@@ -1,27 +1,75 @@
 import Link from "next/link";
-import { Check, Gamepad2 } from "lucide-react";
+import { Check, Gamepad2, Radio, Trophy, Users, Zap } from "lucide-react";
 import { Logo } from "./logo";
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-[#03070c] lg:grid lg:grid-cols-[1.02fr_.98fr]">
-      <section className="arena-bg flex min-h-screen flex-col px-6 py-7 sm:px-12 lg:px-16 xl:px-24">
-        <Logo />
-        <div className="my-auto w-full max-w-[420px] py-12">{children}</div>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[9px] text-slate-700">© 2026 Touchline Technologies Ltd. All rights reserved.</p>
-          <Link href="/world" className="inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-cyan-300/70 hover:text-cyan-200"><Gamepad2 size={12}/>Open World</Link>
+    <main className="arena-bg console-shell relative min-h-screen overflow-hidden bg-[#02050a]">
+      <div className="stadium-light stadium-light-left" />
+      <div className="stadium-light stadium-light-right" />
+      <div className="football-orb" />
+      <div className="stadium-skyline" />
+
+      <section className="relative z-10 grid min-h-screen lg:grid-cols-[1.15fr_.85fr]">
+        <div className="flex min-h-screen flex-col px-5 py-5 sm:px-8 lg:px-12 xl:px-16">
+          <header className="flex items-center justify-between">
+            <Logo />
+            <Link href="/world" className="console-mini-card hidden items-center gap-2 px-4 py-3 text-[8px] font-black uppercase tracking-[.16em] text-cyan-200 transition hover:-translate-y-1 sm:inline-flex">
+              <Gamepad2 size={14}/> AF World
+            </Link>
+          </header>
+
+          <div className="my-auto grid gap-8 py-10 xl:grid-cols-[1fr_430px] xl:items-end">
+            <div className="max-w-3xl">
+              <div className="mb-5 flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]"><span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]"/> Live Career Mode</span>
+                <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">Football Agent Universe</span>
+              </div>
+              <p className="mb-3 text-[9px] font-black uppercase tracking-[.34em] text-cyan-200/60">Main Menu / Sign In</p>
+              <h1 className="console-title font-display text-6xl uppercase italic leading-[.82] text-white sm:text-8xl xl:text-[118px]">
+                AF Career
+              </h1>
+              <p className="mt-6 max-w-xl text-sm leading-7 text-slate-300/80">
+                Enter your football business universe. Manage players, transfers, scouting, rankings and career progression like a next-generation football management experience.
+              </p>
+
+              <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+                <div className="console-mini-card p-4"><Trophy size={18} className="text-amber-300"/><p className="mt-4 text-[8px] font-black uppercase tracking-wider text-slate-500">Global Rank</p><p className="mt-1 text-xl font-black">#184</p></div>
+                <div className="console-mini-card p-4"><Users size={18} className="text-cyan-300"/><p className="mt-4 text-[8px] font-black uppercase tracking-wider text-slate-500">Squad Value</p><p className="mt-1 text-xl font-black">€146M</p></div>
+                <div className="console-mini-card p-4"><Zap size={18} className="text-[#a3ff12]"/><p className="mt-4 text-[8px] font-black uppercase tracking-wider text-slate-500">Market</p><p className="mt-1 text-xl font-black">LIVE</p></div>
+              </div>
+            </div>
+
+            <div className="premium-ring stadium-scoreboard w-full p-5 sm:p-6">
+              <div className="relative z-10">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Player one</p>
+                    <h2 className="mt-1 text-xl font-black uppercase italic text-white">Enter Touchline</h2>
+                  </div>
+                  <span className="grid size-12 place-items-center rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 text-[#a3ff12]"><Gamepad2 size={22}/></span>
+                </div>
+                {children}
+              </div>
+            </div>
+          </div>
+
+          <footer className="flex items-center justify-between gap-3">
+            <p className="text-[9px] text-slate-700">© 2026 Touchline Technologies Ltd. All rights reserved.</p>
+            <div className="hidden items-center gap-2 text-[8px] font-black uppercase tracking-[.16em] text-slate-600 sm:flex"><Radio size={12} className="text-[#a3ff12]"/> Market online</div>
+          </footer>
         </div>
-      </section>
-      <section className="pitch-grid relative hidden overflow-hidden border-l border-cyan-100/10 bg-[#07111b] p-12 text-white lg:flex lg:flex-col">
-        <div className="absolute -right-32 -top-32 size-[440px] rounded-full border border-cyan-300/10"/><div className="absolute -right-10 -top-10 size-[280px] rounded-full border border-cyan-300/10"/>
-        <div className="relative mt-auto max-w-xl">
-          <p className="text-[9px] font-black uppercase tracking-[.22em] text-cyan-300">Enter the football world</p>
-          <h2 className="font-display mt-5 text-5xl uppercase italic leading-[.96] xl:text-6xl">Build careers.<br/><span className="text-[#a3ff12]">Create icons.</span></h2>
-          <p className="mt-6 max-w-md text-xs leading-6 text-slate-500">The next-generation command center for agents who want to shape the game, not just manage a database.</p>
-          <div className="mt-9 space-y-4">{["Live transfer market intelligence","Player progression and career strategy","Global reputation and achievement system"].map(x=><div key={x} className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-300"><span className="grid size-6 place-items-center rounded-lg border border-[#a3ff12]/25 bg-[#a3ff12]/10 text-[#a3ff12]"><Check size={12} strokeWidth={3}/></span>{x}</div>)}</div>
-        </div>
-        <div className="relative mt-auto flex items-center gap-3 border-t border-white/[.07] pt-6"><span className="pulse-live size-2 rounded-full bg-[#a3ff12]"/><p className="text-[8px] font-black uppercase tracking-[.15em] text-slate-600"><strong className="mr-2 text-slate-300">Market online</strong>18,402 players tracked live</p></div>
+
+        <aside className="ps-career-home relative hidden min-h-screen border-l border-cyan-100/10 p-10 lg:block">
+          <div className="stadium-stands" />
+          <div className="pitch-lines" />
+          <div className="manager-silhouette" />
+          <div className="relative z-10 mt-auto flex h-full flex-col justify-end">
+            <p className="text-[9px] font-black uppercase tracking-[.28em] text-cyan-300/70">Season objectives</p>
+            <h2 className="font-display mt-5 text-6xl uppercase italic leading-[.86] xl:text-7xl">Build careers.<br/><span className="text-[#a3ff12]">Create icons.</span></h2>
+            <div className="mt-9 space-y-4">{["Live transfer market intelligence","Player progression and career strategy","Global reputation and achievement system"].map(x=><div key={x} className="console-mini-card flex items-center gap-3 p-4 text-[10px] font-bold uppercase tracking-wider text-slate-300"><span className="grid size-7 place-items-center rounded-lg border border-[#a3ff12]/25 bg-[#a3ff12]/10 text-[#a3ff12]"><Check size={13} strokeWidth={3}/></span>{x}</div>)}</div>
+          </div>
+        </aside>
       </section>
     </main>
   );
