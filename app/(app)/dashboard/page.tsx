@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BadgeEuro, Bot, Building2, Flame, GraduationCap, Landmark, Newspaper, Radio, ShieldCheck, Sparkles, Target, Trophy, Users, Zap } from "lucide-react";
+import { ArrowUpRight, BadgeEuro, Binoculars, Bot, Building2, Flame, Gamepad2, GraduationCap, Landmark, MessageSquare, Newspaper, Radio, ShieldCheck, Sparkles, Target, Trophy, Users, Zap } from "lucide-react";
 import { players } from "@/lib/demo-data";
 import { GamePanel, LivePill, Meter, PlayerGameCard, SectionHeader, StatTile } from "@/components/game-ui";
 
@@ -10,12 +10,75 @@ const negotiations = [
 ];
 
 export default function Dashboard() {
+  const modes = [
+    { href: "/players", title: "Squad Vault", note: "Manage career cards", icon: Users, glow: "rgba(34,211,238,.28)", active: true },
+    { href: "/deals", title: "Transfer Window", note: "Live offers & bid wars", icon: Zap, glow: "rgba(163,255,18,.28)" },
+    { href: "/scouting", title: "Scout Network", note: "Find hidden gems", icon: Binoculars, glow: "rgba(247,198,93,.28)" },
+    { href: "/inbox", title: "Career Inbox", note: "Club messages", icon: MessageSquare, glow: "rgba(251,113,133,.25)" },
+  ];
+
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
-      <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div><div className="mb-2 flex items-center gap-3"><LivePill>Market live</LivePill><span className="text-[9px] font-bold uppercase tracking-[.14em] text-slate-700">Week 26 · Summer Window</span></div><h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Football Command Center</h1><p className="mt-1.5 text-xs text-slate-500">Your career. Your network. Your football empire.</p></div>
-        <div className="flex gap-2"><Link href="/inbox" className="rounded-lg border border-white/[.08] bg-white/[.035] px-4 py-2.5 text-[9px] font-black uppercase tracking-wider text-slate-300">5 urgent messages</Link><Link href="/deals" className="rounded-lg border border-[#a3ff12]/30 bg-[#a3ff12] px-4 py-2.5 text-[9px] font-black uppercase tracking-wider text-[#081008] shadow-[0_0_25px_rgba(163,255,18,.14)]">Enter market</Link></div>
-      </div>
+      <section className="career-stage premium-ring status-scan mb-6 p-5 sm:p-7 lg:p-8">
+        <div className="stadium-stands" />
+        <div className="pitch-lines" />
+        <div className="relative z-10 grid gap-7 xl:grid-cols-[1.25fr_.75fr] xl:items-end">
+          <div>
+            <div className="mb-5 flex flex-wrap items-center gap-3">
+              <LivePill>AF Career Mode</LivePill>
+              <span className="xp-ribbon rounded-full px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">Season 26 · Summer Window</span>
+              <span className="rounded-full border border-amber-300/20 bg-amber-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-amber-200">Founder Admin</span>
+            </div>
+            <h1 className="console-title font-display max-w-4xl text-5xl uppercase italic leading-[.86] text-white sm:text-7xl xl:text-8xl">
+              Agent football universe
+            </h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-400">
+              Build careers, dominate transfer windows, discover talents and grow your global football reputation inside a console-style operating system.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/deals" className="inline-flex h-12 items-center gap-2 rounded-2xl bg-[#a3ff12] px-6 text-[9px] font-black uppercase tracking-[.14em] text-[#081008] shadow-[0_0_38px_rgba(163,255,18,.22)]">Enter transfer window <Zap size={15}/></Link>
+              <Link href="/players" className="inline-flex h-12 items-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-6 text-[9px] font-black uppercase tracking-[.14em] text-cyan-100">Open squad cards <Gamepad2 size={15}/></Link>
+            </div>
+          </div>
+          <div className="stadium-scoreboard p-5">
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Agent rating</p>
+                <p className="font-display mt-2 text-7xl leading-none text-white text-glow">842</p>
+              </div>
+              <div className="rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 py-3 text-right">
+                <p className="text-[8px] font-black uppercase tracking-wider text-[#a3ff12]">Global rank</p>
+                <p className="font-display mt-1 text-4xl">#184</p>
+              </div>
+            </div>
+            <div className="relative z-10 mt-6">
+              <div className="mb-2 flex justify-between text-[8px] font-black uppercase tracking-wider text-slate-500"><span>Icon agent progress</span><span>84%</span></div>
+              <Meter value={84} color="lime"/>
+            </div>
+            <div className="relative z-10 mt-5 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl bg-white/[.045] p-3"><p className="text-[8px] text-slate-500">Deals</p><p className="mt-1 text-sm font-black">18</p></div>
+              <div className="rounded-xl bg-white/[.045] p-3"><p className="text-[8px] text-slate-500">Players</p><p className="mt-1 text-sm font-black">24</p></div>
+              <div className="rounded-xl bg-white/[.045] p-3"><p className="text-[8px] text-slate-500">Revenue</p><p className="mt-1 text-sm font-black">€2.84M</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {modes.map(({ href, title, note, icon: Icon, glow, active }) => (
+          <Link key={href} href={href} className={`mode-tile ${active ? "mode-tile-active" : ""} p-5`} style={{ "--mode-glow": glow } as React.CSSProperties}>
+            <div className="relative z-10 flex items-start justify-between">
+              <span className="grid size-12 place-items-center rounded-2xl border border-white/10 bg-black/20 text-cyan-100"><Icon size={20}/></span>
+              <ArrowUpRight size={15} className="text-white/35"/>
+            </div>
+            <div className="relative z-10 mt-6">
+              <p className="text-[8px] font-black uppercase tracking-[.2em] text-cyan-200/70">Game mode</p>
+              <h2 className="mt-1 text-xl font-black uppercase italic tracking-[-.05em] text-white">{title}</h2>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">{note}</p>
+            </div>
+          </Link>
+        ))}
+      </section>
 
       <div className="stagger grid gap-4 xl:grid-cols-[1.55fr_.85fr]">
         <GamePanel className="premium-ring status-scan console-hud relative overflow-hidden p-5 pitch-grid sm:p-7">
