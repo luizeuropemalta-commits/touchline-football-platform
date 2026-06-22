@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
   const isApp = [
     "/dashboard", "/players", "/deals", "/scouting", "/inbox",
     "/clubs", "/competition", "/investors", "/academies", "/feed", "/ai",
-    "/objectives", "/achievements", "/contracts", "/invoices", "/settings", "/billing", "/subscription", "/upgrade",
+    "/objectives", "/achievements", "/rankings", "/contracts", "/invoices", "/settings", "/billing", "/subscription", "/upgrade",
   ].some(path => request.nextUrl.pathname.startsWith(path));
   if (!user && isApp) return NextResponse.redirect(new URL("/login", request.url));
   if (user && isAuth) return NextResponse.redirect(new URL("/dashboard", request.url));
