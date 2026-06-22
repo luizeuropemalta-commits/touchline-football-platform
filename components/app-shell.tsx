@@ -102,6 +102,10 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
 
   return (
     <div className="arena-bg console-shell flex min-h-screen bg-transparent">
+      <div className="stadium-light stadium-light-left" />
+      <div className="stadium-light stadium-light-right" />
+      <div className="football-orb" />
+      <div className="stadium-skyline" />
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar}</div>
       {open && <div className="fixed inset-0 z-50 flex lg:hidden"><div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => setOpen(false)}/><div className="relative">{sidebar}<button aria-label="Close menu" onClick={() => setOpen(false)} className="absolute right-4 top-4 text-white/60"><X/></button></div></div>}
       <div className="min-w-0 flex-1 lg:pl-[268px]">
