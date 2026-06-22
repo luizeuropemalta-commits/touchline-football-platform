@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { canAccess, featureForPath, type PlanKey } from "@/lib/billing/plans";
 
+const adminEmails = new Set(["luizeuropemalta@gmail.com"]);
+
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -19,6 +21,7 @@ export async function proxy(request: NextRequest) {
     },
   });
   const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = Boolean(user?.email && adminEmails.has(user.email.toLowerCase()));
   const isAuth = ["/login", "/register", "/forgot-password"].some(path => request.nextUrl.pathname.startsWith(path));
   const isApp = [
     "/dashboard", "/players", "/deals", "/scouting", "/inbox",
@@ -29,7 +32,7 @@ export async function proxy(request: NextRequest) {
   if (user && isAuth) return NextResponse.redirect(new URL("/dashboard", request.url));
 
   const feature = featureForPath(request.nextUrl.pathname);
-  if (user && feature) {
+  if (user && feature && !isAdmin) {
     const { data: subscription } = await supabase
       .from("billing_subscriptions")
       .select("plan_key,status")
