@@ -19,11 +19,23 @@ const previewState: SubscriptionState = {
   cancelAtPeriodEnd: false,
 };
 
+const adminEmails = new Set(["luizeuropemalta@gmail.com"]);
+
+const adminState: SubscriptionState = {
+  planKey: "elite_agency",
+  status: "administrator",
+  interval: "year",
+  trialEnd: null,
+  currentPeriodEnd: "2099-12-31T23:59:59.000Z",
+  cancelAtPeriodEnd: false,
+};
+
 export async function getCurrentSubscription(): Promise<SubscriptionState> {
   const supabase = await createClient();
   if (!supabase) return previewState;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { planKey: null, status: null, interval: null, trialEnd: null, currentPeriodEnd: null, cancelAtPeriodEnd: false };
+  if (user.email && adminEmails.has(user.email.toLowerCase())) return adminState;
 
   const { data } = await supabase
     .from("billing_subscriptions")
@@ -44,4 +56,3 @@ export async function getCurrentSubscription(): Promise<SubscriptionState> {
     cancelAtPeriodEnd: data.cancel_at_period_end,
   };
 }
-
