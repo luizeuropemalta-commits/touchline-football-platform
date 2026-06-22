@@ -158,11 +158,45 @@ export const plans: PlanDefinition[] = [
 
 export const planMap = Object.fromEntries(plans.map((plan) => [plan.key, plan])) as Record<PlanKey, PlanDefinition>;
 
+const allEntitlements: FeatureKey[] = [
+  "basic_dashboard",
+  "basic_player_vault",
+  "advanced_player_vault",
+  "basic_scouting",
+  "advanced_scouting",
+  "club_network",
+  "transfer_market",
+  "ai_assistant",
+  "contract_tools",
+  "invoice_tools",
+  "investor_hub",
+  "advanced_analytics",
+  "agent_league",
+  "premium_ranking",
+  "team_members",
+  "player_search",
+  "advanced_player_search",
+  "shortlists",
+  "unlimited_shortlists",
+  "agent_communication",
+  "player_comparison",
+  "market_alerts",
+  "club_deal_room",
+  "priority_visibility",
+  "talent_upload",
+  "scout_connections",
+  "club_visibility",
+  "academy_network",
+  "development_profiles",
+  "priority_support",
+];
+
 export function isPlanKey(value: string): value is PlanKey {
   return value in planMap;
 }
 
 export function canAccess(planKey: PlanKey | null | undefined, feature: FeatureKey) {
+  if (planKey === "elite_agency") return allEntitlements.includes(feature);
   return Boolean(planKey && planMap[planKey].entitlements.includes(feature));
 }
 
@@ -213,4 +247,3 @@ export const pathFeatures: Array<[string, FeatureKey]> = [
 export function featureForPath(pathname: string) {
   return pathFeatures.find(([path]) => pathname.startsWith(path))?.[1] ?? null;
 }
-
