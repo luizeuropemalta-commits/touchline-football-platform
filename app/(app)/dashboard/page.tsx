@@ -19,36 +19,66 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
-      <section className="career-stage premium-ring status-scan mb-6 p-5 sm:p-7 lg:p-8">
+      <section className="ps-career-home premium-ring status-scan mb-6 p-5 sm:p-7 lg:p-9">
         <div className="stadium-stands" />
         <div className="pitch-lines" />
-        <div className="relative z-10 grid gap-7 xl:grid-cols-[1.25fr_.75fr] xl:items-end">
+        <div className="manager-silhouette" />
+        <div className="relative z-10 grid min-h-[500px] gap-7 xl:grid-cols-[1.05fr_.95fr] xl:items-end">
           <div>
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <LivePill>AF Career Mode</LivePill>
               <span className="xp-ribbon rounded-full px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">Season 26 · Summer Window</span>
               <span className="rounded-full border border-amber-300/20 bg-amber-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-amber-200">Founder Admin</span>
             </div>
-            <h1 className="console-title font-display max-w-4xl text-5xl uppercase italic leading-[.86] text-white sm:text-7xl xl:text-8xl">
-              Agent football universe
+            <p className="mb-3 text-[9px] font-black uppercase tracking-[.32em] text-cyan-200/70">Main Menu / Manager Career</p>
+            <h1 className="console-title font-display max-w-4xl text-6xl uppercase italic leading-[.82] text-white sm:text-8xl xl:text-[118px]">
+              AF Career
             </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-400">
-              Build careers, dominate transfer windows, discover talents and grow your global football reputation inside a console-style operating system.
+            <p className="mt-5 max-w-xl text-sm leading-7 text-slate-300/80">
+              Your agency universe: manage players, negotiate transfers, scout wonderkids and climb the global agent rankings.
             </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/deals" className="inline-flex h-12 items-center gap-2 rounded-2xl bg-[#a3ff12] px-6 text-[9px] font-black uppercase tracking-[.14em] text-[#081008] shadow-[0_0_38px_rgba(163,255,18,.22)]">Enter transfer window <Zap size={15}/></Link>
-              <Link href="/players" className="inline-flex h-12 items-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-6 text-[9px] font-black uppercase tracking-[.14em] text-cyan-100">Open squad cards <Gamepad2 size={15}/></Link>
+            <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-[1.35fr_.9fr]">
+              <Link href="/deals" className="continue-career-button flex items-center justify-between px-6 text-[#081008]">
+                <span>
+                  <span className="block text-[8px] font-black uppercase tracking-[.22em]">Press to play</span>
+                  <span className="mt-1 block text-xl font-black uppercase italic tracking-[-.05em]">Continue Career</span>
+                </span>
+                <Zap size={24}/>
+              </Link>
+              <Link href="/players" className="console-mini-card flex min-h-[76px] items-center justify-between px-5 text-cyan-100 transition hover:-translate-y-1 hover:border-cyan-300/30">
+                <span>
+                  <span className="block text-[8px] font-black uppercase tracking-[.22em] text-cyan-300/60">Squad</span>
+                  <span className="mt-1 block text-sm font-black uppercase italic">Player Cards</span>
+                </span>
+                <Gamepad2 size={22} className="text-cyan-300"/>
+              </Link>
+            </div>
+            <div className="mt-7 grid max-w-2xl gap-3 sm:grid-cols-3">
+              <div className="console-mini-card p-4"><p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Next objective</p><p className="mt-2 text-sm font-black uppercase italic">Close bid war</p></div>
+              <div className="console-mini-card p-4"><p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Transfer window</p><p className="mt-2 text-sm font-black uppercase italic text-[#a3ff12]">Open</p></div>
+              <div className="console-mini-card p-4"><p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Scout report</p><p className="mt-2 text-sm font-black uppercase italic text-cyan-300">3 gems</p></div>
             </div>
           </div>
-          <div className="stadium-scoreboard p-5">
+          <div className="stadium-scoreboard p-5 xl:mb-4 xl:max-w-[470px] xl:justify-self-end">
             <div className="relative z-10 flex items-start justify-between">
               <div>
-                <p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Agent rating</p>
-                <p className="font-display mt-2 text-7xl leading-none text-white text-glow">842</p>
+                <p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Manager profile</p>
+                <p className="mt-2 text-xl font-black uppercase italic text-white">Luiz Founder Office</p>
+                <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">Elite Agency · Malta</p>
               </div>
               <div className="rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 py-3 text-right">
-                <p className="text-[8px] font-black uppercase tracking-wider text-[#a3ff12]">Global rank</p>
-                <p className="font-display mt-1 text-4xl">#184</p>
+                <p className="text-[8px] font-black uppercase tracking-wider text-[#a3ff12]">OVR</p>
+                <p className="font-display mt-1 text-5xl">92</p>
+              </div>
+            </div>
+            <div className="relative z-10 mt-6 grid grid-cols-[1fr_auto] gap-4 rounded-2xl border border-white/[.07] bg-black/20 p-4">
+              <div>
+                <p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Agent rating</p>
+                <p className="font-display mt-1 text-6xl leading-none text-white text-glow">842</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Global rank</p>
+                <p className="font-display mt-1 text-4xl text-amber-300">#184</p>
               </div>
             </div>
             <div className="relative z-10 mt-6">
