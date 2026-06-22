@@ -236,6 +236,7 @@ export const featureLabels: Record<FeatureKey, string> = {
 export const pathFeatures: Array<[string, FeatureKey]> = [
   ["/investors", "investor_hub"],
   ["/competition", "agent_league"],
+  ["/rankings", "premium_ranking"],
   ["/ai", "ai_assistant"],
   ["/deals", "transfer_market"],
   ["/clubs", "club_network"],
