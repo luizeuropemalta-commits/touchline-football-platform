@@ -7,11 +7,11 @@ export function Logo({ light = false }: { light?: boolean }) {
         <span className="absolute inset-1 rounded-[1.15rem] border border-white/[.07] bg-black/10"/>
         <span className="absolute h-24 w-24 rounded-full border border-cyan-200/10"/>
         <span className="absolute -right-8 -top-8 h-16 w-16 rounded-full bg-cyan-300/20 blur-2xl"/>
-        <span className="font-display relative text-[24px] font-black uppercase italic tracking-[-.16em] text-white drop-shadow-[0_0_18px_rgba(34,211,238,.75)]">AF</span>
+        <span className="font-display relative text-[23px] font-black uppercase italic tracking-[-.16em] text-white drop-shadow-[0_0_18px_rgba(34,211,238,.75)]">TL</span>
       </span>
       <span>
-        <span className="block text-[19px] font-black uppercase italic tracking-[-.07em]">Agente FIFA</span>
-        <span className="block text-[7px] font-bold uppercase tracking-[.34em] text-cyan-300/70">Career Mode Universe</span>
+        <span className="block text-[19px] font-black uppercase italic tracking-[-.07em]">Touchline</span>
+        <span className="block text-[7px] font-bold uppercase tracking-[.28em] text-cyan-300/70">Football Business Network</span>
       </span>
     </Link>
   );
