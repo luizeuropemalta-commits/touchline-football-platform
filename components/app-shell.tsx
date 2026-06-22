@@ -37,6 +37,16 @@ const operations = [
   { href: "/invoices", label: "Finance", icon: CircleDollarSign },
 ];
 
+const consoleModes = [
+  { href: "/dashboard", label: "Career Home", eyebrow: "Continue", icon: Gamepad2 },
+  { href: "/players", label: "Squad Vault", eyebrow: "Cards", icon: Users },
+  { href: "/deals", label: "Transfer Window", eyebrow: "Live market", icon: Zap },
+  { href: "/scouting", label: "Scout Network", eyebrow: "Wonderkids", icon: Binoculars },
+  { href: "/clubs", label: "Club Hub", eyebrow: "Directors", icon: Building2 },
+  { href: "/rankings", label: "World Rankings", eyebrow: "Leaderboards", icon: BarChart3 },
+  { href: "/inbox", label: "Inbox", eyebrow: "Messages", icon: Inbox },
+];
+
 export function AppShell({ children, planKey, subscriptionStatus }: { children: React.ReactNode; planKey: PlanKey | null; subscriptionStatus: string | null }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -122,6 +132,24 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
             <button className="console-chip hidden h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/[.08] px-3 text-[9px] font-black uppercase tracking-[.1em] text-cyan-200 hover:bg-cyan-300/[.14] sm:flex"><Crosshair size={13}/> Quick Action</button>
           </div>
         </header>
+        <nav className="console-mode-dock">
+          {consoleModes.map(({ href, label, eyebrow, icon: Icon }) => {
+            const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+            const feature = featureForPath(href);
+            const locked = Boolean(feature && !canAccess(planKey, feature));
+            const destination = locked ? `/upgrade?feature=${feature}&from=${encodeURIComponent(href)}` : href;
+            return (
+              <Link key={href} href={destination} className="console-mode-button" data-active={active}>
+                <span className="console-mode-icon"><Icon size={20}/></span>
+                <span className="relative min-w-0">
+                  <span className="block text-[7px] font-black uppercase tracking-[.22em] text-cyan-200/55">{eyebrow}</span>
+                  <span className="mt-1 block truncate text-[12px] font-black uppercase italic tracking-[-.03em] text-white">{label}</span>
+                </span>
+                {locked && <LockKeyhole size={12} className="relative ml-auto text-amber-300"/>}
+              </Link>
+            );
+          })}
+        </nav>
         <main className="p-4 pb-24 sm:p-6 sm:pb-24 xl:p-8 xl:pb-24">{children}</main>
         <Link href="/ai" aria-label="Open Touchline AI" className="premium-ring fixed bottom-5 right-5 z-40 grid size-14 place-items-center rounded-2xl border border-cyan-300/30 bg-[#0a1a27]/90 text-cyan-200 shadow-[0_0_35px_rgba(34,211,238,.2)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:scale-105 hover:border-[#a3ff12]/40 hover:text-[#a3ff12]">
           <Bot size={22}/><span className="pulse-live absolute right-1.5 top-1.5 size-2 rounded-full bg-[#a3ff12]"/>
