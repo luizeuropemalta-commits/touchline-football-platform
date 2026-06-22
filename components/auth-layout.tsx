@@ -1,4 +1,5 @@
-import { Check } from "lucide-react";
+import Link from "next/link";
+import { Check, Gamepad2 } from "lucide-react";
 import { Logo } from "./logo";
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +8,10 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
       <section className="arena-bg flex min-h-screen flex-col px-6 py-7 sm:px-12 lg:px-16 xl:px-24">
         <Logo />
         <div className="my-auto w-full max-w-[420px] py-12">{children}</div>
-        <p className="text-[9px] text-slate-700">© 2026 Touchline Technologies Ltd. All rights reserved.</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[9px] text-slate-700">© 2026 Touchline Technologies Ltd. All rights reserved.</p>
+          <Link href="/world" className="inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-cyan-300/70 hover:text-cyan-200"><Gamepad2 size={12}/>Open World</Link>
+        </div>
       </section>
       <section className="pitch-grid relative hidden overflow-hidden border-l border-cyan-100/10 bg-[#07111b] p-12 text-white lg:flex lg:flex-col">
         <div className="absolute -right-32 -top-32 size-[440px] rounded-full border border-cyan-300/10"/><div className="absolute -right-10 -top-10 size-[280px] rounded-full border border-cyan-300/10"/>
