@@ -1,0 +1,6 @@
+import { ArrowUpRight } from "lucide-react";
+import { Button } from "./ui";
+
+export function ComingSoon({ eyebrow, title, description }: { eyebrow:string; title:string; description:string }) {
+  return <div className="mx-auto max-w-[1500px] animate-in"><p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">{eyebrow}</p><h1 className="font-display mt-2 text-3xl uppercase italic sm:text-[42px]">{title}</h1><p className="mt-2 max-w-xl text-xs leading-6 text-slate-500">{description}</p><div className="glass pitch-grid relative mt-7 overflow-hidden rounded-2xl p-8 sm:p-12"><div className="absolute right-[-10%] top-[-70%] size-[440px] rounded-full border border-cyan-300/10"/><p className="text-[8px] font-black uppercase tracking-[.2em] text-[#a3ff12]">Operations Module</p><h2 className="font-display mt-4 max-w-xl text-3xl uppercase italic sm:text-4xl">Built into your football command network.</h2><p className="mt-4 max-w-xl text-[10px] leading-6 text-slate-500">This secure operational layer connects directly to player careers, live negotiations, agency objectives and financial performance.</p><Button className="mt-7">Enter Module <ArrowUpRight size={13}/></Button></div></div>;
+}
