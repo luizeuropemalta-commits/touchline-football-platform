@@ -552,6 +552,85 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   clip-path: polygon(42% 0, 58% 0, 66% 13%, 63% 24%, 78% 32%, 92% 70%, 80% 100%, 20% 100%, 8% 70%, 22% 32%, 37% 24%, 34% 13%);
   filter: drop-shadow(0 0 42px rgba(34,211,238,.2));
 }
+.af-mode-screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: 36px;
+  border: 1px solid rgba(200,215,232,.13);
+  background:
+    linear-gradient(110deg, rgba(0,0,0,.92), rgba(3,12,23,.86) 46%, rgba(8,34,54,.5)),
+    radial-gradient(ellipse at 72% 10%, var(--mode-aura, rgba(34,211,238,.26)), transparent 46%),
+    radial-gradient(ellipse at 100% 100%, rgba(163,255,18,.12), transparent 44%);
+  box-shadow: 0 30px 100px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.af-mode-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.9), transparent 48%, rgba(0,0,0,.18)),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.026) 0 1px, transparent 1px 92px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 76px);
+}
+.af-mode-screen::after {
+  content: "";
+  position: absolute;
+  right: -8%;
+  bottom: -26%;
+  width: min(780px, 70%);
+  height: 70%;
+  pointer-events: none;
+  opacity: .55;
+  border-radius: 50% 50% 0 0;
+  border: 1px solid rgba(34,211,238,.15);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(163,255,18,.12), transparent 58%),
+    repeating-radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.055) 0 1px, transparent 1px 24px);
+}
+.af-mode-kicker {
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .34em;
+  color: rgba(165, 243, 252, .65);
+}
+.af-mode-title {
+  font-size: clamp(54px, 8vw, 124px);
+  line-height: .82;
+  text-transform: uppercase;
+  font-style: italic;
+  letter-spacing: -.085em;
+  text-shadow: 0 0 42px rgba(34,211,238,.2), 0 8px 38px rgba(0,0,0,.55);
+}
+.af-action-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.af-stat-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(200,215,232,.12);
+  background: linear-gradient(145deg, rgba(255,255,255,.085), rgba(255,255,255,.024));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 18px 48px rgba(0,0,0,.22);
+}
+.af-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 90% 10%, var(--stat-glow, rgba(34,211,238,.18)), transparent 46%);
+  pointer-events: none;
+}
+.af-strip {
+  border-radius: 26px;
+  border: 1px solid rgba(200,215,232,.1);
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.07), rgba(255,255,255,.025)),
+    radial-gradient(circle at 0% 0%, rgba(34,211,238,.16), transparent 38%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+}
 .career-stage {
   position: relative;
   overflow: hidden;
