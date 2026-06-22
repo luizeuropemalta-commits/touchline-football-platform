@@ -20,6 +20,7 @@ const previewState: SubscriptionState = {
 };
 
 const adminEmails = new Set(["luizeuropemalta@gmail.com"]);
+const betaFullAccess = true;
 
 const adminState: SubscriptionState = {
   planKey: "elite_agency",
@@ -46,6 +47,7 @@ export async function getCurrentSubscription(): Promise<SubscriptionState> {
     .limit(1)
     .maybeSingle();
 
+  if (!data && betaFullAccess) return { ...previewState, status: "beta_full_access" };
   if (!data) return { planKey: null, status: null, interval: null, trialEnd: null, currentPeriodEnd: null, cancelAtPeriodEnd: false };
   return {
     planKey: data.plan_key as PlanKey,
