@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
-  FileSignature, Gamepad2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
+  FileSignature, Globe2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
   LockKeyhole, Menu, Newspaper, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
 } from "lucide-react";
 import { useState } from "react";
@@ -14,19 +14,19 @@ import { canAccess, featureForPath, planMap, type PlanKey } from "@/lib/billing/
 
 const nav = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
-  { href: "/players", label: "Squad", icon: Users },
-  { href: "/deals", label: "Transfer Market", icon: Zap, count: 7 },
-  { href: "/scouting", label: "Scouting", icon: Binoculars },
-  { href: "/inbox", label: "Inbox", icon: Inbox, count: 5 },
+  { href: "/players", label: "Player Portfolio", icon: Users },
+  { href: "/deals", label: "Deal Rooms", icon: Zap, count: 7 },
+  { href: "/scouting", label: "Scouting Center", icon: Binoculars },
+  { href: "/inbox", label: "Messages", icon: Inbox, count: 5 },
 ];
 
 const ecosystem = [
   { href: "/clubs", label: "Club Network", icon: Building2 },
-  { href: "/rankings", label: "Market Rankings", icon: BarChart3 },
+  { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
   { href: "/competition", label: "Agent League", icon: Trophy },
   { href: "/investors", label: "Investor Hub", icon: Landmark },
   { href: "/academies", label: "Academies", icon: GraduationCap },
-  { href: "/feed", label: "World Feed", icon: Newspaper, count: 12 },
+  { href: "/feed", label: "Football Feed", icon: Newspaper, count: 12 },
   { href: "/ai", label: "Touchline AI", icon: Bot },
 ];
 
@@ -38,13 +38,13 @@ const operations = [
 ];
 
 const consoleModes = [
-  { href: "/dashboard", label: "Career Home", eyebrow: "Continue", icon: Gamepad2 },
-  { href: "/players", label: "Squad Vault", eyebrow: "Cards", icon: Users },
-  { href: "/deals", label: "Transfer Window", eyebrow: "Live market", icon: Zap },
-  { href: "/scouting", label: "Scout Network", eyebrow: "Wonderkids", icon: Binoculars },
-  { href: "/clubs", label: "Club Hub", eyebrow: "Directors", icon: Building2 },
-  { href: "/rankings", label: "World Rankings", eyebrow: "Leaderboards", icon: BarChart3 },
-  { href: "/inbox", label: "Inbox", eyebrow: "Messages", icon: Inbox },
+  { href: "/dashboard", label: "Command Center", eyebrow: "HQ", icon: Globe2 },
+  { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
+  { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
+  { href: "/scouting", label: "Scouting Center", eyebrow: "Discovery", icon: Binoculars },
+  { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },
+  { href: "/rankings", label: "Market Intel", eyebrow: "Rankings", icon: BarChart3 },
+  { href: "/inbox", label: "Messages", eyebrow: "Comms", icon: Inbox },
 ];
 
 export function AppShell({ children, planKey, subscriptionStatus }: { children: React.ReactNode; planKey: PlanKey | null; subscriptionStatus: string | null }) {
@@ -80,7 +80,7 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
         <p className="mt-2 text-[9px] text-slate-500">7,240 XP <span className="float-right">10,000</span></p>
       </div>
       <nav className="mt-5 space-y-0.5">
-        <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.22em] text-slate-700">Career</p>
+        <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.22em] text-slate-700">Core</p>
         {nav.map(navLink)}
       </nav>
       <nav className="mt-4 space-y-0.5 border-t border-white/[.06] pt-4">
@@ -122,7 +122,7 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
         <header className="console-topbar sticky top-0 z-30 flex h-[72px] items-center border-b border-cyan-100/[.08] bg-[#03080f]/70 px-5 backdrop-blur-2xl sm:px-7">
           <button aria-label="Open menu" onClick={() => setOpen(true)} className="mr-4 text-slate-300 lg:hidden"><Menu size={21}/></button>
           <div className="hidden lg:block"><Logo light /></div>
-          <div className="ml-5 hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600 md:flex"><Gamepad2 size={14} className="text-cyan-400"/><span>Console Career</span><span className="mx-2 h-3 w-px bg-white/10"/><span className="text-slate-400">Season 26</span></div>
+        <div className="ml-5 hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600 md:flex"><Globe2 size={14} className="text-cyan-400"/><span>Global Football Network</span><span className="mx-2 h-3 w-px bg-white/10"/><span className="text-slate-400">Beta HQ</span></div>
           <div className="relative ml-auto hidden w-full max-w-[330px] md:block">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"/>
             <input placeholder="Search the football world..." className="console-chip h-10 w-full rounded-xl border border-white/[.08] bg-white/[.035] pl-9 pr-3 text-[10px] text-slate-200 outline-none transition placeholder:text-slate-700 focus:border-cyan-300/30"/>
