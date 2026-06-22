@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { canAccess, featureForPath, type PlanKey } from "@/lib/billing/plans";
 
 const adminEmails = new Set(["luizeuropemalta@gmail.com"]);
+const betaFullAccess = true;
 
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -32,7 +33,7 @@ export async function proxy(request: NextRequest) {
   if (user && isAuth) return NextResponse.redirect(new URL("/dashboard", request.url));
 
   const feature = featureForPath(request.nextUrl.pathname);
-  if (user && feature && !isAdmin) {
+  if (user && feature && !isAdmin && !betaFullAccess) {
     const { data: subscription } = await supabase
       .from("billing_subscriptions")
       .select("plan_key,status")
