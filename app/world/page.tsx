@@ -16,6 +16,10 @@ export default function PublicWorldPage() {
 
   return (
     <main className="arena-bg min-h-screen px-4 py-6 sm:px-8 lg:px-12">
+      <div className="stadium-light stadium-light-left" />
+      <div className="stadium-light stadium-light-right" />
+      <div className="football-orb" />
+      <div className="stadium-skyline" />
       <header className="mx-auto flex max-w-[1440px] items-center justify-between">
         <Logo light />
         <div className="flex items-center gap-2">
@@ -26,7 +30,9 @@ export default function PublicWorldPage() {
 
       <section className="mx-auto max-w-[1440px] py-14">
         <div className="grid gap-6 xl:grid-cols-[1.2fr_.8fr] xl:items-stretch">
-          <GamePanel className="premium-ring status-scan relative overflow-hidden p-7 pitch-grid sm:p-10">
+          <GamePanel className="career-stage premium-ring status-scan relative overflow-hidden p-7 pitch-grid sm:p-10">
+            <div className="stadium-stands" />
+            <div className="pitch-lines" />
             <div className="soft-orbit right-[-8%] top-[-22%] size-80"/>
             <LivePill>Open football universe</LivePill>
             <h1 className="font-display mt-6 max-w-3xl text-5xl uppercase italic leading-[.92] text-white sm:text-7xl">Enter the AF football world.</h1>
@@ -91,4 +97,3 @@ export default function PublicWorldPage() {
     </main>
   );
 }
-
