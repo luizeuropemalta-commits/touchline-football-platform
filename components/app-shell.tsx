@@ -116,12 +116,13 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />
       <div className="stadium-skyline" />
-      <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar}</div>
+      <div className="fixed inset-y-0 left-0 z-40 hidden">{sidebar}</div>
       {open && <div className="fixed inset-0 z-50 flex lg:hidden"><div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => setOpen(false)}/><div className="relative">{sidebar}<button aria-label="Close menu" onClick={() => setOpen(false)} className="absolute right-4 top-4 text-white/60"><X/></button></div></div>}
-      <div className="min-w-0 flex-1 lg:pl-[268px]">
+      <div className="min-w-0 flex-1">
         <header className="console-topbar sticky top-0 z-30 flex h-[72px] items-center border-b border-cyan-100/[.08] bg-[#03080f]/70 px-5 backdrop-blur-2xl sm:px-7">
           <button aria-label="Open menu" onClick={() => setOpen(true)} className="mr-4 text-slate-300 lg:hidden"><Menu size={21}/></button>
-          <div className="hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600 md:flex"><Gamepad2 size={14} className="text-cyan-400"/><span>Live Career</span><span className="mx-2 h-3 w-px bg-white/10"/><span className="text-slate-400">Monday, 22 June</span></div>
+          <div className="hidden lg:block"><Logo light /></div>
+          <div className="ml-5 hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600 md:flex"><Gamepad2 size={14} className="text-cyan-400"/><span>Console Career</span><span className="mx-2 h-3 w-px bg-white/10"/><span className="text-slate-400">Season 26</span></div>
           <div className="relative ml-auto hidden w-full max-w-[330px] md:block">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"/>
             <input placeholder="Search the football world..." className="console-chip h-10 w-full rounded-xl border border-white/[.08] bg-white/[.035] pl-9 pr-3 text-[10px] text-slate-200 outline-none transition placeholder:text-slate-700 focus:border-cyan-300/30"/>
