@@ -11,6 +11,7 @@ type Mode = "login" | "register" | "forgot";
 
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
+  const googleEnabled = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -47,9 +48,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   async function googleLogin() {
+    setMessage("");
     const supabase = createClient();
     if (!supabase) { router.push("/dashboard"); return; }
-    await supabase.auth.signInWithOAuth({ provider:"google", options:{ redirectTo:`${location.origin}/auth/callback?next=/dashboard` } });
+    const { error } = await supabase.auth.signInWithOAuth({ provider:"google", options:{ redirectTo:`${location.origin}/auth/callback?next=/dashboard` } });
+    if (error) setMessage(error.message);
   }
 
   return (
@@ -60,7 +63,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       {mode === "register" && <label className="flex items-start gap-2 pt-1 text-[11px] leading-5 text-[#73807c]"><input required type="checkbox" className="mt-1 accent-[#153f36]"/>I agree to the Terms of Service and Privacy Policy.</label>}
       {message && <div className={`rounded-xl px-4 py-3 text-xs ${message.toLowerCase().includes("sent")||message.includes("created")?"bg-[#e7f4df] text-[#2a633b]":"bg-[#fee8e4] text-[#a5463a]"}`}>{message}</div>}
       <Button type="submit" disabled={loading} className="w-full">{loading?<Loader2 size={16} className="animate-spin"/>:<>{mode==="login"?"Sign in":mode==="register"?"Create account":"Send reset link"}<ArrowRight size={15}/></>}</Button>
-      {mode !== "forgot" && <><div className="flex items-center gap-3 py-1"><span className="h-px flex-1 bg-[#e3e7e4]"/><span className="text-[10px] uppercase tracking-wider text-[#98a19e]">or continue with</span><span className="h-px flex-1 bg-[#e3e7e4]"/></div><Button type="button" variant="secondary" onClick={googleLogin} className="w-full"><span className="text-base font-bold text-[#4285F4]">G</span> Google</Button></>}
+      {mode !== "forgot" && googleEnabled && <><div className="flex items-center gap-3 py-1"><span className="h-px flex-1 bg-[#e3e7e4]"/><span className="text-[10px] uppercase tracking-wider text-[#98a19e]">or continue with</span><span className="h-px flex-1 bg-[#e3e7e4]"/></div><Button type="button" variant="secondary" onClick={googleLogin} className="w-full"><span className="text-base font-bold text-[#4285F4]">G</span> Google</Button></>}
     </form>
   );
 }
