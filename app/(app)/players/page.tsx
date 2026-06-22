@@ -20,20 +20,20 @@ export default function PlayersPage() {
         <div className="relative z-10 grid gap-8 xl:grid-cols-[1fr_420px] xl:items-end">
           <div>
             <div className="mb-5 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]"><span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]"/>24 active profiles</span>
-              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">Squad value €146.8M</span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]"><span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]"/>24 active player profiles</span>
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">Portfolio value €146.8M</span>
             </div>
-            <p className="af-mode-kicker">Main Menu / Squad Cards</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Squad Vault</h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300/80">Manage your player cards, growth paths, form, videos and transfer heat like a premium football career mode.</p>
-            <div className="mt-8 flex flex-wrap gap-3"><Button><Plus size={14}/>Sign Player</Button><Button variant="secondary"><Sparkles size={14}/>AI Lineup</Button></div>
+            <p className="af-mode-kicker">Touchline / Player Portfolio</p>
+            <h1 className="af-mode-title font-display mt-3 text-white">Player Portfolio</h1>
+            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300/80">Manage profiles, performance, video, contracts, documents, transfer status and career progression from one premium football vault.</p>
+            <div className="mt-8 flex flex-wrap gap-3"><Button><Plus size={14}/>Add Player</Button><Button variant="secondary"><Sparkles size={14}/>AI Profile Builder</Button></div>
           </div>
           <div className="stadium-scoreboard p-5">
             <div className="relative z-10 flex items-start justify-between">
-              <div><p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Squad OVR</p><p className="font-display mt-2 text-7xl leading-none text-white">88</p></div>
+              <div><p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Portfolio Score</p><p className="font-display mt-2 text-7xl leading-none text-white">88</p></div>
               <Crown className="text-amber-300" size={34}/>
             </div>
-            <div className="relative z-10 mt-5"><div className="mb-2 flex justify-between text-[8px] font-black uppercase tracking-wider text-slate-500"><span>Elite agency progress</span><span>76%</span></div><Meter value={76} color="lime"/></div>
+            <div className="relative z-10 mt-5"><div className="mb-2 flex justify-between text-[8px] font-black uppercase tracking-wider text-slate-500"><span>Market readiness</span><span>76%</span></div><Meter value={76} color="lime"/></div>
             <div className="relative z-10 mt-5 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-xl bg-white/[.045] p-3"><Trophy size={15} className="mx-auto text-amber-300"/><p className="mt-2 text-[8px] text-slate-500">Elite</p><p className="text-sm font-black">8</p></div>
               <div className="rounded-xl bg-white/[.045] p-3"><Users size={15} className="mx-auto text-cyan-300"/><p className="mt-2 text-[8px] text-slate-500">Players</p><p className="text-sm font-black">24</p></div>
@@ -51,7 +51,7 @@ export default function PlayersPage() {
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-between"><p className="text-[9px] font-black uppercase tracking-wider text-slate-600"><span className="text-slate-200">{filtered.length}</span> player cards discovered</p><button className="flex items-center gap-2 text-[8px] font-black uppercase tracking-wider text-slate-600">Sort by <span className="text-cyan-300">Overall rating</span><ChevronDown size={11}/></button></div>
+      <div className="mt-5 flex items-center justify-between"><p className="text-[9px] font-black uppercase tracking-wider text-slate-600"><span className="text-slate-200">{filtered.length}</span> player profiles found</p><button className="flex items-center gap-2 text-[8px] font-black uppercase tracking-wider text-slate-600">Sort by <span className="text-cyan-300">Overall rating</span><ChevronDown size={11}/></button></div>
 
       <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">{filtered.map(player=><PlayerGameCard key={player.id} player={player}/>)}</div>
       {filtered.length === 0 && <div className="glass mt-4 flex min-h-72 flex-col items-center justify-center rounded-2xl text-center"><Crosshair size={28} className="text-slate-700"/><p className="mt-4 text-xs font-black uppercase">No players detected</p><p className="mt-1 text-[9px] text-slate-600">Adjust your squad filters to widen the scan.</p></div>}
