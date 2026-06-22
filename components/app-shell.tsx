@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
+  BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
   FileSignature, Gamepad2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
   LockKeyhole, Menu, Newspaper, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
 } from "lucide-react";
@@ -22,6 +22,7 @@ const nav = [
 
 const ecosystem = [
   { href: "/clubs", label: "Club Network", icon: Building2 },
+  { href: "/rankings", label: "Market Rankings", icon: BarChart3 },
   { href: "/competition", label: "Agent League", icon: Trophy },
   { href: "/investors", label: "Investor Hub", icon: Landmark },
   { href: "/academies", label: "Academies", icon: GraduationCap },
