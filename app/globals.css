@@ -29,6 +29,19 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
 }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 82% 16% at 50% 0%, rgba(146, 207, 255, .22), transparent 70%),
+    repeating-linear-gradient(102deg, transparent 0 7.5%, rgba(89, 188, 255, .085) 8.2%, transparent 9.6% 16%),
+    linear-gradient(180deg, rgba(255,255,255,.02), transparent 38%);
+  filter: blur(.2px);
+  opacity: .82;
+}
 button, a, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
@@ -79,6 +92,87 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   filter: blur(9px);
   transform: perspective(600px) rotateX(58deg);
   animation: stadium-sweep 13s ease-in-out infinite alternate;
+}
+.stadium-skyline {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: -1;
+  height: 270px;
+  pointer-events: none;
+  opacity: .72;
+  background:
+    radial-gradient(ellipse at 50% 118%, rgba(163,255,18,.16), transparent 45%),
+    linear-gradient(to top, rgba(2,5,10,.95), rgba(2,5,10,.72) 50%, transparent),
+    repeating-linear-gradient(90deg, transparent 0 38px, rgba(200,215,232,.055) 39px 41px, transparent 42px 80px);
+  mask-image: linear-gradient(to top, black 0 70%, transparent);
+}
+.stadium-skyline::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 36px;
+  width: min(980px, 92vw);
+  height: 180px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(34,211,238,.16);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 62% 62% 0 0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 34px),
+    radial-gradient(ellipse at 50% 100%, rgba(34,211,238,.15), transparent 60%);
+  box-shadow:
+    0 -28px 70px rgba(34,211,238,.08),
+    inset 0 24px 80px rgba(34,211,238,.04);
+}
+.stadium-skyline::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: min(780px, 80vw);
+  height: 70px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 1px solid rgba(163,255,18,.13);
+  background:
+    linear-gradient(90deg, transparent, rgba(163,255,18,.08), transparent),
+    repeating-linear-gradient(90deg, transparent 0 56px, rgba(163,255,18,.09) 56px 58px, transparent 58px 112px);
+  filter: blur(.2px);
+}
+.stadium-light {
+  position: fixed;
+  top: 72px;
+  z-index: -1;
+  width: 260px;
+  height: 470px;
+  pointer-events: none;
+  opacity: .38;
+  filter: blur(1px);
+  background:
+    linear-gradient(to bottom, rgba(210,242,255,.42), rgba(34,211,238,.08) 36%, transparent 78%);
+  clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
+  mix-blend-mode: screen;
+  animation: floodlight-breathe 6s ease-in-out infinite alternate;
+}
+.stadium-light-left { left: 16%; transform: skewX(-10deg) rotate(10deg); }
+.stadium-light-right { right: 10%; transform: skewX(10deg) rotate(-12deg); animation-delay: 1.2s; }
+.football-orb {
+  position: fixed;
+  right: 5vw;
+  bottom: 12vh;
+  z-index: -1;
+  width: 150px;
+  height: 150px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.07);
+  opacity: .2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.18), transparent 18%),
+    repeating-conic-gradient(from 18deg, rgba(255,255,255,.09) 0 8deg, transparent 8deg 18deg),
+    radial-gradient(circle at 50% 50%, rgba(34,211,238,.18), rgba(3,8,15,.2) 58%, transparent 60%);
+  box-shadow: 0 0 80px rgba(34,211,238,.16);
+  animation: ball-drift 9s ease-in-out infinite;
 }
 .arena-bg > * { position: relative; z-index: 1; }
 .arena-bg:has(main)::before { opacity: .96; }
@@ -313,8 +407,134 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 .number-glow { text-shadow: 0 0 30px rgba(255,255,255,.12); }
 .console-shell {
   background:
-    radial-gradient(ellipse 70% 40% at 60% -12%, rgba(22,119,255,.12), transparent 72%),
+    radial-gradient(ellipse 70% 40% at 60% -12%, rgba(22,119,255,.2), transparent 72%),
+    radial-gradient(ellipse 36% 24% at 86% 16%, rgba(163,255,18,.075), transparent 72%),
     linear-gradient(180deg, rgba(255,255,255,.018), transparent 13%);
+}
+.career-stage {
+  position: relative;
+  overflow: hidden;
+  min-height: 420px;
+  border-radius: 34px;
+  background:
+    linear-gradient(112deg, rgba(4,10,18,.98), rgba(6,18,31,.92) 44%, rgba(8,30,45,.72)),
+    radial-gradient(ellipse at 72% 18%, rgba(34,211,238,.24), transparent 40%),
+    radial-gradient(ellipse at 100% 100%, rgba(163,255,18,.11), transparent 42%);
+}
+.career-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.82), transparent 42%, rgba(2,5,10,.25)),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 88px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 74px);
+  mask-image: linear-gradient(to bottom, black 0 64%, transparent 100%);
+  pointer-events: none;
+}
+.career-stage::after {
+  content: "";
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: -34%;
+  height: 52%;
+  border: 1px solid rgba(34,211,238,.2);
+  border-radius: 50% 50% 0 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(163,255,18,.11), transparent 60%),
+    linear-gradient(90deg, transparent, rgba(34,211,238,.13), transparent);
+  filter: blur(.3px);
+  pointer-events: none;
+}
+.career-stage .stadium-stands {
+  position: absolute;
+  right: -7%;
+  bottom: -16%;
+  width: min(760px, 70%);
+  height: 78%;
+  opacity: .64;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 105%, rgba(163,255,18,.12), transparent 40%),
+    repeating-radial-gradient(ellipse at 50% 100%, rgba(255,255,255,.055) 0 1px, transparent 1px 19px);
+  border-radius: 55% 55% 0 0;
+  mask-image: linear-gradient(70deg, transparent 0 8%, black 32%, black 80%, transparent);
+}
+.career-stage .pitch-lines {
+  position: absolute;
+  inset: auto 6% -16% 6%;
+  height: 42%;
+  pointer-events: none;
+  opacity: .6;
+  background:
+    radial-gradient(ellipse at 50% 0%, transparent 0 22%, rgba(163,255,18,.18) 22.5% 23.3%, transparent 24%),
+    linear-gradient(90deg, transparent 49.7%, rgba(163,255,18,.18) 50%, transparent 50.3%),
+    repeating-linear-gradient(90deg, transparent 0 108px, rgba(163,255,18,.11) 109px 111px, transparent 112px 220px);
+  transform: perspective(700px) rotateX(62deg);
+}
+.mode-tile {
+  position: relative;
+  overflow: hidden;
+  min-height: 124px;
+  border-radius: 24px;
+  border: 1px solid rgba(200, 215, 232, .12);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.09), rgba(255,255,255,.025) 52%, rgba(0,0,0,.12)),
+    radial-gradient(circle at 85% 12%, var(--mode-glow, rgba(34,211,238,.22)), transparent 42%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 20px 60px rgba(0,0,0,.24);
+  transition: transform .42s cubic-bezier(.16,1,.3,1), border-color .42s ease, box-shadow .42s ease, filter .42s ease;
+}
+.mode-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(115deg, transparent 18%, rgba(255,255,255,.13) 45%, transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.035), transparent 34%);
+  transform: translateX(-130%);
+  transition: transform .9s cubic-bezier(.16,1,.3,1);
+  mix-blend-mode: screen;
+}
+.mode-tile:hover {
+  transform: translateY(-9px) scale(1.025);
+  border-color: rgba(34,211,238,.38);
+  filter: saturate(1.18) brightness(1.06);
+  box-shadow: 0 28px 86px rgba(0,0,0,.5), 0 0 40px var(--mode-glow, rgba(34,211,238,.14));
+}
+.mode-tile:hover::before { transform: translateX(120%); }
+.mode-tile-active {
+  border-color: rgba(163,255,18,.4);
+  background:
+    linear-gradient(145deg, rgba(163,255,18,.16), rgba(34,211,238,.07) 52%, rgba(0,0,0,.16)),
+    radial-gradient(circle at 86% 14%, rgba(163,255,18,.34), transparent 45%);
+}
+.console-title {
+  letter-spacing: -.085em;
+  text-shadow: 0 0 42px rgba(34,211,238,.22), 0 8px 38px rgba(0,0,0,.52);
+}
+.stadium-scoreboard {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(34,211,238,.18);
+  background:
+    linear-gradient(180deg, rgba(5,16,30,.82), rgba(0,0,0,.34)),
+    radial-gradient(circle at 50% 0%, rgba(34,211,238,.18), transparent 45%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 26px 80px rgba(0,0,0,.36);
+}
+.stadium-scoreboard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(to bottom, rgba(255,255,255,.035) 0 1px, transparent 1px 5px);
+  opacity: .38;
+  pointer-events: none;
+}
+.xp-ribbon {
+  background: linear-gradient(90deg, rgba(163,255,18,.18), rgba(34,211,238,.12), rgba(247,198,93,.12));
+  border: 1px solid rgba(163,255,18,.22);
+  box-shadow: 0 0 28px rgba(163,255,18,.08), inset 0 1px 0 rgba(255,255,255,.08);
 }
 .console-sidebar {
   box-shadow: inset -1px 0 0 rgba(255,255,255,.035), 18px 0 80px rgba(0,0,0,.28);
@@ -399,6 +619,8 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 @keyframes ring-spin { to { transform: rotate(360deg); } }
 @keyframes skeleton-sweep { to { transform: translateX(100%); } }
 @keyframes status-scan { 0%,15% { left:-60%; } 65%,100% { left:120%; } }
+@keyframes floodlight-breathe { from { opacity: .22; transform: translateY(-6px) scaleX(.92); } to { opacity: .48; transform: translateY(4px) scaleX(1.08); } }
+@keyframes ball-drift { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-18px) rotate(18deg); } }
 
 @media (hover: none) {
   .glass-hover:hover, .player-card:hover { transform: none; }
