@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
   FileSignature, Globe2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
-  LockKeyhole, Menu, Newspaper, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
+  LockKeyhole, Menu, Newspaper, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "./logo";
@@ -23,6 +23,7 @@ const nav = [
 const ecosystem = [
   { href: "/clubs", label: "Club Network", icon: Building2 },
   { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
+  { href: "/radar", label: "Market Radar", icon: Radar, count: 9 },
   { href: "/competition", label: "Agent League", icon: Trophy },
   { href: "/investors", label: "Investor Hub", icon: Landmark },
   { href: "/academies", label: "Academies", icon: GraduationCap },
@@ -44,6 +45,7 @@ const consoleModes = [
   { href: "/scouting", label: "Scouting Center", eyebrow: "Discovery", icon: Binoculars },
   { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },
   { href: "/rankings", label: "Market Intel", eyebrow: "Rankings", icon: BarChart3 },
+  { href: "/radar", label: "Market Radar", eyebrow: "Rumors", icon: Radar },
   { href: "/inbox", label: "Messages", eyebrow: "Comms", icon: Inbox },
 ];
 
