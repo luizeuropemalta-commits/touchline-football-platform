@@ -55,6 +55,40 @@ Without Supabase environment variables the app starts in preview mode: authentic
 - Stripe Customer Portal handles plan switching, upgrades, downgrades, cancellation and payment method updates.
 - Supabase row-level security lets users read their own billing state while service-role webhooks perform authoritative writes.
 
+## Free football data demo sync
+
+Touchline is prepared for daily player-data sync. For a free/demo setup, use API-Football by API-SPORTS.
+
+1. Create a free API-Football account.
+2. Copy your API key.
+3. Add these variables in Vercel:
+
+   ```bash
+   API_FOOTBALL_KEY=
+   API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
+   API_FOOTBALL_SEASON=2025
+   MARKET_SYNC_SECRET=
+   CRON_SECRET=
+   ```
+
+4. In Supabase, apply:
+
+   ```text
+   supabase/migrations/004_external_market_sync.sql
+   ```
+
+5. For each player you want to sync, set:
+
+   ```text
+   external_market_provider = api-football
+   external_market_player_id = the API-Football player ID
+   external_market_url = optional public profile/reference URL
+   ```
+
+6. Vercel Cron calls `/api/market-sync` daily.
+
+API-Football free/demo data is good for testing player identity, club, season stats and profile enrichment. Market values like Transfermarkt may require a premium or licensed data provider.
+
 ## Production launch guide
 
 This section is the step-by-step checklist for launching Touchline online without rebuilding the app from scratch.
@@ -147,10 +181,15 @@ Use this URL anywhere the app needs a public callback, return URL or webhook URL
    ```bash
    NEXT_PUBLIC_SUPABASE_URL=
    NEXT_PUBLIC_SUPABASE_ANON_KEY=
+   NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=false
    SUPABASE_SERVICE_ROLE_KEY=
    ```
 
 6. Redeploy Vercel after adding or changing Supabase variables.
+
+The app is a Next.js app and reads Supabase from `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Do not use `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` for this project.
+
+Set `NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=false` unless Google is enabled inside Supabase Auth Providers. When Google is ready, switch it to `true` and redeploy.
 
 ### 4. Connect Stripe test mode
 
@@ -213,6 +252,7 @@ Use these values in Vercel for the temporary preview deployment:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=false
 SUPABASE_SERVICE_ROLE_KEY=
 
 NEXT_PUBLIC_APP_URL=https://touchline-platform.vercel.app
@@ -401,6 +441,7 @@ Add these in Vercel Project Settings → Environment Variables.
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_ENABLE_GOOGLE_AUTH=false
 SUPABASE_SERVICE_ROLE_KEY=
 
 NEXT_PUBLIC_APP_URL=https://yourdomain.com
