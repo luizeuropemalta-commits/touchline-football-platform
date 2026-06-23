@@ -40,6 +40,16 @@ type TouchlinePlayerOption = {
   externalUrl?: string | null;
 };
 
+type LinkPreview = {
+  ok?: boolean;
+  url?: string;
+  title?: string | null;
+  description?: string | null;
+  image?: string | null;
+  siteName?: string | null;
+  error?: string;
+};
+
 function titleFromTransfermarktUrl(profileUrl: string, fallback: string) {
   try {
     const url = new URL(profileUrl);
@@ -78,6 +88,9 @@ export function PlayerApiSearch() {
   const [transfermarktTarget, setTransfermarktTarget] = useState("__create__");
   const [savingTransfermarkt, setSavingTransfermarkt] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
+  const [loadingLinkPreview, setLoadingLinkPreview] = useState(false);
+  const [autoPreviewPhotoUrl, setAutoPreviewPhotoUrl] = useState("");
 
   useEffect(() => {
     void loadProfiles();
@@ -89,6 +102,9 @@ export function PlayerApiSearch() {
     : "https://www.transfermarkt.com/";
   const transfermarktPreviewTitle = titleFromTransfermarktUrl(transfermarktProfileUrl, transfermarktPlayerName || trimmedQuery);
   const transfermarktPreviewId = transfermarktIdFromUrl(transfermarktProfileUrl);
+  const previewTitle = linkPreview?.title || transfermarktPreviewTitle;
+  const previewDescription = linkPreview?.description || "Transfermarkt player profile";
+  const previewSiteName = linkPreview?.siteName || "transfermarkt.com";
 
   async function loadProfiles() {
     setProfilesLoading(true);
@@ -104,6 +120,42 @@ export function PlayerApiSearch() {
       setProfilesLoading(false);
     }
   }
+
+  useEffect(() => {
+    const url = transfermarktProfileUrl.trim();
+    if (!url || !url.startsWith("https://")) {
+      setLinkPreview(null);
+      setLoadingLinkPreview(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeout = window.setTimeout(async () => {
+      setLoadingLinkPreview(true);
+      try {
+        const response = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
+        const data = (await response.json()) as LinkPreview;
+        if (cancelled) return;
+        setLinkPreview(data);
+
+        if (data.ok && data.image && (!transfermarktPhotoUrl || transfermarktPhotoUrl === autoPreviewPhotoUrl)) {
+          setTransfermarktPhotoUrl(data.image);
+          setAutoPreviewPhotoUrl(data.image);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLinkPreview({ ok: false, error: err instanceof Error ? err.message : "Preview unavailable." });
+        }
+      } finally {
+        if (!cancelled) setLoadingLinkPreview(false);
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [transfermarktProfileUrl, transfermarktPhotoUrl, autoPreviewPhotoUrl]);
 
   function openTransfermarktSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -162,6 +214,7 @@ export function PlayerApiSearch() {
       });
       const data = (await response.json()) as { ok?: boolean; photoUrl?: string; error?: string };
       if (!response.ok || !data.ok || !data.photoUrl) throw new Error(data.error || "Não consegui enviar a foto.");
+      setAutoPreviewPhotoUrl("");
       setTransfermarktPhotoUrl(data.photoUrl);
       setSaveMessage("Foto enviada. Agora clica em “Salvar no banco” para gravar no perfil do atleta.");
     } catch (err) {
@@ -333,8 +386,11 @@ export function PlayerApiSearch() {
             <div className="space-y-3">
               <Input
                 value={transfermarktPhotoUrl}
-                onChange={(event) => setTransfermarktPhotoUrl(event.target.value)}
-                placeholder="Foto HTTPS autorizada/opcional ou envia do computador abaixo"
+                onChange={(event) => {
+                  setAutoPreviewPhotoUrl("");
+                  setTransfermarktPhotoUrl(event.target.value);
+                }}
+                placeholder="Foto do preview aparece automática; ou cola/envia foto aqui"
               />
               <label className={`relative flex min-h-12 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-2xl border border-cyan-200/18 bg-white/[.055] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[.085] ${uploadingPhoto ? "pointer-events-none opacity-60" : ""}`}>
                 {uploadingPhoto ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
@@ -381,23 +437,29 @@ export function PlayerApiSearch() {
                     <img src={transfermarktPhotoUrl} alt={transfermarktPreviewTitle} className="h-full w-full object-cover object-top" />
                   ) : (
                     <div className="flex h-full min-h-44 flex-col items-center justify-center gap-3 text-center text-cyan-200/70">
-                      <ImageIcon size={28} />
+                      {loadingLinkPreview ? <Loader2 size={28} className="animate-spin" /> : <ImageIcon size={28} />}
                       <p className="max-w-28 text-[8px] font-black uppercase leading-4 tracking-[.18em]">
-                        Foto autorizada aparece aqui
+                        {loadingLinkPreview ? "Buscando preview" : "Sem imagem pública no preview"}
                       </p>
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
                   <div className="absolute left-3 top-3 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em] text-[#caff72]">
-                    Link preview
+                    {transfermarktPhotoUrl && transfermarktPhotoUrl === autoPreviewPhotoUrl ? "Preview público" : "Link preview"}
                   </div>
                 </div>
                 <div className="p-5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.16em] text-cyan-100">
                       <Link2 size={11} />
-                      transfermarkt.com
+                      {previewSiteName}
                     </span>
+                    {loadingLinkPreview && (
+                      <span className="inline-flex items-center gap-2 rounded-full border border-white/[.08] bg-white/[.035] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.16em] text-slate-400">
+                        <Loader2 size={10} className="animate-spin" />
+                        lendo preview
+                      </span>
+                    )}
                     {transfermarktPreviewId && (
                       <span className="rounded-full border border-white/[.08] bg-white/[.035] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.16em] text-slate-400">
                         Player ID #{transfermarktPreviewId}
@@ -405,9 +467,15 @@ export function PlayerApiSearch() {
                     )}
                   </div>
                   <h4 className="mt-4 text-2xl font-black uppercase italic tracking-[-.04em] text-white">
-                    {transfermarktPreviewTitle}
+                    {previewTitle}
                   </h4>
-                  <p className="mt-2 break-all text-[10px] font-bold leading-5 text-slate-500">{transfermarktProfileUrl}</p>
+                  <p className="mt-2 text-[10px] font-bold leading-5 text-slate-500">{previewDescription}</p>
+                  <p className="mt-2 break-all text-[10px] font-bold leading-5 text-slate-600">{transfermarktProfileUrl}</p>
+                  {linkPreview?.ok === false && (
+                    <p className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[.055] px-3 py-2 text-[8px] font-bold uppercase leading-4 tracking-wider text-amber-100/75">
+                      O site bloqueou o preview automático agora. Se isso acontecer, envia uma foto do computador.
+                    </p>
+                  )}
                   <div className="mt-5 flex flex-wrap gap-2">
                     <a
                       href={transfermarktProfileUrl}
