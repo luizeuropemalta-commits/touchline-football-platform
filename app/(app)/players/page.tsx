@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ChevronDown, Crosshair, Crown, Plus, Search, ShieldCheck, SlidersHorizontal, Sparkles, Trophy, Users } from "lucide-react";
+import { ChevronDown, Crosshair, Crown, DatabaseZap, Plus, Search, ShieldCheck, SlidersHorizontal, Sparkles, Trophy, Users } from "lucide-react";
 import { players } from "@/lib/demo-data";
 import { Button } from "@/components/ui";
 import { Meter, PlayerGameCard } from "@/components/game-ui";
@@ -26,7 +27,14 @@ export default function PlayersPage() {
             <p className="af-mode-kicker">Touchline / Player Portfolio</p>
             <h1 className="af-mode-title font-display mt-3 text-white">Player Portfolio</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300/80">Manage profiles, performance, video, contracts, documents, transfer status and career progression from one premium football vault.</p>
-            <div className="mt-8 flex flex-wrap gap-3"><Button><Plus size={14}/>Add Player</Button><Button variant="secondary"><Sparkles size={14}/>AI Profile Builder</Button></div>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button><Plus size={14}/>Add Player</Button>
+              <Button variant="secondary"><Sparkles size={14}/>AI Profile Builder</Button>
+              <Link href="/players/api-search" className="relative inline-flex h-11 items-center justify-center gap-2 overflow-hidden rounded-2xl border border-cyan-200/18 bg-white/[.055] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[.085]">
+                <DatabaseZap size={14}/>
+                API-Football Search
+              </Link>
+            </div>
           </div>
           <div className="stadium-scoreboard p-5">
             <div className="relative z-10 flex items-start justify-between">
