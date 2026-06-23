@@ -10,12 +10,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "./logo";
+import { PlayerDatabaseSearch } from "./player-database-search";
 import { cn } from "@/lib/utils";
 import { canAccess, featureForPath, planMap, type PlanKey } from "@/lib/billing/plans";
 
 const nav = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/players", label: "Player Portfolio", icon: Users },
+  { href: "/players/database", label: "Player Database", icon: Search },
   { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
   { href: "/opportunities", label: "Opportunities", icon: Target },
   { href: "/deals", label: "Deal Rooms", icon: Zap, count: 7 },
@@ -44,6 +46,7 @@ const operations = [
 const consoleModes = [
   { href: "/dashboard", label: "Command Center", eyebrow: "HQ", icon: Globe2 },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
+  { href: "/players/database", label: "Player Database", eyebrow: "Search", icon: Search },
   { href: "/verification", label: "Verification", eyebrow: "Trust", icon: BadgeCheck },
   { href: "/opportunities", label: "Opportunities", eyebrow: "AI Match", icon: Target },
   { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
@@ -58,8 +61,14 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  const isActivePath = (href: string) => {
+    if (href === "/dashboard") return pathname === href;
+    if (href === "/players") return pathname === "/players" || (pathname.startsWith("/players/") && !pathname.startsWith("/players/database"));
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   const navLink = ({ href, label, icon: Icon, count }: (typeof nav)[number]) => {
-    const active = pathname === href || (href === "/players" && pathname.startsWith("/players/"));
+    const active = isActivePath(href);
     const feature = featureForPath(href);
     const locked = Boolean(feature && !canAccess(planKey, feature));
     const destination = locked ? `/upgrade?feature=${feature}&from=${encodeURIComponent(href)}` : href;
@@ -130,9 +139,8 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
           <button aria-label="Open menu" onClick={() => setOpen(true)} className="mr-4 text-slate-300 lg:hidden"><Menu size={21}/></button>
           <div className="hidden lg:block"><Logo light /></div>
         <div className="ml-5 hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600 md:flex"><Globe2 size={14} className="text-cyan-400"/><span>Global Football Network</span><span className="mx-2 h-3 w-px bg-white/10"/><span className="text-slate-400">Beta HQ</span></div>
-          <div className="relative ml-auto hidden w-full max-w-[330px] md:block">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"/>
-            <input placeholder="Search the football world..." className="console-chip h-10 w-full rounded-xl border border-white/[.08] bg-white/[.035] pl-9 pr-3 text-[10px] text-slate-200 outline-none transition placeholder:text-slate-700 focus:border-cyan-300/30"/>
+          <div className="relative ml-auto hidden w-full max-w-[420px] md:block">
+            <PlayerDatabaseSearch mode="compact" />
           </div>
           <div className="ml-auto flex items-center gap-2 md:ml-3">
             <div className="console-chip hidden items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[.06] px-3 py-2 sm:flex"><Sparkles size={12} className="text-amber-300"/><span className="text-[9px] font-black text-amber-200">12,450</span></div>
@@ -142,7 +150,7 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
         </header>
         <nav className="console-mode-dock">
           {consoleModes.map(({ href, label, eyebrow, icon: Icon }) => {
-            const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+            const active = isActivePath(href);
             const feature = featureForPath(href);
             const locked = Boolean(feature && !canAccess(planKey, feature));
             const destination = locked ? `/upgrade?feature=${feature}&from=${encodeURIComponent(href)}` : href;

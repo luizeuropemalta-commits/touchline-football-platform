@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLinkPreview } from "@/lib/link-preview";
+import { upsertGlobalPlayerProfile } from "@/lib/player-database";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -181,6 +182,19 @@ export async function POST(request: Request) {
       source_updated_at: new Date().toISOString(),
       raw_payload: externalPayload,
     });
+
+    await upsertGlobalPlayerProfile(admin, {
+      url: profileUrl,
+      preview,
+      playerName,
+      photoUrl,
+      source: "player_profile_link",
+      payload: {
+        agencyId,
+        localPlayerId: targetPlayerId,
+        linkedBy: user.id,
+      },
+    }).catch(() => null);
 
     return NextResponse.json({
       ok: true,

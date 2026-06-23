@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLinkPreview, getDomain, getTransfermarktPlayerId, validatePreviewUrl } from "@/lib/link-preview";
+import { upsertGlobalPlayerProfile } from "@/lib/player-database";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     const preview = await fetchLinkPreview(target);
     const url = target.toString();
     const sourceDomain = getDomain(url);
+    const transfermarktPlayerId = getTransfermarktPlayerId(url);
 
     const { data, error } = await admin
       .from("market_radar_links")
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
           description: preview.description,
           image_url: preview.image,
           site_name: preview.siteName,
-          transfermarkt_player_id: getTransfermarktPlayerId(url),
+          transfermarkt_player_id: transfermarktPlayerId,
           tags: normalizeTags(body.tags),
           note: body.note?.trim() || null,
           status: "active",
@@ -103,6 +105,20 @@ export async function POST(request: Request) {
       .single();
 
     if (error) throw new Error(error.message);
+
+    if (transfermarktPlayerId) {
+      await upsertGlobalPlayerProfile(admin, {
+        url,
+        preview,
+        source: "market_radar",
+        payload: {
+          agencyId,
+          radarLinkId: data.id,
+          category: data.category,
+          savedBy: user.id,
+        },
+      }).catch(() => null);
+    }
 
     return NextResponse.json({ ok: true, link: data, preview });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchLinkPreview, getTransfermarktPlayerId, validatePreviewUrl } from "@/lib/link-preview";
+import { upsertGlobalPlayerProfile } from "@/lib/player-database";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -225,6 +226,24 @@ export async function POST(request: Request) {
         source_updated_at: new Date().toISOString(),
         raw_payload: externalPayload,
       });
+
+      await upsertGlobalPlayerProfile(admin, {
+        url: transfermarktProfile,
+        playerName: fullName,
+        photoUrl,
+        currentClub,
+        position: cleanText(body.position, 80),
+        nationality: cleanCountry(body.nationality),
+        dateOfBirth: cleanDate(body.dateOfBirth),
+        marketValue: cleanNumber(body.marketValue),
+        currency: cleanText(body.currency, 3).toUpperCase() || "EUR",
+        source: "player_create",
+        payload: {
+          agencyId,
+          localPlayerId: player.id,
+          createdBy: user.id,
+        },
+      }).catch(() => null);
     }
 
     return NextResponse.json({ ok: true, playerId: player.id, photoUrl });
