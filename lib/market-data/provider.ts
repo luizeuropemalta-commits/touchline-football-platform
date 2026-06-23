@@ -1,3 +1,5 @@
+import { getApiFootballSeason } from "@/lib/market-data/season";
+
 export type ExternalMarketPlayer = {
   provider: string;
   providerPlayerId: string;
@@ -114,7 +116,7 @@ async function fetchApiFootballPlayer(params: {
 }): Promise<MarketSyncResult> {
   const apiKey = process.env.API_FOOTBALL_KEY ?? process.env.APISPORTS_KEY;
   const baseUrl = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
-  const season = process.env.API_FOOTBALL_SEASON ?? String(new Date().getFullYear());
+  const season = getApiFootballSeason(process.env.API_FOOTBALL_SEASON);
 
   if (!apiKey) {
     return {
