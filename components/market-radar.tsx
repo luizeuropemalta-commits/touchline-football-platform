@@ -240,18 +240,30 @@ export function MarketRadar() {
           </div>
 
           <div className="overflow-hidden rounded-3xl border border-white/[.1] bg-[#0b1521]/80 shadow-[0_22px_80px_rgba(0,0,0,.35)] backdrop-blur-xl">
-            <div className="relative min-h-56 overflow-hidden bg-gradient-to-br from-cyan-300/[.12] via-slate-950 to-[#a3ff12]/[.08]">
-              {previewImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewImage} alt={previewTitle} className="h-56 w-full object-cover object-top opacity-85" />
-              ) : (
-                <div className="grid min-h-56 place-items-center text-cyan-200/70">
-                  {loadingPreview ? <Loader2 size={32} className="animate-spin" /> : <Newspaper size={32} />}
+            <div className="relative overflow-hidden bg-gradient-to-br from-cyan-300/[.12] via-slate-950 to-[#a3ff12]/[.08] p-5">
+              <div className="flex items-start gap-4">
+                <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-2xl border border-white/[.12] bg-black/30 shadow-[0_18px_45px_rgba(0,0,0,.35)]">
+                  {previewImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={previewImage} alt={previewTitle} className="h-full w-full object-cover object-top opacity-95" />
+                  ) : (
+                    <div className="grid h-full place-items-center text-cyan-200/70">
+                      {loadingPreview ? <Loader2 size={24} className="animate-spin" /> : <Newspaper size={24} />}
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/70 to-transparent" />
                 </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
-              <div className="absolute left-4 top-4 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 py-1.5 text-[8px] font-black uppercase tracking-[.16em] text-[#caff72]">
-                {loadingPreview ? "Lendo preview" : "Preview público"}
+                <div className="min-w-0 flex-1 pt-1">
+                  <div className="inline-flex rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 py-1.5 text-[8px] font-black uppercase tracking-[.16em] text-[#caff72]">
+                    {loadingPreview ? "Lendo preview" : "Foto pequena"}
+                  </div>
+                  <p className="mt-3 text-[9px] font-bold uppercase tracking-[.18em] text-slate-500">
+                    Estilo perfil Transfermarkt
+                  </p>
+                  <p className="mt-2 text-[10px] leading-5 text-slate-400">
+                    A imagem fica salva como link público, mas aparece no Touchline em miniatura profissional.
+                  </p>
+                </div>
               </div>
             </div>
             <div className="p-5">
@@ -317,37 +329,43 @@ export function MarketRadar() {
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
               {filteredLinks.map((link) => (
-                <article key={link.id} className="group overflow-hidden rounded-3xl border border-white/[.08] bg-white/[.025] transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[.04]">
-                  <div className="relative h-44 overflow-hidden bg-cyan-300/[.04]">
-                    {link.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={link.image_url} alt={link.title ?? "Radar link"} className="h-full w-full object-cover object-top opacity-85 transition duration-500 group-hover:scale-105" />
-                    ) : (
-                      <div className="grid h-full place-items-center text-cyan-300/40">
-                        <Newspaper size={28} />
+                <article key={link.id} className="group rounded-3xl border border-white/[.08] bg-white/[.025] p-4 transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[.04]">
+                  <div className="flex gap-4">
+                    <div className="relative h-28 w-20 shrink-0 overflow-hidden rounded-2xl border border-white/[.1] bg-cyan-300/[.04] shadow-[0_14px_38px_rgba(0,0,0,.25)]">
+                      {link.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={link.image_url} alt={link.title ?? "Radar link"} className="h-full w-full object-cover object-top opacity-95 transition duration-500 group-hover:scale-105" />
+                      ) : (
+                        <div className="grid h-full place-items-center text-cyan-300/40">
+                          <Newspaper size={22} />
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#07111b]/90 to-transparent" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em] ${categoryColors[link.category] ?? categoryColors.other}`}>
+                          {categoryLabel(link.category)}
+                        </span>
+                        {link.transfermarkt_player_id && (
+                          <span className="rounded-full border border-white/[.08] px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em] text-slate-500">
+                            TM #{link.transfermarkt_player_id}
+                          </span>
+                        )}
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
-                    <span className={`absolute left-3 top-3 rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em] ${categoryColors[link.category] ?? categoryColors.other}`}>
-                      {categoryLabel(link.category)}
-                    </span>
+                      <p className="mt-3 flex items-center gap-2 text-[8px] font-black uppercase tracking-[.16em] text-cyan-300">
+                        <Link2 size={11} />
+                        {link.site_name ?? link.source_domain ?? safeHostname(link.url)}
+                      </p>
+                      <h3 className="mt-2 line-clamp-2 text-base font-black uppercase italic text-white">{link.title ?? "External link"}</h3>
+                      <p className="mt-2 line-clamp-2 text-[9px] leading-5 text-slate-500">{link.description ?? link.url}</p>
+                    </div>
                   </div>
-                  <div className="p-4">
-                    <p className="flex items-center gap-2 text-[8px] font-black uppercase tracking-[.16em] text-cyan-300">
-                      <Link2 size={11} />
-                      {link.site_name ?? link.source_domain ?? safeHostname(link.url)}
-                    </p>
-                    <h3 className="mt-2 line-clamp-2 text-base font-black uppercase italic text-white">{link.title ?? "External link"}</h3>
-                    <p className="mt-2 line-clamp-2 text-[9px] leading-5 text-slate-500">{link.description ?? link.url}</p>
+                  <div className="mt-4">
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <a href={link.url} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 text-[8px] font-black uppercase tracking-wider text-[#caff72] transition hover:bg-[#a3ff12]/15">
                         Abrir fonte <ExternalLink size={12} />
                       </a>
-                      {link.transfermarkt_player_id && (
-                        <span className="inline-flex h-9 items-center rounded-xl border border-white/[.08] px-3 text-[8px] font-black uppercase tracking-wider text-slate-500">
-                          TM #{link.transfermarkt_player_id}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </article>
