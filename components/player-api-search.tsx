@@ -40,7 +40,7 @@ type TouchlinePlayerOption = {
 
 export function PlayerApiSearch() {
   const [query, setQuery] = useState("");
-  const [season, setSeason] = useState("2025");
+  const [season, setSeason] = useState(() => String(new Date().getFullYear()));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -157,6 +157,9 @@ export function PlayerApiSearch() {
             Search
           </Button>
         </form>
+        <p className="mt-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600">
+          Season auto-updates to the current year. You can still change it manually if a league uses a different season code.
+        </p>
 
         {error && (
           <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] px-4 py-3 text-xs leading-6 text-amber-100/80">
