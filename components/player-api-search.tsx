@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Check, Copy, DatabaseZap, ExternalLink, ImageIcon, Link2, Loader2, PlusCircle, Save, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, Copy, DatabaseZap, ExternalLink, ImageIcon, Link2, Loader2, PlusCircle, Save, Search, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, Meter, SectionHeader } from "@/components/game-ui";
 
@@ -77,6 +77,7 @@ export function PlayerApiSearch() {
   const [transfermarktPhotoUrl, setTransfermarktPhotoUrl] = useState("");
   const [transfermarktTarget, setTransfermarktTarget] = useState("__create__");
   const [savingTransfermarkt, setSavingTransfermarkt] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     void loadProfiles();
@@ -144,6 +145,30 @@ export function PlayerApiSearch() {
     if (!id) return;
     await navigator.clipboard.writeText(String(id));
     setCopiedId(id);
+  }
+
+  async function uploadPlayerPhoto(file?: File | null) {
+    if (!file) return;
+    setUploadingPhoto(true);
+    setError("");
+    setSaveMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/players/photo-upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await response.json()) as { ok?: boolean; photoUrl?: string; error?: string };
+      if (!response.ok || !data.ok || !data.photoUrl) throw new Error(data.error || "Não consegui enviar a foto.");
+      setTransfermarktPhotoUrl(data.photoUrl);
+      setSaveMessage("Foto enviada. Agora clica em “Salvar no banco” para gravar no perfil do atleta.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao enviar foto.");
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   async function saveDirectToProfile(player: ApiFootballPlayer) {
@@ -309,8 +334,22 @@ export function PlayerApiSearch() {
               <Input
                 value={transfermarktPhotoUrl}
                 onChange={(event) => setTransfermarktPhotoUrl(event.target.value)}
-                placeholder="Foto HTTPS autorizada/opcional"
+                placeholder="Foto HTTPS autorizada/opcional ou envia do computador abaixo"
               />
+              <label className={`relative flex min-h-12 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-2xl border border-cyan-200/18 bg-white/[.055] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[.085] ${uploadingPhoto ? "pointer-events-none opacity-60" : ""}`}>
+                {uploadingPhoto ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+                {uploadingPhoto ? "Enviando foto" : "Enviar foto do computador"}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={uploadingPhoto}
+                  onChange={(event) => {
+                    void uploadPlayerPhoto(event.currentTarget.files?.[0]);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </label>
               <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                 <select
                   value={transfermarktTarget}
