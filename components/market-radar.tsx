@@ -82,12 +82,16 @@ export function MarketRadar() {
     void loadLinks();
   }, []);
 
-  useEffect(() => {
-    if (!trimmedUrl.startsWith("https://")) {
+  function updateUrl(value: string) {
+    setUrl(value);
+    if (!value.trim().startsWith("https://")) {
       setPreview(null);
       setLoadingPreview(false);
-      return;
     }
+  }
+
+  useEffect(() => {
+    if (!trimmedUrl.startsWith("https://")) return;
 
     let cancelled = false;
     const timeout = window.setTimeout(async () => {
@@ -201,7 +205,7 @@ export function MarketRadar() {
                 <Link2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
                 <Input
                   value={url}
-                  onChange={(event) => setUrl(event.target.value)}
+                  onChange={(event) => updateUrl(event.target.value)}
                   placeholder="Cola link do Transfermarkt, rumor ou notícia..."
                   className="pl-11"
                 />

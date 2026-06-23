@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, MessageCircle, Radio, Share2, Sparkles, Target, TrendingUp, Users } from "lucide-react";
+import { MessageCircle, Radio, Share2, Sparkles, Target, TrendingUp, Users } from "lucide-react";
 import { GamePanel, LivePill, SectionHeader } from "@/components/game-ui";
 import { WorkspaceState } from "@/components/workspace-state";
 import { getCurrentWorkspace } from "@/lib/server/current-workspace";

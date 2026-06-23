@@ -240,7 +240,10 @@ export const pathFeatures: Array<[string, FeatureKey]> = [
   ["/ai", "ai_assistant"],
   ["/deals", "transfer_market"],
   ["/clubs", "club_network"],
+  ["/agencies", "team_members"],
   ["/contracts", "contract_tools"],
+  ["/documents", "advanced_player_vault"],
+  ["/reports", "advanced_analytics"],
   ["/invoices", "invoice_tools"],
   ["/academies", "academy_network"],
 ];

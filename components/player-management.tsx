@@ -373,7 +373,7 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
         <div>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-600"><span className="text-slate-200">{filtered.length}</span> real player profiles found</p>
-            <button className="flex items-center gap-2 text-[8px] font-black uppercase tracking-wider text-slate-600">Sort by <span className="text-cyan-300">Updated</span><ChevronDown size={11} /></button>
+            <span className="flex items-center gap-2 text-[8px] font-black uppercase tracking-wider text-slate-600">Sorted by <span className="text-cyan-300">Updated</span><ChevronDown size={11} /></span>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">

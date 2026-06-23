@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, DatabaseZap, ExternalLink, Globe2, Loader2, Search, ShieldCheck, Sparkles, UploadCloud, UserRoundSearch } from "lucide-react";
+import { ArrowRight, DatabaseZap, ExternalLink, Globe2, Loader2, Search, ShieldCheck, UploadCloud, UserRoundSearch } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, SectionHeader } from "@/components/game-ui";
 import { cn } from "@/lib/utils";
@@ -80,13 +80,17 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const trimmed = query.trim();
   const showDropdown = mode === "compact" && focused && (trimmed.length >= 2 || results.length > 0);
 
-  useEffect(() => {
+  function updateQuery(value: string) {
+    setQuery(value);
     setError("");
-    if (trimmed.length < 2) {
+    if (value.trim().length < 2) {
       setResults([]);
       setLoading(false);
-      return;
     }
+  }
+
+  useEffect(() => {
+    if (trimmed.length < 2) return;
 
     const requestId = latestRequest.current + 1;
     latestRequest.current = requestId;
@@ -131,7 +135,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       };
       if (!response.ok || !data.ok) throw new Error(data.error || "Could not import this Transfermarkt profile.");
       setMessage("Player link imported into the Touchline searchable database.");
-      setQuery(data.profile?.player_name || data.profile?.transfermarkt_player_id || importForm.playerName || "");
+      updateQuery(data.profile?.player_name || data.profile?.transfermarkt_player_id || importForm.playerName || "");
       setImportForm(emptyImport);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not import player.");
@@ -147,7 +151,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
         <input
           value={query}
           onBlur={() => window.setTimeout(() => setFocused(false), 180)}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => updateQuery(event.target.value)}
           onFocus={() => setFocused(true)}
           placeholder="Search players database..."
           className="console-chip h-10 w-full rounded-xl border border-white/[.08] bg-white/[.035] pl-9 pr-3 text-[10px] text-slate-200 outline-none transition placeholder:text-slate-700 focus:border-cyan-300/30"
@@ -214,7 +218,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
             <p className="af-mode-kicker">Touchline / Player Database</p>
             <h1 className="af-mode-title font-display mt-3 text-white">Global Player Search</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
-              Search players from Touchline's own database first. Transfermarkt is used only by the import/sync layer to
+              Search players from Touchline&apos;s own database first. Transfermarkt is used only by the import/sync layer to
               keep saved player links, photos and profile references updated.
             </p>
 
@@ -222,7 +226,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
               <Input
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => updateQuery(event.target.value)}
                 placeholder="Type a player name, club, position, nationality or Transfermarkt ID..."
                 className="h-14 pl-12 text-base"
               />
@@ -308,7 +312,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
             <Globe2 size={30} className="text-slate-700" />
             <p className="mt-4 text-sm font-black uppercase italic text-white">Start searching the football database</p>
             <p className="mt-2 max-w-lg text-xs leading-6 text-slate-500">
-              Type part of a player name. Results come from Touchline's own database, not a live Transfermarkt request.
+              Type part of a player name. Results come from Touchline&apos;s own database, not a live Transfermarkt request.
             </p>
           </GamePanel>
         )}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BadgeCheck, BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
-  FileSignature, Globe2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
+  CalendarDays, ClipboardList, FileSignature, FileText, Globe2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
   LockKeyhole, Menu, Newspaper, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
   Target,
 } from "lucide-react";
@@ -14,32 +14,43 @@ import { PlayerDatabaseSearch } from "./player-database-search";
 import { cn } from "@/lib/utils";
 import { canAccess, featureForPath, planMap, type PlanKey } from "@/lib/billing/plans";
 
-const nav = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  count?: number;
+};
+
+const nav: NavItem[] = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/players", label: "Player Portfolio", icon: Users },
   { href: "/players/database", label: "Player Database", icon: Search },
   { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
   { href: "/opportunities", label: "Opportunities", icon: Target },
-  { href: "/deals", label: "Deal Rooms", icon: Zap, count: 7 },
+  { href: "/deals", label: "Deal Rooms", icon: Zap },
   { href: "/scouting", label: "Scouting Center", icon: Binoculars },
-  { href: "/inbox", label: "Messages", icon: Inbox, count: 5 },
+  { href: "/inbox", label: "Messages", icon: Inbox },
 ];
 
-const ecosystem = [
+const ecosystem: NavItem[] = [
   { href: "/clubs", label: "Club Network", icon: Building2 },
+  { href: "/agencies", label: "Agents & Agencies", icon: Users },
   { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
-  { href: "/radar", label: "Market Radar", icon: Radar, count: 9 },
+  { href: "/radar", label: "Market Radar", icon: Radar },
   { href: "/competition", label: "Agent League", icon: Trophy },
   { href: "/investors", label: "Investor Hub", icon: Landmark },
   { href: "/academies", label: "Academies", icon: GraduationCap },
-  { href: "/feed", label: "Football Feed", icon: Newspaper, count: 12 },
+  { href: "/feed", label: "Football Feed", icon: Newspaper },
   { href: "/ai", label: "Touchline AI", icon: Bot },
 ];
 
-const operations = [
+const operations: NavItem[] = [
   { href: "/objectives", label: "Objectives", icon: Goal },
   { href: "/achievements", label: "Achievements", icon: Trophy },
   { href: "/contracts", label: "Contracts", icon: FileSignature },
+  { href: "/documents", label: "Documents", icon: FileText },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/reports", label: "Reports", icon: ClipboardList },
   { href: "/invoices", label: "Finance", icon: CircleDollarSign },
 ];
 
@@ -52,12 +63,25 @@ const consoleModes = [
   { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
   { href: "/scouting", label: "Scouting Center", eyebrow: "Discovery", icon: Binoculars },
   { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },
+  { href: "/agencies", label: "Agencies", eyebrow: "Network", icon: Users },
   { href: "/rankings", label: "Market Intel", eyebrow: "Rankings", icon: BarChart3 },
   { href: "/radar", label: "Market Radar", eyebrow: "Rumors", icon: Radar },
   { href: "/inbox", label: "Messages", eyebrow: "Comms", icon: Inbox },
 ];
 
-export function AppShell({ children, planKey, subscriptionStatus }: { children: React.ReactNode; planKey: PlanKey | null; subscriptionStatus: string | null }) {
+export function AppShell({
+  children,
+  planKey,
+  subscriptionStatus,
+  profileName = "Touchline User",
+  profileRole = "Workspace member",
+}: {
+  children: React.ReactNode;
+  planKey: PlanKey | null;
+  subscriptionStatus: string | null;
+  profileName?: string;
+  profileRole?: string;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -67,7 +91,7 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  const navLink = ({ href, label, icon: Icon, count }: (typeof nav)[number]) => {
+  const navLink = ({ href, label, icon: Icon, count }: NavItem) => {
     const active = isActivePath(href);
     const feature = featureForPath(href);
     const locked = Boolean(feature && !canAccess(planKey, feature));
@@ -101,11 +125,11 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
       </nav>
       <nav className="mt-4 space-y-0.5 border-t border-white/[.06] pt-4">
         <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.22em] text-slate-700">Ecosystem</p>
-        {ecosystem.map(item => navLink(item as (typeof nav)[number]))}
+        {ecosystem.map(navLink)}
       </nav>
       <nav className="mt-4 space-y-0.5 border-t border-white/[.06] pt-4">
         <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.22em] text-slate-700">Operations</p>
-        {operations.map(item => navLink(item as (typeof nav)[number]))}
+        {operations.map(navLink)}
       </nav>
       <div className="mt-5">
         <Link href="/billing" className="ps-focus mb-3 flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045] p-3 transition hover:border-cyan-300/30 hover:bg-cyan-300/[.08]">
@@ -119,7 +143,7 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
         <Link href="/settings" className="flex h-9 items-center gap-3 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:text-white"><Settings size={14}/>Settings</Link>
         <div className="mt-3 flex items-center gap-3 border-t border-white/[.07] px-2 pt-4">
           <div className="relative grid size-9 place-items-center rounded-xl border border-cyan-300/20 bg-gradient-to-br from-cyan-500/20 to-blue-700/20 text-[10px] font-black text-cyan-100">AO<span className="absolute -bottom-1 -right-1 size-2.5 rounded-full border-2 border-[#050b12] bg-[#a3ff12]"/></div>
-          <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold">Alex Oliveira</p><p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-cyan-300/50">Elite Agent · Rank 184</p></div>
+          <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold">{profileName}</p><p className="mt-0.5 text-[8px] font-bold uppercase tracking-wider text-cyan-300/50">{profileRole}</p></div>
           <ChevronDown size={12} className="text-slate-700"/>
         </div>
       </div>
@@ -132,9 +156,9 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />
       <div className="stadium-skyline" />
-      <div className="fixed inset-y-0 left-0 z-40 hidden">{sidebar}</div>
+      <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar}</div>
       {open && <div className="fixed inset-0 z-50 flex lg:hidden"><div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => setOpen(false)}/><div className="relative">{sidebar}<button aria-label="Close menu" onClick={() => setOpen(false)} className="absolute right-4 top-4 text-white/60"><X/></button></div></div>}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 lg:pl-[268px]">
         <header className="console-topbar sticky top-0 z-30 flex h-[72px] items-center border-b border-cyan-100/[.08] bg-[#03080f]/70 px-5 backdrop-blur-2xl sm:px-7">
           <button aria-label="Open menu" onClick={() => setOpen(true)} className="mr-4 text-slate-300 lg:hidden"><Menu size={21}/></button>
           <div className="hidden lg:block"><Logo light /></div>
@@ -144,8 +168,8 @@ export function AppShell({ children, planKey, subscriptionStatus }: { children: 
           </div>
           <div className="ml-auto flex items-center gap-2 md:ml-3">
             <div className="console-chip hidden items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[.06] px-3 py-2 sm:flex"><Sparkles size={12} className="text-amber-300"/><span className="text-[9px] font-black text-amber-200">12,450</span></div>
-            <button aria-label="Notifications" className="interactive-icon relative grid size-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035] text-slate-400 hover:border-cyan-300/25 hover:text-cyan-300"><Bell size={15}/><span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#a3ff12] shadow-[0_0_7px_#a3ff12]"/></button>
-            <button className="console-chip hidden h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/[.08] px-3 text-[9px] font-black uppercase tracking-[.1em] text-cyan-200 hover:bg-cyan-300/[.14] sm:flex"><Crosshair size={13}/> Quick Action</button>
+            <Link href="/inbox" aria-label="Notifications" className="interactive-icon relative grid size-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035] text-slate-400 hover:border-cyan-300/25 hover:text-cyan-300"><Bell size={15}/><span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#a3ff12] shadow-[0_0_7px_#a3ff12]"/></Link>
+            <Link href="/players" className="console-chip hidden h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/[.08] px-3 text-[9px] font-black uppercase tracking-[.1em] text-cyan-200 hover:bg-cyan-300/[.14] sm:flex"><Crosshair size={13}/> Add Player</Link>
           </div>
         </header>
         <nav className="console-mode-dock">

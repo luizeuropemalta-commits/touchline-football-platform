@@ -6,7 +6,6 @@ import {
   Bot,
   BrainCircuit,
   Building2,
-  CalendarDays,
   CheckCircle2,
   FileSignature,
   Globe2,
@@ -19,8 +18,6 @@ import {
   Sparkles,
   Trophy,
   Users,
-  Video,
-  Zap,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 

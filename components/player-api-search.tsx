@@ -121,13 +121,17 @@ export function PlayerApiSearch() {
     }
   }
 
-  useEffect(() => {
-    const url = transfermarktProfileUrl.trim();
-    if (!url || !url.startsWith("https://")) {
+  function updateTransfermarktProfileUrl(value: string) {
+    setTransfermarktProfileUrl(value);
+    if (!value.trim().startsWith("https://")) {
       setLinkPreview(null);
       setLoadingLinkPreview(false);
-      return;
     }
+  }
+
+  useEffect(() => {
+    const url = transfermarktProfileUrl.trim();
+    if (!url || !url.startsWith("https://")) return;
 
     let cancelled = false;
     const timeout = window.setTimeout(async () => {
@@ -379,7 +383,7 @@ export function PlayerApiSearch() {
               />
               <Input
                 value={transfermarktProfileUrl}
-                onChange={(event) => setTransfermarktProfileUrl(event.target.value)}
+                onChange={(event) => updateTransfermarktProfileUrl(event.target.value)}
                 placeholder="Link Transfermarkt. Ex: https://www.transfermarkt.com/neymar/profil/spieler/68290"
               />
             </div>

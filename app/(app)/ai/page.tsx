@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, Bot, FileSearch, FileSignature, Gavel, Mail, ShieldAlert, Sparkles, Target, TrendingUp, UserSearch } from "lucide-react";
+import { BarChart3, Bot, FileSearch, FileSignature, Gavel, Mail, ShieldAlert, Sparkles, TrendingUp, UserSearch } from "lucide-react";
 import { GamePanel, LivePill, SectionHeader } from "@/components/game-ui";
 import { WorkspaceState } from "@/components/workspace-state";
 import { getCurrentWorkspace } from "@/lib/server/current-workspace";

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowRightLeft, Clock3, FileText, Flame, MessageSquare, Radio, Upload, Users, Zap } from "lucide-react";
 import { GamePanel, Meter, SectionHeader, StatTile } from "@/components/game-ui";
-import { Button } from "@/components/ui";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -108,7 +107,11 @@ export default async function NegotiationCenter() {
                   </div>
                   <div><p className="text-[8px] text-slate-600">STATUS</p><p className="mt-1 text-sm font-black">{room.status.replaceAll("_", " ")}</p></div>
                   <div><p className="text-[8px] text-slate-600">UPDATED</p><p className="mt-1 text-xs font-black text-cyan-100">{new Date(room.updated_at).toLocaleDateString()}</p></div>
-                  <div className="md:text-right"><button className="text-[8px] font-black uppercase text-cyan-300 transition hover:text-white">Enter room →</button></div>
+                  <div className="md:text-right">
+                    <Link href="/inbox" className="text-[8px] font-black uppercase text-cyan-300 transition hover:text-white">
+                      Open messages →
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
@@ -144,7 +147,9 @@ export default async function NegotiationCenter() {
           <GamePanel className="p-5">
             <SectionHeader kicker="Next action" title="Create workflow" />
             <p className="text-xs leading-6 text-slate-500">Use Club Network → I&apos;m interested to create an interest, automatically open a negotiation room and begin the deal timeline.</p>
-            <Button className="mt-4 w-full"><Users size={13} />Open Club Network</Button>
+            <Link href="/clubs" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007] transition hover:-translate-y-0.5 hover:bg-[#bcff52]">
+              <Users size={13} />Open Club Network
+            </Link>
           </GamePanel>
         </div>
       </div>
