@@ -40,6 +40,26 @@ type TouchlinePlayerOption = {
   externalUrl?: string | null;
 };
 
+function titleFromTransfermarktUrl(profileUrl: string, fallback: string) {
+  try {
+    const url = new URL(profileUrl);
+    const slug = url.pathname.split("/").filter(Boolean)[0];
+    if (!slug) return fallback || "Transfermarkt player profile";
+    return slug
+      .split("-")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  } catch {
+    return fallback || "Transfermarkt player profile";
+  }
+}
+
+function transfermarktIdFromUrl(profileUrl: string) {
+  const match = profileUrl.match(/\/spieler\/(\d+)/i);
+  return match?.[1] ?? null;
+}
+
 export function PlayerApiSearch() {
   const [query, setQuery] = useState("");
   const [season, setSeason] = useState(() => String(new Date().getFullYear()));
@@ -66,6 +86,8 @@ export function PlayerApiSearch() {
   const transfermarktSearchUrl = trimmedQuery
     ? `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(trimmedQuery)}`
     : "https://www.transfermarkt.com/";
+  const transfermarktPreviewTitle = titleFromTransfermarktUrl(transfermarktProfileUrl, transfermarktPlayerName || trimmedQuery);
+  const transfermarktPreviewId = transfermarktIdFromUrl(transfermarktProfileUrl);
 
   async function loadProfiles() {
     setProfilesLoading(true);
@@ -311,6 +333,60 @@ export function PlayerApiSearch() {
             </div>
           </div>
 
+          {transfermarktProfileUrl && (
+            <div className="mt-5 overflow-hidden rounded-3xl border border-white/[.1] bg-[#0b1521]/80 shadow-[0_22px_80px_rgba(0,0,0,.35)] backdrop-blur-xl">
+              <div className="grid md:grid-cols-[180px_1fr]">
+                <div className="relative min-h-44 overflow-hidden bg-gradient-to-br from-cyan-300/[.12] via-slate-950 to-[#a3ff12]/[.08]">
+                  {transfermarktPhotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={transfermarktPhotoUrl} alt={transfermarktPreviewTitle} className="h-full w-full object-cover object-top" />
+                  ) : (
+                    <div className="flex h-full min-h-44 flex-col items-center justify-center gap-3 text-center text-cyan-200/70">
+                      <ImageIcon size={28} />
+                      <p className="max-w-28 text-[8px] font-black uppercase leading-4 tracking-[.18em]">
+                        Foto autorizada aparece aqui
+                      </p>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
+                  <div className="absolute left-3 top-3 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em] text-[#caff72]">
+                    Link preview
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.16em] text-cyan-100">
+                      <Link2 size={11} />
+                      transfermarkt.com
+                    </span>
+                    {transfermarktPreviewId && (
+                      <span className="rounded-full border border-white/[.08] bg-white/[.035] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.16em] text-slate-400">
+                        Player ID #{transfermarktPreviewId}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="mt-4 text-2xl font-black uppercase italic tracking-[-.04em] text-white">
+                    {transfermarktPreviewTitle}
+                  </h4>
+                  <p className="mt-2 break-all text-[10px] font-bold leading-5 text-slate-500">{transfermarktProfileUrl}</p>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <a
+                      href={transfermarktProfileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72] transition hover:bg-[#a3ff12]/15"
+                    >
+                      Abrir Transfermarkt <ExternalLink size={13} />
+                    </a>
+                    <span className="inline-flex h-10 items-center rounded-xl border border-cyan-300/15 bg-cyan-300/[.055] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100">
+                      Preview estilo WhatsApp
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[.05] px-4 py-3 text-[9px] font-bold uppercase leading-5 tracking-wider text-amber-100/75">
             Modo seguro: o Touchline salva o link e mostra a foto autorizada. Não copiamos automaticamente a página/foto do Transfermarkt.
           </div>
@@ -343,6 +419,10 @@ export function PlayerApiSearch() {
                     )}
                   </div>
                   <div className="p-4">
+                    <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-cyan-300/15 bg-cyan-300/[.06] px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em] text-cyan-100">
+                      <Link2 size={10} />
+                      Link preview
+                    </div>
                     <p className="truncate text-sm font-black uppercase italic text-white">{player.name}</p>
                     <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">
                       {player.position ?? "Position open"} {player.club ? `· ${player.club}` : ""}
