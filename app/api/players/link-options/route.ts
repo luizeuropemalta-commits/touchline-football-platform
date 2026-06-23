@@ -28,7 +28,7 @@ export async function GET() {
     const { admin, agencyId } = await ensureUserWorkspace(user);
     const { data, error } = await admin
       .from("players")
-      .select("id, first_name, last_name, position, photo_url, external_market_provider, external_market_player_id, clubs:current_club_id(name)")
+      .select("id, first_name, last_name, position, photo_url, external_market_provider, external_market_player_id, external_market_url, clubs:current_club_id(name)")
       .eq("agency_id", agencyId)
       .order("created_at", { ascending: false })
       .limit(200);
@@ -44,6 +44,7 @@ export async function GET() {
         photoUrl: player.photo_url,
         externalProvider: player.external_market_provider,
         externalPlayerId: player.external_market_player_id,
+        externalUrl: player.external_market_url,
       })),
     });
   } catch (error) {
