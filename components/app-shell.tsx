@@ -33,6 +33,7 @@ const nav: NavItem[] = [
 ];
 
 const ecosystem: NavItem[] = [
+  { href: "/connect", label: "Touchline Connect", icon: Globe2 },
   { href: "/clubs", label: "Club Network", icon: Building2 },
   { href: "/agencies", label: "Agents & Agencies", icon: Users },
   { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
@@ -56,6 +57,7 @@ const operations: NavItem[] = [
 
 const consoleModes = [
   { href: "/dashboard", label: "Command Center", eyebrow: "HQ", icon: Globe2 },
+  { href: "/connect", label: "Connect", eyebrow: "Network", icon: Globe2 },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
   { href: "/players/database", label: "Player Database", eyebrow: "Search", icon: Search },
   { href: "/verification", label: "Verification", eyebrow: "Trust", icon: BadgeCheck },
