@@ -15,8 +15,16 @@
 }
 
 * { box-sizing: border-box; }
-html { background: var(--void); scroll-behavior: smooth; }
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  background: var(--void);
+  scroll-behavior: smooth;
+}
 body {
+  width: 100%;
+  max-width: 100%;
   margin: 0;
   color: var(--text);
   background:
@@ -27,7 +35,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 body::before {
   content: "";
@@ -416,10 +424,10 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   position: sticky;
   top: 72px;
   z-index: 25;
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding: 14px 20px;
+  width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  padding: 14px 0;
   border-bottom: 1px solid rgba(148, 211, 255, .08);
   background:
     linear-gradient(180deg, rgba(2,8,16,.88), rgba(2,8,16,.62)),
@@ -428,6 +436,10 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   scrollbar-width: none;
 }
 .console-mode-dock::-webkit-scrollbar { display: none; }
+.console-mode-track {
+  scrollbar-width: none;
+}
+.console-mode-track::-webkit-scrollbar { display: none; }
 .console-mode-button {
   position: relative;
   display: flex;

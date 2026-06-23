@@ -155,46 +155,54 @@ export function AppShell({
   );
 
   return (
-    <div className="arena-bg console-shell flex min-h-screen bg-transparent">
+    <div className="arena-bg console-shell min-h-screen overflow-x-clip bg-transparent">
       <div className="stadium-light stadium-light-left" />
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />
       <div className="stadium-skyline" />
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar}</div>
       {open && <div className="fixed inset-0 z-50 flex lg:hidden"><div className="absolute inset-0 bg-black/75 backdrop-blur-md" onClick={() => setOpen(false)}/><div className="relative">{sidebar}<button aria-label="Close menu" onClick={() => setOpen(false)} className="absolute right-4 top-4 text-white/60"><X/></button></div></div>}
-      <div className="min-w-0 flex-1 lg:pl-[268px]">
-        <header className="console-topbar sticky top-0 z-30 flex h-[72px] items-center border-b border-cyan-100/[.08] bg-[#03080f]/70 px-5 backdrop-blur-2xl sm:px-7">
-          <button aria-label="Open menu" onClick={() => setOpen(true)} className="mr-4 text-slate-300 lg:hidden"><Menu size={21}/></button>
-          <div className="hidden lg:block"><Logo light /></div>
-        <div className="ml-5 hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600 md:flex"><Globe2 size={14} className="text-cyan-400"/><span>Global Football Network</span><span className="mx-2 h-3 w-px bg-white/10"/><span className="text-slate-400">Beta HQ</span></div>
-          <div className="relative ml-auto hidden w-full max-w-[420px] md:block">
-            <PlayerDatabaseSearch mode="compact" />
-          </div>
-          <div className="ml-auto flex items-center gap-2 md:ml-3">
-            <div className="console-chip hidden items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[.06] px-3 py-2 sm:flex"><Sparkles size={12} className="text-amber-300"/><span className="text-[9px] font-black text-amber-200">12,450</span></div>
-            <Link href="/inbox" aria-label="Notifications" className="interactive-icon relative grid size-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035] text-slate-400 hover:border-cyan-300/25 hover:text-cyan-300"><Bell size={15}/><span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#a3ff12] shadow-[0_0_7px_#a3ff12]"/></Link>
-            <Link href="/players" className="console-chip hidden h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/[.08] px-3 text-[9px] font-black uppercase tracking-[.1em] text-cyan-200 hover:bg-cyan-300/[.14] sm:flex"><Crosshair size={13}/> Add Player</Link>
+      <div className="min-w-0 lg:ml-[268px]">
+        <header className="console-topbar sticky top-0 z-30 h-[72px] border-b border-cyan-100/[.08] bg-[#03080f]/70 backdrop-blur-2xl">
+          <div className="mx-auto flex h-full w-full max-w-[1500px] min-w-0 items-center px-4 sm:px-6 xl:px-8">
+            <button aria-label="Open menu" onClick={() => setOpen(true)} className="mr-4 shrink-0 text-slate-300 lg:hidden"><Menu size={21}/></button>
+            <div className="hidden shrink-0 lg:block"><Logo light /></div>
+            <div className="ml-5 hidden shrink-0 items-center gap-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600 md:flex"><Globe2 size={14} className="text-cyan-400"/><span>Global Football Network</span><span className="mx-2 h-3 w-px bg-white/10"/><span className="text-slate-400">Beta HQ</span></div>
+            <div className="relative ml-auto hidden w-full max-w-[420px] min-w-0 md:block">
+              <PlayerDatabaseSearch mode="compact" />
+            </div>
+            <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-3">
+              <div className="console-chip hidden items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[.06] px-3 py-2 sm:flex"><Sparkles size={12} className="text-amber-300"/><span className="text-[9px] font-black text-amber-200">12,450</span></div>
+              <Link href="/inbox" aria-label="Notifications" className="interactive-icon relative grid size-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035] text-slate-400 hover:border-cyan-300/25 hover:text-cyan-300"><Bell size={15}/><span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#a3ff12] shadow-[0_0_7px_#a3ff12]"/></Link>
+              <Link href="/players" className="console-chip hidden h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/[.08] px-3 text-[9px] font-black uppercase tracking-[.1em] text-cyan-200 hover:bg-cyan-300/[.14] sm:flex"><Crosshair size={13}/> Add Player</Link>
+            </div>
           </div>
         </header>
         <nav className="console-mode-dock">
-          {consoleModeItems.map(({ href, label, eyebrow, icon: Icon }) => {
-            const active = isActivePath(href);
-            const feature = featureForPath(href);
-            const locked = Boolean(feature && !canAccess(planKey, feature));
-            const destination = locked ? `/upgrade?feature=${feature}&from=${encodeURIComponent(href)}` : href;
-            return (
-              <Link key={href} href={destination} className="console-mode-button" data-active={active}>
-                <span className="console-mode-icon"><Icon size={20}/></span>
-                <span className="relative min-w-0">
-                  <span className="block text-[7px] font-black uppercase tracking-[.22em] text-cyan-200/55">{eyebrow}</span>
-                  <span className="mt-1 block truncate text-[12px] font-black uppercase italic tracking-[-.03em] text-white">{label}</span>
-                </span>
-                {locked && <LockKeyhole size={12} className="relative ml-auto text-amber-300"/>}
-              </Link>
-            );
-          })}
+          <div className="console-mode-track mx-auto flex w-full max-w-[1500px] min-w-0 gap-3 overflow-x-auto scrollbar-none px-4 sm:px-6 xl:px-8">
+            {consoleModeItems.map(({ href, label, eyebrow, icon: Icon }) => {
+              const active = isActivePath(href);
+              const feature = featureForPath(href);
+              const locked = Boolean(feature && !canAccess(planKey, feature));
+              const destination = locked ? `/upgrade?feature=${feature}&from=${encodeURIComponent(href)}` : href;
+              return (
+                <Link key={href} href={destination} className="console-mode-button" data-active={active}>
+                  <span className="console-mode-icon"><Icon size={20}/></span>
+                  <span className="relative min-w-0">
+                    <span className="block text-[7px] font-black uppercase tracking-[.22em] text-cyan-200/55">{eyebrow}</span>
+                    <span className="mt-1 block truncate text-[12px] font-black uppercase italic tracking-[-.03em] text-white">{label}</span>
+                  </span>
+                  {locked && <LockKeyhole size={12} className="relative ml-auto text-amber-300"/>}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
-        <main className="p-4 pb-24 sm:p-6 sm:pb-24 xl:p-8 xl:pb-24">{children}</main>
+        <main className="w-full px-4 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-24 xl:px-8 xl:py-8 xl:pb-24">
+          <div className="mx-auto w-full max-w-[1500px] min-w-0">
+            {children}
+          </div>
+        </main>
         <Link href="/ai" aria-label="Open Touchline AI" className="premium-ring fixed bottom-5 right-5 z-40 grid size-14 place-items-center rounded-2xl border border-cyan-300/30 bg-[#0a1a27]/90 text-cyan-200 shadow-[0_0_35px_rgba(34,211,238,.2)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:scale-105 hover:border-[#a3ff12]/40 hover:text-[#a3ff12]">
           <Bot size={22}/><span className="pulse-live absolute right-1.5 top-1.5 size-2 rounded-full bg-[#a3ff12]"/>
         </Link>
