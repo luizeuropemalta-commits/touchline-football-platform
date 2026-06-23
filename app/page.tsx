@@ -51,7 +51,7 @@ const languages = ["English", "Portuguese", "Spanish", "French", "Italian", "Ger
 
 export default function Home() {
   return (
-    <main className="arena-bg console-shell min-h-screen overflow-hidden bg-[#02050a] text-white">
+    <main className="arena-bg console-shell min-h-[100dvh] overflow-x-clip bg-[#02050a] text-white">
       <div className="stadium-light stadium-light-left" />
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />

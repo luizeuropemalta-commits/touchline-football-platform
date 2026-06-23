@@ -11,6 +11,13 @@ function extensionFromType(type: string) {
   return "jpg";
 }
 
+export function GET() {
+  return NextResponse.json(
+    { ok: false, error: "Upload de foto disponível somente pelo formulário dentro da plataforma." },
+    { status: 405 },
+  );
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   if (!supabase) return NextResponse.json({ error: "Supabase is not configured." }, { status: 500 });
@@ -23,6 +30,14 @@ export async function POST(request: Request) {
 
   try {
     const { admin, agencyId } = await ensureUserWorkspace(user);
+    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json(
+        { ok: false, error: "Upload inválido. Escolhe uma foto no formulário da plataforma." },
+        { status: 415 },
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
 

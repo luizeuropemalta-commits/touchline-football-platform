@@ -4,29 +4,29 @@ import { Logo } from "./logo";
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="arena-bg console-shell relative min-h-screen overflow-hidden bg-[#02050a]">
+    <main className="arena-bg console-shell relative min-h-[100dvh] overflow-x-clip bg-[#02050a]">
       <div className="stadium-light stadium-light-left" />
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />
       <div className="stadium-skyline" />
 
-      <section className="relative z-10 grid min-h-screen lg:grid-cols-[1.15fr_.85fr]">
-        <div className="flex min-h-screen flex-col px-5 py-5 sm:px-8 lg:px-12 xl:px-16">
-          <header className="flex items-center justify-between">
+      <section className="relative z-10 grid min-h-[100dvh] min-w-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(360px,.75fr)]">
+        <div className="flex min-h-[100dvh] min-w-0 flex-col px-5 py-5 sm:px-8 lg:px-10 xl:px-14">
+          <header className="flex shrink-0 items-center justify-between">
             <Logo />
             <Link href="/world" className="console-mini-card hidden items-center gap-2 px-4 py-3 text-[8px] font-black uppercase tracking-[.16em] text-cyan-200 transition hover:-translate-y-1 sm:inline-flex">
               <Globe2 size={14}/> Football Network
             </Link>
           </header>
 
-          <div className="my-auto grid gap-8 py-10 xl:grid-cols-[1fr_430px] xl:items-end">
-            <div className="max-w-3xl">
+          <div className="grid flex-1 content-center gap-6 py-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,430px)] xl:items-center">
+            <div className="order-2 min-w-0 max-w-3xl xl:order-1">
               <div className="mb-5 flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]"><span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]"/> Global ecosystem online</span>
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">Agents · Clubs · Scouts · Players</span>
               </div>
               <p className="mb-3 text-[9px] font-black uppercase tracking-[.34em] text-cyan-200/60">Touchline / Secure Access</p>
-              <h1 className="console-title font-display text-6xl uppercase italic leading-[.82] text-white sm:text-8xl xl:text-[118px]">
+              <h1 className="console-title font-display text-[clamp(3.5rem,8vw,7.4rem)] uppercase italic leading-[.82] text-white">
                 Football
                 <br />
                 Business
@@ -36,14 +36,14 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
                 recruit, negotiate and manage professional opportunities.
               </p>
 
-              <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+              <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
                 <div className="console-mini-card p-4"><Trophy size={18} className="text-amber-300"/><p className="mt-4 text-[8px] font-black uppercase tracking-wider text-slate-500">Global Rank</p><p className="mt-1 text-xl font-black">#184</p></div>
                 <div className="console-mini-card p-4"><Users size={18} className="text-cyan-300"/><p className="mt-4 text-[8px] font-black uppercase tracking-wider text-slate-500">Portfolio Value</p><p className="mt-1 text-xl font-black">€146M</p></div>
                 <div className="console-mini-card p-4"><Zap size={18} className="text-[#a3ff12]"/><p className="mt-4 text-[8px] font-black uppercase tracking-wider text-slate-500">Opportunities</p><p className="mt-1 text-xl font-black">LIVE</p></div>
               </div>
             </div>
 
-            <div className="premium-ring stadium-scoreboard w-full p-5 sm:p-6">
+            <div className="premium-ring stadium-scoreboard order-1 w-full max-w-[430px] justify-self-center p-5 sm:p-6 xl:order-2 xl:justify-self-end">
               <div className="relative z-10">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
@@ -57,13 +57,13 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <footer className="flex items-center justify-between gap-3">
+          <footer className="flex shrink-0 items-center justify-between gap-3">
             <p className="text-[9px] text-slate-700">© 2026 Touchline Technologies Ltd. All rights reserved.</p>
             <div className="hidden items-center gap-2 text-[8px] font-black uppercase tracking-[.16em] text-slate-600 sm:flex"><Radio size={12} className="text-[#a3ff12]"/> Market online</div>
           </footer>
         </div>
 
-        <aside className="ps-career-home relative hidden min-h-screen border-l border-cyan-100/10 p-10 lg:block">
+        <aside className="ps-career-home relative hidden min-h-[100dvh] border-l border-cyan-100/10 p-8 xl:p-10 lg:block">
           <div className="stadium-stands" />
           <div className="pitch-lines" />
           <div className="manager-silhouette" />

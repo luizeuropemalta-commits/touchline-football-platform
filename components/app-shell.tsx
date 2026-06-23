@@ -155,7 +155,7 @@ export function AppShell({
   );
 
   return (
-    <div className="arena-bg console-shell min-h-screen overflow-x-clip bg-transparent">
+    <div className="arena-bg console-shell min-h-[100dvh] overflow-x-clip bg-transparent">
       <div className="stadium-light stadium-light-left" />
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />

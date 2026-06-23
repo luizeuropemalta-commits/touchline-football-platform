@@ -34,7 +34,7 @@ body {
     linear-gradient(180deg, #050b12 0%, #02050a 58%, #010308 100%);
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: clip;
 }
 body::before {
@@ -182,7 +182,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   box-shadow: 0 0 80px rgba(34,211,238,.16);
   animation: ball-drift 9s ease-in-out infinite;
 }
-.arena-bg > :not(.stadium-light):not(.football-orb):not(.stadium-skyline) { position: relative; z-index: 1; }
+.arena-bg > :not(.fixed):not(.stadium-light):not(.football-orb):not(.stadium-skyline) { position: relative; z-index: 1; }
 .arena-bg:has(main)::before { opacity: .96; }
 .arena-bg:has(main) {
   background:

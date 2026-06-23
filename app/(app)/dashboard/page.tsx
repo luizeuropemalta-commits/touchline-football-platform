@@ -168,14 +168,14 @@ export default async function Dashboard() {
   ];
 
   return (
-    <div className="relative mx-auto max-w-[1760px] animate-in">
-      <section className="ps-career-home min-h-[calc(100vh-190px)] p-5 sm:p-7 xl:p-9">
+    <div className="relative mx-auto w-full max-w-[1500px] animate-in">
+      <section className="ps-career-home overflow-hidden p-4 sm:p-6 xl:p-7">
         <div className="stadium-stands" />
         <div className="pitch-lines" />
         <div className="manager-silhouette" />
 
-        <div className="relative z-10 grid min-h-[calc(100vh-250px)] gap-8 xl:grid-cols-[1fr_430px]">
-          <div className="flex flex-col justify-between gap-8">
+        <div className="relative z-10 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,410px)] xl:items-start">
+          <div className="min-w-0 space-y-7">
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]">
@@ -186,11 +186,11 @@ export default async function Dashboard() {
                 </span>
               </div>
 
-              <div className="mt-12">
+              <div className="mt-8 lg:mt-10">
                 <p className="mb-3 text-[10px] font-black uppercase tracking-[.36em] text-cyan-200/65">
                   Touchline / Agent Operating System
                 </p>
-                <h1 className="console-title font-display text-[58px] uppercase italic leading-[.82] text-white sm:text-[96px] xl:text-[126px]">
+                <h1 className="console-title font-display text-[clamp(3.6rem,7vw,7.75rem)] uppercase italic leading-[.82] text-white">
                   Command
                   <br />
                   Center
@@ -201,7 +201,7 @@ export default async function Dashboard() {
                 </p>
               </div>
 
-              <div className="mt-9 grid max-w-4xl gap-3 md:grid-cols-[1.4fr_1fr_1fr]">
+              <div className="mt-7 grid max-w-4xl gap-3 md:grid-cols-[1.4fr_1fr_1fr]">
                 <Link href="/players" className="continue-career-button flex min-h-[92px] items-center justify-between px-7 text-[#071007]">
                   <span>
                     <span className="block text-[8px] font-black uppercase tracking-[.24em]">Start here</span>
@@ -226,16 +226,16 @@ export default async function Dashboard() {
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {overview.slice(0, 4).map(([label, value, note, Icon, accent]) => {
                 const CardIcon = Icon as typeof Users;
                 return (
-                  <div key={String(label)} className="mode-tile min-h-[150px] p-5" data-accent={accent}>
+                  <div key={String(label)} className="mode-tile min-h-[132px] p-4" data-accent={accent}>
                     <div className="relative z-10 flex items-start justify-between">
                       <span className="console-mode-icon"><CardIcon size={21} /></span>
                       <ArrowUpRight size={15} className="text-white/40" />
                     </div>
-                    <div className="relative z-10 mt-7">
+                    <div className="relative z-10 mt-5">
                       <p className="text-[8px] font-black uppercase tracking-[.24em] text-cyan-200/55">{String(label)}</p>
                       <h2 className="mt-2 font-display text-4xl text-white">{String(value)}</h2>
                       <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">{String(note)}</p>
@@ -246,7 +246,7 @@ export default async function Dashboard() {
             </div>
           </div>
 
-          <aside className="space-y-4 xl:self-end">
+          <aside className="min-w-0 space-y-4">
             <div className="stadium-scoreboard p-5">
               <div className="relative z-10 flex items-start justify-between">
                 <div>

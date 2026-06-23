@@ -5,7 +5,7 @@ import { PricingClient } from "@/components/billing/pricing-client";
 
 export default function PricingPage() {
   return (
-    <main className="arena-bg min-h-screen px-4 py-6 sm:px-8 lg:px-12">
+    <main className="arena-bg min-h-[100dvh] px-4 py-6 sm:px-8 lg:px-12">
       <header className="mx-auto flex max-w-[1440px] items-center justify-between">
         <Logo light/>
         <div className="flex items-center gap-3">

@@ -33,7 +33,7 @@ export default async function PublicWorldPage() {
   const news = liveItems.filter((item) => item.item_type !== "fixture" && item.item_type !== "live_score");
 
   return (
-    <main className="arena-bg min-h-screen px-4 py-6 sm:px-8 lg:px-12">
+    <main className="arena-bg min-h-[100dvh] px-4 py-6 sm:px-8 lg:px-12">
       <div className="stadium-light stadium-light-left" />
       <div className="stadium-light stadium-light-right" />
       <div className="football-orb" />

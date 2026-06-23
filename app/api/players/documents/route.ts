@@ -43,6 +43,13 @@ function cleanText(value: FormDataEntryValue | null, max = 180) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+export function GET() {
+  return NextResponse.json(
+    { ok: false, error: "Upload de documentos disponível somente pelo cofre do jogador dentro da plataforma." },
+    { status: 405 },
+  );
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   if (!supabase) return NextResponse.json({ error: "Supabase is not configured." }, { status: 500 });
@@ -55,6 +62,14 @@ export async function POST(request: Request) {
 
   try {
     const { admin, agencyId } = await ensureUserWorkspace(user);
+    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json(
+        { ok: false, error: "Upload inválido. Escolhe um documento no formulário do Player Vault." },
+        { status: 415 },
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
     const playerId = cleanText(formData.get("playerId"), 80);

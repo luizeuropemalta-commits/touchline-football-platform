@@ -37,6 +37,13 @@ function cleanType(value: FormDataEntryValue | null) {
   return documentTypes.has(type) ? type : "supporting_document";
 }
 
+export function GET() {
+  return NextResponse.json(
+    { ok: false, error: "Upload de verificação disponível somente pelo formulário de Agent Verification." },
+    { status: 405 },
+  );
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   if (!supabase) return NextResponse.json({ error: "Supabase is not configured." }, { status: 500 });
@@ -49,6 +56,14 @@ export async function POST(request: Request) {
 
   try {
     const { admin, agencyId } = await ensureUserWorkspace(user);
+    const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json(
+        { ok: false, error: "Upload inválido. Escolhe um documento no formulário de verificação." },
+        { status: 415 },
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file");
     const uploadScope = formData.get("scope");
