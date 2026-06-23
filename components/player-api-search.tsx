@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Check, Copy, DatabaseZap, ExternalLink, Loader2, PlusCircle, Save, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, Copy, DatabaseZap, ExternalLink, ImageIcon, Link2, Loader2, PlusCircle, Save, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, Meter, SectionHeader } from "@/components/game-ui";
 
@@ -34,8 +34,10 @@ type TouchlinePlayerOption = {
   name: string;
   club?: string | null;
   position?: string | null;
+  photoUrl?: string | null;
   externalProvider?: string | null;
   externalPlayerId?: string | null;
+  externalUrl?: string | null;
 };
 
 export function PlayerApiSearch() {
@@ -50,6 +52,11 @@ export function PlayerApiSearch() {
   const [profilesLoading, setProfilesLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [saveMessage, setSaveMessage] = useState("");
+  const [transfermarktPlayerName, setTransfermarktPlayerName] = useState("");
+  const [transfermarktProfileUrl, setTransfermarktProfileUrl] = useState("");
+  const [transfermarktPhotoUrl, setTransfermarktPhotoUrl] = useState("");
+  const [transfermarktTarget, setTransfermarktTarget] = useState("__create__");
+  const [savingTransfermarkt, setSavingTransfermarkt] = useState(false);
 
   useEffect(() => {
     void loadProfiles();
@@ -67,6 +74,7 @@ export function PlayerApiSearch() {
       const data = (await response.json()) as { players?: TouchlinePlayerOption[]; error?: string };
       if (!response.ok) throw new Error(data.error || "Could not load player profiles");
       setProfileOptions(data.players ?? []);
+      setTransfermarktTarget((current) => current || "__create__");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não consegui carregar os perfis Touchline.");
     } finally {
@@ -143,6 +151,36 @@ export function PlayerApiSearch() {
     }
   }
 
+  async function saveTransfermarktLink() {
+    setSavingTransfermarkt(true);
+    setSaveMessage("");
+    setError("");
+
+    try {
+      const response = await fetch("/api/players/transfermarkt-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: transfermarktTarget,
+          playerName: transfermarktPlayerName || trimmedQuery,
+          profileUrl: transfermarktProfileUrl,
+          photoUrl: transfermarktPhotoUrl,
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; created?: boolean; playerId?: string; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || "Não consegui salvar o link do Transfermarkt.");
+      setSaveMessage(data.created ? "Atleta criado no banco real com link do Transfermarkt." : "Link do Transfermarkt salvo no perfil do atleta.");
+      setTransfermarktProfileUrl("");
+      setTransfermarktPhotoUrl("");
+      if (data.created) setTransfermarktPlayerName("");
+      await loadProfiles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao salvar o link do Transfermarkt.");
+    } finally {
+      setSavingTransfermarkt(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <GamePanel className="p-5 sm:p-7">
@@ -204,6 +242,134 @@ export function PlayerApiSearch() {
         {saveMessage && (
           <div className="mt-4 rounded-2xl border border-[#a3ff12]/20 bg-[#a3ff12]/[.07] px-4 py-3 text-xs font-bold leading-6 text-[#caff72]">
             {saveMessage}
+          </div>
+        )}
+
+        <div className="mt-6 rounded-3xl border border-cyan-300/15 bg-gradient-to-br from-cyan-300/[.07] via-white/[.025] to-[#a3ff12]/[.045] p-4 sm:p-5">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
+                <Link2 size={12} />
+                Banco real Touchline
+              </div>
+              <h3 className="mt-3 text-xl font-black uppercase italic text-white">Salvar link do Transfermarkt no perfil</h3>
+              <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-400">
+                Cola o link oficial do atleta. O clube verá o botão para abrir o Transfermarkt no navegador. A foto dentro do Touchline
+                deve ser uma foto enviada/autorizada pelo agente ou um link HTTPS com permissão de uso.
+              </p>
+            </div>
+            {transfermarktProfileUrl && (
+              <a
+                href={transfermarktProfileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72] transition hover:bg-[#a3ff12]/15"
+              >
+                Testar link <ExternalLink size={13} />
+              </a>
+            )}
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            <div className="space-y-3">
+              <Input
+                value={transfermarktPlayerName}
+                onChange={(event) => setTransfermarktPlayerName(event.target.value)}
+                placeholder="Nome do atleta para criar perfil. Ex: Neymar"
+              />
+              <Input
+                value={transfermarktProfileUrl}
+                onChange={(event) => setTransfermarktProfileUrl(event.target.value)}
+                placeholder="Link Transfermarkt. Ex: https://www.transfermarkt.com/neymar/profil/spieler/68290"
+              />
+            </div>
+            <div className="space-y-3">
+              <Input
+                value={transfermarktPhotoUrl}
+                onChange={(event) => setTransfermarktPhotoUrl(event.target.value)}
+                placeholder="Foto HTTPS autorizada/opcional"
+              />
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <select
+                  value={transfermarktTarget}
+                  onChange={(event) => setTransfermarktTarget(event.target.value)}
+                  disabled={profilesLoading || savingTransfermarkt}
+                  className="h-11 rounded-2xl border border-white/[.08] bg-[#07111b] px-3 text-[10px] font-bold uppercase tracking-wider text-slate-200 outline-none focus:border-cyan-300/35"
+                >
+                  <option value="__create__">Criar novo atleta</option>
+                  {profileOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name} {option.position ? `· ${option.position}` : ""} {option.club ? `· ${option.club}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <Button type="button" disabled={savingTransfermarkt} onClick={() => void saveTransfermarktLink()}>
+                  {savingTransfermarkt ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                  Salvar no banco
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[.05] px-4 py-3 text-[9px] font-bold uppercase leading-5 tracking-wider text-amber-100/75">
+            Modo seguro: o Touchline salva o link e mostra a foto autorizada. Não copiamos automaticamente a página/foto do Transfermarkt.
+          </div>
+        </div>
+      </GamePanel>
+
+      <GamePanel className="p-5 sm:p-6">
+        <SectionHeader
+          kicker="Database preview"
+          title="Perfis reais salvos no banco"
+          action={<DatabaseZap size={16} className="text-cyan-300" />}
+        />
+        {profileOptions.length === 0 ? (
+          <div className="rounded-2xl border border-white/[.07] bg-white/[.025] p-5 text-xs leading-6 text-slate-500">
+            Nenhum atleta real salvo ainda. Cola um link do Transfermarkt acima e clica em “Salvar no banco”.
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {profileOptions.map((player) => (
+              <div key={player.id} className="group overflow-hidden rounded-2xl border border-white/[.08] bg-white/[.025] transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[.04]">
+                <div className="grid grid-cols-[86px_1fr]">
+                  <div className="relative min-h-28 overflow-hidden bg-cyan-300/[.04]">
+                    {player.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
+                    ) : (
+                      <div className="grid h-full place-items-center text-cyan-300/40">
+                        <ImageIcon size={22} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="truncate text-sm font-black uppercase italic text-white">{player.name}</p>
+                    <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">
+                      {player.position ?? "Position open"} {player.club ? `· ${player.club}` : ""}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {player.externalUrl ? (
+                        <a
+                          href={player.externalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-8 items-center gap-2 rounded-lg border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 text-[8px] font-black uppercase tracking-wider text-[#caff72] transition hover:bg-[#a3ff12]/15"
+                        >
+                          Transfermarkt <ExternalLink size={11} />
+                        </a>
+                      ) : (
+                        <span className="inline-flex h-8 items-center rounded-lg border border-white/[.08] px-3 text-[8px] font-black uppercase tracking-wider text-slate-600">
+                          Sem link externo
+                        </span>
+                      )}
+                      <span className="inline-flex h-8 items-center rounded-lg border border-cyan-300/15 bg-cyan-300/[.06] px-3 text-[8px] font-black uppercase tracking-wider text-cyan-200">
+                        {player.externalProvider ?? "manual"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </GamePanel>
