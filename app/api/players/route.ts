@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchLinkPreview, getTransfermarktPlayerId, validatePreviewUrl } from "@/lib/link-preview";
 import { upsertGlobalPlayerProfile } from "@/lib/player-database";
+import { readJsonObject } from "@/lib/server/request";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -124,7 +125,9 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Login required" }, { status: 401 });
 
   try {
-    const body = (await request.json()) as Record<string, unknown>;
+    const json = await readJsonObject(request);
+    if (!json.ok) return json.response;
+    const body = json.data;
     const fullName = cleanText(body.name, 180);
     if (!fullName) return NextResponse.json({ error: "Player name is required." }, { status: 400 });
 

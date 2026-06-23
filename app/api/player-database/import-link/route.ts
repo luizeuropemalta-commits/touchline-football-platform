@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { upsertGlobalPlayerProfile, validateTransfermarktProfileUrl } from "@/lib/player-database";
+import { readJsonObject } from "@/lib/server/request";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,7 +27,9 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "Supabase admin client is not configured." }, { status: 500 });
 
-  const body = (await request.json()) as Record<string, unknown>;
+  const json = await readJsonObject(request);
+  if (!json.ok) return json.response;
+  const body = json.data;
   const target = validateTransfermarktProfileUrl(cleanText(body.url, 1000));
 
   if (!target) {

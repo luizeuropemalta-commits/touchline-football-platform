@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppUrl, getPriceId, getStripe } from "@/lib/billing/stripe";
 import { isPlanKey, planMap } from "@/lib/billing/plans";
+import { readJsonObject } from "@/lib/server/request";
 
 const requestSchema = z.object({
   planKey: z.string(),
@@ -22,7 +23,10 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
 
-    const parsed = requestSchema.safeParse(await request.json());
+    const json = await readJsonObject(request);
+    if (!json.ok) return json.response;
+
+    const parsed = requestSchema.safeParse(json.data);
     if (!parsed.success || !isPlanKey(parsed.data.planKey)) {
       return NextResponse.json({ error: "Invalid subscription selection." }, { status: 400 });
     }

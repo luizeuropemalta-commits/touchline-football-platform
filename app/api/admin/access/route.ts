@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isOwnerEmail, ownerGrantSubscriptionId } from "@/lib/admin/owner";
 import { isPlanKey, type BillingInterval } from "@/lib/billing/plans";
+import { readJsonObject } from "@/lib/server/request";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,7 +23,9 @@ export async function POST(request: Request) {
 
   if (!isOwnerEmail(user?.email)) return NextResponse.json({ error: "Owner access required." }, { status: 403 });
 
-  const body = (await request.json()) as AccessBody;
+  const json = await readJsonObject(request);
+  if (!json.ok) return json.response;
+  const body = json.data as AccessBody;
   const userId = body.userId?.trim();
   if (!userId) return NextResponse.json({ error: "User ID is required." }, { status: 400 });
 
@@ -86,4 +89,3 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
-

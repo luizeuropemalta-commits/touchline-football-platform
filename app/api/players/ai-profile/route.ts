@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/server/request";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -35,7 +36,9 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Login required" }, { status: 401 });
 
   try {
-    const body = (await request.json()) as { playerId?: string };
+    const json = await readJsonObject(request);
+    if (!json.ok) return json.response;
+    const body = json.data as { playerId?: string };
     const playerId = cleanText(body.playerId, 80);
     if (!playerId) return NextResponse.json({ error: "Player ID is required." }, { status: 400 });
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { readJsonObject } from "@/lib/server/request";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -43,7 +44,9 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Login required" }, { status: 401 });
 
   try {
-    const body = (await request.json()) as Record<string, unknown>;
+    const json = await readJsonObject(request);
+    if (!json.ok) return json.response;
+    const body = json.data;
     const playerId = cleanText(body.playerId, 80);
     const clubName = cleanText(body.clubName, 180);
     if (!playerId || !clubName) {
