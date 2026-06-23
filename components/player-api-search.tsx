@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Check, Copy, DatabaseZap, Loader2, PlusCircle, Save, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, Copy, DatabaseZap, ExternalLink, Loader2, PlusCircle, Save, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, Meter, SectionHeader } from "@/components/game-ui";
 
@@ -55,6 +55,11 @@ export function PlayerApiSearch() {
     void loadProfiles();
   }, []);
 
+  const trimmedQuery = query.trim();
+  const transfermarktSearchUrl = trimmedQuery
+    ? `https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche?query=${encodeURIComponent(trimmedQuery)}`
+    : "https://www.transfermarkt.com/";
+
   async function loadProfiles() {
     setProfilesLoading(true);
     try {
@@ -69,9 +74,19 @@ export function PlayerApiSearch() {
     }
   }
 
-  async function searchPlayers(event: React.FormEvent<HTMLFormElement>) {
+  function openTransfermarktSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (query.trim().length < 2) {
+    if (trimmedQuery.length < 2) {
+      setError("Escreve pelo menos 2 letras do nome do atleta.");
+      return;
+    }
+    setError("");
+    setSaveMessage("Transfermarkt aberto em nova aba. Escolhe o atleta correto lá e copia o link do perfil se quiser guardar no Touchline.");
+    window.open(transfermarktSearchUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function searchPlayers() {
+    if (trimmedQuery.length < 2) {
       setError("Escreve pelo menos 2 letras do nome do atleta.");
       return;
     }
@@ -80,13 +95,13 @@ export function PlayerApiSearch() {
     setCopiedId(null);
 
     try {
-      const response = await fetch(`/api/api-football/players/search?q=${encodeURIComponent(query)}&season=${encodeURIComponent(season)}`);
+      const response = await fetch(`/api/api-football/players/search?q=${encodeURIComponent(trimmedQuery)}&season=${encodeURIComponent(season)}`);
       const data = (await response.json()) as SearchResponse;
       if (!response.ok) throw new Error(data.error || "Search failed");
       setPlayers(data.players ?? []);
       const defaultTarget = profileOptions[0]?.id ?? "__create__";
       setSelectedTargets(Object.fromEntries((data.players ?? []).filter((player) => player.id).map((player) => [player.id!, defaultTarget])));
-      if (!data.players?.length) setError("Nenhum atleta encontrado. Tenta nome completo ou outro ano.");
+      if (!data.players?.length) setError("A API demo não encontrou esse atleta. Usa o botão principal para abrir a busca grátis no Transfermarkt.");
     } catch (err) {
       setPlayers([]);
       setError(err instanceof Error ? err.message : "Não consegui buscar agora.");
@@ -132,16 +147,16 @@ export function PlayerApiSearch() {
     <div className="space-y-6">
       <GamePanel className="p-5 sm:p-7">
         <SectionHeader
-          kicker="API-Football live search"
-          title="Find and link real player IDs"
+          kicker="Transfermarkt free search"
+          title="Open real player profiles fast"
           action={<Sparkles size={16} className="text-[#a3ff12]" />}
         />
         <p className="max-w-3xl text-sm leading-7 text-slate-400">
-          Pesquisa o atleta na API-Football, escolhe o resultado correto e copia o ID. Esse ID é o que liga o perfil do
-          Touchline à sincronização diária automática.
+          Pesquisa pelo nome e abre o Transfermarkt em nova aba. É mais simples, grátis e funcional para encontrar o perfil
+          correto do atleta sem depender da API demo. Não copiamos dados automaticamente; apenas abrimos a página oficial para consulta.
         </p>
 
-        <form onSubmit={searchPlayers} className="mt-6 grid gap-3 lg:grid-cols-[1fr_150px_auto]">
+        <form onSubmit={openTransfermarktSearch} className="mt-6 grid gap-3 lg:grid-cols-[1fr_auto]">
           <div className="relative">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
             <Input
@@ -151,19 +166,38 @@ export function PlayerApiSearch() {
               className="pl-11"
             />
           </div>
-          <Input value={season} onChange={(event) => setSeason(event.target.value)} placeholder="Season" />
-          <Button type="submit" disabled={loading}>
-            {loading ? <Loader2 size={15} className="animate-spin" /> : <Search size={15} />}
-            Search
+          <Button type="submit">
+            <ExternalLink size={15} />
+            Abrir Transfermarkt
           </Button>
         </form>
-        <p className="mt-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600">
-          Season auto-updates to the current year. You can still change it manually if a league uses a different season code.
-        </p>
+
+        <div className="mt-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-3">
+          <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+            <Input value={season} onChange={(event) => setSeason(event.target.value)} placeholder="Season" />
+            <Button type="button" variant="secondary" disabled={loading} onClick={() => void searchPlayers()}>
+              {loading ? <Loader2 size={15} className="animate-spin" /> : <DatabaseZap size={15} />}
+              API demo opcional
+            </Button>
+          </div>
+          <p className="mt-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600">
+            A API demo fica como opção secundária. O fluxo principal agora abre o Transfermarkt sem custo.
+          </p>
+        </div>
 
         {error && (
           <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] px-4 py-3 text-xs leading-6 text-amber-100/80">
             {error}
+            {trimmedQuery.length >= 2 && (
+              <a
+                href={transfermarktSearchUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="ml-2 inline-flex items-center gap-1 font-black text-[#caff72] underline decoration-[#caff72]/30 underline-offset-4"
+              >
+                Abrir no Transfermarkt <ExternalLink size={12} />
+              </a>
+            )}
           </div>
         )}
 
@@ -290,11 +324,10 @@ export function PlayerApiSearch() {
           <div>
             <h3 className="text-sm font-black uppercase italic text-white">Como linkar no banco</h3>
             <p className="mt-2 text-xs leading-6 text-slate-500">
-              Agora não precisas abrir o Supabase para linkar manualmente. O botão
-              <span className="mx-1 text-cyan-300">Salvar no perfil</span>
-              grava <span className="mx-1 text-cyan-300">external_market_provider = api-football</span>
-              e <span className="mx-1 text-cyan-300">external_market_player_id</span>
-              direto no perfil real do jogador.
+              O fluxo principal abre o Transfermarkt para consulta rápida e grátis. Quando a API demo encontrar o jogador,
+              o botão <span className="mx-1 text-cyan-300">Salvar no perfil</span> ainda pode gravar
+              <span className="mx-1 text-cyan-300">external_market_provider = api-football</span> e
+              <span className="mx-1 text-cyan-300">external_market_player_id</span> direto no perfil.
             </p>
           </div>
         </div>
