@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Building2,
@@ -51,6 +52,7 @@ function representationLabel(status?: string | null) {
 
 export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; players: ClubNetworkPlayer[] }) {
   const [query, setQuery] = useState("");
+  const [clubQuery, setClubQuery] = useState("");
   const [selectedPlayerId, setSelectedPlayerId] = useState(players[0]?.id ?? "");
   const [clubName, setClubName] = useState("");
   const [sportingDirector, setSportingDirector] = useState("");
@@ -64,6 +66,10 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
     const search = query.toLowerCase();
     return players.filter((player) => `${player.name} ${player.club ?? ""} ${player.position ?? ""} ${player.nationality ?? ""}`.toLowerCase().includes(search));
   }, [players, query]);
+  const filteredClubs = useMemo(() => {
+    const search = clubQuery.toLowerCase();
+    return clubs.filter((club) => `${club.name} ${club.league ?? ""} ${club.countryCode ?? ""}`.toLowerCase().includes(search));
+  }, [clubs, clubQuery]);
 
   async function createInterest(playerId: string) {
     setSaving(true);
@@ -178,9 +184,47 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
               <p className="mt-1 text-[10px] text-slate-600">Add players in Player Management to activate club discovery.</p>
             </div>
           )}
-        </GamePanel>
+          </GamePanel>
 
         <aside className="space-y-5">
+          <GamePanel className="p-5">
+            <SectionHeader kicker="Club search" title="Club directory" action={<Building2 size={15} className="text-cyan-300" />} />
+            <div className="relative mb-4">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600" />
+              <input
+                value={clubQuery}
+                onChange={(event) => setClubQuery(event.target.value)}
+                placeholder="Search clubs, league or country..."
+                className="h-10 w-full rounded-xl border border-white/[.07] bg-black/20 pl-9 pr-4 text-[10px] text-white outline-none placeholder:text-slate-700 focus:border-cyan-300/25"
+              />
+            </div>
+            <div className="max-h-[260px] space-y-2 overflow-y-auto pr-1 scrollbar-none">
+              {filteredClubs.map((club) => (
+                <div key={club.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="grid size-10 place-items-center overflow-hidden rounded-xl border border-cyan-300/15 bg-cyan-300/[.06] text-[10px] font-black text-cyan-100">
+                      {club.crestUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={club.crestUrl} alt={club.name} className="h-full w-full object-cover" />
+                      ) : (
+                        club.name.slice(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-[11px] font-black uppercase text-white">{club.name}</p>
+                      <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{club.league ?? "League open"} · {club.countryCode ?? "Global"}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!filteredClubs.length && (
+                <div className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4 text-xs leading-6 text-slate-500">
+                  No clubs found. Add a club through player creation or interest workflows, then it will appear here.
+                </div>
+              )}
+            </div>
+          </GamePanel>
+
           <GamePanel className="p-5">
             <SectionHeader kicker="Interest system" title="Club request form" action={<ShieldCheck size={15} className="text-[#a3ff12]" />} />
             <div className="space-y-3">
@@ -200,6 +244,9 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
             <p className="text-sm leading-6 text-slate-400">
               The database now supports club-agent follows. When a club follows an agent, future player additions can trigger notifications and market alerts.
             </p>
+            <Link href="/agencies" className="mt-4 inline-flex h-10 items-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100">
+              Search agents/agencies
+            </Link>
           </GamePanel>
         </aside>
       </section>

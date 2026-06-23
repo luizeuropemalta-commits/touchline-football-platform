@@ -1,17 +1,9 @@
 import Link from "next/link";
 import { BadgeCheck, Building2, Globe2, ShieldCheck, Users } from "lucide-react";
-import { GamePanel, SectionHeader, StatTile } from "@/components/game-ui";
+import { AgencyDirectory, type AgencyDirectoryAgency, type AgencyDirectoryMember } from "@/components/agency-directory";
+import { StatTile } from "@/components/game-ui";
 import { WorkspaceState } from "@/components/workspace-state";
 import { getCurrentWorkspace } from "@/lib/server/current-workspace";
-
-type TeamMember = {
-  id: string;
-  full_name: string | null;
-  role: string | null;
-  job_title: string | null;
-  avatar_url: string | null;
-  created_at: string | null;
-};
 
 type Agency = {
   name?: string | null;
@@ -44,7 +36,21 @@ export default async function AgenciesPage() {
   ]);
 
   const agencyData = (agency ?? {}) as Agency;
-  const team = (members ?? []) as TeamMember[];
+  const team: AgencyDirectoryMember[] = (members ?? []).map((member) => ({
+    id: member.id,
+    fullName: member.full_name,
+    role: member.role,
+    jobTitle: member.job_title,
+    avatarUrl: member.avatar_url,
+    createdAt: member.created_at,
+  }));
+  const directoryAgency: AgencyDirectoryAgency = {
+    name: agencyData.name,
+    slug: agencyData.slug,
+    countryCode: agencyData.country_code,
+    currency: agencyData.default_currency,
+    logoUrl: agencyData.logo_url,
+  };
 
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
@@ -69,58 +75,7 @@ export default async function AgenciesPage() {
         <StatTile icon={Globe2} label="Followers" value={String(follows)} delta="club relationships" accent="rose" />
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[420px_1fr]">
-        <GamePanel className="p-5">
-          <SectionHeader kicker="Agency profile" title="Identity" action={<ShieldCheck size={15} className="text-[#a3ff12]" />} />
-          <div className="rounded-3xl border border-white/[.08] bg-black/20 p-5">
-            <div className="grid size-20 place-items-center overflow-hidden rounded-3xl border border-cyan-300/20 bg-cyan-300/[.08] text-2xl font-black text-cyan-100">
-              {agencyData.logo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={agencyData.logo_url} alt={agencyData.name ?? "Agency"} className="h-full w-full object-cover" />
-              ) : (
-                (agencyData.name ?? "AF").slice(0, 2).toUpperCase()
-              )}
-            </div>
-            <h2 className="mt-5 text-2xl font-black uppercase italic text-white">{agencyData.name ?? "Touchline Agency"}</h2>
-            <p className="mt-2 text-[9px] font-bold uppercase tracking-wider text-slate-600">{agencyData.slug ?? "agency"} · {agencyData.country_code ?? "Global"} · {agencyData.default_currency ?? "EUR"}</p>
-          </div>
-        </GamePanel>
-
-        <GamePanel className="overflow-hidden">
-          <div className="border-b border-white/[.07] p-5">
-            <SectionHeader kicker="People" title="Agency Team" action={<Users size={15} className="text-cyan-300" />} />
-          </div>
-          {team.length ? (
-            <div className="divide-y divide-white/[.06]">
-              {team.map((member) => (
-                <div key={member.id} className="live-row grid gap-4 p-5 md:grid-cols-[1fr_180px_160px] md:items-center" style={{ "--row-accent": "#22d3ee" } as React.CSSProperties}>
-                  <div className="flex items-center gap-3">
-                    <div className="grid size-11 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.07] text-xs font-black text-cyan-100">
-                      {member.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={member.avatar_url} alt={member.full_name ?? "Agent"} className="h-full w-full object-cover" />
-                      ) : (
-                        (member.full_name ?? "AG").slice(0, 2).toUpperCase()
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-black uppercase italic text-white">{member.full_name || "Unnamed agent"}</p>
-                      <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{member.job_title || "Football professional"}</p>
-                    </div>
-                  </div>
-                  <p className="text-[10px] font-black uppercase text-cyan-200">{member.role ?? "member"}</p>
-                  <Link href="/verification" className="text-[8px] font-black uppercase text-[#a3ff12] hover:text-white">Verification →</Link>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-8 text-center">
-              <p className="text-sm font-black uppercase italic text-white">No team members yet</p>
-              <p className="mt-2 text-xs leading-6 text-slate-500">Your owner profile appears here once the workspace profile is created.</p>
-            </div>
-          )}
-        </GamePanel>
-      </div>
+      <AgencyDirectory agency={directoryAgency} members={team} />
     </div>
   );
 }
