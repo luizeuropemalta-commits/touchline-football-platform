@@ -10,6 +10,10 @@ import { cn } from "@/lib/utils";
 type PlayerDatabaseResult = {
   id: string;
   transfermarktPlayerId: string;
+  sourceProvider?: string | null;
+  sourceId?: string | null;
+  sourceLabel?: string | null;
+  sourceLinkLabel?: string | null;
   name: string;
   profileUrl: string;
   photoUrl?: string | null;
@@ -66,6 +70,12 @@ function metaLine(player: PlayerDatabaseResult) {
   return [player.position, player.currentClub, player.nationality, age ? `Age ${age}` : null].filter(Boolean).join(" · ") || "Profile data open";
 }
 
+function idLabel(player: PlayerDatabaseResult) {
+  return player.sourceProvider === "transfermarkt"
+    ? `TM ID ${player.transfermarktPlayerId}`
+    : `${player.sourceLabel ?? "Source"} ID ${player.sourceId ?? player.transfermarktPlayerId}`;
+}
+
 export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compact" }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlayerDatabaseResult[]>([]);
@@ -97,10 +107,14 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     const timeout = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await fetch(`/api/player-database/search?q=${encodeURIComponent(trimmed)}&limit=${mode === "compact" ? 6 : 24}`);
-        const data = (await response.json()) as { players?: PlayerDatabaseResult[]; error?: string };
+        const discover = mode === "full" && trimmed.length >= 3 ? "&discover=1" : "";
+        const response = await fetch(`/api/player-database/search?q=${encodeURIComponent(trimmed)}&limit=${mode === "compact" ? 6 : 24}${discover}`);
+        const data = (await response.json()) as { players?: PlayerDatabaseResult[]; error?: string; discovered?: boolean };
         if (!response.ok) throw new Error(data.error || "Could not search player database.");
-        if (latestRequest.current === requestId) setResults(data.players ?? []);
+        if (latestRequest.current === requestId) {
+          setResults(data.players ?? []);
+          if (data.discovered) setMessage("Player discovered automatically from API-Football and saved into Touchline.");
+        }
       } catch (err) {
         if (latestRequest.current === requestId) setError(err instanceof Error ? err.message : "Search unavailable.");
       } finally {
@@ -114,9 +128,9 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const hasResults = results.length > 0;
   const resultSummary = useMemo(() => {
     if (trimmed.length < 2) return "Type at least 2 letters";
-    if (loading) return "Searching Touchline database";
+      if (loading) return mode === "full" ? "Searching Touchline + automatic football discovery" : "Searching Touchline database";
     return `${results.length} player${results.length === 1 ? "" : "s"} found`;
-  }, [loading, results.length, trimmed.length]);
+  }, [loading, mode, results.length, trimmed.length]);
 
   async function importLink() {
     setImporting(true);
@@ -181,7 +195,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[11px] font-black uppercase italic text-white group-hover:text-cyan-200">{player.name}</p>
                       <p className="mt-1 truncate text-[8px] font-bold uppercase tracking-wider text-slate-500">{metaLine(player)}</p>
-                      <p className="mt-2 text-[8px] text-[#a3ff12]">TM ID {player.transfermarktPlayerId}</p>
+                      <p className="mt-2 text-[8px] text-[#a3ff12]">{idLabel(player)}</p>
                     </div>
                     <ArrowRight size={14} className="mt-4 text-slate-600 group-hover:text-cyan-300" />
                   </Link>
@@ -212,14 +226,14 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 Database-first search
               </span>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
-                Transfermarkt links cached
+                Automatic player discovery
               </span>
             </div>
             <p className="af-mode-kicker">Touchline / Player Database</p>
             <h1 className="af-mode-title font-display mt-3 text-white">Global Player Search</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
-              Search players from Touchline&apos;s own database first. Transfermarkt is used only by the import/sync layer to
-              keep saved player links, photos and profile references updated.
+              Search players from Touchline&apos;s own database first. If a player is not found, Touchline can discover and save
+              basic player records automatically from API-Football so you do not need to leave the platform.
             </p>
 
             <div className="relative mt-7">
@@ -278,7 +292,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-[#07111b]/20 to-transparent" />
                 <div className="absolute left-4 top-4 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 py-1 text-[8px] font-black uppercase text-[#caff72]">
-                  TM ID {player.transfermarktPlayerId}
+                  {idLabel(player)}
                 </div>
               </div>
               <div className="p-5">
@@ -301,7 +315,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                     Open Profile <ArrowRight size={12} />
                   </Link>
                   <a href={player.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72]">
-                    Transfermarkt <ExternalLink size={12} />
+                    {player.sourceLinkLabel ?? "Source Link"} <ExternalLink size={12} />
                   </a>
                 </div>
               </div>
@@ -312,7 +326,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
             <Globe2 size={30} className="text-slate-700" />
             <p className="mt-4 text-sm font-black uppercase italic text-white">Start searching the football database</p>
             <p className="mt-2 max-w-lg text-xs leading-6 text-slate-500">
-              Type part of a player name. Results come from Touchline&apos;s own database, not a live Transfermarkt request.
+              Type part of a player name. If Touchline has no result, it can automatically save a basic profile from API-Football.
             </p>
           </GamePanel>
         )}

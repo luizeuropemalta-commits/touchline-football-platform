@@ -74,6 +74,16 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
   if (error || !player) notFound();
 
   const age = player.age ?? ageFromDate(player.date_of_birth);
+  const sourcePayload = player.source_payload && typeof player.source_payload === "object" && !Array.isArray(player.source_payload)
+    ? player.source_payload as Record<string, unknown>
+    : {};
+  const sourceLabel = player.source_provider === "transfermarkt"
+    ? "Transfermarkt"
+    : sourcePayload.source === "api-football"
+      ? "API-Football"
+      : "Football Data";
+  const sourceId = sourcePayload.apiFootballPlayerId ? String(sourcePayload.apiFootballPlayerId) : player.transfermarkt_player_id;
+  const sourceLinkLabel = player.source_provider === "transfermarkt" ? "Transfermarkt" : "Source Link";
   const profileCompleteness = Math.min(
     100,
     [
@@ -116,12 +126,12 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
                 </p>
                 <h1 className="font-display mt-2 text-4xl uppercase italic sm:text-6xl">{player.player_name}</h1>
                 <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                  {player.nationality ?? "Nationality open"} {age ? `· AGE ${age}` : ""} · TM ID {player.transfermarkt_player_id}
+                  {player.nationality ?? "Nationality open"} {age ? `· AGE ${age}` : ""} · {sourceLabel} ID {sourceId}
                 </p>
               </div>
               <div className="flex items-start gap-2">
                 <a href={player.profile_url} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007]">
-                  Transfermarkt <ExternalLink size={13} />
+                  {sourceLinkLabel} <ExternalLink size={13} />
                 </a>
               </div>
             </div>
@@ -150,7 +160,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
                 <Meter value={100} color="cyan" />
               </div>
               <div>
-                <div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>SYNC SOURCE</span><span>TM</span></div>
+                <div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>SYNC SOURCE</span><span>{sourceLabel}</span></div>
                 <Meter value={player.source_provider === "transfermarkt" ? 90 : 60} color="gold" />
               </div>
             </div>
@@ -163,7 +173,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
           <SectionHeader kicker="Touchline search profile" title="Database intelligence" action={<DatabaseZap size={15} className="text-cyan-300" />} />
           <div className="grid gap-3 md:grid-cols-2">
             {[
-              ["Transfermarkt ID", player.transfermarkt_player_id],
+              [`${sourceLabel} ID`, sourceId],
               ["Profile URL", player.profile_url],
               ["Position", player.position ?? "Open"],
               ["Nationality", player.nationality ?? "Open"],
@@ -184,8 +194,8 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
           <GamePanel className="p-5">
             <SectionHeader kicker="Legal source rule" title="How Touchline uses this data" action={<ShieldCheck size={15} className="text-[#a3ff12]" />} />
             <div className="space-y-3 text-xs leading-6 text-slate-400">
-              <p>Touchline searches its own saved player-link database first. It does not call Transfermarkt every time a user types.</p>
-              <p>Transfermarkt remains a click-through reference/source link. Representation, legal status and club visibility are controlled inside Touchline.</p>
+              <p>Touchline searches its own saved player-link database first. If the player was missing, it can save a basic profile from an authorized provider such as API-Football.</p>
+              <p>External sources remain reference links only. Representation, legal status and club visibility are controlled inside Touchline.</p>
               <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[.05] p-4">
                 <p className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-300">Sync status</p>
                 <p className="mt-2 text-white">Last updated: {compactDate(player.last_updated_at)}</p>

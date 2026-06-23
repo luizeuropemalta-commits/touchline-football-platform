@@ -5,6 +5,10 @@ import { fetchLinkPreview, getTransfermarktPlayerId, validatePreviewUrl } from "
 export type PlayerDatabaseResult = {
   id: string;
   transfermarktPlayerId: string;
+  sourceProvider?: string | null;
+  sourceId?: string | null;
+  sourceLabel?: string | null;
+  sourceLinkLabel?: string | null;
   name: string;
   profileUrl: string;
   photoUrl?: string | null;
@@ -179,9 +183,25 @@ export async function upsertGlobalPlayerProfile(admin: SupabaseClient, input: Up
 }
 
 export function mapGlobalPlayer(row: Record<string, unknown>): PlayerDatabaseResult {
+  const sourcePayload = row.source_payload && typeof row.source_payload === "object" && !Array.isArray(row.source_payload)
+    ? (row.source_payload as Record<string, unknown>)
+    : {};
+  const sourceProvider = (row.source_provider as string | null) ?? "transfermarkt";
+  const apiFootballPlayerId = sourcePayload.apiFootballPlayerId ? String(sourcePayload.apiFootballPlayerId) : null;
+  const sourceLabel = sourceProvider === "transfermarkt"
+    ? "Transfermarkt"
+    : sourcePayload.source === "api-football"
+      ? "API-Football"
+      : "Football Data";
+  const sourceLinkLabel = sourceProvider === "transfermarkt" ? "Transfermarkt" : "Source Link";
+
   return {
     id: String(row.id),
     transfermarktPlayerId: String(row.transfermarkt_player_id ?? ""),
+    sourceProvider,
+    sourceId: apiFootballPlayerId ?? String(row.transfermarkt_player_id ?? ""),
+    sourceLabel,
+    sourceLinkLabel,
     name: String(row.player_name ?? "Unnamed player"),
     profileUrl: String(row.profile_url ?? ""),
     photoUrl: (row.photo_url as string | null) ?? null,
