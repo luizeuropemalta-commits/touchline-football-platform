@@ -220,7 +220,7 @@ export function MarketRadar() {
             </div>
 
             <div className="mt-3 grid gap-3 lg:grid-cols-2">
-              <Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="Tags opcionais: Neymar, PSG, rumor..." />
+              <Input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="Tags opcionais: atleta, clube, rumor..." />
               <Input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Nota interna opcional" />
             </div>
 

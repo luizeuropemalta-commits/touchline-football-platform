@@ -1,21 +1,155 @@
-"use client";
-
-import Image from "next/image";
-import { useState } from "react";
-import { Building2, Flame, Heart, MessageCircle, Radio, Repeat2, Share2, Sparkles, TrendingUp, Users } from "lucide-react";
+import Link from "next/link";
+import { Building2, MessageCircle, Radio, Share2, Sparkles, Target, TrendingUp, Users } from "lucide-react";
 import { GamePanel, LivePill, SectionHeader } from "@/components/game-ui";
+import { WorkspaceState } from "@/components/workspace-state";
+import { getCurrentWorkspace } from "@/lib/server/current-workspace";
 
-const posts = [
-  {type:"CLUB UPDATE",author:"Arsenal Recruitment",time:"12m",title:"Midfield search enters final phase",body:"Our summer recruitment team is prioritizing a progressive midfielder aged 20–24 with Champions League experience.",image:"https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=1000&q=85",likes:184,comments:27,color:"cyan"},
-  {type:"PLAYER MOMENT",author:"Enzo Martínez",time:"34m",title:"Another step forward.",body:"Proud of the team and focused on what comes next. Thank you for the incredible support.",image:"https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1000&q=85",likes:2840,comments:164,color:"lime"},
-  {type:"MARKET RUMOR",author:"Touchline Intelligence",time:"1h",title:"Serie A demand for wide forwards rises",body:"Four clubs have activated summer searches for left-sided attackers. Average asking prices are up 11% week over week.",image:null,likes:92,comments:18,color:"rose"},
-];
+type PostRow = {
+  id: string;
+  post_type: string;
+  body: string;
+  visibility: string;
+  created_at: string;
+  related_player_id: string | null;
+};
 
-export default function Feed() {
-  const [liked,setLiked]=useState<number[]>([]);
-  return <div className="mx-auto max-w-[1500px] animate-in"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="mb-2 flex items-center gap-3"><LivePill>Football world live</LivePill><span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">1,482 network updates today</span></div><h1 className="font-display text-3xl uppercase italic sm:text-[42px]">World Feed</h1><p className="mt-1.5 text-xs text-slate-500">The live pulse of clubs, players, agents, markets and opportunity.</p></div><div className="flex gap-1 rounded-xl border border-white/[.07] bg-white/[.025] p-1">{["FOR YOU","MARKET","NETWORK"].map((x,i)=><button key={x} data-active={i===0} className={`tab-button rounded-lg px-3 py-2 text-[8px] font-black tracking-wider ${i===0?"bg-cyan-300/10 text-cyan-300":"text-slate-600"}`}>{x}</button>)}</div></div>
-    <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_320px]"><main className="stagger space-y-4">{posts.map((p,i)=><GamePanel key={p.title} className="glass-hover overflow-hidden"><div className="flex items-center gap-3 p-4"><span className={`interactive-icon grid size-10 place-items-center rounded-xl border ${p.color==="cyan"?"border-cyan-300/15 bg-cyan-300/[.06] text-cyan-300":p.color==="lime"?"border-[#a3ff12]/15 bg-[#a3ff12]/[.06] text-[#a3ff12]":"border-rose-300/15 bg-rose-300/[.06] text-rose-300"}`}>{i===0?<Building2 size={16}/>:i===1?<Users size={16}/>:<Flame size={16}/>}</span><div><p className="text-[9px] font-black uppercase">{p.author}</p><p className="mt-1 text-[7px] font-bold tracking-wider text-slate-600">{p.type} · {p.time}</p></div><button className="interactive-icon ml-auto text-slate-700">•••</button></div>{p.image&&<div className="media-cinematic relative h-64 sm:h-80"><Image src={p.image} fill sizes="900px" alt={p.title} className="object-cover opacity-75"/><div className="absolute inset-0 bg-gradient-to-t from-[#08131e] via-transparent to-transparent"/></div>}<div className="p-5"><h2 className="text-base font-black uppercase italic">{p.title}</h2><p className="mt-2 text-[10px] leading-5 text-slate-500">{p.body}</p><div className="mt-5 flex items-center gap-5 border-t border-white/[.06] pt-4"><button onClick={()=>setLiked(x=>x.includes(i)?x.filter(n=>n!==i):[...x,i])} className={`interactive-icon flex items-center gap-2 text-[8px] font-bold ${liked.includes(i)?"text-rose-300":"text-slate-600 hover:text-rose-300"}`}><Heart size={13} fill={liked.includes(i)?"currentColor":"none"}/>{p.likes+(liked.includes(i)?1:0)}</button><button className="interactive-icon flex items-center gap-2 text-[8px] font-bold text-slate-600 hover:text-cyan-300"><MessageCircle size={13}/>{p.comments}</button><button className="interactive-icon flex items-center gap-2 text-[8px] font-bold text-slate-600 hover:text-[#a3ff12]"><Repeat2 size={13}/>Repost</button><button className="interactive-icon ml-auto text-slate-600 hover:text-white"><Share2 size={13}/></button></div></div></GamePanel>)}</main>
-      <aside className="space-y-5"><GamePanel className="p-5"><SectionHeader kicker="Live Opportunities" title="Network Radar" action={<Radio size={14} className="text-rose-300"/>}/><div className="space-y-3">{[["Club seeking U21 striker","Bundesliga · 4m","URGENT","rose"],["Investor seeking academy","Portugal · 18m","NEW","gold"],["Scout mandate: Right-back","Ligue 1 · 31m","OPEN","cyan"],["Legal specialist available","London · 45m","VERIFIED","lime"]].map(([title,meta,status,color])=><div key={title} className="rounded-xl border border-white/[.06] bg-white/[.02] p-3"><div className="flex items-start justify-between gap-2"><p className="text-[9px] font-black uppercase leading-4">{title}</p><span className={`text-[7px] font-black ${color==="rose"?"text-rose-300":color==="gold"?"text-amber-300":color==="lime"?"text-[#a3ff12]":"text-cyan-300"}`}>{status}</span></div><p className="mt-2 text-[7px] text-slate-600">{meta}</p></div>)}</div></GamePanel><GamePanel className="p-5"><SectionHeader kicker="Trending Now" title="Football Signals" action={<TrendingUp size={14} className="text-[#a3ff12]"/>}/><div className="space-y-4">{[["#SummerWindow","8.2K posts"],["#WonderkidWatch","4.7K posts"],["#AgentLeague","3.1K posts"],["#AcademyPathway","2.4K posts"]].map(([tag,count],i)=><div key={tag} className="flex items-center gap-3"><span className="font-display text-lg text-slate-700">0{i+1}</span><div><p className="text-[9px] font-black text-cyan-300">{tag}</p><p className="mt-1 text-[7px] text-slate-600">{count}</p></div></div>)}</div></GamePanel><GamePanel className="border-amber-300/15 p-5"><Sparkles size={15} className="text-amber-300"/><p className="mt-3 text-[9px] font-black uppercase">Network boost available</p><p className="mt-2 text-[8px] leading-4 text-slate-600">Complete your club relationship profile to increase discovery by recruitment teams.</p><button className="mt-3 text-[8px] font-black uppercase text-amber-300">Boost profile →</button></GamePanel></aside>
+type OpportunityRow = {
+  id: string;
+  title: string;
+  position_needed: string | null;
+  status: string;
+  created_at: string;
+  clubs?: { name?: string | null } | Array<{ name?: string | null }> | null;
+};
+
+function relative(date: string) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 60000));
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+function clubName(value: OpportunityRow["clubs"]) {
+  const club = Array.isArray(value) ? value[0] : value;
+  return club?.name ?? "Club requirement";
+}
+
+export default async function Feed() {
+  const workspace = await getCurrentWorkspace();
+  if (workspace.status !== "ready") return <WorkspaceState status={workspace.status} message={"message" in workspace ? workspace.message : undefined} />;
+
+  const { admin, agencyId, profile } = workspace;
+  const [{ data: postRows }, { data: opportunityRows }, { count: playerCount }] = await Promise.all([
+    admin
+      .from("community_posts_phase2")
+      .select("id, post_type, body, visibility, created_at, related_player_id")
+      .eq("agency_id", agencyId)
+      .order("created_at", { ascending: false })
+      .limit(40),
+    admin
+      .from("player_opportunities")
+      .select("id, title, position_needed, status, created_at, clubs:club_id(name)")
+      .eq("agency_id", agencyId)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    admin.from("players").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
+  ]);
+
+  const posts = (postRows ?? []) as PostRow[];
+  const opportunities = (opportunityRows ?? []) as OpportunityRow[];
+
+  return (
+    <div className="mx-auto max-w-[1500px] animate-in">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <div className="mb-2 flex items-center gap-3">
+            <LivePill>{posts.length + opportunities.length} live signals</LivePill>
+            <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">Real community and opportunity feed</span>
+          </div>
+          <h1 className="font-display text-3xl uppercase italic sm:text-[42px]">World Feed</h1>
+          <p className="mt-1.5 text-xs text-slate-500">A living football feed powered by your own network activity.</p>
+        </div>
+        <Link href="/opportunities" className="inline-flex h-11 items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 text-[9px] font-black uppercase text-cyan-100">
+          Create opportunity
+        </Link>
+      </div>
+
+      <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_320px]">
+        <main className="space-y-4">
+          {posts.map((post) => (
+            <GamePanel key={post.id} className="glass-hover p-5">
+              <div className="flex items-center gap-3">
+                <span className="interactive-icon grid size-10 place-items-center rounded-xl border border-cyan-300/15 bg-cyan-300/[.06] text-cyan-300">
+                  <Users size={16} />
+                </span>
+                <div>
+                  <p className="text-[9px] font-black uppercase">{profile.full_name || "Touchline user"}</p>
+                  <p className="mt-1 text-[7px] font-bold uppercase tracking-wider text-slate-600">{post.post_type.replaceAll("_", " ")} · {relative(post.created_at)} · {post.visibility.replaceAll("_", " ")}</p>
+                </div>
+              </div>
+              <p className="mt-5 text-[11px] leading-6 text-slate-400">{post.body}</p>
+              <div className="mt-5 flex items-center gap-5 border-t border-white/[.06] pt-4">
+                <span className="interactive-icon flex items-center gap-2 text-[8px] font-bold text-slate-600"><MessageCircle size={13} />Comment layer ready</span>
+                <span className="interactive-icon flex items-center gap-2 text-[8px] font-bold text-slate-600"><Share2 size={13} />Share inside network</span>
+              </div>
+            </GamePanel>
+          ))}
+
+          {opportunities.map((item) => (
+            <GamePanel key={item.id} className="glass-hover border-cyan-300/10 p-5">
+              <div className="flex items-start gap-3">
+                <span className="interactive-icon grid size-10 place-items-center rounded-xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.06] text-[#a3ff12]">
+                  <Target size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[8px] font-black uppercase tracking-[.2em] text-[#a3ff12]">Opportunity signal · {relative(item.created_at)}</p>
+                  <h2 className="mt-2 text-base font-black uppercase italic">{item.title}</h2>
+                  <p className="mt-2 text-[10px] leading-5 text-slate-500">{clubName(item.clubs)} · {item.position_needed || "position open"} · {item.status.replaceAll("_", " ")}</p>
+                </div>
+                <Link href="/opportunities" className="rounded-xl border border-cyan-300/15 px-3 py-2 text-[8px] font-black uppercase text-cyan-300">Open</Link>
+              </div>
+            </GamePanel>
+          ))}
+
+          {!posts.length && !opportunities.length && (
+            <GamePanel className="border-dashed border-cyan-300/20 p-8">
+              <Sparkles size={20} className="text-[#a3ff12]" />
+              <h2 className="mt-4 text-lg font-black uppercase italic text-white">Your football world is ready</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">Add players, create opportunities, and publish scouting insights. The feed will populate only with real actions from your ecosystem.</p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Link href="/players" className="inline-flex h-10 items-center rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]">Add player</Link>
+                <Link href="/opportunities" className="inline-flex h-10 items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 text-[9px] font-black uppercase text-cyan-100">Create opportunity</Link>
+              </div>
+            </GamePanel>
+          )}
+        </main>
+
+        <aside className="space-y-5">
+          <GamePanel className="p-5">
+            <SectionHeader kicker="Network Radar" title="Real Signals" action={<Radio size={14} className="text-rose-300" />} />
+            <div className="grid gap-3">
+              <div className="rounded-xl border border-white/[.06] bg-white/[.02] p-3">
+                <p className="text-[8px] text-slate-600">PLAYERS IN SYSTEM</p>
+                <p className="mt-1 font-display text-2xl text-cyan-300">{playerCount ?? 0}</p>
+              </div>
+              <div className="rounded-xl border border-white/[.06] bg-white/[.02] p-3">
+                <p className="text-[8px] text-slate-600">OPEN OPPORTUNITIES</p>
+                <p className="mt-1 font-display text-2xl text-[#a3ff12]">{opportunities.filter((item) => item.status === "open").length}</p>
+              </div>
+            </div>
+          </GamePanel>
+          <GamePanel className="p-5">
+            <SectionHeader kicker="Daily habit loop" title="Next Actions" action={<TrendingUp size={14} className="text-[#a3ff12]" />} />
+            <div className="space-y-3 text-[9px] leading-5 text-slate-500">
+              <p>1. Add verified player profiles.</p>
+              <p>2. Create club requirements or opportunity signals.</p>
+              <p>3. Move real interests into negotiation rooms.</p>
+            </div>
+          </GamePanel>
+        </aside>
+      </div>
     </div>
-  </div>;
+  );
 }

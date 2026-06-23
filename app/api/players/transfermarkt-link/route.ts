@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchLinkPreview } from "@/lib/link-preview";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -42,6 +43,20 @@ function getTransfermarktPlayerId(profileUrl: string) {
   return match?.[1] ?? null;
 }
 
+function titleFromTransfermarktUrl(profileUrl: string) {
+  try {
+    const slug = new URL(profileUrl).pathname.split("/").filter(Boolean)[0];
+    if (!slug) return "";
+    return slug
+      .split("-")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  } catch {
+    return "";
+  }
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   if (!supabase) return NextResponse.json({ error: "Supabase is not configured." }, { status: 500 });
@@ -64,12 +79,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Cola um link válido do perfil Transfermarkt. Exemplo: https://www.transfermarkt.com/neymar/profil/spieler/68290" }, { status: 400 });
   }
 
-  const photoUrl = normalizeHttpsUrl(body.photoUrl);
+  let photoUrl = normalizeHttpsUrl(body.photoUrl);
   if (body.photoUrl?.trim() && !photoUrl) {
     return NextResponse.json({ error: "A foto precisa ser um link HTTPS válido, ou deixa o campo vazio." }, { status: 400 });
   }
 
-  const playerName = body.playerName?.trim();
+  const preview = await fetchLinkPreview(new URL(profileUrl));
+  if (!photoUrl && preview.image) photoUrl = preview.image;
+
+  const playerName =
+    body.playerName?.trim() ||
+    preview.title?.replace(/\|.*$/g, "").trim() ||
+    titleFromTransfermarktUrl(profileUrl);
+
   if ((!body.playerId || body.playerId === "__create__") && !playerName) {
     return NextResponse.json({ error: "Escreve o nome do atleta para criar um novo perfil." }, { status: 400 });
   }
@@ -85,9 +107,13 @@ export async function POST(request: Request) {
       profileUrl,
       photoUrl,
       providerPlayerId,
+      previewTitle: preview.title,
+      previewDescription: preview.description,
+      previewImage: preview.image,
+      siteName: preview.siteName,
       linkedBy: user.id,
       linkedAt: new Date().toISOString(),
-      note: "Manual Transfermarkt profile link saved in Touchline. Page content is not copied automatically.",
+      note: "Transfermarkt profile link saved in Touchline as public link preview. Page content is not copied automatically.",
     };
 
     if (!targetPlayerId || targetPlayerId === "__create__") {

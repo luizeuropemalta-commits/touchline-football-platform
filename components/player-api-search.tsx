@@ -184,7 +184,7 @@ export function PlayerApiSearch() {
       setPlayers(data.players ?? []);
       const defaultTarget = profileOptions[0]?.id ?? "__create__";
       setSelectedTargets(Object.fromEntries((data.players ?? []).filter((player) => player.id).map((player) => [player.id!, defaultTarget])));
-      if (!data.players?.length) setError("A API demo não encontrou esse atleta. Usa o botão principal para abrir a busca grátis no Transfermarkt.");
+      if (!data.players?.length) setError("A API opcional não encontrou esse atleta. Usa o botão principal para abrir a busca grátis no Transfermarkt.");
     } catch (err) {
       setPlayers([]);
       setError(err instanceof Error ? err.message : "Não consegui buscar agora.");
@@ -291,7 +291,7 @@ export function PlayerApiSearch() {
         />
         <p className="max-w-3xl text-sm leading-7 text-slate-400">
           Pesquisa pelo nome e abre o Transfermarkt em nova aba. É mais simples, grátis e funcional para encontrar o perfil
-          correto do atleta sem depender da API demo. Não copiamos dados automaticamente; apenas abrimos a página oficial para consulta.
+          correto do atleta sem depender da API opcional. Não copiamos dados automaticamente; apenas abrimos a página oficial para consulta.
         </p>
 
         <form onSubmit={openTransfermarktSearch} className="mt-6 grid gap-3 lg:grid-cols-[1fr_auto]">
@@ -300,7 +300,7 @@ export function PlayerApiSearch() {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Ex: Marcus Rashford, Cristiano Ronaldo, Mbappe..."
+              placeholder="Ex: full player name..."
               className="pl-11"
             />
           </div>
@@ -315,11 +315,11 @@ export function PlayerApiSearch() {
             <Input value={season} onChange={(event) => setSeason(event.target.value)} placeholder="Season" />
             <Button type="button" variant="secondary" disabled={loading} onClick={() => void searchPlayers()}>
               {loading ? <Loader2 size={15} className="animate-spin" /> : <DatabaseZap size={15} />}
-              API demo opcional
+              API opcional
             </Button>
           </div>
           <p className="mt-2 text-[9px] font-bold uppercase tracking-[.16em] text-slate-600">
-            A API demo fica como opção secundária. O fluxo principal agora abre o Transfermarkt sem custo.
+            A API opcional fica como opção secundária. O fluxo principal agora abre o Transfermarkt sem custo.
           </p>
         </div>
 
@@ -375,7 +375,7 @@ export function PlayerApiSearch() {
               <Input
                 value={transfermarktPlayerName}
                 onChange={(event) => setTransfermarktPlayerName(event.target.value)}
-                placeholder="Nome do atleta para criar perfil. Ex: Neymar"
+                placeholder="Nome do atleta para criar perfil"
               />
               <Input
                 value={transfermarktProfileUrl}
@@ -677,7 +677,7 @@ export function PlayerApiSearch() {
           <div>
             <h3 className="text-sm font-black uppercase italic text-white">Como linkar no banco</h3>
             <p className="mt-2 text-xs leading-6 text-slate-500">
-              O fluxo principal abre o Transfermarkt para consulta rápida e grátis. Quando a API demo encontrar o jogador,
+              O fluxo principal abre o Transfermarkt para consulta rápida e grátis. Quando a API opcional encontrar o jogador,
               o botão <span className="mx-1 text-cyan-300">Salvar no perfil</span> ainda pode gravar
               <span className="mx-1 text-cyan-300">external_market_provider = api-football</span> e
               <span className="mx-1 text-cyan-300">external_market_player_id</span> direto no perfil.

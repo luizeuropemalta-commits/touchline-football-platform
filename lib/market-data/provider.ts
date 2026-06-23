@@ -121,7 +121,7 @@ async function fetchApiFootballPlayer(params: {
   if (!apiKey) {
     return {
       ok: false,
-      reason: "API-Football is not configured. Add API_FOOTBALL_KEY in Vercel to enable free demo sync.",
+      reason: "API-Football is not configured. Add API_FOOTBALL_KEY in Vercel to enable optional football data sync.",
     };
   }
 

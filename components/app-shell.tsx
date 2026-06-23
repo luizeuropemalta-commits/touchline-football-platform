@@ -6,6 +6,7 @@ import {
   BadgeCheck, BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
   FileSignature, Globe2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
   LockKeyhole, Menu, Newspaper, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
+  Target,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "./logo";
@@ -16,6 +17,7 @@ const nav = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/players", label: "Player Portfolio", icon: Users },
   { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
+  { href: "/opportunities", label: "Opportunities", icon: Target },
   { href: "/deals", label: "Deal Rooms", icon: Zap, count: 7 },
   { href: "/scouting", label: "Scouting Center", icon: Binoculars },
   { href: "/inbox", label: "Messages", icon: Inbox, count: 5 },
@@ -43,6 +45,7 @@ const consoleModes = [
   { href: "/dashboard", label: "Command Center", eyebrow: "HQ", icon: Globe2 },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
   { href: "/verification", label: "Verification", eyebrow: "Trust", icon: BadgeCheck },
+  { href: "/opportunities", label: "Opportunities", eyebrow: "AI Match", icon: Target },
   { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
   { href: "/scouting", label: "Scouting Center", eyebrow: "Discovery", icon: Binoculars },
   { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },

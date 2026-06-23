@@ -1,68 +1,82 @@
-"use client";
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ChevronDown, Crosshair, Crown, DatabaseZap, Plus, Search, ShieldCheck, SlidersHorizontal, Sparkles, Trophy, Users } from "lucide-react";
-import { players } from "@/lib/demo-data";
-import { Button } from "@/components/ui";
-import { Meter, PlayerGameCard } from "@/components/game-ui";
+import { PlayerManagement, type RealPlayer } from "@/components/player-management";
+import { GamePanel } from "@/components/game-ui";
+import { ensureUserWorkspace } from "@/lib/server/workspace";
+import { createClient } from "@/lib/supabase/server";
 
-export default function PlayersPage() {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("ALL");
-  const filtered = useMemo(() => players.filter(p => {
-    const matches = `${p.name} ${p.club} ${p.position}`.toLowerCase().includes(query.toLowerCase());
-    return matches && (filter === "ALL" || (filter === "ELITE" && p.overall >= 85) || (filter === "RISING" && p.growth >= 8) || (filter === "HOT" && p.interest >= 85));
-  }), [query, filter]);
+type ClubJoin = { name?: string | null } | Array<{ name?: string | null }> | null;
 
-  return (
-    <div className="mx-auto max-w-[1760px] animate-in">
-      <section className="af-mode-screen p-5 sm:p-7 xl:p-9" style={{ "--mode-aura": "rgba(34,211,238,.30)" } as React.CSSProperties}>
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[1fr_420px] xl:items-end">
-          <div>
-            <div className="mb-5 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]"><span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]"/>24 active player profiles</span>
-              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">Portfolio value €146.8M</span>
-            </div>
-            <p className="af-mode-kicker">Touchline / Player Portfolio</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Player Portfolio</h1>
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300/80">Manage profiles, performance, video, contracts, documents, transfer status and career progression from one premium football vault.</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button><Plus size={14}/>Add Player</Button>
-              <Button variant="secondary"><Sparkles size={14}/>AI Profile Builder</Button>
-              <Link href="/players/api-search" className="relative inline-flex h-11 items-center justify-center gap-2 overflow-hidden rounded-2xl border border-cyan-200/18 bg-white/[.055] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[.085]">
-                <DatabaseZap size={14}/>
-                API-Football Search
-              </Link>
-            </div>
-          </div>
-          <div className="stadium-scoreboard p-5">
-            <div className="relative z-10 flex items-start justify-between">
-              <div><p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Portfolio Score</p><p className="font-display mt-2 text-7xl leading-none text-white">88</p></div>
-              <Crown className="text-amber-300" size={34}/>
-            </div>
-            <div className="relative z-10 mt-5"><div className="mb-2 flex justify-between text-[8px] font-black uppercase tracking-wider text-slate-500"><span>Market readiness</span><span>76%</span></div><Meter value={76} color="lime"/></div>
-            <div className="relative z-10 mt-5 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-white/[.045] p-3"><Trophy size={15} className="mx-auto text-amber-300"/><p className="mt-2 text-[8px] text-slate-500">Elite</p><p className="text-sm font-black">8</p></div>
-              <div className="rounded-xl bg-white/[.045] p-3"><Users size={15} className="mx-auto text-cyan-300"/><p className="mt-2 text-[8px] text-slate-500">Players</p><p className="text-sm font-black">24</p></div>
-              <div className="rounded-xl bg-white/[.045] p-3"><ShieldCheck size={15} className="mx-auto text-[#a3ff12]"/><p className="mt-2 text-[8px] text-slate-500">Hot</p><p className="text-sm font-black">6</p></div>
-            </div>
-          </div>
-        </div>
-      </section>
+function clubName(clubs?: ClubJoin) {
+  if (!clubs) return null;
+  return Array.isArray(clubs) ? (clubs[0]?.name ?? null) : (clubs.name ?? null);
+}
 
-      <div className="af-strip mt-6 flex flex-col gap-3 p-3 lg:flex-row lg:items-center">
-        <div className="relative flex-1"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600"/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search squad, club or position..." className="h-10 w-full rounded-lg border border-white/[.07] bg-black/20 pl-9 pr-4 text-[10px] text-white outline-none placeholder:text-slate-700 focus:border-cyan-300/25"/></div>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
-          {["ALL","ELITE","RISING","HOT"].map(x=><button key={x} onClick={()=>setFilter(x)} className={`h-9 shrink-0 rounded-lg px-3 text-[8px] font-black tracking-[.12em] transition ${filter===x?"border border-cyan-300/30 bg-cyan-300/10 text-cyan-200":"border border-white/[.07] text-slate-600 hover:text-white"}`}>{x}{x==="HOT"&&<span className="ml-1 text-rose-400">●</span>}</button>)}
-          <button aria-label="Advanced filters" className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/[.07] text-slate-500"><SlidersHorizontal size={13}/></button>
-        </div>
-      </div>
+export default async function PlayersPage() {
+  const supabase = await createClient();
+  if (!supabase) {
+    return (
+      <GamePanel className="mx-auto max-w-[1100px] p-8">
+        <h1 className="text-3xl font-black uppercase italic text-white">Player Management</h1>
+        <p className="mt-3 text-slate-400">Connect Supabase to activate real player management.</p>
+      </GamePanel>
+    );
+  }
 
-      <div className="mt-5 flex items-center justify-between"><p className="text-[9px] font-black uppercase tracking-wider text-slate-600"><span className="text-slate-200">{filtered.length}</span> player profiles found</p><button className="flex items-center gap-2 text-[8px] font-black uppercase tracking-wider text-slate-600">Sort by <span className="text-cyan-300">Overall rating</span><ChevronDown size={11}/></button></div>
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-      <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">{filtered.map(player=><PlayerGameCard key={player.id} player={player}/>)}</div>
-      {filtered.length === 0 && <div className="glass mt-4 flex min-h-72 flex-col items-center justify-center rounded-2xl text-center"><Crosshair size={28} className="text-slate-700"/><p className="mt-4 text-xs font-black uppercase">No players detected</p><p className="mt-1 text-[9px] text-slate-600">Adjust your squad filters to widen the scan.</p></div>}
-    </div>
-  );
+  if (!user) {
+    return (
+      <GamePanel className="mx-auto max-w-[1100px] p-8">
+        <h1 className="text-3xl font-black uppercase italic text-white">Login required</h1>
+        <p className="mt-3 text-slate-400">Login to manage your real player portfolio.</p>
+        <Link href="/login" className="mt-6 inline-flex h-11 items-center rounded-2xl bg-[#a3ff12] px-5 text-xs font-black uppercase text-[#071007]">
+          Login
+        </Link>
+      </GamePanel>
+    );
+  }
+
+  const { admin, agencyId } = await ensureUserWorkspace(user);
+  const { data, error } = await admin
+    .from("players")
+    .select("id, first_name, last_name, date_of_birth, nationality, position, preferred_foot, status, market_value, currency, photo_url, contract_end_date, height_cm, weight_kg, external_market_provider, external_market_player_id, external_market_url, ai_profile, clubs:current_club_id(name)")
+    .eq("agency_id", agencyId)
+    .order("updated_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    return (
+      <GamePanel className="mx-auto max-w-[1100px] p-8">
+        <h1 className="text-3xl font-black uppercase italic text-white">Could not load players</h1>
+        <p className="mt-3 text-rose-200">{error.message}</p>
+      </GamePanel>
+    );
+  }
+
+  const players: RealPlayer[] = (data ?? []).map((player) => ({
+    id: player.id,
+    name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player",
+    firstName: player.first_name,
+    lastName: player.last_name,
+    dateOfBirth: player.date_of_birth,
+    nationality: player.nationality,
+    position: player.position,
+    preferredFoot: player.preferred_foot,
+    status: player.status,
+    marketValue: player.market_value,
+    currency: player.currency,
+    photoUrl: player.photo_url,
+    contractEndDate: player.contract_end_date,
+    heightCm: player.height_cm,
+    weightKg: player.weight_kg,
+    club: clubName(player.clubs as ClubJoin),
+    externalProvider: player.external_market_provider,
+    externalPlayerId: player.external_market_player_id,
+    externalUrl: player.external_market_url,
+    aiProfile: player.ai_profile,
+  }));
+
+  return <PlayerManagement initialPlayers={players} />;
 }

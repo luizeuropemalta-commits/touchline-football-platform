@@ -55,9 +55,9 @@ Without Supabase environment variables the app starts in preview mode: authentic
 - Stripe Customer Portal handles plan switching, upgrades, downgrades, cancellation and payment method updates.
 - Supabase row-level security lets users read their own billing state while service-role webhooks perform authoritative writes.
 
-## Free football data demo sync
+## Optional football data sync
 
-Touchline is prepared for daily player-data sync. For a free/demo setup, use API-Football by API-SPORTS.
+Touchline is prepared for daily player-data sync. For an optional free-tier setup, use API-Football by API-SPORTS.
 
 1. Create a free API-Football account.
 2. Copy your API key.
@@ -87,7 +87,7 @@ Touchline is prepared for daily player-data sync. For a free/demo setup, use API
 
 6. Vercel Cron calls `/api/market-sync` daily.
 
-API-Football free/demo data is good for testing player identity, club, season stats and profile enrichment. Market values like Transfermarkt may require a premium or licensed data provider.
+API-Football free-tier data is useful for testing player identity, club, season stats and profile enrichment. Market values like Transfermarkt may require a premium or licensed data provider.
 
 ## Production launch guide
 

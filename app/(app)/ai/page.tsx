@@ -1,28 +1,125 @@
-"use client";
+import Link from "next/link";
+import { BarChart3, Bot, FileSearch, FileSignature, Gavel, Mail, ShieldAlert, Sparkles, Target, TrendingUp, UserSearch } from "lucide-react";
+import { GamePanel, LivePill, SectionHeader } from "@/components/game-ui";
+import { WorkspaceState } from "@/components/workspace-state";
+import { getCurrentWorkspace } from "@/lib/server/current-workspace";
 
-import { useState } from "react";
-import { ArrowUp, BarChart3, Bot, BrainCircuit, FileSearch, Gavel, Loader2, ShieldAlert, Sparkles, Target, TrendingUp, UserSearch } from "lucide-react";
-import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
+type AiDocument = {
+  id: string;
+  document_type: string;
+  title: string;
+  status: string;
+  created_at: string;
+};
 
-const modes = [
-  {label:"Contract Analysis",icon:FileSearch,prompt:"Analyze Enzo Martínez's proposed Arsenal contract"},
-  {label:"Value Prediction",icon:TrendingUp,prompt:"Predict Luca Bianchi's market value in 18 months"},
-  {label:"Scouting Advice",icon:UserSearch,prompt:"Find undervalued U21 central defenders in Southern Europe"},
-  {label:"Regulation Guide",icon:Gavel,prompt:"Explain the key agent compliance considerations for this transfer"},
-  {label:"Career Strategy",icon:Target,prompt:"Build a two-year career roadmap for Noah Williams"},
-  {label:"Market Analysis",icon:BarChart3,prompt:"Summarize current demand trends for left wingers"},
-];
+function dateLabel(date: string) {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(date));
+}
 
-export default function AIPage() {
-  const [input,setInput]=useState("");
-  const [question,setQuestion]=useState("What should I prioritize before the transfer window closes?");
-  const [loading,setLoading]=useState(false);
-  const ask=(text:string)=>{setInput("");setQuestion(text);setLoading(true);setTimeout(()=>setLoading(false),700)};
-  return <div className="mx-auto max-w-[1500px] animate-in"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="mb-2 flex items-center gap-3"><LivePill>Intelligence online</LivePill><span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">Agency context synchronized</span></div><h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Touchline AI</h1><p className="mt-1.5 text-xs text-slate-500">One intelligence layer across contracts, careers, markets and regulation.</p></div><div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] px-4 py-3"><p className="text-[7px] font-black uppercase text-cyan-300">Agency Intelligence Score</p><p className="font-display mt-1 text-2xl">94.2</p></div></div>
-    <div className="mt-6 grid gap-5 xl:grid-cols-[320px_1fr]"><aside className="space-y-5"><GamePanel className="p-4"><SectionHeader kicker="Specialized Models" title="AI Capabilities"/><div className="space-y-1.5">{modes.map(m=>{const Icon=m.icon;return <button key={m.label} onClick={()=>ask(m.prompt)} className="flex w-full items-center gap-3 rounded-lg border border-white/[.06] bg-white/[.02] p-3 text-left transition hover:border-cyan-300/20 hover:bg-cyan-300/[.04]"><span className="grid size-8 place-items-center rounded-lg bg-cyan-300/[.06] text-cyan-300"><Icon size={14}/></span><div><p className="text-[9px] font-black uppercase">{m.label}</p><p className="mt-1 text-[7px] text-slate-600">Agency context aware</p></div></button>})}</div></GamePanel><GamePanel className="p-4"><div className="flex gap-3"><ShieldAlert size={15} className="shrink-0 text-amber-300"/><p className="text-[8px] leading-4 text-slate-600">AI output supports decision-making and does not replace licensed legal, financial, medical, or regulatory advice.</p></div></GamePanel></aside>
-      <GamePanel className="flex min-h-[690px] flex-col overflow-hidden"><div className="flex items-center justify-between border-b border-white/[.07] p-4"><div className="flex items-center gap-3"><span className="relative grid size-10 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.07] text-cyan-300"><Bot size={18}/><span className="pulse-live absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[#a3ff12]"/></span><div><p className="text-[10px] font-black uppercase">Touchline Intelligence</p><p className="mt-1 text-[7px] font-bold uppercase tracking-wider text-[#a3ff12]">Live · Full agency context</p></div></div><BrainCircuit size={17} className="text-cyan-300"/></div>
-        <div className="flex-1 space-y-6 overflow-y-auto p-5 sm:p-7"><div className="ml-auto max-w-xl rounded-2xl rounded-br-sm border border-cyan-300/15 bg-cyan-300/[.06] p-4"><p className="text-[10px] leading-5 text-slate-300">{question}</p></div>{loading?<div className="flex items-center gap-3 text-[9px] text-slate-500"><Loader2 size={14} className="animate-spin text-cyan-300"/>Analyzing contracts, market signals and career data...</div>:<div className="max-w-3xl"><div className="mb-3 flex items-center gap-2"><Sparkles size={13} className="text-[#a3ff12]"/><p className="text-[8px] font-black uppercase tracking-[.16em] text-[#a3ff12]">Strategic Analysis</p></div><p className="text-[10px] leading-6 text-slate-400">Your highest-leverage move is to protect the Enzo Martínez exclusivity window while advancing Noah Williams&apos; renewal. The live market signals show elevated demand for creative midfielders, creating short-term negotiating power.</p><div className="mt-5 grid gap-3 sm:grid-cols-3">{[["PRIORITY 01","Enzo deal","94"],["PRIORITY 02","Noah renewal","82"],["OPPORTUNITY","Luca interest","77"]].map(([a,b,c],i)=><div key={a} className="rounded-xl border border-white/[.07] bg-white/[.025] p-4"><p className="text-[7px] font-black text-slate-600">{a}</p><p className="mt-2 text-[10px] font-black uppercase">{b}</p><p className={`font-display mt-3 text-2xl ${i===0?"text-rose-300":i===1?"text-amber-300":"text-cyan-300"}`}>{c}</p><div className="mt-2"><Meter value={Number(c)} color={i===0?"red":i===1?"gold":"cyan"}/></div></div>)}</div><div className="mt-5 rounded-xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.035] p-4"><p className="text-[8px] font-black uppercase tracking-wider text-[#a3ff12]">Recommended next action</p><p className="mt-2 text-[9px] leading-5 text-slate-400">Schedule a decision call with Arsenal before 16:00, preserving optionality while requesting written clarity on performance bonuses and sell-on structure.</p><button className="mt-3 text-[8px] font-black uppercase text-[#a3ff12]">Create action plan →</button></div></div>}</div>
-        <form onSubmit={e=>{e.preventDefault();if(input.trim())ask(input)}} className="border-t border-white/[.07] p-4"><div className="flex gap-2 rounded-xl border border-cyan-300/15 bg-black/25 p-2 focus-within:border-cyan-300/35"><input value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask about any player, deal, contract or market..." className="h-10 min-w-0 flex-1 bg-transparent px-2 text-[10px] outline-none placeholder:text-slate-700"/><button aria-label="Send to Touchline AI" type="submit" className="grid size-10 place-items-center rounded-lg bg-[#a3ff12] text-[#071007]"><ArrowUp size={15}/></button></div><p className="mt-2 text-center text-[7px] text-slate-700">Encrypted agency context · Verify critical recommendations with qualified professionals</p></form>
-      </GamePanel></div>
-  </div>;
+export default async function AIPage() {
+  const workspace = await getCurrentWorkspace();
+  if (workspace.status !== "ready") return <WorkspaceState status={workspace.status} message={"message" in workspace ? workspace.message : undefined} />;
+
+  const { admin, agencyId } = workspace;
+  const [{ data: docs }, { count: players }, { count: opportunities }, { count: negotiations }] = await Promise.all([
+    admin
+      .from("ai_generated_documents")
+      .select("id, document_type, title, status, created_at")
+      .eq("agency_id", agencyId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    admin.from("players").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
+    admin.from("player_opportunities").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
+    admin.from("negotiation_rooms").select("id", { count: "exact", head: true }).eq("agency_id", agencyId).eq("status", "active"),
+  ]);
+
+  const documents = (docs ?? []) as AiDocument[];
+  const actions = [
+    { label: "Create contract", text: "Use the Contracts area with real player and deal data.", icon: FileSignature, href: "/contracts" },
+    { label: "Create proposal", text: "Turn a player profile into a club-ready presentation.", icon: Sparkles, href: "/players" },
+    { label: "Create email", text: "Use club interest and negotiation context.", icon: Mail, href: "/inbox" },
+    { label: "Create scouting report", text: "Generate AI player profile from the Player Vault.", icon: UserSearch, href: "/scouting" },
+    { label: "Create player presentation", text: "Open a player and run AI Profile.", icon: FileSearch, href: "/players" },
+    { label: "Market analysis", text: "Review saved market radar links and opportunities.", icon: BarChart3, href: "/radar" },
+  ];
+
+  return (
+    <div className="mx-auto max-w-[1500px] animate-in">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <div className="mb-2 flex items-center gap-3">
+            <LivePill>AI workspace online</LivePill>
+            <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">Real agency context only</span>
+          </div>
+          <h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Touchline AI</h1>
+          <p className="mt-1.5 text-xs text-slate-500">AI actions are connected to your real players, opportunities, negotiations and generated documents.</p>
+        </div>
+        <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.04] px-4 py-3">
+          <p className="text-[7px] font-black uppercase text-cyan-300">Context records</p>
+          <p className="font-display mt-1 text-2xl">{(players ?? 0) + (opportunities ?? 0) + (negotiations ?? 0)}</p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-5 xl:grid-cols-[360px_1fr]">
+        <aside className="space-y-5">
+          <GamePanel className="p-4">
+            <SectionHeader kicker="Specialized actions" title="AI Capabilities" />
+            <div className="space-y-1.5">
+              {actions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link key={action.label} href={action.href} className="flex w-full items-center gap-3 rounded-lg border border-white/[.06] bg-white/[.02] p-3 text-left transition hover:border-cyan-300/20 hover:bg-cyan-300/[.04]">
+                    <span className="grid size-8 place-items-center rounded-lg bg-cyan-300/[.06] text-cyan-300"><Icon size={14} /></span>
+                    <div>
+                      <p className="text-[9px] font-black uppercase">{action.label}</p>
+                      <p className="mt-1 text-[7px] text-slate-600">{action.text}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </GamePanel>
+          <GamePanel className="p-4">
+            <div className="flex gap-3"><ShieldAlert size={15} className="shrink-0 text-amber-300" /><p className="text-[8px] leading-4 text-slate-600">AI output supports decision-making and does not replace licensed legal, financial, medical, or regulatory advice.</p></div>
+          </GamePanel>
+        </aside>
+
+        <GamePanel className="min-h-[620px] overflow-hidden">
+          <div className="flex items-center justify-between border-b border-white/[.07] p-4">
+            <div className="flex items-center gap-3">
+              <span className="relative grid size-10 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.07] text-cyan-300"><Bot size={18} /><span className="pulse-live absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[#a3ff12]" /></span>
+              <div><p className="text-[10px] font-black uppercase">Generated Intelligence</p><p className="mt-1 text-[7px] font-bold uppercase tracking-wider text-[#a3ff12]">{documents.length} real documents</p></div>
+            </div>
+            <TrendingUp size={17} className="text-cyan-300" />
+          </div>
+
+          <div className="p-5 sm:p-7">
+            {documents.length ? (
+              <div className="divide-y divide-white/[.06] rounded-3xl border border-white/[.07] bg-black/10">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="grid gap-3 p-4 sm:grid-cols-[150px_1fr_100px] sm:items-center">
+                    <span className="text-[8px] font-black uppercase text-cyan-300">{doc.document_type.replaceAll("_", " ")}</span>
+                    <div>
+                      <p className="text-[10px] font-black uppercase italic text-white">{doc.title}</p>
+                      <p className="mt-1 text-[8px] text-slate-600">{dateLabel(doc.created_at)}</p>
+                    </div>
+                    <span className="w-fit rounded-lg border border-[#a3ff12]/20 bg-[#a3ff12]/[.06] px-2 py-1 text-[7px] font-black uppercase text-[#a3ff12]">{doc.status}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/[.035] p-8">
+                <Gavel size={22} className="text-amber-300" />
+                <h2 className="mt-4 text-lg font-black uppercase italic text-white">No AI documents generated yet</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">Open a real player profile and generate an AI Player Profile. Future contract, proposal and email generators will store outputs in this same document center.</p>
+                <Link href="/players" className="mt-6 inline-flex h-10 items-center rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]">
+                  Generate first player profile
+                </Link>
+              </div>
+            )}
+          </div>
+        </GamePanel>
+      </div>
+    </div>
+  );
 }

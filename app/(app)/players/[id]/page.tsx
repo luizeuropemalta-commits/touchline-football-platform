@@ -1,95 +1,287 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BrainCircuit, CalendarClock, ChevronRight, ExternalLink, FileText, Flame, Globe2, Play, Sparkles, TrendingUp, Trophy, Upload, Zap } from "lucide-react";
-import { players } from "@/lib/demo-data";
-import { Button } from "@/components/ui";
+import {
+  ArrowLeft,
+  BrainCircuit,
+  CalendarClock,
+  ChevronRight,
+  ExternalLink,
+  FileText,
+  Globe2,
+  Play,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  Zap,
+} from "lucide-react";
 import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
+import { ensureUserWorkspace } from "@/lib/server/workspace";
+import { createClient } from "@/lib/supabase/server";
 
-export function generateStaticParams() { return players.map(p=>({ id:p.id })); }
+type ClubJoin = { name?: string | null } | Array<{ name?: string | null }> | null;
+type AiProfile = {
+  generated?: boolean;
+  professional_biography?: string;
+  scouting_summary?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+};
 
-export default async function PlayerProfile({ params }: { params:Promise<{id:string}> }) {
+function clubName(clubs?: ClubJoin) {
+  if (!clubs) return "Club open";
+  return Array.isArray(clubs) ? (clubs[0]?.name ?? "Club open") : (clubs.name ?? "Club open");
+}
+
+function fullName(player: { first_name?: string | null; last_name?: string | null }) {
+  return `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player";
+}
+
+function ageFromDate(date?: string | null) {
+  if (!date) return null;
+  const birth = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getUTCFullYear() - birth.getUTCFullYear();
+  const month = now.getUTCMonth() - birth.getUTCMonth();
+  if (month < 0 || (month === 0 && now.getUTCDate() < birth.getUTCDate())) age -= 1;
+  return age;
+}
+
+function formatMoney(value?: number | null, currency = "EUR") {
+  if (!value) return "Value open";
+  return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+}
+
+function embedUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") return `https://www.youtube.com/embed/${parsed.pathname.replace("/", "")}`;
+    if (host.endsWith("youtube.com")) {
+      const id = parsed.searchParams.get("v");
+      return id ? `https://www.youtube.com/embed/${id}` : url;
+    }
+    if (host.endsWith("vimeo.com")) {
+      const id = parsed.pathname.split("/").filter(Boolean)[0];
+      return id ? `https://player.vimeo.com/video/${id}` : url;
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+export default async function PlayerProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const p = players.find(player=>player.id===id);
-  if (!p) notFound();
+  const supabase = await createClient();
+  if (!supabase) notFound();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return (
+      <GamePanel className="mx-auto max-w-[1100px] p-8">
+        <h1 className="text-3xl font-black uppercase italic text-white">Login required</h1>
+        <p className="mt-3 text-slate-400">Login to view this real player profile.</p>
+        <Link href="/login" className="mt-6 inline-flex h-11 items-center rounded-2xl bg-[#a3ff12] px-5 text-xs font-black uppercase text-[#071007]">Login</Link>
+      </GamePanel>
+    );
+  }
+
+  const { admin, agencyId } = await ensureUserWorkspace(user);
+  const { data: player, error } = await admin
+    .from("players")
+    .select("id, first_name, last_name, date_of_birth, nationality, position, preferred_foot, status, market_value, currency, photo_url, contract_end_date, height_cm, weight_kg, external_market_provider, external_market_player_id, external_market_url, external_market_payload, ai_profile, stats, clubs:current_club_id(name)")
+    .eq("agency_id", agencyId)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !player) notFound();
+
+  const [{ data: documents }, { data: videos }, { data: interests }, { data: opportunities }] = await Promise.all([
+    admin.from("player_documents").select("id, name, category, mime_type, size_bytes, created_at").eq("agency_id", agencyId).eq("player_id", id).order("created_at", { ascending: false }),
+    admin.from("player_videos").select("id, title, url, thumbnail_url, created_at").eq("agency_id", agencyId).eq("player_id", id).order("created_at", { ascending: false }),
+    admin.from("player_interests").select("id, club_name, sporting_director, position_needed, status, created_at").eq("agency_id", agencyId).eq("player_id", id).order("created_at", { ascending: false }),
+    admin.from("player_opportunities").select("id, title, position_needed, match_score, status, created_at").eq("agency_id", agencyId).eq("player_id", id).order("created_at", { ascending: false }),
+  ]);
+
+  const name = fullName(player);
+  const age = ageFromDate(player.date_of_birth);
+  const aiProfile = player.ai_profile as AiProfile | null;
+
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
-      <Link href="/players" className="mb-4 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-slate-600 hover:text-cyan-300"><ArrowLeft size={12}/>Return to squad</Link>
+      <Link href="/players" className="mb-4 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-slate-600 hover:text-cyan-300">
+        <ArrowLeft size={12} />Return to players
+      </Link>
+
       <GamePanel className="relative overflow-hidden pitch-grid">
-        <div className="absolute right-[-8%] top-[-60%] size-[500px] rounded-full border border-cyan-300/[.08]"/><div className="absolute right-[4%] top-[-30%] size-[330px] rounded-full border border-cyan-300/[.08]"/>
+        <div className="absolute right-[-8%] top-[-60%] size-[500px] rounded-full border border-cyan-300/[.08]" />
         <div className="relative grid min-h-[330px] lg:grid-cols-[320px_1fr]">
-          <div className="relative overflow-hidden border-b border-white/[.07] lg:border-b-0 lg:border-r">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-cyan-400/[.05]"/>
-            <Image src={p.avatar!} fill sizes="400px" priority alt={p.name} className="object-cover object-top grayscale-[10%] contrast-[1.08]"/>
-            <div className="absolute bottom-5 left-5"><LivePill>{p.status}</LivePill></div>
+          <div className="relative overflow-hidden border-b border-white/[.07] bg-cyan-300/[.035] lg:border-b-0 lg:border-r">
+            {player.photo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={player.photo_url} alt={name} className="h-full min-h-[330px] w-full object-cover object-top grayscale-[10%] contrast-[1.08]" />
+            ) : (
+              <div className="grid h-full min-h-[330px] place-items-center text-6xl font-black text-cyan-300/25">{name.slice(0, 2).toUpperCase()}</div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-cyan-400/[.05]" />
+            <div className="absolute bottom-5 left-5"><LivePill>{player.status ?? "active"}</LivePill></div>
           </div>
           <div className="relative p-6 sm:p-8">
             <div className="flex flex-col justify-between gap-6 sm:flex-row">
-              <div><p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{p.club} · {p.position}</p><h1 className="font-display mt-2 text-4xl uppercase italic sm:text-6xl">{p.name}</h1><p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">{p.nationality} · AGE {p.age} · RIGHT FOOTED</p></div>
-              <div className="flex items-start gap-2"><Button variant="secondary"><BrainCircuit size={13}/>AI Report</Button><Button><Zap size={13}/>Open Deal</Button></div>
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{clubName(player.clubs as ClubJoin)} · {player.position ?? "Position open"}</p>
+                <h1 className="font-display mt-2 text-4xl uppercase italic sm:text-6xl">{name}</h1>
+                <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                  {player.nationality ?? "Nationality open"} {age ? `· AGE ${age}` : ""} {player.preferred_foot ? `· ${player.preferred_foot} footed` : ""}
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <Link href="/players" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-200/18 bg-white/[.055] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-slate-100">
+                  <BrainCircuit size={13} />AI / Vault
+                </Link>
+                <Link href="/deals" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007]">
+                  <Zap size={13} />Open Deal
+                </Link>
+              </div>
             </div>
+
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[["OVR",p.overall,"text-white"],["POT",p.potential,"text-[#a3ff12]"],["FORM",p.form,"text-cyan-300"],["VALUE",`€${p.marketValue/1000000}M`,"text-amber-300"]].map(([label,value,color])=><div key={String(label)} className="rounded-xl border border-white/[.08] bg-black/20 p-4"><p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p><p className={`font-display mt-2 text-3xl ${color}`}>{value}</p></div>)}
+              {[
+                ["VALUE", formatMoney(player.market_value, player.currency ?? "EUR"), "text-amber-300"],
+                ["HEIGHT", player.height_cm ? `${player.height_cm}cm` : "—", "text-white"],
+                ["WEIGHT", player.weight_kg ? `${player.weight_kg}kg` : "—", "text-cyan-300"],
+                ["CONTRACT", player.contract_end_date ?? "—", "text-[#a3ff12]"],
+              ].map(([label, value, color]) => (
+                <div key={String(label)} className="rounded-xl border border-white/[.08] bg-black/20 p-4">
+                  <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>
+                  <p className={`mt-2 text-xl font-black ${color}`}>{value}</p>
+                </div>
+              ))}
             </div>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3"><div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>AGENT RELATIONSHIP</span><span>{p.relationship}%</span></div><Meter value={p.relationship} color="lime"/></div><div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>TRANSFER INTEREST</span><span>{p.interest}%</span></div><Meter value={p.interest} color="cyan"/></div><div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>CAREER MOMENTUM</span><span>+{p.growth}</span></div><Meter value={Math.min(p.growth*8,100)} color="gold"/></div></div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>PROFILE COMPLETENESS</span><span>{player.photo_url && player.contract_end_date ? 82 : 45}%</span></div><Meter value={player.photo_url && player.contract_end_date ? 82 : 45} color="lime" /></div>
+              <div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>TRANSFER INTEREST</span><span>{interests?.length ?? 0}</span></div><Meter value={Math.min(100, (interests?.length ?? 0) * 20)} color="cyan" /></div>
+              <div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>AI READINESS</span><span>{aiProfile?.generated ? 100 : 30}%</span></div><Meter value={aiProfile?.generated ? 100 : 30} color="gold" /></div>
+            </div>
           </div>
         </div>
       </GamePanel>
 
-      <nav className="mt-4 flex gap-1 overflow-x-auto rounded-xl border border-white/[.07] bg-white/[.025] p-1 scrollbar-none">{["Career Hub","Performance","Development","Contracts","Media","Vault"].map((tab,i)=><button key={tab} className={`shrink-0 rounded-lg px-4 py-2.5 text-[8px] font-black uppercase tracking-[.12em] ${i===0?"bg-cyan-300/10 text-cyan-200":"text-slate-600 hover:text-white"}`}>{tab}</button>)}</nav>
-
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.45fr_.8fr]">
         <div className="space-y-5">
           <GamePanel className="p-5">
-            <SectionHeader kicker="2025/26 Intelligence" title="Performance Matrix" action={<span className="text-[8px] font-black text-[#a3ff12]">+8.4% SEASON</span>}/>
-            <div className="grid gap-3 sm:grid-cols-4">{[["APP",p.appearances],["GOALS",p.goals],["ASSISTS",p.assists],["RATING","7.8"]].map(([label,value])=><div key={String(label)} className="rounded-xl border border-white/[.07] bg-white/[.025] p-4"><p className="text-[8px] font-black text-slate-600">{label}</p><p className="font-display mt-2 text-2xl">{value}</p></div>)}</div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">{[["Pace",88],["Technical",84],["Vision",91],["Physical",77],["Composure",86],["Influence",92]].map(([label,value],i)=><div key={String(label)}><div className="mb-1.5 flex justify-between text-[8px] font-bold text-slate-500"><span>{label}</span><span className="text-slate-300">{value}</span></div><Meter value={Number(value)} color={i>3?"lime":"cyan"}/></div>)}</div>
+            <SectionHeader kicker="AI Player Profile" title="Professional intelligence" action={<Sparkles size={14} className="text-amber-300" />} />
+            {aiProfile?.generated ? (
+              <div className="space-y-5">
+                <p className="text-sm leading-7 text-slate-300">{aiProfile.professional_biography}</p>
+                <p className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045] p-4 text-sm leading-7 text-slate-300">{aiProfile.scouting_summary}</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-4">
+                    <p className="text-[9px] font-black uppercase tracking-[.18em] text-[#caff72]">Strengths</p>
+                    <ul className="mt-3 space-y-2 text-xs text-slate-300">{(aiProfile.strengths ?? []).map((item: string) => <li key={item}>• {item}</li>)}</ul>
+                  </div>
+                  <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[.045] p-4">
+                    <p className="text-[9px] font-black uppercase tracking-[.18em] text-amber-200">Weaknesses / next actions</p>
+                    <ul className="mt-3 space-y-2 text-xs text-slate-300">{(aiProfile.weaknesses ?? []).map((item: string) => <li key={item}>• {item}</li>)}</ul>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/[.07] bg-black/20 p-6 text-sm text-slate-400">
+                No AI player profile generated yet. Use the AI Profile button on the Players page.
+              </div>
+            )}
           </GamePanel>
+
           <GamePanel className="p-5">
-            <SectionHeader kicker="Career Development" title="Growth Path" action={<Sparkles size={14} className="text-amber-300"/>}/>
-            <div className="grid gap-3 md:grid-cols-3">{[["Finishing Specialist","68%","Active plan",Flame],["Leadership","42%","Next unlock",Trophy],["Global Brand","81%","Elite pathway",TrendingUp]].map(([title,progress,note,Icon])=>{const I=Icon as typeof Flame; return <div key={String(title)} className="rounded-xl border border-white/[.07] bg-gradient-to-br from-white/[.035] to-transparent p-4"><I size={16} className="text-cyan-300"/><p className="mt-4 text-[10px] font-black uppercase">{String(title)}</p><p className="mt-1 text-[8px] text-slate-600">{String(note)}</p><div className="mt-4"><Meter value={parseInt(String(progress))} color="lime"/></div></div>})}</div>
+            <SectionHeader kicker="Opportunities" title="Club matching workflow" action={<ShieldCheck size={14} className="text-cyan-300" />} />
+            <div className="space-y-3">
+              {opportunities?.length ? opportunities.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
+                  <div className="flex justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-black uppercase italic text-white">{item.title}</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">{item.position_needed ?? "Requirement open"}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-black text-[#a3ff12]">{item.match_score ?? 0}%</p>
+                      <p className="text-[8px] uppercase text-slate-500">{item.status}</p>
+                    </div>
+                  </div>
+                </div>
+              )) : <p className="rounded-2xl border border-white/[.07] bg-black/20 p-6 text-sm text-slate-500">No opportunities connected to this player yet.</p>}
+            </div>
           </GamePanel>
         </div>
+
         <div className="space-y-5">
           <GamePanel className="p-5">
-            <SectionHeader
-              kicker="External Market Profile"
-              title="Transfermarkt Link"
-              action={<Globe2 size={15} className="text-cyan-300" />}
-            />
+            <SectionHeader kicker="External Market Profile" title="Transfermarkt Link" action={<Globe2 size={15} className="text-cyan-300" />} />
             <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.045] p-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[8px] font-black uppercase tracking-wider text-cyan-300">{p.externalMarket?.provider ?? "External source"}</p>
-                  <p className="mt-2 text-xl font-black uppercase italic text-white">{p.externalMarket?.marketValue ?? `€${p.marketValue / 1000000}M`}</p>
-                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">Contract: {p.externalMarket?.contractUntil ?? p.contractUntil}</p>
+                  <p className="text-[8px] font-black uppercase tracking-wider text-cyan-300">{player.external_market_provider ?? "No external profile"}</p>
+                  <p className="mt-2 text-xl font-black uppercase italic text-white">{formatMoney(player.market_value, player.currency ?? "EUR")}</p>
+                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">Contract: {player.contract_end_date ?? "open"}</p>
                 </div>
-                <Link
-                  href={p.externalMarket?.profileUrl ?? "https://www.transfermarkt.com/"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="grid size-10 shrink-0 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.08] text-cyan-200 transition hover:border-[#a3ff12]/35 hover:text-[#a3ff12]"
-                  aria-label="Open external market profile"
-                >
-                  <ExternalLink size={15} />
-                </Link>
+                {player.external_market_url && (
+                  <Link href={player.external_market_url} target="_blank" rel="noreferrer" className="grid size-10 shrink-0 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.08] text-cyan-200 transition hover:border-[#a3ff12]/35 hover:text-[#a3ff12]" aria-label="Open external market profile">
+                    <ExternalLink size={15} />
+                  </Link>
+                )}
               </div>
-              <div className="mt-4">
-                <div className="mb-2 flex justify-between text-[8px] font-bold uppercase tracking-wider text-slate-500">
-                  <span>Data match confidence</span>
-                  <span>{p.externalMarket?.confidence ?? 70}%</span>
-                </div>
-                <Meter value={p.externalMarket?.confidence ?? 70} color="cyan" />
-              </div>
-              <p className="mt-4 text-[9px] leading-5 text-slate-500">{p.externalMarket?.note ?? "Add an external profile URL to enrich this player with verified market data."}</p>
-              <p className="mt-3 rounded-lg border border-amber-300/15 bg-amber-300/[.055] px-3 py-2 text-[8px] font-bold uppercase leading-4 tracking-wider text-amber-200/80">
-                Live sync ready: use an authorized football data API/provider before showing automatic Transfermarkt-style data.
-              </p>
+              <p className="mt-4 text-[9px] leading-5 text-slate-500">Touchline stores the official URL, preview metadata and click-through reference. It does not copy a third-party database.</p>
             </div>
           </GamePanel>
-          <GamePanel className="p-5"><SectionHeader kicker="Contract Status" title="Critical Timeline" action={<CalendarClock size={15} className="text-rose-300"/>}/><div className="rounded-xl border border-rose-300/15 bg-rose-300/[.05] p-4"><p className="text-[8px] font-black uppercase tracking-wider text-rose-300">Contract countdown</p><p className="font-display mt-2 text-3xl">{p.contractUntil}</p><p className="mt-1 text-[8px] text-slate-500">Current agreement with {p.club}</p></div><Button className="mt-3 w-full">Start Renewal</Button></GamePanel>
-          <GamePanel className="overflow-hidden"><div className="relative h-40"><Image src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=900&q=80" fill sizes="500px" alt="Training footage" className="object-cover opacity-55"/><div className="absolute inset-0 bg-gradient-to-t from-[#07111b] to-transparent"/><button aria-label="Play highlights" className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-cyan-300/30 bg-cyan-300/15 text-cyan-200 backdrop-blur-md"><Play size={16} fill="currentColor"/></button><div className="absolute bottom-4 left-4"><p className="text-[10px] font-black uppercase">Performance Reel</p><p className="mt-1 text-[8px] text-slate-500">12 clips · AI tagged</p></div></div></GamePanel>
-          <GamePanel className="p-5"><SectionHeader kicker="Secure Storage" title="Player Vault" action={<Upload size={14} className="text-cyan-300"/>}/><div className="space-y-2">{["Representation Agreement","Medical Assessment","Image Rights Schedule"].map((x,i)=><div key={x} className="flex items-center gap-3 rounded-lg border border-white/[.06] bg-white/[.02] p-3"><FileText size={14} className={i===1?"text-rose-300":"text-cyan-300"}/><div className="min-w-0 flex-1"><p className="truncate text-[9px] font-bold">{x}</p><p className="mt-1 text-[7px] text-slate-600">PDF · ENCRYPTED</p></div><ChevronRight size={12} className="text-slate-700"/></div>)}</div></GamePanel>
+
+          <GamePanel className="p-5">
+            <SectionHeader kicker="Club Interest" title="Interest System" action={<CalendarClock size={15} className="text-rose-300" />} />
+            <div className="space-y-2">
+              {interests?.length ? interests.map((item) => (
+                <div key={item.id} className="rounded-xl border border-white/[.07] bg-white/[.025] p-3">
+                  <p className="text-[10px] font-black uppercase text-white">{item.club_name}</p>
+                  <p className="mt-1 text-[8px] text-slate-500">{item.position_needed ?? "Need open"} · {item.status.replaceAll("_", " ")}</p>
+                </div>
+              )) : <p className="rounded-xl border border-white/[.07] bg-black/20 p-4 text-xs text-slate-500">No club interest yet.</p>}
+            </div>
+          </GamePanel>
+
+          <GamePanel className="overflow-hidden">
+            <div className="p-5">
+              <SectionHeader kicker="Video Hub" title="Highlights" action={<Play size={14} className="text-cyan-300" />} />
+            </div>
+            {videos?.length ? (
+              <div className="space-y-3 p-5 pt-0">
+                {videos.map((video) => (
+                  <div key={video.id} className="overflow-hidden rounded-2xl border border-white/[.08] bg-black/30">
+                    <iframe src={embedUrl(video.url)} title={video.title} className="aspect-video w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                    <p className="p-3 text-[10px] font-black uppercase text-white">{video.title}</p>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="p-5 pt-0 text-xs text-slate-500">No embedded videos yet.</p>}
+          </GamePanel>
+
+          <GamePanel className="p-5">
+            <SectionHeader kicker="Secure Storage" title="Player Vault" action={<Upload size={14} className="text-cyan-300" />} />
+            <div className="space-y-2">
+              {documents?.length ? documents.map((document) => (
+                <div key={document.id} className="flex items-center gap-3 rounded-lg border border-white/[.06] bg-white/[.02] p-3">
+                  <FileText size={14} className="text-cyan-300" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[9px] font-bold">{document.name}</p>
+                    <p className="mt-1 text-[7px] uppercase text-slate-600">{document.category ?? "other"} · encrypted</p>
+                  </div>
+                  <ChevronRight size={12} className="text-slate-700" />
+                </div>
+              )) : <p className="rounded-xl border border-white/[.07] bg-black/20 p-4 text-xs text-slate-500">No documents uploaded yet.</p>}
+            </div>
+          </GamePanel>
         </div>
       </div>
     </div>

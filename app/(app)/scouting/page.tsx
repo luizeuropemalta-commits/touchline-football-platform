@@ -1,18 +1,149 @@
 import Image from "next/image";
-import { BrainCircuit, Crosshair, Globe2, Radar, Sparkles, Star, Telescope } from "lucide-react";
+import Link from "next/link";
+import { Binoculars, Crosshair, Globe2, Radar, Sparkles, Star, Telescope } from "lucide-react";
 import { GamePanel, LivePill, SectionHeader, StatTile } from "@/components/game-ui";
-import { Button } from "@/components/ui";
+import { WorkspaceState } from "@/components/workspace-state";
+import { getCurrentWorkspace } from "@/lib/server/current-workspace";
 
-const prospects = [
-  {name:"Mateo Silva",age:17,pos:"CAM",region:"Brazil",ovr:67,pot:94,stars:5,img:"https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=400&q=85", tag:"HIDDEN GEM"},
-  {name:"Ibrahim Diallo",age:18,pos:"ST",region:"France",ovr:71,pot:91,stars:5,img:"https://images.unsplash.com/photo-1531384441138-2736e62e0919?auto=format&fit=crop&w=400&q=85", tag:"WONDERKID"},
-  {name:"Niko Vuković",age:16,pos:"CB",region:"Croatia",ovr:64,pot:89,stars:4,img:"https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=400&q=85", tag:"AI PICK"},
-];
+type PlayerRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  date_of_birth: string | null;
+  position: string | null;
+  nationality: string | null;
+  status: string;
+  photo_url: string | null;
+  market_value: number | null;
+  ai_profile: { generated?: boolean } | null;
+};
 
-export default function Scouting() {
-  return <div className="mx-auto max-w-[1500px] animate-in"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="mb-2 flex items-center gap-3"><LivePill>42 scouts active</LivePill><span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">Global database 18,402</span></div><h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Scouting Center</h1><p className="mt-1.5 text-xs text-slate-500">See the future before the football world does.</p></div><Button><Crosshair size={14}/>Launch Assignment</Button></div>
-    <div className="stagger mt-6 grid gap-3 sm:grid-cols-3"><StatTile icon={Telescope} label="Players Tracked" value="284" delta="+38 this month" accent="cyan"/><StatTile icon={Sparkles} label="Elite Potential" value="16" delta="90+ projected" accent="gold"/><StatTile icon={Globe2} label="Regions Active" value="08" delta="42 live scouts" accent="lime"/></div>
-    <GamePanel className="premium-ring status-scan relative mt-5 overflow-hidden p-5 sm:p-7"><div className="absolute inset-0 opacity-40 [background:radial-gradient(circle_at_50%_50%,rgba(34,211,238,.15),transparent_50%)]"/><div className="relative grid gap-6 lg:grid-cols-[1fr_1.2fr] lg:items-center"><div><p className="text-[8px] font-black uppercase tracking-[.2em] text-cyan-300">Global Talent Radar</p><h2 className="font-display mt-2 text-3xl uppercase italic">8 regions scanning</h2><p className="mt-3 max-w-md text-[10px] leading-5 text-slate-500">AI pattern recognition is monitoring match data, development curves and contract opportunities across your target markets.</p><Button variant="secondary" className="mt-5"><BrainCircuit size={13}/>View AI Recommendations</Button></div><div className="relative mx-auto aspect-square w-full max-w-[360px] rounded-full border border-cyan-300/15 bg-cyan-300/[.025] shadow-[0_0_70px_rgba(34,211,238,.08)]"><div className="absolute inset-[15%] rounded-full border border-cyan-300/10"/><div className="absolute inset-[32%] rounded-full border border-cyan-300/10"/><div className="absolute left-1/2 top-0 h-full w-px bg-cyan-300/10"/><div className="absolute left-0 top-1/2 h-px w-full bg-cyan-300/10"/><div className="absolute inset-[4%] animate-[spin_8s_linear_infinite] rounded-full border-t border-cyan-300/70 shadow-[0_-5px_20px_rgba(34,211,238,.12)]"/><div className="absolute inset-[22%] animate-[spin_12s_linear_infinite_reverse] rounded-full border-b border-[#a3ff12]/25"/>{[[25,35],[66,22],[73,67],[38,78],[53,48]].map(([x,y],i)=><span key={i} className="pulse-live absolute size-2 rounded-full bg-[#a3ff12]" style={{left:`${x}%`,top:`${y}%`}}/>)}<Radar className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-cyan-300/40 drop-shadow-[0_0_12px_rgba(34,211,238,.5)]" size={32}/></div></div></GamePanel>
-    <section className="mt-6"><SectionHeader kicker="AI Shortlist" title="Future Stars" action={<span className="text-[8px] font-black uppercase text-cyan-300">View 16 prospects →</span>}/><div className="stagger grid gap-4 md:grid-cols-3">{prospects.map(p=><GamePanel key={p.name} className="glass-hover media-cinematic group overflow-hidden"><div className="relative h-48"><Image src={p.img} fill sizes="400px" alt={p.name} className="object-cover opacity-75 grayscale-[15%]"/><div className="absolute inset-0 bg-gradient-to-t from-[#08131e] via-transparent to-transparent"/><span className="absolute left-4 top-4 rounded-md border border-[#a3ff12]/25 bg-black/50 px-2 py-1 text-[7px] font-black tracking-wider text-[#a3ff12] backdrop-blur">{p.tag}</span><div className="absolute bottom-4 left-4"><p className="text-lg font-black uppercase italic">{p.name}</p><p className="mt-1 text-[8px] font-bold text-slate-400">{p.pos} · AGE {p.age} · {p.region.toUpperCase()}</p></div></div><div className="p-4"><div className="grid grid-cols-3 text-center"><div><p className="text-[8px] text-slate-600">CURRENT</p><p className="font-display mt-1 text-xl">{p.ovr}</p></div><div className="border-x border-white/[.07]"><p className="text-[8px] text-slate-600">POTENTIAL</p><p className="font-display mt-1 text-xl text-[#a3ff12]">{p.pot}</p></div><div><p className="text-[8px] text-slate-600">RATING</p><div className="mt-2 flex justify-center">{Array.from({length:p.stars}).map((_,i)=><Star key={i} size={10} fill="currentColor" className="text-amber-300 drop-shadow-[0_0_5px_rgba(247,198,93,.35)]"/>)}</div></div></div><Button variant="secondary" className="mt-4 w-full">Open Scout Report</Button></div></GamePanel>)}</div></section>
-  </div>;
+type OpportunityRow = {
+  id: string;
+  title: string;
+  position_needed: string | null;
+  match_score: number | null;
+  status: string;
+};
+
+function playerName(player: PlayerRow) {
+  return `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player";
+}
+
+function age(date?: string | null) {
+  if (!date) return "Age open";
+  const birth = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(birth.getTime())) return "Age open";
+  const now = new Date();
+  let value = now.getUTCFullYear() - birth.getUTCFullYear();
+  const diff = now.getUTCMonth() - birth.getUTCMonth();
+  if (diff < 0 || (diff === 0 && now.getUTCDate() < birth.getUTCDate())) value -= 1;
+  return `${value}`;
+}
+
+export default async function Scouting() {
+  const workspace = await getCurrentWorkspace();
+  if (workspace.status !== "ready") return <WorkspaceState status={workspace.status} message={"message" in workspace ? workspace.message : undefined} />;
+
+  const { admin, agencyId } = workspace;
+  const [{ data: playerRows }, { data: opportunities }, { count: totalPlayers }] = await Promise.all([
+    admin
+      .from("players")
+      .select("id, first_name, last_name, date_of_birth, position, nationality, status, photo_url, market_value, ai_profile")
+      .eq("agency_id", agencyId)
+      .order("updated_at", { ascending: false })
+      .limit(24),
+    admin
+      .from("player_opportunities")
+      .select("id, title, position_needed, match_score, status")
+      .eq("agency_id", agencyId)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    admin.from("players").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
+  ]);
+
+  const players = ((playerRows ?? []) as PlayerRow[]).filter((player) => player.status === "scouting" || !player.market_value || !player.ai_profile?.generated);
+  const aiReady = ((playerRows ?? []) as PlayerRow[]).filter((player) => player.ai_profile?.generated).length;
+  const openOpportunities = ((opportunities ?? []) as OpportunityRow[]).filter((item) => item.status === "open");
+
+  return (
+    <div className="mx-auto max-w-[1500px] animate-in">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <div className="mb-2 flex items-center gap-3">
+            <LivePill>{players.length} scouting profiles</LivePill>
+            <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">Real portfolio scouting layer</span>
+          </div>
+          <h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Scouting Center</h1>
+          <p className="mt-1.5 text-xs text-slate-500">Track developing players, incomplete profiles and opportunity matches from your real database.</p>
+        </div>
+        <Link href="/players" className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]">
+          <Crosshair size={14} /> Add scouting player
+        </Link>
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <StatTile icon={Telescope} label="Players Tracked" value={String(totalPlayers ?? 0)} delta="real records" accent="cyan" />
+        <StatTile icon={Sparkles} label="AI Profiles" value={String(aiReady)} delta="generated summaries" accent="gold" />
+        <StatTile icon={Globe2} label="Open Requirements" value={String(openOpportunities.length)} delta="club needs" accent="lime" />
+      </div>
+
+      <GamePanel className="premium-ring status-scan relative mt-5 overflow-hidden p-5 sm:p-7">
+        <div className="absolute inset-0 opacity-40 [background:radial-gradient(circle_at_50%_50%,rgba(34,211,238,.15),transparent_50%)]" />
+        <div className="relative grid gap-6 lg:grid-cols-[1fr_1.2fr] lg:items-center">
+          <div>
+            <p className="text-[8px] font-black uppercase tracking-[.2em] text-cyan-300">Global Talent Radar</p>
+            <h2 className="font-display mt-2 text-3xl uppercase italic">Connected to your vault</h2>
+            <p className="mt-3 max-w-md text-[10px] leading-5 text-slate-500">Touchline highlights incomplete profiles and scouting-status players so you can enrich videos, documents, stats and AI reports before promotion.</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {openOpportunities.slice(0, 4).map((item) => (
+              <div key={item.id} className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[.035] p-4">
+                <p className="text-[8px] font-black uppercase tracking-[.16em] text-cyan-300">{item.position_needed || "Open position"}</p>
+                <p className="mt-2 text-[10px] font-black uppercase">{item.title}</p>
+                <p className="mt-3 text-[8px] text-slate-600">Match score: {item.match_score ?? 70}%</p>
+              </div>
+            ))}
+            {!openOpportunities.length && (
+              <div className="rounded-2xl border border-dashed border-cyan-300/20 bg-cyan-300/[.035] p-5 sm:col-span-2">
+                <p className="text-[10px] font-black uppercase text-white">No open requirements yet</p>
+                <p className="mt-2 text-[9px] leading-5 text-slate-500">Create club requirements in Opportunities to power AI matching.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </GamePanel>
+
+      <section className="mt-6">
+        <SectionHeader kicker="Real player discovery" title="Profiles needing scouting attention" action={<Radar size={16} className="text-cyan-300" />} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {players.map((player) => (
+            <Link key={player.id} href={`/players/${player.id}`} className="glass-hover rounded-3xl border border-white/[.07] bg-white/[.025] p-4">
+              <div className="flex gap-4">
+                <div className="relative size-20 overflow-hidden rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04]">
+                  {player.photo_url ? <Image src={player.photo_url} alt={playerName(player)} fill sizes="96px" className="object-cover" /> : <div className="grid h-full place-items-center text-cyan-300"><Binoculars size={22} /></div>}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black uppercase italic text-white">{playerName(player)}</p>
+                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{player.position || "Position open"} · Age {age(player.date_of_birth)} · {player.nationality || "Nationality open"}</p>
+                  <div className="mt-4 flex gap-2">
+                    <span className="rounded-lg border border-[#a3ff12]/20 bg-[#a3ff12]/[.06] px-2 py-1 text-[7px] font-black text-[#a3ff12]">{player.status}</span>
+                    <span className="rounded-lg border border-cyan-300/20 bg-cyan-300/[.06] px-2 py-1 text-[7px] font-black text-cyan-300">{player.ai_profile?.generated ? "AI READY" : "AI NEEDED"}</span>
+                  </div>
+                </div>
+                <Star size={14} className="text-amber-300" />
+              </div>
+            </Link>
+          ))}
+          {!players.length && (
+            <GamePanel className="border-dashed border-cyan-300/20 p-6 md:col-span-2 xl:col-span-3">
+              <p className="text-sm font-black uppercase italic text-white">No scouting profiles yet</p>
+              <p className="mt-2 text-xs leading-6 text-slate-500">Add players manually or with a Transfermarkt link, then use AI Profile and videos to build a scouting-ready portfolio.</p>
+              <Link href="/players" className="mt-5 inline-flex h-10 items-center rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]">Add first player</Link>
+            </GamePanel>
+          )}
+        </div>
+      </section>
+    </div>
+  );
 }

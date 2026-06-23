@@ -18,7 +18,7 @@ export default function PlayerApiSearchPage() {
               API-Football connected
             </span>
             <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
-              Free demo data sync
+              Optional API-Football data sync
             </span>
           </div>
           <p className="af-mode-kicker">Touchline / External Data</p>

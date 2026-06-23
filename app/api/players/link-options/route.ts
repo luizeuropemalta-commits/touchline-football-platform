@@ -1,21 +1,29 @@
 import { NextResponse } from "next/server";
-import { players as demoPlayers } from "@/lib/demo-data";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
+
+type ClubJoin = { name?: string | null } | Array<{ name?: string | null }> | null;
+type PlayerRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  position: string | null;
+  photo_url: string | null;
+  external_market_provider: string | null;
+  external_market_player_id: string | null;
+  external_market_url: string | null;
+  clubs?: ClubJoin;
+};
+
+function clubName(clubs?: ClubJoin) {
+  if (!clubs) return null;
+  return Array.isArray(clubs) ? (clubs[0]?.name ?? null) : (clubs.name ?? null);
+}
 
 export async function GET() {
   const supabase = await createClient();
   if (!supabase) {
-    return NextResponse.json({
-      players: demoPlayers.map((player) => ({
-        id: player.id,
-        name: player.name,
-        club: player.club,
-        position: player.position,
-        demo: true,
-      })),
-      preview: true,
-    });
+    return NextResponse.json({ players: [], preview: true });
   }
 
   const {
@@ -36,11 +44,11 @@ export async function GET() {
     if (error) throw new Error(error.message);
 
     return NextResponse.json({
-      players: (data ?? []).map((player: any) => ({
+      players: ((data ?? []) as PlayerRow[]).map((player) => ({
         id: player.id,
         name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim(),
         position: player.position,
-        club: player.clubs?.name ?? null,
+        club: clubName(player.clubs),
         photoUrl: player.photo_url,
         externalProvider: player.external_market_provider,
         externalPlayerId: player.external_market_player_id,

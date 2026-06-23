@@ -1,24 +1,105 @@
-import Image from "next/image";
-import { BarChart3, Binoculars, Building2, GraduationCap, MapPin, Plus, Radio, ShieldCheck, Sparkles, Upload, Users } from "lucide-react";
-import { Button } from "@/components/ui";
+import Link from "next/link";
+import { BarChart3, Binoculars, Building2, GraduationCap, Radio, ShieldCheck, Sparkles, Upload, Users } from "lucide-react";
 import { GamePanel, LivePill, Meter, SectionHeader, StatTile } from "@/components/game-ui";
+import { WorkspaceState } from "@/components/workspace-state";
+import { getCurrentWorkspace } from "@/lib/server/current-workspace";
 
-const academies = [
-  {name:"Lisbon Future Lab",region:"Portugal",players:84,scouts:18,score:92,specialty:"Technical Development",image:"https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=700&q=85"},
-  {name:"Accra Elite Pathway",region:"Ghana",players:126,scouts:24,score:89,specialty:"Athletic Potential",image:"https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=700&q=85"},
-  {name:"Balkan Talent Forge",region:"Croatia",players:62,scouts:15,score:87,specialty:"Tactical Intelligence",image:"https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=700&q=85"},
-];
+type PlayerRow = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  date_of_birth: string | null;
+  position: string | null;
+  nationality: string | null;
+  ai_profile: { generated?: boolean } | null;
+};
 
-const uploads = [
-  {name:"Mateo Costa",age:16,pos:"CM",potential:91,views:42,status:"CLUB INTEREST"},
-  {name:"Kwame Asare",age:17,pos:"ST",potential:93,views:68,status:"TRENDING"},
-  {name:"Ivan Radić",age:16,pos:"CB",potential:88,views:24,status:"NEW"},
-];
+function age(date?: string | null) {
+  if (!date) return null;
+  const birth = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let years = now.getUTCFullYear() - birth.getUTCFullYear();
+  const diff = now.getUTCMonth() - birth.getUTCMonth();
+  if (diff < 0 || (diff === 0 && now.getUTCDate() < birth.getUTCDate())) years -= 1;
+  return years;
+}
 
-export default function Academies() {
-  return <div className="mx-auto max-w-[1500px] animate-in"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div className="mb-2 flex items-center gap-3"><LivePill>68 academies connected</LivePill><span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">2,840 youth profiles</span></div><h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Academy Network</h1><p className="mt-1.5 text-xs text-slate-500">The global pathway from raw potential to professional opportunity.</p></div><Button><Upload size={14}/>Upload Talent</Button></div>
-    <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><StatTile icon={GraduationCap} label="Partner Academies" value="68" delta="Across 22 regions" accent="cyan"/><StatTile icon={Users} label="Youth Profiles" value="2,840" delta="+184 this month" accent="lime"/><StatTile icon={Binoculars} label="Scout Views" value="8,412" delta="+31% this week" accent="gold"/><StatTile icon={Building2} label="Club Connections" value="142" delta="36 active searches" accent="rose"/></div>
-    <section className="mt-6"><SectionHeader kicker="Verified Development Environments" title="Featured Academies" action={<Button variant="secondary"><Plus size={12}/>Connect Academy</Button>}/><div className="grid gap-4 lg:grid-cols-3">{academies.map(a=><GamePanel key={a.name} className="glass-hover overflow-hidden"><div className="relative h-44"><Image src={a.image} fill sizes="500px" alt={a.name} className="object-cover opacity-65"/><div className="absolute inset-0 bg-gradient-to-t from-[#08131e] via-transparent to-transparent"/><div className="absolute left-4 top-4 flex items-center gap-2 rounded-md border border-[#a3ff12]/20 bg-black/50 px-2 py-1 text-[7px] font-black text-[#a3ff12]"><ShieldCheck size={9}/>VERIFIED</div><div className="absolute bottom-4 left-4"><h3 className="text-sm font-black uppercase italic">{a.name}</h3><p className="mt-1 flex items-center gap-1 text-[8px] text-slate-400"><MapPin size={9}/>{a.region}</p></div><div className="absolute bottom-4 right-4 text-right"><p className="font-display text-2xl text-cyan-300">{a.score}</p><p className="text-[7px] text-slate-500">ACADEMY SCORE</p></div></div><div className="p-4"><p className="text-[8px] font-bold uppercase tracking-wider text-slate-500">{a.specialty}</p><div className="mt-4 grid grid-cols-2 gap-2"><div className="rounded-lg border border-white/[.06] p-3"><p className="text-[7px] text-slate-600">TALENTS</p><p className="mt-1 text-sm font-black">{a.players}</p></div><div className="rounded-lg border border-white/[.06] p-3"><p className="text-[7px] text-slate-600">SCOUTS</p><p className="mt-1 text-sm font-black">{a.scouts}</p></div></div><Button variant="secondary" className="mt-3 w-full">Enter Academy</Button></div></GamePanel>)}</div></section>
-    <div className="mt-6 grid gap-5 xl:grid-cols-[1.3fr_.7fr]"><GamePanel className="overflow-hidden"><div className="flex items-center justify-between border-b border-white/[.07] p-5"><div><p className="text-[8px] font-black uppercase tracking-[.2em] text-[#a3ff12]">Talent Distribution</p><h2 className="mt-1 text-sm font-black uppercase italic">Academy Showcase</h2></div><Radio size={15} className="text-[#a3ff12]"/></div><div className="divide-y divide-white/[.06]">{uploads.map((p,i)=><div key={p.name} className="grid items-center gap-3 p-4 sm:grid-cols-[1fr_70px_90px_110px]"><div><p className="text-[10px] font-black uppercase italic">{p.name}</p><p className="mt-1 text-[8px] text-slate-600">{p.pos} · AGE {p.age}</p></div><div><p className="text-[7px] text-slate-600">POTENTIAL</p><p className="mt-1 text-sm font-black text-[#a3ff12]">{p.potential}</p></div><div><p className="text-[7px] text-slate-600">SCOUT VIEWS</p><p className="mt-1 text-sm font-black">{p.views}</p></div><span className={`justify-self-start rounded-md border px-2 py-1 text-[7px] font-black ${i===1?"border-rose-300/20 text-rose-300":"border-cyan-300/20 text-cyan-300"}`}>{p.status}</span></div>)}</div></GamePanel><GamePanel className="p-5"><SectionHeader kicker="Pathway Health" title="Development Funnel" action={<BarChart3 size={15} className="text-cyan-300"/>}/>{[["Profiles uploaded",2840,100],["Scout verified",1684,59],["Club shortlisted",482,17],["Professional offers",86,3]].map(([label,value,pct],i)=><div key={String(label)} className="mb-4"><div className="flex justify-between text-[8px]"><span className="font-bold text-slate-500">{label}</span><span className="font-black text-slate-300">{value}</span></div><div className="mt-2"><Meter value={Number(pct)} color={i===3?"lime":"cyan"}/></div></div>)}<p className="mt-5 rounded-lg border border-[#a3ff12]/15 bg-[#a3ff12]/[.04] p-3 text-[8px] leading-4 text-slate-500"><Sparkles size={12} className="mb-2 text-[#a3ff12]"/>AI predicts a 14% increase in professional placements this quarter.</p></GamePanel></div>
-  </div>;
+function playerName(player: PlayerRow) {
+  return `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player";
+}
+
+export default async function Academies() {
+  const workspace = await getCurrentWorkspace();
+  if (workspace.status !== "ready") return <WorkspaceState status={workspace.status} message={"message" in workspace ? workspace.message : undefined} />;
+
+  const { admin, agencyId } = workspace;
+  const [{ data: playerRows }, { count: clubCount }, { count: scoutViews }] = await Promise.all([
+    admin.from("players").select("id, first_name, last_name, date_of_birth, position, nationality, ai_profile").eq("agency_id", agencyId).order("created_at", { ascending: false }).limit(30),
+    admin.from("clubs").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
+    admin.from("player_opportunities").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
+  ]);
+  const youth = ((playerRows ?? []) as PlayerRow[]).filter((player) => {
+    const playerAge = age(player.date_of_birth);
+    return playerAge !== null && playerAge <= 21;
+  });
+  const aiReady = youth.filter((player) => player.ai_profile?.generated).length;
+  const funnel = [
+    ["Youth profiles uploaded", youth.length, 100],
+    ["AI profile generated", aiReady, youth.length ? Math.round((aiReady / youth.length) * 100) : 0],
+    ["Club network connected", clubCount ?? 0, Math.min(100, (clubCount ?? 0) * 10)],
+    ["Opportunity signals", scoutViews ?? 0, Math.min(100, (scoutViews ?? 0) * 10)],
+  ] as const;
+
+  return (
+    <div className="mx-auto max-w-[1500px] animate-in">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <div className="mb-2 flex items-center gap-3"><LivePill>{youth.length} youth profiles</LivePill><span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">Academy layer uses real uploaded talents</span></div>
+          <h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Academy Network</h1>
+          <p className="mt-1.5 text-xs text-slate-500">A future academy portal connected to real youth player profiles, club visibility and scout workflows.</p>
+        </div>
+        <Link href="/players" className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]"><Upload size={14} />Upload Talent</Link>
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile icon={GraduationCap} label="Youth Profiles" value={String(youth.length)} delta="age 21 or under" accent="cyan" />
+        <StatTile icon={Users} label="AI Ready" value={String(aiReady)} delta="presentation generated" accent="lime" />
+        <StatTile icon={Binoculars} label="Scout Signals" value={String(scoutViews ?? 0)} delta="opportunities" accent="gold" />
+        <StatTile icon={Building2} label="Club Network" value={String(clubCount ?? 0)} delta="real club records" accent="rose" />
+      </div>
+
+      <section className="mt-6">
+        <SectionHeader kicker="Development profiles" title="Youth Talent Showcase" action={<ShieldCheck size={15} className="text-[#a3ff12]" />} />
+        <div className="grid gap-4 lg:grid-cols-3">
+          {youth.map((player) => (
+            <Link key={player.id} href={`/players/${player.id}`} className="glass-hover rounded-3xl border border-white/[.07] bg-white/[.025] p-5">
+              <p className="text-[8px] font-black uppercase tracking-[.2em] text-[#a3ff12]">Real uploaded talent</p>
+              <h3 className="mt-3 text-sm font-black uppercase italic text-white">{playerName(player)}</h3>
+              <p className="mt-2 text-[9px] text-slate-500">{player.position || "Position open"} · Age {age(player.date_of_birth) ?? "open"} · {player.nationality || "Nationality open"}</p>
+              <span className="mt-5 inline-flex rounded-lg border border-cyan-300/20 bg-cyan-300/[.06] px-2 py-1 text-[7px] font-black text-cyan-300">{player.ai_profile?.generated ? "AI READY" : "PROFILE NEEDS AI"}</span>
+            </Link>
+          ))}
+          {!youth.length && (
+            <GamePanel className="border-dashed border-cyan-300/20 p-6 lg:col-span-3">
+              <Sparkles size={18} className="text-[#a3ff12]" />
+              <p className="mt-4 text-sm font-black uppercase italic text-white">No academy/youth talents uploaded yet</p>
+              <p className="mt-2 text-xs leading-6 text-slate-500">Add players aged 21 or under to activate the academy showcase and future scout visibility workflows.</p>
+            </GamePanel>
+          )}
+        </div>
+      </section>
+
+      <GamePanel className="mt-6 p-5">
+        <SectionHeader kicker="Pathway Health" title="Development Funnel" action={<BarChart3 size={15} className="text-cyan-300" />} />
+        {funnel.map(([label, value, pct], index) => (
+          <div key={label} className="mb-4">
+            <div className="flex justify-between text-[8px]"><span className="font-bold text-slate-500">{label}</span><span className="font-black text-slate-300">{value}</span></div>
+            <div className="mt-2"><Meter value={pct} color={index === 3 ? "lime" : "cyan"} /></div>
+          </div>
+        ))}
+        <p className="mt-5 rounded-lg border border-[#a3ff12]/15 bg-[#a3ff12]/[.04] p-3 text-[8px] leading-4 text-slate-500"><Radio size={12} className="mb-2 text-[#a3ff12]" />Future academy accounts will upload talents directly into this verified pipeline.</p>
+      </GamePanel>
+    </div>
+  );
 }
