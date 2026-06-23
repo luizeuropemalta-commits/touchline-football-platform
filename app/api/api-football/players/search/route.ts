@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getApiFootballSeason } from "@/lib/market-data/season";
 import { createClient } from "@/lib/supabase/server";
 
 type ApiFootballSearchResponse = {
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim();
-  const season = searchParams.get("season")?.trim() || process.env.API_FOOTBALL_SEASON || "2025";
+  const season = getApiFootballSeason(searchParams.get("season") || process.env.API_FOOTBALL_SEASON);
   const apiKey = process.env.API_FOOTBALL_KEY ?? process.env.APISPORTS_KEY;
   const baseUrl = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
 
