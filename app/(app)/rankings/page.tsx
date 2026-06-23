@@ -14,6 +14,10 @@ type PlayerRow = {
   clubs?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
+type AssociationRankingRow = {
+  players?: PlayerRow | PlayerRow[] | null;
+};
+
 function playerName(player: PlayerRow) {
   return `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player";
 }
@@ -33,18 +37,22 @@ export default async function RankingsPage() {
   if (workspace.status !== "ready") return <WorkspaceState status={workspace.status} message={"message" in workspace ? workspace.message : undefined} />;
 
   const { admin, agencyId } = workspace;
-  const [{ data: players }, { count: clubs }, { count: links }, { count: snapshots }] = await Promise.all([
+  const [{ data: associationRows }, { count: clubs }, { count: links }, { count: snapshots }] = await Promise.all([
     admin
-      .from("players")
-      .select("id, first_name, last_name, position, market_value, currency, clubs:current_club_id(name)")
+      .from("agent_player_associations")
+      .select("players:player_id(id, first_name, last_name, position, market_value, currency, clubs:current_club_id(name))")
       .eq("agency_id", agencyId)
-      .order("market_value", { ascending: false, nullsFirst: false })
-      .limit(20),
+      .eq("public_visible", true)
+      .in("status", ["active_representation", "verified_representation"]),
     admin.from("clubs").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
     admin.from("market_radar_links").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
     admin.from("player_market_snapshots").select("id", { count: "exact", head: true }).eq("agency_id", agencyId),
   ]);
-  const rankedPlayers = (players ?? []) as PlayerRow[];
+  const rankedPlayers = ((associationRows ?? []) as AssociationRankingRow[])
+    .map((row) => Array.isArray(row.players) ? row.players[0] : row.players)
+    .filter((player): player is PlayerRow => Boolean(player))
+    .sort((a, b) => (b.market_value ?? 0) - (a.market_value ?? 0))
+    .slice(0, 20);
 
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
@@ -52,7 +60,7 @@ export default async function RankingsPage() {
         <div>
           <div className="mb-2 flex items-center gap-3"><LivePill>Portfolio rankings</LivePill><span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">Real data, no invented global boards</span></div>
           <h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Market Rankings</h1>
-          <p className="mt-1.5 max-w-2xl text-xs text-slate-500">Your player values, club links and market snapshots. Global rankings activate only with a compliant data provider.</p>
+          <p className="mt-1.5 max-w-2xl text-xs text-slate-500">Your rankings count only Active or Verified Representation. Suggested, expired, former, disputed or removed players are excluded.</p>
         </div>
         <div className="rounded-2xl border border-[#a3ff12]/20 bg-[#a3ff12]/[.055] px-4 py-3 text-right">
           <p className="text-[7px] font-black uppercase tracking-wider text-[#a3ff12]">Founder access</p>
@@ -91,7 +99,7 @@ export default async function RankingsPage() {
             ) : (
               <div className="rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/[.035] p-7">
                 <p className="text-sm font-black uppercase italic text-white">No players ranked yet</p>
-                <p className="mt-2 text-xs leading-6 text-slate-500">Add players with market values to create your first real ranking board.</p>
+                <p className="mt-2 text-xs leading-6 text-slate-500">Confirm active representation or upload documents to verify players before they count in rankings.</p>
                 <Link href="/players" className="mt-5 inline-flex h-10 items-center rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]">Add players</Link>
               </div>
             )}

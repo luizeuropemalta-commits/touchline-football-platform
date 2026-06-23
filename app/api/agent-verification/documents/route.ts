@@ -16,6 +16,8 @@ const documentTypes = new Set([
   "representation_agreement",
   "authorization_letter",
   "agency_contract",
+  "mandate",
+  "power_of_attorney",
   "supporting_document",
 ]);
 

@@ -35,11 +35,18 @@ export type ClubNetworkPlayer = {
   marketValue?: number | null;
   currency?: string | null;
   externalUrl?: string | null;
+  representationStatus?: string | null;
 };
 
 function formatMoney(value?: number | null, currency = "EUR") {
   if (!value) return "Value open";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+}
+
+function representationLabel(status?: string | null) {
+  if (status === "verified_representation") return "Verified representation document uploaded.";
+  if (status === "active_representation") return "Currently represented by this agent.";
+  return "Representation status available inside Touchline.";
 }
 
 export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; players: ClubNetworkPlayer[] }) {
@@ -92,10 +99,10 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
         <div>
           <div className="mb-2 flex items-center gap-3">
             <LivePill>{clubs.length} real clubs</LivePill>
-            <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">{players.length} visible player records</span>
+            <span className="text-[8px] font-bold uppercase tracking-wider text-slate-700">{players.length} active/verified player records</span>
           </div>
           <h1 className="font-display text-3xl uppercase italic sm:text-[42px]">Club Network</h1>
-          <p className="mt-1.5 text-xs text-slate-500">Recruitment teams search real players, follow agents and create interest workflows.</p>
+          <p className="mt-1.5 text-xs text-slate-500">Recruitment teams see only players with Active or Verified Representation. Suggested, former, expired or disputed claims stay private.</p>
         </div>
         <Button onClick={() => selectedPlayerId && void createInterest(selectedPlayerId)} disabled={saving || !selectedPlayerId}>
           {saving ? <Loader2 size={14} className="animate-spin" /> : <MessageSquare size={14} />}
@@ -108,7 +115,7 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
 
       <div className="stagger mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile icon={Building2} label="Real Clubs" value={String(clubs.length)} delta="from your workspace" accent="cyan" />
-        <StatTile icon={Eye} label="Visible Players" value={String(players.length)} delta="ready for discovery" accent="lime" />
+        <StatTile icon={Eye} label="Visible Players" value={String(players.length)} delta="active / verified only" accent="lime" />
         <StatTile icon={MessageSquare} label="Interest System" value="LIVE" delta="creates rooms" accent="gold" />
         <StatTile icon={Zap} label="Recruitment" value="READY" delta="filter/search workflow" accent="rose" />
       </div>
@@ -146,6 +153,9 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
                         <input type="radio" name="interest-player" checked={selectedPlayerId === player.id} onChange={() => setSelectedPlayerId(player.id)} className="mt-1 accent-[#a3ff12]" />
                       </div>
                       <p className="mt-3 text-sm font-black text-[#a3ff12]">{formatMoney(player.marketValue, player.currency ?? "EUR")}</p>
+                      <p className="mt-2 rounded-xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.055] px-3 py-2 text-[8px] font-black uppercase leading-4 tracking-wider text-[#caff72]">
+                        {representationLabel(player.representationStatus)}
+                      </p>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button onClick={() => void createInterest(player.id)} disabled={saving} className="inline-flex h-9 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[.08] px-3 text-[8px] font-black uppercase tracking-wider text-cyan-100">
                           I&apos;m interested

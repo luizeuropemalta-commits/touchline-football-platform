@@ -5,6 +5,32 @@ import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
 type ClubJoin = { name?: string | null } | Array<{ name?: string | null }> | null;
+type AssociatedPlayerRow = {
+  status: string;
+  players?: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    nationality: string | null;
+    position: string | null;
+    market_value: number | null;
+    currency: string | null;
+    photo_url: string | null;
+    external_market_url: string | null;
+    clubs?: ClubJoin;
+  } | Array<{
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    nationality: string | null;
+    position: string | null;
+    market_value: number | null;
+    currency: string | null;
+    photo_url: string | null;
+    external_market_url: string | null;
+    clubs?: ClubJoin;
+  }> | null;
+};
 
 function clubName(clubs?: ClubJoin) {
   if (!clubs) return null;
@@ -39,12 +65,14 @@ export default async function ClubsPage() {
   }
 
   const { admin, agencyId } = await ensureUserWorkspace(user);
-  const [{ data: clubRows }, { data: playerRows }] = await Promise.all([
+  const [{ data: clubRows }, { data: associationRows }] = await Promise.all([
     admin.from("clubs").select("id, name, country_code, league, crest_url").eq("agency_id", agencyId).order("created_at", { ascending: false }).limit(120),
     admin
-      .from("players")
-      .select("id, first_name, last_name, nationality, position, market_value, currency, photo_url, external_market_url, clubs:current_club_id(name)")
+      .from("agent_player_associations")
+      .select("status, players:player_id(id, first_name, last_name, nationality, position, market_value, currency, photo_url, external_market_url, clubs:current_club_id(name))")
       .eq("agency_id", agencyId)
+      .eq("public_visible", true)
+      .in("status", ["active_representation", "verified_representation"])
       .order("updated_at", { ascending: false })
       .limit(120),
   ]);
@@ -57,17 +85,22 @@ export default async function ClubsPage() {
     crestUrl: club.crest_url,
   }));
 
-  const players: ClubNetworkPlayer[] = (playerRows ?? []).map((player) => ({
-    id: player.id,
-    name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player",
-    nationality: player.nationality,
-    position: player.position,
-    marketValue: player.market_value,
-    currency: player.currency,
-    photoUrl: player.photo_url,
-    externalUrl: player.external_market_url,
-    club: clubName(player.clubs as ClubJoin),
-  }));
+  const players: ClubNetworkPlayer[] = ((associationRows ?? []) as AssociatedPlayerRow[]).flatMap((association) => {
+    const player = Array.isArray(association.players) ? association.players[0] : association.players;
+    if (!player) return [];
+    return [{
+      id: player.id,
+      name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player",
+      nationality: player.nationality,
+      position: player.position,
+      marketValue: player.market_value,
+      currency: player.currency,
+      photoUrl: player.photo_url,
+      externalUrl: player.external_market_url,
+      club: clubName(player.clubs as ClubJoin),
+      representationStatus: association.status,
+    }];
+  });
 
   return <ClubNetwork clubs={clubs} players={players} />;
 }

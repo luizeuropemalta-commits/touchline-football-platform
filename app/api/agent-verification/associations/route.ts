@@ -4,10 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 
 const allowedActions = new Set([
   "confirm",
+  "save_contract",
   "reject",
   "verify",
   "expire",
+  "dispute",
   "former",
+  "remove",
+  "restore_active",
+  "request_documents",
   "prospect",
   "suggested",
 ]);
@@ -23,13 +28,26 @@ function actionPatch(action: string) {
   const now = new Date().toISOString();
   if (action === "confirm") {
     return {
-      status: "pending_verification",
-      public_visible: false,
+      status: "active_representation",
+      public_visible: true,
       confirmed_at: now,
       ai_validation_status: "needs_review",
+      source_priority: 2,
       compliance_flags: {
+        agent_declared_current_authorization: true,
         requires_documentation_review: true,
-        public_until_verified: false,
+        public_until_verified: true,
+        legal_warning_acknowledged_at: now,
+      },
+    };
+  }
+
+  if (action === "save_contract") {
+    return {
+      ai_validation_status: "needs_review",
+      compliance_flags: {
+        contract_dates_updated: true,
+        contract_review_recommended: true,
       },
     };
   }
@@ -40,6 +58,8 @@ function actionPatch(action: string) {
       public_visible: true,
       verified_at: now,
       ai_validation_status: "consistent",
+      admin_review_status: "approved",
+      source_priority: 1,
       compliance_flags: {
         verified_by_platform_admin: true,
         public_until_verified: true,
@@ -52,6 +72,7 @@ function actionPatch(action: string) {
       status: "rejected",
       public_visible: false,
       rejected_at: now,
+      inactive_reason: "Rejected by agent or admin.",
     };
   }
 
@@ -60,6 +81,8 @@ function actionPatch(action: string) {
       status: "expired_representation",
       public_visible: false,
       ai_validation_status: "needs_review",
+      inactive_reason: "Representation contract expired.",
+      source_priority: 5,
     };
   }
 
@@ -67,6 +90,64 @@ function actionPatch(action: string) {
     return {
       status: "former_client",
       public_visible: false,
+      inactive_reason: "Historical representation retained as former player.",
+      source_priority: 5,
+      external_conflict_notice: {
+        message: "If an external source still lists this player as represented, Touchline will not restore active status automatically.",
+      },
+    };
+  }
+
+  if (action === "remove") {
+    return {
+      status: "removed_by_agent",
+      public_visible: false,
+      inactive_reason: "Agent marked this relationship as no longer represented.",
+      source_priority: 5,
+      external_conflict_notice: {
+        message: "Transfermarkt or another source may still list this relationship. Review manually before restoring.",
+        options: ["keep_as_former", "restore_to_active", "upload_proof", "ignore_update"],
+      },
+    };
+  }
+
+  if (action === "dispute") {
+    return {
+      status: "disputed_representation",
+      public_visible: false,
+      admin_review_status: "disputed",
+      ai_validation_status: "needs_review",
+      inactive_reason: "Representation is under review or contested.",
+      source_priority: 5,
+    };
+  }
+
+  if (action === "request_documents") {
+    return {
+      status: "pending_verification",
+      public_visible: false,
+      admin_review_status: "documents_requested",
+      ai_validation_status: "needs_review",
+      compliance_flags: {
+        documents_requested: true,
+        requested_at: now,
+      },
+    };
+  }
+
+  if (action === "restore_active") {
+    return {
+      status: "active_representation",
+      public_visible: true,
+      confirmed_at: now,
+      ai_validation_status: "needs_review",
+      source_priority: 2,
+      inactive_reason: null,
+      external_conflict_notice: {},
+      compliance_flags: {
+        agent_restored_active_after_review: true,
+        legal_warning_acknowledged_at: now,
+      },
     };
   }
 
@@ -81,7 +162,20 @@ function actionPatch(action: string) {
     status: "suggested",
     public_visible: false,
     ai_validation_status: "not_reviewed",
+    source_priority: 4,
   };
+}
+
+function cleanContractType(value?: string) {
+  const contractType = value?.trim().slice(0, 80);
+  return contractType || null;
+}
+
+function renewalReminderDate(expiration?: string) {
+  if (!expiration || !/^\d{4}-\d{2}-\d{2}$/.test(expiration)) return null;
+  const date = new Date(`${expiration}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 30);
+  return date.toISOString().slice(0, 10);
 }
 
 export async function GET() {
@@ -112,8 +206,16 @@ export async function GET() {
         external_reference_url,
         confidence_score,
         status,
+        contract_type,
         representation_starts_on,
         representation_expires_on,
+        renewal_reminder_on,
+        admin_review_status,
+        admin_review_notes,
+        inactive_reason,
+        source_priority,
+        last_external_sync_at,
+        external_conflict_notice,
         public_visible,
         notes,
         compliance_flags,
@@ -162,6 +264,7 @@ export async function POST(request: Request) {
       notes?: string;
       representationStartsOn?: string;
       representationExpiresOn?: string;
+      contractType?: string;
     };
 
     const action = body.action || "confirm";
@@ -200,6 +303,7 @@ export async function POST(request: Request) {
           confidence_score: 80,
           status: "suggested",
           public_visible: false,
+          source_priority: 5,
           notes: body.notes?.trim() || null,
           compliance_flags: {
             requires_agent_confirmation: true,
@@ -222,12 +326,17 @@ export async function POST(request: Request) {
       notes: typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : undefined,
     };
 
+    if (typeof body.contractType === "string") {
+      patch.contract_type = cleanContractType(body.contractType);
+    }
+
     if (body.representationStartsOn && /^\d{4}-\d{2}-\d{2}$/.test(body.representationStartsOn)) {
       patch.representation_starts_on = body.representationStartsOn;
     }
 
     if (body.representationExpiresOn && /^\d{4}-\d{2}-\d{2}$/.test(body.representationExpiresOn)) {
       patch.representation_expires_on = body.representationExpiresOn;
+      patch.renewal_reminder_on = renewalReminderDate(body.representationExpiresOn);
     }
 
     Object.keys(patch).forEach((key) => patch[key] === undefined && delete patch[key]);
@@ -238,7 +347,7 @@ export async function POST(request: Request) {
       .eq("agency_id", agencyId)
       .eq("agent_user_id", user.id)
       .eq("id", body.associationId)
-      .select("id, status, public_visible, ai_validation_status, updated_at")
+      .select("id, status, public_visible, ai_validation_status, contract_type, representation_starts_on, representation_expires_on, renewal_reminder_on, updated_at")
       .single();
 
     if (error) throw new Error(error.message);
