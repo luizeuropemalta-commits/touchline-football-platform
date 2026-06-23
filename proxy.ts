@@ -1,8 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { canAccess, featureForPath, type PlanKey } from "@/lib/billing/plans";
+import { isOwnerEmail } from "@/lib/admin/owner";
 
-const adminEmails = new Set(["luizeuropemalta@gmail.com"]);
 const betaFullAccess = true;
 
 export async function proxy(request: NextRequest) {
@@ -22,10 +22,10 @@ export async function proxy(request: NextRequest) {
     },
   });
   const { data: { user } } = await supabase.auth.getUser();
-  const isAdmin = Boolean(user?.email && adminEmails.has(user.email.toLowerCase()));
+  const isAdmin = isOwnerEmail(user?.email);
   const isAuth = ["/login", "/register", "/forgot-password"].some(path => request.nextUrl.pathname.startsWith(path));
   const isApp = [
-    "/dashboard", "/players", "/agencies", "/documents", "/calendar", "/reports",
+    "/dashboard", "/admin", "/players", "/agencies", "/documents", "/calendar", "/reports",
     "/deals", "/opportunities", "/radar", "/verification", "/scouting", "/inbox",
     "/clubs", "/competition", "/investors", "/academies", "/feed", "/ai",
     "/objectives", "/achievements", "/rankings", "/contracts", "/invoices", "/settings", "/billing", "/subscription", "/upgrade",

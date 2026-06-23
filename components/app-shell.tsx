@@ -75,15 +75,19 @@ export function AppShell({
   subscriptionStatus,
   profileName = "Touchline User",
   profileRole = "Workspace member",
+  isOwner = false,
 }: {
   children: React.ReactNode;
   planKey: PlanKey | null;
   subscriptionStatus: string | null;
   profileName?: string;
   profileRole?: string;
+  isOwner?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const operationItems = isOwner ? [...operations, { href: "/admin", label: "Owner Admin", icon: Shield }] : operations;
+  const consoleModeItems = isOwner ? [...consoleModes, { href: "/admin", label: "Owner Admin", eyebrow: "Control", icon: Shield }] : consoleModes;
 
   const isActivePath = (href: string) => {
     if (href === "/dashboard") return pathname === href;
@@ -129,7 +133,7 @@ export function AppShell({
       </nav>
       <nav className="mt-4 space-y-0.5 border-t border-white/[.06] pt-4">
         <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.22em] text-slate-700">Operations</p>
-        {operations.map(navLink)}
+        {operationItems.map(navLink)}
       </nav>
       <div className="mt-5">
         <Link href="/billing" className="ps-focus mb-3 flex items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045] p-3 transition hover:border-cyan-300/30 hover:bg-cyan-300/[.08]">
@@ -173,7 +177,7 @@ export function AppShell({
           </div>
         </header>
         <nav className="console-mode-dock">
-          {consoleModes.map(({ href, label, eyebrow, icon: Icon }) => {
+          {consoleModeItems.map(({ href, label, eyebrow, icon: Icon }) => {
             const active = isActivePath(href);
             const feature = featureForPath(href);
             const locked = Boolean(feature && !canAccess(planKey, feature));

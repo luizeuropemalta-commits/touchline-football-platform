@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { isOwnerEmail } from "@/lib/admin/owner";
 import type { PlanKey } from "./plans";
 
 export type SubscriptionState = {
@@ -19,7 +20,6 @@ const previewState: SubscriptionState = {
   cancelAtPeriodEnd: false,
 };
 
-const adminEmails = new Set(["luizeuropemalta@gmail.com"]);
 const betaFullAccess = true;
 
 const adminState: SubscriptionState = {
@@ -36,7 +36,7 @@ export async function getCurrentSubscription(): Promise<SubscriptionState> {
   if (!supabase) return previewState;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { planKey: null, status: null, interval: null, trialEnd: null, currentPeriodEnd: null, cancelAtPeriodEnd: false };
-  if (user.email && adminEmails.has(user.email.toLowerCase())) return adminState;
+  if (isOwnerEmail(user.email)) return adminState;
 
   const { data } = await supabase
     .from("billing_subscriptions")
