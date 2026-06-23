@@ -22,4 +22,13 @@ export interface Player {
   relationship: number;
   interest: number;
   growth: number;
+  externalMarket?: {
+    provider: "Transfermarkt" | "Manual" | "API";
+    profileUrl: string;
+    marketValue: string;
+    contractUntil: string;
+    lastUpdated: string;
+    confidence: number;
+    note: string;
+  };
 }
