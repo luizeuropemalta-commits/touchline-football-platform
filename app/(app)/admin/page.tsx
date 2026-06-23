@@ -257,6 +257,7 @@ export default async function AdminOwnerPanel() {
     totalPlayers,
     totalClubs,
     totalGlobalProfiles,
+    totalGlobalLinks,
     totalDocuments,
     activeSubscriptions,
     pendingReviews,
@@ -264,6 +265,7 @@ export default async function AdminOwnerPanel() {
     billingInvoicesCheck,
     webhookEventsCheck,
     founderSlotsCheck,
+    globalLinksTableCheck,
     authenticatedUsersCheck,
     authenticatedPlayersCheck,
     apiFootballCheck,
@@ -279,6 +281,7 @@ export default async function AdminOwnerPanel() {
     safeCount(admin.from("players").select("id", { count: "exact", head: true })),
     safeCount(admin.from("clubs").select("id", { count: "exact", head: true })),
     safeCount(admin.from("global_player_profiles").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("global_football_links").select("id", { count: "exact", head: true })),
     safeCount(admin.from("player_documents").select("id", { count: "exact", head: true })),
     safeCount(admin.from("billing_subscriptions").select("id", { count: "exact", head: true }).in("status", ["active", "trialing", "past_due"])),
     safeCount(admin.from("representation_admin_reviews").select("id", { count: "exact", head: true }).in("review_status", ["requested", "documents_requested", "disputed"])),
@@ -286,6 +289,7 @@ export default async function AdminOwnerPanel() {
     admin.from("billing_invoices").select("id", { count: "exact", head: true }),
     admin.from("stripe_webhook_events").select("stripe_event_id", { count: "exact", head: true }),
     admin.from("founder_plan_slots").select("user_id", { count: "exact", head: true }),
+    admin.from("global_football_links").select("id", { count: "exact", head: true }),
     supabase.from("users").select("id", { count: "exact", head: true }),
     supabase.from("players").select("id", { count: "exact", head: true }),
     checkApiFootball(),
@@ -354,6 +358,11 @@ export default async function AdminOwnerPanel() {
     : licensedMarketProviderConfigured || hasEnv("API_FOOTBALL_KEY") || hasEnv("APISPORTS_KEY")
       ? "READY"
       : "PARTIALLY_IMPLEMENTED";
+  const linkIndexStatus: HealthStatus = globalLinksTableCheck.error
+    ? "PARTIALLY_IMPLEMENTED"
+    : marketSyncSecretConfigured
+      ? "READY"
+      : "NOT_CONFIGURED_YET";
 
   const healthChecks: HealthCheck[] = [
     {
@@ -461,6 +470,19 @@ export default async function AdminOwnerPanel() {
           : "Cron routes are implemented, but MARKET_SYNC_SECRET or CRON_SECRET is not configured yet.",
     },
     {
+      area: "Link Index",
+      name: "Automatic football link index",
+      purpose: "Daily cron indexes Transfermarkt links already discovered inside Touchline activity.",
+      configured: marketSyncSecretConfigured,
+      required: "Required for automation",
+      status: linkIndexStatus,
+      detail: globalLinksTableCheck.error
+        ? `Link index migration needs to be applied in Supabase: ${globalLinksTableCheck.error.message}`
+        : marketSyncSecretConfigured
+          ? "Automatic link index route exists at /api/link-index/sync and runs daily from Vercel Cron."
+          : "Configure MARKET_SYNC_SECRET or CRON_SECRET so the daily link indexer can run securely.",
+    },
+    {
       area: "Owner Admin",
       name: "Owner/admin access control",
       purpose: "Restricts the owner panel and manual beta access grants.",
@@ -480,6 +502,7 @@ export default async function AdminOwnerPanel() {
     { area: "Env", name: "STRIPE_WEBHOOK_SECRET", purpose: "Validates Stripe webhook signatures.", configured: stripeWebhookConfigured, required: "Required for billing", status: stripeWebhookConfigured ? (stripeWebhookLooksValid ? "READY" : "ERROR") : "NOT_CONFIGURED_YET", detail: "Required before subscription/invoice state can sync automatically." },
     { area: "Env", name: "STRIPE_PRICE_*", purpose: "Monthly/yearly Stripe prices for all plans.", configured: stripeAllPricesConfigured, required: "Required for billing", status: stripeAllPricesConfigured ? "READY" : configuredPriceKeys.length ? "PARTIALLY_IMPLEMENTED" : "NOT_CONFIGURED_YET", detail: `${configuredPriceKeys.length}/${stripePriceEnvKeys.length} Stripe price IDs configured.` },
     { area: "Env", name: "MARKET_SYNC_SECRET / CRON_SECRET", purpose: "Protects scheduled sync endpoints.", configured: marketSyncSecretConfigured, required: "Required for automation", status: marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Required for Vercel Cron to call sync endpoints securely." },
+    { area: "Env", name: "TOUCHLINE_LINK_INDEX_*", purpose: "Optional daily limits for automatic internal link indexing.", configured: hasEnv("TOUCHLINE_LINK_INDEX_DAILY_LIMIT") || hasEnv("TOUCHLINE_LINK_INDEX_SYNC_LIMIT"), required: "Optional", status: "READY", detail: "Defaults to 1000 links/day if not set. This indexes Touchline activity, not external site crawling." },
     { area: "Env", name: "FOOTBALL_MARKET_DATA_API_*", purpose: "Licensed provider for market value/club/contract sync.", configured: licensedMarketProviderConfigured, required: "Optional", status: licensedMarketProviderConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Optional unless professional market value sync is required." },
     { area: "Env", name: "API_FOOTBALL_KEY", purpose: "Optional API-Football player/stat data provider.", configured: hasEnv("API_FOOTBALL_KEY") || hasEnv("APISPORTS_KEY"), required: "Optional", status: apiFootballCheck.status, detail: apiFootballCheck.detail },
     { area: "Env", name: "TOUCHLINE_OWNER_EMAILS", purpose: "Comma-separated owner emails.", configured: hasEnv("TOUCHLINE_OWNER_EMAILS"), required: "Optional", status: hasEnv("TOUCHLINE_OWNER_EMAILS") ? "READY" : "PARTIALLY_IMPLEMENTED", detail: "If missing, the app falls back to the built-in default owner email." },
@@ -490,6 +513,7 @@ export default async function AdminOwnerPanel() {
     ["Supabase", supabaseSystemStatus, "Database, auth users and admin queries are checked against the live Supabase client used by the page."],
     ["API-Football", apiFootballCheck.status, apiFootballCheck.detail],
     ["Market Sync", marketSyncStatus, "Cron routes are implemented in vercel.json. Full data refresh depends on a sync secret and a configured provider."],
+    ["Automatic Link Index", linkIndexStatus, "Touchline now indexes Transfermarkt links discovered inside internal players, Radar and social posts. It does not crawl third-party sites directly."],
     ["Authentication", supabaseEnvReady ? "READY" : "NOT_CONFIGURED_YET", "Password login/register/session cookies are implemented. Google OAuth is optional and should stay disabled until Supabase provider setup is complete."],
     ["Owner Admin", "PARTIALLY_IMPLEMENTED", "Owner email protection and manual beta grants exist. First registered user is not auto-owner; full role management can be expanded later."],
   ] as Array<[string, HealthStatus, string]>;
@@ -521,13 +545,14 @@ export default async function AdminOwnerPanel() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
         <StatTile icon={Users} label="Auth Users" value={String(authUsers.length)} delta="loaded users" accent="cyan" />
         <StatTile icon={Building2} label="Agencies" value={String(totalAgencies)} delta="workspaces" accent="lime" />
         <StatTile icon={Building2} label="Clubs" value={String(totalClubs)} delta="club records" accent="cyan" />
         <StatTile icon={Crown} label="Active Access" value={String(activeSubscriptions)} delta="subs/grants" accent="gold" />
         <StatTile icon={Radio} label="Players" value={String(totalPlayers)} delta="local vault" accent="cyan" />
         <StatTile icon={Database} label="Global Profiles" value={String(totalGlobalProfiles)} delta="search index" accent="lime" />
+        <StatTile icon={Link2} label="Link Index" value={String(totalGlobalLinks)} delta="auto indexed" accent="cyan" />
         <StatTile icon={AlertTriangle} label="Reviews" value={String(pendingReviews)} delta="needs admin" accent={pendingReviews ? "rose" : "gold"} />
       </div>
 

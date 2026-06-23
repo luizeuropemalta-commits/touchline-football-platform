@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ClubNetwork, type ClubNetworkClub, type ClubNetworkPlayer } from "@/components/club-network";
 import { GamePanel } from "@/components/game-ui";
+import { GlobalFootballLinkSearch } from "@/components/global-football-link-search";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
@@ -102,5 +103,15 @@ export default async function ClubsPage() {
     }];
   });
 
-  return <ClubNetwork clubs={clubs} players={players} />;
+  return (
+    <div className="space-y-6">
+      <ClubNetwork clubs={clubs} players={players} />
+      <GlobalFootballLinkSearch
+        type="club"
+        title="Global Club Link Index"
+        description="Search club links discovered automatically from Touchline activity. Clubs become easier to connect, follow and research as the network grows."
+        placeholder="Search club name or Transfermarkt club link..."
+      />
+    </div>
+  );
 }

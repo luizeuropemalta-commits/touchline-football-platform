@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BadgeCheck, Building2, Globe2, ShieldCheck, Users } from "lucide-react";
 import { AgencyDirectory, type AgencyDirectoryAgency, type AgencyDirectoryMember } from "@/components/agency-directory";
+import { GlobalFootballLinkSearch } from "@/components/global-football-link-search";
 import { StatTile } from "@/components/game-ui";
 import { WorkspaceState } from "@/components/workspace-state";
 import { getCurrentWorkspace } from "@/lib/server/current-workspace";
@@ -74,6 +75,13 @@ export default async function AgenciesPage() {
         <StatTile icon={Building2} label="Clubs" value={String(clubs)} delta="club records" accent="gold" />
         <StatTile icon={Globe2} label="Followers" value={String(follows)} delta="club relationships" accent="rose" />
       </div>
+
+      <GlobalFootballLinkSearch
+        type="agent"
+        title="Global Agent Link Index"
+        description="Search agent and agency links discovered automatically from Touchline activity. This prepares the future football business social graph without you manually saving links one by one."
+        placeholder="Search agent, agency or Transfermarkt advisor link..."
+      />
 
       <AgencyDirectory agency={directoryAgency} members={team} />
     </div>
