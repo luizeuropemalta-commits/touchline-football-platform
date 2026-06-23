@@ -3,6 +3,10 @@
     {
       "path": "/api/market-sync",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/radar/refresh",
+      "schedule": "30 6 * * *"
     }
   ]
 }
