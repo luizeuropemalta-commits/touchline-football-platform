@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Building2, CalendarPlus, Check, ExternalLink, Eye, GitCompareArrows, ImageIcon, MessageSquare, Play, Plus, Search, Star, Zap } from "lucide-react";
+import { Building2, CalendarPlus, Check, ExternalLink, Eye, GitCompareArrows, ImageIcon, Link2, MessageSquare, Play, Plus, Search, Star, Zap } from "lucide-react";
 import { players } from "@/lib/demo-data";
 import { Button } from "@/components/ui";
 import { GamePanel, LivePill, SectionHeader, StatTile } from "@/components/game-ui";
@@ -73,9 +73,10 @@ export default function Clubs() {
                   )}
                 </div>
                 <div className="p-4">
-                  <p className="text-[8px] font-black uppercase tracking-[.18em] text-cyan-300">
-                    {player.externalProvider ?? "external profile"}
-                  </p>
+                  <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-cyan-300/15 bg-cyan-300/[.06] px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em] text-cyan-100">
+                    <Link2 size={10} />
+                    {player.externalProvider ?? "link preview"}
+                  </div>
                   <h3 className="mt-2 truncate text-base font-black uppercase italic text-white">{player.name}</h3>
                   <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">
                     {player.position ?? "Position open"} {player.club ? `· ${player.club}` : ""}
