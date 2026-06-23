@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
+  BadgeCheck, BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
   FileSignature, Globe2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
   LockKeyhole, Menu, Newspaper, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
 } from "lucide-react";
@@ -15,6 +15,7 @@ import { canAccess, featureForPath, planMap, type PlanKey } from "@/lib/billing/
 const nav = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/players", label: "Player Portfolio", icon: Users },
+  { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
   { href: "/deals", label: "Deal Rooms", icon: Zap, count: 7 },
   { href: "/scouting", label: "Scouting Center", icon: Binoculars },
   { href: "/inbox", label: "Messages", icon: Inbox, count: 5 },
@@ -41,6 +42,7 @@ const operations = [
 const consoleModes = [
   { href: "/dashboard", label: "Command Center", eyebrow: "HQ", icon: Globe2 },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
+  { href: "/verification", label: "Verification", eyebrow: "Trust", icon: BadgeCheck },
   { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
   { href: "/scouting", label: "Scouting Center", eyebrow: "Discovery", icon: Binoculars },
   { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },
