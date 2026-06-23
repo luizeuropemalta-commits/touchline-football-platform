@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { Check, Copy, Loader2, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, Copy, DatabaseZap, Loader2, PlusCircle, Save, Search, ShieldCheck, Sparkles } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, Meter, SectionHeader } from "@/components/game-ui";
 
@@ -29,6 +29,15 @@ type SearchResponse = {
   error?: string;
 };
 
+type TouchlinePlayerOption = {
+  id: string;
+  name: string;
+  club?: string | null;
+  position?: string | null;
+  externalProvider?: string | null;
+  externalPlayerId?: string | null;
+};
+
 export function PlayerApiSearch() {
   const [query, setQuery] = useState("");
   const [season, setSeason] = useState("2025");
@@ -36,6 +45,29 @@ export function PlayerApiSearch() {
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [players, setPlayers] = useState<ApiFootballPlayer[]>([]);
+  const [profileOptions, setProfileOptions] = useState<TouchlinePlayerOption[]>([]);
+  const [selectedTargets, setSelectedTargets] = useState<Record<number, string>>({});
+  const [profilesLoading, setProfilesLoading] = useState(true);
+  const [savingId, setSavingId] = useState<number | null>(null);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  useEffect(() => {
+    void loadProfiles();
+  }, []);
+
+  async function loadProfiles() {
+    setProfilesLoading(true);
+    try {
+      const response = await fetch("/api/players/link-options");
+      const data = (await response.json()) as { players?: TouchlinePlayerOption[]; error?: string };
+      if (!response.ok) throw new Error(data.error || "Could not load player profiles");
+      setProfileOptions(data.players ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não consegui carregar os perfis Touchline.");
+    } finally {
+      setProfilesLoading(false);
+    }
+  }
 
   async function searchPlayers(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,6 +84,8 @@ export function PlayerApiSearch() {
       const data = (await response.json()) as SearchResponse;
       if (!response.ok) throw new Error(data.error || "Search failed");
       setPlayers(data.players ?? []);
+      const defaultTarget = profileOptions[0]?.id ?? "__create__";
+      setSelectedTargets(Object.fromEntries((data.players ?? []).filter((player) => player.id).map((player) => [player.id!, defaultTarget])));
       if (!data.players?.length) setError("Nenhum atleta encontrado. Tenta nome completo ou outro ano.");
     } catch (err) {
       setPlayers([]);
@@ -65,6 +99,33 @@ export function PlayerApiSearch() {
     if (!id) return;
     await navigator.clipboard.writeText(String(id));
     setCopiedId(id);
+  }
+
+  async function saveDirectToProfile(player: ApiFootballPlayer) {
+    if (!player.id) return;
+    setSavingId(player.id);
+    setSaveMessage("");
+    setError("");
+
+    try {
+      const target = selectedTargets[player.id] ?? profileOptions[0]?.id ?? "__create__";
+      const response = await fetch("/api/players/external-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: target,
+          apiFootballPlayer: player,
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; created?: boolean; playerId?: string; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || "Não consegui salvar no perfil.");
+      setSaveMessage(data.created ? `Perfil criado e ligado: ${player.name}` : `ID salvo direto no perfil: ${player.name}`);
+      await loadProfiles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao salvar no perfil.");
+    } finally {
+      setSavingId(null);
+    }
   }
 
   return (
@@ -100,6 +161,12 @@ export function PlayerApiSearch() {
         {error && (
           <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] px-4 py-3 text-xs leading-6 text-amber-100/80">
             {error}
+          </div>
+        )}
+
+        {saveMessage && (
+          <div className="mt-4 rounded-2xl border border-[#a3ff12]/20 bg-[#a3ff12]/[.07] px-4 py-3 text-xs font-bold leading-6 text-[#caff72]">
+            {saveMessage}
           </div>
         )}
       </GamePanel>
@@ -168,6 +235,44 @@ export function PlayerApiSearch() {
                   </div>
                   <Meter value={player.team?.name ? 92 : 70} color="lime" />
                 </div>
+
+                <div className="mt-5 rounded-2xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-3">
+                  <div className="mb-2 flex items-center gap-2 text-[8px] font-black uppercase tracking-[.18em] text-[#b8ff4d]">
+                    <DatabaseZap size={13} />
+                    Salvar direto no perfil
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                    <select
+                      value={selectedTargets[player.id ?? 0] ?? profileOptions[0]?.id ?? "__create__"}
+                      onChange={(event) =>
+                        player.id && setSelectedTargets((current) => ({ ...current, [player.id!]: event.target.value }))
+                      }
+                      disabled={profilesLoading || savingId === player.id}
+                      className="h-10 rounded-xl border border-white/[.08] bg-[#07111b] px-3 text-[10px] font-bold uppercase tracking-wider text-slate-200 outline-none focus:border-cyan-300/35"
+                    >
+                      <option value="__create__">Criar novo perfil Touchline</option>
+                      {profileOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name} {option.position ? `· ${option.position}` : ""} {option.club ? `· ${option.club}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => saveDirectToProfile(player)}
+                      disabled={!player.id || savingId === player.id}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#a3ff12]/30 bg-[#a3ff12] px-4 text-[9px] font-black uppercase tracking-wider text-[#071007] transition hover:bg-[#bcff52] disabled:opacity-50"
+                    >
+                      {savingId === player.id ? <Loader2 size={14} className="animate-spin" /> : profileOptions.length ? <Save size={14} /> : <PlusCircle size={14} />}
+                      {savingId === player.id ? "Saving" : "Salvar no perfil"}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[8px] leading-4 text-slate-500">
+                    {profileOptions.length
+                      ? "Escolhe um perfil existente ou cria um novo perfil automaticamente."
+                      : "Nenhum perfil real encontrado ainda. O botão cria o perfil e já salva o ID externo."}
+                  </p>
+                </div>
               </div>
             </div>
           </GamePanel>
@@ -182,10 +287,11 @@ export function PlayerApiSearch() {
           <div>
             <h3 className="text-sm font-black uppercase italic text-white">Como linkar no banco</h3>
             <p className="mt-2 text-xs leading-6 text-slate-500">
-              Depois de copiar o ID, abre o jogador no Supabase e coloca:
-              <span className="mx-1 text-cyan-300">external_market_provider = api-football</span>
-              e <span className="mx-1 text-cyan-300">external_market_player_id = ID copiado</span>.
-              Na próxima fase eu posso criar o botão “Salvar direto no perfil” para fazer isso automaticamente.
+              Agora não precisas abrir o Supabase para linkar manualmente. O botão
+              <span className="mx-1 text-cyan-300">Salvar no perfil</span>
+              grava <span className="mx-1 text-cyan-300">external_market_provider = api-football</span>
+              e <span className="mx-1 text-cyan-300">external_market_player_id</span>
+              direto no perfil real do jogador.
             </p>
           </div>
         </div>
