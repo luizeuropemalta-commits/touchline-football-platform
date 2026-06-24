@@ -6,7 +6,9 @@ import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   BadgeEuro,
+  CalendarClock,
   CheckCircle2,
+  CircleDollarSign,
   ClipboardList,
   FileSignature,
   FileText,
@@ -53,6 +55,7 @@ export type DealRoomData = {
   title: string;
   status: string;
   updatedAt: string;
+  dealId?: string | null;
   playerId?: string | null;
   playerName: string;
   playerPosition?: string | null;
@@ -65,6 +68,28 @@ export type DealRoomData = {
   dealStatus?: string | null;
   dealValue?: number | null;
   currency?: string | null;
+};
+
+export type DealRoomContract = {
+  id: string;
+  contractType: string;
+  status: string;
+  expiresOn?: string | null;
+  grossValue?: number | null;
+  currency?: string | null;
+  createdAt: string;
+};
+
+export type DealRoomInvoice = {
+  id: string;
+  invoiceNumber: string;
+  status: string;
+  subtotal?: number | null;
+  taxAmount?: number | null;
+  total?: number | null;
+  currency?: string | null;
+  dueOn?: string | null;
+  createdAt: string;
 };
 
 function formatDate(value: string) {
@@ -95,17 +120,27 @@ export function DealRoomWorkspace({
   messages,
   files,
   documents,
+  contracts,
+  invoices,
 }: {
   room: DealRoomData;
   messages: DealRoomMessage[];
   files: DealRoomFile[];
   documents: DealRoomDocument[];
+  contracts: DealRoomContract[];
+  invoices: DealRoomInvoice[];
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [note, setNote] = useState("");
   const [fileName, setFileName] = useState("");
   const [filePath, setFilePath] = useState("");
+  const [estimatedValue, setEstimatedValue] = useState(room.dealValue ? String(room.dealValue) : "");
+  const [agencyFee, setAgencyFee] = useState(room.dealValue ? String(Math.round(room.dealValue * 0.1)) : "");
+  const [taxAmount, setTaxAmount] = useState("");
+  const [currency, setCurrency] = useState(room.currency ?? "EUR");
+  const [dueDate, setDueDate] = useState("");
+  const [contractEndDate, setContractEndDate] = useState("");
   const [busyAction, setBusyAction] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -113,7 +148,16 @@ export function DealRoomWorkspace({
   const regularMessages = useMemo(() => messages.filter((item) => !item.body.startsWith("[NOTE]") && !item.body.startsWith("[SYSTEM]")), [messages]);
   const notes = useMemo(() => messages.filter((item) => item.body.startsWith("[NOTE]")), [messages]);
   const timeline = useMemo(() => messages.filter((item) => item.body.startsWith("[SYSTEM]")), [messages]);
-  const readiness = Math.min(100, 20 + regularMessages.length * 12 + notes.length * 8 + files.length * 10 + documents.length * 14 + (room.status === "closed" ? 20 : 0));
+  const readiness = Math.min(100, 20 + regularMessages.length * 10 + notes.length * 6 + files.length * 8 + documents.length * 10 + contracts.length * 16 + invoices.length * 14 + (room.status === "closed" ? 16 : 0));
+
+  const commercialPayload = {
+    estimatedValue,
+    agencyFee,
+    taxAmount,
+    currency,
+    dueDate,
+    contractEndDate,
+  };
 
   async function postAction(payload: Record<string, unknown>, success: string) {
     setBusyAction(String(payload.action ?? "action"));
@@ -214,7 +258,7 @@ export function DealRoomWorkspace({
             <div className="relative z-10 mt-5 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-xl bg-white/[.045] p-3"><MessageSquare size={15} className="mx-auto text-cyan-300" /><p className="mt-2 text-[8px] text-slate-500">Messages</p><p className="text-sm font-black">{regularMessages.length}</p></div>
               <div className="rounded-xl bg-white/[.045] p-3"><FileText size={15} className="mx-auto text-[#a3ff12]" /><p className="mt-2 text-[8px] text-slate-500">Files</p><p className="text-sm font-black">{files.length}</p></div>
-              <div className="rounded-xl bg-white/[.045] p-3"><Sparkles size={15} className="mx-auto text-amber-300" /><p className="mt-2 text-[8px] text-slate-500">Pitches</p><p className="text-sm font-black">{documents.length}</p></div>
+              <div className="rounded-xl bg-white/[.045] p-3"><FileSignature size={15} className="mx-auto text-amber-300" /><p className="mt-2 text-[8px] text-slate-500">Contracts</p><p className="text-sm font-black">{contracts.length}</p></div>
             </div>
           </div>
         </div>
@@ -286,6 +330,32 @@ export function DealRoomWorkspace({
                   </button>
                 );
               })}
+            </div>
+          </GamePanel>
+
+          <GamePanel className="p-5">
+            <SectionHeader kicker="Commercial flow" title="Contract & Invoice" />
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <Input value={estimatedValue} onChange={(event) => setEstimatedValue(event.target.value)} placeholder="Deal value" />
+                <Input value={agencyFee} onChange={(event) => setAgencyFee(event.target.value)} placeholder="Agency fee" />
+                <Input value={taxAmount} onChange={(event) => setTaxAmount(event.target.value)} placeholder="Tax amount" />
+                <Input value={currency} maxLength={3} onChange={(event) => setCurrency(event.target.value.toUpperCase())} placeholder="EUR" />
+                <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+                <Input type="date" value={contractEndDate} onChange={(event) => setContractEndDate(event.target.value)} />
+              </div>
+              <Button className="w-full" variant="secondary" onClick={() => void postAction({ action: "save_commercial_terms", ...commercialPayload }, "Commercial terms saved.")} disabled={busyAction === "save_commercial_terms"}>
+                {busyAction === "save_commercial_terms" ? <Loader2 size={14} className="animate-spin" /> : <BadgeEuro size={14} />} Save terms
+              </Button>
+              <Button className="w-full" onClick={() => void postAction({ action: "create_contract", contractType: "playing", ...commercialPayload }, "Contract draft created.")} disabled={busyAction === "create_contract"}>
+                {busyAction === "create_contract" ? <Loader2 size={14} className="animate-spin" /> : <FileSignature size={14} />} Create Contract
+              </Button>
+              <Button className="w-full" variant="secondary" onClick={() => void postAction({ action: "create_invoice", ...commercialPayload }, "Invoice draft created.")} disabled={busyAction === "create_invoice"}>
+                {busyAction === "create_invoice" ? <Loader2 size={14} className="animate-spin" /> : <CircleDollarSign size={14} />} Create Invoice
+              </Button>
+              <p className="text-[9px] leading-5 text-slate-500">
+                Drafts are saved to Contracts, Invoices and Touchline AI documents. Legal and tax review still required.
+              </p>
             </div>
           </GamePanel>
         </aside>
@@ -412,11 +482,43 @@ export function DealRoomWorkspace({
           </GamePanel>
 
           <GamePanel className="p-5">
-            <SectionHeader kicker="Finance signal" title="Deal economics" />
-            <div className="rounded-2xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-4">
-              <BadgeEuro className="text-[#a3ff12]" size={18} />
-              <p className="mt-3 font-display text-3xl text-white">{formatMoney(room.dealValue, room.currency ?? "EUR")}</p>
-              <p className="mt-2 text-[9px] leading-5 text-slate-500">Next phase connects closed rooms to contract and invoice generation.</p>
+            <SectionHeader kicker="Commercial records" title="Contracts & invoices" />
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-4">
+                <BadgeEuro className="text-[#a3ff12]" size={18} />
+                <p className="mt-3 font-display text-3xl text-white">{formatMoney(room.dealValue, room.currency ?? "EUR")}</p>
+                <p className="mt-2 text-[9px] leading-5 text-slate-500">Connected deal value. Use commercial flow to create contract and invoice drafts.</p>
+              </div>
+
+              {contracts.length ? contracts.map((contract) => (
+                <div key={contract.id} className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045] p-4">
+                  <div className="flex gap-3">
+                    <FileSignature size={16} className="shrink-0 text-cyan-300" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-white">{contract.contractType} contract</p>
+                      <p className="mt-1 text-[8px] text-slate-600">{contract.status} · expires {contract.expiresOn ?? "open"}</p>
+                      <p className="mt-2 text-xs font-black text-[#a3ff12]">{formatMoney(contract.grossValue, contract.currency ?? "EUR")}</p>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <p className="rounded-2xl border border-white/[.07] bg-black/20 p-4 text-xs text-slate-500">No contract draft yet.</p>
+              )}
+
+              {invoices.length ? invoices.map((invoice) => (
+                <div key={invoice.id} className="rounded-2xl border border-amber-300/15 bg-amber-300/[.045] p-4">
+                  <div className="flex gap-3">
+                    <CalendarClock size={16} className="shrink-0 text-amber-300" />
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-white">{invoice.invoiceNumber}</p>
+                      <p className="mt-1 text-[8px] text-slate-600">{invoice.status} · due {invoice.dueOn ?? "open"}</p>
+                      <p className="mt-2 text-xs font-black text-[#a3ff12]">{formatMoney(invoice.total, invoice.currency ?? "EUR")}</p>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <p className="rounded-2xl border border-white/[.07] bg-black/20 p-4 text-xs text-slate-500">No invoice draft yet.</p>
+              )}
             </div>
           </GamePanel>
         </aside>

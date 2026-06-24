@@ -28,6 +28,7 @@ type RoomRow = {
   status: string;
   updated_at: string;
   player_id: string | null;
+  deal_id: string | null;
   players?: PlayerJoin;
   clubs?: ClubJoin;
   interests?: InterestJoin;
@@ -37,6 +38,8 @@ type RoomRow = {
 type MessageRow = { id: string; body: string; created_at: string };
 type FileRow = { id: string; name: string; storage_path: string; mime_type: string | null; size_bytes: number | null; created_at: string };
 type DocumentRow = { id: string; title: string; document_type: string; status: string; created_at: string };
+type ContractRow = { id: string; contract_type: string; status: string; expires_on: string | null; gross_value: number | null; currency: string | null; created_at: string };
+type InvoiceRow = { id: string; invoice_number: string; status: string; subtotal: number | null; tax_amount: number | null; total: number | null; currency: string | null; due_on: string | null; created_at: string };
 
 function one<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null;
@@ -55,7 +58,7 @@ export default async function DealRoomDetailPage({ params }: { params: Promise<{
   const { admin, agencyId } = workspace;
   const { data: roomData, error: roomError } = await admin
     .from("negotiation_rooms")
-    .select("id, title, status, updated_at, player_id, players:player_id(id,first_name,last_name,position,photo_url), clubs:club_id(name,league), interests:interest_id(status,message,club_name), deals:deal_id(title,status,estimated_value,currency)")
+    .select("id, title, status, updated_at, player_id, deal_id, players:player_id(id,first_name,last_name,position,photo_url), clubs:club_id(name,league), interests:interest_id(status,message,club_name), deals:deal_id(title,status,estimated_value,currency)")
     .eq("agency_id", agencyId)
     .eq("id", id)
     .maybeSingle();
@@ -77,7 +80,7 @@ export default async function DealRoomDetailPage({ params }: { params: Promise<{
   const interest = one(roomRow.interests);
   const deal = one(roomRow.deals);
 
-  const [{ data: messageRows }, { data: fileRows }, { data: documentRows }] = await Promise.all([
+  const [{ data: messageRows }, { data: fileRows }, { data: documentRows }, { data: contractRows }, { data: invoiceRows }] = await Promise.all([
     admin
       .from("negotiation_messages")
       .select("id, body, created_at")
@@ -92,17 +95,35 @@ export default async function DealRoomDetailPage({ params }: { params: Promise<{
       .eq("room_id", id)
       .order("created_at", { ascending: false })
       .limit(100),
-    roomRow.player_id
+    roomRow.player_id || roomRow.deal_id
       ? admin
           .from("ai_generated_documents")
           .select("id, title, document_type, status, created_at")
           .eq("agency_id", agencyId)
-          .eq("target_type", "player")
-          .eq("target_id", roomRow.player_id)
-          .eq("document_type", "player_presentation")
+          .in("target_type", ["player", "deal"])
+          .in("target_id", [roomRow.player_id, roomRow.deal_id].filter(Boolean) as string[])
+          .in("document_type", ["player_presentation", "contract", "proposal"])
           .order("created_at", { ascending: false })
           .limit(20)
       : Promise.resolve({ data: [] as DocumentRow[] }),
+    roomRow.deal_id
+      ? admin
+          .from("contracts")
+          .select("id, contract_type, status, expires_on, gross_value, currency, created_at")
+          .eq("agency_id", agencyId)
+          .eq("deal_id", roomRow.deal_id)
+          .order("created_at", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: [] as ContractRow[] }),
+    roomRow.deal_id
+      ? admin
+          .from("invoices")
+          .select("id, invoice_number, status, subtotal, tax_amount, total, currency, due_on, created_at")
+          .eq("agency_id", agencyId)
+          .eq("deal_id", roomRow.deal_id)
+          .order("created_at", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: [] as InvoiceRow[] }),
   ]);
 
   const room: DealRoomData = {
@@ -110,6 +131,7 @@ export default async function DealRoomDetailPage({ params }: { params: Promise<{
     title: roomRow.title,
     status: roomRow.status,
     updatedAt: roomRow.updated_at,
+    dealId: roomRow.deal_id,
     playerId: roomRow.player_id,
     playerName: playerName(player),
     playerPosition: player?.position ?? null,
@@ -147,5 +169,27 @@ export default async function DealRoomDetailPage({ params }: { params: Promise<{
     createdAt: item.created_at,
   }));
 
-  return <DealRoomWorkspace room={room} messages={messages} files={files} documents={documents} />;
+  const contracts = ((contractRows ?? []) as ContractRow[]).map((item) => ({
+    id: item.id,
+    contractType: item.contract_type,
+    status: item.status,
+    expiresOn: item.expires_on,
+    grossValue: item.gross_value,
+    currency: item.currency,
+    createdAt: item.created_at,
+  }));
+
+  const invoices = ((invoiceRows ?? []) as InvoiceRow[]).map((item) => ({
+    id: item.id,
+    invoiceNumber: item.invoice_number,
+    status: item.status,
+    subtotal: item.subtotal,
+    taxAmount: item.tax_amount,
+    total: item.total,
+    currency: item.currency,
+    dueOn: item.due_on,
+    createdAt: item.created_at,
+  }));
+
+  return <DealRoomWorkspace room={room} messages={messages} files={files} documents={documents} contracts={contracts} invoices={invoices} />;
 }
