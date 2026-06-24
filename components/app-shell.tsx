@@ -25,7 +25,7 @@ const nav: NavItem[] = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/players", label: "Player Portfolio", icon: Users },
   { href: "/players/pitch", label: "Pitch Player", icon: MailCheck },
-  { href: "/players/database", label: "Player Database", icon: Search },
+  { href: "/players/database", label: "Football Search", icon: Search },
   { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
   { href: "/opportunities", label: "Opportunities", icon: Target },
   { href: "/deals", label: "Deal Rooms", icon: Zap },
@@ -61,7 +61,7 @@ const consoleModes = [
   { href: "/connect", label: "Connect", eyebrow: "Network", icon: Globe2 },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
   { href: "/players/pitch", label: "Pitch Player", eyebrow: "Proposal", icon: MailCheck },
-  { href: "/players/database", label: "Player Database", eyebrow: "Search", icon: Search },
+  { href: "/players/database", label: "Football Search", eyebrow: "Global", icon: Search },
   { href: "/verification", label: "Verification", eyebrow: "Trust", icon: BadgeCheck },
   { href: "/opportunities", label: "Opportunities", eyebrow: "AI Match", icon: Target },
   { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
@@ -180,7 +180,7 @@ export function AppShell({
             <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-3">
               <div className="console-chip hidden items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[.06] px-3 py-2 sm:flex"><Sparkles size={12} className="text-amber-300"/><span className="text-[9px] font-black text-amber-200">12,450</span></div>
               <Link href="/inbox" aria-label="Notifications" className="interactive-icon relative grid size-10 place-items-center rounded-xl border border-white/[.08] bg-white/[.035] text-slate-400 hover:border-cyan-300/25 hover:text-cyan-300"><Bell size={15}/><span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[#a3ff12] shadow-[0_0_7px_#a3ff12]"/></Link>
-              <Link href="/players" className="console-chip hidden h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/[.08] px-3 text-[9px] font-black uppercase tracking-[.1em] text-cyan-200 hover:bg-cyan-300/[.14] sm:flex"><Crosshair size={13}/> Add Player</Link>
+              <Link href="/players" className="console-chip hidden h-10 items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/[.08] px-3 text-[9px] font-black uppercase tracking-[.1em] text-cyan-200 hover:bg-cyan-300/[.14] sm:flex"><Crosshair size={13}/> Add Profile</Link>
             </div>
           </div>
         </header>

@@ -12,7 +12,7 @@ export default function PlayerDatabasePage() {
         </Link>
         <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
           <DatabaseZap size={12} />
-          Touchline player database
+          Touchline football search
         </div>
       </div>
       <PlayerDatabaseSearch />

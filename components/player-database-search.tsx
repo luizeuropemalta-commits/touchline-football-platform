@@ -261,7 +261,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
         const limit = mode === "compact" ? 6 : 24;
         const response = await fetch(`/api/player-database/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`);
         const data = (await response.json()) as { players?: PlayerDatabaseResult[]; error?: string; discovered?: boolean; enriched?: boolean };
-        if (!response.ok) throw new Error(data.error || "Could not search player database.");
+        if (!response.ok) throw new Error(data.error || "Could not search football database.");
         if (latestRequest.current === requestId) {
           const quickPlayers = data.players ?? [];
           setResults(quickPlayers);
@@ -373,7 +373,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
           onBlur={() => window.setTimeout(() => setFocused(false), 180)}
           onChange={(event) => updateQuery(event.target.value)}
           onFocus={() => setFocused(true)}
-          placeholder="Search players database..."
+          placeholder="Search football network..."
           className="console-chip h-10 w-full rounded-xl border border-white/[.08] bg-white/[.035] pl-9 pr-3 text-[10px] text-slate-200 outline-none transition placeholder:text-slate-700 focus:border-cyan-300/30"
         />
         {showDropdown && (
@@ -410,7 +410,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 <div className="p-6 text-center">
                   <UserRoundSearch className="mx-auto text-slate-700" size={22} />
                   <p className="mt-3 text-[10px] font-black uppercase text-slate-400">No player found yet</p>
-                  <Link href="/players/database" className="mt-3 inline-flex text-[8px] font-black uppercase tracking-wider text-cyan-300">Open player database</Link>
+                  <Link href="/players/database" className="mt-3 inline-flex text-[8px] font-black uppercase tracking-wider text-cyan-300">Open football search</Link>
                 </div>
               )}
             </div>

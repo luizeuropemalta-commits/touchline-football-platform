@@ -61,7 +61,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     return (
       <GamePanel className="mx-auto max-w-[1100px] p-8">
         <h1 className="text-3xl font-black uppercase italic text-white">Login required</h1>
-        <p className="mt-3 text-slate-400">Login to search the Touchline player database.</p>
+        <p className="mt-3 text-slate-400">Login to search the Touchline football database.</p>
         <Link href="/login" className="mt-6 inline-flex h-11 items-center rounded-2xl bg-[#a3ff12] px-5 text-xs font-black uppercase text-[#071007]">
           Login
         </Link>
@@ -114,7 +114,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     <div className="mx-auto max-w-[1500px] animate-in">
       <Link href="/players/database" className="mb-4 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-slate-600 hover:text-cyan-300">
         <ArrowLeft size={12} />
-        Return to player database
+        Return to football search
       </Link>
 
       <GamePanel className="relative overflow-hidden pitch-grid">
