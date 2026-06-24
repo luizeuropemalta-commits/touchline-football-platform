@@ -66,11 +66,11 @@ export default async function NegotiationCenter() {
             <p className="af-mode-kicker">Touchline / Negotiation Center</p>
             <h1 className="af-mode-title font-display mt-3 text-white">Deal Rooms</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300/80">
-              Private environment for club interest, messages, files, contracts, notes and timeline. Rooms are created automatically when a club declares interest.
+              Private environment for club interest, messages, files, pitch documents, internal notes and timeline. Rooms are created automatically when opportunities move into negotiation.
             </p>
             <div className="mt-8">
-              <Link href="/clubs" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007]">
-                <Zap size={14} />Create interest room
+              <Link href="/opportunities" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007]">
+                <Zap size={14} />Create opportunity
               </Link>
             </div>
           </div>
@@ -108,8 +108,8 @@ export default async function NegotiationCenter() {
                   <div><p className="text-[8px] text-slate-600">STATUS</p><p className="mt-1 text-sm font-black">{room.status.replaceAll("_", " ")}</p></div>
                   <div><p className="text-[8px] text-slate-600">UPDATED</p><p className="mt-1 text-xs font-black text-cyan-100">{new Date(room.updated_at).toLocaleDateString()}</p></div>
                   <div className="md:text-right">
-                    <Link href="/inbox" className="text-[8px] font-black uppercase text-cyan-300 transition hover:text-white">
-                      Open messages →
+                    <Link href={`/deals/${room.id}`} className="inline-flex h-9 items-center justify-center rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 text-[8px] font-black uppercase text-[#caff72] transition hover:border-[#a3ff12]/45 hover:bg-[#a3ff12]/[.16]">
+                      Open room →
                     </Link>
                   </div>
                 </div>
@@ -146,9 +146,9 @@ export default async function NegotiationCenter() {
           </GamePanel>
           <GamePanel className="p-5">
             <SectionHeader kicker="Next action" title="Create workflow" />
-            <p className="text-xs leading-6 text-slate-500">Use Club Network → I&apos;m interested to create an interest, automatically open a negotiation room and begin the deal timeline.</p>
-            <Link href="/clubs" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007] transition hover:-translate-y-0.5 hover:bg-[#bcff52]">
-              <Users size={13} />Open Club Network
+            <p className="text-xs leading-6 text-slate-500">Use Opportunity Board → Deal to create a private room, attach pitch documents and begin the deal timeline.</p>
+            <Link href="/opportunities" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007] transition hover:-translate-y-0.5 hover:bg-[#bcff52]">
+              <Users size={13} />Open Opportunity Board
             </Link>
           </GamePanel>
         </div>
