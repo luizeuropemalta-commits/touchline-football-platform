@@ -91,6 +91,126 @@ function toNumber(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function stripHtml(value: string) {
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractTransfermarktInfoTableValue(html: string, labels: string[]) {
+  for (const label of labels) {
+    const pattern = new RegExp(
+      `<span[^>]*class=["'][^"']*info-table__content--regular[^"']*["'][^>]*>\\s*${escapeRegex(label)}\\s*:?\\s*<\\/span>\\s*<span[^>]*class=["'][^"']*info-table__content--bold[^"']*["'][^>]*>([\\s\\S]*?)<\\/span>`,
+      "i",
+    );
+    const match = html.match(pattern);
+    const value = match?.[1] ? stripHtml(match[1]) : null;
+    if (value) return value;
+  }
+  return null;
+}
+
+function extractMetaContent(html: string, key: string) {
+  const escapedKey = escapeRegex(key);
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${escapedKey}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${escapedKey}["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]+name=["']${escapedKey}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+name=["']${escapedKey}["'][^>]*>`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) return stripHtml(match[1]);
+  }
+  return null;
+}
+
+function extractTransfermarktName(html: string) {
+  const headline = html.match(/<h1[^>]*class=["'][^"']*data-header__headline-wrapper[^"']*["'][^>]*>([\s\S]*?)<\/h1>/i)?.[1];
+  const name = headline ? stripHtml(headline).replace(/^#\d+\s*/g, "") : null;
+  return cleanText(name, 180) ?? cleanText(extractMetaContent(html, "og:title")?.replace(/\s*\|.*$/g, ""), 180);
+}
+
+function extractTransfermarktPhoto(html: string, profileUrl: string) {
+  const image =
+    extractMetaContent(html, "og:image") ??
+    html.match(/<img[^>]+class=["'][^"']*(?:data-header__profile-image|bilderrahmen-fixed)[^"']*["'][^>]+src=["']([^"']+)["']/i)?.[1] ??
+    html.match(/<img[^>]+src=["']([^"']+)["'][^>]+class=["'][^"']*(?:data-header__profile-image|bilderrahmen-fixed)[^"']*["']/i)?.[1];
+
+  if (!image) return null;
+  try {
+    const url = new URL(image, profileUrl);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractTransfermarktMarketValue(html: string) {
+  const candidates = [
+    html.match(/class=["'][^"']*data-header__market-value-wrapper[^"']*["'][^>]*>([\s\S]*?)<\/a>/i)?.[1],
+    html.match(/class=["'][^"']*tm-player-market-value-development__current-value[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1],
+    html.match(/Market value[\s\S]{0,700}?([€£$]\s?\d+(?:[.,]\d+)?\s?(?:m|k|bn|million|thousand)?)/i)?.[1],
+  ];
+  const text = cleanText(candidates.map((candidate) => candidate ? stripHtml(candidate) : null).find(Boolean), 80);
+  if (!text) return { marketValue: null, marketValueText: null, currency: null };
+
+  const currency = text.includes("£") ? "GBP" : text.includes("$") ? "USD" : "EUR";
+  const numberMatch = text.match(/(\d+(?:[.,]\d+)?)/);
+  const raw = numberMatch?.[1] ? Number(numberMatch[1].replace(",", ".")) : null;
+  const lower = text.toLowerCase();
+  const multiplier = lower.includes("bn") ? 1_000_000_000 : lower.includes("m") || lower.includes("million") ? 1_000_000 : lower.includes("k") || lower.includes("thousand") ? 1_000 : 1;
+  return {
+    marketValue: raw && Number.isFinite(raw) ? raw * multiplier : null,
+    marketValueText: text,
+    currency,
+  };
+}
+
+function parseTransfermarktDate(value?: string | null) {
+  const text = cleanText(value, 80);
+  if (!text) return null;
+  const dateText = text.replace(/\([^)]*\)/g, "").trim();
+  const parsed = new Date(dateText);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
+function parseTransfermarktAge(value?: string | null) {
+  const match = value?.match(/\((\d{1,2})\)/);
+  return match?.[1] ? Number(match[1]) : null;
+}
+
+function parseTransfermarktProfileHtml(html: string, profileUrl: string) {
+  const dateOfBirthText = extractTransfermarktInfoTableValue(html, ["Date of birth/Age", "Date of birth"]);
+  const market = extractTransfermarktMarketValue(html);
+  return {
+    playerName: extractTransfermarktName(html),
+    photoUrl: extractTransfermarktPhoto(html, profileUrl),
+    currentClub: extractTransfermarktInfoTableValue(html, ["Current club"]),
+    position: extractTransfermarktInfoTableValue(html, ["Position", "Main position"]),
+    nationality: extractTransfermarktInfoTableValue(html, ["Citizenship", "Nationality"]),
+    dateOfBirth: parseTransfermarktDate(dateOfBirthText),
+    age: parseTransfermarktAge(dateOfBirthText),
+    agentName: extractTransfermarktInfoTableValue(html, ["Agent", "Player agent"]),
+    marketValue: market.marketValue,
+    marketValueText: market.marketValueText,
+    currency: market.currency,
+  };
+}
+
 function existingText(row: Record<string, unknown> | null, key: string, max = 240) {
   return cleanText(typeof row?.[key] === "string" ? row[key] : null, max);
 }
@@ -180,6 +300,84 @@ export async function upsertGlobalPlayerProfile(admin: SupabaseClient, input: Up
 
   if (error) throw new Error(error.message);
   return data;
+}
+
+export async function enrichGlobalPlayerProfileFromTransfermarkt(
+  admin: SupabaseClient,
+  row: Record<string, unknown>,
+) {
+  const profileUrl = typeof row.profile_url === "string" ? row.profile_url : "";
+  const target = validateTransfermarktProfileUrl(profileUrl);
+  if (!target) return row;
+
+  const payload = existingPayload(row);
+  const enrichment = payload.transfermarktProfileEnrichment;
+  const lastChecked = enrichment && typeof enrichment === "object" && !Array.isArray(enrichment)
+    ? Date.parse(String((enrichment as Record<string, unknown>).checkedAt ?? ""))
+    : 0;
+  const missingKeyFields = [
+    row.photo_url,
+    row.current_club,
+    row.position,
+    row.nationality,
+    row.date_of_birth || row.age,
+    row.market_value || row.market_value_text,
+  ].some((value) => !value);
+
+  if (!missingKeyFields) return row;
+  if (lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return row;
+  if (process.env.TRANSFERMARKT_SYNC_ENABLED?.toLowerCase() !== "true") return row;
+
+  try {
+    const response = await fetch(target.toString(), {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent": "TouchlineBot/1.0 (+https://touchline-football-platform.vercel.app; profile metadata enrichment)",
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!response.ok) return row;
+
+    const html = (await response.text()).slice(0, 700_000);
+    const parsed = parseTransfermarktProfileHtml(html, target.toString());
+    const patch = {
+      player_name: cleanText(parsed.playerName, 180) ?? existingText(row, "player_name", 180),
+      photo_url: normalizeHttpsUrl(parsed.photoUrl) ?? existingText(row, "photo_url", 1000),
+      current_club: cleanText(parsed.currentClub, 180) ?? existingText(row, "current_club", 180),
+      position: cleanText(parsed.position, 80) ?? existingText(row, "position", 80),
+      nationality: cleanText(parsed.nationality, 80) ?? existingText(row, "nationality", 80),
+      date_of_birth: toDate(parsed.dateOfBirth) ?? toDate(existingText(row, "date_of_birth", 10)),
+      age: parsed.age && parsed.age > 0 && parsed.age < 80 ? parsed.age : existingNumber(row, "age"),
+      agent_name: cleanText(parsed.agentName, 180) ?? existingText(row, "agent_name", 180),
+      market_value: toNumber(parsed.marketValue) ?? existingNumber(row, "market_value"),
+      market_value_text: cleanText(parsed.marketValueText, 80) ?? existingText(row, "market_value_text", 80),
+      currency: (cleanText(parsed.currency, 3) ?? existingText(row, "currency", 3) ?? "EUR").toUpperCase(),
+      source_provider: "transfermarkt",
+      source_payload: {
+        ...payload,
+        transfermarktProfileEnrichment: {
+          checkedAt: new Date().toISOString(),
+          status: "success",
+          fieldsFound: Object.entries(parsed).filter(([, value]) => Boolean(value)).map(([key]) => key),
+          legalNote: "Touchline stores limited public profile metadata for internal search/profile display and keeps Transfermarkt as the source link.",
+        },
+      },
+      last_updated_at: new Date().toISOString(),
+    };
+
+    const { data } = await admin
+      .from("global_player_profiles")
+      .update(patch)
+      .eq("id", row.id)
+      .select("id, transfermarkt_player_id, player_name, profile_url, photo_url, current_club, position, nationality, date_of_birth, age, agent_name, agency_name, market_value, market_value_text, currency, source_provider, source_payload, last_updated_at, created_at, updated_at")
+      .maybeSingle();
+
+    return data ?? row;
+  } catch {
+    return row;
+  }
 }
 
 export function mapGlobalPlayer(row: Record<string, unknown>): PlayerDatabaseResult {

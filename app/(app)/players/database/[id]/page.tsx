@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarClock, DatabaseZap, ExternalLink, Globe2, Send, ShieldCheck, Sparkles, UserRoundSearch } from "lucide-react";
 import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
+import { enrichGlobalPlayerProfileFromTransfermarkt } from "@/lib/player-database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -71,7 +72,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
   const admin = createAdminClient();
   if (!admin) notFound();
 
-  const { data: player, error } = await admin
+  const { data: playerRow, error } = await admin
     .from("global_player_profiles")
     .select(
       "id, transfermarkt_player_id, player_name, profile_url, photo_url, current_club, position, nationality, date_of_birth, age, agent_name, agency_name, market_value, market_value_text, currency, source_provider, source_payload, last_updated_at, created_at, updated_at",
@@ -79,7 +80,9 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     .eq("id", id)
     .maybeSingle();
 
-  if (error || !player) notFound();
+  if (error || !playerRow) notFound();
+
+  const player = await enrichGlobalPlayerProfileFromTransfermarkt(admin, playerRow);
 
   const age = player.age ?? ageFromDate(player.date_of_birth);
   const sourcePayload = player.source_payload && typeof player.source_payload === "object" && !Array.isArray(player.source_payload)
