@@ -106,7 +106,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
 
       <GamePanel className="relative overflow-hidden pitch-grid">
         <div className="absolute right-[-8%] top-[-60%] size-[500px] rounded-full border border-cyan-300/[.08]" />
-        <div className="relative grid min-h-[360px] lg:grid-cols-[330px_1fr]">
+        <div className="relative grid min-h-[360px] min-w-0 lg:grid-cols-[330px_1fr]">
           <div className="relative overflow-hidden border-b border-white/[.07] bg-cyan-300/[.035] lg:border-b-0 lg:border-r">
             {player.photo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -118,19 +118,19 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
             <div className="absolute bottom-5 left-5"><LivePill>Database profile</LivePill></div>
           </div>
 
-          <div className="relative p-6 sm:p-8">
+          <div className="relative min-w-0 p-5 sm:p-8">
             <div className="flex flex-col justify-between gap-6 sm:flex-row">
-              <div>
+              <div className="min-w-0">
                 <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">
                   {player.current_club ?? "Club open"} · {player.position ?? "Position open"}
                 </p>
-                <h1 className="font-display mt-2 text-4xl uppercase italic sm:text-6xl">{player.player_name}</h1>
-                <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                <h1 className="font-display mt-2 break-words text-4xl uppercase italic sm:text-6xl">{player.player_name}</h1>
+                <p className="mt-2 break-words text-[10px] font-bold uppercase tracking-wider text-slate-600">
                   {player.nationality ?? "Nationality open"} {age ? `· AGE ${age}` : ""} · {sourceLabel} ID {sourceId}
                 </p>
               </div>
-              <div className="flex items-start gap-2">
-                <a href={player.profile_url} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007]">
+              <div className="flex shrink-0 items-start gap-2">
+                <a href={player.profile_url} target="_blank" rel="noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007] sm:w-auto">
                   {sourceLinkLabel} <ExternalLink size={13} />
                 </a>
               </div>
@@ -171,7 +171,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
         <GamePanel className="p-5">
           <SectionHeader kicker="Touchline search profile" title="Database intelligence" action={<DatabaseZap size={15} className="text-cyan-300" />} />
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid min-w-0 gap-3 md:grid-cols-2">
             {[
               [`${sourceLabel} ID`, sourceId],
               ["Profile URL", player.profile_url],
@@ -182,9 +182,9 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
               ["Agent", player.agent_name ?? "Open"],
               ["Agency", player.agency_name ?? "Open"],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-white/[.07] bg-black/20 p-4">
+              <div key={label} className="min-w-0 rounded-2xl border border-white/[.07] bg-black/20 p-4">
                 <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>
-                <p className="mt-2 break-words text-xs font-bold text-slate-200">{value}</p>
+                <p className="mt-2 overflow-wrap-anywhere text-xs font-bold text-slate-200">{value}</p>
               </div>
             ))}
           </div>

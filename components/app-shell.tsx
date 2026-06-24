@@ -202,12 +202,12 @@ export function AppShell({
             })}
           </div>
         </nav>
-        <main className="w-full px-4 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-24 xl:px-8 xl:py-8 xl:pb-24">
+        <main className="app-main w-full px-4 py-4 sm:px-6 sm:py-6 xl:px-8 xl:py-8">
           <div className="mx-auto w-full max-w-[1500px] min-w-0">
             {children}
           </div>
         </main>
-        <Link href="/ai" aria-label="Open Touchline AI" className="premium-ring fixed bottom-5 right-5 z-40 grid size-14 place-items-center rounded-2xl border border-cyan-300/30 bg-[#0a1a27]/90 text-cyan-200 shadow-[0_0_35px_rgba(34,211,238,.2)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:scale-105 hover:border-[#a3ff12]/40 hover:text-[#a3ff12]">
+        <Link href="/ai" aria-label="Open Touchline AI" className="mobile-floating-ai premium-ring fixed bottom-5 right-5 z-40 grid size-14 place-items-center rounded-2xl border border-cyan-300/30 bg-[#0a1a27]/90 text-cyan-200 shadow-[0_0_35px_rgba(34,211,238,.2)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:scale-105 hover:border-[#a3ff12]/40 hover:text-[#a3ff12]">
           <Bot size={22}/><span className="pulse-live absolute right-1.5 top-1.5 size-2 rounded-full bg-[#a3ff12]"/>
         </Link>
       </div>

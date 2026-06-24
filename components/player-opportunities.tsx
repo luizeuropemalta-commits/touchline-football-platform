@@ -389,6 +389,12 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
         <div className="space-y-5">
           <GamePanel className="p-5">
             <SectionHeader kicker="Create club requirement" title="New opportunity" />
+            <div className="mb-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">How this board works</p>
+              <p className="mt-2 text-xs leading-6 text-slate-400">
+                Add what a club is looking for. Touchline compares the requirement with your players, then you can create a pitch or open a private deal room.
+              </p>
+            </div>
             <div className="grid gap-3 lg:grid-cols-2">
               <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Example: club needs striker 18–25 EU passport *" />
               <Input value={clubName} onChange={(event) => setClubName(event.target.value)} placeholder="Club name" />
