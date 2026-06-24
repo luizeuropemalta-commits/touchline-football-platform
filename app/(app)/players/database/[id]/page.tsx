@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarClock, DatabaseZap, ExternalLink, Globe2, Send, ShieldCheck, Sparkles, UserRoundSearch } from "lucide-react";
+import { ArrowLeft, CalendarClock, DatabaseZap, ExternalLink, Globe2, Send, ShieldCheck, Sparkles, Trophy, UserRoundSearch } from "lucide-react";
 import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
 import { enrichGlobalPlayerProfileFromTransfermarkt } from "@/lib/player-database";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -115,6 +115,21 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
   );
   const internalProfileUrl = `${siteUrl()}/players/database/${player.id}`;
   const whatsAppUrl = `https://wa.me/?text=${encodeURIComponent(`Touchline player profile: ${player.player_name}\n${internalProfileUrl}`)}`;
+  const rawHonours = Array.isArray(enrichment.honours) ? enrichment.honours : [];
+  const playerHonours = (rawHonours.length ? rawHonours : [
+    { label: "League titles", count: null, icon: "🏆" },
+    { label: "Continental titles", count: null, icon: "🌍" },
+    { label: "Domestic cups", count: null, icon: "🥈" },
+    { label: "Individual awards", count: null, icon: "⭐" },
+  ]).flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const record = item as Record<string, unknown>;
+    return [{
+      label: typeof record.label === "string" ? record.label : "Honour",
+      count: typeof record.count === "number" ? record.count : null,
+      icon: typeof record.icon === "string" ? record.icon : "🏆",
+    }];
+  });
 
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
@@ -188,6 +203,26 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
             </div>
           </div>
         </div>
+      </GamePanel>
+
+      <GamePanel className="mt-5 p-5">
+        <SectionHeader kicker="Player honours" title="Trophy cabinet" action={<Trophy size={15} className="text-amber-300" />} />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {playerHonours.map((honour) => (
+            <div key={honour.label} className="relative overflow-hidden rounded-3xl border border-amber-300/15 bg-amber-300/[.045] p-5">
+              <div className="absolute right-[-20px] top-[-20px] size-24 rounded-full bg-amber-300/[.05]" />
+              <div className="relative">
+                <div className="grid size-10 place-items-center rounded-2xl border border-amber-300/20 bg-black/20 text-lg">{honour.icon}</div>
+                <p className="mt-5 text-[9px] font-black uppercase tracking-[.16em] text-amber-200">{honour.label}</p>
+                <p className="mt-3 text-3xl font-black text-white">{honour.count ?? "—"}</p>
+                <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-600">{honour.count === null ? "Sync pending" : "Public metadata"}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-[10px] leading-5 text-slate-500">
+          Trophy data is limited public metadata. If unavailable from the source page, Touchline keeps the cabinet ready for approved sync.
+        </p>
       </GamePanel>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_.8fr]">

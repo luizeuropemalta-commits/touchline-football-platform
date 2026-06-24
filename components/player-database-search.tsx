@@ -43,6 +43,7 @@ type NetworkSearchResult = {
     transfermarktId?: string | null;
     name?: string | null;
     profileUrl?: string | null;
+    internalProfileUrl?: string | null;
     photoUrl?: string | null;
     status?: string | null;
     relationshipType?: string | null;
@@ -223,11 +224,9 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
 
       {showPlayerPreview && <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {entity.players.length ? entity.players.map((player) => (
-          <a
+          <Link
             key={`${entity.id}-${player.id}`}
-            href={player.profileUrl ?? "#"}
-            target="_blank"
-            rel="noreferrer"
+            href={player.internalProfileUrl ?? (player.profileUrl ? `/football-search?q=${encodeURIComponent(player.name ?? "")}` : "#")}
             className="group flex min-w-0 items-center gap-3 rounded-2xl border border-white/[.06] bg-black/20 p-2 transition hover:border-cyan-300/20 hover:bg-cyan-300/[.05]"
           >
             <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
@@ -241,10 +240,10 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
             <div className="min-w-0">
               <p className="truncate text-[10px] font-black uppercase italic text-white group-hover:text-cyan-100">{player.name ?? "Player"}</p>
               <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">
-                TM ID {player.transfermarktId ?? "open"} · {player.status === "approved" ? "verified" : "suggested"}
+                TM ID {player.transfermarktId ?? "open"} · {player.status === "approved" ? "verified" : "suggested"} · Touchline profile
               </p>
             </div>
-          </a>
+          </Link>
         )) : (
           <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[.06] p-4 sm:col-span-2 xl:col-span-3">
             <p className="text-[10px] font-black uppercase tracking-wider text-amber-200">{emptyPlayerMessage}</p>
@@ -621,6 +620,15 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                         <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#caff72]">Football network match found</p>
                         <p className="mt-2 text-[10px] leading-5 text-slate-500">
                           No player profile matched directly, but Touchline found club, agent or agency results below.
+                        </p>
+                      </div>
+                    ) : !shouldShowPlayers && visibleNetworkResults.length ? (
+                      <div className="rounded-3xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-5">
+                        <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#caff72]">
+                          {activeTab === "agents" ? "Agent / agency result found" : activeTab === "clubs" ? "Club result found" : "Football network result found"}
+                        </p>
+                        <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                          Touchline found the network profile below. Open it inside the app to see linked players and internal profiles.
                         </p>
                       </div>
                     ) : noResultsInActiveTab ? (

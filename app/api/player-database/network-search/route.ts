@@ -35,6 +35,12 @@ type RelationshipRow = {
   } | null;
 };
 
+type GlobalPlayerReference = {
+  id: string;
+  transfermarkt_player_id: string;
+  photo_url: string | null;
+};
+
 function cleanQuery(value: string | null) {
   return value?.trim().replace(/\s+/g, " ").slice(0, 100) ?? "";
 }
@@ -144,6 +150,72 @@ async function loadPlayersForEntities(admin: NonNullable<ReturnType<typeof creat
   return byEntity;
 }
 
+async function loadGlobalPlayerReferences(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  relationshipMap: Map<string, RelationshipRow[]>,
+) {
+  const targets = [...relationshipMap.values()]
+    .flat()
+    .map((relationship) => relationship.target)
+    .filter((target): target is NonNullable<RelationshipRow["target"]> => Boolean(
+      target?.transfermarkt_id &&
+      target.entity_type === "player" &&
+      (target.canonical_url || target.profile_url),
+    ));
+
+  const byTransfermarktId = new Map<string, NonNullable<RelationshipRow["target"]>>();
+  for (const target of targets) {
+    if (target.transfermarkt_id && !byTransfermarktId.has(target.transfermarkt_id)) {
+      byTransfermarktId.set(target.transfermarkt_id, target);
+    }
+  }
+
+  const transfermarktIds = [...byTransfermarktId.keys()];
+  if (!transfermarktIds.length) return new Map<string, GlobalPlayerReference>();
+
+  const { data: existing } = await admin
+    .from("global_player_profiles")
+    .select("id, transfermarkt_player_id, photo_url")
+    .in("transfermarkt_player_id", transfermarktIds);
+
+  const existingIds = new Set((existing ?? []).map((row) => String(row.transfermarkt_player_id)));
+  const missingRows = transfermarktIds
+    .filter((id) => !existingIds.has(id))
+    .map((id) => {
+      const target = byTransfermarktId.get(id);
+      return {
+        transfermarkt_player_id: id,
+        player_name: target?.name ?? `Transfermarkt Player ${id}`,
+        profile_url: target?.canonical_url ?? target?.profile_url ?? "",
+        photo_url: target?.photo_url ?? null,
+        source_provider: "transfermarkt",
+        source_payload: {
+          source: "network_search_linked_player",
+          importedAt: new Date().toISOString(),
+          safeRegistryOnly: true,
+          note: "Created from an agent/club linked public player reference so Touchline can open an internal profile.",
+        },
+        last_updated_at: new Date().toISOString(),
+      };
+    })
+    .filter((row) => row.profile_url);
+
+  if (missingRows.length) {
+    await admin
+      .from("global_player_profiles")
+      .upsert(missingRows, { onConflict: "transfermarkt_player_id" });
+  }
+
+  const { data } = await admin
+    .from("global_player_profiles")
+    .select("id, transfermarkt_player_id, photo_url")
+    .in("transfermarkt_player_id", transfermarktIds);
+
+  return new Map(
+    ((data ?? []) as GlobalPlayerReference[]).map((row) => [String(row.transfermarkt_player_id), row]),
+  );
+}
+
 function isKnownFalseClubPlayerLink(entity: NetworkEntity, relationship: RelationshipRow) {
   return entity.entity_type === "club" && entity.transfermarkt_id === "199" && relationship.target?.transfermarkt_id === "8198";
 }
@@ -226,6 +298,8 @@ export async function GET(request: Request) {
       relationships = await loadPlayersForEntities(admin, entities.map((entity) => entity.id));
     }
 
+    const globalPlayerReferences = await loadGlobalPlayerReferences(admin, relationships);
+
     return NextResponse.json({
       ok: true,
       entities: entities.map((entity) => ({
@@ -240,12 +314,14 @@ export async function GET(request: Request) {
         players: (relationships.get(entity.id) ?? []).filter((relationship) => isTrustedNetworkRelationship(entity, relationship)).flatMap((relationship) => {
           const player = relationship.target;
           if (!player?.id || player.entity_type !== "player") return [];
+          const globalPlayer = player.transfermarkt_id ? globalPlayerReferences.get(player.transfermarkt_id) : null;
           return [{
             id: player.id,
             transfermarktId: player.transfermarkt_id,
             name: player.name,
             profileUrl: player.canonical_url ?? player.profile_url,
-            photoUrl: player.photo_url,
+            internalProfileUrl: globalPlayer ? `/players/database/${globalPlayer.id}` : null,
+            photoUrl: globalPlayer?.photo_url ?? player.photo_url,
             status: relationship.status,
             relationshipType: relationship.relationship_type,
           }];

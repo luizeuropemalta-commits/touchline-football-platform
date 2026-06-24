@@ -207,6 +207,62 @@ function extractTransfermarktMarketValue(html: string) {
   };
 }
 
+function playerHonoursUrl(profileUrl: string, transfermarktPlayerId: string) {
+  try {
+    const url = new URL(profileUrl);
+    const slug = url.pathname.split("/").filter(Boolean)[0];
+    if (!slug) return null;
+    return `${url.origin}/${slug}/erfolge/spieler/${transfermarktPlayerId}`;
+  } catch {
+    return null;
+  }
+}
+
+function extractHonourCount(html: string, labels: string[]) {
+  const text = stripHtml(html).replace(/\s+/g, " ");
+  for (const label of labels) {
+    const escaped = escapeRegex(label);
+    const patterns = [
+      new RegExp(`(\\d{1,3})\\s+${escaped}`, "i"),
+      new RegExp(`${escaped}\\s+(\\d{1,3})`, "i"),
+      new RegExp(`${escaped}[\\s\\S]{0,80}?(\\d{1,3})`, "i"),
+    ];
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match?.[1]) {
+        const value = Number(match[1]);
+        if (Number.isFinite(value) && value >= 0 && value < 200) return value;
+      }
+    }
+  }
+  return null;
+}
+
+function extractPlayerHonours(html: string) {
+  return [
+    {
+      label: "League titles",
+      count: extractHonourCount(html, ["League Champion", "Spanish Champion", "French Champion", "German Champion", "English Champion", "Portuguese Champion", "Italian Champion"]),
+      icon: "🏆",
+    },
+    {
+      label: "Continental titles",
+      count: extractHonourCount(html, ["Champions League winner", "Europa League winner", "Copa Libertadores winner", "Club World Cup winner"]),
+      icon: "🌍",
+    },
+    {
+      label: "Domestic cups",
+      count: extractHonourCount(html, ["Cup Winner", "FA Cup winner", "Spanish Cup winner", "French Cup winner", "German Cup winner", "Italian Cup winner", "Portuguese Cup winner"]),
+      icon: "🥈",
+    },
+    {
+      label: "Individual awards",
+      count: extractHonourCount(html, ["Ballon d'Or", "Footballer of the Year", "Player of the Year", "Top scorer", "Golden Boot"]),
+      icon: "⭐",
+    },
+  ];
+}
+
 function parseTransfermarktDate(value?: string | null) {
   const text = cleanText(value, 80);
   if (!text) return null;
@@ -247,6 +303,7 @@ function parseTransfermarktProfileHtml(html: string, profileUrl: string) {
       placeOfBirth: extractTransfermarktInfoTableValue(html, ["Place of birth"]),
       playerStatus: extractTransfermarktInfoTableValue(html, ["Status"]),
     },
+    honours: extractPlayerHonours(html),
   };
 }
 
@@ -425,8 +482,9 @@ export async function enrichGlobalPlayerProfileFromTransfermarkt(
     row.date_of_birth || row.age,
     row.market_value || row.market_value_text,
   ].some((value) => !value);
+  const missingHonours = !(enrichment && typeof enrichment === "object" && !Array.isArray(enrichment) && Array.isArray((enrichment as Record<string, unknown>).honours));
 
-  if (!missingKeyFields) return row;
+  if (!missingKeyFields && !missingHonours) return row;
   if (lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return row;
   if (!transfermarktProfileEnrichmentEnabled()) return row;
 
@@ -443,7 +501,25 @@ export async function enrichGlobalPlayerProfileFromTransfermarkt(
     if (!response.ok) return row;
 
     const html = (await response.text()).slice(0, 700_000);
-    const parsed = parseTransfermarktProfileHtml(html, target.toString());
+    let honoursHtml = "";
+    const transfermarktPlayerId = getTransfermarktPlayerId(target.toString());
+    const honoursUrl = transfermarktPlayerId ? playerHonoursUrl(target.toString(), transfermarktPlayerId) : null;
+    if (honoursUrl) {
+      try {
+        const honoursResponse = await fetch(honoursUrl, {
+          headers: {
+            Accept: "text/html,application/xhtml+xml",
+            "Accept-Language": "en-US,en;q=0.9",
+            "User-Agent": "TouchlineBot/1.0 (+https://touchline-football-platform.vercel.app; player honours metadata enrichment)",
+          },
+          signal: AbortSignal.timeout(8_000),
+        });
+        if (honoursResponse.ok) honoursHtml = (await honoursResponse.text()).slice(0, 500_000);
+      } catch {
+        honoursHtml = "";
+      }
+    }
+    const parsed = parseTransfermarktProfileHtml(`${html} ${honoursHtml}`, target.toString());
     const linked = await saveLinkedTransfermarktEntities(admin, {
       playerUrl: target.toString(),
       playerName: cleanText(parsed.playerName, 180) ?? existingText(row, "player_name", 180),
@@ -471,6 +547,7 @@ export async function enrichGlobalPlayerProfileFromTransfermarkt(
           fieldsFound: Object.entries(parsed).filter(([, value]) => Boolean(value)).map(([key]) => key),
           linkedEntitiesSaved: linked.linked,
           details: parsed.details,
+          honours: parsed.honours,
           legalNote: "Touchline stores limited public profile metadata for internal search/profile display and keeps Transfermarkt as the source link.",
         },
       },
