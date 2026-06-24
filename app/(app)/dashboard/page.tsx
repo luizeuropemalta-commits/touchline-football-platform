@@ -7,9 +7,12 @@ import {
   Bot,
   Building2,
   CalendarClock,
+  ClipboardList,
   FileSignature,
+  FileText,
   MessageSquare,
   Radio,
+  Search,
   ShieldCheck,
   Sparkles,
   Target,
@@ -167,6 +170,71 @@ export default async function Dashboard() {
     ["Create player presentation", "Club-ready player dossier", Sparkles],
   ];
 
+  const operatingSuite = [
+    {
+      title: "Player Management",
+      description: "Build a clean portfolio with photos, market data, videos, notes and documents.",
+      href: "/players",
+      metric: totalPlayers,
+      metricLabel: "Players",
+      icon: Users,
+      accent: "lime",
+    },
+    {
+      title: "Club Requests",
+      description: "Track club needs, squad gaps and player opportunities without losing follow-ups.",
+      href: "/opportunities",
+      metric: openOpportunities,
+      metricLabel: "Open",
+      icon: ClipboardList,
+      accent: "cyan",
+    },
+    {
+      title: "Pitch Builder",
+      description: "Use Touchline AI to create club-ready player presentations, proposals and emails.",
+      href: "/ai",
+      metric: "AI",
+      metricLabel: "Docs",
+      icon: Sparkles,
+      accent: "gold",
+    },
+    {
+      title: "Contract Alerts",
+      description: "Follow mandates, contract expirations, birthdays and renewal windows.",
+      href: "/contracts",
+      metric: contractExpirations,
+      metricLabel: "90 days",
+      icon: FileSignature,
+      accent: "gold",
+    },
+    {
+      title: "Document Vault",
+      description: "Keep passports, mandates, contracts, medical files and work permits organized.",
+      href: "/documents",
+      metric: "Vault",
+      metricLabel: "Secure",
+      icon: FileText,
+      accent: "cyan",
+    },
+    {
+      title: "Finance Control",
+      description: "Prepare commission tracking, player investments, invoices and deal revenue.",
+      href: "/invoices",
+      metric: "€",
+      metricLabel: "Finance",
+      icon: BadgeEuro,
+      accent: "lime",
+    },
+  ];
+
+  const requestToDealFlow = [
+    ["Discover", "Search or auto-discover players from the database.", "/players/database", Search],
+    ["Prepare", "Add videos, documents and AI profile material.", "/players", Users],
+    ["Pitch", "Create a professional proposal for targeted clubs.", "/ai", Sparkles],
+    ["Interest", "Track club interest and opportunity status.", "/opportunities", Target],
+    ["Negotiate", "Move into a private deal room with messages and files.", "/deals", Zap],
+  ];
+
   return (
     <div className="relative mx-auto w-full max-w-[1500px] animate-in">
       <section className="ps-career-home overflow-hidden p-4 sm:p-6 xl:p-7">
@@ -305,6 +373,80 @@ export default async function Dashboard() {
             </div>
           </aside>
         </div>
+      </section>
+
+      <section className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <GamePanel className="p-5 sm:p-6">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[.24em] text-[#a3ff12]">Daily agency operating suite</p>
+              <h2 className="mt-1 text-2xl font-black uppercase italic text-white sm:text-3xl">Everything an agent opens every morning</h2>
+              <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-500">
+                Built to replace scattered WhatsApp notes, spreadsheets, folders and forgotten club requests with one
+                connected football workspace.
+              </p>
+            </div>
+            <Link href="/connect" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.06] px-4 text-[9px] font-black uppercase tracking-[.14em] text-cyan-100 transition hover:border-cyan-300/35 hover:bg-cyan-300/[.11]">
+              Open network <ArrowUpRight size={13} />
+            </Link>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            {operatingSuite.map(({ title, description, href, metric, metricLabel, icon: Icon, accent }) => (
+              <Link
+                key={title}
+                href={href}
+                className="mode-tile group min-h-[178px] p-4 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/25"
+                data-accent={accent}
+              >
+                <div className="relative z-10 flex items-start justify-between gap-3">
+                  <span className="console-mode-icon"><Icon size={21} /></span>
+                  <span className="rounded-2xl border border-white/[.08] bg-black/25 px-3 py-2 text-right">
+                    <span className="block font-display text-2xl leading-none text-white">{metric}</span>
+                    <span className="mt-1 block text-[7px] font-black uppercase tracking-[.16em] text-slate-500">{metricLabel}</span>
+                  </span>
+                </div>
+                <div className="relative z-10 mt-8">
+                  <h3 className="text-lg font-black uppercase italic tracking-[-.04em] text-white">{title}</h3>
+                  <p className="mt-2 text-xs leading-6 text-slate-500">{description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </GamePanel>
+
+        <GamePanel className="p-5 sm:p-6">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[.24em] text-cyan-300">Request to deal flow</p>
+              <h2 className="mt-1 text-2xl font-black uppercase italic text-white">No lost opportunities</h2>
+              <p className="mt-2 text-xs leading-6 text-slate-500">
+                The most important product loop: find a player, prepare the profile, pitch the club, track interest and
+                negotiate inside Touchline.
+              </p>
+            </div>
+            <Radio className="shrink-0 text-[#a3ff12]" />
+          </div>
+
+          <div className="space-y-3">
+            {requestToDealFlow.map(([title, body, href, Icon], index) => {
+              const FlowIcon = Icon as typeof Search;
+              return (
+                <Link key={String(title)} href={String(href)} className="group flex items-center gap-3 rounded-2xl border border-white/[.07] bg-black/20 p-3 transition hover:border-[#a3ff12]/25 hover:bg-[#a3ff12]/[.04]">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-cyan-300/15 bg-cyan-300/[.06] text-[10px] font-black text-cyan-200">
+                    {index + 1}
+                  </span>
+                  <FlowIcon size={15} className="shrink-0 text-[#a3ff12]" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[10px] font-black uppercase italic text-white">{String(title)}</span>
+                    <span className="mt-0.5 block text-[9px] leading-4 text-slate-500">{String(body)}</span>
+                  </span>
+                  <ArrowUpRight size={12} className="shrink-0 text-slate-700 transition group-hover:text-cyan-300" />
+                </Link>
+              );
+            })}
+          </div>
+        </GamePanel>
       </section>
 
       <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_420px]">

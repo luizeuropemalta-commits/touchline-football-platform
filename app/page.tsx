@@ -39,6 +39,15 @@ const systems = [
   ["Community", "Predictions, points, professional rankings, insights, follows and achievements without gambling.", Trophy],
 ];
 
+const dailyLoops = [
+  ["Portfolio", "Create player records once, then keep videos, documents, market links and career data organized.", Users],
+  ["Club Requests", "Turn club recruitment needs into trackable opportunities instead of scattered messages.", Building2],
+  ["Pitch Packs", "Generate player presentations, transfer proposals and professional emails from one place.", Sparkles],
+  ["Milestones", "Follow contract ends, mandates, birthdays, renewals and representation status before deadlines hit.", FileSignature],
+  ["Live Signals", "Bring match, market and scouting signals into the agent workspace so users return daily.", Radio],
+  ["Network", "Connect agents, clubs, scouts, academies and investors around verified football business profiles.", Network],
+];
+
 const matching = [
   "Club searches for U23 left-back in Portugal",
   "Touchline detects matching agent portfolios",
@@ -144,6 +153,44 @@ export default function Home() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section className="relative z-10 mx-auto max-w-[1500px] px-5 py-10 sm:px-8">
+        <div className="af-mode-screen p-6 sm:p-8" style={{ "--mode-aura": "rgba(163,255,18,.18)" } as React.CSSProperties}>
+          <div className="relative z-10 grid gap-8 lg:grid-cols-[.85fr_1.15fr] lg:items-center">
+            <div>
+              <p className="af-mode-kicker">Daily use engine</p>
+              <h2 className="mt-2 text-3xl font-black uppercase italic tracking-[-.06em] sm:text-5xl">
+                Built to replace WhatsApp chaos, folders and spreadsheets.
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-slate-400">
+                The strongest football platforms are not opened once. They become the daily operating room. Touchline is
+                being shaped around repeat workflows: requests, player profiles, pitches, documents, alerts and deals.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link href="/register" className="continue-career-button inline-flex min-h-[52px] items-center gap-3 px-5 text-[9px] font-black uppercase tracking-[.16em] text-[#071007]">
+                  Build your workspace <ArrowRight size={15} />
+                </Link>
+                <Link href="/login" className="console-mini-card inline-flex min-h-[52px] items-center gap-3 px-5 text-[9px] font-black uppercase tracking-[.16em] text-cyan-100">
+                  Enter Touchline HQ
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {dailyLoops.map(([title, text, Icon]) => {
+                const CardIcon = Icon as typeof Users;
+                return (
+                  <div key={String(title)} className="rounded-3xl border border-white/[.07] bg-black/25 p-5">
+                    <CardIcon size={20} className="text-[#a3ff12]" />
+                    <h3 className="mt-5 text-lg font-black uppercase italic tracking-[-.05em] text-white">{String(title)}</h3>
+                    <p className="mt-2 text-xs leading-6 text-slate-500">{String(text)}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </section>
 
