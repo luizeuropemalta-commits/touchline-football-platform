@@ -91,6 +91,11 @@ function toNumber(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function transfermarktProfileEnrichmentEnabled() {
+  const value = process.env.TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED ?? process.env.TRANSFERMARKT_SYNC_ENABLED;
+  return value?.toLowerCase() !== "false";
+}
+
 function stripHtml(value: string) {
   return value
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -326,7 +331,7 @@ export async function enrichGlobalPlayerProfileFromTransfermarkt(
 
   if (!missingKeyFields) return row;
   if (lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return row;
-  if (process.env.TRANSFERMARKT_SYNC_ENABLED?.toLowerCase() !== "true") return row;
+  if (!transfermarktProfileEnrichmentEnabled()) return row;
 
   try {
     const response = await fetch(target.toString(), {
