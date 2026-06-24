@@ -101,7 +101,11 @@ function isGenericTransfermarktImage(value?: string | null) {
     lower.includes("/logos/") ||
     lower.includes("tm-logo") ||
     lower.includes("default") ||
-    lower.includes("socialmedia")
+    lower.includes("socialmedia") ||
+    lower.includes("transfermarkt.svg") ||
+    lower.includes("transfermarkt.png") ||
+    lower.includes("/icons/") ||
+    lower.includes("/icon/")
   );
 }
 
@@ -199,11 +203,22 @@ function extractHonourCount(html: string, labels: string[]) {
 
 function extractHonours(html: string) {
   return [
-    { label: "League titles", count: extractHonourCount(html, ["Campeonato Brasileiro Série A", "Brazilian champion", "League Champion", "Champion"]), icon: "🏆" },
-    { label: "National cups", count: extractHonourCount(html, ["Copa do Brasil", "Brazilian Cup", "National Cup", "Cup Winner"]), icon: "🥈" },
-    { label: "Continental titles", count: extractHonourCount(html, ["Copa Libertadores", "Libertadores", "Champions League", "Copa Sudamericana"]), icon: "🌎" },
-    { label: "Super cups", count: extractHonourCount(html, ["Supercopa", "Super Cup", "Recopa"]), icon: "⭐" },
+    { label: "League titles", count: extractHonourCount(html, ["Campeonato Brasileiro Série A", "Brazilian champion", "Portuguese champion", "League Champion", "Champion"]), icon: "🏆" },
+    { label: "National cups", count: extractHonourCount(html, ["Copa do Brasil", "Brazilian Cup", "Portuguese cup winner", "Taça de Portugal", "National Cup", "Cup Winner"]), icon: "🥈" },
+    { label: "Continental titles", count: extractHonourCount(html, ["Copa Libertadores", "Libertadores", "Champions League", "Copa Sudamericana", "European Cup"]), icon: "🌎" },
+    { label: "Super cups", count: extractHonourCount(html, ["Supercopa", "Super Cup", "Portuguese Super Cup", "Recopa", "League Cup", "Portuguese League Cup"]), icon: "⭐" },
   ];
+}
+
+function clubHonoursUrl(profileUrl: string, transfermarktId: string) {
+  try {
+    const url = new URL(profileUrl);
+    const slug = url.pathname.split("/").filter(Boolean)[0];
+    if (!slug || !transfermarktId) return null;
+    return `${url.origin}/${slug}/erfolge/verein/${transfermarktId}`;
+  } catch {
+    return null;
+  }
 }
 
 function parseClubHtml(html: string, profileUrl: string) {
@@ -331,7 +346,24 @@ export async function enrichTransfermarktClubProfile(admin: SupabaseClient, row:
     if (!response.ok) return mapClub(row);
 
     const html = (await response.text()).slice(0, 700_000);
-    const parsed = parseClubHtml(html, profileUrl);
+    let honoursHtml = "";
+    const honoursUrl = clubHonoursUrl(profileUrl, row.transfermarkt_id);
+    if (honoursUrl) {
+      try {
+        const honoursResponse = await fetch(honoursUrl, {
+          headers: {
+            Accept: "text/html,application/xhtml+xml",
+            "Accept-Language": "en-US,en;q=0.9",
+            "User-Agent": "TouchlineBot/1.0 (+https://touchline-football-platform.vercel.app; club trophy metadata enrichment)",
+          },
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (honoursResponse.ok) honoursHtml = (await honoursResponse.text()).slice(0, 500_000);
+      } catch {
+        honoursHtml = "";
+      }
+    }
+    const parsed = parseClubHtml(`${html} ${honoursHtml}`, profileUrl);
     const latestPayload = await loadLatestPayload(admin, row.id, payload);
     const nextPayload = {
       ...latestPayload,
@@ -363,10 +395,10 @@ export async function enrichTransfermarktClubProfile(admin: SupabaseClient, row:
   }
 }
 
-async function loadRawClubLinkedPlayers(admin: SupabaseClient, clubId: string) {
+async function loadRawClubLinkedPlayers(admin: SupabaseClient, clubId: string, clubTransfermarktId?: string | null) {
   const { data } = await admin
     .from("transfermarkt_relationships")
-    .select("id, relationship_type, status, target:transfermarkt_entities!transfermarkt_relationships_target_entity_id_fkey(id, transfermarkt_id, entity_type, name, profile_url, canonical_url, photo_url, status)")
+    .select("id, relationship_type, status, source_url, source_payload, target:transfermarkt_entities!transfermarkt_relationships_target_entity_id_fkey(id, transfermarkt_id, entity_type, name, profile_url, canonical_url, photo_url, status)")
     .eq("source_entity_id", clubId)
     .eq("relationship_type", "club_player")
     .in("status", ["approved", "suggested", "needs_review"])
@@ -376,6 +408,8 @@ async function loadRawClubLinkedPlayers(admin: SupabaseClient, clubId: string) {
   return ((data ?? []) as Array<{
     id: string;
     status: string;
+    source_url?: string | null;
+    source_payload?: Record<string, unknown> | null;
     target?: {
       id?: string | null;
       transfermarkt_id?: string | null;
@@ -386,8 +420,13 @@ async function loadRawClubLinkedPlayers(admin: SupabaseClient, clubId: string) {
       photo_url?: string | null;
     } | null;
   }>).flatMap((row) => {
+    const payload = row.source_payload && typeof row.source_payload === "object" && !Array.isArray(row.source_payload)
+      ? row.source_payload
+      : {};
+    if (row.status !== "approved" && (!row.source_url || payload.discoveredFrom === "player_profile_enrichment")) return [];
     const target = row.target;
     if (!target?.id || target.entity_type !== "player") return [];
+    if (clubTransfermarktId === "199" && target.transfermarkt_id === "8198") return [];
     return [{
       entityId: target.id,
       id: target.id,
@@ -456,8 +495,8 @@ export async function syncClubRosterOnProfileOpen(admin: SupabaseClient, row: En
     .eq("id", row.id);
 }
 
-export async function loadClubLinkedPlayers(admin: SupabaseClient, clubId: string) {
-  const players = await loadRawClubLinkedPlayers(admin, clubId);
+export async function loadClubLinkedPlayers(admin: SupabaseClient, clubId: string, clubTransfermarktId?: string | null) {
+  const players = await loadRawClubLinkedPlayers(admin, clubId, clubTransfermarktId);
   const globalProfileIds = await ensureGlobalPlayerProfilesForClub(admin, players);
   return players.map((player) => ({
     ...player,

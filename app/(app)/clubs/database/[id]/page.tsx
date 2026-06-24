@@ -96,7 +96,7 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
 
   await syncClubRosterOnProfileOpen(admin, row as ClubRow, user.id);
   const club = await enrichTransfermarktClubProfile(admin, row as ClubRow);
-  const linkedPlayers = await loadClubLinkedPlayers(admin, club.id);
+  const linkedPlayers = await loadClubLinkedPlayers(admin, club.id, club.transfermarktId);
   const profileCompleteness = completeness([
     club.photoUrl,
     club.marketValueText || club.marketValue,

@@ -113,6 +113,23 @@ function missingSearchData(player: PlayerDatabaseResult) {
   return !player.photoUrl || !player.currentClub || !player.position || !player.nationality || !player.age;
 }
 
+function isGenericExternalImage(value?: string | null) {
+  if (!value) return true;
+  const lower = value.toLowerCase();
+  return (
+    lower.includes("transfermarkt-logo") ||
+    lower.includes("transfermarkt.svg") ||
+    lower.includes("transfermarkt.png") ||
+    lower.includes("/logo/") ||
+    lower.includes("/logos/") ||
+    lower.includes("tm-logo") ||
+    lower.includes("default") ||
+    lower.includes("socialmedia") ||
+    lower.includes("/icons/") ||
+    lower.includes("/icon/")
+  );
+}
+
 function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
   return (
     <div className="group grid gap-3 rounded-3xl border border-white/[.07] bg-white/[.035] p-3 transition hover:border-cyan-300/25 hover:bg-cyan-300/[.055] lg:grid-cols-[minmax(0,1fr)_auto]">
@@ -172,7 +189,7 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
     <div className="rounded-3xl border border-white/[.07] bg-white/[.035] p-4">
       <div className="flex items-start gap-3">
         <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.06]">
-          {entity.photoUrl ? (
+          {entity.photoUrl && !isGenericExternalImage(entity.photoUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={entity.photoUrl} alt={entity.name} className="h-full w-full object-cover" />
           ) : (

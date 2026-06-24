@@ -21,6 +21,8 @@ type RelationshipRow = {
   source_entity_id: string;
   relationship_type: string;
   status: string;
+  source_url?: string | null;
+  source_payload?: Record<string, unknown> | null;
   target?: {
     id?: string | null;
     transfermarkt_id?: string | null;
@@ -84,7 +86,7 @@ async function loadPlayersForEntities(admin: NonNullable<ReturnType<typeof creat
 
   const { data } = await admin
     .from("transfermarkt_relationships")
-    .select("source_entity_id, relationship_type, status, target:transfermarkt_entities!transfermarkt_relationships_target_entity_id_fkey(id, transfermarkt_id, entity_type, name, profile_url, canonical_url, photo_url, status)")
+    .select("source_entity_id, relationship_type, status, source_url, source_payload, target:transfermarkt_entities!transfermarkt_relationships_target_entity_id_fkey(id, transfermarkt_id, entity_type, name, profile_url, canonical_url, photo_url, status)")
     .in("source_entity_id", entityIds)
     .in("relationship_type", ["agent_player", "club_player"])
     .in("status", ["approved", "suggested"])
@@ -98,6 +100,20 @@ async function loadPlayersForEntities(admin: NonNullable<ReturnType<typeof creat
     byEntity.set(row.source_entity_id, list);
   }
   return byEntity;
+}
+
+function isKnownFalseClubPlayerLink(entity: NetworkEntity, relationship: RelationshipRow) {
+  return entity.entity_type === "club" && entity.transfermarkt_id === "199" && relationship.target?.transfermarkt_id === "8198";
+}
+
+function isTrustedNetworkRelationship(entity: NetworkEntity, relationship: RelationshipRow) {
+  if (isKnownFalseClubPlayerLink(entity, relationship)) return false;
+  if (relationship.status === "approved") return true;
+  if (relationship.relationship_type !== "club_player") return true;
+  const payload = relationship.source_payload && typeof relationship.source_payload === "object" && !Array.isArray(relationship.source_payload)
+    ? relationship.source_payload
+    : {};
+  return payload.discoveredFrom !== "player_profile_enrichment" && Boolean(relationship.source_url);
 }
 
 export async function GET(request: Request) {
@@ -179,7 +195,7 @@ export async function GET(request: Request) {
         photoUrl: entity.photo_url,
         status: entity.status,
         relevance: entity.relevance ?? null,
-        players: (relationships.get(entity.id) ?? []).flatMap((relationship) => {
+        players: (relationships.get(entity.id) ?? []).filter((relationship) => isTrustedNetworkRelationship(entity, relationship)).flatMap((relationship) => {
           const player = relationship.target;
           if (!player?.id || player.entity_type !== "player") return [];
           return [{
