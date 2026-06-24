@@ -175,7 +175,7 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
           </div>
           <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white">{entity.name}</p>
           <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            {entity.players.length ? `${entity.players.length} linked player${entity.players.length === 1 ? "" : "s"}` : "No linked players yet"}
+            {entity.players.length ? `${entity.players.length} verified linked player${entity.players.length === 1 ? "" : "s"}` : "No verified player list yet"}
           </p>
         </div>
         <a href={entity.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72]">
@@ -207,8 +207,10 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
           </a>
         )) : (
           <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[.06] p-4 sm:col-span-2 xl:col-span-3">
-            <p className="text-[10px] font-black uppercase tracking-wider text-amber-200">No player list saved yet</p>
-            <p className="mt-1 text-[10px] leading-5 text-slate-500">Touchline can attempt safe discovery from this {entity.type} link when the network search enriches results.</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-200">No verified player list yet</p>
+            <p className="mt-1 text-[10px] leading-5 text-slate-500">
+              Touchline hides suggested links until they are approved, so the platform does not show false player associations.
+            </p>
           </div>
         )}
       </div>

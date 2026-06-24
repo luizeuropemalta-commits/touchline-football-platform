@@ -83,7 +83,7 @@ async function loadPlayersForEntities(admin: NonNullable<ReturnType<typeof creat
     .select("source_entity_id, relationship_type, status, target:transfermarkt_entities!transfermarkt_relationships_target_entity_id_fkey(id, transfermarkt_id, entity_type, name, profile_url, canonical_url, photo_url, status)")
     .in("source_entity_id", entityIds)
     .in("relationship_type", ["agent_player", "club_player"])
-    .in("status", ["suggested", "approved", "needs_review"])
+    .eq("status", "approved")
     .order("last_seen_at", { ascending: false })
     .limit(200);
 
