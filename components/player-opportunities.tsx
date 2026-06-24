@@ -331,10 +331,10 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] animate-in space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 animate-in space-y-6">
       <section className="af-mode-screen p-5 sm:p-7 xl:p-9" style={{ "--mode-aura": "rgba(163,255,18,.22)" } as CSSProperties}>
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-end">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] 2xl:items-end">
+          <div className="min-w-0">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <LivePill>Opportunity Board live</LivePill>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
@@ -342,7 +342,7 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
               </span>
             </div>
             <p className="af-mode-kicker">Touchline / Opportunity Board</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Opportunity Board</h1>
+            <h1 className="af-mode-title font-display mt-3 max-w-full text-white">Opportunity Board</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
               Convert club needs into player matches, professional pitches and private deal rooms. This is the commercial
               engine between your portfolio and the transfer market.
@@ -356,7 +356,7 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
               </Link>
             </div>
           </div>
-          <div className="stadium-scoreboard p-5">
+          <div className="stadium-scoreboard min-w-0 p-5">
             <div className="relative z-10 flex items-center justify-between">
               <div>
                 <p className="text-[8px] font-black uppercase tracking-[.22em] text-[#a3ff12]">Active requirements</p>
@@ -385,7 +385,7 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
         <StatTile icon={Users} label="Portfolio Pool" value={String(players.length)} delta="matchable players" accent="rose" />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_430px]">
+      <div className="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1.3fr)_430px]">
         <div className="space-y-5">
           <GamePanel className="p-5">
             <SectionHeader kicker="Create club requirement" title="New opportunity" />

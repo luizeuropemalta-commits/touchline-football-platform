@@ -48,7 +48,7 @@ export function AgencyDirectory({ agency, members }: { agency: AgencyDirectoryAg
   }, [agency.countryCode, agency.name, members, search]);
 
   return (
-    <div className="mt-5 grid gap-5 xl:grid-cols-[420px_1fr]">
+    <div className="mt-5 grid min-w-0 gap-5 2xl:grid-cols-[420px_minmax(0,1fr)]">
       <GamePanel className="p-5">
         <SectionHeader kicker="Agency profile" title="Identity" action={<ShieldCheck size={15} className="text-[#a3ff12]" />} />
         <div className="rounded-3xl border border-white/[.08] bg-black/20 p-5">
@@ -130,4 +130,3 @@ export function AgencyDirectory({ agency, members }: { agency: AgencyDirectoryAg
     </div>
   );
 }
-

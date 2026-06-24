@@ -215,11 +215,11 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 space-y-6">
       <GamePanel className="relative overflow-hidden p-5 sm:p-7 xl:p-8">
         <div className="absolute right-[-10%] top-[-65%] size-[520px] rounded-full border border-cyan-300/[.08]" />
-        <div className="relative z-10 grid gap-7 xl:grid-cols-[1fr_420px]">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-7 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+          <div className="min-w-0">
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]">
                 <span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]" />

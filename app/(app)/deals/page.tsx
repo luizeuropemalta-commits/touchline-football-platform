@@ -55,16 +55,16 @@ export default async function NegotiationCenter() {
   const closed = (interests ?? []).filter((interest) => interest.status === "deal_closed").length;
 
   return (
-    <div className="mx-auto max-w-[1760px] animate-in">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 animate-in">
       <section className="af-mode-screen p-5 sm:p-7 xl:p-9" style={{ "--mode-aura": "rgba(163,255,18,.25)" } as React.CSSProperties}>
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[1fr_420px] xl:items-end">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] 2xl:items-end">
+          <div className="min-w-0">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]"><span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]" />Negotiation center live</span>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">Private rooms · real data</span>
             </div>
             <p className="af-mode-kicker">Touchline / Negotiation Center</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Deal Rooms</h1>
+            <h1 className="af-mode-title font-display mt-3 max-w-full text-white">Deal Rooms</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300/80">
               Private environment for club interest, messages, files, pitch documents, internal notes and timeline. Rooms are created automatically when opportunities move into negotiation.
             </p>
@@ -74,7 +74,7 @@ export default async function NegotiationCenter() {
               </Link>
             </div>
           </div>
-          <div className="stadium-scoreboard p-5">
+          <div className="stadium-scoreboard min-w-0 p-5">
             <div className="relative z-10 flex items-center justify-between">
               <div><p className="text-[8px] font-black uppercase tracking-[.22em] text-[#a3ff12]">Active rooms</p><p className="font-display mt-2 text-7xl leading-none text-white">{activeRooms.length}</p></div>
               <Flame className="text-rose-300" size={38} />

@@ -62,12 +62,12 @@ export default async function TouchlineConnectPage() {
   const recentLinks = (recentResult.data ?? []) as LinkRow[];
 
   return (
-    <div className="mx-auto max-w-[1500px] animate-in space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 animate-in space-y-6">
       <GamePanel className="relative overflow-hidden p-5 sm:p-7 xl:p-8">
         <div className="absolute right-[-12%] top-[-65%] size-[560px] rounded-full border border-cyan-300/[.08] bg-cyan-300/[.025]" />
         <div className="absolute bottom-[-35%] left-[-8%] size-[360px] rounded-full bg-[#a3ff12]/[.035] blur-3xl" />
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[1fr_420px] xl:items-end">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] 2xl:items-end">
+          <div className="min-w-0">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <LivePill>Business graph online</LivePill>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
@@ -75,7 +75,7 @@ export default async function TouchlineConnectPage() {
               </span>
             </div>
             <p className="af-mode-kicker">Touchline / Global business network</p>
-            <h1 className="font-display mt-3 text-5xl uppercase italic text-white sm:text-7xl">Touchline Connect</h1>
+            <h1 className="font-display mt-3 max-w-full text-5xl uppercase italic text-white sm:text-7xl">Touchline Connect</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
               The football business graph for agents, clubs, players and opportunities. Touchline indexes football links
               discovered inside your own platform activity so the network becomes easier to search every day.

@@ -564,12 +564,12 @@ export function AgentVerificationCenter() {
           : 24;
 
   return (
-    <div className="mx-auto max-w-[1760px] animate-in space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 animate-in space-y-6">
       <GamePanel className="relative overflow-hidden p-5 sm:p-7 xl:p-9">
         <div className="absolute -right-24 -top-24 size-[460px] rounded-full border border-cyan-300/[.08] bg-cyan-400/[.035] blur-sm" />
         <div className="absolute bottom-0 left-10 h-px w-2/3 bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[1fr_430px] xl:items-end">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,430px)] 2xl:items-end">
+          <div className="min-w-0">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <LivePill>Representation control online</LivePill>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
@@ -577,7 +577,7 @@ export function AgentVerificationCenter() {
               </span>
             </div>
             <p className="af-mode-kicker">Touchline / Trust Layer</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Agent Verification Center</h1>
+            <h1 className="af-mode-title font-display mt-3 max-w-full text-white">Agent Verification Center</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
               Connect your profile to official football identity, discover possible player relationships and confirm
               representation only when you have legal rights. External sources are references, not legal truth.
@@ -608,7 +608,7 @@ export function AgentVerificationCenter() {
             </div>
           </div>
 
-          <div className="stadium-scoreboard p-5">
+          <div className="stadium-scoreboard min-w-0 p-5">
             <div className="relative z-10 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Verification level</p>
@@ -654,7 +654,7 @@ export function AgentVerificationCenter() {
       {message && <div className="rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 py-3 text-sm font-bold text-[#caff72]">{message}</div>}
       {error && <div className="rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-200">{error}</div>}
 
-      <section className="grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
+      <section className="grid min-w-0 gap-5 2xl:grid-cols-[1.05fr_.95fr]">
         <GamePanel className="p-5 sm:p-6">
           <SectionHeader kicker="Official identity" title="Agent license profile" />
           <div className="grid gap-4 md:grid-cols-2">
@@ -744,7 +744,7 @@ export function AgentVerificationCenter() {
         </GamePanel>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1fr_390px]">
+      <section className="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_390px]">
         <GamePanel className="p-5 sm:p-6">
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <SectionHeader kicker="Agent dashboard" title="My Players" />

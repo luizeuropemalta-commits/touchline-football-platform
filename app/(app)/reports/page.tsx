@@ -70,7 +70,7 @@ export default async function ReportsPage() {
         <StatTile icon={Target} label="Opportunities" value={String(opportunities)} delta="matching engine" accent="rose" />
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_420px]">
+      <div className="mt-5 grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <GamePanel className="overflow-hidden">
           <div className="border-b border-white/[.07] p-5"><SectionHeader kicker="Operating metrics" title="Database Health" action={<BarChart3 size={15} className="text-cyan-300" />} /></div>
           <div className="divide-y divide-white/[.06]">

@@ -182,11 +182,11 @@ export function MarketRadar() {
   const previewDomain = preview?.siteName || (trimmedUrl ? safeHostname(trimmedUrl) : "transfermarkt.com");
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 space-y-6">
       <GamePanel className="relative overflow-hidden p-5 sm:p-7 xl:p-8">
         <div className="absolute right-[-12%] top-[-50%] size-[460px] rounded-full border border-cyan-300/[.08]" />
-        <div className="relative z-10 grid gap-7 xl:grid-cols-[1fr_420px] xl:items-start">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-7 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] 2xl:items-start">
+          <div className="min-w-0">
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <LivePill>Radar online</LivePill>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
@@ -194,7 +194,7 @@ export function MarketRadar() {
               </span>
             </div>
             <p className="af-mode-kicker">Touchline / Market Radar</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Transfermarkt & Rumor Radar</h1>
+            <h1 className="af-mode-title font-display mt-3 max-w-full text-white">Transfermarkt & Rumor Radar</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
               Salva links públicos de jogadores, rumores e notícias como cartões de preview. O Touchline guarda apenas
               metadados e leva clique para a fonte original.
@@ -243,7 +243,7 @@ export function MarketRadar() {
             {error && <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] px-4 py-3 text-xs leading-6 text-amber-100/80">{error}</div>}
           </div>
 
-          <div className="overflow-hidden rounded-3xl border border-white/[.1] bg-[#0b1521]/80 shadow-[0_22px_80px_rgba(0,0,0,.35)] backdrop-blur-xl">
+          <div className="min-w-0 overflow-hidden rounded-3xl border border-white/[.1] bg-[#0b1521]/80 shadow-[0_22px_80px_rgba(0,0,0,.35)] backdrop-blur-xl">
             <div className="relative overflow-hidden bg-gradient-to-br from-cyan-300/[.12] via-slate-950 to-[#a3ff12]/[.08] p-5">
               <div className="flex items-start gap-4">
                 <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-2xl border border-white/[.12] bg-black/30 shadow-[0_18px_45px_rgba(0,0,0,.35)]">
@@ -292,7 +292,7 @@ export function MarketRadar() {
         </div>
       </GamePanel>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+      <div className="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
         <GamePanel className="p-5 sm:p-6">
           <SectionHeader kicker="Saved intelligence" title="Radar feed" action={<Zap size={16} className="text-[#a3ff12]" />} />
           <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto]">

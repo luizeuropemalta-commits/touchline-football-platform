@@ -786,6 +786,12 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 .app-main {
   padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
 }
+.app-main :where(section, article, aside, div) {
+  min-width: 0;
+}
+.app-main :where(h1, h2, h3, p) {
+  overflow-wrap: anywhere;
+}
 .mobile-floating-ai {
   bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
 }
@@ -828,6 +834,31 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   transform: translateY(-2px);
   border-color: rgba(34,211,238,.32);
   box-shadow: 0 14px 34px rgba(0,0,0,.28), 0 0 24px rgba(34,211,238,.08);
+}
+
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .app-main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .console-mode-track {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .console-mode-button {
+    min-width: 156px;
+    height: 66px;
+    border-radius: 20px;
+  }
+  .console-mode-icon {
+    width: 42px;
+    height: 42px;
+  }
+  .af-mode-title {
+    font-size: clamp(52px, 6.2vw, 86px);
+    line-height: .86;
+    letter-spacing: -.078em;
+  }
 }
 
 @media (max-width: 640px) {

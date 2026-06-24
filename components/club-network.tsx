@@ -126,7 +126,7 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
         <StatTile icon={Zap} label="Recruitment" value="READY" delta="filter/search workflow" accent="rose" />
       </div>
 
-      <section className="mt-6 grid gap-5 xl:grid-cols-[1fr_420px]">
+      <section className="mt-6 grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <GamePanel className="p-5">
           <SectionHeader kicker="Recruitment center" title="Search real player portfolio" />
           <div className="relative mb-4">

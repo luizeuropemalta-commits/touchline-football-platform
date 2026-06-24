@@ -260,10 +260,10 @@ export function PlayerPitchBuilder({
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] animate-in space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 animate-in space-y-6">
       <section className="af-mode-screen p-5 sm:p-7 xl:p-9" style={{ "--mode-aura": "rgba(163,255,18,.22)" } as React.CSSProperties}>
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-end">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] 2xl:items-end">
+          <div className="min-w-0">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]">
                 <span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]" /> Club-ready presentation
@@ -273,7 +273,7 @@ export function PlayerPitchBuilder({
               </span>
             </div>
             <p className="af-mode-kicker">Touchline / Pitch Player</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Pitch Player</h1>
+            <h1 className="af-mode-title font-display mt-3 max-w-full text-white">Pitch Player</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
               Select a player, choose the club context and generate a professional message/presentation for sporting
               directors, scouts and recruitment teams.
@@ -293,7 +293,7 @@ export function PlayerPitchBuilder({
             </div>
           </div>
 
-          <div className="stadium-scoreboard p-5">
+          <div className="stadium-scoreboard min-w-0 p-5">
             <div className="relative z-10 flex items-start justify-between">
               <div>
                 <p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Pitch readiness</p>
@@ -320,7 +320,7 @@ export function PlayerPitchBuilder({
       {message && <div className="rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 py-3 text-sm font-bold text-[#caff72]">{message}</div>}
       {error && <div className="rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-200">{error}</div>}
 
-      <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)_420px]">
+      <div className="grid min-w-0 gap-5 2xl:grid-cols-[340px_minmax(0,1fr)_380px]">
         <GamePanel className="p-5">
           <SectionHeader kicker="Pitch setup" title="Choose player & club" />
           <div className="space-y-3">

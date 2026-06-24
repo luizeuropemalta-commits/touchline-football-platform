@@ -269,10 +269,10 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
   }
 
   return (
-    <div className="mx-auto max-w-[1760px] animate-in space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 animate-in space-y-6">
       <section className="af-mode-screen p-5 sm:p-7 xl:p-9" style={{ "--mode-aura": "rgba(34,211,238,.30)" } as React.CSSProperties}>
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[1fr_420px] xl:items-end">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] 2xl:items-end">
+          <div className="min-w-0">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]">
                 <span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]" />
@@ -283,7 +283,7 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
               </span>
             </div>
             <p className="af-mode-kicker">Touchline / Player Management</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Player Management</h1>
+            <h1 className="af-mode-title font-display mt-3 max-w-full text-white">Player Management</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300/80">
               Add real players, import Transfermarkt link previews, store documents, embed videos and generate professional AI player profiles.
             </p>
@@ -307,7 +307,7 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
             </div>
           </div>
 
-          <div className="stadium-scoreboard p-5">
+          <div className="stadium-scoreboard min-w-0 p-5">
             <div className="relative z-10 flex items-start justify-between">
               <div>
                 <p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Portfolio readiness</p>
@@ -374,7 +374,7 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_430px]">
+      <div className="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_430px]">
         <div>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-[9px] font-black uppercase tracking-wider text-slate-600"><span className="text-slate-200">{filtered.length}</span> real player profiles found</p>

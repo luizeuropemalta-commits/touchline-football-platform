@@ -375,7 +375,7 @@ export default async function Dashboard() {
         </div>
       </section>
 
-      <section className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <section className="mt-6 grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <GamePanel className="p-5 sm:p-6">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -449,7 +449,7 @@ export default async function Dashboard() {
         </GamePanel>
       </section>
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_420px]">
+      <section className="mt-6 grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <GamePanel className="p-5">
           <div className="mb-5 flex items-center justify-between">
             <div>
@@ -459,7 +459,7 @@ export default async function Dashboard() {
             <Trophy className="text-amber-300" />
           </div>
           {players.length ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
               {players.map((player) => (
                 <Link key={player.id} href={`/players/${player.id}`} className="overflow-hidden rounded-3xl border border-cyan-300/15 bg-white/[.035] transition hover:-translate-y-1 hover:border-cyan-300/30">
                   <div className="relative h-48 bg-cyan-300/[.04]">

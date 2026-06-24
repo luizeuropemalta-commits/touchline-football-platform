@@ -208,14 +208,14 @@ export function DealRoomWorkspace({
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] animate-in space-y-6">
+    <div className="mx-auto w-full max-w-[1500px] min-w-0 animate-in space-y-6">
       <Link href="/deals" className="inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-slate-600 hover:text-cyan-300">
         <ArrowLeft size={12} /> Return to Deal Rooms
       </Link>
 
       <section className="af-mode-screen p-5 sm:p-7 xl:p-9" style={{ "--mode-aura": "rgba(34,211,238,.28)" } as React.CSSProperties}>
-        <div className="relative z-10 grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-end">
-          <div>
+        <div className="relative z-10 grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] 2xl:items-end">
+          <div className="min-w-0">
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#b7ff45]">
                 <span className="pulse-live size-1.5 rounded-full bg-[#a3ff12]" /> Private negotiation room
@@ -225,7 +225,7 @@ export function DealRoomWorkspace({
               </span>
             </div>
             <p className="af-mode-kicker">Touchline / Club Deal Room</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">{room.title}</h1>
+            <h1 className="af-mode-title font-display mt-3 max-w-full text-white">{room.title}</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
               Private room for club interest, player pitch, files, notes, messages and negotiation status.
             </p>
@@ -240,7 +240,7 @@ export function DealRoomWorkspace({
               </Link>
             </div>
           </div>
-          <div className="stadium-scoreboard p-5">
+          <div className="stadium-scoreboard min-w-0 p-5">
             <div className="relative z-10 flex items-start justify-between gap-4">
               <div>
                 <p className="text-[8px] font-black uppercase tracking-[.22em] text-cyan-300">Deal readiness</p>
@@ -267,7 +267,7 @@ export function DealRoomWorkspace({
       {notice && <div className="rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 py-3 text-sm font-bold text-[#caff72]">{notice}</div>}
       {error && <div className="rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-200">{error}</div>}
 
-      <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)_420px]">
+      <div className="grid min-w-0 gap-5 2xl:grid-cols-[340px_minmax(0,1fr)_380px]">
         <aside className="space-y-5">
           <GamePanel className="overflow-hidden">
             <div className="relative h-72 bg-cyan-300/[.035]">
