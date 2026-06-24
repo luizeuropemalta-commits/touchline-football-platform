@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ElementType } from "react";
-import { ArrowLeft, Building2, CalendarClock, DatabaseZap, ExternalLink, Globe2, ShieldCheck, Trophy, UsersRound } from "lucide-react";
+import { ArrowLeft, Building2, CalendarClock, DatabaseZap, ExternalLink, Globe2, Send, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
 import { enrichTransfermarktClubProfile, loadClubLinkedPlayers } from "@/lib/club-database";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -53,6 +53,14 @@ function completeness(values: unknown[]) {
   return Math.min(100, values.filter(Boolean).length * 13);
 }
 
+function siteUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/g, "");
+  if (configured) return configured;
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return `https://${vercel}`;
+  return "https://touchline-football-platform.vercel.app";
+}
+
 export default async function ClubDatabaseProfile({ params }: { params: Promise<PageParams> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -99,6 +107,8 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
     club.transfermarktId,
   ]);
   const sourceLabel = "Transfermarkt";
+  const internalProfileUrl = `${siteUrl()}/clubs/database/${club.id}`;
+  const whatsAppUrl = `https://wa.me/?text=${encodeURIComponent(`Touchline club profile: ${club.name}\n${internalProfileUrl}`)}`;
 
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
@@ -135,6 +145,9 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
               <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
                 <a href={club.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007] sm:w-auto">
                   Transfermarkt <ExternalLink size={13} />
+                </a>
+                <a href={whatsAppUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-cyan-100 sm:w-auto">
+                  Share WhatsApp <Send size={13} />
                 </a>
               </div>
             </div>
