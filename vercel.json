@@ -11,6 +11,10 @@
     {
       "path": "/api/link-index/sync",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/market-links/sync",
+      "schedule": "30 7 * * *"
     }
   ]
 }

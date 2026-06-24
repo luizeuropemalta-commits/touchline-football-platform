@@ -266,6 +266,7 @@ export default async function AdminOwnerPanel() {
     webhookEventsCheck,
     founderSlotsCheck,
     globalLinksTableCheck,
+    transfermarktRegistryTableCheck,
     authenticatedUsersCheck,
     authenticatedPlayersCheck,
     apiFootballCheck,
@@ -290,6 +291,7 @@ export default async function AdminOwnerPanel() {
     admin.from("stripe_webhook_events").select("stripe_event_id", { count: "exact", head: true }),
     admin.from("founder_plan_slots").select("user_id", { count: "exact", head: true }),
     admin.from("global_football_links").select("id", { count: "exact", head: true }),
+    admin.from("transfermarkt_entities").select("id", { count: "exact", head: true }),
     supabase.from("users").select("id", { count: "exact", head: true }),
     supabase.from("players").select("id", { count: "exact", head: true }),
     checkApiFootball(),
@@ -363,6 +365,7 @@ export default async function AdminOwnerPanel() {
     : marketSyncSecretConfigured
       ? "READY"
       : "NOT_CONFIGURED_YET";
+  const transfermarktRegistryStatus: HealthStatus = transfermarktRegistryTableCheck.error ? "NOT_CONFIGURED_YET" : "READY";
 
   const healthChecks: HealthCheck[] = [
     {
@@ -483,6 +486,17 @@ export default async function AdminOwnerPanel() {
           : "Configure MARKET_SYNC_SECRET or CRON_SECRET so the daily link indexer can run securely.",
     },
     {
+      area: "Market Link Registry",
+      name: "Transfermarkt link registry",
+      purpose: "Stores player, agent and club profile links, IDs, preview images and sync status without copying a full external database.",
+      configured: !transfermarktRegistryTableCheck.error,
+      required: "Required for automation",
+      status: transfermarktRegistryStatus,
+      detail: transfermarktRegistryTableCheck.error
+        ? `Apply migration 012_transfermarkt_link_registry.sql in Supabase: ${transfermarktRegistryTableCheck.error.message}`
+        : "Registry tables exist. Owner page is available at /admin/market-links.",
+    },
+    {
       area: "Owner Admin",
       name: "Owner/admin access control",
       purpose: "Restricts the owner panel and manual beta access grants.",
@@ -502,6 +516,9 @@ export default async function AdminOwnerPanel() {
     { area: "Env", name: "STRIPE_WEBHOOK_SECRET", purpose: "Validates Stripe webhook signatures.", configured: stripeWebhookConfigured, required: "Required for billing", status: stripeWebhookConfigured ? (stripeWebhookLooksValid ? "READY" : "ERROR") : "NOT_CONFIGURED_YET", detail: "Required before subscription/invoice state can sync automatically." },
     { area: "Env", name: "STRIPE_PRICE_*", purpose: "Monthly/yearly Stripe prices for all plans.", configured: stripeAllPricesConfigured, required: "Required for billing", status: stripeAllPricesConfigured ? "READY" : configuredPriceKeys.length ? "PARTIALLY_IMPLEMENTED" : "NOT_CONFIGURED_YET", detail: `${configuredPriceKeys.length}/${stripePriceEnvKeys.length} Stripe price IDs configured.` },
     { area: "Env", name: "MARKET_SYNC_SECRET / CRON_SECRET", purpose: "Protects scheduled sync endpoints.", configured: marketSyncSecretConfigured, required: "Required for automation", status: marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Required for Vercel Cron to call sync endpoints securely." },
+    { area: "Env", name: "TRANSFERMARKT_SYNC_ENABLED", purpose: "Opt-in switch for server-side Transfermarkt link checks.", configured: envValue("TRANSFERMARKT_SYNC_ENABLED") === "true", required: "Optional", status: envValue("TRANSFERMARKT_SYNC_ENABLED") === "true" ? "READY" : "NOT_CONFIGURED_YET", detail: "Keep disabled until you want server-side daily checks. Manual registry saving works without it." },
+    { area: "Env", name: "TRANSFERMARKT_SYNC_SECRET", purpose: "Protects /api/market-links/sync if used separately from MARKET_SYNC_SECRET.", configured: hasEnv("TRANSFERMARKT_SYNC_SECRET"), required: "Required for automation", status: hasEnv("TRANSFERMARKT_SYNC_SECRET") || marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Can fall back to MARKET_SYNC_SECRET or CRON_SECRET." },
+    { area: "Env", name: "TRANSFERMARKT_RATE_LIMIT_MS", purpose: "Delay between external Transfermarkt checks.", configured: hasEnv("TRANSFERMARKT_RATE_LIMIT_MS"), required: "Optional", status: "READY", detail: "Defaults to 2500ms. Increase this for safer, slower checks." },
     { area: "Env", name: "TOUCHLINE_LINK_INDEX_*", purpose: "Optional daily limits for automatic internal link indexing.", configured: hasEnv("TOUCHLINE_LINK_INDEX_DAILY_LIMIT") || hasEnv("TOUCHLINE_LINK_INDEX_SYNC_LIMIT"), required: "Optional", status: "READY", detail: "Defaults to 1000 links/day if not set. This indexes Touchline activity, not external site crawling." },
     { area: "Env", name: "FOOTBALL_MARKET_DATA_API_*", purpose: "Licensed provider for market value/club/contract sync.", configured: licensedMarketProviderConfigured, required: "Optional", status: licensedMarketProviderConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Optional unless professional market value sync is required." },
     { area: "Env", name: "API_FOOTBALL_KEY", purpose: "Optional API-Football player/stat data provider.", configured: hasEnv("API_FOOTBALL_KEY") || hasEnv("APISPORTS_KEY"), required: "Optional", status: apiFootballCheck.status, detail: apiFootballCheck.detail },
@@ -629,6 +646,10 @@ export default async function AdminOwnerPanel() {
             <p className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Route protection</p>
             <p className="mt-2 text-[10px] leading-5 text-slate-500">Dashboard, players, agencies, documents, calendar, reports, radar, verification, billing and admin routes are private. The admin page checks owner email before loading data. Subscription feature gates currently allow beta full access in code.</p>
           </div>
+          <Link href="/admin/market-links" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-[.14em] text-[#caff72] transition hover:bg-[#a3ff12]/15">
+            <Link2 size={14} />
+            Open Market Link Registry
+          </Link>
         </GamePanel>
       </div>
 

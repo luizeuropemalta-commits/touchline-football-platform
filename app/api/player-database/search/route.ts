@@ -120,6 +120,46 @@ async function discoverFromApiFootball(admin: NonNullable<ReturnType<typeof crea
   return (saved ?? []) as Record<string, unknown>[];
 }
 
+async function discoverFromMarketLinkRegistry(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number) {
+  const { data } = await admin.rpc("search_transfermarkt_entities", {
+    search_query: query,
+    entity_type_filter: "player",
+    result_limit: limit,
+  });
+
+  const rows = ((data ?? []) as Record<string, unknown>[]).flatMap((entity) => {
+    const transfermarktId = cleanText(String(entity.transfermarkt_id ?? ""), 80);
+    const name = cleanText(String(entity.name ?? ""), 180);
+    const profileUrl = cleanText(String(entity.canonical_url ?? entity.profile_url ?? ""), 1000);
+    if (!transfermarktId || !name || !profileUrl) return [];
+
+    return [{
+      transfermarkt_player_id: transfermarktId,
+      player_name: name,
+      profile_url: profileUrl,
+      photo_url: cleanText(entity.photo_url as string | null, 1000),
+      source_provider: "transfermarkt",
+      source_payload: {
+        source: "market_link_registry",
+        registryEntityId: entity.id,
+        registryStatus: entity.status,
+        note: "Created from Touchline Transfermarkt Link Registry. Stores link metadata only.",
+      },
+      last_updated_at: new Date().toISOString(),
+    }];
+  });
+
+  if (!rows.length) return [];
+
+  const { data: saved } = await admin
+    .from("global_player_profiles")
+    .upsert(rows, { onConflict: "transfermarkt_player_id" })
+    .select("id, transfermarkt_player_id, player_name, profile_url, photo_url, current_club, position, nationality, date_of_birth, age, agent_name, agency_name, market_value, market_value_text, currency, source_provider, source_payload, last_updated_at")
+    .limit(limit);
+
+  return (saved ?? []) as Record<string, unknown>[];
+}
+
 async function hydrateProfiles(admin: NonNullable<ReturnType<typeof createAdminClient>>, rows: Record<string, unknown>[]) {
   const ids = rows.map((row) => String(row.id)).filter(Boolean);
   if (!ids.length) return rows;
@@ -162,6 +202,10 @@ export async function GET(request: Request) {
 
   let rows = (data ?? []) as Record<string, unknown>[];
   if (rows.length) rows = await hydrateProfiles(admin, rows);
+
+  if (!rows.length) {
+    rows = await discoverFromMarketLinkRegistry(admin, query, limit);
+  }
 
   if (!rows.length && shouldDiscover) {
     rows = await discoverFromApiFootball(admin, query, limit);

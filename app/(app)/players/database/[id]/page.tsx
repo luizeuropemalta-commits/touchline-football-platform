@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarClock, DatabaseZap, ExternalLink, Globe2, ShieldCheck, Sparkles, UserRoundSearch } from "lucide-react";
+import { ArrowLeft, CalendarClock, DatabaseZap, ExternalLink, Globe2, Send, ShieldCheck, Sparkles, UserRoundSearch } from "lucide-react";
 import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -37,6 +37,14 @@ function initialBadge(name: string) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function siteUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/g, "");
+  if (configured) return configured;
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return `https://${vercel}`;
+  return "https://touchline-football-platform.vercel.app";
 }
 
 export default async function PlayerDatabaseProfile({ params }: { params: Promise<PageParams> }) {
@@ -96,6 +104,8 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
       player.transfermarkt_player_id,
     ].filter(Boolean).length * 14,
   );
+  const internalProfileUrl = `${siteUrl()}/players/database/${player.id}`;
+  const whatsAppUrl = `https://wa.me/?text=${encodeURIComponent(`Touchline player profile: ${player.player_name}\n${internalProfileUrl}`)}`;
 
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
@@ -129,9 +139,12 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
                   {player.nationality ?? "Nationality open"} {age ? `· AGE ${age}` : ""} · {sourceLabel} ID {sourceId}
                 </p>
               </div>
-              <div className="flex shrink-0 items-start gap-2">
+              <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
                 <a href={player.profile_url} target="_blank" rel="noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007] sm:w-auto">
                   {sourceLinkLabel} <ExternalLink size={13} />
+                </a>
+                <a href={whatsAppUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-cyan-100 sm:w-auto">
+                  Share WhatsApp <Send size={13} />
                 </a>
               </div>
             </div>
