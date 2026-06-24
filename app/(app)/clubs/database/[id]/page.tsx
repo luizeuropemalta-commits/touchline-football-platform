@@ -104,6 +104,7 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
     club.averageAge,
     club.stadium,
     club.league,
+    club.honours.some((item) => item.count),
     club.profileUrl,
     club.transfermarktId,
   ]);
@@ -183,6 +184,30 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
             </div>
           </div>
         </div>
+      </GamePanel>
+
+      <GamePanel className="mt-5 overflow-hidden p-5">
+        <SectionHeader kicker="Club honours" title="Trophy cabinet" action={<Trophy size={15} className="text-amber-300" />} />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {club.honours.map((honour) => (
+            <div key={honour.label} className="relative overflow-hidden rounded-3xl border border-amber-300/15 bg-amber-300/[.055] p-4">
+              <div className="absolute -right-4 -top-6 text-6xl opacity-10">{honour.icon}</div>
+              <div className="grid size-11 place-items-center rounded-2xl border border-amber-300/20 bg-black/25 text-xl">
+                {honour.icon}
+              </div>
+              <p className="mt-5 text-[8px] font-black uppercase tracking-[.18em] text-amber-200/80">{honour.label}</p>
+              <p className="mt-1 font-display text-4xl font-black text-white">
+                {honour.count ?? "—"}
+              </p>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-600">
+                {honour.count ? "synced from public source" : "sync pending"}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 text-[10px] leading-5 text-slate-500">
+          Trophy data is displayed as Touchline club intelligence. If public metadata is unavailable, the cabinet remains ready for licensed/approved sync.
+        </p>
       </GamePanel>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">

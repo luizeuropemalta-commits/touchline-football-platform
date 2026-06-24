@@ -21,6 +21,7 @@ export type ClubDatabaseProfile = {
   league?: string | null;
   country?: string | null;
   rankLabel?: string | null;
+  honours: Array<{ label: string; count: number | null; icon: string }>;
   sourcePayload?: Record<string, unknown>;
 };
 
@@ -181,6 +182,30 @@ function extractMarketValue(html: string) {
   };
 }
 
+function extractHonourCount(html: string, labels: string[]) {
+  const text = stripHtml(html);
+  for (const label of labels) {
+    const patterns = [
+      new RegExp(`${escapeRegex(label)}\\s*(?:x|:)?\\s*(\\d{1,3})`, "i"),
+      new RegExp(`(\\d{1,3})\\s*(?:x)?\\s*${escapeRegex(label)}`, "i"),
+    ];
+    for (const pattern of patterns) {
+      const value = text.match(pattern)?.[1];
+      if (value) return Number(value);
+    }
+  }
+  return null;
+}
+
+function extractHonours(html: string) {
+  return [
+    { label: "League titles", count: extractHonourCount(html, ["Campeonato Brasileiro Série A", "Brazilian champion", "League Champion", "Champion"]), icon: "🏆" },
+    { label: "National cups", count: extractHonourCount(html, ["Copa do Brasil", "Brazilian Cup", "National Cup", "Cup Winner"]), icon: "🥈" },
+    { label: "Continental titles", count: extractHonourCount(html, ["Copa Libertadores", "Libertadores", "Champions League", "Copa Sudamericana"]), icon: "🌎" },
+    { label: "Super cups", count: extractHonourCount(html, ["Supercopa", "Super Cup", "Recopa"]), icon: "⭐" },
+  ];
+}
+
 function parseClubHtml(html: string, profileUrl: string) {
   const market = extractMarketValue(html);
   return {
@@ -196,6 +221,7 @@ function parseClubHtml(html: string, profileUrl: string) {
     stadium: extractInfoValue(html, ["Stadium"]),
     league: extractInfoValue(html, ["League", "Current league"]),
     country: extractInfoValue(html, ["Country"]),
+    honours: extractHonours(html),
   };
 }
 
@@ -256,6 +282,22 @@ function mapClub(row: EntityRow): ClubDatabaseProfile {
     league: typeof club.league === "string" ? club.league : null,
     country: typeof club.country === "string" ? club.country : null,
     rankLabel: typeof club.rankLabel === "string" ? club.rankLabel : null,
+    honours: Array.isArray(club.honours)
+      ? club.honours.flatMap((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+        const record = item as Record<string, unknown>;
+        return [{
+          label: typeof record.label === "string" ? record.label : "Honour",
+          count: typeof record.count === "number" ? record.count : null,
+          icon: typeof record.icon === "string" ? record.icon : "🏆",
+        }];
+      })
+      : [
+        { label: "League titles", count: null, icon: "🏆" },
+        { label: "National cups", count: null, icon: "🥈" },
+        { label: "Continental titles", count: null, icon: "🌎" },
+        { label: "Super cups", count: null, icon: "⭐" },
+      ],
     sourcePayload: payload,
   };
 }
