@@ -89,6 +89,7 @@ export function MarketLinkRegistryAdmin() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -172,6 +173,35 @@ export function MarketLinkRegistryAdmin() {
     }
   }
 
+  async function discoverByName() {
+    const searchName = name.trim() || query.trim();
+    setDiscovering(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/market-links/discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: searchName,
+          entityType: type || "player",
+          limit: 8,
+        }),
+      });
+      const data = await response.json() as { ok?: boolean; discovered?: number; saved?: number; sourceUrl?: string | null; error?: string };
+      if (!response.ok || !data.ok) throw new Error(data.error || "Could not discover links.");
+      setMessage(data.saved
+        ? `Discovery complete. Saved ${data.saved} candidate link${data.saved === 1 ? "" : "s"} from Transfermarkt search.`
+        : "No candidate links found. Try full name, another spelling, or paste the exact URL as fallback.");
+      if (searchName) setQuery(searchName);
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not discover links.");
+    } finally {
+      setDiscovering(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1500px] min-w-0 animate-in space-y-6">
       <GamePanel className="relative overflow-hidden p-5 sm:p-7 xl:p-8">
@@ -249,6 +279,10 @@ export function MarketLinkRegistryAdmin() {
             </Button>
           </div>
           <div className="mt-3 flex flex-wrap gap-3">
+            <Button variant="secondary" onClick={() => void discoverByName()} disabled={discovering || !(name.trim() || query.trim())}>
+              {discovering ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              Discover by name
+            </Button>
             <Button variant="secondary" onClick={() => void addLink(true)} disabled={saving || !url.trim()}>
               Discover agent players
             </Button>

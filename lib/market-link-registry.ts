@@ -261,6 +261,94 @@ export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntit
   return { discovered: uniquePlayers.length, relationshipsSaved };
 }
 
+function transfermarktSearchUrl(query: string) {
+  const url = new URL("https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche");
+  url.searchParams.set("query", query);
+  return url.toString();
+}
+
+export async function discoverTransfermarktLinksByName(
+  admin: SupabaseClient,
+  input: {
+    query: string;
+    entityType?: TransfermarktEntityType;
+    limit?: number;
+    createdBy?: string | null;
+  },
+) {
+  const query = cleanText(input.query, 100);
+  if (!query || query.length < 3) return { discovered: 0, saved: 0, entities: [], sourceUrl: null };
+
+  const sourceUrl = transfermarktSearchUrl(query);
+  const limit = Math.min(Math.max(input.limit ?? 8, 1), 15);
+  const started = Date.now();
+
+  await waitForTransfermarktRateLimit();
+
+  const response = await fetch(sourceUrl, {
+    headers: {
+      Accept: "text/html,application/xhtml+xml",
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent": "TouchlineBot/1.0 (+https://touchline-football-platform.vercel.app; user-triggered link discovery)",
+    },
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    await logSync(admin, {
+      action: "search_save",
+      status: "partial",
+      sourceUrl,
+      message: `Transfermarkt search unavailable or blocked (${response.status}).`,
+      recordsFound: 0,
+      recordsSaved: 0,
+      durationMs: Date.now() - started,
+      createdBy: input.createdBy,
+      payload: { query, entityType: input.entityType ?? "player" },
+    });
+    return { discovered: 0, saved: 0, entities: [], sourceUrl };
+  }
+
+  const html = (await response.text()).slice(0, 600_000);
+  const wantedType = input.entityType ?? "player";
+  const parsedLinks = extractTransfermarktUrlsFromHtml(html)
+    .map((url) => parseTransfermarktEntityUrl(url, wantedType))
+    .filter(Boolean) as ParsedTransfermarktEntity[];
+
+  const unique = [...new Map(parsedLinks.map((link) => [`${link.entityType}:${link.transfermarktId}`, link])).values()]
+    .slice(0, limit);
+
+  const entities = [];
+  for (const link of unique) {
+    const saved = await upsertTransfermarktEntity(admin, {
+      url: link.canonicalUrl,
+      name: link.name,
+      sourceUrl,
+      createdBy: input.createdBy,
+      action: "search_save",
+      fetchPreview: false,
+      discoverRelationships: false,
+    });
+    entities.push(saved.entity);
+  }
+
+  await logSync(admin, {
+    action: "search_save",
+    status: entities.length ? "success" : "partial",
+    sourceUrl,
+    message: entities.length
+      ? "User-triggered Transfermarkt name search saved candidate profile links."
+      : "No Transfermarkt profile links found from user-triggered name search.",
+    recordsFound: unique.length,
+    recordsSaved: entities.length,
+    durationMs: Date.now() - started,
+    createdBy: input.createdBy,
+    payload: { query, entityType: wantedType },
+  });
+
+  return { discovered: unique.length, saved: entities.length, entities, sourceUrl };
+}
+
 export async function syncKnownTransfermarktEntities(admin: SupabaseClient, options: { limit: number; createdBy?: string | null; manual?: boolean }) {
   const started = Date.now();
   const limit = Math.min(Math.max(options.limit, 1), 100);

@@ -113,7 +113,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
         if (!response.ok) throw new Error(data.error || "Could not search player database.");
         if (latestRequest.current === requestId) {
           setResults(data.players ?? []);
-          if (data.discovered) setMessage("Player discovered automatically from API-Football and saved into Touchline.");
+          if (data.discovered) setMessage("Player link discovered automatically and saved into Touchline.");
         }
       } catch (err) {
         if (latestRequest.current === requestId) setError(err instanceof Error ? err.message : "Search unavailable.");
@@ -128,7 +128,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const hasResults = results.length > 0;
   const resultSummary = useMemo(() => {
     if (trimmed.length < 2) return "Type at least 2 letters";
-      if (loading) return mode === "full" ? "Searching Touchline + automatic football discovery" : "Searching Touchline database";
+      if (loading) return mode === "full" ? "Searching Touchline + automatic Transfermarkt link discovery" : "Searching Touchline database";
     return `${results.length} player${results.length === 1 ? "" : "s"} found`;
   }, [loading, mode, results.length, trimmed.length]);
 
@@ -232,8 +232,8 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
             <p className="af-mode-kicker">Touchline / Player Database</p>
             <h1 className="af-mode-title font-display mt-3 text-white">Global Player Search</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
-              Search players from Touchline&apos;s own database first. If a player is not found, Touchline can discover and save
-              basic player records automatically from API-Football so you do not need to leave the platform.
+              Search players from Touchline&apos;s own database first. If a player is not found, Touchline tries to discover the
+              public Transfermarkt profile link, saves it in the registry, and shows it inside the app.
             </p>
 
             <div className="relative mt-7">
@@ -268,7 +268,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 Import to database
               </Button>
               <p className="text-[10px] leading-5 text-slate-500">
-                Touchline stores the ID, link and preview metadata. It does not copy a full third-party database into the UI.
+                Manual fallback only. Normal search now tries to discover player links automatically before asking you to paste a URL.
               </p>
             </div>
           </div>
@@ -326,7 +326,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
             <Globe2 size={30} className="text-slate-700" />
             <p className="mt-4 text-sm font-black uppercase italic text-white">Start searching the football database</p>
             <p className="mt-2 max-w-lg text-xs leading-6 text-slate-500">
-              Type part of a player name. If Touchline has no result, it can automatically save a basic profile from API-Football.
+              Type part of a player name. If Touchline has no result, it can discover the public Transfermarkt profile link and save it automatically.
             </p>
           </GamePanel>
         )}

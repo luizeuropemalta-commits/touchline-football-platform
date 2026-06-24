@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getApiFootballSeason } from "@/lib/market-data/season";
+import { discoverTransfermarktLinksByName } from "@/lib/market-link-registry";
 import { mapGlobalPlayer } from "@/lib/player-database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -204,6 +205,16 @@ export async function GET(request: Request) {
   if (rows.length) rows = await hydrateProfiles(admin, rows);
 
   if (!rows.length) {
+    rows = await discoverFromMarketLinkRegistry(admin, query, limit);
+  }
+
+  if (!rows.length && shouldDiscover) {
+    await discoverTransfermarktLinksByName(admin, {
+      query,
+      entityType: "player",
+      limit,
+      createdBy: user.id,
+    });
     rows = await discoverFromMarketLinkRegistry(admin, query, limit);
   }
 
