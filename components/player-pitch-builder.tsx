@@ -173,11 +173,21 @@ ${notes ? `Additional context:\n${notes}\n\n` : ""}I can share the full Touchlin
 Best regards.`;
 }
 
-export function PlayerPitchBuilder({ players }: { players: PitchPlayer[] }) {
-  const [selectedId, setSelectedId] = useState(players[0]?.id ?? "");
-  const [targetClub, setTargetClub] = useState("");
+export function PlayerPitchBuilder({
+  players,
+  initialPlayerId,
+  initialTargetClub = "",
+  initialObjective,
+}: {
+  players: PitchPlayer[];
+  initialPlayerId?: string | null;
+  initialTargetClub?: string;
+  initialObjective?: string;
+}) {
+  const [selectedId, setSelectedId] = useState(players.some((player) => player.id === initialPlayerId) ? (initialPlayerId ?? "") : (players[0]?.id ?? ""));
+  const [targetClub, setTargetClub] = useState(initialTargetClub);
   const [recipient, setRecipient] = useState("");
-  const [objective, setObjective] = useState(objectives[0]);
+  const [objective, setObjective] = useState(initialObjective || objectives[0]);
   const [tone, setTone] = useState(tones[0]);
   const [notes, setNotes] = useState("");
   const [copied, setCopied] = useState(false);

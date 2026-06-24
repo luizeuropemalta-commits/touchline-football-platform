@@ -21,6 +21,13 @@ function cleanNumber(value: unknown) {
   return Number.isFinite(number) ? number : null;
 }
 
+function cleanDate(value: unknown) {
+  const text = cleanText(value, 40);
+  if (!text) return null;
+  const date = new Date(`${text}T12:00:00Z`);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 export async function GET() {
   const supabase = await createClient();
   if (!supabase) return NextResponse.json({ opportunities: [] });
@@ -69,6 +76,16 @@ export async function POST(request: Request) {
       const nextStatus = statusActions[action];
       if (!nextStatus) return NextResponse.json({ error: "Unsupported action." }, { status: 400 });
 
+      const { data: existingOpportunity, error: existingError } = await admin
+        .from("player_opportunities")
+        .select("id, title, player_id, club_id")
+        .eq("agency_id", agencyId)
+        .eq("id", opportunityId)
+        .maybeSingle();
+
+      if (existingError) throw new Error(existingError.message);
+      if (!existingOpportunity) return NextResponse.json({ error: "Opportunity not found." }, { status: 404 });
+
       const { data, error } = await admin
         .from("player_opportunities")
         .update({ status: nextStatus })
@@ -78,7 +95,39 @@ export async function POST(request: Request) {
         .single();
 
       if (error) throw new Error(error.message);
-      return NextResponse.json({ ok: true, opportunity: data });
+
+      let roomId: string | null = null;
+      if (action === "open_negotiation") {
+        const roomTitle = `Opportunity — ${existingOpportunity.title}`;
+        const { data: existingRoom } = await admin
+          .from("negotiation_rooms")
+          .select("id")
+          .eq("agency_id", agencyId)
+          .eq("title", roomTitle)
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (existingRoom?.id) {
+          roomId = existingRoom.id;
+        } else {
+          const { data: room, error: roomError } = await admin
+            .from("negotiation_rooms")
+            .insert({
+              agency_id: agencyId,
+              player_id: existingOpportunity.player_id,
+              club_id: existingOpportunity.club_id,
+              title: roomTitle,
+              status: "active",
+              created_by: user.id,
+            })
+            .select("id")
+            .single();
+          if (roomError) throw new Error(roomError.message);
+          roomId = room.id;
+        }
+      }
+
+      return NextResponse.json({ ok: true, opportunity: data, roomId });
     }
 
     const title = cleanText(body.title, 220);
@@ -120,11 +169,16 @@ export async function POST(request: Request) {
         age_max: cleanNumber(body.ageMax),
         requirements: {
           eu_passport: Boolean(body.euPassport),
+          budget: cleanNumber(body.budget),
+          nationality: cleanText(body.nationality, 2) || null,
+          urgency: cleanText(body.urgency, 80) || null,
+          contract_status: cleanText(body.contractStatus, 80) || null,
           notes: cleanText(body.notes, 1000),
         },
         match_score: cleanNumber(body.matchScore) ?? 70,
         status: "open",
         source: cleanText(body.source, 40) || "manual",
+        expires_at: cleanDate(body.deadline),
         created_by: user.id,
       })
       .select("id, status")

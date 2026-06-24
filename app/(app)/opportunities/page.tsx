@@ -5,10 +5,21 @@ import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
 
 type RelatedValue = { name?: string | null; first_name?: string | null; last_name?: string | null } | Array<{ name?: string | null; first_name?: string | null; last_name?: string | null }> | null;
+type ClubJoin = { name?: string | null } | Array<{ name?: string | null }> | null;
 
 function relatedName(value: RelatedValue) {
   const item = Array.isArray(value) ? value[0] : value;
   return item?.name ?? `${item?.first_name ?? ""} ${item?.last_name ?? ""}`.trim() ?? "";
+}
+
+function relatedId(value: unknown) {
+  const item = (Array.isArray(value) ? value[0] : value) as { id?: string | null } | null | undefined;
+  return item?.id ?? null;
+}
+
+function clubName(clubs?: ClubJoin) {
+  if (!clubs) return null;
+  return Array.isArray(clubs) ? (clubs[0]?.name ?? null) : (clubs.name ?? null);
 }
 
 export default async function OpportunitiesPage() {
@@ -40,10 +51,15 @@ export default async function OpportunitiesPage() {
   const [{ data: opportunityRows }, { data: playerRows }] = await Promise.all([
     admin
       .from("player_opportunities")
-      .select("id, title, position_needed, match_score, status, players:player_id(first_name,last_name), clubs:club_id(name)")
+      .select("id, title, position_needed, age_min, age_max, requirements, match_score, status, source, expires_at, created_at, players:player_id(id,first_name,last_name,position,photo_url), clubs:club_id(id,name,league,country_code)")
       .eq("agency_id", agencyId)
       .order("created_at", { ascending: false }),
-    admin.from("players").select("id, first_name, last_name, position").eq("agency_id", agencyId).order("updated_at", { ascending: false }).limit(200),
+    admin
+      .from("players")
+      .select("id, first_name, last_name, date_of_birth, nationality, position, market_value, currency, photo_url, contract_end_date, clubs:current_club_id(name)")
+      .eq("agency_id", agencyId)
+      .order("updated_at", { ascending: false })
+      .limit(300),
   ]);
 
   return (
@@ -52,15 +68,29 @@ export default async function OpportunitiesPage() {
         id: item.id,
         title: item.title,
         positionNeeded: item.position_needed,
+        ageMin: item.age_min,
+        ageMax: item.age_max,
+        requirements: item.requirements,
         matchScore: item.match_score,
         status: item.status,
+        source: item.source,
+        expiresAt: item.expires_at,
+        createdAt: item.created_at,
         clubName: relatedName(item.clubs),
         playerName: relatedName(item.players),
+        playerId: relatedId(item.players),
       }))}
       players={(playerRows ?? []).map((player) => ({
         id: player.id,
         name: `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player",
         position: player.position,
+        dateOfBirth: player.date_of_birth,
+        nationality: player.nationality,
+        marketValue: player.market_value,
+        currency: player.currency,
+        photoUrl: player.photo_url,
+        contractEndDate: player.contract_end_date,
+        club: clubName(player.clubs as ClubJoin),
       }))}
     />
   );

@@ -37,7 +37,16 @@ function fullName(player: PlayerRow) {
   return `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player";
 }
 
-export default async function PitchPlayerPage() {
+function searchValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function PitchPlayerPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   const workspace = await getCurrentWorkspace();
   if (workspace.status !== "ready") return <WorkspaceState status={workspace.status} message={"message" in workspace ? workspace.message : undefined} />;
 
@@ -110,7 +119,12 @@ export default async function PitchPlayerPage() {
 
   return (
     <div className="space-y-5">
-      <PlayerPitchBuilder players={players} />
+      <PlayerPitchBuilder
+        players={players}
+        initialPlayerId={searchValue(params?.player)}
+        initialTargetClub={searchValue(params?.club) ?? ""}
+        initialObjective={searchValue(params?.objective)}
+      />
       <div className="mx-auto flex max-w-[1600px] justify-end">
         <Link href="/ai" className="text-[9px] font-black uppercase tracking-[.16em] text-slate-600 hover:text-cyan-300">
           View saved AI documents →
