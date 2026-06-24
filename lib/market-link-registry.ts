@@ -28,6 +28,32 @@ function cleanText(value?: string | null, max = 240) {
   return value?.trim().replace(/\s+/g, " ").slice(0, max) || null;
 }
 
+function normalizeSearchText(value?: string | null) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function searchResultScore(name: string, query: string) {
+  const normalizedName = normalizeSearchText(name);
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedName || !normalizedQuery) return 0;
+
+  let score = 0;
+  if (normalizedName === normalizedQuery) score += 1000;
+  if (normalizedName.startsWith(normalizedQuery)) score += 500;
+  if (normalizedName.includes(normalizedQuery)) score += 250;
+
+  const words = normalizedQuery.split(" ").filter(Boolean);
+  const matchedWords = words.filter((word) => normalizedName.includes(word)).length;
+  score += matchedWords * 80;
+  score -= Math.max(normalizedName.length - normalizedQuery.length, 0);
+  return score;
+}
+
 export function transfermarktSyncEnabled() {
   return process.env.TRANSFERMARKT_SYNC_ENABLED?.toLowerCase() === "true";
 }
@@ -316,6 +342,7 @@ export async function discoverTransfermarktLinksByName(
     .filter(Boolean) as ParsedTransfermarktEntity[];
 
   const unique = [...new Map(parsedLinks.map((link) => [`${link.entityType}:${link.transfermarktId}`, link])).values()]
+    .sort((a, b) => searchResultScore(b.name, query) - searchResultScore(a.name, query))
     .slice(0, limit);
 
   const entities = [];

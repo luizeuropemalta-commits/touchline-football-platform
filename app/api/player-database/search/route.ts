@@ -41,6 +41,40 @@ function cleanText(value?: string | null, max = 220) {
   return value?.trim().replace(/\s+/g, " ").slice(0, max) || null;
 }
 
+function normalizeSearchText(value?: string | null) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function searchResultScore(name: unknown, query: string) {
+  const normalizedName = normalizeSearchText(typeof name === "string" ? name : "");
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedName || !normalizedQuery) return 0;
+
+  let score = 0;
+  if (normalizedName === normalizedQuery) score += 1000;
+  if (normalizedName.startsWith(normalizedQuery)) score += 500;
+  if (normalizedName.includes(normalizedQuery)) score += 250;
+  const words = normalizedQuery.split(" ").filter(Boolean);
+  score += words.filter((word) => normalizedName.includes(word)).length * 80;
+  score -= Math.max(normalizedName.length - normalizedQuery.length, 0);
+  return score;
+}
+
+function sortRowsForQuery(rows: Record<string, unknown>[], query: string) {
+  return [...rows].sort((a, b) => {
+    const scoreDiff = searchResultScore(b.player_name, query) - searchResultScore(a.player_name, query);
+    if (scoreDiff !== 0) return scoreDiff;
+    const relevanceA = typeof a.relevance === "number" ? a.relevance : 0;
+    const relevanceB = typeof b.relevance === "number" ? b.relevance : 0;
+    return relevanceB - relevanceA;
+  });
+}
+
 function playerName(player?: { name?: string; firstname?: string; lastname?: string }) {
   return cleanText(player?.name, 180) || cleanText(`${player?.firstname ?? ""} ${player?.lastname ?? ""}`, 180);
 }
@@ -119,6 +153,115 @@ async function discoverFromApiFootball(admin: NonNullable<ReturnType<typeof crea
     .limit(limit);
 
   return (saved ?? []) as Record<string, unknown>[];
+}
+
+async function fetchApiFootballCandidates(query: string) {
+  const apiKey = process.env.API_FOOTBALL_KEY ?? process.env.APISPORTS_KEY;
+  if (!apiKey || query.length < 3) return [];
+
+  const season = getApiFootballSeason(process.env.API_FOOTBALL_SEASON);
+  const baseUrl = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
+  const url = new URL("/players", baseUrl);
+  url.searchParams.set("search", query);
+  url.searchParams.set("season", season);
+
+  const response = await fetch(url, {
+    headers: {
+      "x-apisports-key": apiKey,
+      Accept: "application/json",
+    },
+    next: { revalidate: 0 },
+  });
+
+  if (!response.ok) return [];
+
+  const data = (await response.json()) as ApiFootballSearchResponse;
+  return (data.response ?? []).map((item) => {
+    const name = playerName(item.player);
+    const primaryStats = item.statistics?.[0];
+    return {
+      name,
+      apiFootballPlayerId: item.player?.id,
+      photoUrl: cleanText(item.player?.photo, 1000),
+      currentClub: cleanText(primaryStats?.team?.name, 180),
+      position: cleanText(primaryStats?.games?.position, 80),
+      nationality: cleanText(item.player?.nationality, 80),
+      dateOfBirth: cleanText(item.player?.birth?.date, 10),
+      age: item.player?.age && item.player.age > 0 && item.player.age < 80 ? Math.round(item.player.age) : null,
+      primaryStats,
+      player: item.player,
+      season,
+    };
+  }).filter((candidate) => candidate.name && candidate.apiFootballPlayerId);
+}
+
+async function enrichRowsFromApiFootball(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  query: string,
+  rows: Record<string, unknown>[],
+) {
+  const needsEnrichment = rows.some((row) => !row.photo_url || !row.current_club || !row.position || !row.nationality || !row.age);
+  if (!needsEnrichment) return rows;
+
+  const candidates = await fetchApiFootballCandidates(query);
+  if (!candidates.length) return rows;
+
+  const now = new Date().toISOString();
+  const patches = rows.flatMap((row) => {
+    const best = candidates
+      .map((candidate) => ({
+        candidate,
+        score: searchResultScore(candidate.name, String(row.player_name ?? query)),
+      }))
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (!best || best.score < 220) return [];
+
+    const sourcePayload = row.source_payload && typeof row.source_payload === "object" && !Array.isArray(row.source_payload)
+      ? (row.source_payload as Record<string, unknown>)
+      : {};
+
+    return [{
+      id: row.id,
+      transfermarkt_player_id: row.transfermarkt_player_id,
+      player_name: row.player_name,
+      profile_url: row.profile_url,
+      photo_url: cleanText(String(row.photo_url ?? ""), 1000) ?? best.candidate.photoUrl,
+      current_club: cleanText(String(row.current_club ?? ""), 180) ?? best.candidate.currentClub,
+      position: cleanText(String(row.position ?? ""), 80) ?? best.candidate.position,
+      nationality: cleanText(String(row.nationality ?? ""), 80) ?? best.candidate.nationality,
+      date_of_birth: cleanText(String(row.date_of_birth ?? ""), 10) ?? best.candidate.dateOfBirth,
+      age: typeof row.age === "number" ? row.age : best.candidate.age,
+      agent_name: row.agent_name ?? null,
+      agency_name: row.agency_name ?? null,
+      market_value: row.market_value ?? null,
+      market_value_text: row.market_value_text ?? null,
+      currency: row.currency ?? "EUR",
+      source_provider: row.source_provider ?? "transfermarkt",
+      source_payload: {
+        ...sourcePayload,
+        apiFootballEnrichment: {
+          apiFootballPlayerId: best.candidate.apiFootballPlayerId,
+          season: best.candidate.season,
+          enrichedAt: now,
+          note: "Used only to fill available public/licensed football metadata for a saved Transfermarkt link.",
+        },
+      },
+      last_updated_at: now,
+    }];
+  });
+
+  if (!patches.length) return rows;
+
+  const { data } = await admin
+    .from("global_player_profiles")
+    .upsert(patches, { onConflict: "transfermarkt_player_id" })
+    .select("id, transfermarkt_player_id, player_name, profile_url, photo_url, current_club, position, nationality, date_of_birth, age, agent_name, agency_name, market_value, market_value_text, currency, source_provider, source_payload, last_updated_at");
+
+  if (!data?.length) return rows;
+
+  const byId = new Map((data as Record<string, unknown>[]).map((row) => [String(row.id), row]));
+  return rows.map((row) => byId.get(String(row.id)) ?? row);
 }
 
 async function discoverFromMarketLinkRegistry(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number) {
@@ -221,6 +364,12 @@ export async function GET(request: Request) {
   if (!rows.length && shouldDiscover) {
     rows = await discoverFromApiFootball(admin, query, limit);
   }
+
+  if (rows.length && shouldDiscover) {
+    rows = await enrichRowsFromApiFootball(admin, query, rows);
+  }
+
+  rows = sortRowsForQuery(rows, query).slice(0, limit);
 
   return NextResponse.json({
     players: rows.map(mapGlobalPlayer),

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, DatabaseZap, ExternalLink, Globe2, Loader2, Search, ShieldCheck, UploadCloud, UserRoundSearch } from "lucide-react";
+import { ArrowRight, ChevronDown, DatabaseZap, ExternalLink, Loader2, Search, UploadCloud, UserRoundSearch } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, SectionHeader } from "@/components/game-ui";
 import { cn } from "@/lib/utils";
@@ -60,20 +60,75 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function compactDate(value?: string | null) {
-  if (!value) return "Not synced yet";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", year: "numeric" }).format(new Date(value));
-}
-
 function metaLine(player: PlayerDatabaseResult) {
   const age = player.age ?? ageFromDate(player.dateOfBirth);
   return [player.position, player.currentClub, player.nationality, age ? `Age ${age}` : null].filter(Boolean).join(" · ") || "Profile data open";
+}
+
+function displayAge(player: PlayerDatabaseResult) {
+  const age = player.age ?? ageFromDate(player.dateOfBirth);
+  return age ? `${age}` : "—";
+}
+
+function marketValue(player: PlayerDatabaseResult) {
+  if (player.marketValueText) return player.marketValueText;
+  if (typeof player.marketValue === "number" && Number.isFinite(player.marketValue)) {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: player.currency ?? "EUR",
+      maximumFractionDigits: 0,
+    }).format(player.marketValue);
+  }
+  return "Value open";
 }
 
 function idLabel(player: PlayerDatabaseResult) {
   return player.sourceProvider === "transfermarkt"
     ? `TM ID ${player.transfermarktPlayerId}`
     : `${player.sourceLabel ?? "Source"} ID ${player.sourceId ?? player.transfermarktPlayerId}`;
+}
+
+function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
+  return (
+    <div className="group grid gap-3 rounded-3xl border border-white/[.07] bg-white/[.035] p-3 transition hover:border-cyan-300/25 hover:bg-cyan-300/[.055] lg:grid-cols-[minmax(0,1fr)_auto]">
+      <Link href={`/players/database/${player.id}`} className="grid min-w-0 gap-3 sm:grid-cols-[72px_minmax(0,1fr)]">
+        <div className="size-[72px] overflow-hidden rounded-2xl border border-white/[.08] bg-black/30">
+          {player.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
+          ) : (
+            <div className="grid h-full place-items-center text-xl font-black text-cyan-300/45">{initials(player.name)}</div>
+          )}
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">
+              {idLabel(player)}
+            </span>
+            <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.07] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-cyan-200">
+              Age {displayAge(player)}
+            </span>
+          </div>
+          <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white group-hover:text-cyan-100">{player.name}</p>
+          <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-slate-500">{metaLine(player)}</p>
+          <div className="mt-3 grid gap-2 text-[9px] font-black uppercase tracking-wider text-slate-400 sm:grid-cols-4">
+            <span className="truncate rounded-xl bg-black/20 px-3 py-2">Club: <b className="text-cyan-200">{player.currentClub ?? "Open"}</b></span>
+            <span className="truncate rounded-xl bg-black/20 px-3 py-2">Nation: <b className="text-white">{player.nationality ?? "Open"}</b></span>
+            <span className="truncate rounded-xl bg-black/20 px-3 py-2">Value: <b className="text-amber-300">{marketValue(player)}</b></span>
+            <span className="truncate rounded-xl bg-black/20 px-3 py-2">Agent: <b className="text-[#a3ff12]">{player.agentName ?? player.agencyName ?? "Open"}</b></span>
+          </div>
+        </div>
+      </Link>
+      <div className="flex items-center gap-2 lg:flex-col lg:justify-center">
+        <Link href={`/players/database/${player.id}`} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-cyan-200/18 bg-white/[.055] px-4 text-[9px] font-black uppercase tracking-wider text-slate-100 transition hover:border-cyan-300/35 lg:flex-none">
+          Open <ArrowRight size={12} />
+        </Link>
+        <a href={player.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72] lg:flex-none">
+          TM <ExternalLink size={12} />
+        </a>
+      </div>
+    </div>
+  );
 }
 
 export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compact" }) {
@@ -85,10 +140,12 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const [message, setMessage] = useState("");
   const [importForm, setImportForm] = useState(emptyImport);
   const [importing, setImporting] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const latestRequest = useRef(0);
 
   const trimmed = query.trim();
   const showDropdown = mode === "compact" && focused && (trimmed.length >= 2 || results.length > 0);
+  const showFullDropdown = mode === "full" && focused && (trimmed.length >= 2 || results.length > 0 || loading);
 
   function updateQuery(value: string) {
     setQuery(value);
@@ -128,7 +185,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const hasResults = results.length > 0;
   const resultSummary = useMemo(() => {
     if (trimmed.length < 2) return "Type at least 2 letters";
-      if (loading) return mode === "full" ? "Searching Touchline + automatic Transfermarkt link discovery" : "Searching Touchline database";
+    if (loading) return mode === "full" ? "Searching Touchline + automatic Transfermarkt link discovery" : "Searching Touchline database";
     return `${results.length} player${results.length === 1 ? "" : "s"} found`;
   }, [loading, mode, results.length, trimmed.length]);
 
@@ -241,9 +298,39 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
               <Input
                 value={query}
                 onChange={(event) => updateQuery(event.target.value)}
+                onBlur={() => window.setTimeout(() => setFocused(false), 180)}
+                onFocus={() => setFocused(true)}
                 placeholder="Type a player name, club, position, nationality or Transfermarkt ID..."
                 className="h-14 pl-12 text-base"
               />
+              {showFullDropdown && (
+                <div className="absolute left-0 right-0 top-[calc(100%+14px)] z-50 overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#06101a]/95 shadow-[0_30px_110px_rgba(0,0,0,.65)] backdrop-blur-2xl">
+                  <div className="flex items-center justify-between border-b border-white/[.06] px-4 py-3">
+                    <span className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">{resultSummary}</span>
+                    {loading && <Loader2 size={14} className="animate-spin text-cyan-300" />}
+                  </div>
+                  <div className="max-h-[520px] space-y-2 overflow-y-auto p-3">
+                    {hasResults ? (
+                      results.map((player) => <PlayerSearchRow key={player.id} player={player} />)
+                    ) : loading ? (
+                      <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025]">
+                        <div className="text-center">
+                          <Loader2 size={24} className="mx-auto animate-spin text-cyan-300" />
+                          <p className="mt-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Searching and saving possible links...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
+                        <div>
+                          <UserRoundSearch className="mx-auto text-slate-700" size={24} />
+                          <p className="mt-3 text-[11px] font-black uppercase text-white">No player found yet</p>
+                          <p className="mt-2 text-[10px] leading-5 text-slate-500">Try full name or use the manual fallback below.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <p className="mt-3 text-[9px] font-black uppercase tracking-[.18em] text-slate-600">{resultSummary}</p>
             {error && <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/10 px-4 py-3 text-xs font-bold text-rose-200">{error}</div>}
@@ -251,8 +338,18 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
           </div>
 
           <div className="rounded-3xl border border-white/[.08] bg-black/20 p-5">
-            <SectionHeader kicker="Import system" title="Save Transfermarkt link" action={<UploadCloud size={15} className="text-cyan-300" />} />
-            <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setManualOpen((value) => !value)}
+              className="flex w-full items-center justify-between gap-4 text-left"
+            >
+              <SectionHeader kicker="Manual fallback" title="Paste Transfermarkt link" action={<UploadCloud size={15} className="text-cyan-300" />} />
+              <ChevronDown size={18} className={cn("shrink-0 text-slate-500 transition", manualOpen && "rotate-180 text-cyan-300")} />
+            </button>
+            <p className="mt-2 text-[10px] leading-5 text-slate-500">
+              Use only when automatic search cannot find the correct profile.
+            </p>
+            {manualOpen && <div className="mt-4 space-y-3">
               <Input value={importForm.url} onChange={(event) => setImportForm({ ...importForm, url: event.target.value })} placeholder="Transfermarkt profile URL" />
               <Input value={importForm.playerName} onChange={(event) => setImportForm({ ...importForm, playerName: event.target.value })} placeholder="Player name optional" />
               <div className="grid gap-3 sm:grid-cols-2">
@@ -270,67 +367,17 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
               <p className="text-[10px] leading-5 text-slate-500">
                 Manual fallback only. Normal search now tries to discover player links automatically before asking you to paste a URL.
               </p>
-            </div>
+            </div>}
           </div>
         </div>
       </GamePanel>
 
-      <div className={cn("grid gap-5", hasResults && "sm:grid-cols-2 2xl:grid-cols-3")}>
-        {loading && !hasResults ? (
-          <div className="glass flex min-h-72 items-center justify-center rounded-3xl">
-            <Loader2 size={28} className="animate-spin text-cyan-300" />
-          </div>
-        ) : hasResults ? (
-          results.map((player) => (
-            <GamePanel key={player.id} className="glass-hover overflow-hidden">
-              <div className="relative h-64 bg-cyan-300/[.035]">
-                {player.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
-                ) : (
-                  <div className="grid h-full place-items-center text-5xl font-black text-cyan-300/25">{initials(player.name)}</div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-[#07111b]/20 to-transparent" />
-                <div className="absolute left-4 top-4 rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 py-1 text-[8px] font-black uppercase text-[#caff72]">
-                  {idLabel(player)}
-                </div>
-              </div>
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link href={`/players/database/${player.id}`} className="text-xl font-black uppercase italic tracking-[-.05em] text-white hover:text-cyan-200">
-                      {player.name}
-                    </Link>
-                    <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">{metaLine(player)}</p>
-                  </div>
-                  <ShieldCheck size={20} className="shrink-0 text-[#a3ff12]" />
-                </div>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <div className="rounded-xl bg-white/[.045] p-3"><p className="text-[8px] text-slate-500">CLUB</p><p className="mt-1 truncate text-xs font-black text-cyan-300">{player.currentClub ?? "—"}</p></div>
-                  <div className="rounded-xl bg-white/[.045] p-3"><p className="text-[8px] text-slate-500">NATION</p><p className="mt-1 truncate text-xs font-black text-white">{player.nationality ?? "—"}</p></div>
-                  <div className="rounded-xl bg-white/[.045] p-3"><p className="text-[8px] text-slate-500">UPDATED</p><p className="mt-1 text-[10px] font-black text-amber-300">{compactDate(player.lastUpdatedAt)}</p></div>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link href={`/players/database/${player.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-200/18 bg-white/[.055] px-4 text-[9px] font-black uppercase tracking-wider text-slate-100 transition hover:border-cyan-300/35">
-                    Open Profile <ArrowRight size={12} />
-                  </Link>
-                  <a href={player.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72]">
-                    {player.sourceLinkLabel ?? "Source Link"} <ExternalLink size={12} />
-                  </a>
-                </div>
-              </div>
-            </GamePanel>
-          ))
-        ) : (
-          <GamePanel className="flex min-h-72 flex-col items-center justify-center p-8 text-center">
-            <Globe2 size={30} className="text-slate-700" />
-            <p className="mt-4 text-sm font-black uppercase italic text-white">Start searching the football database</p>
-            <p className="mt-2 max-w-lg text-xs leading-6 text-slate-500">
-              Type part of a player name. If Touchline has no result, it can discover the public Transfermarkt profile link and save it automatically.
-            </p>
-          </GamePanel>
-        )}
-      </div>
+      <GamePanel className="p-5">
+        <p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">Fast workflow</p>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          Search results now appear directly below the field. Clicking a player opens the internal profile and keeps the saved Transfermarkt link inside Touchline.
+        </p>
+      </GamePanel>
     </div>
   );
 }
