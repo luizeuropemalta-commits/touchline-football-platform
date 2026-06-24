@@ -49,6 +49,8 @@ type NetworkSearchResult = {
   }>;
 };
 
+type SearchTab = "all" | "players" | "clubs" | "agents";
+
 const emptyImport = {
   url: "",
   playerName: "",
@@ -222,8 +224,16 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
   );
 }
 
+const searchTabs: Array<{ key: SearchTab; label: string }> = [
+  { key: "all", label: "All" },
+  { key: "players", label: "Players" },
+  { key: "clubs", label: "Clubs" },
+  { key: "agents", label: "Agents / Agencies" },
+];
+
 export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compact" }) {
   const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<SearchTab>("all");
   const [results, setResults] = useState<PlayerDatabaseResult[]>([]);
   const [networkResults, setNetworkResults] = useState<NetworkSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -334,15 +344,35 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   }, [mode, trimmed]);
 
   const hasResults = results.length > 0;
+  const clubResults = useMemo(() => networkResults.filter((entity) => entity.type === "club"), [networkResults]);
+  const agentResults = useMemo(() => networkResults.filter((entity) => entity.type === "agent"), [networkResults]);
+  const visibleNetworkResults = useMemo(() => {
+    if (activeTab === "clubs") return clubResults;
+    if (activeTab === "agents") return agentResults;
+    return networkResults;
+  }, [activeTab, agentResults, clubResults, networkResults]);
+  const shouldShowPlayers = activeTab === "all" || activeTab === "players";
+  const shouldShowNetwork = activeTab === "all" || activeTab === "clubs" || activeTab === "agents";
+  const noResultsInActiveTab =
+    showFullResults &&
+    !loading &&
+    !enriching &&
+    ((activeTab === "players" && !hasResults) ||
+      (activeTab === "clubs" && !clubResults.length) ||
+      (activeTab === "agents" && !agentResults.length) ||
+      (activeTab === "all" && !hasResults && !networkResults.length));
   const resultSummary = useMemo(() => {
     if (trimmed.length < 2) return "Type at least 2 letters";
     if (loading) return mode === "full" ? "Searching Touchline + automatic Transfermarkt link discovery" : "Searching Touchline database";
     if (enriching) return "Updating photos and profile data";
-    if (mode === "full" && !results.length && networkResults.length) {
-      return `${networkResults.length} football network result${networkResults.length === 1 ? "" : "s"} found`;
+    if (mode === "full") {
+      if (activeTab === "players") return `${results.length} player${results.length === 1 ? "" : "s"} found`;
+      if (activeTab === "clubs") return `${clubResults.length} club${clubResults.length === 1 ? "" : "s"} found`;
+      if (activeTab === "agents") return `${agentResults.length} agent/agency result${agentResults.length === 1 ? "" : "s"} found`;
+      if (!results.length && networkResults.length) return `${networkResults.length} football network result${networkResults.length === 1 ? "" : "s"} found`;
     }
     return `${results.length} player${results.length === 1 ? "" : "s"} found`;
-  }, [enriching, loading, mode, networkResults.length, results.length, trimmed.length]);
+  }, [activeTab, agentResults.length, clubResults.length, enriching, loading, mode, networkResults.length, results.length, trimmed.length]);
 
   async function importLink() {
     setImporting(true);
@@ -463,8 +493,31 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                     <span className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">{resultSummary}</span>
                     {(loading || enriching) && <Loader2 size={14} className="animate-spin text-cyan-300" />}
                   </div>
+                  <div className="border-b border-white/[.06] px-3 py-3">
+                    <div className="flex gap-2 overflow-x-auto scrollbar-none">
+                      {searchTabs.map((tab) => {
+                        const count = tab.key === "players" ? results.length : tab.key === "clubs" ? clubResults.length : tab.key === "agents" ? agentResults.length : results.length + networkResults.length;
+                        const active = activeTab === tab.key;
+                        return (
+                          <button
+                            key={tab.key}
+                            type="button"
+                            onClick={() => setActiveTab(tab.key)}
+                            className={cn(
+                              "shrink-0 rounded-2xl border px-4 py-2 text-[8px] font-black uppercase tracking-[.16em] transition",
+                              active
+                                ? "border-[#a3ff12]/35 bg-[#a3ff12]/15 text-[#caff72] shadow-[0_0_20px_rgba(163,255,18,.08)]"
+                                : "border-white/[.07] bg-white/[.03] text-slate-500 hover:border-cyan-300/20 hover:text-cyan-200",
+                            )}
+                          >
+                            {tab.label} <span className="ml-1 text-white/45">{count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <div className="max-h-[62vh] space-y-2 overflow-y-auto overscroll-contain p-3 pr-4">
-                    {hasResults ? (
+                    {shouldShowPlayers && hasResults ? (
                       results.map((player) => <PlayerSearchRow key={player.id} player={player} />)
                     ) : loading ? (
                       <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025]">
@@ -473,12 +526,20 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                           <p className="mt-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Searching and saving possible links...</p>
                         </div>
                       </div>
-                    ) : networkResults.length ? (
+                    ) : activeTab === "all" && networkResults.length ? (
                       <div className="rounded-3xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-5">
                         <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#caff72]">Football network match found</p>
                         <p className="mt-2 text-[10px] leading-5 text-slate-500">
                           No player profile matched directly, but Touchline found club, agent or agency results below.
                         </p>
+                      </div>
+                    ) : noResultsInActiveTab ? (
+                      <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
+                        <div>
+                          <UserRoundSearch className="mx-auto text-slate-700" size={24} />
+                          <p className="mt-3 text-[11px] font-black uppercase text-white">No {activeTab === "all" ? "football" : activeTab} result found yet</p>
+                          <p className="mt-2 text-[10px] leading-5 text-slate-500">Try the official Transfermarkt name or switch tabs.</p>
+                        </div>
                       </div>
                     ) : (
                       <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
@@ -491,14 +552,14 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                     )}
                   </div>
 
-                  {(networkResults.length > 0 || networkLoading || (!hasResults && trimmed.length >= 3)) && (
+                  {shouldShowNetwork && (visibleNetworkResults.length > 0 || networkLoading || (!hasResults && trimmed.length >= 3)) && (
                     <div className="border-t border-white/[.06] p-3">
                       <div className="mb-3 flex items-center justify-between">
                         <span className="text-[9px] font-black uppercase tracking-[.18em] text-[#caff72]">Football network results</span>
                         {networkLoading && <Loader2 size={14} className="animate-spin text-[#a3ff12]" />}
                       </div>
                       <div className="space-y-2">
-                        {networkResults.length ? networkResults.map((entity) => <NetworkSearchCard key={entity.id} entity={entity} />) : (
+                        {visibleNetworkResults.length ? visibleNetworkResults.map((entity) => <NetworkSearchCard key={entity.id} entity={entity} />) : (
                           <div className="rounded-3xl border border-white/[.06] bg-white/[.025] p-5 text-center">
                             <Building2 className="mx-auto text-slate-700" size={22} />
                             <p className="mt-3 text-[10px] font-black uppercase tracking-wider text-white">
