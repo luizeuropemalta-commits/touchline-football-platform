@@ -327,6 +327,32 @@ async function ensureGlobalPlayerProfilesForAgent(admin: SupabaseClient, players
 
 export async function syncAgentPlayersOnProfileOpen(admin: SupabaseClient, row: EntityRow, createdBy?: string | null) {
   if (!shouldSyncAgentPlayers(row)) return;
+  const { count } = await admin
+    .from("transfermarkt_relationships")
+    .select("id", { count: "exact", head: true })
+    .eq("source_entity_id", row.id)
+    .eq("relationship_type", "agent_player")
+    .in("status", ["approved", "suggested", "needs_review"]);
+
+  if ((count ?? 0) > 0) {
+    const payload = existingPayload(row);
+    const latestPayload = await loadLatestPayload(admin, row.id, payload);
+    await admin
+      .from("transfermarkt_entities")
+      .update({
+        source_payload: {
+          ...latestPayload,
+          agentPlayerSync: {
+            checkedAt: new Date().toISOString(),
+            status: "cached",
+            legalNote: "Touchline used cached public agent-player links for faster profile loading.",
+          },
+        },
+      })
+      .eq("id", row.id);
+    return;
+  }
+
   await discoverEntityPlayerLinks(
     admin,
     row.id,

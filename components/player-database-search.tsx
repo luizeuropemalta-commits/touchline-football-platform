@@ -177,8 +177,9 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
   const Icon = entity.type === "club" ? Building2 : UsersRound;
   const typeLabel = entity.type === "club" ? "Club" : "Agent / Agency";
   const internalHref = entity.type === "club" ? `/clubs/database/${entity.id}` : `/agents/database/${entity.id}`;
-  const approvedCount = entity.players.filter((player) => player.status === "approved").length;
-  const suggestedCount = entity.players.filter((player) => player.status !== "approved").length;
+  const showPlayerPreview = entity.type !== "club";
+  const approvedCount = showPlayerPreview ? entity.players.filter((player) => player.status === "approved").length : 0;
+  const suggestedCount = showPlayerPreview ? entity.players.filter((player) => player.status !== "approved").length : 0;
   const emptyPlayerMessage = entity.type === "club"
     ? "No public player links saved yet"
     : "No public player links saved yet";
@@ -188,22 +189,24 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
   return (
     <div className="rounded-3xl border border-white/[.07] bg-white/[.035] p-4">
       <div className="flex items-start gap-3">
-        <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.06]">
+        <Link href={internalHref} className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.06] transition hover:border-[#a3ff12]/40">
           {entity.photoUrl && !isGenericExternalImage(entity.photoUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={entity.photoUrl} alt={entity.name} className="h-full w-full object-cover" />
+            <img src={entity.photoUrl} alt={entity.name} className="h-full w-full object-contain p-2" />
           ) : (
             <Icon size={20} className="text-cyan-300" />
           )}
-        </div>
+        </Link>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.07] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-cyan-200">{typeLabel}</span>
             <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">TM ID {entity.transfermarktId}</span>
           </div>
-          <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white">{entity.name}</p>
+          <Link href={internalHref} className="mt-2 block truncate text-base font-black uppercase italic tracking-[-.04em] text-white transition hover:text-[#caff72]">{entity.name}</Link>
           <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            {entity.players.length
+            {!showPlayerPreview
+              ? "Open internal club profile · market, squad and share tools"
+              : entity.players.length
               ? `${entity.players.length} public linked player${entity.players.length === 1 ? "" : "s"} · ${approvedCount} verified · ${suggestedCount} suggested`
               : emptyPlayerMessage}
           </p>
@@ -218,7 +221,7 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      {showPlayerPreview && <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {entity.players.length ? entity.players.map((player) => (
           <a
             key={`${entity.id}-${player.id}`}
@@ -248,7 +251,7 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
             <p className="mt-1 text-[10px] leading-5 text-slate-500">{emptyPlayerDetail}</p>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

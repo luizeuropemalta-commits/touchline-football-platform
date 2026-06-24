@@ -52,11 +52,53 @@ function cleanType(value: string | null): "all" | "agent" | "club" {
 function uniqueQueries(query: string) {
   const normalized = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const variants = [query];
-  if (normalized.includes("sporting")) {
+  if (normalized.includes("sporting") || normalized.includes("lisboa") || normalized.includes("lisbon") || normalized.includes("lissabon")) {
     variants.push("Sporting CP", "Sporting Lisbon", "Sporting Lisboa", "Sporting Clube de Portugal");
+  }
+  if (normalized.includes("corinthians")) {
+    variants.push("Sport Club Corinthians Paulista", "Corinthians Sao Paulo", "Corinthians Paulista");
   }
   variants.push(`${query} club`);
   return [...new Set(variants.map((value) => value.trim()).filter(Boolean))].slice(0, 4);
+}
+
+function knownClubDisplayName(entity: NetworkEntity) {
+  if (entity.entity_type !== "club") return entity.name;
+  const names: Record<string, string> = {
+    "336": "Sporting CP",
+    "199": "Sport Club Corinthians Paulista",
+    "631": "Chelsea FC",
+    "418": "Real Madrid",
+    "131": "FC Barcelona",
+    "27": "Bayern Munich",
+    "281": "Manchester City",
+    "985": "Manchester United",
+    "31": "Liverpool FC",
+    "11": "Arsenal FC",
+  };
+  return names[entity.transfermarkt_id] ?? entity.name;
+}
+
+function knownClubPriority(entity: NetworkEntity) {
+  if (entity.entity_type !== "club") return 0;
+  const priority: Record<string, number> = {
+    "336": 4000,
+    "199": 3900,
+    "418": 3800,
+    "131": 3700,
+    "27": 3600,
+    "281": 3500,
+    "985": 3400,
+    "31": 3300,
+    "11": 3200,
+    "631": 3100,
+  };
+  return priority[entity.transfermarkt_id] ?? 0;
+}
+
+function clubCrestFallback(entity: NetworkEntity) {
+  if (entity.entity_type !== "club" || !entity.transfermarkt_id) return entity.photo_url;
+  return entity.photo_url ?? `https://tmssl.akamaized.net/images/wappen/head/${entity.transfermarkt_id}.png`;
 }
 
 async function searchNetworkEntities(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number, type: "all" | "agent" | "club") {
@@ -77,7 +119,7 @@ async function searchNetworkEntities(admin: NonNullable<ReturnType<typeof create
   if (clubs.error) throw new Error(clubs.error.message);
 
   return ([...((agents.data ?? []) as NetworkEntity[]), ...((clubs.data ?? []) as NetworkEntity[])])
-    .sort((a, b) => (b.relevance ?? 0) - (a.relevance ?? 0))
+    .sort((a, b) => ((b.relevance ?? 0) + knownClubPriority(b)) - ((a.relevance ?? 0) + knownClubPriority(a)))
     .slice(0, limit);
 }
 
@@ -190,9 +232,9 @@ export async function GET(request: Request) {
         id: entity.id,
         transfermarktId: entity.transfermarkt_id,
         type: entity.entity_type,
-        name: entity.name,
+        name: knownClubDisplayName(entity),
         profileUrl: entity.canonical_url ?? entity.profile_url,
-        photoUrl: entity.photo_url,
+        photoUrl: clubCrestFallback(entity),
         status: entity.status,
         relevance: entity.relevance ?? null,
         players: (relationships.get(entity.id) ?? []).filter((relationship) => isTrustedNetworkRelationship(entity, relationship)).flatMap((relationship) => {
