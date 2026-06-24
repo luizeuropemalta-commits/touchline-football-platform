@@ -43,6 +43,10 @@ function cleanLimit(value: string | null) {
   return Math.min(Math.max(Math.round(parsed), 1), 20);
 }
 
+function cleanType(value: string | null): "all" | "agent" | "club" {
+  return value === "agent" || value === "club" ? value : "all";
+}
+
 function uniqueQueries(query: string) {
   const normalized = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const variants = [query];
@@ -53,14 +57,14 @@ function uniqueQueries(query: string) {
   return [...new Set(variants.map((value) => value.trim()).filter(Boolean))].slice(0, 4);
 }
 
-async function searchNetworkEntities(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number) {
+async function searchNetworkEntities(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number, type: "all" | "agent" | "club") {
   const [agents, clubs] = await Promise.all([
-    admin.rpc("search_transfermarkt_entities", {
+    type === "club" ? Promise.resolve({ data: [], error: null }) : admin.rpc("search_transfermarkt_entities", {
       search_query: query,
       entity_type_filter: "agent",
       result_limit: limit,
     }),
-    admin.rpc("search_transfermarkt_entities", {
+    type === "agent" ? Promise.resolve({ data: [], error: null }) : admin.rpc("search_transfermarkt_entities", {
       search_query: query,
       entity_type_filter: "club",
       result_limit: limit,
@@ -112,28 +116,31 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = cleanQuery(searchParams.get("q"));
   const limit = cleanLimit(searchParams.get("limit"));
+  const type = cleanType(searchParams.get("type"));
   const shouldDiscover = searchParams.get("discover") === "1" || searchParams.get("discover") === "true";
 
   if (query.length < 2) return NextResponse.json({ ok: true, entities: [] });
 
   try {
-    let entities = await searchNetworkEntities(admin, query, limit);
+    let entities = await searchNetworkEntities(admin, query, limit, type);
     let relationships = await loadPlayersForEntities(admin, entities.filter((entity) => entity.entity_type === "agent").map((entity) => entity.id));
 
     if (shouldDiscover) {
       if (!entities.length) {
-        for (const candidateQuery of uniqueQueries(query)) {
-          await discoverTransfermarktLinksByName(admin, {
-            query: candidateQuery,
-            entityType: "club",
-            limit: Math.min(limit, 8),
-            createdBy: user.id,
-          });
+        if (type !== "agent") {
+          for (const candidateQuery of uniqueQueries(query)) {
+            await discoverTransfermarktLinksByName(admin, {
+              query: candidateQuery,
+              entityType: "club",
+              limit: Math.min(limit, 8),
+              createdBy: user.id,
+            });
 
-          entities = await searchNetworkEntities(admin, query, limit);
-          if (entities.length) break;
+            entities = await searchNetworkEntities(admin, query, limit, type);
+            if (entities.length) break;
+          }
         }
-        if (!entities.length) {
+        if (!entities.length && type !== "club") {
           await discoverTransfermarktLinksByName(admin, {
             query,
             entityType: "agent",
@@ -141,7 +148,7 @@ export async function GET(request: Request) {
             createdBy: user.id,
           });
         }
-        entities = await searchNetworkEntities(admin, query, limit);
+        entities = await searchNetworkEntities(admin, query, limit, type);
         relationships = await loadPlayersForEntities(admin, entities.filter((entity) => entity.entity_type === "agent").map((entity) => entity.id));
       }
 
@@ -158,7 +165,7 @@ export async function GET(request: Request) {
           { force: true },
         );
       }
-      entities = await searchNetworkEntities(admin, query, limit);
+      entities = await searchNetworkEntities(admin, query, limit, type);
       relationships = await loadPlayersForEntities(admin, entities.filter((entity) => entity.entity_type === "agent").map((entity) => entity.id));
     }
 

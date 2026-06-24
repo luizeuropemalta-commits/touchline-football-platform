@@ -49,7 +49,7 @@ type NetworkSearchResult = {
   }>;
 };
 
-type SearchTab = "all" | "players" | "clubs" | "agents";
+type SearchTab = "all" | "players" | "clubs" | "agents" | "coaches";
 
 const emptyImport = {
   url: "",
@@ -226,9 +226,10 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
 
 const searchTabs: Array<{ key: SearchTab; label: string }> = [
   { key: "all", label: "All" },
-  { key: "players", label: "Players" },
-  { key: "clubs", label: "Clubs" },
-  { key: "agents", label: "Agents / Agencies" },
+  { key: "players", label: "Player" },
+  { key: "agents", label: "Agent / Agency" },
+  { key: "clubs", label: "Club" },
+  { key: "coaches", label: "Coach" },
 ];
 
 export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compact" }) {
@@ -265,7 +266,23 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     }
   }
 
+  function updateTab(tab: SearchTab) {
+    setActiveTab(tab);
+    setError("");
+    setMessage("");
+    latestRequest.current += 1;
+    latestNetworkRequest.current += 1;
+    setResults([]);
+    setNetworkResults([]);
+    setLoading(false);
+    setEnriching(false);
+    setNetworkLoading(false);
+  }
+
   useEffect(() => {
+    if (mode === "full" && activeTab !== "all" && activeTab !== "players") {
+      return;
+    }
     if (trimmed.length < 2) return;
 
     const requestId = latestRequest.current + 1;
@@ -312,24 +329,27 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     }, mode === "compact" ? 180 : 260);
 
     return () => window.clearTimeout(timeout);
-  }, [mode, trimmed]);
+  }, [activeTab, mode, trimmed]);
 
   useEffect(() => {
-    if (mode !== "full" || trimmed.length < 2) return;
+    if (mode !== "full" || trimmed.length < 2 || activeTab === "players" || activeTab === "coaches") {
+      return;
+    }
 
     const requestId = latestNetworkRequest.current + 1;
     latestNetworkRequest.current = requestId;
     const timeout = window.setTimeout(async () => {
       setNetworkLoading(true);
       try {
-        const response = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8`);
+        const networkType = activeTab === "agents" ? "agent" : activeTab === "clubs" ? "club" : "all";
+        const response = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8&type=${networkType}`);
         const data = await response.json() as { ok?: boolean; entities?: NetworkSearchResult[]; error?: string };
         if (!response.ok || !data.ok) throw new Error(data.error || "Could not search agents, agencies or clubs.");
         if (latestNetworkRequest.current === requestId) setNetworkResults(data.entities ?? []);
 
         const needsDiscovery = !(data.entities ?? []).length || (data.entities ?? []).some((entity) => entity.players.length === 0);
         if (!needsDiscovery || trimmed.length < 3) return;
-        const discoverResponse = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8&discover=1`);
+        const discoverResponse = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8&type=${networkType}&discover=1`);
         const discoverData = await discoverResponse.json() as { ok?: boolean; entities?: NetworkSearchResult[]; error?: string };
         if (!discoverResponse.ok || !discoverData.ok) throw new Error(discoverData.error || "Could not discover network players.");
         if (latestNetworkRequest.current === requestId) setNetworkResults(discoverData.entities ?? data.entities ?? []);
@@ -341,7 +361,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     }, 340);
 
     return () => window.clearTimeout(timeout);
-  }, [mode, trimmed]);
+  }, [activeTab, mode, trimmed]);
 
   const hasResults = results.length > 0;
   const clubResults = useMemo(() => networkResults.filter((entity) => entity.type === "club"), [networkResults]);
@@ -349,6 +369,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const visibleNetworkResults = useMemo(() => {
     if (activeTab === "clubs") return clubResults;
     if (activeTab === "agents") return agentResults;
+    if (activeTab === "coaches") return [];
     return networkResults;
   }, [activeTab, agentResults, clubResults, networkResults]);
   const shouldShowPlayers = activeTab === "all" || activeTab === "players";
@@ -360,6 +381,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     ((activeTab === "players" && !hasResults) ||
       (activeTab === "clubs" && !clubResults.length) ||
       (activeTab === "agents" && !agentResults.length) ||
+      activeTab === "coaches" ||
       (activeTab === "all" && !hasResults && !networkResults.length));
   const resultSummary = useMemo(() => {
     if (trimmed.length < 2) return "Type at least 2 letters";
@@ -369,6 +391,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       if (activeTab === "players") return `${results.length} player${results.length === 1 ? "" : "s"} found`;
       if (activeTab === "clubs") return `${clubResults.length} club${clubResults.length === 1 ? "" : "s"} found`;
       if (activeTab === "agents") return `${agentResults.length} agent/agency result${agentResults.length === 1 ? "" : "s"} found`;
+      if (activeTab === "coaches") return "Coach search coming soon";
       if (!results.length && networkResults.length) return `${networkResults.length} football network result${networkResults.length === 1 ? "" : "s"} found`;
     }
     return `${results.length} player${results.length === 1 ? "" : "s"} found`;
@@ -478,13 +501,48 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
               Touchline tries to discover the public Transfermarkt profile link, saves it in the registry, and shows it inside the app.
             </p>
 
-            <div className="relative mt-7">
+            <div className="mt-7">
+              <p className="mb-2 text-[8px] font-black uppercase tracking-[.18em] text-slate-600">Choose search type</p>
+              <div className="flex gap-2 overflow-x-auto scrollbar-none">
+                {searchTabs.map((tab) => {
+                  const active = activeTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => updateTab(tab.key)}
+                      className={cn(
+                        "shrink-0 rounded-2xl border px-4 py-2.5 text-[9px] font-black uppercase tracking-[.14em] transition",
+                        active
+                          ? "border-[#a3ff12]/40 bg-[#a3ff12]/15 text-[#caff72] shadow-[0_0_22px_rgba(163,255,18,.08)]"
+                          : "border-white/[.08] bg-white/[.035] text-slate-500 hover:border-cyan-300/25 hover:text-cyan-200",
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="relative mt-4">
               <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
               <Input
                 value={query}
                 onChange={(event) => updateQuery(event.target.value)}
                 onFocus={() => setFocused(true)}
-                placeholder="Type player, agent, agency, club, nationality or Transfermarkt ID..."
+                placeholder={
+                  activeTab === "players"
+                    ? "Type player name, nationality or Transfermarkt ID..."
+                    : activeTab === "agents"
+                      ? "Type agent or agency name, example: Jorge Mendes..."
+                      : activeTab === "clubs"
+                        ? "Type club name, example: Corinthians, Sporting CP..."
+                        : activeTab === "coaches"
+                          ? "Coach search is coming soon..."
+                          : "Type player, agent, agency, club, nationality or Transfermarkt ID..."
+                }
+                disabled={activeTab === "coaches"}
                 className="h-14 pl-12 text-base"
               />
               {showFullResults && (
@@ -496,13 +554,13 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                   <div className="border-b border-white/[.06] px-3 py-3">
                     <div className="flex gap-2 overflow-x-auto scrollbar-none">
                       {searchTabs.map((tab) => {
-                        const count = tab.key === "players" ? results.length : tab.key === "clubs" ? clubResults.length : tab.key === "agents" ? agentResults.length : results.length + networkResults.length;
+                        const count = tab.key === "players" ? results.length : tab.key === "clubs" ? clubResults.length : tab.key === "agents" ? agentResults.length : tab.key === "coaches" ? 0 : results.length + networkResults.length;
                         const active = activeTab === tab.key;
                         return (
                           <button
                             key={tab.key}
                             type="button"
-                            onClick={() => setActiveTab(tab.key)}
+                            onClick={() => updateTab(tab.key)}
                             className={cn(
                               "shrink-0 rounded-2xl border px-4 py-2 text-[8px] font-black uppercase tracking-[.16em] transition",
                               active
@@ -537,8 +595,12 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                       <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
                         <div>
                           <UserRoundSearch className="mx-auto text-slate-700" size={24} />
-                          <p className="mt-3 text-[11px] font-black uppercase text-white">No {activeTab === "all" ? "football" : activeTab} result found yet</p>
-                          <p className="mt-2 text-[10px] leading-5 text-slate-500">Try the official Transfermarkt name or switch tabs.</p>
+                          <p className="mt-3 text-[11px] font-black uppercase text-white">
+                            {activeTab === "coaches" ? "Coach search coming soon" : `No ${activeTab === "all" ? "football" : activeTab} result found yet`}
+                          </p>
+                          <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                            {activeTab === "coaches" ? "This type is reserved for the next database expansion." : "Try the official Transfermarkt name or switch tabs."}
+                          </p>
                         </div>
                       </div>
                     ) : (
