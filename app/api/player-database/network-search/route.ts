@@ -86,8 +86,8 @@ async function loadPlayersForEntities(admin: NonNullable<ReturnType<typeof creat
     .from("transfermarkt_relationships")
     .select("source_entity_id, relationship_type, status, target:transfermarkt_entities!transfermarkt_relationships_target_entity_id_fkey(id, transfermarkt_id, entity_type, name, profile_url, canonical_url, photo_url, status)")
     .in("source_entity_id", entityIds)
-    .eq("relationship_type", "agent_player")
-    .eq("status", "approved")
+    .in("relationship_type", ["agent_player", "club_player"])
+    .in("status", ["approved", "suggested"])
     .order("last_seen_at", { ascending: false })
     .limit(200);
 
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
 
   try {
     let entities = await searchNetworkEntities(admin, query, limit, type);
-    let relationships = await loadPlayersForEntities(admin, entities.filter((entity) => entity.entity_type === "agent").map((entity) => entity.id));
+    let relationships = await loadPlayersForEntities(admin, entities.map((entity) => entity.id));
 
     if (shouldDiscover) {
       if (!entities.length) {
@@ -149,24 +149,23 @@ export async function GET(request: Request) {
           });
         }
         entities = await searchNetworkEntities(admin, query, limit, type);
-        relationships = await loadPlayersForEntities(admin, entities.filter((entity) => entity.entity_type === "agent").map((entity) => entity.id));
+        relationships = await loadPlayersForEntities(admin, entities.map((entity) => entity.id));
       }
 
       for (const entity of entities.slice(0, 3)) {
-        if (entity.entity_type === "club") continue;
         const existing = relationships.get(entity.id) ?? [];
         if (existing.length > 0) continue;
         await discoverEntityPlayerLinks(
           admin,
           entity.id,
           entity.canonical_url ?? entity.profile_url,
-          "agent_player",
+          entity.entity_type === "club" ? "club_player" : "agent_player",
           user.id,
           { force: true },
         );
       }
       entities = await searchNetworkEntities(admin, query, limit, type);
-      relationships = await loadPlayersForEntities(admin, entities.filter((entity) => entity.entity_type === "agent").map((entity) => entity.id));
+      relationships = await loadPlayersForEntities(admin, entities.map((entity) => entity.id));
     }
 
     return NextResponse.json({

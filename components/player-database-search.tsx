@@ -159,12 +159,14 @@ function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
 function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
   const Icon = entity.type === "club" ? Building2 : UsersRound;
   const typeLabel = entity.type === "club" ? "Club" : "Agent / Agency";
+  const approvedCount = entity.players.filter((player) => player.status === "approved").length;
+  const suggestedCount = entity.players.filter((player) => player.status !== "approved").length;
   const emptyPlayerMessage = entity.type === "club"
-    ? "Club roster sync not enabled yet"
-    : "No verified player list yet";
+    ? "No public player links saved yet"
+    : "No public player links saved yet";
   const emptyPlayerDetail = entity.type === "club"
-    ? "Touchline shows the club profile link now. Player rosters will only appear from approved or licensed data, so wrong players are not attached to clubs."
-    : "Touchline hides suggested links until they are approved, so the platform does not show false player associations.";
+    ? "Touchline can discover public player links from the club profile page, but this is only a reference and not a contract or registration claim."
+    : "Touchline can discover public player links from the agent/agency profile page, but representation still needs confirmation before being treated as verified.";
   return (
     <div className="rounded-3xl border border-white/[.07] bg-white/[.035] p-4">
       <div className="flex items-start gap-3">
@@ -183,7 +185,9 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
           </div>
           <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white">{entity.name}</p>
           <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            {entity.players.length ? `${entity.players.length} verified linked player${entity.players.length === 1 ? "" : "s"}` : emptyPlayerMessage}
+            {entity.players.length
+              ? `${entity.players.length} public linked player${entity.players.length === 1 ? "" : "s"} · ${approvedCount} verified · ${suggestedCount} suggested`
+              : emptyPlayerMessage}
           </p>
         </div>
         <a href={entity.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72]">
@@ -210,7 +214,9 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
             </div>
             <div className="min-w-0">
               <p className="truncate text-[10px] font-black uppercase italic text-white group-hover:text-cyan-100">{player.name ?? "Player"}</p>
-              <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">TM ID {player.transfermarktId ?? "open"}</p>
+              <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">
+                TM ID {player.transfermarktId ?? "open"} · {player.status === "approved" ? "verified" : "suggested"}
+              </p>
             </div>
           </a>
         )) : (
