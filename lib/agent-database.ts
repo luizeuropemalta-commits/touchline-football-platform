@@ -87,7 +87,12 @@ function isGenericTransfermarktImage(value?: string | null) {
     lower.includes("/logos/") ||
     lower.includes("tm-logo") ||
     lower.includes("default") ||
-    lower.includes("socialmedia")
+    lower.includes("socialmedia") ||
+    lower.includes("verified") ||
+    lower.includes("check") ||
+    lower.includes("/icons/") ||
+    lower.includes("/icon/") ||
+    lower.includes("flaggen")
   );
 }
 
@@ -102,7 +107,7 @@ function extractAgentPhoto(html: string, profileUrl: string) {
   }
   const profileImage = candidates.find((url) => {
     const lower = url.toLowerCase();
-    return lower.includes("berater") || lower.includes("person") || lower.includes("portrait") || lower.includes("profil");
+    return lower.includes("beraterfirma") || lower.includes("berater") || lower.includes("agentur") || lower.includes("person") || lower.includes("portrait") || lower.includes("profil");
   });
   const ogImage = absolutizeImageUrl(extractMetaContent(html, "og:image"), profileUrl);
   return profileImage ?? (ogImage && !isGenericTransfermarktImage(ogImage) ? ogImage : null);
@@ -188,9 +193,10 @@ export async function enrichTransfermarktAgentProfile(admin: SupabaseClient, row
     ? payload.agentProfile as Record<string, unknown>
     : {};
   const lastChecked = Date.parse(String(agent.checkedAt ?? ""));
-  const missingKeyFields = !row.photo_url || isGenericTransfermarktImage(row.photo_url) || !agent.agencyName || !agent.country;
+  const hasGenericPhoto = isGenericTransfermarktImage(row.photo_url);
+  const missingKeyFields = !row.photo_url || hasGenericPhoto || !agent.agencyName || !agent.country;
   if (!missingKeyFields) return mapAgent(row);
-  if (lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return mapAgent(row);
+  if (!hasGenericPhoto && lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return mapAgent(row);
   if (!profileEnrichmentEnabled()) return mapAgent(row);
 
   try {
@@ -280,6 +286,7 @@ async function loadRawAgentLinkedPlayers(admin: SupabaseClient, agentId: string)
 }
 
 async function ensureGlobalPlayerProfilesForAgent(admin: SupabaseClient, players: Awaited<ReturnType<typeof loadRawAgentLinkedPlayers>>) {
+  type GlobalProfileReference = { id: string; photoUrl: string | null };
   const rows = players.flatMap((player) => {
     if (!player.transfermarktId || !player.profileUrl || player.profileUrl === "#") return [];
     return [{
@@ -297,14 +304,25 @@ async function ensureGlobalPlayerProfilesForAgent(admin: SupabaseClient, players
     }];
   });
 
-  if (!rows.length) return new Map<string, string>();
+  if (!rows.length) return new Map<string, GlobalProfileReference>();
 
-  const { data } = await admin
+  const { data: upserted } = await admin
     .from("global_player_profiles")
     .upsert(rows, { onConflict: "transfermarkt_player_id" })
     .select("id, transfermarkt_player_id");
 
-  return new Map(((data ?? []) as Array<{ id: string; transfermarkt_player_id: string }>).map((row) => [row.transfermarkt_player_id, row.id]));
+  const ids = ((upserted ?? []) as Array<{ transfermarkt_player_id: string }>).map((row) => row.transfermarkt_player_id);
+  if (!ids.length) return new Map<string, { id: string; photoUrl: string | null }>();
+
+  const { data } = await admin
+    .from("global_player_profiles")
+    .select("id, transfermarkt_player_id, photo_url")
+    .in("transfermarkt_player_id", ids);
+
+  return new Map(((data ?? []) as Array<{ id: string; transfermarkt_player_id: string; photo_url: string | null }>).map((row) => [
+    row.transfermarkt_player_id,
+    { id: row.id, photoUrl: row.photo_url },
+  ]));
 }
 
 export async function syncAgentPlayersOnProfileOpen(admin: SupabaseClient, row: EntityRow, createdBy?: string | null) {
@@ -337,10 +355,11 @@ export async function syncAgentPlayersOnProfileOpen(admin: SupabaseClient, row: 
 
 export async function loadAgentLinkedPlayers(admin: SupabaseClient, agentId: string) {
   const players = await loadRawAgentLinkedPlayers(admin, agentId);
-  const globalProfileIds = await ensureGlobalPlayerProfilesForAgent(admin, players);
+  const globalProfiles = await ensureGlobalPlayerProfilesForAgent(admin, players);
   return players.map((player) => ({
     ...player,
-    internalProfileUrl: globalProfileIds.get(player.transfermarktId) ? `/players/database/${globalProfileIds.get(player.transfermarktId)}` : null,
+    photoUrl: globalProfiles.get(player.transfermarktId)?.photoUrl ?? player.photoUrl,
+    internalProfileUrl: globalProfiles.get(player.transfermarktId)?.id ? `/players/database/${globalProfiles.get(player.transfermarktId)?.id}` : null,
   }));
 }
 

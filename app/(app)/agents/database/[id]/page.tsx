@@ -101,6 +101,7 @@ export default async function AgentDatabaseProfile({ params }: { params: Promise
     agent.profileUrl,
     agent.transfermarktId,
   ]);
+  const hasTransfermarktIdentity = Boolean(agent.transfermarktId);
   const internalProfileUrl = `${siteUrl()}/agents/database/${agent.id}`;
   const whatsAppUrl = `https://wa.me/?text=${encodeURIComponent(`Touchline agent/agency profile: ${agent.name}\n${internalProfileUrl}`)}`;
 
@@ -150,7 +151,7 @@ export default async function AgentDatabaseProfile({ params }: { params: Promise
               {[
                 ["PUBLIC PLAYERS", String(agent.publicLinkedPlayersCount), "text-[#a3ff12]"],
                 ["SUGGESTED", String(agent.suggestedPlayersCount), "text-amber-300"],
-                ["VERIFIED", String(agent.verifiedPlayersCount), "text-cyan-300"],
+                ["LINK STATUS", hasTransfermarktIdentity ? "Verified" : "Open", hasTransfermarktIdentity ? "text-[#a3ff12]" : "text-cyan-300"],
                 ["UPDATED", compactDate(agent.lastCheckedAt ?? agent.updatedAt), "text-white"],
               ].map(([label, value, color]) => (
                 <div key={String(label)} className="rounded-xl border border-white/[.08] bg-black/20 p-4">
@@ -170,8 +171,8 @@ export default async function AgentDatabaseProfile({ params }: { params: Promise
                 <Meter value={100} color="cyan" />
               </div>
               <div>
-                <div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>LEGAL STATUS</span><span>Suggested</span></div>
-                <Meter value={55} color="gold" />
+                <div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>TM ID STATUS</span><span>{hasTransfermarktIdentity ? "Verified" : "Open"}</span></div>
+                <Meter value={hasTransfermarktIdentity ? 100 : 35} color={hasTransfermarktIdentity ? "lime" : "gold"} />
               </div>
             </div>
           </div>

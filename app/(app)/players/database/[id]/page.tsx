@@ -88,6 +88,12 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
   const sourcePayload = player.source_payload && typeof player.source_payload === "object" && !Array.isArray(player.source_payload)
     ? player.source_payload as Record<string, unknown>
     : {};
+  const enrichment = sourcePayload.transfermarktProfileEnrichment && typeof sourcePayload.transfermarktProfileEnrichment === "object" && !Array.isArray(sourcePayload.transfermarktProfileEnrichment)
+    ? sourcePayload.transfermarktProfileEnrichment as Record<string, unknown>
+    : {};
+  const details = enrichment.details && typeof enrichment.details === "object" && !Array.isArray(enrichment.details)
+    ? enrichment.details as Record<string, unknown>
+    : {};
   const sourceLabel = player.source_provider === "transfermarkt"
     ? "Transfermarkt"
     : sourcePayload.source === "api-football"
@@ -190,7 +196,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
           <div className="grid min-w-0 gap-3 md:grid-cols-2">
             {[
               [`${sourceLabel} ID`, sourceId],
-              ["Profile URL", player.profile_url],
+              ["Share Profile", internalProfileUrl],
               ["Position", player.position ?? "Open"],
               ["Nationality", player.nationality ?? "Open"],
               ["Date of birth", player.date_of_birth ?? "Open"],
@@ -200,9 +206,35 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
             ].map(([label, value]) => (
               <div key={label} className="min-w-0 rounded-2xl border border-white/[.07] bg-black/20 p-4">
                 <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>
-                <p className="mt-2 overflow-wrap-anywhere text-xs font-bold text-slate-200">{value}</p>
+                {label === "Share Profile" ? (
+                  <a href={whatsAppUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex h-10 items-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100">
+                    Share Touchline Profile <Send size={12} />
+                  </a>
+                ) : (
+                  <p className="mt-2 overflow-wrap-anywhere text-xs font-bold text-slate-200">{value}</p>
+                )}
               </div>
             ))}
+          </div>
+          <div className="mt-5 rounded-3xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-4">
+            <SectionHeader kicker="Career & contract" title="Player details" action={<CalendarClock size={15} className="text-[#a3ff12]" />} />
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                ["Height", typeof details.height === "string" ? details.height : "Open"],
+                ["Preferred foot", typeof details.foot === "string" ? details.foot : "Open"],
+                ["Joined club", typeof details.joined === "string" ? details.joined : "Open"],
+                ["Contract until", typeof details.contractExpires === "string" ? details.contractExpires : "Open"],
+                ["Place of birth", typeof details.placeOfBirth === "string" ? details.placeOfBirth : "Open"],
+                ["Outfitter", typeof details.outfitter === "string" ? details.outfitter : "Open"],
+                ["Status", typeof details.playerStatus === "string" ? details.playerStatus : "Open"],
+                ["Source", sourceLabel],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-white/[.07] bg-black/20 p-4">
+                  <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>
+                  <p className="mt-2 overflow-wrap-anywhere text-xs font-bold text-slate-200">{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </GamePanel>
 

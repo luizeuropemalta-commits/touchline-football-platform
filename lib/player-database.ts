@@ -238,6 +238,15 @@ function parseTransfermarktProfileHtml(html: string, profileUrl: string) {
     marketValue: market.marketValue,
     marketValueText: market.marketValueText,
     currency: market.currency,
+    details: {
+      height: extractTransfermarktInfoTableValue(html, ["Height"]),
+      foot: extractTransfermarktInfoTableValue(html, ["Foot"]),
+      joined: extractTransfermarktInfoTableValue(html, ["Joined"]),
+      contractExpires: extractTransfermarktInfoTableValue(html, ["Contract expires", "Contract expires on"]),
+      outfitter: extractTransfermarktInfoTableValue(html, ["Outfitter"]),
+      placeOfBirth: extractTransfermarktInfoTableValue(html, ["Place of birth"]),
+      playerStatus: extractTransfermarktInfoTableValue(html, ["Status"]),
+    },
   };
 }
 
@@ -461,6 +470,7 @@ export async function enrichGlobalPlayerProfileFromTransfermarkt(
           status: "success",
           fieldsFound: Object.entries(parsed).filter(([, value]) => Boolean(value)).map(([key]) => key),
           linkedEntitiesSaved: linked.linked,
+          details: parsed.details,
           legalNote: "Touchline stores limited public profile metadata for internal search/profile display and keeps Transfermarkt as the source link.",
         },
       },
