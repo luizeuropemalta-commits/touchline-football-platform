@@ -230,6 +230,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const [importing, setImporting] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const latestRequest = useRef(0);
+  const latestNetworkRequest = useRef(0);
 
   const trimmed = query.trim();
   const showDropdown = mode === "compact" && focused && (trimmed.length >= 2 || results.length > 0);
@@ -244,6 +245,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       setLoading(false);
       setEnriching(false);
       setNetworkLoading(false);
+      latestNetworkRequest.current += 1;
     }
   }
 
@@ -299,25 +301,26 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   useEffect(() => {
     if (mode !== "full" || trimmed.length < 2) return;
 
-    const requestId = latestRequest.current;
+    const requestId = latestNetworkRequest.current + 1;
+    latestNetworkRequest.current = requestId;
     const timeout = window.setTimeout(async () => {
       setNetworkLoading(true);
       try {
         const response = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8`);
         const data = await response.json() as { ok?: boolean; entities?: NetworkSearchResult[]; error?: string };
         if (!response.ok || !data.ok) throw new Error(data.error || "Could not search agents, agencies or clubs.");
-        if (latestRequest.current === requestId) setNetworkResults(data.entities ?? []);
+        if (latestNetworkRequest.current === requestId) setNetworkResults(data.entities ?? []);
 
         const needsDiscovery = !(data.entities ?? []).length || (data.entities ?? []).some((entity) => entity.players.length === 0);
         if (!needsDiscovery || trimmed.length < 3) return;
         const discoverResponse = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8&discover=1`);
         const discoverData = await discoverResponse.json() as { ok?: boolean; entities?: NetworkSearchResult[]; error?: string };
         if (!discoverResponse.ok || !discoverData.ok) throw new Error(discoverData.error || "Could not discover network players.");
-        if (latestRequest.current === requestId) setNetworkResults(discoverData.entities ?? data.entities ?? []);
+        if (latestNetworkRequest.current === requestId) setNetworkResults(discoverData.entities ?? data.entities ?? []);
       } catch {
-        if (latestRequest.current === requestId) setNetworkResults([]);
+        if (latestNetworkRequest.current === requestId) setNetworkResults([]);
       } finally {
-        if (latestRequest.current === requestId) setNetworkLoading(false);
+        if (latestNetworkRequest.current === requestId) setNetworkLoading(false);
       }
     }, 340);
 

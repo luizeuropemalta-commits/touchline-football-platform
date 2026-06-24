@@ -43,6 +43,16 @@ function cleanLimit(value: string | null) {
   return Math.min(Math.max(Math.round(parsed), 1), 20);
 }
 
+function uniqueQueries(query: string) {
+  const normalized = query.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const variants = [query];
+  if (normalized.includes("sporting")) {
+    variants.push("Sporting CP", "Sporting Lisbon", "Sporting Lisboa", "Sporting Clube de Portugal");
+  }
+  variants.push(`${query} club`);
+  return [...new Set(variants.map((value) => value.trim()).filter(Boolean))].slice(0, 4);
+}
+
 async function searchNetworkEntities(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number) {
   const [agents, clubs] = await Promise.all([
     admin.rpc("search_transfermarkt_entities", {
@@ -112,20 +122,25 @@ export async function GET(request: Request) {
 
     if (shouldDiscover) {
       if (!entities.length) {
-        await Promise.all([
-          discoverTransfermarktLinksByName(admin, {
-            query,
+        for (const candidateQuery of uniqueQueries(query)) {
+          await discoverTransfermarktLinksByName(admin, {
+            query: candidateQuery,
             entityType: "club",
             limit: Math.min(limit, 8),
             createdBy: user.id,
-          }),
-          discoverTransfermarktLinksByName(admin, {
+          });
+
+          entities = await searchNetworkEntities(admin, query, limit);
+          if (entities.length) break;
+        }
+        if (!entities.length) {
+          await discoverTransfermarktLinksByName(admin, {
             query,
             entityType: "agent",
             limit: Math.min(limit, 8),
             createdBy: user.id,
-          }),
-        ]);
+          });
+        }
         entities = await searchNetworkEntities(admin, query, limit);
         relationships = await loadPlayersForEntities(admin, entities.map((entity) => entity.id));
       }
