@@ -81,19 +81,69 @@ function extractClubName(html: string) {
   return cleanText(headline ? stripHtml(headline) : null, 180) ?? cleanText(extractMetaContent(html, "og:title")?.replace(/\s*\|.*$/g, ""), 180);
 }
 
-function extractClubPhoto(html: string, profileUrl: string) {
-  const image =
-    extractMetaContent(html, "og:image") ??
-    html.match(/<img[^>]+class=["'][^"']*(?:data-header__profile-image|data-header__profile-club|vereinprofil_tooltip)[^"']*["'][^>]+src=["']([^"']+)["']/i)?.[1] ??
-    html.match(/<img[^>]+src=["']([^"']+)["'][^>]+class=["'][^"']*(?:data-header__profile-image|data-header__profile-club|vereinprofil_tooltip)[^"']*["']/i)?.[1];
-
-  if (!image) return null;
+function absolutizeImageUrl(value: string | null | undefined, profileUrl: string) {
+  if (!value) return null;
   try {
-    const url = new URL(image, profileUrl);
+    const url = new URL(value, profileUrl);
     return url.protocol === "https:" ? url.toString() : null;
   } catch {
     return null;
   }
+}
+
+function isGenericTransfermarktImage(value?: string | null) {
+  if (!value) return true;
+  const lower = value.toLowerCase();
+  return (
+    lower.includes("transfermarkt-logo") ||
+    lower.includes("/logo/") ||
+    lower.includes("/logos/") ||
+    lower.includes("tm-logo") ||
+    lower.includes("default") ||
+    lower.includes("socialmedia")
+  );
+}
+
+function isLikelyClubCrest(value?: string | null) {
+  if (!value || isGenericTransfermarktImage(value)) return false;
+  const lower = value.toLowerCase();
+  return lower.includes("/wappen/") || lower.includes("wappen") || lower.includes("vereinslogo") || lower.includes("club-logo");
+}
+
+function imageCandidatesFromHtml(html: string, profileUrl: string) {
+  const candidates: string[] = [];
+  const imgTags = html.match(/<img\b[^>]*>/gi) ?? [];
+  for (const tag of imgTags) {
+    for (const attr of ["src", "data-src", "data-original", "data-lazy"]) {
+      const value = tag.match(new RegExp(`${attr}=["']([^"']+)["']`, "i"))?.[1];
+      const url = absolutizeImageUrl(value, profileUrl);
+      if (url) candidates.push(url);
+    }
+    const srcset = tag.match(/srcset=["']([^"']+)["']/i)?.[1];
+    if (srcset) {
+      for (const part of srcset.split(",")) {
+        const value = part.trim().split(/\s+/)[0];
+        const url = absolutizeImageUrl(value, profileUrl);
+        if (url) candidates.push(url);
+      }
+    }
+  }
+  return [...new Set(candidates)];
+}
+
+function extractClubPhoto(html: string, profileUrl: string) {
+  const candidates = imageCandidatesFromHtml(html, profileUrl);
+  const crest = candidates.find(isLikelyClubCrest);
+  if (crest) return crest;
+
+  const classImage =
+    html.match(/<img[^>]+class=["'][^"']*(?:data-header__profile-image|data-header__profile-club|vereinprofil_tooltip|vereinprofil)[^"']*["'][^>]+(?:src|data-src)=["']([^"']+)["']/i)?.[1] ??
+    html.match(/<img[^>]+(?:src|data-src)=["']([^"']+)["'][^>]+class=["'][^"']*(?:data-header__profile-image|data-header__profile-club|vereinprofil_tooltip|vereinprofil)[^"']*["']/i)?.[1];
+  const classImageUrl = absolutizeImageUrl(classImage, profileUrl);
+  if (classImageUrl && !isGenericTransfermarktImage(classImageUrl)) return classImageUrl;
+
+  const ogImage = absolutizeImageUrl(extractMetaContent(html, "og:image"), profileUrl);
+  return ogImage && !isGenericTransfermarktImage(ogImage) ? ogImage : null;
 }
 
 function extractInfoValue(html: string, labels: string[]) {
@@ -191,7 +241,7 @@ function mapClub(row: EntityRow): ClubDatabaseProfile {
     transfermarktId: row.transfermarkt_id,
     name: row.name,
     profileUrl: row.canonical_url ?? row.profile_url,
-    photoUrl: row.photo_url,
+    photoUrl: isGenericTransfermarktImage(row.photo_url) ? null : row.photo_url,
     status: row.status,
     lastCheckedAt: row.last_checked_at,
     updatedAt: row.updated_at,
@@ -219,10 +269,11 @@ export async function enrichTransfermarktClubProfile(admin: SupabaseClient, row:
     ? payload.clubProfile as Record<string, unknown>
     : {};
   const lastChecked = Date.parse(String(club.checkedAt ?? ""));
-  const missingKeyFields = !row.photo_url || !club.marketValueText || !club.squadSize || !club.stadium || !club.league;
+  const hasGenericPhoto = isGenericTransfermarktImage(row.photo_url);
+  const missingKeyFields = !row.photo_url || hasGenericPhoto || !club.marketValueText || !club.squadSize || !club.stadium || !club.league;
 
   if (!missingKeyFields) return mapClub(row);
-  if (lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return mapClub(row);
+  if (!hasGenericPhoto && lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return mapClub(row);
   if (!profileEnrichmentEnabled()) return mapClub(row);
 
   try {
