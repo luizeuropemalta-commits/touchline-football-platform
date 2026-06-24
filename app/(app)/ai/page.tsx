@@ -36,10 +36,10 @@ export default async function AIPage() {
   const documents = (docs ?? []) as AiDocument[];
   const actions = [
     { label: "Create contract", text: "Use the Contracts area with real player and deal data.", icon: FileSignature, href: "/contracts" },
-    { label: "Create proposal", text: "Turn a player profile into a club-ready presentation.", icon: Sparkles, href: "/players" },
+    { label: "Create proposal", text: "Turn a player profile into a club-ready presentation.", icon: Sparkles, href: "/players/pitch" },
     { label: "Create email", text: "Use club interest and negotiation context.", icon: Mail, href: "/inbox" },
     { label: "Create scouting report", text: "Generate AI player profile from the Player Vault.", icon: UserSearch, href: "/scouting" },
-    { label: "Create player presentation", text: "Open a player and run AI Profile.", icon: FileSearch, href: "/players" },
+    { label: "Create player presentation", text: "Build a club-ready Pitch Player document.", icon: FileSearch, href: "/players/pitch" },
     { label: "Market analysis", text: "Review saved market radar links and opportunities.", icon: BarChart3, href: "/radar" },
   ];
 
@@ -111,9 +111,9 @@ export default async function AIPage() {
               <div className="rounded-3xl border border-dashed border-cyan-300/20 bg-cyan-300/[.035] p-8">
                 <Gavel size={22} className="text-amber-300" />
                 <h2 className="mt-4 text-lg font-black uppercase italic text-white">No AI documents generated yet</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">Open a real player profile and generate an AI Player Profile. Future contract, proposal and email generators will store outputs in this same document center.</p>
-                <Link href="/players" className="mt-6 inline-flex h-10 items-center rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]">
-                  Generate first player profile
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">Open Pitch Player to create a club-ready presentation. Saved pitches and AI player profiles appear in this same document center.</p>
+                <Link href="/players/pitch" className="mt-6 inline-flex h-10 items-center rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]">
+                  Create first pitch
                 </Link>
               </div>
             )}

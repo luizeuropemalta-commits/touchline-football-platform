@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BadgeCheck, BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
   CalendarDays, ClipboardList, FileSignature, FileText, Globe2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
-  LockKeyhole, Menu, Newspaper, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
+  LockKeyhole, MailCheck, Menu, Newspaper, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
   Target,
 } from "lucide-react";
 import { useState } from "react";
@@ -24,6 +24,7 @@ type NavItem = {
 const nav: NavItem[] = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/players", label: "Player Portfolio", icon: Users },
+  { href: "/players/pitch", label: "Pitch Player", icon: MailCheck },
   { href: "/players/database", label: "Player Database", icon: Search },
   { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
   { href: "/opportunities", label: "Opportunities", icon: Target },
@@ -59,6 +60,7 @@ const consoleModes = [
   { href: "/dashboard", label: "Command Center", eyebrow: "HQ", icon: Globe2 },
   { href: "/connect", label: "Connect", eyebrow: "Network", icon: Globe2 },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
+  { href: "/players/pitch", label: "Pitch Player", eyebrow: "Proposal", icon: MailCheck },
   { href: "/players/database", label: "Player Database", eyebrow: "Search", icon: Search },
   { href: "/verification", label: "Verification", eyebrow: "Trust", icon: BadgeCheck },
   { href: "/opportunities", label: "Opportunities", eyebrow: "AI Match", icon: Target },
@@ -93,7 +95,7 @@ export function AppShell({
 
   const isActivePath = (href: string) => {
     if (href === "/dashboard") return pathname === href;
-    if (href === "/players") return pathname === "/players" || (pathname.startsWith("/players/") && !pathname.startsWith("/players/database"));
+    if (href === "/players") return pathname === "/players" || (pathname.startsWith("/players/") && !pathname.startsWith("/players/database") && !pathname.startsWith("/players/pitch"));
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 

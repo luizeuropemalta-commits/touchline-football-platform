@@ -164,10 +164,10 @@ export default async function Dashboard() {
 
   const aiActions = [
     ["Create contract", "Representation agreement or club contract draft", FileSignature],
-    ["Create proposal", "Professional transfer/player proposal", BadgeEuro],
+    ["Create proposal", "Professional transfer/player proposal", BadgeEuro, "/players/pitch"],
     ["Create email", "Message to sporting director or scout", MessageSquare],
     ["Create scouting report", "Structured report with strengths and risks", Binoculars],
-    ["Create player presentation", "Club-ready player dossier", Sparkles],
+    ["Create player presentation", "Club-ready player dossier", Sparkles, "/players/pitch"],
   ];
 
   const operatingSuite = [
@@ -192,7 +192,7 @@ export default async function Dashboard() {
     {
       title: "Pitch Builder",
       description: "Use Touchline AI to create club-ready player presentations, proposals and emails.",
-      href: "/ai",
+      href: "/players/pitch",
       metric: "AI",
       metricLabel: "Docs",
       icon: Sparkles,
@@ -230,7 +230,7 @@ export default async function Dashboard() {
   const requestToDealFlow = [
     ["Discover", "Search or auto-discover players from the database.", "/players/database", Search],
     ["Prepare", "Add videos, documents and AI profile material.", "/players", Users],
-    ["Pitch", "Create a professional proposal for targeted clubs.", "/ai", Sparkles],
+    ["Pitch", "Create a professional proposal for targeted clubs.", "/players/pitch", Sparkles],
     ["Interest", "Track club interest and opportunity status.", "/opportunities", Target],
     ["Negotiate", "Move into a private deal room with messages and files.", "/deals", Zap],
   ];
@@ -356,10 +356,10 @@ export default async function Dashboard() {
                 <Bot size={16} className="pulse-live text-[#a3ff12]" />
               </div>
               <div className="space-y-2">
-                {aiActions.map(([title, subtitle, Icon]) => {
+                {aiActions.map(([title, subtitle, Icon, href]) => {
                   const ActionIcon = Icon as typeof Bot;
                   return (
-                    <Link key={String(title)} href="/ai" className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.035] p-3 transition hover:border-cyan-300/20 hover:bg-cyan-300/[.05]">
+                    <Link key={String(title)} href={String(href ?? "/ai")} className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.035] p-3 transition hover:border-cyan-300/20 hover:bg-cyan-300/[.05]">
                       <ActionIcon size={15} className="text-cyan-300" />
                       <span className="min-w-0 flex-1">
                         <span className="block text-[10px] font-black uppercase italic text-white">{String(title)}</span>
