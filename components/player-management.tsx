@@ -296,7 +296,7 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
                 <DatabaseZap size={14} />
                 External Search
               </Link>
-              <Link href="/players/database" className="relative inline-flex h-11 items-center justify-center gap-2 overflow-hidden rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#caff72] transition duration-300 hover:-translate-y-0.5 hover:border-[#a3ff12]/45 hover:bg-[#a3ff12]/[.16]">
+              <Link href="/football-search" className="relative inline-flex h-11 items-center justify-center gap-2 overflow-hidden rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#caff72] transition duration-300 hover:-translate-y-0.5 hover:border-[#a3ff12]/45 hover:bg-[#a3ff12]/[.16]">
                 <Search size={14} />
                 Player Database
               </Link>

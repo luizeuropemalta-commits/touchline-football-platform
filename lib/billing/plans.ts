@@ -234,6 +234,7 @@ export const featureLabels: Record<FeatureKey, string> = {
 };
 
 export const pathFeatures: Array<[string, FeatureKey]> = [
+  ["/football-search", "player_search"],
   ["/investors", "investor_hub"],
   ["/competition", "agent_league"],
   ["/rankings", "premium_ranking"],

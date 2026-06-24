@@ -228,7 +228,7 @@ export default async function Dashboard() {
   ];
 
   const requestToDealFlow = [
-    ["Discover", "Search or auto-discover players from the database.", "/players/database", Search],
+    ["Discover", "Search players, agents, agencies and clubs.", "/football-search", Search],
     ["Prepare", "Add videos, documents and AI profile material.", "/players", Users],
     ["Pitch", "Create a professional proposal for targeted clubs.", "/players/pitch", Sparkles],
     ["Interest", "Track club interest and opportunity status.", "/opportunities", Target],

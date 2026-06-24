@@ -159,7 +159,7 @@ export default async function TouchlineConnectPage() {
           <SectionHeader kicker="Network categories" title="Discover by role" action={<Search size={15} className="text-cyan-300" />} />
           <div className="mt-5 grid gap-3">
             {[
-              ["Players", "/players/database", "Search cached player profiles and Transfermarkt references."],
+              ["Football Search", "/football-search", "Search players, agents, agencies, clubs and Transfermarkt references."],
               ["Agents & Agencies", "/agencies", "Discover agent/advisor links and verified representation workflows."],
               ["Clubs", "/clubs", "Research club links and recruitment relationships."],
               ["Football Feed", "/feed", "Turn activity into social/business discovery signals."],

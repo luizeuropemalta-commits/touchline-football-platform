@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
   const isAdmin = isOwnerEmail(user?.email);
   const isAuth = ["/login", "/register", "/forgot-password"].some(path => request.nextUrl.pathname.startsWith(path));
   const isApp = [
-    "/dashboard", "/admin", "/players", "/agencies", "/documents", "/calendar", "/reports",
+    "/dashboard", "/admin", "/players", "/football-search", "/agencies", "/documents", "/calendar", "/reports",
     "/deals", "/opportunities", "/radar", "/verification", "/scouting", "/inbox",
     "/clubs", "/connect", "/competition", "/investors", "/academies", "/feed", "/ai",
     "/objectives", "/achievements", "/rankings", "/contracts", "/invoices", "/settings", "/billing", "/subscription", "/upgrade",

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BadgeCheck, BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
-  CalendarDays, ClipboardList, FileSignature, FileText, Globe2, Goal, GraduationCap, Inbox, Landmark, LayoutDashboard,
-  Link2, LockKeyhole, MailCheck, Menu, Newspaper, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
+  CalendarDays, ClipboardList, FileSignature, FileText, Globe2, Goal, Inbox, LayoutDashboard,
+  Link2, LockKeyhole, MailCheck, Menu, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
   Target,
 } from "lucide-react";
 import { useState } from "react";
@@ -24,29 +24,25 @@ type NavItem = {
 const nav: NavItem[] = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/players", label: "Player Portfolio", icon: Users },
+  { href: "/football-search", label: "Football Search", icon: Search },
   { href: "/players/pitch", label: "Pitch Player", icon: MailCheck },
-  { href: "/players/database", label: "Football Search", icon: Search },
-  { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
   { href: "/opportunities", label: "Opportunities", icon: Target },
   { href: "/deals", label: "Deal Rooms", icon: Zap },
-  { href: "/scouting", label: "Scouting Center", icon: Binoculars },
   { href: "/inbox", label: "Messages", icon: Inbox },
 ];
 
 const ecosystem: NavItem[] = [
-  { href: "/connect", label: "Touchline Connect", icon: Globe2 },
   { href: "/clubs", label: "Club Network", icon: Building2 },
   { href: "/agencies", label: "Agents & Agencies", icon: Users },
-  { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
+  { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
   { href: "/radar", label: "Market Radar", icon: Radar },
-  { href: "/competition", label: "Agent League", icon: Trophy },
-  { href: "/investors", label: "Investor Hub", icon: Landmark },
-  { href: "/academies", label: "Academies", icon: GraduationCap },
-  { href: "/feed", label: "Football Feed", icon: Newspaper },
+  { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
+  { href: "/connect", label: "Touchline Connect", icon: Globe2 },
   { href: "/ai", label: "Touchline AI", icon: Bot },
 ];
 
 const operations: NavItem[] = [
+  { href: "/scouting", label: "Scouting Center", icon: Binoculars },
   { href: "/objectives", label: "Objectives", icon: Goal },
   { href: "/achievements", label: "Achievements", icon: Trophy },
   { href: "/contracts", label: "Contracts", icon: FileSignature },
@@ -58,19 +54,11 @@ const operations: NavItem[] = [
 
 const consoleModes = [
   { href: "/dashboard", label: "Command Center", eyebrow: "HQ", icon: Globe2 },
-  { href: "/connect", label: "Connect", eyebrow: "Network", icon: Globe2 },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
-  { href: "/players/pitch", label: "Pitch Player", eyebrow: "Proposal", icon: MailCheck },
-  { href: "/players/database", label: "Football Search", eyebrow: "Global", icon: Search },
-  { href: "/verification", label: "Verification", eyebrow: "Trust", icon: BadgeCheck },
+  { href: "/football-search", label: "Football Search", eyebrow: "Global", icon: Search },
+  { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },
   { href: "/opportunities", label: "Opportunities", eyebrow: "AI Match", icon: Target },
   { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
-  { href: "/scouting", label: "Scouting Center", eyebrow: "Discovery", icon: Binoculars },
-  { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },
-  { href: "/agencies", label: "Agencies", eyebrow: "Network", icon: Users },
-  { href: "/rankings", label: "Market Intel", eyebrow: "Rankings", icon: BarChart3 },
-  { href: "/radar", label: "Market Radar", eyebrow: "Rumors", icon: Radar },
-  { href: "/inbox", label: "Messages", eyebrow: "Comms", icon: Inbox },
 ];
 
 export function AppShell({
@@ -98,6 +86,7 @@ export function AppShell({
   const isActivePath = (href: string) => {
     if (href === "/dashboard") return pathname === href;
     if (href === "/players") return pathname === "/players" || (pathname.startsWith("/players/") && !pathname.startsWith("/players/database") && !pathname.startsWith("/players/pitch"));
+    if (href === "/football-search") return pathname === "/football-search" || pathname.startsWith("/players/database");
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 

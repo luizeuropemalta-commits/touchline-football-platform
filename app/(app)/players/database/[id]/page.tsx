@@ -112,7 +112,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
 
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
-      <Link href="/players/database" className="mb-4 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-slate-600 hover:text-cyan-300">
+      <Link href="/football-search" className="mb-4 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-slate-600 hover:text-cyan-300">
         <ArrowLeft size={12} />
         Return to football search
       </Link>

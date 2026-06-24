@@ -339,7 +339,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     if (loading) return mode === "full" ? "Searching Touchline + automatic Transfermarkt link discovery" : "Searching Touchline database";
     if (enriching) return "Updating photos and profile data";
     if (mode === "full" && !results.length && networkResults.length) {
-      return `${networkResults.length} agent/agency/club result${networkResults.length === 1 ? "" : "s"} found`;
+      return `${networkResults.length} football network result${networkResults.length === 1 ? "" : "s"} found`;
     }
     return `${results.length} player${results.length === 1 ? "" : "s"} found`;
   }, [enriching, loading, mode, networkResults.length, results.length, trimmed.length]);
@@ -416,7 +416,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 <div className="p-6 text-center">
                   <UserRoundSearch className="mx-auto text-slate-700" size={22} />
                   <p className="mt-3 text-[10px] font-black uppercase text-slate-400">No player found yet</p>
-                  <Link href="/players/database" className="mt-3 inline-flex text-[8px] font-black uppercase tracking-wider text-cyan-300">Open football search</Link>
+                  <Link href="/football-search" className="mt-3 inline-flex text-[8px] font-black uppercase tracking-wider text-cyan-300">Open football search</Link>
                 </div>
               )}
             </div>
@@ -473,6 +473,13 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                           <p className="mt-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Searching and saving possible links...</p>
                         </div>
                       </div>
+                    ) : networkResults.length ? (
+                      <div className="rounded-3xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-5">
+                        <p className="text-[10px] font-black uppercase tracking-[.18em] text-[#caff72]">Football network match found</p>
+                        <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                          No player profile matched directly, but Touchline found club, agent or agency results below.
+                        </p>
+                      </div>
                     ) : (
                       <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
                         <div>
@@ -487,7 +494,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                   {(networkResults.length > 0 || networkLoading || (!hasResults && trimmed.length >= 3)) && (
                     <div className="border-t border-white/[.06] p-3">
                       <div className="mb-3 flex items-center justify-between">
-                        <span className="text-[9px] font-black uppercase tracking-[.18em] text-[#caff72]">Agents, agencies & clubs</span>
+                        <span className="text-[9px] font-black uppercase tracking-[.18em] text-[#caff72]">Football network results</span>
                         {networkLoading && <Loader2 size={14} className="animate-spin text-[#a3ff12]" />}
                       </div>
                       <div className="space-y-2">
