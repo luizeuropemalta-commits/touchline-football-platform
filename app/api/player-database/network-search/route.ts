@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { discoverEntityPlayerLinks } from "@/lib/market-link-registry";
+import { discoverEntityPlayerLinks, discoverTransfermarktLinksByName } from "@/lib/market-link-registry";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -111,6 +111,25 @@ export async function GET(request: Request) {
     let relationships = await loadPlayersForEntities(admin, entities.map((entity) => entity.id));
 
     if (shouldDiscover) {
+      if (!entities.length) {
+        await Promise.all([
+          discoverTransfermarktLinksByName(admin, {
+            query,
+            entityType: "club",
+            limit: Math.min(limit, 8),
+            createdBy: user.id,
+          }),
+          discoverTransfermarktLinksByName(admin, {
+            query,
+            entityType: "agent",
+            limit: Math.min(limit, 8),
+            createdBy: user.id,
+          }),
+        ]);
+        entities = await searchNetworkEntities(admin, query, limit);
+        relationships = await loadPlayersForEntities(admin, entities.map((entity) => entity.id));
+      }
+
       for (const entity of entities.slice(0, 3)) {
         const existing = relationships.get(entity.id) ?? [];
         if (existing.length > 0) continue;

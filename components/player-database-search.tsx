@@ -308,7 +308,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
         if (!response.ok || !data.ok) throw new Error(data.error || "Could not search agents, agencies or clubs.");
         if (latestRequest.current === requestId) setNetworkResults(data.entities ?? []);
 
-        const needsDiscovery = (data.entities ?? []).some((entity) => entity.players.length === 0);
+        const needsDiscovery = !(data.entities ?? []).length || (data.entities ?? []).some((entity) => entity.players.length === 0);
         if (!needsDiscovery || trimmed.length < 3) return;
         const discoverResponse = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8&discover=1`);
         const discoverData = await discoverResponse.json() as { ok?: boolean; entities?: NetworkSearchResult[]; error?: string };
@@ -329,8 +329,11 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     if (trimmed.length < 2) return "Type at least 2 letters";
     if (loading) return mode === "full" ? "Searching Touchline + automatic Transfermarkt link discovery" : "Searching Touchline database";
     if (enriching) return "Updating photos and profile data";
+    if (mode === "full" && !results.length && networkResults.length) {
+      return `${networkResults.length} agent/agency/club result${networkResults.length === 1 ? "" : "s"} found`;
+    }
     return `${results.length} player${results.length === 1 ? "" : "s"} found`;
-  }, [enriching, loading, mode, results.length, trimmed.length]);
+  }, [enriching, loading, mode, networkResults.length, results.length, trimmed.length]);
 
   async function importLink() {
     setImporting(true);
@@ -426,14 +429,14 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 Database-first search
               </span>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
-                Automatic player discovery
+                Players · agents · agencies · clubs
               </span>
             </div>
-            <p className="af-mode-kicker">Touchline / Player Database</p>
-            <h1 className="af-mode-title font-display mt-3 text-white">Global Player Search</h1>
+            <p className="af-mode-kicker">Touchline / Football Database</p>
+            <h1 className="af-mode-title font-display mt-3 text-white">Global Football Search</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
-              Search players from Touchline&apos;s own database first. If a player is not found, Touchline tries to discover the
-              public Transfermarkt profile link, saves it in the registry, and shows it inside the app.
+              Search players, agents, agencies and clubs from Touchline&apos;s own database first. If the entity is missing,
+              Touchline tries to discover the public Transfermarkt profile link, saves it in the registry, and shows it inside the app.
             </p>
 
             <div className="relative mt-7">
@@ -442,7 +445,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 value={query}
                 onChange={(event) => updateQuery(event.target.value)}
                 onFocus={() => setFocused(true)}
-                placeholder="Type a player name, club, position, nationality or Transfermarkt ID..."
+                placeholder="Type player, agent, agency, club, nationality or Transfermarkt ID..."
                 className="h-14 pl-12 text-base"
               />
               {showFullResults && (
@@ -465,21 +468,31 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                       <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
                         <div>
                           <UserRoundSearch className="mx-auto text-slate-700" size={24} />
-                          <p className="mt-3 text-[11px] font-black uppercase text-white">No player found yet</p>
-                          <p className="mt-2 text-[10px] leading-5 text-slate-500">Try full name or use the manual fallback below.</p>
+                          <p className="mt-3 text-[11px] font-black uppercase text-white">No player found directly</p>
+                          <p className="mt-2 text-[10px] leading-5 text-slate-500">Checking agents, agencies and clubs below. Try official name if needed.</p>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {(networkResults.length > 0 || networkLoading) && (
+                  {(networkResults.length > 0 || networkLoading || (!hasResults && trimmed.length >= 3)) && (
                     <div className="border-t border-white/[.06] p-3">
                       <div className="mb-3 flex items-center justify-between">
                         <span className="text-[9px] font-black uppercase tracking-[.18em] text-[#caff72]">Agents, agencies & clubs</span>
                         {networkLoading && <Loader2 size={14} className="animate-spin text-[#a3ff12]" />}
                       </div>
                       <div className="space-y-2">
-                        {networkResults.map((entity) => <NetworkSearchCard key={entity.id} entity={entity} />)}
+                        {networkResults.length ? networkResults.map((entity) => <NetworkSearchCard key={entity.id} entity={entity} />) : (
+                          <div className="rounded-3xl border border-white/[.06] bg-white/[.025] p-5 text-center">
+                            <Building2 className="mx-auto text-slate-700" size={22} />
+                            <p className="mt-3 text-[10px] font-black uppercase tracking-wider text-white">
+                              {networkLoading ? "Searching network..." : "No agent, agency or club found yet"}
+                            </p>
+                            <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                              Try the official Transfermarkt name, for example Sporting CP, Sporting Lisbon, agent name or agency name.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
