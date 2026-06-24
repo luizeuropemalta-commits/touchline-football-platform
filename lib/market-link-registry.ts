@@ -202,14 +202,21 @@ export function extractTransfermarktUrlsFromHtml(html: string) {
   return [...new Set([...matches, ...relativeUrls].map((url) => url.replace(/[?#].*$/, "").replace(/[.,;:!?]+$/g, "")))];
 }
 
-export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntityId: string, agentUrl: string, createdBy?: string | null) {
+export async function discoverEntityPlayerLinks(
+  admin: SupabaseClient,
+  sourceEntityId: string,
+  sourceUrl: string,
+  relationshipType: "agent_player" | "club_player" = "agent_player",
+  createdBy?: string | null,
+  options?: { force?: boolean },
+) {
   const started = Date.now();
-  if (!transfermarktSyncEnabled()) {
+  if (!transfermarktSyncEnabled() && !options?.force) {
     await logSync(admin, {
-      entityId: agentEntityId,
+      entityId: sourceEntityId,
       action: "agent_discovery",
       status: "not_configured",
-      sourceUrl: agentUrl,
+      sourceUrl,
       message: "TRANSFERMARKT_SYNC_ENABLED is not true, so external discovery was skipped.",
       createdBy,
     });
@@ -217,7 +224,7 @@ export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntit
   }
 
   await waitForTransfermarktRateLimit();
-  const response = await fetch(agentUrl, {
+  const response = await fetch(sourceUrl, {
     headers: {
       Accept: "text/html,application/xhtml+xml",
       "Accept-Language": "en-US,en;q=0.9",
@@ -228,11 +235,11 @@ export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntit
 
   if (!response.ok) {
     await logSync(admin, {
-      entityId: agentEntityId,
+      entityId: sourceEntityId,
       action: "agent_discovery",
       status: "partial",
-      sourceUrl: agentUrl,
-      message: `Agent page unavailable or blocked (${response.status}).`,
+      sourceUrl,
+      message: `Source page unavailable or blocked (${response.status}).`,
       durationMs: Date.now() - started,
       createdBy,
     });
@@ -252,7 +259,7 @@ export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntit
     const saved = await upsertTransfermarktEntity(admin, {
       url: player.canonicalUrl,
       name: player.name,
-      sourceUrl: agentUrl,
+      sourceUrl,
       createdBy,
       action: "agent_discovery",
       fetchPreview: false,
@@ -260,12 +267,14 @@ export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntit
     });
 
     const { error } = await admin.from("transfermarkt_relationships").upsert({
-      source_entity_id: agentEntityId,
+      source_entity_id: sourceEntityId,
       target_entity_id: saved.entity.id,
-      relationship_type: "agent_player",
+      relationship_type: relationshipType,
       status: "suggested",
-      source_url: agentUrl,
-      evidence: "Public player link discovered from the submitted agent profile page. Requires human confirmation before representation claims.",
+      source_url: sourceUrl,
+      evidence: relationshipType === "agent_player"
+        ? "Public player link discovered from the submitted agent/agency profile page. Requires human confirmation before representation claims."
+        : "Public player link discovered from the submitted club profile page. This is a club-player reference, not a representation claim.",
       source_payload: { discoveredAt: new Date().toISOString(), safeRegistryOnly: true },
       last_seen_at: new Date().toISOString(),
     }, { onConflict: "source_entity_id,target_entity_id,relationship_type" });
@@ -273,11 +282,13 @@ export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntit
   }
 
   await logSync(admin, {
-    entityId: agentEntityId,
+    entityId: sourceEntityId,
     action: "agent_discovery",
     status: "success",
-    sourceUrl: agentUrl,
-    message: "Agent page checked for public player profile links.",
+    sourceUrl,
+    message: relationshipType === "agent_player"
+      ? "Agent/agency page checked for public player profile links."
+      : "Club page checked for public player profile links.",
     recordsFound: uniquePlayers.length,
     recordsSaved: relationshipsSaved,
     durationMs: Date.now() - started,
@@ -285,6 +296,10 @@ export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntit
   });
 
   return { discovered: uniquePlayers.length, relationshipsSaved };
+}
+
+export async function discoverAgentPlayerLinks(admin: SupabaseClient, agentEntityId: string, agentUrl: string, createdBy?: string | null) {
+  return discoverEntityPlayerLinks(admin, agentEntityId, agentUrl, "agent_player", createdBy);
 }
 
 function transfermarktSearchUrl(query: string) {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, ChevronDown, DatabaseZap, ExternalLink, Loader2, Search, UploadCloud, UserRoundSearch } from "lucide-react";
+import { ArrowRight, Building2, ChevronDown, DatabaseZap, ExternalLink, Loader2, Search, UploadCloud, UserRoundSearch, UsersRound } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, SectionHeader } from "@/components/game-ui";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,25 @@ type PlayerDatabaseResult = {
   marketValueText?: string | null;
   currency?: string | null;
   lastUpdatedAt?: string | null;
+};
+
+type NetworkSearchResult = {
+  id: string;
+  transfermarktId: string;
+  type: "agent" | "club";
+  name: string;
+  profileUrl: string;
+  photoUrl?: string | null;
+  status: string;
+  players: Array<{
+    id: string;
+    transfermarktId?: string | null;
+    name?: string | null;
+    profileUrl?: string | null;
+    photoUrl?: string | null;
+    status?: string | null;
+    relationshipType?: string | null;
+  }>;
 };
 
 const emptyImport = {
@@ -135,11 +154,75 @@ function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
   );
 }
 
+function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
+  const Icon = entity.type === "club" ? Building2 : UsersRound;
+  const typeLabel = entity.type === "club" ? "Club" : "Agent / Agency";
+  return (
+    <div className="rounded-3xl border border-white/[.07] bg-white/[.035] p-4">
+      <div className="flex items-start gap-3">
+        <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.06]">
+          {entity.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={entity.photoUrl} alt={entity.name} className="h-full w-full object-cover" />
+          ) : (
+            <Icon size={20} className="text-cyan-300" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.07] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-cyan-200">{typeLabel}</span>
+            <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">TM ID {entity.transfermarktId}</span>
+          </div>
+          <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white">{entity.name}</p>
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            {entity.players.length ? `${entity.players.length} linked player${entity.players.length === 1 ? "" : "s"}` : "No linked players yet"}
+          </p>
+        </div>
+        <a href={entity.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72]">
+          TM <ExternalLink size={12} />
+        </a>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {entity.players.length ? entity.players.map((player) => (
+          <a
+            key={`${entity.id}-${player.id}`}
+            href={player.profileUrl ?? "#"}
+            target="_blank"
+            rel="noreferrer"
+            className="group flex min-w-0 items-center gap-3 rounded-2xl border border-white/[.06] bg-black/20 p-2 transition hover:border-cyan-300/20 hover:bg-cyan-300/[.05]"
+          >
+            <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
+              {player.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={player.photoUrl} alt={player.name ?? "Player"} className="h-full w-full object-cover object-top" />
+              ) : (
+                <span className="text-[10px] font-black text-cyan-300/60">{initials(player.name ?? "P")}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-black uppercase italic text-white group-hover:text-cyan-100">{player.name ?? "Player"}</p>
+              <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">TM ID {player.transfermarktId ?? "open"}</p>
+            </div>
+          </a>
+        )) : (
+          <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[.06] p-4 sm:col-span-2 xl:col-span-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-200">No player list saved yet</p>
+            <p className="mt-1 text-[10px] leading-5 text-slate-500">Touchline can attempt safe discovery from this {entity.type} link when the network search enriches results.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compact" }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlayerDatabaseResult[]>([]);
+  const [networkResults, setNetworkResults] = useState<NetworkSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [enriching, setEnriching] = useState(false);
+  const [networkLoading, setNetworkLoading] = useState(false);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -157,8 +240,10 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     setError("");
     if (value.trim().length < 2) {
       setResults([]);
+      setNetworkResults([]);
       setLoading(false);
       setEnriching(false);
+      setNetworkLoading(false);
     }
   }
 
@@ -207,6 +292,34 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
         if (latestRequest.current === requestId) setEnriching(false);
       }
     }, mode === "compact" ? 180 : 260);
+
+    return () => window.clearTimeout(timeout);
+  }, [mode, trimmed]);
+
+  useEffect(() => {
+    if (mode !== "full" || trimmed.length < 2) return;
+
+    const requestId = latestRequest.current;
+    const timeout = window.setTimeout(async () => {
+      setNetworkLoading(true);
+      try {
+        const response = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8`);
+        const data = await response.json() as { ok?: boolean; entities?: NetworkSearchResult[]; error?: string };
+        if (!response.ok || !data.ok) throw new Error(data.error || "Could not search agents, agencies or clubs.");
+        if (latestRequest.current === requestId) setNetworkResults(data.entities ?? []);
+
+        const needsDiscovery = (data.entities ?? []).some((entity) => entity.players.length === 0);
+        if (!needsDiscovery || trimmed.length < 3) return;
+        const discoverResponse = await fetch(`/api/player-database/network-search?q=${encodeURIComponent(trimmed)}&limit=8&discover=1`);
+        const discoverData = await discoverResponse.json() as { ok?: boolean; entities?: NetworkSearchResult[]; error?: string };
+        if (!discoverResponse.ok || !discoverData.ok) throw new Error(discoverData.error || "Could not discover network players.");
+        if (latestRequest.current === requestId) setNetworkResults(discoverData.entities ?? data.entities ?? []);
+      } catch {
+        if (latestRequest.current === requestId) setNetworkResults([]);
+      } finally {
+        if (latestRequest.current === requestId) setNetworkLoading(false);
+      }
+    }, 340);
 
     return () => window.clearTimeout(timeout);
   }, [mode, trimmed]);
@@ -358,6 +471,18 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                       </div>
                     )}
                   </div>
+
+                  {(networkResults.length > 0 || networkLoading) && (
+                    <div className="border-t border-white/[.06] p-3">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-[9px] font-black uppercase tracking-[.18em] text-[#caff72]">Agents, agencies & clubs</span>
+                        {networkLoading && <Loader2 size={14} className="animate-spin text-[#a3ff12]" />}
+                      </div>
+                      <div className="space-y-2">
+                        {networkResults.map((entity) => <NetworkSearchCard key={entity.id} entity={entity} />)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

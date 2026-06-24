@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LinkPreviewResult } from "@/lib/link-preview";
 import { fetchLinkPreview, getTransfermarktPlayerId, validatePreviewUrl } from "@/lib/link-preview";
+import { upsertTransfermarktEntity } from "@/lib/market-link-registry";
+import { parseTransfermarktEntityUrl } from "@/lib/market-link-parser";
 
 export type PlayerDatabaseResult = {
   id: string;
@@ -127,6 +129,27 @@ function extractTransfermarktInfoTableValue(html: string, labels: string[]) {
   return null;
 }
 
+function extractTransfermarktInfoTableLink(html: string, labels: string[], expectedType: "agent" | "club") {
+  for (const label of labels) {
+    const pattern = new RegExp(
+      `<span[^>]*class=["'][^"']*info-table__content--regular[^"']*["'][^>]*>\\s*${escapeRegex(label)}\\s*:?\\s*<\\/span>\\s*<span[^>]*class=["'][^"']*info-table__content--bold[^"']*["'][^>]*>([\\s\\S]*?)<\\/span>`,
+      "i",
+    );
+    const match = html.match(pattern);
+    const block = match?.[1];
+    if (!block) continue;
+    const href = block.match(/href=["']([^"']+)["']/i)?.[1];
+    if (!href) continue;
+    try {
+      const parsed = parseTransfermarktEntityUrl(new URL(href, "https://www.transfermarkt.com").toString(), expectedType);
+      if (parsed) return parsed;
+    } catch {
+      // Ignore malformed links and keep trying other labels.
+    }
+  }
+  return null;
+}
+
 function extractMetaContent(html: string, key: string) {
   const escapedKey = escapeRegex(key);
   const patterns = [
@@ -210,10 +233,75 @@ function parseTransfermarktProfileHtml(html: string, profileUrl: string) {
     dateOfBirth: parseTransfermarktDate(dateOfBirthText),
     age: parseTransfermarktAge(dateOfBirthText),
     agentName: extractTransfermarktInfoTableValue(html, ["Agent", "Player agent"]),
+    currentClubEntity: extractTransfermarktInfoTableLink(html, ["Current club"], "club"),
+    agentEntity: extractTransfermarktInfoTableLink(html, ["Agent", "Player agent"], "agent"),
     marketValue: market.marketValue,
     marketValueText: market.marketValueText,
     currency: market.currency,
   };
+}
+
+async function saveLinkedTransfermarktEntities(
+  admin: SupabaseClient,
+  input: {
+    playerUrl: string;
+    playerName?: string | null;
+    club?: ReturnType<typeof parseTransfermarktEntityUrl>;
+    agent?: ReturnType<typeof parseTransfermarktEntityUrl>;
+  },
+) {
+  const player = parseTransfermarktEntityUrl(input.playerUrl, "player");
+  if (!player) return { linked: 0 };
+
+  const savedPlayer = await upsertTransfermarktEntity(admin, {
+    url: player.canonicalUrl,
+    name: input.playerName ?? player.name,
+    entityType: "player",
+    action: "search_save",
+    fetchPreview: false,
+    discoverRelationships: false,
+  });
+
+  let linked = 0;
+  const links = [
+    input.agent ? { entity: input.agent, relationshipType: "agent_player" as const } : null,
+    input.club ? { entity: input.club, relationshipType: "club_player" as const } : null,
+  ].filter(Boolean) as Array<{
+    entity: NonNullable<ReturnType<typeof parseTransfermarktEntityUrl>>;
+    relationshipType: "agent_player" | "club_player";
+  }>;
+
+  for (const link of links) {
+    const savedSource = await upsertTransfermarktEntity(admin, {
+      url: link.entity.canonicalUrl,
+      name: link.entity.name,
+      entityType: link.entity.entityType,
+      sourceUrl: player.canonicalUrl,
+      action: "search_save",
+      fetchPreview: false,
+      discoverRelationships: false,
+    });
+
+    const { error } = await admin.from("transfermarkt_relationships").upsert({
+      source_entity_id: savedSource.entity.id,
+      target_entity_id: savedPlayer.entity.id,
+      relationship_type: link.relationshipType,
+      status: "suggested",
+      source_url: player.canonicalUrl,
+      evidence: link.relationshipType === "agent_player"
+        ? "Agent/agency link found on the player's public Transfermarkt profile. Requires confirmation before representation claims."
+        : "Club link found on the player's public Transfermarkt profile.",
+      source_payload: {
+        discoveredAt: new Date().toISOString(),
+        discoveredFrom: "player_profile_enrichment",
+        safeRegistryOnly: true,
+      },
+      last_seen_at: new Date().toISOString(),
+    }, { onConflict: "source_entity_id,target_entity_id,relationship_type" });
+    if (!error) linked += 1;
+  }
+
+  return { linked };
 }
 
 function existingText(row: Record<string, unknown> | null, key: string, max = 240) {
@@ -347,6 +435,12 @@ export async function enrichGlobalPlayerProfileFromTransfermarkt(
 
     const html = (await response.text()).slice(0, 700_000);
     const parsed = parseTransfermarktProfileHtml(html, target.toString());
+    const linked = await saveLinkedTransfermarktEntities(admin, {
+      playerUrl: target.toString(),
+      playerName: cleanText(parsed.playerName, 180) ?? existingText(row, "player_name", 180),
+      club: parsed.currentClubEntity,
+      agent: parsed.agentEntity,
+    });
     const patch = {
       player_name: cleanText(parsed.playerName, 180) ?? existingText(row, "player_name", 180),
       photo_url: normalizeHttpsUrl(parsed.photoUrl) ?? existingText(row, "photo_url", 1000),
@@ -366,6 +460,7 @@ export async function enrichGlobalPlayerProfileFromTransfermarkt(
           checkedAt: new Date().toISOString(),
           status: "success",
           fieldsFound: Object.entries(parsed).filter(([, value]) => Boolean(value)).map(([key]) => key),
+          linkedEntitiesSaved: linked.linked,
           legalNote: "Touchline stores limited public profile metadata for internal search/profile display and keeps Transfermarkt as the source link.",
         },
       },
