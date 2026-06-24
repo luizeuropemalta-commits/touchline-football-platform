@@ -216,7 +216,7 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
           <div className="grid min-w-0 gap-3 md:grid-cols-2">
             {[
               ["Transfermarkt ID", club.transfermarktId],
-              ["Profile URL", club.profileUrl],
+              ["Share Profile", internalProfileUrl],
               ["Market value", formatMoney(club.marketValue, club.currency ?? "EUR", club.marketValueText)],
               ["League", club.league ?? "Pending"],
               ["Country", club.country ?? "Pending"],
@@ -226,7 +226,13 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
             ].map(([label, value]) => (
               <div key={label} className="min-w-0 rounded-2xl border border-white/[.07] bg-black/20 p-4">
                 <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>
-                <p className="mt-2 overflow-wrap-anywhere text-xs font-bold text-slate-200">{value}</p>
+                {label === "Share Profile" ? (
+                  <a href={whatsAppUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex h-10 items-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100">
+                    Share Touchline Profile <Send size={12} />
+                  </a>
+                ) : (
+                  <p className="mt-2 overflow-wrap-anywhere text-xs font-bold text-slate-200">{value}</p>
+                )}
               </div>
             ))}
           </div>

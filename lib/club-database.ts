@@ -96,7 +96,9 @@ function isGenericTransfermarktImage(value?: string | null) {
   if (!value) return true;
   const lower = value.toLowerCase();
   return (
+    (lower.includes("transfermarkt") && lower.includes("logo")) ||
     lower.includes("transfermarkt-logo") ||
+    lower.includes("/images/logo/") ||
     lower.includes("/logo/") ||
     lower.includes("/logos/") ||
     lower.includes("tm-logo") ||
@@ -107,6 +109,15 @@ function isGenericTransfermarktImage(value?: string | null) {
     lower.includes("/icons/") ||
     lower.includes("/icon/")
   );
+}
+
+function transfermarktClubCrestUrl(transfermarktId?: string | null) {
+  return transfermarktId ? `https://tmssl.akamaized.net/images/wappen/head/${transfermarktId}.png` : null;
+}
+
+function preferredClubPhoto(transfermarktId?: string | null, value?: string | null) {
+  if (value && !isGenericTransfermarktImage(value)) return value;
+  return transfermarktClubCrestUrl(transfermarktId);
 }
 
 function isLikelyClubCrest(value?: string | null) {
@@ -187,11 +198,12 @@ function extractMarketValue(html: string) {
 }
 
 function extractHonourCount(html: string, labels: string[]) {
-  const text = stripHtml(html);
+  const text = stripHtml(html).replace(/\s+/g, " ");
   for (const label of labels) {
     const patterns = [
       new RegExp(`${escapeRegex(label)}\\s*(?:x|:)?\\s*(\\d{1,3})`, "i"),
       new RegExp(`(\\d{1,3})\\s*(?:x)?\\s*${escapeRegex(label)}`, "i"),
+      new RegExp(`${escapeRegex(label)}[\\s\\S]{0,120}?(\\d{1,3})`, "i"),
     ];
     for (const pattern of patterns) {
       const value = text.match(pattern)?.[1];
@@ -282,7 +294,7 @@ function mapClub(row: EntityRow): ClubDatabaseProfile {
     transfermarktId: row.transfermarkt_id,
     name: row.name,
     profileUrl: row.canonical_url ?? row.profile_url,
-    photoUrl: isGenericTransfermarktImage(row.photo_url) ? null : row.photo_url,
+    photoUrl: preferredClubPhoto(row.transfermarkt_id, row.photo_url),
     status: row.status,
     lastCheckedAt: row.last_checked_at,
     updatedAt: row.updated_at,
@@ -327,10 +339,15 @@ export async function enrichTransfermarktClubProfile(admin: SupabaseClient, row:
     : {};
   const lastChecked = Date.parse(String(club.checkedAt ?? ""));
   const hasGenericPhoto = isGenericTransfermarktImage(row.photo_url);
+  const existingHonours = Array.isArray(club.honours) ? club.honours : [];
+  const missingHonours = !existingHonours.some((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    return typeof (item as Record<string, unknown>).count === "number";
+  });
   const missingKeyFields = !row.photo_url || hasGenericPhoto || !club.marketValueText || !club.squadSize || !club.stadium || !club.league;
 
-  if (!missingKeyFields) return mapClub(row);
-  if (!hasGenericPhoto && lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return mapClub(row);
+  if (!missingKeyFields && !missingHonours) return mapClub(row);
+  if (!hasGenericPhoto && !missingHonours && lastChecked && Date.now() - lastChecked < 24 * 60 * 60 * 1000) return mapClub(row);
   if (!profileEnrichmentEnabled()) return mapClub(row);
 
   try {
@@ -380,7 +397,7 @@ export async function enrichTransfermarktClubProfile(admin: SupabaseClient, row:
       .from("transfermarkt_entities")
       .update({
         name: cleanText(parsed.name, 180) ?? row.name,
-        photo_url: cleanText(parsed.photoUrl, 1000) ?? row.photo_url,
+        photo_url: preferredClubPhoto(row.transfermarkt_id, cleanText(parsed.photoUrl, 1000) ?? row.photo_url),
         last_checked_at: new Date().toISOString(),
         next_check_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         source_payload: nextPayload,

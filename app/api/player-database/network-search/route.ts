@@ -88,23 +88,45 @@ function knownClubDisplayName(entity: NetworkEntity) {
 function knownClubPriority(entity: NetworkEntity) {
   if (entity.entity_type !== "club") return 0;
   const priority: Record<string, number> = {
+    "131": 6000,
+    "418": 5900,
+    "27": 5800,
+    "281": 5700,
+    "985": 5600,
+    "31": 5500,
+    "11": 5400,
+    "631": 5300,
     "336": 4000,
     "199": 3900,
-    "418": 3800,
-    "131": 3700,
-    "27": 3600,
-    "281": 3500,
-    "985": 3400,
-    "31": 3300,
-    "11": 3200,
-    "631": 3100,
+    "294": 3800,
+    "583": 3700,
+    "46": 3600,
   };
   return priority[entity.transfermarkt_id] ?? 0;
 }
 
+function isGenericTransfermarktImage(value?: string | null) {
+  if (!value) return true;
+  const lower = value.toLowerCase();
+  return (
+    (lower.includes("transfermarkt") && lower.includes("logo")) ||
+    lower.includes("transfermarkt-logo") ||
+    lower.includes("/images/logo/") ||
+    lower.includes("/logo/") ||
+    lower.includes("/logos/") ||
+    lower.includes("tm-logo") ||
+    lower.includes("default") ||
+    lower.includes("socialmedia") ||
+    lower.includes("transfermarkt.svg") ||
+    lower.includes("transfermarkt.png")
+  );
+}
+
 function clubCrestFallback(entity: NetworkEntity) {
   if (entity.entity_type !== "club" || !entity.transfermarkt_id) return entity.photo_url;
-  return entity.photo_url ?? `https://tmssl.akamaized.net/images/wappen/head/${entity.transfermarkt_id}.png`;
+  return entity.photo_url && !isGenericTransfermarktImage(entity.photo_url)
+    ? entity.photo_url
+    : `https://tmssl.akamaized.net/images/wappen/head/${entity.transfermarkt_id}.png`;
 }
 
 async function searchNetworkEntities(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number, type: "all" | "agent" | "club") {
