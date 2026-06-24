@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getApiFootballSeason } from "@/lib/market-data/season";
 import { discoverTransfermarktLinksByName } from "@/lib/market-link-registry";
-import { mapGlobalPlayer } from "@/lib/player-database";
+import { enrichGlobalPlayerProfileFromTransfermarkt, mapGlobalPlayer } from "@/lib/player-database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -334,6 +334,7 @@ export async function GET(request: Request) {
   const query = cleanQuery(searchParams.get("q"));
   const limit = cleanLimit(searchParams.get("limit"));
   const shouldDiscover = searchParams.get("discover") === "1" || searchParams.get("discover") === "true";
+  const shouldEnrich = searchParams.get("enrich") === "1" || searchParams.get("enrich") === "true";
 
   if (query.length < 2) return NextResponse.json({ players: [] });
 
@@ -365,8 +366,16 @@ export async function GET(request: Request) {
     rows = await discoverFromApiFootball(admin, query, limit);
   }
 
-  if (rows.length && shouldDiscover) {
+  if (rows.length && (shouldDiscover || shouldEnrich)) {
     rows = await enrichRowsFromApiFootball(admin, query, rows);
+  }
+
+  if (rows.length && shouldEnrich) {
+    const enrichedRows: Record<string, unknown>[] = [];
+    for (const row of rows.slice(0, Math.min(limit, 6))) {
+      enrichedRows.push(await enrichGlobalPlayerProfileFromTransfermarkt(admin, row));
+    }
+    rows = [...enrichedRows, ...rows.slice(enrichedRows.length)];
   }
 
   rows = sortRowsForQuery(rows, query).slice(0, limit);
@@ -374,5 +383,6 @@ export async function GET(request: Request) {
   return NextResponse.json({
     players: rows.map(mapGlobalPlayer),
     discovered: !data?.length && rows.length > 0,
+    enriched: shouldEnrich,
   });
 }

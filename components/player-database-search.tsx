@@ -88,6 +88,10 @@ function idLabel(player: PlayerDatabaseResult) {
     : `${player.sourceLabel ?? "Source"} ID ${player.sourceId ?? player.transfermarktPlayerId}`;
 }
 
+function missingSearchData(player: PlayerDatabaseResult) {
+  return !player.photoUrl || !player.currentClub || !player.position || !player.nationality || !player.age;
+}
+
 function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
   return (
     <div className="group grid gap-3 rounded-3xl border border-white/[.07] bg-white/[.035] p-3 transition hover:border-cyan-300/25 hover:bg-cyan-300/[.055] lg:grid-cols-[minmax(0,1fr)_auto]">
@@ -135,6 +139,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<PlayerDatabaseResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [enriching, setEnriching] = useState(false);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -145,7 +150,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
 
   const trimmed = query.trim();
   const showDropdown = mode === "compact" && focused && (trimmed.length >= 2 || results.length > 0);
-  const showFullDropdown = mode === "full" && focused && (trimmed.length >= 2 || results.length > 0 || loading);
+  const showFullResults = mode === "full" && trimmed.length >= 2;
 
   function updateQuery(value: string) {
     setQuery(value);
@@ -153,6 +158,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     if (value.trim().length < 2) {
       setResults([]);
       setLoading(false);
+      setEnriching(false);
     }
   }
 
@@ -163,19 +169,42 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
     latestRequest.current = requestId;
     const timeout = window.setTimeout(async () => {
       setLoading(true);
+      setEnriching(false);
       try {
-        const discover = mode === "full" && trimmed.length >= 3 ? "&discover=1" : "";
-        const response = await fetch(`/api/player-database/search?q=${encodeURIComponent(trimmed)}&limit=${mode === "compact" ? 6 : 24}${discover}`);
-        const data = (await response.json()) as { players?: PlayerDatabaseResult[]; error?: string; discovered?: boolean };
+        const limit = mode === "compact" ? 6 : 24;
+        const response = await fetch(`/api/player-database/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`);
+        const data = (await response.json()) as { players?: PlayerDatabaseResult[]; error?: string; discovered?: boolean; enriched?: boolean };
         if (!response.ok) throw new Error(data.error || "Could not search player database.");
         if (latestRequest.current === requestId) {
-          setResults(data.players ?? []);
+          const quickPlayers = data.players ?? [];
+          setResults(quickPlayers);
+          setLoading(false);
           if (data.discovered) setMessage("Player link discovered automatically and saved into Touchline.");
+        }
+
+        const quickPlayers = data.players ?? [];
+        const needsDiscovery = mode === "full" && trimmed.length >= 3 && quickPlayers.length === 0;
+        const needsEnrichment = mode === "full" && trimmed.length >= 3 && quickPlayers.some(missingSearchData);
+        if (!needsDiscovery && !needsEnrichment) return;
+
+        if (latestRequest.current === requestId) {
+          setLoading(false);
+          setEnriching(true);
+        }
+        const enrichResponse = await fetch(
+          `/api/player-database/search?q=${encodeURIComponent(trimmed)}&limit=${limit}${needsDiscovery ? "&discover=1" : ""}&enrich=1`,
+        );
+        const enrichData = (await enrichResponse.json()) as { players?: PlayerDatabaseResult[]; error?: string; discovered?: boolean; enriched?: boolean };
+        if (!enrichResponse.ok) throw new Error(enrichData.error || "Could not enrich player results.");
+        if (latestRequest.current === requestId) {
+          setResults(enrichData.players ?? quickPlayers);
+          if (enrichData.discovered) setMessage("Player link discovered automatically and saved into Touchline.");
         }
       } catch (err) {
         if (latestRequest.current === requestId) setError(err instanceof Error ? err.message : "Search unavailable.");
       } finally {
         if (latestRequest.current === requestId) setLoading(false);
+        if (latestRequest.current === requestId) setEnriching(false);
       }
     }, mode === "compact" ? 180 : 260);
 
@@ -186,8 +215,9 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const resultSummary = useMemo(() => {
     if (trimmed.length < 2) return "Type at least 2 letters";
     if (loading) return mode === "full" ? "Searching Touchline + automatic Transfermarkt link discovery" : "Searching Touchline database";
+    if (enriching) return "Updating photos and profile data";
     return `${results.length} player${results.length === 1 ? "" : "s"} found`;
-  }, [loading, mode, results.length, trimmed.length]);
+  }, [enriching, loading, mode, results.length, trimmed.length]);
 
   async function importLink() {
     setImporting(true);
@@ -298,18 +328,17 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
               <Input
                 value={query}
                 onChange={(event) => updateQuery(event.target.value)}
-                onBlur={() => window.setTimeout(() => setFocused(false), 180)}
                 onFocus={() => setFocused(true)}
                 placeholder="Type a player name, club, position, nationality or Transfermarkt ID..."
                 className="h-14 pl-12 text-base"
               />
-              {showFullDropdown && (
-                <div className="absolute left-0 right-0 top-[calc(100%+14px)] z-50 overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#06101a]/95 shadow-[0_30px_110px_rgba(0,0,0,.65)] backdrop-blur-2xl">
+              {showFullResults && (
+                <div className="mt-3 overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[#06101a]/80 shadow-[0_18px_70px_rgba(0,0,0,.35)] backdrop-blur-2xl">
                   <div className="flex items-center justify-between border-b border-white/[.06] px-4 py-3">
                     <span className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-200">{resultSummary}</span>
-                    {loading && <Loader2 size={14} className="animate-spin text-cyan-300" />}
+                    {(loading || enriching) && <Loader2 size={14} className="animate-spin text-cyan-300" />}
                   </div>
-                  <div className="max-h-[520px] space-y-2 overflow-y-auto p-3">
+                  <div className="max-h-[62vh] space-y-2 overflow-y-auto overscroll-contain p-3 pr-4">
                     {hasResults ? (
                       results.map((player) => <PlayerSearchRow key={player.id} player={player} />)
                     ) : loading ? (
