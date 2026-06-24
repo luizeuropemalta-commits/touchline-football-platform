@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { ElementType } from "react";
 import { ArrowLeft, Building2, CalendarClock, DatabaseZap, ExternalLink, Globe2, Send, ShieldCheck, Trophy, UsersRound } from "lucide-react";
 import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
-import { enrichTransfermarktClubProfile, loadClubLinkedPlayers } from "@/lib/club-database";
+import { enrichTransfermarktClubProfile, loadClubLinkedPlayers, syncClubRosterOnProfileOpen } from "@/lib/club-database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -94,6 +94,7 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
 
   if (error || !row) notFound();
 
+  await syncClubRosterOnProfileOpen(admin, row as ClubRow, user.id);
   const club = await enrichTransfermarktClubProfile(admin, row as ClubRow);
   const linkedPlayers = await loadClubLinkedPlayers(admin, club.id);
   const profileCompleteness = completeness([
@@ -209,12 +210,15 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
         <GamePanel className="p-5">
           <SectionHeader kicker="Linked players" title="Public squad references" action={<UsersRound size={15} className="text-[#a3ff12]" />} />
           <div className="space-y-2">
-            {linkedPlayers.length ? linkedPlayers.map((player) => (
-              <a
+            {linkedPlayers.length ? linkedPlayers.map((player) => {
+              const href = player.internalProfileUrl ?? player.profileUrl;
+              const external = !player.internalProfileUrl;
+              return (
+              <Link
                 key={player.id}
-                href={player.profileUrl}
-                target="_blank"
-                rel="noreferrer"
+                href={href}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noreferrer" : undefined}
                 className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-3 transition hover:border-cyan-300/25 hover:bg-cyan-300/[.05]"
               >
                 <div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
@@ -227,11 +231,13 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[10px] font-black uppercase italic text-white">{player.name}</p>
-                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">TM ID {player.transfermarktId} · {player.status}</p>
+                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">
+                    TM ID {player.transfermarktId} · {player.status} · {player.internalProfileUrl ? "Touchline profile" : "External profile"}
+                  </p>
                 </div>
                 <ExternalLink size={13} className="text-slate-600" />
-              </a>
-            )) : (
+              </Link>
+            );}) : (
               <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[.06] p-4">
                 <p className="text-[10px] font-black uppercase tracking-wider text-amber-200">Squad list pending</p>
                 <p className="mt-2 text-[10px] leading-5 text-slate-500">

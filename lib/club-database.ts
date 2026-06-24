@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { discoverEntityPlayerLinks } from "@/lib/market-link-registry";
 
 export type ClubDatabaseProfile = {
   id: string;
@@ -154,9 +155,30 @@ function existingPayload(row: EntityRow) {
     : {};
 }
 
+async function loadLatestPayload(admin: SupabaseClient, entityId: string, fallback: Record<string, unknown>) {
+  const { data } = await admin
+    .from("transfermarkt_entities")
+    .select("source_payload")
+    .eq("id", entityId)
+    .maybeSingle();
+  const payload = data?.source_payload;
+  return payload && typeof payload === "object" && !Array.isArray(payload)
+    ? payload as Record<string, unknown>
+    : fallback;
+}
+
 function profileEnrichmentEnabled() {
   const value = process.env.TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED ?? process.env.TRANSFERMARKT_SYNC_ENABLED;
   return value?.toLowerCase() !== "false";
+}
+
+function shouldSyncClubRoster(row: EntityRow) {
+  const payload = existingPayload(row);
+  const rosterSync = payload.clubRosterSync && typeof payload.clubRosterSync === "object" && !Array.isArray(payload.clubRosterSync)
+    ? payload.clubRosterSync as Record<string, unknown>
+    : {};
+  const lastChecked = Date.parse(String(rosterSync.checkedAt ?? ""));
+  return !lastChecked || Date.now() - lastChecked > 24 * 60 * 60 * 1000;
 }
 
 function mapClub(row: EntityRow): ClubDatabaseProfile {
@@ -217,8 +239,9 @@ export async function enrichTransfermarktClubProfile(admin: SupabaseClient, row:
 
     const html = (await response.text()).slice(0, 700_000);
     const parsed = parseClubHtml(html, profileUrl);
+    const latestPayload = await loadLatestPayload(admin, row.id, payload);
     const nextPayload = {
-      ...payload,
+      ...latestPayload,
       clubProfile: {
         ...club,
         ...parsed,
@@ -247,7 +270,7 @@ export async function enrichTransfermarktClubProfile(admin: SupabaseClient, row:
   }
 }
 
-export async function loadClubLinkedPlayers(admin: SupabaseClient, clubId: string) {
+async function loadRawClubLinkedPlayers(admin: SupabaseClient, clubId: string) {
   const { data } = await admin
     .from("transfermarkt_relationships")
     .select("id, relationship_type, status, target:transfermarkt_entities!transfermarkt_relationships_target_entity_id_fkey(id, transfermarkt_id, entity_type, name, profile_url, canonical_url, photo_url, status)")
@@ -273,6 +296,7 @@ export async function loadClubLinkedPlayers(admin: SupabaseClient, clubId: strin
     const target = row.target;
     if (!target?.id || target.entity_type !== "player") return [];
     return [{
+      entityId: target.id,
       id: target.id,
       transfermarktId: target.transfermarkt_id ?? "",
       name: target.name ?? "Player",
@@ -281,4 +305,69 @@ export async function loadClubLinkedPlayers(admin: SupabaseClient, clubId: strin
       status: row.status,
     }];
   });
+}
+
+async function ensureGlobalPlayerProfilesForClub(admin: SupabaseClient, players: Awaited<ReturnType<typeof loadRawClubLinkedPlayers>>) {
+  const rows = players.flatMap((player) => {
+    if (!player.transfermarktId || !player.profileUrl || player.profileUrl === "#") return [];
+    return [{
+      transfermarkt_player_id: player.transfermarktId,
+      player_name: player.name,
+      profile_url: player.profileUrl,
+      photo_url: player.photoUrl,
+      source_provider: "transfermarkt",
+      source_payload: {
+        source: "club_profile_auto_sync",
+        transfermarktEntityId: player.entityId,
+        legalNote: "Automatically created from a public club-player reference. This is not a representation claim.",
+      },
+      last_updated_at: new Date().toISOString(),
+    }];
+  });
+
+  if (!rows.length) return new Map<string, string>();
+
+  const { data } = await admin
+    .from("global_player_profiles")
+    .upsert(rows, { onConflict: "transfermarkt_player_id" })
+    .select("id, transfermarkt_player_id");
+
+  return new Map(((data ?? []) as Array<{ id: string; transfermarkt_player_id: string }>).map((row) => [row.transfermarkt_player_id, row.id]));
+}
+
+export async function syncClubRosterOnProfileOpen(admin: SupabaseClient, row: EntityRow, createdBy?: string | null) {
+  if (!shouldSyncClubRoster(row)) return;
+  await discoverEntityPlayerLinks(
+    admin,
+    row.id,
+    row.canonical_url ?? row.profile_url,
+    "club_player",
+    createdBy,
+    { force: true },
+  );
+
+  const payload = existingPayload(row);
+  const latestPayload = await loadLatestPayload(admin, row.id, payload);
+  await admin
+    .from("transfermarkt_entities")
+    .update({
+      source_payload: {
+        ...latestPayload,
+        clubRosterSync: {
+          checkedAt: new Date().toISOString(),
+          status: "attempted",
+          legalNote: "Touchline stores public club-player links as references only.",
+        },
+      },
+    })
+    .eq("id", row.id);
+}
+
+export async function loadClubLinkedPlayers(admin: SupabaseClient, clubId: string) {
+  const players = await loadRawClubLinkedPlayers(admin, clubId);
+  const globalProfileIds = await ensureGlobalPlayerProfilesForClub(admin, players);
+  return players.map((player) => ({
+    ...player,
+    internalProfileUrl: globalProfileIds.get(player.transfermarktId) ? `/players/database/${globalProfileIds.get(player.transfermarktId)}` : null,
+  }));
 }
