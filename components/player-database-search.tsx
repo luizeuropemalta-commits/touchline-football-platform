@@ -159,7 +159,7 @@ function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
 function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
   const Icon = entity.type === "club" ? Building2 : UsersRound;
   const typeLabel = entity.type === "club" ? "Club" : "Agent / Agency";
-  const internalHref = entity.type === "club" ? `/clubs/database/${entity.id}` : null;
+  const internalHref = entity.type === "club" ? `/clubs/database/${entity.id}` : `/agents/database/${entity.id}`;
   const approvedCount = entity.players.filter((player) => player.status === "approved").length;
   const suggestedCount = entity.players.filter((player) => player.status !== "approved").length;
   const emptyPlayerMessage = entity.type === "club"
@@ -192,11 +192,9 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-2">
-          {internalHref && (
-            <Link href={internalHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100">
-              Open Profile <ArrowRight size={12} />
-            </Link>
-          )}
+          <Link href={internalHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100">
+            Open Profile <ArrowRight size={12} />
+          </Link>
           <a href={entity.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72]">
             TM <ExternalLink size={12} />
           </a>
