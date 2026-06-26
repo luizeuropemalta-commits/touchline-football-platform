@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BadgeCheck, BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
   CalendarDays, ClipboardList, FileSignature, FileText, Globe2, Goal, Inbox, LayoutDashboard,
-  Link2, LockKeyhole, MailCheck, Menu, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
+  Database, Link2, LockKeyhole, MailCheck, Menu, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
   Target,
 } from "lucide-react";
 import { useState } from "react";
@@ -79,9 +79,20 @@ export function AppShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const operationItems = isOwner
-    ? [...operations, { href: "/admin", label: "Owner Admin", icon: Shield }, { href: "/admin/market-links", label: "Market Registry", icon: Link2 }]
+    ? [
+        ...operations,
+        { href: "/admin", label: "Owner Admin", icon: Shield },
+        { href: "/admin/football-data", label: "Football Data", icon: Database },
+        { href: "/admin/market-links", label: "Market Registry", icon: Link2 },
+      ]
     : operations;
-  const consoleModeItems = isOwner ? [...consoleModes, { href: "/admin", label: "Owner Admin", eyebrow: "Control", icon: Shield }] : consoleModes;
+  const consoleModeItems = isOwner
+    ? [
+        ...consoleModes,
+        { href: "/admin/football-data", label: "Football Data", eyebrow: "Data", icon: Database },
+        { href: "/admin", label: "Owner Admin", eyebrow: "Control", icon: Shield },
+      ]
+    : consoleModes;
 
   const isActivePath = (href: string) => {
     if (href === "/dashboard") return pathname === href;

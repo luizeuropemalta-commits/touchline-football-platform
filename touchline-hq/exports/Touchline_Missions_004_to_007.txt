@@ -1,0 +1,3273 @@
+SOURCE: touchline-hq/09_UI_UX/01_Touchline_User_Experience_Bible.md
+
+# Touchline User Experience Bible
+
+Version: 0.1  
+Author: Touchline Executive Documentation Board  
+Last Updated: 2026-06-26  
+Status: Draft Constitution  
+Dependencies: 02_Product, 03_Fantasy, 04_Economy, 05_Transfer_Center, 10_Security  
+Future Related Documents: Mobile Experience Bible, Live Arena UX, Transfer Center UX, Touchline Cards Visual System
+
+## Executive Summary
+
+Touchline must be understood within minutes and mastered over years.
+
+The first-time user experience must be simple, emotional and guided. The long-term experience must feel deep, competitive and alive.
+
+The user should never feel they are filling out a boring form.
+
+The user should feel:
+
+```text
+I just entered my football headquarters.
+```
+
+Touchline's UX must combine:
+
+- SaaS clarity.
+- Football business credibility.
+- AAA game emotion.
+- Mobile-first speed.
+- Long-term progression.
+
+The onboarding promise:
+
+```text
+Create your club, build your squad, enter the market, compete, grow your legacy.
+```
+
+---
+
+# Complete User Journey
+
+```mermaid
+flowchart TD
+  A["Open Touchline"] --> B["Welcome Screen"]
+  B --> C["Create Account"]
+  C --> D["Create Club"]
+  D --> E["Upload Owner Photo"]
+  E --> F["AI Generates Club Owner Avatar"]
+  F --> G["Choose Club Name"]
+  G --> H["Choose Club Badge"]
+  H --> I["Receive Starter Budget"]
+  I --> J["Guided Tutorial"]
+  J --> K["Transfer Center"]
+  K --> L["Buy First Players"]
+  L --> M["Create Starting XI"]
+  M --> N["Choose Coach"]
+  N --> O["Enter First Competition"]
+  O --> P["First Match"]
+  P --> Q["Live Arena"]
+  Q --> R["First Ranking"]
+  R --> S["First Trophy or First Lesson"]
+  S --> T["Promotion Path"]
+  T --> U["Long-Term Club Progression"]
+```
+
+---
+
+# 01 First Time Experience
+
+## Objective
+
+Make the first minute feel premium, clear and exciting.
+
+## User Feeling
+
+The user should feel curiosity and status immediately.
+
+## First Screen Goals
+
+The welcome screen must explain:
+
+- What Touchline is.
+- What the user will become.
+- What the first action is.
+- Why this is different from normal fantasy football.
+
+## Recommended Message
+
+```text
+Build your football empire.
+Create your club, sign players, compete live and grow your legacy.
+```
+
+## Key UX Rule
+
+Do not show too many options before the user understands the core loop.
+
+## Risks
+
+- Too much text.
+- Too many buttons.
+- Confusion between professional Touchline and Touchline Fantasy.
+- User does not understand what to do first.
+
+---
+
+# 02 Onboarding
+
+## Objective
+
+Guide the user from zero to active club owner without confusion.
+
+## Onboarding Steps
+
+1. Account creation.
+2. Choose experience: Fantasy Club Owner or Professional Platform.
+3. Create club.
+4. Upload photo.
+5. Generate owner avatar.
+6. Choose club badge.
+7. Receive starter budget.
+8. Learn first transfer.
+9. Build first squad.
+10. Enter first competition.
+
+## UX Rule
+
+Onboarding must feel like a club creation ceremony, not account setup.
+
+## Progress Indicator
+
+Use a premium progress bar:
+
+```text
+Step 1 of 7 — Create Your Club
+```
+
+## Risks
+
+- Long onboarding can cause drop-off.
+- Too much customization before gameplay delays excitement.
+- Users may skip important rules.
+
+## Improvement
+
+Allow quick start and later customization.
+
+---
+
+# 03 Club Creation
+
+## Objective
+
+Give the user immediate ownership and identity.
+
+## Required Steps
+
+- Choose Club Name.
+- Choose Country.
+- Choose Club Badge.
+- Choose Club Colors.
+- Choose Stadium Style.
+- Confirm Club Identity.
+
+## Emotional Target
+
+The user should feel:
+
+```text
+This is my club.
+```
+
+## UX Rule
+
+Club creation must be fast but meaningful.
+
+## Risks
+
+- Users may choose offensive names.
+- Badge generator may create poor visuals.
+- Too much choice causes delay.
+
+## Future Expansion
+
+- AI badge generator.
+- Stadium creator.
+- Club anthem.
+- Fanbase identity.
+- Kit design.
+
+---
+
+# 04 Owner Profile
+
+## Objective
+
+Create a prestigious identity around the user.
+
+## Flow
+
+1. User uploads normal photo.
+2. Touchline generates AI Club Owner Avatar.
+3. User reviews avatar.
+4. User confirms.
+5. Owner Card is created.
+
+## Owner Card Should Show
+
+- Owner avatar.
+- Club name.
+- Club badge.
+- Overall Rating.
+- Global Ranking.
+- Club Net Worth.
+- Current League.
+- Prestige Level.
+- Titles.
+
+## UX Rule
+
+The owner profile should feel like a boardroom identity card.
+
+## Risks
+
+- Avatar generation disappointment.
+- Privacy concerns.
+- Identity misuse.
+
+## Future Expansion
+
+- Multiple avatar styles.
+- Trophy portrait.
+- Press conference portrait.
+- Owner legacy page.
+
+---
+
+# 05 Transfer Center Experience
+
+## Objective
+
+Make the Transfer Center the daily heartbeat of Touchline.
+
+## First Transfer Flow
+
+1. User enters Transfer Center.
+2. Touchline recommends affordable starter players.
+3. User sees cards by category.
+4. User selects player.
+5. User reviews price and squad impact.
+6. User confirms purchase or sends offer.
+7. Player joins squad.
+
+## Transfer Actions
+
+- Buy.
+- Sell.
+- Loan.
+- Exchange.
+- Counteroffer.
+- Add future clause.
+- Add sell-on clause.
+
+## UX Rule
+
+Transfers must feel official and safe.
+
+All negotiations stay inside Touchline Secure Negotiation Rooms.
+
+## Risks
+
+- User may not understand credits.
+- Too many market options can overwhelm.
+- Off-platform negotiation attempts.
+
+## Future Expansion
+
+- Deadline day mode.
+- AI deal rating.
+- Rival bids.
+- Transfer rumors.
+- Market movers.
+
+---
+
+# 06 Live Arena Experience
+
+## Objective
+
+Make matchday feel alive.
+
+## Live Arena Should Show
+
+- Live match score.
+- User squad performance.
+- Rival club performance.
+- Player event cards.
+- Goals.
+- Assists.
+- Cards.
+- Injuries.
+- Substitutions.
+- Live ranking movement.
+
+## Emotional Target
+
+The user should feel tension.
+
+Every event should matter.
+
+## UX Rule
+
+Live Arena must feel like a stadium command screen.
+
+## Risks
+
+- Too much animation can distract.
+- Live data delays can frustrate.
+- Mobile screen can become crowded.
+
+## Future Expansion
+
+- Crowd sound.
+- Goal animation.
+- Live card glow.
+- Rival alert.
+- Trophy race mode.
+
+---
+
+# 07 Competition Experience
+
+## Objective
+
+Give the user's club purpose.
+
+## Competition Flow
+
+1. Choose competition.
+2. Review entry rules.
+3. Register squad.
+4. Confirm salary cap.
+5. Enter match week.
+6. Track Live Arena.
+7. Receive results.
+8. Gain ranking, rewards or lessons.
+
+## Competition Types
+
+- Domestic league.
+- Cup.
+- Champions-style tournament.
+- Continental tournament.
+- World tournament.
+- Special event.
+
+## UX Rule
+
+Competition entry must clearly show:
+
+- Requirements.
+- Rewards.
+- Risk.
+- Deadline.
+- Squad eligibility.
+
+## Risks
+
+- Complicated rules can confuse users.
+- Losing too early can reduce retention.
+- Unfair matching can damage trust.
+
+## Future Expansion
+
+- Promotion/relegation animation.
+- Trophy ceremony.
+- Rival history.
+- Tournament bracket.
+
+---
+
+# 08 Daily Experience
+
+## Objective
+
+Give users a reason to return every day.
+
+## Daily Loop
+
+```mermaid
+flowchart LR
+  A["Open App"] --> B["Daily Briefing"]
+  B --> C["Market Alerts"]
+  C --> D["Transfer Offers"]
+  D --> E["Squad Check"]
+  E --> F["Objectives"]
+  F --> G["Reward / Progress"]
+```
+
+## Daily Elements
+
+- Daily briefing.
+- Transfer offers.
+- Market movers.
+- Player alerts.
+- Club objectives.
+- Squad health.
+- Competition countdown.
+
+## UX Rule
+
+Daily experience must be useful in under 2 minutes.
+
+## Risks
+
+- Daily tasks become chores.
+- Too many notifications.
+- Rewards inflate economy.
+
+---
+
+# 09 Weekly Experience
+
+## Objective
+
+Create weekly rhythm and anticipation.
+
+## Weekly Flow
+
+- Review squad.
+- Choose coach.
+- Set formation.
+- Confirm Starting XI.
+- Check opponents.
+- Enter competition round.
+- Watch Live Arena.
+- Collect weekly rewards.
+
+## Emotional Target
+
+The user should feel preparation, tension and consequence.
+
+## UX Rule
+
+Weekly planning should feel like match preparation.
+
+## Future Expansion
+
+- Weekly press conference.
+- Coach advice.
+- Rival scouting.
+- Team morale report.
+
+---
+
+# 10 Seasonal Experience
+
+## Objective
+
+Make long-term progression meaningful.
+
+## Season Flow
+
+1. Season start.
+2. Transfer window.
+3. League rounds.
+4. Cup competitions.
+5. Mid-season review.
+6. Deadline day.
+7. Final rounds.
+8. Trophy or promotion.
+9. Season report.
+10. New season preparation.
+
+## Season Rewards
+
+- Trophies.
+- Promotions.
+- Reputation.
+- Credits.
+- Prestige.
+- Card cosmetics.
+- Club history.
+
+## UX Rule
+
+The end of a season must feel like a major football moment.
+
+## Future Expansion
+
+- Season documentary.
+- Club legacy timeline.
+- Hall of Fame.
+- Best XI of season.
+
+---
+
+# 11 Notifications
+
+## Objective
+
+Bring users back without annoying them.
+
+## Notification Types
+
+- Transfer offer received.
+- Counteroffer received.
+- Match starting soon.
+- Goal scored by owned player.
+- Player value changed.
+- Competition deadline.
+- Trophy won.
+- Promotion achieved.
+- Reputation changed.
+
+## UX Rule
+
+Notifications must be actionable.
+
+Bad:
+
+```text
+Come back to Touchline.
+```
+
+Good:
+
+```text
+Sporting CP sent a counteroffer for your Gold striker.
+```
+
+## Risks
+
+- Notification spam.
+- Low-value alerts.
+- Users disable notifications.
+
+---
+
+# 12 Mobile Experience
+
+## Objective
+
+Make Touchline feel premium and usable on mobile.
+
+## Mobile Principles
+
+- One primary action per screen.
+- Clear bottom navigation.
+- Large touch targets.
+- Fast loading.
+- Short text.
+- No crowded tables.
+- Cards over grids.
+- Swipeable sections.
+
+## Mobile Priority Screens
+
+1. Daily Briefing.
+2. Transfer Center.
+3. Squad.
+4. Live Arena.
+5. Owner Card.
+6. Notifications.
+
+## Risks
+
+- Desktop UI squeezed into mobile.
+- Too much horizontal scrolling.
+- Important buttons hidden.
+- Live Arena overcrowding.
+
+## Future Expansion
+
+- Native mobile app.
+- Push notifications.
+- Lock screen match alerts.
+- Mobile-first transfer negotiation.
+
+---
+
+# 13 Emotional Journey
+
+## Objective
+
+Design how the user feels over time.
+
+## Emotional Stages
+
+| Stage | Feeling |
+| --- | --- |
+| First open | Curiosity |
+| Club creation | Ownership |
+| Avatar generation | Identity |
+| First transfer | Control |
+| First match | Tension |
+| First ranking | Competition |
+| First trophy | Pride |
+| First promotion | Ambition |
+| Long-term play | Legacy |
+
+## UX Rule
+
+Every major milestone should be celebrated.
+
+## Risks
+
+- If early experience is confusing, emotion dies.
+- If rewards are too small, progress feels flat.
+- If losing feels punishing, users leave.
+
+---
+
+# 14 Retention Strategy
+
+## Objective
+
+Make Touchline habit-forming without feeling manipulative.
+
+## Retention Loops
+
+- Daily briefing.
+- Transfer negotiations.
+- Market movement.
+- Weekly competition.
+- Live match tension.
+- Ranking changes.
+- Trophy pursuit.
+- Club Net Worth growth.
+- Owner Card prestige.
+
+## Long-Term Hooks
+
+- Club legacy.
+- Trophy cabinet.
+- Promotion history.
+- Rivalries.
+- Owner reputation.
+- Card collection.
+- Seasonal records.
+
+## UX Rule
+
+Retention should come from meaningful football decisions, not empty rewards.
+
+---
+
+# 15 UX Risks
+
+## Major Risks
+
+| Risk | Impact | Prevention |
+| --- | --- | --- |
+| Too complex too early | New users leave | Guided onboarding and simple first actions |
+| Too game-like | Professional users distrust it | Keep visual tone premium and serious |
+| Too SaaS-like | Fantasy users get bored | Add emotion, animation and progression |
+| Mobile crowding | Poor usability | Mobile-first layouts |
+| Unclear economy | Users distrust credits | Simple explanations and transparent rules |
+| Too many notifications | Users disable alerts | Actionable notification policy |
+| Weak first session | Low retention | First transfer and first squad must happen fast |
+
+---
+
+# UX Flow
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant T as Touchline
+  participant M as Market
+  participant C as Competition
+  participant L as Live Arena
+
+  U->>T: Opens Touchline
+  T->>U: Welcome and club creation
+  U->>T: Creates club and owner profile
+  T->>U: Generates Owner Card
+  T->>U: Gives starter budget
+  U->>M: Buys first players
+  U->>T: Creates Starting XI
+  U->>C: Enters first competition
+  C->>L: Matchday begins
+  L->>U: Live events and ranking
+  T->>U: Rewards, progression and next objective
+```
+
+---
+
+# Recommended Screen Order
+
+1. Welcome Screen.
+2. Account Creation.
+3. Choose Experience.
+4. Create Club.
+5. Upload Owner Photo.
+6. AI Owner Avatar.
+7. Club Badge and Colors.
+8. Starter Budget.
+9. Tutorial Mission.
+10. Transfer Center.
+11. First Player Purchase.
+12. Squad Builder.
+13. Coach Selection.
+14. Competition Entry.
+15. Live Arena.
+16. Results and Ranking.
+17. Daily Briefing.
+18. Long-Term Dashboard.
+
+---
+
+# Most Important Screens
+
+## 1. Welcome Screen
+
+Must explain Touchline instantly.
+
+## 2. Club Creation
+
+Creates ownership.
+
+## 3. Club Owner Card
+
+Creates status.
+
+## 4. Transfer Center
+
+Creates daily engagement.
+
+## 5. Squad Builder
+
+Creates control.
+
+## 6. Live Arena
+
+Creates emotion.
+
+## 7. Competition Dashboard
+
+Creates purpose.
+
+## 8. Daily Briefing
+
+Creates habit.
+
+---
+
+# Potential UX Problems
+
+## Problem 1
+
+User does not understand whether Touchline is professional platform or fantasy.
+
+### Solution
+
+Use clear mode selection:
+
+- Touchline Professional.
+- Touchline Fantasy.
+
+## Problem 2
+
+User feels overwhelmed.
+
+### Solution
+
+Unlock features gradually.
+
+## Problem 3
+
+User does not understand credits.
+
+### Solution
+
+Explain credits before first transfer.
+
+## Problem 4
+
+User loses first match and quits.
+
+### Solution
+
+Give learning feedback and next objective.
+
+## Problem 5
+
+Mobile screen feels crowded.
+
+### Solution
+
+Use cards, tabs and one main action per screen.
+
+---
+
+# Future Expansion
+
+- Native mobile app.
+- Club badge generator.
+- Stadium builder.
+- Press conference mode.
+- Trophy ceremony.
+- Owner rivalry system.
+- Career documentary.
+- AI assistant coach.
+- Voice notifications.
+- Live arena sound design.
+- Augmented reality trophy room.
+
+---
+
+# Final UX Constitution
+
+Touchline must obey five UX laws:
+
+1. The user must understand the product within minutes.
+2. The user must feel ownership in the first session.
+3. The user must make a meaningful football decision quickly.
+4. The user must see years of progression ahead.
+5. Every screen must feel premium, useful and alive.
+
+
+
+============================================================
+
+SOURCE: touchline-hq/06_Football_Data/08_Football_Data_Architecture_Bible.md
+
+# Football Data Architecture Bible
+
+Version: 0.1  
+Author: Touchline Executive Documentation Board  
+Last Updated: 2026-06-26  
+Status: Draft Architecture  
+Dependencies: 01_Data_Strategy, 03_API_Adapter, 04_Sync_Engine, 05_Cache_Strategy, 06_Rate_Limit, 07_Data_Quality, 07_Architecture, 08_Database  
+Future Related Documents: Provider Matrix, Data Licensing Strategy, Live Match Data Strategy, Historical Data Warehouse, Search Infrastructure Plan
+
+## Executive Summary
+
+Touchline must never depend on one football data provider.
+
+Sportmonks may be the first provider, but the architecture must support future providers such as Opta, Sportradar, Stats Perform, API-Football and others.
+
+The football data architecture must be provider-independent, cache-first, rate-limit-safe, scalable to millions of users and legally disciplined.
+
+The system must follow one golden rule:
+
+```text
+Touchline products read from Touchline's normalized data layer, not directly from external providers.
+```
+
+External providers feed Touchline. They do not control the application.
+
+---
+
+# 01 — Football Data Provider Layer
+
+## Objective
+
+The provider layer connects Touchline to external football data companies without making the product dependent on any single provider.
+
+## Supported Provider Types
+
+- Sportmonks.
+- Opta.
+- Sportradar.
+- Stats Perform.
+- API-Football.
+- Future licensed providers.
+- Internal verified Touchline data.
+
+## Provider Responsibilities
+
+Each provider connector should know:
+
+- Authentication method.
+- Endpoint structure.
+- Rate limits.
+- Coverage.
+- Data freshness.
+- Terms of use.
+- Cost model.
+- Error patterns.
+- Supported entities.
+
+## Provider Independence Rule
+
+No product feature should directly depend on Sportmonks-specific field names, IDs or endpoint behavior.
+
+Everything must pass through the adapter layer.
+
+---
+
+# 02 — API Adapter Layer
+
+## Objective
+
+The adapter layer converts provider-specific data into Touchline-standard football objects.
+
+## Standard Objects
+
+The adapter layer should normalize:
+
+- Player.
+- Club.
+- Coach.
+- Competition.
+- Fixture.
+- Match event.
+- Lineup.
+- Statistic.
+- Transfer.
+- Injury.
+- Market value.
+- National team.
+
+## Adapter Output Rule
+
+Every adapter output must include:
+
+- `touchline_entity_type`
+- `provider_name`
+- `provider_entity_id`
+- `provider_confidence`
+- `source_updated_at`
+- `normalized_payload`
+- `raw_payload_reference`
+
+## Why It Exists
+
+If Touchline changes from Sportmonks to Opta later, the app should not need to be rewritten.
+
+Only provider adapters should change.
+
+---
+
+# 03 — Sync Engine
+
+## Objective
+
+The sync engine decides what data is updated, when it is updated and how conflicts are handled.
+
+## Sync Types
+
+- Full sync.
+- Incremental sync.
+- Priority sync.
+- Live sync.
+- Manual admin sync.
+- Recovery sync after failure.
+
+## Sync Rules
+
+1. Sync must be server-side.
+2. Sync must respect provider rate limits.
+3. Sync must log every job.
+4. Sync must avoid duplicates.
+5. Sync must not overwrite verified Touchline data with weaker external data.
+6. Sync must support failover providers.
+
+## Sync Priority
+
+Highest priority:
+
+- Live matches.
+- Match events.
+- Competition standings.
+- Injury updates.
+- Player transfers.
+
+Medium priority:
+
+- Player profiles.
+- Club profiles.
+- Squads.
+- Coaches.
+
+Low priority:
+
+- Historical stats.
+- Old transfers.
+- Archived competitions.
+
+---
+
+# 04 — Background Jobs
+
+## Objective
+
+Background jobs keep Touchline updated without forcing users to wait for external APIs.
+
+## Job Types
+
+- Static data sync.
+- Daily data sync.
+- Matchday data sync.
+- Live match sync.
+- Historical backfill.
+- Failed job retry.
+- Provider health check.
+- Cache warming.
+- Duplicate detection.
+- Data quality review.
+
+## Job Scheduling Rule
+
+Users should rarely trigger external API calls directly.
+
+Instead:
+
+```text
+User request → Touchline cache/database → background refresh if stale
+```
+
+## Risks
+
+- Too many jobs can exceed provider limits.
+- Failed jobs can leave data stale.
+- Large historical jobs can become expensive.
+
+---
+
+# 05 — Queue System
+
+## Objective
+
+The queue system controls job volume, retry behavior and priority.
+
+## Queue Types
+
+- High priority live queue.
+- Matchday queue.
+- Daily sync queue.
+- Historical queue.
+- Low priority enrichment queue.
+- Manual admin queue.
+
+## Priority Rules
+
+1. Live match data first.
+2. Active competitions second.
+3. User-visible stale profiles third.
+4. Historical data last.
+
+## Retry Rules
+
+- Retry transient failures.
+- Back off after repeated failures.
+- Stop retrying if provider returns permanent errors.
+- Log failures for admin review.
+
+---
+
+# 06 — Caching
+
+## Objective
+
+Caching allows Touchline to support millions of users while minimizing external API usage.
+
+## Cache Strategy
+
+Use multiple cache layers:
+
+1. Browser/UI cache.
+2. Server response cache.
+3. Database cache.
+4. Search index cache.
+5. Live match memory cache.
+6. CDN/image cache.
+
+## Cache First Rule
+
+The app should almost always read from Touchline's stored data first.
+
+External APIs should update the cache, not serve every user request.
+
+## Cache TTL by Data Type
+
+| Data Type | Recommended Freshness |
+| --- | --- |
+| Static player identity | Weekly or when changed |
+| Club identity | Weekly or when changed |
+| Historical stats | Monthly or after provider correction |
+| Daily market data | Daily |
+| Squads | Daily during season, more often during transfer windows |
+| Fixtures | Daily, hourly near matchday |
+| Matchday lineups | 5-15 minutes before match |
+| Live events | 5-30 seconds depending on plan |
+| Standings | During/after matchday |
+
+---
+
+# 07 — Database Strategy
+
+## Objective
+
+The database stores normalized, provider-independent football data.
+
+## Data Layers
+
+### 1. Touchline Verified Data
+
+Data created or verified inside Touchline.
+
+Examples:
+
+- Verified agent relationships.
+- User-submitted documents.
+- Club-created opportunities.
+- Touchline Fantasy ownership.
+
+### 2. Normalized Provider Data
+
+Cleaned data from external providers.
+
+### 3. Raw Provider References
+
+Raw payload references for audit/debug, not product display by default.
+
+### 4. Historical Snapshots
+
+Time-based records of changes.
+
+## Database Rules
+
+- Never mix verified Touchline relationships with unverified provider suggestions.
+- Store source and confidence.
+- Store last synced date.
+- Store provider IDs.
+- Store internal Touchline IDs separately.
+- Support multiple provider IDs per entity.
+
+---
+
+# 08 — Rate Limit Protection
+
+## Objective
+
+Protect Touchline from provider bans, high costs and unstable data.
+
+## Protection Rules
+
+- Search local database first.
+- Batch provider requests.
+- Cache aggressively.
+- Use background sync.
+- Use exponential backoff.
+- Respect provider quotas.
+- Separate live data from historical data.
+- Avoid duplicate fetches.
+
+## Rate Limit Diagram
+
+```mermaid
+flowchart TD
+  A["User Request"] --> B["Touchline Cache"]
+  B --> C{"Fresh data?"}
+  C -->|"Yes"| D["Return cached data"]
+  C -->|"No"| E["Return stale-safe data"]
+  E --> F["Queue background refresh"]
+  F --> G["Rate limit controller"]
+  G --> H["Provider adapter"]
+  H --> I["Normalize and save"]
+  I --> B
+```
+
+---
+
+# 09 — Live Sync
+
+## Objective
+
+Live sync powers matchday experiences without overloading providers.
+
+## Live Data Types
+
+- Goals.
+- Assists.
+- Cards.
+- Substitutions.
+- VAR events.
+- Injuries.
+- Lineups.
+- Player ratings.
+- Match clock.
+- Standings changes.
+
+## Live Sync Frequencies
+
+| Situation | Frequency |
+| --- | --- |
+| No live match | No live polling |
+| Pre-match lineup window | Every 1-5 minutes |
+| Active match basic plan | Every 30-60 seconds |
+| Active match premium plan | Every 5-15 seconds |
+| Post-match | Every 5-10 minutes until finalized |
+
+## Scaling Rule
+
+One provider request should serve many users.
+
+Never poll the provider separately for every user watching the same match.
+
+---
+
+# 10 — Historical Data
+
+## Objective
+
+Historical data powers player profiles, club history, rankings, analytics and storytelling.
+
+## Historical Data Types
+
+- Player career history.
+- Club squad history.
+- Transfer history.
+- Competition history.
+- Match statistics.
+- Trophy history.
+- Market value history.
+
+## Sync Approach
+
+Historical data should be backfilled gradually.
+
+Do not sync the entire world at once.
+
+Recommended priority:
+
+1. User-searched entities.
+2. Top leagues.
+3. Active fantasy competitions.
+4. Popular clubs.
+5. Historical archive.
+
+---
+
+# 11 — Data Validation
+
+## Objective
+
+Protect Touchline from wrong, duplicated or low-quality data.
+
+## Validation Rules
+
+Each normalized entity should validate:
+
+- Required fields.
+- Provider ID.
+- Entity type.
+- Source date.
+- Country/league consistency.
+- Duplicate candidates.
+- Confidence score.
+- Data freshness.
+
+## Relationship Validation
+
+Relationships need extra caution:
+
+- Player-agent relationships are suggestions until verified.
+- Club-player relationships should be time-bound.
+- Coach-club relationships should be date-bound.
+- Transfers must have source and date.
+
+---
+
+# 12 — Data Versioning
+
+## Objective
+
+Track changes over time.
+
+## Versioned Data
+
+- Player club.
+- Player market value.
+- Player injury status.
+- Player contract date.
+- Club squad.
+- Coach appointment.
+- Competition standings.
+- Card category.
+
+## Why It Matters
+
+Versioning allows:
+
+- Audit history.
+- Market graphs.
+- Fantasy card category changes.
+- Dispute resolution.
+- Data rollback.
+
+---
+
+# 13 — Provider Failover
+
+## Objective
+
+Keep Touchline running when one provider fails.
+
+## Failover Strategy
+
+Provider priority should be configurable:
+
+```text
+Primary Provider → Secondary Provider → Cache → Stale Safe Display
+```
+
+## Failover Rules
+
+- Do not switch providers silently for critical values without source tracking.
+- Show data source in admin tools.
+- Compare provider confidence.
+- Never overwrite verified data with lower-confidence data.
+
+## Example
+
+If Sportmonks fails during matchday:
+
+1. Try secondary provider.
+2. Use last known cache.
+3. Mark live data as delayed.
+4. Alert admins.
+
+---
+
+# 14 — Update Frequencies
+
+## Static Data
+
+Examples:
+
+- Player identity.
+- Club identity.
+- Stadium.
+- Country.
+- Competition identity.
+
+Recommended update:
+
+- Weekly.
+- On user request if stale.
+- Manual admin sync.
+
+## Daily Data
+
+Examples:
+
+- Squads.
+- Injuries.
+- Transfers.
+- Market values.
+- Rankings.
+
+Recommended update:
+
+- Once per day.
+- More often during transfer windows.
+
+## Matchday Data
+
+Examples:
+
+- Fixtures.
+- Lineups.
+- Match status.
+- Competition standings.
+
+Recommended update:
+
+- Morning matchday sync.
+- Pre-match sync.
+- Post-match final sync.
+
+## Live Data
+
+Examples:
+
+- Goals.
+- Assists.
+- Cards.
+- Match clock.
+- Live ratings.
+
+Recommended update:
+
+- 5-60 seconds depending on product tier and provider cost.
+
+---
+
+# 15 — Supporting Millions of Users
+
+## Objective
+
+Support massive scale without massive API cost.
+
+## Core Strategy
+
+Touchline must serve users from its own normalized data layer.
+
+External providers update Touchline. Users do not hit providers directly.
+
+## Scaling Principles
+
+1. Cache first.
+2. Queue provider requests.
+3. Batch sync jobs.
+4. Use search indexes.
+5. Share live match polling across all viewers.
+6. Pre-warm popular data.
+7. Prioritize active competitions.
+8. Use stale-safe displays.
+9. Separate live and historical infrastructure.
+10. Add provider failover.
+
+## High Scale Diagram
+
+```mermaid
+flowchart LR
+  A["External Providers"] --> B["Provider Layer"]
+  B --> C["API Adapter Layer"]
+  C --> D["Queue + Sync Engine"]
+  D --> E["Normalized Database"]
+  E --> F["Cache/Search Layer"]
+  F --> G["Touchline App"]
+  G --> H["Millions of Users"]
+```
+
+## Rule
+
+If 100,000 users watch the same match, Touchline should not make 100,000 provider requests.
+
+It should make a controlled number of provider requests, cache the result and broadcast or serve it internally.
+
+---
+
+# 16 — Architecture Risks
+
+| Risk | Severity | Protection |
+| --- | --- | --- |
+| Provider dependency | Critical | Multi-provider adapter layer |
+| API cost explosion | Critical | Cache-first architecture and queues |
+| Live data delay | High | Priority live queue and provider failover |
+| Bad provider data | High | Validation, source confidence, admin review |
+| Duplicate entities | High | Entity resolution and provider ID mapping |
+| Rate limit ban | High | Rate limit controller and backoff |
+| Stale data | Medium | Freshness labels and sync jobs |
+| Over-complexity | Medium | Start with core data, expand by priority |
+
+---
+
+# 17 — Final Architecture Principle
+
+Touchline must own the user experience and normalized data model.
+
+Providers supply data.
+
+Providers must never define the product.
+
+The architecture must allow Touchline to replace, combine or downgrade providers without breaking the platform.
+
+
+
+============================================================
+
+SOURCE: touchline-hq/08_Database/01_Database_Master_Bible.md
+
+# Database Master Bible
+
+Version: 0.1  
+Author: Touchline Executive Documentation Board  
+Last Updated: 2026-06-26  
+Status: Draft Architecture  
+Dependencies: 02_Product, 03_Fantasy, 04_Economy, 05_Transfer_Center, 06_Football_Data, 07_Architecture, 10_Security  
+Future Related Documents: Entity Relationship Model, RLS Policy Rules, Search Strategy, Data Warehouse Strategy, Audit Log Strategy
+
+## Executive Summary
+
+The Touchline database must become the trusted football business graph.
+
+It must support two connected worlds:
+
+1. **Touchline Professional** — real football agents, clubs, players, documents, representation, opportunities and negotiations.
+2. **Touchline Fantasy** — Club Owners, Touchline Cards, credits, competitions, Live Arena, transfers and long-term progression.
+
+The database must never treat external provider data as absolute truth without source, version and confidence.
+
+The database must separate:
+
+- Verified Touchline data.
+- External provider data.
+- User-created data.
+- Fantasy economy data.
+- Historical snapshots.
+- Audit records.
+
+---
+
+# 01 — Core Database Principles
+
+## Principles
+
+1. Every entity must have a stable internal Touchline ID.
+2. External provider IDs must be stored separately.
+3. Verified relationships must be separated from suggested relationships.
+4. Financial/economy events must be auditable.
+5. Transfers must be immutable after completion.
+6. Historical changes must be versioned.
+7. Search must be designed separately from transaction storage.
+8. Live data must not overload core relational tables.
+9. Archived records must remain queryable.
+10. No strategic data should be deleted without archive or audit record.
+
+---
+
+# 02 — Entity Relationship Model
+
+## High-Level ERD
+
+```mermaid
+erDiagram
+  USER ||--o{ CLUB_OWNER : owns_profile
+  CLUB_OWNER ||--|| CLUB : creates
+  CLUB_OWNER ||--|| CLUB_BANK : controls
+  CLUB_OWNER ||--o{ TOUCHLINE_CARD : owns
+  CLUB ||--o{ STADIUM : has
+  CLUB ||--o{ ACADEMY : develops
+  CLUB ||--o{ SPONSOR : signs
+  CLUB ||--o{ COMPETITION_ENTRY : enters
+  CLUB ||--o{ TRANSFER : participates
+  PLAYER ||--o{ TOUCHLINE_CARD : represented_by
+  COACH ||--o{ CLUB_COACH_ASSIGNMENT : manages
+  CLUB ||--o{ CLUB_COACH_ASSIGNMENT : hires
+  COMPETITION ||--o{ COMPETITION_ENTRY : includes
+  COMPETITION ||--o{ LIVE_ARENA_EVENT : produces
+  TRANSFER_CENTER ||--o{ TRANSFER : manages
+  TRANSFER ||--o{ TRANSFER_PROPOSAL : contains
+  TOUCHLINE_CREDITS_LEDGER ||--o{ TRANSFER : funds
+  CLUB_OWNER ||--o{ REPUTATION_EVENT : earns
+  CLUB_OWNER ||--o{ ACHIEVEMENT : unlocks
+  CLUB_OWNER ||--o{ NOTIFICATION : receives
+  AI_AGENT ||--o{ AI_INTERACTION : creates
+  SPORTMONKS_ENTITY ||--o{ EXTERNAL_IDENTITY_MAP : maps
+  PLAYER ||--o{ HISTORICAL_STATISTIC : has
+```
+
+---
+
+# 03 — Entity Blueprints
+
+## Club Owner
+
+### Purpose
+
+Represents the user as a football club owner inside Touchline Fantasy.
+
+### Primary Key
+
+- `club_owner_id`
+
+### Key Relationships
+
+- Belongs to User.
+- Owns Club.
+- Owns Touchline Cards.
+- Controls Club Bank.
+- Has Reputation.
+- Has Achievements.
+- Receives Notifications.
+
+### Important Fields
+
+- Owner name.
+- Country.
+- AI avatar reference.
+- Global ranking.
+- Prestige level.
+- Reputation score.
+- Club net worth.
+- Created season.
+
+### Indexes
+
+- Owner ID.
+- User ID.
+- Global ranking.
+- Country.
+- Prestige level.
+
+---
+
+## Club
+
+### Purpose
+
+Represents a fantasy or professional club profile.
+
+### Primary Key
+
+- `club_id`
+
+### External IDs
+
+- Sportmonks club ID.
+- Opta club ID.
+- Sportradar club ID.
+- Stats Perform club ID.
+- API-Football club ID.
+- Transfermarkt reference ID, if legally stored as reference.
+
+### Relationships
+
+- Belongs to Club Owner.
+- Has Stadium.
+- Has Academy.
+- Has Sponsors.
+- Has Coach assignments.
+- Has Competition entries.
+- Has Squad/Card registrations.
+
+### Indexes
+
+- Club name.
+- Country.
+- League/division.
+- External IDs.
+- Club net worth.
+- Squad market value.
+
+---
+
+## Touchline Cards
+
+### Purpose
+
+Digital platform assets used inside Touchline Fantasy.
+
+They do not represent real-world ownership of players.
+
+### Primary Key
+
+- `card_id`
+
+### Relationships
+
+- References Player.
+- Owned by Club Owner.
+- Can be included in Transfer.
+- Can be registered to Competition.
+- Has Card History.
+
+### Important Fields
+
+- Card category: Bronze, Silver, Gold.
+- Current owner.
+- Edition.
+- Availability status.
+- Official market value snapshot.
+- Fantasy salary cost.
+- Transfer lock status.
+
+### Indexes
+
+- Card ID.
+- Player ID.
+- Owner ID.
+- Category.
+- Edition.
+- Availability.
+- Current competition lock.
+
+---
+
+## Players
+
+### Purpose
+
+Stores normalized player identity and football profile data.
+
+### Primary Key
+
+- `player_id`
+
+### External IDs
+
+- Sportmonks player ID.
+- Opta player ID.
+- Sportradar player ID.
+- Stats Perform player ID.
+- API-Football player ID.
+- Transfermarkt reference ID.
+
+### Relationships
+
+- Has Touchline Cards.
+- Has Historical Statistics.
+- Has Club history.
+- Has Agent/representation suggestions.
+- Has market value history.
+
+### Indexes
+
+- Player name.
+- Normalized search name.
+- Current club.
+- Position.
+- Nationality.
+- Age.
+- External IDs.
+- Official market value.
+
+---
+
+## Coaches
+
+### Purpose
+
+Stores coach profiles for fantasy and professional club systems.
+
+### Primary Key
+
+- `coach_id`
+
+### Relationships
+
+- Can be assigned to Club.
+- Can affect competition strategy.
+- Has career history.
+- Has statistics.
+
+### Indexes
+
+- Coach name.
+- Country.
+- License level.
+- Current club.
+- Tactical style.
+
+---
+
+## Competitions
+
+### Purpose
+
+Stores fantasy and real football competition structures.
+
+### Primary Key
+
+- `competition_id`
+
+### Relationships
+
+- Has entries.
+- Has rounds.
+- Has fixtures.
+- Has ranking tables.
+- Generates Live Arena events.
+- Grants rewards.
+
+### Indexes
+
+- Competition type.
+- Season.
+- Region.
+- Tier.
+- Status.
+
+---
+
+## Transfers
+
+### Purpose
+
+Records official Touchline Card transfers.
+
+### Primary Key
+
+- `transfer_id`
+
+### Relationships
+
+- Managed by Transfer Center.
+- Includes proposals.
+- Includes cards.
+- Includes credits.
+- Includes clauses.
+- Updates ownership when completed.
+
+### Important Rule
+
+Completed transfers must be immutable except through correction records.
+
+### Indexes
+
+- Seller.
+- Buyer.
+- Card ID.
+- Status.
+- Created date.
+- Completed date.
+
+---
+
+## Transfer Center
+
+### Purpose
+
+Marketplace and negotiation system for Touchline Cards.
+
+### Primary Key
+
+- `transfer_center_session_id` or `negotiation_room_id`
+
+### Relationships
+
+- Has secure negotiation rooms.
+- Has proposals.
+- Has counteroffers.
+- Has message protection logs.
+
+### Indexes
+
+- Room status.
+- Participant owner IDs.
+- Card IDs.
+- Last activity.
+
+---
+
+## Touchline Credits
+
+### Purpose
+
+Internal ecosystem currency.
+
+### Recommended Structure
+
+Use a ledger model.
+
+### Primary Key
+
+- `ledger_event_id`
+
+### Relationships
+
+- Belongs to Club Owner or Club Bank.
+- References Transfer, Competition Reward, Purchase, Fee or Adjustment.
+
+### Rule
+
+Never store only a mutable balance without ledger history.
+
+### Indexes
+
+- Owner ID.
+- Club ID.
+- Event type.
+- Created date.
+- Reference object.
+
+---
+
+## Club Bank
+
+### Purpose
+
+Stores club financial status.
+
+### Primary Key
+
+- `club_bank_id`
+
+### Relationships
+
+- Belongs to Club.
+- Uses Touchline Credits ledger.
+- Feeds Club Net Worth.
+
+### Important Fields
+
+- Available credits.
+- Reserved credits.
+- Pending transfers.
+- Financial obligations.
+- Club assets value.
+
+---
+
+## Stadium
+
+### Purpose
+
+Represents club stadium identity and future upgrade economy.
+
+### Primary Key
+
+- `stadium_id`
+
+### Relationships
+
+- Belongs to Club.
+- Affects fanbase, revenue and prestige in fantasy.
+
+### Future Fields
+
+- Capacity.
+- Level.
+- Region.
+- Upgrade tier.
+- Visual theme.
+
+---
+
+## Academy
+
+### Purpose
+
+Supports youth development and future card discovery.
+
+### Primary Key
+
+- `academy_id`
+
+### Relationships
+
+- Belongs to Club.
+- Produces prospects.
+- Links to youth competitions.
+
+---
+
+## Sponsors
+
+### Purpose
+
+Represents sponsor relationships and future club revenue.
+
+### Primary Key
+
+- `sponsor_id`
+
+### Relationships
+
+- Belongs to Club.
+- Provides seasonal rewards.
+- May affect reputation.
+
+---
+
+## Reputation
+
+### Purpose
+
+Tracks trust, activity and competitive prestige.
+
+### Recommended Structure
+
+Use reputation events, not only a mutable score.
+
+### Primary Key
+
+- `reputation_event_id`
+
+### Relationships
+
+- Belongs to Club Owner, Club, Agent or User.
+
+### Events
+
+- Transfer completed.
+- Trophy won.
+- Abuse penalty.
+- Verified behavior.
+- Secure negotiation violation.
+
+---
+
+## Achievements
+
+### Purpose
+
+Stores milestone and progression achievements.
+
+### Primary Key
+
+- `achievement_id`
+
+### Relationships
+
+- Belongs to Club Owner.
+- References competition, transfer, season or card.
+
+---
+
+## Notifications
+
+### Purpose
+
+Stores actionable user alerts.
+
+### Primary Key
+
+- `notification_id`
+
+### Relationships
+
+- Belongs to User or Club Owner.
+- References transfer, competition, match, card or reputation event.
+
+### Indexes
+
+- User ID.
+- Status.
+- Created date.
+- Priority.
+
+---
+
+## AI
+
+### Purpose
+
+Stores AI interactions, generation requests and audit references.
+
+### Primary Key
+
+- `ai_interaction_id`
+
+### Relationships
+
+- Belongs to User.
+- May reference Club Owner, Player, Club, Transfer, Document or Message.
+
+### Rules
+
+- Store request metadata.
+- Store generated result reference.
+- Store safety classification.
+- Store user approval status where needed.
+
+---
+
+## Live Arena
+
+### Purpose
+
+Stores live match events and fantasy scoring state.
+
+### Primary Key
+
+- `live_event_id`
+
+### Relationships
+
+- Belongs to Competition.
+- References Fixture.
+- References Player.
+- References Touchline Card.
+- Updates standings.
+
+### Scaling Rule
+
+Live Arena data should be optimized for high-frequency reads.
+
+---
+
+## Sportmonks
+
+### Purpose
+
+Provider-specific external identity and source tracking.
+
+### Rule
+
+Sportmonks data must not be mixed directly into core entities without normalization.
+
+### Recommended Structure
+
+- Provider entity map.
+- Provider sync logs.
+- Provider raw references.
+- Provider confidence records.
+
+---
+
+## Historical Statistics
+
+### Purpose
+
+Stores long-term player, club, coach and competition history.
+
+### Primary Key
+
+- `historical_stat_id`
+
+### Relationships
+
+- Belongs to Player, Club, Coach or Competition.
+- References provider and season.
+
+### Partition Candidate
+
+Historical statistics should be partitioned by season and/or competition.
+
+---
+
+# 04 — External IDs Strategy
+
+## Objective
+
+Support multiple providers without data lock-in.
+
+## Rule
+
+Never make external provider IDs the primary key of core entities.
+
+## External Identity Map
+
+Use a provider mapping layer:
+
+- Touchline entity ID.
+- Entity type.
+- Provider name.
+- Provider entity ID.
+- Provider URL/reference.
+- Confidence.
+- Last checked.
+- Status.
+
+## Supported Providers
+
+- Sportmonks.
+- Opta.
+- Sportradar.
+- Stats Perform.
+- API-Football.
+- Transfermarkt reference links.
+- Future providers.
+
+---
+
+# 05 — Index Strategy
+
+## Core Indexes
+
+Indexes should support:
+
+- Entity ID lookups.
+- User/owner dashboards.
+- Search.
+- Ranking.
+- Transfer history.
+- Live match reads.
+- Audit investigation.
+
+## Search Indexes
+
+Search needs:
+
+- Normalized names.
+- Slugs.
+- Aliases.
+- Countries.
+- Clubs.
+- Positions.
+- Provider IDs.
+- Ranking/market value sorting.
+
+## High-Volume Indexes
+
+High-volume tables need indexes on:
+
+- Created date.
+- Owner ID.
+- Status.
+- Competition ID.
+- Fixture ID.
+- Provider ID.
+
+---
+
+# 06 — History Tables
+
+## Objective
+
+Track changes over time.
+
+## Required History Areas
+
+- Player market value history.
+- Player club history.
+- Card ownership history.
+- Club net worth history.
+- Reputation history.
+- Competition standings history.
+- Coach assignment history.
+- Transfer status history.
+- Credit ledger.
+
+## Rule
+
+Do not overwrite important state without recording history.
+
+---
+
+# 07 — Audit Tables
+
+## Objective
+
+Support trust, security and dispute resolution.
+
+## Required Audit Areas
+
+- Auth events.
+- Admin actions.
+- Transfer actions.
+- Credit changes.
+- AI message protection blocks.
+- Secure negotiation warnings.
+- External data sync.
+- Data correction events.
+- Document access events.
+
+## Audit Rule
+
+High-value economic events must be append-only.
+
+---
+
+# 08 — Future Tables
+
+## Future Professional Tables
+
+- Verified identity checks.
+- Federation licenses.
+- Legal review requests.
+- Club recruitment pipelines.
+- Agent performance score.
+- Player career passports.
+
+## Future Fantasy Tables
+
+- Club facilities.
+- Stadium upgrades.
+- Sponsor contracts.
+- Fanbase events.
+- Rivalry history.
+- Dynasty seasons.
+- Card skins.
+- Avatar versions.
+
+## Future Data Tables
+
+- Provider comparison snapshots.
+- Entity resolution candidates.
+- Data confidence scores.
+- Search analytics.
+- Data warehouse aggregates.
+
+---
+
+# 09 — Scalability
+
+## Scaling Principles
+
+1. Use normalized relational tables for core business data.
+2. Use search infrastructure for large-scale discovery.
+3. Use cache for high-traffic reads.
+4. Use queues for sync and background jobs.
+5. Use partitions for high-volume historical/live data.
+6. Use append-only ledgers for financial events.
+7. Archive old data but keep it recoverable.
+
+## High-Scale Data Areas
+
+- Live Arena events.
+- Notifications.
+- Credit ledger.
+- Transfer messages.
+- Historical statistics.
+- Search logs.
+
+---
+
+# 10 — Archiving
+
+## Objective
+
+Keep the core database fast while preserving history.
+
+## Archive Candidates
+
+- Old notifications.
+- Old live match events.
+- Old sync logs.
+- Completed negotiation messages.
+- Historical raw provider payload references.
+- Expired temporary files.
+
+## Archive Rule
+
+Strategic, financial, transfer and audit data must not be deleted casually.
+
+Use cold storage or archive tables.
+
+---
+
+# 11 — Partition Strategy
+
+## Partition Candidates
+
+Partition by time:
+
+- Live Arena events.
+- Historical statistics.
+- Notifications.
+- Audit logs.
+- Sync logs.
+- Credit ledger at very large scale.
+
+Partition by season:
+
+- Competition standings.
+- Fantasy results.
+- Historical statistics.
+
+Partition by competition:
+
+- Live match events.
+- Competition entries.
+
+## Why
+
+Partitioning keeps reads fast and makes archive policies safer.
+
+---
+
+# 12 — Search Strategy
+
+## Objective
+
+Make football search fast across millions of records.
+
+## Search Targets
+
+- Players.
+- Clubs.
+- Coaches.
+- Agents.
+- Agencies.
+- Competitions.
+- Cards.
+- Club Owners.
+
+## Search Requirements
+
+- Partial name search.
+- Aliases.
+- Multi-language names.
+- Ranking by relevance.
+- Ranking by market value.
+- Ranking by popularity.
+- Entity type filters.
+- Provider confidence.
+
+## Recommended Architecture
+
+Start with PostgreSQL indexes.
+
+Move to dedicated search engine when scale requires:
+
+- Meilisearch.
+- Typesense.
+- Algolia.
+- OpenSearch.
+
+## Search Rule
+
+Search should read from Touchline's normalized database/search index first, not external APIs.
+
+---
+
+# 13 — Data Ownership and Trust
+
+## Touchline Verified Data
+
+Highest trust.
+
+Examples:
+
+- Verified representation.
+- Secure transfers.
+- Club Owner actions.
+- Credit ledger.
+
+## Provider Data
+
+Medium trust, depends on source confidence.
+
+## User-Submitted Data
+
+Requires validation and moderation depending on risk.
+
+## Suggested Relationships
+
+Never public as verified until confirmed.
+
+---
+
+# 14 — Final Database Blueprint
+
+The definitive Touchline database must support:
+
+- Football business relationships.
+- Fantasy club ownership.
+- Card ownership.
+- Secure transfers.
+- Credits and bank ledger.
+- Provider-independent football data.
+- Live match events.
+- Historical data.
+- Search at scale.
+- Audit and compliance.
+- Long-term progression.
+
+The database is not just storage.
+
+It is the strategic foundation of the company.
+
+
+
+============================================================
+
+SOURCE: touchline-hq/11_Roadmap/01_Master_Development_Roadmap.md
+
+# Master Development Roadmap
+
+Version: 0.1  
+Author: Touchline Executive Documentation Board  
+Last Updated: 2026-06-26  
+Status: Draft Official Roadmap  
+Dependencies: 00_Governance, 02_Product, 03_Fantasy, 04_Economy, 05_Transfer_Center, 06_Football_Data, 08_Database, 09_UI_UX, 10_Security, 12_Legal, 14_Development  
+Future Related Documents: 30-Day Plan, 90-Day Plan, Version 1.0 Launch Plan, Technical Debt Plan, Investor Build Plan
+
+## Executive Summary
+
+Touchline must be built in the correct order:
+
+1. Governance and product clarity.
+2. Stable data foundation.
+3. Secure economy and transfer rules.
+4. Core fantasy onboarding.
+5. Transfer Center.
+6. Live Arena and competitions.
+7. Monetization and marketplace security.
+8. Beta launch.
+9. Version 1.0 launch.
+
+The roadmap must protect the company from the biggest danger: building exciting features on weak foundations.
+
+Touchline should not rush into full fantasy, live data and marketplace features before the database, economy, security and user journey are stable.
+
+---
+
+# Roadmap Principles
+
+## Constitutional Rules
+
+1. Do not build a feature without a clear document owner.
+2. Do not build fantasy economy features before the Economy Bible rules are implemented.
+3. Do not build external data features tied to one provider only.
+4. Do not build transfer features without Secure Transfer Policy enforcement.
+5. Do not build Live Arena before caching and sync strategy are stable.
+6. Do not build monetization that creates pay-to-win risk.
+7. Do not launch Version 1.0 with fake buttons, unclear permissions or unverified economy flows.
+
+---
+
+# Phase 0 — Documentation and Constitutional Foundation
+
+## Objective
+
+Create the strategic foundation before development.
+
+## Required Documents
+
+- `00_Governance/01_Touchline_Manifesto.md`
+- `00_Governance/02_Company_Principles.md`
+- `00_Governance/03_Architecture_Rules.md`
+- `00_Governance/04_Development_Rules.md`
+- `00_Governance/05_Naming_Convention.md`
+- `11_Roadmap/01_Master_Development_Roadmap.md`
+
+## Dependencies
+
+- Touchline HQ structure.
+- Product direction.
+- Executive approval.
+
+## Estimated Complexity
+
+Low technical complexity. High strategic importance.
+
+## Technical Risks
+
+- Documentation becomes disconnected from actual product.
+- Future development ignores architecture rules.
+
+## Business Risks
+
+- Building too many disconnected ideas.
+- Losing focus between Professional and Fantasy.
+
+## Milestones
+
+- Governance documents created.
+- Roadmap approved.
+- All future missions mapped to folders.
+
+## Definition of Done
+
+- Touchline HQ contains the official governance layer.
+- The roadmap is approved before development resumes.
+- Every new feature has a documentation home.
+
+---
+
+# Phase 1 — Product Stabilization and Current Platform Cleanup
+
+## Objective
+
+Stabilize the current Touchline platform before adding major new systems.
+
+## Required Documents
+
+- `02_Product/README.md`
+- `09_UI_UX/01_Touchline_User_Experience_Bible.md`
+- `14_Development/README.md`
+- `00_Governance/04_Development_Rules.md`
+
+## Dependencies
+
+- Existing app audit.
+- Current routing.
+- Current Supabase setup.
+- Current football search and profile workflows.
+
+## Estimated Complexity
+
+Medium.
+
+## Technical Risks
+
+- Duplicate routes.
+- Broken buttons.
+- Inconsistent mobile layout.
+- Demo data mixed with real data.
+- Fragile Transfermarkt link enrichment.
+
+## Business Risks
+
+- Users lose trust if the platform feels unfinished.
+- Agents and clubs may not understand the core value.
+
+## Milestones
+
+- Navigation simplified.
+- Dead buttons removed or clearly marked.
+- Football Search becomes the official search entry.
+- Player, club and agent profiles become consistent.
+- Mobile layouts are usable.
+
+## Definition of Done
+
+- A new user can log in, navigate, search and open core profiles without confusion.
+- No major route feels abandoned.
+- No duplicate page serves the same purpose without reason.
+
+---
+
+# Phase 2 — Database and Football Data Foundation
+
+## Objective
+
+Build the provider-independent football data foundation.
+
+## Required Documents
+
+- `06_Football_Data/08_Football_Data_Architecture_Bible.md`
+- `08_Database/01_Database_Master_Bible.md`
+- `06_Football_Data/01_Data_Strategy.md`
+- `06_Football_Data/03_API_Adapter.md`
+- `06_Football_Data/04_Sync_Engine.md`
+- `06_Football_Data/05_Cache_Strategy.md`
+- `06_Football_Data/06_Rate_Limit.md`
+- `06_Football_Data/07_Data_Quality.md`
+
+## Dependencies
+
+- Provider decision.
+- Sportmonks evaluation.
+- Database schema design.
+- Search strategy.
+
+## Estimated Complexity
+
+High.
+
+## Technical Risks
+
+- Provider lock-in.
+- High API usage.
+- Bad data quality.
+- Duplicate entities.
+- Slow search.
+
+## Business Risks
+
+- Wrong football data damages credibility.
+- Provider cost may become too high.
+- Legal/data licensing ambiguity.
+
+## Milestones
+
+- Provider-independent data model.
+- External ID mapping strategy.
+- Sync job plan.
+- Cache strategy.
+- Data quality rules.
+- Search ranking rules.
+
+## Definition of Done
+
+- Touchline can store and search normalized players, clubs, coaches and competitions without depending on one provider's schema.
+- External data is source-tracked.
+- Sync and cache rules are documented and ready for implementation.
+
+---
+
+# Phase 3 — Touchline Fantasy Core MVP
+
+## Objective
+
+Create the first playable fantasy ownership loop.
+
+## Required Documents
+
+- `03_Fantasy/README.md`
+- `03_Fantasy/08_Club_Owner_Card_System.md`
+- `09_UI_UX/01_Touchline_User_Experience_Bible.md`
+- `04_Economy/01_Touchline_Economy_Bible.md`
+- `08_Database/01_Database_Master_Bible.md`
+
+## Dependencies
+
+- User account.
+- Club Owner entity.
+- Club creation.
+- Owner Card system.
+- Starter budget.
+- Basic cards.
+- Basic squad builder.
+
+## Estimated Complexity
+
+High.
+
+## Technical Risks
+
+- Avatar generation complexity.
+- Card state complexity.
+- Club owner data model mistakes.
+- Mobile onboarding friction.
+
+## Business Risks
+
+- Users may not understand the difference between Professional and Fantasy.
+- Too much onboarding may reduce activation.
+
+## Milestones
+
+- Welcome screen.
+- Account creation flow.
+- Club creation.
+- Owner avatar.
+- Club badge.
+- Starter budget.
+- First squad.
+- First Owner Card.
+
+## Definition of Done
+
+- A new user can create a club and understand the fantasy core loop within minutes.
+- The user sees a meaningful Club Owner Card.
+- The first session produces ownership, not confusion.
+
+---
+
+# Phase 4 — Economy and Touchline Cards
+
+## Objective
+
+Build the economic foundation for cards, credits, club bank and prestige.
+
+## Required Documents
+
+- `04_Economy/01_Touchline_Economy_Bible.md`
+- `03_Fantasy/08_Club_Owner_Card_System.md`
+- `10_Security/02_Secure_Transfer_Policy.md`
+- `12_Legal/01_Legal_Bible.md`
+
+## Dependencies
+
+- Official Market Value provider.
+- Club Bank.
+- Touchline Credits ledger.
+- Touchline Cards.
+- Salary cap.
+- Card categories.
+
+## Estimated Complexity
+
+Very High.
+
+## Technical Risks
+
+- Incorrect credit ledger.
+- Mutable balances without audit history.
+- Incorrect card category updates.
+- Inflation risk.
+
+## Business Risks
+
+- Pay-to-win perception.
+- Legal confusion around cards and credits.
+- Economy manipulation.
+
+## Milestones
+
+- Bronze, Silver and Gold categories.
+- Credits ledger.
+- Club Bank.
+- Club Net Worth.
+- Salary cap.
+- Card availability.
+- Inflation guardrails.
+
+## Definition of Done
+
+- Every credit movement is explainable.
+- Card category follows official provider market value.
+- Club Net Worth is visible but not legally misleading.
+- Economy rules prevent obvious pay-to-win abuse.
+
+---
+
+# Phase 5 — Transfer Center and Secure Negotiation Rooms
+
+## Objective
+
+Create the official in-platform marketplace for Touchline Cards.
+
+## Required Documents
+
+- `05_Transfer_Center/01_Transfer_Center_Bible.md`
+- `05_Transfer_Center/02_Secure_Transfer_Policy.md`
+- `10_Security/02_Secure_Transfer_Policy.md`
+- `04_Economy/01_Touchline_Economy_Bible.md`
+- `12_Legal/02_Secure_Transfer_Policy.md`
+
+## Dependencies
+
+- Touchline Cards.
+- Credits ledger.
+- Club Bank.
+- Secure message protection.
+- Transfer audit logs.
+
+## Estimated Complexity
+
+Very High.
+
+## Technical Risks
+
+- Fraud attempts.
+- External transaction bypassing.
+- Message protection false positives.
+- Transfer race conditions.
+- Dispute resolution gaps.
+
+## Business Risks
+
+- Users may attempt to move deals to WhatsApp.
+- Marketplace revenue leakage.
+- Fraud could damage brand trust.
+
+## Milestones
+
+- Offer system.
+- Counteroffer system.
+- Secure Negotiation Room.
+- Transfer status lifecycle.
+- AI message protection.
+- Reputation penalties.
+
+## Definition of Done
+
+- Every transfer proposal is recorded.
+- External contact/payment attempts are blocked.
+- Completed transfers are auditable.
+- Users understand why negotiations stay inside Touchline.
+
+---
+
+# Phase 6 — Competitions and Live Arena
+
+## Objective
+
+Turn club ownership into competition, emotion and daily engagement.
+
+## Required Documents
+
+- `09_UI_UX/01_Touchline_User_Experience_Bible.md`
+- `06_Football_Data/08_Football_Data_Architecture_Bible.md`
+- `08_Database/01_Database_Master_Bible.md`
+- `04_Economy/01_Touchline_Economy_Bible.md`
+
+## Dependencies
+
+- Fixtures.
+- Live data.
+- Competition entries.
+- Squad registration.
+- Scoring rules.
+- Cache and sync.
+
+## Estimated Complexity
+
+Very High.
+
+## Technical Risks
+
+- Live sync delay.
+- High API cost.
+- Scoring disputes.
+- Cache invalidation.
+- Real-time scaling.
+
+## Business Risks
+
+- Live experience disappoints if updates are slow.
+- Bad scoring rules reduce trust.
+- Competitions feel unfair if matching is poor.
+
+## Milestones
+
+- First competition.
+- Squad registration.
+- Matchday view.
+- Live Arena events.
+- Ranking updates.
+- Rewards.
+- Trophy cabinet.
+
+## Definition of Done
+
+- Users can enter a competition, watch matchday progress and receive clear results.
+- Live data is cached and scalable.
+- Rankings and rewards are explainable.
+
+---
+
+# Phase 7 — Retention, Notifications and Seasonal Progression
+
+## Objective
+
+Make Touchline a daily and weekly habit.
+
+## Required Documents
+
+- `09_UI_UX/01_Touchline_User_Experience_Bible.md`
+- `04_Economy/01_Touchline_Economy_Bible.md`
+- `08_Database/01_Database_Master_Bible.md`
+
+## Dependencies
+
+- Notification system.
+- Daily briefing.
+- Weekly loop.
+- Seasonal rewards.
+- Achievements.
+- Reputation events.
+
+## Estimated Complexity
+
+Medium to High.
+
+## Technical Risks
+
+- Notification spam.
+- Poor mobile performance.
+- Reward inflation.
+- Achievement farming.
+
+## Business Risks
+
+- Users return only weekly.
+- Too many notifications cause opt-out.
+- Rewards feel meaningless.
+
+## Milestones
+
+- Daily briefing.
+- Actionable notifications.
+- Weekly preparation flow.
+- Seasonal report.
+- Achievements.
+- Reputation events.
+
+## Definition of Done
+
+- Users have meaningful reasons to return daily.
+- Notifications are actionable.
+- Seasonal progression feels emotionally valuable.
+
+---
+
+# Phase 8 — Monetization and Commercial Launch Readiness
+
+## Objective
+
+Create a sustainable revenue model without damaging fairness.
+
+## Required Documents
+
+- `04_Economy/01_Touchline_Economy_Bible.md`
+- `10_Security/01_Security_Bible.md`
+- `12_Legal/01_Legal_Bible.md`
+- `13_Marketing/README.md`
+
+## Dependencies
+
+- Economy rules.
+- Secure Transfer Policy.
+- Subscription model.
+- Payment provider.
+- Legal disclaimers.
+
+## Estimated Complexity
+
+High.
+
+## Technical Risks
+
+- Payment failures.
+- Subscription entitlement bugs.
+- Credit purchase disputes.
+- Security issues.
+
+## Business Risks
+
+- Pay-to-win perception.
+- Pricing too high or too confusing.
+- Launch before value is proven.
+
+## Milestones
+
+- Subscription tiers.
+- Credit purchase rules.
+- Cosmetic monetization.
+- Premium analytics.
+- Billing dashboard.
+- Founder/early adopter plan.
+
+## Definition of Done
+
+- Users understand what is paid and what is fair.
+- Monetization does not break competitive integrity.
+- Billing and entitlement logic are reliable.
+
+---
+
+# Phase 9 — Private Beta
+
+## Objective
+
+Test Touchline with controlled real users before public launch.
+
+## Required Documents
+
+- `11_Roadmap/01_Master_Development_Roadmap.md`
+- `14_Development/README.md`
+- `13_Marketing/README.md`
+- `10_Security/01_Security_Bible.md`
+
+## Dependencies
+
+- Core MVP stable.
+- Economy rules working.
+- Football data stable.
+- Secure negotiations.
+- Support process.
+
+## Estimated Complexity
+
+Medium.
+
+## Technical Risks
+
+- Unknown bugs.
+- Data sync failures.
+- User behavior edge cases.
+
+## Business Risks
+
+- Early users misunderstand product.
+- Feedback reveals missing core value.
+- Bad first impression with target market.
+
+## Milestones
+
+- Beta cohort selected.
+- Feedback system.
+- Bug triage.
+- Usage analytics.
+- Retention measurement.
+- Economy monitoring.
+
+## Definition of Done
+
+- Beta users complete onboarding.
+- Users make transfers.
+- Users enter competitions.
+- Major UX blockers are identified.
+- Economy abuse scenarios are tested.
+
+---
+
+# Phase 10 — Version 1.0 Launch
+
+## Objective
+
+Launch Touchline 1.0 as a serious, trusted and exciting football ownership ecosystem.
+
+## Required Documents
+
+- All Governance documents.
+- Economy Bible.
+- Football Data Architecture Bible.
+- Database Master Bible.
+- User Experience Bible.
+- Security Bible.
+- Legal Bible.
+- Marketing launch docs.
+
+## Dependencies
+
+- Production infrastructure.
+- Stable data provider.
+- Payment system.
+- Legal policies.
+- Customer support.
+- Monitoring.
+
+## Estimated Complexity
+
+Very High.
+
+## Technical Risks
+
+- Scale issues.
+- Live data failures.
+- Payment bugs.
+- Search latency.
+- Mobile performance.
+
+## Business Risks
+
+- Weak launch positioning.
+- Incomplete product-market fit.
+- Economy imbalance.
+- Legal/data provider issues.
+
+## Milestones
+
+- Production readiness.
+- Public landing page.
+- Support system.
+- Launch campaign.
+- First competitions.
+- First marketplace season.
+- Version 1.0 release notes.
+
+## Definition of Done
+
+- A new user can join, create a club, buy cards, enter competition, use Live Arena and understand long-term progression.
+- Secure Transfer Policy is enforced.
+- Provider data is stable enough for launch.
+- Payment and subscription systems are production-ready.
+- Core economy is monitored.
+
+---
+
+# Executive Roadmap
+
+## Priority Order
+
+1. Foundation and governance.
+2. Current product stabilization.
+3. Football data architecture.
+4. Database architecture.
+5. Fantasy onboarding.
+6. Economy and cards.
+7. Transfer Center.
+8. Competitions and Live Arena.
+9. Monetization.
+10. Beta.
+11. Version 1.0.
+
+## Executive Rule
+
+Do not launch public Version 1.0 until the economy, security and data foundations are trusted.
+
+---
+
+# Product Roadmap
+
+## Product Milestones
+
+1. Clear mode selection.
+2. First-time user journey.
+3. Club creation.
+4. Owner Card.
+5. Starter budget.
+6. First squad.
+7. Transfer Center.
+8. First competition.
+9. Live Arena.
+10. Daily retention loop.
+11. Seasonal progression.
+
+## Product Goal
+
+Every new user must understand Touchline within minutes and see years of progression ahead.
+
+---
+
+# Technical Roadmap
+
+## Technical Milestones
+
+1. Clean navigation and route structure.
+2. Provider-independent data layer.
+3. Database schema foundation.
+4. Search strategy.
+5. Credit ledger.
+6. Card ownership system.
+7. Transfer audit system.
+8. Queue and sync architecture.
+9. Live data cache.
+10. Monitoring and admin tools.
+
+## Technical Goal
+
+Touchline should serve millions of users from its own normalized data layer, minimizing direct API usage.
+
+---
+
+# Business Roadmap
+
+## Business Milestones
+
+1. Define target users.
+2. Validate fantasy ownership concept.
+3. Validate Club Owner Card status value.
+4. Validate Transfer Center engagement.
+5. Validate pricing.
+6. Create beta community.
+7. Launch founder plan.
+8. Build partnerships.
+9. Prepare investor story.
+
+## Business Goal
+
+Create a football technology company, not only a fantasy app.
+
+---
+
+# Launch Roadmap
+
+## Pre-Launch
+
+- Documentation approved.
+- Product stabilization.
+- Legal review.
+- Data provider plan.
+- Economy testing.
+- Beta recruitment.
+
+## Beta Launch
+
+- Invite-only users.
+- Controlled competitions.
+- Economy monitoring.
+- Feedback collection.
+- Bug fixes.
+
+## Public Launch
+
+- Landing page.
+- Paid plans.
+- Public competitions.
+- Social sharing.
+- Support system.
+- Launch campaign.
+
+## Post-Launch
+
+- Monitor retention.
+- Monitor economy.
+- Monitor fraud.
+- Improve onboarding.
+- Expand provider coverage.
+
+---
+
+# Future Roadmap
+
+## Version 1.1
+
+- Advanced Club Owner Card animations.
+- More competitions.
+- Better notifications.
+- Improved mobile experience.
+
+## Version 1.2
+
+- Coach system.
+- Stadium upgrades.
+- Sponsor economy.
+- Academy system.
+
+## Version 1.3
+
+- Advanced transfer clauses.
+- Rivalries.
+- Dynasty mode.
+- Historical club documentary.
+
+## Version 2.0
+
+- Native mobile app.
+- Multi-provider live data.
+- Global fantasy leagues.
+- Professional/Fantasy bridge.
+- Investor-ready business intelligence.
+
+---
+
+# Final Development Rule
+
+The roadmap is official.
+
+If a new idea appears, it must be placed into the correct phase or deliberately deferred.
+
+Touchline should grow with discipline:
+
+```text
+Trust → Data → Economy → Transfer → Competition → Retention → Monetization → Scale
+```
+
