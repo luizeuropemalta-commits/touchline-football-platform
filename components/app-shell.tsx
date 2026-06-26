@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BadgeCheck, BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
-  CalendarDays, ClipboardList, FileSignature, FileText, Globe2, Goal, Inbox, LayoutDashboard,
+  CalendarDays, ClipboardList, FileSignature, FileText, Globe2, Goal, Inbox,
   Database, Link2, LockKeyhole, MailCheck, Menu, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
   Target,
 } from "lucide-react";
@@ -22,7 +22,7 @@ type NavItem = {
 };
 
 const nav: NavItem[] = [
-  { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Touchline Fantasy", icon: Trophy },
   { href: "/players", label: "Player Portfolio", icon: Users },
   { href: "/football-search", label: "Football Search", icon: Search },
   { href: "/players/pitch", label: "Pitch Player", icon: MailCheck },
@@ -53,7 +53,7 @@ const operations: NavItem[] = [
 ];
 
 const consoleModes = [
-  { href: "/dashboard", label: "Command Center", eyebrow: "HQ", icon: Globe2 },
+  { href: "/dashboard", label: "Fantasy HQ", eyebrow: "Club Owner", icon: Trophy },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
   { href: "/football-search", label: "Football Search", eyebrow: "Global", icon: Search },
   { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },

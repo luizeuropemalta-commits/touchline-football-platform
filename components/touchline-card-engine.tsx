@@ -1,5 +1,19 @@
 import Link from "next/link";
-import { Activity, AlertTriangle, HeartPulse, Shield, Sparkles, Star, Trophy, Zap } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  Building2,
+  ExternalLink,
+  HeartPulse,
+  Shield,
+  Sparkles,
+  Star,
+  Trophy,
+  UserRoundCheck,
+  UsersRound,
+  Zap,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type TouchlineCardTier = "bronze" | "silver" | "gold";
@@ -58,6 +72,37 @@ export type TouchlinePlayerCardModel = {
 };
 
 type TouchlinePlayerCardVariant = "showcase" | "compact" | "list";
+
+export type TouchlineIdentityEntityType = "club" | "agent" | "agency" | "coach" | "scout" | "academy" | "investor";
+
+export type TouchlineIdentityCardModel = {
+  id?: string;
+  type: TouchlineIdentityEntityType;
+  name: string;
+  initials?: string;
+  imageUrl?: string | null;
+  transfermarktId?: string | null;
+  href?: string;
+  externalHref?: string;
+  status?: string | null;
+  country?: string | null;
+  league?: string | null;
+  subtitle?: string | null;
+  valueLabel?: string | null;
+  metricLabel?: string | null;
+  metricValue?: string | number | null;
+  secondaryMetricLabel?: string | null;
+  secondaryMetricValue?: string | number | null;
+  linkedPlayers?: Array<{
+    id?: string | null;
+    name?: string | null;
+    initials?: string | null;
+    href?: string | null;
+    photoUrl?: string | null;
+    status?: string | null;
+    transfermarktId?: string | null;
+  }>;
+};
 
 const tierMeta: Record<TouchlineCardTier, { label: string; border: string; glow: string; text: string; chip: string }> = {
   bronze: {
@@ -122,6 +167,99 @@ function CardEngineMeter({ value, color = "cyan" }: { value: number; color?: "cy
         )}
         style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
       />
+    </div>
+  );
+}
+
+function identityInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
+function entityMeta(type: TouchlineIdentityEntityType) {
+  const map = {
+    club: {
+      label: "Club identity",
+      icon: Building2,
+      chip: "border-[#a3ff12]/25 bg-[#a3ff12]/[.08] text-[#caff72]",
+      glow: "shadow-[0_0_34px_rgba(163,255,18,.16)]",
+      fallback: "Premium Club Identity Coming Soon",
+    },
+    agent: {
+      label: "Agent identity",
+      icon: UserRoundCheck,
+      chip: "border-cyan-300/25 bg-cyan-300/[.08] text-cyan-100",
+      glow: "shadow-[0_0_34px_rgba(34,211,238,.14)]",
+      fallback: "TDIE Executive Identity",
+    },
+    agency: {
+      label: "Agency identity",
+      icon: UsersRound,
+      chip: "border-cyan-300/25 bg-cyan-300/[.08] text-cyan-100",
+      glow: "shadow-[0_0_34px_rgba(34,211,238,.14)]",
+      fallback: "TDIE Agency Identity",
+    },
+    coach: {
+      label: "Coach identity",
+      icon: Trophy,
+      chip: "border-amber-300/25 bg-amber-300/[.08] text-amber-100",
+      glow: "shadow-[0_0_34px_rgba(251,191,36,.14)]",
+      fallback: "Premium Coach Identity Coming Soon",
+    },
+    scout: {
+      label: "Scout identity",
+      icon: Shield,
+      chip: "border-cyan-300/25 bg-cyan-300/[.08] text-cyan-100",
+      glow: "shadow-[0_0_34px_rgba(34,211,238,.12)]",
+      fallback: "Premium Scout Identity Coming Soon",
+    },
+    academy: {
+      label: "Academy identity",
+      icon: Star,
+      chip: "border-[#a3ff12]/25 bg-[#a3ff12]/[.08] text-[#caff72]",
+      glow: "shadow-[0_0_34px_rgba(163,255,18,.13)]",
+      fallback: "Premium Academy Identity Coming Soon",
+    },
+    investor: {
+      label: "Investor identity",
+      icon: Sparkles,
+      chip: "border-amber-300/25 bg-amber-300/[.08] text-amber-100",
+      glow: "shadow-[0_0_34px_rgba(251,191,36,.13)]",
+      fallback: "Premium Investor Identity Coming Soon",
+    },
+  };
+  return map[type];
+}
+
+export function TouchlineIdentityArtwork({
+  entity,
+  className,
+}: {
+  entity: TouchlineIdentityCardModel;
+  className?: string;
+}) {
+  const meta = entityMeta(entity.type);
+  const Icon = meta.icon;
+  const initials = entity.initials ?? identityInitials(entity.name);
+
+  return (
+    <div className={cn("relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.055]", className)}>
+      {entity.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={entity.imageUrl} alt={entity.name} className="h-full w-full object-contain p-1.5 saturate-[1.04] contrast-[1.05]" />
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_45%_30%,rgba(34,211,238,.22),transparent_58%),linear-gradient(145deg,rgba(163,255,18,.10),transparent)]" />
+          <Icon size={18} className="absolute right-2 top-2 text-cyan-200/55" />
+          <span className="relative font-display text-xl font-black italic text-cyan-100">{initials}</span>
+        </>
+      )}
+      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,.16)_46%,transparent_58%)] opacity-45" />
     </div>
   );
 }
@@ -329,4 +467,140 @@ export function TouchlinePlayerCard({
   }
 
   return inner;
+}
+
+export function TouchlineIdentityCard({
+  entity,
+  className,
+}: {
+  entity: TouchlineIdentityCardModel;
+  className?: string;
+}) {
+  const meta = entityMeta(entity.type);
+  const linkedPlayers = entity.linkedPlayers ?? [];
+  const approved = linkedPlayers.filter((player) => player.status === "approved").length;
+  const suggested = linkedPlayers.length - approved;
+
+  const inner = (
+    <div className={cn("relative overflow-hidden rounded-[1.6rem] bg-[#07111b] p-[1px]", meta.glow, className)}>
+      <div className="absolute inset-0 rounded-[1.6rem] bg-gradient-to-br from-cyan-300/35 via-white/10 to-[#a3ff12]/25 opacity-60" />
+      <div className="relative z-10 overflow-hidden rounded-[1.6rem] border border-white/[.08] bg-[radial-gradient(circle_at_12%_0%,rgba(34,211,238,.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02))] p-4">
+        <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,.08)_45%,transparent_56%)] opacity-45" />
+        <div className="relative flex min-w-0 items-start gap-4">
+          <TouchlineIdentityArtwork entity={entity} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn("rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em]", meta.chip)}>{meta.label}</span>
+              {entity.transfermarktId ? (
+                <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">
+                  TM ID {entity.transfermarktId}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white">{entity.name}</p>
+            <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              {entity.subtitle ?? entity.status ?? meta.fallback}
+            </p>
+          </div>
+        </div>
+
+        <div className="relative mt-4 grid gap-2 text-[9px] font-black uppercase tracking-wider text-slate-500 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/[.06] bg-black/20 px-3 py-2">
+            <p>{entity.metricLabel ?? "Linked"}</p>
+            <p className="mt-1 truncate text-sm text-cyan-100">{entity.metricValue ?? linkedPlayers.length}</p>
+          </div>
+          <div className="rounded-2xl border border-white/[.06] bg-black/20 px-3 py-2">
+            <p>{entity.secondaryMetricLabel ?? "Verified"}</p>
+            <p className="mt-1 truncate text-sm text-[#a3ff12]">{entity.secondaryMetricValue ?? approved}</p>
+          </div>
+          <div className="rounded-2xl border border-white/[.06] bg-black/20 px-3 py-2">
+            <p>Status</p>
+            <p className="mt-1 truncate text-sm text-amber-200">{entity.status ?? (suggested ? `${suggested} suggested` : "Pending Official Data Sync")}</p>
+          </div>
+        </div>
+
+        {linkedPlayers.length ? (
+          <div className="relative mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {linkedPlayers.slice(0, 12).map((player, index) => {
+              const playerInitials = player.initials ?? identityInitials(player.name ?? "Player");
+              const content = (
+                <div className="group flex min-w-0 items-center gap-3 rounded-2xl border border-white/[.06] bg-black/20 p-2 transition hover:border-cyan-300/20 hover:bg-cyan-300/[.05]">
+                  <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
+                    {player.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={player.photoUrl} alt={player.name ?? "Player"} className="h-full w-full object-cover object-top" />
+                    ) : (
+                      <span className="text-[10px] font-black text-cyan-300/75">{playerInitials}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[10px] font-black uppercase italic text-white group-hover:text-cyan-100">{player.name ?? "Player"}</p>
+                    <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">
+                      TM ID {player.transfermarktId ?? "open"} · {player.status === "approved" ? "verified" : "suggested"}
+                    </p>
+                  </div>
+                </div>
+              );
+
+              if (player.href) {
+                return (
+                  <Link key={`${player.id ?? player.name ?? "player"}-${index}`} href={player.href}>
+                    {content}
+                  </Link>
+                );
+              }
+
+              return <div key={`${player.id ?? player.name ?? "player"}-${index}`}>{content}</div>;
+            })}
+          </div>
+        ) : (
+          <div className="relative mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[.06] p-4">
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-200">
+              {entity.type === "club" ? "Pending Official Data Sync" : "Premium identity ready"}
+            </p>
+            <p className="mt-1 text-[10px] leading-5 text-slate-500">
+              {entity.type === "club"
+                ? "Touchline shows the club identity now. Official squad and trophy data will be filled by approved football data sync."
+                : "Touchline can display public linked profiles here while keeping representation and business status separate."}
+            </p>
+          </div>
+        )}
+
+        <div className="relative mt-4 flex flex-wrap gap-2">
+          {entity.href ? (
+            <Link href={entity.href} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-300/[.12]">
+              Open Profile <ArrowRight size={12} />
+            </Link>
+          ) : null}
+          {entity.externalHref ? (
+            <a href={entity.externalHref} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72]">
+              Transfermarkt <ExternalLink size={12} />
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (entity.href) {
+    return (
+      <div className="block min-w-0">
+        {inner}
+      </div>
+    );
+  }
+
+  return inner;
+}
+
+export function TouchlineClubIdentityCard(props: Omit<Parameters<typeof TouchlineIdentityCard>[0], "entity"> & { entity: Omit<TouchlineIdentityCardModel, "type"> }) {
+  return <TouchlineIdentityCard {...props} entity={{ ...props.entity, type: "club" }} />;
+}
+
+export function TouchlineAgentIdentityCard(props: Omit<Parameters<typeof TouchlineIdentityCard>[0], "entity"> & { entity: Omit<TouchlineIdentityCardModel, "type"> }) {
+  return <TouchlineIdentityCard {...props} entity={{ ...props.entity, type: "agent" }} />;
+}
+
+export function TouchlineCoachIdentityCard(props: Omit<Parameters<typeof TouchlineIdentityCard>[0], "entity"> & { entity: Omit<TouchlineIdentityCardModel, "type"> }) {
+  return <TouchlineIdentityCard {...props} entity={{ ...props.entity, type: "coach" }} />;
 }

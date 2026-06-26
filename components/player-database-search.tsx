@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Building2, ChevronDown, DatabaseZap, ExternalLink, Loader2, Search, UploadCloud, UserRoundSearch, UsersRound } from "lucide-react";
+import { Building2, ChevronDown, DatabaseZap, Loader2, Search, UploadCloud, UserRoundSearch } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, SectionHeader } from "@/components/game-ui";
+import { TouchlineAgentIdentityCard, TouchlineClubIdentityCard, TouchlineCoachIdentityCard, TouchlinePlayerCard } from "@/components/touchline-card-engine";
 import { cn } from "@/lib/utils";
 
 type PlayerDatabaseResult = {
@@ -82,16 +83,6 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-function metaLine(player: PlayerDatabaseResult) {
-  const age = player.age ?? ageFromDate(player.dateOfBirth);
-  return [player.position, player.currentClub, player.nationality, age ? `Age ${age}` : null].filter(Boolean).join(" · ") || "Profile data open";
-}
-
-function displayAge(player: PlayerDatabaseResult) {
-  const age = player.age ?? ageFromDate(player.dateOfBirth);
-  return age ? `${age}` : "—";
-}
-
 function marketValue(player: PlayerDatabaseResult) {
   if (player.marketValueText) return player.marketValueText;
   if (typeof player.marketValue === "number" && Number.isFinite(player.marketValue)) {
@@ -104,10 +95,25 @@ function marketValue(player: PlayerDatabaseResult) {
   return "Value open";
 }
 
-function idLabel(player: PlayerDatabaseResult) {
-  return player.sourceProvider === "transfermarkt"
-    ? `TM ID ${player.transfermarktPlayerId}`
-    : `${player.sourceLabel ?? "Source"} ID ${player.sourceId ?? player.transfermarktPlayerId}`;
+function playerCardModel(player: PlayerDatabaseResult) {
+  return {
+    id: player.id,
+    name: player.name,
+    initials: initials(player.name),
+    tdieImageUrl: player.photoUrl,
+    nationality: player.nationality,
+    position: player.position,
+    age: player.age ?? ageFromDate(player.dateOfBirth),
+    currentClub: player.currentClub,
+    currentAgent: player.agentName ?? player.agencyName,
+    officialMarketValue: player.marketValue,
+    officialMarketValueLabel: marketValue(player),
+    currency: player.currency ?? "EUR",
+    availability: missingSearchData(player) ? "Pending Official Data Sync" : "Ready",
+    href: `/players/database/${player.id}`,
+    externalHref: player.profileUrl,
+    context: "search" as const,
+  };
 }
 
 function missingSearchData(player: PlayerDatabaseResult) {
@@ -121,8 +127,7 @@ function isGenericExternalImage(value?: string | null) {
     lower.includes("transfermarkt-logo") ||
     lower.includes("transfermarkt.svg") ||
     lower.includes("transfermarkt.png") ||
-    lower.includes("/logo/") ||
-    lower.includes("/logos/") ||
+    (lower.includes("transfermarkt") && lower.includes("logo")) ||
     lower.includes("tm-logo") ||
     lower.includes("default") ||
     lower.includes("socialmedia") ||
@@ -133,126 +138,47 @@ function isGenericExternalImage(value?: string | null) {
 
 function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
   return (
-    <div className="group grid gap-3 rounded-3xl border border-white/[.07] bg-white/[.035] p-3 transition hover:border-cyan-300/25 hover:bg-cyan-300/[.055] lg:grid-cols-[minmax(0,1fr)_auto]">
-      <Link href={`/players/database/${player.id}`} className="grid min-w-0 gap-3 sm:grid-cols-[72px_minmax(0,1fr)]">
-        <div className="size-[72px] overflow-hidden rounded-2xl border border-white/[.08] bg-black/30">
-          {player.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
-          ) : (
-            <div className="grid h-full place-items-center text-xl font-black text-cyan-300/45">{initials(player.name)}</div>
-          )}
-        </div>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">
-              {idLabel(player)}
-            </span>
-            <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.07] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-cyan-200">
-              Age {displayAge(player)}
-            </span>
-          </div>
-          <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white group-hover:text-cyan-100">{player.name}</p>
-          <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-slate-500">{metaLine(player)}</p>
-          <div className="mt-3 grid gap-2 text-[9px] font-black uppercase tracking-wider text-slate-400 sm:grid-cols-4">
-            <span className="truncate rounded-xl bg-black/20 px-3 py-2">Club: <b className="text-cyan-200">{player.currentClub ?? "Open"}</b></span>
-            <span className="truncate rounded-xl bg-black/20 px-3 py-2">Nation: <b className="text-white">{player.nationality ?? "Open"}</b></span>
-            <span className="truncate rounded-xl bg-black/20 px-3 py-2">Value: <b className="text-amber-300">{marketValue(player)}</b></span>
-            <span className="truncate rounded-xl bg-black/20 px-3 py-2">Agent: <b className="text-[#a3ff12]">{player.agentName ?? player.agencyName ?? "Open"}</b></span>
-          </div>
-        </div>
-      </Link>
-      <div className="flex items-center gap-2 lg:flex-col lg:justify-center">
-        <Link href={`/players/database/${player.id}`} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-cyan-200/18 bg-white/[.055] px-4 text-[9px] font-black uppercase tracking-wider text-slate-100 transition hover:border-cyan-300/35 lg:flex-none">
-          Open <ArrowRight size={12} />
-        </Link>
-        <a href={player.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72] lg:flex-none">
-          TM <ExternalLink size={12} />
-        </a>
-      </div>
-    </div>
+    <TouchlinePlayerCard player={playerCardModel(player)} variant="list" />
   );
 }
 
 function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
-  const Icon = entity.type === "club" ? Building2 : UsersRound;
-  const typeLabel = entity.type === "club" ? "Club" : "Agent / Agency";
   const internalHref = entity.type === "club" ? `/clubs/database/${entity.id}` : `/agents/database/${entity.id}`;
-  const showPlayerPreview = entity.type !== "club";
-  const approvedCount = showPlayerPreview ? entity.players.filter((player) => player.status === "approved").length : 0;
-  const suggestedCount = showPlayerPreview ? entity.players.filter((player) => player.status !== "approved").length : 0;
-  const emptyPlayerMessage = entity.type === "club"
-    ? "No public player links saved yet"
-    : "No public player links saved yet";
-  const emptyPlayerDetail = entity.type === "club"
-    ? "Touchline can discover public player links from the club profile page, but this is only a reference and not a contract or registration claim."
-    : "Touchline can discover public player links from the agent/agency profile page, but representation still needs confirmation before being treated as verified.";
-  return (
-    <div className="rounded-3xl border border-white/[.07] bg-white/[.035] p-4">
-      <div className="flex items-start gap-3">
-        <Link href={internalHref} className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.06] transition hover:border-[#a3ff12]/40">
-          {entity.photoUrl && !isGenericExternalImage(entity.photoUrl) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={entity.photoUrl} alt={entity.name} className="h-full w-full object-contain p-2" />
-          ) : (
-            <Icon size={20} className="text-cyan-300" />
-          )}
-        </Link>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.07] px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-cyan-200">{typeLabel}</span>
-            <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">TM ID {entity.transfermarktId}</span>
-          </div>
-          <Link href={internalHref} className="mt-2 block truncate text-base font-black uppercase italic tracking-[-.04em] text-white transition hover:text-[#caff72]">{entity.name}</Link>
-          <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            {!showPlayerPreview
-              ? "Open internal club profile · market, squad and share tools"
-              : entity.players.length
-              ? `${entity.players.length} public linked player${entity.players.length === 1 ? "" : "s"} · ${approvedCount} verified · ${suggestedCount} suggested`
-              : emptyPlayerMessage}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col gap-2">
-          <Link href={internalHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100">
-            Open Profile <ArrowRight size={12} />
-          </Link>
-          <a href={entity.profileUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-wider text-[#caff72]">
-            TM <ExternalLink size={12} />
-          </a>
-        </div>
-      </div>
+  const linkedPlayers = entity.players.map((player) => ({
+    id: player.id,
+    name: player.name,
+    initials: initials(player.name ?? "Player"),
+    href: player.internalProfileUrl ?? (player.name ? `/football-search?q=${encodeURIComponent(player.name)}` : null),
+    photoUrl: player.photoUrl,
+    status: player.status,
+    transfermarktId: player.transfermarktId,
+  }));
 
-      {showPlayerPreview && <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {entity.players.length ? entity.players.map((player) => (
-          <Link
-            key={`${entity.id}-${player.id}`}
-            href={player.internalProfileUrl ?? (player.profileUrl ? `/football-search?q=${encodeURIComponent(player.name ?? "")}` : "#")}
-            className="group flex min-w-0 items-center gap-3 rounded-2xl border border-white/[.06] bg-black/20 p-2 transition hover:border-cyan-300/20 hover:bg-cyan-300/[.05]"
-          >
-            <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
-              {player.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={player.photoUrl} alt={player.name ?? "Player"} className="h-full w-full object-cover object-top" />
-              ) : (
-                <span className="text-[10px] font-black text-cyan-300/60">{initials(player.name ?? "P")}</span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-[10px] font-black uppercase italic text-white group-hover:text-cyan-100">{player.name ?? "Player"}</p>
-              <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">
-                TM ID {player.transfermarktId ?? "open"} · {player.status === "approved" ? "verified" : "suggested"} · Touchline profile
-              </p>
-            </div>
-          </Link>
-        )) : (
-          <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[.06] p-4 sm:col-span-2 xl:col-span-3">
-            <p className="text-[10px] font-black uppercase tracking-wider text-amber-200">{emptyPlayerMessage}</p>
-            <p className="mt-1 text-[10px] leading-5 text-slate-500">{emptyPlayerDetail}</p>
-          </div>
-        )}
-      </div>}
-    </div>
-  );
+  const cardProps = {
+    entity: {
+      id: entity.id,
+      name: entity.name,
+      initials: initials(entity.name),
+      imageUrl: entity.photoUrl && !isGenericExternalImage(entity.photoUrl) ? entity.photoUrl : null,
+      transfermarktId: entity.transfermarktId,
+      href: internalHref,
+      externalHref: entity.profileUrl,
+      status: entity.status === "active" ? "Active" : "Pending Official Data Sync",
+      subtitle:
+        entity.type === "club"
+          ? "Open internal club profile · market, squad and share tools"
+          : entity.players.length
+            ? `${entity.players.length} public linked players · representation pending`
+            : "Premium agent identity · linked players pending",
+      metricLabel: entity.type === "club" ? "Public squad" : "Public players",
+      metricValue: entity.players.length,
+      secondaryMetricLabel: "Verified",
+      secondaryMetricValue: entity.players.filter((player) => player.status === "approved").length,
+      linkedPlayers,
+    },
+  };
+
+  return entity.type === "club" ? <TouchlineClubIdentityCard {...cardProps} /> : <TouchlineAgentIdentityCard {...cardProps} />;
 }
 
 const searchTabs: Array<{ key: SearchTab; label: string }> = [
@@ -475,26 +401,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
             <div className="max-h-[430px] overflow-y-auto p-2">
               {hasResults ? (
                 results.map((player) => (
-                  <Link
-                    key={player.id}
-                    href={`/players/database/${player.id}`}
-                    className="group flex gap-3 rounded-2xl border border-transparent p-3 transition hover:border-cyan-300/20 hover:bg-cyan-300/[.06]"
-                  >
-                    <div className="size-14 shrink-0 overflow-hidden rounded-2xl border border-white/[.08] bg-black/30">
-                      {player.photoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
-                      ) : (
-                        <div className="grid h-full place-items-center text-[11px] font-black text-cyan-300/50">{initials(player.name)}</div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[11px] font-black uppercase italic text-white group-hover:text-cyan-200">{player.name}</p>
-                      <p className="mt-1 truncate text-[8px] font-bold uppercase tracking-wider text-slate-500">{metaLine(player)}</p>
-                      <p className="mt-2 text-[8px] text-[#a3ff12]">{idLabel(player)}</p>
-                    </div>
-                    <ArrowRight size={14} className="mt-4 text-slate-600 group-hover:text-cyan-300" />
-                  </Link>
+                  <TouchlinePlayerCard key={player.id} player={playerCardModel(player)} variant="list" className="mb-2" />
                 ))
               ) : (
                 <div className="p-6 text-center">
@@ -632,17 +539,30 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                         </p>
                       </div>
                     ) : noResultsInActiveTab ? (
-                      <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
-                        <div>
-                          <UserRoundSearch className="mx-auto text-slate-700" size={24} />
-                          <p className="mt-3 text-[11px] font-black uppercase text-white">
-                            {activeTab === "coaches" ? "Coach search coming soon" : `No ${activeTab === "all" ? "football" : activeTab} result found yet`}
-                          </p>
-                          <p className="mt-2 text-[10px] leading-5 text-slate-500">
-                            {activeTab === "coaches" ? "This type is reserved for the next database expansion." : "Try the official Transfermarkt name or switch tabs."}
-                          </p>
+                      activeTab === "coaches" ? (
+                        <TouchlineCoachIdentityCard
+                          entity={{
+                            name: "Coach Identity Search",
+                            initials: "CI",
+                            status: "Under Development",
+                            subtitle: "Premium coach profiles will use the same TDIE visual identity system as players, clubs and agents.",
+                            metricLabel: "Module",
+                            metricValue: "V1 Optional",
+                            secondaryMetricLabel: "Identity",
+                            secondaryMetricValue: "TDIE Ready",
+                          }}
+                        />
+                      ) : (
+                        <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
+                          <div>
+                            <UserRoundSearch className="mx-auto text-slate-700" size={24} />
+                            <p className="mt-3 text-[11px] font-black uppercase text-white">
+                              No {activeTab === "all" ? "football" : activeTab} result found yet
+                            </p>
+                            <p className="mt-2 text-[10px] leading-5 text-slate-500">Try the official Transfermarkt name or switch tabs.</p>
+                          </div>
                         </div>
-                      </div>
+                      )
                     ) : (
                       <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
                         <div>

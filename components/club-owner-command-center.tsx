@@ -297,6 +297,25 @@ export function ClubOwnerCommandCenter({ data }: { data: CommandCenterData }) {
     <div className="mx-auto w-full max-w-[1760px] min-w-0 animate-in space-y-6">
       <ClubOwnerCard data={data} />
 
+      <GamePanel className="overflow-hidden p-4 sm:p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <LivePill>Touchline Fantasy Entry</LivePill>
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.06] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
+                Club Owner Home Screen
+              </span>
+            </div>
+            <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-300/80">
+              This is the official Fantasy starting point: manage your club identity, squad value, economy, competitions, transfers and live match flow from one command center.
+            </p>
+          </div>
+          <Link href="/football-search" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[10px] font-black uppercase tracking-[.16em] text-[#071007] transition hover:bg-cyan-200">
+            Start Building Squad <ArrowUpRight size={14} />
+          </Link>
+        </div>
+      </GamePanel>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_430px]">
         <div className="grid min-w-0 gap-4 2xl:grid-cols-2">
           <CenterCard kicker="Club economy" title="Financial Center" icon={<CircleDollarSign className="text-[#a3ff12]" />}>
