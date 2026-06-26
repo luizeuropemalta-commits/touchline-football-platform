@@ -23,6 +23,7 @@ Defines what Touchline is, who it serves and how each user type experiences the 
 - Investor Journey
 - MVP Scope
 - Product Requirements
+- Touchline Digital Identity Engine
 
 ## Dependencies
 
@@ -40,3 +41,4 @@ Defines what Touchline is, who it serves and how each user type experiences the 
 - `04_club_experience.md`
 - `05_player_experience.md`
 - `06_mvp_scope.md`
+- `Touchline_Digital_Identity_Engine.md`

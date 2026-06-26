@@ -22,10 +22,12 @@ Documents the technical architecture and long-term scaling strategy.
 - Background Jobs
 - Scaling Plan
 - AI Service Architecture
+- Touchline Digital Identity Engine architecture
 
 ## Dependencies
 
 - Product
+- Touchline Digital Identity Engine
 - Database
 - Security
 - Development workflow
@@ -37,3 +39,7 @@ Documents the technical architecture and long-term scaling strategy.
 - `03_backend_architecture.md`
 - `04_search_architecture.md`
 - `05_scaling_plan.md`
+
+## Identity architecture rule
+
+All avatar, card, profile, shareable media and identity-animation architecture must depend on `02_Product/Touchline_Digital_Identity_Engine.md`. Touchline must not create separate visual identity or card animation engines per entity type.

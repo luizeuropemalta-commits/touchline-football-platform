@@ -19,6 +19,7 @@ Tracks what Touchline builds, when it builds it and why it matters.
 - Fantasy Roadmap
 - Technical Debt Roadmap
 - Launch Roadmap
+- Touchline Digital Identity Engine Roadmap
 - 30-Day Plan
 - 90-Day Plan
 - 12-Month Plan
@@ -27,6 +28,7 @@ Tracks what Touchline builds, when it builds it and why it matters.
 
 - Executive
 - Product
+- Product identity engine
 - Architecture
 - Development
 - Investor strategy
@@ -38,3 +40,7 @@ Tracks what Touchline builds, when it builds it and why it matters.
 - `03_90_Day_Plan.md`
 - `04_Professional_Platform_Roadmap.md`
 - `05_Fantasy_Roadmap.md`
+
+## Identity roadmap rule
+
+Any future player card, club card, agent card, coach card, owner card, identity animation or shareable artwork milestone must depend on `02_Product/Touchline_Digital_Identity_Engine.md` before implementation begins.

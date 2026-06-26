@@ -21,10 +21,12 @@ Stores database design, relationships, table definitions, migrations and data qu
 - Indexing Strategy
 - Migration History
 - Data Quality Rules
+- Digital Identity Engine data model
 
 ## Dependencies
 
 - Product requirements
+- Touchline Digital Identity Engine
 - Security
 - Architecture
 - API data strategy
@@ -36,3 +38,8 @@ Stores database design, relationships, table definitions, migrations and data qu
 - `03_Table_Definitions.md`
 - `04_RLS_Policy_Rules.md`
 - `05_Indexing_Strategy.md`
+- `06_Digital_Identity_Data_Model.md`
+
+## Identity data rule
+
+The database must support the Touchline Digital Identity Engine as a platform-wide system. It must store source assets, generated identity assets, rendered cards, version history, moderation status and entity-to-identity mappings without duplicating avatar logic per entity.

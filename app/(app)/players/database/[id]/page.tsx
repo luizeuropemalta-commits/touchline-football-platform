@@ -1,12 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarClock, DatabaseZap, ExternalLink, Globe2, Send, ShieldCheck, Sparkles, Trophy, UserRoundSearch } from "lucide-react";
-import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
+import { CalendarClock, CircleDollarSign, Globe2, Shield, Sparkles, Trophy, UsersRound } from "lucide-react";
+import { GamePanel } from "@/components/game-ui";
+import { PlayerProfileCommandCenter, type PlayerProfile2Data } from "@/components/player-profile-command-center";
 import { enrichGlobalPlayerProfileFromTransfermarkt } from "@/lib/player-database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 type PageParams = { id: string };
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
+}
+
+function asString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
 
 function ageFromDate(date?: string | null) {
   if (!date) return null;
@@ -27,7 +37,9 @@ function formatMoney(value?: number | null, currency = "EUR", fallback?: string 
 
 function compactDate(value?: string | null) {
   if (!value) return "Not synced yet";
-  return new Intl.DateTimeFormat("en", { month: "long", day: "2-digit", year: "numeric" }).format(new Date(value));
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "Not synced yet";
+  return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", year: "numeric" }).format(parsed);
 }
 
 function initialBadge(name: string) {
@@ -46,6 +58,63 @@ function siteUrl() {
   const vercel = process.env.VERCEL_URL?.trim();
   if (vercel) return `https://${vercel}`;
   return "https://touchline-football-platform.vercel.app";
+}
+
+function playerTier(marketValue?: number | null): PlayerProfile2Data["cardTier"] {
+  if ((marketValue ?? 0) >= 50_000_000) return "Gold";
+  if ((marketValue ?? 0) >= 5_000_000) return "Silver";
+  return "Bronze";
+}
+
+function tierColor(tier: PlayerProfile2Data["cardTier"]): PlayerProfile2Data["cardTierColor"] {
+  if (tier === "Gold") return "gold";
+  if (tier === "Silver") return "silver";
+  return "bronze";
+}
+
+function openOr(value?: string | null, fallback = "Open") {
+  return value?.trim() || fallback;
+}
+
+function buildHonours(enrichment: JsonRecord): PlayerProfile2Data["honours"] {
+  const rawHonours = Array.isArray(enrichment.honours) ? enrichment.honours : [];
+  const source = rawHonours.length ? rawHonours : [
+    { label: "League titles", count: null, icon: "🏆" },
+    { label: "Continental titles", count: null, icon: "🌍" },
+    { label: "Domestic cups", count: null, icon: "🥈" },
+    { label: "Individual awards", count: null, icon: "⭐" },
+  ];
+
+  return source.flatMap((item) => {
+    const record = asRecord(item);
+    const label = asString(record.label);
+    if (!label) return [];
+    return [{
+      label,
+      count: typeof record.count === "number" ? record.count : null,
+      icon: asString(record.icon) ?? "🏆",
+    }];
+  });
+}
+
+function buildStats(profile: {
+  marketValueLabel: string;
+  age: number | null;
+  position: string | null;
+  currentClub: string | null;
+  contractExpiry: string | null;
+  sourceLabel: string;
+}): PlayerProfile2Data["stats"] {
+  return [
+    { label: "Goals", value: "Sync", detail: "Sportmonks player statistics", accent: "gold" },
+    { label: "Assists", value: "Sync", detail: "season data pending", accent: "cyan" },
+    { label: "Minutes", value: "Sync", detail: "match participation", accent: "lime" },
+    { label: "Cards", value: "Sync", detail: "discipline history", accent: "rose" },
+    { label: "Market", value: profile.marketValueLabel, detail: profile.sourceLabel, accent: "gold" },
+    { label: "Age", value: profile.age ? String(profile.age) : "Open", detail: "identity profile", accent: "cyan" },
+    { label: "Role", value: openOr(profile.position), detail: "main position", accent: "lime" },
+    { label: "Club", value: openOr(profile.currentClub), detail: profile.contractExpiry ? `contract ${profile.contractExpiry}` : "contract open", accent: "cyan" },
+  ];
 }
 
 export default async function PlayerDatabaseProfile({ params }: { params: Promise<PageParams> }) {
@@ -83,24 +152,23 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
   if (error || !playerRow) notFound();
 
   const player = await enrichGlobalPlayerProfileFromTransfermarkt(admin, playerRow);
-
+  const sourcePayload = asRecord(player.source_payload);
+  const enrichment = asRecord(sourcePayload.transfermarktProfileEnrichment);
+  const details = asRecord(enrichment.details);
   const age = player.age ?? ageFromDate(player.date_of_birth);
-  const sourcePayload = player.source_payload && typeof player.source_payload === "object" && !Array.isArray(player.source_payload)
-    ? player.source_payload as Record<string, unknown>
-    : {};
-  const enrichment = sourcePayload.transfermarktProfileEnrichment && typeof sourcePayload.transfermarktProfileEnrichment === "object" && !Array.isArray(sourcePayload.transfermarktProfileEnrichment)
-    ? sourcePayload.transfermarktProfileEnrichment as Record<string, unknown>
-    : {};
-  const details = enrichment.details && typeof enrichment.details === "object" && !Array.isArray(enrichment.details)
-    ? enrichment.details as Record<string, unknown>
-    : {};
   const sourceLabel = player.source_provider === "transfermarkt"
     ? "Transfermarkt"
     : sourcePayload.source === "api-football"
       ? "API-Football"
       : "Football Data";
-  const sourceId = sourcePayload.apiFootballPlayerId ? String(sourcePayload.apiFootballPlayerId) : player.transfermarkt_player_id;
+  const sourceId = sourcePayload.apiFootballPlayerId ? String(sourcePayload.apiFootballPlayerId) : String(player.transfermarkt_player_id ?? "");
   const sourceLinkLabel = player.source_provider === "transfermarkt" ? "Transfermarkt" : "Source Link";
+  const marketValueLabel = formatMoney(player.market_value, player.currency ?? "EUR", player.market_value_text);
+  const cardTier = playerTier(player.market_value);
+  const internalProfileUrl = `${siteUrl()}/players/database/${player.id}`;
+  const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Touchline player profile: ${player.player_name}\n${internalProfileUrl}`)}`;
+  const contractExpiry = asString(details.contractExpires);
+  const joined = asString(details.joined);
   const profileCompleteness = Math.min(
     100,
     [
@@ -111,201 +179,117 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
       player.date_of_birth || player.age,
       player.profile_url,
       player.transfermarkt_player_id,
-    ].filter(Boolean).length * 14,
+      player.market_value || player.market_value_text,
+      contractExpiry,
+      details.height,
+    ].filter(Boolean).length * 10,
   );
-  const internalProfileUrl = `${siteUrl()}/players/database/${player.id}`;
-  const whatsAppUrl = `https://wa.me/?text=${encodeURIComponent(`Touchline player profile: ${player.player_name}\n${internalProfileUrl}`)}`;
-  const rawHonours = Array.isArray(enrichment.honours) ? enrichment.honours : [];
-  const playerHonours = (rawHonours.length ? rawHonours : [
-    { label: "League titles", count: null, icon: "🏆" },
-    { label: "Continental titles", count: null, icon: "🌍" },
-    { label: "Domestic cups", count: null, icon: "🥈" },
-    { label: "Individual awards", count: null, icon: "⭐" },
-  ]).flatMap((item) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
-    const record = item as Record<string, unknown>;
-    return [{
-      label: typeof record.label === "string" ? record.label : "Honour",
-      count: typeof record.count === "number" ? record.count : null,
-      icon: typeof record.icon === "string" ? record.icon : "🏆",
-    }];
-  });
 
-  return (
-    <div className="mx-auto max-w-[1500px] animate-in">
-      <Link href="/football-search" className="mb-4 inline-flex items-center gap-2 text-[8px] font-black uppercase tracking-[.14em] text-slate-600 hover:text-cyan-300">
-        <ArrowLeft size={12} />
-        Return to football search
-      </Link>
+  const timeline: PlayerProfile2Data["timeline"] = [
+    {
+      label: "Identity created",
+      value: compactDate(player.created_at),
+      meta: "Touchline created the player identity inside the global football profile registry.",
+      icon: <Sparkles size={15} />,
+    },
+    {
+      label: "Born",
+      value: player.date_of_birth ? compactDate(player.date_of_birth) : "Birth data pending",
+      meta: asString(details.placeOfBirth) ? `Place of birth: ${details.placeOfBirth}` : "Birthplace will be completed by approved football data sync.",
+      icon: <CalendarClock size={15} />,
+    },
+    {
+      label: "Current club",
+      value: openOr(player.current_club, "Club open"),
+      meta: joined ? `Joined: ${joined}` : "Club movement timeline will expand with provider transfer history.",
+      icon: <Shield size={15} />,
+    },
+    {
+      label: "Market checkpoint",
+      value: marketValueLabel,
+      meta: `Official value follows ${sourceLabel}. Touchline never changes official market value manually.`,
+      icon: <CircleDollarSign size={15} />,
+    },
+  ];
 
-      <GamePanel className="relative overflow-hidden pitch-grid">
-        <div className="absolute right-[-8%] top-[-60%] size-[500px] rounded-full border border-cyan-300/[.08]" />
-        <div className="relative grid min-h-[360px] min-w-0 lg:grid-cols-[330px_1fr]">
-          <div className="relative overflow-hidden border-b border-white/[.07] bg-cyan-300/[.035] lg:border-b-0 lg:border-r">
-            {player.photo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={player.photo_url} alt={player.player_name} className="h-full min-h-[360px] w-full object-cover object-top grayscale-[8%] contrast-[1.08]" />
-            ) : (
-              <div className="grid h-full min-h-[360px] place-items-center text-6xl font-black text-cyan-300/25">{initialBadge(player.player_name)}</div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-cyan-400/[.05]" />
-            <div className="absolute bottom-5 left-5"><LivePill>Database profile</LivePill></div>
-          </div>
+  const data: PlayerProfile2Data = {
+    id: String(player.id),
+    name: String(player.player_name ?? "Unnamed player"),
+    initials: initialBadge(String(player.player_name ?? "Player")),
+    sourceLabel,
+    sourceId,
+    sourceLinkLabel,
+    profileUrl: String(player.profile_url ?? "#"),
+    internalProfileUrl,
+    shareUrl,
+    photoUrl: player.photo_url,
+    club: player.current_club,
+    nationality: player.nationality,
+    position: player.position,
+    age,
+    dateOfBirth: player.date_of_birth,
+    height: asString(details.height),
+    preferredFoot: asString(details.foot),
+    coach: "Sync pending",
+    agent: player.agent_name,
+    agency: player.agency_name,
+    league: "League sync pending",
+    competition: "Competition sync pending",
+    marketValueLabel,
+    marketValueNumber: player.market_value,
+    currency: player.currency ?? "EUR",
+    contractExpiry,
+    joined,
+    placeOfBirth: asString(details.placeOfBirth),
+    outfitter: asString(details.outfitter),
+    playerStatus: asString(details.playerStatus),
+    updatedAtLabel: compactDate(player.last_updated_at),
+    profileCompleteness,
+    searchReadiness: 100,
+    cardTier,
+    cardTierColor: tierColor(cardTier),
+    availability: asString(details.playerStatus) ?? "Available",
+    transferStatus: contractExpiry ? "Monitoring" : "Open",
+    currentForm: "Live sync",
+    injuryStatus: "No injury synced",
+    honours: buildHonours(enrichment),
+    timeline,
+    stats: buildStats({
+      marketValueLabel,
+      age,
+      position: player.position,
+      currentClub: player.current_club,
+      contractExpiry,
+      sourceLabel,
+    }),
+    related: [
+      { label: "Club", value: openOr(player.current_club), href: "/club-network", icon: <Shield size={15} /> },
+      { label: "Agent", value: openOr(player.agent_name ?? player.agency_name), href: "/agents", icon: <UsersRound size={15} /> },
+      { label: "League", value: "Sync pending", href: "/admin/football-data", icon: <Trophy size={15} /> },
+      { label: "Competition", value: "Provider foundation", href: "/admin/football-data", icon: <Globe2 size={15} /> },
+    ],
+    videos: [
+      {
+        title: "Latest highlights",
+        description: "Video modules are ready. Approved YouTube, Vimeo, Hudl, Wyscout and Veo embeds can connect here without leaving Touchline.",
+      },
+      {
+        title: "AI summary future",
+        description: "Future AI summaries will convert highlight videos into scouting notes, strengths, risks and club-fit recommendations.",
+      },
+    ],
+    live: {
+      status: "No live match active",
+      minute: "Pre-match",
+      points: "0",
+      events: [
+        { label: "Goals", value: "0", accent: "gold" },
+        { label: "Assists", value: "0", accent: "cyan" },
+        { label: "Cards", value: "0", accent: "rose" },
+        { label: "Minutes", value: "0", accent: "lime" },
+      ],
+    },
+  };
 
-          <div className="relative min-w-0 p-5 sm:p-8">
-            <div className="flex flex-col justify-between gap-6 sm:flex-row">
-              <div className="min-w-0">
-                <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">
-                  {player.current_club ?? "Club open"} · {player.position ?? "Position open"}
-                </p>
-                <h1 className="font-display mt-2 break-words text-4xl uppercase italic sm:text-6xl">{player.player_name}</h1>
-                <p className="mt-2 break-words text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                  {player.nationality ?? "Nationality open"} {age ? `· AGE ${age}` : ""} · {sourceLabel} ID {sourceId}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-                <a href={player.profile_url} target="_blank" rel="noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#071007] sm:w-auto">
-                  {sourceLinkLabel} <ExternalLink size={13} />
-                </a>
-                <a href={whatsAppUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-cyan-100 sm:w-auto">
-                  Share WhatsApp <Send size={13} />
-                </a>
-              </div>
-            </div>
-
-            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                ["VALUE", formatMoney(player.market_value, player.currency ?? "EUR", player.market_value_text), "text-amber-300"],
-                ["CLUB", player.current_club ?? "Open", "text-white"],
-                ["AGENT", player.agent_name ?? player.agency_name ?? "Open", "text-cyan-300"],
-                ["UPDATED", compactDate(player.last_updated_at), "text-[#a3ff12]"],
-              ].map(([label, value, color]) => (
-                <div key={String(label)} className="rounded-xl border border-white/[.08] bg-black/20 p-4">
-                  <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>
-                  <p className={`mt-2 truncate text-xl font-black ${color}`}>{value}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <div>
-                <div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>PROFILE COMPLETENESS</span><span>{profileCompleteness}%</span></div>
-                <Meter value={profileCompleteness} color="lime" />
-              </div>
-              <div>
-                <div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>SEARCH READINESS</span><span>100%</span></div>
-                <Meter value={100} color="cyan" />
-              </div>
-              <div>
-                <div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>SYNC SOURCE</span><span>{sourceLabel}</span></div>
-                <Meter value={player.source_provider === "transfermarkt" ? 90 : 60} color="gold" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </GamePanel>
-
-      <GamePanel className="mt-5 p-5">
-        <SectionHeader kicker="Player honours" title="Trophy cabinet" action={<Trophy size={15} className="text-amber-300" />} />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {playerHonours.map((honour) => (
-            <div key={honour.label} className="relative overflow-hidden rounded-3xl border border-amber-300/15 bg-amber-300/[.045] p-5">
-              <div className="absolute right-[-20px] top-[-20px] size-24 rounded-full bg-amber-300/[.05]" />
-              <div className="relative">
-                <div className="grid size-10 place-items-center rounded-2xl border border-amber-300/20 bg-black/20 text-lg">{honour.icon}</div>
-                <p className="mt-5 text-[9px] font-black uppercase tracking-[.16em] text-amber-200">{honour.label}</p>
-                <p className="mt-3 text-3xl font-black text-white">{honour.count ?? "—"}</p>
-                <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-600">{honour.count === null ? "Sync pending" : "Public metadata"}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-4 text-[10px] leading-5 text-slate-500">
-          Trophy data is limited public metadata. If unavailable from the source page, Touchline keeps the cabinet ready for approved sync.
-        </p>
-      </GamePanel>
-
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
-        <GamePanel className="p-5">
-          <SectionHeader kicker="Touchline search profile" title="Database intelligence" action={<DatabaseZap size={15} className="text-cyan-300" />} />
-          <div className="grid min-w-0 gap-3 md:grid-cols-2">
-            {[
-              [`${sourceLabel} ID`, sourceId],
-              ["Share Profile", internalProfileUrl],
-              ["Position", player.position ?? "Open"],
-              ["Nationality", player.nationality ?? "Open"],
-              ["Date of birth", player.date_of_birth ?? "Open"],
-              ["Age", age ? String(age) : "Open"],
-              ["Agent", player.agent_name ?? "Open"],
-              ["Agency", player.agency_name ?? "Open"],
-            ].map(([label, value]) => (
-              <div key={label} className="min-w-0 rounded-2xl border border-white/[.07] bg-black/20 p-4">
-                <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>
-                {label === "Share Profile" ? (
-                  <a href={whatsAppUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex h-10 items-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-4 text-[9px] font-black uppercase tracking-wider text-cyan-100">
-                    Share Touchline Profile <Send size={12} />
-                  </a>
-                ) : (
-                  <p className="mt-2 overflow-wrap-anywhere text-xs font-bold text-slate-200">{value}</p>
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 rounded-3xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.045] p-4">
-            <SectionHeader kicker="Career & contract" title="Player details" action={<CalendarClock size={15} className="text-[#a3ff12]" />} />
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {[
-                ["Height", typeof details.height === "string" ? details.height : "Open"],
-                ["Preferred foot", typeof details.foot === "string" ? details.foot : "Open"],
-                ["Joined club", typeof details.joined === "string" ? details.joined : "Open"],
-                ["Contract until", typeof details.contractExpires === "string" ? details.contractExpires : "Open"],
-                ["Place of birth", typeof details.placeOfBirth === "string" ? details.placeOfBirth : "Open"],
-                ["Outfitter", typeof details.outfitter === "string" ? details.outfitter : "Open"],
-                ["Status", typeof details.playerStatus === "string" ? details.playerStatus : "Open"],
-                ["Source", sourceLabel],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl border border-white/[.07] bg-black/20 p-4">
-                  <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>
-                  <p className="mt-2 overflow-wrap-anywhere text-xs font-bold text-slate-200">{value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </GamePanel>
-
-        <div className="space-y-5">
-          <GamePanel className="p-5">
-            <SectionHeader kicker="Legal source rule" title="How Touchline uses this data" action={<ShieldCheck size={15} className="text-[#a3ff12]" />} />
-            <div className="space-y-3 text-xs leading-6 text-slate-400">
-              <p>Touchline searches its own saved player-link database first. If the player was missing, it can save a basic profile from an authorized provider such as API-Football.</p>
-              <p>External sources remain reference links only. Representation, legal status and club visibility are controlled inside Touchline.</p>
-              <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[.05] p-4">
-                <p className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-300">Sync status</p>
-                <p className="mt-2 text-white">Last updated: {compactDate(player.last_updated_at)}</p>
-              </div>
-            </div>
-          </GamePanel>
-
-          <GamePanel className="p-5">
-            <SectionHeader kicker="Future AI matching" title="Opportunity engine" action={<Sparkles size={15} className="text-amber-300" />} />
-            <div className="space-y-3 text-xs leading-6 text-slate-400">
-              <p>This profile can be used later for club needs, shortlists, AI scouting suggestions and daily sync workflows.</p>
-              <div className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
-                <CalendarClock size={16} className="text-cyan-300" />
-                <span>Daily sync-ready profile reference</span>
-              </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
-                <Globe2 size={16} className="text-[#a3ff12]" />
-                <span>Global search and autocomplete enabled</span>
-              </div>
-              <div className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
-                <UserRoundSearch size={16} className="text-amber-300" />
-                <span>Ready for club discovery workflows</span>
-              </div>
-            </div>
-          </GamePanel>
-        </div>
-      </div>
-    </div>
-  );
+  return <PlayerProfileCommandCenter data={data} />;
 }

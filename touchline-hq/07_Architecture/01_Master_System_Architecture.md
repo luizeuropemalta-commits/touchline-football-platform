@@ -39,6 +39,14 @@ The most important architectural principle is this:
 
 Sportmonks, Transfermarkt links, API-Football, Opta, Sportradar or future providers must never become the architecture. They are adapters. Touchline is the product.
 
+Touchline also adopts one unified visual identity architecture:
+
+> Every profile, card, avatar and shareable visual must be generated through the Touchline Digital Identity Engine.
+
+Players, coaches, agents, agencies, club owners, clubs, scouts, academies, investors and future entities must not create isolated avatar systems. The TDIE is the platform-wide identity engine and is documented in `02_Product/Touchline_Digital_Identity_Engine.md`.
+
+The TDIE also owns identity-related animations. No module may create separate card animation, prestige border animation, Live Arena identity animation or social artwork motion pipelines outside the TDIE. Modules must request identity motion from TDIE instead of implementing isolated animation logic.
+
 ## Master Architecture Diagram
 
 ```mermaid
@@ -52,6 +60,7 @@ flowchart TD
 
     Core --> Users["Users & Roles"]
     Core --> Profiles["Profiles: Player / Club / Agent / Coach"]
+    Core --> TDIE["Touchline Digital Identity Engine: Identity + Motion"]
     Core --> Search["Global Football Search"]
     Core --> Admin["Owner Admin"]
     Core --> Billing["Billing & Subscriptions"]
@@ -70,6 +79,10 @@ flowchart TD
 
     Search --> DataCore["Touchline Football Data Core"]
     Profiles --> DataCore
+    Profiles --> TDIE
+    TDIE --> Cards
+    TDIE --> LiveArena
+    TDIE --> TransferCenter
     Cards --> DataCore
     Scoring --> DataCore
     LiveArena --> DataCore
@@ -1196,4 +1209,3 @@ Those systems are now architecturally defined, but they depend on the foundation
 The correct first development rule is:
 
 > Build trust and data truth before building the game economy.
-

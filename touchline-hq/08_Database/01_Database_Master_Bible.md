@@ -960,3 +960,49 @@ The database is not just storage.
 
 It is the strategic foundation of the company.
 
+---
+
+# 15 — Digital Identity Engine Data Model
+
+The database must support the Touchline Digital Identity Engine as one platform-wide identity system.
+
+TDIE data should not be duplicated separately for players, coaches, agents, agencies, clubs, club owners, scouts, academies or investors.
+
+## Required Future Entity Groups
+
+- Identity source assets.
+- Generated identity assets.
+- Entity identity mappings.
+- Rendered cards.
+- Rendered social artwork.
+- Prestige border history.
+- Identity version history.
+- AI generation metadata.
+- Moderation and approval status.
+- Usage rights and source references.
+
+## Database Rule
+
+Every entity should reference TDIE identity records through a reusable mapping pattern.
+
+The database must distinguish:
+
+- Original uploaded/source image.
+- AI-generated identity.
+- Rendered profile asset.
+- Rendered card asset.
+- Shareable artwork asset.
+
+## Why This Matters
+
+Without a shared identity model, Touchline would eventually create many disconnected avatar systems.
+
+That would create:
+
+- Duplicated tables.
+- Duplicated rendering logic.
+- Inconsistent visuals.
+- Harder moderation.
+- Poor scalability.
+
+The TDIE database model keeps every visual identity consistent, auditable and reusable.

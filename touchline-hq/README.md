@@ -19,7 +19,7 @@ No production code belongs here.
 | --- | --- |
 | `00_Governance` | Constitutional foundation, company rules, architecture rules, development rules and naming conventions. |
 | `01_Executive` | Company vision, board strategy, investor-level direction and founder principles. |
-| `02_Product` | Product strategy, user journeys, user roles, core workflows and product requirements. |
+| `02_Product` | Product strategy, user journeys, user roles, core workflows, product requirements and the Touchline Digital Identity Engine. |
 | `03_Fantasy` | Touchline Fantasy Bible, club owner system, cards, competitions, scoring and retention. |
 | `04_Economy` | Touchline Credits, reputation, rankings, scarcity, inflation control and reward systems. |
 | `05_Transfer_Center` | Transfer workflows, proposals, negotiations, deal rooms and opportunity systems. |
@@ -54,6 +54,7 @@ Future Related Documents:
 | Constitutional rules | `00_Governance` | `01_Executive`, `14_Development` |
 | Company strategy | `01_Executive` | `11_Roadmap`, `13_Marketing`, `12_Legal` |
 | Product strategy | `02_Product` | `09_UI_UX`, `07_Architecture`, `08_Database` |
+| Touchline Digital Identity Engine | `02_Product/Touchline_Digital_Identity_Engine.md` | Visual identity, identity rendering, identity animations, prestige borders and social artwork across `03_Fantasy`, `07_Architecture`, `08_Database`, `09_UI_UX`, `11_Roadmap` |
 | Fantasy ecosystem | `03_Fantasy` | `04_Economy`, `05_Transfer_Center`, `09_UI_UX` |
 | Club Owner Card System | `03_Fantasy/08_Club_Owner_Card_System.md` | `04_Economy/01_Touchline_Economy_Bible.md`, `09_UI_UX` |
 | Credits, ranking and rewards | `04_Economy` | `03_Fantasy`, `05_Transfer_Center` |

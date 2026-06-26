@@ -1,6 +1,5 @@
-import Image from "next/image";
-import Link from "next/link";
 import { TrendingUp } from "lucide-react";
+import { TouchlinePlayerCard } from "@/components/touchline-card-engine";
 import type { Player } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -18,34 +17,28 @@ export function Meter({ value, color = "cyan" }: { value: number; color?: "cyan"
 }
 
 export function PlayerGameCard({ player, compact = false }: { player: Player; compact?: boolean }) {
-  const elite = player.overall >= 85;
-  const glow = elite ? "rgba(247,198,93,.28)" : player.potential >= 90 ? "rgba(163,255,18,.22)" : "rgba(34,211,238,.2)";
   return (
-    <Link href={`/players/${player.id}`} className={cn("player-card shimmer relative block border p-[1px]", elite ? "border-amber-300/50" : "border-cyan-300/30", compact ? "min-h-[300px]" : "min-h-[382px]")} style={{ "--card-glow":glow } as React.CSSProperties}>
-      <span className="card-edge"/>
-      <span className="soft-orbit left-1/2 top-9 size-40 -translate-x-1/2 opacity-70"/>
-      <div className="relative z-10 h-full overflow-hidden p-[18px]">
-        <div className="flex items-start justify-between">
-          <div><p className={cn("card-rating font-display leading-none text-white", compact ? "text-[44px]" : "text-[54px]")}>{player.overall}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[.22em] text-cyan-300">{player.position}</p></div>
-          <div className="text-right"><span className={cn("console-chip inline-flex rounded-lg border px-2 py-1 text-[8px] font-black uppercase tracking-wider", elite ? "border-amber-300/35 bg-amber-300/10 text-amber-300" : "border-cyan-300/25 bg-cyan-300/[.07] text-cyan-300")}>{elite ? "Icon" : "Pro"}</span><p className="mt-2 text-[8px] font-bold text-slate-500">{player.nationality}</p></div>
-        </div>
-        <div className={cn("relative mx-auto", compact ? "-mt-1 h-32" : "-mt-4 h-48")}>
-          <div className="absolute bottom-2 left-1/2 h-12 w-40 -translate-x-1/2 rounded-full bg-cyan-400/20 blur-2xl"/>
-          <div className="absolute inset-x-8 bottom-0 h-px bg-gradient-to-r from-transparent via-cyan-200/35 to-transparent"/>
-          <Image src={player.avatar!} fill sizes="300px" alt={player.name} className="card-photo object-cover object-top [mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] saturate-[.8] contrast-[1.08]"/>
-        </div>
-        <div className={cn("relative text-center", compact ? "-mt-1" : "-mt-2")}>
-          <p className="truncate text-base font-black uppercase italic tracking-[-.05em]">{player.name}</p>
-          <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-400/70">{player.club}</p>
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-1.5 border-t border-white/[.08] pt-3 text-center">
-          <div className="card-stat rounded-lg py-2"><p className="text-[8px] font-bold text-slate-500">POT</p><p className="mt-0.5 text-sm font-black text-[#a3ff12]">{player.potential}</p></div>
-          <div className="card-stat rounded-lg py-2"><p className="text-[8px] font-bold text-slate-500">FORM</p><p className="mt-0.5 text-sm font-black text-cyan-300">{player.form}</p></div>
-          <div className="card-stat rounded-lg py-2"><p className="text-[8px] font-bold text-slate-500">GROWTH</p><p className="mt-0.5 text-sm font-black text-emerald-400">+{player.growth}</p></div>
-        </div>
-        {!compact && <div className="mt-3 space-y-2"><div><div className="mb-1 flex justify-between text-[8px] font-bold text-slate-600"><span>AGENT BOND</span><span className="text-slate-400">{player.relationship}%</span></div><Meter value={player.relationship} color="lime"/></div><div><div className="mb-1 flex justify-between text-[8px] font-bold text-slate-600"><span>TRANSFER HEAT</span><span className="text-slate-400">{player.interest}%</span></div><Meter value={player.interest} color="cyan"/></div></div>}
-      </div>
-    </Link>
+    <TouchlinePlayerCard
+      variant={compact ? "compact" : "showcase"}
+      player={{
+        id: player.id,
+        name: player.name,
+        initials: player.initials,
+        tdieImageUrl: player.avatar,
+        nationality: player.nationality,
+        position: player.position,
+        age: player.age,
+        currentClub: player.club,
+        officialMarketValue: player.marketValue,
+        officialMarketValueLabel: player.externalMarket?.marketValue,
+        contractStatus: player.externalMarket?.contractUntil ?? player.contractUntil,
+        currentForm: player.form,
+        availability: player.status,
+        href: `/players/${player.id}`,
+        liveState: player.status === "Injured" ? "injury" : "idle",
+        context: "dashboard",
+      }}
+    />
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BrainCircuit,
   CheckCircle2,
@@ -54,6 +54,42 @@ export type RealPlayer = {
     market_recommendation?: string;
     club_recommendations?: string[];
   } | null;
+};
+
+type FootballFoundationPlayer = {
+  id: string;
+  name?: string | null;
+  display_name?: string | null;
+  photo_url?: string | null;
+  position?: string | null;
+  nationality?: string | null;
+  age?: number | null;
+  provider_player_id?: string | null;
+};
+
+type FootballFoundationState = {
+  ok?: boolean;
+  status?: string;
+  counts?: {
+    competitions?: number;
+    clubs?: number;
+    selectedClubSquadMembers?: number;
+    selectedClubPlayers?: number;
+  };
+  selectedClub?: {
+    id?: string;
+    name?: string | null;
+    logo_url?: string | null;
+    country?: string | null;
+    provider_team_id?: string | null;
+  } | null;
+  players?: FootballFoundationPlayer[];
+  recentSyncRuns?: Array<{
+    id: string;
+    status?: string | null;
+    completed_at?: string | null;
+    records_updated?: number | null;
+  }>;
 };
 
 const emptyForm = {
@@ -130,6 +166,8 @@ function embedUrl(url: string) {
 
 export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlayer[] }) {
   const [players, setPlayers] = useState(initialPlayers);
+  const [footballFoundation, setFootballFoundation] = useState<FootballFoundationState | null>(null);
+  const [footballFoundationLoading, setFootballFoundationLoading] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("ALL");
@@ -146,6 +184,27 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
   const [previewVideoUrl, setPreviewVideoUrl] = useState("");
 
   const activePlayer = players.find((player) => player.id === selectedPlayerId) ?? players[0] ?? null;
+
+  useEffect(() => {
+    let alive = true;
+    async function loadFootballFoundation() {
+      setFootballFoundationLoading(true);
+      try {
+        const response = await fetch("/api/football-data/foundation", { cache: "no-store" });
+        const data = (await response.json()) as FootballFoundationState;
+        if (alive && response.ok && data.ok) setFootballFoundation(data);
+      } catch {
+        if (alive) setFootballFoundation(null);
+      } finally {
+        if (alive) setFootballFoundationLoading(false);
+      }
+    }
+
+    void loadFootballFoundation();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     return players.filter((player) => {
@@ -333,6 +392,78 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
 
       {message && <div className="rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 py-3 text-sm font-bold text-[#caff72]">{message}</div>}
       {error && <div className="rounded-2xl border border-rose-300/25 bg-rose-300/10 px-4 py-3 text-sm font-bold text-rose-200">{error}</div>}
+
+      <GamePanel className="p-5 sm:p-6">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+          <div className="min-w-0">
+            <SectionHeader kicker="Licensed football data" title="Football Data Core" />
+            <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-400">
+              This is the new Sportmonks foundation: external football data is synchronized into Touchline&apos;s own database first, then the app reads from Touchline. This is the base for Player Profile 2.0.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
+                {footballFoundationLoading ? "Checking sync" : footballFoundation?.ok ? "Database online" : "Waiting for sync"}
+              </span>
+              <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-[#caff72]">
+                Clubs {footballFoundation?.counts?.clubs ?? 0}
+              </span>
+              <span className="rounded-full border border-amber-300/20 bg-amber-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-amber-100">
+                Synced players {footballFoundation?.counts?.selectedClubPlayers ?? 0}
+              </span>
+            </div>
+          </div>
+
+          <Link href="/admin/football-data" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.08] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-cyan-100 transition hover:-translate-y-0.5 hover:border-cyan-300/45 hover:bg-cyan-300/[.13]">
+            <DatabaseZap size={14} />
+            Open Data Core
+          </Link>
+        </div>
+
+        {footballFoundation?.selectedClub && (
+          <div className="mt-5 grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="rounded-3xl border border-white/[.07] bg-black/20 p-4">
+              <div className="flex items-center gap-4">
+                <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.06]">
+                  {footballFoundation.selectedClub.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={footballFoundation.selectedClub.logo_url} alt={footballFoundation.selectedClub.name ?? "Club"} className="h-full w-full object-contain p-2" />
+                  ) : (
+                    <ShieldCheck size={24} className="text-cyan-300" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[8px] font-black uppercase tracking-[.18em] text-cyan-300">Starter synced club</p>
+                  <p className="mt-1 truncate text-lg font-black uppercase italic tracking-[-.04em] text-white">{footballFoundation.selectedClub.name}</p>
+                  <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                    {footballFoundation.selectedClub.country ?? "Country open"} · Sportmonks ID {footballFoundation.selectedClub.provider_team_id ?? "open"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {(footballFoundation.players ?? []).slice(0, 8).map((player) => (
+                <div key={player.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/[.06] bg-white/[.035] p-3">
+                  <div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
+                    {player.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={player.photo_url} alt={player.display_name ?? player.name ?? "Player"} className="h-full w-full object-cover object-top" />
+                    ) : (
+                      <span className="text-[10px] font-black text-cyan-300/60">{initials(player.display_name ?? player.name ?? "P")}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[10px] font-black uppercase italic text-white">{player.display_name ?? player.name}</p>
+                    <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">
+                      {player.position ?? "Position open"} · {player.nationality ?? "Nation open"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </GamePanel>
 
       <GamePanel className="p-5 sm:p-6">
         <SectionHeader kicker="Add player" title="Professional player record" />

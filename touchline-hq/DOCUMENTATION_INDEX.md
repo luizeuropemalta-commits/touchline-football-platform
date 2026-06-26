@@ -46,6 +46,7 @@ This index defines where official Touchline documents belong.
 
 | Topic | Document |
 | --- | --- |
+| Touchline Digital Identity Engine, identity rendering and identity animation rules | `02_Product/Touchline_Digital_Identity_Engine.md` |
 | Club Owner Card System | `03_Fantasy/08_Club_Owner_Card_System.md` |
 | Economy Bible | `04_Economy/01_Touchline_Economy_Bible.md` |
 | Transfer Center Bible | `05_Transfer_Center/01_Transfer_Center_Bible.md` |

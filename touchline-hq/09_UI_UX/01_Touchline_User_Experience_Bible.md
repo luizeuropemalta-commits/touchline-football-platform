@@ -818,3 +818,66 @@ Touchline must obey five UX laws:
 4. The user must see years of progression ahead.
 5. Every screen must feel premium, useful and alive.
 
+---
+
+# Touchline Digital Identity Engine UX Rule
+
+Every profile, avatar, card and shareable visual must feel like it belongs to the same Touchline universe.
+
+The UX must never make users feel that:
+
+- Player cards belong to one product.
+- Agent profiles belong to another product.
+- Club Owner Cards belong to another product.
+- Club profiles were designed separately.
+
+The Touchline Digital Identity Engine is responsible for this consistency.
+
+## UX Requirements
+
+- Every entity should have a premium identity block.
+- Every card should use the same visual grammar.
+- Every shareable profile should feel official and recognizable.
+- Every generated image should preserve trust and identity.
+- Every role should feel unique without breaking the design language.
+
+## UX Risk
+
+If Touchline creates separate avatar systems, the product will feel fragmented.
+
+Fragmentation weakens:
+
+- Trust.
+- Brand memory.
+- Premium feeling.
+- User pride.
+- Social sharing.
+
+Therefore TDIE is now a UX foundation, not only an AI feature.
+
+## Identity Motion UX Rule
+
+Identity animations must also come from TDIE.
+
+Player goal animations, assist animations, card warnings, substitution states, owner prestige upgrades, transfer completed moments and Live Arena identity moments must follow one motion language.
+
+The motion language must be:
+
+- Premium.
+- Smooth.
+- Fast.
+- Legible.
+- Emotionally satisfying.
+- Never excessive.
+
+Touchline animation should feel like elite football broadcast plus premium gaming polish, not arcade noise.
+
+Every animation must have a clear user meaning:
+
+- Something happened.
+- Value changed.
+- Status changed.
+- Rank changed.
+- A milestone was achieved.
+
+Animations that do not communicate meaning should not be used.

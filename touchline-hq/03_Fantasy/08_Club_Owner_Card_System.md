@@ -400,3 +400,22 @@ It must feel rarer, more prestigious and more meaningful than any normal player 
 
 It represents the user's football empire.
 
+---
+
+# TDIE Dependency Rule
+
+The Club Owner Card must not be implemented as a standalone avatar or card system.
+
+It is an output of the Touchline Digital Identity Engine documented in `02_Product/Touchline_Digital_Identity_Engine.md`.
+
+The Club Owner Card may define its own displayed information, prestige logic and business meaning, but the following must come from TDIE:
+
+- Avatar generation.
+- Premium portrait language.
+- Card shell.
+- Prestige border rendering.
+- Shareable artwork.
+- Versioned identity assets.
+- Club branding integration.
+
+If Touchline later changes the visual identity system, the Club Owner Card must inherit those improvements through TDIE rather than being redesigned separately.

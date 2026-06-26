@@ -22,10 +22,12 @@ Defines the premium visual language and user experience standards of Touchline.
 - Agent Profile Rules
 - Game-Like Experience
 - Accessibility Standards
+- Touchline Digital Identity Engine Visual Rules
 
 ## Dependencies
 
 - Product
+- Touchline Digital Identity Engine
 - Fantasy
 - Professional platform
 - Security for permission-sensitive screens
@@ -37,3 +39,7 @@ Defines the premium visual language and user experience standards of Touchline.
 - `03_Mobile_Rules.md`
 - `04_Touchline_Cards_Visual_System.md`
 - `05_Profile_Page_Rules.md`
+
+## Identity visual rule
+
+Every profile, card and identity-related animation must follow the Touchline Digital Identity Engine. The visual and motion language must remain unified across players, coaches, agents, agencies, club owners, clubs, scouts, academies, investors and future entities.

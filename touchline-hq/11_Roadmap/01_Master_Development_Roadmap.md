@@ -834,3 +834,74 @@ Touchline should grow with discipline:
 Trust → Data → Economy → Transfer → Competition → Retention → Monetization → Scale
 ```
 
+---
+
+# Digital Identity Engine Roadmap Rule
+
+The Touchline Digital Identity Engine must be built before Touchline creates final production versions of:
+
+- Player Cards.
+- Coach Cards.
+- Agent Cards.
+- Agency Cards.
+- Club Owner Cards.
+- Club Cards.
+- Scout Cards.
+- Academy Cards.
+- Investor Cards.
+- Shareable trophy/transfer/ranking artwork.
+
+## Recommended Roadmap Position
+
+TDIE should begin after the Football Data Core is stable and before large-scale card, fantasy and social sharing implementation.
+
+## Why
+
+Football Data Core provides the facts.
+
+TDIE turns those facts into premium identity.
+
+Cards, profiles, rankings, Live Arena and social sharing should not be finalized until the identity engine exists.
+
+## Definition of Ready
+
+TDIE development is ready when:
+
+- Entity identity rules are approved.
+- Database identity model is approved.
+- AI image safety rules are approved.
+- Card visual grammar is approved.
+- Source image compliance rules are approved.
+
+## Roadmap Warning
+
+Do not create isolated avatar implementations while waiting for TDIE.
+
+Temporary placeholders are allowed only if they are clearly marked as replaceable TDIE placeholders.
+
+## Identity Motion Roadmap Rule
+
+TDIE must also control identity-related animation before Touchline finalizes:
+
+- Player Card goal/assist/card/substitution animations.
+- Club Owner prestige upgrade animations.
+- Transfer Center acceptance/rejection/counter-offer animations.
+- Live Arena identity animations.
+- Prestige border reflections.
+- Shareable motion artwork.
+
+Do not build these as independent animation systems.
+
+The correct roadmap order is:
+
+```text
+Football Data Core
+↓
+TDIE Identity Model
+↓
+TDIE Rendering System
+↓
+TDIE Motion Presets
+↓
+Cards / Profiles / Live Arena / Transfer Center adoption
+```
