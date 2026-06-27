@@ -185,7 +185,7 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
           <div className="relative p-6 sm:p-8">
             <div className="flex flex-col justify-between gap-6 sm:flex-row">
               <div>
-                <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{playerClubName} · {displayData(player.position, "Position unavailable")}</p>
+                <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{playerClubName} · {displayData(player.position, "Role pending")}</p>
                 <h1 className="font-display mt-2 text-4xl uppercase italic sm:text-6xl">{name}</h1>
                 <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                   {displayData(player.nationality, "Nationality unavailable")} {age ? `· AGE ${age}` : ""} {player.preferred_foot ? `· ${player.preferred_foot} footed` : ""}

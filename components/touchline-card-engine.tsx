@@ -153,6 +153,29 @@ function cardStatusLabel(value?: string | number | null, fallback = DATA_NOT_AVA
   return label;
 }
 
+function compactDataLabel(value?: string | number | null, fallback = "Not available") {
+  const label = cardStatusLabel(value, fallback);
+  if (label === DATA_NOT_AVAILABLE) return fallback;
+  return label;
+}
+
+function cleanVisualLabel(value?: string | number | null, fallback = "Touchline") {
+  const label = cardStatusLabel(value, fallback);
+  const normalized = label.toLowerCase();
+
+  if (
+    label === DATA_NOT_AVAILABLE ||
+    normalized.includes("unavailable") ||
+    normalized.includes("not available") ||
+    normalized.includes("official data pending") ||
+    normalized.includes("data pending")
+  ) {
+    return fallback;
+  }
+
+  return label;
+}
+
 const liveStateMeta: Record<TouchlineCardLiveState, { label: string; icon: typeof Activity; className: string }> = {
   idle: { label: "Match ready", icon: Sparkles, className: "border-cyan-300/20 bg-cyan-300/[.06] text-cyan-200" },
   live_match: { label: "Live match", icon: Activity, className: "border-[#a3ff12]/25 bg-[#a3ff12]/[.08] text-[#b7ff45]" },
@@ -330,12 +353,21 @@ function IdentityArtwork({ player, tier, compact = false }: { player: TouchlineP
   const identity = resolvePlayerIdentity(player);
   const artworkUrl = resolveTdieArtworkUrl(player, identity);
   const initials = identity.initials || player.initials || player.name.slice(0, 2).toUpperCase();
-  const identityLabel = identity.status === "generated" ? "TDIE generated identity" : "TDIE premium fallback";
+  const identityLabel = identity.status === "generated" ? "Touchline identity" : "Premium identity";
+  const positionLabel = cleanVisualLabel(player.position ?? identity.positionLabel, "Role pending");
+  const clubLabel = cleanVisualLabel(player.currentClub ?? identity.clubLabel, "Club pending");
+  const nationLabel = cleanVisualLabel(player.nationality, "Nation pending");
+  const tierStyle = tierMeta[tier];
 
   return (
-    <div className={cn("tdie-identity-stage pitch-grid relative mx-auto overflow-hidden rounded-[1.65rem] border border-cyan-300/10 bg-cyan-300/[.035]", compact ? "h-44" : "h-72", identity.accent.glow)}>
-      <div className="absolute inset-x-6 bottom-4 z-[1] h-16 rounded-full bg-cyan-300/20 blur-2xl" />
+    <div className={cn("tdie-identity-stage pitch-grid relative mx-auto overflow-hidden rounded-[1.65rem] border border-white/10 bg-[#061019]", compact ? "h-44" : "h-72", identity.accent.glow)}>
+      <div className={cn("absolute -left-16 -top-20 z-[1] size-48 rounded-full blur-3xl", tier === "gold" ? "bg-amber-300/20" : tier === "silver" ? "bg-slate-100/14" : "bg-orange-300/16")} />
+      <div className="absolute inset-x-6 bottom-2 z-[1] h-20 rounded-full bg-cyan-300/18 blur-2xl" />
       <div className="absolute inset-x-12 top-6 z-[1] h-px bg-gradient-to-r from-transparent via-amber-200/60 to-transparent" />
+      <div className="absolute left-4 top-4 z-[4] flex items-center gap-2">
+        <span className={cn("rounded-full border px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em]", tierStyle.chip)}>{tierStyle.label}</span>
+        <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.06] px-2.5 py-1 text-[7px] font-black uppercase tracking-[.16em] text-cyan-100">Card</span>
+      </div>
       {artworkUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -346,12 +378,17 @@ function IdentityArtwork({ player, tier, compact = false }: { player: TouchlineP
       ) : (
         <div className={cn("relative z-[1] grid h-full place-items-center overflow-hidden bg-gradient-to-br", identity.accent.primary)}>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_24%,rgba(255,255,255,.22),transparent_28%),linear-gradient(115deg,transparent_0%,rgba(255,255,255,.14)_46%,transparent_58%)]" />
-          <div className="absolute bottom-0 left-1/2 h-28 w-[74%] -translate-x-1/2 rounded-[999px_999px_0_0] border border-cyan-200/15 bg-black/25 blur-sm" />
+          <div className="absolute inset-x-8 top-12 z-[1] h-28 rounded-full border border-white/10 bg-white/[.035] blur-xl" />
+          <div className="absolute bottom-0 left-1/2 h-32 w-[78%] -translate-x-1/2 rounded-[999px_999px_0_0] border border-cyan-200/15 bg-black/25 blur-sm" />
           <div className="tdie-avatar-silhouette">
             <div className="absolute inset-x-0 top-[45%] z-10 text-center">
               <p className={cn("card-rating font-display text-5xl font-black italic tracking-[-.08em]", identity.accent.text)}>{initials}</p>
-              <p className="mx-auto mt-2 max-w-32 truncate text-[7px] font-black uppercase tracking-[.16em] text-white/55">{identity.positionLabel ?? "Touchline"}</p>
+              <p className="mx-auto mt-2 max-w-32 truncate text-[7px] font-black uppercase tracking-[.16em] text-white/55">{positionLabel}</p>
             </div>
+          </div>
+          <div className="absolute bottom-16 left-4 right-4 z-[3] rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-center backdrop-blur-md">
+            <p className="truncate text-[8px] font-black uppercase tracking-[.18em] text-white/70">{clubLabel}</p>
+            <p className="mt-1 truncate text-[7px] font-bold uppercase tracking-[.18em] text-cyan-200/70">{nationLabel}</p>
           </div>
         </div>
       )}
@@ -359,8 +396,8 @@ function IdentityArtwork({ player, tier, compact = false }: { player: TouchlineP
       <div className="absolute bottom-4 left-4 z-[4]">
         <CardEngineLivePill>{identityLabel}</CardEngineLivePill>
       </div>
-      <div className={cn("absolute right-4 top-4 z-[4] rounded-xl border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em]", tierMeta[tier].chip)}>
-        {tierMeta[tier].label}
+      <div className={cn("absolute right-4 top-4 z-[4] rounded-xl border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em]", tierStyle.chip)}>
+        Touchline
       </div>
       <div className="card-edge" />
     </div>
@@ -398,6 +435,11 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
   const identity = resolvePlayerIdentity(player);
   const isCompact = variant === "compact";
   const isList = variant === "list";
+  const tierStyle = tierMeta[tier];
+  const positionLabel = compactDataLabel(player.position, "Role pending");
+  const clubLabel = compactDataLabel(player.currentClub, "Club pending");
+  const nationLabel = compactDataLabel(player.nationality, "Nation pending");
+  const hasMarketValue = typeof player.officialMarketValue === "number";
 
   if (isList) {
     const artworkUrl = resolveTdieArtworkUrl(player, identity);
@@ -417,17 +459,17 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={cn("rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-wider", tierMeta[tier].chip)}>{tierMeta[tier].label}</span>
+              <span className={cn("rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-wider", tierStyle.chip)}>{tierStyle.label}</span>
               <LiveStatusBadge state={liveState} points={player.livePoints} />
             </div>
             <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white">{player.name}</p>
             <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">
-              {dataLabel(player.position, "Position unavailable")} · {dataLabel(player.currentClub, "Club unavailable")} · {dataLabel(player.nationality, "Nation unavailable")}
+              {positionLabel} · {clubLabel} · {nationLabel}
             </p>
           </div>
           <div className="hidden min-w-[120px] text-right sm:block">
             <p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Official value</p>
-            <p className="mt-1 text-sm font-black text-[#a3ff12]">{marketValue}</p>
+            <p className="mt-1 text-sm font-black text-[#a3ff12]">{hasMarketValue ? marketValue : "Value pending"}</p>
           </div>
         </div>
       </div>
@@ -440,12 +482,12 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
       <div className="relative z-10 h-full overflow-hidden rounded-[2rem] border border-white/[.08] bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,.18),transparent_24%),radial-gradient(circle_at_18%_18%,rgba(34,211,238,.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.015))] p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className={cn("card-rating font-display font-black uppercase leading-none", tierMeta[tier].text, isCompact ? "text-4xl" : "text-5xl")}>{tierMeta[tier].label}</p>
-            <p className="mt-1 text-[9px] font-black uppercase tracking-[.25em] text-cyan-300">{dataLabel(player.position, "Position unavailable")}</p>
+            <p className={cn("card-rating font-display font-black uppercase leading-none", tierStyle.text, isCompact ? "text-4xl" : "text-5xl")}>{tierStyle.label}</p>
+            <p className="mt-1 text-[9px] font-black uppercase tracking-[.25em] text-cyan-300">{positionLabel}</p>
           </div>
           <div className="rounded-2xl border border-white/[.08] bg-black/25 px-3 py-2 text-right">
             <p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Official</p>
-            <p className="max-w-32 truncate text-sm font-black text-[#a3ff12]">{marketValue}</p>
+            <p className="max-w-32 truncate text-sm font-black text-[#a3ff12]">{hasMarketValue ? marketValue : "Value pending"}</p>
           </div>
         </div>
 
@@ -456,7 +498,7 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
         <div className="mt-5 text-center">
           <p className={cn("truncate font-black uppercase italic tracking-[-.05em] text-white", isCompact ? "text-lg" : "text-2xl")}>{player.name}</p>
           <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-[.16em] text-slate-500">
-            {dataLabel(player.currentClub, "Club unavailable")} · {dataLabel(player.nationality, "Nation unavailable")}
+            {clubLabel} · {nationLabel}
           </p>
         </div>
 
@@ -502,9 +544,9 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
           <div className="mt-4">
             <div className="mb-1 flex justify-between text-[8px] font-bold uppercase tracking-wider text-slate-600">
               <span>Card readiness</span>
-              <span>{player.officialMarketValue ? "100%" : "62%"}</span>
+              <span>{hasMarketValue ? "100%" : "72%"}</span>
             </div>
-            <CardEngineMeter value={player.officialMarketValue ? 100 : 62} color={tier === "gold" ? "gold" : tier === "silver" ? "cyan" : "lime"} />
+            <CardEngineMeter value={hasMarketValue ? 100 : 72} color={tier === "gold" ? "gold" : tier === "silver" ? "cyan" : "lime"} />
           </div>
         )}
       </div>

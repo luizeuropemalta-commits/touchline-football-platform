@@ -112,8 +112,8 @@ function buildStats(profile: {
     { label: "Cards", value: "—", detail: "discipline data pending", accent: "rose" },
     { label: "Market", value: profile.marketValueLabel, detail: profile.sourceLabel, accent: "gold" },
     { label: "Age", value: profile.age ? String(profile.age) : "Data not available", detail: "identity profile", accent: "cyan" },
-    { label: "Role", value: openOr(profile.position, "Position unavailable"), detail: "main position", accent: "lime" },
-    { label: "Club", value: openOr(profile.currentClub, "Club unavailable"), detail: profile.contractExpiry ? `contract ${profile.contractExpiry}` : "contract data not available", accent: "cyan" },
+    { label: "Role", value: openOr(profile.position, "Role pending"), detail: "main position", accent: "lime" },
+    { label: "Club", value: openOr(profile.currentClub, "Club pending"), detail: profile.contractExpiry ? `contract ${profile.contractExpiry}` : "contract data not available", accent: "cyan" },
   ];
 }
 
@@ -216,7 +216,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     },
     {
       label: "Current club",
-      value: openOr(player.current_club, "Club unavailable"),
+      value: openOr(player.current_club, "Club pending"),
       meta: joined ? `Joined: ${joined}` : "Club movement timeline will expand when provider transfer history is available.",
       icon: <Shield size={15} />,
     },
@@ -280,7 +280,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
       sourceLabel,
     }),
     related: [
-      { label: "Club", value: openOr(player.current_club, "Club unavailable"), href: "/club-network", icon: <Shield size={15} /> },
+      { label: "Club", value: openOr(player.current_club, "Club pending"), href: "/club-network", icon: <Shield size={15} /> },
       { label: "Agent", value: openOr(player.agent_name ?? player.agency_name, "Agent unavailable"), href: "/agents", icon: <UsersRound size={15} /> },
       { label: "League", value: "Data not available", href: "/admin/football-data", icon: <Trophy size={15} /> },
       { label: "Competition", value: "Data not available", href: "/admin/football-data", icon: <Globe2 size={15} /> },

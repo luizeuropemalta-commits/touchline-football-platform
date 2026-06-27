@@ -113,7 +113,7 @@ type CommandCenterData = {
 };
 
 function formatMoney(value: number, currency = "EUR") {
-  if (!value) return "Sync pending";
+  if (!value) return "Value pending";
   return new Intl.NumberFormat("en", {
     style: "currency",
     currency,

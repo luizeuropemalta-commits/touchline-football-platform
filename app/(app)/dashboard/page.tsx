@@ -96,7 +96,7 @@ function prestigeFromNetWorth(value: number): "Bronze" | "Silver" | "Gold" | "Em
 }
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return "Sync pending";
+  if (!value) return "Official data pending";
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
 }
 
@@ -207,7 +207,7 @@ export default async function Dashboard() {
     ? footballPlayers.map((player) => ({
         id: player.id,
         name: player.display_name || player.name,
-        position: player.position || "Position unavailable",
+        position: player.position || "Role pending",
         photoUrl: player.photo_url,
         marketValue: toMoneyNumber(player.market_value),
         currency: player.market_value_currency || "EUR",
@@ -271,13 +271,13 @@ export default async function Dashboard() {
       silverCards,
       bronzeCards,
       squadMarketValue,
-      coach: "Coach sync pending",
+      coach: "Coach data pending",
       formation: dataPlayers.length >= 11 ? "4-3-3" : "Setup pending",
       players: dataPlayers,
     },
     competition: {
-      leaguePosition: synced ? "Pre-season" : "Sync pending",
-      nextMatch: synced ? "Fixture sync pending" : "No fixture loaded",
+      leaguePosition: synced ? "Pre-season" : "Competition data pending",
+      nextMatch: synced ? "Fixture data pending" : "No fixture loaded",
       seasonProgress: synced ? 7 : 0,
       promotionZone: synced ? "Available after standings sync" : "Not configured",
       relegationZone: synced ? "Available after standings sync" : "Not configured",

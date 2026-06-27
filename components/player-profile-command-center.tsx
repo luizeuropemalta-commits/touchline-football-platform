@@ -190,7 +190,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
                   <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.06] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.15em] text-cyan-200">{data.cardTier} player card</span>
                 </div>
                 <p className="text-[9px] font-black uppercase tracking-[.24em] text-cyan-300">
-                  {displayData(data.club, "Club unavailable")} · {displayData(data.position, "Position unavailable")} · {displayData(data.competition ?? data.league, "Competition unavailable")}
+                  {displayData(data.club, "Club pending")} · {displayData(data.position, "Role pending")} · {displayData(data.competition ?? data.league, "Competition pending")}
                 </p>
                 <h1 className="font-display mt-2 break-words text-5xl uppercase italic tracking-[-.08em] text-white sm:text-7xl 2xl:text-8xl">{data.name}</h1>
                 <p className="mt-3 break-words text-[10px] font-bold uppercase tracking-wider text-slate-500">
