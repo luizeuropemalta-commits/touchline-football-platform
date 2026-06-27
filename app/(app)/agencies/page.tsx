@@ -80,7 +80,7 @@ export default async function AgenciesPage() {
         type="agent"
         title="Global Agent Link Index"
         description="Search agent and agency links discovered automatically from Touchline activity. This prepares the future football business social graph without you manually saving links one by one."
-        placeholder="Search agent, agency or Transfermarkt advisor link..."
+        placeholder="Search agent, agency or public provider reference..."
       />
 
       <AgencyDirectory agency={directoryAgency} members={team} />

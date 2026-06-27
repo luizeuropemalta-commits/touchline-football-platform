@@ -934,7 +934,7 @@ export function AgentVerificationCenter() {
               <div className="flex min-h-72 flex-col items-center justify-center rounded-3xl border border-white/[.07] bg-black/20 text-center">
                 <Filter size={28} className="text-slate-700" />
                 <p className="mt-4 text-sm font-black uppercase text-white">No players in this category yet</p>
-                <p className="mt-2 max-w-md text-xs leading-6 text-slate-500">Save your identity, add players or save player links in Market Radar, then run Smart Scan.</p>
+                <p className="mt-2 max-w-md text-xs leading-6 text-slate-500">Save your identity, add players through Football Search, then run Smart Scan.</p>
               </div>
             )}
           </div>

@@ -40,7 +40,7 @@ export default async function AIPage() {
     { label: "Create email", text: "Use club interest and negotiation context.", icon: Mail, href: "/inbox" },
     { label: "Create scouting report", text: "Generate AI player profile from the Player Vault.", icon: UserSearch, href: "/scouting" },
     { label: "Create player presentation", text: "Build a club-ready Pitch Player document.", icon: FileSearch, href: "/players/pitch" },
-    { label: "Market analysis", text: "Review saved market radar links and opportunities.", icon: BarChart3, href: "/radar" },
+    { label: "Market analysis", text: "Review football search, provider data and opportunities.", icon: BarChart3, href: "/football-search" },
   ];
 
   return (

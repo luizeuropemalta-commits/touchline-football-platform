@@ -49,7 +49,7 @@ export default async function ReportsPage() {
     ["Verified representation", verifiedReps, "/verification"],
     ["Opportunities", opportunities, "/opportunities"],
     ["Club interests", interests, "/inbox"],
-    ["Market radar links", marketLinks, "/radar"],
+    ["Football data signals", marketLinks, "/football-search"],
   ];
 
   return (

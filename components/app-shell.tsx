@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BadgeCheck, BarChart3, Bell, Binoculars, Bot, Building2, ChevronDown, CircleDollarSign, Crosshair,
   CalendarDays, ClipboardList, FileSignature, FileText, Globe2, Goal, Inbox,
-  Database, Link2, LockKeyhole, MailCheck, Menu, Radar, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
+  Database, LockKeyhole, MailCheck, Menu, Search, Settings, Shield, Sparkles, Trophy, Users, WalletCards, X, Zap,
   Target,
 } from "lucide-react";
 import { useState } from "react";
@@ -23,25 +23,24 @@ type NavItem = {
 
 const nav: NavItem[] = [
   { href: "/dashboard", label: "Touchline Fantasy", icon: Trophy },
-  { href: "/players", label: "Player Portfolio", icon: Users },
   { href: "/football-search", label: "Football Search", icon: Search },
-  { href: "/players/pitch", label: "Pitch Player", icon: MailCheck },
-  { href: "/opportunities", label: "Opportunities", icon: Target },
-  { href: "/deals", label: "Deal Rooms", icon: Zap },
+  { href: "/players", label: "Player Portfolio", icon: Users },
+  { href: "/deals", label: "Transfer Center", icon: Zap },
   { href: "/inbox", label: "Messages", icon: Inbox },
 ];
 
 const ecosystem: NavItem[] = [
   { href: "/clubs", label: "Club Network", icon: Building2 },
   { href: "/agencies", label: "Agents & Agencies", icon: Users },
-  { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
-  { href: "/radar", label: "Market Radar", icon: Radar },
-  { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
-  { href: "/connect", label: "Touchline Connect", icon: Globe2 },
-  { href: "/ai", label: "Touchline AI", icon: Bot },
 ];
 
 const operations: NavItem[] = [
+  { href: "/verification", label: "Agent Verification", icon: BadgeCheck },
+  { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
+  { href: "/connect", label: "Touchline Connect", icon: Globe2 },
+  { href: "/ai", label: "Touchline AI", icon: Bot },
+  { href: "/players/pitch", label: "Pitch Player", icon: MailCheck },
+  { href: "/opportunities", label: "Opportunities", icon: Target },
   { href: "/scouting", label: "Scouting Center", icon: Binoculars },
   { href: "/objectives", label: "Objectives", icon: Goal },
   { href: "/achievements", label: "Achievements", icon: Trophy },
@@ -54,11 +53,10 @@ const operations: NavItem[] = [
 
 const consoleModes = [
   { href: "/dashboard", label: "Fantasy HQ", eyebrow: "Club Owner", icon: Trophy },
-  { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
   { href: "/football-search", label: "Football Search", eyebrow: "Global", icon: Search },
+  { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
   { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },
-  { href: "/opportunities", label: "Opportunities", eyebrow: "AI Match", icon: Target },
-  { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
+  { href: "/deals", label: "Transfer Center", eyebrow: "Negotiations", icon: Zap },
 ];
 
 export function AppShell({
@@ -83,7 +81,6 @@ export function AppShell({
         ...operations,
         { href: "/admin", label: "Owner Admin", icon: Shield },
         { href: "/admin/football-data", label: "Football Data", icon: Database },
-        { href: "/admin/market-links", label: "Market Registry", icon: Link2 },
       ]
     : operations;
   const consoleModeItems = isOwner

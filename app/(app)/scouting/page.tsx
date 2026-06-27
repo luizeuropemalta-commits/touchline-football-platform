@@ -138,7 +138,7 @@ export default async function Scouting() {
           {!players.length && (
             <GamePanel className="border-dashed border-cyan-300/20 p-6 md:col-span-2 xl:col-span-3">
               <p className="text-sm font-black uppercase italic text-white">No scouting profiles yet</p>
-              <p className="mt-2 text-xs leading-6 text-slate-500">Add players manually or with a Transfermarkt link, then use AI Profile and videos to build a scouting-ready portfolio.</p>
+              <p className="mt-2 text-xs leading-6 text-slate-500">Add players through Football Search or the Football Data layer, then use AI Profile and videos to build a scouting-ready portfolio.</p>
               <Link href="/players" className="mt-5 inline-flex h-10 items-center rounded-2xl bg-[#a3ff12] px-4 text-[9px] font-black uppercase text-[#071007]">Add first player</Link>
             </GamePanel>
           )}

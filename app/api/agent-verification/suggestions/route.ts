@@ -69,8 +69,8 @@ export async function GET() {
       suggestions: data ?? [],
       connectors: [
         { name: "Touchline Player Vault", status: "active" },
-        { name: "Market Radar Link Preview", status: "active" },
-        { name: "Transfermarkt", status: "link-preview-only" },
+        { name: "Football Search", status: "active" },
+        { name: "Legacy Link Preview", status: "fallback-only" },
         { name: "FIFA Agent Registry", status: "future-official-connector" },
         { name: "Licensed Football Data Providers", status: "future-recommended" },
       ],
@@ -210,7 +210,7 @@ export async function POST() {
       return NextResponse.json({
         ok: true,
         created: 0,
-        message: "No new suggestions found. Add players or save player links in Market Radar, then run the scan again.",
+        message: "No new suggestions found. Add players through Football Search or the Football Data layer, then run the scan again.",
       });
     }
 

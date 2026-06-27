@@ -342,7 +342,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       (activeTab === "all" && !hasResults && !networkResults.length));
   const resultSummary = useMemo(() => {
     if (trimmed.length < 2) return "Type at least 2 letters";
-    if (loading) return mode === "full" ? "Searching Touchline + automatic Transfermarkt link discovery" : "Searching Touchline database";
+    if (loading) return mode === "full" ? "Searching Touchline football data layer" : "Searching Touchline database";
     if (enriching) return "Updating photos and profile data";
     if (mode === "full") {
       if (activeTab === "players") return `${results.length} player${results.length === 1 ? "" : "s"} found`;
@@ -435,8 +435,8 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
             <p className="af-mode-kicker">Touchline / Football Database</p>
             <h1 className="af-mode-title font-display mt-3 text-white">Global Football Search</h1>
             <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-300/80">
-              Search players, agents, agencies and clubs from Touchline&apos;s own database first. If the entity is missing,
-              Touchline tries to discover the public Transfermarkt profile link, saves it in the registry, and shows it inside the app.
+              Search players, agents, agencies and clubs from Touchline&apos;s own database first. New football data providers enrich
+              profiles through the internal Football Data layer, so users stay inside Touchline instead of manually copying links.
             </p>
 
             <div className="mt-7">
@@ -471,14 +471,14 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 onFocus={() => setFocused(true)}
                 placeholder={
                   activeTab === "players"
-                    ? "Type player name, nationality or Transfermarkt ID..."
+                    ? "Type player name, nationality or provider ID..."
                     : activeTab === "agents"
                       ? "Type agent or agency name, example: Jorge Mendes..."
                       : activeTab === "clubs"
                         ? "Type club name, example: Corinthians, Sporting CP..."
                         : activeTab === "coaches"
                           ? "Coach search is coming soon..."
-                          : "Type player, agent, agency, club, nationality or Transfermarkt ID..."
+                          : "Type player, agent, agency, club, nationality or provider ID..."
                 }
                 disabled={activeTab === "coaches"}
                 className="h-14 pl-12 text-base"
@@ -559,7 +559,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                             <p className="mt-3 text-[11px] font-black uppercase text-white">
                               No {activeTab === "all" ? "football" : activeTab} result found yet
                             </p>
-                            <p className="mt-2 text-[10px] leading-5 text-slate-500">Try the official Transfermarkt name or switch tabs.</p>
+                            <p className="mt-2 text-[10px] leading-5 text-slate-500">Try the official football name or switch tabs.</p>
                           </div>
                         </div>
                       )
@@ -588,7 +588,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                               {networkLoading ? "Searching network..." : "No agent, agency or club found yet"}
                             </p>
                             <p className="mt-2 text-[10px] leading-5 text-slate-500">
-                              Try the official Transfermarkt name, for example Sporting CP, Sporting Lisbon, agent name or agency name.
+                              Try the official football name, for example Sporting CP, Sporting Lisbon, agent name or agency name.
                             </p>
                           </div>
                         )}
@@ -609,14 +609,14 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
               onClick={() => setManualOpen((value) => !value)}
               className="flex w-full items-center justify-between gap-4 text-left"
             >
-              <SectionHeader kicker="Manual fallback" title="Paste Transfermarkt link" action={<UploadCloud size={15} className="text-cyan-300" />} />
+              <SectionHeader kicker="Legacy fallback" title="Manual profile link" action={<UploadCloud size={15} className="text-cyan-300" />} />
               <ChevronDown size={18} className={cn("shrink-0 text-slate-500 transition", manualOpen && "rotate-180 text-cyan-300")} />
             </button>
             <p className="mt-2 text-[10px] leading-5 text-slate-500">
-              Use only when automatic search cannot find the correct profile.
+              Hidden fallback for old records only. Normal users should use Football Search and the Football Data layer.
             </p>
             {manualOpen && <div className="mt-4 space-y-3">
-              <Input value={importForm.url} onChange={(event) => setImportForm({ ...importForm, url: event.target.value })} placeholder="Transfermarkt profile URL" />
+              <Input value={importForm.url} onChange={(event) => setImportForm({ ...importForm, url: event.target.value })} placeholder="Provider profile URL" />
               <Input value={importForm.playerName} onChange={(event) => setImportForm({ ...importForm, playerName: event.target.value })} placeholder="Player name optional" />
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input value={importForm.currentClub} onChange={(event) => setImportForm({ ...importForm, currentClub: event.target.value })} placeholder="Current club optional" />
@@ -631,7 +631,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 Import to database
               </Button>
               <p className="text-[10px] leading-5 text-slate-500">
-                Manual fallback only. Normal search now tries to discover player links automatically before asking you to paste a URL.
+                Legacy fallback only. The product direction is API-first: Football Search → Football Data Provider → Touchline Database → internal profile.
               </p>
             </div>}
           </div>
@@ -641,7 +641,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       <GamePanel className="p-5">
         <p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">Fast workflow</p>
         <p className="mt-2 text-sm leading-6 text-slate-400">
-          Search results now appear directly below the field. Clicking a player opens the internal profile and keeps the saved Transfermarkt link inside Touchline.
+          Search results now appear directly below the field. Clicking a result opens the internal profile and keeps users inside Touchline.
         </p>
       </GamePanel>
     </div>

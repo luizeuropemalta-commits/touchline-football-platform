@@ -462,7 +462,7 @@ export default async function AdminOwnerPanel() {
     {
       area: "Market Sync",
       name: "Market sync automation",
-      purpose: "Vercel cron calls /api/market-sync and /api/radar/refresh with a bearer secret.",
+      purpose: "Vercel cron calls secure sync endpoints with a bearer secret.",
       configured: marketSyncSecretConfigured,
       required: "Required for automation",
       status: marketSyncStatus,
@@ -473,28 +473,28 @@ export default async function AdminOwnerPanel() {
           : "Cron routes are implemented, but MARKET_SYNC_SECRET or CRON_SECRET is not configured yet.",
     },
     {
-      area: "Link Index",
-      name: "Automatic football link index",
-      purpose: "Daily cron indexes Transfermarkt links already discovered inside Touchline activity.",
+      area: "Legacy Link Index",
+      name: "Archived football link index",
+      purpose: "Legacy fallback for public links already discovered inside Touchline activity.",
       configured: marketSyncSecretConfigured,
       required: "Required for automation",
       status: linkIndexStatus,
       detail: globalLinksTableCheck.error
         ? `Link index migration needs to be applied in Supabase: ${globalLinksTableCheck.error.message}`
         : marketSyncSecretConfigured
-          ? "Automatic link index route exists at /api/link-index/sync and runs daily from Vercel Cron."
+          ? "Legacy link index route exists and can run from Vercel Cron, but the new product direction is Football Data first."
           : "Configure MARKET_SYNC_SECRET or CRON_SECRET so the daily link indexer can run securely.",
     },
     {
-      area: "Market Link Registry",
-      name: "Transfermarkt link registry",
-      purpose: "Stores player, agent and club profile links, IDs, preview images and sync status without copying a full external database.",
+      area: "Legacy Link Registry",
+      name: "Archived public link registry",
+      purpose: "Stores legacy public profile links, IDs, preview images and sync status without copying a full external database.",
       configured: !transfermarktRegistryTableCheck.error,
       required: "Required for automation",
       status: transfermarktRegistryStatus,
       detail: transfermarktRegistryTableCheck.error
         ? `Apply migration 012_transfermarkt_link_registry.sql in Supabase: ${transfermarktRegistryTableCheck.error.message}`
-        : "Registry tables exist. Owner page is available at /admin/market-links.",
+        : "Registry tables exist. This is now a legacy owner tool; Football Data Center is the active model.",
     },
     {
       area: "Owner Admin",
@@ -516,10 +516,10 @@ export default async function AdminOwnerPanel() {
     { area: "Env", name: "STRIPE_WEBHOOK_SECRET", purpose: "Validates Stripe webhook signatures.", configured: stripeWebhookConfigured, required: "Required for billing", status: stripeWebhookConfigured ? (stripeWebhookLooksValid ? "READY" : "ERROR") : "NOT_CONFIGURED_YET", detail: "Required before subscription/invoice state can sync automatically." },
     { area: "Env", name: "STRIPE_PRICE_*", purpose: "Monthly/yearly Stripe prices for all plans.", configured: stripeAllPricesConfigured, required: "Required for billing", status: stripeAllPricesConfigured ? "READY" : configuredPriceKeys.length ? "PARTIALLY_IMPLEMENTED" : "NOT_CONFIGURED_YET", detail: `${configuredPriceKeys.length}/${stripePriceEnvKeys.length} Stripe price IDs configured.` },
     { area: "Env", name: "MARKET_SYNC_SECRET / CRON_SECRET", purpose: "Protects scheduled sync endpoints.", configured: marketSyncSecretConfigured, required: "Required for automation", status: marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Required for Vercel Cron to call sync endpoints securely." },
-    { area: "Env", name: "TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED", purpose: "Allows user-triggered enrichment when opening a saved Transfermarkt player profile.", configured: envValue("TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED") !== "false", required: "Optional", status: envValue("TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED") === "false" ? "NOT_CONFIGURED_YET" : "READY", detail: "Enabled by default. Set to false only if you want profile pages to stop reading public link metadata." },
-    { area: "Env", name: "TRANSFERMARKT_SYNC_ENABLED", purpose: "Opt-in switch for scheduled/background Transfermarkt link checks.", configured: envValue("TRANSFERMARKT_SYNC_ENABLED") === "true", required: "Optional", status: envValue("TRANSFERMARKT_SYNC_ENABLED") === "true" ? "READY" : "NOT_CONFIGURED_YET", detail: "Controls daily/background sync only. User-triggered player profile enrichment works separately and is rate-limited per profile." },
-    { area: "Env", name: "TRANSFERMARKT_SYNC_SECRET", purpose: "Protects /api/market-links/sync if used separately from MARKET_SYNC_SECRET.", configured: hasEnv("TRANSFERMARKT_SYNC_SECRET"), required: "Required for automation", status: hasEnv("TRANSFERMARKT_SYNC_SECRET") || marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Can fall back to MARKET_SYNC_SECRET or CRON_SECRET." },
-    { area: "Env", name: "TRANSFERMARKT_RATE_LIMIT_MS", purpose: "Delay between external Transfermarkt checks.", configured: hasEnv("TRANSFERMARKT_RATE_LIMIT_MS"), required: "Optional", status: "READY", detail: "Defaults to 2500ms. Increase this for safer, slower checks." },
+    { area: "Env", name: "TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED", purpose: "Legacy fallback only for old saved public links.", configured: envValue("TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED") !== "false", required: "Optional", status: envValue("TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED") === "false" ? "NOT_CONFIGURED_YET" : "READY", detail: "Not part of the official Sportmonks-first architecture. Prefer Football Data Provider for new records." },
+    { area: "Env", name: "TRANSFERMARKT_SYNC_ENABLED", purpose: "Legacy opt-in switch for archived public-link checks.", configured: envValue("TRANSFERMARKT_SYNC_ENABLED") === "true", required: "Optional", status: envValue("TRANSFERMARKT_SYNC_ENABLED") === "true" ? "READY" : "NOT_CONFIGURED_YET", detail: "Keep disabled unless a controlled legacy-link maintenance task is required." },
+    { area: "Env", name: "TRANSFERMARKT_SYNC_SECRET", purpose: "Protects legacy /api/market-links/sync fallback.", configured: hasEnv("TRANSFERMARKT_SYNC_SECRET"), required: "Optional", status: hasEnv("TRANSFERMARKT_SYNC_SECRET") || marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Can fall back to MARKET_SYNC_SECRET or CRON_SECRET when legacy sync is explicitly enabled." },
+    { area: "Env", name: "TRANSFERMARKT_RATE_LIMIT_MS", purpose: "Safety delay for legacy public-link checks.", configured: hasEnv("TRANSFERMARKT_RATE_LIMIT_MS"), required: "Optional", status: "READY", detail: "Defaults to 2500ms. New football data should use the provider layer instead." },
     { area: "Env", name: "TOUCHLINE_LINK_INDEX_*", purpose: "Optional daily limits for automatic internal link indexing.", configured: hasEnv("TOUCHLINE_LINK_INDEX_DAILY_LIMIT") || hasEnv("TOUCHLINE_LINK_INDEX_SYNC_LIMIT"), required: "Optional", status: "READY", detail: "Defaults to 1000 links/day if not set. This indexes Touchline activity, not external site crawling." },
     { area: "Env", name: "FOOTBALL_MARKET_DATA_API_*", purpose: "Licensed provider for market value/club/contract sync.", configured: licensedMarketProviderConfigured, required: "Optional", status: licensedMarketProviderConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Optional unless professional market value sync is required." },
     { area: "Env", name: "API_FOOTBALL_KEY", purpose: "Optional API-Football player/stat data provider.", configured: hasEnv("API_FOOTBALL_KEY") || hasEnv("APISPORTS_KEY"), required: "Optional", status: apiFootballCheck.status, detail: apiFootballCheck.detail },
@@ -531,7 +531,7 @@ export default async function AdminOwnerPanel() {
     ["Supabase", supabaseSystemStatus, "Database, auth users and admin queries are checked against the live Supabase client used by the page."],
     ["API-Football", apiFootballCheck.status, apiFootballCheck.detail],
     ["Market Sync", marketSyncStatus, "Cron routes are implemented in vercel.json. Full data refresh depends on a sync secret and a configured provider."],
-    ["Automatic Link Index", linkIndexStatus, "Touchline now indexes Transfermarkt links discovered inside internal players, Radar and social posts. It does not crawl third-party sites directly."],
+    ["Legacy Link Index", linkIndexStatus, "The old link-index system remains as a safe fallback only. New football discovery should use Football Search, Sportmonks and the Football Data Center."],
     ["Authentication", supabaseEnvReady ? "READY" : "NOT_CONFIGURED_YET", "Password login/register/session cookies are implemented. Google OAuth is optional and should stay disabled until Supabase provider setup is complete."],
     ["Owner Admin", "PARTIALLY_IMPLEMENTED", "Owner email protection and manual beta grants exist. First registered user is not auto-owner; full role management can be expanded later."],
   ] as Array<[string, HealthStatus, string]>;
@@ -570,7 +570,7 @@ export default async function AdminOwnerPanel() {
         <StatTile icon={Crown} label="Active Access" value={String(activeSubscriptions)} delta="subs/grants" accent="gold" />
         <StatTile icon={Radio} label="Players" value={String(totalPlayers)} delta="local vault" accent="cyan" />
         <StatTile icon={Database} label="Global Profiles" value={String(totalGlobalProfiles)} delta="search index" accent="lime" />
-        <StatTile icon={Link2} label="Link Index" value={String(totalGlobalLinks)} delta="auto indexed" accent="cyan" />
+        <StatTile icon={Link2} label="Legacy Links" value={String(totalGlobalLinks)} delta="archived fallback" accent="cyan" />
         <StatTile icon={AlertTriangle} label="Reviews" value={String(pendingReviews)} delta="needs admin" accent={pendingReviews ? "rose" : "gold"} />
       </div>
 
@@ -645,11 +645,11 @@ export default async function AdminOwnerPanel() {
           </div>
           <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045] p-4">
             <p className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Route protection</p>
-            <p className="mt-2 text-[10px] leading-5 text-slate-500">Dashboard, players, agencies, documents, calendar, reports, radar, verification, billing and admin routes are private. The admin page checks owner email before loading data. Subscription feature gates currently allow beta full access in code.</p>
+            <p className="mt-2 text-[10px] leading-5 text-slate-500">Dashboard, football search, players, agencies, clubs, documents, calendar, reports, verification, billing and admin routes are private. The admin page checks owner email before loading data. Subscription feature gates currently allow beta full access in code.</p>
           </div>
-          <Link href="/admin/market-links" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-[.14em] text-[#caff72] transition hover:bg-[#a3ff12]/15">
-            <Link2 size={14} />
-            Open Market Link Registry
+          <Link href="/admin/football-data" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-[.14em] text-[#caff72] transition hover:bg-[#a3ff12]/15">
+            <Database size={14} />
+            Open Football Data Center
           </Link>
         </GamePanel>
       </div>
@@ -710,7 +710,7 @@ export default async function AdminOwnerPanel() {
         </GamePanel>
 
         <GamePanel className="p-5">
-          <div className="mb-4 flex items-center gap-3"><Link2 size={17} className="text-[#a3ff12]" /><h2 className="text-sm font-black uppercase italic text-white">Recent Radar links</h2></div>
+          <div className="mb-4 flex items-center gap-3"><Link2 size={17} className="text-[#a3ff12]" /><h2 className="text-sm font-black uppercase italic text-white">Recent legacy links</h2></div>
           <div className="space-y-2">
             {radarLinks.map((item) => (
               <a key={item.id} href={item.url ?? "#"} target="_blank" className="block rounded-2xl border border-white/[.07] bg-white/[.025] p-3 transition hover:border-[#a3ff12]/25">
@@ -718,7 +718,7 @@ export default async function AdminOwnerPanel() {
                 <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{item.category ?? "market"} · {dateLabel(item.created_at)}</p>
               </a>
             ))}
-            {!radarLinks.length && <p className="rounded-2xl border border-white/[.07] p-4 text-xs text-slate-500">No radar links saved yet.</p>}
+            {!radarLinks.length && <p className="rounded-2xl border border-white/[.07] p-4 text-xs text-slate-500">No legacy links saved yet.</p>}
           </div>
         </GamePanel>
 

@@ -344,17 +344,13 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
             <p className="af-mode-kicker">Touchline / Player Management</p>
             <h1 className="af-mode-title font-display mt-3 max-w-full text-white">Player Management</h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300/80">
-              Add real players, import Transfermarkt link previews, store documents, embed videos and generate professional AI player profiles.
+              Add real players, enrich profiles through Football Search, store documents, embed videos and generate professional AI player profiles.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button onClick={createPlayer} disabled={creating}>
                 {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 Add Player
               </Button>
-              <Link href="/players/api-search" className="relative inline-flex h-11 items-center justify-center gap-2 overflow-hidden rounded-2xl border border-cyan-200/18 bg-white/[.055] px-5 text-xs font-extrabold uppercase tracking-[.09em] text-slate-100 transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[.085]">
-                <DatabaseZap size={14} />
-                External Search
-              </Link>
               <Link href="/football-search" className="relative inline-flex h-11 items-center justify-center gap-2 overflow-hidden rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-5 text-xs font-extrabold uppercase tracking-[.09em] text-[#caff72] transition duration-300 hover:-translate-y-0.5 hover:border-[#a3ff12]/45 hover:bg-[#a3ff12]/[.16]">
                 <Search size={14} />
                 Football Search

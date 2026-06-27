@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Building2, Globe2, Link2, Network, Radio, Search, ShieldCheck, Sparkles, Users, Zap } from "lucide-react";
+import { ArrowRight, Building2, Globe2, Link2, Network, Search, ShieldCheck, Sparkles, Users, Zap } from "lucide-react";
 import { GlobalFootballLinkSearch } from "@/components/global-football-link-search";
 import { GamePanel, LivePill, SectionHeader, StatTile } from "@/components/game-ui";
 import { WorkspaceState } from "@/components/workspace-state";
@@ -84,8 +84,8 @@ export default async function TouchlineConnectPage() {
               <Link href="/feed" className="inline-flex h-11 items-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[9px] font-black uppercase tracking-wider text-[#071007]">
                 Open social feed <ArrowRight size={13} />
               </Link>
-              <Link href="/radar" className="inline-flex h-11 items-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-5 text-[9px] font-black uppercase tracking-wider text-cyan-100">
-                Market radar <Radio size={13} />
+              <Link href="/football-search" className="inline-flex h-11 items-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-5 text-[9px] font-black uppercase tracking-wider text-cyan-100">
+                Football Search <Search size={13} />
               </Link>
             </div>
           </div>
@@ -112,8 +112,8 @@ export default async function TouchlineConnectPage() {
       <GlobalFootballLinkSearch
         title="Search Touchline Connect"
         kicker="Global football business index"
-        description="Search links discovered automatically from Touchline activity. Results can include players, agents, clubs, rumors and football business references."
-        placeholder="Search player, agent, club, opportunity or Transfermarkt ID..."
+        description="Search football entities discovered through Touchline activity and provider-backed internal records. Results can include players, agents, clubs and football business references."
+        placeholder="Search player, agent, club, opportunity or provider ID..."
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
@@ -149,7 +149,7 @@ export default async function TouchlineConnectPage() {
               <div className="p-8 text-center">
                 <Globe2 size={28} className="mx-auto text-slate-700" />
                 <p className="mt-4 text-sm font-black uppercase italic text-white">Touchline Connect is ready</p>
-                <p className="mt-2 text-xs leading-6 text-slate-500">The index will fill as players, Radar links and feed posts create network signals.</p>
+                <p className="mt-2 text-xs leading-6 text-slate-500">The index will fill as players, clubs, agencies and provider-backed records create network signals.</p>
               </div>
             )}
           </div>
@@ -159,7 +159,7 @@ export default async function TouchlineConnectPage() {
           <SectionHeader kicker="Network categories" title="Discover by role" action={<Search size={15} className="text-cyan-300" />} />
           <div className="mt-5 grid gap-3">
             {[
-              ["Football Search", "/football-search", "Search players, agents, agencies, clubs and Transfermarkt references."],
+              ["Football Search", "/football-search", "Search players, agents, agencies, clubs and provider-backed references."],
               ["Agents & Agencies", "/agencies", "Discover agent/advisor links and verified representation workflows."],
               ["Clubs", "/clubs", "Research club links and recruitment relationships."],
               ["Football Feed", "/feed", "Turn activity into social/business discovery signals."],

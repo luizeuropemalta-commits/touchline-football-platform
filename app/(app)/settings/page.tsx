@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, Bell, Building2, CreditCard, DatabaseZap, Globe2, ShieldCheck, Users } from "lucide-react";
+import { BadgeCheck, Bell, Building2, CreditCard, Database, Globe2, ShieldCheck, Users } from "lucide-react";
 import { GamePanel, SectionHeader, StatTile } from "@/components/game-ui";
 import { WorkspaceState } from "@/components/workspace-state";
 import { getCurrentWorkspace } from "@/lib/server/current-workspace";
@@ -28,9 +28,9 @@ export default async function SettingsPage() {
   const controls = [
     { title: "Billing & subscription", body: "Manage plan, invoices and Stripe portal.", href: "/billing", icon: CreditCard },
     { title: "Agent verification", body: "FIFA ID, documents and representation integrity.", href: "/verification", icon: BadgeCheck },
-    { title: "Player portfolio", body: "Add players, videos, documents and Transfermarkt links.", href: "/players", icon: Users },
+    { title: "Player portfolio", body: "Add players, videos, documents and football data profiles.", href: "/players", icon: Users },
     { title: "Club network", body: "Manage clubs, interests and recruitment requests.", href: "/clubs", icon: Building2 },
-    { title: "Market radar", body: "Control saved public market links and link previews.", href: "/radar", icon: DatabaseZap },
+    { title: "Football data", body: "Validate provider sync, internal data and API-first football records.", href: "/admin/football-data", icon: Database },
     { title: "Touchline AI", body: "Generate contracts, proposals and scouting documents.", href: "/ai", icon: Globe2 },
   ];
 
@@ -86,7 +86,7 @@ export default async function SettingsPage() {
         </GamePanel>
 
         <GamePanel className="p-5">
-          <SectionHeader kicker="Control links" title="Workspace Actions" action={<DatabaseZap size={15} className="text-cyan-300" />} />
+          <SectionHeader kicker="Control center" title="Workspace Actions" action={<Database size={15} className="text-cyan-300" />} />
           <div className="grid gap-3 md:grid-cols-2">
             {controls.map(({ title, body, href, icon: Icon }) => (
               <Link key={href} href={href} className="group rounded-2xl border border-white/[.07] bg-white/[.025] p-4 transition hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-cyan-300/[.045]">

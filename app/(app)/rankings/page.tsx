@@ -71,7 +71,7 @@ export default async function RankingsPage() {
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile icon={Trophy} label="Ranked Players" value={String(rankedPlayers.length)} delta="portfolio board" accent="gold" />
         <StatTile icon={DatabaseZap} label="Market Snapshots" value={String(snapshots ?? 0)} delta="saved provider data" accent="cyan" />
-        <StatTile icon={Radio} label="Radar Links" value={String(links ?? 0)} delta="market intelligence" accent="lime" />
+        <StatTile icon={Radio} label="Data Signals" value={String(links ?? 0)} delta="football intelligence" accent="lime" />
         <StatTile icon={ShieldCheck} label="Clubs" value={String(clubs ?? 0)} delta="real records" accent="rose" />
       </div>
 

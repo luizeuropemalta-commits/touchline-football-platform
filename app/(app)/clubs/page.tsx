@@ -110,7 +110,7 @@ export default async function ClubsPage() {
         type="club"
         title="Global Club Link Index"
         description="Search club links discovered automatically from Touchline activity. Clubs become easier to connect, follow and research as the network grows."
-        placeholder="Search club name or Transfermarkt club link..."
+        placeholder="Search club name or public provider reference..."
       />
     </div>
   );
