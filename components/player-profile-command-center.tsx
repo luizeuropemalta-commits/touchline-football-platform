@@ -148,7 +148,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
             <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/[.045] px-4 py-3">
               <div>
                 <p className="text-[8px] font-black uppercase tracking-[.18em] text-amber-200">Official Touchline Card</p>
-                <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">Rendered by TDIE + Card Engine</p>
+                <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">Premium identity ready</p>
               </div>
               <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 py-1 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">{data.cardTier}</span>
             </div>
@@ -168,7 +168,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
                 officialMarketValue: data.marketValueNumber,
                 officialMarketValueLabel: data.marketValueLabel,
                 currency: data.currency,
-                contractStatus: data.contractExpiry ? `Until ${data.contractExpiry}` : "Contract data pending",
+                contractStatus: data.contractExpiry ? `Until ${data.contractExpiry}` : "Contract pending",
                 currentForm: polishedStatus(data.currentForm),
                 availability: polishedStatus(data.availability, "Ready"),
                 competition: data.competition,

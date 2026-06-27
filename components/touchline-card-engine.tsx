@@ -145,10 +145,10 @@ function cardStatusLabel(value?: string | number | null, fallback = DATA_NOT_AVA
   const label = dataLabel(value, fallback);
   const normalized = label.toLowerCase();
 
-  if (normalized === "sync" || normalized === "live sync") return "Awaiting data";
-  if (normalized === "no injury synced") return DATA_NOT_AVAILABLE;
-  if (normalized.includes("pending official data sync")) return "Official data pending";
-  if (normalized.includes("sync pending")) return "Official data pending";
+  if (normalized === "sync" || normalized === "live sync") return "Pending";
+  if (normalized === "no injury synced") return fallback;
+  if (normalized.includes("pending official data sync")) return "Pending";
+  if (normalized.includes("sync pending")) return "Pending";
 
   return label;
 }
@@ -171,6 +171,23 @@ function cleanVisualLabel(value?: string | number | null, fallback = "Touchline"
     normalized.includes("data pending")
   ) {
     return fallback;
+  }
+
+  return label;
+}
+
+function marketVisualLabel(value?: string | number | null) {
+  const label = dataLabel(value, "Value pending");
+  const normalized = label.toLowerCase();
+
+  if (
+    normalized === "open" ||
+    normalized === "value open" ||
+    normalized.includes("data not available") ||
+    normalized.includes("not available") ||
+    normalized.includes("pending")
+  ) {
+    return "Value pending";
   }
 
   return label;
@@ -353,7 +370,7 @@ function IdentityArtwork({ player, tier, compact = false }: { player: TouchlineP
   const identity = resolvePlayerIdentity(player);
   const artworkUrl = resolveTdieArtworkUrl(player, identity);
   const initials = identity.initials || player.initials || player.name.slice(0, 2).toUpperCase();
-  const identityLabel = identity.status === "generated" ? "Touchline identity" : "Premium identity";
+  const identityLabel = identity.status === "generated" ? "Touchline identity" : "Touchline card";
   const positionLabel = cleanVisualLabel(player.position ?? identity.positionLabel, "Role pending");
   const clubLabel = cleanVisualLabel(player.currentClub ?? identity.clubLabel, "Club pending");
   const nationLabel = cleanVisualLabel(player.nationality, "Nation pending");
@@ -381,6 +398,8 @@ function IdentityArtwork({ player, tier, compact = false }: { player: TouchlineP
           <div className="absolute inset-x-8 top-12 z-[1] h-28 rounded-full border border-white/10 bg-white/[.035] blur-xl" />
           <div className="absolute bottom-0 left-1/2 h-32 w-[78%] -translate-x-1/2 rounded-[999px_999px_0_0] border border-cyan-200/15 bg-black/25 blur-sm" />
           <div className="tdie-avatar-silhouette">
+            <div className="absolute left-1/2 top-[18%] z-10 size-16 -translate-x-1/2 rounded-full border border-white/15 bg-black/20 shadow-[0_0_24px_rgba(255,255,255,.1)]" />
+            <div className="absolute left-1/2 top-[38%] z-10 h-28 w-32 -translate-x-1/2 rounded-[3rem_3rem_1.5rem_1.5rem] border border-white/10 bg-black/25" />
             <div className="absolute inset-x-0 top-[45%] z-10 text-center">
               <p className={cn("card-rating font-display text-5xl font-black italic tracking-[-.08em]", identity.accent.text)}>{initials}</p>
               <p className="mx-auto mt-2 max-w-32 truncate text-[7px] font-black uppercase tracking-[.16em] text-white/55">{positionLabel}</p>
@@ -430,7 +449,7 @@ function LiveStatusBadge({ state, points }: { state: TouchlineCardLiveState; poi
 
 function PlayerCardInner({ player, variant, className }: { player: TouchlinePlayerCardModel; variant: TouchlinePlayerCardVariant; className?: string }) {
   const tier = getTouchlinePlayerCardTier(player.officialMarketValue);
-  const marketValue = formatOfficialMarketValue(player.officialMarketValue, player.currency ?? "EUR", player.officialMarketValueLabel);
+  const marketValue = marketVisualLabel(formatOfficialMarketValue(player.officialMarketValue, player.currency ?? "EUR", player.officialMarketValueLabel));
   const liveState = player.liveState ?? "idle";
   const identity = resolvePlayerIdentity(player);
   const isCompact = variant === "compact";
@@ -509,7 +528,7 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
         <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/[.08] pt-5">
           <div className="rounded-2xl bg-white/[.04] p-3 text-center">
             <p className="text-[8px] font-black uppercase text-slate-500">Form</p>
-            <p className="mt-1 text-lg font-black text-cyan-300">{cardStatusLabel(player.currentForm)}</p>
+            <p className="mt-1 text-lg font-black text-cyan-300">{cardStatusLabel(player.currentForm, "Ready")}</p>
           </div>
           <div className="rounded-2xl bg-white/[.04] p-3 text-center">
             <p className="text-[8px] font-black uppercase text-slate-500">Age</p>
@@ -525,19 +544,19 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
           <div className="mt-4 grid gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Coach</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{cardStatusLabel(player.currentCoach)}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{cardStatusLabel(player.currentCoach, "Pending")}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Agent</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-cyan-200">{cardStatusLabel(player.currentAgent)}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-cyan-200">{cardStatusLabel(player.currentAgent, "Pending")}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>League</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{cardStatusLabel(player.league)}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{cardStatusLabel(player.league, "Pending")}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Contract</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-amber-200">{cardStatusLabel(player.contractStatus)}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-amber-200">{cardStatusLabel(player.contractStatus, "Pending")}</p>
             </div>
           </div>
         ) : (

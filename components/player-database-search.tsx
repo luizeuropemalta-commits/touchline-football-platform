@@ -93,7 +93,7 @@ function marketValue(player: PlayerDatabaseResult) {
       maximumFractionDigits: 0,
     }).format(player.marketValue);
   }
-  return "Data not available";
+  return "Value pending";
 }
 
 function playerCardModel(player: PlayerDatabaseResult) {
@@ -155,7 +155,7 @@ function isGenericExternalImage(value?: string | null) {
 
 function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
   return (
-    <TouchlinePlayerCard player={playerCardModel(player)} variant="list" />
+    <TouchlinePlayerCard player={playerCardModel(player)} variant="compact" />
   );
 }
 
@@ -531,7 +531,9 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                   </div>
                   <div className="max-h-[62vh] space-y-2 overflow-y-auto overscroll-contain p-3 pr-4">
                     {shouldShowPlayers && hasResults ? (
-                      results.map((player) => <PlayerSearchRow key={player.id} player={player} />)
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {results.map((player) => <PlayerSearchRow key={player.id} player={player} />)}
+                      </div>
                     ) : loading ? (
                       <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025]">
                         <div className="text-center">
