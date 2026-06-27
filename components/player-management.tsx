@@ -122,7 +122,7 @@ const documentFolders = [
 ];
 
 function formatMoney(value?: number | null, currency = "EUR") {
-  if (!value) return "Value open";
+  if (!value) return "Data not available";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
@@ -447,7 +447,7 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
                   <div className="min-w-0">
                     <p className="truncate text-[10px] font-black uppercase italic text-white">{player.display_name ?? player.name}</p>
                     <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">
-                      {player.position ?? "Position open"} · {player.nationality ?? "Nation open"}
+                      {player.position ?? "Position unavailable"} · {player.nationality ?? "Nation unavailable"}
                     </p>
                   </div>
                 </div>
@@ -535,7 +535,7 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
                           {player.name}
                         </Link>
                         <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">
-                          {player.position ?? "Position open"} · {player.club ?? "Club open"} {age ? `· ${age}` : ""}
+                          {player.position ?? "Position unavailable"} · {player.club ?? "Club unavailable"} {age ? `· ${age}` : ""}
                         </p>
                       </div>
                       <button onClick={() => setSelectedPlayerId(player.id)} className="grid size-10 shrink-0 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.07] text-cyan-200">

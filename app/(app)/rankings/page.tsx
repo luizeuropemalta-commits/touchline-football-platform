@@ -28,7 +28,7 @@ function clubName(value: PlayerRow["clubs"]) {
 }
 
 function money(value: number | null, currency = "EUR") {
-  if (!value) return "Value open";
+  if (!value) return "Data not available";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
@@ -90,7 +90,7 @@ export default async function RankingsPage() {
                 {rankedPlayers.map((player, index) => (
                   <Link key={player.id} href={`/players/${player.id}`} className="live-row grid items-center gap-3 p-4 sm:grid-cols-[56px_1fr_130px_80px]" style={{ "--row-accent": index < 3 ? "#fbbf24" : "#22d3ee" } as React.CSSProperties}>
                     <span className={`font-display text-2xl ${index < 3 ? "text-amber-300" : "text-slate-600"}`}>#{index + 1}</span>
-                    <div><p className="text-[10px] font-black uppercase italic">{playerName(player)}</p><p className="mt-1 text-[8px] text-slate-600">{player.position || "Position open"} · {clubName(player.clubs)}</p></div>
+                    <div><p className="text-[10px] font-black uppercase italic">{playerName(player)}</p><p className="mt-1 text-[8px] text-slate-600">{player.position || "Position unavailable"} · {clubName(player.clubs)}</p></div>
                     <p className="number-glow text-sm font-black">{money(player.market_value, player.currency ?? "EUR")}</p>
                     <ArrowUpRight size={13} className="text-cyan-300" />
                   </Link>

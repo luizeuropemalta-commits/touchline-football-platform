@@ -62,7 +62,7 @@ const objectives = [
 const tones = ["Premium", "Direct", "Scouting", "Executive"];
 
 function formatMoney(value?: number | null, currency = "EUR") {
-  if (!value) return "Value open";
+  if (!value) return "Data not available";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
@@ -367,13 +367,13 @@ export function PlayerPitchBuilder({
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
-                    <p className="text-[8px] font-black uppercase tracking-[.22em] text-[#a3ff12]">{selectedPlayer.position ?? "Position open"}</p>
+                    <p className="text-[8px] font-black uppercase tracking-[.22em] text-[#a3ff12]">{selectedPlayer.position ?? "Position unavailable"}</p>
                     <h2 className="mt-1 text-3xl font-black uppercase italic tracking-[-.06em] text-white">{selectedPlayer.name}</h2>
                   </div>
                 </div>
                 <div className="p-5 sm:p-6">
                   <div className="mb-5 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.14em] text-cyan-100">{selectedPlayer.club ?? "Club open"}</span>
+                    <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.14em] text-cyan-100">{selectedPlayer.club ?? "Club unavailable"}</span>
                     <span className="rounded-full border border-[#a3ff12]/20 bg-[#a3ff12]/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.14em] text-[#b7ff45]">{formatMoney(selectedPlayer.marketValue, selectedPlayer.currency ?? "EUR")}</span>
                     {selectedPlayer.externalUrl && (
                       <a href={selectedPlayer.externalUrl} target="_blank" rel="noreferrer" className="rounded-full border border-amber-300/20 bg-amber-300/[.07] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.14em] text-amber-200">

@@ -93,6 +93,15 @@ function CardShell({ children, className }: { children: ReactNode; className?: s
   );
 }
 
+function displayData(value?: string | number | null, fallback = "Data not available") {
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : fallback;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : fallback;
+  }
+  return fallback;
+}
+
 function MicroStat({ label, value, detail, accent = "cyan" }: { label: string; value: string; detail: string; accent?: "cyan" | "lime" | "gold" | "rose" }) {
   const colors = {
     cyan: "text-cyan-300 border-cyan-300/15 bg-cyan-300/[.045]",
@@ -118,9 +127,10 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
         Return to football search
       </Link>
 
-      <GamePanel className="relative overflow-hidden pitch-grid">
-        <div className="absolute -right-28 -top-56 size-[620px] rounded-full border border-cyan-300/[.08]" />
-        <div className="absolute left-1/3 top-0 h-px w-1/2 bg-gradient-to-r from-transparent via-cyan-200/30 to-transparent" />
+      <GamePanel className="tdie-identity-stage relative overflow-hidden pitch-grid">
+        <div className="absolute -right-28 -top-56 size-[620px] rounded-full border border-amber-300/[.08] bg-amber-300/[.035] blur-sm" />
+        <div className="absolute -left-28 bottom-[-220px] size-[520px] rounded-full border border-cyan-300/[.08] bg-cyan-300/[.04] blur-sm" />
+        <div className="absolute left-1/3 top-0 z-[1] h-px w-1/2 bg-gradient-to-r from-transparent via-amber-200/40 to-transparent" />
         <div className="relative grid min-w-0 gap-5 p-4 lg:grid-cols-[420px_minmax(0,1fr)] xl:p-6">
           <TouchlinePlayerCard
             player={{
@@ -137,7 +147,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
               officialMarketValue: data.marketValueNumber,
               officialMarketValueLabel: data.marketValueLabel,
               currency: data.currency,
-              contractStatus: data.contractExpiry ? `Until ${data.contractExpiry}` : "Contract open",
+              contractStatus: data.contractExpiry ? `Until ${data.contractExpiry}` : "Data not available",
               currentForm: data.currentForm,
               availability: data.availability,
               competition: data.competition,
@@ -158,11 +168,11 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
                   <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[.06] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.15em] text-cyan-200">{data.cardTier} player card</span>
                 </div>
                 <p className="text-[9px] font-black uppercase tracking-[.24em] text-cyan-300">
-                  {data.club ?? "Club open"} · {data.position ?? "Position open"} · {data.competition ?? data.league ?? "Competition open"}
+                  {displayData(data.club, "Club unavailable")} · {displayData(data.position, "Position unavailable")} · {displayData(data.competition ?? data.league, "Competition unavailable")}
                 </p>
                 <h1 className="font-display mt-2 break-words text-5xl uppercase italic tracking-[-.08em] text-white sm:text-7xl 2xl:text-8xl">{data.name}</h1>
                 <p className="mt-3 break-words text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  {data.nationality ?? "Nationality open"} {data.age ? `· AGE ${data.age}` : ""} {data.preferredFoot ? `· ${data.preferredFoot}` : ""} · {data.sourceLabel} ID {data.sourceId}
+                  {displayData(data.nationality, "Nationality unavailable")} {data.age ? `· AGE ${data.age}` : ""} {data.preferredFoot ? `· ${data.preferredFoot}` : ""} · {data.sourceLabel} ID {data.sourceId}
                 </p>
               </div>
 
@@ -178,8 +188,8 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MicroStat label="Market value" value={data.marketValueLabel} detail="official provider value" accent="gold" />
-              <MicroStat label="Club" value={data.club ?? "Open"} detail={data.league ?? "league pending"} accent="cyan" />
-              <MicroStat label="Agent" value={data.agent ?? data.agency ?? "Open"} detail="relationship source" accent="lime" />
+              <MicroStat label="Club" value={displayData(data.club)} detail={displayData(data.league, "league data not available")} accent="cyan" />
+              <MicroStat label="Agent" value={displayData(data.agent ?? data.agency)} detail="relationship source" accent="lime" />
               <MicroStat label="Updated" value={data.updatedAtLabel} detail="profile sync" accent="rose" />
             </div>
 
@@ -207,13 +217,13 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
             <SectionHeader kicker="Player identity" title="Football intelligence" action={<Sparkles size={16} className="text-amber-300" />} />
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {[
-                ["Age", data.age ? String(data.age) : "Open", data.dateOfBirth ?? "birth date pending", <Clock3 key="age" size={16} />],
-                ["Height", data.height ?? "Open", "physical profile", <Activity key="height" size={16} />],
-                ["Preferred foot", data.preferredFoot ?? "Open", "technical identity", <Zap key="foot" size={16} />],
-                ["Coach", data.coach ?? "Open", "current staff", <UsersRound key="coach" size={16} />],
-                ["League", data.league ?? "Open", "domestic context", <Trophy key="league" size={16} />],
-                ["Competition", data.competition ?? "Open", "active tournament", <Globe2 key="competition" size={16} />],
-                ["Contract", data.contractExpiry ?? "Open", "expiry status", <CalendarClock key="contract" size={16} />],
+                ["Age", data.age ? String(data.age) : "Data not available", displayData(data.dateOfBirth, "birth date not available"), <Clock3 key="age" size={16} />],
+                ["Height", displayData(data.height), "physical profile", <Activity key="height" size={16} />],
+                ["Preferred foot", displayData(data.preferredFoot), "technical identity", <Zap key="foot" size={16} />],
+                ["Coach", displayData(data.coach), "current staff", <UsersRound key="coach" size={16} />],
+                ["League", displayData(data.league), "domestic context", <Trophy key="league" size={16} />],
+                ["Competition", displayData(data.competition), "active tournament", <Globe2 key="competition" size={16} />],
+                ["Contract", displayData(data.contractExpiry), "expiry status", <CalendarClock key="contract" size={16} />],
                 ["Injury", data.injuryStatus, "availability monitor", <HeartPulse key="injury" size={16} />],
               ].map(([label, value, detail, icon]) => (
                 <CardShell key={String(label)} className="min-w-0">
@@ -275,7 +285,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
             <div className="space-y-3">
               {[
                 ["Official market value", data.marketValueLabel, "Synced from selected football data/source provider"],
-                ["Contract status", data.contractExpiry ?? "Open", "Expiry and negotiation visibility"],
+                ["Contract status", displayData(data.contractExpiry), "Expiry and negotiation visibility"],
                 ["Availability", data.availability, "Ready for scouting, shortlist and offers"],
                 ["Transfer status", data.transferStatus, "Touchline Transfer Center state"],
                 ["Current form", data.currentForm, "Live/stat data will upgrade this automatically"],

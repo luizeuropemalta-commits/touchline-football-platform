@@ -136,7 +136,7 @@ export default async function DealRoomDetailPage({ params }: { params: Promise<{
     playerName: playerName(player),
     playerPosition: player?.position ?? null,
     playerPhotoUrl: player?.photo_url ?? null,
-    clubName: club?.name ?? interest?.club_name ?? "Club open",
+    clubName: club?.name ?? interest?.club_name ?? "Club unavailable",
     clubLeague: club?.league ?? null,
     interestStatus: interest?.status ?? null,
     interestMessage: interest?.message ?? null,

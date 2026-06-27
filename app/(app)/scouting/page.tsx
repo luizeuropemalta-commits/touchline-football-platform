@@ -31,9 +31,9 @@ function playerName(player: PlayerRow) {
 }
 
 function age(date?: string | null) {
-  if (!date) return "Age open";
+  if (!date) return "Age unavailable";
   const birth = new Date(`${date}T00:00:00Z`);
-  if (Number.isNaN(birth.getTime())) return "Age open";
+  if (Number.isNaN(birth.getTime())) return "Age unavailable";
   const now = new Date();
   let value = now.getUTCFullYear() - birth.getUTCFullYear();
   const diff = now.getUTCMonth() - birth.getUTCMonth();

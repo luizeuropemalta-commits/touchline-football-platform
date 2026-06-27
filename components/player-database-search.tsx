@@ -93,7 +93,7 @@ function marketValue(player: PlayerDatabaseResult) {
       maximumFractionDigits: 0,
     }).format(player.marketValue);
   }
-  return "Value open";
+  return "Data not available";
 }
 
 function playerCardModel(player: PlayerDatabaseResult) {
@@ -584,8 +584,20 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                       <div className="grid min-h-40 place-items-center rounded-3xl border border-white/[.06] bg-white/[.025] p-6 text-center">
                         <div>
                           <UserRoundSearch className="mx-auto text-slate-700" size={24} />
-                          <p className="mt-3 text-[11px] font-black uppercase text-white">No player found directly</p>
-                          <p className="mt-2 text-[10px] leading-5 text-slate-500">Checking agents, agencies and clubs below. Try official name if needed.</p>
+                          <p className="mt-3 text-[11px] font-black uppercase text-white">
+                            {activeTab === "agents"
+                              ? "Searching agent and agency identities"
+                              : activeTab === "clubs"
+                                ? "Searching club identities"
+                                : "No player found directly"}
+                          </p>
+                          <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                            {activeTab === "agents"
+                              ? "Touchline is checking saved agency profiles and linked players below."
+                              : activeTab === "clubs"
+                                ? "Touchline is checking saved club profiles and public squad references below."
+                                : "Checking agents, agencies and clubs below. Try official name if needed."}
+                          </p>
                         </div>
                       </div>
                     )}

@@ -219,7 +219,7 @@ function associationName(association: Association) {
 
 function associationMeta(association: Association) {
   return {
-    position: association.players?.position || association.suggested_position || "Position open",
+    position: association.players?.position || association.suggested_position || "Position unavailable",
     nationality: association.players?.nationality || association.suggested_nationality || "Global",
     club: association.players?.clubs?.name || association.suggested_club || "Club not linked",
     photo: association.players?.photo_url || association.suggested_photo_url || null,

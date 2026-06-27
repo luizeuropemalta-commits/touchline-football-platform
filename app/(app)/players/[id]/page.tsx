@@ -30,8 +30,8 @@ type AiProfile = {
 };
 
 function clubName(clubs?: ClubJoin) {
-  if (!clubs) return "Club open";
-  return Array.isArray(clubs) ? (clubs[0]?.name ?? "Club open") : (clubs.name ?? "Club open");
+  if (!clubs) return "Data not available";
+  return Array.isArray(clubs) ? (clubs[0]?.name ?? "Data not available") : (clubs.name ?? "Data not available");
 }
 
 function fullName(player: { first_name?: string | null; last_name?: string | null }) {
@@ -50,8 +50,17 @@ function ageFromDate(date?: string | null) {
 }
 
 function formatMoney(value?: number | null, currency = "EUR") {
-  if (!value) return "Value open";
+  if (!value) return "Data not available";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+}
+
+function displayData(value?: string | number | null, fallback = "Data not available") {
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : fallback;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : fallback;
+  }
+  return fallback;
 }
 
 function embedUrl(url: string) {
@@ -147,8 +156,9 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
         <ArrowLeft size={12} />Return to players
       </Link>
 
-      <GamePanel className="relative overflow-hidden pitch-grid">
-        <div className="absolute right-[-8%] top-[-60%] size-[500px] rounded-full border border-cyan-300/[.08]" />
+      <GamePanel className="tdie-identity-stage relative overflow-hidden pitch-grid">
+        <div className="absolute right-[-8%] top-[-60%] size-[500px] rounded-full border border-amber-300/[.08] bg-amber-300/[.035]" />
+        <div className="absolute left-[-10%] bottom-[-58%] size-[440px] rounded-full border border-cyan-300/[.08] bg-cyan-300/[.035]" />
         <div className="relative grid min-h-[330px] lg:grid-cols-[320px_1fr]">
           <div className="relative overflow-hidden border-b border-white/[.07] bg-cyan-300/[.035] p-4 lg:border-b-0 lg:border-r">
             <TouchlinePlayerCard
@@ -175,10 +185,10 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
           <div className="relative p-6 sm:p-8">
             <div className="flex flex-col justify-between gap-6 sm:flex-row">
               <div>
-                <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{playerClubName} · {player.position ?? "Position open"}</p>
+                <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{playerClubName} · {displayData(player.position, "Position unavailable")}</p>
                 <h1 className="font-display mt-2 text-4xl uppercase italic sm:text-6xl">{name}</h1>
                 <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                  {player.nationality ?? "Nationality open"} {age ? `· AGE ${age}` : ""} {player.preferred_foot ? `· ${player.preferred_foot} footed` : ""}
+                  {displayData(player.nationality, "Nationality unavailable")} {age ? `· AGE ${age}` : ""} {player.preferred_foot ? `· ${player.preferred_foot} footed` : ""}
                 </p>
               </div>
               <div className="flex items-start gap-2">
@@ -269,7 +279,7 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
                 <div>
                   <p className="text-[8px] font-black uppercase tracking-wider text-cyan-300">{player.external_market_provider ?? "No external profile"}</p>
                   <p className="mt-2 text-xl font-black uppercase italic text-white">{formatMoney(player.market_value, player.currency ?? "EUR")}</p>
-                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">Contract: {player.contract_end_date ?? "open"}</p>
+                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">Contract: {displayData(player.contract_end_date)}</p>
                 </div>
                 {player.external_market_url && (
                   <Link href={player.external_market_url} target="_blank" rel="noreferrer" className="grid size-10 shrink-0 place-items-center rounded-xl border border-cyan-300/20 bg-cyan-300/[.08] text-cyan-200 transition hover:border-[#a3ff12]/35 hover:text-[#a3ff12]" aria-label="Open external market profile">

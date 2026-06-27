@@ -298,8 +298,8 @@ export default async function FootballDataAdminPage({
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-black uppercase italic tracking-[-.03em] text-white">{name}</p>
                           <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">
-                            {player?.detailed_position_name ?? member.position_name ?? player?.position_name ?? "Position open"} ·{" "}
-                            {player?.nationality_name ?? "Nation open"}
+                            {player?.detailed_position_name ?? member.position_name ?? player?.position_name ?? "Position unavailable"} ·{" "}
+                            {player?.nationality_name ?? "Nation unavailable"}
                           </p>
                         </div>
                         <span className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.06] px-2 py-1 text-[9px] font-black text-cyan-200">

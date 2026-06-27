@@ -107,7 +107,7 @@ function relationPlayerId(value: OpportunityApiRow["players"]) {
 }
 
 function formatMoney(value?: number | null, currency = "EUR") {
-  if (!value) return "Budget open";
+  if (!value) return "Budget unavailable";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
@@ -465,7 +465,7 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
                         </button>
                         <div className="min-w-0">
                           <p className="truncate text-[11px] font-black uppercase italic">{opportunity.title}</p>
-                          <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{opportunity.clubName || "Club open"} · {opportunity.playerName || "No player selected"}</p>
+                          <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{opportunity.clubName || "Club unavailable"} · {opportunity.playerName || "No player selected"}</p>
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             {opportunity.ageMin || opportunity.ageMax ? <span className="rounded-full border border-white/[.08] bg-white/[.035] px-2 py-1 text-[7px] font-black uppercase text-slate-500">{opportunity.ageMin ?? "?"}–{opportunity.ageMax ?? "?"} yrs</span> : null}
                             {opportunity.requirements?.eu_passport ? <span className="rounded-full border border-[#a3ff12]/20 bg-[#a3ff12]/[.06] px-2 py-1 text-[7px] font-black uppercase text-[#caff72]">EU passport</span> : null}
@@ -475,7 +475,7 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
                       </div>
                       <div>
                         <p className="text-[8px] text-slate-600">POSITION</p>
-                        <p className="mt-1 text-sm font-black">{opportunity.positionNeeded ?? "Open"}</p>
+                        <p className="mt-1 text-sm font-black">{opportunity.positionNeeded ?? "Position unavailable"}</p>
                         <p className="mt-1 text-[8px] text-slate-600">{deadlineLabel(opportunity.expiresAt)}</p>
                       </div>
                       <div>
@@ -531,7 +531,7 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-black uppercase italic text-white">{player.name}</p>
-                        <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{player.position ?? "Position open"} · {player.club ?? "Club open"}</p>
+                        <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{player.position ?? "Position unavailable"} · {player.club ?? "Club unavailable"}</p>
                         <div className="mt-2 flex items-center gap-2">
                           <span className="font-display text-2xl text-[#a3ff12]">{score}</span>
                           <div className="flex-1"><Meter value={score} color={score > 80 ? "lime" : "cyan"} /></div>

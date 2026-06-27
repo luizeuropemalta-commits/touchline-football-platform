@@ -76,7 +76,7 @@ export default async function Academies() {
             <Link key={player.id} href={`/players/${player.id}`} className="glass-hover rounded-3xl border border-white/[.07] bg-white/[.025] p-5">
               <p className="text-[8px] font-black uppercase tracking-[.2em] text-[#a3ff12]">Real uploaded talent</p>
               <h3 className="mt-3 text-sm font-black uppercase italic text-white">{playerName(player)}</h3>
-              <p className="mt-2 text-[9px] text-slate-500">{player.position || "Position open"} · Age {age(player.date_of_birth) ?? "open"} · {player.nationality || "Nationality open"}</p>
+              <p className="mt-2 text-[9px] text-slate-500">{player.position || "Position unavailable"} · Age {age(player.date_of_birth) ?? "unavailable"} · {player.nationality || "Nationality unavailable"}</p>
               <span className="mt-5 inline-flex rounded-lg border border-cyan-300/20 bg-cyan-300/[.06] px-2 py-1 text-[7px] font-black text-cyan-300">{player.ai_profile?.generated ? "AI READY" : "PROFILE NEEDS AI"}</span>
             </Link>
           ))}

@@ -702,7 +702,7 @@ export default async function AdminOwnerPanel() {
             {players.map((player) => (
               <Link key={player.id} href={`/players/${player.id}`} className="block rounded-2xl border border-white/[.07] bg-white/[.025] p-3 transition hover:border-cyan-300/25">
                 <p className="text-[11px] font-black uppercase text-white">{playerName(player)}</p>
-                <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{player.position ?? "Position open"} · {dateLabel(player.created_at)}</p>
+                <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{player.position ?? "Position unavailable"} · {dateLabel(player.created_at)}</p>
               </Link>
             ))}
             {!players.length && <p className="rounded-2xl border border-white/[.07] p-4 text-xs text-slate-500">No players created yet.</p>}

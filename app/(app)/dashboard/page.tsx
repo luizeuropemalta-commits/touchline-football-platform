@@ -207,7 +207,7 @@ export default async function Dashboard() {
     ? footballPlayers.map((player) => ({
         id: player.id,
         name: player.display_name || player.name,
-        position: player.position || "Position open",
+        position: player.position || "Position unavailable",
         photoUrl: player.photo_url,
         marketValue: toMoneyNumber(player.market_value),
         currency: player.market_value_currency || "EUR",

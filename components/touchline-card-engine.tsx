@@ -130,6 +130,17 @@ const tierMeta: Record<TouchlineCardTier, { label: string; border: string; glow:
   },
 };
 
+const DATA_NOT_AVAILABLE = "Data not available";
+
+function dataLabel(value?: string | number | null, fallback = DATA_NOT_AVAILABLE) {
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : fallback;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : fallback;
+  }
+  return fallback;
+}
+
 const liveStateMeta: Record<TouchlineCardLiveState, { label: string; icon: typeof Activity; className: string }> = {
   idle: { label: "Match ready", icon: Sparkles, className: "border-cyan-300/20 bg-cyan-300/[.06] text-cyan-200" },
   live_match: { label: "Live match", icon: Activity, className: "border-[#a3ff12]/25 bg-[#a3ff12]/[.08] text-[#b7ff45]" },
@@ -293,7 +304,7 @@ export function getTouchlinePlayerCardTier(officialMarketValue?: number | null):
 }
 
 export function formatOfficialMarketValue(officialMarketValue?: number | null, currency = "EUR", fallback?: string | null) {
-  if (typeof officialMarketValue !== "number") return fallback ?? "Value open";
+  if (typeof officialMarketValue !== "number") return fallback ?? DATA_NOT_AVAILABLE;
 
   return new Intl.NumberFormat("en", {
     style: "currency",
@@ -307,34 +318,39 @@ function IdentityArtwork({ player, tier, compact = false }: { player: TouchlineP
   const identity = resolvePlayerIdentity(player);
   const artworkUrl = resolveTdieArtworkUrl(player, identity);
   const initials = identity.initials || player.initials || player.name.slice(0, 2).toUpperCase();
+  const identityLabel = identity.status === "generated" ? "TDIE generated identity" : "TDIE premium fallback";
 
   return (
-    <div className={cn("relative mx-auto overflow-hidden rounded-[1.65rem] border border-cyan-300/10 bg-cyan-300/[.035]", compact ? "h-36" : "h-56", identity.accent.glow)}>
-      <div className="absolute inset-x-10 bottom-5 h-12 rounded-full bg-cyan-300/20 blur-2xl" />
+    <div className={cn("tdie-identity-stage pitch-grid relative mx-auto overflow-hidden rounded-[1.65rem] border border-cyan-300/10 bg-cyan-300/[.035]", compact ? "h-44" : "h-72", identity.accent.glow)}>
+      <div className="absolute inset-x-6 bottom-4 z-[1] h-16 rounded-full bg-cyan-300/20 blur-2xl" />
+      <div className="absolute inset-x-12 top-6 z-[1] h-px bg-gradient-to-r from-transparent via-amber-200/60 to-transparent" />
       {artworkUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={artworkUrl}
           alt={player.name}
-          className="h-full w-full object-cover object-top saturate-[.95] contrast-[1.08] [mask-image:linear-gradient(to_bottom,black_72%,transparent_100%)]"
+          className="card-photo relative z-[1] h-full w-full object-cover object-top saturate-[.98] contrast-[1.12] [mask-image:linear-gradient(to_bottom,black_76%,transparent_100%)]"
         />
       ) : (
-        <div className={cn("relative grid h-full place-items-center overflow-hidden bg-gradient-to-br", identity.accent.primary)}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_28%,rgba(255,255,255,.18),transparent_34%),linear-gradient(115deg,transparent_0%,rgba(255,255,255,.12)_46%,transparent_58%)]" />
-          <div className="absolute -bottom-10 left-1/2 h-32 w-40 -translate-x-1/2 rounded-full border border-cyan-200/15 bg-black/20 blur-sm" />
-          <div className="relative text-center">
-            <p className={cn("font-display text-6xl font-black italic tracking-[-.08em]", identity.accent.text)}>{initials}</p>
-            <p className="mt-2 max-w-40 truncate text-[8px] font-black uppercase tracking-[.16em] text-white/55">{identity.clubLabel ?? "Touchline identity"}</p>
+        <div className={cn("relative z-[1] grid h-full place-items-center overflow-hidden bg-gradient-to-br", identity.accent.primary)}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_24%,rgba(255,255,255,.22),transparent_28%),linear-gradient(115deg,transparent_0%,rgba(255,255,255,.14)_46%,transparent_58%)]" />
+          <div className="absolute bottom-0 left-1/2 h-28 w-[74%] -translate-x-1/2 rounded-[999px_999px_0_0] border border-cyan-200/15 bg-black/25 blur-sm" />
+          <div className="tdie-avatar-silhouette">
+            <div className="absolute inset-x-0 top-[45%] z-10 text-center">
+              <p className={cn("card-rating font-display text-5xl font-black italic tracking-[-.08em]", identity.accent.text)}>{initials}</p>
+              <p className="mx-auto mt-2 max-w-32 truncate text-[7px] font-black uppercase tracking-[.16em] text-white/55">{identity.positionLabel ?? "Touchline"}</p>
+            </div>
           </div>
         </div>
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
-      <div className="absolute bottom-4 left-4">
-        <CardEngineLivePill>{identity.status === "generated" ? "TDIE generated" : "TDIE fallback"}</CardEngineLivePill>
+      <div className="absolute inset-0 z-[3] bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
+      <div className="absolute bottom-4 left-4 z-[4]">
+        <CardEngineLivePill>{identityLabel}</CardEngineLivePill>
       </div>
-      <div className={cn("absolute right-4 top-4 rounded-xl border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em]", tierMeta[tier].chip)}>
+      <div className={cn("absolute right-4 top-4 z-[4] rounded-xl border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em]", tierMeta[tier].chip)}>
         {tierMeta[tier].label}
       </div>
+      <div className="card-edge" />
     </div>
   );
 }
@@ -343,7 +359,7 @@ function PrestigeBorder({ tier, liveState }: { tier: TouchlineCardTier; liveStat
   const isEvent = liveState !== "idle";
 
   return (
-    <div className="pointer-events-none absolute inset-0 rounded-[2rem] p-px">
+    <div className="tdie-prestige-border pointer-events-none absolute inset-0 rounded-[2rem] p-px">
       <div className={cn("h-full rounded-[2rem] bg-gradient-to-br opacity-80", tierMeta[tier].border)} />
       <div className={cn("absolute inset-0 rounded-[2rem] bg-[linear-gradient(110deg,transparent_0%,rgba(255,255,255,.28)_42%,transparent_55%)] opacity-45", isEvent && "animate-pulse")} />
     </div>
@@ -394,7 +410,7 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
             </div>
             <p className="mt-2 truncate text-base font-black uppercase italic tracking-[-.04em] text-white">{player.name}</p>
             <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">
-              {player.position ?? "Position open"} · {player.currentClub ?? "Club open"} · {player.nationality ?? "Nation open"}
+              {dataLabel(player.position, "Position unavailable")} · {dataLabel(player.currentClub, "Club unavailable")} · {dataLabel(player.nationality, "Nation unavailable")}
             </p>
           </div>
           <div className="hidden min-w-[120px] text-right sm:block">
@@ -407,13 +423,13 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
   }
 
   return (
-    <div className={cn("relative overflow-hidden rounded-[2rem] bg-[#07111b] p-[1px]", tierMeta[tier].glow, isCompact ? "min-h-[330px]" : "min-h-[460px]", className)}>
+    <div className={cn("player-card relative overflow-hidden rounded-[2rem] bg-[#07111b] p-[1px]", tierMeta[tier].glow, isCompact ? "min-h-[360px]" : "min-h-[540px]", className)}>
       <PrestigeBorder tier={tier} liveState={liveState} />
-      <div className="relative z-10 h-full overflow-hidden rounded-[2rem] border border-white/[.08] bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,.18),transparent_38%),linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015))] p-5">
+      <div className="relative z-10 h-full overflow-hidden rounded-[2rem] border border-white/[.08] bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,.18),transparent_24%),radial-gradient(circle_at_18%_18%,rgba(34,211,238,.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,.058),rgba(255,255,255,.015))] p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className={cn("font-display font-black uppercase leading-none", tierMeta[tier].text, isCompact ? "text-4xl" : "text-5xl")}>{tierMeta[tier].label}</p>
-            <p className="mt-1 text-[9px] font-black uppercase tracking-[.25em] text-cyan-300">{player.position ?? "Position open"}</p>
+            <p className={cn("card-rating font-display font-black uppercase leading-none", tierMeta[tier].text, isCompact ? "text-4xl" : "text-5xl")}>{tierMeta[tier].label}</p>
+            <p className="mt-1 text-[9px] font-black uppercase tracking-[.25em] text-cyan-300">{dataLabel(player.position, "Position unavailable")}</p>
           </div>
           <div className="rounded-2xl border border-white/[.08] bg-black/25 px-3 py-2 text-right">
             <p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Official</p>
@@ -428,7 +444,7 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
         <div className="mt-5 text-center">
           <p className={cn("truncate font-black uppercase italic tracking-[-.05em] text-white", isCompact ? "text-lg" : "text-2xl")}>{player.name}</p>
           <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-[.16em] text-slate-500">
-            {player.currentClub ?? "Club open"} · {player.nationality ?? "Nation open"}
+            {dataLabel(player.currentClub, "Club unavailable")} · {dataLabel(player.nationality, "Nation unavailable")}
           </p>
         </div>
 
@@ -439,7 +455,7 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
         <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/[.08] pt-5">
           <div className="rounded-2xl bg-white/[.04] p-3 text-center">
             <p className="text-[8px] font-black uppercase text-slate-500">Form</p>
-            <p className="mt-1 text-lg font-black text-cyan-300">{player.currentForm ?? "Open"}</p>
+            <p className="mt-1 text-lg font-black text-cyan-300">{dataLabel(player.currentForm)}</p>
           </div>
           <div className="rounded-2xl bg-white/[.04] p-3 text-center">
             <p className="text-[8px] font-black uppercase text-slate-500">Age</p>
@@ -447,7 +463,7 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
           </div>
           <div className="rounded-2xl bg-white/[.04] p-3 text-center">
             <p className="text-[8px] font-black uppercase text-slate-500">Status</p>
-            <p className="mt-1 truncate text-lg font-black text-[#a3ff12]">{player.availability ?? "Ready"}</p>
+            <p className="mt-1 truncate text-lg font-black text-[#a3ff12]">{dataLabel(player.availability, "Ready")}</p>
           </div>
         </div>
 
@@ -455,19 +471,19 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
           <div className="mt-4 grid gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Coach</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{player.currentCoach ?? "Open"}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{dataLabel(player.currentCoach)}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Agent</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-cyan-200">{player.currentAgent ?? "Open"}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-cyan-200">{dataLabel(player.currentAgent)}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>League</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{player.league ?? "Open"}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{dataLabel(player.league)}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Contract</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-amber-200">{player.contractStatus ?? "Open"}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-amber-200">{dataLabel(player.contractStatus)}</p>
             </div>
           </div>
         ) : (

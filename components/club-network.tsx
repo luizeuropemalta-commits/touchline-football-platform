@@ -39,7 +39,7 @@ export type ClubNetworkPlayer = {
 };
 
 function formatMoney(value?: number | null, currency = "EUR") {
-  if (!value) return "Value open";
+  if (!value) return "Data not available";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
@@ -158,7 +158,7 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
                         <div className="min-w-0">
                           <h3 className="truncate text-base font-black uppercase italic text-white">{player.name}</h3>
                           <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-500">
-                            {player.position ?? "Position open"} {player.club ? `· ${player.club}` : ""} {player.nationality ? `· ${player.nationality}` : ""}
+                            {player.position ?? "Position unavailable"} {player.club ? `· ${player.club}` : ""} {player.nationality ? `· ${player.nationality}` : ""}
                           </p>
                         </div>
                         <input type="radio" name="interest-player" checked={selectedPlayerId === player.id} onChange={() => setSelectedPlayerId(player.id)} className="mt-1 accent-[#a3ff12]" />

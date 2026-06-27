@@ -31,7 +31,7 @@ function ageFromDate(date?: string | null) {
 
 function formatMoney(value?: number | null, currency = "EUR", fallback?: string | null) {
   if (fallback) return fallback;
-  if (!value) return "Value open";
+  if (!value) return "Data not available";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 
@@ -72,7 +72,7 @@ function tierColor(tier: PlayerProfile2Data["cardTier"]): PlayerProfile2Data["ca
   return "bronze";
 }
 
-function openOr(value?: string | null, fallback = "Open") {
+function openOr(value?: string | null, fallback = "Data not available") {
   return value?.trim() || fallback;
 }
 
@@ -111,9 +111,9 @@ function buildStats(profile: {
     { label: "Minutes", value: "Sync", detail: "match participation", accent: "lime" },
     { label: "Cards", value: "Sync", detail: "discipline history", accent: "rose" },
     { label: "Market", value: profile.marketValueLabel, detail: profile.sourceLabel, accent: "gold" },
-    { label: "Age", value: profile.age ? String(profile.age) : "Open", detail: "identity profile", accent: "cyan" },
-    { label: "Role", value: openOr(profile.position), detail: "main position", accent: "lime" },
-    { label: "Club", value: openOr(profile.currentClub), detail: profile.contractExpiry ? `contract ${profile.contractExpiry}` : "contract open", accent: "cyan" },
+    { label: "Age", value: profile.age ? String(profile.age) : "Data not available", detail: "identity profile", accent: "cyan" },
+    { label: "Role", value: openOr(profile.position, "Position unavailable"), detail: "main position", accent: "lime" },
+    { label: "Club", value: openOr(profile.currentClub, "Club unavailable"), detail: profile.contractExpiry ? `contract ${profile.contractExpiry}` : "contract data not available", accent: "cyan" },
   ];
 }
 
@@ -216,7 +216,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     },
     {
       label: "Current club",
-      value: openOr(player.current_club, "Club open"),
+      value: openOr(player.current_club, "Club unavailable"),
       meta: joined ? `Joined: ${joined}` : "Club movement timeline will expand with provider transfer history.",
       icon: <Shield size={15} />,
     },
@@ -247,11 +247,11 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     dateOfBirth: player.date_of_birth,
     height: asString(details.height),
     preferredFoot: asString(details.foot),
-    coach: "Sync pending",
+    coach: "Data not available",
     agent: player.agent_name,
     agency: player.agency_name,
-    league: "League sync pending",
-    competition: "Competition sync pending",
+    league: "Data not available",
+    competition: "Data not available",
     marketValueLabel,
     marketValueNumber: player.market_value,
     currency: player.currency ?? "EUR",
@@ -265,8 +265,8 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     searchReadiness: 100,
     cardTier,
     cardTierColor: tierColor(cardTier),
-    availability: asString(details.playerStatus) ?? "Available",
-    transferStatus: contractExpiry ? "Monitoring" : "Open",
+    availability: asString(details.playerStatus) ?? "Data not available",
+    transferStatus: contractExpiry ? "Monitoring" : "Data not available",
     currentForm: "Live sync",
     injuryStatus: "No injury synced",
     honours: buildHonours(enrichment),
@@ -280,9 +280,9 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
       sourceLabel,
     }),
     related: [
-      { label: "Club", value: openOr(player.current_club), href: "/club-network", icon: <Shield size={15} /> },
-      { label: "Agent", value: openOr(player.agent_name ?? player.agency_name), href: "/agents", icon: <UsersRound size={15} /> },
-      { label: "League", value: "Sync pending", href: "/admin/football-data", icon: <Trophy size={15} /> },
+      { label: "Club", value: openOr(player.current_club, "Club unavailable"), href: "/club-network", icon: <Shield size={15} /> },
+      { label: "Agent", value: openOr(player.agent_name ?? player.agency_name, "Agent unavailable"), href: "/agents", icon: <UsersRound size={15} /> },
+      { label: "League", value: "Data not available", href: "/admin/football-data", icon: <Trophy size={15} /> },
       { label: "Competition", value: "Provider foundation", href: "/admin/football-data", icon: <Globe2 size={15} /> },
     ],
     videos: [

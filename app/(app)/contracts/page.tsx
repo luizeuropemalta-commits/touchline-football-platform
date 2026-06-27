@@ -27,7 +27,7 @@ function club(value: ContractRow["clubs"]) {
 }
 
 function money(value: number | null, currency = "EUR") {
-  if (!value) return "Value open";
+  if (!value) return "Data not available";
   return new Intl.NumberFormat("en", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
 }
 

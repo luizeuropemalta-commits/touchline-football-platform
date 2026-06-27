@@ -317,6 +317,98 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   mix-blend-mode: screen;
 }
 .player-card:hover .card-edge { transform: translateX(120%); }
+.tdie-identity-stage {
+  isolation: isolate;
+  position: relative;
+}
+.tdie-identity-stage::before {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 52% 12%, rgba(255, 226, 132, .28), transparent 24%),
+    radial-gradient(circle at 20% 28%, rgba(34, 211, 238, .2), transparent 25%),
+    radial-gradient(circle at 82% 38%, rgba(163, 255, 18, .16), transparent 30%),
+    linear-gradient(120deg, transparent 0%, rgba(255,255,255,.12) 46%, transparent 58%);
+  filter: blur(2px);
+  opacity: .78;
+  animation: tdie-stadium-sweep 7s ease-in-out infinite alternate;
+}
+.tdie-identity-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(3,7,13,.92), transparent 42%, rgba(255,255,255,.035)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 5px, rgba(255,255,255,.018) 6px);
+  mix-blend-mode: screen;
+  opacity: .64;
+}
+.tdie-avatar-silhouette {
+  position: relative;
+  width: min(48%, 170px);
+  aspect-ratio: .58;
+  margin-inline: auto;
+  border-radius: 999px 999px 34% 34%;
+  background:
+    linear-gradient(160deg, rgba(255,255,255,.34), rgba(255,255,255,.04) 34%, rgba(0,0,0,.18)),
+    linear-gradient(180deg, rgba(15, 23, 42, .94), rgba(3, 7, 13, .98));
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.18),
+    0 0 45px rgba(34,211,238,.16),
+    0 28px 70px rgba(0,0,0,.48);
+  transform: translateY(8%);
+}
+.tdie-avatar-silhouette::before {
+  content: "";
+  position: absolute;
+  top: -18%;
+  left: 50%;
+  width: 54%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.35), transparent 22%),
+    linear-gradient(150deg, rgba(255,255,255,.24), rgba(34,211,238,.08) 38%, rgba(0,0,0,.24));
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 0 34px rgba(255,255,255,.08);
+}
+.tdie-avatar-silhouette::after {
+  content: "";
+  position: absolute;
+  inset: 31% 13% 9%;
+  border-radius: 38% 38% 18% 18%;
+  background:
+    linear-gradient(90deg, transparent 0 12%, rgba(255,255,255,.1) 13% 16%, transparent 17% 83%, rgba(255,255,255,.1) 84% 87%, transparent 88%),
+    linear-gradient(180deg, rgba(34,211,238,.18), rgba(163,255,18,.08));
+  opacity: .9;
+}
+.tdie-prestige-border {
+  overflow: hidden;
+}
+.tdie-prestige-border::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  background: linear-gradient(115deg, transparent 28%, rgba(255,255,255,.36) 47%, transparent 62%);
+  transform: translateX(-40%) rotate(10deg);
+  animation: tdie-border-sweep 5.5s cubic-bezier(.16, 1, .3, 1) infinite;
+  opacity: .52;
+}
+@keyframes tdie-stadium-sweep {
+  from { transform: translate3d(-2%, -1%, 0) rotate(-2deg) scale(1); }
+  to { transform: translate3d(3%, 2%, 0) rotate(2deg) scale(1.05); }
+}
+@keyframes tdie-border-sweep {
+  0%, 18% { transform: translateX(-55%) rotate(10deg); opacity: 0; }
+  32% { opacity: .52; }
+  58%, 100% { transform: translateX(55%) rotate(10deg); opacity: 0; }
+}
 .live-row {
   position: relative;
   transition: background-color .3s ease, transform .3s cubic-bezier(.16,1,.3,1);
