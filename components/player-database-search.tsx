@@ -6,6 +6,7 @@ import { Building2, ChevronDown, DatabaseZap, Loader2, Search, UploadCloud, User
 import { Button, Input } from "@/components/ui";
 import { GamePanel, SectionHeader } from "@/components/game-ui";
 import { TouchlineAgentIdentityCard, TouchlineClubIdentityCard, TouchlineCoachIdentityCard, TouchlinePlayerCard } from "@/components/touchline-card-engine";
+import { buildTdiePlayerIdentity } from "@/lib/tdie/player-identity";
 import { cn } from "@/lib/utils";
 
 type PlayerDatabaseResult = {
@@ -96,14 +97,30 @@ function marketValue(player: PlayerDatabaseResult) {
 }
 
 function playerCardModel(player: PlayerDatabaseResult) {
+  const age = player.age ?? ageFromDate(player.dateOfBirth);
+
   return {
     id: player.id,
     name: player.name,
     initials: initials(player.name),
-    tdieImageUrl: player.photoUrl,
+    tdieIdentity: buildTdiePlayerIdentity({
+      playerSource: "football-search",
+      playerSourceId: player.id,
+      provider: player.sourceProvider ?? "touchline",
+      providerPlayerId: player.sourceId ?? player.transfermarktPlayerId,
+      name: player.name,
+      clubName: player.currentClub,
+      position: player.position,
+      nationality: player.nationality,
+      marketValue: player.marketValue,
+      currency: player.currency ?? "EUR",
+      sourceReferenceUrl: player.profileUrl,
+      sourcePhotoUrl: player.photoUrl,
+      sourceUpdatedAt: player.lastUpdatedAt,
+    }),
     nationality: player.nationality,
     position: player.position,
-    age: player.age ?? ageFromDate(player.dateOfBirth),
+    age,
     currentClub: player.currentClub,
     currentAgent: player.agentName ?? player.agencyName,
     officialMarketValue: player.marketValue,
@@ -117,7 +134,7 @@ function playerCardModel(player: PlayerDatabaseResult) {
 }
 
 function missingSearchData(player: PlayerDatabaseResult) {
-  return !player.photoUrl || !player.currentClub || !player.position || !player.nationality || !player.age;
+  return !player.currentClub || !player.position || !player.nationality || !(player.age ?? ageFromDate(player.dateOfBirth));
 }
 
 function isGenericExternalImage(value?: string | null) {
@@ -343,7 +360,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const resultSummary = useMemo(() => {
     if (trimmed.length < 2) return "Type at least 2 letters";
     if (loading) return mode === "full" ? "Searching Touchline football data layer" : "Searching Touchline database";
-    if (enriching) return "Updating photos and profile data";
+    if (enriching) return "Updating cached profile data";
     if (mode === "full") {
       if (activeTab === "players") return `${results.length} player${results.length === 1 ? "" : "s"} found`;
       if (activeTab === "clubs") return `${clubResults.length} club${clubResults.length === 1 ? "" : "s"} found`;

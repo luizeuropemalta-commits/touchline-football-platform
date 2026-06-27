@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { CalendarClock, CircleDollarSign, Globe2, Shield, Sparkles, Trophy, UsersRound } from "lucide-react";
 import { GamePanel } from "@/components/game-ui";
 import { PlayerProfileCommandCenter, type PlayerProfile2Data } from "@/components/player-profile-command-center";
-import { enrichGlobalPlayerProfileFromTransfermarkt } from "@/lib/player-database";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { loadOrCreateTdiePlayerIdentity } from "@/lib/tdie/server";
 
 type PageParams = { id: string };
 type JsonRecord = Record<string, unknown>;
@@ -151,11 +151,12 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
 
   if (error || !playerRow) notFound();
 
-  const player = await enrichGlobalPlayerProfileFromTransfermarkt(admin, playerRow);
+  const player = playerRow;
   const sourcePayload = asRecord(player.source_payload);
   const enrichment = asRecord(sourcePayload.transfermarktProfileEnrichment);
   const details = asRecord(enrichment.details);
   const age = player.age ?? ageFromDate(player.date_of_birth);
+  const playerName = String(player.player_name ?? "Unnamed player");
   const sourceLabel = player.source_provider === "transfermarkt"
     ? "Transfermarkt"
     : sourcePayload.source === "api-football"
@@ -166,13 +167,28 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
   const marketValueLabel = formatMoney(player.market_value, player.currency ?? "EUR", player.market_value_text);
   const cardTier = playerTier(player.market_value);
   const internalProfileUrl = `${siteUrl()}/players/database/${player.id}`;
-  const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Touchline player profile: ${player.player_name}\n${internalProfileUrl}`)}`;
+  const shareUrl = `https://wa.me/?text=${encodeURIComponent(`Touchline player profile: ${playerName}\n${internalProfileUrl}`)}`;
   const contractExpiry = asString(details.contractExpires);
   const joined = asString(details.joined);
+  const tdieIdentity = await loadOrCreateTdiePlayerIdentity(admin, {
+    playerSource: "global_player_profiles",
+    playerSourceId: String(player.id),
+    provider: player.source_provider,
+    providerPlayerId: sourceId || player.transfermarkt_player_id,
+    name: playerName,
+    clubName: player.current_club,
+    position: player.position,
+    nationality: player.nationality,
+    marketValue: player.market_value,
+    currency: player.currency ?? "EUR",
+    sourceReferenceUrl: player.profile_url,
+    sourcePhotoUrl: player.photo_url,
+    sourceUpdatedAt: player.last_updated_at ?? player.updated_at ?? player.created_at,
+  });
   const profileCompleteness = Math.min(
     100,
     [
-      player.photo_url,
+      tdieIdentity,
       player.current_club,
       player.position,
       player.nationality,
@@ -214,8 +230,8 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
 
   const data: PlayerProfile2Data = {
     id: String(player.id),
-    name: String(player.player_name ?? "Unnamed player"),
-    initials: initialBadge(String(player.player_name ?? "Player")),
+    name: playerName,
+    initials: initialBadge(playerName),
     sourceLabel,
     sourceId,
     sourceLinkLabel,
@@ -223,6 +239,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     internalProfileUrl,
     shareUrl,
     photoUrl: player.photo_url,
+    tdieIdentity,
     club: player.current_club,
     nationality: player.nationality,
     position: player.position,

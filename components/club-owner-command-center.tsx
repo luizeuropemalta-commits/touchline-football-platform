@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
+import { TouchlinePlayerCard } from "@/components/touchline-card-engine";
 
 type CommandCenterPlayer = {
   id: string;
@@ -468,25 +469,20 @@ export function ClubOwnerCommandCenter({ data }: { data: CommandCenterData }) {
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {data.squad.players.length ? (
               data.squad.players.slice(0, 8).map((player) => (
-                <div key={player.id} className="overflow-hidden rounded-3xl border border-cyan-300/15 bg-white/[.035]">
-                  <div className="relative h-44 bg-cyan-300/[.04]">
-                    {player.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
-                    ) : (
-                      <div className="grid h-full place-items-center text-4xl font-black text-cyan-300/35">{initials(player.name)}</div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#06111c] to-transparent p-3">
-                      <span className="rounded-full border border-[#a3ff12]/20 bg-[#a3ff12]/[.08] px-2 py-1 text-[7px] font-black uppercase text-[#baff4c]">
-                        {player.position}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <p className="truncate text-sm font-black uppercase italic text-white">{player.name}</p>
-                    <p className="mt-2 text-[10px] font-black text-[#a3ff12]">{formatMoney(player.marketValue ?? 0, player.currency ?? "EUR")}</p>
-                  </div>
-                </div>
+                <TouchlinePlayerCard
+                  key={player.id}
+                  variant="compact"
+                  player={{
+                    id: player.id,
+                    name: player.name,
+                    initials: initials(player.name),
+                    position: player.position,
+                    officialMarketValue: player.marketValue,
+                    officialMarketValueLabel: formatMoney(player.marketValue ?? 0, player.currency ?? "EUR"),
+                    currency: player.currency,
+                    context: "dashboard",
+                  }}
+                />
               ))
             ) : (
               <div className="rounded-3xl border border-amber-300/15 bg-amber-300/[.05] p-6 md:col-span-2 xl:col-span-4">

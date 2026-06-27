@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ExternalLink,
   Eye,
-  ImageIcon,
   Loader2,
   MessageSquare,
   Search,
@@ -48,6 +47,16 @@ function representationLabel(status?: string | null) {
   if (status === "verified_representation") return "Verified representation document uploaded.";
   if (status === "active_representation") return "Currently represented by this agent.";
   return "Representation status available inside Touchline.";
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; players: ClubNetworkPlayer[] }) {
@@ -139,14 +148,10 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
                 <div key={player.id} className="overflow-hidden rounded-3xl border border-white/[.08] bg-white/[.025] transition hover:border-cyan-300/20">
                   <div className="grid grid-cols-[108px_1fr]">
                     <div className="relative min-h-36 bg-cyan-300/[.04]">
-                      {player.photoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
-                      ) : (
-                        <div className="grid h-full place-items-center text-cyan-300/40">
-                          <ImageIcon size={24} />
-                        </div>
-                      )}
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(34,211,238,.18),transparent_42%),linear-gradient(145deg,rgba(163,255,18,.08),rgba(2,6,23,.86))]" />
+                      <div className="relative grid h-full place-items-center">
+                        <span className="font-display text-3xl font-black text-cyan-200/55">{initials(player.name)}</span>
+                      </div>
                     </div>
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-3">

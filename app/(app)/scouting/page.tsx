@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
-import { Binoculars, Crosshair, Globe2, Radar, Sparkles, Star, Telescope } from "lucide-react";
+import { Crosshair, Globe2, Radar, Sparkles, Telescope } from "lucide-react";
 import { GamePanel, LivePill, SectionHeader, StatTile } from "@/components/game-ui";
+import { TouchlinePlayerCard } from "@/components/touchline-card-engine";
 import { WorkspaceState } from "@/components/workspace-state";
 import { getCurrentWorkspace } from "@/lib/server/current-workspace";
 
@@ -118,21 +118,21 @@ export default async function Scouting() {
         <SectionHeader kicker="Real player discovery" title="Profiles needing scouting attention" action={<Radar size={16} className="text-cyan-300" />} />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {players.map((player) => (
-            <Link key={player.id} href={`/players/${player.id}`} className="glass-hover rounded-3xl border border-white/[.07] bg-white/[.025] p-4">
-              <div className="flex gap-4">
-                <div className="relative size-20 overflow-hidden rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04]">
-                  {player.photo_url ? <Image src={player.photo_url} alt={playerName(player)} fill sizes="96px" className="object-cover" /> : <div className="grid h-full place-items-center text-cyan-300"><Binoculars size={22} /></div>}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-black uppercase italic text-white">{playerName(player)}</p>
-                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{player.position || "Position open"} · Age {age(player.date_of_birth)} · {player.nationality || "Nationality open"}</p>
-                  <div className="mt-4 flex gap-2">
-                    <span className="rounded-lg border border-[#a3ff12]/20 bg-[#a3ff12]/[.06] px-2 py-1 text-[7px] font-black text-[#a3ff12]">{player.status}</span>
-                    <span className="rounded-lg border border-cyan-300/20 bg-cyan-300/[.06] px-2 py-1 text-[7px] font-black text-cyan-300">{player.ai_profile?.generated ? "AI READY" : "AI NEEDED"}</span>
-                  </div>
-                </div>
-                <Star size={14} className="text-amber-300" />
-              </div>
+            <Link key={player.id} href={`/players/${player.id}`} className="block">
+              <TouchlinePlayerCard
+                variant="list"
+                player={{
+                  id: player.id,
+                  name: playerName(player),
+                  position: player.position,
+                  nationality: player.nationality,
+                  age: Number(age(player.date_of_birth)) || null,
+                  officialMarketValue: player.market_value,
+                  availability: player.status,
+                  liveState: player.ai_profile?.generated ? "player_of_the_match" : "idle",
+                  context: "scouting",
+                }}
+              />
             </Link>
           ))}
           {!players.length && (

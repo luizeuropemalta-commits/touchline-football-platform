@@ -253,12 +253,7 @@ export default async function ClubDatabaseProfile({ params }: { params: Promise<
                 className="flex items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-3 transition hover:border-cyan-300/25 hover:bg-cyan-300/[.05]"
               >
                 <div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
-                  {player.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
-                  ) : (
-                    <span className="text-[10px] font-black text-cyan-300/60">{initialBadge(player.name)}</span>
-                  )}
+                  <span className="font-display text-[10px] font-black text-cyan-300/60">{initialBadge(player.name)}</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[10px] font-black uppercase italic text-white">{player.name}</p>

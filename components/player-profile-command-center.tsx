@@ -28,6 +28,7 @@ import {
 import type { ReactNode } from "react";
 import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
 import { TouchlinePlayerCard } from "@/components/touchline-card-engine";
+import type { TdiePlayerIdentity } from "@/lib/tdie/player-identity";
 import { cn } from "@/lib/utils";
 
 export type PlayerProfile2Data = {
@@ -41,6 +42,7 @@ export type PlayerProfile2Data = {
   internalProfileUrl: string;
   shareUrl: string;
   photoUrl?: string | null;
+  tdieIdentity?: TdiePlayerIdentity | null;
   club?: string | null;
   nationality?: string | null;
   position?: string | null;
@@ -125,7 +127,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
               id: data.id,
               name: data.name,
               initials: data.initials,
-              tdieImageUrl: data.photoUrl,
+              tdieIdentity: data.tdieIdentity,
               nationality: data.nationality,
               position: data.position,
               age: data.age,

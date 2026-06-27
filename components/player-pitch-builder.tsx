@@ -105,8 +105,7 @@ function readiness(player?: PitchPlayer | null) {
   if (!player) return 0;
   return Math.min(
     100,
-    (player.photoUrl ? 18 : 0) +
-      (player.position ? 10 : 0) +
+    (player.position ? 18 : 0) +
       (player.club ? 10 : 0) +
       (player.marketValue ? 12 : 0) +
       (player.contractEndDate ? 12 : 0) +
@@ -360,12 +359,12 @@ export function PlayerPitchBuilder({
             <>
               <div className="grid gap-0 lg:grid-cols-[280px_1fr]">
                 <div className="relative min-h-[360px] bg-cyan-300/[.035]">
-                  {selectedPlayer.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selectedPlayer.photoUrl} alt={selectedPlayer.name} className="h-full w-full object-cover object-top" />
-                  ) : (
-                    <div className="grid h-full min-h-[360px] place-items-center text-6xl font-black text-cyan-300/25">{initials(selectedPlayer.name)}</div>
-                  )}
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(163,255,18,.22),transparent_34%),linear-gradient(145deg,rgba(14,165,233,.16),rgba(2,6,23,.88))]" />
+                  <div className="relative grid h-full min-h-[360px] place-items-center">
+                    <div className="grid size-32 place-items-center rounded-[2.5rem] border border-cyan-300/20 bg-black/30 shadow-[0_0_70px_rgba(34,211,238,.18)]">
+                      <span className="font-display text-6xl font-black text-cyan-200/70">{initials(selectedPlayer.name)}</span>
+                    </div>
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
                     <p className="text-[8px] font-black uppercase tracking-[.22em] text-[#a3ff12]">{selectedPlayer.position ?? "Position open"}</p>

@@ -527,12 +527,7 @@ export function PlayerOpportunities({ initialOpportunities, players }: { initial
                   <div key={player.id} className="rounded-3xl border border-white/[.07] bg-black/20 p-3">
                     <div className="flex gap-3">
                       <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.04]">
-                        {player.photoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
-                        ) : (
-                          <span className="text-lg font-black text-cyan-300/40">{initials(player.name)}</span>
-                        )}
+                        <span className="font-display text-lg font-black text-cyan-300/50">{initials(player.name)}</span>
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-black uppercase italic text-white">{player.name}</p>

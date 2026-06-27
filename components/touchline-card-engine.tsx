@@ -14,6 +14,7 @@ import {
   UsersRound,
   Zap,
 } from "lucide-react";
+import { buildTdiePlayerIdentity, type TdiePlayerIdentity } from "@/lib/tdie/player-identity";
 import { cn } from "@/lib/utils";
 
 export type TouchlineCardTier = "bronze" | "silver" | "gold";
@@ -49,6 +50,7 @@ export type TouchlinePlayerCardModel = {
   id?: string;
   name: string;
   initials?: string;
+  tdieIdentity?: TdiePlayerIdentity | null;
   tdieImageUrl?: string | null;
   nationality?: string | null;
   position?: string | null;
@@ -181,6 +183,26 @@ function identityInitials(name: string) {
     .toUpperCase();
 }
 
+function resolvePlayerIdentity(player: TouchlinePlayerCardModel): TdiePlayerIdentity {
+  return player.tdieIdentity ?? buildTdiePlayerIdentity({
+    playerSource: player.context ?? "touchline-card-engine",
+    playerSourceId: player.id ?? player.name,
+    provider: "touchline",
+    providerPlayerId: player.id ?? null,
+    name: player.name,
+    clubName: player.currentClub,
+    position: player.position,
+    nationality: player.nationality,
+    marketValue: player.officialMarketValue,
+    currency: player.currency ?? "EUR",
+  });
+}
+
+function resolveTdieArtworkUrl(player: TouchlinePlayerCardModel, identity = resolvePlayerIdentity(player)) {
+  if (identity.renderMode !== "generated_artwork") return null;
+  return identity.artworkUrl ?? player.tdieImageUrl ?? null;
+}
+
 function entityMeta(type: TouchlineIdentityEntityType) {
   const map = {
     club: {
@@ -282,22 +304,33 @@ export function formatOfficialMarketValue(officialMarketValue?: number | null, c
 }
 
 function IdentityArtwork({ player, tier, compact = false }: { player: TouchlinePlayerCardModel; tier: TouchlineCardTier; compact?: boolean }) {
+  const identity = resolvePlayerIdentity(player);
+  const artworkUrl = resolveTdieArtworkUrl(player, identity);
+  const initials = identity.initials || player.initials || player.name.slice(0, 2).toUpperCase();
+
   return (
-    <div className={cn("relative mx-auto overflow-hidden rounded-[1.65rem] border border-cyan-300/10 bg-cyan-300/[.035]", compact ? "h-36" : "h-56")}>
+    <div className={cn("relative mx-auto overflow-hidden rounded-[1.65rem] border border-cyan-300/10 bg-cyan-300/[.035]", compact ? "h-36" : "h-56", identity.accent.glow)}>
       <div className="absolute inset-x-10 bottom-5 h-12 rounded-full bg-cyan-300/20 blur-2xl" />
-      {player.tdieImageUrl ? (
+      {artworkUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={player.tdieImageUrl}
+          src={artworkUrl}
           alt={player.name}
           className="h-full w-full object-cover object-top saturate-[.95] contrast-[1.08] [mask-image:linear-gradient(to_bottom,black_72%,transparent_100%)]"
         />
       ) : (
-        <div className="grid h-full place-items-center text-6xl font-black text-cyan-300/30">{player.initials ?? player.name.slice(0, 2).toUpperCase()}</div>
+        <div className={cn("relative grid h-full place-items-center overflow-hidden bg-gradient-to-br", identity.accent.primary)}>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_28%,rgba(255,255,255,.18),transparent_34%),linear-gradient(115deg,transparent_0%,rgba(255,255,255,.12)_46%,transparent_58%)]" />
+          <div className="absolute -bottom-10 left-1/2 h-32 w-40 -translate-x-1/2 rounded-full border border-cyan-200/15 bg-black/20 blur-sm" />
+          <div className="relative text-center">
+            <p className={cn("font-display text-6xl font-black italic tracking-[-.08em]", identity.accent.text)}>{initials}</p>
+            <p className="mt-2 max-w-40 truncate text-[8px] font-black uppercase tracking-[.16em] text-white/55">{identity.clubLabel ?? "Touchline identity"}</p>
+          </div>
+        </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-transparent" />
       <div className="absolute bottom-4 left-4">
-        <CardEngineLivePill>TDIE identity</CardEngineLivePill>
+        <CardEngineLivePill>{identity.status === "generated" ? "TDIE generated" : "TDIE fallback"}</CardEngineLivePill>
       </div>
       <div className={cn("absolute right-4 top-4 rounded-xl border px-2.5 py-1 text-[8px] font-black uppercase tracking-[.16em]", tierMeta[tier].chip)}>
         {tierMeta[tier].label}
@@ -334,20 +367,24 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
   const tier = getTouchlinePlayerCardTier(player.officialMarketValue);
   const marketValue = formatOfficialMarketValue(player.officialMarketValue, player.currency ?? "EUR", player.officialMarketValueLabel);
   const liveState = player.liveState ?? "idle";
+  const identity = resolvePlayerIdentity(player);
   const isCompact = variant === "compact";
   const isList = variant === "list";
 
   if (isList) {
+    const artworkUrl = resolveTdieArtworkUrl(player, identity);
+    const listInitials = identity.initials || player.initials || player.name.slice(0, 2).toUpperCase();
+
     return (
       <div className={cn("relative overflow-hidden rounded-[1.35rem] bg-[#07111b] p-[1px]", tierMeta[tier].glow, className)}>
         <PrestigeBorder tier={tier} liveState={liveState} />
         <div className="relative z-10 flex min-w-0 items-center gap-4 rounded-[1.35rem] border border-white/[.08] bg-white/[.035] p-3">
-          <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045]">
-            {player.tdieImageUrl ? (
+          <div className={cn("relative size-16 shrink-0 overflow-hidden rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045]", identity.accent.glow)}>
+            {artworkUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={player.tdieImageUrl} alt={player.name} className="h-full w-full object-cover object-top" />
+              <img src={artworkUrl} alt={player.name} className="h-full w-full object-cover object-top" />
             ) : (
-              <div className="grid h-full place-items-center text-lg font-black text-cyan-300">{player.initials ?? player.name.slice(0, 2).toUpperCase()}</div>
+              <div className={cn("grid h-full place-items-center bg-gradient-to-br text-lg font-black", identity.accent.primary, identity.accent.text)}>{listInitials}</div>
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -526,12 +563,7 @@ export function TouchlineIdentityCard({
               const content = (
                 <div className="group flex min-w-0 items-center gap-3 rounded-2xl border border-white/[.06] bg-black/20 p-2 transition hover:border-cyan-300/20 hover:bg-cyan-300/[.05]">
                   <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
-                    {player.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={player.photoUrl} alt={player.name ?? "Player"} className="h-full w-full object-cover object-top" />
-                    ) : (
-                      <span className="text-[10px] font-black text-cyan-300/75">{playerInitials}</span>
-                    )}
+                    <span className="text-[10px] font-black text-cyan-300/75">{playerInitials}</span>
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[10px] font-black uppercase italic text-white group-hover:text-cyan-100">{player.name ?? "Player"}</p>

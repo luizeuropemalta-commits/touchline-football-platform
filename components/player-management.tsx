@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, Meter, SectionHeader } from "@/components/game-ui";
+import { TouchlinePlayerCard } from "@/components/touchline-card-engine";
 import { cn } from "@/lib/utils";
 
 export type RealPlayer = {
@@ -441,12 +442,7 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
               {(footballFoundation.players ?? []).slice(0, 8).map((player) => (
                 <div key={player.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/[.06] bg-white/[.035] p-3">
                   <div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
-                    {player.photo_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={player.photo_url} alt={player.display_name ?? player.name ?? "Player"} className="h-full w-full object-cover object-top" />
-                    ) : (
-                      <span className="text-[10px] font-black text-cyan-300/60">{initials(player.display_name ?? player.name ?? "P")}</span>
-                    )}
+                    <span className="text-[10px] font-black text-cyan-300/60">{initials(player.display_name ?? player.name ?? "P")}</span>
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[10px] font-black uppercase italic text-white">{player.display_name ?? player.name}</p>
@@ -513,18 +509,24 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
               const age = calculateAge(player.dateOfBirth);
               return (
                 <GamePanel key={player.id} className="glass-hover overflow-hidden">
-                  <div className="relative h-64 bg-cyan-300/[.035]">
-                    {player.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={player.photoUrl} alt={player.name} className="h-full w-full object-cover object-top" />
-                    ) : (
-                      <div className="grid h-full place-items-center text-5xl font-black text-cyan-300/25">{initials(player.name)}</div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-[#07111b]/20 to-transparent" />
-                    <div className="absolute left-4 top-4 flex gap-2">
-                      {player.externalUrl && <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 py-1 text-[8px] font-black uppercase text-[#caff72]">Linked</span>}
-                      {player.aiProfile?.generated && <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-[8px] font-black uppercase text-amber-200">AI Ready</span>}
-                    </div>
+                  <div className="relative bg-cyan-300/[.02] p-3">
+                    <TouchlinePlayerCard
+                      variant="compact"
+                      player={{
+                        id: player.id,
+                        name: player.name,
+                        initials: initials(player.name),
+                        position: player.position,
+                        nationality: player.nationality,
+                        age,
+                        currentClub: player.club,
+                        officialMarketValue: player.marketValue,
+                        officialMarketValueLabel: formatMoney(player.marketValue, player.currency ?? "EUR"),
+                        currency: player.currency,
+                        contractStatus: player.contractEndDate,
+                        context: "dashboard",
+                      }}
+                    />
                   </div>
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-3">

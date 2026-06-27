@@ -14,9 +14,11 @@ import {
   Upload,
   Zap,
 } from "lucide-react";
-import { GamePanel, LivePill, Meter, SectionHeader } from "@/components/game-ui";
+import { GamePanel, Meter, SectionHeader } from "@/components/game-ui";
+import { TouchlinePlayerCard } from "@/components/touchline-card-engine";
 import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createClient } from "@/lib/supabase/server";
+import { loadOrCreateTdiePlayerIdentity } from "@/lib/tdie/server";
 
 type ClubJoin = { name?: string | null } | Array<{ name?: string | null }> | null;
 type AiProfile = {
@@ -110,6 +112,34 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
   const name = fullName(player);
   const age = ageFromDate(player.date_of_birth);
   const aiProfile = player.ai_profile as AiProfile | null;
+  const playerClubName = clubName(player.clubs as ClubJoin);
+  const tdieIdentity = await loadOrCreateTdiePlayerIdentity(admin, {
+    playerSource: "players",
+    playerSourceId: String(player.id),
+    provider: player.external_market_provider ?? "touchline",
+    providerPlayerId: player.external_market_player_id ?? String(player.id),
+    name,
+    clubName: playerClubName,
+    position: player.position,
+    nationality: player.nationality,
+    marketValue: player.market_value,
+    currency: player.currency ?? "EUR",
+    sourceReferenceUrl: player.external_market_url,
+    sourcePhotoUrl: player.photo_url,
+    sourceUpdatedAt: player.contract_end_date ?? undefined,
+  });
+  const profileCompleteness = Math.min(
+    100,
+    [
+      tdieIdentity,
+      player.contract_end_date,
+      player.market_value,
+      player.position,
+      player.nationality,
+      player.date_of_birth,
+      player.external_market_url,
+    ].filter(Boolean).length * 14,
+  );
 
   return (
     <div className="mx-auto max-w-[1500px] animate-in">
@@ -120,20 +150,32 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
       <GamePanel className="relative overflow-hidden pitch-grid">
         <div className="absolute right-[-8%] top-[-60%] size-[500px] rounded-full border border-cyan-300/[.08]" />
         <div className="relative grid min-h-[330px] lg:grid-cols-[320px_1fr]">
-          <div className="relative overflow-hidden border-b border-white/[.07] bg-cyan-300/[.035] lg:border-b-0 lg:border-r">
-            {player.photo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={player.photo_url} alt={name} className="h-full min-h-[330px] w-full object-cover object-top grayscale-[10%] contrast-[1.08]" />
-            ) : (
-              <div className="grid h-full min-h-[330px] place-items-center text-6xl font-black text-cyan-300/25">{name.slice(0, 2).toUpperCase()}</div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#07111b] via-transparent to-cyan-400/[.05]" />
-            <div className="absolute bottom-5 left-5"><LivePill>{player.status ?? "active"}</LivePill></div>
+          <div className="relative overflow-hidden border-b border-white/[.07] bg-cyan-300/[.035] p-4 lg:border-b-0 lg:border-r">
+            <TouchlinePlayerCard
+              variant="compact"
+              player={{
+                id: String(player.id),
+                name,
+                initials: name.slice(0, 2).toUpperCase(),
+                tdieIdentity,
+                nationality: player.nationality,
+                position: player.position,
+                age,
+                currentClub: playerClubName,
+                officialMarketValue: player.market_value,
+                officialMarketValueLabel: formatMoney(player.market_value, player.currency ?? "EUR"),
+                currency: player.currency ?? "EUR",
+                contractStatus: player.contract_end_date ? `Until ${player.contract_end_date}` : "Data not available",
+                currentForm: aiProfile?.generated ? "AI ready" : "Sync",
+                availability: player.status ?? "Active",
+                context: "profile",
+              }}
+            />
           </div>
           <div className="relative p-6 sm:p-8">
             <div className="flex flex-col justify-between gap-6 sm:flex-row">
               <div>
-                <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{clubName(player.clubs as ClubJoin)} · {player.position ?? "Position open"}</p>
+                <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">{playerClubName} · {player.position ?? "Position open"}</p>
                 <h1 className="font-display mt-2 text-4xl uppercase italic sm:text-6xl">{name}</h1>
                 <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                   {player.nationality ?? "Nationality open"} {age ? `· AGE ${age}` : ""} {player.preferred_foot ? `· ${player.preferred_foot} footed` : ""}
@@ -164,7 +206,7 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              <div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>PROFILE COMPLETENESS</span><span>{player.photo_url && player.contract_end_date ? 82 : 45}%</span></div><Meter value={player.photo_url && player.contract_end_date ? 82 : 45} color="lime" /></div>
+              <div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>PROFILE COMPLETENESS</span><span>{profileCompleteness}%</span></div><Meter value={profileCompleteness} color="lime" /></div>
               <div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>TRANSFER INTEREST</span><span>{interests?.length ?? 0}</span></div><Meter value={Math.min(100, (interests?.length ?? 0) * 20)} color="cyan" /></div>
               <div><div className="mb-2 flex justify-between text-[8px] font-bold text-slate-500"><span>AI READINESS</span><span>{aiProfile?.generated ? 100 : 30}%</span></div><Meter value={aiProfile?.generated ? 100 : 30} color="gold" /></div>
             </div>
