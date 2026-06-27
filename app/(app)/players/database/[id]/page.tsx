@@ -106,10 +106,10 @@ function buildStats(profile: {
   sourceLabel: string;
 }): PlayerProfile2Data["stats"] {
   return [
-    { label: "Goals", value: "Sync", detail: "Sportmonks player statistics", accent: "gold" },
-    { label: "Assists", value: "Sync", detail: "season data pending", accent: "cyan" },
-    { label: "Minutes", value: "Sync", detail: "match participation", accent: "lime" },
-    { label: "Cards", value: "Sync", detail: "discipline history", accent: "rose" },
+    { label: "Goals", value: "—", detail: "official stats pending", accent: "gold" },
+    { label: "Assists", value: "—", detail: "official stats pending", accent: "cyan" },
+    { label: "Minutes", value: "—", detail: "match data pending", accent: "lime" },
+    { label: "Cards", value: "—", detail: "discipline data pending", accent: "rose" },
     { label: "Market", value: profile.marketValueLabel, detail: profile.sourceLabel, accent: "gold" },
     { label: "Age", value: profile.age ? String(profile.age) : "Data not available", detail: "identity profile", accent: "cyan" },
     { label: "Role", value: openOr(profile.position, "Position unavailable"), detail: "main position", accent: "lime" },
@@ -211,13 +211,13 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     {
       label: "Born",
       value: player.date_of_birth ? compactDate(player.date_of_birth) : "Birth data pending",
-      meta: asString(details.placeOfBirth) ? `Place of birth: ${details.placeOfBirth}` : "Birthplace will be completed by approved football data sync.",
+      meta: asString(details.placeOfBirth) ? `Place of birth: ${details.placeOfBirth}` : "Birthplace will appear when official provider data is available.",
       icon: <CalendarClock size={15} />,
     },
     {
       label: "Current club",
       value: openOr(player.current_club, "Club unavailable"),
-      meta: joined ? `Joined: ${joined}` : "Club movement timeline will expand with provider transfer history.",
+      meta: joined ? `Joined: ${joined}` : "Club movement timeline will expand when provider transfer history is available.",
       icon: <Shield size={15} />,
     },
     {
@@ -267,8 +267,8 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
     cardTierColor: tierColor(cardTier),
     availability: asString(details.playerStatus) ?? "Data not available",
     transferStatus: contractExpiry ? "Monitoring" : "Data not available",
-    currentForm: "Live sync",
-    injuryStatus: "No injury synced",
+    currentForm: "Awaiting match data",
+    injuryStatus: "Data not available",
     honours: buildHonours(enrichment),
     timeline,
     stats: buildStats({
@@ -283,7 +283,7 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
       { label: "Club", value: openOr(player.current_club, "Club unavailable"), href: "/club-network", icon: <Shield size={15} /> },
       { label: "Agent", value: openOr(player.agent_name ?? player.agency_name, "Agent unavailable"), href: "/agents", icon: <UsersRound size={15} /> },
       { label: "League", value: "Data not available", href: "/admin/football-data", icon: <Trophy size={15} /> },
-      { label: "Competition", value: "Provider foundation", href: "/admin/football-data", icon: <Globe2 size={15} /> },
+      { label: "Competition", value: "Data not available", href: "/admin/football-data", icon: <Globe2 size={15} /> },
     ],
     videos: [
       {

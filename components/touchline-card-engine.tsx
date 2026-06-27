@@ -141,6 +141,18 @@ function dataLabel(value?: string | number | null, fallback = DATA_NOT_AVAILABLE
   return fallback;
 }
 
+function cardStatusLabel(value?: string | number | null, fallback = DATA_NOT_AVAILABLE) {
+  const label = dataLabel(value, fallback);
+  const normalized = label.toLowerCase();
+
+  if (normalized === "sync" || normalized === "live sync") return "Awaiting data";
+  if (normalized === "no injury synced") return DATA_NOT_AVAILABLE;
+  if (normalized.includes("pending official data sync")) return "Official data pending";
+  if (normalized.includes("sync pending")) return "Official data pending";
+
+  return label;
+}
+
 const liveStateMeta: Record<TouchlineCardLiveState, { label: string; icon: typeof Activity; className: string }> = {
   idle: { label: "Match ready", icon: Sparkles, className: "border-cyan-300/20 bg-cyan-300/[.06] text-cyan-200" },
   live_match: { label: "Live match", icon: Activity, className: "border-[#a3ff12]/25 bg-[#a3ff12]/[.08] text-[#b7ff45]" },
@@ -455,7 +467,7 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
         <div className="mt-5 grid grid-cols-3 gap-2 border-t border-white/[.08] pt-5">
           <div className="rounded-2xl bg-white/[.04] p-3 text-center">
             <p className="text-[8px] font-black uppercase text-slate-500">Form</p>
-            <p className="mt-1 text-lg font-black text-cyan-300">{dataLabel(player.currentForm)}</p>
+            <p className="mt-1 text-lg font-black text-cyan-300">{cardStatusLabel(player.currentForm)}</p>
           </div>
           <div className="rounded-2xl bg-white/[.04] p-3 text-center">
             <p className="text-[8px] font-black uppercase text-slate-500">Age</p>
@@ -463,7 +475,7 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
           </div>
           <div className="rounded-2xl bg-white/[.04] p-3 text-center">
             <p className="text-[8px] font-black uppercase text-slate-500">Status</p>
-            <p className="mt-1 truncate text-lg font-black text-[#a3ff12]">{dataLabel(player.availability, "Ready")}</p>
+            <p className="mt-1 truncate text-lg font-black text-[#a3ff12]">{cardStatusLabel(player.availability, "Ready")}</p>
           </div>
         </div>
 
@@ -471,19 +483,19 @@ function PlayerCardInner({ player, variant, className }: { player: TouchlinePlay
           <div className="mt-4 grid gap-2 text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:grid-cols-2">
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Coach</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{dataLabel(player.currentCoach)}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{cardStatusLabel(player.currentCoach)}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Agent</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-cyan-200">{dataLabel(player.currentAgent)}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-cyan-200">{cardStatusLabel(player.currentAgent)}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>League</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{dataLabel(player.league)}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-white">{cardStatusLabel(player.league)}</p>
             </div>
             <div className="rounded-2xl border border-white/[.06] bg-black/15 p-3">
               <p>Contract</p>
-              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-amber-200">{dataLabel(player.contractStatus)}</p>
+              <p className="mt-1 truncate text-sm font-black normal-case tracking-normal text-amber-200">{cardStatusLabel(player.contractStatus)}</p>
             </div>
           </div>
         ) : (
@@ -568,7 +580,7 @@ export function TouchlineIdentityCard({
           </div>
           <div className="rounded-2xl border border-white/[.06] bg-black/20 px-3 py-2">
             <p>Status</p>
-            <p className="mt-1 truncate text-sm text-amber-200">{entity.status ?? (suggested ? `${suggested} suggested` : "Pending Official Data Sync")}</p>
+            <p className="mt-1 truncate text-sm text-amber-200">{cardStatusLabel(entity.status ?? (suggested ? `${suggested} suggested` : "Official data pending"))}</p>
           </div>
         </div>
 
@@ -604,11 +616,11 @@ export function TouchlineIdentityCard({
         ) : (
           <div className="relative mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[.06] p-4">
             <p className="text-[10px] font-black uppercase tracking-wider text-amber-200">
-              {entity.type === "club" ? "Pending Official Data Sync" : "Premium identity ready"}
+              {entity.type === "club" ? "Official data pending" : "Premium identity ready"}
             </p>
             <p className="mt-1 text-[10px] leading-5 text-slate-500">
               {entity.type === "club"
-                ? "Touchline shows the club identity now. Official squad and trophy data will be filled by approved football data sync."
+                ? "Touchline shows the club identity now. Official squad and trophy data will appear when approved football data is available."
                 : "Touchline can display public linked profiles here while keeping representation and business status separate."}
             </p>
           </div>

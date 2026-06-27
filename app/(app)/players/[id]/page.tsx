@@ -176,7 +176,7 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
                 officialMarketValueLabel: formatMoney(player.market_value, player.currency ?? "EUR"),
                 currency: player.currency ?? "EUR",
                 contractStatus: player.contract_end_date ? `Until ${player.contract_end_date}` : "Data not available",
-                currentForm: aiProfile?.generated ? "AI ready" : "Sync",
+                currentForm: aiProfile?.generated ? "AI ready" : "Data pending",
                 availability: player.status ?? "Active",
                 context: "profile",
               }}
@@ -204,9 +204,9 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 ["VALUE", formatMoney(player.market_value, player.currency ?? "EUR"), "text-amber-300"],
-                ["HEIGHT", player.height_cm ? `${player.height_cm}cm` : "—", "text-white"],
-                ["WEIGHT", player.weight_kg ? `${player.weight_kg}kg` : "—", "text-cyan-300"],
-                ["CONTRACT", player.contract_end_date ?? "—", "text-[#a3ff12]"],
+                ["HEIGHT", player.height_cm ? `${player.height_cm}cm` : "Not available", "text-white"],
+                ["WEIGHT", player.weight_kg ? `${player.weight_kg}kg` : "Not available", "text-cyan-300"],
+                ["CONTRACT", player.contract_end_date ?? "Not available", "text-[#a3ff12]"],
               ].map(([label, value, color]) => (
                 <div key={String(label)} className="rounded-xl border border-white/[.08] bg-black/20 p-4">
                   <p className="text-[8px] font-black uppercase tracking-wider text-slate-600">{label}</p>

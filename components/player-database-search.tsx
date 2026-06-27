@@ -126,7 +126,7 @@ function playerCardModel(player: PlayerDatabaseResult) {
     officialMarketValue: player.marketValue,
     officialMarketValueLabel: marketValue(player),
     currency: player.currency ?? "EUR",
-    availability: missingSearchData(player) ? "Pending Official Data Sync" : "Ready",
+    availability: missingSearchData(player) ? "Official data pending" : "Ready",
     href: `/players/database/${player.id}`,
     externalHref: player.profileUrl,
     context: "search" as const,
@@ -180,7 +180,7 @@ function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
       transfermarktId: entity.transfermarktId,
       href: internalHref,
       externalHref: entity.profileUrl,
-      status: entity.status === "active" ? "Active" : "Pending Official Data Sync",
+      status: entity.status === "active" ? "Active" : "Official data pending",
       subtitle:
         entity.type === "club"
           ? "Open internal club profile · market, squad and share tools"

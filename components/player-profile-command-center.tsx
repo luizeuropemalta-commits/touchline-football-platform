@@ -102,6 +102,18 @@ function displayData(value?: string | number | null, fallback = "Data not availa
   return fallback;
 }
 
+function polishedStatus(value?: string | number | null, fallback = "Data not available") {
+  const text = displayData(value, fallback);
+  const normalized = text.toLowerCase();
+
+  if (normalized === "sync" || normalized === "live sync") return "Awaiting data";
+  if (normalized === "no injury synced") return "Data not available";
+  if (normalized.includes("sync pending")) return "Official data pending";
+  if (normalized.includes("provider foundation")) return "Data not available";
+
+  return text;
+}
+
 function MicroStat({ label, value, detail, accent = "cyan" }: { label: string; value: string; detail: string; accent?: "cyan" | "lime" | "gold" | "rose" }) {
   const colors = {
     cyan: "text-cyan-300 border-cyan-300/15 bg-cyan-300/[.045]",
@@ -131,34 +143,44 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
         <div className="absolute -right-28 -top-56 size-[620px] rounded-full border border-amber-300/[.08] bg-amber-300/[.035] blur-sm" />
         <div className="absolute -left-28 bottom-[-220px] size-[520px] rounded-full border border-cyan-300/[.08] bg-cyan-300/[.04] blur-sm" />
         <div className="absolute left-1/3 top-0 z-[1] h-px w-1/2 bg-gradient-to-r from-transparent via-amber-200/40 to-transparent" />
-        <div className="relative grid min-w-0 gap-5 p-4 lg:grid-cols-[420px_minmax(0,1fr)] xl:p-6">
-          <TouchlinePlayerCard
-            player={{
-              id: data.id,
-              name: data.name,
-              initials: data.initials,
-              tdieIdentity: data.tdieIdentity,
-              nationality: data.nationality,
-              position: data.position,
-              age: data.age,
-              currentClub: data.club,
-              currentCoach: data.coach,
-              currentAgent: data.agent ?? data.agency,
-              officialMarketValue: data.marketValueNumber,
-              officialMarketValueLabel: data.marketValueLabel,
-              currency: data.currency,
-              contractStatus: data.contractExpiry ? `Until ${data.contractExpiry}` : "Data not available",
-              currentForm: data.currentForm,
-              availability: data.availability,
-              competition: data.competition,
-              league: data.league,
-              href: data.internalProfileUrl,
-              externalHref: data.profileUrl,
-              liveState: data.live.status === "No live match active" ? "idle" : "live_match",
-              livePoints: data.live.points,
-              context: "profile",
-            }}
-          />
+        <div className="relative grid min-w-0 gap-5 p-4 lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)] 2xl:grid-cols-[420px_minmax(0,1fr)] xl:p-6">
+          <div className="min-w-0">
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-amber-300/15 bg-amber-300/[.045] px-4 py-3">
+              <div>
+                <p className="text-[8px] font-black uppercase tracking-[.18em] text-amber-200">Official Touchline Card</p>
+                <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">Rendered by TDIE + Card Engine</p>
+              </div>
+              <span className="rounded-full border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-3 py-1 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">{data.cardTier}</span>
+            </div>
+            <TouchlinePlayerCard
+              className="h-full"
+              player={{
+                id: data.id,
+                name: data.name,
+                initials: data.initials,
+                tdieIdentity: data.tdieIdentity,
+                nationality: data.nationality,
+                position: data.position,
+                age: data.age,
+                currentClub: data.club,
+                currentCoach: data.coach,
+                currentAgent: data.agent ?? data.agency,
+                officialMarketValue: data.marketValueNumber,
+                officialMarketValueLabel: data.marketValueLabel,
+                currency: data.currency,
+                contractStatus: data.contractExpiry ? `Until ${data.contractExpiry}` : "Contract data pending",
+                currentForm: polishedStatus(data.currentForm),
+                availability: polishedStatus(data.availability, "Ready"),
+                competition: data.competition,
+                league: data.league,
+                href: data.internalProfileUrl,
+                externalHref: data.profileUrl,
+                liveState: data.live.status === "No live match active" ? "idle" : "live_match",
+                livePoints: data.live.points,
+                context: "profile",
+              }}
+            />
+          </div>
 
           <div className="min-w-0 p-1 md:p-3">
             <div className="flex flex-col justify-between gap-5 xl:flex-row">
@@ -190,7 +212,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
               <MicroStat label="Market value" value={data.marketValueLabel} detail="official provider value" accent="gold" />
               <MicroStat label="Club" value={displayData(data.club)} detail={displayData(data.league, "league data not available")} accent="cyan" />
               <MicroStat label="Agent" value={displayData(data.agent ?? data.agency)} detail="relationship source" accent="lime" />
-              <MicroStat label="Updated" value={data.updatedAtLabel} detail="profile sync" accent="rose" />
+              <MicroStat label="Updated" value={data.updatedAtLabel} detail="identity updated" accent="rose" />
             </div>
 
             <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -203,8 +225,8 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
                 <Meter value={data.searchReadiness} color="cyan" />
               </div>
               <div>
-                <div className="mb-2 flex justify-between text-[8px] font-bold uppercase tracking-wider text-slate-500"><span>Transfer heat</span><span>{data.transferStatus}</span></div>
-                <Meter value={data.transferStatus === "Open" ? 72 : 38} color="gold" />
+                <div className="mb-2 flex justify-between text-[8px] font-bold uppercase tracking-wider text-slate-500"><span>Transfer heat</span><span>{polishedStatus(data.transferStatus, "Monitoring pending")}</span></div>
+                <Meter value={data.transferStatus === "Open" || data.transferStatus === "Monitoring" ? 72 : 38} color="gold" />
               </div>
             </div>
           </div>
@@ -224,7 +246,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
                 ["League", displayData(data.league), "domestic context", <Trophy key="league" size={16} />],
                 ["Competition", displayData(data.competition), "active tournament", <Globe2 key="competition" size={16} />],
                 ["Contract", displayData(data.contractExpiry), "expiry status", <CalendarClock key="contract" size={16} />],
-                ["Injury", data.injuryStatus, "availability monitor", <HeartPulse key="injury" size={16} />],
+                ["Injury", polishedStatus(data.injuryStatus), "availability monitor", <HeartPulse key="injury" size={16} />],
               ].map(([label, value, detail, icon]) => (
                 <CardShell key={String(label)} className="min-w-0">
                   <div className="flex items-center justify-between gap-3">
@@ -271,7 +293,7 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
                     <div className="grid size-10 place-items-center rounded-2xl border border-amber-300/20 bg-black/20 text-lg">{honour.icon}</div>
                     <p className="mt-5 text-[9px] font-black uppercase tracking-[.16em] text-amber-200">{honour.label}</p>
                     <p className="mt-3 text-3xl font-black text-white">{honour.count ?? "—"}</p>
-                    <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-600">{honour.count === null ? "Sync pending" : "Public metadata"}</p>
+                    <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-slate-600">{honour.count === null ? "Official data pending" : "Public metadata"}</p>
                   </div>
                 </div>
               ))}
@@ -284,12 +306,12 @@ export function PlayerProfileCommandCenter({ data }: { data: PlayerProfile2Data 
             <SectionHeader kicker="Market information" title="Transfer readiness" action={<CircleDollarSign size={16} className="text-amber-300" />} />
             <div className="space-y-3">
               {[
-                ["Official market value", data.marketValueLabel, "Synced from selected football data/source provider"],
+                ["Official market value", data.marketValueLabel, "Official provider value"],
                 ["Contract status", displayData(data.contractExpiry), "Expiry and negotiation visibility"],
-                ["Availability", data.availability, "Ready for scouting, shortlist and offers"],
-                ["Transfer status", data.transferStatus, "Touchline Transfer Center state"],
-                ["Current form", data.currentForm, "Live/stat data will upgrade this automatically"],
-                ["Injury status", data.injuryStatus, "Availability monitor"],
+                ["Availability", polishedStatus(data.availability), "Ready for scouting, shortlist and offers"],
+                ["Transfer status", polishedStatus(data.transferStatus, "Monitoring pending"), "Touchline Transfer Center state"],
+                ["Current form", polishedStatus(data.currentForm), "Awaiting official match data"],
+                ["Injury status", polishedStatus(data.injuryStatus), "Availability monitor"],
               ].map(([label, value, detail]) => (
                 <CardShell key={label}>
                   <p className="text-[8px] font-black uppercase tracking-[.18em] text-slate-500">{label}</p>
