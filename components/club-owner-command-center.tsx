@@ -302,17 +302,17 @@ export function ClubOwnerCommandCenter({ data }: { data: CommandCenterData }) {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <LivePill>Touchline Fantasy Entry</LivePill>
+              <LivePill>Touchline Command Center</LivePill>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[.06] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.18em] text-cyan-100">
-                Club Owner Home Screen
+                Club · agency · transfer workflow
               </span>
             </div>
             <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-300/80">
-              This is the official Fantasy starting point: manage your club identity, squad value, economy, competitions, transfers and live match flow from one command center.
+              One operating screen for the whole football business flow: search the market, manage player assets, convert club requests into pitches, and move serious interest into private deal rooms.
             </p>
           </div>
-          <Link href="/football-search" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[10px] font-black uppercase tracking-[.16em] text-[#071007] transition hover:bg-cyan-200">
-            Start Building Squad <ArrowUpRight size={14} />
+          <Link href="/opportunities" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[10px] font-black uppercase tracking-[.16em] text-[#071007] transition hover:bg-cyan-200">
+            Open Club Requests <ArrowUpRight size={14} />
           </Link>
         </div>
       </GamePanel>
@@ -402,7 +402,7 @@ export function ClubOwnerCommandCenter({ data }: { data: CommandCenterData }) {
             </div>
           </CenterCard>
 
-          <CenterCard kicker="Negotiation room" title="Transfer Center" icon={<Zap className="text-[#a3ff12]" />}>
+          <CenterCard kicker="Commercial pipeline" title="Requests, Watchlist & Deals" icon={<Zap className="text-[#a3ff12]" />}>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <StatTile label="Latest Offers" value={data.transfer.latestOffers} detail="new activity" icon={<Bell size={18} />} />
               <StatTile label="Pending" value={data.transfer.pendingOffers} detail="awaiting answer" icon={<ClipboardList size={18} />} />
@@ -410,9 +410,36 @@ export function ClubOwnerCommandCenter({ data }: { data: CommandCenterData }) {
               <StatTile label="Watchlist" value={data.transfer.watchlist} detail="targets" icon={<Search size={18} />} />
               <StatTile label="Transfers" value={data.transfer.recentTransfers} detail="recent moves" icon={<ArrowUpRight size={18} />} />
             </div>
-            <Link href="/deals" className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[10px] font-black uppercase tracking-[.16em] text-[#071007] transition hover:bg-cyan-200">
-              Open Transfer Center <ArrowUpRight size={14} />
-            </Link>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href="/opportunities" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#a3ff12] px-5 text-[10px] font-black uppercase tracking-[.16em] text-[#071007] transition hover:bg-cyan-200">
+                Open Requests <ArrowUpRight size={14} />
+              </Link>
+              <Link href="/deals" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.08] px-5 text-[10px] font-black uppercase tracking-[.16em] text-cyan-100 transition hover:border-cyan-300/40">
+                Deal Rooms <Zap size={14} />
+              </Link>
+            </div>
+          </CenterCard>
+
+          <CenterCard kicker="Operating workflow" title="Request → Match → Pitch → Deal" icon={<Sparkles className="text-[#a3ff12]" />}>
+            <div className="grid gap-3 md:grid-cols-4">
+              {[
+                ["Request", "Capture club need, age range, budget and deadline.", ClipboardList, "/opportunities"],
+                ["Match", "Rank your player portfolio against the requirement.", Search, "/opportunities"],
+                ["Pitch", "Generate a club-ready player proposal.", Sparkles, "/players/pitch"],
+                ["Deal", "Move serious interest into a private room.", ShieldCheck, "/deals"],
+              ].map(([title, body, Icon, href]) => {
+                const StepIcon = Icon as typeof ClipboardList;
+                return (
+                  <Link key={String(title)} href={String(href)} className="group rounded-3xl border border-white/[.07] bg-black/20 p-4 transition hover:-translate-y-0.5 hover:border-[#a3ff12]/25 hover:bg-[#a3ff12]/[.045]">
+                    <span className="grid size-10 place-items-center rounded-xl border border-cyan-300/15 bg-cyan-300/[.06] text-cyan-200 transition group-hover:text-[#a3ff12]">
+                      <StepIcon size={17} />
+                    </span>
+                    <p className="mt-4 text-[10px] font-black uppercase italic tracking-[.08em] text-white">{String(title)}</p>
+                    <p className="mt-2 text-[9px] leading-5 text-slate-500">{String(body)}</p>
+                  </Link>
+                );
+              })}
+            </div>
           </CenterCard>
         </div>
 
@@ -503,7 +530,9 @@ export function ClubOwnerCommandCenter({ data }: { data: CommandCenterData }) {
           <SectionHeader kicker="One-click command" title="Quick Actions" action={<Sparkles className="text-[#a3ff12]" />} />
           <div className="mt-5 grid gap-3">
             <QuickAction href="/football-search" label="Football Search" icon={<Search size={18} />} />
-            <QuickAction href="/deals" label="Transfer Center" icon={<Zap size={18} />} />
+            <QuickAction href="/opportunities" label="Club Requests" icon={<Target size={18} />} />
+            <QuickAction href="/players/pitch" label="Pitch Builder" icon={<Sparkles size={18} />} />
+            <QuickAction href="/deals" label="Deal Rooms" icon={<Zap size={18} />} />
             <QuickAction href="/competition" label="Live Arena" icon={<Radio size={18} />} />
             <QuickAction href="/competition" label="Competitions" icon={<Trophy size={18} />} />
             <QuickAction href="/football-search?type=player" label="Player Search" icon={<Users size={18} />} />

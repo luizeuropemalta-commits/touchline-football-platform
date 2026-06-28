@@ -22,10 +22,11 @@ type NavItem = {
 };
 
 const nav: NavItem[] = [
-  { href: "/dashboard", label: "Touchline Fantasy", icon: Trophy },
+  { href: "/dashboard", label: "Command Center", icon: Trophy },
   { href: "/football-search", label: "Football Search", icon: Search },
   { href: "/players", label: "Player Portfolio", icon: Users },
-  { href: "/deals", label: "Transfer Center", icon: Zap },
+  { href: "/opportunities", label: "Club Requests", icon: Target },
+  { href: "/deals", label: "Deal Rooms", icon: Zap },
   { href: "/inbox", label: "Messages", icon: Inbox },
 ];
 
@@ -39,8 +40,7 @@ const operations: NavItem[] = [
   { href: "/rankings", label: "Market Intelligence", icon: BarChart3 },
   { href: "/connect", label: "Touchline Connect", icon: Globe2 },
   { href: "/ai", label: "Touchline AI", icon: Bot },
-  { href: "/players/pitch", label: "Pitch Player", icon: MailCheck },
-  { href: "/opportunities", label: "Opportunities", icon: Target },
+  { href: "/players/pitch", label: "Pitch Builder", icon: MailCheck },
   { href: "/scouting", label: "Scouting Center", icon: Binoculars },
   { href: "/objectives", label: "Objectives", icon: Goal },
   { href: "/achievements", label: "Achievements", icon: Trophy },
@@ -52,11 +52,11 @@ const operations: NavItem[] = [
 ];
 
 const consoleModes = [
-  { href: "/dashboard", label: "Fantasy HQ", eyebrow: "Club Owner", icon: Trophy },
+  { href: "/dashboard", label: "HQ", eyebrow: "Command", icon: Trophy },
   { href: "/football-search", label: "Football Search", eyebrow: "Global", icon: Search },
   { href: "/players", label: "Player Portfolio", eyebrow: "Talent", icon: Users },
-  { href: "/clubs", label: "Club Network", eyebrow: "Recruitment", icon: Building2 },
-  { href: "/deals", label: "Transfer Center", eyebrow: "Negotiations", icon: Zap },
+  { href: "/opportunities", label: "Requests", eyebrow: "Marketplace", icon: Target },
+  { href: "/deals", label: "Deal Rooms", eyebrow: "Negotiations", icon: Zap },
 ];
 
 export function AppShell({

@@ -106,8 +106,8 @@ export default async function Dashboard() {
     return (
       <div className="mx-auto max-w-[1200px]">
         <GamePanel className="p-8">
-          <h1 className="text-3xl font-black uppercase italic text-white">Touchline Club Owner Command Center</h1>
-          <p className="mt-3 text-slate-400">Connect Supabase to activate the real Touchline home screen.</p>
+          <h1 className="text-3xl font-black uppercase italic text-white">Touchline Command Center</h1>
+          <p className="mt-3 text-slate-400">Connect Supabase to activate the real operating screen for requests, player assets, pitches and deal rooms.</p>
         </GamePanel>
       </div>
     );
@@ -122,7 +122,7 @@ export default async function Dashboard() {
       <div className="mx-auto max-w-[1200px]">
         <GamePanel className="p-8">
           <h1 className="text-3xl font-black uppercase italic text-white">Login required</h1>
-          <p className="mt-3 text-slate-400">Enter your account to load the Club Owner Command Center.</p>
+          <p className="mt-3 text-slate-400">Enter your account to load the Touchline Command Center.</p>
           <Link href="/login" className="mt-6 inline-flex h-11 items-center rounded-2xl bg-[#a3ff12] px-5 text-xs font-black uppercase text-[#071007]">
             Login
           </Link>
@@ -319,7 +319,7 @@ export default async function Dashboard() {
       },
       {
         title: "TDIE ready",
-        body: "This dashboard uses one unified identity language for owner, club and future card visuals.",
+        body: "Touchline uses one identity language for players, clubs, agencies, cards and deal rooms.",
         tone: "cyan" as const,
       },
       {
