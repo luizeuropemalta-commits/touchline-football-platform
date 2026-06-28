@@ -30,17 +30,6 @@ function playerName(player: PlayerRow) {
   return `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player";
 }
 
-function age(date?: string | null) {
-  if (!date) return "Age unavailable";
-  const birth = new Date(`${date}T00:00:00Z`);
-  if (Number.isNaN(birth.getTime())) return "Age unavailable";
-  const now = new Date();
-  let value = now.getUTCFullYear() - birth.getUTCFullYear();
-  const diff = now.getUTCMonth() - birth.getUTCMonth();
-  if (diff < 0 || (diff === 0 && now.getUTCDate() < birth.getUTCDate())) value -= 1;
-  return `${value}`;
-}
-
 export default async function Scouting() {
   const workspace = await getCurrentWorkspace();
   if (workspace.status !== "ready") return <WorkspaceState status={workspace.status} message={"message" in workspace ? workspace.message : undefined} />;
@@ -124,13 +113,15 @@ export default async function Scouting() {
                 player={{
                   id: player.id,
                   name: playerName(player),
+                  photoUrl: player.photo_url,
+                  avatarUrl: player.photo_url,
                   position: player.position,
                   nationality: player.nationality,
-                  age: Number(age(player.date_of_birth)) || null,
                   officialMarketValue: player.market_value,
-                  availability: player.status,
                   liveState: player.ai_profile?.generated ? "player_of_the_match" : "idle",
                   context: "scouting",
+                  statusLabel: player.status,
+                  syncStatus: player.ai_profile?.generated ? "AI ready" : "Needs scouting",
                 }}
               />
             </Link>

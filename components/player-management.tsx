@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, Meter, SectionHeader } from "@/components/game-ui";
-import { TouchlinePlayerCard } from "@/components/touchline-card-engine";
+import { TouchlinePlayerCard, TouchlinePlayerGrid } from "@/components/touchline-card-engine";
+import { normalizePlayer, rankPlayersForQuery } from "@/lib/player-normalization";
 import { cn } from "@/lib/utils";
 
 export type RealPlayer = {
@@ -137,15 +138,6 @@ function calculateAge(date?: string | null) {
   return age;
 }
 
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 function embedUrl(url: string) {
   try {
     const parsed = new URL(url);
@@ -208,17 +200,55 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
   }, []);
 
   const filtered = useMemo(() => {
+    const normalizedPlayers = players.map((player) => normalizePlayer({
+      id: player.id,
+      name: player.name,
+      firstName: player.firstName,
+      lastName: player.lastName,
+      photoUrl: player.photoUrl,
+      currentClub: player.club,
+      position: player.position,
+      nationality: player.nationality,
+      marketValue: player.marketValue,
+      currency: player.currency,
+      contractEndDate: player.contractEndDate,
+      sourceProvider: player.externalProvider,
+      sourceId: player.externalPlayerId,
+      href: `/players/${player.id}`,
+      syncStatus: player.externalUrl ? "Linked" : player.aiProfile?.generated ? "AI ready" : "Portfolio",
+    }));
+    const rankedIds = new Set(rankPlayersForQuery(normalizedPlayers, query).map((player) => player.id));
+
     return players.filter((player) => {
-      const text = `${player.name} ${player.club ?? ""} ${player.position ?? ""} ${player.nationality ?? ""}`.toLowerCase();
-      const matchesSearch = text.includes(query.toLowerCase());
+      const matchesSearch = query.trim().length < 2 || rankedIds.has(player.id);
       const matchesFilter =
         filter === "ALL" ||
         (filter === "LINKED" && Boolean(player.externalUrl)) ||
         (filter === "EXPIRING" && Boolean(player.contractEndDate)) ||
         (filter === "AI_READY" && Boolean(player.aiProfile?.generated));
       return matchesSearch && matchesFilter;
+    }).sort((a, b) => {
+      const ranked = rankPlayersForQuery(normalizedPlayers, query).map((player) => player.id);
+      return ranked.indexOf(a.id) - ranked.indexOf(b.id);
     });
   }, [filter, players, query]);
+
+  const filteredCardModels = useMemo(() => filtered.map((player) => ({
+    id: player.id,
+    name: player.name,
+    photoUrl: player.photoUrl,
+    avatarUrl: player.photoUrl,
+    position: player.position,
+    nationality: player.nationality,
+    currentClub: player.club,
+    officialMarketValue: player.marketValue,
+    officialMarketValueLabel: formatMoney(player.marketValue, player.currency ?? "EUR"),
+    currency: player.currency,
+    href: `/players/${player.id}`,
+    context: "agent" as const,
+    statusLabel: player.status ?? "Portfolio player",
+    syncStatus: player.externalUrl ? "Linked profile" : player.aiProfile?.generated ? "AI ready" : "Touchline profile",
+  })), [filtered]);
 
   const totalValue = players.reduce((sum, player) => sum + (Number(player.marketValue) || 0), 0);
   const linkedCount = players.filter((player) => player.externalUrl).length;
@@ -440,17 +470,23 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {(footballFoundation.players ?? []).slice(0, 8).map((player) => (
-                <div key={player.id} className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/[.06] bg-white/[.035] p-3">
-                  <div className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30">
-                    <span className="text-[10px] font-black text-cyan-300/60">{initials(player.display_name ?? player.name ?? "P")}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[10px] font-black uppercase italic text-white">{player.display_name ?? player.name}</p>
-                    <p className="mt-0.5 truncate text-[8px] font-bold uppercase tracking-wider text-slate-600">
-                      {player.position ?? "Position unavailable"} · {player.nationality ?? "Nation unavailable"}
-                    </p>
-                  </div>
-                </div>
+                <TouchlinePlayerCard
+                  key={player.id}
+                  variant="list"
+                  player={{
+                    id: player.id,
+                    name: player.display_name ?? player.name ?? "Player",
+                    photoUrl: player.photo_url,
+                    avatarUrl: player.photo_url,
+                    position: player.position,
+                    nationality: player.nationality,
+                    currentClub: footballFoundation.selectedClub?.name,
+                    href: `/football-search?q=${encodeURIComponent(player.display_name ?? player.name ?? "")}`,
+                    context: "search",
+                    statusLabel: "Football Data",
+                    syncStatus: player.provider_player_id ? "Provider synced" : "Sync pending",
+                  }}
+                />
               ))}
             </div>
           </div>
@@ -504,7 +540,13 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
             <span className="flex items-center gap-2 text-[8px] font-black uppercase tracking-wider text-slate-600">Sorted by <span className="text-cyan-300">Updated</span><ChevronDown size={11} /></span>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
+          <TouchlinePlayerGrid
+            players={filteredCardModels}
+            variant="list"
+            className="grid-cols-1 md:grid-cols-2 2xl:grid-cols-3"
+          />
+
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 2xl:grid-cols-3">
             {filtered.map((player) => {
               const age = calculateAge(player.dateOfBirth);
               return (
@@ -515,16 +557,18 @@ export function PlayerManagement({ initialPlayers }: { initialPlayers: RealPlaye
                       player={{
                         id: player.id,
                         name: player.name,
-                        initials: initials(player.name),
+                        photoUrl: player.photoUrl,
+                        avatarUrl: player.photoUrl,
                         position: player.position,
                         nationality: player.nationality,
-                        age,
                         currentClub: player.club,
                         officialMarketValue: player.marketValue,
                         officialMarketValueLabel: formatMoney(player.marketValue, player.currency ?? "EUR"),
                         currency: player.currency,
-                        contractStatus: player.contractEndDate,
+                        href: `/players/${player.id}`,
                         context: "dashboard",
+                        statusLabel: player.status ?? "Portfolio player",
+                        syncStatus: player.externalUrl ? "Linked profile" : "Touchline profile",
                       }}
                     />
                   </div>

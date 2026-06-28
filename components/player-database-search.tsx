@@ -7,6 +7,7 @@ import { Button, Input } from "@/components/ui";
 import { GamePanel, SectionHeader } from "@/components/game-ui";
 import { TouchlineAgentIdentityCard, TouchlineClubIdentityCard, TouchlineCoachIdentityCard, TouchlinePlayerCard } from "@/components/touchline-card-engine";
 import { buildTdiePlayerIdentity } from "@/lib/tdie/player-identity";
+import { normalizePlayer, rankPlayersForQuery } from "@/lib/player-normalization";
 import { cn } from "@/lib/utils";
 
 type PlayerDatabaseResult = {
@@ -18,6 +19,7 @@ type PlayerDatabaseResult = {
   sourceLinkLabel?: string | null;
   name: string;
   profileUrl: string;
+  internalProfileUrl?: string | null;
   photoUrl?: string | null;
   currentClub?: string | null;
   position?: string | null;
@@ -97,39 +99,55 @@ function marketValue(player: PlayerDatabaseResult) {
 }
 
 function playerCardModel(player: PlayerDatabaseResult) {
-  const age = player.age ?? ageFromDate(player.dateOfBirth);
+  const normalized = normalizePlayer({
+    id: player.id,
+    transfermarktPlayerId: player.transfermarktPlayerId,
+    sourceId: player.sourceId,
+    name: player.name,
+    photoUrl: player.photoUrl,
+    currentClub: player.currentClub,
+    position: player.position,
+    nationality: player.nationality,
+    marketValue: player.marketValue,
+    marketValueText: player.marketValueText,
+    currency: player.currency,
+    agentName: player.agentName,
+    agencyName: player.agencyName,
+    sourceProvider: player.sourceProvider,
+    href: player.internalProfileUrl ?? `/players/database/${player.id}`,
+    syncStatus: player.lastUpdatedAt ? "Synced" : "Data pending",
+  });
 
   return {
-    id: player.id,
-    name: player.name,
-    initials: initials(player.name),
+    id: normalized.id,
+    name: normalized.displayName,
     tdieIdentity: buildTdiePlayerIdentity({
       playerSource: "football-search",
-      playerSourceId: player.id,
+      playerSourceId: normalized.id,
       provider: player.sourceProvider ?? "touchline",
-      providerPlayerId: player.sourceId ?? player.transfermarktPlayerId,
-      name: player.name,
-      clubName: player.currentClub,
-      position: player.position,
-      nationality: player.nationality,
-      marketValue: player.marketValue,
-      currency: player.currency ?? "EUR",
+      providerPlayerId: player.sourceId ?? normalized.tmPlayerId,
+      name: normalized.displayName,
+      clubName: normalized.club,
+      position: normalized.position,
+      nationality: normalized.nationality,
+      marketValue: normalized.marketValue,
+      currency: normalized.currency ?? "EUR",
       sourceReferenceUrl: player.profileUrl,
-      sourcePhotoUrl: player.photoUrl,
       sourceUpdatedAt: player.lastUpdatedAt,
     }),
-    nationality: player.nationality,
-    position: player.position,
-    age,
-    currentClub: player.currentClub,
-    currentAgent: player.agentName ?? player.agencyName,
-    officialMarketValue: player.marketValue,
+    photoUrl: normalized.photoUrl,
+    avatarUrl: normalized.avatarUrl,
+    nationality: normalized.nationality,
+    position: normalized.position,
+    currentClub: normalized.club,
+    officialMarketValue: normalized.marketValue,
     officialMarketValueLabel: marketValue(player),
-    currency: player.currency ?? "EUR",
-    availability: missingSearchData(player) ? "Official data pending" : "Ready",
-    href: `/players/database/${player.id}`,
-    externalHref: player.profileUrl,
+    currency: normalized.currency ?? "EUR",
+    lastUpdated: player.lastUpdatedAt,
+    href: normalized.href ?? player.internalProfileUrl ?? `/players/database/${player.id}`,
     context: "search" as const,
+    statusLabel: normalized.agentName ? `Agent ${normalized.agentName}` : "Player profile",
+    syncStatus: normalized.syncStatus,
   };
 }
 
@@ -155,8 +173,31 @@ function isGenericExternalImage(value?: string | null) {
 
 function PlayerSearchRow({ player }: { player: PlayerDatabaseResult }) {
   return (
-    <TouchlinePlayerCard player={playerCardModel(player)} variant="compact" />
+    <TouchlinePlayerCard player={playerCardModel(player)} variant="list" />
   );
+}
+
+function rankDatabasePlayers(players: PlayerDatabaseResult[], query: string) {
+  return rankPlayersForQuery(
+    players.map((player) => ({
+      ...normalizePlayer({
+        id: player.id,
+        transfermarktPlayerId: player.transfermarktPlayerId,
+        sourceId: player.sourceId,
+        name: player.name,
+        photoUrl: player.photoUrl,
+        currentClub: player.currentClub,
+        position: player.position,
+        nationality: player.nationality,
+        marketValue: player.marketValue,
+        marketValueText: player.marketValueText,
+        currency: player.currency,
+        href: player.internalProfileUrl ?? `/players/database/${player.id}`,
+      }),
+      raw: player,
+    })),
+    query,
+  ).map((entry) => entry.raw);
 }
 
 function NetworkSearchCard({ entity }: { entity: NetworkSearchResult }) {
@@ -222,6 +263,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
   const [manualOpen, setManualOpen] = useState(false);
   const latestRequest = useRef(0);
   const latestNetworkRequest = useRef(0);
+  const playerCache = useRef(new Map<string, PlayerDatabaseResult[]>());
 
   const trimmed = query.trim();
   const showDropdown = mode === "compact" && focused && (trimmed.length >= 2 || results.length > 0);
@@ -266,11 +308,18 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       setEnriching(false);
       try {
         const limit = mode === "compact" ? 6 : 24;
+        const cacheKey = `${mode}:${trimmed.toLowerCase()}:${limit}`;
+        const cached = playerCache.current.get(cacheKey);
+        if (cached) {
+          setResults(cached);
+          setLoading(false);
+        }
         const response = await fetch(`/api/player-database/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`);
         const data = (await response.json()) as { players?: PlayerDatabaseResult[]; error?: string; discovered?: boolean; enriched?: boolean };
         if (!response.ok) throw new Error(data.error || "Could not search football database.");
         if (latestRequest.current === requestId) {
-          const quickPlayers = data.players ?? [];
+          const quickPlayers = rankDatabasePlayers(data.players ?? [], trimmed);
+          playerCache.current.set(cacheKey, quickPlayers);
           setResults(quickPlayers);
           setLoading(false);
           if (data.discovered) setMessage("Player link discovered automatically and saved into Touchline.");
@@ -291,7 +340,9 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
         const enrichData = (await enrichResponse.json()) as { players?: PlayerDatabaseResult[]; error?: string; discovered?: boolean; enriched?: boolean };
         if (!enrichResponse.ok) throw new Error(enrichData.error || "Could not enrich player results.");
         if (latestRequest.current === requestId) {
-          setResults(enrichData.players ?? quickPlayers);
+          const ranked = rankDatabasePlayers(enrichData.players ?? quickPlayers, trimmed);
+          playerCache.current.set(cacheKey, ranked);
+          setResults(ranked);
           if (enrichData.discovered) setMessage("Player link discovered automatically and saved into Touchline.");
         }
       } catch (err) {
@@ -300,7 +351,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
         if (latestRequest.current === requestId) setLoading(false);
         if (latestRequest.current === requestId) setEnriching(false);
       }
-    }, mode === "compact" ? 180 : 260);
+    }, mode === "compact" ? 150 : 220);
 
     return () => window.clearTimeout(timeout);
   }, [activeTab, mode, trimmed]);
@@ -578,7 +629,14 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                             <p className="mt-3 text-[11px] font-black uppercase text-white">
                               No {activeTab === "all" ? "football" : activeTab} result found yet
                             </p>
-                            <p className="mt-2 text-[10px] leading-5 text-slate-500">Try the official football name or switch tabs.</p>
+                    <div className="mt-3 flex flex-wrap justify-center gap-2">
+                      <button type="button" onClick={() => setManualOpen(true)} className="rounded-full border border-cyan-300/20 bg-cyan-300/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.14em] text-cyan-100">
+                        Search by Transfermarkt URL
+                      </button>
+                      <Link href="/players" className="rounded-full border border-[#a3ff12]/20 bg-[#a3ff12]/10 px-3 py-1.5 text-[8px] font-black uppercase tracking-[.14em] text-[#caff72]">
+                        Add player manually
+                      </Link>
+                    </div>
                           </div>
                         </div>
                       )
@@ -672,7 +730,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       <GamePanel className="p-5">
         <p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">Fast workflow</p>
         <p className="mt-2 text-sm leading-6 text-slate-400">
-          Search results now appear directly below the field. Clicking a result opens the internal profile and keeps users inside Touchline.
+          Search results now appear directly below the field. Clicking a result opens the unified internal player profile and keeps users inside Touchline.
         </p>
       </GamePanel>
     </div>

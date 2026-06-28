@@ -1,4 +1,3 @@
-import { LegacyFootballProvider } from "@/lib/football-data/providers/legacy";
 import { SportmonksFootballProvider } from "@/lib/football-data/providers/sportmonks";
 import { resultError } from "@/lib/football-data/http";
 import type {
@@ -25,22 +24,18 @@ import type {
 let cachedProvider: FootballDataProvider | null = null;
 
 export function getConfiguredFootballDataProviderName(): FootballDataProviderName {
-  const configured = (process.env.FOOTBALL_DATA_PROVIDER ?? "legacy").trim().toLowerCase();
+  const configured = (process.env.FOOTBALL_DATA_PROVIDER ?? "sportmonks").trim().toLowerCase();
 
   if (configured === "sportmonks") return "sportmonks";
-  if (configured === "api-football" || configured === "api_football" || configured === "apisports" || configured === "api-sports") {
-    return "api-football";
-  }
   if (configured === "opta") return "opta";
   if (configured === "sportradar") return "sportradar";
   if (configured === "statsperform" || configured === "stats-perform") return "statsperform";
 
-  return "legacy";
+  return "sportmonks";
 }
 
 export function createFootballDataProvider(name: FootballDataProviderName = getConfiguredFootballDataProviderName()): FootballDataProvider {
   if (name === "sportmonks") return new SportmonksFootballProvider();
-  if (name === "legacy" || name === "api-football") return new LegacyFootballProvider();
 
   return new PlaceholderFootballProvider(name);
 }

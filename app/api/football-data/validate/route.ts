@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   const providerParam = request.nextUrl.searchParams.get("provider");
-  const provider = providerParam === "sportmonks" || providerParam === "legacy" || providerParam === "api-football"
+  const provider = providerParam === "sportmonks"
     ? providerParam
     : undefined;
 

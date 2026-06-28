@@ -465,7 +465,7 @@ export function ClubOwnerCommandCenter({ data }: { data: CommandCenterData }) {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_430px]">
         <GamePanel className="p-5 sm:p-6">
-          <SectionHeader kicker="Registered squad" title="Top Squad Assets" action={<Star className="text-amber-300" />} />
+          <SectionHeader kicker="Registered squad" title="Top Fantasy Squad Assets" action={<Star className="text-amber-300" />} />
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {data.squad.players.length ? (
               data.squad.players.slice(0, 8).map((player) => (
@@ -475,12 +475,16 @@ export function ClubOwnerCommandCenter({ data }: { data: CommandCenterData }) {
                   player={{
                     id: player.id,
                     name: player.name,
-                    initials: initials(player.name),
+                    photoUrl: player.photoUrl,
+                    avatarUrl: player.photoUrl,
                     position: player.position,
                     officialMarketValue: player.marketValue,
                     officialMarketValueLabel: formatMoney(player.marketValue ?? 0, player.currency ?? "EUR"),
                     currency: player.currency,
                     context: "dashboard",
+                    fantasyAsset: true,
+                    statusLabel: "Fantasy Asset",
+                    syncStatus: player.marketValue ? "Value synced" : player.position ? "Squad synced" : "Data pending",
                   }}
                 />
               ))

@@ -55,7 +55,7 @@ type HealthCheck = {
   name: string;
   purpose: string;
   configured: boolean;
-  required: "Required" | "Optional" | "Required for billing" | "Required for automation";
+  required: "Required" | "Optional" | "Required for billing" | "Required for automation" | "Required for football data";
   status: HealthStatus;
   detail: string;
 };
@@ -122,70 +122,6 @@ function healthStatus(checks: HealthCheck[]): HealthStatus {
   if (checks.some((check) => check.status === "PARTIALLY_IMPLEMENTED")) return "PARTIALLY_IMPLEMENTED";
   if (checks.some((check) => check.status === "NOT_CONFIGURED_YET")) return "NOT_CONFIGURED_YET";
   return "READY";
-}
-
-async function checkApiFootball(): Promise<HealthCheck> {
-  const keyConfigured = hasEnv("API_FOOTBALL_KEY") || hasEnv("APISPORTS_KEY");
-  const baseUrl = envValue("API_FOOTBALL_BASE_URL") || "https://v3.football.api-sports.io";
-
-  if (!keyConfigured) {
-    return {
-      area: "API-Football",
-      name: "API-Football connection",
-      purpose: "Optional football data search and provider player ID lookup.",
-      configured: false,
-      required: "Optional",
-      status: "NOT_CONFIGURED_YET",
-      detail: "No API-Football/API-SPORTS key is configured. This is optional unless live provider search is required.",
-    };
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const response = await fetch(new URL("/status", baseUrl), {
-      headers: {
-        "x-apisports-key": envValue("API_FOOTBALL_KEY") || envValue("APISPORTS_KEY"),
-        Accept: "application/json",
-      },
-      cache: "no-store",
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      return {
-        area: "API-Football",
-        name: "API-Football connection",
-        purpose: "Optional football data search and provider player ID lookup.",
-        configured: true,
-        required: "Optional",
-        status: "ERROR",
-        detail: `API-Football responded with HTTP ${response.status}. Check key, quota and base URL.`,
-      };
-    }
-
-    const body = await response.json().catch(() => null);
-    return {
-      area: "API-Football",
-      name: "API-Football connection",
-      purpose: "Optional football data search and provider player ID lookup.",
-      configured: true,
-      required: "Optional",
-      status: body ? "READY" : "ERROR",
-      detail: body ? "API key exists and the provider status endpoint returned JSON." : "Provider response was not valid JSON.",
-    };
-  } catch (error) {
-    return {
-      area: "API-Football",
-      name: "API-Football connection",
-      purpose: "Optional football data search and provider player ID lookup.",
-      configured: true,
-      required: "Optional",
-      status: "ERROR",
-      detail: error instanceof Error ? error.message : "Could not verify API-Football connection.",
-    };
-  }
 }
 
 function dateLabel(value?: string | null) {
@@ -269,7 +205,6 @@ export default async function AdminOwnerPanel() {
     transfermarktRegistryTableCheck,
     authenticatedUsersCheck,
     authenticatedPlayersCheck,
-    apiFootballCheck,
   ] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 100 }),
     admin.from("users").select("id, agency_id, full_name, role, job_title, created_at").order("created_at", { ascending: false }).limit(100),
@@ -294,7 +229,6 @@ export default async function AdminOwnerPanel() {
     admin.from("transfermarkt_entities").select("id", { count: "exact", head: true }),
     supabase.from("users").select("id", { count: "exact", head: true }),
     supabase.from("players").select("id", { count: "exact", head: true }),
-    checkApiFootball(),
   ]);
 
   const authUsers = authResult.data?.users ?? [];
@@ -339,7 +273,7 @@ export default async function AdminOwnerPanel() {
   const configuredPriceKeys = stripePriceEnvKeys.filter((key) => hasEnv(key));
   const stripeAllPricesConfigured = configuredPriceKeys.length === stripePriceEnvKeys.length;
   const marketSyncSecretConfigured = hasEnv("MARKET_SYNC_SECRET") || hasEnv("CRON_SECRET");
-  const licensedMarketProviderConfigured = hasEnv("FOOTBALL_MARKET_DATA_API_URL") && hasEnv("FOOTBALL_MARKET_DATA_API_KEY");
+  const sportmonksConfigured = hasEnv("SPORTMONKS_API_TOKEN");
 
   const stripeSystemStatus: HealthStatus = !stripeSecretConfigured && !stripeWebhookConfigured && configuredPriceKeys.length === 0
     ? "NOT_CONFIGURED_YET"
@@ -357,7 +291,7 @@ export default async function AdminOwnerPanel() {
 
   const marketSyncStatus: HealthStatus = !marketSyncSecretConfigured
     ? "NOT_CONFIGURED_YET"
-    : licensedMarketProviderConfigured || hasEnv("API_FOOTBALL_KEY") || hasEnv("APISPORTS_KEY")
+    : sportmonksConfigured
       ? "READY"
       : "PARTIALLY_IMPLEMENTED";
   const linkIndexStatus: HealthStatus = globalLinksTableCheck.error
@@ -451,13 +385,15 @@ export default async function AdminOwnerPanel() {
       detail: "Plan restriction code exists in proxy.ts, but beta full access is currently enabled so you can test the full platform as owner/beta.",
     },
     {
-      area: "API-Football",
-      name: apiFootballCheck.name,
-      purpose: apiFootballCheck.purpose,
-      configured: apiFootballCheck.configured,
-      required: apiFootballCheck.required,
-      status: apiFootballCheck.status,
-      detail: apiFootballCheck.detail,
+      area: "Sportmonks",
+      name: "Sportmonks football data provider",
+      purpose: "Only active football data API provider for normalized football records.",
+      configured: sportmonksConfigured,
+      required: "Required for football data",
+      status: sportmonksConfigured ? "READY" : "NOT_CONFIGURED_YET",
+      detail: sportmonksConfigured
+        ? "Sportmonks token is configured. UI reads normalized Touchline football tables, not provider APIs directly."
+        : "Add SPORTMONKS_API_TOKEN before running football data sync.",
     },
     {
       area: "Market Sync",
@@ -469,7 +405,7 @@ export default async function AdminOwnerPanel() {
       detail: marketSyncStatus === "READY"
         ? "Cron routes exist, a sync secret is configured, and at least one provider key/source is available."
         : marketSyncStatus === "PARTIALLY_IMPLEMENTED"
-          ? "Cron routes and secret exist, but no licensed market provider/API-Football key is configured for external player refresh."
+          ? "Cron routes and secret exist, but Sportmonks is not configured for football data refresh."
           : "Cron routes are implemented, but MARKET_SYNC_SECRET or CRON_SECRET is not configured yet.",
     },
     {
@@ -521,15 +457,15 @@ export default async function AdminOwnerPanel() {
     { area: "Env", name: "TRANSFERMARKT_SYNC_SECRET", purpose: "Protects legacy /api/market-links/sync fallback.", configured: hasEnv("TRANSFERMARKT_SYNC_SECRET"), required: "Optional", status: hasEnv("TRANSFERMARKT_SYNC_SECRET") || marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Can fall back to MARKET_SYNC_SECRET or CRON_SECRET when legacy sync is explicitly enabled." },
     { area: "Env", name: "TRANSFERMARKT_RATE_LIMIT_MS", purpose: "Safety delay for legacy public-link checks.", configured: hasEnv("TRANSFERMARKT_RATE_LIMIT_MS"), required: "Optional", status: "READY", detail: "Defaults to 2500ms. New football data should use the provider layer instead." },
     { area: "Env", name: "TOUCHLINE_LINK_INDEX_*", purpose: "Optional daily limits for automatic internal link indexing.", configured: hasEnv("TOUCHLINE_LINK_INDEX_DAILY_LIMIT") || hasEnv("TOUCHLINE_LINK_INDEX_SYNC_LIMIT"), required: "Optional", status: "READY", detail: "Defaults to 1000 links/day if not set. This indexes Touchline activity, not external site crawling." },
-    { area: "Env", name: "FOOTBALL_MARKET_DATA_API_*", purpose: "Licensed provider for market value/club/contract sync.", configured: licensedMarketProviderConfigured, required: "Optional", status: licensedMarketProviderConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Optional unless professional market value sync is required." },
-    { area: "Env", name: "API_FOOTBALL_KEY", purpose: "Optional API-Football player/stat data provider.", configured: hasEnv("API_FOOTBALL_KEY") || hasEnv("APISPORTS_KEY"), required: "Optional", status: apiFootballCheck.status, detail: apiFootballCheck.detail },
+    { area: "Env", name: "SPORTMONKS_API_TOKEN", purpose: "Sportmonks server token for the only active football data API provider.", configured: sportmonksConfigured, required: "Required for football data", status: sportmonksConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Required before football provider sync can run." },
+    { area: "Env", name: "SPORTMONKS_BASE_URL", purpose: "Sportmonks football API base URL.", configured: hasEnv("SPORTMONKS_BASE_URL"), required: "Optional", status: "READY", detail: "Defaults to the official Sportmonks v3 football endpoint when not set." },
     { area: "Env", name: "TOUCHLINE_OWNER_EMAILS", purpose: "Comma-separated owner emails.", configured: hasEnv("TOUCHLINE_OWNER_EMAILS"), required: "Optional", status: hasEnv("TOUCHLINE_OWNER_EMAILS") ? "READY" : "PARTIALLY_IMPLEMENTED", detail: "If missing, the app falls back to the built-in default owner email." },
   ];
 
   const reportItems = [
     ["Stripe", healthStatus(healthChecks.filter((item) => item.area === "Stripe")), "Checkout, billing portal and webhook code exist. Billing is ready only when secret, webhook and every Stripe price ID are configured."],
     ["Supabase", supabaseSystemStatus, "Database, auth users and admin queries are checked against the live Supabase client used by the page."],
-    ["API-Football", apiFootballCheck.status, apiFootballCheck.detail],
+    ["Sportmonks", sportmonksConfigured ? "READY" : "NOT_CONFIGURED_YET", sportmonksConfigured ? "Only active football data API provider is configured." : "Configure SPORTMONKS_API_TOKEN for football data sync."],
     ["Market Sync", marketSyncStatus, "Cron routes are implemented in vercel.json. Full data refresh depends on a sync secret and a configured provider."],
     ["Legacy Link Index", linkIndexStatus, "The old link-index system remains as a safe fallback only. New football discovery should use Football Search, Sportmonks and the Football Data Center."],
     ["Authentication", supabaseEnvReady ? "READY" : "NOT_CONFIGURED_YET", "Password login/register/session cookies are implemented. Google OAuth is optional and should stay disabled until Supabase provider setup is complete."],

@@ -1,6 +1,4 @@
 export type FootballDataProviderName =
-  | "legacy"
-  | "api-football"
   | "sportmonks"
   | "opta"
   | "sportradar"

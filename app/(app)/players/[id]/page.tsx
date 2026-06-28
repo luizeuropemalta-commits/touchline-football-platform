@@ -104,7 +104,7 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
   const { admin, agencyId } = await ensureUserWorkspace(user);
   const { data: player, error } = await admin
     .from("players")
-    .select("id, first_name, last_name, date_of_birth, nationality, position, preferred_foot, status, market_value, currency, photo_url, contract_end_date, height_cm, weight_kg, external_market_provider, external_market_player_id, external_market_url, external_market_payload, ai_profile, stats, clubs:current_club_id(name)")
+    .select("id, first_name, last_name, date_of_birth, nationality, position, preferred_foot, status, market_value, currency, photo_url, contract_end_date, height_cm, weight_kg, external_market_provider, external_market_player_id, external_market_url, external_market_payload, ai_profile, stats, updated_at, clubs:current_club_id(name)")
     .eq("agency_id", agencyId)
     .eq("id", id)
     .maybeSingle();
@@ -163,24 +163,24 @@ export default async function PlayerProfile({ params }: { params: Promise<{ id: 
           <div className="relative overflow-hidden border-b border-white/[.07] bg-cyan-300/[.035] p-4 lg:border-b-0 lg:border-r">
             <TouchlinePlayerCard
               variant="compact"
-              player={{
-                id: String(player.id),
-                name,
-                initials: name.slice(0, 2).toUpperCase(),
-                tdieIdentity,
-                nationality: player.nationality,
-                position: player.position,
-                age,
-                currentClub: playerClubName,
-                officialMarketValue: player.market_value,
-                officialMarketValueLabel: formatMoney(player.market_value, player.currency ?? "EUR"),
-                currency: player.currency ?? "EUR",
-                contractStatus: player.contract_end_date ? `Until ${player.contract_end_date}` : "Data not available",
-                currentForm: aiProfile?.generated ? "AI ready" : "Data pending",
-                availability: player.status ?? "Active",
-                context: "profile",
-              }}
-            />
+            player={{
+              id: String(player.id),
+              name,
+              tdieIdentity,
+              photoUrl: player.photo_url,
+              avatarUrl: player.photo_url,
+              nationality: player.nationality,
+              position: player.position,
+              currentClub: playerClubName,
+              officialMarketValue: player.market_value,
+              officialMarketValueLabel: formatMoney(player.market_value, player.currency ?? "EUR"),
+              currency: player.currency ?? "EUR",
+              lastUpdated: player.updated_at,
+              context: "profile",
+              statusLabel: player.status,
+              syncStatus: player.external_market_url ? "Linked profile" : "Touchline profile",
+            }}
+          />
           </div>
           <div className="relative p-6 sm:p-8">
             <div className="flex flex-col justify-between gap-6 sm:flex-row">

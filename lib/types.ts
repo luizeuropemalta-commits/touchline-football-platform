@@ -12,6 +12,8 @@ export interface Player {
   marketValue: number;
   contractUntil: string;
   avatar?: string;
+  photoUrl?: string | null;
+  avatarUrl?: string | null;
   appearances: number;
   goals: number;
   assists: number;

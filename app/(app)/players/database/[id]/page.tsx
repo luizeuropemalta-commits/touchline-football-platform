@@ -159,10 +159,8 @@ export default async function PlayerDatabaseProfile({ params }: { params: Promis
   const playerName = String(player.player_name ?? "Unnamed player");
   const sourceLabel = player.source_provider === "transfermarkt"
     ? "Transfermarkt"
-    : sourcePayload.source === "api-football"
-      ? "API-Football"
-      : "Football Data";
-  const sourceId = sourcePayload.apiFootballPlayerId ? String(sourcePayload.apiFootballPlayerId) : String(player.transfermarkt_player_id ?? "");
+    : "Football Data";
+  const sourceId = String(player.transfermarkt_player_id ?? "");
   const sourceLinkLabel = player.source_provider === "transfermarkt" ? "Transfermarkt" : "Source Link";
   const marketValueLabel = formatMoney(player.market_value, player.currency ?? "EUR", player.market_value_text);
   const cardTier = playerTier(player.market_value);

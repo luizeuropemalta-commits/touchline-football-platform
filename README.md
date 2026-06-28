@@ -57,16 +57,16 @@ Without Supabase environment variables the app starts in preview mode: authentic
 
 ## Optional football data sync
 
-Touchline is prepared for daily player-data sync. For an optional free-tier setup, use API-Football by API-SPORTS.
+Touchline is prepared for daily player-data sync through Sportmonks, the only active football data API provider.
 
-1. Create a free API-Football account.
-2. Copy your API key.
+1. Create a Sportmonks account with football data access.
+2. Copy your server-side API token.
 3. Add these variables in Vercel:
 
    ```bash
-   API_FOOTBALL_KEY=
-   API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
-   API_FOOTBALL_SEASON=2025
+   FOOTBALL_DATA_PROVIDER=sportmonks
+   SPORTMONKS_API_TOKEN=
+   SPORTMONKS_BASE_URL=https://api.sportmonks.com/v3/football
    MARKET_SYNC_SECRET=
    CRON_SECRET=
    ```
@@ -77,17 +77,9 @@ Touchline is prepared for daily player-data sync. For an optional free-tier setu
    supabase/migrations/004_external_market_sync.sql
    ```
 
-5. For each player you want to sync, set:
+5. Vercel Cron calls the football data sync routes daily.
 
-   ```text
-   external_market_provider = api-football
-   external_market_player_id = the API-Football player ID
-   external_market_url = optional public profile/reference URL
-   ```
-
-6. Vercel Cron calls `/api/market-sync` daily.
-
-API-Football free-tier data is useful for testing player identity, club, season stats and profile enrichment. Market values like Transfermarkt may require a premium or licensed data provider.
+Transfermarkt IDs and links may remain as identity/reference fields, but football data enrichment must flow through the Sportmonks-backed provider layer.
 
 ## Production launch guide
 

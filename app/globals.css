@@ -409,6 +409,23 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   32% { opacity: .52; }
   58%, 100% { transform: translateX(55%) rotate(10deg); opacity: 0; }
 }
+
+@keyframes touchline-card-sweep {
+  0%, 18% {
+    opacity: 0;
+    transform: translateX(-135%) skewX(-12deg);
+  }
+  36% {
+    opacity: .28;
+  }
+  62% {
+    opacity: .14;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(135%) skewX(-12deg);
+  }
+}
 .live-row {
   position: relative;
   transition: background-color .3s ease, transform .3s cubic-bezier(.16,1,.3,1);

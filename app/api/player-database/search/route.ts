@@ -1,31 +1,9 @@
 import { NextResponse } from "next/server";
-import { getApiFootballSeason } from "@/lib/market-data/season";
 import { discoverTransfermarktLinksByName } from "@/lib/market-link-registry";
 import { enrichGlobalPlayerProfileFromTransfermarkt, mapGlobalPlayer } from "@/lib/player-database";
+import { ensureUserWorkspace } from "@/lib/server/workspace";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-
-type ApiFootballSearchResponse = {
-  response?: Array<{
-    player?: {
-      id?: number;
-      name?: string;
-      firstname?: string;
-      lastname?: string;
-      age?: number;
-      birth?: { date?: string };
-      nationality?: string;
-      photo?: string;
-      injured?: boolean;
-    };
-    statistics?: Array<{
-      team?: { id?: number; name?: string; logo?: string };
-      league?: { id?: number; name?: string; country?: string; season?: number };
-      games?: { appearences?: number; position?: string; rating?: string };
-      goals?: { total?: number; assists?: number };
-    }>;
-  }>;
-};
 
 function cleanQuery(value: string | null) {
   return value?.trim().replace(/\s+/g, " ").slice(0, 80) ?? "";
@@ -67,201 +45,14 @@ function searchResultScore(name: unknown, query: string) {
 
 function sortRowsForQuery(rows: Record<string, unknown>[], query: string) {
   return [...rows].sort((a, b) => {
-    const scoreDiff = searchResultScore(b.player_name, query) - searchResultScore(a.player_name, query);
+    const scoreDiff =
+      searchResultScore(b.player_name ?? b.name, query) -
+      searchResultScore(a.player_name ?? a.name, query);
     if (scoreDiff !== 0) return scoreDiff;
     const relevanceA = typeof a.relevance === "number" ? a.relevance : 0;
     const relevanceB = typeof b.relevance === "number" ? b.relevance : 0;
     return relevanceB - relevanceA;
   });
-}
-
-function playerName(player?: { name?: string; firstname?: string; lastname?: string }) {
-  return cleanText(player?.name, 180) || cleanText(`${player?.firstname ?? ""} ${player?.lastname ?? ""}`, 180);
-}
-
-function transfermarktSearchUrl(name: string) {
-  const url = new URL("https://www.transfermarkt.com/schnellsuche/ergebnis/schnellsuche");
-  url.searchParams.set("query", name);
-  return url.toString();
-}
-
-async function discoverFromApiFootball(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number) {
-  const apiKey = process.env.API_FOOTBALL_KEY ?? process.env.APISPORTS_KEY;
-  if (!apiKey || query.length < 3) return [];
-
-  const season = getApiFootballSeason(process.env.API_FOOTBALL_SEASON);
-  const baseUrl = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
-  const url = new URL("/players", baseUrl);
-  url.searchParams.set("search", query);
-  url.searchParams.set("season", season);
-
-  const response = await fetch(url, {
-    headers: {
-      "x-apisports-key": apiKey,
-      Accept: "application/json",
-    },
-    next: { revalidate: 0 },
-  });
-
-  if (!response.ok) return [];
-
-  const data = (await response.json()) as ApiFootballSearchResponse;
-  const now = new Date().toISOString();
-  const rows = (data.response ?? [])
-    .slice(0, Math.min(limit, 24))
-    .flatMap((item) => {
-      const name = playerName(item.player);
-      const apiFootballPlayerId = item.player?.id;
-      if (!name || !apiFootballPlayerId) return [];
-
-      const primaryStats = item.statistics?.[0];
-      const sourceLink = transfermarktSearchUrl(name);
-
-      return [{
-        transfermarkt_player_id: `api-football-${apiFootballPlayerId}`,
-        player_name: name,
-        profile_url: sourceLink,
-        photo_url: cleanText(item.player?.photo, 1000),
-        current_club: cleanText(primaryStats?.team?.name, 180),
-        position: cleanText(primaryStats?.games?.position, 80),
-        nationality: cleanText(item.player?.nationality, 80),
-        date_of_birth: cleanText(item.player?.birth?.date, 10),
-        age: item.player?.age && item.player.age > 0 && item.player.age < 80 ? Math.round(item.player.age) : null,
-        currency: "EUR",
-        source_provider: "licensed_provider",
-        source_payload: {
-          source: "api-football",
-          apiFootballPlayerId,
-          season,
-          transfermarktSearchUrl: sourceLink,
-          player: item.player,
-          primaryStats,
-          discoveredFromQuery: query,
-          importedAt: now,
-          note: "Automatically discovered from API-Football when Touchline internal search had no result. Transfermarkt full profile link still requires saved link/licensed source.",
-        },
-        last_updated_at: now,
-      }];
-    });
-
-  if (!rows.length) return [];
-
-  const { data: saved } = await admin
-    .from("global_player_profiles")
-    .upsert(rows, { onConflict: "transfermarkt_player_id" })
-    .select("id, transfermarkt_player_id, player_name, profile_url, photo_url, current_club, position, nationality, date_of_birth, age, agent_name, agency_name, market_value, market_value_text, currency, source_provider, source_payload, last_updated_at")
-    .limit(limit);
-
-  return (saved ?? []) as Record<string, unknown>[];
-}
-
-async function fetchApiFootballCandidates(query: string) {
-  const apiKey = process.env.API_FOOTBALL_KEY ?? process.env.APISPORTS_KEY;
-  if (!apiKey || query.length < 3) return [];
-
-  const season = getApiFootballSeason(process.env.API_FOOTBALL_SEASON);
-  const baseUrl = process.env.API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
-  const url = new URL("/players", baseUrl);
-  url.searchParams.set("search", query);
-  url.searchParams.set("season", season);
-
-  const response = await fetch(url, {
-    headers: {
-      "x-apisports-key": apiKey,
-      Accept: "application/json",
-    },
-    next: { revalidate: 0 },
-  });
-
-  if (!response.ok) return [];
-
-  const data = (await response.json()) as ApiFootballSearchResponse;
-  return (data.response ?? []).map((item) => {
-    const name = playerName(item.player);
-    const primaryStats = item.statistics?.[0];
-    return {
-      name,
-      apiFootballPlayerId: item.player?.id,
-      photoUrl: cleanText(item.player?.photo, 1000),
-      currentClub: cleanText(primaryStats?.team?.name, 180),
-      position: cleanText(primaryStats?.games?.position, 80),
-      nationality: cleanText(item.player?.nationality, 80),
-      dateOfBirth: cleanText(item.player?.birth?.date, 10),
-      age: item.player?.age && item.player.age > 0 && item.player.age < 80 ? Math.round(item.player.age) : null,
-      primaryStats,
-      player: item.player,
-      season,
-    };
-  }).filter((candidate) => candidate.name && candidate.apiFootballPlayerId);
-}
-
-async function enrichRowsFromApiFootball(
-  admin: NonNullable<ReturnType<typeof createAdminClient>>,
-  query: string,
-  rows: Record<string, unknown>[],
-) {
-  const needsEnrichment = rows.some((row) => !row.photo_url || !row.current_club || !row.position || !row.nationality || !row.age);
-  if (!needsEnrichment) return rows;
-
-  const candidates = await fetchApiFootballCandidates(query);
-  if (!candidates.length) return rows;
-
-  const now = new Date().toISOString();
-  const patches = rows.flatMap((row) => {
-    const best = candidates
-      .map((candidate) => ({
-        candidate,
-        score: searchResultScore(candidate.name, String(row.player_name ?? query)),
-      }))
-      .sort((a, b) => b.score - a.score)[0];
-
-    if (!best || best.score < 220) return [];
-
-    const sourcePayload = row.source_payload && typeof row.source_payload === "object" && !Array.isArray(row.source_payload)
-      ? (row.source_payload as Record<string, unknown>)
-      : {};
-
-    return [{
-      id: row.id,
-      transfermarkt_player_id: row.transfermarkt_player_id,
-      player_name: row.player_name,
-      profile_url: row.profile_url,
-      photo_url: cleanText(String(row.photo_url ?? ""), 1000) ?? best.candidate.photoUrl,
-      current_club: cleanText(String(row.current_club ?? ""), 180) ?? best.candidate.currentClub,
-      position: cleanText(String(row.position ?? ""), 80) ?? best.candidate.position,
-      nationality: cleanText(String(row.nationality ?? ""), 80) ?? best.candidate.nationality,
-      date_of_birth: cleanText(String(row.date_of_birth ?? ""), 10) ?? best.candidate.dateOfBirth,
-      age: typeof row.age === "number" ? row.age : best.candidate.age,
-      agent_name: row.agent_name ?? null,
-      agency_name: row.agency_name ?? null,
-      market_value: row.market_value ?? null,
-      market_value_text: row.market_value_text ?? null,
-      currency: row.currency ?? "EUR",
-      source_provider: row.source_provider ?? "transfermarkt",
-      source_payload: {
-        ...sourcePayload,
-        apiFootballEnrichment: {
-          apiFootballPlayerId: best.candidate.apiFootballPlayerId,
-          season: best.candidate.season,
-          enrichedAt: now,
-          note: "Used only to fill available public/licensed football metadata for a saved Transfermarkt link.",
-        },
-      },
-      last_updated_at: now,
-    }];
-  });
-
-  if (!patches.length) return rows;
-
-  const { data } = await admin
-    .from("global_player_profiles")
-    .upsert(patches, { onConflict: "transfermarkt_player_id" })
-    .select("id, transfermarkt_player_id, player_name, profile_url, photo_url, current_club, position, nationality, date_of_birth, age, agent_name, agency_name, market_value, market_value_text, currency, source_provider, source_payload, last_updated_at");
-
-  if (!data?.length) return rows;
-
-  const byId = new Map((data as Record<string, unknown>[]).map((row) => [String(row.id), row]));
-  return rows.map((row) => byId.get(String(row.id)) ?? row);
 }
 
 async function discoverFromMarketLinkRegistry(admin: NonNullable<ReturnType<typeof createAdminClient>>, query: string, limit: number) {
@@ -317,6 +108,53 @@ async function hydrateProfiles(admin: NonNullable<ReturnType<typeof createAdminC
   return rows.map((row) => byId.get(String(row.id)) ?? row);
 }
 
+async function searchWorkspacePlayers(
+  admin: NonNullable<ReturnType<typeof createAdminClient>>,
+  agencyId: string,
+  query: string,
+  limit: number,
+) {
+  const pattern = `%${query}%`;
+  const { data } = await admin
+    .from("players")
+    .select("id, first_name, last_name, nationality, position, status, market_value, currency, photo_url, contract_end_date, external_market_provider, external_market_player_id, external_market_url, updated_at, clubs:current_club_id(name)")
+    .eq("agency_id", agencyId)
+    .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},position.ilike.${pattern},nationality.ilike.${pattern}`)
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map((player) => {
+    const clubs = player.clubs as { name?: string | null } | Array<{ name?: string | null }> | null;
+    const club = Array.isArray(clubs) ? clubs[0]?.name : clubs?.name;
+    const name = `${String(player.first_name ?? "")} ${String(player.last_name ?? "")}`.trim() || "Unnamed player";
+    const externalId = player.external_market_player_id ? String(player.external_market_player_id) : `touchline-${String(player.id)}`;
+    return {
+      id: String(player.id),
+      transfermarktPlayerId: externalId,
+      sourceProvider: player.external_market_provider ? String(player.external_market_provider) : "touchline_workspace",
+      sourceId: externalId,
+      sourceLabel: "Touchline Portfolio",
+      sourceLinkLabel: player.external_market_url ? "Source Link" : "Touchline Profile",
+      name,
+      profileUrl: player.external_market_url ? String(player.external_market_url) : `/players/${String(player.id)}`,
+      internalProfileUrl: `/players/${String(player.id)}`,
+      photoUrl: (player.photo_url as string | null) ?? null,
+      currentClub: club ?? null,
+      position: (player.position as string | null) ?? null,
+      nationality: (player.nationality as string | null) ?? null,
+      dateOfBirth: null,
+      age: null,
+      agentName: null,
+      agencyName: null,
+      marketValue: (player.market_value as number | null) ?? null,
+      marketValueText: null,
+      currency: (player.currency as string | null) ?? "EUR",
+      lastUpdatedAt: (player.updated_at as string | null) ?? null,
+      relevance: searchResultScore(name, query),
+    };
+  });
+}
+
 export async function GET(request: Request) {
   const supabase = await createClient();
   if (!supabase) return NextResponse.json({ error: "Supabase is not configured." }, { status: 500 });
@@ -329,6 +167,7 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "Supabase admin client is not configured." }, { status: 500 });
+  const { agencyId } = await ensureUserWorkspace(user);
 
   const { searchParams } = new URL(request.url);
   const query = cleanQuery(searchParams.get("q"));
@@ -348,6 +187,13 @@ export async function GET(request: Request) {
   let rows = (data ?? []) as Record<string, unknown>[];
   if (rows.length) rows = await hydrateProfiles(admin, rows);
 
+  const workspacePlayers = await searchWorkspacePlayers(admin, agencyId, query, limit);
+  const workspaceIds = new Set(workspacePlayers.map((player) => player.transfermarktPlayerId).filter(Boolean));
+  rows = [
+    ...workspacePlayers,
+    ...rows.filter((row) => !workspaceIds.has(String(row.transfermarkt_player_id ?? ""))),
+  ];
+
   if (!rows.length) {
     rows = await discoverFromMarketLinkRegistry(admin, query, limit);
   }
@@ -362,26 +208,20 @@ export async function GET(request: Request) {
     rows = await discoverFromMarketLinkRegistry(admin, query, limit);
   }
 
-  if (!rows.length && shouldDiscover) {
-    rows = await discoverFromApiFootball(admin, query, limit);
-  }
-
-  if (rows.length && (shouldDiscover || shouldEnrich)) {
-    rows = await enrichRowsFromApiFootball(admin, query, rows);
-  }
-
   if (rows.length && shouldEnrich) {
+    const localRows = rows.filter((row) => "internalProfileUrl" in row);
+    const globalRows = rows.filter((row) => !("internalProfileUrl" in row));
     const enrichedRows: Record<string, unknown>[] = [];
-    for (const row of rows.slice(0, Math.min(limit, 6))) {
+    for (const row of globalRows.slice(0, Math.min(limit, 6))) {
       enrichedRows.push(await enrichGlobalPlayerProfileFromTransfermarkt(admin, row));
     }
-    rows = [...enrichedRows, ...rows.slice(enrichedRows.length)];
+    rows = [...localRows, ...enrichedRows, ...globalRows.slice(enrichedRows.length)];
   }
 
   rows = sortRowsForQuery(rows, query).slice(0, limit);
 
   return NextResponse.json({
-    players: rows.map(mapGlobalPlayer),
+    players: rows.map((row) => "internalProfileUrl" in row ? row : mapGlobalPlayer(row)),
     discovered: !data?.length && rows.length > 0,
     enriched: shouldEnrich,
   });

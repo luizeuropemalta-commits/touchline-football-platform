@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { GamePanel, LivePill, SectionHeader, StatTile } from "@/components/game-ui";
+import { TouchlinePlayerCard } from "@/components/touchline-card-engine";
+import { normalizePlayer, rankPlayersForQuery } from "@/lib/player-normalization";
 
 export type ClubNetworkClub = {
   id: string;
@@ -49,16 +51,6 @@ function representationLabel(status?: string | null) {
   return "Representation status available inside Touchline.";
 }
 
-function initials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; players: ClubNetworkPlayer[] }) {
   const [query, setQuery] = useState("");
   const [clubQuery, setClubQuery] = useState("");
@@ -72,8 +64,23 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
   const [error, setError] = useState("");
 
   const filteredPlayers = useMemo(() => {
-    const search = query.toLowerCase();
-    return players.filter((player) => `${player.name} ${player.club ?? ""} ${player.position ?? ""} ${player.nationality ?? ""}`.toLowerCase().includes(search));
+    const normalizedPlayers = players.map((player) => normalizePlayer({
+      id: player.id,
+      name: player.name,
+      photoUrl: player.photoUrl,
+      currentClub: player.club,
+      position: player.position,
+      nationality: player.nationality,
+      marketValue: player.marketValue,
+      currency: player.currency,
+      href: `/players/${player.id}`,
+      syncStatus: player.representationStatus?.replaceAll("_", " ") ?? "Visible",
+    }));
+    const rankedIds = new Set(rankPlayersForQuery(normalizedPlayers, query).map((player) => player.id));
+    return players.filter((player) => query.trim().length < 2 || rankedIds.has(player.id)).sort((a, b) => {
+      const ranked = rankPlayersForQuery(normalizedPlayers, query).map((player) => player.id);
+      return ranked.indexOf(a.id) - ranked.indexOf(b.id);
+    });
   }, [players, query]);
   const filteredClubs = useMemo(() => {
     const search = clubQuery.toLowerCase();
@@ -146,12 +153,27 @@ export function ClubNetwork({ clubs, players }: { clubs: ClubNetworkClub[]; play
             <div className="grid gap-3 md:grid-cols-2">
               {filteredPlayers.map((player) => (
                 <div key={player.id} className="overflow-hidden rounded-3xl border border-white/[.08] bg-white/[.025] transition hover:border-cyan-300/20">
-                  <div className="grid grid-cols-[108px_1fr]">
-                    <div className="relative min-h-36 bg-cyan-300/[.04]">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(34,211,238,.18),transparent_42%),linear-gradient(145deg,rgba(163,255,18,.08),rgba(2,6,23,.86))]" />
-                      <div className="relative grid h-full place-items-center">
-                        <span className="font-display text-3xl font-black text-cyan-200/55">{initials(player.name)}</span>
-                      </div>
+                  <div className="grid">
+                    <div className="p-3">
+                      <TouchlinePlayerCard
+                        variant="list"
+                        player={{
+                          id: player.id,
+                          name: player.name,
+                          photoUrl: player.photoUrl,
+                          avatarUrl: player.photoUrl,
+                          position: player.position,
+                          nationality: player.nationality,
+                          currentClub: player.club,
+                          officialMarketValue: player.marketValue,
+                          officialMarketValueLabel: formatMoney(player.marketValue, player.currency ?? "EUR"),
+                          currency: player.currency,
+                          href: `/players/${player.id}`,
+                          context: "club",
+                          statusLabel: "Visible player",
+                          syncStatus: player.representationStatus?.replaceAll("_", " ") ?? "Representation",
+                        }}
+                      />
                     </div>
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-3">
