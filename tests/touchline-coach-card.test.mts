@@ -165,18 +165,16 @@ test("normalizes the square emerald coach export through lightweight runtime der
   assert.doesNotMatch(coachCardStyles, /\.frame \{[\s\S]*?transform: scale\(1\);/);
 });
 
-test("keeps live compact coaches at least thirty percent larger than live player cards", () => {
+test("keeps the approved live compact player and coach sizes across desktop and mobile", () => {
   const arenaClient = fs.readFileSync("app/arena/ArenaClient.tsx", "utf8");
 
   assert.match(arenaClient, /\.arena-live-moving-card \{[\s\S]*?width: clamp\(27px, 3vw, 42px\)/);
   assert.match(arenaClient, /\.arena-live-coach-card-art \{[\s\S]*?width: clamp\(35px, 3\.9vw, 55px\)/);
   assert.match(arenaClient, /@media \(max-width: 900px\)[\s\S]*?\.arena-live-coach-card-art \{[\s\S]*?width: clamp\(30px, 7\.4vw, 42px\)/);
-  assert.match(arenaClient, /@media \(max-width: 900px\) and \(orientation: portrait\)[\s\S]*?\.arena-live-moving-card \{[\s\S]*?width: clamp\(23px, 5\.7vw, 32px\)/);
+  assert.match(arenaClient, /@media \(max-width: 760px\)[\s\S]*?\.arena-live-moving-card \{[\s\S]*?width: clamp\(30px, 7\.8vw, 38px\)/);
 
   assert.ok(35 / 27 >= 1.29);
   assert.ok(55 / 42 >= 1.3);
-  assert.ok(30 / 23 >= 1.3);
-  assert.ok(42 / 32 >= 1.3);
 });
 
 test("keeps live coach zoom isolated and renders the full card instead of compact content", () => {

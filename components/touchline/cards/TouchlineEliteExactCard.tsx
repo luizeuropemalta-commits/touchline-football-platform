@@ -622,6 +622,7 @@ export function TouchlineEliteExactCard({
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [runtimeLocaleFromUrl, setRuntimeLocaleFromUrl] = useState<string | null>(null);
   const runtimeLocale = runtimeLocaleOverride ?? runtimeLocaleFromUrl;
+  const [useWebKitCompactPaintScale, setUseWebKitCompactPaintScale] = useState(false);
   const [shirtPlayerNameSize, setShirtPlayerNameSize] = useState(31);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -646,6 +647,15 @@ export function TouchlineEliteExactCard({
     if (runtimeLocaleOverride || typeof window === "undefined") return;
     setRuntimeLocaleFromUrl(new URLSearchParams(window.location.search).get("lang"));
   }, [runtimeLocaleOverride]);
+
+  useLayoutEffect(() => {
+    if (!optimizeForLiveCompact || typeof navigator === "undefined") return;
+    const userAgent = navigator.userAgent;
+    const isWebKitEngine =
+      /\bAppleWebKit\//.test(userAgent)
+      && !/\b(?:Chrome|Chromium|Edg|OPR|SamsungBrowser)\//.test(userAgent);
+    setUseWebKitCompactPaintScale(isWebKitEngine);
+  }, [optimizeForLiveCompact]);
 
   useLayoutEffect(() => {
     if (!enableInteractiveNeon || isEditable || showMatchPoints || typeof window === "undefined") return;
@@ -1198,19 +1208,25 @@ export function TouchlineEliteExactCard({
       <div
         data-card-price-version={cardPriceVersion}
         data-card-tier={marketTier.key}
-        data-card-live-scale-mode={optimizeForLiveCompact ? "atomic-layout" : undefined}
+        data-card-live-scale-mode={
+          optimizeForLiveCompact
+            ? (useWebKitCompactPaintScale ? "atomic-transform" : "atomic-layout")
+            : undefined
+        }
         style={{
           width: CARD_W,
           height: CARD_H,
           position: "absolute",
           left: 0,
           top: 0,
-          /* Layout zoom keeps all 22 compact Live cards in one proportional
-             product without splitting frame, shirt and data into independent
-             paint layers. Non-Live presentations retain the approved
-             transform path used by the full card and zoom. */
-          zoom: optimizeForLiveCompact ? scale : undefined,
-          transform: optimizeForLiveCompact ? "none" : `scale(${scale})`,
+          /* Chromium retains the approved layout-zoom rendering. WebKit uses
+             a post-layout paint scale so its minimum text metrics cannot grow
+             compact labels independently from the frame. Full-card and zoom
+             presentations remain on their existing transform path. */
+          zoom: optimizeForLiveCompact && !useWebKitCompactPaintScale ? scale : undefined,
+          transform: optimizeForLiveCompact
+            ? (useWebKitCompactPaintScale ? `scale(${scale})` : "none")
+            : `scale(${scale})`,
           transformOrigin: "top left",
           opacity: scale > 0 ? 1 : 0,
           overflow: "hidden",

@@ -142,9 +142,11 @@ test("Live opens immediately, prioritizes saved squads and reveals complete card
   assert.doesNotMatch(liveBuilder, /matchStats:\s*\{\s*goals:\s*0/);
   assert.match(liveBuilder, /fantasyPoints:\s*player\.touchlinePoints/);
   assert.match(liveBuilder, /matchStats:\s*player\.matchStats/);
-  assert.match(eliteCardSource, /data-card-live-scale-mode=\{optimizeForLiveCompact \? "atomic-layout" : undefined\}/);
-  assert.match(eliteCardSource, /zoom: optimizeForLiveCompact \? scale : undefined/);
-  assert.match(eliteCardSource, /transform: optimizeForLiveCompact \? "none" : `scale\(\$\{scale\}\)`/);
+  assert.match(eliteCardSource, /const \[useWebKitCompactPaintScale, setUseWebKitCompactPaintScale\] = useState\(false\)/);
+  assert.match(eliteCardSource, /const isWebKitEngine =[\s\S]*?AppleWebKit[\s\S]*?Chrome\|Chromium\|Edg\|OPR\|SamsungBrowser/);
+  assert.match(eliteCardSource, /useWebKitCompactPaintScale \? "atomic-transform" : "atomic-layout"/);
+  assert.match(eliteCardSource, /zoom: optimizeForLiveCompact && !useWebKitCompactPaintScale \? scale : undefined/);
+  assert.match(eliteCardSource, /useWebKitCompactPaintScale \? `scale\(\$\{scale\}\)` : "none"/);
   assert.match(globalCssSource, /\[data-card-live-scale-mode="atomic-layout"\][\s\S]*?-webkit-text-size-adjust: none/);
   assert.doesNotMatch(globalCssSource, /@supports \(zoom: 1\)[\s\S]*?transform: none !important/);
   assert.match(arenaClientSource, /Promise\.allSettled\(\[/);
