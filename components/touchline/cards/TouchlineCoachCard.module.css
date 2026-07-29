@@ -1,0 +1,422 @@
+.shell {
+  --coach-touchline: #a8ff38;
+  --coach-touchline-soft: #d8ff9f;
+  --touchline-card-frame-neon-filter:
+    drop-shadow(0 0 2px rgb(var(--touchline-card-light) / .55))
+    drop-shadow(0 0 9px rgb(var(--touchline-card-light) / .32));
+  --touchline-card-neon-active-filter:
+    drop-shadow(0 0 3px rgb(var(--touchline-card-light) / .82))
+    drop-shadow(0 0 12px rgb(var(--touchline-card-light) / .52))
+    drop-shadow(0 0 24px rgb(var(--touchline-card-light) / .26));
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  isolation: isolate;
+  filter: none;
+  transition: transform .2s ease;
+}
+
+.shell:hover,
+.shell:focus-within {
+  transform: translateY(-3px) scale(1.018);
+}
+
+.inner {
+  position: absolute;
+  z-index: 2;
+  inset: 7.2% 10.8% 6.4%;
+  overflow: hidden;
+  border-radius: 8% / 5.5%;
+  background: transparent;
+  opacity: 0;
+}
+
+.inner::before {
+  display: none;
+}
+
+.shell[data-coach-frame-ready="true"] .inner {
+  opacity: 1;
+}
+
+.frame {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Runtime derivatives preserve the official art while normalizing only
+     transparent export gutters. Heavy source PNGs never reach the browser. */
+  transform: scale(var(--coach-art-scale, 1));
+  transform-origin: center;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.shell[data-coach-frame-ready="true"] .frame {
+  opacity: 1;
+}
+
+.identity,
+.clubBadge {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.identity {
+  top: var(--coach-nationality-y, 12.2%);
+  left: var(--coach-nationality-x, 42.5%);
+  width: var(--coach-nationality-w, 15%);
+}
+
+.clubBadge {
+  top: var(--coach-club-crest-y, 25.5%);
+  left: var(--coach-club-crest-x, 67.5%);
+  width: var(--coach-club-crest-w, 14%);
+  gap: 0;
+}
+
+.identity span,
+.clubBadge span {
+  min-width: 100%;
+  color: rgba(255,255,255,.84);
+  font-size: clamp(4px, 1.75cqw, 8.5px);
+  font-weight: 1000;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,.8);
+  text-transform: uppercase;
+}
+
+.clubBadge span {
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+.identity b {
+  color: white;
+  font-size: clamp(4px, 1.9cqw, 9.5px);
+  font-weight: 1000;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,.8);
+}
+
+.identity img {
+  width: clamp(14px, 7.3cqw, 34px);
+  height: clamp(9px, 4.75cqw, 22px);
+  border-radius: 2px;
+  object-fit: cover;
+  box-shadow: 0 0 10px rgba(255,255,255,.22), 0 3px 12px rgba(0,0,0,.55);
+}
+
+.clubBadge img {
+  width: var(--coach-crest-size, 132px);
+  height: var(--coach-crest-size, 132px);
+  max-width: none;
+  margin-top: -1px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.48));
+}
+
+.nameplate {
+  position: absolute;
+  z-index: 3;
+  top: var(--coach-nameplate-y, 59.2%);
+  left: var(--coach-nameplate-x, 14%);
+  width: var(--coach-nameplate-w, 72%);
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  isolation: isolate;
+  padding: 7px 8px 8px;
+  text-align: center;
+  contain: layout;
+}
+
+.nameplate::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -58% -10% -16%;
+  border-radius: 20% / 38%;
+  background:
+    radial-gradient(ellipse at center bottom, rgba(0,0,0,.9) 0 38%, rgba(0,0,0,.62) 60%, rgba(0,0,0,0) 84%),
+    linear-gradient(0deg, rgba(2,4,5,.86) 0%, rgba(2,4,5,.58) 46%, rgba(2,4,5,0) 100%);
+  filter: blur(.2px);
+  pointer-events: none;
+}
+
+.nameplate::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 7%;
+  bottom: 1px;
+  left: 7%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--coach-tier-accent) 62%, transparent), transparent);
+  opacity: .72;
+  pointer-events: none;
+}
+
+.nameplate small,
+.nameplate span,
+.stat small {
+  color: rgba(255,255,255,.52);
+  font-size: clamp(4px, 1.8cqw, 8px);
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.nameplate strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: white;
+  font-family: "Bebas Neue", "Anton", Impact, Inter, sans-serif;
+  font-size: clamp(12px, calc(var(--coach-name-size, 5.2cqw) * 1.16), 35px);
+  line-height: 1;
+  font-weight: 1000;
+  letter-spacing: -.015em;
+  text-overflow: clip;
+  text-shadow:
+    -1px -1px 0 rgba(0,0,0,.72),
+    1px -1px 0 rgba(0,0,0,.72),
+    -1px 1px 0 rgba(0,0,0,.72),
+    1px 1px 0 rgba(0,0,0,.72),
+    0 2px 10px rgba(0,0,0,.8),
+    0 0 14px rgba(168,255,56,.16);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.nameplate[data-coach-name-fit="medium"] strong {
+  font-size: clamp(11px, calc(var(--coach-name-size, 5.2cqw) * 1.02), 31px);
+  letter-spacing: -.025em;
+}
+
+.nameplate[data-coach-name-fit="long"] strong {
+  font-size: clamp(9px, calc(var(--coach-name-size, 5.2cqw) * .86), 27px);
+  letter-spacing: -.035em;
+}
+
+.nameplate > span {
+  overflow: hidden;
+  color: var(--coach-touchline-soft);
+  font-size: clamp(6px, 2.08cqw, 12px);
+  font-weight: 1000;
+  letter-spacing: .05em;
+  line-height: 1;
+  text-overflow: clip;
+  text-shadow: 0 2px 8px rgba(0,0,0,.84), 0 0 10px color-mix(in srgb, var(--coach-tier-accent) 24%, transparent);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stats {
+  position: absolute;
+  z-index: 3;
+  top: var(--coach-stats-y, 71.5%);
+  left: var(--coach-stats-x, 13%);
+  width: var(--coach-stats-w, 74%);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.matchContext {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--coach-touchline-soft);
+  font-size: clamp(4px, 1.55cqw, 7px);
+  font-weight: 1000;
+  letter-spacing: .05em;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: .9;
+}
+
+.matchContext .statIcon {
+  width: clamp(6px, 2.6cqw, 12px);
+  height: clamp(6px, 2.6cqw, 12px);
+}
+
+.stat {
+  min-width: 0;
+  min-height: clamp(27px, 14cqw, 61px);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  border: 1px solid color-mix(in srgb, var(--coach-tier-accent) 22%, transparent);
+  border-radius: 7px;
+  background:
+    radial-gradient(ellipse at center, rgba(0,0,0,.64) 0 44%, rgba(0,0,0,.34) 72%, rgba(0,0,0,.18) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(0,0,0,.58));
+  box-shadow:
+    inset 0 0 16px rgba(0,0,0,.38),
+    inset 0 0 12px color-mix(in srgb, var(--coach-tier-accent) 4%, transparent);
+}
+
+.stat strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: white;
+  font-size: clamp(6px, 3.3cqw, 15px);
+  line-height: 1;
+  font-weight: 1000;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pointsStat strong {
+  color: var(--coach-touchline);
+}
+
+.statIcon {
+  width: clamp(8px, 4.3cqw, 19px);
+  height: clamp(8px, 4.3cqw, 19px);
+  color: var(--coach-touchline-soft);
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cardPair {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cardPair i {
+  width: clamp(4px, 2.1cqw, 9px);
+  aspect-ratio: .68;
+  border-radius: 1px;
+  background: #ffd633;
+  box-shadow: 0 0 7px rgba(255, 214, 51, .46);
+  transform: rotate(-4deg);
+}
+
+.cardPair i:last-child {
+  background: #ff3b42;
+  box-shadow: 0 0 7px rgba(255, 59, 66, .45);
+  transform: rotate(4deg);
+}
+
+.shell {
+  container-type: inline-size;
+}
+
+.shell[data-coach-card-editable="true"] [data-coach-layer] {
+  border-radius: 5px;
+  outline: 0;
+  outline-offset: 0;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.shell[data-coach-card-editable="true"] [data-coach-layer][data-coach-layer-active="true"] {
+  cursor: grabbing;
+}
+
+.shell[data-coach-card-editable="true"] [data-coach-layer]:hover {
+  outline: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.shell[data-coach-card-editable="true"] [data-coach-layer]::after {
+  content: none;
+}
+
+/* The pitch card can be only 40–88px wide. Do not let the minimum pixel sizes
+   from the profile/spotlight card expand its content beyond the official art. */
+.shell[data-coach-card-display="compact"]:hover,
+.shell[data-coach-card-display="compact"]:focus-within {
+  transform: translateY(-1px) scale(1.018);
+}
+
+.shell[data-coach-card-display="compact"] .identity span,
+.shell[data-coach-card-display="compact"] .clubBadge span,
+.shell[data-coach-card-display="compact"] .nameplate small,
+.shell[data-coach-card-display="compact"] .nameplate > span,
+.shell[data-coach-card-display="compact"] .stat small,
+.shell[data-coach-card-display="compact"] .matchContext {
+  font-size: clamp(1.6px, 1.75cqw, 3.2px);
+}
+
+.shell[data-coach-card-display="compact"] .identity b {
+  font-size: clamp(1.8px, 1.9cqw, 3.5px);
+}
+
+.shell[data-coach-card-display="compact"] .identity img {
+  width: clamp(4px, 7.3cqw, 7px);
+  height: clamp(3px, 4.75cqw, 5px);
+  border-radius: .5px;
+}
+
+.shell[data-coach-card-display="compact"] .clubBadge img {
+  width: min(var(--coach-club-crest-w, 14%), 12px);
+  height: auto;
+  max-height: 12px;
+}
+
+.shell[data-coach-card-display="compact"] .nameplate {
+  gap: 0;
+  padding: 1px;
+}
+
+.shell[data-coach-card-display="compact"] .nameplate strong,
+.shell[data-coach-card-display="compact"] .nameplate[data-coach-name-fit="medium"] strong,
+.shell[data-coach-card-display="compact"] .nameplate[data-coach-name-fit="long"] strong {
+  font-size: clamp(3.4px, var(--coach-name-size, 5.2cqw), 6px);
+  line-height: .94;
+}
+
+.shell[data-coach-card-display="compact"] .stats {
+  gap: 1px;
+}
+
+.shell[data-coach-card-display="compact"] .stat {
+  min-height: 0;
+  gap: 0;
+  border-width: .5px;
+  border-radius: 2px;
+  padding: 1px 0;
+  box-shadow: none;
+}
+
+.shell[data-coach-card-display="compact"] .stat strong {
+  font-size: clamp(2px, 3.3cqw, 4px);
+}
+
+.shell[data-coach-card-display="compact"] .statIcon,
+.shell[data-coach-card-display="compact"] .matchContext .statIcon {
+  width: clamp(2px, 4.3cqw, 4px);
+  height: clamp(2px, 4.3cqw, 4px);
+}
+
+.shell[data-coach-card-display="compact"] .cardPair {
+  gap: .5px;
+}
+
+.shell[data-coach-card-display="compact"] .cardPair i {
+  width: clamp(1px, 2.1cqw, 2px);
+}

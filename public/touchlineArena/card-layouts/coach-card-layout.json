@@ -1,0 +1,42 @@
+{
+  "version": 6,
+  "updatedAt": "2026-07-29T18:00:54.521Z",
+  "storageKey": "touchline:coach-card:master-layout:v6",
+  "layout": {
+    "nationality": {
+      "x": 42.5,
+      "y": 12.2,
+      "w": 15
+    },
+    "clubCrest": {
+      "x": 20.360540577355295,
+      "y": 18.39326773385237,
+      "w": 10
+    },
+    "portrait": {
+      "x": 23,
+      "y": 8.5,
+      "w": 54,
+      "h": 25.5
+    },
+    "nameplate": {
+      "x": 13,
+      "y": 52,
+      "w": 74
+    },
+    "stats": {
+      "x": 11.5,
+      "y": 65.5,
+      "w": 77
+    },
+    "footer": {
+      "x": 18,
+      "y": 86.4,
+      "w": 64
+    }
+  },
+  "portraitScale": 1,
+  "nameSize": 5.8,
+  "crestSize": 30.8,
+  "neonStrength": 1
+}
