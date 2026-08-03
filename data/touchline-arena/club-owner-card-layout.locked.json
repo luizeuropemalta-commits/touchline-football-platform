@@ -1,0 +1,79 @@
+{
+  "lockedAt": "2026-07-18T11:55:24.463Z",
+  "note": "Locked manually from the ClubOwner Card visual QA editor. Do not overwrite unless Luiz explicitly asks to save a new ClubOwner Card layout.",
+  "layout": {
+    "ownerName": "Luiz Lopez",
+    "nationality": "Brazil",
+    "countryCode": "BRA",
+    "clubName": "",
+    "rank": 7,
+    "seasonPoints": 2468,
+    "reputation": 98,
+    "squadCount": 35,
+    "trophySize": 53,
+    "statNumberSize": 25,
+    "editableLayers": {
+      "topline": {
+        "x": 12,
+        "y": 7.5,
+        "w": 76
+      },
+      "nationality": {
+        "x": 6.771156177308917,
+        "y": 12.723558951715304,
+        "w": 38
+      },
+      "points": {
+        "x": 69.26579628476887,
+        "y": 15.293906359029503,
+        "w": 16.6
+      },
+      "nameplate": {
+        "x": 11.96723782065984,
+        "y": 49.7283714066736,
+        "w": 76
+      },
+      "rankPanel": {
+        "x": 12.20476362087608,
+        "y": 62.811832667955485,
+        "w": 76
+      },
+      "trophyRow": {
+        "x": 12.209743472135774,
+        "y": 76.94716937965431,
+        "w": 78
+      }
+    },
+    "leagues": [
+      {
+        "key": "england",
+        "label": "TouchLine England",
+        "wins": 0,
+        "points": 1840
+      },
+      {
+        "key": "spain",
+        "label": "TouchLine Spain",
+        "wins": 0,
+        "points": 620
+      },
+      {
+        "key": "italy",
+        "label": "TouchLine Italy",
+        "wins": 0,
+        "points": 0
+      },
+      {
+        "key": "germany",
+        "label": "TouchLine Germany",
+        "wins": 0,
+        "points": 0
+      }
+    ],
+    "assets": {
+      "frame": "/touchlineArena/frames/special/club-owner-transparent-preview.png",
+      "defaultAvatar": "/touchlineArena/club-owner/avatars/luiz-lopez-owner-avatar-v1.png",
+      "touchlineEnglandTrophy": "/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png"
+    }
+  }
+}

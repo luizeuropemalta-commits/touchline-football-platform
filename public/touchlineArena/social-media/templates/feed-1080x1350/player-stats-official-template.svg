@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350" role="img" aria-label="TouchLine player statistics social template feed">
+  <defs>
+    <radialGradient id="g1" cx="34%" cy="30%" r="72%">
+      <stop offset="0%" stop-color="{{tier.accent}}" stop-opacity=".34"/>
+      <stop offset="38%" stop-color="{{tier.secondary}}" stop-opacity=".18"/>
+      <stop offset="100%" stop-color="#02050a" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1622" stop-opacity=".92"/>
+      <stop offset="100%" stop-color="#02050a" stop-opacity=".98"/>
+    </linearGradient>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="22" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1080" height="1350" fill="#02050a"/>
+  <rect width="1080" height="1350" fill="url(#g1)"/>
+  <path d="M0 830 C230 715 420 720 603 786 C782 850 915 824 1080 733 L1080 1350 L0 1350 Z" fill="#06100d" opacity=".82"/>
+  <path d="M90 1068 C310 1002 548 1005 990 1126" fill="none" stroke="{{tier.accent}}" stroke-opacity=".26" stroke-width="3"/>
+  <path d="M93 1096 C310 1044 548 1048 990 1152" fill="none" stroke="#edf8ff" stroke-opacity=".10" stroke-width="2"/>
+  <image href="/touchlineArena/brand/tl-shield-lime.svg" x="72" y="76" width="52" height="52" preserveAspectRatio="xMidYMid meet"/>
+  <text x="145" y="104" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="900" letter-spacing=".08em">TOUCHLINE</text>
+  <text x="145" y="132" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="900" letter-spacing=".18em">ENGLAND LEAGUE</text>
+  <g filter="url(#softGlow)">
+    <rect x="92" y="286" width="394" height="634" rx="34" fill="{{tier.accent}}" opacity=".15"/>
+  </g>
+  <rect x="92" y="286" width="394" height="634" rx="34" fill="none" stroke="{{tier.accent}}" stroke-opacity=".36" stroke-width="2" stroke-dasharray="10 12"/>
+  <text x="289" y="610" text-anchor="middle" fill="#edf8ff" fill-opacity=".72" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="900">CARD OFICIAL</text>
+  <text x="289" y="642" text-anchor="middle" fill="#edf8ff" fill-opacity=".38" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="800">INSERIDO PELO SISTEMA</text>
+  <text x="560" y="292" fill="{{tier.accent}}" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="950" letter-spacing=".16em">PLAYER STATS</text>
+  <text x="560" y="372" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="950" letter-spacing="-.05em">{{player.name}}</text>
+  <text x="562" y="426" fill="#edf8ff" fill-opacity=".64" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800">{{player.club}} · {{player.position}}</text>
+  <rect x="560" y="502" width="390" height="180" rx="26" fill="url(#panel)" stroke="{{tier.accent}}" stroke-opacity=".26"/>
+  <text x="595" y="566" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="950" letter-spacing=".12em">PONTOS TOUCHLINE</text>
+  <text x="595" y="645" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="950">{{player.touchlinePoints}}</text>
+  <g transform="translate(560 744)">
+    <rect width="390" height="74" rx="18" fill="#050b12" opacity=".78" stroke="#edf8ff" stroke-opacity=".09"/>
+    <text x="26" y="45" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="900">{{stat.1.label}}</text>
+    <text x="342" y="45" text-anchor="end" fill="{{tier.accent}}" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="950">{{stat.1.value}}</text>
+  </g>
+  <g transform="translate(560 836)">
+    <rect width="390" height="74" rx="18" fill="#050b12" opacity=".66" stroke="#edf8ff" stroke-opacity=".09"/>
+    <text x="26" y="45" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="900">{{stat.2.label}}</text>
+    <text x="342" y="45" text-anchor="end" fill="{{tier.accent}}" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="950">{{stat.2.value}}</text>
+  </g>
+  <g transform="translate(560 928)">
+    <rect width="390" height="74" rx="18" fill="#050b12" opacity=".56" stroke="#edf8ff" stroke-opacity=".09"/>
+    <text x="26" y="45" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="900">{{stat.3.label}}</text>
+    <text x="342" y="45" text-anchor="end" fill="{{tier.accent}}" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="950">{{stat.3.value}}</text>
+  </g>
+  <text x="72" y="1240" fill="#edf8ff" fill-opacity=".54" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="800">{{editorial.comment}}</text>
+  <text x="72" y="1286" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="950">#TouchLineArena</text>
+</svg>

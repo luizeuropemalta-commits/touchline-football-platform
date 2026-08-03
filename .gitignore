@@ -2,5 +2,11 @@
 node_modules
 .env
 .env.local
+ENV_LOCAL_ATALHO_VISIVEL
 *.log
 .DS_Store
+.vercel
+.env*
+!.env.example
+.pnpm-store/
+*.tsbuildinfo

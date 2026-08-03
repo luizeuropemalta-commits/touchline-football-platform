@@ -6,11 +6,15 @@ import React, { useId, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { Heart, Share2, ShieldCheck, UserPlus, UserRound } from "lucide-react";
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-  formatTouchlineCardPrice,
+  resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaClubTemplateForTierPreview,
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "@/lib/touchlineArena/card-rules";
+import {
+  formatTouchlineCommercialCardPrice,
+  resolveTouchlineCommercialCardPrice,
+} from "@/lib/touchlineArena/commercial-card-pricing";
 import { useTouchlineActiveRanking } from "@/lib/touchlineArena/card-ranking-client";
 import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
 import { normalizeTouchlineCountryCode3, touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
@@ -18,7 +22,6 @@ import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineShirtNumberPaletteForClub } from "@/lib/touchlineArena/shirt-number-colors";
 import { TouchlineShirtNumber } from "@/components/touchline/cards/TouchlineShirtNumber";
-import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import masterCardLayout from "@/public/touchlineArena/card-layouts/master-shirt-back-layout.json";
 
 const CARD_W = 430;
@@ -32,6 +35,11 @@ const MASTER_CARD_LAYOUT_SAVE_URL = "/api/touchline-arena/card-layout-master";
 const CLUB_CREST_VISUAL_SCALE = 0.8;
 const SHIRT_NAME_BASE_PADDING = 24;
 const SHIRT_NAME_CREST_GAP = 8;
+// The shirt name is a primary identifier, including on the small cards used in
+// the pitch and ClubHub. Keep its readable size in one place rather than
+// allowing individual views to make the name smaller.
+const SHIRT_NAME_READABILITY_MULTIPLIER = 1.2;
+const MIN_SHIRT_NAME_HORIZONTAL_SCALE = 0.78;
 
 export function touchlineLiveCompactFrameUrl(sourceUrl: string) {
   const unversionedUrl = sourceUrl.split("?")[0];
@@ -88,7 +96,10 @@ const DEFAULT_CARD_LAYOUT = masterCardLayout.layout as CardLayout;
 const FIELD_SIZE: Record<EditableBlock, { width: number; height: number }> = {
   backName: { width: 214, height: 34 },
   backNumber: { width: 144, height: 105 },
-  shirtClub: { width: 246, height: 28 },
+  // The previous 28px mask clipped short names such as "GABRIEL" vertically.
+  // This taller field keeps the exact same centre line while giving the 20%
+  // readability increase room to render without touching the shirt number.
+  shirtClub: { width: 246, height: 42 },
   clubCrest: { width: 42, height: 42 },
   flag: { width: 74, height: 60 },
   points: { width: 82, height: 58 },
@@ -114,7 +125,7 @@ const FIELD_LABELS: Partial<Record<EditableBlock, string>> = {
   clubCrest: "Club crest",
   flag: "Flag",
   marketValue: "TouchLine Points",
-  cardPrice: "TC Value",
+  cardPrice: "Card price",
   name: "Legacy club text",
   touchlineLogo: "Logo TL",
   touchlinePremier: "TouchLine England League Stats",
@@ -135,7 +146,7 @@ const FIELD_LABELS_PT_BR: Partial<Record<EditableBlock, string>> = {
   clubCrest: "Escudo do clube",
   flag: "Bandeira",
   marketValue: "Pontos TouchLine",
-  cardPrice: "Valor TC",
+  cardPrice: "Preço do card",
   name: "Texto antigo do clube",
   touchlineLogo: "Logo TL",
   touchlinePremier: "Estatísticas da TouchLine England League",
@@ -175,7 +186,6 @@ export type TouchlineEliteExactPlayer = {
   nationality: string;
   stadiumName?: string | null;
   avatarImageUrl?: string | null;
-  avatarVideoUrl?: string | null;
   avatarStatus?: string | null;
   sourcePhotoUrl?: string | null;
   frameUrl?: string | null;
@@ -209,7 +219,7 @@ const DEFAULT_CARD_LABELS: TouchlineEliteExactCardLabels = {
   nationality: "Nat",
   points: "Points",
   totalPoints: "TouchLine Points",
-  cardPrice: "TC",
+  cardPrice: "Card price",
   currentClub: "Current Club",
   profileAction: "Profile",
   shareAction: "Share",
@@ -221,7 +231,7 @@ function localizedCardLabels(locale: string | null): TouchlineEliteExactCardLabe
       nationality: "País",
       points: "Pontos",
       totalPoints: "Pontos TouchLine",
-      cardPrice: "TC",
+      cardPrice: "Preço do card",
       currentClub: "Clube atual",
       profileAction: "Perfil",
       shareAction: "Compartilhar",
@@ -246,6 +256,11 @@ type Props = {
   markerStorageKey?: string;
   labels?: Partial<TouchlineEliteExactCardLabels>;
   imageLoading?: "eager" | "lazy";
+  /**
+   * A known compact width can be rendered atomically on the server, avoiding
+   * a transparent card while the client ResizeObserver initializes.
+   */
+  initialRenderScale?: number;
   optimizeForLiveCompact?: boolean;
   runtimeLocaleOverride?: string | null;
   subscribeToRanking?: boolean;
@@ -595,6 +610,7 @@ export function TouchlineEliteExactCard({
   markerStorageKey,
   labels,
   imageLoading = "eager",
+  initialRenderScale,
   optimizeForLiveCompact = false,
   runtimeLocaleOverride = null,
   subscribeToRanking = true,
@@ -613,7 +629,10 @@ export function TouchlineEliteExactCard({
   const shellRef = useRef<HTMLDivElement | null>(null);
   const shirtNameMaskRef = useRef<HTMLDivElement | null>(null);
   const shouldUseStoredLayout = isEditable && !ignoreStoredLayout;
-  const [scale, setScale] = useState(0);
+  const [scale, setScale] = useState(() => {
+    if (typeof initialRenderScale !== "number" || !Number.isFinite(initialRenderScale)) return 0;
+    return Math.max(0, Math.min(1, initialRenderScale));
+  });
   const [layout, setLayout] = useState<CardLayout>(() => normalizeLayout());
   const [removalMarkers, setRemovalMarkers] = useState<RemovalMarker[]>([]);
   const [isLayoutLocked, setIsLayoutLocked] = useState(false);
@@ -623,7 +642,10 @@ export function TouchlineEliteExactCard({
   const [runtimeLocaleFromUrl, setRuntimeLocaleFromUrl] = useState<string | null>(null);
   const runtimeLocale = runtimeLocaleOverride ?? runtimeLocaleFromUrl;
   const [useWebKitCompactPaintScale, setUseWebKitCompactPaintScale] = useState(false);
-  const [shirtPlayerNameSize, setShirtPlayerNameSize] = useState(31);
+  const [shirtPlayerNameFit, setShirtPlayerNameFit] = useState({
+    size: 31 * SHIRT_NAME_READABILITY_MULTIPLIER,
+    horizontalScale: 1,
+  });
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isNeonActive, setIsNeonActive] = useState(false);
@@ -777,16 +799,25 @@ export function TouchlineEliteExactCard({
     playerId: player.formationPlayerId,
     providerPlayerId: player.sportmonksPlayerId,
   });
-  // The shared competition state is authoritative in every phase. During the
-  // inaugural preseason it deliberately resolves to 0 points, Ruby Red and
-  // 1 TC; this is confirmed baseline data, not a UI placeholder.
+  // Ranking is authoritative only for sporting points. Card color and its
+  // nominal commercial price are economic attributes supplied by the tier.
   const totalPointsText = touchlineCardMetricText(liveCompetition.touchlinePoints);
   const previewTier = touchlineArenaTierForKey(player.cardTier) || touchlineArenaTierForKey("ruby-red")!;
-  const marketTier = rankingMode === "preview"
-    ? previewTier
-    : touchlineArenaTierForKey(liveCompetition.tierKey)!;
-  const cardPriceText = formatTouchlineCardPrice(
-    rankingMode === "preview" ? previewTier.retailPriceTc : liveCompetition.priceTc,
+  const verifiedEconomy = resolveTouchlineVerifiedPlayerEconomy({
+    marketValue: player.marketValue,
+    marketValueSource: player.marketValueSource,
+  });
+  const marketTier = verifiedEconomy.status === "resolved"
+    ? touchlineArenaTierForKey(verifiedEconomy.tierKey) ?? previewTier
+    : previewTier;
+  // England cards always keep the approved numeric tier value and use GBP as
+  // their official currency. This is deliberately not a Touch Credits value,
+  // currency conversion or wallet balance.
+  const cardPriceText = formatTouchlineCommercialCardPrice(
+    resolveTouchlineCommercialCardPrice({
+      tierKey: marketTier.key,
+      competition: "england",
+    }),
   );
   const preseasonMissingValue = liveCompetition.phase === "preseason" ? "0" : "—";
   const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
@@ -820,18 +851,27 @@ export function TouchlineEliteExactCard({
     let active = true;
     const fitNameInsideShirt = () => {
       if (!active) return;
-      const initialSize = fitShirtBackNameSize(shirtPlayerName) * shirtClubScale;
+      const initialSize = fitShirtBackNameSize(shirtPlayerName) * shirtClubScale * SHIRT_NAME_READABILITY_MULTIPLIER;
       const availableWidth = Math.max(1, mask.clientWidth - shirtNamePadding.left - shirtNamePadding.right);
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
       if (!context) {
-        setShirtPlayerNameSize(initialSize);
+        setShirtPlayerNameFit({ size: initialSize, horizontalScale: 1 });
         return;
       }
       context.font = `950 ${initialSize}px "Bebas Neue", "Anton", Impact, Inter, sans-serif`;
       const measuredWidth = Math.max(1, context.measureText(shirtPlayerName.toUpperCase()).width);
-      const fittedSize = initialSize * Math.min(1, (availableWidth * 0.97) / measuredWidth);
-      setShirtPlayerNameSize(Number(Math.max(3.5, fittedSize).toFixed(2)));
+      const availableScale = Math.min(1, (availableWidth * 0.97) / measuredWidth);
+      // Preserve the promised vertical size whenever possible. Very long names
+      // are condensed horizontally first; only then is their type reduced.
+      const horizontalScale = Math.max(MIN_SHIRT_NAME_HORIZONTAL_SCALE, availableScale);
+      const fittedSize = availableScale < MIN_SHIRT_NAME_HORIZONTAL_SCALE
+        ? initialSize * (availableScale / MIN_SHIRT_NAME_HORIZONTAL_SCALE)
+        : initialSize;
+      setShirtPlayerNameFit({
+        size: Number(Math.max(3.5, fittedSize).toFixed(2)),
+        horizontalScale: Number(horizontalScale.toFixed(3)),
+      });
     };
 
     fitNameInsideShirt();
@@ -1271,8 +1311,8 @@ export function TouchlineEliteExactCard({
               textOverflow: "clip",
               whiteSpace: "nowrap",
               fontFamily: '"Bebas Neue", "Anton", Impact, Inter, sans-serif',
-              fontSize: shirtPlayerNameSize,
-              lineHeight: `${shirtPlayerNameSize + 2}px`,
+              fontSize: shirtPlayerNameFit.size,
+              lineHeight: `${shirtPlayerNameFit.size + 2}px`,
               fontWeight: 950,
               letterSpacing: "-.015em",
               textAlign: "center",
@@ -1280,6 +1320,8 @@ export function TouchlineEliteExactCard({
               color: textPalette.fill,
               textShadow: shirtTextOutline,
               WebkitTextStroke: "0",
+              transform: shirtPlayerNameFit.horizontalScale === 1 ? undefined : `scaleX(${shirtPlayerNameFit.horizontalScale})`,
+              transformOrigin: "center",
             }}
           >
             {shirtPlayerName}
@@ -1404,8 +1446,7 @@ export function TouchlineEliteExactCard({
           }}
         >
           <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 * fieldScale("cardPrice"), color: "rgba(254,240,138,.88)", fontSize: 8 * fieldScale("cardPrice"), lineHeight: `${10 * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>
-            <TouchlineCoinMark size={10 * fieldScale("cardPrice")} />
-            <span>TC Value</span>
+            <span>{cardLabels.cardPrice}</span>
           </div>
           <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: cardPriceSize * fieldScale("cardPrice"), lineHeight: `${(cardPriceSize + 2) * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{cardPriceText}</div>
         </div>

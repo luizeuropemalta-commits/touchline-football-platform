@@ -1,13 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
-import type {
-  FootballDataProvider,
-  TouchlineCompetition,
-  TouchlinePlayer,
-  TouchlineSquadMember,
-  TouchlineTeam,
-} from "@/lib/football-data/types";
+import type { TouchlineCompetition, TouchlinePlayer, TouchlineSquadMember, TouchlineTeam } from "@/lib/football-data/types";
 
 type AdminClient = SupabaseClient;
 

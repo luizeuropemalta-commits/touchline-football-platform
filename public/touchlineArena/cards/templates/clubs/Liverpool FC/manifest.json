@@ -1,0 +1,43 @@
+{
+  "clubName": "Liverpool FC",
+  "expectedTierCount": 7,
+  "albumComplete": true,
+  "tiers": {
+    "ruby-red": {
+      "label": "Ruby Red",
+      "range": "EUR 0-4.99M",
+      "file": "market-tiers/ruby-red.png"
+    },
+    "sapphire-blue": {
+      "label": "Sapphire Blue",
+      "range": "EUR 5M-9.99M",
+      "file": "market-tiers/sapphire-blue.png"
+    },
+    "amethyst-purple": {
+      "label": "Amethyst Purple",
+      "range": "EUR 10M-14.99M",
+      "file": "market-tiers/amethyst-purple.png"
+    },
+    "radiant-gold": {
+      "label": "Radiant Gold",
+      "range": "EUR 15M-24.99M",
+      "file": "market-tiers/radiant-gold.png"
+    },
+    "emerald-green": {
+      "label": "Emerald Green",
+      "range": "EUR 25M-49.99M",
+      "file": "market-tiers/emerald-green.png"
+    },
+    "clear-diamond": {
+      "label": "Clear Diamond",
+      "range": "EUR 50M-149M",
+      "file": "market-tiers/clear-diamond.png"
+    },
+    "diamond-gold": {
+      "label": "Diamond Gold",
+      "range": "EUR 150M-300M",
+      "file": "market-tiers/diamond-gold.png"
+    }
+  },
+  "missingTiers": []
+}

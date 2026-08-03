@@ -1,0 +1,56 @@
+.shell { min-height: 100vh; background: radial-gradient(circle at 55% -10%, #254a3e 0, transparent 33%), #060a09; color: #f7fbf7; font-family: Arial, sans-serif; }
+.header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 clamp(18px, 4vw, 60px); border-bottom: 1px solid rgba(220,255,206,.12); background: rgba(4,10,8,.92); }
+.brand { font-size: 13px; font-weight: 950; letter-spacing: .13em; color: #f7fbf7; text-decoration: none; }
+.brand span, .header > div span { color: #b7ff4b; }
+.header > div { display: grid; gap: 3px; text-align: center; }
+.header > div span { font-size: 9px; font-weight: 900; letter-spacing: .16em; }
+.header > div strong { font-size: 16px; letter-spacing: .04em; }
+.return { display: flex; gap: 4px; align-items: center; color: #dfffaf; text-decoration: none; font-size: 12px; font-weight: 800; }
+.layout { display: grid; grid-template-columns: minmax(270px, 320px) minmax(0, 1fr); max-width: 1540px; min-height: calc(100vh - 72px); margin: auto; }
+.fixtureRail { border-right: 1px solid rgba(220,255,206,.12); background: rgba(4,9,7,.72); }
+.railHeading { display: flex; align-items: center; gap: 8px; padding: 22px 20px 16px; border-bottom: 1px solid rgba(220,255,206,.1); color: #d8ff94; }
+.railHeading strong { font-size: 13px; letter-spacing: .07em; }
+.railHeading span { margin-left: auto; padding: 3px 7px; border-radius: 99px; background: rgba(183,255,75,.15); font-size: 11px; }
+.fixtureScroller { padding: 16px 12px; }
+.fixtureGroup { margin-bottom: 21px; }
+.fixtureGroup h2 { margin: 0 8px 8px; color: rgba(235,255,224,.54); font-size: 10px; letter-spacing: .14em; }
+.fixture, .selectedFixture { display: grid; width: 100%; gap: 7px; padding: 10px; border: 0; border-radius: 12px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.fixture:hover { background: rgba(255,255,255,.055); }
+.selectedFixture { background: linear-gradient(110deg, rgba(183,255,75,.19), rgba(38,112,77,.25)); box-shadow: inset 3px 0 #b7ff4b; }
+.fixtureTeams { display: grid; grid-template-columns: 24px minmax(0,1fr) 24px minmax(0,1fr); align-items: center; gap: 5px; }
+.fixtureTeams b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.fixture small { padding-left: 29px; color: rgba(243,255,232,.55); font-size: 10px; }
+.liveStatus { color: #ff7f70 !important; font-weight: 900; }
+.teamMark { display: grid; place-items: center; width: 24px; height: 24px; overflow: hidden; border-radius: 50%; background: #163a2b; }
+.teamMark img { width: 100%; height: 100%; object-fit: contain; }
+.teamMark span { font-size: 8px; font-weight: 900; }
+.emptyRail { display: grid; justify-items: center; gap: 9px; padding: 38px 12px; color: rgba(237,255,223,.56); font-size: 12px; text-align: center; }
+.matchPanel { width: 100%; max-width: 1160px; margin: 0 auto; padding: clamp(18px,3vw,44px); align-self: start; }
+.matchMeta { display: flex; flex-wrap: wrap; gap: 8px; color: rgba(232,255,218,.58); font-size: 11px; }
+.matchMeta span { display: flex; align-items: center; gap: 5px; padding: 6px 9px; border: 1px solid rgba(216,255,148,.14); border-radius: 99px; }
+.hero { position: relative; display: grid; justify-items: center; overflow: hidden; margin-top: 17px; padding: clamp(26px,6vw,76px) 22px; border: 1px solid rgba(194,255,119,.22); border-radius: 24px; background: radial-gradient(circle at 50% 0, rgba(183,255,75,.23), transparent 46%), linear-gradient(130deg,#103324,#07130e); box-shadow: 0 30px 80px rgba(0,0,0,.27); }
+.hero[data-state="live"] { background: radial-gradient(circle at 50% 0, rgba(255,104,91,.25), transparent 44%), linear-gradient(130deg,#331713,#100807); }
+.statusPill { padding: 6px 10px; border-radius: 99px; background: rgba(4,10,7,.66); color: #caff79; font-size: 10px; font-weight: 950; letter-spacing: .13em; }
+.hero[data-state="live"] .statusPill { color: #ff9a8f; }
+.heroTeams { display: grid; grid-template-columns: minmax(120px,1fr) auto minmax(120px,1fr); width: min(100%,850px); align-items: center; gap: clamp(12px,4vw,52px); margin: 27px 0 16px; text-align: center; }
+.heroTeams > div { display: grid; justify-items: center; gap: 12px; }
+.heroTeams .teamMark { width: clamp(62px,9vw,104px); height: clamp(62px,9vw,104px); border: 1px solid rgba(232,255,218,.25); background: rgba(0,0,0,.2); }
+.heroTeams strong { font-size: clamp(14px,2.2vw,23px); }
+.score { color: #fff; font-size: clamp(26px,5vw,52px); letter-spacing: .05em; }
+.hero p { margin: 0; color: rgba(244,255,235,.7); font-size: 12px; text-transform: capitalize; }
+.countdown { margin-top: 10px; color: #d8ff94; font-size: 12px; }
+.infoGrid, .contentGrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 13px; margin-top: 13px; }
+.infoGrid article, .featurePanel { padding: 16px; border: 1px solid rgba(228,255,216,.12); border-radius: 15px; background: rgba(255,255,255,.035); }
+.infoGrid span, .panelTitle span { display: block; color: #b7ff4b; font-size: 9px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.infoGrid strong { display: block; margin: 7px 0; font-size: 13px; }
+.infoGrid small, .featurePanel p { color: rgba(235,255,224,.56); font-size: 11px; line-height: 1.5; }
+.contentGrid { grid-template-columns: 1fr 1fr; }
+.panelTitle { display: flex; gap: 10px; align-items: center; }
+.panelTitle svg { color: #caff79; }
+.panelTitle strong { font-size: 13px; }
+.featurePanel p { margin: 14px 0 0; }
+.emptyPanel { display: grid; place-content: center; justify-items: center; min-height: 62vh; gap: 12px; padding: 30px; color: #dfffaf; text-align: center; }
+.emptyPanel span { font-size: 20px; font-weight: 900; }
+.emptyPanel p { max-width: 420px; margin: 0; color: rgba(235,255,224,.6); line-height: 1.55; }
+@media (max-width: 850px) { .layout { grid-template-columns: 1fr; } .fixtureRail { border-right: 0; border-bottom: 1px solid rgba(220,255,206,.12); } .fixtureScroller { display: flex; gap: 12px; overflow: auto; padding: 12px; } .fixtureGroup { min-width: 220px; margin: 0; } .fixtureGroup h2 { margin-top: 4px; } .fixture, .selectedFixture { min-height: 65px; } .matchPanel { padding: 18px; } .infoGrid, .contentGrid { grid-template-columns: 1fr; } .header > div { display: none; } }
+@media (max-width: 520px) { .header { min-height: 60px; padding: 0 14px; } .heroTeams { grid-template-columns: 1fr auto 1fr; gap: 8px; } .heroTeams strong { font-size: 12px; } .score { font-size: 23px; } .matchMeta span:nth-child(2) { display: none; } .fixtureScroller { padding-left: 8px; } .matchPanel { padding: 13px; } .hero { padding: 27px 12px; border-radius: 17px; } .infoGrid article { padding: 13px; } }

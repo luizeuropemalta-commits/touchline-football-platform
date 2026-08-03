@@ -1,0 +1,41 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Touchline TL shield">
+  <defs>
+    <linearGradient id="tlFill" x1="37" y1="23" x2="143" y2="155" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0e1710"/>
+      <stop offset="0.52" stop-color="#050807"/>
+      <stop offset="1" stop-color="#142016"/>
+    </linearGradient>
+    <linearGradient id="tlStroke" x1="90" y1="14" x2="90" y2="166" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ccff75"/>
+      <stop offset="0.5" stop-color="#74ff21"/>
+      <stop offset="1" stop-color="#27d913"/>
+    </linearGradient>
+    <filter id="tlGlow" x="2" y="0" width="176" height="180" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.44 0 0 0 0 1 0 0 0 0 0.09 0 0 0 0.85 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="textGlow" x="31" y="42" width="118" height="100" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.64 0 0 0 0 1 0 0 0 0 0.07 0 0 0 0.85 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#tlGlow)">
+    <path d="M90 12L151 40V111L90 166L29 111V40L90 12Z" fill="url(#tlFill)"/>
+    <path d="M90 18L145 43V108L90 157L35 108V43L90 18Z" stroke="url(#tlStroke)" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M90 30L133 49V101L90 140L47 101V49L90 30Z" stroke="#102915" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M50 46L90 28L130 46" stroke="#8dff31" stroke-width="2" stroke-linecap="round" opacity=".42"/>
+  </g>
+  <g filter="url(#textGlow)" fill="#a3ff12">
+    <path d="M48 50H103V68H85V124H65V68H48V50Z"/>
+    <path d="M102 50H123V107L141 95V116L102 141V50Z"/>
+    <path d="M89 122L102 114V139L89 147V122Z"/>
+  </g>
+</svg>

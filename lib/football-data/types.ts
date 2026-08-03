@@ -19,6 +19,9 @@ export type FootballDataError = {
   message: string;
   provider: FootballDataProviderName;
   status?: number;
+  retryAfterSeconds?: number;
+  remaining?: number;
+  requestedEntity?: string;
 };
 
 export type FootballDataResult<T> =
@@ -62,6 +65,7 @@ export type TouchlinePlayer = {
   positionId?: string;
   height?: string;
   weight?: string;
+  preferredFoot?: string;
   currentTeamId?: string;
   currentTeamName?: string;
   marketValue?: number;
@@ -174,6 +178,118 @@ export type TouchlineSquadMember = {
   raw?: unknown;
 };
 
+export type TouchlineBallCoordinate = {
+  id: string;
+  providerId: string;
+  provider: FootballDataProviderName;
+  fixtureId: string;
+  periodId: string;
+  timer: string;
+  x: number;
+  y: number;
+  /** Provider-authored timestamp, when supplied; never inferred from kickoff. */
+  sourceTimestamp?: string;
+};
+
+export type TouchlineFantasyLineupMember = {
+  id: string;
+  providerId: string;
+  provider: FootballDataProviderName;
+  fixtureId: string;
+  teamId?: string;
+  teamName?: string;
+  playerId?: string;
+  playerName: string;
+  jerseyNumber?: number;
+  position?: string;
+  positionId?: string;
+  formationPosition?: string;
+  x?: number;
+  y?: number;
+  isStarter?: boolean;
+  isSubstitute?: boolean;
+  isCaptain?: boolean;
+  statistics: TouchlineFantasyPlayerStatistic[];
+  raw?: unknown;
+};
+
+export type TouchlineFantasyPlayerStatistic = {
+  typeId: string;
+  code?: string;
+  name?: string;
+  value?: number | string;
+};
+
+export type TouchlineFantasyFormation = {
+  id: string;
+  providerId: string;
+  provider: FootballDataProviderName;
+  fixtureId: string;
+  teamId?: string;
+  teamName?: string;
+  formation?: string;
+  raw?: unknown;
+};
+
+export type TouchlineFantasySidelinedPlayer = {
+  id: string;
+  providerId: string;
+  provider: FootballDataProviderName;
+  fixtureId: string;
+  teamId?: string;
+  teamName?: string;
+  playerId?: string;
+  playerName?: string;
+  reason?: string;
+  category?: string;
+  raw?: unknown;
+};
+
+export type TouchlineFantasyEvent = {
+  id: string;
+  providerId: string;
+  provider: FootballDataProviderName;
+  fixtureId?: string;
+  teamId?: string;
+  playerId?: string;
+  playerName?: string;
+  relatedPlayerId?: string;
+  relatedPlayerName?: string;
+  type?: string;
+  minute?: number;
+  extraMinute?: number;
+  fantasyPoints?: number;
+  raw?: unknown;
+};
+
+export type TouchlineProviderCapability = {
+  id: string;
+  name?: string;
+  endpoint?: string;
+  available?: boolean;
+  raw?: unknown;
+};
+
+export type TouchlineProviderCapabilities = {
+  provider: FootballDataProviderName;
+  resources: TouchlineProviderCapability[];
+  enrichments: TouchlineProviderCapability[];
+  fetchedAt: string;
+};
+
+export type TouchlineFantasyFixtureFeed = {
+  fixture: TouchlineFixture;
+  lineups: TouchlineFantasyLineupMember[];
+  formations: TouchlineFantasyFormation[];
+  sidelined: TouchlineFantasySidelinedPlayer[];
+  events: TouchlineFantasyEvent[];
+  fetchedAt: string;
+  mediaPolicy: {
+    officialMediaExposed: false;
+    note: string;
+  };
+};
+
 export type FootballRateLimitStatus = {
   configured: boolean;
   limit?: number;
@@ -217,9 +333,11 @@ export interface FootballDataProvider {
   getTeamById(id: string): Promise<FootballDataResult<TouchlineTeam | null>>;
   getCoachById(id: string): Promise<FootballDataResult<TouchlineCoach | null>>;
   getCompetitionById(id: string): Promise<FootballDataResult<TouchlineCompetition | null>>;
+  getSeasonById(id: string): Promise<FootballDataResult<TouchlineSeason | null>>;
   getFixtureById(id: string): Promise<FootballDataResult<TouchlineFixture | null>>;
   getFixturesByDate(params: FixturesByDateParams): Promise<FootballDataResult<TouchlineFixture[]>>;
   getLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
+  getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
   getStandings(params: StandingsParams): Promise<FootballDataResult<TouchlineStandingRow[]>>;
   getTransfers(params: TransfersParams): Promise<FootballDataResult<TouchlineTransfer[]>>;
   getSeasons(competitionId?: string): Promise<FootballDataResult<TouchlineSeason[]>>;
@@ -228,4 +346,8 @@ export interface FootballDataProvider {
   getPlayerStats(params: StatsParams): Promise<FootballDataResult<Record<string, unknown>>>;
   getTeamStats(params: StatsParams): Promise<FootballDataResult<Record<string, unknown>>>;
   getRateLimitStatus(): Promise<FootballDataResult<FootballRateLimitStatus>>;
+  getFixtureBallCoordinates(fixtureId: string): Promise<FootballDataResult<TouchlineBallCoordinate[]>>;
+  getFixtureFantasyFeed(fixtureId: string): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>>;
+  getLiveFantasyEvents(fixtureId?: string): Promise<FootballDataResult<TouchlineFantasyEvent[]>>;
+  getSubscriptionCapabilities(): Promise<FootballDataResult<TouchlineProviderCapabilities>>;
 }

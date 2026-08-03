@@ -1,0 +1,53 @@
+.surface {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(200,255,220,.32);
+  border-radius: 20px;
+  background:
+    linear-gradient(90deg, transparent 49.85%, rgba(235,255,240,.42) 50%, transparent 50.15%),
+    repeating-linear-gradient(90deg, rgba(24,97,57,.88) 0 12.5%, rgba(17,75,45,.9) 12.5% 25%);
+  box-shadow: inset 0 0 70px rgba(0,0,0,.55), 0 18px 42px rgba(0,0,0,.25);
+}
+
+.surface::before {
+  content: "";
+  position: absolute;
+  inset: 0 50% 0 auto;
+  z-index: 1;
+  width: 1px;
+  background: rgba(235,255,240,.45);
+  pointer-events: none;
+}
+
+.surface::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  width: 130px;
+  height: 130px;
+  border: 1px solid rgba(235,255,240,.45);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.box {
+  position: absolute;
+  top: 28%;
+  z-index: 1;
+  width: 12%;
+  height: 44%;
+  border: 1px solid rgba(235,255,240,.45);
+  pointer-events: none;
+}
+
+.boxStart { left: -1px; border-left: 0; }
+.boxEnd { right: -1px; border-right: 0; }
+
+@media (max-width: 760px) {
+  .surface { border-radius: 14px; }
+  .surface::after { width: 82px; height: 82px; }
+}

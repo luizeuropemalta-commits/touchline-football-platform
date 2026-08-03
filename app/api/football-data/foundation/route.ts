@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 
 type FootballDbClient = SupabaseClient;
 
@@ -25,7 +26,11 @@ async function getReadableClient(request: NextRequest): Promise<{ client: Footba
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { client: user ? supabase : null, mode: user ? "authenticated" : "missing" };
+  const hasArenaAccess = hasTouchLineArenaAccess(user);
+  return {
+    client: hasArenaAccess ? supabase : null,
+    mode: hasArenaAccess ? "authenticated" : "missing",
+  };
 }
 
 export async function GET(request: NextRequest) {

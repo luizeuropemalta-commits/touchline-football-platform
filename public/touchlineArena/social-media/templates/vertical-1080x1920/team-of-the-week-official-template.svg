@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-label="TouchLine Team of the Week vertical template">
+  <defs>
+    <radialGradient id="stage" cx="50%" cy="28%" r="78%">
+      <stop offset="0%" stop-color="#a3ff12" stop-opacity=".22"/>
+      <stop offset="48%" stop-color="#07111b" stop-opacity=".92"/>
+      <stop offset="100%" stop-color="#02050a"/>
+    </radialGradient>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#stage)"/>
+  <image href="/touchlineArena/brand/tl-shield-lime.svg" x="486" y="164" width="108" height="108"/>
+  <text x="540" y="370" text-anchor="middle" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="950" letter-spacing="-.055em">TEAM OF THE WEEK</text>
+  <text x="540" y="420" text-anchor="middle" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="950">{{round.name}} · {{formation}}</text>
+  <rect x="90" y="500" width="900" height="1100" rx="46" fill="#03100d" opacity=".74" stroke="#a3ff12" stroke-opacity=".18"/>
+  <g fill="#a3ff12" fill-opacity=".12" stroke="#a3ff12" stroke-opacity=".40" stroke-width="2">
+    <rect x="462" y="550" width="156" height="236" rx="20"/>
+    <rect x="250" y="708" width="126" height="190" rx="16"/>
+    <rect x="704" y="708" width="126" height="190" rx="16"/>
+    <rect x="154" y="940" width="126" height="190" rx="16"/>
+    <rect x="392" y="940" width="126" height="190" rx="16"/>
+    <rect x="562" y="940" width="126" height="190" rx="16"/>
+    <rect x="800" y="940" width="126" height="190" rx="16"/>
+    <rect x="250" y="1188" width="126" height="190" rx="16"/>
+    <rect x="477" y="1188" width="126" height="190" rx="16"/>
+    <rect x="704" y="1188" width="126" height="190" rx="16"/>
+    <rect x="118" y="1288" width="96" height="146" rx="14"/>
+    <rect x="866" y="1288" width="96" height="146" rx="14"/>
+  </g>
+  <text x="540" y="860" text-anchor="middle" fill="#edf8ff" fill-opacity=".54" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="900">CARDS OFICIAIS ENTRAM AQUI</text>
+  <rect x="126" y="1660" width="828" height="92" rx="24" fill="#050b12" opacity=".82" stroke="#edf8ff" stroke-opacity=".10"/>
+  <text x="540" y="1718" text-anchor="middle" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="950">{{topPlayer.name}} · {{topPlayer.points}} TOUCHLINE POINTS</text>
+  <text x="540" y="1812" text-anchor="middle" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="950">TOUCHLINE ENGLAND LEAGUE</text>
+</svg>

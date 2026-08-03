@@ -1,0 +1,80 @@
+{
+  "project": "touchlineArena",
+  "phase": "touchline-first-party-card-system",
+  "rules": {
+    "apiDriven": true,
+    "finalCardTextIsProgrammatic": true,
+    "priceRule": "Card visual tier follows the current market value range table",
+    "premiumLivePortraitMinMarketValue": 50000000
+  },
+  "marketTiers": [
+    {
+      "id": "diamond-gold",
+      "label": "Diamond Gold",
+      "range": "€150M-€300M",
+      "minMarketValue": 150000000,
+      "maxMarketValue": 300000000,
+      "frame": "/touchlineArena/frames/market-tiers/diamond-gold.png"
+    },
+    {
+      "id": "clear-diamond",
+      "label": "Clear Diamond",
+      "range": "€50M-€149M",
+      "minMarketValue": 50000000,
+      "maxMarketValue": 149999999,
+      "frame": "/touchlineArena/frames/market-tiers/clear-diamond.png"
+    },
+    {
+      "id": "emerald-green",
+      "label": "Emerald Green",
+      "range": "€25M-€49.99M",
+      "minMarketValue": 25000000,
+      "maxMarketValue": 49999999,
+      "frame": "/touchlineArena/frames/market-tiers/emerald-green.png"
+    },
+    {
+      "id": "radiant-gold",
+      "label": "Radiant Gold",
+      "range": "€15M-€24.99M",
+      "minMarketValue": 15000000,
+      "maxMarketValue": 24999999,
+      "frame": "/touchlineArena/frames/market-tiers/radiant-gold.png"
+    },
+    {
+      "id": "amethyst-purple",
+      "label": "Amethyst Purple",
+      "range": "€10M-€14.99M",
+      "minMarketValue": 10000000,
+      "maxMarketValue": 14999999,
+      "frame": "/touchlineArena/frames/market-tiers/amethyst-purple.png"
+    },
+    {
+      "id": "sapphire-blue",
+      "label": "Sapphire Blue",
+      "range": "€5M-€9.99M",
+      "minMarketValue": 5000000,
+      "maxMarketValue": 9999999,
+      "frame": "/touchlineArena/frames/market-tiers/sapphire-blue.png"
+    },
+    {
+      "id": "ruby-red",
+      "label": "Ruby Red",
+      "range": "€0-€4.99M",
+      "minMarketValue": 0,
+      "maxMarketValue": 4999999,
+      "frame": "/touchlineArena/frames/market-tiers/ruby-red.png"
+    }
+  ],
+  "specialCards": [
+    {
+      "id": "club_owner",
+      "label": "Club Owner",
+      "frame": "/touchlineArena/frames/special/CLUB OWNER.png"
+    }
+  ],
+  "references": {
+    "approvedPlayerReference": "/touchlineArena/players/haaland/man-city/v1",
+    "cardStudioDefaultAvatar": "/touchlineArena/players/haaland/man-city/v1/approved/card_portrait_transparent.png",
+    "arenaDefaultPlayer": "/touchlineArena/players/haaland/man-city/v1/approved/full_body_static_transparent.png"
+  }
+}

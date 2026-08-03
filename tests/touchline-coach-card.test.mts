@@ -41,26 +41,29 @@ test("keeps an empty coach slot scoreless until provider identity is verified", 
   assert.equal(slot.cardTier, "ruby-red");
   assert.equal(slot.rankingPosition, null);
   assert.equal(slot.apparel, "official-coach-photo-art");
-  assert.equal(slot.cardPriceTc, 1);
+  assert.equal(slot.cardPriceTc, 0);
   assert.equal(touchlineCoachScoreCanBePublished(slot), false);
 });
 
-test("maps the exclusive table of 20 coaches across the same seven player tiers", () => {
+test("maps the 20 current-league coaches from last-season football zones into fixed opening tiers", () => {
   const expected = [
     "diamond-gold",
-    "clear-diamond", "clear-diamond", "clear-diamond",
-    "emerald-green", "emerald-green",
-    "radiant-gold", "radiant-gold",
-    "amethyst-purple", "amethyst-purple", "amethyst-purple", "amethyst-purple", "amethyst-purple",
-    "sapphire-blue", "sapphire-blue", "sapphire-blue",
-    "ruby-red", "ruby-red", "ruby-red", "ruby-red",
+    "clear-diamond", "clear-diamond", "clear-diamond", "clear-diamond",
+    "emerald-green", "emerald-green", "emerald-green",
+    "radiant-gold", "radiant-gold", "radiant-gold", "radiant-gold",
+    "amethyst-purple", "amethyst-purple", "amethyst-purple", "amethyst-purple",
+    "sapphire-blue",
+    "ruby-red", "ruby-red", "ruby-red",
   ];
   assert.equal(TOUCHLINE_COACH_RANKING_SIZE, 20);
   assert.equal(TOUCHLINE_COACH_TIER_BANDS.length, 7);
   assert.deepEqual(Array.from({ length: 20 }, (_, index) => touchlineCoachTierForRankingPosition(index + 1)), expected);
   assert.equal(touchlineCoachTierForRankingPosition(null), "ruby-red");
   assert.equal(touchlineCoachTierForRankingPosition(21), "ruby-red");
-  assert.equal(createTouchlineArenaCoachSlot(verifiedCoach, 1).cardPriceTc, 50);
+  assert.equal(createTouchlineArenaCoachSlot(verifiedCoach, 1).cardPriceTc, 15);
+  assert.equal(createTouchlineArenaCoachSlot(verifiedCoach, 5).cardPriceTc, 10);
+  assert.equal(createTouchlineArenaCoachSlot(verifiedCoach, 17).cardPriceTc, 1);
+  assert.equal(createTouchlineArenaCoachSlot(verifiedCoach, 18).cardPriceTc, 0);
   assert.equal(Object.keys(TOUCHLINE_COACH_CARD_ART).length, 7);
   assert.equal(touchlineCoachCardArtForTier("ruby-red"), "/touchlineArena/cards/coaches/02_red_coach.png");
   assert.equal(touchlineCoachCardArtForTier("diamond-gold"), "/touchlineArena/cards/coaches/07_golddiamond_coach.png");

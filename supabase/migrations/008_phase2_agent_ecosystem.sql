@@ -89,21 +89,6 @@ create table if not exists public.negotiation_files (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.ai_generated_documents (
-  id uuid primary key default gen_random_uuid(),
-  agency_id uuid not null references public.agencies(id) on delete cascade,
-  created_by uuid references public.users(id) on delete set null,
-  target_type text not null default 'workspace' check (target_type in ('workspace', 'player', 'club', 'deal', 'contract')),
-  target_id uuid,
-  document_type text not null check (document_type in ('contract', 'proposal', 'email', 'scouting_report', 'player_presentation', 'bio', 'market_recommendation')),
-  title text not null,
-  content text not null default '',
-  status text not null default 'draft' check (status in ('draft', 'review', 'approved', 'archived')),
-  metadata jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
 create table if not exists public.football_live_items (
   id uuid primary key default gen_random_uuid(),
   agency_id uuid references public.agencies(id) on delete cascade,
@@ -166,10 +151,6 @@ drop trigger if exists negotiation_rooms_updated on public.negotiation_rooms;
 create trigger negotiation_rooms_updated before update on public.negotiation_rooms
   for each row execute function public.touch_updated_at();
 
-drop trigger if exists ai_generated_documents_updated on public.ai_generated_documents;
-create trigger ai_generated_documents_updated before update on public.ai_generated_documents
-  for each row execute function public.touch_updated_at();
-
 drop trigger if exists community_posts_phase2_updated on public.community_posts_phase2;
 create trigger community_posts_phase2_updated before update on public.community_posts_phase2
   for each row execute function public.touch_updated_at();
@@ -180,7 +161,6 @@ alter table public.player_interests enable row level security;
 alter table public.negotiation_rooms enable row level security;
 alter table public.negotiation_messages enable row level security;
 alter table public.negotiation_files enable row level security;
-alter table public.ai_generated_documents enable row level security;
 alter table public.football_live_items enable row level security;
 alter table public.community_posts_phase2 enable row level security;
 alter table public.match_predictions enable row level security;
@@ -209,10 +189,6 @@ drop policy if exists "tenant negotiation files" on public.negotiation_files;
 create policy "tenant negotiation files" on public.negotiation_files
   for all using (agency_id = public.current_agency_id()) with check (agency_id = public.current_agency_id());
 
-drop policy if exists "tenant ai generated documents" on public.ai_generated_documents;
-create policy "tenant ai generated documents" on public.ai_generated_documents
-  for all using (agency_id = public.current_agency_id()) with check (agency_id = public.current_agency_id());
-
 drop policy if exists "tenant football live items" on public.football_live_items;
 create policy "tenant football live items" on public.football_live_items
   for all using (agency_id is null or agency_id = public.current_agency_id()) with check (agency_id = public.current_agency_id());
@@ -231,7 +207,6 @@ grant select, insert, update, delete on public.player_interests to authenticated
 grant select, insert, update, delete on public.negotiation_rooms to authenticated, service_role;
 grant select, insert, update, delete on public.negotiation_messages to authenticated, service_role;
 grant select, insert, update, delete on public.negotiation_files to authenticated, service_role;
-grant select, insert, update, delete on public.ai_generated_documents to authenticated, service_role;
 grant select, insert, update, delete on public.football_live_items to authenticated, service_role;
 grant select, insert, update, delete on public.community_posts_phase2 to authenticated, service_role;
 grant select, insert, update, delete on public.match_predictions to authenticated, service_role;

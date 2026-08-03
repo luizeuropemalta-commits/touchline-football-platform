@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350" role="img" aria-label="TouchLine round result feed template">
+  <defs>
+    <radialGradient id="post" cx="44%" cy="38%" r="84%">
+      <stop offset="0%" stop-color="#edf8ff" stop-opacity=".16"/>
+      <stop offset="42%" stop-color="#163022" stop-opacity=".34"/>
+      <stop offset="100%" stop-color="#02050a"/>
+    </radialGradient>
+  </defs>
+  <rect width="1080" height="1350" fill="#02050a"/>
+  <rect width="1080" height="1350" fill="url(#post)"/>
+  <path d="M0 904 C260 808 446 813 648 879 C804 930 948 924 1080 850 L1080 1350 L0 1350 Z" fill="#06100d" opacity=".92"/>
+  <image href="/touchlineArena/brand/tl-shield-lime.svg" x="72" y="76" width="52" height="52"/>
+  <text x="145" y="108" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="950" letter-spacing=".08em">TOUCHLINE</text>
+  <text x="74" y="240" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="950" letter-spacing=".16em">ROUND RESULT</text>
+  <text x="74" y="350" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="82" font-weight="950" letter-spacing="-.055em">{{fixture.homeCode}}</text>
+  <text x="74" y="442" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="82" font-weight="950" letter-spacing="-.055em">{{fixture.homeScore}}</text>
+  <text x="248" y="442" fill="#edf8ff" fill-opacity=".40" font-family="Arial, Helvetica, sans-serif" font-size="50" font-weight="900">VS</text>
+  <text x="74" y="552" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="82" font-weight="950" letter-spacing="-.055em">{{fixture.awayScore}}</text>
+  <text x="74" y="644" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="82" font-weight="950" letter-spacing="-.055em">{{fixture.awayCode}}</text>
+  <text x="78" y="720" fill="#edf8ff" fill-opacity=".62" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="850">{{fixture.homeClub}} vs {{fixture.awayClub}}</text>
+  <rect x="692" y="398" width="288" height="462" rx="30" fill="#a3ff12" opacity=".10" stroke="#a3ff12" stroke-opacity=".34" stroke-dasharray="10 12"/>
+  <text x="836" y="610" text-anchor="middle" fill="#edf8ff" fill-opacity=".72" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="950">CARD OFICIAL</text>
+  <text x="836" y="642" text-anchor="middle" fill="#edf8ff" fill-opacity=".42" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="800">{{fixture.topPerformer}}</text>
+  <rect x="72" y="1002" width="936" height="138" rx="28" fill="#050b12" opacity=".82" stroke="#edf8ff" stroke-opacity=".10"/>
+  <text x="112" y="1062" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="950" letter-spacing=".14em">MATCH NOTE</text>
+  <text x="112" y="1112" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900">{{editorial.comment}}</text>
+</svg>

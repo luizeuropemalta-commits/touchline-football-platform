@@ -1,5 +1,27 @@
-import Link from "next/link";
 import { AuthForm } from "@/components/auth-form";
 import { AuthLayout } from "@/components/auth-layout";
+import { getTouchLineAuthCopy, normalizeTouchLineAuthLocale } from "@/lib/touchlineArena/auth-i18n";
 
-export default function Login() { return <AuthLayout><p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">Secure access</p><h1 className="font-display mt-3 text-4xl uppercase italic">Enter Touchline</h1><p className="mt-3 text-xs text-slate-500">Your football business workspace is ready.</p><AuthForm mode="login"/><p className="mt-7 text-center text-[10px] text-slate-600">New user? <Link href="/register" className="font-black text-cyan-300">Create your account</Link></p></AuthLayout>; }
+export default async function Login({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string; error?: string; returnTo?: string }>;
+}) {
+  const { lang, error, returnTo } = await searchParams;
+  const locale = normalizeTouchLineAuthLocale(lang);
+  const copy = getTouchLineAuthCopy(locale).login;
+
+  return (
+    <AuthLayout cinematic locale={locale}>
+      <p className="text-[9px] font-black text-cyan-300">{copy.eyebrow}</p>
+      <h1 className="font-display mt-3 text-4xl italic">{copy.title}</h1>
+      <p className="mt-3 text-xs text-slate-500">{copy.description}</p>
+      <AuthForm
+        mode="login"
+        locale={locale}
+        returnTo={returnTo}
+        initialError={error === "auth_callback" ? "auth_callback" : null}
+      />
+    </AuthLayout>
+  );
+}

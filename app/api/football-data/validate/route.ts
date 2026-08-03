@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createFootballDataSyncEngine } from "@/lib/football-data";
 import { createClient } from "@/lib/supabase/server";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 
 export async function GET(request: NextRequest) {
   const authorized = await isAuthorized(request);
@@ -37,5 +38,5 @@ async function isAuthorized(request: NextRequest) {
   if (!supabase) return false;
 
   const { data } = await supabase.auth.getUser();
-  return isOwnerEmail(data.user?.email);
+  return hasTouchLineArenaAccess(data.user) && isOwnerEmail(data.user?.email);
 }

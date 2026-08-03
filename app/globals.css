@@ -12,6 +12,36 @@
   --silver: #c8d7e8;
   --text: #edf8ff;
   --muted: #7e94a6;
+  --touchline-window-height: 100vh;
+  --touchline-visual-viewport-height: 100vh;
+  --touchline-available-height: 100vh;
+  --touchline-small-height: 100vh;
+  --touchline-large-height: 100vh;
+  --touchline-1vh: 1vh;
+  --touchline-safe-area-top: env(safe-area-inset-top);
+  --touchline-safe-area-right: env(safe-area-inset-right);
+  --touchline-safe-area-bottom: env(safe-area-inset-bottom);
+  --touchline-safe-area-left: env(safe-area-inset-left);
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --touchline-window-height: 100dvh;
+    --touchline-visual-viewport-height: 100dvh;
+    --touchline-available-height: 100dvh;
+  }
+}
+
+@supports (height: 100svh) {
+  :root {
+    --touchline-small-height: 100svh;
+  }
+}
+
+@supports (height: 100lvh) {
+  :root {
+    --touchline-large-height: 100lvh;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -21,6 +51,8 @@ html {
   overflow-x: clip;
   background: var(--void);
   scroll-behavior: smooth;
+  scrollbar-color: rgba(144, 205, 52, .72) #030a08;
+  scrollbar-width: thin;
 }
 body {
   width: 100%;
@@ -34,7 +66,9 @@ body {
     linear-gradient(180deg, #050b12 0%, #02050a 58%, #010308 100%);
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
   min-height: 100dvh;
+  min-height: var(--touchline-available-height, 100dvh);
   overflow-x: clip;
 }
 body::before {
@@ -60,10 +94,20 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 }
 ::selection { background: var(--cyan); color: #041019; }
 .font-display { font-family: Arial, Helvetica, sans-serif; font-weight: 800; letter-spacing: 0; }
-::-webkit-scrollbar { width: 7px; height: 7px; }
-::-webkit-scrollbar-track { background: #040a10; }
-::-webkit-scrollbar-thumb { border-radius: 999px; background: linear-gradient(#17364a, #0f5360); }
-::-webkit-scrollbar-thumb:hover { background: linear-gradient(#1d536c, #19a1ad); }
+/* One subdued TouchLine treatment for every visible scrolling surface. Keep
+   the thumb green/graphite: blue tracks were a leftover from the old shell
+   and made nested scrolling areas look like unrelated products. */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #030a08; }
+::-webkit-scrollbar-thumb {
+  border: 1px solid #06110b;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #8bc93d 0%, #4f851e 52%, #234a24 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #b5f35c 0%, #69a92a 52%, #2f622d 100%);
+}
 
 .arena-bg {
   position: relative;
@@ -590,97 +634,6 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   box-shadow: inset 0 0 34px rgba(214,92,255,.12), 0 0 36px rgba(214,92,255,.1);
   animation: touchline-crystal-pulse 3.2s ease-in-out infinite;
 }
-.touchline-premium-avatar {
-  transform-origin: 50% 76%;
-  will-change: transform, filter;
-}
-.touchline-premium-avatar img {
-  position: relative;
-  z-index: 2;
-}
-.touchline-avatar-kit {
-  filter: drop-shadow(0 26px 48px rgba(0,0,0,.66));
-}
-.touchline-avatar-body {
-  position: absolute;
-  left: 50%;
-  top: 24%;
-  height: 72%;
-  width: 56%;
-  transform: translateX(-50%);
-  clip-path: polygon(17% 100%, 9% 58%, 19% 30%, 34% 14%, 43% 7%, 57% 7%, 66% 14%, 81% 30%, 91% 58%, 83% 100%);
-  border-radius: 34% 34% 16% 16%;
-  background:
-    radial-gradient(circle at 50% 18%, rgba(255,255,255,.12), transparent 28%),
-    linear-gradient(92deg, #b70f3d 0 49.2%, #072e91 50.4% 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.08),
-    inset 0 28px 40px rgba(255,255,255,.05),
-    inset 0 -28px 46px rgba(0,0,0,.42),
-    0 0 34px rgba(var(--avatar-rgb),.2);
-}
-.touchline-avatar-body::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    repeating-linear-gradient(90deg, rgba(255,255,255,.065) 0 1px, transparent 1px 11px),
-    linear-gradient(180deg, rgba(255,255,255,.07), transparent 35%);
-  mix-blend-mode: screen;
-  opacity: .72;
-}
-.touchline-avatar-shirt-light {
-  position: absolute;
-  left: 50%;
-  top: 27%;
-  height: 63%;
-  width: 38%;
-  transform: translateX(-50%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
-  opacity: .22;
-  filter: blur(9px);
-}
-.touchline-avatar-arm {
-  position: absolute;
-  top: 38%;
-  height: 48%;
-  width: 24%;
-  border-radius: 999px 999px 36% 36%;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.1), transparent 28%),
-    linear-gradient(92deg, #a20f34, #092876);
-  box-shadow: inset 0 -22px 34px rgba(0,0,0,.42), 0 16px 28px rgba(0,0,0,.34);
-}
-.touchline-avatar-arm-left {
-  left: 8%;
-  transform: rotate(15deg);
-}
-.touchline-avatar-arm-right {
-  right: 8%;
-  transform: rotate(-15deg);
-}
-.touchline-avatar-hand {
-  position: absolute;
-  top: 77%;
-  height: 10%;
-  width: 10%;
-  border-radius: 50%;
-  background: linear-gradient(180deg, #d39a6f, #9f5f3d);
-  box-shadow: inset 0 2px 8px rgba(255,255,255,.18), 0 8px 20px rgba(0,0,0,.45);
-  opacity: .92;
-}
-.touchline-avatar-hand-left { left: 8%; }
-.touchline-avatar-hand-right { right: 8%; }
-.touchline-avatar-rim {
-  z-index: 1;
-  opacity: .72;
-  mix-blend-mode: screen;
-  animation: touchline-avatar-rim 2.9s ease-in-out infinite alternate;
-}
-.touchline-avatar-motion-1 { animation: touchline-avatar-confident 5.2s ease-in-out infinite; }
-.touchline-avatar-motion-2 { animation: touchline-avatar-celebrate 4.8s ease-in-out infinite; }
-.touchline-avatar-motion-3 { animation: touchline-avatar-motion 4.6s ease-in-out infinite; }
-.touchline-avatar-motion-4 { animation: touchline-avatar-smile 5.6s ease-in-out infinite; }
 @keyframes page-in { from { opacity: 0; transform: translateY(10px) scale(.995); } to { opacity: 1; transform: none; } }
 @keyframes item-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes pulse-live { 0%,100% { box-shadow:0 0 0 0 rgba(163,255,18,.45); } 50% { box-shadow:0 0 0 6px rgba(163,255,18,0); } }
@@ -697,22 +650,6 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 @keyframes touchline-crystal-sweep { 0%,54% { transform: translateX(-62%) rotate(8deg); opacity: 0; } 64% { opacity: .92; } 100% { transform: translateX(62%) rotate(8deg); opacity: 0; } }
 @keyframes touchline-crystal-twinkle { 0% { opacity: .38; filter: blur(0); } 50% { opacity: .96; filter: blur(.2px); } 100% { opacity: .58; filter: blur(0); } }
 @keyframes touchline-crystal-pulse { 0%,100% { opacity: .55; box-shadow: inset 0 0 26px rgba(214,92,255,.1), 0 0 20px rgba(214,92,255,.06); } 50% { opacity: .92; box-shadow: inset 0 0 44px rgba(214,92,255,.18), 0 0 44px rgba(104,231,255,.12); } }
-@keyframes touchline-avatar-rim { from { opacity: .38; transform: scale(.98); } to { opacity: .84; transform: scale(1.04); } }
-@keyframes touchlineAvatarBreath {
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-
-  50% {
-    transform: translateX(-50%) translateY(-4px) scale(1.012);
-  }
-}
-@keyframes touchline-avatar-confident { 0%,100% { transform: translateX(-50%) translateY(0) rotate(-.35deg) scale(1); filter: saturate(1.04); } 50% { transform: translateX(-50%) translateY(-4px) rotate(.35deg) scale(1.012); filter: saturate(1.12); } }
-@keyframes touchline-avatar-celebrate { 0%,100% { transform: translateX(-50%) translateY(0) rotate(-.8deg) scale(1); } 42% { transform: translateX(-50%) translateY(-7px) rotate(1.1deg) scale(1.018); } 58% { transform: translateX(-50%) translateY(-3px) rotate(-.3deg) scale(1.01); } }
-@keyframes touchline-avatar-motion { 0%,100% { transform: translateX(-50%) translateY(0) translateZ(0) rotate(.7deg) scale(1.004); } 50% { transform: translateX(calc(-50% + 5px)) translateY(-5px) rotate(-.8deg) scale(1.018); } }
-@keyframes touchline-avatar-smile { 0%,100% { transform: translateX(-50%) translateY(0) scale(1); filter: brightness(1.02); } 50% { transform: translateX(-50%) translateY(-3px) scale(1.014); filter: brightness(1.11) saturate(1.08); } }
-
 .club-owner-card-shell {
   position: relative;
   width: min(74vh, 100%);
@@ -871,7 +808,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 }
 
 /* Live field cards remain the complete official 430x691 product. The component
-   scales one atomic surface, so points, TC value and every statistic stay
+   scales one atomic surface, so points, card price and every statistic stay
    attached to the frame in compact, desktop, mobile and zoom presentations. */
 [data-card-live-scale-mode="atomic-layout"] {
   -webkit-text-size-adjust: none;

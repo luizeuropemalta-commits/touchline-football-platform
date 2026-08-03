@@ -1,0 +1,22 @@
+{
+  "4-3-3": {
+    "goalkeeper": [{ "x": 10, "y": 50, "heightVh": 14 }],
+    "defender": [
+      { "x": 28, "y": 24, "heightVh": 14 },
+      { "x": 18, "y": 38, "heightVh": 14 },
+      { "x": 14, "y": 61, "heightVh": 14 },
+      { "x": 15, "y": 87, "heightVh": 14 }
+    ],
+    "midfielder": [
+      { "x": 40, "y": 36, "heightVh": 14 },
+      { "x": 32, "y": 49, "heightVh": 14 },
+      { "x": 39, "y": 76, "heightVh": 14 }
+    ],
+    "forward": [
+      { "x": 54, "y": 29, "heightVh": 14 },
+      { "x": 66, "y": 49, "heightVh": 14 },
+      { "x": 62, "y": 83, "heightVh": 14 }
+    ]
+  },
+  "4-4-2": {}
+}

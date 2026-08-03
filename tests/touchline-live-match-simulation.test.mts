@@ -71,7 +71,7 @@ test("Live mini cards open one shared central zoom and can return to the pitch",
   );
   assert.match(
     arenaClientSource,
-    /data-card-spotlight=\{isCoachSpotlightOpen \|\| selectedLiveCoachData \|\| selectedLiveSimulationCard \? "open" : "closed"\}/,
+    /data-card-spotlight=\{isCoachSpotlightOpen \|\| selectedLiveCoachData \|\| selectedLiveSimulationCard \|\| spotlightPlayer \? "open" : "closed"\}/,
   );
   assert.match(
     arenaClientSource,
@@ -191,15 +191,14 @@ test("Live opens immediately, prioritizes saved squads and reveals complete card
 });
 
 test("Live never invents a real score and excludes known non-league fixtures", () => {
-  assert.match(arenaClientSource, /function isFallbackLiveFixture\(fixture: TouchlineFixture\)/);
-  assert.match(arenaClientSource, /siteLanguage === "pt-BR" \? "SIMULAÇÃO" : "DEMO"/);
+  assert.doesNotMatch(arenaClientSource, /isFallbackLiveFixture|FALLBACK_LIVE_FIXTURES|"SIMULAÇÃO" : "DEMO"/);
   assert.match(
     arenaClientSource,
-    /function fixtureBoardScore\(fixture: TouchlineFixture\) \{[\s\S]*?isFallbackLiveFixture\(fixture\) \? "2 — 1" : "VS"/,
+    /function fixtureBoardScore\(fixture: TouchlineFixture\) \{[\s\S]*?return "VS"/,
   );
   assert.match(
     arenaClientSource,
-    /function fixtureBoardClock\(fixture: TouchlineFixture, locale: TouchLineLocale\) \{[\s\S]*?isFallbackLiveFixture\(fixture\)\) return "74′"/,
+    /function fixtureBoardClock\(fixture: TouchlineFixture, locale: TouchLineLocale\) \{[\s\S]*?const status = String\(fixture\.status \?\? ""\)\.trim\(\);/,
   );
   assert.match(
     arenaClientSource,

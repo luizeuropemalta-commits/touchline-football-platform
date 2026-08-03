@@ -1,0 +1,94 @@
+.bar {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.back,
+.shortcuts a {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: #f7fff0;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.back {
+  min-height: 46px;
+  gap: 9px;
+  border: 1px solid rgba(163,255,18,.4);
+  border-radius: 999px;
+  padding: 0 20px;
+  background: linear-gradient(135deg, rgba(87,142,20,.58), rgba(7,20,12,.96));
+  box-shadow: 0 0 18px rgba(163,255,18,.12), inset 0 1px rgba(255,255,255,.08);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.back svg {
+  width: 16px;
+  height: 16px;
+  color: #a3ff12;
+}
+
+.shortcuts {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px;
+  scrollbar-width: none;
+}
+
+.shortcuts::-webkit-scrollbar { display: none; }
+
+.shortcuts a {
+  min-height: 30px;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 999px;
+  padding: 0 10px;
+  color: rgba(255,255,255,.68);
+  background: rgba(3,11,10,.66);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .015em;
+}
+
+.shortcuts a svg {
+  width: 12px;
+  height: 12px;
+  color: rgba(163,255,18,.74);
+}
+
+.back:hover,
+.shortcuts a:hover,
+.shortcuts a:active,
+.shortcuts a.isActive {
+  transform: translateY(-1px);
+  border-color: #a3ff12;
+  color: #fff;
+  background: rgba(18,42,25,.92);
+  box-shadow: 0 0 8px rgba(163,255,18,.62), 0 0 24px rgba(163,255,18,.28), inset 0 0 12px rgba(163,255,18,.08);
+}
+
+.shortcuts a.isActive svg { color: #a3ff12; filter: drop-shadow(0 0 6px #a3ff12); }
+
+.back:focus-visible,
+.shortcuts a:focus-visible {
+  outline: 2px solid #a3ff12;
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .bar { align-items: stretch; flex-direction: column; gap: 7px; }
+  .back { min-height: 38px; padding: 0 12px; font-size: 9px; }
+  .shortcuts a { min-height: 28px; padding: 0 9px; font-size: 7.5px; }
+}

@@ -1,0 +1,178 @@
+[
+  {
+    "slug": "haaland",
+    "club": "man-city",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/haaland/man-city/v1/approved/full_body_static_transparent.png",
+    "preview": "/touchlineArena/players/haaland/man-city/v1/approved/full_body_static_black_preview.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "erling-haaland",
+    "club": "man-city",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/haaland/man-city/v1/approved/full_body_static_transparent.png",
+    "preview": "/touchlineArena/players/haaland/man-city/v1/approved/full_body_static_black_preview.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "trent-alexander-arnold",
+    "club": "liverpool",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/trent-alexander-arnold/liverpool/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/trent-alexander-arnold/liverpool/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "ibrahima-konate",
+    "club": "liverpool",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/ibrahima-konate/liverpool/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/ibrahima-konate/liverpool/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "gabriel-magalhaes",
+    "club": "arsenal",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/gabriel-magalhaes/arsenal/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/gabriel-magalhaes/arsenal/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "william-saliba",
+    "club": "arsenal",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/william-saliba/arsenal/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/william-saliba/arsenal/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "aaron-ramsdale",
+    "club": "arsenal",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/aaron-ramsdale/arsenal/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/aaron-ramsdale/arsenal/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "mohamed-salah",
+    "club": "liverpool",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/mohamed-salah/liverpool/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/mohamed-salah/liverpool/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "declan-rice",
+    "club": "arsenal",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/declan-rice/arsenal/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/declan-rice/arsenal/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "martin-odegaard",
+    "club": "arsenal",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/martin-odegaard/arsenal/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/martin-odegaard/arsenal/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "son-heung-min",
+    "club": "tottenham",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/son-heung-min/tottenham/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/son-heung-min/tottenham/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "bukayo-saka",
+    "club": "arsenal",
+    "kind": "cards/portrait",
+    "transparent": "/touchlineArena/players/bukayo-saka/arsenal/v1/approved/cards/portrait/transparent.png",
+    "preview": "/touchlineArena/players/bukayo-saka/arsenal/v1/approved/cards/portrait/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "william-saliba",
+    "club": "arsenal",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/william-saliba/arsenal/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/william-saliba/arsenal/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "trent-alexander-arnold",
+    "club": "liverpool",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/trent-alexander-arnold/liverpool/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/trent-alexander-arnold/liverpool/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "ibrahima-konate",
+    "club": "liverpool",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/ibrahima-konate/liverpool/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/ibrahima-konate/liverpool/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "gabriel-magalhaes",
+    "club": "arsenal",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/gabriel-magalhaes/arsenal/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/gabriel-magalhaes/arsenal/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "aaron-ramsdale",
+    "club": "arsenal",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/aaron-ramsdale/arsenal/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/aaron-ramsdale/arsenal/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "martin-odegaard",
+    "club": "arsenal",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/martin-odegaard/arsenal/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/martin-odegaard/arsenal/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "bukayo-saka",
+    "club": "arsenal",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/bukayo-saka/arsenal/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/bukayo-saka/arsenal/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "declan-rice",
+    "club": "arsenal",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/declan-rice/arsenal/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/declan-rice/arsenal/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "son-heung-min",
+    "club": "tottenham",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/son-heung-min/tottenham/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/son-heung-min/tottenham/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  },
+  {
+    "slug": "mohamed-salah",
+    "club": "liverpool",
+    "kind": "field/full-body",
+    "transparent": "/touchlineArena/players/mohamed-salah/liverpool/v1/approved/field/full-body/transparent.png",
+    "preview": "/touchlineArena/players/mohamed-salah/liverpool/v1/approved/field/full-body/preview-black.png",
+    "sourceArchived": true
+  }
+]

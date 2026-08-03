@@ -4,6 +4,7 @@ import { isOwnerEmail } from "@/lib/admin/owner";
 import { syncSportmonksStarterFoundation } from "@/lib/football-data/starter-sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 
 type SyncAuthResult =
   | { ok: true; mode: "owner_session" | "sync_secret" }
@@ -28,7 +29,7 @@ async function authorize(request: NextRequest): Promise<SyncAuthResult> {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (isOwnerEmail(user?.email)) {
+  if (hasTouchLineArenaAccess(user) && isOwnerEmail(user?.email)) {
     return { ok: true, mode: "owner_session" };
   }
 

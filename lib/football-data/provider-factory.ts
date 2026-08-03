@@ -9,10 +9,14 @@ import type {
   SearchPlayersParams,
   StandingsParams,
   StatsParams,
+  TouchlineBallCoordinate,
   TouchlineCoach,
   TouchlineCompetition,
+  TouchlineFantasyEvent,
+  TouchlineFantasyFixtureFeed,
   TouchlineFixture,
   TouchlinePlayer,
+  TouchlineProviderCapabilities,
   TouchlineSeason,
   TouchlineSquadMember,
   TouchlineStandingRow,
@@ -78,6 +82,10 @@ class PlaceholderFootballProvider implements FootballDataProvider {
     return this.unsupported<TouchlineCompetition | null>();
   }
 
+  getSeasonById(_id: string): Promise<FootballDataResult<TouchlineSeason | null>> {
+    return this.unsupported<TouchlineSeason | null>();
+  }
+
   getFixtureById(_id: string): Promise<FootballDataResult<TouchlineFixture | null>> {
     return this.unsupported<TouchlineFixture | null>();
   }
@@ -87,6 +95,10 @@ class PlaceholderFootballProvider implements FootballDataProvider {
   }
 
   getLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>> {
+    return this.unsupported<TouchlineFixture[]>();
+  }
+
+  getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>> {
     return this.unsupported<TouchlineFixture[]>();
   }
 
@@ -120,5 +132,21 @@ class PlaceholderFootballProvider implements FootballDataProvider {
 
   getRateLimitStatus(): Promise<FootballDataResult<FootballRateLimitStatus>> {
     return this.unsupported<FootballRateLimitStatus>();
+  }
+
+  getFixtureBallCoordinates(_fixtureId: string): Promise<FootballDataResult<TouchlineBallCoordinate[]>> {
+    return this.unsupported<TouchlineBallCoordinate[]>();
+  }
+
+  getFixtureFantasyFeed(_fixtureId: string): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>> {
+    return this.unsupported<TouchlineFantasyFixtureFeed | null>();
+  }
+
+  getLiveFantasyEvents(_fixtureId?: string): Promise<FootballDataResult<TouchlineFantasyEvent[]>> {
+    return this.unsupported<TouchlineFantasyEvent[]>();
+  }
+
+  getSubscriptionCapabilities(): Promise<FootballDataResult<TouchlineProviderCapabilities>> {
+    return this.unsupported<TouchlineProviderCapabilities>();
   }
 }

@@ -1,19 +1,49 @@
 import type { FootballDataProviderName } from "@/lib/football-data/types";
 
+export type FootballDataTimeoutProfile = "live" | "interactive" | "background";
+
+const DEFAULT_TIMEOUT_MS: Record<FootballDataTimeoutProfile, number> = {
+  live: 2_000,
+  interactive: 3_000,
+  background: 15_000,
+};
+
+/**
+ * One timeout policy for every provider adapter. Live and user-facing reads
+ * must fail fast so callers can keep serving their last verified snapshot.
+ */
+export function footballDataTimeoutMs(profile: FootballDataTimeoutProfile) {
+  const envName = `FOOTBALL_DATA_${profile.toUpperCase()}_TIMEOUT_MS`;
+  const configured = Number(process.env[envName]);
+  return Number.isFinite(configured) && configured >= 100 && configured <= 60_000
+    ? configured
+    : DEFAULT_TIMEOUT_MS[profile];
+}
+
 export type FootballDataHttpResponse<T> = {
   ok: boolean;
   status: number;
   data?: T;
   error?: string;
   headers: Headers;
+  fetchedAt: string;
 };
+
+export function footballDataHttpResponseCanBeCached(
+  response: Pick<FootballDataHttpResponse<unknown>, "ok" | "status">,
+) {
+  return response.ok && response.status >= 200 && response.status < 300;
+}
 
 export async function footballDataFetchJson<T>(
   url: URL,
   init: RequestInit & { timeoutMs?: number; provider: FootballDataProviderName },
 ): Promise<FootballDataHttpResponse<T>> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), init.timeoutMs ?? 12_000);
+  const timeout = setTimeout(
+    () => controller.abort(new Error(`${init.provider} request timed out`)),
+    init.timeoutMs ?? footballDataTimeoutMs("background"),
+  );
 
   try {
     const response = await fetch(url, {
@@ -43,6 +73,7 @@ export async function footballDataFetchJson<T>(
       data,
       error,
       headers: response.headers,
+      fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
     return {
@@ -50,6 +81,7 @@ export async function footballDataFetchJson<T>(
       status: 0,
       error: error instanceof Error ? error.message : `${init.provider} request failed`,
       headers: new Headers(),
+      fetchedAt: new Date().toISOString(),
     };
   } finally {
     clearTimeout(timeout);
@@ -75,18 +107,26 @@ export function asNumber(value: unknown): number | undefined {
   return undefined;
 }
 
+export function footballDataErrorHttpStatus(status: number | undefined, fallback = 502): number {
+  if (Number.isInteger(status) && status !== undefined && status >= 400 && status <= 599) {
+    return status;
+  }
+  return fallback;
+}
+
 export function resultOk<T>(
   provider: FootballDataProviderName,
   data: T,
   raw?: unknown,
   cached = false,
+  fetchedAt = new Date().toISOString(),
 ) {
   return {
     ok: true as const,
     data,
     provider,
     cached,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt,
     raw,
   };
 }
@@ -96,11 +136,16 @@ export function resultError(
   code: "not_configured" | "unsupported" | "provider_error" | "not_found" | "invalid_request" | "rate_limited",
   message: string,
   status?: number,
+  details: {
+    retryAfterSeconds?: number;
+    remaining?: number;
+    requestedEntity?: string;
+  } = {},
 ) {
   return {
     ok: false as const,
     provider,
     fetchedAt: new Date().toISOString(),
-    error: { provider, code, message, status },
+    error: { provider, code, message, status, ...details },
   };
 }

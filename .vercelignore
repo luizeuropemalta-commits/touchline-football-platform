@@ -1,0 +1,21 @@
+.next
+node_modules
+.env
+.env.local
+ENV_LOCAL_ATALHO_VISIVEL
+*.log
+.DS_Store
+work
+project-quarantine
+# Local package cache and audit deliveries are never runtime inputs. Excluding
+# them keeps Vercel deployments limited to the executable TouchLine product.
+.pnpm-store
+docs
+exports
+TOUCHLINE_VISUAL_AUDIT_2026-07-31
+TOUCHLINE_VISUAL_AUDIT_2026-07-31 2
+TOUCHLINE_VISUAL_AUDIT_2026-07-31.zip
+TOUCHLINE_VISUAL_AUDIT_2026-07-31_COMPACT
+TOUCHLINE_VISUAL_AUDIT_2026-07-31_COMPACT.zip
+# Pacotes locais de auditoria: são entregas para download, não assets do app.
+TOUCHLINE_VISUAL_AUDIT_*.zip

@@ -1,163 +1,210 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  Activity,
   AlertTriangle,
-  Building2,
+  BarChart3,
   CheckCircle2,
-  Crown,
+  CircleDollarSign,
+  Clock3,
   Database,
   ExternalLink,
-  FileText,
-  KeyRound,
-  Link2,
-  LockKeyhole,
+  Gift,
+  Layers3,
   Radio,
   ShieldCheck,
   Sparkles,
+  Trophy,
   Users,
+  WalletCards,
 } from "lucide-react";
-import { AdminOwnerActions } from "@/components/admin-owner-actions";
-import { GamePanel, LivePill, StatTile } from "@/components/game-ui";
-import { isOwnerEmail, ownerGrantSubscriptionId } from "@/lib/admin/owner";
-import { planMap, type PlanKey } from "@/lib/billing/plans";
+
+import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
+import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
 
 export const dynamic = "force-dynamic";
 
-type PublicUser = {
+type QueryError = { message: string };
+type ReadResult<T> = { data: T; error: string | null };
+type CountResult = { value: number; error: string | null };
+type HealthStatus = "READY" | "CONFIGURED_NOT_VERIFIED" | "NOT_CONFIGURED_YET" | "PARTIALLY_IMPLEMENTED" | "ERROR";
+
+type PublicUserRow = {
   id: string;
-  agency_id: string | null;
   full_name: string | null;
-  role: string | null;
-  job_title: string | null;
   created_at: string | null;
 };
 
-type SubscriptionRow = {
+type AnalyticsSessionRow = {
   user_id: string;
-  stripe_subscription_id: string;
-  plan_key: string | null;
-  status: string | null;
-  billing_interval: string | null;
-  current_period_end: string | null;
-  metadata: unknown;
-  created_at: string | null;
+  active_seconds: number | null;
+  last_seen_at: string;
+  current_area: string;
+  device_class: string;
 };
 
-type AgencyRow = { id: string; name: string | null };
-type PlayerRow = { id: string; first_name: string | null; last_name: string | null; position: string | null; created_at: string | null };
-type RadarRow = { id: string; title: string | null; url: string | null; category: string | null; created_at: string | null };
-type AlertRow = { id: string; title: string; message: string; type: string; created_at: string };
-type HealthStatus = "READY" | "NOT_CONFIGURED_YET" | "PARTIALLY_IMPLEMENTED" | "ERROR";
+type BetaGrantRow = {
+  user_id: string;
+  slot_number: number;
+  amount_tc: number;
+  granted_at: string;
+};
+
+type ArenaStateRow = {
+  user_id: string;
+  formation_key: string;
+  updated_at: string;
+};
+
+type SyncRunRow = {
+  id: string;
+  provider: string;
+  sync_type: string;
+  status: string;
+  records_created: number;
+  records_updated: number;
+  started_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+};
+
+type CardInventoryRow = {
+  id: string;
+  player_name: string;
+  frame_color: string;
+  card_status: string;
+  sale_status: string;
+  updated_at: string | null;
+};
+
+type CreditLedgerRow = {
+  id: string;
+  user_id: string;
+  amount_cents: number;
+  currency: string;
+  entry_type: string;
+  reason: string;
+  created_at: string;
+};
+
 type HealthCheck = {
-  area: string;
   name: string;
-  purpose: string;
-  configured: boolean;
-  required: "Required" | "Optional" | "Required for billing" | "Required for automation" | "Required for football data";
-  status: HealthStatus;
   detail: string;
+  status: HealthStatus;
 };
 
-const stripePriceEnvKeys = [
-  "STRIPE_PRICE_STARTER_AGENT_MONTHLY",
-  "STRIPE_PRICE_STARTER_AGENT_YEARLY",
-  "STRIPE_PRICE_PRO_AGENT_MONTHLY",
-  "STRIPE_PRICE_PRO_AGENT_YEARLY",
-  "STRIPE_PRICE_ELITE_AGENCY_MONTHLY",
-  "STRIPE_PRICE_ELITE_AGENCY_YEARLY",
-  "STRIPE_PRICE_CLUB_BASIC_MONTHLY",
-  "STRIPE_PRICE_CLUB_BASIC_YEARLY",
-  "STRIPE_PRICE_CLUB_PRO_MONTHLY",
-  "STRIPE_PRICE_CLUB_PRO_YEARLY",
-  "STRIPE_PRICE_CLUB_ELITE_MONTHLY",
-  "STRIPE_PRICE_CLUB_ELITE_YEARLY",
-  "STRIPE_PRICE_ACADEMY_MONTHLY",
-  "STRIPE_PRICE_ACADEMY_YEARLY",
-  "STRIPE_PRICE_FOUNDER_YEARLY",
-] as const;
-
-function envValue(name: string) {
-  return process.env[name]?.trim() ?? "";
+async function safeRows<T>(
+  query: PromiseLike<{ data: T[] | null; error: QueryError | null }>,
+): Promise<ReadResult<T[]>> {
+  try {
+    const { data, error } = await query;
+    return error ? { data: [], error: error.message } : { data: data ?? [], error: null };
+  } catch (error) {
+    return { data: [], error: error instanceof Error ? error.message : "Read unavailable" };
+  }
 }
 
-function isPlaceholder(value: string) {
-  const lower = value.toLowerCase();
-  return (
-    !value ||
-    value === "price_" ||
-    lower.includes("your-") ||
-    lower.includes("your_") ||
-    lower.includes("replace-with") ||
-    lower.includes("example.com")
-  );
+async function safeCount(
+  query: PromiseLike<{ count: number | null; error: QueryError | null }>,
+): Promise<CountResult> {
+  try {
+    const { count, error } = await query;
+    return error ? { value: 0, error: error.message } : { value: count ?? 0, error: null };
+  } catch (error) {
+    return { value: 0, error: error instanceof Error ? error.message : "Count unavailable" };
+  }
 }
 
 function hasEnv(name: string) {
-  return !isPlaceholder(envValue(name));
+  const value = process.env[name]?.trim();
+  if (!value) return false;
+  const normalized = value.toLowerCase();
+  return !normalized.includes("replace-with") && !normalized.includes("your_") && !normalized.includes("your-");
 }
 
-function statusText(status: HealthStatus) {
-  if (status === "NOT_CONFIGURED_YET") return "Not Configured Yet";
-  if (status === "PARTIALLY_IMPLEMENTED") return "Partially Implemented";
-  return status === "READY" ? "Ready" : "Error";
+function supabaseTargetsMatch() {
+  const publicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const adminUrl = process.env.SUPABASE_URL?.trim();
+  if (!publicUrl || !adminUrl) return true;
+
+  try {
+    return new URL(publicUrl).origin === new URL(adminUrl).origin;
+  } catch {
+    return false;
+  }
 }
 
-function statusClasses(status: HealthStatus) {
-  if (status === "READY") return "border-[#a3ff12]/20 bg-[#a3ff12]/10 text-[#caff6d]";
-  if (status === "ERROR") return "border-rose-300/25 bg-rose-300/10 text-rose-200";
-  if (status === "PARTIALLY_IMPLEMENTED") return "border-amber-300/25 bg-amber-300/10 text-amber-200";
-  return "border-cyan-300/20 bg-cyan-300/[.07] text-cyan-100";
-}
-
-function statusIcon(status: HealthStatus) {
-  if (status === "READY") return <CheckCircle2 size={16} className="text-[#a3ff12]" />;
-  if (status === "ERROR") return <AlertTriangle size={16} className="text-rose-300" />;
-  return <AlertTriangle size={16} className={status === "PARTIALLY_IMPLEMENTED" ? "text-amber-300" : "text-cyan-300"} />;
-}
-
-function healthStatus(checks: HealthCheck[]): HealthStatus {
-  if (checks.some((check) => check.status === "ERROR")) return "ERROR";
-  if (checks.some((check) => check.status === "PARTIALLY_IMPLEMENTED")) return "PARTIALLY_IMPLEMENTED";
-  if (checks.some((check) => check.status === "NOT_CONFIGURED_YET")) return "NOT_CONFIGURED_YET";
-  return "READY";
+function countText(result: CountResult) {
+  return result.error ? "—" : String(result.value);
 }
 
 function dateLabel(value?: string | null) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", year: "numeric" }).format(new Date(value));
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-function fullName(user?: PublicUser) {
-  return user?.full_name?.trim() || "Unnamed user";
-}
-
-function playerName(player: PlayerRow) {
-  return `${player.first_name ?? ""} ${player.last_name ?? ""}`.trim() || "Unnamed player";
-}
-
-async function safeCount(query: PromiseLike<{ count: number | null; error: { message: string } | null }>) {
+function money(cents: number, currency = "EUR") {
   try {
-    const { count, error } = await query;
-    if (error) return 0;
-    return count ?? 0;
+    return new Intl.NumberFormat("en-GB", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(cents / 100);
   } catch {
-    return 0;
+    return `${(cents / 100).toFixed(2)} ${currency.toUpperCase()}`;
   }
 }
 
-export default async function AdminOwnerPanel() {
+function healthText(status: HealthStatus) {
+  if (status === "READY") return "Ready";
+  if (status === "CONFIGURED_NOT_VERIFIED") return "Configured, not verified";
+  if (status === "ERROR") return "Error";
+  if (status === "PARTIALLY_IMPLEMENTED") return "Partially ready";
+  return "Not configured yet";
+}
+
+function healthClasses(status: HealthStatus) {
+  if (status === "READY") return "border-[#a3ff12]/20 bg-[#a3ff12]/10 text-[#caff6d]";
+  if (status === "ERROR") return "border-rose-300/25 bg-rose-300/10 text-rose-200";
+  if (status === "PARTIALLY_IMPLEMENTED" || status === "CONFIGURED_NOT_VERIFIED") return "border-amber-300/25 bg-amber-300/10 text-amber-200";
+  return "border-cyan-300/20 bg-cyan-300/[.07] text-cyan-100";
+}
+
+function healthIcon(status: HealthStatus) {
+  if (status === "READY") return <CheckCircle2 size={16} className="text-[#a3ff12]" />;
+  if (status === "ERROR") return <AlertTriangle size={16} className="text-rose-300" />;
+  return <AlertTriangle size={16} className={status === "NOT_CONFIGURED_YET" ? "text-cyan-300" : "text-amber-300"} />;
+}
+
+function schemaStatus(errors: Array<string | null>): HealthStatus {
+  const failures = errors.filter(Boolean).length;
+  if (failures === 0) return "READY";
+  return failures === errors.length ? "ERROR" : "PARTIALLY_IMPLEMENTED";
+}
+
+export default async function AdminOwnerPanel({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = (await searchParams) ?? {};
+  const locale = normalizeTouchLineAuthLocale(typeof params.lang === "string" ? params.lang : null);
   const supabase = await createClient();
   const admin = createAdminClient();
 
-  if (!supabase || !admin) {
+  if (!supabase) {
     return (
       <div className="mx-auto max-w-[1200px]">
         <GamePanel className="p-8">
-          <p className="text-[9px] font-black uppercase tracking-[.2em] text-rose-300">Admin unavailable</p>
-          <h1 className="mt-2 text-3xl font-black uppercase italic text-white">Supabase admin client is not configured</h1>
-          <p className="mt-3 max-w-2xl text-xs leading-6 text-slate-500">Add the public Supabase URL, anon key and service role key in Vercel to activate the owner control room.</p>
+          <LivePill>Configuration required</LivePill>
+          <h1 className="mt-5 text-4xl font-black italic text-white">Arena Owner Control</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+            Supabase public credentials and the protected service role are required before the Arena owner panel can read operational data.
+          </p>
         </GamePanel>
       </div>
     );
@@ -171,9 +218,12 @@ export default async function AdminOwnerPanel() {
     return (
       <div className="mx-auto max-w-[1200px]">
         <GamePanel className="p-8">
-          <p className="text-[9px] font-black uppercase tracking-[.2em] text-cyan-300">Login required</p>
-          <h1 className="mt-2 text-3xl font-black uppercase italic text-white">Owner access requires login</h1>
-          <Link href="/login" className="mt-6 inline-flex h-11 items-center rounded-2xl bg-[#a3ff12] px-5 text-[9px] font-black uppercase text-[#071007]">Login</Link>
+          <LivePill>Owner area</LivePill>
+          <h1 className="mt-5 text-4xl font-black italic text-white">Arena Owner Control</h1>
+          <p className="mt-3 max-w-2xl text-sm text-slate-400">Sign in with the TouchLine owner account to continue.</p>
+          <Link href={touchLineAuthEntryHref("/login", locale, touchLineAuthHref("/admin", locale))} className="mt-6 inline-flex rounded-2xl bg-[#a3ff12] px-5 py-3 text-xs font-black text-black">
+            Sign in
+          </Link>
         </GamePanel>
       </div>
     );
@@ -181,297 +231,274 @@ export default async function AdminOwnerPanel() {
 
   if (!isOwnerEmail(user.email)) notFound();
 
+  if (!admin) {
+    return (
+      <div className="mx-auto max-w-[1200px]">
+        <GamePanel className="p-8">
+          <LivePill>Configuration required</LivePill>
+          <h1 className="mt-5 text-4xl font-black italic text-white">Arena Owner Control</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+            The protected Supabase administration client is required before operational data can be read.
+          </p>
+        </GamePanel>
+      </div>
+    );
+  }
+
+  let authUsers: Array<{
+    id: string;
+    email?: string;
+    created_at: string;
+    last_sign_in_at?: string;
+  }> = [];
+  let authUsersError: string | null = null;
+
+  try {
+    const authResult = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    authUsers = authResult.data?.users ?? [];
+    authUsersError = authResult.error?.message ?? null;
+  } catch (error) {
+    authUsersError = error instanceof Error ? error.message : "Auth users unavailable";
+  }
+
   const [
-    authResult,
-    publicUsersResult,
-    agenciesResult,
-    subscriptionsResult,
-    playersResult,
-    radarResult,
-    alertsResult,
-    totalAgencies,
-    totalPlayers,
-    totalClubs,
-    totalGlobalProfiles,
-    totalGlobalLinks,
-    totalDocuments,
-    activeSubscriptions,
-    pendingReviews,
-    billingCustomersCheck,
-    billingInvoicesCheck,
-    webhookEventsCheck,
-    founderSlotsCheck,
-    globalLinksTableCheck,
-    transfermarktRegistryTableCheck,
-    authenticatedUsersCheck,
-    authenticatedPlayersCheck,
+    publicUsers,
+    sessions,
+    betaGrants,
+    arenaStates,
+    syncRuns,
+    recentCards,
+    ledger,
+    registeredUsers,
+    footballPlayers,
+    footballClubs,
+    footballCompetitions,
+    footballSquadMembers,
+    cardInventory,
+    activeContracts,
+    marketOrders,
+    analyticsSessions,
+    betaGrantCount,
+    arenaStateCount,
+    creditLedgerCount,
   ] = await Promise.all([
-    admin.auth.admin.listUsers({ page: 1, perPage: 100 }),
-    admin.from("users").select("id, agency_id, full_name, role, job_title, created_at").order("created_at", { ascending: false }).limit(100),
-    admin.from("agencies").select("id, name").limit(500),
-    admin.from("billing_subscriptions").select("user_id, stripe_subscription_id, plan_key, status, billing_interval, current_period_end, metadata, created_at").order("created_at", { ascending: false }).limit(200),
-    admin.from("players").select("id, first_name, last_name, position, created_at").order("created_at", { ascending: false }).limit(8),
-    admin.from("market_radar_links").select("id, title, url, category, created_at").order("created_at", { ascending: false }).limit(8),
-    admin.from("billing_alerts").select("id, title, message, type, created_at").is("resolved_at", null).order("created_at", { ascending: false }).limit(8),
-    safeCount(admin.from("agencies").select("id", { count: "exact", head: true })),
-    safeCount(admin.from("players").select("id", { count: "exact", head: true })),
-    safeCount(admin.from("clubs").select("id", { count: "exact", head: true })),
-    safeCount(admin.from("global_player_profiles").select("id", { count: "exact", head: true })),
-    safeCount(admin.from("global_football_links").select("id", { count: "exact", head: true })),
-    safeCount(admin.from("player_documents").select("id", { count: "exact", head: true })),
-    safeCount(admin.from("billing_subscriptions").select("id", { count: "exact", head: true }).in("status", ["active", "trialing", "past_due"])),
-    safeCount(admin.from("representation_admin_reviews").select("id", { count: "exact", head: true }).in("review_status", ["requested", "documents_requested", "disputed"])),
-    admin.from("billing_customers").select("user_id", { count: "exact", head: true }),
-    admin.from("billing_invoices").select("id", { count: "exact", head: true }),
-    admin.from("stripe_webhook_events").select("stripe_event_id", { count: "exact", head: true }),
-    admin.from("founder_plan_slots").select("user_id", { count: "exact", head: true }),
-    admin.from("global_football_links").select("id", { count: "exact", head: true }),
-    admin.from("transfermarkt_entities").select("id", { count: "exact", head: true }),
-    supabase.from("users").select("id", { count: "exact", head: true }),
-    supabase.from("players").select("id", { count: "exact", head: true }),
+    safeRows<PublicUserRow>(
+      admin.from("users").select("id,full_name,created_at").order("created_at", { ascending: false }).limit(12).returns<PublicUserRow[]>(),
+    ),
+    safeRows<AnalyticsSessionRow>(
+      admin
+        .from("touchline_analytics_sessions")
+        .select("user_id,active_seconds,last_seen_at,current_area,device_class")
+        .order("last_seen_at", { ascending: false })
+        .limit(2500)
+        .returns<AnalyticsSessionRow[]>(),
+    ),
+    safeRows<BetaGrantRow>(
+      admin
+        .from("touchline_beta_tc_grants")
+        .select("user_id,slot_number,amount_tc,granted_at")
+        .order("slot_number", { ascending: true })
+        .limit(20)
+        .returns<BetaGrantRow[]>(),
+    ),
+    safeRows<ArenaStateRow>(
+      admin
+        .from("touchline_user_arena_state")
+        .select("user_id,formation_key,updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(100)
+        .returns<ArenaStateRow[]>(),
+    ),
+    safeRows<SyncRunRow>(
+      admin
+        .from("football_data_sync_runs")
+        .select("id,provider,sync_type,status,records_created,records_updated,started_at,completed_at,error_message")
+        .order("started_at", { ascending: false })
+        .limit(8)
+        .returns<SyncRunRow[]>(),
+    ),
+    safeRows<CardInventoryRow>(
+      admin
+        .from("touchline_card_inventory")
+        .select("id,player_name,frame_color,card_status,sale_status,updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(8)
+        .returns<CardInventoryRow[]>(),
+    ),
+    safeRows<CreditLedgerRow>(
+      admin
+        .from("clubowner_credit_ledger")
+        .select("id,user_id,amount_cents,currency,entry_type,reason,created_at")
+        .order("created_at", { ascending: false })
+        .limit(12)
+        .returns<CreditLedgerRow[]>(),
+    ),
+    safeCount(admin.from("users").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("football_players").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("football_clubs").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("football_competitions").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("football_squad_members").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("touchline_card_inventory").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("touchline_card_contracts").select("id", { count: "exact", head: true }).eq("status", "active")),
+    safeCount(admin.from("touchline_market_orders").select("id", { count: "exact", head: true }).eq("status", "completed")),
+    safeCount(admin.from("touchline_analytics_sessions").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("touchline_beta_tc_grants").select("id", { count: "exact", head: true })),
+    safeCount(admin.from("touchline_user_arena_state").select("user_id", { count: "exact", head: true })),
+    safeCount(admin.from("clubowner_credit_ledger").select("id", { count: "exact", head: true })),
   ]);
 
-  const authUsers = authResult.data?.users ?? [];
-  const publicUsers = (publicUsersResult.data ?? []) as PublicUser[];
-  const agencies = (agenciesResult.data ?? []) as AgencyRow[];
-  const subscriptions = (subscriptionsResult.data ?? []) as SubscriptionRow[];
-  const players = (playersResult.data ?? []) as PlayerRow[];
-  const radarLinks = (radarResult.data ?? []) as RadarRow[];
-  const alerts = (alertsResult.data ?? []) as AlertRow[];
+  const profileById = new Map(publicUsers.data.map((profile) => [profile.id, profile]));
+  const grantByUser = new Map(betaGrants.data.map((grant) => [grant.user_id, grant]));
+  const arenaStateByUser = new Map(arenaStates.data.map((state) => [state.user_id, state]));
 
-  const profilesById = new Map(publicUsers.map((profile) => [profile.id, profile]));
-  const agenciesById = new Map(agencies.map((agency) => [agency.id, agency.name || "Unnamed agency"]));
-  const latestSubByUser = new Map<string, SubscriptionRow>();
-  subscriptions.forEach((subscription) => {
-    if (!latestSubByUser.has(subscription.user_id)) latestSubByUser.set(subscription.user_id, subscription);
+  // Server timestamps intentionally represent the instant this protected dashboard is requested.
+  // eslint-disable-next-line react-hooks/purity
+  const requestTime = Date.now();
+  const activeCutoff = requestTime - 2 * 60_000;
+  const dailyCutoff = requestTime - 24 * 60 * 60_000;
+  const activeNow = new Set(
+    sessions.data
+      .filter((session) => Date.parse(session.last_seen_at) >= activeCutoff)
+      .map((session) => session.user_id),
+  ).size;
+  const dailyActive = new Set(
+    sessions.data
+      .filter((session) => Date.parse(session.last_seen_at) >= dailyCutoff)
+      .map((session) => session.user_id),
+  ).size;
+  const activeSeconds = sessions.data.reduce((total, session) => total + Number(session.active_seconds ?? 0), 0);
+  const areaTotals = new Map<string, number>();
+  sessions.data.forEach((session) => {
+    areaTotals.set(session.current_area, (areaTotals.get(session.current_area) ?? 0) + Number(session.active_seconds ?? 0));
   });
+  const topAreas = [...areaTotals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  const supabaseEnvReady = hasEnv("NEXT_PUBLIC_SUPABASE_URL") && hasEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  const supabaseAdminReady = hasEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const supabaseQueryErrors = [
-    authResult.error,
-    publicUsersResult.error,
-    agenciesResult.error,
-    playersResult.error,
-  ].filter(Boolean);
-  const billingTableErrors = [
-    subscriptionsResult.error,
-    alertsResult.error,
-    billingCustomersCheck.error,
-    billingInvoicesCheck.error,
-    webhookEventsCheck.error,
-    founderSlotsCheck.error,
-  ].filter(Boolean);
-  const authenticatedAccessErrors = [
-    authenticatedUsersCheck.error,
-    authenticatedPlayersCheck.error,
-  ].filter(Boolean);
-  const stripeSecretConfigured = hasEnv("STRIPE_SECRET_KEY");
-  const stripeWebhookConfigured = hasEnv("STRIPE_WEBHOOK_SECRET");
-  const stripeSecretLooksValid = !stripeSecretConfigured || /^sk_(test|live)_/.test(envValue("STRIPE_SECRET_KEY"));
-  const stripeWebhookLooksValid = !stripeWebhookConfigured || envValue("STRIPE_WEBHOOK_SECRET").startsWith("whsec_");
-  const configuredPriceKeys = stripePriceEnvKeys.filter((key) => hasEnv(key));
-  const stripeAllPricesConfigured = configuredPriceKeys.length === stripePriceEnvKeys.length;
-  const marketSyncSecretConfigured = hasEnv("MARKET_SYNC_SECRET") || hasEnv("CRON_SECRET");
+  const footballSchema = schemaStatus([
+    footballPlayers.error,
+    footballClubs.error,
+    footballCompetitions.error,
+    footballSquadMembers.error,
+    syncRuns.error,
+  ]);
+  const arenaSchema = schemaStatus([
+    sessions.error,
+    betaGrants.error,
+    arenaStates.error,
+    recentCards.error,
+    ledger.error,
+    cardInventory.error,
+    activeContracts.error,
+    marketOrders.error,
+    analyticsSessions.error,
+    betaGrantCount.error,
+    arenaStateCount.error,
+    creditLedgerCount.error,
+  ]);
+  const supabaseReady =
+    hasEnv("NEXT_PUBLIC_SUPABASE_URL") &&
+    hasEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY") &&
+    hasEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseProjectsAligned = supabaseTargetsMatch();
+  const supabaseReadError = Boolean(authUsersError || registeredUsers.error || publicUsers.error);
+  const ownerAllowlistConfigured = hasEnv("TOUCHLINE_OWNER_EMAILS");
   const sportmonksConfigured = hasEnv("SPORTMONKS_API_TOKEN");
-
-  const stripeSystemStatus: HealthStatus = !stripeSecretConfigured && !stripeWebhookConfigured && configuredPriceKeys.length === 0
-    ? "NOT_CONFIGURED_YET"
-    : billingTableErrors.length || !stripeSecretLooksValid || !stripeWebhookLooksValid
-      ? "ERROR"
-      : stripeSecretConfigured && stripeWebhookConfigured && stripeAllPricesConfigured
-        ? "READY"
-        : "PARTIALLY_IMPLEMENTED";
-
-  const supabaseSystemStatus: HealthStatus = !supabaseEnvReady || !supabaseAdminReady
-    ? "NOT_CONFIGURED_YET"
-    : supabaseQueryErrors.length
-      ? "ERROR"
-      : "READY";
-
-  const marketSyncStatus: HealthStatus = !marketSyncSecretConfigured
-    ? "NOT_CONFIGURED_YET"
-    : sportmonksConfigured
-      ? "READY"
-      : "PARTIALLY_IMPLEMENTED";
-  const linkIndexStatus: HealthStatus = globalLinksTableCheck.error
-    ? "PARTIALLY_IMPLEMENTED"
-    : marketSyncSecretConfigured
-      ? "READY"
-      : "NOT_CONFIGURED_YET";
-  const transfermarktRegistryStatus: HealthStatus = transfermarktRegistryTableCheck.error ? "NOT_CONFIGURED_YET" : "READY";
+  const stripeSecretReady = hasEnv("STRIPE_SECRET_KEY");
+  const stripeWebhookReady = hasEnv("STRIPE_WEBHOOK_SECRET");
 
   const healthChecks: HealthCheck[] = [
     {
-      area: "Supabase",
-      name: "Supabase environment",
-      purpose: "Frontend auth, server sessions and service-role admin operations.",
-      configured: supabaseEnvReady && supabaseAdminReady,
-      required: "Required",
-      status: supabaseSystemStatus,
-      detail: supabaseSystemStatus === "READY"
-        ? "Public URL, anon key and service role are present; auth/admin queries returned successfully."
-        : supabaseSystemStatus === "ERROR"
-          ? `Supabase query returned an error: ${supabaseQueryErrors[0]?.message ?? "unknown"}`
-          : "Add NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY.",
+      name: "Supabase protected reads",
+      status: !supabaseReady ? "NOT_CONFIGURED_YET" : !supabaseProjectsAligned || supabaseReadError ? "ERROR" : "READY",
+      detail: !supabaseReady
+        ? "Public URL, anon key and service role are required."
+        : !supabaseProjectsAligned
+          ? "Public authentication and protected administration are configured for different Supabase projects."
+          : supabaseReadError
+            ? "A protected authentication or database read failed. No server error detail is exposed here."
+            : "The current owner session and protected database reads were validated server-side.",
     },
     {
-      area: "Supabase",
-      name: "Protected route/auth flow",
-      purpose: "Login, registration, session persistence and private route redirects.",
-      configured: supabaseEnvReady,
-      required: "Required",
-      status: supabaseEnvReady && authenticatedAccessErrors.length === 0 ? "READY" : supabaseEnvReady ? "ERROR" : "NOT_CONFIGURED_YET",
-      detail: supabaseEnvReady && authenticatedAccessErrors.length === 0
-        ? "SSR cookie sessions, protected routes and authenticated Supabase reads are working. Google OAuth is optional and controlled separately."
-        : supabaseEnvReady
-          ? `Authenticated Supabase/RLS check failed: ${authenticatedAccessErrors[0]?.message ?? "unknown"}`
-        : "Supabase public URL/key are required before auth flows can work.",
+      name: "Owner access boundary",
+      status: ownerAllowlistConfigured ? "READY" : "PARTIALLY_IMPLEMENTED",
+      detail: ownerAllowlistConfigured
+        ? "The current session passed the explicit server-side owner allowlist."
+        : "The current session passed the built-in fallback. Configure an explicit deployment owner allowlist before release.",
     },
     {
-      area: "Supabase",
-      name: "RLS policy access check",
-      purpose: "Confirms authenticated users can read their permitted user/player records without service-role bypass.",
-      configured: supabaseEnvReady,
-      required: "Required",
-      status: !supabaseEnvReady ? "NOT_CONFIGURED_YET" : authenticatedAccessErrors.length ? "ERROR" : "READY",
-      detail: authenticatedAccessErrors.length
-        ? `Authenticated client query failed: ${authenticatedAccessErrors[0]?.message ?? "unknown"}`
-        : "Authenticated client queries ran through RLS without errors. Deeper policy review still lives in Supabase migrations.",
+      name: "Official football schema",
+      status: footballSchema,
+      detail: footballSchema === "READY"
+        ? "Normalized competitions, clubs, players, squads and sync history are readable."
+        : footballSchema === "ERROR"
+          ? "All checked football_* reads failed; coverage values are unavailable rather than zero."
+          : "One or more football_* reads failed; unaffected sections remain available.",
     },
     {
-      area: "Stripe",
-      name: "Stripe billing system",
-      purpose: "Checkout, portal, webhook processing, subscriptions, invoices and billing alerts.",
-      configured: stripeSecretConfigured || stripeWebhookConfigured || configuredPriceKeys.length > 0,
-      required: "Required for billing",
-      status: stripeSystemStatus,
-      detail: stripeSystemStatus === "READY"
-        ? "Stripe secret, webhook secret, all monthly/yearly price IDs and billing tables are configured."
-        : stripeSystemStatus === "NOT_CONFIGURED_YET"
-          ? "Stripe code and tables exist, but billing environment variables are not configured yet."
-          : stripeSystemStatus === "PARTIALLY_IMPLEMENTED"
-            ? `Stripe is partially configured: ${configuredPriceKeys.length}/${stripePriceEnvKeys.length} price IDs set; webhook=${stripeWebhookConfigured ? "set" : "not set"}; secret=${stripeSecretConfigured ? "set" : "not set"}.`
-            : billingTableErrors.length
-              ? `Billing table check failed: ${billingTableErrors[0]?.message ?? "unknown"}`
-              : "Stripe environment value appears invalid. Check key prefixes and price IDs.",
+      name: "Arena operational schema",
+      status: arenaSchema,
+      detail: arenaSchema === "READY"
+        ? "Cards, contracts, orders, analytics, legacy grant audit rows, state and credit ledger are readable."
+        : arenaSchema === "ERROR"
+          ? "All checked Arena operational reads failed; affected values are shown as unavailable."
+          : "One or more Arena operational reads failed; affected values are shown as unavailable.",
     },
     {
-      area: "Stripe",
-      name: "Stripe webhook endpoint",
-      purpose: "Synchronizes subscriptions, invoices, payment failures and trial alerts.",
-      configured: stripeWebhookConfigured,
-      required: "Required for billing",
-      status: !stripeSecretConfigured && !stripeWebhookConfigured
-        ? "NOT_CONFIGURED_YET"
-        : billingTableErrors.length || (stripeWebhookConfigured && !stripeWebhookLooksValid)
-          ? "ERROR"
-          : stripeWebhookConfigured
-            ? "READY"
-            : "PARTIALLY_IMPLEMENTED",
-      detail: stripeWebhookConfigured
-        ? "Webhook route exists at /api/stripe/webhook and validates Stripe signatures before syncing billing tables."
-        : stripeSecretConfigured
-          ? "Stripe secret exists, but the webhook secret is not configured yet. Billing can start checkout, but subscription/invoice sync is not complete."
-          : "Webhook is not configured yet. This is not an app error until live Stripe billing is expected.",
-    },
-    {
-      area: "Stripe",
-      name: "Subscription feature restrictions",
-      purpose: "Controls plan-based access to premium routes and upgrade prompts.",
-      configured: true,
-      required: "Required for billing",
-      status: "PARTIALLY_IMPLEMENTED",
-      detail: "Plan restriction code exists in proxy.ts, but beta full access is currently enabled so you can test the full platform as owner/beta.",
-    },
-    {
-      area: "Sportmonks",
-      name: "Sportmonks football data provider",
-      purpose: "Only active football data API provider for normalized football records.",
-      configured: sportmonksConfigured,
-      required: "Required for football data",
-      status: sportmonksConfigured ? "READY" : "NOT_CONFIGURED_YET",
+      name: "Sportmonks configuration",
+      status: sportmonksConfigured ? "CONFIGURED_NOT_VERIFIED" : "NOT_CONFIGURED_YET",
       detail: sportmonksConfigured
-        ? "Sportmonks token is configured. UI reads normalized Touchline football tables, not provider APIs directly."
-        : "Add SPORTMONKS_API_TOKEN before running football data sync.",
+        ? "A server token is configured. Connectivity and subscription entitlement are not probed by this page."
+        : "SPORTMONKS_API_TOKEN is not configured.",
     },
     {
-      area: "Market Sync",
-      name: "Market sync automation",
-      purpose: "Vercel cron calls secure sync endpoints with a bearer secret.",
-      configured: marketSyncSecretConfigured,
-      required: "Required for automation",
-      status: marketSyncStatus,
-      detail: marketSyncStatus === "READY"
-        ? "Cron routes exist, a sync secret is configured, and at least one provider key/source is available."
-        : marketSyncStatus === "PARTIALLY_IMPLEMENTED"
-          ? "Cron routes and secret exist, but Sportmonks is not configured for football data refresh."
-          : "Cron routes are implemented, but MARKET_SYNC_SECRET or CRON_SECRET is not configured yet.",
-    },
-    {
-      area: "Legacy Link Index",
-      name: "Archived football link index",
-      purpose: "Legacy fallback for public links already discovered inside Touchline activity.",
-      configured: marketSyncSecretConfigured,
-      required: "Required for automation",
-      status: linkIndexStatus,
-      detail: globalLinksTableCheck.error
-        ? `Link index migration needs to be applied in Supabase: ${globalLinksTableCheck.error.message}`
-        : marketSyncSecretConfigured
-          ? "Legacy link index route exists and can run from Vercel Cron, but the new product direction is Football Data first."
-          : "Configure MARKET_SYNC_SECRET or CRON_SECRET so the daily link indexer can run securely.",
-    },
-    {
-      area: "Legacy Link Registry",
-      name: "Archived public link registry",
-      purpose: "Stores legacy public profile links, IDs, preview images and sync status without copying a full external database.",
-      configured: !transfermarktRegistryTableCheck.error,
-      required: "Required for automation",
-      status: transfermarktRegistryStatus,
-      detail: transfermarktRegistryTableCheck.error
-        ? `Apply migration 012_transfermarkt_link_registry.sql in Supabase: ${transfermarktRegistryTableCheck.error.message}`
-        : "Registry tables exist. This is now a legacy owner tool; Football Data Center is the active model.",
-    },
-    {
-      area: "Owner Admin",
-      name: "Owner/admin access control",
-      purpose: "Restricts the owner panel and manual beta access grants.",
-      configured: true,
-      required: "Required",
-      status: "PARTIALLY_IMPLEMENTED",
-      detail: "Owner access is controlled by TOUCHLINE_OWNER_EMAILS or the default owner email. The first registered user is not automatically promoted to owner.",
+      name: "Stripe configuration",
+      status: stripeSecretReady && stripeWebhookReady
+        ? "CONFIGURED_NOT_VERIFIED"
+        : stripeSecretReady || stripeWebhookReady
+          ? "PARTIALLY_IMPLEMENTED"
+          : "NOT_CONFIGURED_YET",
+      detail: stripeSecretReady && stripeWebhookReady
+        ? "Server and webhook credentials are configured, but connectivity and webhook delivery are not probed here."
+        : stripeSecretReady || stripeWebhookReady
+          ? "Only part of the generic Stripe server configuration is present."
+          : "Generic Stripe server and webhook configuration is not present.",
     },
   ];
 
-  const envTable: HealthCheck[] = [
-    { area: "Env", name: "NEXT_PUBLIC_SUPABASE_URL", purpose: "Supabase project URL for auth and database.", configured: hasEnv("NEXT_PUBLIC_SUPABASE_URL"), required: "Required", status: hasEnv("NEXT_PUBLIC_SUPABASE_URL") ? "READY" : "NOT_CONFIGURED_YET", detail: "Required for frontend and server Supabase clients." },
-    { area: "Env", name: "NEXT_PUBLIC_SUPABASE_ANON_KEY", purpose: "Public anon/publishable Supabase key.", configured: hasEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"), required: "Required", status: hasEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY") ? "READY" : "NOT_CONFIGURED_YET", detail: "Required for login, register and sessions." },
-    { area: "Env", name: "SUPABASE_SERVICE_ROLE_KEY", purpose: "Server-only admin database operations.", configured: hasEnv("SUPABASE_SERVICE_ROLE_KEY"), required: "Required", status: hasEnv("SUPABASE_SERVICE_ROLE_KEY") ? "READY" : "NOT_CONFIGURED_YET", detail: "Never expose this key in frontend code." },
-    { area: "Env", name: "NEXT_PUBLIC_ENABLE_GOOGLE_AUTH", purpose: "Shows/enables the Google login button.", configured: envValue("NEXT_PUBLIC_ENABLE_GOOGLE_AUTH") === "true", required: "Optional", status: envValue("NEXT_PUBLIC_ENABLE_GOOGLE_AUTH") === "true" ? "PARTIALLY_IMPLEMENTED" : "NOT_CONFIGURED_YET", detail: "Only enable after Google provider is enabled in Supabase Auth." },
-    { area: "Env", name: "STRIPE_SECRET_KEY", purpose: "Stripe Checkout and Billing Portal server key.", configured: stripeSecretConfigured, required: "Required for billing", status: stripeSecretConfigured ? (stripeSecretLooksValid ? "READY" : "ERROR") : "NOT_CONFIGURED_YET", detail: "Required before paid checkout can work." },
-    { area: "Env", name: "STRIPE_WEBHOOK_SECRET", purpose: "Validates Stripe webhook signatures.", configured: stripeWebhookConfigured, required: "Required for billing", status: stripeWebhookConfigured ? (stripeWebhookLooksValid ? "READY" : "ERROR") : "NOT_CONFIGURED_YET", detail: "Required before subscription/invoice state can sync automatically." },
-    { area: "Env", name: "STRIPE_PRICE_*", purpose: "Monthly/yearly Stripe prices for all plans.", configured: stripeAllPricesConfigured, required: "Required for billing", status: stripeAllPricesConfigured ? "READY" : configuredPriceKeys.length ? "PARTIALLY_IMPLEMENTED" : "NOT_CONFIGURED_YET", detail: `${configuredPriceKeys.length}/${stripePriceEnvKeys.length} Stripe price IDs configured.` },
-    { area: "Env", name: "MARKET_SYNC_SECRET / CRON_SECRET", purpose: "Protects scheduled sync endpoints.", configured: marketSyncSecretConfigured, required: "Required for automation", status: marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Required for Vercel Cron to call sync endpoints securely." },
-    { area: "Env", name: "TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED", purpose: "Legacy fallback only for old saved public links.", configured: envValue("TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED") !== "false", required: "Optional", status: envValue("TRANSFERMARKT_PROFILE_ENRICHMENT_ENABLED") === "false" ? "NOT_CONFIGURED_YET" : "READY", detail: "Not part of the official Sportmonks-first architecture. Prefer Football Data Provider for new records." },
-    { area: "Env", name: "TRANSFERMARKT_SYNC_ENABLED", purpose: "Legacy opt-in switch for archived public-link checks.", configured: envValue("TRANSFERMARKT_SYNC_ENABLED") === "true", required: "Optional", status: envValue("TRANSFERMARKT_SYNC_ENABLED") === "true" ? "READY" : "NOT_CONFIGURED_YET", detail: "Keep disabled unless a controlled legacy-link maintenance task is required." },
-    { area: "Env", name: "TRANSFERMARKT_SYNC_SECRET", purpose: "Protects legacy /api/market-links/sync fallback.", configured: hasEnv("TRANSFERMARKT_SYNC_SECRET"), required: "Optional", status: hasEnv("TRANSFERMARKT_SYNC_SECRET") || marketSyncSecretConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Can fall back to MARKET_SYNC_SECRET or CRON_SECRET when legacy sync is explicitly enabled." },
-    { area: "Env", name: "TRANSFERMARKT_RATE_LIMIT_MS", purpose: "Safety delay for legacy public-link checks.", configured: hasEnv("TRANSFERMARKT_RATE_LIMIT_MS"), required: "Optional", status: "READY", detail: "Defaults to 2500ms. New football data should use the provider layer instead." },
-    { area: "Env", name: "TOUCHLINE_LINK_INDEX_*", purpose: "Optional daily limits for automatic internal link indexing.", configured: hasEnv("TOUCHLINE_LINK_INDEX_DAILY_LIMIT") || hasEnv("TOUCHLINE_LINK_INDEX_SYNC_LIMIT"), required: "Optional", status: "READY", detail: "Defaults to 1000 links/day if not set. This indexes Touchline activity, not external site crawling." },
-    { area: "Env", name: "SPORTMONKS_API_TOKEN", purpose: "Sportmonks server token for the only active football data API provider.", configured: sportmonksConfigured, required: "Required for football data", status: sportmonksConfigured ? "READY" : "NOT_CONFIGURED_YET", detail: "Required before football provider sync can run." },
-    { area: "Env", name: "SPORTMONKS_BASE_URL", purpose: "Sportmonks football API base URL.", configured: hasEnv("SPORTMONKS_BASE_URL"), required: "Optional", status: "READY", detail: "Defaults to the official Sportmonks v3 football endpoint when not set." },
-    { area: "Env", name: "TOUCHLINE_OWNER_EMAILS", purpose: "Comma-separated owner emails.", configured: hasEnv("TOUCHLINE_OWNER_EMAILS"), required: "Optional", status: hasEnv("TOUCHLINE_OWNER_EMAILS") ? "READY" : "PARTIALLY_IMPLEMENTED", detail: "If missing, the app falls back to the built-in default owner email." },
+  const overallHealth: HealthStatus = healthChecks.some((check) => check.status === "ERROR")
+    ? "ERROR"
+    : healthChecks.some((check) => check.status === "PARTIALLY_IMPLEMENTED")
+      ? "PARTIALLY_IMPLEMENTED"
+      : healthChecks.some((check) => check.status === "NOT_CONFIGURED_YET")
+        ? "NOT_CONFIGURED_YET"
+        : healthChecks.some((check) => check.status === "CONFIGURED_NOT_VERIFIED")
+          ? "CONFIGURED_NOT_VERIFIED"
+          : "READY";
+
+  const linkCards = [
+    { href: "/admin/cards", label: "Card Inventory", detail: "Art, publication and supply", icon: Layers3 },
+    { href: "/admin/analytics", label: "Arena Analytics", detail: "ClubOwner activity and retention", icon: BarChart3 },
+    { href: "/admin/promotions", label: "Promotions", detail: "Campaigns and credit ledger", icon: Gift },
+    { href: "/admin/football-data", label: "Football Data", detail: "Sportmonks normalization", icon: Database },
+    { href: "/admin/finance", label: "Finance Control", detail: "Protected financial overview", icon: CircleDollarSign },
   ];
 
-  const reportItems = [
-    ["Stripe", healthStatus(healthChecks.filter((item) => item.area === "Stripe")), "Checkout, billing portal and webhook code exist. Billing is ready only when secret, webhook and every Stripe price ID are configured."],
-    ["Supabase", supabaseSystemStatus, "Database, auth users and admin queries are checked against the live Supabase client used by the page."],
-    ["Sportmonks", sportmonksConfigured ? "READY" : "NOT_CONFIGURED_YET", sportmonksConfigured ? "Only active football data API provider is configured." : "Configure SPORTMONKS_API_TOKEN for football data sync."],
-    ["Market Sync", marketSyncStatus, "Cron routes are implemented in vercel.json. Full data refresh depends on a sync secret and a configured provider."],
-    ["Legacy Link Index", linkIndexStatus, "The old link-index system remains as a safe fallback only. New football discovery should use Football Search, Sportmonks and the Football Data Center."],
-    ["Authentication", supabaseEnvReady ? "READY" : "NOT_CONFIGURED_YET", "Password login/register/session cookies are implemented. Google OAuth is optional and should stay disabled until Supabase provider setup is complete."],
-    ["Owner Admin", "PARTIALLY_IMPLEMENTED", "Owner email protection and manual beta grants exist. First registered user is not auto-owner; full role management can be expanded later."],
-  ] as Array<[string, HealthStatus, string]>;
-
+  const recentAuthUsers = authUsers.slice(0, 10);
+  const ledgerNetCents = ledger.data.reduce((total, entry) => total + Number(entry.amount_cents || 0), 0);
+  const registeredUsersText = registeredUsers.error
+    ? authUsersError ? "—" : String(authUsers.length)
+    : String(registeredUsers.value);
+  const footballCoverage = [
+    { label: "Competitions", result: footballCompetitions },
+    { label: "Clubs", result: footballClubs },
+    { label: "Players", result: footballPlayers },
+    { label: "Squad rows", result: footballSquadMembers },
+  ];
+  const economyCoverage = [
+    { label: "Completed orders", result: marketOrders },
+    { label: "Active contracts", result: activeContracts },
+    { label: "Saved Arenas", result: arenaStateCount },
+    { label: "Ledger entries", result: creditLedgerCount },
+  ];
   const supabaseRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
 
   return (
@@ -479,152 +506,126 @@ export default async function AdminOwnerPanel() {
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <LivePill>Owner control room</LivePill>
-            <span className="rounded-full border border-amber-300/25 bg-amber-300/[.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[.15em] text-amber-200">Admin access active</span>
+            <LivePill>Arena owner control</LivePill>
+            <span className={`rounded-full border px-3 py-1.5 text-[8px] font-black ${healthClasses(overallHealth)}`}>
+              {healthText(overallHealth)}
+            </span>
           </div>
-          <h1 className="font-display text-4xl uppercase italic text-white sm:text-[52px]">Admin Owner Panel</h1>
+          <h1 className="font-display text-4xl italic text-white sm:text-[52px]">TouchLine Owner Panel</h1>
           <p className="mt-2 max-w-3xl text-xs leading-6 text-slate-500">
-            Your private operating cockpit for users, access, billing health, database coverage and football ecosystem readiness.
+            Read-only command center for ClubOwners, official football data, Arena operations, cards, engagement and credits.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {supabaseRef && (
-            <Link href={`https://supabase.com/dashboard/project/${supabaseRef}`} target="_blank" className="inline-flex h-11 items-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 text-[9px] font-black uppercase text-cyan-100">
-              Supabase <ExternalLink size={13} />
-            </Link>
-          )}
-          <Link href="https://dashboard.stripe.com/test/dashboard" target="_blank" className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase text-[#caff6d]">
-            Stripe <ExternalLink size={13} />
+        {supabaseRef ? (
+          <Link
+            href={`https://supabase.com/dashboard/project/${supabaseRef}`}
+            target="_blank"
+            className="inline-flex h-11 items-center gap-2 self-start rounded-2xl border border-cyan-300/20 bg-cyan-300/[.07] px-4 text-[9px] font-black text-cyan-100"
+          >
+            Supabase project <ExternalLink size={13} />
           </Link>
-        </div>
+        ) : null}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
-        <StatTile icon={Users} label="Auth Users" value={String(authUsers.length)} delta="loaded users" accent="cyan" />
-        <StatTile icon={Building2} label="Agencies" value={String(totalAgencies)} delta="workspaces" accent="lime" />
-        <StatTile icon={Building2} label="Clubs" value={String(totalClubs)} delta="club records" accent="cyan" />
-        <StatTile icon={Crown} label="Active Access" value={String(activeSubscriptions)} delta="subs/grants" accent="gold" />
-        <StatTile icon={Radio} label="Players" value={String(totalPlayers)} delta="local vault" accent="cyan" />
-        <StatTile icon={Database} label="Global Profiles" value={String(totalGlobalProfiles)} delta="search index" accent="lime" />
-        <StatTile icon={Link2} label="Legacy Links" value={String(totalGlobalLinks)} delta="archived fallback" accent="cyan" />
-        <StatTile icon={AlertTriangle} label="Reviews" value={String(pendingReviews)} delta="needs admin" accent={pendingReviews ? "rose" : "gold"} />
+        <StatTile icon={Users} label="ClubOwners" value={registeredUsersText} delta={registeredUsersText === "—" ? "read unavailable" : "registered"} accent={registeredUsersText === "—" ? "rose" : "cyan"} />
+        <StatTile icon={Radio} label="Active now" value={sessions.error ? "—" : String(activeNow)} delta={sessions.error ? "read unavailable" : "last 2 min"} accent={sessions.error ? "rose" : "lime"} />
+        <StatTile icon={Activity} label="Daily active" value={sessions.error ? "—" : String(dailyActive)} delta={sessions.error ? "read unavailable" : "last 24h"} accent={sessions.error ? "rose" : "cyan"} />
+        <StatTile icon={Trophy} label="Legacy grants" value={betaGrantCount.error ? "—" : String(betaGrantCount.value)} delta={betaGrantCount.error ? "read unavailable" : "historical only"} accent={betaGrantCount.error ? "rose" : "gold"} />
+        <StatTile icon={Database} label="Players" value={countText(footballPlayers)} delta={footballPlayers.error ? "read unavailable" : "football_*"} accent={footballPlayers.error ? "rose" : "cyan"} />
+        <StatTile icon={ShieldCheck} label="Clubs" value={countText(footballClubs)} delta={footballClubs.error ? "read unavailable" : "normalized"} accent={footballClubs.error ? "rose" : "lime"} />
+        <StatTile icon={Sparkles} label="Cards" value={countText(cardInventory)} delta={cardInventory.error ? "read unavailable" : "inventory"} accent={cardInventory.error ? "rose" : "gold"} />
+        <StatTile icon={WalletCards} label="Contracts" value={countText(activeContracts)} delta={activeContracts.error ? "read unavailable" : "active"} accent="rose" />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.45fr_.85fr]">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        {linkCards.map(({ href, label, detail, icon: Icon }) => (
+          <Link
+            key={href}
+            href={touchLineAuthHref(href, locale)}
+            className="glass glass-hover group rounded-2xl border border-white/[.07] p-4 transition hover:border-[#a3ff12]/25"
+          >
+            <span className="grid size-9 place-items-center rounded-xl border border-[#a3ff12]/20 bg-[#a3ff12]/[.07] text-[#a3ff12]">
+              <Icon size={16} />
+            </span>
+            <p className="mt-4 text-xs font-black text-white">{label}</p>
+            <p className="mt-1 text-[9px] leading-4 text-slate-600">{detail}</p>
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[1.25fr_.75fr]">
         <GamePanel className="overflow-hidden">
           <div className="border-b border-white/[.07] p-5">
-            <div className="flex items-center gap-3">
-              <div className="grid size-10 place-items-center rounded-2xl border border-[#a3ff12]/20 bg-[#a3ff12]/10 text-[#a3ff12]"><KeyRound size={18} /></div>
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[.18em] text-[#a3ff12]">Access Control</p>
-                <h2 className="mt-1 text-xl font-black uppercase italic text-white">Users & manual beta grants</h2>
-              </div>
-            </div>
+            <p className="text-[9px] font-black text-[#a3ff12]">ClubOwner access</p>
+            <h2 className="mt-1 text-xl font-black italic text-white">Recent registered users</h2>
+            <p className="mt-2 text-[10px] leading-5 text-slate-500">
+              Read-only identity overview. Historical access grants and saved Arena state are shown independently of authentication.
+            </p>
           </div>
           <div className="divide-y divide-white/[.06]">
-            {authUsers.map((authUser) => {
-              const profile = profilesById.get(authUser.id);
-              const subscription = latestSubByUser.get(authUser.id);
-              const ownerGrantActive = subscription?.stripe_subscription_id === ownerGrantSubscriptionId(authUser.id) && ["active", "trialing", "past_due"].includes(subscription.status ?? "");
-              const planName = subscription?.plan_key && subscription.plan_key in planMap ? planMap[subscription.plan_key as PlanKey].name : "No active plan";
-              const agencyName = profile?.agency_id ? agenciesById.get(profile.agency_id) : null;
-
+            {recentAuthUsers.map((authUser) => {
+              const profile = profileById.get(authUser.id);
+              const grant = grantByUser.get(authUser.id);
+              const arenaState = arenaStateByUser.get(authUser.id);
               return (
-                <div key={authUser.id} className="grid gap-4 p-5 lg:grid-cols-[1fr_210px_340px] lg:items-center">
+                <div key={authUser.id} className="grid gap-3 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-black uppercase italic text-white">{fullName(profile)}</p>
-                      {isOwnerEmail(authUser.email) && <span className="rounded-lg border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-[7px] font-black uppercase tracking-wider text-amber-200">Owner</span>}
-                      {ownerGrantActive && <span className="rounded-lg border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-2 py-1 text-[7px] font-black uppercase tracking-wider text-[#caff6d]">Manual grant</span>}
+                      <p className="truncate text-xs font-black text-white">{profile?.full_name?.trim() || authUser.email || "ClubOwner"}</p>
+                      {isOwnerEmail(authUser.email) ? (
+                        <span className="rounded-lg border border-amber-300/20 bg-amber-300/[.08] px-2 py-1 text-[7px] font-black text-amber-200">
+                          Owner
+                        </span>
+                      ) : null}
                     </div>
-                    <p className="mt-1 truncate text-[10px] text-slate-500">{authUser.email ?? "No email"} · {agencyName ?? "No agency loaded"}</p>
-                    <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-700">Joined {dateLabel(authUser.created_at)}</p>
+                    <p className="mt-1 truncate text-[9px] text-slate-600">{authUser.email ?? "Email unavailable"} · joined {dateLabel(authUser.created_at)}</p>
                   </div>
-                  <div>
-                    <p className="text-[8px] font-black uppercase tracking-[.16em] text-slate-600">Plan status</p>
-                    <p className="mt-1 text-[11px] font-black uppercase text-cyan-100">{planName}</p>
-                    <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{subscription?.status ?? "no subscription"} · {subscription?.billing_interval ?? "—"}</p>
-                  </div>
-                  <AdminOwnerActions userId={authUser.id} ownerGrantActive={ownerGrantActive} />
+                  <span className={`w-fit rounded-lg border px-2 py-1 text-[8px] font-black ${grant ? "border-[#a3ff12]/20 bg-[#a3ff12]/[.07] text-[#caff6d]" : "border-white/[.08] text-slate-600"}`}>
+                    {grant ? `Legacy grant #${grant.slot_number}` : "No legacy grant"}
+                  </span>
+                  <span className={`w-fit rounded-lg border px-2 py-1 text-[8px] font-black ${arenaState ? "border-cyan-300/20 bg-cyan-300/[.06] text-cyan-100" : "border-white/[.08] text-slate-600"}`}>
+                    {arenaState ? `${arenaState.formation_key} saved` : "Arena not saved"}
+                  </span>
                 </div>
               );
             })}
-            {!authUsers.length && <div className="p-8 text-center text-xs text-slate-500">No users found yet.</div>}
+            {!recentAuthUsers.length ? (
+              <p className="p-8 text-center text-xs text-slate-500">
+                {authUsersError ? "Authenticated users are temporarily unavailable." : "No ClubOwners registered yet."}
+              </p>
+            ) : null}
           </div>
         </GamePanel>
 
         <GamePanel className="p-5">
           <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[.08] text-cyan-300"><ShieldCheck size={18} /></div>
+            <div className="grid size-10 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[.08] text-cyan-300">
+              <ShieldCheck size={18} />
+            </div>
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-300">System Health</p>
-              <h2 className="mt-1 text-xl font-black uppercase italic text-white">Live operational audit</h2>
+              <p className="text-[9px] font-black text-cyan-300">Operational health</p>
+              <h2 className="mt-1 text-xl font-black italic text-white">Protected read audit</h2>
             </div>
           </div>
-          <div className={`mt-5 rounded-2xl border p-4 ${statusClasses(healthStatus(healthChecks))}`}>
-            <p className="text-[8px] font-black uppercase tracking-[.18em] opacity-70">Overall platform status</p>
-            <p className="mt-1 text-sm font-black uppercase italic">{statusText(healthStatus(healthChecks))}</p>
-            <p className="mt-2 text-[10px] leading-5 opacity-70">Unconfigured optional systems are reported as Not Configured Yet, not as errors.</p>
+          <div className={`mt-5 rounded-2xl border p-4 ${healthClasses(overallHealth)}`}>
+            <p className="text-[8px] font-black opacity-70">Overall state</p>
+            <p className="mt-1 text-sm font-black italic">{healthText(overallHealth)}</p>
+            <p className="mt-2 text-[10px] leading-5 opacity-70">
+              Readiness reflects only the protected checks shown below. Configured integrations remain unverified until a targeted connectivity check runs.
+            </p>
           </div>
-          <div className="mt-5 space-y-2">
+          <div className="mt-4 space-y-2">
             {healthChecks.map((check) => (
-              <div key={`${check.area}-${check.name}`} className="flex items-start gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-3">
-                <div className="mt-0.5">{statusIcon(check.status)}</div>
+              <div key={check.name} className="flex items-start gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] p-3">
+                <div className="mt-0.5">{healthIcon(check.status)}</div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[8px] font-black uppercase tracking-[.16em] text-cyan-300/65">{check.area}</p>
-                  <p className="mt-0.5 text-[10px] font-black uppercase text-white">{check.name}</p>
-                  <p className="mt-1 text-[8px] font-bold uppercase leading-4 tracking-wider text-slate-600">{check.detail}</p>
+                  <p className="text-[10px] font-black text-white">{check.name}</p>
+                  <p className="mt-1 text-[8px] leading-4 text-slate-600">{check.detail}</p>
                 </div>
-                <span className={`shrink-0 rounded-lg border px-2 py-1 text-[7px] font-black uppercase tracking-wider ${statusClasses(check.status)}`}>{statusText(check.status)}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 rounded-2xl border border-cyan-300/15 bg-cyan-300/[.045] p-4">
-            <p className="text-[9px] font-black uppercase tracking-[.16em] text-cyan-200">Route protection</p>
-            <p className="mt-2 text-[10px] leading-5 text-slate-500">Dashboard, football search, players, agencies, clubs, documents, calendar, reports, verification, billing and admin routes are private. The admin page checks owner email before loading data. Subscription feature gates currently allow beta full access in code.</p>
-          </div>
-          <Link href="/admin/football-data" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 px-4 text-[9px] font-black uppercase tracking-[.14em] text-[#caff72] transition hover:bg-[#a3ff12]/15">
-            <Database size={14} />
-            Open Football Data Center
-          </Link>
-        </GamePanel>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
-        <GamePanel className="overflow-hidden">
-          <div className="border-b border-white/[.07] p-5">
-            <p className="text-[9px] font-black uppercase tracking-[.18em] text-cyan-300">Environment Variable Audit</p>
-            <h2 className="mt-1 text-xl font-black uppercase italic text-white">Configuration matrix</h2>
-            <p className="mt-2 text-[10px] leading-5 text-slate-500">Secret values are never displayed. This table only checks whether values appear configured and whether they look like placeholders.</p>
-          </div>
-          <div className="divide-y divide-white/[.06]">
-            {envTable.map((item) => (
-              <div key={item.name} className="grid gap-3 p-4 text-[10px] sm:grid-cols-[1.15fr_1.3fr_120px_150px] sm:items-center">
-                <div>
-                  <p className="font-black uppercase text-white">{item.name}</p>
-                  <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{item.required}</p>
-                </div>
-                <p className="text-[9px] leading-5 text-slate-500">{item.purpose}</p>
-                <span className={`w-fit rounded-lg border px-2 py-1 text-[7px] font-black uppercase tracking-wider ${item.configured ? "border-[#a3ff12]/20 bg-[#a3ff12]/10 text-[#caff6d]" : "border-cyan-300/20 bg-cyan-300/[.07] text-cyan-100"}`}>
-                  {item.configured ? "Configured" : "Not set"}
+                <span className={`shrink-0 rounded-lg border px-2 py-1 text-[7px] font-black ${healthClasses(check.status)}`}>
+                  {healthText(check.status)}
                 </span>
-                <span className={`w-fit rounded-lg border px-2 py-1 text-[7px] font-black uppercase tracking-wider ${statusClasses(item.status)}`}>{statusText(item.status)}</span>
-              </div>
-            ))}
-          </div>
-        </GamePanel>
-
-        <GamePanel className="p-5">
-          <p className="text-[9px] font-black uppercase tracking-[.18em] text-amber-300">Audit Report</p>
-          <h2 className="mt-1 text-xl font-black uppercase italic text-white">What is real vs pending</h2>
-          <div className="mt-5 space-y-3">
-            {reportItems.map(([name, status, detail]) => (
-              <div key={name} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[11px] font-black uppercase italic text-white">{name}</p>
-                  <span className={`shrink-0 rounded-lg border px-2 py-1 text-[7px] font-black uppercase tracking-wider ${statusClasses(status)}`}>{statusText(status)}</span>
-                </div>
-                <p className="mt-2 text-[10px] leading-5 text-slate-500">{detail}</p>
               </div>
             ))}
           </div>
@@ -633,61 +634,114 @@ export default async function AdminOwnerPanel() {
 
       <div className="grid gap-5 xl:grid-cols-3">
         <GamePanel className="p-5">
-          <div className="mb-4 flex items-center gap-3"><Sparkles size={17} className="text-cyan-300" /><h2 className="text-sm font-black uppercase italic text-white">Recent players</h2></div>
-          <div className="space-y-2">
-            {players.map((player) => (
-              <Link key={player.id} href={`/players/${player.id}`} className="block rounded-2xl border border-white/[.07] bg-white/[.025] p-3 transition hover:border-cyan-300/25">
-                <p className="text-[11px] font-black uppercase text-white">{playerName(player)}</p>
-                <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{player.position ?? "Position unavailable"} · {dateLabel(player.created_at)}</p>
-              </Link>
-            ))}
-            {!players.length && <p className="rounded-2xl border border-white/[.07] p-4 text-xs text-slate-500">No players created yet.</p>}
-          </div>
-        </GamePanel>
-
-        <GamePanel className="p-5">
-          <div className="mb-4 flex items-center gap-3"><Link2 size={17} className="text-[#a3ff12]" /><h2 className="text-sm font-black uppercase italic text-white">Recent legacy links</h2></div>
-          <div className="space-y-2">
-            {radarLinks.map((item) => (
-              <a key={item.id} href={item.url ?? "#"} target="_blank" className="block rounded-2xl border border-white/[.07] bg-white/[.025] p-3 transition hover:border-[#a3ff12]/25">
-                <p className="line-clamp-1 text-[11px] font-black uppercase text-white">{item.title ?? "Untitled link"}</p>
-                <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-slate-600">{item.category ?? "market"} · {dateLabel(item.created_at)}</p>
-              </a>
-            ))}
-            {!radarLinks.length && <p className="rounded-2xl border border-white/[.07] p-4 text-xs text-slate-500">No legacy links saved yet.</p>}
-          </div>
-        </GamePanel>
-
-        <GamePanel className="p-5">
-          <div className="mb-4 flex items-center gap-3"><FileText size={17} className="text-amber-300" /><h2 className="text-sm font-black uppercase italic text-white">Alerts & documents</h2></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><p className="text-[8px] font-black uppercase text-slate-600">Documents</p><p className="mt-2 font-display text-3xl text-white">{totalDocuments}</p></div>
-            <div className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><p className="text-[8px] font-black uppercase text-slate-600">Open alerts</p><p className="mt-2 font-display text-3xl text-white">{alerts.length}</p></div>
-          </div>
-          <div className="mt-3 space-y-2">
-            {alerts.map((alert) => (
-              <div key={alert.id} className="rounded-2xl border border-rose-300/20 bg-rose-300/[.07] p-3">
-                <p className="text-[10px] font-black uppercase text-rose-100">{alert.title}</p>
-                <p className="mt-1 text-[8px] leading-4 text-rose-100/60">{alert.message}</p>
+          <p className="text-[9px] font-black text-cyan-300">Official football data</p>
+          <h2 className="mt-1 text-xl font-black italic text-white">Normalized coverage</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            {footballCoverage.map(({ label, result }) => (
+              <div key={label} className={`rounded-2xl border bg-white/[.025] p-4 ${result.error ? "border-rose-300/20" : "border-white/[.07]"}`}>
+                <p className="text-[8px] font-black text-slate-600">{label}</p>
+                <p className={`mt-2 font-display text-3xl ${result.error ? "text-rose-200" : "text-white"}`}>{countText(result)}</p>
               </div>
             ))}
-            {!alerts.length && <p className="rounded-2xl border border-[#a3ff12]/15 bg-[#a3ff12]/[.06] p-4 text-xs font-bold text-[#caff6d]">No unresolved billing alerts.</p>}
+          </div>
+          <div className="mt-4 space-y-2">
+            {syncRuns.data.slice(0, 4).map((run) => (
+              <div key={run.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-black text-white">{run.provider} · {run.sync_type}</p>
+                  <span className={run.status === "success" ? "text-[#a3ff12]" : run.status === "error" ? "text-rose-300" : "text-amber-200"}>
+                    {run.status}
+                  </span>
+                </div>
+                <p className="mt-1 text-[8px] text-slate-600">{run.records_created} created · {run.records_updated} updated · {dateLabel(run.completed_at ?? run.started_at)}</p>
+              </div>
+            ))}
+            {!syncRuns.data.length ? (
+              <p className={`text-xs ${syncRuns.error ? "text-rose-200" : "text-slate-500"}`}>
+                {syncRuns.error ? "Football sync history is unavailable." : "No football sync history has been recorded yet."}
+              </p>
+            ) : null}
+          </div>
+        </GamePanel>
+
+        <GamePanel className="p-5">
+          <p className="text-[9px] font-black text-[#a3ff12]">Arena engagement</p>
+          <h2 className="mt-1 text-xl font-black italic text-white">Gameplay activity</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
+              <Clock3 size={15} className="text-cyan-300" />
+              <p className="mt-3 text-[8px] font-black text-slate-600">Tracked time</p>
+              <p className={`mt-1 font-display text-3xl ${sessions.error ? "text-rose-200" : "text-white"}`}>
+                {sessions.error ? "—" : `${Math.round(activeSeconds / 3600)}h`}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
+              <Activity size={15} className="text-[#a3ff12]" />
+              <p className="mt-3 text-[8px] font-black text-slate-600">Sessions</p>
+              <p className={`mt-1 font-display text-3xl ${analyticsSessions.error ? "text-rose-200" : "text-white"}`}>
+                {countText(analyticsSessions)}
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 space-y-3">
+            {topAreas.map(([area, seconds]) => {
+              const width = activeSeconds ? Math.max(4, Math.round((seconds / activeSeconds) * 100)) : 0;
+              return (
+                <div key={area}>
+                  <div className="flex justify-between gap-3 text-[9px]">
+                    <span className="font-black text-white">{area}</span>
+                    <span className="text-slate-600">{Math.round(seconds / 60)} min</span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[.06]">
+                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-[#a3ff12]" style={{ width: `${width}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+            {!topAreas.length ? (
+              <p className={`text-xs ${sessions.error ? "text-rose-200" : "text-slate-500"}`}>
+                {sessions.error ? "Engagement data is unavailable." : "Engagement appears after authenticated Arena sessions."}
+              </p>
+            ) : null}
+          </div>
+        </GamePanel>
+
+        <GamePanel className="p-5">
+          <p className="text-[9px] font-black text-amber-300">Arena economy read model</p>
+          <h2 className="mt-1 text-xl font-black italic text-white">Contracts and credits</h2>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            {economyCoverage.map(({ label, result }) => (
+              <div key={label} className={`rounded-2xl border bg-white/[.025] p-4 ${result.error ? "border-rose-300/20" : "border-white/[.07]"}`}>
+                <p className="text-[8px] font-black text-slate-600">{label}</p>
+                <p className={`mt-2 font-display text-3xl ${result.error ? "text-rose-200" : "text-white"}`}>{countText(result)}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[.05] p-4">
+            <p className="text-[8px] font-black text-amber-200">Recent ledger sample</p>
+            <p className="mt-2 text-2xl font-black text-white">
+              {ledger.error ? "—" : money(ledgerNetCents, ledger.data[0]?.currency ?? "EUR")}
+            </p>
+            <p className="mt-1 text-[8px] leading-4 text-slate-600">
+              {ledger.error
+                ? "The recent ledger sample is unavailable."
+                : `Net of the latest ${ledger.data.length} immutable entries. This panel never changes balances or economy rules.`}
+            </p>
+          </div>
+          <div className="mt-3 space-y-2">
+            {recentCards.data.slice(0, 3).map((card) => (
+              <div key={card.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/[.06] bg-white/[.025] px-3 py-2">
+                <div className="min-w-0">
+                  <p className="truncate text-[9px] font-black text-white">{card.player_name}</p>
+                  <p className="mt-0.5 text-[7px] text-slate-600">{card.frame_color}</p>
+                </div>
+                <span className="text-[8px] font-black text-cyan-100">{card.card_status} · {card.sale_status}</span>
+              </div>
+            ))}
+            {recentCards.error ? <p className="text-xs text-rose-200">Recent card inventory is unavailable.</p> : null}
           </div>
         </GamePanel>
       </div>
-
-      <GamePanel className="p-5">
-        <div className="flex items-start gap-3">
-          <div className="grid size-10 place-items-center rounded-2xl border border-amber-300/20 bg-amber-300/[.08] text-amber-300"><LockKeyhole size={18} /></div>
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[.18em] text-amber-300">Owner note</p>
-            <h2 className="mt-1 text-xl font-black uppercase italic text-white">Manual access is for beta control</h2>
-            <p className="mt-2 max-w-4xl text-[10px] leading-5 text-slate-500">
-              Stripe remains the professional payment system. Manual grants are marked with owner metadata and are useful for yourself, testers, partners or early clients while the business is being shaped.
-            </p>
-          </div>
-        </div>
-      </GamePanel>
     </div>
   );
 }

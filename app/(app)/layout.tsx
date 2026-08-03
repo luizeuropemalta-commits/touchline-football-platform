@@ -1,17 +1,38 @@
-import { AppShell } from "@/components/app-shell";
+import { redirect } from "next/navigation";
+
+import { ArenaAdminShell } from "@/components/arena-admin-shell";
 import { isOwnerEmail } from "@/lib/admin/owner";
-import { getCurrentSubscription } from "@/lib/billing/subscription";
-import { getCurrentWorkspace } from "@/lib/server/current-workspace";
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const [subscription, workspace] = await Promise.all([getCurrentSubscription(), getCurrentWorkspace()]);
-  const profileName = workspace.status === "ready" ? workspace.profile.full_name || workspace.user.email || "Touchline User" : "Touchline User";
-  const profileRole = workspace.status === "ready" ? `${workspace.profile.role} · ${subscription.status || "workspace"}` : subscription.status || "Workspace member";
-  const isOwner = workspace.status === "ready" && isOwnerEmail(workspace.user.email);
+  const supabase = await createClient();
+  if (!supabase) redirect("/login");
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const metadata = user.user_metadata && typeof user.user_metadata === "object"
+    ? user.user_metadata as Record<string, unknown>
+    : {};
+  const metadataName = typeof metadata.full_name === "string"
+    ? metadata.full_name
+    : typeof metadata.name === "string"
+      ? metadata.name
+      : "";
+  const profileName = metadataName.trim() || user.email || "TouchLine ClubOwner";
+  const isOwner = isOwnerEmail(user.email);
 
   return (
-    <AppShell planKey={subscription.planKey} subscriptionStatus={subscription.status} profileName={profileName} profileRole={profileRole} isOwner={isOwner}>
+    <ArenaAdminShell
+      profileName={profileName}
+      profileEmail={user.email ?? ""}
+      isOwner={isOwner}
+    >
       {children}
-    </AppShell>
+    </ArenaAdminShell>
   );
 }

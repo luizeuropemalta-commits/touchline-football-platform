@@ -1,0 +1,163 @@
+{
+  "version": "2026-07-26-social-art-system-v1",
+  "status": "prototype-pending-approval",
+  "brand": {
+    "logoSvg": "/touchlineArena/brand/tl-shield-lime.svg",
+    "logoPng": "/touchlineArena/brand/tl-shield-lime.png",
+    "primaryAccent": "#a3ff12",
+    "base": "#02050a",
+    "fontFamily": "Arial, Helvetica, sans-serif"
+  },
+  "officialCardComponents": [
+    "/components/touchline/cards/TouchlineEliteExactCard.tsx",
+    "/components/touchline/cards/TouchlineCoachCard.tsx",
+    "/components/touchline/cards/TouchlineCardZoom.tsx"
+  ],
+  "officialCardTiers": {
+    "ruby-red": {
+      "pt": "Rubi Vermelho",
+      "accent": "#ff4d5e",
+      "secondary": "#7a111e",
+      "frame": "/touchlineArena/frames/market-tiers/ruby-red.png"
+    },
+    "sapphire-blue": {
+      "pt": "Safira Azul",
+      "accent": "#61c7ff",
+      "secondary": "#174b9b",
+      "frame": "/touchlineArena/frames/market-tiers/sapphire-blue.png"
+    },
+    "amethyst-purple": {
+      "pt": "Ametista Roxa",
+      "accent": "#c788ff",
+      "secondary": "#58208f",
+      "frame": "/touchlineArena/frames/market-tiers/amethyst-purple.png"
+    },
+    "radiant-gold": {
+      "pt": "Ouro Radiante",
+      "accent": "#ffd85e",
+      "secondary": "#91640b",
+      "frame": "/touchlineArena/frames/market-tiers/radiant-gold.png"
+    },
+    "emerald-green": {
+      "pt": "Esmeralda Verde",
+      "accent": "#5ff0a0",
+      "secondary": "#08764a",
+      "frame": "/touchlineArena/frames/market-tiers/emerald-green.png"
+    },
+    "clear-diamond": {
+      "pt": "Diamante Cristalino",
+      "accent": "#dff8ff",
+      "secondary": "#71b7d4",
+      "frame": "/touchlineArena/frames/market-tiers/clear-diamond.png"
+    },
+    "diamond-gold": {
+      "pt": "Diamante Dourado",
+      "accent": "#fff2a8",
+      "secondary": "#c58a15",
+      "frame": "/touchlineArena/frames/market-tiers/diamond-gold.png"
+    }
+  },
+  "formats": {
+    "feed": {
+      "width": 1080,
+      "height": 1350,
+      "safeArea": {
+        "left": 70,
+        "right": 70,
+        "top": 70,
+        "bottom": 90
+      }
+    },
+    "vertical": {
+      "width": 1080,
+      "height": 1920,
+      "safeArea": {
+        "left": 80,
+        "right": 80,
+        "top": 170,
+        "bottom": 240
+      }
+    }
+  },
+  "backgroundFamilies": [
+    "stadium-central",
+    "stadium-tunnel",
+    "premium-dressing-room",
+    "tactical-room",
+    "training-ground",
+    "press-room",
+    "awards-stage",
+    "statistics-studio",
+    "stands",
+    "post-match-pitch"
+  ],
+  "templates": [
+    {
+      "id": "tl-social-player-stats-feed-v1",
+      "category": "player-stats",
+      "format": "feed",
+      "family": "statistics-studio",
+      "file": "/touchlineArena/social-media/templates/feed-1080x1350/player-stats-official-template.svg",
+      "cardSlot": { "x": 92, "y": 286, "width": 394, "height": 634 },
+      "dataSlots": ["player.name", "player.cardOfficialRenderUrl", "player.touchlinePoints", "player.primaryStats"],
+      "approval": "pending"
+    },
+    {
+      "id": "tl-social-player-stats-vertical-v1",
+      "category": "player-stats",
+      "format": "vertical",
+      "family": "statistics-studio",
+      "file": "/touchlineArena/social-media/templates/vertical-1080x1920/player-stats-official-template.svg",
+      "cardSlot": { "x": 244, "y": 498, "width": 592, "height": 950 },
+      "dataSlots": ["player.name", "player.cardOfficialRenderUrl", "player.touchlinePoints", "player.primaryStats"],
+      "approval": "pending"
+    },
+    {
+      "id": "tl-social-team-of-week-feed-v1",
+      "category": "team-of-the-week",
+      "format": "feed",
+      "family": "awards-stage",
+      "file": "/touchlineArena/social-media/templates/feed-1080x1350/team-of-the-week-official-template.svg",
+      "cardSlot": { "mode": "multi", "players": 11, "coach": 1 },
+      "dataSlots": ["round.name", "formation", "team.cards", "coach.card"],
+      "approval": "pending"
+    },
+    {
+      "id": "tl-social-team-of-week-vertical-v1",
+      "category": "team-of-the-week",
+      "format": "vertical",
+      "family": "awards-stage",
+      "file": "/touchlineArena/social-media/templates/vertical-1080x1920/team-of-the-week-official-template.svg",
+      "cardSlot": { "mode": "multi", "players": 11, "coach": 1 },
+      "dataSlots": ["round.name", "formation", "team.cards", "coach.card"],
+      "approval": "pending"
+    },
+    {
+      "id": "tl-social-round-result-feed-v1",
+      "category": "results",
+      "format": "feed",
+      "family": "post-match-pitch",
+      "file": "/touchlineArena/social-media/templates/feed-1080x1350/round-result-official-template.svg",
+      "cardSlot": { "x": 692, "y": 398, "width": 288, "height": 462 },
+      "dataSlots": ["fixture.homeClub", "fixture.awayClub", "fixture.score", "fixture.topPerformer"],
+      "approval": "pending"
+    },
+    {
+      "id": "tl-social-round-result-vertical-v1",
+      "category": "results",
+      "format": "vertical",
+      "family": "post-match-pitch",
+      "file": "/touchlineArena/social-media/templates/vertical-1080x1920/round-result-official-template.svg",
+      "cardSlot": { "x": 300, "y": 1028, "width": 480, "height": 770 },
+      "dataSlots": ["fixture.homeClub", "fixture.awayClub", "fixture.score", "fixture.topPerformer"],
+      "approval": "pending"
+    }
+  ],
+  "rotationRules": {
+    "avoidSameBackgroundWithinNextPosts": 10,
+    "avoidConsecutiveSameFamily": true,
+    "avoidConsecutiveSameCardPosition": true,
+    "avoidAlwaysGreenLighting": true,
+    "avoidAlwaysCenteredCard": true
+  }
+}

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-label="TouchLine player statistics social template vertical">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="40%" r="72%">
+      <stop offset="0%" stop-color="{{tier.accent}}" stop-opacity=".30"/>
+      <stop offset="48%" stop-color="{{tier.secondary}}" stop-opacity=".16"/>
+      <stop offset="100%" stop-color="#02050a"/>
+    </radialGradient>
+  </defs>
+  <rect width="1080" height="1920" fill="#02050a"/>
+  <rect width="1080" height="1920" fill="url(#g)"/>
+  <path d="M0 1320 C250 1200 470 1240 640 1294 C812 1349 938 1320 1080 1226 L1080 1920 L0 1920 Z" fill="#06100d" opacity=".9"/>
+  <image href="/touchlineArena/brand/tl-shield-lime.svg" x="486" y="194" width="108" height="108" preserveAspectRatio="xMidYMid meet"/>
+  <text x="540" y="350" text-anchor="middle" fill="{{tier.accent}}" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="950" letter-spacing=".18em">PLAYER STATS</text>
+  <text x="540" y="420" text-anchor="middle" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="950" letter-spacing="-.05em">{{player.name}}</text>
+  <rect x="244" y="498" width="592" height="950" rx="42" fill="{{tier.accent}}" opacity=".10" stroke="{{tier.accent}}" stroke-opacity=".34" stroke-dasharray="12 14" stroke-width="2"/>
+  <text x="540" y="946" text-anchor="middle" fill="#edf8ff" fill-opacity=".74" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="950">CARD OFICIAL</text>
+  <text x="540" y="988" text-anchor="middle" fill="#edf8ff" fill-opacity=".42" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="800">INSERIDO PELO SISTEMA</text>
+  <rect x="126" y="1490" width="828" height="172" rx="30" fill="#050b12" opacity=".82" stroke="{{tier.accent}}" stroke-opacity=".28"/>
+  <text x="172" y="1552" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="950" letter-spacing=".14em">PONTOS TOUCHLINE</text>
+  <text x="172" y="1628" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="950">{{player.touchlinePoints}}</text>
+  <text x="500" y="1584" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="900">{{stat.1.label}} {{stat.1.value}}</text>
+  <text x="500" y="1638" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="900">{{stat.2.label}} {{stat.2.value}}</text>
+  <text x="500" y="1692" fill="#edf8ff" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="900">{{stat.3.label}} {{stat.3.value}}</text>
+  <text x="540" y="1774" text-anchor="middle" fill="#edf8ff" fill-opacity=".62" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="800">{{editorial.comment}}</text>
+  <text x="540" y="1834" text-anchor="middle" fill="#a3ff12" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="950">TOUCHLINE ENGLAND LEAGUE</text>
+</svg>

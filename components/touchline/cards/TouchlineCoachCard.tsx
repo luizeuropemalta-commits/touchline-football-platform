@@ -58,6 +58,9 @@ type TouchlineCoachCardProps = {
   displayMode?: "default" | "compact";
   optimizeForLiveCompact?: boolean;
   enableInteractiveNeon?: boolean;
+  frameLoading?: "eager" | "lazy";
+  frameDecoding?: "sync" | "async" | "auto";
+  frameFetchPriority?: "high" | "low" | "auto";
 };
 
 function CoachStatIcon({ type }: { type: "result" | "travel" | "discipline" | "points" }) {
@@ -90,6 +93,9 @@ export default function TouchlineCoachCard({
   displayMode = "default",
   optimizeForLiveCompact = false,
   enableInteractiveNeon = true,
+  frameLoading,
+  frameDecoding,
+  frameFetchPriority,
 }: TouchlineCoachCardProps) {
   const [storedLayout, setStoredLayout] = useState<TouchlineCoachCardLayout>(TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT);
   const [isNeonActive, setIsNeonActive] = useState(false);
@@ -409,9 +415,9 @@ export default function TouchlineCoachCard({
         src={optimizeForLiveCompact ? compactCardTemplateUrl : zoomCardTemplateUrl}
         alt=""
         draggable={false}
-        loading={optimizeForLiveCompact ? "eager" : "lazy"}
-        decoding={optimizeForLiveCompact ? "sync" : "async"}
-        fetchPriority={optimizeForLiveCompact ? "high" : "auto"}
+        loading={frameLoading ?? (optimizeForLiveCompact ? "eager" : "lazy")}
+        decoding={frameDecoding ?? (optimizeForLiveCompact ? "sync" : "async")}
+        fetchPriority={frameFetchPriority ?? (optimizeForLiveCompact ? "high" : "auto")}
       />
     </article>
   );

@@ -11,8 +11,3 @@ export function isOwnerEmail(email?: string | null) {
   if (!email) return false;
   return ownerEmails().includes(email.toLowerCase());
 }
-
-export function ownerGrantSubscriptionId(userId: string) {
-  return `owner_grant_${userId}`;
-}
-
