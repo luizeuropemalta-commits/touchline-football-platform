@@ -20,6 +20,18 @@ The current continuation deployment is also Ready:
 - Preview: `https://touchline-arena-official-git-safety-cee89f-fifa-agent-plataform.vercel.app`
 - Vercel status: `Ready` (2m28s)
 
+The audit-evidence continuation deployment is also Ready and was smoke-tested
+after the push:
+
+- Deployment: `A5a8aKbr4qgdSkXT6R9afE4S8uE8`
+- Commit: `eac3e1da694a7a90cc18bf5ed1deb49727c96879`
+- Preview: `https://touchline-arena-official-a4y8xwgr5-fifa-agent-plataform.vercel.app`
+- Vercel status: `Ready` (2m32s)
+
+Its real Manchester United ClubHub route rendered in Portuguese at `1280x720`
+with the same live roster, 33 cards and predicted line-up. It contained no
+Audit Mode substitute.
+
 ## Public smoke results
 
 Browser validation, through the authorized Vercel Preview session, confirms the
