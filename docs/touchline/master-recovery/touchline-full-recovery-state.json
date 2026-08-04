@@ -5,7 +5,7 @@
   "current_block": 35,
   "completed_blocks": [1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 31, 32, 33, 34],
   "blocked_blocks": [4, 5, 23, 24, 25, 26, 29, 30, 35],
-  "next_action": "Publish a Preview from the current safe checkpoint, validate the canonical Player Profile unavailable state and TouchLine public branding there, then retain migration 048 historical-data backfill as an external hard gate. Do not promote while any acceptance result is unresolved.",
+  "next_action": "Inspect the pending touchline-arena-official Preview for f80617e6, validate the canonical Player Profile unavailable state and TouchLine public branding there, then address the sibling touchline-football-platform Preview's 711.82 MB function-bundle gate without changing any production alias. Do not promote while any acceptance result is unresolved.",
   "last_validated_at": "2026-08-04T14:55:00+02:00",
   "progress": {
     "formal_complete_blocks": 26,

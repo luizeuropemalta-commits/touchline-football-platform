@@ -106,3 +106,7 @@ Latest safe commits after checkpoint: `eb79bb12`, `ca182d1d`, `ab608662`, `88bc9
 Read-only production schema inspection also confirms the existing gates are real: migration `047` has not added `touchline_user_arena_state.coach_provider_id`, and migration `043` has not created the TouchLine Central message/localization/receipt tables. Both remain `EXTERNAL_HARD_GATE`; neither was applied by this workstream.
 
 Latest safe checkpoint: `e8679830` — canonical player-season statistics read model, safe public unavailable state, TouchLine public branding cleanup, audit evidence and regression coverage.
+
+## Preview deployment observation — 2026-08-04
+
+The `touchline-football-platform` sibling Vercel project failed after a successful build because its `api/players/search-and-build-card` function measured 711.82 MB uncompressed, exceeding Vercel's 250 MB function limit. This is a deployment configuration/bundle gate specific to that project, not a product-code test failure; the approved `touchline-arena-official` Preview is still deploying. No production alias was changed. Next executable action: inspect the official deployment result first, then remove the oversized route dependency or apply the project-scoped Vercel large-functions setting only after confirming it targets the intended non-production project.
