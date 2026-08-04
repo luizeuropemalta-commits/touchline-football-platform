@@ -1,0 +1,18 @@
+{
+  "goal": "TouchLine Full Product Recovery — 100% Completion",
+  "checkpoint": "74fe6cae",
+  "overall_status": "IN_PROGRESS",
+  "current_block": 24,
+  "completed_blocks": [],
+  "blocked_blocks": [4, 5, 26, 29, 34],
+  "next_action": "Replace the demo ClubOwner ranking source in app/touchline-tables/page.tsx with a server-owned published ranking read model or an explicit pending state, then run TypeScript, ESLint, focused tests and build.",
+  "last_validated_at": "2026-08-04T09:42:00+02:00",
+  "tests": {
+    "typescript": "pass",
+    "eslint": "pass",
+    "unit": "617 passed, 0 failed",
+    "integration": "focused route and contract coverage recorded in execution ledger",
+    "e2e": "partial; native WebKit and controlled production-account matrix pending",
+    "build": "pass"
+  }
+}
