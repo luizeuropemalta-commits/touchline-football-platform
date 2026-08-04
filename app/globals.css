@@ -88,7 +88,7 @@ button, a, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 a, button { outline: none; }
-a:focus-visible, button:focus-visible, input:focus-visible {
+:is(a, button, input, textarea, select, [tabindex]):focus-visible {
   outline: 1px solid rgba(34,211,238,.7);
   outline-offset: 3px;
 }

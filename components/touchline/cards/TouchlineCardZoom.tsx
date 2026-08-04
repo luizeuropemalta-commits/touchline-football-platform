@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import styles from "./TouchlineCardZoom.module.css";
@@ -69,6 +69,16 @@ export default function TouchlineCardZoom({
   details,
 }: TouchlineCardZoomProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeControl = closeRef.current;
+    const trigger = triggerRef.current;
+    closeControl?.focus();
+    return () => trigger?.focus();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -122,6 +132,7 @@ export default function TouchlineCardZoom({
         style={{ "--touchline-card-zoom-accent": tierAccent } as CSSProperties}
       >
         <div
+          ref={triggerRef}
           className={styles.trigger}
           role="button"
           tabIndex={0}
@@ -145,7 +156,7 @@ export default function TouchlineCardZoom({
               setIsOpen(false);
             }}
           >
-            <button type="button" className={styles.close} aria-label="Fechar card" onClick={() => setIsOpen(false)}>
+            <button ref={closeRef} type="button" className={styles.close} aria-label="Fechar card" onClick={() => setIsOpen(false)}>
               ×
             </button>
             <div className={styles.cardColumn}>
