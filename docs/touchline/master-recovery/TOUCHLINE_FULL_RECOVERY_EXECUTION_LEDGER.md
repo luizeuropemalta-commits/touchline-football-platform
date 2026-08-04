@@ -105,7 +105,7 @@ Latest safe commits after checkpoint: `eb79bb12`, `ca182d1d`, `ab608662`, `88bc9
 
 Read-only production schema inspection also confirms the existing gates are real: migration `047` has not added `touchline_user_arena_state.coach_provider_id`, and migration `043` has not created the TouchLine Central message/localization/receipt tables. Both remain `EXTERNAL_HARD_GATE`; neither was applied by this workstream.
 
-Latest safe checkpoint: `e8679830` — canonical player-season statistics read model, safe public unavailable state, TouchLine public branding cleanup, audit evidence and regression coverage.
+Latest safe checkpoint: `6b7ad943` — canonical player-season statistics read model, safe public unavailable state, TouchLine public branding cleanup, audit evidence and regression coverage, plus a Vercel-safe card-portrait lookup that no longer traces the full public asset tree into the API function.
 
 ## Preview deployment observation — 2026-08-04
 
