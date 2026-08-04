@@ -21,7 +21,7 @@ const siteOffline = process.env.TOUCHLINE_SITE_OFFLINE === "true";
 const localDevHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 const authPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/auth/callback"] as const;
 const authEntryPaths = ["/login", "/register", "/forgot-password"] as const;
-const protectedArenaPaths = ["/arena", "/market-transfer", "/admin", "/notifications", "/football-search", "/visual-qa"] as const;
+const protectedArenaPaths = ["/arena", "/market-transfer", "/admin", "/notifications", "/inbox", "/football-search", "/visual-qa"] as const;
 const adminOnlyArenaPaths = ["/admin", "/visual-qa"] as const;
 
 function matchesRoute(pathname: string, route: string) {

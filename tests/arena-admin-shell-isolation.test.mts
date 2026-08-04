@@ -27,6 +27,7 @@ test("Arena admin shell exposes only official operational navigation", () => {
   for (const href of [
     "/arena",
     "/notifications",
+    "/inbox",
     "/football-search",
     "/admin",
     "/admin/analytics",

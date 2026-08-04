@@ -143,7 +143,7 @@ test("authentication presents only the current TouchLine Arena product", () => {
 });
 
 test("the proxy protects the Arena itself and its current operations without legacy billing gates", () => {
-  assert.match(proxySource, /protectedArenaPaths\s*=\s*\["\/arena", "\/market-transfer", "\/admin", "\/notifications", "\/football-search", "\/visual-qa"\]/);
+  assert.match(proxySource, /protectedArenaPaths\s*=\s*\["\/arena", "\/market-transfer", "\/admin", "\/notifications", "\/inbox", "\/football-search", "\/visual-qa"\]/);
   assert.match(proxySource, /adminOnlyArenaPaths\s*=\s*\["\/admin", "\/visual-qa"\]/);
   assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
   assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return arenaRedirect\(request, response\)/);

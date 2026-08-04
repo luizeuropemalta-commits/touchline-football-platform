@@ -55,7 +55,7 @@ export function isSafeTouchlineCentralDeepLink(value: string | null): boolean {
   if (value === null) return true;
   if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return false;
   const path = value.split(/[?#]/, 1)[0];
-  return ["/arena", "/club-owner", "/market-transfer", "/rankings", "/notifications"].some(
+  return ["/arena", "/club-owner", "/market-transfer", "/rankings", "/notifications", "/inbox"].some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );
 }

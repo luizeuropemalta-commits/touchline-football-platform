@@ -7,6 +7,7 @@ import {
   Bell,
   CircleDollarSign,
   Database,
+  Inbox,
   LogOut,
   Menu,
   Search,
@@ -46,6 +47,12 @@ const PRIMARY_LINKS: ShellLink[] = [
     label: "Notifications",
     description: "Your delivery preferences",
     icon: Bell,
+  },
+  {
+    href: "/inbox",
+    label: "Inbox",
+    description: "Official Central notices",
+    icon: Inbox,
   },
   {
     href: "/football-search",

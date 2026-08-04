@@ -39,6 +39,9 @@ test("callback accepts only same-origin TouchLine destinations and preserves lan
 
   const nestedAdmin = resolveTouchLineAuthCallbackDestination("/admin/finance?lang=en-GB", origin);
   assert.equal(nestedAdmin.href, `${origin}/admin/finance?lang=en-GB`);
+
+  const inbox = resolveTouchLineAuthCallbackDestination("/inbox?lang=en-GB", origin);
+  assert.equal(inbox.href, `${origin}/inbox?lang=en-GB`);
 });
 
 test("callback rejects protocol-relative, absolute, backslash and unapproved paths", () => {

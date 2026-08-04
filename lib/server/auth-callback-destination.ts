@@ -7,6 +7,7 @@ const ALLOWED_AUTH_CALLBACK_PATHS = [
   "/market-transfer",
   "/admin",
   "/notifications",
+  "/inbox",
   "/football-search",
   "/visual-qa",
 ] as const;

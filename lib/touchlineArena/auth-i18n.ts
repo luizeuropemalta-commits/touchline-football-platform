@@ -9,6 +9,7 @@ const TOUCHLINE_AUTH_RETURN_PATHS = [
   "/market-transfer",
   "/admin",
   "/notifications",
+  "/inbox",
   "/football-search",
   "/visual-qa",
 ] as const;

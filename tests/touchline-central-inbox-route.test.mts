@@ -4,6 +4,7 @@ import test from "node:test";
 
 const source = readFileSync(new URL("../app/(app)/inbox/page.tsx", import.meta.url), "utf8");
 const receiptRoute = readFileSync(new URL("../app/api/touchline-central/inbox/read/route.ts", import.meta.url), "utf8");
+const inboxList = readFileSync(new URL("../components/touchline/TouchlineInboxList.tsx", import.meta.url), "utf8");
 
 test("ClubOwner Inbox is a protected read consumer of canonical Central messages", () => {
   assert.match(source, /createClient\(\)/);
@@ -26,4 +27,10 @@ test("a read receipt accepts only a canonical message id and the authenticated m
   assert.match(receiptRoute, /isCentralAudienceForEngland/);
   assert.match(receiptRoute, /message_id: intent\.messageId, user_id: user\.id/);
   assert.doesNotMatch(receiptRoute, /requested_user_id|body\.userId/);
+});
+
+test("opening a Central notice waits for its durable receipt before navigation", () => {
+  assert.match(inboxList, /await markRead\(item\.id\)/);
+  assert.match(inboxList, /window\.location\.assign/);
+  assert.doesNotMatch(inboxList, /<Link/);
 });
