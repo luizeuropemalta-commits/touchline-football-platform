@@ -4,9 +4,9 @@
   "overall_status": "IN_PROGRESS",
   "current_block": 35,
   "completed_blocks": [],
-  "blocked_blocks": [4, 5, 26, 29, 34],
-  "next_action": "Run the controlled real-product audit on the deployed domain once GitHub/Vercel publication credentials and disposable owner personas are available.",
-  "last_validated_at": "2026-08-04T11:12:00+02:00",
+  "blocked_blocks": [4, 5, 26, 29, 34, 35],
+  "next_action": "Authenticate GitHub publishing, push checkpoint b940e31d, verify the matching Vercel deployment, then run the controlled real-product audit with disposable owner personas.",
+  "last_validated_at": "2026-08-04T11:16:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
