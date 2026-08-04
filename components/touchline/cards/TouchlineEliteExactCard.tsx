@@ -256,6 +256,12 @@ function localizedCardLabels(locale: string | null): TouchlineEliteExactCardLabe
   return DEFAULT_CARD_LABELS;
 }
 
+function localeFromPlayerProfileHref(href?: string) {
+  const queryStart = href?.indexOf("?") ?? -1;
+  if (queryStart < 0) return null;
+  return new URLSearchParams(href?.slice(queryStart + 1)).get("lang");
+}
+
 type Props = {
   player: TouchlineEliteExactPlayer;
   className?: string;
@@ -655,7 +661,7 @@ export function TouchlineEliteExactCard({
   const [masterLockState, setMasterLockState] = useState<MasterLockState>(() => persistLayoutToMaster ? "checking" : "unlocked");
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [runtimeLocaleFromUrl, setRuntimeLocaleFromUrl] = useState<string | null>(null);
-  const runtimeLocale = runtimeLocaleOverride ?? runtimeLocaleFromUrl;
+  const runtimeLocale = runtimeLocaleOverride ?? localeFromPlayerProfileHref(playerProfileHref) ?? runtimeLocaleFromUrl;
   const [useWebKitCompactPaintScale, setUseWebKitCompactPaintScale] = useState(false);
   const [shirtPlayerNameFit, setShirtPlayerNameFit] = useState({
     size: 31 * SHIRT_NAME_READABILITY_MULTIPLIER,

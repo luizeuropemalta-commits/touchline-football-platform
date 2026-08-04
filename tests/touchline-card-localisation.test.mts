@@ -15,4 +15,5 @@ test("the shared player card localizes every discipline label", () => {
   assert.match(cardSource, /label: cardLabels\.redCards/);
   assert.doesNotMatch(cardSource, /aria-label="England flag"/);
   assert.match(cardSource, /role="img" aria-label=\{code\}/);
+  assert.match(cardSource, /runtimeLocaleOverride \?\? localeFromPlayerProfileHref\(playerProfileHref\) \?\? runtimeLocaleFromUrl/);
 });
