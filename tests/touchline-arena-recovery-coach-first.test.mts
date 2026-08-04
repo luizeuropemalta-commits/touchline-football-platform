@@ -68,6 +68,18 @@ test("Arena keeps production coach identity out of the demo fallback and exposes
   assert.match(arena, /arenaPersistencePrincipal\?\.kind === "demo"[\s\S]*?TOUCHLINE_DEMO_COACH/);
   assert.match(arena, /data-testid="arena-coach-first-gate"/);
   assert.match(arena, /\/api\/touchline-arena\/coach/);
+  assert.match(arena, /const mustPersistForClubOwner = canPersistArenaAccountState/);
+  assert.match(arena, /if \(!response\.ok\) \{[\s\S]*?Não foi possível salvar o treinador na sua conta/);
+  assert.match(arena, /setCoachSelectionError\(message\)/);
+  assert.match(arena, /className="arena-coach-selection-error" role="alert"/);
+  const selectCoach = arena.slice(
+    arena.indexOf("async function selectOfficialArenaCoach"),
+    arena.indexOf("async function toggleArenaFullscreen"),
+  );
+  assert.ok(
+    selectCoach.indexOf("const mustPersistForClubOwner") < selectCoach.indexOf('writeBrowserStorage("localStorage", coachStorageKey'),
+    "authenticated ClubOwner coach selection must be accepted by the server before local cache is written",
+  );
   assert.match(arena, /coachOffersByProviderId/);
   assert.match(arena, /offer\.displayPrice/);
   assert.match(arena, /selectArenaFixtureRound\(premierLiveFixtures\)/);

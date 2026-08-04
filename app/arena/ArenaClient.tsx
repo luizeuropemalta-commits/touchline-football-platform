@@ -3205,6 +3205,7 @@ export default function ArenaClient({
   const [ownerCoachProviderId, setOwnerCoachProviderId] = useState<string | null>(null);
   const [hasLoadedOwnerCoach, setHasLoadedOwnerCoach] = useState(false);
   const [isCoachSaving, setIsCoachSaving] = useState(false);
+  const [coachSelectionError, setCoachSelectionError] = useState<string | null>(null);
   const [coachOffersByProviderId, setCoachOffersByProviderId] = useState<Record<string, TouchlineCompetitionCardOffer>>({});
   const [coachOfferStatus, setCoachOfferStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [isCoachSpotlightOpen, setIsCoachSpotlightOpen] = useState(false);
@@ -5560,32 +5561,48 @@ export default function ArenaClient({
     if (!coach || !arenaPersistencePrincipal || isCoachSaving) return;
 
     const coachStorageKey = arenaStorageKey(arenaPersistencePrincipal, ARENA_PERSISTENCE_RESOURCES.coach);
+    setCoachSelectionError(null);
+    const mustPersistForClubOwner = canPersistArenaAccountState(
+      arenaPersistencePrincipal,
+      arenaAccountSyncStatus,
+    );
+
+    if (mustPersistForClubOwner) {
+      setIsCoachSaving(true);
+      try {
+        const response = await fetch("/api/touchline-arena/coach", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ coachProviderId: coach.coach.providerId }),
+        });
+        if (!response.ok) {
+          const message = siteLanguage === "pt-BR"
+            ? "Não foi possível salvar o treinador na sua conta. Tente novamente."
+            : "We could not save this coach to your account. Please try again.";
+          setCoachSelectionError(message);
+          setSaveStatus(message);
+          return;
+        }
+      } catch {
+        const message = siteLanguage === "pt-BR"
+          ? "Não foi possível salvar o treinador na sua conta. Tente novamente."
+          : "We could not save this coach to your account. Please try again.";
+        setCoachSelectionError(message);
+        setSaveStatus(message);
+        return;
+      } finally {
+        setIsCoachSaving(false);
+      }
+    }
+
+    // A signed-in ClubOwner may continue only after the server accepted the
+    // canonical coach identity. Browser storage is merely a local cache and
+    // must never be the source of a real account's coach selection.
     writeBrowserStorage("localStorage", coachStorageKey, coach.coach.providerId);
     setOwnerCoachProviderId(coach.coach.providerId);
     setHasLoadedOwnerCoach(true);
     setIsCoachSpotlightOpen(false);
     setSaveStatus(siteLanguage === "pt-BR" ? "Treinador oficial selecionado" : "Official coach selected");
-
-    if (!canPersistArenaAccountState(arenaPersistencePrincipal, arenaAccountSyncStatus)) return;
-    setIsCoachSaving(true);
-    try {
-      const response = await fetch("/api/touchline-arena/coach", {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ coachProviderId: coach.coach.providerId }),
-      });
-      if (!response.ok) {
-        setSaveStatus(siteLanguage === "pt-BR"
-          ? "Treinador salvo neste dispositivo; sincronização indisponível"
-          : "Coach saved on this device; account sync unavailable");
-      }
-    } catch {
-      setSaveStatus(siteLanguage === "pt-BR"
-        ? "Treinador salvo neste dispositivo; sincronização indisponível"
-        : "Coach saved on this device; account sync unavailable");
-    } finally {
-      setIsCoachSaving(false);
-    }
   }
 
   async function toggleArenaFullscreen() {
@@ -6308,6 +6325,7 @@ export default function ArenaClient({
               <span>{siteLanguage === "pt-BR" ? "CLUBOWNER · PASSO 1 DE 2" : "CLUBOWNER · STEP 1 OF 2"}</span>
               <h1>{siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"}</h1>
               <p>{siteLanguage === "pt-BR" ? "Defina o treinador oficial antes de montar o seu elenco. A escolha fica ligada ao seu ClubOwner." : "Set your official coach before building your squad. This choice stays linked to your ClubOwner."}</p>
+              {coachSelectionError ? <p className="arena-coach-selection-error" role="alert">{coachSelectionError}</p> : null}
             </div>
             <div className="arena-coach-choice-rail" role="list">
               {coachOfferStatus !== "ready" ? (
@@ -9217,6 +9235,7 @@ export default function ArenaClient({
         .arena-coach-first-copy span { color: #b5ff4b; font-size: 9px; font-weight: 950; letter-spacing: .14em; }
         .arena-coach-first-copy h1 { margin: 0; color: #f4ffd8; font-size: clamp(24px, 3.4vw, 46px); line-height: .98; letter-spacing: -.045em; }
         .arena-coach-first-copy p { margin: 2px 0 0; color: rgba(239,255,210,.66); font-size: 12px; line-height: 1.42; }
+        .arena-coach-first-copy .arena-coach-selection-error { color: #ffd6c7; font-weight: 800; }
 
         .arena-coach-choice-rail {
           display: grid;

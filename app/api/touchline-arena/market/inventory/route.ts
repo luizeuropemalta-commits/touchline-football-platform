@@ -23,11 +23,6 @@ function databaseErrorCode(message: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const teamId = request.nextUrl.searchParams.get("teamId")?.trim() ?? "";
-  if (!TEAM_ID_PATTERN.test(teamId)) {
-    return NextResponse.json({ error: "TL_MARKET_INVALID_TEAM_ID" }, { status: 400 });
-  }
-
   const supabase = await createClient();
   const admin = createAdminClient();
   if (!supabase || !admin) {
@@ -37,6 +32,11 @@ export async function GET(request: NextRequest) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user || !hasTouchLineArenaAccess(user)) {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
+
+  const teamId = request.nextUrl.searchParams.get("teamId")?.trim() ?? "";
+  if (!TEAM_ID_PATTERN.test(teamId)) {
+    return NextResponse.json({ error: "TL_MARKET_INVALID_TEAM_ID" }, { status: 400 });
   }
 
   const { data, error } = await admin.rpc("get_touchline_market_inventory", {

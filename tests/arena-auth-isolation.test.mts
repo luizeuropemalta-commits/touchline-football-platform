@@ -111,6 +111,17 @@ test("protected routes require the server-owned welcome completion predicate", (
   }
 });
 
+test("Market inventory authenticates before validating a requested team", () => {
+  const marketInventorySource = protectedArenaApiSources.find(
+    ({ path }) => path.endsWith("market/inventory/route.ts"),
+  )?.source;
+  assert.ok(marketInventorySource);
+  assert.ok(
+    marketInventorySource.indexOf("supabase.auth.getUser()") < marketInventorySource.indexOf("TEAM_ID_PATTERN.test(teamId)"),
+    "an anonymous request must receive 401 before request-parameter validation",
+  );
+});
+
 test("all authentication continuations stay inside the Arena", () => {
   assert.doesNotMatch(authFormSource, /next=\/settings/);
   assert.match(authFormSource, /resetPasswordForEmail\([\s\S]*buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/);
