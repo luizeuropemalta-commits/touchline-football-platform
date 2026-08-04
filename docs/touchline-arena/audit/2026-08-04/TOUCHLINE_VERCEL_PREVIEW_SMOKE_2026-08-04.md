@@ -88,17 +88,24 @@ and zero `Current Club` labels in the `pt-BR` surface.
 
 The same localization sweep found English-only accessibility labels for the
 yellow/red-card icons in the shared player card. The card now localizes the
-group, yellow-card, red-card and count labels. The local production Player
-Profile confirms only the Portuguese semantic labels; focused tests, the full
-624-test suite and the production build pass. This follow-up is awaiting its
-own Preview validation.
+group, yellow-card, red-card and count labels. A further server-rendering sweep
+found that the nested card in the Player Profile feed did not receive the
+resolved locale on its first server render. Every Player Profile card instance
+now receives the resolved locale explicitly.
 
 The same shared-card pass also replaced the fallback `England flag` and
 `<country> flag placeholder` English accessibility text with the canonical
 three-letter country code and explicit image semantics. This avoids a hidden
 English phrase in a localized surface without inventing a country translation.
-The same focused regression and full validation matrix pass; the combined
-shared-card candidate is awaiting Preview validation.
+The current authorized branch Preview was checked immediately after
+`domcontentloaded`, before relying on client hydration. The Portuguese Player
+Profile reports two `Cartões amarelo e vermelho` groups and three `Clube atual`
+labels, with zero `Yellow and red cards` or `Current Club` fallbacks. The English
+variant reports the inverse result: two English discipline groups and two
+`Current Club` labels, with zero Portuguese fallbacks. Neither variant emitted
+a console warning or error. The focused regression is 2/2, the full suite is
+625/625, and the production build passes. This remains Preview-only; no
+production alias was promoted.
 
 ## Available responsive evidence
 
@@ -112,6 +119,13 @@ surface. Screenshots are stored locally, not embedded in chat:
 
 Native WebKit, a phone-width viewport and landscape mobile remain part of the
 separate native-device gate; they are not inferred from this evidence.
+
+The current authorized branch Preview also passed the deterministic responsive
+DOM matrix for the real Player Profile at `1280x720`, `768x1024`, `390x844` and
+`844x390`. At every viewport the real page retained its heading and both shared
+cards, preserved the Portuguese card labels, and had document/body widths equal
+to the viewport (no horizontal overflow). This is browser-viewport evidence;
+it does not substitute for the outstanding native-phone or remote-WebKit gate.
 
 ## Native WebKit evidence
 
