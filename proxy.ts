@@ -220,7 +220,7 @@ function clearInvalidSupabaseSession(request: NextRequest, response: NextRespons
   return response;
 }
 
-export async function proxy(request: NextRequest) {
+async function handleTouchLineRequest(request: NextRequest) {
   const hostname = resolveTouchLineRequestHostname(
     request.headers.get("x-forwarded-host"),
     request.headers.get("host"),
@@ -309,6 +309,21 @@ export async function proxy(request: NextRequest) {
     return redirectWithSupabaseCookies(new URL(destination, request.url), response);
   }
   return response;
+}
+
+/**
+ * Edge middleware is the availability boundary for the public site.  If an
+ * unexpected runtime failure escapes a dependency (including an auth SDK
+ * update), preserve the secure failure mode for protected routes and keep
+ * public pages available instead of returning Vercel's opaque 500 screen.
+ */
+export async function proxy(request: NextRequest) {
+  try {
+    return await handleTouchLineRequest(request);
+  } catch {
+    const isProtectedArenaRoute = protectedArenaPaths.some((path) => matchesRoute(request.nextUrl.pathname, path));
+    return isProtectedArenaRoute ? loginRedirect(request) : NextResponse.next();
+  }
 }
 
 export const config = {
