@@ -170,10 +170,14 @@ export function AuthForm({
       setLoading(false);
       return;
     }
+    let loginRedirect: string | null = null;
     try {
       if (mode === "login") {
         await signInWithTouchlinePassword(normalizedEmail, effectivePassword);
-        await enterArena(arenaHref);
+        // Keep a successful sign-in outside the error boundary below.  Safari
+        // can reject a client transition after accepting the login response;
+        // that must never be shown as a failed authentication.
+        loginRedirect = arenaHref;
       } else if (mode === "register") {
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
@@ -211,7 +215,15 @@ export function AuthForm({
       );
       setMessageTone("error");
     }
-    finally { setLoading(false); }
+    finally {
+      if (!loginRedirect) setLoading(false);
+    }
+
+    if (loginRedirect) {
+      // Do a native document navigation after the first-party session cookie
+      // has been written.  This avoids a stale client router cache in Safari.
+      window.location.replace(loginRedirect);
+    }
   }
 
   async function socialLogin(provider: SocialAuthProvider) {

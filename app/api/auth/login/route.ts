@@ -8,6 +8,15 @@ type LoginPayload = {
   password?: unknown;
 };
 
+function successResponse(responseWithSession: NextResponse, access: Awaited<ReturnType<typeof ensureTouchlineArenaAccess>>) {
+  const response = NextResponse.json({ ok: true, ...access });
+  // Copy through the cookies as cookies, not as a raw Headers object.  This is
+  // important for Safari: it must receive the Supabase session Set-Cookie on
+  // the same first-party response that confirms the sign-in.
+  responseWithSession.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+  return response;
+}
+
 function invalidRequest() {
   return NextResponse.json({ ok: false, error: "invalid_credentials" }, { status: 400 });
 }
@@ -55,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const access = await ensureTouchlineArenaAccess(data.user);
-      return NextResponse.json({ ok: true, ...access }, { headers: response.headers });
+      return successResponse(response, access);
     } catch {
       await supabase.auth.signOut({ scope: "local" });
       return NextResponse.json({ ok: false, error: "arena_access_unavailable" }, { status: 503 });
