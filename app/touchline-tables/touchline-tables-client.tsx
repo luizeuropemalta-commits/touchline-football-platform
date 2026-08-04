@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
+import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineProfileQuickNav from "@/components/touchline/TouchlineProfileQuickNav";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import {
@@ -55,8 +56,9 @@ type TouchLineTablesClientProps = {
 
 function projectedPitchPoint(x: number, y: number) {
   return {
-    x: 7 + (1 - y / 100) * 86,
-    y: 7 + (x / 100) * 86,
+    // Keep the broadcast card area safely inside the canonical pitch markings.
+    x: 11 + (1 - y / 100) * 78,
+    y: 11 + (x / 100) * 78,
   };
 }
 
@@ -190,15 +192,7 @@ export default function TouchLineTablesClient({
           <span>{copy.seasonSelectionRule}</span>
         </div>
 
-        {selection ? <><div className={styles.pitch} aria-label={copy.seasonSelection}>
-          <Image
-            src="/touchlineArena/ranking/touchline-selection-pitch-horizontal.webp"
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 900px) 100vw, 1320px"
-            className={styles.pitchArt}
-          />
+        {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection}>
           {selection.map((slot) => {
             const card = rosterCards.find((item) => slot.playerIds.includes(item.id));
             if (!card) return null;
@@ -222,7 +216,7 @@ export default function TouchLineTablesClient({
             );
           })}
 
-        </div>
+        </TouchlinePitchSurface>
         <p className={styles.pitchHint}>
           {isPortuguese
             ? "Toque em um card para ampliar. A Seleção TouchLine usa o mesmo ranking de todas as páginas do jogo."

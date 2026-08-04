@@ -180,8 +180,7 @@ export default async function ClubOwnerProfileRenderer({
   const startingShowcaseCards = sortedClubOwnerSquadCards.slice(0, 6);
   const {
     startingXiCards,
-    matchdayBenchCards,
-    reserveVaultCards,
+    allBenchCards,
   } = partitionClubOwnerRoster(rosterCards);
   const squadCardValue = sortedClubOwnerSquadCards.reduce(
     (sum, card) => sum + (verifiedCardNumericPrice(card) ?? 0),
@@ -203,6 +202,15 @@ export default async function ClubOwnerProfileRenderer({
     : 60;
   const occupiedContractPercent = Math.round((sortedClubOwnerSquadCards.length / 35) * 100);
   const locale = normalizeTouchLineLocale(params.lang);
+  const benchPositionGroups = ([
+    { role: "goalkeeper", label: locale === "pt-BR" ? "Guarda-redes" : "Goalkeepers" },
+    { role: "defender", label: locale === "pt-BR" ? "Defesas" : "Defenders" },
+    { role: "midfielder", label: locale === "pt-BR" ? "Médios" : "Midfielders" },
+    { role: "forward", label: locale === "pt-BR" ? "Avançados" : "Forwards" },
+  ] as const).map((group) => ({
+    ...group,
+    cards: allBenchCards.filter((card) => card.role === group.role),
+  }));
   const isPortuguese = locale === "pt-BR";
   const clubCopy = isPortuguese ? {
     rankingUpdated: "Classificação oficial atualizada após cada rodada auditada.",
@@ -512,8 +520,8 @@ export default async function ClubOwnerProfileRenderer({
                   </div>
                   <div className="club-owner-training-metrics">
                     <div><strong>{startingXiCards.length}/11</strong><span>{t("startingXi")}</span></div>
-                    <div><strong>{matchdayBenchCards.length}/9</strong><span>{t("matchdayBenchLabel")}</span></div>
-                    <div><strong>{reserveVaultCards.length}</strong><span>{t("notRelatedLabel")}</span></div>
+                    <div><strong>{allBenchCards.length}</strong><span>{locale === "pt-BR" ? "Banco unificado" : "Unified bench"}</span></div>
+                    <div><strong>GK · DF · MF · FW</strong><span>{locale === "pt-BR" ? "Ordem por posição" : "Position order"}</span></div>
                   </div>
                   <p>{clubCopy.privateStrategy}</p>
                   <a href={touchlineArenaPanelHref("bench", locale)}>{clubCopy.openSubstitution} <ArrowRight aria-hidden="true" /></a>
@@ -541,7 +549,7 @@ export default async function ClubOwnerProfileRenderer({
                   <div>
                     <span><Users aria-hidden="true" /> {locale === "pt-BR" ? "Gestão do elenco" : "Squad management"}</span>
                     <strong>{locale === "pt-BR" ? "Seu time, em uma única tela" : "Your team, on one screen"}</strong>
-                    <small>{locale === "pt-BR" ? "Titulares, nove reservas e cards fora dos relacionados. A estratégia continua privada." : "Starting XI, nine substitutes and cards outside the matchday squad. Your strategy stays private."}</small>
+                    <small>{locale === "pt-BR" ? "Titulares e um único banco, ordenado por impacto e posição. A estratégia continua privada." : "Starting XI and one unified bench, ordered by impact and position. Your strategy stays private."}</small>
                   </div>
                   <a href={touchlineArenaPanelHref("bench", locale)}><Repeat2 aria-hidden="true" /> {locale === "pt-BR" ? "Fazer substituição" : "Make substitution"}</a>
                 </header>
@@ -566,35 +574,26 @@ export default async function ClubOwnerProfileRenderer({
                 </TouchlinePitchSurface>
 
                 <div className="club-owner-squad-row-heading">
-                  <span>{t("matchdayBenchLabel")}</span>
-                  <strong>{matchdayBenchCards.length}/9</strong>
+                  <span>{locale === "pt-BR" ? "Banco" : "Bench"}</span>
+                  <strong>{allBenchCards.length}</strong>
                 </div>
-                <div className="club-owner-squad-card-row">
-                  {matchdayBenchCards.map((card) => {
-                    const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
-                    return (
-                      <a key={card.id} href={touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier })}>
-                        <span aria-hidden="true"><TouchlineEliteExactCard player={player} labels={cardLabels} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} rankingMode="preview" showProfileAction={false} showSocialMetrics={false} /></span>
-                        <strong>{card.shortName}</strong>
-                      </a>
-                    );
-                  })}
-                </div>
-
-                <div className="club-owner-squad-row-heading">
-                  <span>{t("notRelatedLabel")}</span>
-                  <strong>{reserveVaultCards.length}</strong>
-                </div>
-                <div className="club-owner-squad-card-row club-owner-squad-reserves">
-                  {reserveVaultCards.map((card) => {
-                    const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
-                    return (
-                      <a key={card.id} href={touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier })}>
-                        <span aria-hidden="true"><TouchlineEliteExactCard player={player} labels={cardLabels} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} rankingMode="preview" showProfileAction={false} showSocialMetrics={false} /></span>
-                        <strong>{card.shortName}</strong>
-                      </a>
-                    );
-                  })}
+                <div className="club-owner-unified-bench">
+                  {benchPositionGroups.map((group) => group.cards.length ? (
+                    <section key={group.role} className="club-owner-bench-position" aria-label={group.label}>
+                      <header><span>{group.label}</span><strong>{group.cards.length}</strong></header>
+                      <div className="club-owner-squad-card-row">
+                        {group.cards.map((card) => {
+                          const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
+                          return (
+                            <a key={card.id} href={touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier })}>
+                              <span aria-hidden="true"><TouchlineEliteExactCard player={player} labels={cardLabels} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} rankingMode="preview" showProfileAction={false} showSocialMetrics={false} /></span>
+                              <strong>{card.shortName}</strong>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ) : null)}
                 </div>
               </section>
             </section>
@@ -1433,7 +1432,7 @@ export default async function ClubOwnerProfileRenderer({
           position: absolute;
           left: var(--squad-x);
           top: var(--squad-y);
-          width: 88px;
+          width: clamp(62px, 6.4vw, 78px);
           color: white;
           text-align: center;
           text-decoration: none;
@@ -1449,9 +1448,12 @@ export default async function ClubOwnerProfileRenderer({
         .club-owner-squad-row-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 22px 10px; }
         .club-owner-squad-row-heading span { color: #a3ff12; font-size: 9px; font-weight: 950; text-transform: uppercase; }
         .club-owner-squad-row-heading strong { color: rgba(255,255,255,.52); font-size: 9px; }
-        .club-owner-squad-card-row { display: grid; grid-template-columns: repeat(9,minmax(72px,1fr)); gap: 8px; overflow-x: auto; padding: 0 18px 20px; scrollbar-width: thin; }
+        .club-owner-unified-bench { display: grid; gap: 12px; padding-bottom: 24px; }
+        .club-owner-bench-position { display: grid; gap: 6px; }
+        .club-owner-bench-position > header { display: flex; align-items: center; justify-content: space-between; padding: 0 22px; color: rgba(255,255,255,.56); font-size: 8px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+        .club-owner-bench-position > header span { color: #a3ff12; }
+        .club-owner-squad-card-row { display: grid; grid-template-columns: repeat(9,minmax(72px,1fr)); gap: 8px; overflow-x: auto; padding: 0 18px; scrollbar-width: thin; }
         .club-owner-squad-card-row a { min-width: 72px; color: white; text-align: center; text-decoration: none; }
-        .club-owner-squad-reserves { grid-template-columns: repeat(6,minmax(72px,1fr)); padding-bottom: 24px; opacity: .9; }
 
         .club-owner-profile-commands {
           margin-top: 14px;
@@ -2113,7 +2115,7 @@ export default async function ClubOwnerProfileRenderer({
           .club-owner-squad-pitch-card { width: 52px; }
           .club-owner-squad-pitch-card strong { font-size: 5.5px; }
           .club-owner-squad-card-row { grid-template-columns: repeat(9,64px); gap: 6px; padding-inline: 10px; }
-          .club-owner-squad-reserves { grid-template-columns: repeat(6,64px); }
+          .club-owner-bench-position > header { padding-inline: 10px; }
 
           .club-owner-finance,
           .club-owner-training,

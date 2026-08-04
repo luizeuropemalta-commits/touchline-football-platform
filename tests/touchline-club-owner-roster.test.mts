@@ -132,7 +132,7 @@ describe("TouchLine ClubOwner roster accounting", () => {
     assert.equal(clubOwnerRosterMarketValue(deduplicated), parseMarketValueEur(first.marketValue));
   });
 
-  it("keeps every owned card in one explicit ClubOwner view: XI, bench, then Reserve Vault", () => {
+  it("keeps every owned card in one explicit ClubOwner view: XI and a unified position-ready bench", () => {
     const repeatedFirstCard = { ...CLUB_OWNER_SQUAD_CARDS[0] };
     const sections = partitionClubOwnerRoster([
       ...CLUB_OWNER_SQUAD_CARDS,
@@ -143,10 +143,15 @@ describe("TouchLine ClubOwner roster accounting", () => {
     assert.equal(sections.startingXiCards.length, 11);
     assert.equal(sections.matchdayBenchCards.length, 9);
     assert.equal(sections.reserveVaultCards.length, CLUB_OWNER_SQUAD_CARDS.length - 20);
+    assert.equal(sections.allBenchCards.length, CLUB_OWNER_SQUAD_CARDS.length - 11);
     assert.deepEqual(
       [...sections.startingXiCards, ...sections.matchdayBenchCards, ...sections.reserveVaultCards]
         .map((card) => card.id),
       CLUB_OWNER_SQUAD_CARDS.map((card) => card.id),
+    );
+    assert.deepEqual(
+      [...sections.startingXiCards, ...sections.allBenchCards].map((card) => card.id).sort(),
+      CLUB_OWNER_SQUAD_CARDS.map((card) => card.id).sort(),
     );
   });
 

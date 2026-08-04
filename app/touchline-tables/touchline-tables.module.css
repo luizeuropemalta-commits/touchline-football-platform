@@ -178,13 +178,6 @@
   width: min(100%, 1320px);
   aspect-ratio: 1575 / 1000;
   margin-inline: auto;
-  overflow: visible;
-}
-
-.pitchArt {
-  z-index: 0;
-  object-fit: contain;
-  filter: saturate(0.72) brightness(0.64) contrast(1.08) drop-shadow(0 30px 28px rgba(0, 0, 0, 0.54));
 }
 
 .pitchPlayer {

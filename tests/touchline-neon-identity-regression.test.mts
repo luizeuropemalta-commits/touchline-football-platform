@@ -118,8 +118,8 @@ test("ClubHub line-up contains its wide desktop pitch and fits every player on m
   assert.match(clubHubPage, /\.club-hub-shell \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
   assert.match(clubHubPage, /\.club-hub-shell > \* \{[\s\S]*?min-width: 0/);
   assert.match(lineupCss, /\.pitchViewport \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
-  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitch \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?min-height: clamp\(520px, 132vw, 650px\)/);
-  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.player \{[\s\S]*?width: clamp\(48px, 14vw, 82px\)/);
+  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitch \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?min-height: clamp\(500px, 128vw, 610px\)/);
+  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.player \{[\s\S]*?width: clamp\(44px, 13vw, 70px\)/);
   assert.match(lineupCss, /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)/);
   assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitchViewport \{[\s\S]*?overflow: hidden/);
   assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitch \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?min-height: 540px/);
@@ -530,8 +530,8 @@ test("ClubOwner headquarters centralizes squad decisions and Arena keeps substit
 
   assert.match(clubOwner, /className="club-owner-squad-pitch"/);
   assert.match(clubOwner, /startingXiCards\.map/);
-  assert.match(clubOwner, /matchdayBenchCards\.map/);
-  assert.match(clubOwner, /reserveVaultCards\.map/);
+  assert.match(clubOwner, /allBenchCards/);
+  assert.match(clubOwner, /benchPositionGroups\.map/);
   assert.match(clubOwner, /Fazer substituição/);
   assert.match(arenaClient, /draggable=\{!isLocked\}/);
   assert.match(arenaClient, /text\/touchline-bench-id/);

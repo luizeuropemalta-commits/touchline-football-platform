@@ -95,6 +95,7 @@ export type TouchlineClubOwnerRosterSections = {
   startingXiCards: ClubOwnerSquadCard[];
   matchdayBenchCards: ClubOwnerSquadCard[];
   reserveVaultCards: ClubOwnerSquadCard[];
+  allBenchCards: ClubOwnerSquadCard[];
 };
 
 function normalizeRosterIdentity(value: string) {
@@ -231,6 +232,25 @@ export function uniqueClubOwnerRosterCards(cards: ClubOwnerSquadCard[]) {
   return [...uniqueCards.values()];
 }
 
+/**
+ * The bench is one football group, not a price segment. The normal football
+ * spine keeps it predictable and scannable: goalkeeper, defenders,
+ * midfielders, forwards.
+ */
+export function orderClubOwnerBenchCards(cards: ClubOwnerSquadCard[]) {
+  const roleRank: Record<ClubOwnerSquadCard["role"], number> = {
+    goalkeeper: 0,
+    defender: 1,
+    midfielder: 2,
+    forward: 3,
+  };
+  return uniqueClubOwnerRosterCards(cards).sort((first, second) => (
+    roleRank[first.role] - roleRank[second.role]
+    || first.position.localeCompare(second.position)
+    || first.name.localeCompare(second.name)
+  ));
+}
+
 export function partitionClubOwnerRoster(cards: ClubOwnerSquadCard[]): TouchlineClubOwnerRosterSections {
   const allCards = uniqueClubOwnerRosterCards(cards);
   const startingXiCards = allCards.slice(0, TOUCHLINE_ROSTER_PRESENTATION_LIMITS.startingXi);
@@ -245,6 +265,7 @@ export function partitionClubOwnerRoster(cards: ClubOwnerSquadCard[]): Touchline
     startingXiCards,
     matchdayBenchCards,
     reserveVaultCards: allCards.slice(matchdayBenchStart + matchdayBenchCards.length),
+    allBenchCards: orderClubOwnerBenchCards(allCards.slice(matchdayBenchStart)),
   };
 }
 

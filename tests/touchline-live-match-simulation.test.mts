@@ -6,6 +6,10 @@ const arenaClientSource = readFileSync(
   new URL("../app/arena/ArenaClient.tsx", import.meta.url),
   "utf8",
 );
+const pitchSurfaceSource = readFileSync(
+  new URL("../components/touchline/pitch/TouchlinePitchSurface.module.css", import.meta.url),
+  "utf8",
+);
 const eliteCardSource = readFileSync(
   new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url),
   "utf8",
@@ -292,19 +296,15 @@ test("Live club marks remain transparent and scoreboard names stay contained", (
 });
 
 test("Live uses the licensed pitch as a proportional visual layer without changing card simulation", () => {
-  assert.match(
-    arenaClientSource,
-    /official-live-pitch-640\.webp\?v=\$\{ARENA_LIVE_VISUAL_ASSET_VERSION\} 640w,[\s\S]*?official-live-pitch-1600\.webp\?v=\$\{ARENA_LIVE_VISUAL_ASSET_VERSION\} 1600w/,
-  );
+  assert.match(arenaClientSource, /import TouchlinePitchSurface/);
+  assert.match(arenaClientSource, /<TouchlinePitchSurface className="arena-live-visualizer"/);
+  assert.match(pitchSurfaceSource, /official-live-pitch-960\.webp/);
   assert.doesNotMatch(arenaClientSource, /src="\/touchlineArena\/live\/official-live-pitch-dgim-studio-freepik\.jpg"/);
   assert.match(
     arenaClientSource,
     /\.arena-live-visualizer \{[\s\S]*?aspect-ratio: 2200 \/ 1555;/,
   );
-  assert.match(
-    arenaClientSource,
-    /\.arena-live-pitch-photo \{[\s\S]*?object-fit: cover;[\s\S]*?object-position: 50% 50%;/,
-  );
+  assert.doesNotMatch(arenaClientSource, /arena-live-pitch-photo/);
   assert.match(
     arenaClientSource,
     /Designed by dgim-studio \/ Freepik/,

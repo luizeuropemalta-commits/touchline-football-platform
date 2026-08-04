@@ -136,8 +136,8 @@
 
 .pitch {
   position: relative;
-  min-width: 940px;
-  min-height: 700px;
+  min-width: 900px;
+  min-height: 660px;
 }
 
 .player {
@@ -145,7 +145,7 @@
   z-index: 3;
   left: var(--lineup-x);
   top: var(--lineup-y);
-  width: clamp(78px, 8vw, 116px);
+  width: clamp(68px, 7.1vw, 96px);
   display: grid;
   justify-items: center;
   overflow: visible;
@@ -160,8 +160,9 @@
   z-index: 5;
   bottom: calc(100% + clamp(7px, .8vw, 12px));
   left: 50%;
-  width: max-content;
-  max-width: none;
+  width: min(168%, 154px);
+  max-width: 154px;
+  overflow: hidden;
   transform: translateX(-50%);
   color: #fff;
   font-size: clamp(9px, .83vw, 13px);
@@ -171,6 +172,7 @@
   text-align: center;
   text-shadow: 0 2px 5px rgba(0,0,0,.96), 0 0 10px rgba(0,0,0,.78);
   text-transform: uppercase;
+  text-overflow: ellipsis;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -266,21 +268,11 @@
   .pitch {
     width: 100%;
     min-width: 0;
-    min-height: clamp(520px, 132vw, 650px);
-  }
-
-  .pitch::after {
-    width: clamp(68px, 22vw, 120px);
-    height: clamp(68px, 22vw, 120px);
-  }
-
-  .pitch::after {
-    width: min(38%, 210px);
-    height: 15%;
+    min-height: clamp(500px, 128vw, 610px);
   }
 
   .player {
-    width: clamp(48px, 14vw, 82px);
+    width: clamp(44px, 13vw, 70px);
   }
 
   .playerName {
@@ -364,16 +356,6 @@
     width: 100%;
     min-width: 0;
     min-height: 540px;
-  }
-
-  .pitch::after {
-    width: 100px;
-    height: 100px;
-  }
-
-  .pitch::after {
-    width: min(40%, 230px);
-    height: 15%;
   }
 
   .player {

@@ -8,6 +8,7 @@ import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEl
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineCoachCard, { touchlineLiveCompactCoachFrameUrl } from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntro";
+import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import { TouchlineCoinMark, TouchlineSelectedPlayersMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -1064,9 +1065,19 @@ function benchImpactLabel(impact: string, t: ArenaTranslate) {
   return key ? `+ ${t(key)}` : impact;
 }
 
+function compareBenchByUsageAndPosition(first: BenchOption, second: BenchOption) {
+  const usageRank: Record<BenchOption["status"], number> = { hot: 0, ready: 1, watch: 2, risk: 3 };
+  const roleRank: Record<BenchOption["role"], number> = { goalkeeper: 0, defender: 1, midfielder: 2, forward: 3 };
+  return usageRank[first.status] - usageRank[second.status]
+    || roleRank[first.role] - roleRank[second.role]
+    || first.position.localeCompare(second.position)
+    || first.name.localeCompare(second.name);
+}
+
 function buildMatchdayBench(benchPlayers: BenchOption[]) {
-  const firstGoalkeeper = benchPlayers.find((bench) => bench.role === "goalkeeper");
-  const outfield = benchPlayers.filter((bench) => bench.role !== "goalkeeper");
+  const ordered = [...benchPlayers].sort(compareBenchByUsageAndPosition);
+  const firstGoalkeeper = ordered.find((bench) => bench.role === "goalkeeper");
+  const outfield = ordered.filter((bench) => bench.role !== "goalkeeper");
   const matchdayBench = [...outfield.slice(0, firstGoalkeeper ? 8 : 9), firstGoalkeeper].filter((bench): bench is BenchOption => Boolean(bench));
   return matchdayBench.slice(0, 9);
 }
@@ -6696,34 +6707,7 @@ export default function ArenaClient({
                     </span>
                   </div>
                   <div className="arena-live-stadium">
-                    <div className="arena-live-visualizer" aria-label={siteLanguage === "pt-BR" ? "Visualização do jogo" : "Match visualisation"}>
-                      <picture>
-                        <source
-                          type="image/webp"
-                          srcSet={`/touchlineArena/live/official-live-pitch-640.webp?v=${ARENA_LIVE_VISUAL_ASSET_VERSION} 640w, /touchlineArena/live/official-live-pitch-960.webp?v=${ARENA_LIVE_VISUAL_ASSET_VERSION} 960w, /touchlineArena/live/official-live-pitch-1600.webp?v=${ARENA_LIVE_VISUAL_ASSET_VERSION} 1600w`}
-                          sizes="(max-width: 760px) calc(100vw - 40px), (max-width: 1100px) calc(100vw - 310px), min(72vw, 1120px)"
-                        />
-                        <img
-                          className="arena-live-pitch-photo"
-                          src={`/touchlineArena/live/official-live-pitch-960.webp?v=${ARENA_LIVE_VISUAL_ASSET_VERSION}`}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                          decoding="async"
-                          fetchPriority="high"
-                        />
-                      </picture>
-                      <span className="arena-live-pitch-boundary" aria-hidden="true" />
-                      <span className="arena-live-pitch-halfway" aria-hidden="true" />
-                      <span className="arena-live-pitch-circle" aria-hidden="true" />
-                      <span className="arena-live-pitch-box arena-live-pitch-box-home" aria-hidden="true" />
-                      <span className="arena-live-pitch-box arena-live-pitch-box-away" aria-hidden="true" />
-                      <span className="arena-live-pitch-six arena-live-pitch-six-home" aria-hidden="true" />
-                      <span className="arena-live-pitch-six arena-live-pitch-six-away" aria-hidden="true" />
-                      <span className="arena-live-pitch-goal arena-live-pitch-goal-home" aria-hidden="true" />
-                      <span className="arena-live-pitch-goal arena-live-pitch-goal-away" aria-hidden="true" />
-                      <span className="arena-live-pitch-spot arena-live-pitch-spot-home" aria-hidden="true" />
-                      <span className="arena-live-pitch-spot arena-live-pitch-spot-away" aria-hidden="true" />
+                    <TouchlinePitchSurface className="arena-live-visualizer" ariaLabel={siteLanguage === "pt-BR" ? "Visualização do jogo" : "Match visualisation"}>
                       <div
                         ref={liveSimulationRef}
                         className={`arena-live-card-simulation ${isLiveLineupVisuallyReady ? "is-lineup-ready" : "is-lineup-loading"}`}
@@ -6748,7 +6732,7 @@ export default function ArenaClient({
                         ) : null}
                       </div>
                       <span className="arena-live-ball" aria-hidden="true" />
-                    </div>
+                    </TouchlinePitchSurface>
                     <div
                       ref={liveCoachCardsRef}
                       className="arena-live-technical-area"
@@ -7282,13 +7266,7 @@ export default function ArenaClient({
                         </button>
                         <strong title={ARENA_FORMATION_POSITION_RULES[selectedFormationKey]}>{selectedFormationKey}</strong>
                       </div>
-                      <div className="training-center-pitch">
-                        <span className="training-center-halfway" aria-hidden="true" />
-                        <span className="training-center-circle" aria-hidden="true" />
-                        <span className="training-center-box training-center-box-left" aria-hidden="true" />
-                        <span className="training-center-box training-center-box-right" aria-hidden="true" />
-                        <span className="training-center-goal training-center-goal-left" aria-hidden="true" />
-                        <span className="training-center-goal training-center-goal-right" aria-hidden="true" />
+                      <TouchlinePitchSurface className="training-center-pitch" ariaLabel={t("startingXi")}>
                         {players.map((player) => {
                           const slot = trainingCenterSlots.get(player.id) ?? { x: 50, y: 50 };
                           const isReplacementTarget = replacementTargetId === player.id;
@@ -7326,7 +7304,7 @@ export default function ArenaClient({
                             </button>
                           );
                         })}
-                      </div>
+                      </TouchlinePitchSurface>
                     </section>
                     <div className="bench-group-title">
                       <span>{t("selectedBench")}</span>
@@ -10525,11 +10503,6 @@ export default function ArenaClient({
           overflow: hidden;
           border: 1px solid rgba(221,255,226,.3);
           border-radius: 18px;
-          background:
-            radial-gradient(ellipse at 16% 22%, rgba(163,255,18,.09), transparent 36%),
-            radial-gradient(ellipse at 84% 72%, rgba(56,214,255,.06), transparent 38%),
-            repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 12.5%, rgba(0,0,0,.055) 12.5% 25%),
-            linear-gradient(155deg, rgba(13,27,28,.97), rgba(3,12,14,.985) 62%, rgba(1,7,9,.99));
           box-shadow:
             inset 0 0 0 1px rgba(255,255,255,.025),
             inset 0 -120px 160px rgba(0,0,0,.44),
@@ -10539,20 +10512,6 @@ export default function ArenaClient({
           backdrop-filter: blur(18px) saturate(.88);
           transform: perspective(1100px) rotateX(1.8deg);
           transform-origin: 50% 100%;
-        }
-
-        .arena-live-pitch-photo {
-          position: absolute;
-          inset: 0;
-          z-index: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: 50% 50%;
-          opacity: .64;
-          filter: saturate(.58) brightness(.48) contrast(1.18);
-          pointer-events: none;
-          user-select: none;
         }
 
         .arena-live-visualizer::before {
@@ -10566,95 +10525,6 @@ export default function ArenaClient({
             linear-gradient(115deg, transparent 18%, rgba(255,255,255,.035) 43%, transparent 64%);
           pointer-events: none;
         }
-
-        .arena-live-pitch-boundary,
-        .arena-live-pitch-halfway,
-        .arena-live-pitch-circle,
-        .arena-live-pitch-box,
-        .arena-live-pitch-six,
-        .arena-live-pitch-goal,
-        .arena-live-pitch-spot {
-          visibility: hidden;
-        }
-
-        .arena-live-pitch-boundary {
-          position: absolute;
-          inset: 5%;
-          z-index: 1;
-          border: 1px solid rgba(225,255,239,.32);
-          border-radius: 2px;
-        }
-
-        .arena-live-pitch-halfway {
-          position: absolute;
-          top: 5%;
-          bottom: 5%;
-          left: 50%;
-          width: 2px;
-          z-index: 1;
-          background: rgba(225,255,239,.28);
-          transform: translateX(-50%);
-        }
-
-        .arena-live-pitch-circle {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          width: min(18vw, 176px);
-          aspect-ratio: 1;
-          z-index: 1;
-          border: 1px solid rgba(225,255,239,.3);
-          border-radius: 50%;
-          transform: translate(-50%, -50%);
-        }
-
-        .arena-live-pitch-box,
-        .arena-live-pitch-six,
-        .arena-live-pitch-goal {
-          position: absolute;
-          top: 25%;
-          height: 50%;
-          z-index: 1;
-          border: 1px solid rgba(225,255,239,.3);
-        }
-
-        .arena-live-pitch-box { width: 16%; }
-        .arena-live-pitch-box-home { left: 5%; border-left: 0; }
-        .arena-live-pitch-box-away { right: 5%; border-right: 0; }
-
-        .arena-live-pitch-six {
-          top: 37%;
-          width: 7%;
-          height: 26%;
-        }
-
-        .arena-live-pitch-six-home { left: 5%; border-left: 0; }
-        .arena-live-pitch-six-away { right: 5%; border-right: 0; }
-
-        .arena-live-pitch-goal {
-          top: 41%;
-          width: 2.2%;
-          height: 18%;
-          border-color: rgba(225,255,239,.25);
-          background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(255,255,255,.13) 5px 6px);
-        }
-
-        .arena-live-pitch-goal-home { left: 2.8%; }
-        .arena-live-pitch-goal-away { right: 2.8%; }
-
-        .arena-live-pitch-spot {
-          position: absolute;
-          top: 50%;
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          z-index: 1;
-          background: rgba(225,255,239,.55);
-          transform: translateY(-50%);
-        }
-
-        .arena-live-pitch-spot-home { left: 13.5%; }
-        .arena-live-pitch-spot-away { right: 13.5%; }
 
         .arena-live-ball {
           position: absolute;
@@ -11805,22 +11675,11 @@ export default function ArenaClient({
           justify-self: center;
           overflow: hidden;
           border-radius: 16px;
-          border: 1px solid rgba(181,255,75,.3);
-          background:
-            radial-gradient(circle at 50% 46%, rgba(181,255,75,.14), transparent 36%),
-            repeating-linear-gradient(90deg, rgba(255,255,255,.028) 0 12.5%, rgba(0,0,0,.035) 12.5% 25%),
-            linear-gradient(135deg, rgba(13,91,55,.92), rgba(4,45,35,.96) 56%, rgba(9,69,52,.94));
-          box-shadow: inset 0 0 42px rgba(0,0,0,.34), 0 18px 42px rgba(0,0,0,.22);
           isolation: isolate;
         }
 
         .training-center-pitch::before {
-          content: "";
-          position: absolute;
-          inset: 4%;
-          z-index: 0;
-          border: 1px solid rgba(255,255,255,.66);
-          pointer-events: none;
+          content: none;
         }
 
         .training-center-halfway,
@@ -11885,7 +11744,7 @@ export default function ArenaClient({
           position: absolute;
           z-index: 2;
           display: grid;
-          width: clamp(38px, 4.3vw, 56px);
+          width: clamp(34px, 3.8vw, 50px);
           min-height: 0;
           gap: 3px;
           place-items: center;
@@ -11935,7 +11794,8 @@ export default function ArenaClient({
 
         .training-center-player > strong {
           display: block;
-          width: 132%;
+          width: 150%;
+          max-width: 82px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;

@@ -137,9 +137,11 @@ test("keeps the Live pitch and all fixture crests inside responsive runtime budg
   }
 
   const arenaClient = fs.readFileSync("app/arena/ArenaClient.tsx", "utf8");
+  const pitchSurface = fs.readFileSync("components/touchline/pitch/TouchlinePitchSurface.module.css", "utf8");
   assert.match(arenaClient, /function liveOptimizedClubLogoUrl/);
-  assert.match(arenaClient, /official-live-pitch-640\.webp\?v=\$\{ARENA_LIVE_VISUAL_ASSET_VERSION\} 640w/);
-  assert.match(arenaClient, /official-live-pitch-1600\.webp\?v=\$\{ARENA_LIVE_VISUAL_ASSET_VERSION\} 1600w/);
+  assert.match(arenaClient, /import TouchlinePitchSurface/);
+  assert.match(arenaClient, /<TouchlinePitchSurface className="arena-live-visualizer"/);
+  assert.match(pitchSurface, /official-live-pitch-960\.webp/);
   assert.match(arenaClient, /const ARENA_LIVE_VISUAL_ASSET_VERSION = "2026-07-28-1"/);
   assert.doesNotMatch(arenaClient, /src="\/touchlineArena\/live\/official-live-pitch-dgim-studio-freepik\.jpg"/);
 

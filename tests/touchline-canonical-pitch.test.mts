@@ -37,11 +37,10 @@ test("ClubHub formation keeps every complete player name above its card", () => 
   assert.doesNotMatch(clubHubLineupCss, /\.playerLink/);
 });
 
-test("ClubHub gives only the defensive line a modest local cross-field refinement", () => {
-  assert.match(clubHubLineup, /CLUB_HUB_DEFENDER_Y_REFINEMENT/);
-  assert.match(clubHubLineup, /17: 15,[\s\S]*?39: 38\.25,[\s\S]*?61: 61\.75,[\s\S]*?83: 85/);
-  assert.match(clubHubLineup, /resolveClubHubLineupY\(card\.role, y\)/);
-  assert.doesNotMatch(clubLineupBuilder, /CLUB_HUB_DEFENDER_Y_REFINEMENT/);
+test("ClubHub preserves canonical player coordinates without local role refinements", () => {
+  assert.doesNotMatch(clubHubLineup, /CLUB_HUB_DEFENDER_Y_REFINEMENT/);
+  assert.doesNotMatch(clubHubLineup, /resolveClubHubLineupY\(/);
+  assert.match(clubHubLineup, /"--lineup-x": `\$\{x\}%`, "--lineup-y": `\$\{y\}%`/);
 });
 
 test("ClubHub makes an unscheduled opponent explicit without pretending TouchLine is a club", () => {

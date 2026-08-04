@@ -13,21 +13,6 @@ import { formatPlayerMarketTierRange, formatPlayerMarketValueEur } from "@/lib/t
 
 import styles from "./ClubHubOfficialLineup.module.css";
 
-/* This is deliberately local to ClubHub's visual presentation. The canonical
-   4-3-3 coordinates remain the source of truth for every other pitch. On a
-   horizontal field, x keeps the defensive line at the same depth; only the
-   cross-field breathing room is refined here. */
-const CLUB_HUB_DEFENDER_Y_REFINEMENT: Readonly<Record<number, number>> = {
-  17: 15,
-  39: 38.25,
-  61: 61.75,
-  83: 85,
-};
-
-function resolveClubHubLineupY(role: string, y: number) {
-  return role === "defender" ? (CLUB_HUB_DEFENDER_Y_REFINEMENT[y] ?? y) : y;
-}
-
 type ClubHubOfficialLineupProps = {
   clubName: string;
   lineup: TouchLineClubLineup;
@@ -99,13 +84,11 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                 competition: "england",
               }))
               : updating;
-            const visualY = resolveClubHubLineupY(card.role, y);
-
             return (
               <article
                 key={card.id}
                 className={styles.player}
-                style={{ "--lineup-x": `${x}%`, "--lineup-y": `${visualY}%` } as CSSProperties}
+                style={{ "--lineup-x": `${x}%`, "--lineup-y": `${y}%` } as CSSProperties}
               >
                 <span className={styles.playerName}>{card.name}</span>
                 <TouchlineCardZoom
