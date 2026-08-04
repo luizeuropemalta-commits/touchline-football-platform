@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { TouchlineInboxList } from "@/components/touchline/TouchlineInboxList";
 import {
   resolveTouchlineCentralInbox,
   type TouchlineCentralMessage,
@@ -58,12 +59,12 @@ export default async function TouchlineInboxPage({ searchParams }: InboxPageProp
     title: "Inbox do ClubOwner", subtitle: "Comunicados oficiais da TouchLine Central para a sua competição.",
     empty: "Nenhum comunicado para você agora.", unavailable: "O Inbox está indisponível neste ambiente.",
     unavailableCopy: "A fonte de mensagens ainda não foi preparada neste ambiente. Nenhum comunicado é simulado.",
-    read: "Lida", unread: "Não lida", open: "Abrir destino", back: "Voltar à Arena",
+    read: "Lida", unread: "Não lida", open: "Abrir destino", markRead: "Marcar como lida", back: "Voltar à Arena",
   } : {
     title: "ClubOwner Inbox", subtitle: "Official TouchLine Central notices for your competition.",
     empty: "There are no notices for you right now.", unavailable: "Inbox is unavailable in this environment.",
     unavailableCopy: "The message source has not been prepared in this environment. No notice is simulated.",
-    read: "Read", unread: "Unread", open: "Open destination", back: "Back to Arena",
+    read: "Read", unread: "Unread", open: "Open destination", markRead: "Mark as read", back: "Back to Arena",
   };
   let unavailable = !user || !admin;
   let items: ReturnType<typeof resolveTouchlineCentralInbox> = [];
@@ -82,5 +83,5 @@ export default async function TouchlineInboxPage({ searchParams }: InboxPageProp
       });
     }
   }
-  return <main className="inbox"><header><span>TOUCHLINE CENTRAL</span><h1>{copy.title}</h1><p>{copy.subtitle}</p></header>{unavailable ? <section className="state"><h2>{copy.unavailable}</h2><p>{copy.unavailableCopy}</p></section> : items.length ? <ol>{items.map((item) => <li key={item.id}><div><span>{item.priority} · {item.category}</span><h2>{item.title}</h2><p>{item.body}</p></div><aside><b>{item.readAt ? copy.read : copy.unread}</b><small>{item.lifecycleState}</small>{item.deepLink ? <Link href={`${item.deepLink}${item.deepLink.includes("?") ? "&" : "?"}lang=${encodeURIComponent(locale)}`}>{copy.open}</Link> : null}</aside></li>)}</ol> : <section className="state"><h2>{copy.empty}</h2></section>}<Link className="back" href={`/arena?lang=${encodeURIComponent(locale)}`}>← {copy.back}</Link><style>{`.inbox{min-height:100%;max-width:980px;margin:auto;padding:28px;color:#efffd5}.inbox header span,.inbox li>div>span{color:#b5ff4b;font-size:10px;font-weight:900;letter-spacing:.12em}.inbox h1{margin:7px 0;font-size:clamp(32px,5vw,58px);letter-spacing:-.055em}.inbox header p,.inbox li p,.state p{color:#b8c9bc;line-height:1.55}.inbox ol{display:grid;gap:12px;padding:0;list-style:none}.inbox li,.state{display:flex;justify-content:space-between;gap:20px;border:1px solid rgba(181,255,75,.19);border-radius:20px;padding:20px;background:#07120e}.inbox li h2{margin:8px 0;font-size:21px}.inbox aside{display:grid;align-content:start;gap:8px;text-align:right}.inbox aside b{color:#b5ff4b;font-size:11px}.inbox aside small{color:#b8c9bc}.inbox a{color:#efffd5;font-weight:800}.back{display:inline-block;margin-top:24px}@media(max-width:620px){.inbox li{display:grid}.inbox aside{text-align:left}}`}</style></main>;
+  return <main className="inbox"><header><span>TOUCHLINE CENTRAL</span><h1>{copy.title}</h1><p>{copy.subtitle}</p></header>{unavailable ? <section className="state"><h2>{copy.unavailable}</h2><p>{copy.unavailableCopy}</p></section> : items.length ? <TouchlineInboxList initialItems={items} locale={locale} labels={copy} /> : <section className="state"><h2>{copy.empty}</h2></section>}<Link className="back" href={`/arena?lang=${encodeURIComponent(locale)}`}>← {copy.back}</Link><style>{`.inbox{min-height:100%;max-width:980px;margin:auto;padding:28px;color:#efffd5}.inbox header span,.inbox li>div>span{color:#b5ff4b;font-size:10px;font-weight:900;letter-spacing:.12em}.inbox h1{margin:7px 0;font-size:clamp(32px,5vw,58px);letter-spacing:-.055em}.inbox header p,.inbox li p,.state p{color:#b8c9bc;line-height:1.55}.inbox ol{display:grid;gap:12px;padding:0;list-style:none}.inbox li,.state{display:flex;justify-content:space-between;gap:20px;border:1px solid rgba(181,255,75,.19);border-radius:20px;padding:20px;background:#07120e}.inbox li h2{margin:8px 0;font-size:21px}.inbox aside{display:grid;align-content:start;gap:8px;text-align:right}.inbox aside b{color:#b5ff4b;font-size:11px}.inbox aside small{color:#b8c9bc}.inbox a,.inbox button{color:#efffd5;font-weight:800}.inbox button{border:0;background:transparent;padding:0;text-decoration:underline;cursor:pointer}.back{display:inline-block;margin-top:24px}@media(max-width:620px){.inbox li{display:grid}.inbox aside{text-align:left}}`}</style></main>;
 }
