@@ -64,6 +64,24 @@ Preview: opening the real Amad Diallo card created its dialog, the Close control
 removed it, and focus returned to the same card trigger. This verifies the
 actual interactive component rather than a static screenshot.
 
+## Localisation correction found during smoke
+
+The Portuguese ClubHub smoke exposed one shared-card label that still used the
+English fallback (`Current Club`) while the rest of the card was Portuguese.
+The cause was a partial `cardLabels` object in
+`app/touchline-clubs/[club]/page.tsx`: it supplied the other labels but omitted
+`currentClub`, allowing the card component's English server-rendering fallback.
+
+The page now supplies `Clube atual` for `pt-BR` and `Current Club` otherwise.
+The focused contract test, TypeScript, ESLint, all 623 tests and a new
+production build pass. A fresh local production render contains 45 occurrences
+of `Clube atual` and none of `Current Club`; visual evidence is stored locally:
+
+- `screenshots/recovery-local/clubhub-ptbr-current-club-label.png`
+
+This correction is pending the next Ready Preview validation; it has not been
+promoted to the production alias.
+
 ## Available responsive evidence
 
 The available browser surfaces validated ClubHub at `1280x720` and `656x756`.

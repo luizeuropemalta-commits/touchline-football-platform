@@ -364,6 +364,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
     points: t("points"),
     totalPoints: t("touchlinePoints"),
     cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
+    currentClub: locale === "pt-BR" ? "Clube atual" : "Current Club",
   };
   const club = findTouchLineClub(clubParam);
   if (!club) notFound();
