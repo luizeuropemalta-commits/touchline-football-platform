@@ -21,6 +21,22 @@
   margin-inline: auto;
 }
 
+.selectionPending {
+  display: grid;
+  gap: 8px;
+  min-height: 260px;
+  align-content: center;
+  border: 1px dashed rgba(184, 255, 70, .35);
+  border-radius: 24px;
+  padding: 28px;
+  background: rgba(2, 13, 10, .56);
+  color: #efffd8;
+  text-align: center;
+}
+
+.selectionPending strong { color: #caff70; font-size: clamp(18px, 2vw, 26px); }
+.selectionPending p { max-width: 620px; margin: 0 auto; color: rgba(230, 255, 226, .72); line-height: 1.55; }
+
 .topbar {
   display: flex;
   align-items: center;

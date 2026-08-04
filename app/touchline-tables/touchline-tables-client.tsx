@@ -47,7 +47,7 @@ type TouchLineTablesClientProps = {
   copy: RankingsCopy;
   locale: TouchLineLocale;
   rankMode: string;
-  rankingSnapshot: TouchlineRankingSnapshot;
+  rankingSnapshot: TouchlineRankingSnapshot | null;
   rosterCards: ClubOwnerSquadCard[];
   totalCards: number;
   totalOwnerValue: string;
@@ -111,7 +111,7 @@ export default function TouchLineTablesClient({
 }: TouchLineTablesClientProps) {
   const [zoomedCardId, setZoomedCardId] = useState<string | null>(null);
   const selection = useMemo(
-    () => buildTouchlineSelection(rankingSnapshot),
+    () => rankingSnapshot ? buildTouchlineSelection(rankingSnapshot) : null,
     [rankingSnapshot],
   );
   const zoomedCard = rosterCards.find((card) => card.id === zoomedCardId) ?? null;
@@ -185,7 +185,7 @@ export default function TouchLineTablesClient({
           <span>{copy.seasonSelectionRule}</span>
         </div>
 
-        <div className={styles.pitch} aria-label={copy.seasonSelection}>
+        {selection ? <><div className={styles.pitch} aria-label={copy.seasonSelection}>
           <Image
             src="/touchlineArena/ranking/touchline-selection-pitch-horizontal.webp"
             alt=""
@@ -222,7 +222,7 @@ export default function TouchLineTablesClient({
           {isPortuguese
             ? "Toque em um card para ampliar. A Seleção TouchLine usa o mesmo ranking de todas as páginas do jogo."
             : "Tap a card to enlarge it. The TouchLine XI uses the same ranking across the game."}
-        </p>
+        </p></> : <div className={styles.selectionPending} role="status"><strong>{copy.seasonSelectionPending}</strong><p>{copy.seasonSelectionPendingDescription}</p></div>}
       </section>
 
       <div className={styles.cascade}>

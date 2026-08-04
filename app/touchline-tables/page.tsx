@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { buildTouchlineRankingSnapshot } from "@/lib/touchlineArena/card-ranking";
 import { buildDemoClubOwnerStandings, rankClubOwnerCards } from "@/lib/touchlineArena/demo-data";
 import { arenaPersistenceKeys } from "@/lib/touchlineArena/arena-persistence-namespace";
 import { readAuthoritativeTouchlineRoster } from "@/lib/touchlineArena/authoritative-roster-server";
@@ -73,26 +72,6 @@ export default async function TouchLineTablesPage({
     .slice(0, 20);
 
   const cardPlayerRank = [...rosterCards].sort(rankClubOwnerCards).slice(0, 20);
-  const rankingSnapshot = buildTouchlineRankingSnapshot({
-    snapshotId: "touchline-england-current",
-    roundId: "touchline-england-preseason",
-    status: "draft",
-    generatedAt: "2026-07-21T00:00:00.000Z",
-    source: "simulation",
-    players: rosterCards.map((card) => ({
-      playerId: card.id,
-      providerPlayerId: card.id,
-      name: card.name,
-      clubName: card.clubName,
-      position: card.position,
-      role: card.role,
-      touchlinePoints: card.touchlinePoints,
-      roundPoints: card.touchlinePoints,
-      minutesPlayed: 0,
-      appearances: 0,
-    })),
-  });
-
   const copy = getTouchLineRankingsCopy(locale);
   const totalOwnerValue = ownerRows.reduce(
     (total, owner) => total + owner.squadValueTc,
@@ -106,7 +85,7 @@ export default async function TouchLineTablesPage({
       copy={copy}
       locale={locale}
       rankMode={totalCardPoints > 0 ? copy.pointsMode : copy.marketMode}
-      rankingSnapshot={rankingSnapshot}
+      rankingSnapshot={null}
       rosterCards={rosterCards}
       totalCards={rosterCards.length}
       totalOwnerValue={formatTouchlineCommercialCardTotal({
