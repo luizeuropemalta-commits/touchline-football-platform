@@ -104,3 +104,5 @@ Latest safe commits after checkpoint: `eb79bb12`, `ca182d1d`, `ab608662`, `88bc9
 | Remaining external action | Apply migration 048 in a controlled non-financial database operation, backfill verified prior-season memberships/fixtures/lineups, execute canonical sync and audit coverage before any historical total is published. Then validate all shared consumers against the one read model. |
 
 Read-only production schema inspection also confirms the existing gates are real: migration `047` has not added `touchline_user_arena_state.coach_provider_id`, and migration `043` has not created the TouchLine Central message/localization/receipt tables. Both remain `EXTERNAL_HARD_GATE`; neither was applied by this workstream.
+
+Latest safe checkpoint: `e8679830` — canonical player-season statistics read model, safe public unavailable state, TouchLine public branding cleanup, audit evidence and regression coverage.
