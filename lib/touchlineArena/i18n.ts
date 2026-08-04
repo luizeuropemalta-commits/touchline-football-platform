@@ -254,6 +254,9 @@ export type TouchLineTranslationKey =
   | "clubTable"
   | "fullTables"
   | "tableDemoDescription"
+  | "officialTableDescription"
+  | "officialTablePending"
+  | "officialTablePendingDescription"
   | "nextMatch"
   | "clubStore"
   | "officialShopTraffic"
@@ -280,6 +283,10 @@ export type TouchLineTranslationKey =
   | "drawsShort"
   | "lossesShort"
   | "goalDifferenceShort"
+  | "goalsForShort"
+  | "goalsAgainstShort"
+  | "pointsShort"
+  | "formShort"
   | "locked"
   | "ready"
   | "hotStatus"
@@ -556,6 +563,9 @@ const en: Record<TouchLineTranslationKey, string> = {
   clubTable: "Club table",
   fullTables: "Full tables",
   tableDemoDescription: "The demo table is seeded for presentation. When the season starts, it must come from official match results and TouchLine league rules.",
+  officialTableDescription: "Official football results only. Scheduled and live matches never affect the table.",
+  officialTablePending: "Official standings will appear after the first verified final result.",
+  officialTablePendingDescription: "No completed England fixture is currently available in the canonical TouchLine data source.",
   nextMatch: "Next Match",
   clubStore: "Club Store",
   officialShopTraffic: "Official shop traffic",
@@ -582,6 +592,10 @@ const en: Record<TouchLineTranslationKey, string> = {
   drawsShort: "D",
   lossesShort: "L",
   goalDifferenceShort: "GD",
+  goalsForShort: "GF",
+  goalsAgainstShort: "GA",
+  pointsShort: "PTS",
+  formShort: "Form",
   locked: "Locked",
   ready: "Ready",
   hotStatus: "Hot",
@@ -859,6 +873,9 @@ const ptBR: Record<TouchLineTranslationKey, string> = {
   clubTable: "Tabela de clubes",
   fullTables: "Tabelas completas",
   tableDemoDescription: "A tabela de demonstração existe apenas para apresentação. Quando a temporada começar, os dados virão dos resultados oficiais e das regras da liga TouchLine.",
+  officialTableDescription: "Somente resultados oficiais. Partidas agendadas e ao vivo nunca alteram a tabela.",
+  officialTablePending: "A tabela oficial aparecerá após o primeiro resultado final verificado.",
+  officialTablePendingDescription: "Ainda não há partida concluída da England disponível na fonte canônica da TouchLine.",
   nextMatch: "Próxima partida",
   clubStore: "Loja do clube",
   officialShopTraffic: "Acesso à loja oficial",
@@ -885,6 +902,10 @@ const ptBR: Record<TouchLineTranslationKey, string> = {
   drawsShort: "E",
   lossesShort: "D",
   goalDifferenceShort: "SG",
+  goalsForShort: "GP",
+  goalsAgainstShort: "GC",
+  pointsShort: "PTS",
+  formShort: "Forma",
   locked: "Bloqueado",
   ready: "Pronto",
   hotStatus: "Em alta",

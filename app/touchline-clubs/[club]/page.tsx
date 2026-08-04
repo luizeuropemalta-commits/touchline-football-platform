@@ -11,7 +11,6 @@ import type { TouchlineFantasyLineupMember, TouchlineFixture, TouchlineTeam } fr
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   TOUCHLINE_ENGLAND_CLUBS,
-  buildTouchLineEnglandClubTable,
   findTouchLineClub,
   formatCompactEuro,
   rankClubOwnerCards,
@@ -26,6 +25,7 @@ import {
 import { readLiveScoreSnapshot } from "@/lib/football-data/live-score-snapshot";
 import { readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fantasy-snapshot";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { buildOfficialStandings } from "@/lib/football-data/official-standings";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import {
   parseMarketValueEur,
@@ -368,10 +368,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const club = findTouchLineClub(clubParam);
   if (!club) notFound();
 
-  const [squadLoad, matchSnapshot, clubHonours] = await Promise.all([
+  const [squadLoad, matchSnapshot, clubHonours, officialFixtures] = await Promise.all([
     loadClubSquadCards(club, locale),
     loadClubMatchSnapshot(club, locale),
     loadClubTrophyAssets(club),
+    readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
   ]);
   const matchPreview = matchSnapshot.preview;
   const clubCards = squadLoad.cards.sort(rankClubOwnerCards);
@@ -388,7 +389,14 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const clubValue = clubCards.reduce((sum, card) => sum + parseMarketValueEur(card.marketValue), 0);
   const hasCompleteClubValue = clubCards.length > 0 && clubCards.every((card) => parseMarketValueEur(card.marketValue) > 0);
   const touchLinePoints = clubCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
-  const leagueTable = buildTouchLineEnglandClubTable();
+  const leagueTable = buildOfficialStandings({
+    teams: TOUCHLINE_ENGLAND_CLUBS.map((entry) => ({
+      providerTeamId: entry.teamId,
+      name: entry.name,
+      value: entry,
+    })),
+    fixtures: officialFixtures,
+  });
 
   return (
     <main className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent } as CSSProperties}>
@@ -443,28 +451,31 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             <div><span>TouchLine England Table</span><strong>{t("clubTable")}</strong></div>
             <div className="club-hub-section-actions">
               <a href={`/touchline-tables?${localeQuery}`}>{t("fullTables")}</a>
-              <small>{t("tableDemoDescription")}</small>
+              <small>{t("officialTableDescription")}</small>
             </div>
           </div>
-          <div className="club-hub-table-list">
-            {leagueTable.map((row) => (
+          {leagueTable.completedFixtures ? <div className="club-hub-table-list">
+            {leagueTable.rows.map((row, index) => (
               <a
-                key={row.club.teamId}
-                href={`/touchline-clubs/${row.club.slug}?${localeQuery}`}
-                className={`club-hub-table-row ${row.club.teamId === club.teamId ? "is-current" : ""}`}
+                key={row.team.teamId}
+                href={`/touchline-clubs/${row.team.slug}?${localeQuery}`}
+                className={`club-hub-table-row ${row.team.teamId === club.teamId ? "is-current" : ""}`}
               >
-                <span>{row.rank}</span>
-                {row.club.logoUrl ? <img src={row.club.logoUrl} alt="" draggable={false} /> : <i>{row.club.shortCode}</i>}
-                <strong>{row.club.name}</strong>
+                <span>{index + 1}</span>
+                {row.team.logoUrl ? <img src={row.team.logoUrl} alt="" draggable={false} /> : <i>{row.team.shortCode}</i>}
+                <strong>{row.team.name}</strong>
                 <small>{t("playedShort")} {row.played}</small>
-                <small>{t("winsShort")} {row.wins}</small>
-                <small>{t("drawsShort")} {row.draws}</small>
-                <small>{t("lossesShort")} {row.losses}</small>
+                <small>{t("winsShort")} {row.won}</small>
+                <small>{t("drawsShort")} {row.drawn}</small>
+                <small>{t("lossesShort")} {row.lost}</small>
+                <small>{t("goalsForShort")} {row.goalsFor}</small>
+                <small>{t("goalsAgainstShort")} {row.goalsAgainst}</small>
                 <small>{t("goalDifferenceShort")} {row.goalDifference}</small>
-                <b>{row.touchlinePoints}</b>
+                <b>{t("pointsShort")} {row.points}</b>
+                <small className="club-hub-table-form" aria-label={`${t("formShort")}: ${row.form.join(" ")}`}>{row.form.join(" · ") || "—"}</small>
               </a>
             ))}
-          </div>
+          </div> : <div className="club-hub-table-empty" role="status"><strong>{t("officialTablePending")}</strong><p>{t("officialTablePendingDescription")}</p></div>}
         </section>
 
         <section className="club-hub-board">
@@ -901,7 +912,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         }
         .club-hub-table-row {
           display: grid;
-          grid-template-columns: 38px 42px minmax(0, 1fr) repeat(5, 48px) 54px;
+          grid-template-columns: 38px 42px minmax(150px, 1fr) repeat(7, 48px) 58px minmax(70px, .8fr);
           align-items: center;
           gap: 10px;
           min-height: 58px;
@@ -957,6 +968,18 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           text-align: center;
           white-space: nowrap;
         }
+        .club-hub-table-form { color: #dfff9b !important; letter-spacing: .04em; }
+        .club-hub-table-empty {
+          display: grid;
+          gap: 7px;
+          margin-top: 18px;
+          border: 1px dashed rgba(181,255,75,.28);
+          border-radius: 8px;
+          padding: 20px;
+          background: rgba(0,0,0,.18);
+        }
+        .club-hub-table-empty strong { color: #dfff9b; font-size: 14px; }
+        .club-hub-table-empty p { margin: 0; color: rgba(255,255,255,.66); font-size: 12px; line-height: 1.5; }
         .club-hub-board strong {
           display: block;
           margin: 12px 0;
@@ -1202,7 +1225,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             padding-bottom: 6px;
           }
           .club-hub-table-row {
-            min-width: 760px;
+            min-width: 920px;
           }
           .club-hub-feature-list article { grid-template-columns: 42px minmax(0, 1fr); }
           .club-hub-feature-list small { grid-column: 2; }
