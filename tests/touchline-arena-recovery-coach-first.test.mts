@@ -71,6 +71,9 @@ test("Arena keeps production coach identity out of the demo fallback and exposes
   assert.match(arena, /const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired/);
   assert.match(arena, /is-market-standalone \.arena-functional-layer > :not\(\.arena-action-layer\):not\(\.arena-coach-first-gate\)/);
   assert.match(arena, /\/api\/touchline-arena\/coach/);
+  assert.match(arena, /const requestTimeout = window\.setTimeout\(\(\) => controller\.abort\(\), 10_000\)/);
+  assert.match(arena, /signal: controller\.signal/);
+  assert.match(arena, /window\.clearTimeout\(requestTimeout\)/);
   assert.match(arena, /const mustPersistForClubOwner = canPersistArenaAccountState/);
   assert.match(arena, /if \(!response\.ok\) \{[\s\S]*?Não foi possível salvar o treinador na sua conta/);
   assert.match(arena, /setCoachSelectionError\(message\)/);

@@ -4159,7 +4159,9 @@ export default function ArenaClient({
     queueMicrotask(() => {
       if (!cancelled) setCoachOfferStatus("loading");
     });
-    fetch("/api/touchline-arena/coach", { cache: "no-store" })
+    const controller = new AbortController();
+    const requestTimeout = window.setTimeout(() => controller.abort(), 10_000);
+    fetch("/api/touchline-arena/coach", { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
         const payload = await readTouchlineJsonPayload<{
           ok?: boolean;
@@ -4181,10 +4183,15 @@ export default function ArenaClient({
       })
       .catch(() => {
         if (!cancelled) setCoachOfferStatus("error");
+      })
+      .finally(() => {
+        window.clearTimeout(requestTimeout);
       });
 
     return () => {
       cancelled = true;
+      controller.abort();
+      window.clearTimeout(requestTimeout);
     };
   }, [arenaPersistencePrincipal]);
 
