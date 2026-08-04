@@ -40,6 +40,19 @@ The Portuguese Match Centre route also renders the real data surface with its
 upcoming-fixture list, localized kickoff times, canonical source status and the
 explicit next-match state. No presentation-only audit substitute was used.
 
+## Available responsive evidence
+
+The available browser surfaces validated ClubHub at `1280x720` and `656x756`.
+Both completed the initial loading state and rendered the real Manchester United
+hero and card/squad summary without a horizontal error state or an incomplete
+surface. Screenshots are stored locally, not embedded in chat:
+
+- `screenshots/vercel-preview/clubhub-desktop-1280x720.png`
+- `screenshots/vercel-preview/clubhub-compact-656x756.png`
+
+Native WebKit, a phone-width viewport and landscape mobile remain part of the
+separate native-device gate; they are not inferred from this evidence.
+
 ## Production protection
 
 `touchline.com.br` and `www.touchline.com.br` remain Production aliases. This
