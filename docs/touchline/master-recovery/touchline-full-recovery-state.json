@@ -2,16 +2,16 @@
   "goal": "TouchLine Full Product Recovery — 100% Completion",
   "checkpoint": "74fe6cae",
   "overall_status": "IN_PROGRESS",
-  "current_block": 31,
+  "current_block": 35,
   "completed_blocks": [],
   "blocked_blocks": [4, 5, 26, 29, 34],
-  "next_action": "Measure canonical public-route performance locally and identify only independently safe bottlenecks.",
-  "last_validated_at": "2026-08-04T10:50:00+02:00",
+  "next_action": "Run the controlled real-product audit on the deployed domain once GitHub/Vercel publication credentials and disposable owner personas are available.",
+  "last_validated_at": "2026-08-04T11:12:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
-    "unit": "621 passed, 0 failed",
-    "integration": "focused Training Centre route/navigation/visual-contract coverage: 41 passed",
+    "unit": "622 passed, 0 failed",
+    "integration": "focused Training Centre route/navigation/visual-contract coverage: 41 passed; local performance read matrix: 21 HTTP 200 responses; ClubHub delivery contract: 8 focused tests passed",
     "e2e": "partial; native WebKit and controlled production-account matrix pending",
     "build": "pass"
   }
