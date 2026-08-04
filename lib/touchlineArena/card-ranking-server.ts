@@ -7,6 +7,7 @@ import {
   type TouchlineActiveRankingState,
 } from "./card-ranking-live";
 import type { TouchlinePublishedRankingSnapshot } from "./card-ranking-pipeline";
+import { parseTouchlinePublishedTopEleven, type TouchlinePublishedTopEleven } from "./published-top-eleven";
 
 export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRankingState> {
   const admin = createAdminClient();
@@ -53,4 +54,29 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
   return state && state.players.length === record.actual_player_count
     ? state
     : TOUCHLINE_PRESEASON_RANKING_STATE;
+}
+
+/** Reads only an immutable, audited published Top 11; absence is a valid state. */
+export async function loadTouchLinePublishedTopEleven(): Promise<TouchlinePublishedTopEleven | null> {
+  const admin = createAdminClient();
+  if (!admin) return null;
+  const { data: active, error: activeError } = await admin
+    .from("touchline_card_ranking_active_snapshots")
+    .select("snapshot_id")
+    .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
+    .maybeSingle();
+  if (activeError || !active?.snapshot_id) return null;
+  const { data: record, error } = await admin
+    .from("touchline_card_ranking_snapshots")
+    .select("snapshot_id,round_id,published_at,source,status,selection_payload")
+    .eq("snapshot_id", active.snapshot_id)
+    .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
+    .maybeSingle();
+  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited") return null;
+  return parseTouchlinePublishedTopEleven({
+    snapshotId: record.snapshot_id,
+    roundId: record.round_id,
+    publishedAt: record.published_at,
+    selectionPayload: record.selection_payload,
+  });
 }

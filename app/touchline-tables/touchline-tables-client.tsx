@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   ChevronRight,
   ExternalLink,
@@ -26,7 +26,6 @@ import {
   formatTouchlineCommercialCardTotal,
   resolveTouchlineCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
-import type { TouchlineRankingSnapshot } from "@/lib/touchlineArena/card-ranking";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
@@ -35,7 +34,7 @@ import {
   type TouchLineClubOwnerStanding,
 } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
-import { buildTouchlineSelection } from "@/lib/touchlineArena/touchline-selection";
+import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published-top-eleven";
 import type { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import styles from "./touchline-tables.module.css";
 
@@ -47,7 +46,7 @@ type TouchLineTablesClientProps = {
   copy: RankingsCopy;
   locale: TouchLineLocale;
   rankMode: string;
-  rankingSnapshot: TouchlineRankingSnapshot | null;
+  publishedTopEleven: TouchlinePublishedTopEleven | null;
   rosterCards: ClubOwnerSquadCard[];
   totalCards: number;
   totalOwnerValue: string;
@@ -103,17 +102,14 @@ export default function TouchLineTablesClient({
   copy,
   locale,
   rankMode,
-  rankingSnapshot,
+  publishedTopEleven,
   rosterCards,
   totalCards,
   totalOwnerValue,
   touchLineEnglandTable,
 }: TouchLineTablesClientProps) {
   const [zoomedCardId, setZoomedCardId] = useState<string | null>(null);
-  const selection = useMemo(
-    () => rankingSnapshot ? buildTouchlineSelection(rankingSnapshot) : null,
-    [rankingSnapshot],
-  );
+  const selection = publishedTopEleven?.slots ?? null;
   const zoomedCard = rosterCards.find((card) => card.id === zoomedCardId) ?? null;
   const isPortuguese = locale === "pt-BR";
   const zoomedCardTierLabel = zoomedCard
@@ -194,8 +190,8 @@ export default function TouchLineTablesClient({
             sizes="(max-width: 900px) 100vw, 1320px"
             className={styles.pitchArt}
           />
-          {selection.players.map((slot) => {
-            const card = rosterCards.find((item) => item.id === slot.player.playerId);
+          {selection.map((slot) => {
+            const card = rosterCards.find((item) => slot.playerIds.includes(item.id));
             if (!card) return null;
             const point = projectedPitchPoint(slot.x, slot.y);
             return (

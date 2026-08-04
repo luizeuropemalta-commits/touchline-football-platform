@@ -5,6 +5,7 @@ import { readAuthoritativeTouchlineRoster } from "@/lib/touchlineArena/authorita
 import { resolveTouchlineServerPageRoster } from "@/lib/touchlineArena/server-page-roster";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { loadTouchLinePublishedTopEleven } from "@/lib/touchlineArena/card-ranking-server";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import { formatTouchlineCommercialCardTotal } from "@/lib/touchlineArena/commercial-card-pricing";
@@ -45,6 +46,7 @@ export default async function TouchLineTablesPage({
     console.error("[TouchLine] Tables roster unavailable", rosterResolution.error);
   }
   const rosterCards = rosterResolution.cards;
+  const publishedTopEleven = await loadTouchLinePublishedTopEleven();
   const ownerRows = buildDemoClubOwnerStandings(rosterCards);
   const totalCardPoints = rosterCards.reduce(
     (total, card) => total + card.touchlinePoints,
@@ -85,7 +87,7 @@ export default async function TouchLineTablesPage({
       copy={copy}
       locale={locale}
       rankMode={totalCardPoints > 0 ? copy.pointsMode : copy.marketMode}
-      rankingSnapshot={null}
+      publishedTopEleven={publishedTopEleven}
       rosterCards={rosterCards}
       totalCards={rosterCards.length}
       totalOwnerValue={formatTouchlineCommercialCardTotal({

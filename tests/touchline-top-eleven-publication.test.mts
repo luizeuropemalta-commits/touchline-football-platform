@@ -6,8 +6,8 @@ const page = readFileSync(new URL("../app/touchline-tables/page.tsx", import.met
 const client = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
 
 test("Top 11 never turns a simulated preseason ranking into an official selection", () => {
-  assert.match(page, /rankingSnapshot=\{null\}/);
+  assert.match(page, /loadTouchLinePublishedTopEleven/);
   assert.doesNotMatch(page, /source:\s*"simulation"/);
   assert.match(client, /seasonSelectionPending/);
-  assert.match(client, /rankingSnapshot \? buildTouchlineSelection/);
+  assert.match(client, /publishedTopEleven\?\.slots/);
 });
