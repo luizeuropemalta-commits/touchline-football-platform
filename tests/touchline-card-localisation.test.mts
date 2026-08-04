@@ -13,4 +13,6 @@ test("the shared player card localizes every discipline label", () => {
   assert.match(cardSource, /aria-label=\{cardLabels\.yellowRedCards\}/);
   assert.match(cardSource, /label: cardLabels\.yellowCards/);
   assert.match(cardSource, /label: cardLabels\.redCards/);
+  assert.doesNotMatch(cardSource, /aria-label="England flag"/);
+  assert.match(cardSource, /role="img" aria-label=\{code\}/);
 });

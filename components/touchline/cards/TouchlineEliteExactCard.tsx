@@ -447,7 +447,7 @@ function countryFlagFallback(countryCode3: string) {
   if (flagUrl) return <img src={flagUrl} alt={code} draggable={false} style={{ width: 52, height: 34, objectFit: "cover", borderRadius: 4, boxShadow: "0 0 10px rgba(255,255,255,.22), 0 3px 12px rgba(0,0,0,.55)" }} />;
   if (code === "ENG") {
     return (
-      <div aria-label="England flag" style={{ position: "relative", width: 52, height: 34, overflow: "hidden", borderRadius: 4, background: "#fff", boxShadow: "0 0 10px rgba(255,255,255,.22), 0 3px 12px rgba(0,0,0,.55)" }}>
+      <div role="img" aria-label={code} style={{ position: "relative", width: 52, height: 34, overflow: "hidden", borderRadius: 4, background: "#fff", boxShadow: "0 0 10px rgba(255,255,255,.22), 0 3px 12px rgba(0,0,0,.55)" }}>
         <div style={{ position: "absolute", left: 0, right: 0, top: 14, height: 6, background: "#cf142b" }} />
         <div style={{ position: "absolute", top: 0, bottom: 0, left: 23, width: 6, background: "#cf142b" }} />
       </div>
@@ -455,7 +455,7 @@ function countryFlagFallback(countryCode3: string) {
   }
 
   return (
-    <div aria-label={`${code} flag placeholder`} style={{ width: 52, height: 34, borderRadius: 4, border: "1px solid rgba(255,255,255,.24)", background: "linear-gradient(135deg, rgba(255,255,255,.20), rgba(255,255,255,.04))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 950 }}>
+    <div role="img" aria-label={code} style={{ width: 52, height: 34, borderRadius: 4, border: "1px solid rgba(255,255,255,.24)", background: "linear-gradient(135deg, rgba(255,255,255,.20), rgba(255,255,255,.04))", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 950 }}>
       {code}
     </div>
   );

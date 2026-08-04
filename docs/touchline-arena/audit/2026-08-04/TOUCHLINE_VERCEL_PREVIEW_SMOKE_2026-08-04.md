@@ -93,6 +93,13 @@ Profile confirms only the Portuguese semantic labels; focused tests, the full
 624-test suite and the production build pass. This follow-up is awaiting its
 own Preview validation.
 
+The same shared-card pass also replaced the fallback `England flag` and
+`<country> flag placeholder` English accessibility text with the canonical
+three-letter country code and explicit image semantics. This avoids a hidden
+English phrase in a localized surface without inventing a country translation.
+The same focused regression and full validation matrix pass; the combined
+shared-card candidate is awaiting Preview validation.
+
 ## Available responsive evidence
 
 The available browser surfaces validated ClubHub at `1280x720` and `656x756`.
