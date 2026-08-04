@@ -498,6 +498,9 @@ export default async function TouchLinePlayerProfilePage({
       competition: "england",
     }),
   );
+  const displayedMarketValue = exactPlayer.marketValue && exactPlayer.marketValue.trim().toLowerCase() !== "pending"
+    ? exactPlayer.marketValue
+    : text.rankPending;
   const officialSyncTime = formatOfficialSyncTime(official.fetchedAt, locale);
   const rankingGroupLabel = competition.positionGroup
     ? TOUCHLINE_POSITION_RANKING_LABELS[competition.positionGroup][locale === "pt-BR" ? "pt" : "en"]
@@ -934,7 +937,7 @@ export default async function TouchLinePlayerProfilePage({
             </div>
             <div>
               <small>{text.marketValue}</small>
-              <strong>{exactPlayer.marketValue || text.rankPending}</strong>
+              <strong>{displayedMarketValue}</strong>
             </div>
             <div>
               <small>{text.price}</small>

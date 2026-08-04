@@ -25,3 +25,9 @@ test("the server-rendered player profile explicitly passes its resolved locale t
 
   assert.equal(localeOverrides.length, profileCards.length);
 });
+
+test("the player profile does not leak the English pending market-value sentinel into Portuguese", () => {
+  assert.match(playerProfileSource, /const displayedMarketValue = exactPlayer\.marketValue/);
+  assert.match(playerProfileSource, /exactPlayer\.marketValue\.trim\(\)\.toLowerCase\(\) !== "pending"/);
+  assert.match(playerProfileSource, /<strong>\{displayedMarketValue\}<\/strong>/);
+});
