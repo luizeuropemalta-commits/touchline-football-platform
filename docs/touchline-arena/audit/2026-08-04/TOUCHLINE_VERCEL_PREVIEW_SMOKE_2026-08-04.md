@@ -15,20 +15,26 @@ No production alias, payment flow, wallet, Stripe configuration or data mutation
 
 ## Public smoke results
 
-All returned HTTP 200 from the Preview:
+Browser validation, through the authorized Vercel Preview session, confirms the
+root renders the real localized TouchLine Arena login, not the temporary Audit
+Mode. The Manchester United ClubHub route renders the expected real ClubHub
+content: predicted line-up, 33 TouchLine cards, full squad, canonical standings
+pending state and next-match state.
 
-- `/`
-- `/arena?skipIntro=1`
-- `/live`
-- `/market-transfer`
-- `/touchline-tables`
-- `/touchline-clubs/manchester-united`
-- `/touchline-players/erling-haaland`
+The browser smoke matrix produced the expected result for every tested route:
 
-Browser validation confirms the root renders the real localized TouchLine Arena
-login, not the temporary Audit Mode. The Manchester United ClubHub route renders
-the expected real ClubHub content: predicted line-up, 33 TouchLine cards, full
-squad, canonical standings pending state and next-match state.
+| Surface | Result |
+| --- | --- |
+| `/`, `/login`, `/register`, `/forgot-password` | Real localized Arena authentication surfaces render. |
+| `/arena`, `/market-transfer`, `/admin` | Redirect to the localized login with a preserved return path when no product session exists. |
+| `/live`, `/touchline-tables`, `/touchline-player-card-rankings` | Real public Match Centre and ranking/table surfaces render. |
+| ClubHub and Player Profile | Real public football content renders. |
+| `/club-owner/demo` | Safe 404 boundary renders; no demo ClubOwner is exposed. |
+
+An unauthenticated transport request to the Preview is redirected to Vercel SSO.
+That is Preview deployment protection, not a TouchLine route failure. It means
+anonymous HTTP checks cannot substitute for the browser-authorized Preview
+matrix; production aliases were not affected.
 
 The Portuguese Match Centre route also renders the real data surface with its
 upcoming-fixture list, localized kickoff times, canonical source status and the
