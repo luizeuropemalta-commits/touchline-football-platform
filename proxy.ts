@@ -199,6 +199,27 @@ function arenaRedirect(request: NextRequest, sourceResponse?: NextResponse) {
   return redirectWithSupabaseCookies(arenaUrl, sourceResponse);
 }
 
+/**
+ * A malformed or stale Supabase browser cookie must never turn a public page
+ * into an edge-function 500.  This can happen after an auth configuration
+ * change or after a session is revoked on another device.  Clear only
+ * Supabase-owned browser cookies and continue through the normal unauthenticated
+ * route, so protected pages safely redirect to login.
+ */
+function clearInvalidSupabaseSession(request: NextRequest, response: NextResponse) {
+  request.cookies
+    .getAll()
+    .filter(({ name }) => name.startsWith("sb-") || name.startsWith("supabase-"))
+    .forEach(({ name }) => {
+      response.cookies.set(name, "", {
+        expires: new Date(0),
+        maxAge: 0,
+        path: "/",
+      });
+    });
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   const hostname = resolveTouchLineRequestHostname(
     request.headers.get("x-forwarded-host"),
@@ -250,23 +271,31 @@ export async function proxy(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return isProtectedArenaRoute ? loginRedirect(request) : NextResponse.next();
 
-  const [{ createServerClient }, { isOwnerEmail }] = await Promise.all([
-    import("@supabase/ssr"),
-    import("@/lib/admin/owner"),
-  ]);
-
   let response = NextResponse.next({ request });
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (cookies) => {
-        cookies.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+  let user: { email?: string | null; app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> } | null = null;
+  let isOwnerEmail: (email: string | null | undefined) => boolean = () => false;
+
+  try {
+    const [{ createServerClient }, ownerModule] = await Promise.all([
+      import("@supabase/ssr"),
+      import("@/lib/admin/owner"),
+    ]);
+    isOwnerEmail = ownerModule.isOwnerEmail;
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookies) => {
+          cookies.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        },
       },
-    },
-  });
-  const { data: { user } } = await supabase.auth.getUser();
+    });
+    ({ data: { user } } = await supabase.auth.getUser());
+  } catch {
+    response = clearInvalidSupabaseSession(request, response);
+  }
+
   const isAdmin = isOwnerEmail(user?.email);
   if (!user && isProtectedArenaRoute) return loginRedirect(request, response);
   const hasArenaAccess = hasTouchLineArenaAccess(user);
