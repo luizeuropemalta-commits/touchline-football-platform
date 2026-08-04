@@ -67,6 +67,15 @@ function OwnerAvatar({ owner }: { owner: TouchLineClubOwnerStanding }) {
   return <span aria-hidden="true">{owner.name.slice(0, 2)}</span>;
 }
 
+function RankingPending({ copy }: { copy: RankingsCopy }) {
+  return (
+    <div className={styles.rankingPending} role="status">
+      <strong>{copy.rankingPending}</strong>
+      <p>{copy.rankingPendingDescription}</p>
+    </div>
+  );
+}
+
 function CompactPlayerCard({
   card,
   locale,
@@ -227,7 +236,7 @@ export default function TouchLineTablesClient({
             <div><p>{copy.clubOwnerRank}</p><h2>{copy.mostValuableOwners}</h2></div>
             <span>{copy.ownerValueRule}</span>
           </div>
-          <ol className={styles.ownerList}>
+          {cardClubOwnerRank.length ? <ol className={styles.ownerList}>
             {cardClubOwnerRank.map((owner, index) => (
               <li key={owner.id}>
                 <b>{String(index + 1).padStart(2, "0")}</b>
@@ -250,7 +259,7 @@ export default function TouchLineTablesClient({
                 ) : <span className={styles.rowEnd} />}
               </li>
             ))}
-          </ol>
+          </ol> : <RankingPending copy={copy} />}
         </section>
 
         <section className={styles.rankSection} id="touchline-england">
@@ -258,7 +267,7 @@ export default function TouchLineTablesClient({
             <div><p>{copy.englandTable}</p><h2>{copy.ownerLeagueTable}</h2></div>
             <span>{copy.ownerLeagueRule}</span>
           </div>
-          <ol className={styles.tableList}>
+          {touchLineEnglandTable.length ? <ol className={styles.tableList}>
             {touchLineEnglandTable.map((owner, index) => (
               <li key={owner.id}>
                 <b>{String(index + 1).padStart(2, "0")}</b>
@@ -267,7 +276,7 @@ export default function TouchLineTablesClient({
                 <div className={styles.pointsValue}><strong>{owner.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
               </li>
             ))}
-          </ol>
+          </ol> : <RankingPending copy={copy} />}
         </section>
 
         <section className={styles.playerRankSection} id="card-rankings">
@@ -275,7 +284,7 @@ export default function TouchLineTablesClient({
             <div><p>{copy.playerRank}</p><h2>{copy.bestPlayerCards}</h2></div>
             <span>{copy.playerOrderRule}</span>
           </div>
-          <ol className={styles.playerList}>
+          {cardPlayerRank.length ? <ol className={styles.playerList}>
             {cardPlayerRank.map((card, index) => (
               <li key={card.id}>
                 <b>{String(index + 1).padStart(2, "0")}</b>
@@ -294,7 +303,7 @@ export default function TouchLineTablesClient({
                 </Link>
               </li>
             ))}
-          </ol>
+          </ol> : <RankingPending copy={copy} />}
         </section>
       </div>
 

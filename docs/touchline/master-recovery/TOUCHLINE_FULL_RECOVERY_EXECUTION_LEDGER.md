@@ -18,7 +18,7 @@ Checkpoint: `74fe6cae` (subsequent safe commits are recorded below). Safety: no 
 | 10 | Squad builder | TESTED | ClubOwner/Arena | roster limits | squad tests | controlled complete-squad journey | validate when account fixture exists |
 | 11 | Market | TESTED | Market Transfer | auth before team validation | Market tests | controlled real account | validate journey without payment |
 | 12 | Club Hub | TESTED | ClubHub | official table checkpoint `2653a0c8` | 614 suite + desktop | mobile/WebKit evidence | inspect controlled responsive surface |
-| 13 | Training Centre | NOT_STARTED | Training Centre | — | required: route/UI tests | — | inspect real module and route coverage |
+| 13 | Training Centre | IN_PROGRESS | Training Centre | route coverage to be verified | required: route/UI tests | — | inspect real module and route coverage |
 | 14 | Renewals, history and substitutions | TESTED | renewal/history/substitution | server-owned boundaries | renewal/history tests | financial fulfillment hold excluded | test controlled nonfinancial views |
 | 15 | Frozen Club experience | TESTED | ClubOwner lifecycle | frozen predicates | lifecycle tests | controlled frozen account | validate view only |
 | 16 | Arena | TESTED | Arena | coach gate/carousel | Arena tests | migration 047 cross-device | validate after migration separately |
@@ -29,7 +29,7 @@ Checkpoint: `74fe6cae` (subsequent safe commits are recorded below). Safety: no 
 | 21 | Coach Profile | TESTED | `/touchline-coaches/[coach]` | checkpoint `ca182d1d` | focused tests + desktop | responsive/WebKit evidence | validate native devices |
 | 22 | Club Profile | TESTED | ClubHub | roster/loading | ClubHub tests | responsive/WebKit evidence | validate native devices |
 | 23 | Competition table | CODE_COMPLETE | ClubHub | checkpoint `2653a0c8` | 614 suite + desktop | production publish + responsive | await official finished fixtures then production validate |
-| 24 | Rankings and statistics | IN_PROGRESS | rankings/statistics | authoritative sources not fully wired | ranking tests | — | inspect canonical ranking/statistics surfaces and remove remaining demo authority |
+| 24 | Rankings and statistics | CODE_COMPLETE | Tables rankings/statistics | Removed fabricated ClubOwner, England and player rankings; absent audited publication now has an explicit localized pending state. Files: `app/touchline-tables/page.tsx`, client/CSS, rankings i18n, `tests/touchline-rankings-publication.test.mts`. | TypeScript, ESLint, focused 6/6, full 618/618 and production build pass; local desktop + mobile visual evidence saved under `audit/2026-08-03/screenshots/recovery-local/`. | A first audited published ranking snapshot is required before production data validation. | Validate against the first immutable audited snapshot after it is published; do not reintroduce simulated standings. |
 | 25 | Top 11 | CODE_COMPLETE | Tables Top 11 | `a42ef0ec`, `4a88b974` | 617 suite + local desktop | first audited snapshot / publish | production validate after snapshot exists |
 | 26 | TouchLine Central, Inbox and notifications | EXTERNAL_HARD_GATE | Inbox/API | `28b17b0f` | 611 suite + local desktop | migration 043 remote | apply migration then validate durable receipt |
 | 27 | Admin | TESTED | Admin routes | isolation | admin tests | controlled admin account | validate matrix |

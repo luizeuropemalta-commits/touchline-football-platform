@@ -37,6 +37,20 @@
 .selectionPending strong { color: #caff70; font-size: clamp(18px, 2vw, 26px); }
 .selectionPending p { max-width: 620px; margin: 0 auto; color: rgba(230, 255, 226, .72); line-height: 1.55; }
 
+.rankingPending {
+  display: grid;
+  gap: 7px;
+  min-height: 150px;
+  align-content: center;
+  border: 1px dashed rgba(184, 255, 70, .28);
+  border-radius: 16px;
+  padding: 24px;
+  background: rgba(2, 13, 10, .48);
+}
+
+.rankingPending strong { color: #caff70; font-size: 17px; }
+.rankingPending p { max-width: 680px; margin: 0; color: rgba(230, 255, 226, .72); line-height: 1.55; }
+
 .topbar {
   display: flex;
   align-items: center;

@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { buildDemoClubOwnerStandings, rankClubOwnerCards } from "@/lib/touchlineArena/demo-data";
 import { arenaPersistenceKeys } from "@/lib/touchlineArena/arena-persistence-namespace";
 import { readAuthoritativeTouchlineRoster } from "@/lib/touchlineArena/authoritative-roster-server";
 import { resolveTouchlineServerPageRoster } from "@/lib/touchlineArena/server-page-roster";
@@ -47,38 +46,14 @@ export default async function TouchLineTablesPage({
   }
   const rosterCards = rosterResolution.cards;
   const publishedTopEleven = await loadTouchLinePublishedTopEleven();
-  const ownerRows = buildDemoClubOwnerStandings(rosterCards);
-  const totalCardPoints = rosterCards.reduce(
-    (total, card) => total + card.touchlinePoints,
-    0,
-  );
-
-  const cardClubOwnerRank = [...ownerRows]
-    .sort((first, second) => {
-      const valueDifference = second.squadValueTc - first.squadValueTc;
-      if (valueDifference) return valueDifference;
-      const pointsDifference = second.touchlinePoints - first.touchlinePoints;
-      if (pointsDifference) return pointsDifference;
-      return first.name.localeCompare(second.name);
-    })
-    .slice(0, 20);
-
-  const touchLineEnglandTable = [...ownerRows]
-    .sort((first, second) => {
-      const pointsDifference = second.touchlinePoints - first.touchlinePoints;
-      if (pointsDifference) return pointsDifference;
-      const valueDifference = second.squadValueTc - first.squadValueTc;
-      if (valueDifference) return valueDifference;
-      return first.name.localeCompare(second.name);
-    })
-    .slice(0, 20);
-
-  const cardPlayerRank = [...rosterCards].sort(rankClubOwnerCards).slice(0, 20);
+  // No fabricated owner or player leaderboard may be presented as a published
+  // competition ranking. These remain empty until the audited ranking snapshot
+  // is loaded through the server-owned publication path.
+  const cardClubOwnerRank: never[] = [];
+  const touchLineEnglandTable: never[] = [];
+  const cardPlayerRank: never[] = [];
+  const totalOwnerValue = 0;
   const copy = getTouchLineRankingsCopy(locale);
-  const totalOwnerValue = ownerRows.reduce(
-    (total, owner) => total + owner.squadValueTc,
-    0,
-  );
 
   return (
     <TouchLineTablesClient
@@ -86,10 +61,10 @@ export default async function TouchLineTablesPage({
       cardPlayerRank={cardPlayerRank}
       copy={copy}
       locale={locale}
-      rankMode={totalCardPoints > 0 ? copy.pointsMode : copy.marketMode}
+      rankMode={copy.marketMode}
       publishedTopEleven={publishedTopEleven}
       rosterCards={rosterCards}
-      totalCards={rosterCards.length}
+      totalCards={0}
       totalOwnerValue={formatTouchlineCommercialCardTotal({
         numericPrice: totalOwnerValue,
         competition: "england",
