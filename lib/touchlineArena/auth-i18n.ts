@@ -114,6 +114,7 @@ const en = {
     confirmationLinkError:
       "This confirmation link is invalid or has expired. Request a new email or sign in if your account is already confirmed.",
     authenticationUnavailable: "Authentication service is unavailable. Please try again later.",
+    invalidCredentials: "Check your email and password and try again.",
     welcomeUnavailable: "Unable to finish TouchLine Arena access.",
     accountCreated: "Account created. Check your email to confirm.",
     resetSent: "Reset instructions sent. Check your inbox.",
@@ -227,6 +228,7 @@ const ptBR: typeof en = {
     confirmationLinkError:
       "Este link de confirmação é inválido ou expirou. Solicite um novo e-mail ou entre se sua conta já estiver confirmada.",
     authenticationUnavailable: "O serviço de autenticação está indisponível. Tente novamente mais tarde.",
+    invalidCredentials: "Confira seu e-mail e senha e tente novamente.",
     welcomeUnavailable: "Não foi possível concluir o acesso à TouchLine Arena.",
     accountCreated: "Conta criada. Confira seu e-mail para confirmar o cadastro.",
     resetSent: "Instruções enviadas. Confira sua caixa de entrada.",

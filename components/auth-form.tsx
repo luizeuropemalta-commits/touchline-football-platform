@@ -55,6 +55,20 @@ async function finishTouchlineArenaAccessOrSignOut(
   }
 }
 
+async function signInWithTouchlinePassword(email: string, password: string) {
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "content-type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+  if (response.ok && payload?.ok === true) return;
+
+  if (payload?.error === "invalid_credentials") throw new Error("invalid_credentials");
+  if (payload?.error === "arena_access_unavailable") throw new Error("arena_access_unavailable");
+  throw new Error("auth_unavailable");
+}
+
 export function AuthForm({
   mode,
   locale = "en-GB",
@@ -147,9 +161,7 @@ export function AuthForm({
     try {
       const normalizedEmail = email.trim().toLowerCase();
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-        if (error) throw error;
-        await finishTouchlineArenaAccessOrSignOut(supabase, copy.welcomeUnavailable);
+        await signInWithTouchlinePassword(normalizedEmail, password);
         await enterArena(arenaHref);
       } else if (mode === "register") {
         const { data, error } = await supabase.auth.signUp({
@@ -176,7 +188,16 @@ export function AuthForm({
         setMessageTone("success");
       }
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : copy.genericError);
+      const code = err instanceof Error ? err.message : "";
+      setMessage(
+        code === "invalid_credentials"
+          ? copy.invalidCredentials
+          : code === "arena_access_unavailable"
+            ? copy.welcomeUnavailable
+            : code === "auth_unavailable"
+              ? copy.authenticationUnavailable
+              : copy.genericError,
+      );
       setMessageTone("error");
     }
     finally { setLoading(false); }
