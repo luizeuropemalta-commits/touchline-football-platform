@@ -1,18 +1,18 @@
 {
   "goal": "TouchLine Full Product Recovery — 100% Completion",
-  "checkpoint": "6b7ad943",
+  "checkpoint": "766f0d78",
   "overall_status": "IN_PROGRESS",
   "current_block": 35,
-  "completed_blocks": [1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 31, 32, 33, 34],
-  "blocked_blocks": [4, 5, 23, 24, 25, 26, 29, 30, 35],
-  "next_action": "Inspect the pending touchline-arena-official Preview for f80617e6, validate the canonical Player Profile unavailable state and TouchLine public branding there, then address the sibling touchline-football-platform Preview's 711.82 MB function-bundle gate without changing any production alias. Do not promote while any acceptance result is unresolved.",
-  "last_validated_at": "2026-08-04T14:55:00+02:00",
+  "completed_blocks": [1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 26, 27, 28, 31, 32, 33, 34],
+  "blocked_blocks": [4, 5, 23, 24, 25, 29, 30, 35],
+  "next_action": "Obtain a controlled non-financial ClubOwner persona and native mobile/browser access. Validate 047 coach persistence through reload, logout/login and a second browser session; then execute the remaining authenticated responsive, accessibility and final-product acceptance matrix. Do not promote while any acceptance result is unresolved.",
+  "last_validated_at": "2026-08-04T19:46:12+02:00",
   "progress": {
-    "formal_complete_blocks": 26,
-    "external_hard_gates": 9,
+    "formal_complete_blocks": 27,
+    "external_hard_gates": 8,
     "in_progress_blocks": 0,
     "not_started_blocks": 2,
-    "formal_completion_percent": 70,
+    "formal_completion_percent": 73,
     "implementation_or_external_classification_percent": 95
   },
   "tests": {
@@ -32,7 +32,7 @@
     "unavailable_previous_season_profiles": 568,
     "incorrect_player_mappings": 0,
     "haaland_root_cause": "legacy-season-aggregate-without-canonical-season-or-fixture-coverage",
-    "production_schema_status": "EXTERNAL_HARD_GATE: migration 048 not applied",
-    "next_action": "Apply reviewed migration 048 under controlled non-financial access, backfill verified historical season/fixtures/lineups, then execute canonical sync and re-audit coverage before publishing a historical total."
+    "production_schema_status": "APPLIED: canonical tables, RLS, constraints and service-role-only access verified. Historical source coverage remains an external data gate.",
+    "next_action": "Backfill verified prior-season memberships, fixtures and lineups from an authoritative historical source, execute canonical sync and re-audit coverage before publishing a historical total."
   }
 }
