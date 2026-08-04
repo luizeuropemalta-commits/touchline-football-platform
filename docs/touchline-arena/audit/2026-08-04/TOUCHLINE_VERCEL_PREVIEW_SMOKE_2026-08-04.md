@@ -30,6 +30,10 @@ login, not the temporary Audit Mode. The Manchester United ClubHub route renders
 the expected real ClubHub content: predicted line-up, 33 TouchLine cards, full
 squad, canonical standings pending state and next-match state.
 
+The Portuguese Match Centre route also renders the real data surface with its
+upcoming-fixture list, localized kickoff times, canonical source status and the
+explicit next-match state. No presentation-only audit substitute was used.
+
 ## Production protection
 
 `touchline.com.br` and `www.touchline.com.br` remain Production aliases. This
