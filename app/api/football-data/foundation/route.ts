@@ -7,6 +7,17 @@ import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 
 type FootballDbClient = SupabaseClient;
 
+function publicFoundationRecord(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(publicFoundationRecord);
+  if (!value || typeof value !== "object") return value;
+  const result: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    if (key === "provider" || key.startsWith("provider_")) continue;
+    result[key] = publicFoundationRecord(nested);
+  }
+  return result;
+}
+
 function readSecret() {
   return process.env.FOOTBALL_DATA_SYNC_SECRET ?? process.env.FOOTBALL_DATA_VALIDATION_SECRET;
 }
@@ -102,21 +113,20 @@ export async function GET(request: NextRequest) {
       ok: true,
       status: "ready",
       mode,
-      sourceOfTruth: "touchline_database",
-      provider: "sportmonks",
+      sourceOfTruth: "touchline_verified_database",
       counts: {
         competitions: competitions?.length ?? 0,
         clubs: clubs?.length ?? 0,
         selectedClubSquadMembers: squad.length,
         selectedClubPlayers: players.length,
       },
-      selectedClub: selectedClub ?? null,
-      competitions: competitions ?? [],
-      clubs: clubs ?? [],
-      squad,
-      players,
-      recentSyncRuns: syncRuns ?? [],
-      note: "This endpoint reads only normalized Touchline database tables. It never calls Sportmonks directly.",
+      selectedClub: publicFoundationRecord(selectedClub),
+      competitions: publicFoundationRecord(competitions ?? []),
+      clubs: publicFoundationRecord(clubs ?? []),
+      squad: publicFoundationRecord(squad),
+      players: publicFoundationRecord(players),
+      recentSyncRuns: publicFoundationRecord(syncRuns ?? []),
+      note: "This endpoint reads only normalized TouchLine Verified database tables.",
     });
   } catch (error) {
     return NextResponse.json(

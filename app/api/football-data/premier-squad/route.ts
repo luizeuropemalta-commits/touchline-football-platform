@@ -223,7 +223,7 @@ function mapSquadMember(
     countryCode3: countryCode,
     flagUrl,
     nationality,
-    source: "sportmonks_squad",
+    source: "touchline_verified",
   };
 }
 

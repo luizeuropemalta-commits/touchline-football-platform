@@ -21,6 +21,73 @@ export type TouchLineOfficialPlayerProfile = {
   reason?: string;
 };
 
+/**
+ * Identity and career data may be refreshed independently. Season performance
+ * deliberately has no path through this function: public season totals must
+ * come only from the canonical fixture-coverage read model.
+ */
+export async function loadTouchLineOfficialPlayerIdentity(input: {
+  name: string;
+  providerPlayerId?: string | null;
+}): Promise<TouchLineOfficialPlayerProfile> {
+  try {
+    const provider = createFootballDataProvider("sportmonks");
+    const player = await resolveTouchLineProviderPlayer(provider, {
+      name: input.name,
+      candidateId: input.providerPlayerId,
+    });
+    if (!player || !/^\d+$/.test(player.providerId)) {
+      return {
+        status: "pending",
+        player: null,
+        providerPlayerId: null,
+        seasonId: null,
+        seasonName: null,
+        fetchedAt: null,
+        stats: [],
+        transferStatus: "pending",
+        transfers: [],
+        transfersFetchedAt: null,
+        reason: "verified-player-id-pending",
+      };
+    }
+    const transfersResult = await provider.getTransfers({ playerId: player.providerId });
+    return {
+      status: "pending",
+      player,
+      providerPlayerId: player.providerId,
+      seasonId: null,
+      seasonName: null,
+      fetchedAt: player.source.lastSyncedAt ?? null,
+      stats: [],
+      transferStatus: transfersResult.ok
+        ? transfersResult.data.length ? "live" : "pending"
+        : "error",
+      transfers: transfersResult.ok ? transfersResult.data : [],
+      transfersFetchedAt: transfersResult.ok ? transfersResult.fetchedAt ?? null : null,
+      transferReason: transfersResult.ok
+        ? transfersResult.data.length ? undefined : "verified-career-empty"
+        : transfersResult.error.code,
+      reason: "season-statistics-read-model-required",
+    };
+  } catch {
+    return {
+      status: "error",
+      player: null,
+      providerPlayerId: null,
+      seasonId: null,
+      seasonName: null,
+      fetchedAt: null,
+      stats: [],
+      transferStatus: "error",
+      transfers: [],
+      transfersFetchedAt: null,
+      transferReason: "provider-request-failed",
+      reason: "provider-request-failed",
+    };
+  }
+}
+
 export async function loadTouchLineOfficialPlayerProfile(input: {
   name: string;
   providerPlayerId?: string | null;

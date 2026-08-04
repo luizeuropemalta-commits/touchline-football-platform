@@ -64,14 +64,14 @@ async function runStarterSync(request: NextRequest) {
       ...result,
       mode: auth.mode,
       syncedAt: new Date().toISOString(),
-      note: "Sportmonks feeds the normalized Touchline database. Frontend modules should read from /api/football-data/foundation.",
+      note: "TouchLine Data feeds the normalized TouchLine database. Frontend modules should read from /api/football-data/foundation.",
     });
   } catch (error) {
     return NextResponse.json(
       {
         ok: false,
         status: "error",
-        error: error instanceof Error ? error.message : "Unknown Sportmonks starter sync error.",
+        error: error instanceof Error ? error.message.replace(/SportMonks/gi, "TouchLine Data") : "Unknown TouchLine Data sync error.",
         hint: "If this mentions a missing relation, run supabase/migrations/013_football_data_foundation.sql in Supabase first.",
       },
       { status: 500 },

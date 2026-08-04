@@ -6848,7 +6848,7 @@ export default function ArenaClient({
                     <span>{siteLanguage === "pt-BR" ? "Estatísticas" : "Statistics"}</span>
                     <span>{siteLanguage === "pt-BR" ? "Escalações" : "Line-ups"}</span>
                   </div>
-                  <p>{siteLanguage === "pt-BR" ? "Eventos, estatísticas e escalações oficiais serão exibidos aqui assim que forem confirmados pelo provedor." : "Official events, statistics and line-ups appear here as soon as the provider confirms them."}</p>
+                  <p>{siteLanguage === "pt-BR" ? "Eventos, estatísticas e escalações oficiais serão exibidos aqui assim que forem verificados pela TouchLine." : "Official events, statistics and line-ups appear here as soon as TouchLine verifies them."}</p>
                   <small>{PUBLIC_DATA_SOURCE_LABEL} · {selectedLiveFixture.status || (siteLanguage === "pt-BR" ? "Sincronizando" : "Syncing")}</small>
                 </section>
               ) : (

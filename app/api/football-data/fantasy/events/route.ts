@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   const rawFixtureId = request.nextUrl.searchParams.get("fixtureId")?.trim();
   if (rawFixtureId && !SPORTMONKS_ID_PATTERN.test(rawFixtureId)) {
-    return NextResponse.json({ ok: false, error: "fixtureId must be a numeric Sportmonks identifier." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "fixtureId must be a valid numeric TouchLine fixture identifier." }, { status: 400 });
   }
 
   const fixtureId = rawFixtureId || undefined;

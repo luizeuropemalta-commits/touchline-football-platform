@@ -55,8 +55,8 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
           <h2>{title}</h2>
           <p>
             {confirmed
-              ? (isPortuguese ? "Titulares confirmados pelo provedor e distribuídos automaticamente por toda a TouchLine." : "Starting XI confirmed by the provider and distributed automatically across TouchLine.")
-              : (isPortuguese ? "Prévia baseada no elenco disponível. Assim que o provedor confirmar os titulares, esta formação será atualizada automaticamente." : "Preview based on the available squad. This formation updates automatically as soon as the provider confirms the Starting XI.")}
+              ? (isPortuguese ? "Titulares verificados pela TouchLine e distribuídos automaticamente por toda a plataforma." : "Starting XI verified by TouchLine and distributed automatically across the platform.")
+              : (isPortuguese ? "Prévia baseada no elenco disponível. Assim que a TouchLine verificar os titulares, esta formação será atualizada automaticamente." : "Preview based on the available squad. This formation updates automatically as soon as TouchLine verifies the Starting XI.")}
           </p>
         </div>
         <div className={styles.statusPanel}>

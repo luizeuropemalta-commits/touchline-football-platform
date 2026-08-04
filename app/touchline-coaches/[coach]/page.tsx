@@ -110,7 +110,7 @@ export default async function TouchlineCoachProfilePage({
           <dl>
             <div><dt>{pt ? "Clube atual" : "Current club"}</dt><dd>{club.name}</dd></div>
             <div><dt>{pt ? "Nacionalidade" : "Nationality"}</dt><dd>{entry.coach.nationality ?? "—"}</dd></div>
-            <div><dt>{pt ? "Fonte" : "Source"}</dt><dd>{entry.coach.provider === "sportmonks" ? "Sportmonks" : entry.coach.provider}</dd></div>
+            <div><dt>{pt ? "Verificação" : "Verification"}</dt><dd>{pt ? "TouchLine Verified" : "Verified by TouchLine"}</dd></div>
           </dl>
         </div>
         <div className="coach-profile-card"><TouchlineCoachCard

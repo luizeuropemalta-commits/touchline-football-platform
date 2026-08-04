@@ -88,3 +88,19 @@ Coach-first journey itself remains correctly external-gated because no isolated
 ClubOwner persona or confirmation mailbox is provisioned.
 
 Latest safe commits after checkpoint: `eb79bb12`, `ca182d1d`, `ab608662`, `88bc9f35`, `28b17b0f`, `2653a0c8`, `a42ef0ec`, `4a88b974`, `470d9593`, `b1491c1c`, `c4e47484`, `f2bc14cb`, `7940994b`, `eac3e1da`.
+
+## Active external-gate requirement — canonical player-season statistics — 2026-08-04
+
+**Status:** `CODE_COMPLETE` locally; real historical data publication is an `EXTERNAL_HARD_GATE`. This is an additional mandatory acceptance requirement for Blocks 20, 22–25, 31 and 35. It does not re-open their completed UI work or authorize a production promotion.
+
+| Item | Evidence / status |
+|---|---|
+| Canonical read model | Implemented as server-owned season, fixture, membership and coverage records in reviewed non-financial migration `048_touchline_player_season_statistics_read_model.sql`. Player Profile now consumes `loadTouchLinePlayerStatisticsReadModel`; it no longer derives season totals from the legacy profile snapshot. |
+| Dataset separation | Previous completed season, current season, last five, and current/selected fixture are separately typed and rendered. Unknown data is unavailable; incomplete coverage renders exactly `Partial data — X of Y eligible fixtures synchronised`. |
+| Integrity audit | Read-only audit script `scripts/audit-touchline-england-player-season-statistics.mts` inspected 568 active England players. There are 0 incorrect player mappings, 0 finished fixtures of 29, no stored prior completed season and no production canonical table. Thus 0 complete, 0 partial and 568 unavailable historic profiles are accurately represented. |
+| Haaland | Player ID `a1e3b920-4b73-4588-bd08-ff19e70a74fc`, external ID `154421` are valid. The former 4/3/1/232/3 display was a legacy aggregate labelled 2025/26 with external season 25919, but that season is absent from the local canonical season mapping and has no fixture coverage. It is treated as unverified/unavailable, never as last five or a completed season. |
+| Public provider wording | Reviewed public Player Profile, Coach Profile, Club Hub, Match Centre, Arena and data-response wording now uses TouchLine branding. Provider identity remains internal metadata/diagnostics only. |
+| Validation | TypeScript, ESLint, 631/631 tests, production build and local production browser validation pass. Details: `docs/touchline-arena/audit/2026-08-04/TOUCHLINE_PLAYER_SEASON_STATISTICS_INTEGRITY_AUDIT_2026-08-04.md`. |
+| Remaining external action | Apply migration 048 in a controlled non-financial database operation, backfill verified prior-season memberships/fixtures/lineups, execute canonical sync and audit coverage before any historical total is published. Then validate all shared consumers against the one read model. |
+
+Read-only production schema inspection also confirms the existing gates are real: migration `047` has not added `touchline_user_arena_state.coach_provider_id`, and migration `043` has not created the TouchLine Central message/localization/receipt tables. Both remain `EXTERNAL_HARD_GATE`; neither was applied by this workstream.

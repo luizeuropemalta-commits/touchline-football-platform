@@ -1036,7 +1036,7 @@ export async function POST(req: Request) {
 
       return playerRouteJson({
         ok: true,
-        source: "sportmonks_refreshed",
+        source: "touchline_verified",
         cacheTtlSeconds: Math.round(playerCacheTtlMs() / 1000),
         candidates: candidates.map(cachedPlayerSearchCandidate),
       });
@@ -1045,7 +1045,7 @@ export async function POST(req: Request) {
     let rawPlayer: any = null;
     let normalized: any = null;
     let livePlayerError: unknown = null;
-    let playerDataSource: "sportmonks_api" | "database_fallback" = "sportmonks_api";
+    let playerDataSource: "touchline_verified" | "database_fallback" = "touchline_verified";
 
     try {
       rawPlayer = await fetchFullSportMonksPlayer(searchQuery, sportmonksPlayerId);
@@ -1096,7 +1096,7 @@ export async function POST(req: Request) {
       diagnostics: {
         playerPersistenceError: null,
         photoSource: {
-          sourceRule: "Provider photos are not exposed. Only an existing approved TouchLine static portrait may be rendered.",
+          sourceRule: "External football photos are not exposed. Only an existing approved TouchLine static portrait may be rendered.",
           rawPhotoPubliclyRendered: false,
           playerDataSource,
         },
