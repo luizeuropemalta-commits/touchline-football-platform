@@ -5,8 +5,8 @@
   "current_block": 35,
   "completed_blocks": [],
   "blocked_blocks": [4, 5, 26, 29, 34, 35],
-  "next_action": "Authenticate GitHub publishing, push checkpoint b940e31d, verify the matching Vercel deployment, then run the controlled real-product audit with disposable owner personas.",
-  "last_validated_at": "2026-08-04T11:16:00+02:00",
+  "next_action": "After GitHub e-mail sudo confirmation, register the prepared SSH key, push checkpoint 12573af3, verify the matching Vercel deployment, then run the controlled real-product audit with disposable owner personas.",
+  "last_validated_at": "2026-08-04T11:31:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
