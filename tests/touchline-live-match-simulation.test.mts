@@ -211,7 +211,7 @@ test("Live never invents a real score and excludes known non-league fixtures", (
 test("Live only warms the current 22 player and two coach card products", () => {
   assert.match(arenaClientSource, /simulation\.querySelectorAll\("\[data-live-player-id\]"\)\.length !== 22/);
   assert.match(arenaClientSource, /coaches\.querySelectorAll\("\[data-live-coach-card\]"\)\.length !== 2/);
-  assert.match(arenaClientSource, /shouldRenderPlayers && standalonePanel !== "live"/);
+  assert.match(arenaClientSource, /shouldRenderPlayers && standaloneExperience !== "live"/);
   assert.match(arenaClientSource, /standalonePanel !== "live" \? \([\s\S]*?<div className="arena-video-stack"/);
   assert.match(arenaClientSource, /optimizeForLiveCompact/);
   assert.match(arenaClientSource, /readyLiveCardProductsSignature === liveCardProductsSignature/);

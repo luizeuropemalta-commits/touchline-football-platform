@@ -3414,11 +3414,11 @@ export default function ArenaClient({
     && hasLoadedOwnerCoach
     && arenaPersistencePrincipal?.kind !== "demo"
     && !activeArenaCoachIdentity?.coach
-    && standalonePanel !== "live",
+    && standaloneExperience !== "live",
   );
   // The personal field remains intentionally separate from the standalone
   // Match Centre. Coach-first adds only the final eligibility gate.
-  const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standalonePanel !== "live" && !isCoachSelectionRequired;
+  const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired;
   const selectedLiveHomeCoachSlot = useMemo(
     () => selectedLiveHomeClub
       ? createTouchlineArenaCoachSlot(
@@ -9880,8 +9880,8 @@ export default function ArenaClient({
           display: block;
         }
 
-        .touchline-game.is-market-standalone .arena-functional-layer > :not(.arena-action-layer),
-        .touchline-game.is-bench-standalone .arena-functional-layer > :not(.arena-action-layer) {
+        .touchline-game.is-market-standalone .arena-functional-layer > :not(.arena-action-layer):not(.arena-coach-first-gate),
+        .touchline-game.is-bench-standalone .arena-functional-layer > :not(.arena-action-layer):not(.arena-coach-first-gate) {
           display: none !important;
         }
 
