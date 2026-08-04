@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import fs from "node:fs";
-import path from "node:path";
 import { touchlineCountryCode3FromName, touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { requireAuthenticatedOrLocalTouchlineEditor } from "@/lib/touchlineArena/api-access";
@@ -11,7 +9,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_PLAYER_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const PUBLIC_ROOT = path.join(process.cwd(), "public");
 const BLOCKED_CLIENT_RESPONSE_KEYS = new Set([
   "authorization",
   "image_path",
@@ -957,12 +954,11 @@ function approvedStaticCardPortraitUrl(player: any) {
 
   if (!playerSlugs.length || !clubSlug) return "";
 
-  for (const playerSlug of playerSlugs) {
-    const publicPath = `/touchlineArena/players/${playerSlug}/${clubSlug}/v1/approved/cards/portrait/transparent.png`;
-    if (fs.existsSync(path.join(PUBLIC_ROOT, publicPath.replace(/^\/+/, "")))) return publicPath;
-  }
-
-  return "";
+  // Do not probe the public directory at runtime. Besides doing blocking I/O,
+  // a process.cwd() path makes Vercel trace the complete asset tree into this
+  // server function. The card client already owns its image fallback, so a
+  // deterministic approved-asset URL is both safer and deployable.
+  return `/touchlineArena/players/${playerSlugs[0]}/${clubSlug}/v1/approved/cards/portrait/transparent.png`;
 }
 
 function buildPlayerCard(player: any) {
