@@ -113,9 +113,11 @@ Player Profile. Commit `68709bd3` now maps that sentinel to `Pendente` through
 the page's existing localized pending label. Focused localization checks pass
 3/3, the full suite passes 626/626 and the local production route renders four
 `Pendente` values with zero English `Pending` values. The branch Preview was
-still serving its preceding deployment when checked; its Vercel dashboard had a
-temporary authenticated SSR-fetch warning, so the remote verification remains
-explicitly pending and production was not promoted.
+then rechecked after the branch deployment updated and reports the same four
+`Pendente` values with zero English `Pending` values. The Vercel dashboard had
+a temporary authenticated SSR-fetch warning while the deployment row was
+unavailable, but the public Preview route supplied the required evidence.
+Production was not promoted.
 
 ## Available responsive evidence
 
