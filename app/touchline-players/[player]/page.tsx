@@ -565,6 +565,7 @@ export default async function TouchLinePlayerProfilePage({
           player={exactPlayer}
           layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
           playerProfileHref={profileHref}
+          runtimeLocaleOverride={locale}
           rankingMode={previewTier ? "preview" : "live"}
           showCardActions
           showProfileAction
@@ -575,6 +576,7 @@ export default async function TouchLinePlayerProfilePage({
       <TouchlineEliteExactCard
         player={exactPlayer}
         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
+        runtimeLocaleOverride={locale}
         rankingMode={previewTier ? "preview" : "live"}
         showProfileAction={false}
         showSocialMetrics={false}
@@ -728,6 +730,7 @@ export default async function TouchLinePlayerProfilePage({
               player={exactPlayer}
               layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
               playerProfileHref={profileHref}
+              runtimeLocaleOverride={locale}
               rankingMode={previewTier ? "preview" : "live"}
               showCardActions
               showProfileAction={false}
