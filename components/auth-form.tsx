@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Check, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -80,7 +79,6 @@ export function AuthForm({
   returnTo?: string;
   initialError?: AuthEntryError;
 }) {
-  const router = useRouter();
   const normalizedLocale = normalizeTouchLineAuthLocale(locale);
   const copy = getTouchLineAuthCopy(normalizedLocale).form;
   const normalizedReturnTo = normalizeTouchLineAuthReturnTo(returnTo);
@@ -144,8 +142,10 @@ export function AuthForm({
     await new Promise<void>((resolve) => {
       window.setTimeout(resolve, reducedMotion ? 40 : 280);
     });
-    router.push(href);
-    router.refresh();
+    // A full same-origin navigation is intentional here. It makes the new
+    // server-issued Supabase session available before Arena guards run and is
+    // more reliable than a client-router transition after Safari AutoFill.
+    window.location.assign(href);
   }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
