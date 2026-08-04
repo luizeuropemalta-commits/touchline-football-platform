@@ -148,8 +148,20 @@ export function AuthForm({
     router.refresh();
   }
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Safari Password AutoFill can populate the native inputs without
+    // dispatching React's change event. Read the submitted form directly so
+    // the authenticated request always uses what the person can see.
+    const submittedFields = new FormData(e.currentTarget);
+    const submittedEmail = submittedFields.get("email");
+    const submittedPassword = submittedFields.get("password");
+    const submittedName = submittedFields.get("full_name");
+    const normalizedEmail = typeof submittedEmail === "string"
+      ? submittedEmail.trim().toLowerCase()
+      : email.trim().toLowerCase();
+    const effectivePassword = typeof submittedPassword === "string" ? submittedPassword : password;
+    const effectiveName = typeof submittedName === "string" ? submittedName : name;
     setLoading(true); setMessage(""); setMessageTone(null);
     const supabase = createClient();
     if (!supabase) {
@@ -159,16 +171,15 @@ export function AuthForm({
       return;
     }
     try {
-      const normalizedEmail = email.trim().toLowerCase();
       if (mode === "login") {
-        await signInWithTouchlinePassword(normalizedEmail, password);
+        await signInWithTouchlinePassword(normalizedEmail, effectivePassword);
         await enterArena(arenaHref);
       } else if (mode === "register") {
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
-          password,
+          password: effectivePassword,
           options: {
-            data: { full_name: name },
+            data: { full_name: effectiveName },
             emailRedirectTo: buildTouchLineAuthCallbackUrl(firstEntryHref),
           },
         });
@@ -301,8 +312,8 @@ export function AuthForm({
   return (
     <>
     <form onSubmit={submit} className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}>
-      {mode === "register" && <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.fullName}</span><Input required value={name} onChange={e=>setName(e.target.value)} placeholder={copy.fullNamePlaceholder} autoComplete="name"/></label>}
-      <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.email}</span><Input required type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={copy.emailPlaceholder} autoComplete="email"/></label>
+      {mode === "register" && <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.fullName}</span><Input required name="full_name" value={name} onChange={e=>setName(e.target.value)} placeholder={copy.fullNamePlaceholder} autoComplete="name"/></label>}
+      <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.email}</span><Input required name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={copy.emailPlaceholder} autoComplete="email"/></label>
       {mode !== "forgot" && (
         <div className="block">
           <div className="mb-2 flex items-center justify-between">
@@ -310,7 +321,7 @@ export function AuthForm({
             {mode === "login" && <Link href={forgotPasswordHref} className="text-xs font-semibold text-[#8fc7b8] transition hover:text-cyan-100">{copy.forgotPassword}</Link>}
           </div>
           <div className="relative">
-            <Input id="touchline-auth-password" required minLength={8} type={show ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder={copy.passwordPlaceholder} autoComplete={mode === "login" ? "current-password" : "new-password"} className="pr-11" />
+            <Input id="touchline-auth-password" required name="password" minLength={8} type={show ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder={copy.passwordPlaceholder} autoComplete={mode === "login" ? "current-password" : "new-password"} className="pr-11" />
             <button type="button" aria-controls="touchline-auth-password" aria-label={show ? copy.hidePassword : copy.showPassword} onClick={() => setShow(!show)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b9592]">{show ? <EyeOff size={16} /> : <Eye size={16} />}</button>
           </div>
         </div>
