@@ -6339,7 +6339,9 @@ export default function ArenaClient({
                 <p className="arena-coach-offer-status" role="status">
                   {coachOfferStatus === "error"
                     ? (siteLanguage === "pt-BR" ? "As ofertas oficiais dos treinadores estão indisponíveis. Tente novamente." : "Official coach offers are unavailable. Please try again.")
-                    : (siteLanguage === "pt-BR" ? "Carregando ofertas oficiais dos treinadores…" : "Loading official coach offers…")}
+                    : coachOfferStatus === "idle"
+                      ? (siteLanguage === "pt-BR" ? "Entre na sua conta para carregar as ofertas oficiais dos treinadores." : "Sign in to load official coach offers.")
+                      : (siteLanguage === "pt-BR" ? "Carregando ofertas oficiais dos treinadores…" : "Loading official coach offers…")}
                 </p>
               ) : TOUCHLINE_LIVE_COACHES.map(({ coach, countryCode3 }) => {
                 const club = PREMIER_CLUB_VISUALS.find((candidate) => candidate.teamId === coach.teamId) ?? null;

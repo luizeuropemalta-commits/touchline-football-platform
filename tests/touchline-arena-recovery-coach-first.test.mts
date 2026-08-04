@@ -74,6 +74,7 @@ test("Arena keeps production coach identity out of the demo fallback and exposes
   assert.match(arena, /const requestTimeout = window\.setTimeout\(\(\) => controller\.abort\(\), 10_000\)/);
   assert.match(arena, /signal: controller\.signal/);
   assert.match(arena, /window\.clearTimeout\(requestTimeout\)/);
+  assert.match(arena, /coachOfferStatus === "idle"[\s\S]*?Entre na sua conta para carregar as ofertas oficiais dos treinadores/);
   assert.match(arena, /const mustPersistForClubOwner = canPersistArenaAccountState/);
   assert.match(arena, /if \(!response\.ok\) \{[\s\S]*?Não foi possível salvar o treinador na sua conta/);
   assert.match(arena, /setCoachSelectionError\(message\)/);
