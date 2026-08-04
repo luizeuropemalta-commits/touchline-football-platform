@@ -54,4 +54,31 @@ while making the 37-block total auditable.
 | 36 | Acceptance standard | NOT_STARTED | all blocks | — | evidence review | depends on prior blocks | evaluate after 1–35 |
 | 37 | Final report | NOT_STARTED | reports | — | consolidated evidence | depends on acceptance | generate only at completion |
 
+## Active Block 35 validation note — 2026-08-04
+
+Commit `68709bd3` is on the authorized GitHub branch and fixes the only
+remaining Portuguese Player Profile fallback observed during this pass: the
+canonical unavailable market-value sentinel `Pending` now renders as
+`Pendente`. The current local production server confirms four Portuguese
+pending values, zero English `Pending` values and no browser-console warnings.
+Focused localisation checks pass 3/3, the full suite passes 626/626, and the
+production build passes.
+
+The branch Preview continued serving the previous deployment during this check;
+the authenticated Vercel deployments page reported an SSR dashboard-fetch
+warning and did not expose the new deployment row. This is recorded only as a
+remote-Preview validation dependency for `68709bd3`; it does not reclassify the
+already validated code or authorize a production promotion. Independent public
+route and responsive validation continues while it resolves.
+
+The same public-route pass reproduced a separate Coach-first UX defect: an
+unauthenticated visitor could see the coach-offer rail remain in a permanent
+loading state because the unauthenticated principal intentionally never starts
+the authenticated offers request. Commits `61bfecd6` and `09c1a64d` bound a
+real authenticated request to 10 seconds and make the signed-out state say
+that sign-in is required, rather than claiming it is loading. The new local
+production check has one signed-out guidance message, zero loading messages and
+zero console warnings. This preserves Coach-first and does not create a demo
+coach or persist any selection.
+
 Latest safe commits after checkpoint: `eb79bb12`, `ca182d1d`, `ab608662`, `88bc9f35`, `28b17b0f`, `2653a0c8`, `a42ef0ec`, `4a88b974`, `470d9593`, `b1491c1c`, `c4e47484`, `f2bc14cb`, `7940994b`, `eac3e1da`.
