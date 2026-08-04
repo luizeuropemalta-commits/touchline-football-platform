@@ -81,4 +81,10 @@ production check has one signed-out guidance message, zero loading messages and
 zero console warnings. This preserves Coach-first and does not create a demo
 coach or persist any selection.
 
+Vercel Preview `F9QwQJnBPHb9xf2CBkrP4kbDrxvG` for `09c1a64d` is Ready. Its
+public Portuguese Player Profile again verifies four `Pendente` values, zero
+English `Pending` values and zero console warnings. The authenticated
+Coach-first journey itself remains correctly external-gated because no isolated
+ClubOwner persona or confirmation mailbox is provisioned.
+
 Latest safe commits after checkpoint: `eb79bb12`, `ca182d1d`, `ab608662`, `88bc9f35`, `28b17b0f`, `2653a0c8`, `a42ef0ec`, `4a88b974`, `470d9593`, `b1491c1c`, `c4e47484`, `f2bc14cb`, `7940994b`, `eac3e1da`.
