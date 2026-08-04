@@ -4,15 +4,15 @@
   "overall_status": "IN_PROGRESS",
   "current_block": 35,
   "completed_blocks": [],
-  "blocked_blocks": [4, 5, 26, 29, 34, 35],
-  "next_action": "After GitHub e-mail sudo confirmation, register the prepared SSH key, push checkpoint 12573af3, verify the matching Vercel deployment, then run the controlled real-product audit with disposable owner personas.",
-  "last_validated_at": "2026-08-04T11:31:00+02:00",
+  "blocked_blocks": [4, 5, 26, 29],
+  "next_action": "Continue the Vercel Preview smoke and controlled non-financial persona matrix for deployment DqWfCWs2FVhNgrJ2ey13KHsv6Tj5; do not promote until every required result passes.",
+  "last_validated_at": "2026-08-04T12:00:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
     "unit": "622 passed, 0 failed",
-    "integration": "focused Training Centre route/navigation/visual-contract coverage: 41 passed; local performance read matrix: 21 HTTP 200 responses; ClubHub delivery contract: 8 focused tests passed",
-    "e2e": "partial; native WebKit and controlled production-account matrix pending",
+    "integration": "focused Training Centre route/navigation/visual-contract coverage: 41 passed; local performance read matrix: 21 HTTP 200 responses; ClubHub delivery contract: 8 focused tests passed; Vercel Preview public smoke: seven canonical routes returned HTTP 200",
+    "e2e": "partial; Vercel Preview renders the real localized Arena login; native WebKit and controlled non-financial owner-persona matrix pending",
     "build": "pass"
   }
 }
