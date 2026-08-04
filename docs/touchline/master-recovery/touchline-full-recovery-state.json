@@ -5,8 +5,8 @@
   "current_block": 35,
   "completed_blocks": [],
   "blocked_blocks": [4, 5, 26, 29],
-  "next_action": "Push the combined shared-card localization and country-flag accessibility correction, verify it on the Ready Preview, then continue the controlled non-financial persona and native phone/remote-Preview WebKit matrix; do not promote until every required result passes.",
-  "last_validated_at": "2026-08-04T13:43:00+02:00",
+  "next_action": "Verify the queued combined shared-card localization and country-flag accessibility correction on its Ready Preview, then continue the controlled non-financial persona and native phone/remote-Preview WebKit matrix; do not promote until every required result passes.",
+  "last_validated_at": "2026-08-04T13:54:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
