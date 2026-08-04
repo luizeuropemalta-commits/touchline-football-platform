@@ -82,6 +82,17 @@ of `Clube atual` and none of `Current Club`; visual evidence is stored locally:
 This correction is pending the next Ready Preview validation; it has not been
 promoted to the production alias.
 
+Ready Preview `3TNoH5vcGQCnENtaDbmA8tfyhb3z` (`78b5af5d`) subsequently
+validated this correction on the real ClubHub route: 44 `Clube atual` labels
+and zero `Current Club` labels in the `pt-BR` surface.
+
+The same localization sweep found English-only accessibility labels for the
+yellow/red-card icons in the shared player card. The card now localizes the
+group, yellow-card, red-card and count labels. The local production Player
+Profile confirms only the Portuguese semantic labels; focused tests, the full
+624-test suite and the production build pass. This follow-up is awaiting its
+own Preview validation.
+
 ## Available responsive evidence
 
 The available browser surfaces validated ClubHub at `1280x720` and `656x756`.

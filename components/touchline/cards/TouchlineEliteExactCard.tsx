@@ -211,6 +211,11 @@ export type TouchlineEliteExactCardLabels = {
   totalPoints: string;
   cardPrice: string;
   currentClub?: string;
+  yellowRedCards: string;
+  yellowCard: string;
+  redCard: string;
+  yellowCards: string;
+  redCards: string;
   profileAction: string;
   shareAction: string;
 };
@@ -221,6 +226,11 @@ const DEFAULT_CARD_LABELS: TouchlineEliteExactCardLabels = {
   totalPoints: "TouchLine Points",
   cardPrice: "Card price",
   currentClub: "Current Club",
+  yellowRedCards: "Yellow and red cards",
+  yellowCard: "Yellow card",
+  redCard: "Red card",
+  yellowCards: "Yellow cards",
+  redCards: "Red cards",
   profileAction: "Profile",
   shareAction: "Share",
 };
@@ -233,6 +243,11 @@ function localizedCardLabels(locale: string | null): TouchlineEliteExactCardLabe
       totalPoints: "Pontos TouchLine",
       cardPrice: "Preço do card",
       currentClub: "Clube atual",
+      yellowRedCards: "Cartões amarelo e vermelho",
+      yellowCard: "Cartão amarelo",
+      redCard: "Cartão vermelho",
+      yellowCards: "Cartões amarelos",
+      redCards: "Cartões vermelhos",
       profileAction: "Perfil",
       shareAction: "Compartilhar",
     };
@@ -1682,10 +1697,10 @@ export function TouchlineEliteExactCard({
             gap: 4 * fieldScale("statCar"),
           }}
         >
-          <span role="img" aria-label="Yellow and red cards" style={{ position: "relative", width: 30 * fieldScale("statCar"), height: 27 * fieldScale("statCar"), filter: "drop-shadow(0 3px 7px rgba(0,0,0,.70))" }}>
+          <span role="img" aria-label={cardLabels.yellowRedCards} style={{ position: "relative", width: 30 * fieldScale("statCar"), height: 27 * fieldScale("statCar"), filter: "drop-shadow(0 3px 7px rgba(0,0,0,.70))" }}>
             {([
-              { label: "Yellow card", color: "#facc15", left: 2, rotate: -5 },
-              { label: "Red card", color: "#ef4444", left: 13, rotate: 5 },
+              { label: cardLabels.yellowCard, color: "#facc15", left: 2, rotate: -5 },
+              { label: cardLabels.redCard, color: "#ef4444", left: 13, rotate: 5 },
             ]).map((discipline) => (
               <span
                 key={discipline.label}
@@ -1707,8 +1722,8 @@ export function TouchlineEliteExactCard({
           </span>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", alignItems: "center", gap: 3 * fieldScale("statCar") }}>
             {([
-              { id: "yellowCards" as const, legacyId: "cards" as const, label: "Yellow cards", color: "#facc15" },
-              { id: "redCards" as const, label: "Red cards", color: "#ef4444" },
+              { id: "yellowCards" as const, legacyId: "cards" as const, label: cardLabels.yellowCards, color: "#facc15" },
+              { id: "redCards" as const, label: cardLabels.redCards, color: "#ef4444" },
             ]).map((discipline) => (
               <div
                 key={discipline.id}

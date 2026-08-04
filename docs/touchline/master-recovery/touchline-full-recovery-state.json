@@ -5,14 +5,14 @@
   "current_block": 35,
   "completed_blocks": [],
   "blocked_blocks": [4, 5, 26, 29],
-  "next_action": "Push the ClubHub pt-BR card-label correction, verify it on the Ready Preview, then continue the controlled non-financial persona and native phone/remote-Preview WebKit matrix; do not promote until every required result passes.",
-  "last_validated_at": "2026-08-04T13:18:00+02:00",
+  "next_action": "Push the shared Portuguese card-discipline accessibility-label correction, verify it on the Ready Preview, then continue the controlled non-financial persona and native phone/remote-Preview WebKit matrix; do not promote until every required result passes.",
+  "last_validated_at": "2026-08-04T13:31:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
-    "unit": "623 passed, 0 failed",
-    "integration": "focused Training Centre route/navigation/visual-contract coverage: 41 passed; local performance read matrix: 21 HTTP 200 responses; ClubHub delivery contracts: 3 focused localization/name-placement tests passed; authorized Vercel Preview smoke covers auth surfaces, protected redirects, Live, tables, rankings, ClubHub, Player Profile and real card-detail open/close/focus-return interaction",
-    "e2e": "partial; Ready Preview A5a8aKbr4qgdSkXT6R9afE4S8uE8 renders the real localized ClubHub, while the authorized Preview matrix renders real auth surfaces, protected redirects, public ClubHub/Match Centre/tables/rankings and safe 404 state. The pt-BR card-label correction is locally production-validated and awaits its Preview check. Native Safari/WebKit desktop verifies the real local production ClubHub lineup and approved player-name placement. Controlled non-financial owner personas plus native phone/remote-Preview WebKit remain pending; anonymous Preview HTTP is Vercel-SSO protected by design",
+    "unit": "624 passed, 0 failed",
+    "integration": "focused Training Centre route/navigation/visual-contract coverage: 41 passed; local performance read matrix: 21 HTTP 200 responses; ClubHub/shared-card delivery contracts: 4 focused localization/name-placement tests passed; authorized Vercel Preview smoke covers auth surfaces, protected redirects, Live, tables, rankings, ClubHub, Player Profile and real card-detail open/close/focus-return interaction",
+    "e2e": "partial; Ready Preview 3TNoH5vcGQCnENtaDbmA8tfyhb3z verifies the real ClubHub pt-BR current-club label. The shared card-discipline correction is locally production-validated and awaits its Preview check. The authorized Preview matrix renders real auth surfaces, protected redirects, public ClubHub/Match Centre/tables/rankings and safe 404 state. Native Safari/WebKit desktop verifies the real local production ClubHub lineup and approved player-name placement. Controlled non-financial owner personas plus native phone/remote-Preview WebKit remain pending; anonymous Preview HTTP is Vercel-SSO protected by design",
     "build": "pass"
   }
 }
