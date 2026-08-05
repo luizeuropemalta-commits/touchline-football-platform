@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-schedule-sync";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { toPublicTouchlineFixtures } from "@/lib/football-data/public-fixture";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createClient } from "@/lib/supabase/server";
@@ -20,7 +21,7 @@ export async function GET() {
   const fixtures = await readPublicCompetitionFixtures();
   return NextResponse.json({
     ok: true,
-    data: fixtures,
+    data: toPublicTouchlineFixtures(fixtures),
     source: "canonical-schedule",
     fetchedAt: new Date().toISOString(),
   }, {

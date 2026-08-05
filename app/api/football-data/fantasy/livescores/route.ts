@@ -14,6 +14,7 @@ import { createFootballDataProvider } from "@/lib/football-data/provider-factory
 import type { TouchlineFixture } from "@/lib/football-data/types";
 import { mergeTouchlineLiveFixtureDeltas } from "@/lib/football-data/sportmonks-live";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { toPublicTouchlineFixtures } from "@/lib/football-data/public-fixture";
 import { requireAuthenticatedOrLocalTouchlineEditor } from "@/lib/touchlineArena/api-access";
 
 function stripFixtureRaw(fixture: TouchlineFixture): TouchlineFixture {
@@ -53,7 +54,7 @@ function stripFixtureRaw(fixture: TouchlineFixture): TouchlineFixture {
 function snapshotJson(snapshot: { fixtures: TouchlineFixture[]; fetchedAt: string }, source: "local-snapshot" | "durable-snapshot" | "outage-fallback") {
   return NextResponse.json({
     ok: true,
-    data: snapshot.fixtures,
+    data: toPublicTouchlineFixtures(snapshot.fixtures),
     cached: true,
     degraded: source === "outage-fallback",
     source,
@@ -123,7 +124,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    data: fixtures,
+    data: toPublicTouchlineFixtures(fixtures),
     cached: result.cached ?? false,
     degraded: false,
     source: "live-provider",

@@ -1714,11 +1714,8 @@ function isStoredLiveTeam(value: unknown) {
     && Boolean(team.id.trim())
     && typeof team.providerId === "string"
     && /^[0-9]{1,20}$/.test(team.providerId.trim())
-    && team.provider === "sportmonks"
     && typeof team.name === "string"
-    && Boolean(team.name.trim())
-    && team.source?.provider === team.provider
-    && team.source.providerId === team.providerId;
+    && Boolean(team.name.trim());
 }
 
 function isStoredLiveFixture(value: unknown): value is TouchlineFixture {
@@ -1728,9 +1725,6 @@ function isStoredLiveFixture(value: unknown): value is TouchlineFixture {
     && Boolean(fixture.id.trim())
     && typeof fixture.providerId === "string"
     && /^[0-9]{1,20}$/.test(fixture.providerId.trim())
-    && fixture.provider === "sportmonks"
-    && fixture.source?.provider === fixture.provider
-    && fixture.source.providerId === fixture.providerId
     && isStoredLiveTeam(fixture.homeTeam)
     && isStoredLiveTeam(fixture.awayTeam);
 }
