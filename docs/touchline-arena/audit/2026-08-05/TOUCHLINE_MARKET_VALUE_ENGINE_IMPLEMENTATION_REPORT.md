@@ -41,7 +41,7 @@ applied canonical table.
 ## Validation
 
 - TypeScript: pass.
-- ESLint: pass for touched paths.
+- ESLint: full repository pass (existing large-file generator notices only).
 - Tests: 646 passed, 0 failed.
 - Production build: pass (`next build --webpack`).
 - Local visual validation: current production build checked at 1280px, 768px
