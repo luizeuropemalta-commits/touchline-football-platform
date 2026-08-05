@@ -64,6 +64,9 @@ export function parseAuthoritativeRosterResponse(
     const marketValue = requiredText(card?.marketValue);
     const source = marketValueSource(card?.marketValueSource);
     const tier = requiredText(card?.cardTier);
+    const priceAuthority = card?.cardPriceAuthority === "active-contract"
+      ? "active-contract" as const
+      : null;
     const points = typeof card?.touchlinePoints === "number" && Number.isFinite(card.touchlinePoints)
       ? card.touchlinePoints
       : null;
@@ -81,6 +84,7 @@ export function parseAuthoritativeRosterResponse(
       || !marketValue
       || !source
       || !tier
+      || !priceAuthority
       || !touchlineArenaTierForKey(tier)
       || points === null
     ) return { ok: false };
@@ -100,6 +104,7 @@ export function parseAuthoritativeRosterResponse(
       marketValueSource: source,
       cardTier: tier as TouchlineCardTierKey,
       cardPriceVersion: optionalText(card?.cardPriceVersion),
+      cardPriceAuthority: priceAuthority,
       touchlinePoints: points,
     });
   }

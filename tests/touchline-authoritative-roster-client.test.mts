@@ -25,6 +25,7 @@ function validPayload() {
       marketValueSource: "verified-cache",
       cardTier: "emerald-green",
       cardPriceVersion: "2026-07-tc-v2",
+      cardPriceAuthority: "active-contract",
       touchlinePoints: 12,
     }],
   };
@@ -36,6 +37,7 @@ test("accepts a complete authoritative roster and preserves its inventory identi
   if (!result.ok) return;
   assert.equal(result.cards[0].inventoryId, INVENTORY_ID);
   assert.equal(result.cards[0].cardTier, "emerald-green");
+  assert.equal(result.cards[0].cardPriceAuthority, "active-contract");
   assert.equal(result.cards[0].shirtNumber, 9);
 });
 

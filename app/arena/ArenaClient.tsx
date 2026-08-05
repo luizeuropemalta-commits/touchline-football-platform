@@ -51,6 +51,7 @@ import {
   uniqueClubOwnerRosterCards,
   writeBrowserClubOwnerRoster,
 } from "@/lib/touchlineArena/club-owner-roster";
+import { orderTouchlineBenchByPosition } from "@/lib/touchlineArena/bench-presentation";
 import { quoteTouchlineMarketCart, type TouchlineMarketCartErrorCode } from "@/lib/touchlineArena/market-cart";
 import {
   normalizeTouchlineMarketInventoryId,
@@ -197,6 +198,7 @@ type BenchOption = {
   marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
+  cardPriceAuthority?: "active-contract" | null;
   inventoryId?: string | null;
   countryCode3: string;
   impact: string;
@@ -258,6 +260,7 @@ type TeamBuilderSquadPlayer = {
   marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
+  cardPriceAuthority?: "active-contract" | null;
   countryCode3?: string | null;
   flagUrl?: string | null;
   nationality?: string | null;
@@ -747,6 +750,7 @@ function normalizeArenaPlayerCard(player: Partial<ArenaPlayer>) {
     marketValueSource,
     cardTier,
     cardPriceVersion: player.card.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    cardPriceAuthority: player.card.cardPriceAuthority ?? null,
   };
 }
 
@@ -846,6 +850,7 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
       marketValueSource,
       cardTier,
       cardPriceVersion: player.card.cardPriceVersion || squadPlayer.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+      cardPriceAuthority: player.card.cardPriceAuthority ?? squadPlayer.cardPriceAuthority ?? null,
       inventoryId: player.card.inventoryId ?? squadPlayer.inventoryId ?? null,
       matchStats: player.card.matchStats ?? { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
     },
@@ -880,6 +885,7 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
       marketValueSource: hasUsableMarketValue(marketValue) ? marketValueSource : "unavailable",
       cardTier,
       cardPriceVersion: bench.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+      cardPriceAuthority: bench.cardPriceAuthority ?? null,
       inventoryId: bench.inventoryId ?? null,
       matchStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
     },
@@ -900,6 +906,7 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
     marketValueSource: card?.marketValueSource || "unavailable",
     cardTier: touchlineArenaCompetitionTierForCard(card?.cardTier).key,
     cardPriceVersion: card?.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    cardPriceAuthority: card?.cardPriceAuthority ?? undefined,
     inventoryId: card?.inventoryId ?? null,
     countryCode3: card?.countryCode3 || "ENG",
     impact: replacedBench.impact,
@@ -921,6 +928,7 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
     marketValueSource,
     cardTier: touchlineArenaCompetitionTierForCard(player.cardTier).key,
     cardPriceVersion: player.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    cardPriceAuthority: player.cardPriceAuthority ?? null,
     inventoryId: player.inventoryId ?? null,
     countryCode3: player.countryCode3 || "N/A",
     impact: "+ squad depth",
@@ -951,6 +959,7 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
     marketValueSource: card?.marketValueSource || "unavailable",
     cardTier: card?.cardTier || defaultCard?.cardTier,
     cardPriceVersion: card?.cardPriceVersion || defaultCard?.cardPriceVersion,
+    cardPriceAuthority: card?.cardPriceAuthority ?? defaultCard?.cardPriceAuthority,
     inventoryId: card?.inventoryId ?? defaultCard?.inventoryId ?? null,
     touchlinePoints: Number.parseFloat(String(card?.fantasyPoints ?? "")) || defaultCard?.touchlinePoints || 0,
   });
@@ -972,6 +981,7 @@ function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
     marketValueSource: bench.marketValueSource || "unavailable",
     cardTier: bench.cardTier || defaultCard?.cardTier,
     cardPriceVersion: bench.cardPriceVersion || defaultCard?.cardPriceVersion,
+    cardPriceAuthority: bench.cardPriceAuthority ?? defaultCard?.cardPriceAuthority,
     inventoryId: bench.inventoryId ?? defaultCard?.inventoryId ?? null,
     touchlinePoints: defaultCard?.touchlinePoints || 0,
   });
@@ -994,6 +1004,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
       marketValueSource: card.marketValueSource || "unavailable",
       cardTier: card.cardTier,
       cardPriceVersion: card.cardPriceVersion,
+      cardPriceAuthority: card.cardPriceAuthority,
       inventoryId: card.inventoryId ?? null,
       countryCode3: card.countryCode3,
     };
@@ -1011,6 +1022,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
     marketValueSource: card.marketValueSource || "unavailable",
     cardTier: card.cardTier,
     cardPriceVersion: card.cardPriceVersion,
+    cardPriceAuthority: card.cardPriceAuthority,
     inventoryId: card.inventoryId ?? null,
     countryCode3: card.countryCode3,
     impact: "+ squad depth",
@@ -1080,7 +1092,7 @@ function buildMatchdayBench(benchPlayers: BenchOption[]) {
   const firstGoalkeeper = ordered.find((bench) => bench.role === "goalkeeper");
   const outfield = ordered.filter((bench) => bench.role !== "goalkeeper");
   const matchdayBench = [...outfield.slice(0, firstGoalkeeper ? 8 : 9), firstGoalkeeper].filter((bench): bench is BenchOption => Boolean(bench));
-  return matchdayBench.slice(0, 9);
+  return orderTouchlineBenchByPosition(matchdayBench.slice(0, 9));
 }
 
 type ArenaPositionGroup = "goalkeeper" | "centre-back" | "full-back" | "midfield" | "winger" | "striker" | "outfield";
@@ -2777,6 +2789,7 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
     marketValueSource: card?.marketValueSource || "unavailable",
     cardTier: previewTier ?? touchlineArenaCompetitionTierForCard(card?.cardTier).key,
     cardPriceVersion: card?.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    cardPriceAuthority: card?.cardPriceAuthority ?? undefined,
     updatedAt: PUBLIC_DATA_SOURCE_LABEL,
     age: "N/A",
     height: "N/A",
@@ -3312,7 +3325,7 @@ export default function ArenaClient({
   const ownedSquadCount = clubOwnerRoster.length;
   const matchdayBenchPlayers = buildMatchdayBench(benchPlayers);
   const matchdayBenchIds = new Set(matchdayBenchPlayers.map((bench) => bench.id));
-  const reserveVaultPlayers = benchPlayers.filter((bench) => !matchdayBenchIds.has(bench.id));
+  const reserveVaultPlayers = orderTouchlineBenchByPosition(benchPlayers.filter((bench) => !matchdayBenchIds.has(bench.id)));
   const isSelectedBenchInMatchday = Boolean(selectedBench && matchdayBenchPlayers.some((bench) => bench.id === selectedBench.id));
   const selectedBenchFormationLocked = Boolean(selectedBench && isBenchFormationLocked(selectedBench, players, selectedFormationKey, replacementTarget));
   const canSelectedBenchReplaceTarget = Boolean(selectedBench && replacementTarget && canBenchReplaceTarget(selectedBench, replacementTarget));

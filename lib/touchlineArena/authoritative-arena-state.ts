@@ -157,6 +157,7 @@ function canonicalArenaPlayer(
       marketValueSource: rosterCard.marketValueSource ?? "unavailable",
       cardTier: rosterCard.cardTier,
       cardPriceVersion: rosterCard.cardPriceVersion,
+      cardPriceAuthority: rosterCard.cardPriceAuthority,
       inventoryId,
       matchStats: {
         goals: 0,

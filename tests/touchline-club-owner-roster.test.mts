@@ -196,15 +196,16 @@ describe("TouchLine ClubOwner roster accounting", () => {
     assert.equal(restored.cardPriceVersion, "provider-regression-v2");
   });
 
-  it("preserves the authoritative inventory UUID through the V4 roster round trip", () => {
+  it("preserves the authoritative contract identity through the V5 roster round trip", () => {
     const inventoryId = "cb58b289-dbb6-4a2f-8db5-bf3af1cb8d6e";
     const seeded = CLUB_OWNER_SQUAD_CARDS[0];
     const restored = parseClubOwnerRoster(serializeClubOwnerRoster([
-      { ...seeded, inventoryId },
+      { ...seeded, inventoryId, cardPriceAuthority: "active-contract" as const },
     ]), { fallback: "empty" });
 
     assert.equal(restored.length, 1);
     assert.equal(restored[0].inventoryId, inventoryId);
+    assert.equal(restored[0].cardPriceAuthority, "active-contract");
   });
 
   it("keeps a new authenticated roster empty when no namespaced value exists", () => {

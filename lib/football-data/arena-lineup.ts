@@ -24,6 +24,8 @@ export type ArenaLineupPlayer = {
     marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
     cardTier?: TouchlineCardTierKey | null;
     cardPriceVersion?: string | null;
+    /** Only active server-side contracts may freeze the card classification. */
+    cardPriceAuthority?: "active-contract" | null;
     inventoryId?: string | null;
     matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards", string | number | null>>;
   };

@@ -831,9 +831,16 @@ export function TouchlineEliteExactCard({
     marketValue: player.marketValue,
     marketValueSource: player.marketValueSource,
   });
-  const marketTier = verifiedEconomy.status === "resolved"
+  // An active contract stores the approved in-season classification. It is
+  // intentionally stronger than a later market-value refresh: a refreshed
+  // value may inform the following seasonal reset, never recolour an owned
+  // card in the current season.
+  const contractedTier = player.cardPriceAuthority === "active-contract"
+    ? touchlineArenaTierForKey(player.cardTier)
+    : null;
+  const marketTier = contractedTier ?? (verifiedEconomy.status === "resolved"
     ? touchlineArenaTierForKey(verifiedEconomy.tierKey) ?? previewTier
-    : previewTier;
+    : previewTier);
   // England cards always keep the approved numeric tier value and use GBP as
   // their official currency. This is deliberately not a Touch Credits value,
   // currency conversion or wallet balance.

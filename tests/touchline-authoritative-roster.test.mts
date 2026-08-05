@@ -256,6 +256,7 @@ test("Arena persistence rebuilds spoofed card identity, tier, value, points and 
     marketValueSource: "verified-cache",
     cardTier: "emerald-green",
     cardPriceVersion: "2026-07-premier-v1",
+    cardPriceAuthority: "active-contract",
     inventoryId: INVENTORY_ID,
     matchStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
   });
