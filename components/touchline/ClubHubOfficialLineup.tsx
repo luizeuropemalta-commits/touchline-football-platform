@@ -7,8 +7,8 @@ import type { TouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
 import { findTouchLineClub, squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
-import { resolveTouchlineVerifiedPlayerEconomy, touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
-import { formatTouchlineCommercialCardPrice, resolveTouchlineCommercialCardPrice } from "@/lib/touchlineArena/commercial-card-pricing";
+import { resolveTouchlineVerifiedPlayerEconomy, touchlineArenaTierForKey, touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
+import { formatTouchlineCommercialCardPrice, formatTouchlineContractedCommercialCardPrice, resolveTouchlineCommercialCardPrice } from "@/lib/touchlineArena/commercial-card-pricing";
 import { formatPlayerMarketTierRange, formatPlayerMarketValueEur } from "@/lib/touchlineArena/player-market-tiers";
 
 import styles from "./ClubHubOfficialLineup.module.css";
@@ -68,6 +68,9 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
               marketValue: card.marketValue,
               marketValueSource: card.marketValueSource,
             });
+            const contractedTier = card.cardPriceAuthority === "active-contract"
+              ? touchlineArenaTierForKey(card.cardTier)
+              : null;
             const profileHref = touchlinePlayerProfileHref({
                 sportmonksPlayerId: card.id,
                 name: card.name,
@@ -76,9 +79,16 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                 shirtNumber: card.shirtNumber,
                 countryCode3: card.countryCode3,
               }, locale, { previewTier: card.cardTier });
-            const zoomTier = economy.status === "resolved" ? economy.tierKey : card.cardTier;
+            const zoomTier = contractedTier?.key ?? (economy.status === "resolved" ? economy.tierKey : card.cardTier);
             const updating = isPortuguese ? "Em atualização" : "Updating";
-            const commercialPrice = economy.status === "resolved"
+            const commercialPrice = contractedTier
+              ? formatTouchlineContractedCommercialCardPrice({
+                tierKey: contractedTier.key,
+                priceTableVersion: card.cardPriceVersion,
+                competition: "england",
+                locale,
+              })
+              : economy.status === "resolved"
               ? formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
                 tierKey: economy.tierKey,
                 competition: "england",
@@ -103,7 +113,7 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                   contractValue={commercialPrice}
                   contractTermLabel={isPortuguese ? "Contrato · 1 temporada" : "Contract · 1 season"}
                   tierAccent={touchlineCardTierPalette(zoomTier).accent}
-                  tierLabel={economy.status === "resolved" ? touchlineCardTierName(economy.tierKey, locale) : updating}
+                  tierLabel={contractedTier ? touchlineCardTierName(contractedTier.key, locale) : economy.status === "resolved" ? touchlineCardTierName(economy.tierKey, locale) : updating}
                   details={{
                     eyebrow: isPortuguese ? "Perfil económico oficial" : "Official economic profile",
                     title: card.name,
