@@ -283,6 +283,7 @@ async function handleTouchLineRequest(request: NextRequest) {
     isOwnerEmail = ownerModule.isOwnerEmail;
     const supabase = createServerClient(url, key, {
       cookies: {
+        encode: "tokens-only",
         getAll: () => request.cookies.getAll(),
         setAll: (cookies) => {
           cookies.forEach(({ name, value }) => request.cookies.set(name, value));

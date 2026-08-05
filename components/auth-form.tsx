@@ -231,6 +231,19 @@ export function AuthForm({
     }
   }
 
+  function submitNativeLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setMessage("");
+    setMessageTone(null);
+    setLoading(true);
+    const form = e.currentTarget;
+    // Give React a paint opportunity and a short acknowledgement window so
+    // Safari visibly shows "Entrando…" before the document navigation starts.
+    window.requestAnimationFrame(() => {
+      window.setTimeout(() => form.submit(), 140);
+    });
+  }
+
   async function socialLogin(provider: SocialAuthProvider) {
     setMessage("");
     setMessageTone(null);
@@ -335,7 +348,7 @@ export function AuthForm({
     <form
       action={mode === "login" ? "/login/submit" : undefined}
       method="post"
-      onSubmit={mode === "login" ? undefined : submit}
+      onSubmit={mode === "login" ? submitNativeLogin : submit}
       className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}
     >
       {mode === "login" ? <input type="hidden" name="return_to" value={arenaHref} /> : null}
@@ -356,7 +369,13 @@ export function AuthForm({
       )}
       {mode === "register" && <label className="flex items-start gap-2 pt-1 text-[10px] leading-4 text-[#73807c]"><input required type="checkbox" className="mt-1 accent-[#153f36]"/><span>{copy.terms}</span></label>}
       {message && <div className={`rounded-xl px-4 py-3 text-xs ${messageTone === "success" ? "bg-[#e7f4df] text-[#2a633b]" : "bg-[#fee8e4] text-[#a5463a]"}`}>{message}</div>}
-      <Button type="submit" disabled={loading || isArenaTransitioning} className="w-full">{loading || isArenaTransitioning?<Loader2 size={16} className="animate-spin"/>:<>{mode==="login"?copy.signIn:mode==="register"?copy.createAccount:copy.sendReset}<ArrowRight size={15}/></>}</Button>
+      <Button type="submit" disabled={loading || isArenaTransitioning} className="w-full">
+        {loading || isArenaTransitioning ? (
+          <><Loader2 size={16} className="animate-spin"/>{mode === "login" ? copy.signingIn : null}</>
+        ) : (
+          <>{mode==="login"?copy.signIn:mode==="register"?copy.createAccount:copy.sendReset}<ArrowRight size={15}/></>
+        )}
+      </Button>
       {mode === "login" && (
         <p className="auth-account-switch">
           <span>{copy.newToTouchLine}</span>

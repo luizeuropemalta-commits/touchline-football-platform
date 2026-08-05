@@ -8,6 +8,7 @@ export async function createClient() {
   const store = await cookies();
   return createServerClient(url, key, {
     cookies: {
+      encode: "tokens-only",
       getAll: () => store.getAll(),
       setAll: (items) => {
         try {

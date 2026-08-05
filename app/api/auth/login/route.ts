@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 import { ensureTouchlineArenaAccess } from "@/lib/server/touchline-arena-access";
@@ -17,6 +17,12 @@ type LoginError =
   | "profile_setup_failed"
   | "session_cookie_failure"
   | "auth_unavailable";
+
+type SessionCookie = {
+  name: string;
+  value: string;
+  options: CookieOptions;
+};
 
 function invalidRequest() {
   return NextResponse.json({ ok: false, error: "invalid_credentials" }, { status: 400 });
@@ -48,35 +54,10 @@ function safeLoginError(error: { code?: string; message?: string } | null): Logi
   return "auth_unavailable";
 }
 
-function successResponse(responseWithSession: NextResponse) {
-  const response = NextResponse.json(
-    { ok: true },
-    { headers: { "Cache-Control": "no-store" } },
-  );
-
-  // Preserve each cookie through the route-handler response. Passing the
-  // raw Headers object can collapse repeated Set-Cookie headers in some
-  // runtimes; Safari then receives an incomplete (and unusable) session.
-  responseWithSession.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
-  return response;
-}
-
-function nativeSessionResponse(
-  request: NextRequest,
-  responseWithSession: NextResponse,
-  returnTo: unknown,
-) {
-  const destination = safeReturnTo(request, returnTo);
-  const response = NextResponse.redirect(new URL(destination, request.url), 303);
-  response.headers.set("Cache-Control", "no-store");
-  response.headers.set("Referrer-Policy", "no-referrer");
-
-  // This response is a top-level Safari navigation, not a fetch response.
-  // Keep the session host-only, HTTPS-only and Lax so www redirects cannot
-  // produce a competing session cookie for the canonical root domain.
-  responseWithSession.cookies.getAll().forEach(({ name, value, ...cookie }) => {
+function applySessionCookies(response: NextResponse, sessionCookies: SessionCookie[]) {
+  sessionCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, {
-      ...cookie,
+      ...options,
       domain: undefined,
       path: "/",
       sameSite: "lax",
@@ -84,6 +65,27 @@ function nativeSessionResponse(
     });
   });
   return response;
+}
+
+function successResponse(sessionCookies: SessionCookie[]) {
+  const response = NextResponse.json(
+    { ok: true },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+  return applySessionCookies(response, sessionCookies);
+}
+
+function nativeSessionResponse(
+  request: NextRequest,
+  sessionCookies: SessionCookie[],
+  returnTo: unknown,
+) {
+  const destination = safeReturnTo(request, returnTo);
+  const response = NextResponse.redirect(new URL(destination, request.url), 303);
+  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("Referrer-Policy", "no-referrer");
+
+  return applySessionCookies(response, sessionCookies);
 }
 
 /**
@@ -130,17 +132,15 @@ export async function POST(request: NextRequest) {
   // The session is established by the first-party response itself. This keeps
   // password handling on TouchLine and avoids a second cross-origin browser
   // authentication request after the credentials have already been verified.
-  const responseWithSession = NextResponse.json({ ok: true });
+  let sessionCookies: SessionCookie[] = [];
   const supabase = createServerClient(url, key, {
     cookies: {
+      encode: "tokens-only",
       getAll: () => request.cookies.getAll(),
       setAll: (items) => {
-        items.forEach(({ name, value, options }) => responseWithSession.cookies.set(name, value, {
-          ...options,
-          path: "/",
-          sameSite: "lax",
-          secure: true,
-        }));
+        // Apply the final compact cookie set once. An intermediate response
+        // can duplicate chunks and produce a header Safari/Vercel rejects.
+        sessionCookies = items;
       },
     },
   });
@@ -162,8 +162,8 @@ export async function POST(request: NextRequest) {
           : NextResponse.json({ ok: false, error: "session_cookie_failure" }, { status: 503 });
       }
       return nativeFormPost
-        ? nativeSessionResponse(request, responseWithSession, payload.return_to)
-        : successResponse(responseWithSession);
+        ? nativeSessionResponse(request, sessionCookies, payload.return_to)
+        : successResponse(sessionCookies);
     } catch {
       return nativeFormPost
         ? nativeErrorResponse(request, "profile_setup_failed", payload.return_to, payload.locale)

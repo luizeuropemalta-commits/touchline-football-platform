@@ -91,6 +91,7 @@ const en = {
     terms:
       "I agree to the Terms and Privacy Policy. During Beta, TouchLine measures active time, device class and feature areas to improve gameplay — never passwords, messages or typed content.",
     signIn: "Sign in",
+    signingIn: "Signing in…",
     createAccount: "Create account",
     sendReset: "Send reset link",
     watchWithoutLogin: "Explore a public club",
@@ -209,6 +210,7 @@ const ptBR: typeof en = {
     terms:
       "Concordo com os Termos e a Política de Privacidade. Durante o Beta, a TouchLine mede tempo ativo, tipo de dispositivo e áreas utilizadas para melhorar a jogabilidade — nunca senhas, mensagens ou conteúdo digitado.",
     signIn: "Entrar",
+    signingIn: "Entrando…",
     createAccount: "Criar conta",
     sendReset: "Enviar link de recuperação",
     watchWithoutLogin: "Explorar um clube público",
