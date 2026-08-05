@@ -7,6 +7,7 @@ type LoginPayload = {
   email?: unknown;
   password?: unknown;
   return_to?: unknown;
+  locale?: unknown;
 };
 
 type LoginError =
@@ -31,9 +32,10 @@ function safeReturnTo(request: NextRequest, value: unknown) {
   return target.origin === request.nextUrl.origin ? `${target.pathname}${target.search}` : "/arena";
 }
 
-function nativeErrorResponse(request: NextRequest, error: LoginError, returnTo: unknown) {
+function nativeErrorResponse(request: NextRequest, error: LoginError, returnTo: unknown, locale?: unknown) {
   const target = new URL("/login", request.url);
   target.searchParams.set("error", error);
+  if (locale === "pt-BR" || locale === "en-GB") target.searchParams.set("lang", locale);
   const destination = safeReturnTo(request, returnTo);
   if (destination !== "/arena") target.searchParams.set("returnTo", destination);
   return NextResponse.redirect(target, { status: 303 });
@@ -65,16 +67,9 @@ function nativeSessionResponse(
   returnTo: unknown,
 ) {
   const destination = safeReturnTo(request, returnTo);
-  const response = new NextResponse(
-    `<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>TouchLine</title></head><body><script>window.location.replace(${JSON.stringify(destination)});</script><noscript><a href="${destination}">Continue</a></noscript></body></html>`,
-    {
-      headers: {
-        "Cache-Control": "no-store",
-        "Content-Type": "text/html; charset=utf-8",
-        "Referrer-Policy": "no-referrer",
-      },
-    },
-  );
+  const response = NextResponse.redirect(new URL(destination, request.url), 303);
+  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("Referrer-Policy", "no-referrer");
 
   // This response is a top-level Safari navigation, not a fetch response.
   // Keep the session host-only, HTTPS-only and Lax so www redirects cannot
@@ -107,6 +102,7 @@ export async function POST(request: NextRequest) {
         email: form.get("email"),
         password: form.get("password"),
         return_to: form.get("return_to"),
+        locale: form.get("locale"),
       };
     } else {
       payload = await request.json() as LoginPayload;
@@ -119,7 +115,7 @@ export async function POST(request: NextRequest) {
   const password = typeof payload.password === "string" ? payload.password : "";
   if (!email || !password) {
     return nativeFormPost
-      ? nativeErrorResponse(request, "invalid_credentials", payload.return_to)
+      ? nativeErrorResponse(request, "invalid_credentials", payload.return_to, payload.locale)
       : invalidRequest();
   }
 
@@ -127,7 +123,7 @@ export async function POST(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
     return nativeFormPost
-      ? nativeErrorResponse(request, "auth_unavailable", payload.return_to)
+      ? nativeErrorResponse(request, "auth_unavailable", payload.return_to, payload.locale)
       : NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
   }
 
@@ -154,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (error || !data.user) {
       const safeError = safeLoginError(error);
       return nativeFormPost
-        ? nativeErrorResponse(request, safeError, payload.return_to)
+        ? nativeErrorResponse(request, safeError, payload.return_to, payload.locale)
         : NextResponse.json({ ok: false, error: safeError }, { status: 401 });
     }
 
@@ -162,7 +158,7 @@ export async function POST(request: NextRequest) {
       await ensureTouchlineArenaAccess(data.user);
       if (!data.session?.access_token || !data.session.refresh_token) {
         return nativeFormPost
-          ? nativeErrorResponse(request, "session_cookie_failure", payload.return_to)
+          ? nativeErrorResponse(request, "session_cookie_failure", payload.return_to, payload.locale)
           : NextResponse.json({ ok: false, error: "session_cookie_failure" }, { status: 503 });
       }
       return nativeFormPost
@@ -170,12 +166,12 @@ export async function POST(request: NextRequest) {
         : successResponse(responseWithSession);
     } catch {
       return nativeFormPost
-        ? nativeErrorResponse(request, "profile_setup_failed", payload.return_to)
+        ? nativeErrorResponse(request, "profile_setup_failed", payload.return_to, payload.locale)
         : NextResponse.json({ ok: false, error: "profile_setup_failed" }, { status: 503 });
     }
   } catch {
     return nativeFormPost
-      ? nativeErrorResponse(request, "auth_unavailable", payload.return_to)
+      ? nativeErrorResponse(request, "auth_unavailable", payload.return_to, payload.locale)
       : NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
   }
 }

@@ -82,8 +82,8 @@ test("password login and immediate-session registration require Arena access bef
   );
   assert.match(authFormSource, /await fetch\("\/api\/touchline-arena\/access"/);
 
-  assert.match(authFormSource, /action=\{mode === "login" \? loginWithPassword : undefined\}/);
-  assert.match(authFormSource, /import \{ loginWithPassword \} from "@\/app\/\(auth\)\/login\/actions"/);
+  assert.match(authFormSource, /action=\{mode === "login" \? "\/login\/submit" : undefined\}/);
+  assert.match(authFormSource, /method=\{mode === "login" \? "post" : undefined\}/);
   assert.match(authFormSource, /name="return_to" value=\{arenaHref\}/);
   assert.match(authFormSource, /name="locale" value=\{normalizedLocale\}/);
   assert.doesNotMatch(authFormSource, /action=\{mode === "login" \? "\/api\/auth\/login"/);

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, Check, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { loginWithPassword } from "@/app/(auth)/login/actions";
 import {
   getTouchLineAuthCopy,
   normalizeTouchLineAuthLocale,
@@ -321,7 +320,8 @@ export function AuthForm({
   return (
     <>
     <form
-      action={mode === "login" ? loginWithPassword : undefined}
+      action={mode === "login" ? "/login/submit" : undefined}
+      method={mode === "login" ? "post" : undefined}
       onSubmit={mode === "login" ? undefined : submit}
       className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}
     >
