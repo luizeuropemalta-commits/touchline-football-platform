@@ -1,0 +1,42 @@
+{
+  "goal": "TouchLine Final Product Completion — Current State",
+  "overall_status": "IN_PROGRESS",
+  "authoritative_resume_rule": "At the start of every execution, inspect git status, read HEAD, read the execution ledger, resolve the newest safe checkpoint from the current branch, then continue the first incomplete executable item. Never resume a hardcoded historical checkpoint.",
+  "repository": {
+    "branch": "safety/touchline-2026-06-28-wip",
+    "latest_pushed_commit": "f347f2dce57c923cac7030ac73440740094f391d",
+    "safe_checkpoint": "f347f2dc",
+    "working_tree": "dirty: unrelated user documentation and audit artifacts are preserved; only task-owned files may be staged"
+  },
+  "applied_migrations": [
+    "043_touchline_central_inbox_foundation.sql",
+    "047_touchline_arena_owner_coach.sql",
+    "048_touchline_player_season_statistics_read_model.sql"
+  ],
+  "preview": {
+    "project": "touchline-arena-official",
+    "project_id": "prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM",
+    "production_promotion": "prohibited until all mandatory gates pass",
+    "state": "Git-integrated Preview pending validation for the latest pushed commit"
+  },
+  "current_mission": [
+    "Market Value Engine",
+    "Unified Card Engine",
+    "canonical card tiers and borders",
+    "active-season card stability",
+    "new-player classification",
+    "bench organisation",
+    "responsive card layout",
+    "public provider-brand removal",
+    "Preview validation",
+    "Final Zero-Defect Audit"
+  ],
+  "next_executable_action": "Validate the Git-integrated Preview for f347f2dc; then continue the first incomplete non-external item in the final-product ledger.",
+  "last_validated_at": "2026-08-05T15:35:00+02:00",
+  "tests": {
+    "typescript": "pass",
+    "eslint": "pass",
+    "unit": "651 passed, 0 failed",
+    "build": "pass"
+  }
+}

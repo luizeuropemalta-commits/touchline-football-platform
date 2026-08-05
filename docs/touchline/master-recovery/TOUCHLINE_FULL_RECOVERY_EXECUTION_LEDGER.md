@@ -1,8 +1,16 @@
-# TouchLine Full Product Recovery — Durable Execution Ledger
+# TouchLine Full Product Recovery — Durable Execution Ledger (Historical / Superseded)
+
+> **Historical record only — superseded on 2026-08-05.** The former runtime
+> objective referenced checkpoint `c80e52dc`; that checkpoint must never be
+> used to resume work. The repository has since advanced through migrations
+> 043/047/048, the Market Value Engine, the Card Engine and Gold Polish work.
+> The authoritative continuation record is now
+> `docs/touchline/final-product-completion/TOUCHLINE_FINAL_PRODUCT_EXECUTION_LEDGER.md`.
+> This ledger remains intact solely for traceability.
 
 Authoritative mission: `FULL PRODUCT RECOVERY, CONSISTENCY AND PREMIUM COMPLETION` in `/Users/luizlopez/.codex/attachments/14d41325-a252-4ecc-8a6e-0ce47146f59b/pasted-text.txt`.
 
-Checkpoint: `74fe6cae` (subsequent safe commits are recorded below). Safety: no Live Stripe, real payment, monetary wallet, financial migration, legal/tax decision, destructive production data change, or service-role disclosure. Resume protocol: read this file and `touchline-full-recovery-state.json`, inspect Git, then execute the first non-`COMPLETE` block whose next action is not an external or Luiz gate.
+Historical checkpoint: `74fe6cae` (subsequent safe commits are recorded below). Safety: no Live Stripe, real payment, monetary wallet, financial migration, legal/tax decision, destructive production data change, or service-role disclosure. This historical file is not a resume protocol.
 
 ## Reconciliation — 2026-08-04
 
