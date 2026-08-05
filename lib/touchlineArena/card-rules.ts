@@ -3,6 +3,7 @@ import {
   PLAYER_MARKET_TIERS,
   resolvePlayerMarketTier,
 } from "./player-market-tiers.ts";
+import { resolveTouchlineCardClassification, type TouchlineCardClassification } from "./card-engine.ts";
 
 export const TOUCHLINE_CARD_TIER_KEYS = [
   "ruby-red",
@@ -205,6 +206,8 @@ export type TouchlineMarketValueSource = "provider" | "verified-cache" | "unavai
 export function resolveTouchlineVerifiedPlayerEconomy(input: {
   marketValue: number | string | null | undefined;
   marketValueSource?: TouchlineMarketValueSource | null;
+  effectiveSeason?: string;
+  existingClassification?: Pick<TouchlineCardClassification, "tierKey" | "nominalPrice" | "effectiveSeason" | "policyVersion"> | null;
 }) {
   const source = input.marketValueSource ?? "unavailable";
   if (source !== "provider" && source !== "verified-cache") {
@@ -228,13 +231,28 @@ export function resolveTouchlineVerifiedPlayerEconomy(input: {
       priceTc: null,
     };
   }
+  const classification = resolveTouchlineCardClassification({
+    approvedMarketValueEur: marketValueEur,
+    effectiveSeason: input.effectiveSeason ?? "unassigned",
+    policyVersion: PLAYER_MARKET_TIER_POLICY_VERSION,
+    existing: input.existingClassification,
+  });
+  if (!classification) {
+    return {
+      status: "unavailable" as const,
+      marketValueEur: null,
+      tier: null,
+      tierKey: null,
+      priceTc: null,
+    };
+  }
 
   return {
     status: "resolved" as const,
     marketValueEur: resolution.marketValueEur,
     tier: resolution.tier,
-    tierKey: resolution.tier.id,
-    priceTc: resolution.tier.touchCreditPrice,
+    tierKey: classification.tierKey,
+    priceTc: classification.nominalPrice,
   };
 }
 
