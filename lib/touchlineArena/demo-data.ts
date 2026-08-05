@@ -40,6 +40,8 @@ export type ClubOwnerSquadCard = {
   marketValueSource?: "provider" | "verified-cache" | "unavailable";
   cardTier?: TouchlineCardTierKey;
   cardPriceVersion?: string;
+  /** Present only for a roster read from an active server-side card contract. */
+  cardPriceAuthority?: "active-contract";
   inventoryId?: string | null;
   touchlinePoints: number;
 };
@@ -338,6 +340,7 @@ export function squadCardToExactPlayer(
     marketValueSource: card.marketValueSource || "unavailable",
     cardTier,
     cardPriceVersion: card.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    cardPriceAuthority: card.cardPriceAuthority,
     updatedAt: "TouchLine Season 2026/27",
     age: "--",
     height: "--",

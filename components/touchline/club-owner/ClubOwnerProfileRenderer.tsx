@@ -29,7 +29,9 @@ import {
 } from "@/lib/touchlineArena/card-rules";
 import {
   formatTouchlineCommercialCardTotal,
+  formatTouchlineContractedCommercialCardPrice,
   formatTouchlineVerifiedCommercialCardPrice,
+  resolveTouchlineContractedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import { normalizeTouchLineLocale, touchLineT } from "@/lib/touchlineArena/i18n";
 import { touchlineArenaContractHref, touchlineArenaPanelHref } from "@/lib/touchlineArena/arena-navigation";
@@ -70,7 +72,20 @@ const trophyGallery = [
   },
 ];
 
-function verifiedCardNumericPrice(card: { marketValue: string; marketValueSource?: "provider" | "verified-cache" | "unavailable" }) {
+function verifiedCardNumericPrice(card: {
+  marketValue: string;
+  marketValueSource?: "provider" | "verified-cache" | "unavailable";
+  cardTier?: ClubOwnerSquadCard["cardTier"];
+  cardPriceVersion?: string;
+  cardPriceAuthority?: ClubOwnerSquadCard["cardPriceAuthority"];
+}) {
+  if (card.cardPriceAuthority === "active-contract") {
+    return resolveTouchlineContractedCommercialCardPrice({
+      tierKey: card.cardTier,
+      priceTableVersion: card.cardPriceVersion,
+      competition: "england",
+    })?.numericPrice ?? null;
+  }
   const economy = resolveTouchlineVerifiedPlayerEconomy({
     marketValue: card.marketValue,
     marketValueSource: card.marketValueSource,
@@ -83,9 +98,19 @@ function verifiedCardPriceLabel(
     marketValue: string;
     marketValueSource?: "provider" | "verified-cache" | "unavailable";
     cardTier?: ClubOwnerSquadCard["cardTier"];
+    cardPriceVersion?: string;
+    cardPriceAuthority?: ClubOwnerSquadCard["cardPriceAuthority"];
   },
   locale: string,
 ) {
+  if (card.cardPriceAuthority === "active-contract") {
+    return formatTouchlineContractedCommercialCardPrice({
+      tierKey: card.cardTier,
+      priceTableVersion: card.cardPriceVersion,
+      competition: "england",
+      locale,
+    });
+  }
   return formatTouchlineVerifiedCommercialCardPrice({
     marketValue: card.marketValue,
     marketValueSource: card.marketValueSource,

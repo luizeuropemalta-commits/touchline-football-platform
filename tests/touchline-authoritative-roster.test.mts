@@ -12,7 +12,10 @@ import {
   mapAuthoritativeRosterRows,
   validateLineupInventoryOwnership,
 } from "../lib/touchlineArena/authoritative-roster-server.ts";
-import type { ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
+import {
+  squadCardToExactPlayer,
+  type ClubOwnerSquadCard,
+} from "../lib/touchlineArena/demo-data.ts";
 
 const USER_ID = "123e4567-e89b-42d3-a456-426614174000";
 const CONTRACT_ID = "123e4567-e89b-42d3-a456-426614174001";
@@ -35,7 +38,8 @@ function authoritativeCard(): ClubOwnerSquadCard {
     marketValue: "€180M",
     marketValueSource: "verified-cache",
     cardTier: "emerald-green",
-    cardPriceVersion: "2026-08-tc-v3",
+    cardPriceVersion: "2026-07-premier-v1",
+    cardPriceAuthority: "active-contract",
     inventoryId: INVENTORY_ID,
     touchlinePoints: 12,
   };
@@ -49,7 +53,7 @@ function completeRows() {
       card_id: INVENTORY_ID,
       status: "active",
       purchase_tier: "ruby-red",
-      purchase_price_table_version: "2026-07-tc-v2",
+      purchase_price_table_version: "2026-07-premier-v1",
       metadata: { touchlinePoints: 12 },
     }],
     inventories: [{
@@ -59,7 +63,7 @@ function completeRows() {
       player_name: "Erling Haaland",
       club_name: "Manchester City",
       competition_tier: "emerald-green",
-      price_table_version: "2026-08-tc-v3",
+      price_table_version: "2026-07-premier-v1",
       metadata: {},
     }],
     players: [{
@@ -109,7 +113,8 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
     marketValue: "€180M",
     marketValueSource: "verified-cache",
     cardTier: "emerald-green",
-    cardPriceVersion: "2026-08-tc-v3",
+    cardPriceVersion: "2026-07-premier-v1",
+    cardPriceAuthority: "active-contract",
     inventoryId: INVENTORY_ID,
     touchlinePoints: 12,
   });
@@ -131,6 +136,37 @@ test("rejects malformed active-contract rows instead of treating them as an empt
     ok: false,
     error: "TL_ROSTER_DATA_INCOMPLETE",
   });
+});
+
+test("rejects an owned card with a missing tier or a stale price table rather than displaying an invented price", () => {
+  const missingTier = completeRows();
+  missingTier.inventories[0].competition_tier = null;
+  missingTier.contracts[0].purchase_tier = null;
+  assert.deepEqual(mapAuthoritativeRosterRows(missingTier), {
+    ok: false,
+    error: "TL_ROSTER_DATA_INCOMPLETE",
+  });
+
+  const staleTable = completeRows();
+  staleTable.inventories[0].price_table_version = "obsolete-price-table";
+  assert.deepEqual(mapAuthoritativeRosterRows(staleTable), {
+    ok: false,
+    error: "TL_ROSTER_DATA_INCOMPLETE",
+  });
+});
+
+test("maps the known retired inventory table to the current approved tier policy", () => {
+  const rows = completeRows();
+  rows.inventories[0].price_table_version = "2026-07-tc-v2";
+  const result = mapAuthoritativeRosterRows(rows);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.snapshot.cards[0].cardPriceAuthority, "active-contract");
+  assert.equal(result.snapshot.cards[0].cardPriceVersion, "2026-07-tc-v2");
+  assert.equal(result.snapshot.cards[0].cardTier, "emerald-green");
+  const exactCardPlayer = squadCardToExactPlayer(result.snapshot.cards[0], { useSuppliedTier: true });
+  assert.equal(exactCardPlayer.cardPriceAuthority, "active-contract");
+  assert.equal(exactCardPlayer.cardPriceVersion, "2026-07-tc-v2");
 });
 
 test("strict lineup ownership guard reports missing, foreign and duplicate cards", () => {
@@ -219,7 +255,7 @@ test("Arena persistence rebuilds spoofed card identity, tier, value, points and 
     marketValue: "€180M",
     marketValueSource: "verified-cache",
     cardTier: "emerald-green",
-    cardPriceVersion: "2026-08-tc-v3",
+    cardPriceVersion: "2026-07-premier-v1",
     inventoryId: INVENTORY_ID,
     matchStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
   });

@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   formatTouchlineCommercialCardPrice,
   formatTouchlineCommercialCardTotal,
+  formatTouchlineContractedCommercialCardPrice,
   formatTouchlineVerifiedCommercialCardPrice,
+  resolveTouchlineContractedCommercialCardPrice,
   resolveTouchlineCommercialCardPrice,
 } from "../lib/touchlineArena/commercial-card-pricing.ts";
 
@@ -59,4 +61,39 @@ test("a visual fallback tier never exposes a public zero-price offer without ver
     competition: "england",
     locale: "en",
   }), "£15");
+});
+
+test("an active contract uses its persisted tier and current price-table version even while live market value is pending", () => {
+  assert.deepEqual(resolveTouchlineContractedCommercialCardPrice({
+    tierKey: "diamond-gold",
+    priceTableVersion: "2026-07-premier-v1",
+    competition: "england",
+  }), { tierKey: "diamond-gold", numericPrice: 15, currency: "GBP", amountMinor: 1500 });
+  assert.equal(formatTouchlineContractedCommercialCardPrice({
+    tierKey: "ruby-red",
+    priceTableVersion: "2026-07-premier-v1",
+    competition: "england",
+    locale: "pt-BR",
+  }), "£0");
+  assert.equal(formatTouchlineContractedCommercialCardPrice({
+    tierKey: "diamond-gold",
+    priceTableVersion: "stale-table",
+    competition: "england",
+    locale: "pt-BR",
+  }), "Pendente");
+});
+
+test("the known retired table source renders the corrected approved value, never its old numeric price", () => {
+  assert.equal(formatTouchlineContractedCommercialCardPrice({
+    tierKey: "diamond-gold",
+    priceTableVersion: "2026-07-tc-v2",
+    competition: "england",
+    locale: "en",
+  }), "£15");
+  assert.equal(formatTouchlineContractedCommercialCardPrice({
+    tierKey: "ruby-red",
+    priceTableVersion: "2026-07-tc-v2",
+    competition: "england",
+    locale: "en",
+  }), "£0");
 });

@@ -83,9 +83,11 @@ test("shared player cards never present the England commercial price as Touch Cr
   assert.doesNotMatch(source, /TC Value/);
 });
 
-test("shared player cards never turn an unavailable football value into a £0 commercial price", () => {
+test("shared player cards keep public unavailable values pending and allow a stored price only for an active contract", () => {
   const source = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /const cardPriceText = verifiedEconomy\.status === "resolved"/);
+  assert.match(source, /player\.cardPriceAuthority === "active-contract"/);
+  assert.match(source, /formatTouchlineContractedCommercialCardPrice/);
+  assert.match(source, /verifiedEconomy\.status === "resolved"/);
   assert.match(source, /runtimeLocale === "pt-BR" \? "Pendente" : "Pending"/);
 });

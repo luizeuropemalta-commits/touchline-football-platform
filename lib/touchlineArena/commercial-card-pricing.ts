@@ -1,4 +1,5 @@
 import {
+  PLAYER_MARKET_TIER_POLICY_VERSION,
   PLAYER_MARKET_TIERS,
   type PlayerMarketTierId,
 } from "./player-market-tiers.ts";
@@ -13,6 +14,24 @@ import {
 } from "./commercial-activation.ts";
 
 const MINOR_UNITS_PER_MAJOR_UNIT = 100;
+
+/**
+ * `2026-07-tc-v2` is the retired source table that preceded the approved
+ * 0/1/2/4/7/10/15 policy. Active inventory rows may still carry that source
+ * marker while their immutable tier key is valid. For those owned cards we
+ * deliberately render the current canonical nominal value; the old numeric
+ * table is never surfaced again. Any other unknown version remains blocked.
+ */
+const ACCEPTED_CONTRACTED_CARD_PRICE_TABLE_VERSIONS = new Set([
+  PLAYER_MARKET_TIER_POLICY_VERSION,
+  "2026-07-tc-v2",
+]);
+
+export function isTouchlineAcceptedContractedCardPriceTableVersion(
+  priceTableVersion: string | null | undefined,
+) {
+  return Boolean(priceTableVersion && ACCEPTED_CONTRACTED_CARD_PRICE_TABLE_VERSIONS.has(priceTableVersion));
+}
 
 const COMMERCIAL_CURRENCY_SYMBOLS: Record<TouchlineCommercialCurrency, string> = {
   GBP: "£",
@@ -79,6 +98,48 @@ export function formatTouchlineVerifiedCommercialCardPrice(input: {
     tierKey: economy.tierKey,
     competition: input.competition,
   }));
+}
+
+/**
+ * Resolves the nominal price recorded on an already-contracted card. This is
+ * intentionally a different trust boundary from the public Market: an active
+ * inventory/contract pair already carries its approved tier and price-table
+ * version, so it must not be hidden merely because the live football-value
+ * cache is awaiting a refresh. Unknown or stale price tables fail closed.
+ */
+export function resolveTouchlineContractedCommercialCardPrice(input: {
+  tierKey: PlayerMarketTierId | null | undefined;
+  priceTableVersion: string | null | undefined;
+  competition: TouchlineCommercialCompetition;
+}) {
+  if (
+    !input.tierKey
+    || !PLAYER_MARKET_TIERS.some((tier) => tier.id === input.tierKey)
+    || !isTouchlineAcceptedContractedCardPriceTableVersion(input.priceTableVersion)
+  ) {
+    return null;
+  }
+
+  return resolveTouchlineCommercialCardPrice({
+    tierKey: input.tierKey,
+    competition: input.competition,
+  });
+}
+
+/**
+ * User-facing counterpart to the contracted-card resolver. It is used only
+ * when the roster mapper has proved ownership from an active server contract.
+ */
+export function formatTouchlineContractedCommercialCardPrice(input: {
+  tierKey: PlayerMarketTierId | null | undefined;
+  priceTableVersion: string | null | undefined;
+  competition: TouchlineCommercialCompetition;
+  locale?: "pt-BR" | "en" | string | null;
+}) {
+  const price = resolveTouchlineContractedCommercialCardPrice(input);
+  return price
+    ? formatTouchlineCommercialCardPrice(price)
+    : input.locale === "pt-BR" ? "Pendente" : "Pending";
 }
 
 /**

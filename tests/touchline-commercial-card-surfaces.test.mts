@@ -50,6 +50,8 @@ test("ClubOwner keeps card assets in competition currency and never combines the
 
   assert.match(clubOwner, /formatTouchlineCommercialCardTotal\(\{ numericPrice: squadCardValue, competition: "england" \}\)/);
   assert.match(clubOwner, /formatTouchlineVerifiedCommercialCardPrice/);
+  assert.match(clubOwner, /formatTouchlineContractedCommercialCardPrice/);
+  assert.match(clubOwner, /resolveTouchlineContractedCommercialCardPrice/);
   assert.doesNotMatch(clubOwner, /walletBalanceTc \+ squadValueTc/);
   assert.doesNotMatch(clubOwner, /\{squadValueTc\} TC/);
   assert.match(clubOwner, /occupiedContractPercent/);

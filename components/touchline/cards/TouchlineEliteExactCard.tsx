@@ -13,6 +13,7 @@ import {
 } from "@/lib/touchlineArena/card-rules";
 import {
   formatTouchlineCommercialCardPrice,
+  formatTouchlineContractedCommercialCardPrice,
   resolveTouchlineCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import { useTouchlineActiveRanking } from "@/lib/touchlineArena/card-ranking-client";
@@ -178,6 +179,8 @@ export type TouchlineEliteExactPlayer = {
   marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
+  /** Set exclusively by the active-contract roster mapper. */
+  cardPriceAuthority?: "active-contract";
   updatedAt: string;
   age: string | number;
   height: string;
@@ -837,14 +840,22 @@ export function TouchlineEliteExactCard({
   // A fallback frame keeps the card visually coherent while live football
   // data is syncing, but it is not evidence of a commercial tier. Never turn
   // that visual fallback into a £0 public price.
-  const cardPriceText = verifiedEconomy.status === "resolved"
+  const contractedCardPriceText = player.cardPriceAuthority === "active-contract"
+    ? formatTouchlineContractedCommercialCardPrice({
+      tierKey: player.cardTier,
+      priceTableVersion: player.cardPriceVersion,
+      competition: "england",
+      locale: runtimeLocale,
+    })
+    : null;
+  const cardPriceText = contractedCardPriceText ?? (verifiedEconomy.status === "resolved"
     ? formatTouchlineCommercialCardPrice(
       resolveTouchlineCommercialCardPrice({
         tierKey: marketTier.key,
         competition: "england",
       }),
     )
-    : runtimeLocale === "pt-BR" ? "Pendente" : "Pending";
+    : runtimeLocale === "pt-BR" ? "Pendente" : "Pending");
   const preseasonMissingValue = liveCompetition.phase === "preseason" ? "0" : "—";
   const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
     ? preseasonMissingValue

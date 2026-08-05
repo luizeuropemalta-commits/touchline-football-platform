@@ -9,6 +9,7 @@ import {
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
+import { isTouchlineAcceptedContractedCardPriceTableVersion } from "./commercial-card-pricing.ts";
 import {
   hasTouchlineCountryFlag,
   normalizeTouchlineCountryCode3,
@@ -127,7 +128,7 @@ function countryCodeForPlayer(player: DatabaseRecord) {
 function currentTier(
   inventory: DatabaseRecord,
   contract: DatabaseRecord,
-): TouchlineCardTierKey {
+): TouchlineCardTierKey | null {
   const inventoryTier = asString(inventory.competition_tier);
   if (inventoryTier && touchlineArenaTierForKey(inventoryTier)) {
     return inventoryTier as TouchlineCardTierKey;
@@ -138,7 +139,7 @@ function currentTier(
     return purchaseTier as TouchlineCardTierKey;
   }
 
-  return "ruby-red";
+  return null;
 }
 
 function touchlinePointsFor(
@@ -247,6 +248,14 @@ export function mapAuthoritativeRosterRows(
     const cardPriceVersion = asString(inventory.price_table_version)
       ?? asString(contract.purchase_price_table_version)
       ?? undefined;
+    // A contracted card may show its stored nominal price only when both
+    // economic fields match a known approved policy source. The retired v2
+    // marker is deliberately mapped to the current canonical 0/1/2/4/7/10/15
+    // policy; arbitrary unknown tables stay fail-closed. Never turn a missing
+    // tier into a visual Ruby card or a public-looking £0 offer.
+    if (!cardTier || !isTouchlineAcceptedContractedCardPriceTableVersion(cardPriceVersion)) {
+      return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
+    }
 
     cards.push({
       id: playerId,
@@ -261,6 +270,7 @@ export function mapAuthoritativeRosterRows(
       marketValueSource: marketValue.marketValueSource,
       cardTier,
       cardPriceVersion,
+      cardPriceAuthority: "active-contract",
       inventoryId,
       touchlinePoints: touchlinePointsFor(contract, inventory),
     });
