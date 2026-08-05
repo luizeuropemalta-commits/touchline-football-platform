@@ -69,6 +69,7 @@ import {
   type TouchLineLocale,
   type TouchLineTranslationKey,
 } from "@/lib/touchlineArena/i18n";
+import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { getTouchLineMarketCopy } from "@/lib/touchlineArena/market-i18n";
 import {
   TOUCHLINE_MARKET_POSITION_LIMITS,
@@ -3421,6 +3422,11 @@ export default function ArenaClient({
     && !activeArenaCoachIdentity?.coach
     && standaloneExperience !== "live",
   );
+  const coachFirstLoginHref = touchLineAuthEntryHref(
+    "/login",
+    siteLanguage,
+    `/arena?skipIntro=1&lang=${encodeURIComponent(siteLanguage)}`,
+  );
   // The personal field remains intentionally separate from the standalone
   // Match Centre. Coach-first adds only the final eligibility gate.
   const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired;
@@ -6341,13 +6347,20 @@ export default function ArenaClient({
             </div>
             <div className="arena-coach-choice-rail" role="list">
               {coachOfferStatus !== "ready" ? (
-                <p className="arena-coach-offer-status" role="status">
-                  {coachOfferStatus === "error"
-                    ? (siteLanguage === "pt-BR" ? "As ofertas oficiais dos treinadores estão indisponíveis. Tente novamente." : "Official coach offers are unavailable. Please try again.")
-                    : coachOfferStatus === "idle"
-                      ? (siteLanguage === "pt-BR" ? "Entre na sua conta para carregar as ofertas oficiais dos treinadores." : "Sign in to load official coach offers.")
-                      : (siteLanguage === "pt-BR" ? "Carregando ofertas oficiais dos treinadores…" : "Loading official coach offers…")}
-                </p>
+                <div className="arena-coach-offer-status" role="status">
+                  <p>
+                    {coachOfferStatus === "error"
+                      ? (siteLanguage === "pt-BR" ? "As ofertas oficiais dos treinadores estão indisponíveis. Tente novamente." : "Official coach offers are unavailable. Please try again.")
+                      : coachOfferStatus === "idle"
+                        ? (siteLanguage === "pt-BR" ? "Entre na sua conta para carregar as ofertas oficiais dos treinadores." : "Sign in to load official coach offers.")
+                        : (siteLanguage === "pt-BR" ? "Carregando ofertas oficiais dos treinadores…" : "Loading official coach offers…")}
+                  </p>
+                  {coachOfferStatus === "idle" ? (
+                    <a className="arena-coach-login-link" href={coachFirstLoginHref}>
+                      {siteLanguage === "pt-BR" ? "Entrar para escolher o treinador" : "Sign in to choose your coach"}
+                    </a>
+                  ) : null}
+                </div>
               ) : TOUCHLINE_LIVE_COACHES.map(({ coach, countryCode3 }) => {
                 const club = PREMIER_CLUB_VISUALS.find((candidate) => candidate.teamId === coach.teamId) ?? null;
                 const offer = coachOffersByProviderId[coach.providerId];
@@ -6395,6 +6408,11 @@ export default function ArenaClient({
             </div>
           </section>
         ) : null}
+        <div
+          className="arena-coach-gated-content"
+          inert={isCoachSelectionRequired ? true : undefined}
+          aria-hidden={isCoachSelectionRequired}
+        >
         <div
           className="arena-field-selection-clear-layer"
           aria-hidden="true"
@@ -8172,6 +8190,7 @@ export default function ArenaClient({
           </section>
         ) : null}
         </div>
+        </div>
       </section>
 
       <style>{`
@@ -8187,6 +8206,13 @@ export default function ArenaClient({
         }
 
         .arena-functional-layer {
+          display: contents;
+        }
+
+        /* Keep every operational Arena control out of both pointer and keyboard
+           access until the ClubOwner has an official persisted coach.  The
+           coach-first choice itself remains the only available interaction. */
+        .arena-coach-gated-content {
           display: contents;
         }
 
@@ -9257,7 +9283,10 @@ export default function ArenaClient({
         .arena-coach-choice-card > * { width: 100%; height: 100%; }
         .arena-coach-choice strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
         .arena-coach-choice small { overflow: hidden; color: rgba(255,255,255,.55); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
-        .arena-coach-offer-status { align-self: center; max-width: 340px; color: rgba(239,255,210,.7); font-size: 11px; line-height: 1.45; }
+        .arena-coach-offer-status { display: grid; align-self: center; gap: 9px; max-width: 340px; color: rgba(239,255,210,.7); font-size: 11px; line-height: 1.45; }
+        .arena-coach-offer-status p { margin: 0; }
+        .arena-coach-login-link { display: inline-flex; width: fit-content; align-items: center; min-height: 34px; border: 1px solid rgba(181,255,75,.58); border-radius: 999px; padding: 0 13px; color: #e4ffc1; background: rgba(101,176,15,.14); font-size: 10px; font-weight: 950; text-decoration: none; }
+        .arena-coach-login-link:hover, .arena-coach-login-link:focus-visible { border-color: #c5ff6d; background: rgba(181,255,75,.24); color: #fff; outline: none; }
         .arena-coach-choice-offer { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; color: #c8ff77; font-size: 7px; font-weight: 950; letter-spacing: .035em; }
         .arena-coach-choice-offer b:last-child { color: #fff4b1; font-size: 10px; }
         .arena-coach-choice-reason { color: rgba(239,255,210,.72) !important; font-size: 7px !important; }
@@ -9861,8 +9890,10 @@ export default function ArenaClient({
           display: block;
         }
 
-        .touchline-game.is-market-standalone .arena-functional-layer > :not(.arena-action-layer):not(.arena-coach-first-gate),
-        .touchline-game.is-bench-standalone .arena-functional-layer > :not(.arena-action-layer):not(.arena-coach-first-gate) {
+        .touchline-game.is-market-standalone .arena-functional-layer > :not(.arena-action-layer):not(.arena-coach-first-gate):not(.arena-coach-gated-content),
+        .touchline-game.is-bench-standalone .arena-functional-layer > :not(.arena-action-layer):not(.arena-coach-first-gate):not(.arena-coach-gated-content),
+        .touchline-game.is-market-standalone .arena-coach-gated-content > :not(.arena-action-layer),
+        .touchline-game.is-bench-standalone .arena-coach-gated-content > :not(.arena-action-layer) {
           display: none !important;
         }
 
@@ -9911,7 +9942,8 @@ export default function ArenaClient({
           overflow: visible;
         }
 
-        .touchline-game.is-live-standalone .arena-functional-layer > :not(.arena-live-dock):not(.arena-live-card-spotlight) {
+        .touchline-game.is-live-standalone .arena-functional-layer > :not(.arena-live-dock):not(.arena-live-card-spotlight):not(.arena-coach-gated-content),
+        .touchline-game.is-live-standalone .arena-coach-gated-content > :not(.arena-live-dock):not(.arena-live-card-spotlight) {
           display: none !important;
         }
 

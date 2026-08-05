@@ -9,9 +9,9 @@ Production: read-only validation only; no production promotion is permitted for 
 | Area | Product walk-through | Code/data review | Responsive/browser matrix | Defects reproduced | Revalidated |
 | --- | --- | --- | --- | --- | --- |
 | Entry, authentication and recovery | IN PROGRESS | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
-| ClubOwner, coach-first and squad builder | IN PROGRESS | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
-| Market and contracts | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
-| Arena, Match Centre and live states | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
+| ClubOwner, coach-first and squad builder | IN PROGRESS | IN PROGRESS | IN PROGRESS | IN PROGRESS | IN PROGRESS |
+| Market and contracts | IN PROGRESS | NOT STARTED | NOT STARTED | IN PROGRESS | IN PROGRESS |
+| Arena, Match Centre and live states | IN PROGRESS | NOT STARTED | IN PROGRESS | NOT STARTED | IN PROGRESS |
 | Player, coach and club profiles | IN PROGRESS | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
 | Tables, rankings and Top 11 | IN PROGRESS | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
 | TouchLine Central, Inbox and notifications | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
@@ -45,6 +45,10 @@ Production: read-only validation only; no production promotion is permitted for 
 | 2026-08-05 10:44 | Player profile contract state | An unverified player profile could display `Pendente` while still offering a visible `Contratar jogador` action and an `Disponível` feed state. The Market itself correctly disallows an unpriced selection, so the profile promise was inconsistent. | Confirmed UX/commercial-state defect | Suppress the contract action until a verified card offer exists and identify the feed state as updating. |
 | 2026-08-05 10:50 | Match Centre mobile | At 390 px the 29-fixture selector rendered before the selected fixture and required traversing the whole group before seeing match detail. | Confirmed responsive UX defect | Show the selected match first at tablet/mobile widths and return focus/viewport to it after mobile fixture selection. |
 | 2026-08-05 10:54 | Match Centre mobile revalidation | The 390×844 viewport now opens with the selected fixture and its state, countdown and information panels first; the fixture rail remains available below as a horizontal selector. | Local visual fix validated | Continue representative tablet/desktop checks and full authenticated coverage. |
+| 2026-08-05 12:02 | Market Transfer | Anonymous Market journey loaded the twenty-club selector, club roster, search/filter controls and card detail. Every player with unavailable verified economics remained visibly pending and its contract action was disabled; no contract mutation was performed. | Safe empty/unavailable commercial state | Repeat the complete purchase flow only with a controlled authenticated persona and verified offer. |
+| 2026-08-05 12:04 | Coach-first / Training Centre | A user without a persisted coach saw the coach gate but the standalone Training Centre still exposed underlying operational controls to the accessibility tree. In addition, the gate told the user to sign in without offering a direct entry path. | Confirmed coach-first accessibility and journey defect | Shared Arena content is now inert/aria-hidden while the gate is active, and the gate exposes a safe localized login return link. |
+| 2026-08-05 12:10 | Coach-first revalidation | The no-coach Training Centre exposes only the coach-first gate and a localized login link returning to the Arena; the prior `Vaga do treinador` control is absent from the accessible tree. The desktop visual state was saved locally. | Local functional and visual fix validated | Validate the persisted-coach journey using a controlled account without modifying production data. |
+| 2026-08-05 12:12 | Match Centre | Public Match Centre listed 29 upcoming fixtures, exposed selected-match schedule/status/data-unavailable states honestly, and a different fixture changed the selected detail and the `fixture` URL to the exact numeric fixture ID. | Local public journey pass | Cover live/finished fixtures when the canonical feed has them and complete responsive/browser matrix. |
 
 ## Implemented during this audit (not deployed)
 
@@ -54,6 +58,7 @@ Production: read-only validation only; no production promotion is permitted for 
 - `lib/touchlineArena/commercial-card-pricing.ts` now has one verified-economy public-price boundary. A nominal `£0` remains valid only when its zero tier was actually verified; visual fallback frames and missing market values render `Pendente`/`Pending`.
 - Player-card rankings, ClubOwner card surfaces, public ClubHub zooms, player profiles and table-card zooms use that boundary instead of treating a fallback tier as an offer. Ranking aggregates become pending whenever any included card is unverified.
 - The player profile now withholds its contract CTA and availability claim until the price is verified; the Match Centre puts match detail ahead of the fixture rail on compact screens.
+- Coach-first now makes the downstream Arena/Market/Training interaction layer inert and hidden from assistive technology until a coach is persisted. An unauthenticated user receives an explicit localized login link with a safe return destination instead of a dead-end status message.
 
 ## Validation evidence
 
@@ -68,7 +73,10 @@ Production: read-only validation only; no production promotion is permitted for 
 - TypeScript and ESLint: passed after the commercial and responsive corrections.
 - Production build: passed after the commercial and responsive corrections.
 - Visual evidence: `evidence/match-centre-mobile-390x844.png` (before) and `evidence/match-centre-mobile-after-390x844.png` (after); kept locally only.
+- Coach-first targeted contract test: 5 passed.
+- TypeScript, ESLint and production build: passed after the coach-first accessibility/journey correction.
+- Visual evidence: `evidence/coach-first-training-lock-desktop.png` and `evidence/coach-first-training-lock-with-login-desktop.png`; kept locally only.
 
 ## Next audited action
 
-Continue from the first unverified authenticated journey: a controlled ClubOwner with an already-persisted coach, then validate Market, roster, Training Centre, Inbox and notifications without changing production data. Follow with the tablet/desktop viewport matrix and the remaining server/API/RLS review. The route inventory contains 74 Next page/route handlers; audit-only and visual-QA routes remain excluded from production acceptance evidence.
+Continue from the first unverified authenticated journey: a controlled ClubOwner with an already-persisted coach, then validate Market, roster, Training Centre, Inbox and notifications without changing production data. Follow with Arena live/finished states, the tablet/desktop viewport matrix and the remaining server/API/RLS review. The route inventory contains 74 Next page/route handlers; audit-only and visual-QA routes remain excluded from production acceptance evidence.

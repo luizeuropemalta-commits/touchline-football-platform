@@ -69,12 +69,18 @@ test("Arena keeps production coach identity out of the demo fallback and exposes
   assert.match(arena, /data-testid="arena-coach-first-gate"/);
   assert.match(arena, /const isCoachSelectionRequired = Boolean\([\s\S]*?standaloneExperience !== "live"/);
   assert.match(arena, /const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired/);
-  assert.match(arena, /is-market-standalone \.arena-functional-layer > :not\(\.arena-action-layer\):not\(\.arena-coach-first-gate\)/);
+  assert.match(
+    arena,
+    /className="arena-coach-gated-content"[\s\S]*?inert=\{isCoachSelectionRequired \? true : undefined\}[\s\S]*?aria-hidden=\{isCoachSelectionRequired\}/,
+  );
+  assert.match(arena, /is-market-standalone \.arena-coach-gated-content > :not\(\.arena-action-layer\)/);
   assert.match(arena, /\/api\/touchline-arena\/coach/);
   assert.match(arena, /const requestTimeout = window\.setTimeout\(\(\) => controller\.abort\(\), 10_000\)/);
   assert.match(arena, /signal: controller\.signal/);
   assert.match(arena, /window\.clearTimeout\(requestTimeout\)/);
   assert.match(arena, /coachOfferStatus === "idle"[\s\S]*?Entre na sua conta para carregar as ofertas oficiais dos treinadores/);
+  assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"/);
+  assert.match(arena, /className="arena-coach-login-link" href=\{coachFirstLoginHref\}/);
   assert.match(arena, /const mustPersistForClubOwner = canPersistArenaAccountState/);
   assert.match(arena, /if \(!response\.ok\) \{[\s\S]*?Não foi possível salvar o treinador na sua conta/);
   assert.match(arena, /setCoachSelectionError\(message\)/);
