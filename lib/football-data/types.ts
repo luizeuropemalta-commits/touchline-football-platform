@@ -1,8 +1,4 @@
-export type FootballDataProviderName =
-  | "sportmonks"
-  | "opta"
-  | "sportradar"
-  | "statsperform";
+export type FootballDataProviderName = "sportmonks";
 
 export type FootballDataCacheBucket = "static" | "daily" | "live" | "historical";
 

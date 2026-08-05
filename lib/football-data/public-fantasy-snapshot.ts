@@ -25,7 +25,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isProviderName(value: unknown): value is FootballDataProviderName {
-  return value === "sportmonks" || value === "opta" || value === "sportradar" || value === "statsperform";
+  return value === "sportmonks";
 }
 
 function isStoredFixture(value: unknown): value is TouchlineFixture {
