@@ -12,11 +12,11 @@ Production: read-only validation only; no production promotion is permitted for 
 | ClubOwner, coach-first and squad builder | IN PROGRESS | IN PROGRESS | IN PROGRESS | IN PROGRESS | IN PROGRESS |
 | Market and contracts | IN PROGRESS | NOT STARTED | NOT STARTED | IN PROGRESS | IN PROGRESS |
 | Arena, Match Centre and live states | IN PROGRESS | NOT STARTED | IN PROGRESS | NOT STARTED | IN PROGRESS |
-| Player, coach and club profiles | IN PROGRESS | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
-| Tables, rankings and Top 11 | IN PROGRESS | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
-| TouchLine Central, Inbox and notifications | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
-| Admin, permissions and observability | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
-| APIs, data integrity, migrations and security | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
+| Player, coach and club profiles | IN PROGRESS | NOT STARTED | IN PROGRESS | NOT STARTED | IN PROGRESS |
+| Tables, rankings and Top 11 | IN PROGRESS | NOT STARTED | IN PROGRESS | NOT STARTED | IN PROGRESS |
+| TouchLine Central, Inbox and notifications | IN PROGRESS | NOT STARTED | NOT STARTED | NOT STARTED | IN PROGRESS |
+| Admin, permissions and observability | IN PROGRESS | NOT STARTED | NOT STARTED | NOT STARTED | IN PROGRESS |
+| APIs, data integrity, migrations and security | IN PROGRESS | IN PROGRESS | NOT STARTED | NOT STARTED | IN PROGRESS |
 | Assets, localisation, accessibility and performance | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED | NOT STARTED |
 
 ## Evidence rules
@@ -50,6 +50,8 @@ Production: read-only validation only; no production promotion is permitted for 
 | 2026-08-05 12:10 | Coach-first revalidation | The no-coach Training Centre exposes only the coach-first gate and a localized login link returning to the Arena; the prior `Vaga do treinador` control is absent from the accessible tree. The desktop visual state was saved locally. | Local functional and visual fix validated | Validate the persisted-coach journey using a controlled account without modifying production data. |
 | 2026-08-05 12:12 | Match Centre | Public Match Centre listed 29 upcoming fixtures, exposed selected-match schedule/status/data-unavailable states honestly, and a different fixture changed the selected detail and the `fixture` URL to the exact numeric fixture ID. | Local public journey pass | Cover live/finished fixtures when the canonical feed has them and complete responsive/browser matrix. |
 | 2026-08-05 12:22 | Standalone coach-first visual pass | The blocked Training Centre title was still visible behind the mandatory gate on compact screens. The shared standalone gate now fills the operation surface; mobile, tablet and desktop all retain the localized login link and hide operational controls from the accessible tree. | Local visual and accessibility fix validated | Persisted-coach user journey remains the only outstanding coach-first evidence. |
+| 2026-08-05 12:27 | Communication and Admin boundaries | Anonymous visits to Inbox, notification preferences and every Admin entry were redirected to the localized first-party login route; no operational content or raw diagnostic state rendered before authentication. | Local route-boundary pass | Exercise read/write flows only with controlled authenticated roles. |
+| 2026-08-05 12:30 | Player, coach, club and table surfaces | Public Haaland profile separated previous season, current season, last five and selected fixture with clear unavailable states. Coach profile showed its approved tier offer plus pending real-football history without invention. ClubHub, tables, rankings and Top 11 states preserved `Pendente`/preseason notices rather than fabricating prices or published standings. | Local public journey pass | Complete visual/browser matrix and controlled authenticated actions. |
 
 ## Implemented during this audit (not deployed)
 
@@ -78,6 +80,7 @@ Production: read-only validation only; no production promotion is permitted for 
 - TypeScript, ESLint and production build: passed after the coach-first accessibility/journey correction.
 - Visual evidence: `evidence/coach-first-training-lock-desktop.png` and `evidence/coach-first-training-lock-with-login-desktop.png`; kept locally only.
 - Responsive visual evidence: `evidence/coach-first-training-full-surface-mobile-390x844.png`, `evidence/coach-first-training-full-surface-tablet-768x1024.png` and `evidence/coach-first-training-full-surface-desktop.png`; kept locally only.
+- Full automated suite after coach-first corrections: 636 passed.
 
 ## Next audited action
 
