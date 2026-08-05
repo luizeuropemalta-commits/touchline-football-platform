@@ -149,7 +149,18 @@ export default async function ClubOwnerProfileRenderer({
   const admin = createAdminClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   const clubOwnerUser = user && !isOwnerEmail(user.email) ? user : null;
-  const ownerIdentity = resolveTouchlineClubOwnerPageIdentity(clubOwnerUser, ownerSlug);
+  let storedAvatarUrl: string | null = null;
+  if (clubOwnerUser && supabase) {
+    const { data: storedProfile } = await supabase
+      .from("users")
+      .select("avatar_url")
+      .eq("id", clubOwnerUser.id)
+      .maybeSingle();
+    storedAvatarUrl = typeof storedProfile?.avatar_url === "string"
+      ? storedProfile.avatar_url
+      : null;
+  }
+  const ownerIdentity = resolveTouchlineClubOwnerPageIdentity(clubOwnerUser, ownerSlug, storedAvatarUrl);
   if (!ownerIdentity) notFound();
   const activeClubOwnerUser = ownerIdentity.isAuthenticatedClubOwner && clubOwnerUser ? clubOwnerUser : null;
   const activeRanking = await loadTouchLineActiveRanking();

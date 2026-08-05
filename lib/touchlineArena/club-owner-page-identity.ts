@@ -24,12 +24,22 @@ function cleanMetadataText(value: unknown, maximumLength = 160) {
     : "";
 }
 
-function profileAvatarUrl(metadata: Record<string, unknown>) {
-  const value = cleanMetadataText(metadata.avatar_url)
-    || cleanMetadataText(metadata.picture);
+function cleanProfileAvatarUrl(value: unknown) {
+  if (typeof value !== "string") return "";
+  const normalized = value.trim();
+  if (normalized.startsWith("/") || normalized.startsWith("https://")) return normalized.slice(0, 2_048);
+  if (
+    normalized.length <= 512_000
+    && /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(normalized)
+  ) return normalized;
+  return "";
+}
 
-  if (value.startsWith("/") || value.startsWith("https://")) return value;
-  return "/icons/touchline-512.png";
+function profileAvatarUrl(metadata: Record<string, unknown>, storedAvatarUrl?: string | null) {
+  return cleanProfileAvatarUrl(storedAvatarUrl)
+    || cleanProfileAvatarUrl(metadata.avatar_url)
+    || cleanProfileAvatarUrl(metadata.picture)
+    || "/icons/touchline-512.png";
 }
 
 function registeredYear(createdAt?: string) {
@@ -68,6 +78,7 @@ export function touchlineIsKnownPublicClubOwnerSlug(slug?: string | null) {
 export function resolveTouchlineClubOwnerPageIdentity(
   user?: TouchlineClubOwnerIdentityUser | null,
   requestedSlug?: string | null,
+  storedAvatarUrl?: string | null,
 ) {
   const normalizedRequestedSlug = normalizeTouchlineClubOwnerSlug(requestedSlug);
 
@@ -89,7 +100,7 @@ export function resolveTouchlineClubOwnerPageIdentity(
       return {
         slug: userSlug,
         name,
-        avatarUrl: profileAvatarUrl(metadata),
+        avatarUrl: profileAvatarUrl(metadata, storedAvatarUrl),
         nationality,
         city,
         since: registeredYear(user.created_at),

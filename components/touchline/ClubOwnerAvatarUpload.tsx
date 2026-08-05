@@ -38,7 +38,15 @@ export default function ClubOwnerAvatarUpload({ locale }: { locale: string }) {
       const avatarUrl = await compressedAvatarDataUrl(file);
       const supabase = createClient();
       if (!supabase) throw new Error("auth_unavailable");
-      const { error } = await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw userError ?? new Error("auth_unavailable");
+      // Profile media belongs to the profile row, not auth metadata. Data URLs
+      // in Supabase user_metadata are copied into JWTs and can exceed browser
+      // and edge request-header limits on the next authenticated navigation.
+      const { error } = await supabase
+        .from("users")
+        .update({ avatar_url: avatarUrl })
+        .eq("id", user.id);
       if (error) throw error;
       window.location.reload();
     } catch {

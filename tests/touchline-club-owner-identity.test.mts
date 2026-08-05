@@ -12,6 +12,10 @@ const rendererSource = readFileSync(
   new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url),
   "utf8",
 );
+const avatarUploadSource = readFileSync(
+  new URL("../components/touchline/ClubOwnerAvatarUpload.tsx", import.meta.url),
+  "utf8",
+);
 
 test("an authenticated ClubOwner profile uses that account identity, not Luiz's public identity", () => {
   const identity = resolveTouchlineClubOwnerPageIdentity({
@@ -51,6 +55,24 @@ test("unsafe or absent profile metadata never reuses Luiz's photo for another ac
   assert.equal(identity.nationality, "—");
   assert.equal(identity.city, "—");
   assert.equal(identity.since, "—");
+});
+
+test("stored profile media overrides auth metadata and never enters the session token", () => {
+  const storedAvatar = "data:image/jpeg;base64,aGVsbG8=";
+  const identity = resolveTouchlineClubOwnerPageIdentity({
+    id: "account-3",
+    email: "maria@example.com",
+    created_at: "2026-08-05T00:00:00.000Z",
+    user_metadata: {
+      full_name: "Maria Silva",
+      avatar_url: "https://old.example.com/avatar.png",
+    },
+  }, "maria-silva", storedAvatar);
+
+  assert.equal(identity?.avatarUrl, storedAvatar);
+  assert.match(avatarUploadSource, /\.from\("users"\)/);
+  assert.match(avatarUploadSource, /\.update\(\{ avatar_url: avatarUrl \}\)/);
+  assert.doesNotMatch(avatarUploadSource, /auth\.updateUser\(\{ data: \{ avatar_url/);
 });
 
 test("ClubOwner slugs come from account metadata/name and never silently fall back to Luiz", () => {
