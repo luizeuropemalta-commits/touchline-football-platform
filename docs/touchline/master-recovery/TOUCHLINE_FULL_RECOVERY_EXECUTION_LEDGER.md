@@ -122,3 +122,9 @@ The `touchline-football-platform` sibling Vercel project failed after a successf
 Migration `050_touchline_market_value_engine.sql` defines the TouchLine-owned canonical current-value table, immutable player-value history, import runs/items, pending/mapping queue, job definitions/runs and service-role-only RLS. It preserves the earlier card-economy history by renaming it, and removes legacy triggers that changed card classifications during a generic football-data update. The approved 30-day annual refresh, seven-day delta check, daily transfer-window roster detection, and manual one-player import are recorded as inert job definitions. CSV parsing is native; spreadsheet parsing and licensed-source retrieval are injected server-side interfaces with no enabled default. The protected owner UI is `/admin/market-values`; public profiles and authoritative ClubOwner roster reads accept only verified canonical values, otherwise `Market Value Pending`.
 
 Local evidence: TypeScript pass, ESLint pass, full test suite `646/646` pass. No data was scraped, no external source was activated, no remote migration was applied and no production alias changed. Template and migration safety review: `docs/touchline-arena/market-values/`.
+
+Visual validation of the current local production build passed at 1280px,
+768px and 390px: the Player Profile has no horizontal overflow and renders an
+honest pending market-value state. The new owner route redirects an
+unauthenticated visitor to the existing login route. Screenshot evidence is
+stored locally under the 2026-08-05 audit evidence folder.

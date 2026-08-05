@@ -44,3 +44,8 @@ applied canonical table.
 - ESLint: pass for touched paths.
 - Tests: 646 passed, 0 failed.
 - Production build: pass (`next build --webpack`).
+- Local visual validation: current production build checked at 1280px, 768px
+  and 390px. The public Player Profile presents a pending value rather than a
+  fabricated amount, has no alert/error state and no horizontal overflow. The
+  protected owner route correctly redirects an unauthenticated visitor to the
+  Arena login. Local screenshot evidence is retained under `evidence/`.
