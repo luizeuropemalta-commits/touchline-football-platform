@@ -34,6 +34,10 @@
   "market_value_commercial_enquiry": {
     "status": "AWAITING_FOOTBALL_BENCHMARK_RESPONSE",
     "product_requested": "Player Valuation only",
+    "submitted_sector": "Football agent / representative",
+    "submitted_company": "TouchLine",
+    "submitted_role": "Founder & Director",
+    "intended_use": "licensed football agents consulting player valuation data through TouchLine",
     "competitions_requested": [
       "England — Premier League",
       "Spain — La Liga",
