@@ -17,7 +17,7 @@ const publicCardPriceSurfaces = [
 test("England card-price surfaces use the canonical commercial currency rather than TC", () => {
   for (const relativePath of publicCardPriceSurfaces) {
     const source = readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8");
-    assert.match(source, /(?:format|resolve)TouchlineCommercialCardPrice/,
+    assert.match(source, /(?:format|resolve)Touchline(?:Verified)?CommercialCardPrice/,
       `${relativePath} must use the commercial card-price contract`);
     assert.doesNotMatch(source, /\$\{(?:economy|spotlightPlayerEconomy)\.priceTc\} TC/,
       `${relativePath} must not render a card price as Touch Credits`);
@@ -49,21 +49,23 @@ test("ClubOwner keeps card assets in competition currency and never combines the
   const arenaCopy = readFileSync(new URL("../lib/touchlineArena/i18n.ts", import.meta.url), "utf8");
 
   assert.match(clubOwner, /formatTouchlineCommercialCardTotal\(\{ numericPrice: squadCardValue, competition: "england" \}\)/);
-  assert.match(clubOwner, /touchlineArenaTierForKey\(card\.cardTier\)\?\.key/);
+  assert.match(clubOwner, /formatTouchlineVerifiedCommercialCardPrice/);
   assert.doesNotMatch(clubOwner, /walletBalanceTc \+ squadValueTc/);
   assert.doesNotMatch(clubOwner, /\{squadValueTc\} TC/);
   assert.match(clubOwner, /occupiedContractPercent/);
   assert.doesNotMatch(arenaCopy, /Squad TC Value|Valor TC atual do elenco|preços TC atuais/);
 });
 
-test("public rankings present aggregate card values in the England competition currency", () => {
+test("public rankings keep unverified card economics pending rather than inventing a zero-price aggregate", () => {
   const tablesPage = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
   const tablesClient = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
   const rankingsCopy = readFileSync(new URL("../lib/touchlineArena/rankings-i18n.ts", import.meta.url), "utf8");
 
   assert.match(tablesPage, /formatTouchlineCommercialCardTotal\(\{\s*numericPrice: totalOwnerValue,\s*competition: "england"/);
   assert.match(tablesClient, /formatTouchlineCommercialCardTotal\(\{\s*numericPrice: owner\.squadValueTc,\s*competition: "england"/);
-  assert.match(readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8"), /formatTouchlineCommercialCardTotal\(\{\s*numericPrice: rankedCards\.reduce\([\s\S]*competition: "england"/);
+  const playerRankings = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
+  assert.match(playerRankings, /rankedCardPrices\.every\(\(price\) => price !== null\)/);
+  assert.match(playerRankings, /formatTouchlineVerifiedCommercialCardPrice/);
   assert.doesNotMatch(tablesClient, /<strong>£\{owner\.squadValueTc\}<\/strong>/);
   assert.doesNotMatch(rankingsCopy, /current TC prices|preços TC atuais|Total TC|Total em TC/);
 });

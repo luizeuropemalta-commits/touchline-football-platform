@@ -18,14 +18,12 @@ import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSu
 import TouchlineProfileQuickNav from "@/components/touchline/TouchlineProfileQuickNav";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import {
-  resolveTouchlineVerifiedPlayerEconomy,
   touchlineCardTierName,
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
 import {
-  formatTouchlineCommercialCardPrice,
   formatTouchlineCommercialCardTotal,
-  resolveTouchlineCommercialCardPrice,
+  formatTouchlineVerifiedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import {
@@ -130,17 +128,12 @@ export default function TouchLineTablesClient({
     ? touchlineCardTierPalette(zoomedCard.cardTier).accent
     : "#b8ff46";
   const zoomedCardContractValue = zoomedCard
-    ? (() => {
-        const economy = resolveTouchlineVerifiedPlayerEconomy({
-          marketValue: zoomedCard.marketValue,
-          marketValueSource: zoomedCard.marketValueSource,
-        });
-        const tierKey = economy.status === "resolved" ? economy.tierKey : (zoomedCard.cardTier ?? "ruby-red");
-        return formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
-          tierKey,
-          competition: "england",
-        }));
-      })()
+    ? formatTouchlineVerifiedCommercialCardPrice({
+        marketValue: zoomedCard.marketValue,
+        marketValueSource: zoomedCard.marketValueSource,
+        competition: "england",
+        locale,
+      })
     : "";
   const zoomedCardContractHref = zoomedCard
     ? touchlineArenaContractHref({

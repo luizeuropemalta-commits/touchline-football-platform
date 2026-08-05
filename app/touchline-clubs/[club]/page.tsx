@@ -34,8 +34,7 @@ import {
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
 import {
-  formatTouchlineCommercialCardPrice,
-  resolveTouchlineCommercialCardPrice,
+  formatTouchlineVerifiedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import { buildTouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
@@ -542,10 +541,12 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                         clubId: club.teamId,
                       })}
                       contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
-                      contractValue={formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
-                        tierKey: zoomTier ?? "ruby-red",
+                      contractValue={formatTouchlineVerifiedCommercialCardPrice({
+                        marketValue: card.marketValue,
+                        marketValueSource: card.marketValueSource,
                         competition: "england",
-                      }))}
+                        locale,
+                      })}
                       contractTermLabel={locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season"}
                       tierAccent={touchlineCardTierPalette(zoomTier).accent}
                       tierLabel={economy.status === "resolved" ? touchlineCardTierName(economy.tierKey, locale) : updating}

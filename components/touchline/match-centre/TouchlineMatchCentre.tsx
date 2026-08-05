@@ -125,6 +125,14 @@ export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId
     const url = new URL(window.location.href);
     url.searchParams.set("fixture", fixture.id);
     window.history.replaceState({}, "", url);
+    if (window.matchMedia("(max-width: 850px)").matches) {
+      window.requestAnimationFrame(() => {
+        document.getElementById("touchline-match-panel")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
   }
 
   return (
@@ -150,7 +158,7 @@ export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId
           </div>
         </aside>
 
-        {selected ? <section className={styles.matchPanel} aria-label={fixtureLabel(selected)}>
+        {selected ? <section id="touchline-match-panel" className={styles.matchPanel} aria-label={fixtureLabel(selected)}>
           <div className={styles.matchMeta}><span><Trophy size={14} /> {dictionary.competition}</span><span>{dictionary.matchweek} · {selected.seasonId ?? "—"}</span><span><Clock3 size={14} /> {dictionary.timezone}</span></div>
           <div className={styles.hero} data-state={touchlineFixtureState(selected)}>
             <span className={styles.statusPill}>{touchlineFixtureState(selected) === "live" ? dictionary.liveNow : touchlineFixtureState(selected) === "finished" ? dictionary.completed : dictionary.next}</span>

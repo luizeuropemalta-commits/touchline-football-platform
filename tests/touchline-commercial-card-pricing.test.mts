@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   formatTouchlineCommercialCardPrice,
   formatTouchlineCommercialCardTotal,
+  formatTouchlineVerifiedCommercialCardPrice,
   resolveTouchlineCommercialCardPrice,
 } from "../lib/touchlineArena/commercial-card-pricing.ts";
 
@@ -43,4 +44,19 @@ test("the zero-priced approved tier stays numeric zero in every competition", ()
   const price = resolveTouchlineCommercialCardPrice({ tierKey: "ruby-red", competition: "england" });
   assert.deepEqual(price, { tierKey: "ruby-red", numericPrice: 0, currency: "GBP", amountMinor: 0 });
   assert.equal(formatTouchlineCommercialCardPrice(price), "£0");
+});
+
+test("a visual fallback tier never exposes a public zero-price offer without verified economy data", () => {
+  assert.equal(formatTouchlineVerifiedCommercialCardPrice({
+    marketValue: "Pending",
+    marketValueSource: "unavailable",
+    competition: "england",
+    locale: "pt-BR",
+  }), "Pendente");
+  assert.equal(formatTouchlineVerifiedCommercialCardPrice({
+    marketValue: "€100m",
+    marketValueSource: "provider",
+    competition: "england",
+    locale: "en",
+  }), "£15");
 });

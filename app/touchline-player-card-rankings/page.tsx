@@ -28,8 +28,8 @@ import {
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
 import {
-  formatTouchlineCommercialCardPrice,
   formatTouchlineCommercialCardTotal,
+  formatTouchlineVerifiedCommercialCardPrice,
   resolveTouchlineCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import { formatPlayerMarketTierRange, formatPlayerMarketValueEur } from "@/lib/touchlineArena/player-market-tiers";
@@ -95,19 +95,23 @@ export default async function TouchLinePlayerCardRankingsPage({
   const locale = normalizeTouchLineLocale((await searchParams).lang);
   const commercialPriceForCard = (card: (typeof rankedCards)[number]) => {
     const economy = economyByCardId.get(card.id);
-    const tierKey = economy?.status === "resolved" ? economy.tierKey : (card.cardTier ?? "ruby-red");
-    return resolveTouchlineCommercialCardPrice({ tierKey, competition: "england" });
+    return economy?.status === "resolved"
+      ? resolveTouchlineCommercialCardPrice({ tierKey: economy.tierKey, competition: "england" })
+      : null;
   };
-  const totalPriceLabel = formatTouchlineCommercialCardTotal({
-    numericPrice: rankedCards.reduce(
-      (sum, card) => sum + commercialPriceForCard(card).numericPrice,
-      0,
-    ),
+  const rankedCardPrices = rankedCards.map(commercialPriceForCard);
+  const totalPriceLabel = rankedCardPrices.every((price) => price !== null)
+    ? formatTouchlineCommercialCardTotal({
+      numericPrice: rankedCardPrices.reduce((sum, price) => sum + price!.numericPrice, 0),
+      competition: "england",
+    })
+    : locale === "pt-BR" ? "Pendente" : "Pending";
+  const economyLabel = (card: (typeof rankedCards)[number]) => formatTouchlineVerifiedCommercialCardPrice({
+    marketValue: card.marketValue,
+    marketValueSource: card.marketValueSource,
     competition: "england",
+    locale,
   });
-  const economyLabel = (card: (typeof rankedCards)[number]) => formatTouchlineCommercialCardPrice(
-    commercialPriceForCard(card),
-  );
   const totalPoints = rankedCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
   const copy = getTouchLineRankingsCopy(locale);
   const localeQuery = `lang=${encodeURIComponent(locale)}`;

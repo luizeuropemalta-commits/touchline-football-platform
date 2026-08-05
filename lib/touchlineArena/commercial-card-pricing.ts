@@ -3,6 +3,10 @@ import {
   type PlayerMarketTierId,
 } from "./player-market-tiers.ts";
 import {
+  resolveTouchlineVerifiedPlayerEconomy,
+  type TouchlineMarketValueSource,
+} from "./card-rules.ts";
+import {
   touchlineCommercialCurrencyForCompetition,
   type TouchlineCommercialCompetition,
   type TouchlineCommercialCurrency,
@@ -49,6 +53,32 @@ export function resolveTouchlineCommercialCardPrice(input: {
 /** Canonical product display, deliberately independent from user residence. */
 export function formatTouchlineCommercialCardPrice(price: TouchlineCommercialCardPrice) {
   return `${COMMERCIAL_CURRENCY_SYMBOLS[price.currency]}${price.numericPrice}`;
+}
+
+/**
+ * Public card-price boundary. A visual fallback frame or an old card tier is
+ * never enough to expose a nominal commercial price. The price can be shown
+ * only when the player economy has a provider-verified market value (or its
+ * verified cache); otherwise the UI must remain explicit about the pending
+ * verification instead of presenting the approved zero tier as a real offer.
+ */
+export function formatTouchlineVerifiedCommercialCardPrice(input: {
+  marketValue: number | string | null | undefined;
+  marketValueSource?: TouchlineMarketValueSource | null;
+  competition: TouchlineCommercialCompetition;
+  locale?: "pt-BR" | "en" | string;
+}) {
+  const economy = resolveTouchlineVerifiedPlayerEconomy({
+    marketValue: input.marketValue,
+    marketValueSource: input.marketValueSource,
+  });
+  if (economy.status !== "resolved") {
+    return input.locale === "pt-BR" ? "Pendente" : "Pending";
+  }
+  return formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
+    tierKey: economy.tierKey,
+    competition: input.competition,
+  }));
 }
 
 /**

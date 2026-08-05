@@ -28,9 +28,8 @@ import {
   touchlineArenaTierForKey,
 } from "@/lib/touchlineArena/card-rules";
 import {
-  formatTouchlineCommercialCardPrice,
   formatTouchlineCommercialCardTotal,
-  resolveTouchlineCommercialCardPrice,
+  formatTouchlineVerifiedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import { normalizeTouchLineLocale, touchLineT } from "@/lib/touchlineArena/i18n";
 import { touchlineArenaContractHref, touchlineArenaPanelHref } from "@/lib/touchlineArena/arena-navigation";
@@ -87,19 +86,12 @@ function verifiedCardPriceLabel(
   },
   locale: string,
 ) {
-  const economy = resolveTouchlineVerifiedPlayerEconomy({
+  return formatTouchlineVerifiedCommercialCardPrice({
     marketValue: card.marketValue,
     marketValueSource: card.marketValueSource,
+    competition: "england",
+    locale,
   });
-  const tierKey = economy.status === "resolved"
-    ? economy.tierKey
-    : touchlineArenaTierForKey(card.cardTier)?.key;
-  return !tierKey
-    ? (locale === "pt-BR" ? "Em atualização" : "Updating")
-    : formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
-        tierKey,
-        competition: "england",
-      }));
 }
 
 function clubOwnerCardZoomDetails(card: ClubOwnerSquadCard, locale: string) {

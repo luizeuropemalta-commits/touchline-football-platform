@@ -46,8 +46,7 @@ import {
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
 import {
-  formatTouchlineCommercialCardPrice,
-  resolveTouchlineCommercialCardPrice,
+  formatTouchlineVerifiedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
@@ -587,12 +586,15 @@ export default async function TouchLinePlayerProfilePage({
   const tier = economicTier ?? previewTier
     ?? touchlineArenaTierForKey(card.cardTier)
     ?? touchlineArenaTierForKey("ruby-red")!;
-  const displayedPriceText = formatTouchlineCommercialCardPrice(
-    resolveTouchlineCommercialCardPrice({
-      tierKey: tier.key,
-      competition: "england",
-    }),
-  );
+  const displayedPriceText = formatTouchlineVerifiedCommercialCardPrice({
+    marketValue: official.player?.marketValue ?? exactPlayer.marketValue,
+    marketValueSource: official.player?.marketValue !== undefined
+      ? "provider"
+      : exactPlayer.marketValueSource,
+    competition: "england",
+    locale,
+  });
+  const hasVerifiedCardOffer = economy.status === "resolved";
   const displayedMarketValue = exactPlayer.marketValue && exactPlayer.marketValue.trim().toLowerCase() !== "pending"
     ? exactPlayer.marketValue
     : text.rankPending;
@@ -635,7 +637,7 @@ export default async function TouchLinePlayerProfilePage({
   const socialCardVisual = (ariaLabel: string) => (
     <TouchlineCardZoom
       ariaLabel={ariaLabel}
-      contractHref={marketHref}
+      contractHref={hasVerifiedCardOffer ? marketHref : undefined}
       contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
       contractValue={displayedPriceText}
       contractTermLabel={locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season"}
@@ -684,9 +686,9 @@ export default async function TouchLinePlayerProfilePage({
     {
       id: `card-status-${card.id}-${tier.key}`,
       kind: "official",
-      title: isPortuguese
-        ? "Card disponível para contratação na TouchLine"
-        : "Card available to contract on TouchLine",
+      title: hasVerifiedCardOffer
+        ? (isPortuguese ? "Card disponível para contratação na TouchLine" : "Card available to contract on TouchLine")
+        : (isPortuguese ? "Preço do card aguardando verificação TouchLine" : "Card price awaiting TouchLine verification"),
       body: isPortuguese
         ? "Categoria, preço do card e pontos acumulados são atualizados pelo sistema oficial do card."
         : "Category, card price and cumulative points are updated by the official card system.",
@@ -696,7 +698,7 @@ export default async function TouchLinePlayerProfilePage({
       visual: socialCardVisual(`${isPortuguese ? "Ampliar card atual de" : "Open current card for"} ${card.name}`),
       visualTheme: "market",
       metrics: [
-        { label: isPortuguese ? "Status" : "Status", value: isPortuguese ? "Disponível" : "Available" },
+        { label: isPortuguese ? "Status" : "Status", value: hasVerifiedCardOffer ? (isPortuguese ? "Disponível" : "Available") : (isPortuguese ? "Em atualização" : "Updating") },
         { label: isPortuguese ? "Pontos" : "Points", value: String(competition.touchlinePoints) },
         { label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText },
       ],
@@ -867,7 +869,7 @@ export default async function TouchLinePlayerProfilePage({
                 followerCount={playerFollowerCount(card.id)}
                 accent={accent}
                 locale={locale}
-                purchaseHref={marketHref}
+                purchaseHref={hasVerifiedCardOffer ? marketHref : undefined}
                 purchaseLabel={locale === "pt-BR" ? "Contratar jogador" : "Contract player"}
               />
             </div>
@@ -954,8 +956,8 @@ export default async function TouchLinePlayerProfilePage({
             { label: isPortuguese ? "Pontos acumulados" : "Cumulative points", value: String(competition.touchlinePoints) },
             { label: isPortuguese ? "Posição" : "Position", value: displayPosition || "—" },
           ]}
-          defaultActionHref={marketHref}
-          defaultActionLabel={`${locale === "pt-BR" ? "Contratar jogador" : "Contract player"} · ${displayedPriceText}`}
+          defaultActionHref={hasVerifiedCardOffer ? marketHref : undefined}
+          defaultActionLabel={hasVerifiedCardOffer ? `${locale === "pt-BR" ? "Contratar jogador" : "Contract player"} · ${displayedPriceText}` : undefined}
         />
 
         <section className={styles.officialBand} id="official-performance">

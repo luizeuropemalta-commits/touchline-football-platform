@@ -41,12 +41,19 @@ Production: read-only validation only; no production promotion is permitted for 
 | 2026-08-05 10:24 | Public fixture API boundary | Anonymous fixture and live-score JSON responses expose internal provider identifiers in `id`, `provider` and nested `source` fields. The visible UI uses TouchLine branding, but the public transport DTO does not yet meet the branding boundary. | Confirmed public metadata defect | Create a provider-free public fixture DTO and adapt client hydration without altering internal database/source metadata. |
 | 2026-08-05 10:30 | Public fixture API revalidation | New server-owned DTO retains stable numeric fixture/team IDs, score, schedule, crest and TouchLine verification time while removing provider name/source fields from both public schedule and snapshot endpoints. Local Match Centre remained interactive after client refresh. | Local fix validated | Include this endpoint class in the full public API metadata sweep. |
 | 2026-08-05 10:33 | Anonymous API sweep | Public football and Arena reads returned the expected public or fail-closed responses. Tested responses contained no Sportmonks, API-Football or Transfermarkt branding. Owner/mutation endpoints returned 401/403/405 without disclosing technical payloads. | Initial API boundary pass | Continue authenticated mutation and admin persona coverage. |
+| 2026-08-05 10:39 | Public player-card ranking | Unverified player records correctly rendered `Pendente` inside the shared card but ranking summary, list and contract zoom independently derived the visual fallback tier and exposed `£0`. | Confirmed commercial presentation defect | Reuse the verified-economy boundary for every public price consumer; do not add unavailable values to aggregates. |
+| 2026-08-05 10:44 | Player profile contract state | An unverified player profile could display `Pendente` while still offering a visible `Contratar jogador` action and an `Disponível` feed state. The Market itself correctly disallows an unpriced selection, so the profile promise was inconsistent. | Confirmed UX/commercial-state defect | Suppress the contract action until a verified card offer exists and identify the feed state as updating. |
+| 2026-08-05 10:50 | Match Centre mobile | At 390 px the 29-fixture selector rendered before the selected fixture and required traversing the whole group before seeing match detail. | Confirmed responsive UX defect | Show the selected match first at tablet/mobile widths and return focus/viewport to it after mobile fixture selection. |
+| 2026-08-05 10:54 | Match Centre mobile revalidation | The 390×844 viewport now opens with the selected fixture and its state, countdown and information panels first; the fixture rail remains available below as a horizontal selector. | Local visual fix validated | Continue representative tablet/desktop checks and full authenticated coverage. |
 
 ## Implemented during this audit (not deployed)
 
 - `lib/football-data/squad-snapshot-store.ts` now reads memberships only from a club's canonical competition and writes that competition ID on every refreshed membership.
 - `supabase/migrations/049_scope_legacy_squad_memberships_to_club_competition.sql` is a repair-only migration: it scopes active unscoped Sportmonks rows to the already-canonical club competition and adds a matching partial index. It creates no new public access and changes no player, club, status or historical record.
 - `scripts/audit-touchline-player-profiles.mts` now includes players awaiting a verified shirt number in the identity audit but retains their card-eligibility boundary.
+- `lib/touchlineArena/commercial-card-pricing.ts` now has one verified-economy public-price boundary. A nominal `£0` remains valid only when its zero tier was actually verified; visual fallback frames and missing market values render `Pendente`/`Pending`.
+- Player-card rankings, ClubOwner card surfaces, public ClubHub zooms, player profiles and table-card zooms use that boundary instead of treating a fallback tier as an offer. Ranking aggregates become pending whenever any included card is unverified.
+- The player profile now withholds its contract CTA and availability claim until the price is verified; the Match Centre puts match detail ahead of the fixture rail on compact screens.
 
 ## Validation evidence
 
@@ -56,7 +63,11 @@ Production: read-only validation only; no production promotion is permitted for 
 - ESLint: passed.
 - Production build: passed.
 - Local server roster read: all 20 England clubs, 565 unique canonical players, snapshot source only.
+- Targeted commercial-price and Match Centre tests: 12 passed.
+- TypeScript and ESLint: passed after the commercial and responsive corrections.
+- Production build: passed after the commercial and responsive corrections.
+- Visual evidence: `evidence/match-centre-mobile-390x844.png` (before) and `evidence/match-centre-mobile-after-390x844.png` (after); kept locally only.
 
 ## Next audited action
 
-Continue from the first unverified authenticated journey: a controlled ClubOwner with an already-persisted coach, then validate Market, roster, Training Centre, Inbox and notifications without changing production data. Follow with the viewport/browser matrix and the remaining server/API/RLS review.
+Continue from the first unverified authenticated journey: a controlled ClubOwner with an already-persisted coach, then validate Market, roster, Training Centre, Inbox and notifications without changing production data. Follow with the tablet/desktop viewport matrix and the remaining server/API/RLS review.
