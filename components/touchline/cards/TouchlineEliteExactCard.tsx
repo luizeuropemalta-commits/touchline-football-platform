@@ -834,12 +834,17 @@ export function TouchlineEliteExactCard({
   // England cards always keep the approved numeric tier value and use GBP as
   // their official currency. This is deliberately not a Touch Credits value,
   // currency conversion or wallet balance.
-  const cardPriceText = formatTouchlineCommercialCardPrice(
-    resolveTouchlineCommercialCardPrice({
-      tierKey: marketTier.key,
-      competition: "england",
-    }),
-  );
+  // A fallback frame keeps the card visually coherent while live football
+  // data is syncing, but it is not evidence of a commercial tier. Never turn
+  // that visual fallback into a £0 public price.
+  const cardPriceText = verifiedEconomy.status === "resolved"
+    ? formatTouchlineCommercialCardPrice(
+      resolveTouchlineCommercialCardPrice({
+        tierKey: marketTier.key,
+        competition: "england",
+      }),
+    )
+    : runtimeLocale === "pt-BR" ? "Pendente" : "Pending";
   const preseasonMissingValue = liveCompetition.phase === "preseason" ? "0" : "—";
   const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
     ? preseasonMissingValue

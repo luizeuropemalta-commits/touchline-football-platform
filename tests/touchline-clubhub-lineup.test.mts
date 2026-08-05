@@ -82,3 +82,10 @@ test("shared player cards never present the England commercial price as Touch Cr
   assert.match(source, /Card price/);
   assert.doesNotMatch(source, /TC Value/);
 });
+
+test("shared player cards never turn an unavailable football value into a £0 commercial price", () => {
+  const source = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /const cardPriceText = verifiedEconomy\.status === "resolved"/);
+  assert.match(source, /runtimeLocale === "pt-BR" \? "Pendente" : "Pending"/);
+});
