@@ -87,8 +87,15 @@
   outline-offset: 2px;
 }
 
+@media (max-width: 900px) {
+  .shortcuts a { min-height: 44px; padding-inline: 12px; font-size: 9.5px; }
+  .shortcuts a svg { width: 14px; height: 14px; }
+}
+
 @media (max-width: 760px) {
   .bar { align-items: stretch; flex-direction: column; gap: 7px; }
-  .back { min-height: 38px; padding: 0 12px; font-size: 9px; }
-  .shortcuts a { min-height: 28px; padding: 0 9px; font-size: 7.5px; }
+  .back { min-height: 44px; padding: 0 14px; font-size: 10px; }
+  .shortcuts { gap: 8px; padding-block: 5px; scroll-padding-inline: 2px; }
+  .shortcuts a { min-height: 44px; padding: 0 12px; font-size: 9.5px; }
+  .shortcuts a svg { width: 14px; height: 14px; }
 }

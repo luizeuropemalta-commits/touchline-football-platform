@@ -1251,7 +1251,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           }
           .club-hub-actions a {
             min-width: 0;
-            min-height: 40px;
+            min-height: 44px;
             padding: 0 10px;
             text-align: center;
           }
@@ -1290,7 +1290,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           }
           .club-hub-back {
             display: inline-flex;
-            min-height: 34px;
+            min-height: 44px;
             align-items: center;
             padding-inline: 16px;
           }
@@ -1325,7 +1325,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           }
           .club-hub-actions a {
             min-width: 0;
-            min-height: 32px;
+            min-height: 44px;
             padding-inline: 8px;
             text-align: center;
           }
