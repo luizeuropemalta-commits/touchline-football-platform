@@ -200,6 +200,8 @@ export type TouchLineTranslationKey =
   | "formationDragging"
   | "chooseReserve"
   | "localData"
+  // Kept for archived visual-audit checkpoints, which are included in the
+  // repository typecheck. The active Arena no longer blocks portrait users.
   | "landscapeRequired"
   | "rotateDevice"
   | "enterLandscape"

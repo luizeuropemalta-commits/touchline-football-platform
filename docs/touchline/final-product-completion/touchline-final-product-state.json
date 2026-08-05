@@ -65,8 +65,8 @@
       "CSV/API delivery method"
     ]
   },
-  "next_executable_action": "Validate the Git-integrated Preview for the current HEAD; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
-  "last_validated_at": "2026-08-05T15:35:00+02:00",
+  "next_executable_action": "Publish and validate the Git-integrated Preview for the current committed HEAD, including the mobile portrait Arena journey; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
+  "last_validated_at": "2026-08-05T16:20:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",

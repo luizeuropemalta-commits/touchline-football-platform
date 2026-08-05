@@ -28,7 +28,7 @@ change, or production promotion.
 | 4 | Active-season stability | COMPLETE | Stored active-contract tier is propagated and browser roster V5 retains its authority marker. | Regression-only. |
 | 5 | New-player classification | CODE_COMPLETE | Canonical Card Engine classifies an approved new player without a live gameplay dependency; missing value remains pending. | Validate after an approved import sample exists. |
 | 6 | Bench organisation | COMPLETE | Selection follows availability; presentation is GK → DEF → MID → ATA, never value or price. | Regression-only. |
-| 7 | Responsive card layout | EXTERNAL_HARD_GATE | Local desktop/mobile evidence exists; controlled authenticated phone/tablet and remote WebKit remain unvalidated. | Run controlled device/browser matrix. |
+| 7 | Responsive card layout | CODE_COMPLETE | The Arena no longer blocks portrait phones: the field can still enter immersive landscape, while portrait now renders the real ClubOwner/coach-first journey. Local 390×844 evidence is stored under the official audit evidence folder. Controlled authenticated phone/tablet and remote WebKit remain unvalidated. | Publish a Preview from the current safe checkpoint, then run the controlled device/browser matrix. |
 | 8 | Public provider-brand removal | COMPLETE | Public product wording is TouchLine-branded; provider identities remain internal/Admin metadata. | Regression-only. |
 | 9 | Preview validation | IN_PROGRESS | Branch is Git-integrated with Vercel; no production alias change. | Confirm the Preview built from current HEAD and run public smoke tests. |
 | 10 | Final Zero-Defect Audit | IN_PROGRESS | Historical completed recovery blocks are preserved; external controlled-persona, historical-data and device gates are separately tracked. | Continue only non-external audit items after current Preview validation. |
@@ -41,5 +41,6 @@ change, or production promotion.
 - Native WebKit/phone accessible validation.
 - Deliberate production promotion after all acceptance gates pass.
 
-Latest safe checkpoint at ledger creation: `f347f2dc` on
-`safety/touchline-2026-06-28-wip`.
+Latest safe checkpoint must always be resolved from the newest committed HEAD on
+`safety/touchline-2026-06-28-wip`; the next checkpoint follows the portrait
+Arena correction and its complete local test/build validation.

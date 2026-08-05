@@ -3825,20 +3825,11 @@ export default function ArenaClient({
   }, [initialIntroIntent]);
 
   useEffect(() => {
-    const orientationGate = window.matchMedia("(orientation: portrait) and (max-width: 1100px)");
-    let cancelled = false;
-    const syncViewportReadiness = () => {
-      queueMicrotask(() => {
-        if (!cancelled) setIsArenaIntroViewportReady(!orientationGate.matches);
-      });
-    };
-
-    syncViewportReadiness();
-    orientationGate.addEventListener("change", syncViewportReadiness);
-    return () => {
-      cancelled = true;
-      orientationGate.removeEventListener("change", syncViewportReadiness);
-    };
+    // Portrait is a supported TouchLine viewport. The pitch can still offer
+    // fullscreen/landscape as an immersion option, but it must never prevent
+    // someone from entering the Arena, reading their club state or using the
+    // mobile controls.
+    setIsArenaIntroViewportReady(true);
   }, []);
 
   useEffect(() => {
@@ -5694,15 +5685,6 @@ export default function ArenaClient({
     await orientation?.lock?.("landscape").catch(() => undefined);
   }
 
-  async function enterRequiredLandscapeMode() {
-    const stage = stageRef.current;
-    if (stage && touchlineFullscreenElement(document) !== stage && !isArenaFallbackFullscreen) {
-      await requestArenaFullscreen(stage);
-      return;
-    }
-    await lockArenaLandscape();
-  }
-
   async function toggleLineupEditor() {
     if (isEditorOpen) {
       setIsEditorOpen(false);
@@ -6261,18 +6243,6 @@ export default function ArenaClient({
         data-coach-spotlight={isCoachSpotlightOpen || selectedLiveCoachData ? "open" : "closed"}
         data-card-spotlight={isCoachSpotlightOpen || selectedLiveCoachData || selectedLiveSimulationCard || spotlightPlayer ? "open" : "closed"}
       >
-        <section className="arena-orientation-gate" aria-label={t("landscapeRequired")}>
-          <div className="arena-orientation-gate__panel">
-            <img src={TOUCHLINE_ARENA_OFFICIAL_LOGO} alt="" aria-hidden="true" />
-            <RotateCw aria-hidden="true" />
-            <span>{t("landscapeRequired")}</span>
-            <strong><i>Touch</i>Line Arena</strong>
-            <p>{t("rotateDevice")}</p>
-            <button type="button" onClick={() => void enterRequiredLandscapeMode()}>
-              {t("enterLandscape")}
-            </button>
-          </div>
-        </section>
         <TouchlineArenaIntro
           key={`touchline-arena-intro-${introExperienceRun}`}
           locale={siteLanguage}
@@ -8273,93 +8243,6 @@ export default function ArenaClient({
           filter: saturate(1.06) contrast(1.05) brightness(1.02);
           backface-visibility: hidden;
           opacity: 1;
-        }
-
-        .arena-orientation-gate {
-          display: none;
-        }
-
-        @media (orientation: portrait) and (max-width: 1100px) {
-          .arena-orientation-gate {
-            position: fixed;
-            inset: 0;
-            z-index: 2147483647;
-            display: grid;
-            place-items: center;
-            overflow: hidden;
-            padding:
-              max(20px, env(safe-area-inset-top))
-              max(20px, env(safe-area-inset-right))
-              max(20px, env(safe-area-inset-bottom))
-              max(20px, env(safe-area-inset-left));
-            background: rgba(2, 8, 12, .92);
-            backdrop-filter: blur(20px);
-          }
-
-          .arena-orientation-gate__panel {
-            display: grid;
-            width: min(100%, 390px);
-            justify-items: center;
-            border: 1px solid rgba(181,255,75,.28);
-            border-radius: 8px;
-            background: rgba(3, 8, 10, .72);
-            padding: 28px 24px;
-            text-align: center;
-            box-shadow: 0 24px 80px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.04);
-          }
-
-          .arena-orientation-gate__panel img {
-            width: 58px;
-            height: 58px;
-            object-fit: contain;
-          }
-
-          .arena-orientation-gate__panel > svg {
-            width: 34px;
-            height: 34px;
-            margin-top: 18px;
-            color: #b5ff4b;
-          }
-
-          .arena-orientation-gate__panel span {
-            margin-top: 16px;
-            color: rgba(181,255,75,.82);
-            font-size: 10px;
-            font-weight: 900;
-          }
-
-          .arena-orientation-gate__panel strong {
-            margin-top: 6px;
-            color: white;
-            font-size: 28px;
-            line-height: 1;
-            font-weight: 900;
-          }
-
-          .arena-orientation-gate__panel strong i {
-            color: #b5ff4b;
-            font-style: normal;
-          }
-
-          .arena-orientation-gate__panel p {
-            max-width: 300px;
-            margin: 12px 0 0;
-            color: rgba(255,255,255,.7);
-            font-size: 13px;
-            line-height: 1.45;
-          }
-
-          .arena-orientation-gate__panel button {
-            min-height: 44px;
-            margin-top: 20px;
-            border: 1px solid rgba(181,255,75,.4);
-            border-radius: 8px;
-            background: rgba(181,255,75,.16);
-            padding: 0 18px;
-            color: #efffbe;
-            font-size: 11px;
-            font-weight: 900;
-          }
         }
 
         .arena-video {

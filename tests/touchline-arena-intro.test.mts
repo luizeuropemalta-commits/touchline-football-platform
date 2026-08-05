@@ -246,7 +246,7 @@ test("Arena without a lang query restores the stored language before using the c
   assert.match(arena, /setSiteLanguage\(\(current\) => current === preferredLocale \? current : preferredLocale\)/);
 });
 
-test("Arena waits for landscape, reveals first access quickly and keeps replay explicit", () => {
+test("Arena supports portrait, reveals first access quickly and keeps replay explicit", () => {
   const arena = source("app/arena/ArenaClient.tsx");
   const page = source("app/arena/page.tsx");
   const zonePage = source("app/arena/[zone]/page.tsx");
@@ -263,9 +263,6 @@ test("Arena waits for landscape, reveals first access quickly and keeps replay e
   const videoStackEnd = arena.indexOf("</div>", loopVideoStart);
   const entryVideo = arena.slice(entryVideoStart, loopVideoStart);
   const loopVideo = arena.slice(loopVideoStart, videoStackEnd);
-  const orientationGateStart = arena.indexOf('<section className="arena-orientation-gate"');
-  const introComponentStart = arena.indexOf("<TouchlineArenaIntro", orientationGateStart);
-  const orientationGate = arena.slice(orientationGateStart, introComponentStart);
 
   assert.match(page, /parseTouchlineArenaIntroIntent/);
   assert.match(page, /initialIntroIntent=/);
@@ -279,9 +276,8 @@ test("Arena waits for landscape, reveals first access quickly and keeps replay e
     arena,
     /const \[isArenaIntroViewportReady, setIsArenaIntroViewportReady\] = useState\(false\)/,
   );
-  assert.match(arena, /window\.matchMedia\("\(orientation: portrait\) and \(max-width: 1100px\)"\)/);
-  assert.match(arena, /orientationGate\.addEventListener\("change", syncViewportReadiness\)/);
-  assert.match(arena, /orientationGate\.removeEventListener\("change", syncViewportReadiness\)/);
+  assert.match(arena, /Portrait is a supported TouchLine viewport/);
+  assert.match(arena, /setIsArenaIntroViewportReady\(true\)/);
   assert.match(
     arena,
     /const isArenaFunctionalReady = Boolean\(standaloneExperience\) \|\| \(\s*isArenaIntroViewportReady\s*&& introExperienceMode === "hidden"\s*&& hasEntryVideoFinished\s*\)/,
@@ -318,6 +314,5 @@ test("Arena waits for landscape, reveals first access quickly and keeps replay e
   assert.match(loopVideo, /onPlaying=\{handleCardLoopPlaying\}/);
   assert.doesNotMatch(loopVideo, /onPlay=/);
   assert.equal((arena.match(/onPlaying=/g) ?? []).length, 1);
-  assert.ok(orientationGateStart >= 0 && introComponentStart > orientationGateStart);
-  assert.match(orientationGate, /<img src=\{TOUCHLINE_ARENA_OFFICIAL_LOGO\} alt="" aria-hidden="true" \/>/);
+  assert.doesNotMatch(arena, /arena-orientation-gate/);
 });
