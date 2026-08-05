@@ -149,3 +149,8 @@ build pass. Local visual evidence is saved under
 stops at Coach-first rather than rendering a demonstration squad. This does
 not create market values, enable an external source, apply migration 050, or
 promote the official domain.
+
+The ClubHub lineup zoom now consumes the same active-contract boundary. Its
+stored tier and approved England nominal price therefore remain aligned with
+the exact card itself; only public, unowned cards remain subject to the
+verified-value read model. Latest safe checkpoint: `18134f7f`.
