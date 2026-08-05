@@ -9890,6 +9890,13 @@ export default function ArenaClient({
           display: block;
         }
 
+        /* Standalone Market and Training pages are entry points too.  When a
+           coach is required, make the first required step fill that surface
+           instead of leaving a blocked page title peeking around the gate. */
+        .touchline-game.is-panel-standalone .arena-coach-first-gate {
+          inset: 10px;
+        }
+
         .touchline-game.is-market-standalone .arena-functional-layer > :not(.arena-action-layer):not(.arena-coach-first-gate):not(.arena-coach-gated-content),
         .touchline-game.is-bench-standalone .arena-functional-layer > :not(.arena-action-layer):not(.arena-coach-first-gate):not(.arena-coach-gated-content),
         .touchline-game.is-market-standalone .arena-coach-gated-content > :not(.arena-action-layer),

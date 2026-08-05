@@ -74,6 +74,7 @@ test("Arena keeps production coach identity out of the demo fallback and exposes
     /className="arena-coach-gated-content"[\s\S]*?inert=\{isCoachSelectionRequired \? true : undefined\}[\s\S]*?aria-hidden=\{isCoachSelectionRequired\}/,
   );
   assert.match(arena, /is-market-standalone \.arena-coach-gated-content > :not\(\.arena-action-layer\)/);
+  assert.match(arena, /is-panel-standalone \.arena-coach-first-gate \{\s*inset: 10px;/);
   assert.match(arena, /\/api\/touchline-arena\/coach/);
   assert.match(arena, /const requestTimeout = window\.setTimeout\(\(\) => controller\.abort\(\), 10_000\)/);
   assert.match(arena, /signal: controller\.signal/);

@@ -49,6 +49,7 @@ Production: read-only validation only; no production promotion is permitted for 
 | 2026-08-05 12:04 | Coach-first / Training Centre | A user without a persisted coach saw the coach gate but the standalone Training Centre still exposed underlying operational controls to the accessibility tree. In addition, the gate told the user to sign in without offering a direct entry path. | Confirmed coach-first accessibility and journey defect | Shared Arena content is now inert/aria-hidden while the gate is active, and the gate exposes a safe localized login return link. |
 | 2026-08-05 12:10 | Coach-first revalidation | The no-coach Training Centre exposes only the coach-first gate and a localized login link returning to the Arena; the prior `Vaga do treinador` control is absent from the accessible tree. The desktop visual state was saved locally. | Local functional and visual fix validated | Validate the persisted-coach journey using a controlled account without modifying production data. |
 | 2026-08-05 12:12 | Match Centre | Public Match Centre listed 29 upcoming fixtures, exposed selected-match schedule/status/data-unavailable states honestly, and a different fixture changed the selected detail and the `fixture` URL to the exact numeric fixture ID. | Local public journey pass | Cover live/finished fixtures when the canonical feed has them and complete responsive/browser matrix. |
+| 2026-08-05 12:22 | Standalone coach-first visual pass | The blocked Training Centre title was still visible behind the mandatory gate on compact screens. The shared standalone gate now fills the operation surface; mobile, tablet and desktop all retain the localized login link and hide operational controls from the accessible tree. | Local visual and accessibility fix validated | Persisted-coach user journey remains the only outstanding coach-first evidence. |
 
 ## Implemented during this audit (not deployed)
 
@@ -76,6 +77,7 @@ Production: read-only validation only; no production promotion is permitted for 
 - Coach-first targeted contract test: 5 passed.
 - TypeScript, ESLint and production build: passed after the coach-first accessibility/journey correction.
 - Visual evidence: `evidence/coach-first-training-lock-desktop.png` and `evidence/coach-first-training-lock-with-login-desktop.png`; kept locally only.
+- Responsive visual evidence: `evidence/coach-first-training-full-surface-mobile-390x844.png`, `evidence/coach-first-training-full-surface-tablet-768x1024.png` and `evidence/coach-first-training-full-surface-desktop.png`; kept locally only.
 
 ## Next audited action
 
