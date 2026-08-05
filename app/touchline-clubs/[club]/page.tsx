@@ -1128,6 +1128,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           text-align: center;
         }
         .club-hub-card-meta a {
+          display: inline-flex;
+          min-height: 44px;
+          align-items: center;
+          justify-content: center;
+          padding-inline: 12px;
           color: #dfff9b;
           text-decoration: none;
           font-size: 10px;
