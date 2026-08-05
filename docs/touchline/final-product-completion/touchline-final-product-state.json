@@ -4,8 +4,8 @@
   "authoritative_resume_rule": "At the start of every execution, inspect git status, read HEAD, read the execution ledger, resolve the newest safe checkpoint from the current branch, then continue the first incomplete executable item. Never resume a hardcoded historical checkpoint.",
   "repository": {
     "branch": "safety/touchline-2026-06-28-wip",
-    "latest_pushed_commit": "f347f2dce57c923cac7030ac73440740094f391d",
-    "safe_checkpoint": "f347f2dc",
+    "latest_pushed_commit": "resolve at runtime with git rev-parse HEAD",
+    "safe_checkpoint": "resolve at runtime from the newest committed HEAD after inspecting git status",
     "working_tree": "dirty: unrelated user documentation and audit artifacts are preserved; only task-owned files may be staged"
   },
   "applied_migrations": [
