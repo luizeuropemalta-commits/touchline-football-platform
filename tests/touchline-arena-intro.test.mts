@@ -272,12 +272,8 @@ test("Arena supports portrait, reveals first access quickly and keeps replay exp
   assert.match(arena, /if \(launchMode === "skip"\)/);
   assert.match(arena, /setIntroExperienceMode\("hidden"\)/);
   assert.match(arena, /startCardLoopVideo\(\)/);
-  assert.match(
-    arena,
-    /const \[isArenaIntroViewportReady, setIsArenaIntroViewportReady\] = useState\(false\)/,
-  );
-  assert.match(arena, /Portrait is a supported TouchLine viewport/);
-  assert.match(arena, /setIsArenaIntroViewportReady\(true\)/);
+  assert.match(arena, /const isArenaIntroViewportReady = true/);
+  assert.match(arena, /Every supported viewport, including portrait phones/);
   assert.match(
     arena,
     /const isArenaFunctionalReady = Boolean\(standaloneExperience\) \|\| \(\s*isArenaIntroViewportReady\s*&& introExperienceMode === "hidden"\s*&& hasEntryVideoFinished\s*\)/,

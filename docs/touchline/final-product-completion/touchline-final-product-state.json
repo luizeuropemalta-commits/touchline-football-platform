@@ -25,6 +25,7 @@
     "canonical card tiers and borders",
     "active-season card stability",
     "new-player classification",
+    "Market Transfer coach-first journey",
     "bench organisation",
     "responsive card layout",
     "public provider-brand removal",
@@ -65,8 +66,8 @@
       "CSV/API delivery method"
     ]
   },
-  "next_executable_action": "Publish and validate the Git-integrated Preview for the current committed HEAD, including the mobile portrait Arena journey; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
-  "last_validated_at": "2026-08-05T16:20:00+02:00",
+  "next_executable_action": "Publish and validate the Git-integrated Preview for the current committed HEAD: Arena must remain free of the coach-selection gate, while Market Transfer must persist coach selection and guide goalkeeper → defence → midfield → attack; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
+  "last_validated_at": "2026-08-05T18:52:45+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",

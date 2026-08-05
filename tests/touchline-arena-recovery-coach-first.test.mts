@@ -60,14 +60,14 @@ test("Arena keeps an incomplete canonical round intact instead of borrowing a ma
   assert.equal(selected.length, 9);
 });
 
-test("Arena keeps production coach identity out of the demo fallback and exposes persistent coach-first selection", () => {
+test("Market Transfer keeps production coach identity out of the demo fallback and owns persistent coach-first selection", () => {
   const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const coachRoute = readFileSync(new URL("../app/api/touchline-arena/coach/route.ts", import.meta.url), "utf8");
   const stateRoute = readFileSync(new URL("../app/api/touchline-arena/state/route.ts", import.meta.url), "utf8");
 
   assert.match(arena, /arenaPersistencePrincipal\?\.kind === "demo"[\s\S]*?TOUCHLINE_DEMO_COACH/);
   assert.match(arena, /data-testid="arena-coach-first-gate"/);
-  assert.match(arena, /const isCoachSelectionRequired = Boolean\([\s\S]*?standaloneExperience !== "live"/);
+  assert.match(arena, /const isCoachSelectionRequired = Boolean\([\s\S]*?standaloneExperience === "market"/);
   assert.match(arena, /const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired/);
   assert.match(
     arena,
@@ -80,8 +80,10 @@ test("Arena keeps production coach identity out of the demo fallback and exposes
   assert.match(arena, /signal: controller\.signal/);
   assert.match(arena, /window\.clearTimeout\(requestTimeout\)/);
   assert.match(arena, /coachOfferStatus === "idle"[\s\S]*?Entre na sua conta para carregar as ofertas oficiais dos treinadores/);
-  assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"/);
+  assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?\/market-transfer\?lang=/);
   assert.match(arena, /className="arena-coach-login-link" href=\{coachFirstLoginHref\}/);
+  assert.match(arena, /MERCADO · PASSO 1 DE 5/);
+  assert.match(arena, /className="team-builder-onboarding-flow"/);
   assert.match(arena, /const mustPersistForClubOwner = canPersistArenaAccountState/);
   assert.match(arena, /if \(!response\.ok\) \{[\s\S]*?Não foi possível salvar o treinador na sua conta/);
   assert.match(arena, /setCoachSelectionError\(message\)/);
@@ -94,6 +96,7 @@ test("Arena keeps production coach identity out of the demo fallback and exposes
     selectCoach.indexOf("const mustPersistForClubOwner") < selectCoach.indexOf('writeBrowserStorage("localStorage", coachStorageKey'),
     "authenticated ClubOwner coach selection must be accepted by the server before local cache is written",
   );
+  assert.match(selectCoach, /standaloneExperience === "market"[\s\S]*?setMarketPositionFilter\("goalkeeper"\)/);
   assert.match(arena, /coachOffersByProviderId/);
   assert.match(arena, /offer\.displayPrice/);
   assert.match(arena, /selectArenaFixtureRound\(premierLiveFixtures\)/);

@@ -139,7 +139,6 @@ import {
   TOUCHLINE_ARENA_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_INTRO_STORAGE_KEY,
   TOUCHLINE_ARENA_LOOP_VIDEO,
-  TOUCHLINE_ARENA_OFFICIAL_LOGO,
   TOUCHLINE_ARENA_SKIP_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_VIDEO_POSTER,
   parseTouchlineArenaIntroIntent,
@@ -3186,7 +3185,10 @@ export default function ArenaClient({
   const [introExperienceMode, setIntroExperienceMode] = useState<"pending" | "hidden" | TouchlineArenaIntroLaunchMode>(initialIntroWasSkipped ? "hidden" : "pending");
   const [introExperienceRun, setIntroExperienceRun] = useState(0);
   const [isEntrySkipAvailable, setIsEntrySkipAvailable] = useState(false);
-  const [isArenaIntroViewportReady, setIsArenaIntroViewportReady] = useState(false);
+  // Every supported viewport, including portrait phones, can run the Arena
+  // journey immediately. Landscape fullscreen remains an optional immersion
+  // control rather than an entry requirement.
+  const isArenaIntroViewportReady = true;
   const [hasLoadedSavedLineup, setHasLoadedSavedLineup] = useState(false);
   const [hasLoadedClubOwnerRoster, setHasLoadedClubOwnerRoster] = useState(false);
   const [arenaPersistencePrincipal, setArenaPersistencePrincipal] = useState<ArenaPersistencePrincipal | null>(null);
@@ -3433,15 +3435,18 @@ export default function ArenaClient({
     && hasLoadedOwnerCoach
     && arenaPersistencePrincipal?.kind !== "demo"
     && !activeArenaCoachIdentity?.coach
-    && standaloneExperience !== "live",
+    // Coach selection is part of the Market Transfer acquisition journey.
+    // The Arena itself stays available and uncluttered; it must never turn
+    // into a mandatory shopping screen for a ClubOwner who has no coach yet.
+    && standaloneExperience === "market",
   );
   const coachFirstLoginHref = touchLineAuthEntryHref(
     "/login",
     siteLanguage,
-    `/arena?skipIntro=1&lang=${encodeURIComponent(siteLanguage)}`,
+    `/market-transfer?lang=${encodeURIComponent(siteLanguage)}`,
   );
   // The personal field remains intentionally separate from the standalone
-  // Match Centre. Coach-first adds only the final eligibility gate.
+  // Match Centre. The Market Transfer owns the coach-first acquisition gate.
   const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired;
   const selectedLiveHomeCoachSlot = useMemo(
     () => selectedLiveHomeClub
@@ -3823,14 +3828,6 @@ export default function ArenaClient({
       cancelled = true;
     };
   }, [initialIntroIntent]);
-
-  useEffect(() => {
-    // Portrait is a supported TouchLine viewport. The pitch can still offer
-    // fullscreen/landscape as an immersion option, but it must never prevent
-    // someone from entering the Arena, reading their club state or using the
-    // mobile controls.
-    setIsArenaIntroViewportReady(true);
-  }, []);
 
   useEffect(() => {
     const entryVideo = firstVideoRef.current;
@@ -5624,6 +5621,13 @@ export default function ArenaClient({
     setOwnerCoachProviderId(coach.coach.providerId);
     setHasLoadedOwnerCoach(true);
     setIsCoachSpotlightOpen(false);
+    // Selecting the coach opens the first player stage of the guided Market
+    // Transfer journey. The player may still browse other positions, but the
+    // recommended sequence is coach → goalkeeper → defence → midfield → attack.
+    if (standaloneExperience === "market") {
+      setMarketPositionFilter("goalkeeper");
+      setMarketNeedsOnly(true);
+    }
     setSaveStatus(siteLanguage === "pt-BR" ? "Treinador oficial selecionado" : "Official coach selected");
   }
 
@@ -6323,9 +6327,9 @@ export default function ArenaClient({
         {isCoachSelectionRequired ? (
           <section className="arena-coach-first-gate" aria-label={siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"} data-testid="arena-coach-first-gate">
             <div className="arena-coach-first-copy">
-              <span>{siteLanguage === "pt-BR" ? "CLUBOWNER · PASSO 1 DE 2" : "CLUBOWNER · STEP 1 OF 2"}</span>
+              <span>{siteLanguage === "pt-BR" ? "MERCADO · PASSO 1 DE 5" : "MARKET · STEP 1 OF 5"}</span>
               <h1>{siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"}</h1>
-              <p>{siteLanguage === "pt-BR" ? "Defina o treinador oficial antes de montar o seu elenco. A escolha fica ligada ao seu ClubOwner." : "Set your official coach before building your squad. This choice stays linked to your ClubOwner."}</p>
+              <p>{siteLanguage === "pt-BR" ? "Comece pelo treinador oficial. Depois, monte o elenco por posição: goleiros, defensores, meio-campistas e atacantes. A escolha fica ligada ao seu ClubOwner." : "Start with your official coach, then build by position: goalkeepers, defenders, midfielders and forwards. This choice stays linked to your ClubOwner."}</p>
               {coachSelectionError ? <p className="arena-coach-selection-error" role="alert">{coachSelectionError}</p> : null}
             </div>
             <div className="arena-coach-choice-rail" role="list">
@@ -6340,7 +6344,7 @@ export default function ArenaClient({
                   </p>
                   {coachOfferStatus === "idle" ? (
                     <a className="arena-coach-login-link" href={coachFirstLoginHref}>
-                      {siteLanguage === "pt-BR" ? "Entrar para escolher o treinador" : "Sign in to choose your coach"}
+                      {siteLanguage === "pt-BR" ? "Entrar para abrir o Market Transfer" : "Sign in to open Market Transfer"}
                     </a>
                   ) : null}
                 </div>
@@ -7446,6 +7450,28 @@ export default function ArenaClient({
 
               {activeArenaPanel === "market" ? (
                 <div className="team-builder-shell">
+                  <nav className="team-builder-onboarding-flow" aria-label={siteLanguage === "pt-BR" ? "Sequência para montar o elenco" : "Squad-building sequence"}>
+                    <span className="is-complete"><b>01</b><strong>{siteLanguage === "pt-BR" ? "Treinador" : "Coach"}</strong><small>{activeArenaCoachIdentity?.coach?.displayName ?? (siteLanguage === "pt-BR" ? "Definido" : "Set")}</small></span>
+                    {([
+                      ["goalkeeper", "02", siteLanguage === "pt-BR" ? "Goleiros" : "Goalkeepers"],
+                      ["defender", "03", siteLanguage === "pt-BR" ? "Defensores" : "Defenders"],
+                      ["midfielder", "04", siteLanguage === "pt-BR" ? "Meio-campistas" : "Midfielders"],
+                      ["forward", "05", siteLanguage === "pt-BR" ? "Atacantes" : "Forwards"],
+                    ] as const).map(([position, number, label]) => (
+                      <button
+                        key={position}
+                        type="button"
+                        className={marketPositionFilter === position ? "is-active" : ""}
+                        aria-pressed={marketPositionFilter === position}
+                        onClick={() => {
+                          setMarketPositionFilter(position);
+                          setMarketNeedsOnly(true);
+                        }}
+                      >
+                        <b>{number}</b><strong>{label}</strong>
+                      </button>
+                    ))}
+                  </nav>
                   <div className="team-builder-deal-flow" aria-label={marketUi.negotiationRoom}>
                     <div>
                       <Handshake aria-hidden="true" />
@@ -15344,6 +15370,81 @@ export default function ArenaClient({
           grid-template-rows: auto auto auto minmax(540px, 1fr);
         }
 
+        .team-builder-onboarding-flow {
+          display: grid;
+          grid-template-columns: 1.22fr repeat(4, minmax(0, 1fr));
+          gap: 7px;
+          margin: 0;
+          border: 1px solid rgba(181,255,75,.25);
+          border-radius: 15px;
+          padding: 8px;
+          background: linear-gradient(125deg, rgba(181,255,75,.08), rgba(4,16,17,.86) 42%);
+        }
+
+        .team-builder-onboarding-flow > span,
+        .team-builder-onboarding-flow > button {
+          display: grid;
+          min-width: 0;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+          gap: 3px 7px;
+          border: 1px solid rgba(255,255,255,.09);
+          border-radius: 10px;
+          padding: 7px 9px;
+          background: rgba(0,0,0,.16);
+          color: rgba(255,255,255,.72);
+          text-align: left;
+        }
+
+        .team-builder-onboarding-flow > button {
+          cursor: pointer;
+          font: inherit;
+          transition: border-color .18s ease, background .18s ease, transform .18s ease;
+        }
+
+        .team-builder-onboarding-flow > button:hover,
+        .team-builder-onboarding-flow > button:focus-visible,
+        .team-builder-onboarding-flow > button.is-active {
+          border-color: rgba(181,255,75,.66);
+          outline: none;
+          background: rgba(181,255,75,.12);
+          color: #fff;
+          transform: translateY(-1px);
+        }
+
+        .team-builder-onboarding-flow b {
+          grid-row: span 2;
+          color: #b5ff4b;
+          font-size: 8px;
+          font-weight: 1000;
+        }
+
+        .team-builder-onboarding-flow strong,
+        .team-builder-onboarding-flow small {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .team-builder-onboarding-flow strong {
+          color: currentColor;
+          font-size: 9px;
+          font-weight: 1000;
+        }
+
+        .team-builder-onboarding-flow small {
+          color: rgba(122,231,255,.78);
+          font-size: 7px;
+          font-weight: 800;
+        }
+
+        .team-builder-onboarding-flow > span.is-complete {
+          border-color: rgba(181,255,75,.42);
+          background: rgba(181,255,75,.1);
+          color: #fff;
+        }
+
         .team-builder-deal-flow {
           display: grid;
           grid-template-columns: minmax(210px, .7fr) minmax(420px, 1.3fr);
@@ -16012,6 +16113,25 @@ export default function ArenaClient({
         @media (max-width: 760px) {
           .touchline-game.is-market-standalone .arena-club-sections {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .team-builder-onboarding-flow {
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(126px, 46vw);
+            grid-template-columns: none;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            padding-bottom: 10px;
+            scrollbar-width: none;
+          }
+
+          .team-builder-onboarding-flow::-webkit-scrollbar {
+            display: none;
+          }
+
+          .team-builder-onboarding-flow > span,
+          .team-builder-onboarding-flow > button {
+            min-height: 48px;
           }
 
           .arena-action-panel-market .team-builder-shell {
@@ -17351,6 +17471,10 @@ export default function ArenaClient({
           .touchline-game.is-market-standalone .team-builder-shell {
             gap: 10px;
             margin-top: 10px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-onboarding-flow {
+            margin-inline: -2px;
           }
 
           .touchline-game.is-market-standalone .team-builder-deal-flow {
