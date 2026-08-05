@@ -13,9 +13,9 @@ test("authentication configuration failures are reported instead of simulating s
   assert.match(authCopySource, /O serviço de autenticação está indisponível\. Tente novamente mais tarde\./);
 });
 
-test("password sign-in uses one first-party native session hand-off", () => {
+test("password sign-in uses one first-party server-action hand-off", () => {
   assert.doesNotMatch(authFormSource, /supabase\.auth\.setSession\(session\)/);
-  assert.match(authFormSource, /action=\{mode === "login" \? "\/api\/auth\/login" : undefined\}/);
-  assert.match(authFormSource, /method=\{mode === "login" \? "post" : undefined\}/);
+  assert.match(authFormSource, /action=\{mode === "login" \? loginWithPassword : undefined\}/);
   assert.match(authFormSource, /onSubmit=\{mode === "login" \? undefined : submit\}/);
+  assert.doesNotMatch(authFormSource, /action=\{mode === "login" \? "\/api\/auth\/login"/);
 });
