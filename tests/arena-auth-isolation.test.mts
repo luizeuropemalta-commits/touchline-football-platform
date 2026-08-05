@@ -125,7 +125,7 @@ test("all authentication continuations stay inside the Arena", () => {
   assert.match(authFormSource, /resetPasswordForEmail\([\s\S]*buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/);
   assert.match(authFormSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale\)/);
   assert.match(authFormSource, /normalizeTouchLineAuthReturnTo\(returnTo\)/);
-  assert.match(authFormSource, /touchLineAuthHref\(touchlineClubOwnerBasePath\(\), normalizedLocale\)/);
+  assert.match(authFormSource, /touchLineAuthHref\("\/arena\?skipIntro=1&onboarding=market", normalizedLocale\)/);
   assert.match(authFormSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale\)/);
   assert.doesNotMatch(proxySource, /new URL\("\/dashboard"/);
   assert.match(proxySource, /touchLinePostAuthHref\(returnTo, lang\)/);

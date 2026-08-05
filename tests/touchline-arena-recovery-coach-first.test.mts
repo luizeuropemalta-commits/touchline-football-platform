@@ -84,6 +84,11 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /className="arena-coach-login-link" href=\{coachFirstLoginHref\}/);
   assert.match(arena, /MERCADO · PASSO 1 DE 5/);
   assert.match(arena, /className="team-builder-onboarding-flow"/);
+  assert.match(arena, /params\.get\("onboarding"\) !== "market"/);
+  assert.match(arena, /window\.location\.replace\(`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\)/);
+  assert.match(arena, /\}, 6_500\);/);
+  assert.match(arena, /className="arena-market-welcome"/);
+  assert.match(arena, /arena-market-welcome-title/);
   assert.match(arena, /const mustPersistForClubOwner = canPersistArenaAccountState/);
   assert.match(arena, /if \(!response\.ok\) \{[\s\S]*?Não foi possível salvar o treinador na sua conta/);
   assert.match(arena, /setCoachSelectionError\(message\)/);

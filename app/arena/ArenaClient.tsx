@@ -3203,6 +3203,7 @@ export default function ArenaClient({
   const [isArenaFallbackFullscreen, setIsArenaFallbackFullscreen] = useState(false);
   const isArenaFullscreen = isArenaNativeFullscreen || isArenaFallbackFullscreen;
   const [isArenaVideoPaused, setIsArenaVideoPaused] = useState(false);
+  const [isMarketOnboardingWelcomeVisible, setIsMarketOnboardingWelcomeVisible] = useState(false);
   const isArenaFunctionalReady = Boolean(standaloneExperience) || (
     isArenaIntroViewportReady
     && introExperienceMode === "hidden"
@@ -3445,6 +3446,61 @@ export default function ArenaClient({
     siteLanguage,
     `/market-transfer?lang=${encodeURIComponent(siteLanguage)}`,
   );
+  const marketOnboardingWelcomeCopy = siteLanguage === "pt-BR"
+    ? {
+        eyebrow: "TOUCHLINE ENGLAND · BEM-VINDO",
+        titleLead: "Bem-vindo à TouchLine",
+        titleAccent: "Arena",
+        message: "Seu clube começa agora.",
+        journey: "Escolha seu treinador. Monte seu elenco. Boa sorte.",
+        transition: "Abrindo o Market Transfer",
+        skip: "Ir para o Market Transfer agora",
+      }
+    : {
+        eyebrow: "TOUCHLINE ENGLAND · WELCOME",
+        titleLead: "Welcome to TouchLine",
+        titleAccent: "Arena",
+        message: "Your club starts now.",
+        journey: "Choose your coach. Build your squad. Good luck.",
+        transition: "Opening Market Transfer",
+        skip: "Open Market Transfer now",
+      };
+
+  useEffect(() => {
+    // The first ClubOwner arrival has a short Arena welcome, then continues
+    // into the Market Transfer journey. This marker is issued only by the
+    // registration flow, so intentionally visiting Arena is never hijacked.
+    if (
+      standaloneExperience
+      || !isArenaFunctionalReady
+      || !hasLoadedOwnerCoach
+      || arenaPersistencePrincipal?.kind === "demo"
+      || activeArenaCoachIdentity?.coach
+    ) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("onboarding") !== "market") return;
+
+    // Schedule the visual state after the initial effect tick: this preserves
+    // server/client hydration while still presenting the welcome immediately.
+    const welcomeTimer = window.setTimeout(() => setIsMarketOnboardingWelcomeVisible(true), 0);
+    const redirectTimer = window.setTimeout(() => {
+      window.location.replace(`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`);
+    }, 6_500);
+
+    return () => {
+      window.clearTimeout(welcomeTimer);
+      window.clearTimeout(redirectTimer);
+    };
+  }, [
+    activeArenaCoachIdentity?.coach,
+    arenaPersistencePrincipal?.kind,
+    hasLoadedOwnerCoach,
+    isArenaFunctionalReady,
+    siteLanguage,
+    standaloneExperience,
+  ]);
+
   // The personal field remains intentionally separate from the standalone
   // Match Centre. The Market Transfer owns the coach-first acquisition gate.
   const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired;
@@ -6324,6 +6380,24 @@ export default function ArenaClient({
           inert={isArenaFunctionalReady ? undefined : true}
           aria-hidden={!isArenaFunctionalReady}
         >
+        {isMarketOnboardingWelcomeVisible ? (
+          <section className="arena-market-welcome" role="status" aria-live="polite" aria-label={`${marketOnboardingWelcomeCopy.titleLead} ${marketOnboardingWelcomeCopy.titleAccent}`}>
+            <div className="arena-market-welcome-rings" aria-hidden="true"><i /><i /><i /></div>
+            <div className="arena-market-welcome-copy">
+              <span>{marketOnboardingWelcomeCopy.eyebrow}</span>
+              <h1>{marketOnboardingWelcomeCopy.titleLead} <em>{marketOnboardingWelcomeCopy.titleAccent}</em></h1>
+              <p>{marketOnboardingWelcomeCopy.message}</p>
+              <strong>{marketOnboardingWelcomeCopy.journey}</strong>
+              <div><i aria-hidden="true" />{marketOnboardingWelcomeCopy.transition}</div>
+              <button
+                type="button"
+                onClick={() => window.location.replace(`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`)}
+              >
+                {marketOnboardingWelcomeCopy.skip}
+              </button>
+            </div>
+          </section>
+        ) : null}
         {isCoachSelectionRequired ? (
           <section className="arena-coach-first-gate" aria-label={siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"} data-testid="arena-coach-first-gate">
             <div className="arena-coach-first-copy">
@@ -8216,6 +8290,225 @@ export default function ArenaClient({
 
         .arena-functional-layer {
           display: contents;
+        }
+
+        .arena-market-welcome {
+          position: absolute;
+          z-index: 900;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          overflow: hidden;
+          padding: clamp(22px, 5vw, 72px);
+          background:
+            radial-gradient(circle at 50% 48%, rgba(181,255,75,.13), transparent 27%),
+            linear-gradient(110deg, rgba(2,9,11,.91), rgba(2,15,15,.64) 49%, rgba(2,9,11,.93));
+          animation: arena-market-welcome-in .55s both ease-out;
+          backdrop-filter: blur(5px);
+          -webkit-backdrop-filter: blur(5px);
+        }
+
+        .arena-market-welcome-rings {
+          position: absolute;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          pointer-events: none;
+        }
+
+        .arena-market-welcome-rings i {
+          position: absolute;
+          width: min(76vw, 720px);
+          aspect-ratio: 1;
+          border: 1px solid rgba(181,255,75,.15);
+          border-radius: 50%;
+          box-shadow: 0 0 44px rgba(181,255,75,.08), inset 0 0 34px rgba(122,231,255,.04);
+          animation: arena-market-welcome-ring 4.8s ease-in-out infinite;
+        }
+
+        .arena-market-welcome-rings i:nth-child(2) {
+          width: min(52vw, 500px);
+          border-color: rgba(122,231,255,.18);
+          animation-delay: .55s;
+        }
+
+        .arena-market-welcome-rings i:nth-child(3) {
+          width: min(28vw, 270px);
+          border-color: rgba(255,255,255,.13);
+          animation-delay: 1.1s;
+        }
+
+        .arena-market-welcome-copy {
+          position: relative;
+          z-index: 1;
+          display: grid;
+          justify-items: center;
+          max-width: 920px;
+          color: #f7ffe9;
+          text-align: center;
+        }
+
+        .arena-market-welcome-copy > span {
+          color: #b5ff4b;
+          font-size: clamp(8px, 1.1vw, 12px);
+          font-weight: 1000;
+          letter-spacing: .22em;
+          text-transform: uppercase;
+          opacity: 0;
+          animation: arena-market-welcome-copy .5s .15s both ease-out;
+        }
+
+        .arena-market-welcome-copy h1 {
+          max-width: 860px;
+          margin: 16px 0 0;
+          color: #fff;
+          font-size: clamp(38px, 7vw, 100px);
+          font-weight: 1000;
+          letter-spacing: -.07em;
+          line-height: .88;
+          text-wrap: balance;
+          opacity: 0;
+          text-shadow: 0 12px 52px rgba(0,0,0,.55);
+          animation: arena-market-welcome-title .72s .38s both cubic-bezier(.18,.84,.25,1);
+        }
+
+        .arena-market-welcome-copy h1 em {
+          display: inline-block;
+          color: #b5ff4b;
+          font-style: italic;
+          text-shadow: 0 0 26px rgba(181,255,75,.4);
+        }
+
+        .arena-market-welcome-copy p {
+          margin: 24px 0 0;
+          color: #d9efdd;
+          font-size: clamp(16px, 2vw, 23px);
+          font-weight: 700;
+          opacity: 0;
+          animation: arena-market-welcome-copy .55s .92s both ease-out;
+        }
+
+        .arena-market-welcome-copy strong {
+          margin-top: 8px;
+          color: rgba(231,247,232,.76);
+          font-size: clamp(12px, 1.45vw, 16px);
+          font-weight: 750;
+          opacity: 0;
+          animation: arena-market-welcome-copy .55s 1.2s both ease-out;
+        }
+
+        .arena-market-welcome-copy > div {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          margin-top: 34px;
+          color: #bdf3ff;
+          font-size: 11px;
+          font-weight: 1000;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+          opacity: 0;
+          animation: arena-market-welcome-copy .5s 2.05s both ease-out;
+        }
+
+        .arena-market-welcome-copy > div i {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #b5ff4b;
+          box-shadow: 0 0 0 0 rgba(181,255,75,.7);
+          animation: arena-market-welcome-pulse 1.35s infinite ease-out;
+        }
+
+        .arena-market-welcome-copy button {
+          margin-top: 13px;
+          border: 0;
+          padding: 6px 0;
+          background: transparent;
+          color: rgba(255,255,255,.54);
+          font: inherit;
+          font-size: 10px;
+          font-weight: 850;
+          text-decoration: underline;
+          text-underline-offset: 4px;
+          cursor: pointer;
+          opacity: 0;
+          animation: arena-market-welcome-copy .5s 2.25s both ease-out;
+        }
+
+        .arena-market-welcome-copy button:hover,
+        .arena-market-welcome-copy button:focus-visible {
+          color: #fff;
+          outline: none;
+        }
+
+        @keyframes arena-market-welcome-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes arena-market-welcome-copy {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes arena-market-welcome-title {
+          from { opacity: 0; transform: translateY(25px) scale(.95); filter: blur(7px); }
+          to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+
+        @keyframes arena-market-welcome-ring {
+          0%, 100% { opacity: .32; transform: scale(.9); }
+          50% { opacity: .74; transform: scale(1.06); }
+        }
+
+        @keyframes arena-market-welcome-pulse {
+          to { box-shadow: 0 0 0 10px rgba(181,255,75,0); }
+        }
+
+        @media (max-width: 760px) {
+          .arena-market-welcome {
+            padding: 24px 18px;
+          }
+
+          .arena-market-welcome-rings i {
+            width: min(128vw, 560px);
+          }
+
+          .arena-market-welcome-rings i:nth-child(2) {
+            width: min(88vw, 390px);
+          }
+
+          .arena-market-welcome-rings i:nth-child(3) {
+            width: min(46vw, 210px);
+          }
+
+          .arena-market-welcome-copy h1 {
+            max-width: 345px;
+            font-size: clamp(42px, 13vw, 59px);
+          }
+
+          .arena-market-welcome-copy > div {
+            margin-top: 28px;
+            font-size: 9px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .arena-market-welcome,
+          .arena-market-welcome-rings i,
+          .arena-market-welcome-copy > span,
+          .arena-market-welcome-copy h1,
+          .arena-market-welcome-copy p,
+          .arena-market-welcome-copy strong,
+          .arena-market-welcome-copy > div,
+          .arena-market-welcome-copy button,
+          .arena-market-welcome-copy > div i {
+            animation: none;
+            opacity: 1;
+            transform: none;
+            filter: none;
+          }
         }
 
         /* Keep every operational Arena control out of both pointer and keyboard

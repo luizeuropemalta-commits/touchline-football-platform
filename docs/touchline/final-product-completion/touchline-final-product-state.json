@@ -66,8 +66,8 @@
       "CSV/API delivery method"
     ]
   },
-  "next_executable_action": "Publish and validate the Git-integrated Preview for the current committed HEAD: Arena must remain free of the coach-selection gate, while Market Transfer must persist coach selection and guide goalkeeper → defence → midfield → attack; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
-  "last_validated_at": "2026-08-05T18:56:00+02:00",
+  "next_executable_action": "Publish and validate the Git-integrated Preview for the current committed HEAD: a new ClubOwner must see the localized 6.5-second Arena welcome, then continue to Market Transfer for coach → goalkeeper → defence → midfield → attack; ordinary Arena visits must not redirect. Keep any later game-day dispatch bound only to the server-owned TouchLine competition engine, never an external fixture calendar; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
+  "last_validated_at": "2026-08-05T19:04:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
