@@ -128,3 +128,24 @@ Visual validation of the current local production build passed at 1280px,
 honest pending market-value state. The new owner route redirects an
 unauthenticated visitor to the existing login route. Screenshot evidence is
 stored locally under the 2026-08-05 audit evidence folder.
+
+## Card Engine continuity — 2026-08-05
+
+Checkpoint `67b8c727` closes a shared-state regression in the active-card
+path. The authoritative roster client, Arena canonical state, browser roster
+serialization and the exact-card renderer now preserve the explicit
+`active-contract` authority marker. An owned card therefore continues to use
+its stored, approved in-season tier after a later verified market-value
+refresh; an unowned public offer still needs a current verified TouchLine
+market value. Browser persistence format V5 preserves that marker while V1–V4
+values remain readable. The Arena matchday bench now selects availability by
+football status but presents both the matchday bench and Reserve Vault in the
+stable goalkeeper / defender / midfielder / forward order; market value, tier
+and nominal price cannot influence that order.
+
+Validation: TypeScript, ESLint, full `651/651` test suite and local production
+build pass. Local visual evidence is saved under
+`audit/2026-08-05/evidence/`; the unauthenticated production route correctly
+stops at Coach-first rather than rendering a demonstration squad. This does
+not create market values, enable an external source, apply migration 050, or
+promote the official domain.
