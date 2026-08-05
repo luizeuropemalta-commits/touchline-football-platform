@@ -13,14 +13,23 @@ Football, scouting, player analysis, contract, agent or other data module has
 been requested as part of this initial purchase.
 
 The requested initial valuation coverage is the first divisions of England
-(Premier League), Spain (La Liga), France (Ligue 1), Brazil (Série A) and
-Germany (Bundesliga), with Malta coverage requested for confirmation.
+(Premier League), Spain (La Liga), France (Ligue 1), Brazil (Brasileirão Série
+A), Germany (Bundesliga) and Malta (Maltese Premier League). Football
+Benchmark has specifically been asked to confirm its Malta Player Valuation
+coverage because TouchLine's founder is based in Malta and plans local club
+visits.
 
-The enquiry asks for the smallest suitable plan, permitted delivery method
-(CSV and/or API), update cadence, commercial price, and rights to store and
-publicly display approved values through the TouchLine read model. This gate
-remains unresolved until Football Benchmark returns a written proposal and
-licence scope.
+The enquiry asks for the smallest suitable/custom plan, permitted delivery
+method (CSV and/or API), update cadence, commercial price, rights to store and
+publicly display approved values through the TouchLine read model, and whether
+licensed-agent users of TouchLine may access the data. This gate remains
+unresolved until Football Benchmark returns a written proposal and licence
+scope.
+
+No subscription, paid trial or charge has been activated. The public Starter
+access exposes only a limited player selection, while the Premium link does
+not disclose a public price; the commercial model is demonstration and custom
+quotation.
 
 ## Research result
 

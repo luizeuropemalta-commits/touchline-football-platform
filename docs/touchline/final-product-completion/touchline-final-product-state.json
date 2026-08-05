@@ -43,10 +43,11 @@
       "Spain — La Liga",
       "France — Ligue 1",
       "Brazil — Série A",
-      "Germany — Bundesliga"
+      "Germany — Bundesliga",
+      "Malta — Maltese Premier League"
     ],
     "coverage_confirmation_requested": [
-      "Malta"
+      "Malta — Player Valuation coverage"
     ],
     "excluded_from_initial_request": [
       "scouting",
@@ -54,6 +55,14 @@
       "agent data",
       "contract data",
       "other data modules"
+    ],
+    "commercial_state": "No subscription, paid trial or charge activated; awaiting custom quotation",
+    "required_response_checks": [
+      "price",
+      "coverage per league",
+      "limits for licensed-agent users of TouchLine",
+      "storage and public-display licence",
+      "CSV/API delivery method"
     ]
   },
   "next_executable_action": "Validate the Git-integrated Preview for the current HEAD; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
