@@ -30,7 +30,7 @@ change, or production promotion.
 | 6 | Bench organisation | COMPLETE | Selection follows availability; presentation is GK → DEF → MID → ATA, never value or price. | Regression-only. |
 | 7 | Responsive card layout | CODE_COMPLETE | The Arena no longer blocks portrait phones: the field can still enter immersive landscape, while portrait renders the real ClubOwner journey. The guided Market Transfer sequence uses a touch-scrollable step rail on narrow screens. Local 390×844 evidence is stored under the official audit evidence folder. Controlled authenticated phone/tablet and remote WebKit remain unvalidated. | Publish a Preview from the current safe checkpoint, then run the controlled device/browser matrix. |
 | 8 | Public provider-brand removal | COMPLETE | Public product wording is TouchLine-branded; provider identities remain internal/Admin metadata. | Regression-only. |
-| 9 | Preview validation | IN_PROGRESS | Branch is Git-integrated with Vercel; no production alias change. | Confirm the Preview built from current HEAD and run public smoke tests. |
+| 9 | Preview validation | IN_PROGRESS | Preview `dpl_5sjRVafBiiuq2Md9sdu8THx3nFCD` for `f45cac2f` is Ready. Public smoke confirms unauthenticated `/arena` and `/market-transfer` redirect to the localized first-party login without exposing an API endpoint. No production alias changed. | Run the controlled ClubOwner coach-persistence journey and device/browser matrix. |
 | 10 | Final Zero-Defect Audit | IN_PROGRESS | Historical completed recovery blocks are preserved; external controlled-persona, historical-data and device gates are separately tracked. | Continue only non-external audit items after current Preview validation. |
 
 ## Current external gates
