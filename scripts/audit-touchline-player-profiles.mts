@@ -42,6 +42,16 @@ type SquadPlayer = {
   countryCode3?: string | null;
 };
 
+type SquadPayload = {
+  players?: SquadPlayer[];
+  pendingPlayers?: SquadPlayer[];
+  dataQuality?: {
+    totalPlayers?: number;
+    cardEligiblePlayers?: number;
+    awaitingShirtNumberPlayers?: number;
+  };
+};
+
 const failures: string[] = [];
 const allPlayers: Array<SquadPlayer & { sourceClub: string }> = [];
 
@@ -57,8 +67,19 @@ for (const [teamId, clubName, clubShortCode] of clubs) {
     continue;
   }
 
-  const payload = await response.json() as { players?: SquadPlayer[] };
-  const players = Array.isArray(payload.players) ? payload.players : [];
+  const payload = await response.json() as SquadPayload;
+  // A player awaiting a verified shirt number cannot be offered as a card,
+  // but is still an active footballer whose identity and profile link must be
+  // audited. Do not silently turn a card-eligibility boundary into missing
+  // roster data.
+  const players = [
+    ...(Array.isArray(payload.players) ? payload.players : []),
+    ...(Array.isArray(payload.pendingPlayers) ? payload.pendingPlayers : []),
+  ];
+  const reportedTotal = payload.dataQuality?.totalPlayers;
+  if (Number.isInteger(reportedTotal) && reportedTotal !== players.length) {
+    failures.push(`${clubName}: data-quality total ${reportedTotal} does not equal ${players.length} returned active players.`);
+  }
   if (!players.length) failures.push(`${clubName}: squad is empty.`);
   if (players.length > 0 && players.length < MINIMUM_SQUAD_SIZE) {
     failures.push(`${clubName}: squad has only ${players.length} players; expected at least ${MINIMUM_SQUAD_SIZE}.`);

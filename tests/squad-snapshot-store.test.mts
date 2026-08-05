@@ -401,6 +401,31 @@ test("does not expose a coherent but incomplete persisted squad", async () => {
   assert.equal(await readPersistedSquadSnapshot(clubA.teamId, adminForStore(admin)), null);
 });
 
+test("never publishes legacy unscoped members for a competition-scoped club and repairs them on refresh", async () => {
+  const admin = new FakeAdminClient();
+  const squad = [playerP, playerQ, ...clubAFillers];
+  assert.deepEqual(
+    await persistSquadSnapshot(clubA, squad, adminForStore(admin)),
+    { stored: true },
+  );
+
+  const club = admin.clubs.find((row) => row.provider_team_id === clubA.teamId)!;
+  club.competition_id = "touchline-england";
+  for (const member of admin.memberships) member.competition_id = "touchline-england";
+  admin.memberships[0]!.competition_id = null;
+
+  const isolatedSnapshot = await readPersistedSquadSnapshot(clubA.teamId, adminForStore(admin));
+  assert.equal(isolatedSnapshot?.players.length, 11);
+  assert.equal(isolatedSnapshot?.players.some((player) => player.providerId === playerP.providerId), false);
+
+  assert.deepEqual(
+    await persistSquadSnapshot(clubA, squad, adminForStore(admin)),
+    { stored: true },
+  );
+  assert.ok(admin.memberships.every((member) => member.competition_id === "touchline-england"));
+  assert.equal((await readPersistedSquadSnapshot(clubA.teamId, adminForStore(admin)))?.players.length, 12);
+});
+
 test("an older concurrent persistence cannot reactivate a player removed by a newer revision", async () => {
   const admin = new FakeAdminClient();
   assert.deepEqual(

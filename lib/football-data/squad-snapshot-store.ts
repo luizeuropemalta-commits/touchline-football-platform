@@ -107,19 +107,27 @@ export async function readPersistedSquadSnapshot(
 
   const { data: club, error: clubError } = await admin
     .from("football_clubs")
-    .select("id")
+    .select("id,competition_id")
     .eq("provider", PROVIDER)
     .eq("provider_team_id", teamId)
     .maybeSingle();
 
   if (clubError || !club?.id) return null;
 
-  const { data: members, error: membersError } = await admin
+  let membersQuery = admin
     .from("football_squad_members")
     .select("player_id,jersey_number,position,source_updated_at")
     .eq("provider", PROVIDER)
     .eq("club_id", club.id)
     .eq("status", "active");
+
+  // A club can only publish a squad in its own competition. Older snapshots
+  // created before memberships were competition-scoped must never leak into a
+  // competition-specific public roster while the next sync repairs them.
+  const competitionId = asString(club.competition_id);
+  if (competitionId) membersQuery = membersQuery.eq("competition_id", competitionId);
+
+  const { data: members, error: membersError } = await membersQuery;
 
   if (membersError || !members || members.length < MIN_COMPLETE_SQUAD_SIZE) return null;
 
@@ -232,7 +240,7 @@ export async function persistSquadSnapshot(
     )
     // The club search trigger writes updated_at with PostgreSQL's clock,
     // giving concurrent app instances one shared revision fence.
-    .select("id,updated_at")
+    .select("id,updated_at,competition_id")
     .single();
 
   const capturedAt = asString(clubRow?.updated_at);
@@ -241,6 +249,7 @@ export async function persistSquadSnapshot(
   }
   const snapshotAdmin = admin;
   const clubId = asString(clubRow.id)!;
+  const competitionId = asString(clubRow.competition_id);
 
   const playerRows = players.map((player) => ({
     provider: PROVIDER,
@@ -289,7 +298,7 @@ export async function persistSquadSnapshot(
 
   const existingMemberResult = await snapshotAdmin
     .from("football_squad_members")
-    .select("player_id,jersey_number,position,status,source_updated_at")
+    .select("player_id,jersey_number,position,status,source_updated_at,competition_id")
     .eq("provider", PROVIDER)
     .eq("club_id", clubId);
   if (existingMemberResult.error) {
@@ -317,6 +326,7 @@ export async function persistSquadSnapshot(
       player_id: playerId,
       jersey_number: player.shirtNumber ?? existingNumbers.get(playerId) ?? null,
       position: player.position ?? null,
+      competition_id: competitionId,
       status: "active",
       source_updated_at: capturedAt,
     }];
@@ -335,6 +345,7 @@ export async function persistSquadSnapshot(
           .update({
             jersey_number: asNullableNumber(member.jersey_number),
             position: asString(member.position),
+            competition_id: asString(member.competition_id),
             status: asString(member.status) ?? "unknown",
             source_updated_at: asString(member.source_updated_at) ?? EMPTY_SQUAD_SNAPSHOT_REVISION,
           })
@@ -379,6 +390,7 @@ export async function persistSquadSnapshot(
       .update({
         jersey_number: member.jersey_number,
         position: member.position,
+        competition_id: member.competition_id,
         status: "active",
         source_updated_at: capturedAt,
       })
