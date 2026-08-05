@@ -167,6 +167,36 @@ export function ArenaAdminShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const locale = normalizeTouchLineAuthLocale(searchParams.get("lang"));
+  const pt = locale === "pt-BR";
+  const shellCopy = pt ? {
+    arenaOperations: "Operações da Arena", touchline: "TouchLine", owner: "Administração",
+    ownerIdentity: "Administrador TouchLine", clubOwnerIdentity: "Conta ClubOwner",
+    officialAdmin: "Administração oficial da Arena", account: "Conta ClubOwner",
+    openSearch: "Abrir pesquisa de futebol", openNotifications: "Abrir preferências de notificações",
+    openMenu: "Abrir menu", closeMenu: "Fechar menu", closeNavigation: "Fechar navegação",
+    signingOut: "Saindo…", signOut: "Sair", authUnavailable: "O serviço de autenticação está indisponível.",
+  } : {
+    arenaOperations: "Arena operations", touchline: "TouchLine", owner: "Owner",
+    ownerIdentity: "TouchLine Owner", clubOwnerIdentity: "Authenticated ClubOwner",
+    officialAdmin: "Official Arena administration", account: "ClubOwner account",
+    openSearch: "Open football search", openNotifications: "Open notification preferences",
+    openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation",
+    signingOut: "Signing out…", signOut: "Sign out", authUnavailable: "Authentication service is unavailable.",
+  };
+  const primaryLinks = pt ? [
+    { href: "/arena", label: "TouchLine Arena", description: "Voltar ao dia de jogo", icon: Trophy },
+    { href: "/notifications", label: "Notificações", description: "Suas preferências de entrega", icon: Bell },
+    { href: "/inbox", label: "Caixa de entrada", description: "Avisos oficiais da Central", icon: Inbox },
+    { href: "/football-search", label: "Pesquisa de Futebol", description: "Dados oficiais de futebol", icon: Search },
+  ] : PRIMARY_LINKS;
+  const ownerLinks = pt ? [
+    { href: "/admin", label: "Admin da Arena", description: "Controles oficiais", icon: ShieldCheck },
+    { href: "/admin/analytics", label: "Atividade", description: "Telemetria própria da Arena", icon: Activity },
+    { href: "/admin/cards", label: "Inventário de Cards", description: "Operações oficiais de cards", icon: WalletCards },
+    { href: "/admin/promotions", label: "Promoções", description: "Controles de campanhas", icon: Sparkles },
+    { href: "/admin/finance", label: "Controle Financeiro", description: "Visão financeira protegida", icon: CircleDollarSign },
+    { href: "/admin/football-data", label: "Dados de Futebol", description: "Saúde dos dados TouchLine", icon: Database },
+  ] : OWNER_LINKS;
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
@@ -176,7 +206,7 @@ export function ArenaAdminShell({
     setSignOutError("");
     const supabase = createClient();
     if (!supabase) {
-      setSignOutError("Authentication service is unavailable.");
+      setSignOutError(shellCopy.authUnavailable);
       setSigningOut(false);
       return;
     }
@@ -203,15 +233,15 @@ export function ArenaAdminShell({
       <div className="px-2">
         <Logo light />
         <p className="mt-3 text-[8px] font-black uppercase tracking-[.24em] text-[#a3ff12]">
-          Arena operations
+          {shellCopy.arenaOperations}
         </p>
       </div>
 
       <nav aria-label="TouchLine Arena" className="mt-7 space-y-1">
         <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.18em] text-slate-700">
-          TouchLine
+          {shellCopy.touchline}
         </p>
-        {PRIMARY_LINKS.map((item) => (
+        {primaryLinks.map((item) => (
           <NavigationLink
             key={item.href}
             item={item}
@@ -225,9 +255,9 @@ export function ArenaAdminShell({
       {isOwner ? (
         <nav aria-label="Arena administration" className="mt-6 space-y-1 border-t border-white/[.07] pt-5">
           <p className="mb-2 px-3 text-[8px] font-black uppercase tracking-[.18em] text-slate-700">
-            Owner
+            {shellCopy.owner}
           </p>
-          {OWNER_LINKS.map((item) => (
+          {ownerLinks.map((item) => (
             <NavigationLink
               key={item.href}
               item={item}
@@ -247,7 +277,7 @@ export function ArenaAdminShell({
           <span className="min-w-0">
             <span className="block truncate text-[11px] font-bold">{profileName}</span>
             <span className="mt-0.5 block truncate text-[8px] text-slate-600">
-              {isOwner ? "TouchLine Owner" : profileEmail || "Authenticated ClubOwner"}
+              {isOwner ? shellCopy.ownerIdentity : profileEmail || shellCopy.clubOwnerIdentity}
             </span>
           </span>
         </div>
@@ -258,7 +288,7 @@ export function ArenaAdminShell({
           className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-white/[.08] bg-white/[.025] px-3 text-[9px] font-black text-slate-400 transition hover:border-rose-300/25 hover:bg-rose-300/[.06] hover:text-rose-100 disabled:cursor-wait disabled:opacity-60"
         >
           <LogOut size={14} aria-hidden="true" />
-          {signingOut ? "Signing out…" : "Sign out"}
+          {signingOut ? shellCopy.signingOut : shellCopy.signOut}
         </button>
         {signOutError ? <p className="mt-2 text-[8px] leading-4 text-rose-200" role="alert">{signOutError}</p> : null}
       </div>
@@ -278,7 +308,7 @@ export function ArenaAdminShell({
         <div className="fixed inset-0 z-50 flex xl:hidden">
           <button
             type="button"
-            aria-label="Close navigation"
+            aria-label={shellCopy.closeNavigation}
             className="absolute inset-0 bg-black/75 backdrop-blur-sm"
             onClick={() => setMenuOpen(false)}
           />
@@ -286,7 +316,7 @@ export function ArenaAdminShell({
             {navigation}
             <button
               type="button"
-              aria-label="Close menu"
+              aria-label={shellCopy.closeMenu}
               onClick={() => setMenuOpen(false)}
               className="absolute right-4 top-4 grid size-9 place-items-center rounded-xl border border-white/10 bg-black/30 text-slate-300"
             >
@@ -301,7 +331,7 @@ export function ArenaAdminShell({
           <div className="mx-auto flex h-[68px] w-full max-w-[1500px] items-center gap-3 px-4 sm:px-6 xl:px-8">
             <button
               type="button"
-              aria-label="Open menu"
+              aria-label={shellCopy.openMenu}
               onClick={() => setMenuOpen(true)}
               className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-300 xl:hidden"
             >
@@ -312,20 +342,20 @@ export function ArenaAdminShell({
                 TouchLine England
               </p>
               <p className="mt-1 truncate text-[10px] text-slate-500">
-                {isOwner ? "Official Arena administration" : "ClubOwner account"}
+                {isOwner ? shellCopy.officialAdmin : shellCopy.account}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Link
                 href={touchLineAuthHref("/football-search", locale)}
-                aria-label="Open football search"
+                aria-label={shellCopy.openSearch}
                 className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-400 transition hover:border-cyan-300/30 hover:text-cyan-200"
               >
                 <Search size={16} />
               </Link>
               <Link
                 href={touchLineAuthHref("/notifications", locale)}
-                aria-label="Open notification preferences"
+                aria-label={shellCopy.openNotifications}
                 className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-400 transition hover:border-[#a3ff12]/30 hover:text-[#caff72]"
               >
                 <Bell size={16} />

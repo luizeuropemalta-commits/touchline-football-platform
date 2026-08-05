@@ -57,7 +57,7 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
         <span>ClubHub</span>
         <span>TouchLine Arena</span>
         <span>ClubOwners</span>
-        <span>Player Feeds</span>
+        <span>{isPortuguese ? "Feeds de Jogadores" : "Player Feeds"}</span>
       </div>
 
       <div className={styles.pitchViewport}>

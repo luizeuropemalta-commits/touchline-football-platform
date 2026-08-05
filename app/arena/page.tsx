@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { parseTouchlineArenaPanel } from "@/lib/touchlineArena/arena-navigation";
 import { parseTouchlineArenaIntroIntent } from "@/lib/touchlineArena/arena-intro";
 import { touchlineClubOwnerProfileHref, touchlineClubOwnerSubstitutionHref } from "@/lib/touchlineArena/club-owner-routes";
+import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 
 export default async function ArenaPage({
   searchParams,
@@ -44,6 +45,7 @@ export default async function ArenaPage({
   return (
     <ArenaClient
       initialPanel={initialPanel}
+      initialLocale={normalizeTouchLineLocale(firstValue(params.lang))}
       initialContractPlayerId={firstValue(params.contractPlayer)}
       initialContractPlayerName={firstValue(params.contractName)}
       initialContractClubId={firstValue(params.contractClub)}

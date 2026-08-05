@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Search, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 
 type SportmonksCandidate = {
   sportmonksPlayerId: string;
@@ -24,7 +25,7 @@ function initials(value?: string | null) {
   return parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "TL";
 }
 
-export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compact" }) {
+export function PlayerDatabaseSearch({ mode = "full", locale = "en-GB" }: { mode?: "full" | "compact"; locale?: "en-GB" | "pt-BR" }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SportmonksCandidate[]>([]);
   const [loading, setLoading] = useState(false);
@@ -32,6 +33,16 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
 
   const trimmed = query.trim();
   const compact = mode === "compact";
+  const pt = locale === "pt-BR";
+  const copy = pt ? {
+    compactPlaceholder: "Pesquisar na TouchLine England...", placeholder: "Pesquisar jogadores nos dados da TouchLine England...",
+    failed: "A pesquisa da TouchLine England falhou.", searching: "Pesquisando na TouchLine England...", empty: "Nenhum jogador da TouchLine England foi encontrado.",
+    verified: "Dados verificados pela TouchLine England", publicLabel: "Exibidos publicamente como TouchLine England", pending: "PENDENTE",
+  } : {
+    compactPlaceholder: "Search TouchLine England...", placeholder: "Search players through TouchLine England data...",
+    failed: "TouchLine England search failed.", searching: "Searching TouchLine England...", empty: "No TouchLine England player found.",
+    verified: "TouchLine England verified data", publicLabel: "Shown publicly as TouchLine England", pending: "PENDING",
+  };
 
   useEffect(() => {
     if (trimmed.length < 2) {
@@ -56,12 +67,12 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
           signal: controller.signal,
         });
         const payload = await response.json();
-        if (!response.ok || payload?.ok === false) throw new Error(payload?.error || "TouchLine England search failed.");
+        if (!response.ok || payload?.ok === false) throw new Error(copy.failed);
         setResults(Array.isArray(payload?.candidates) ? payload.candidates : []);
-      } catch (err) {
+      } catch (_err) {
         if (controller.signal.aborted) return;
         setResults([]);
-        setError(err instanceof Error ? err.message.replace(/SportMonks/gi, "TouchLine England") : "TouchLine England search failed.");
+        setError(copy.failed);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -71,7 +82,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [trimmed]);
+  }, [copy.failed, trimmed]);
 
   const visibleResults = useMemo(() => results.slice(0, compact ? 4 : 10), [compact, results]);
 
@@ -82,7 +93,8 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={compact ? "Search TouchLine England..." : "Search players through TouchLine England data..."}
+          placeholder={compact ? copy.compactPlaceholder : copy.placeholder}
+          aria-label={compact ? copy.compactPlaceholder : copy.placeholder}
           className="h-11 w-full rounded-2xl border border-cyan-300/15 bg-white/[.045] pl-10 pr-3 text-xs font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-[#a3ff12]/40 focus:bg-white/[.07]"
         />
       </div>
@@ -90,23 +102,29 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
       {!compact && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[8px] font-black text-slate-500">
           <span className="inline-flex items-center gap-1 rounded-full border border-[#a3ff12]/20 bg-[#a3ff12]/10 px-2.5 py-1 text-[#caff72]">
-            <ShieldCheck size={11} /> TouchLine England verified data
+            <ShieldCheck size={11} /> {copy.verified}
           </span>
-          <span>Shown publicly as TouchLine England</span>
+          <span>{copy.publicLabel}</span>
         </div>
       )}
 
       {(loading || error || visibleResults.length > 0 || trimmed.length >= 2) && (
         <div className={compact ? "absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-cyan-300/15 bg-[#06111d]/95 shadow-2xl backdrop-blur-xl" : "mt-4 overflow-hidden rounded-2xl border border-white/[.08] bg-white/[.025]"}>
-          {loading && <div className="p-4 text-[10px] font-black text-cyan-100">Searching TouchLine England...</div>}
+          {loading && <div className="p-4 text-[10px] font-black text-cyan-100" role="status">{copy.searching}</div>}
           {error && <div className="p-4 text-[10px] font-bold text-rose-200">{error}</div>}
           {!loading && !error && trimmed.length >= 2 && visibleResults.length === 0 && (
-            <div className="p-4 text-[10px] font-bold text-slate-500">No TouchLine England player found.</div>
+            <div className="p-4 text-[10px] font-bold text-slate-500" role="status">{copy.empty}</div>
           )}
           {!loading && !error && visibleResults.map((player) => (
             <Link
               key={player.sportmonksPlayerId}
-              href={`/visual-qa/touchline-card-studio?playerId=${encodeURIComponent(player.sportmonksPlayerId)}&player=${encodeURIComponent(player.name)}`}
+              href={touchlinePlayerProfileHref({
+                sportmonksPlayerId: player.sportmonksPlayerId,
+                name: player.name,
+                clubName: player.clubName ?? undefined,
+                position: player.position ?? undefined,
+                shirtNumber: player.shirtNumber ?? undefined,
+              }, locale)}
               className="grid grid-cols-[44px_1fr_auto] items-center gap-3 border-t border-white/[.06] p-3 first:border-t-0 transition hover:bg-cyan-300/[.055]"
             >
               <div className="grid size-11 place-items-center overflow-hidden rounded-xl border border-white/[.08] bg-black/30 text-[11px] font-black text-cyan-100">
@@ -124,7 +142,7 @@ export function PlayerDatabaseSearch({ mode = "full" }: { mode?: "full" | "compa
                 </p>
               </div>
               <div className="hidden text-right sm:block">
-                <p className="text-[10px] font-black text-[#caff72]">{player.marketValue || "PENDING"}</p>
+                <p className="text-[10px] font-black text-[#caff72]">{player.marketValue || copy.pending}</p>
                 <UserRound size={13} className="ml-auto mt-1 text-cyan-300/60" />
               </div>
             </Link>

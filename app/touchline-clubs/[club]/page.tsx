@@ -5,16 +5,13 @@ import path from "path";
 import type { CSSProperties } from "react";
 import ClubTrophyCarousel from "@/components/touchline/ClubTrophyCarousel";
 import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup";
-import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
-import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
+import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import type { TouchlineFantasyLineupMember, TouchlineFixture, TouchlineTeam } from "@/lib/football-data/types";
 import {
-  TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   TOUCHLINE_ENGLAND_CLUBS,
   findTouchLineClub,
   formatCompactEuro,
   rankClubOwnerCards,
-  squadCardToExactPlayer,
   type ClubOwnerSquadCard,
 } from "@/lib/touchlineArena/demo-data";
 import { inferArenaRole, normalizeOfficialShirtNumber } from "@/lib/football-data/arena-lineup";
@@ -29,22 +26,14 @@ import { buildOfficialStandings } from "@/lib/football-data/official-standings";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import {
   parseMarketValueEur,
-  resolveTouchlineVerifiedPlayerEconomy,
-  touchlineCardTierName,
-  touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
-import {
-  formatTouchlineVerifiedCommercialCardPrice,
-} from "@/lib/touchlineArena/commercial-card-pricing";
 import { buildTouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
-import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
-import { touchlineArenaContractHref, touchlineArenaHref } from "@/lib/touchlineArena/arena-navigation";
+import { touchlineArenaHref } from "@/lib/touchlineArena/arena-navigation";
 import {
   normalizeTouchLineLocale,
   touchLineT,
   type TouchLineLocale,
 } from "@/lib/touchlineArena/i18n";
-import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
 import { fetchTouchlineInternalJson } from "@/lib/server/safe-internal-fetch";
 
@@ -308,6 +297,17 @@ function feedTeamBelongsToClub(teamId: string | undefined, teamName: string | un
   return findTouchLineClub(teamName)?.teamId === club.teamId;
 }
 
+function localizedFixtureStatus(value: string, locale: TouchLineLocale) {
+  if (locale !== "pt-BR") return value;
+  const normalized = value.trim().toLowerCase().replace(/[_-]+/g, " ");
+  if (["not started", "scheduled", "upcoming", "ns"].includes(normalized)) return "Agendada";
+  if (["live", "inplay", "in play"].includes(normalized)) return "Ao vivo";
+  if (["finished", "ft", "full time"].includes(normalized)) return "Encerrada";
+  if (normalized === "postponed") return "Adiada";
+  if (["cancelled", "canceled"].includes(normalized)) return "Cancelada";
+  return value;
+}
+
 async function loadClubMatchSnapshot(
   club: NonNullable<ReturnType<typeof findTouchLineClub>>,
   locale: TouchLineLocale,
@@ -389,6 +389,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const clubValue = clubCards.reduce((sum, card) => sum + parseMarketValueEur(card.marketValue), 0);
   const hasCompleteClubValue = clubCards.length > 0 && clubCards.every((card) => parseMarketValueEur(card.marketValue) > 0);
   const touchLinePoints = clubCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
+  const squadStatus = locale === "pt-BR" ? `${clubCards.length} cards TouchLine` : squadLoad.status;
   const leagueTable = buildOfficialStandings({
     teams: TOUCHLINE_ENGLAND_CLUBS.map((entry) => ({
       providerTeamId: entry.teamId,
@@ -448,13 +449,13 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
 
         <section className="club-hub-league-table" aria-label="TouchLine England table">
           <div className="club-hub-section-head">
-            <div><span>TouchLine England Table</span><strong>{t("clubTable")}</strong></div>
+            <div><span>{locale === "pt-BR" ? "Tabela TouchLine England" : "TouchLine England Table"}</span><strong>{t("clubTable")}</strong></div>
             <div className="club-hub-section-actions">
               <a href={`/touchline-tables?${localeQuery}`}>{t("fullTables")}</a>
               <small>{t("officialTableDescription")}</small>
             </div>
           </div>
-          {leagueTable.completedFixtures ? <div className="club-hub-table-list">
+          {leagueTable.completedFixtures ? <div className="club-hub-table-list" role="region" tabIndex={0} aria-label={locale === "pt-BR" ? "Tabela rolável da TouchLine England" : "Scrollable TouchLine England table"}>
             {leagueTable.rows.map((row, index) => (
               <a
                 key={row.team.teamId}
@@ -493,7 +494,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               </div>
             </div>
             <p>{matchPreview.home.name} vs {matchPreview.away.name}</p>
-            <small>{[matchPreview.status, matchPreview.startsAt, matchPreview.source].filter(Boolean).join(" / ")}</small>
+            <small>{[localizedFixtureStatus(matchPreview.status, locale), matchPreview.startsAt, matchPreview.source].filter(Boolean).join(" / ")}</small>
           </article>
           <article><span>{t("clubStore")}</span><strong>{t("officialShopTraffic")}</strong><p>{t("clubStoreDescription")}</p></article>
           <article><span>{t("partnerSlots")}</span><strong>{club.sponsorSlots} {t("spaces")}</strong><p>{t("partnerDescription")}</p></article>
@@ -507,96 +508,17 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             </div>
             <div className="club-hub-section-actions">
               <a href={`/touchline-player-card-rankings?${localeQuery}`}>{t("playerCardsRanking")}</a>
-              <small>{squadLoad.status}. {t("playerOrderDescription")}</small>
+              <small>{squadStatus}. {t("playerOrderDescription")}</small>
             </div>
           </div>
           {clubCards.length ? (
-            <div className="club-hub-card-grid">
-              {clubCards.map((card, index) => {
-                const exactPlayer = squadCardToExactPlayer(card);
-                const economy = resolveTouchlineVerifiedPlayerEconomy({
-                  marketValue: card.marketValue,
-                  marketValueSource: card.marketValueSource,
-                });
-                const updating = locale === "pt-BR" ? "Em atualização" : "Updating";
-                const zoomTier = economy.status === "resolved" ? economy.tierKey : card.cardTier;
-                const profileHref = touchlinePlayerProfileHref({
-                  sportmonksPlayerId: card.id,
-                  name: card.name,
-                  clubName: card.clubName,
-                  position: card.position,
-                  shirtNumber: card.shirtNumber,
-                  countryCode3: card.countryCode3,
-                }, locale, { previewTier: card.cardTier });
-
-                return (
-                  <article key={card.id} className="club-hub-card">
-                    <span className="club-hub-rank">#{index + 1}</span>
-                    <TouchlineCardZoom
-                      ariaLabel={`${locale === "pt-BR" ? "Ampliar card de" : "Expand card for"} ${card.name}`}
-                      contractHref={touchlineArenaContractHref({
-                        locale,
-                        playerId: card.id,
-                        playerName: card.name,
-                        clubId: club.teamId,
-                      })}
-                      contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
-                      contractValue={formatTouchlineVerifiedCommercialCardPrice({
-                        marketValue: card.marketValue,
-                        marketValueSource: card.marketValueSource,
-                        competition: "england",
-                        locale,
-                      })}
-                      contractTermLabel={locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season"}
-                      tierAccent={touchlineCardTierPalette(zoomTier).accent}
-                      tierLabel={economy.status === "resolved" ? touchlineCardTierName(economy.tierKey, locale) : updating}
-                      details={buildTouchlinePlayerCardZoomDetails({
-                        locale,
-                        name: card.name,
-                        clubName: card.clubName,
-                        position: card.position,
-                        nationality: card.countryCode3,
-                        marketValue: card.marketValue,
-                        marketValueSource: card.marketValueSource,
-                        touchlinePoints: card.touchlinePoints,
-                        profileHref,
-                      })}
-                      expandedContent={(
-                        <TouchlineEliteExactCard
-                          player={exactPlayer}
-                          labels={cardLabels}
-                          imageLoading="lazy"
-                          layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
-                          playerProfileHref={profileHref}
-                          forceNeonActive
-                        />
-                      )}
-                    >
-                      <TouchlineEliteExactCard
-                        className="club-hub-rendered-card"
-                        player={exactPlayer}
-                        labels={cardLabels}
-                        imageLoading={index < 6 ? "eager" : "lazy"}
-                        initialRenderScale={180 / 430}
-                        layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
-                        playerProfileHref={profileHref}
-                        showProfileAction={false}
-                        showSocialMetrics={false}
-                      />
-                    </TouchlineCardZoom>
-                    <div className="club-hub-card-meta">
-                      <a
-                        href={profileHref}
-                        aria-label={`${t("openSelectedPlayerProfile")}: ${card.name}`}
-                      >
-                        {t("openSelectedPlayerProfile")}
-                      </a>
-                      <small>{card.position} / {card.marketValue} / {card.touchlinePoints} pts</small>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+            <ClubHubSquadGrid
+              cards={clubCards}
+              clubId={club.teamId}
+              locale={locale}
+              labels={cardLabels}
+              openProfileLabel={t("openSelectedPlayerProfile")}
+            />
           ) : (
             <div className="club-hub-empty" role={squadUnavailable ? "status" : undefined}>
               <strong>{squadUnavailable ? squadRecoveryCopy.title : t("cardsPending")}</strong>
@@ -1079,6 +1001,38 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           gap: 14px;
           padding-top: 22px;
         }
+        .club-hub-progressive-controls {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          margin-top: 18px;
+          border-top: 1px solid rgba(255,255,255,.1);
+          padding-top: 18px;
+        }
+        .club-hub-progressive-controls span {
+          color: rgba(255,255,255,.62);
+          font-size: 11px;
+          font-weight: 850;
+        }
+        .club-hub-progressive-controls button {
+          min-height: 44px;
+          border: 1px solid rgba(181,255,75,.48);
+          border-radius: 999px;
+          padding: 0 18px;
+          color: #efffbd;
+          background: rgba(181,255,75,.1);
+          font: inherit;
+          font-size: 10px;
+          font-weight: 950;
+          cursor: pointer;
+        }
+        .club-hub-progressive-controls button:hover,
+        .club-hub-progressive-controls button:focus-visible {
+          border-color: #c5ff6d;
+          background: rgba(181,255,75,.2);
+          outline: none;
+        }
         .club-hub-card {
           position: relative;
           min-height: 360px;
@@ -1230,6 +1184,16 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             max-width: 100%;
             overflow-x: auto;
             padding-bottom: 6px;
+            scrollbar-width: thin;
+            scrollbar-color: color-mix(in srgb, var(--club-accent) 70%, #b5ff4b) rgba(255,255,255,.06);
+            -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+            mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+          }
+          .club-hub-table-list:focus,
+          .club-hub-table-list:hover {
+            -webkit-mask-image: none;
+            mask-image: none;
+            outline: none;
           }
           .club-hub-table-row {
             min-width: 920px;
@@ -1284,6 +1248,10 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           .club-hub-card-grid {
             grid-template-columns: 1fr;
             gap: 12px;
+          }
+          .club-hub-progressive-controls {
+            align-items: stretch;
+            flex-direction: column;
           }
           .club-hub-rendered-card { width: min(100%, 190px) !important; }
           .club-hub-fixture-row { gap: 8px; }

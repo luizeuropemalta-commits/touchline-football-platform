@@ -1525,7 +1525,7 @@ export function TouchlineEliteExactCard({
             textShadow: "0 0 12px rgba(184,255,70,.36), 0 2px 12px rgba(0,0,0,.86)",
           }}
         >
-          TouchLine England League Stats
+          {runtimeLocale === "pt-BR" ? "Estatísticas da TouchLine England League" : "TouchLine England League Stats"}
         </div>
 
         {shouldShowCardActions ? (

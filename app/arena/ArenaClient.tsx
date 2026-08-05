@@ -3441,6 +3441,13 @@ export default function ArenaClient({
     // into a mandatory shopping screen for a ClubOwner who has no coach yet.
     && standaloneExperience === "market",
   );
+  const needsArenaRosterRecovery = Boolean(
+    isArenaFunctionalReady
+    && hasLoadedOwnerCoach
+    && arenaPersistencePrincipal?.kind !== "demo"
+    && standaloneExperience === null
+    && (!activeArenaCoachIdentity?.coach || ownedSquadCount < 11),
+  );
   const coachFirstLoginHref = touchLineAuthEntryHref(
     "/login",
     siteLanguage,
@@ -6398,6 +6405,29 @@ export default function ArenaClient({
             </div>
           </section>
         ) : null}
+        {needsArenaRosterRecovery && !isMarketOnboardingWelcomeVisible && !activeArenaPanel ? (
+          <aside className="arena-empty-roster-recovery" role="status" aria-label={siteLanguage === "pt-BR" ? "Concluir preparação do clube" : "Complete club setup"}>
+            <span>{siteLanguage === "pt-BR" ? "SEU CLUBE CONTINUA SEGURO" : "YOUR CLUB REMAINS SAFE"}</span>
+            <h2>{siteLanguage === "pt-BR" ? "Prepare seu clube para a próxima rodada" : "Prepare your club for the next round"}</h2>
+            <p>
+              {!activeArenaCoachIdentity?.coach
+                ? (siteLanguage === "pt-BR" ? "Escolha primeiro seu treinador oficial no Market Transfer. A Arena fica livre para o dia de jogo." : "Choose your official coach first in Market Transfer. Arena stays clear for matchday.")
+                : ownedSquadCount === 0
+                  ? (siteLanguage === "pt-BR" ? "Seu treinador está salvo. Agora contrate os jogadores do seu elenco no Market Transfer." : "Your coach is saved. Now contract your squad players in Market Transfer.")
+                  : (siteLanguage === "pt-BR" ? `Seu elenco tem ${ownedSquadCount} jogadores. Continue a montagem até completar a formação.` : `Your squad has ${ownedSquadCount} players. Continue building until the formation is complete.`)}
+            </p>
+            <div>
+              <a className="is-primary" href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
+                {!activeArenaCoachIdentity?.coach
+                  ? (siteLanguage === "pt-BR" ? "Abrir Mercado de Treinadores" : "Open Coach Market")
+                  : ownedSquadCount === 0
+                    ? (siteLanguage === "pt-BR" ? "Abrir Mercado de Jogadores" : "Open Player Market")
+                    : (siteLanguage === "pt-BR" ? "Continuar Montagem do Elenco" : "Continue Squad Building")}
+              </a>
+              <a href={selectedBuilderClubHubHref}>{siteLanguage === "pt-BR" ? "Voltar ao ClubHub" : "Return to Club Hub"}</a>
+            </div>
+          </aside>
+        ) : null}
         {isCoachSelectionRequired ? (
           <section className="arena-coach-first-gate" aria-label={siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"} data-testid="arena-coach-first-gate">
             <div className="arena-coach-first-copy">
@@ -7692,7 +7722,7 @@ export default function ArenaClient({
                         </div>
                         <a href={`/touchline-player-card-rankings?lang=${encodeURIComponent(siteLanguage)}`}>{t("ranking")}</a>
                       </div>
-                      <div className="team-builder-club-grid">
+                      <div className="team-builder-club-grid" role="region" tabIndex={0} aria-label={marketUi.ariaEnglandClubs}>
                         {TEAM_BUILDER_CLUBS.map((club) => (
                           <button
                             key={club.teamId}
@@ -8442,6 +8472,79 @@ export default function ArenaClient({
           outline: none;
         }
 
+        .arena-empty-roster-recovery {
+          position: absolute;
+          z-index: 108;
+          top: max(92px, calc(env(safe-area-inset-top) + 84px));
+          right: max(22px, env(safe-area-inset-right));
+          width: min(390px, calc(100vw - 44px));
+          display: grid;
+          gap: 10px;
+          border: 1px solid rgba(181,255,75,.42);
+          border-radius: 20px;
+          padding: 19px;
+          color: #f4ffe2;
+          background: linear-gradient(145deg, rgba(4,17,13,.94), rgba(2,8,11,.94));
+          box-shadow: 0 24px 70px rgba(0,0,0,.48), inset 0 0 0 1px rgba(255,255,255,.035);
+          backdrop-filter: blur(18px);
+        }
+
+        .arena-empty-roster-recovery > span {
+          color: #b5ff4b;
+          font-size: 8px;
+          font-weight: 1000;
+          letter-spacing: .15em;
+        }
+
+        .arena-empty-roster-recovery h2 {
+          margin: 0;
+          font-size: clamp(22px, 2.6vw, 34px);
+          line-height: .98;
+          letter-spacing: -.04em;
+        }
+
+        .arena-empty-roster-recovery p {
+          margin: 0;
+          color: rgba(239,255,234,.68);
+          font-size: 11px;
+          font-weight: 750;
+          line-height: 1.5;
+        }
+
+        .arena-empty-roster-recovery > div {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .arena-empty-roster-recovery a {
+          display: inline-flex;
+          min-height: 44px;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(255,255,255,.14);
+          border-radius: 999px;
+          padding: 0 14px;
+          color: rgba(255,255,255,.82);
+          background: rgba(255,255,255,.04);
+          font-size: 9px;
+          font-weight: 950;
+          text-decoration: none;
+        }
+
+        .arena-empty-roster-recovery a.is-primary {
+          border-color: rgba(181,255,75,.58);
+          color: #071007;
+          background: #a3ff12;
+          box-shadow: 0 0 24px rgba(163,255,18,.16);
+        }
+
+        .arena-empty-roster-recovery a:hover,
+        .arena-empty-roster-recovery a:focus-visible {
+          border-color: #d5ff8d;
+          outline: none;
+        }
+
         @keyframes arena-market-welcome-in {
           from { opacity: 0; }
           to { opacity: 1; }
@@ -8491,6 +8594,19 @@ export default function ArenaClient({
           .arena-market-welcome-copy > div {
             margin-top: 28px;
             font-size: 9px;
+          }
+
+          .arena-empty-roster-recovery {
+            top: max(82px, calc(env(safe-area-inset-top) + 74px));
+            right: max(10px, env(safe-area-inset-right));
+            left: max(10px, env(safe-area-inset-left));
+            width: auto;
+            padding: 15px;
+          }
+
+          .arena-empty-roster-recovery > div,
+          .arena-empty-roster-recovery a {
+            width: 100%;
           }
         }
 
@@ -16415,11 +16531,19 @@ export default function ArenaClient({
             overflow-x: auto;
             overscroll-behavior-x: contain;
             padding-bottom: 10px;
-            scrollbar-width: none;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(181,255,75,.5) rgba(255,255,255,.06);
           }
 
           .team-builder-onboarding-flow::-webkit-scrollbar {
-            display: none;
+            display: block;
+            height: 4px;
+          }
+
+          .team-builder-onboarding-flow::-webkit-scrollbar-thumb,
+          .arena-action-panel-market .team-builder-club-grid::-webkit-scrollbar-thumb {
+            border-radius: 999px;
+            background: rgba(181,255,75,.5);
           }
 
           .team-builder-onboarding-flow > span,
@@ -17162,6 +17286,13 @@ export default function ArenaClient({
             overflow-y: hidden;
             padding: 2px 2px 8px;
             scroll-snap-type: x proximity;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(181,255,75,.5) rgba(255,255,255,.06);
+          }
+
+          .arena-action-panel-market .team-builder-club-grid::-webkit-scrollbar {
+            display: block;
+            height: 4px;
           }
 
           .arena-action-panel-market .team-builder-club-grid button {
@@ -17949,7 +18080,7 @@ export default function ArenaClient({
             gap: 5px;
             border-radius: 10px;
             padding: 3px 5px;
-            grid-template-columns: auto 22px minmax(0, 1fr) 22px auto;
+            grid-template-columns: auto 44px minmax(0, 1fr) 44px auto;
           }
 
           .club-symbol-kicker {
@@ -17993,8 +18124,45 @@ export default function ArenaClient({
             font-size: 5px;
           }
 
-          .club-symbol-arrow { width: 20px; height: 20px; font-size: 15px; }
-          .club-symbol-match-centre { min-height: 22px; gap: 3px; padding: 0 5px; font-size: 5px; }
+          .club-symbol-kicker,
+          .club-symbol-arrow,
+          .club-symbol-match-centre,
+          .arena-quick-toggle,
+          .arena-quick-links button,
+          .arena-quick-links a,
+          .language-trigger {
+            min-height: 44px;
+          }
+
+          .club-symbol-arrow { width: 44px; height: 44px; font-size: 20px; }
+          .club-symbol-match-centre { gap: 5px; padding: 0 10px; font-size: 7px; }
+
+          .arena-empty-roster-recovery {
+            top: max(8px, env(safe-area-inset-top));
+            right: max(74px, calc(env(safe-area-inset-right) + 68px));
+            left: auto;
+            width: min(390px, calc(100vw - 190px));
+            max-height: calc(100dvh - 72px);
+            overflow-y: auto;
+            padding: 12px;
+          }
+
+          .arena-empty-roster-recovery h2 { font-size: 22px; }
+          .arena-empty-roster-recovery p { font-size: 9px; }
+          .arena-empty-roster-recovery > div { flex-wrap: nowrap; }
+          .arena-empty-roster-recovery a { width: auto; min-height: 44px; }
+
+          .touchline-game.is-market-standalone .team-builder-section-title a,
+          .touchline-game.is-market-standalone .team-builder-club-grid button,
+          .touchline-game.is-market-standalone .team-builder-club-hub,
+          .touchline-game.is-market-standalone .team-builder-market-search,
+          .touchline-game.is-market-standalone .team-builder-market-search > button,
+          .touchline-game.is-market-standalone .team-builder-position-filters button,
+          .touchline-game.is-market-standalone .team-builder-market-sort,
+          .touchline-game.is-market-standalone .team-builder-player-select,
+          .touchline-game.is-market-standalone .team-builder-quick-buy {
+            min-height: 44px;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
