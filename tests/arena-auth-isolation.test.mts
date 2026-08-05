@@ -86,7 +86,9 @@ test("password login and immediate-session registration require Arena access bef
     authFormSource.indexOf('if (mode === "login")'),
     authFormSource.indexOf('} else if (mode === "register")'),
   );
-  assert.ok(passwordLogin.indexOf("await finishTouchlineArenaAccessOrSignOut(") < passwordLogin.indexOf("await enterArena(arenaHref)"));
+  assert.match(passwordLogin, /await signInWithTouchlinePassword\(normalizedEmail, effectivePassword\)/);
+  assert.match(passwordLogin, /loginRedirect = arenaHref/);
+  assert.doesNotMatch(passwordLogin, /supabase\.auth\.setSession/);
 
   const registration = authFormSource.slice(
     authFormSource.indexOf('} else if (mode === "register")'),

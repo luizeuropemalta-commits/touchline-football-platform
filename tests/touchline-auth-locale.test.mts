@@ -169,8 +169,8 @@ test("login remains a returning entry while every registration continuation requ
     formSource.indexOf("} else {", formSource.indexOf('} else if (mode === "register")') + 1),
   );
 
-  assert.match(loginFlow, /await enterArena\(arenaHref\)/);
-  assert.doesNotMatch(loginFlow, /enterArena\(firstEntryHref\)/);
+  assert.match(loginFlow, /loginRedirect = arenaHref/);
+  assert.doesNotMatch(loginFlow, /loginRedirect = firstEntryHref/);
   assert.match(registrationFlow, /emailRedirectTo: buildTouchLineAuthCallbackUrl\(firstEntryHref\)/);
   assert.match(registrationFlow, /await enterArena\(firstEntryHref\)/);
   assert.match(formSource, /mode === "register" \? firstEntryHref : arenaHref/);
@@ -191,7 +191,7 @@ test("Arena navigation uses a short accessible route transition before changing 
   assert.match(transitionFlow, /window\.matchMedia\?\.\("\(prefers-reduced-motion: reduce\)"\)/);
   assert.match(transitionFlow, /setIsArenaTransitioning\(true\)/);
   assert.match(transitionFlow, /reducedMotion \? 40 : 280/);
-  assert.ok(transitionFlow.indexOf("setIsArenaTransitioning(true)") < transitionFlow.indexOf("router.push(href)"));
+  assert.ok(transitionFlow.indexOf("setIsArenaTransitioning(true)") < transitionFlow.indexOf("window.location.assign(href)"));
   assert.match(formSource, /auth-route-transition\$\{isArenaTransitioning \? " is-active" : ""\}/);
   assert.match(formSource, /aria-hidden="true"/);
   assert.match(globalStylesSource, /\.auth-route-transition \{[\s\S]*?pointer-events: none;[\s\S]*?transition: opacity 280ms/);

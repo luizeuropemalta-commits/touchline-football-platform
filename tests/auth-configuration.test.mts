@@ -12,3 +12,8 @@ test("authentication configuration failures are reported instead of simulating s
   assert.match(authCopySource, /Authentication service is unavailable\. Please try again later\./);
   assert.match(authCopySource, /O serviço de autenticação está indisponível\. Tente novamente mais tarde\./);
 });
+
+test("password sign-in uses one first-party session hand-off", () => {
+  assert.doesNotMatch(authFormSource, /supabase\.auth\.setSession\(session\)/);
+  assert.match(authFormSource, /await signInWithTouchlinePassword\(normalizedEmail, effectivePassword\)/);
+});

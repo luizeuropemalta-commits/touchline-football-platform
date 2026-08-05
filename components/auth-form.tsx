@@ -144,11 +144,8 @@ export function AuthForm({
     const payload = await response.json().catch(() => null) as {
       ok?: boolean;
       error?: string;
-      session?: { access_token?: string; refresh_token?: string };
     } | null;
-    if (response.ok && payload?.ok && payload.session?.access_token && payload.session.refresh_token) {
-      return { access_token: payload.session.access_token, refresh_token: payload.session.refresh_token };
-    }
+    if (response.ok && payload?.ok) return;
     if (payload?.error === "invalid_credentials") throw new Error("invalid_credentials");
     if (payload?.error === "arena_access_unavailable") throw new Error("arena_access_unavailable");
     throw new Error("auth_unavailable");
@@ -179,9 +176,7 @@ export function AuthForm({
     let loginRedirect: string | null = null;
     try {
       if (mode === "login") {
-        const session = await signInWithTouchlinePassword(normalizedEmail, effectivePassword);
-        const { error } = await supabase.auth.setSession(session);
-        if (error) throw new Error("auth_unavailable");
+        await signInWithTouchlinePassword(normalizedEmail, effectivePassword);
         loginRedirect = arenaHref;
       } else if (mode === "register") {
         const { data, error } = await supabase.auth.signUp({
