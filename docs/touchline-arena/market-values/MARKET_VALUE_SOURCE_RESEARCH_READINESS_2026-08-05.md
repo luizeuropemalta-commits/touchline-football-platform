@@ -2,6 +2,21 @@
 
 Status: `EXTERNAL_HARD_GATE` for bulk value ingestion and public publication.
 
+## Commercial enquiry status — 5 August 2026
+
+TouchLine has requested a Football Benchmark demonstration and commercial
+quotation limited to **Player Valuation**. The requested initial coverage is
+the first divisions of England (Premier League), Spain (La Liga), France
+(Ligue 1), Brazil (Série A) and Germany (Bundesliga), with Malta coverage
+requested for confirmation. No scouting, player-analysis, agent, contract or
+other data module has been requested as part of this initial purchase.
+
+The enquiry asks for the smallest suitable plan, permitted delivery method
+(CSV and/or API), update cadence, commercial price, and rights to store and
+publicly display approved values through the TouchLine read model. This gate
+remains unresolved until Football Benchmark returns a written proposal and
+licence scope.
+
 ## Research result
 
 Football Benchmark documents coverage of all Premier League club players and

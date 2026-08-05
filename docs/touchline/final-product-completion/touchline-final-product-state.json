@@ -31,7 +31,28 @@
     "Preview validation",
     "Final Zero-Defect Audit"
   ],
-  "next_executable_action": "Validate the Git-integrated Preview for the current HEAD; retain the Market Value Engine source boundary until written bulk-reuse permission/licence or an approved licensed export exists.",
+  "market_value_commercial_enquiry": {
+    "status": "AWAITING_FOOTBALL_BENCHMARK_RESPONSE",
+    "product_requested": "Player Valuation only",
+    "competitions_requested": [
+      "England — Premier League",
+      "Spain — La Liga",
+      "France — Ligue 1",
+      "Brazil — Série A",
+      "Germany — Bundesliga"
+    ],
+    "coverage_confirmation_requested": [
+      "Malta"
+    ],
+    "excluded_from_initial_request": [
+      "scouting",
+      "player analysis",
+      "agent data",
+      "contract data",
+      "other data modules"
+    ]
+  },
+  "next_executable_action": "Validate the Git-integrated Preview for the current HEAD; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
   "last_validated_at": "2026-08-05T15:35:00+02:00",
   "tests": {
     "typescript": "pass",
