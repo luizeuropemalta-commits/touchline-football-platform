@@ -197,6 +197,29 @@ export function AuthForm({
         } else {
           setRegistrationConfirmationEmail(normalizedEmail);
         }
+      } else if (mode === "login") {
+        // Keep the password exchange first-party.  Unlike a native form
+        // navigation this lets the visible page safely show the precise
+        // category of failure, and prevents Safari from rendering an API
+        // endpoint as the destination after Password AutoFill.
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: normalizedEmail,
+            password: effectivePassword,
+            return_to: arenaHref,
+            locale: normalizedLocale,
+          }),
+        });
+        const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+        if (!response.ok || payload?.ok !== true) {
+          throw new Error(payload?.error || "auth_unavailable");
+        }
+        await enterArena(arenaHref);
       } else {
         const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
           redirectTo: buildTouchLineAuthCallbackUrl(resetPasswordHref),
@@ -326,7 +349,7 @@ export function AuthForm({
     <form
       action={mode === "login" ? "/login/submit" : undefined}
       method="post"
-      onSubmit={mode === "login" ? undefined : submit}
+      onSubmit={submit}
       className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}
     >
       {mode === "login" ? <input type="hidden" name="return_to" value={arenaHref} /> : null}
