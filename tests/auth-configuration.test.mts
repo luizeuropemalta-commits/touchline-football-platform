@@ -15,12 +15,12 @@ test("authentication configuration failures are reported instead of simulating s
   assert.match(authCopySource, /O serviço de autenticação está indisponível\. Tente novamente mais tarde\./);
 });
 
-test("password sign-in uses a first-party background request with a safe native fallback", () => {
+test("password sign-in uses one same-origin native redirect with an API compatibility guard", () => {
   assert.doesNotMatch(authFormSource, /supabase\.auth\.setSession\(session\)/);
   assert.match(authFormSource, /action=\{mode === "login" \? "\/login\/submit" : undefined\}/);
   assert.match(authFormSource, /method="post"/);
-  assert.match(authFormSource, /onSubmit=\{submit\}/);
-  assert.match(authFormSource, /fetch\("\/api\/auth\/login"/);
+  assert.match(authFormSource, /onSubmit=\{mode === "login" \? undefined : submit\}/);
+  assert.doesNotMatch(authFormSource, /fetch\("\/api\/auth\/login"/);
   assert.match(loginSubmitSource, /export \{ POST \} from "@\/app\/api\/auth\/login\/route"/);
   assert.match(loginApiSource, /NextResponse\.redirect\(new URL\(destination, request\.url\), 303\)/);
   assert.doesNotMatch(loginApiSource, /window\.location\.replace/);
