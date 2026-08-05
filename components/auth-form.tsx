@@ -233,6 +233,14 @@ export function AuthForm({
       setMessage(
         code === "invalid_credentials"
           ? copy.invalidCredentials
+          : code === "email_not_confirmed"
+            ? copy.emailNotConfirmed
+            : code === "account_disabled"
+              ? copy.accountDisabled
+              : code === "session_cookie_failure"
+                ? copy.sessionCookieFailure
+                : code === "profile_setup_failed"
+                  ? copy.profileSetupFailed
           : code === "arena_access_unavailable"
             ? copy.welcomeUnavailable
             : code === "auth_unavailable"
