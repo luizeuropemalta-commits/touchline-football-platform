@@ -18,7 +18,7 @@ test("authentication configuration failures are reported instead of simulating s
 test("password sign-in uses one first-party native redirect hand-off", () => {
   assert.doesNotMatch(authFormSource, /supabase\.auth\.setSession\(session\)/);
   assert.match(authFormSource, /action=\{mode === "login" \? "\/login\/submit" : undefined\}/);
-  assert.match(authFormSource, /method=\{mode === "login" \? "post" : undefined\}/);
+  assert.match(authFormSource, /method="post"/);
   assert.match(authFormSource, /onSubmit=\{mode === "login" \? undefined : submit\}/);
   assert.doesNotMatch(authFormSource, /action=\{mode === "login" \? "\/api\/auth\/login"/);
   assert.match(loginSubmitSource, /export \{ POST \} from "@\/app\/api\/auth\/login\/route"/);

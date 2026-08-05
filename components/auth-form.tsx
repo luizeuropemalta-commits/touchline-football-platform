@@ -319,9 +319,12 @@ export function AuthForm({
 
   return (
     <>
+    {/* Registration and recovery are client-side Supabase flows after hydration.
+        Their native fallback remains POST so a pre-hydration Enter key cannot
+        serialize an email or password into the URL. */}
     <form
       action={mode === "login" ? "/login/submit" : undefined}
-      method={mode === "login" ? "post" : undefined}
+      method="post"
       onSubmit={mode === "login" ? undefined : submit}
       className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}
     >
