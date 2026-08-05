@@ -22,7 +22,7 @@ change, or production promotion.
 
 | # | Item | Status | Current evidence | Next executable action |
 |---:|---|---|---|---|
-| 1 | Market Value Engine | CODE_COMPLETE | Canonical server-owned import/read architecture, admin workflow, CSV template and safety report exist locally. External source ingestion remains disabled. | Validate the current Preview; retain `Market Value Pending` until approved values are imported. |
+| 1 | Market Value Engine | EXTERNAL_HARD_GATE | Canonical server-owned import/read architecture, admin workflow, CSV template and safety report exist locally. Football Benchmark is subscriber/download data and FootballTransfers bulk-reuse rights are not confirmed. | Obtain written reuse permission/licence or an approved licensed export; retain `Market Value Pending` until reviewed values are imported. |
 | 2 | Unified Card Engine | IN_PROGRESS | `77ffadf8`, `67b8c727`, `18134f7f` and `f347f2dc` preserve stored active-contract tier authority through Arena, ClubOwner, exact cards and ClubHub. | Validate the latest Preview with a controlled non-financial ClubOwner persona. |
 | 3 | Canonical tiers and borders | COMPLETE | One versioned 0/1/2/4/7/10/15 policy and seven visual tiers; no ranking-derived pricing. | Regression-only. |
 | 4 | Active-season stability | COMPLETE | Stored active-contract tier is propagated and browser roster V5 retains its authority marker. | Regression-only. |

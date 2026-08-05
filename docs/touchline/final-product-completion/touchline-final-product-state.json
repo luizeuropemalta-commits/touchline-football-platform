@@ -31,7 +31,7 @@
     "Preview validation",
     "Final Zero-Defect Audit"
   ],
-  "next_executable_action": "Validate the Git-integrated Preview for f347f2dc; then continue the first incomplete non-external item in the final-product ledger.",
+  "next_executable_action": "Validate the Git-integrated Preview for the current HEAD; retain the Market Value Engine source boundary until written bulk-reuse permission/licence or an approved licensed export exists.",
   "last_validated_at": "2026-08-05T15:35:00+02:00",
   "tests": {
     "typescript": "pass",
