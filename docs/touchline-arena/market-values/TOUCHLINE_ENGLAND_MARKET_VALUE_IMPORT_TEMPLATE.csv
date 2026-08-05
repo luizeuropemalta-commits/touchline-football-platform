@@ -1,0 +1,2 @@
+player_id,external_player_id,source_url,market_value,currency,market_value_eur
+CANONICAL_TOUCHLINE_PLAYER_UUID,LICENSED_SOURCE_PLAYER_ID,https://licensed-source.example/player/PLAYER_ID,200000000,EUR,200000000

@@ -478,7 +478,8 @@ export default async function AdminOwnerPanel({
     { href: "/admin/cards", label: "Card Inventory", detail: "Art, publication and supply", icon: Layers3 },
     { href: "/admin/analytics", label: "Arena Analytics", detail: "ClubOwner activity and retention", icon: BarChart3 },
     { href: "/admin/promotions", label: "Promotions", detail: "Campaigns and credit ledger", icon: Gift },
-    { href: "/admin/football-data", label: "Football Data", detail: "Sportmonks normalization", icon: Database },
+    { href: "/admin/football-data", label: "Football Data", detail: "Normalized football foundation", icon: Database },
+    { href: "/admin/market-values", label: "Market Values", detail: "Verified values and review queue", icon: ShieldCheck },
     { href: "/admin/finance", label: "Finance Control", detail: "Protected financial overview", icon: CircleDollarSign },
   ];
 

@@ -30,6 +30,7 @@ import {
   touchlinePlayerProfileHref,
 } from "@/lib/touchlineArena/player-links";
 import { loadTouchLineOfficialPlayerIdentity } from "@/lib/touchlineArena/player-profile-official";
+import { loadTouchlineVerifiedMarketValueByProviderPlayerId } from "@/lib/touchlineArena/market-value-read-model";
 import { loadTouchLinePlayerStatisticsReadModel } from "@/lib/touchlineArena/player-season-statistics-server";
 import {
   touchLinePlayerSeasonCoverageMessage,
@@ -554,9 +555,15 @@ export default async function TouchLinePlayerProfilePage({
     selectedFixtureId: Array.isArray(query.fixture) ? query.fixture[0] : query.fixture,
   });
   if (official.providerPlayerId) exactPlayer.sportmonksPlayerId = official.providerPlayerId;
-  if (official.player?.marketValue !== undefined) {
-    exactPlayer.marketValue = formatCompactEuro(official.player.marketValue);
-    exactPlayer.marketValueSource = "provider";
+  const verifiedMarketValue = await loadTouchlineVerifiedMarketValueByProviderPlayerId(
+    official.providerPlayerId ?? officialLookup.providerPlayerId,
+  );
+  if (verifiedMarketValue.status === "verified" && verifiedMarketValue.marketValueEur !== null) {
+    exactPlayer.marketValue = formatCompactEuro(verifiedMarketValue.marketValueEur);
+    exactPlayer.marketValueSource = "verified-cache";
+  } else {
+    exactPlayer.marketValue = "Pending";
+    exactPlayer.marketValueSource = "unavailable";
   }
   const competition = resolveTouchlineCardCompetition({
     state: activeRanking,
@@ -575,10 +582,8 @@ export default async function TouchLinePlayerProfilePage({
   // Market value controls the economic tier. Ranking remains independent and
   // contributes only points and sporting position information.
   const economy = resolveTouchlineVerifiedPlayerEconomy({
-    marketValue: official.player?.marketValue ?? exactPlayer.marketValue,
-    marketValueSource: official.player?.marketValue !== undefined
-      ? "provider"
-      : exactPlayer.marketValueSource,
+    marketValue: exactPlayer.marketValue,
+    marketValueSource: exactPlayer.marketValueSource,
   });
   const economicTier = economy.status === "resolved"
     ? touchlineArenaTierForKey(economy.tierKey)
@@ -587,10 +592,8 @@ export default async function TouchLinePlayerProfilePage({
     ?? touchlineArenaTierForKey(card.cardTier)
     ?? touchlineArenaTierForKey("ruby-red")!;
   const displayedPriceText = formatTouchlineVerifiedCommercialCardPrice({
-    marketValue: official.player?.marketValue ?? exactPlayer.marketValue,
-    marketValueSource: official.player?.marketValue !== undefined
-      ? "provider"
-      : exactPlayer.marketValueSource,
+    marketValue: exactPlayer.marketValue,
+    marketValueSource: exactPlayer.marketValueSource,
     competition: "england",
     locale,
   });
@@ -649,8 +652,8 @@ export default async function TouchLinePlayerProfilePage({
         clubName: card.clubName,
         position: displayPosition,
         nationality: displayNationality,
-        marketValue: official.player?.marketValue ?? exactPlayer.marketValue,
-        marketValueSource: official.player?.marketValue !== undefined ? "provider" : exactPlayer.marketValueSource,
+        marketValue: exactPlayer.marketValue,
+        marketValueSource: exactPlayer.marketValueSource,
         touchlinePoints: competition.touchlinePoints,
         profileHref,
         eyebrow: isPortuguese ? "Perfil oficial do atleta" : "Official player profile",
@@ -1032,7 +1035,7 @@ export default async function TouchLinePlayerProfilePage({
             </div>
             <div>
               <small>{text.lastMarketUpdate}</small>
-              <strong>{officialSyncTime || text.rankPending}</strong>
+              <strong>{verifiedMarketValue.lastVerified ? formatOfficialSyncTime(verifiedMarketValue.lastVerified, locale) : text.rankPending}</strong>
             </div>
           </div>
 

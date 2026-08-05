@@ -379,6 +379,32 @@ export async function readAuthoritativeTouchlineRoster(
     return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
   }
 
+  // The ClubOwner/Arena roster consumes the same TouchLine-owned approved
+  // value read model as public profiles. A missing migration or unverified
+  // row becomes Pending; it never falls back to a live provider value.
+  const marketValuesResponse = await admin
+    .from("football_player_market_values")
+    .select("player_id,market_value_eur,status,confidence")
+    .in("player_id", playerIds);
+  const marketValues = dataRows(marketValuesResponse.data) ?? [];
+  const approvedMarketValuesByPlayerId = new Map(
+    marketValues.flatMap((row) => {
+      const playerId = asUuid(row.player_id);
+      const amount = asFiniteNumber(row.market_value_eur);
+      return playerId && amount !== null && amount >= 0 && asString(row.status) === "verified" && asString(row.confidence) === "verified"
+        ? [[playerId, amount] as const]
+        : [];
+    }),
+  );
+  const canonicalPlayers = players.map((player) => {
+    const approved = approvedMarketValuesByPlayerId.get(asUuid(player.id) ?? "");
+    return {
+      ...player,
+      market_value: approved ?? null,
+      market_value_currency: approved === undefined ? null : "EUR",
+    };
+  });
+
   const clubIds = [...new Set([
     ...inventories.map((inventory) => asUuid(inventory.club_id)),
     ...players.map((player) => asUuid(player.current_club_id)),
@@ -414,7 +440,7 @@ export async function readAuthoritativeTouchlineRoster(
   return mapAuthoritativeRosterRows({
     contracts,
     inventories,
-    players,
+    players: canonicalPlayers,
     clubs,
     squadMembers,
   });

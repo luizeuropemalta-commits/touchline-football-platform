@@ -114,3 +114,11 @@ Latest safe checkpoint: `766f0d78` — applied-migration evidence plus Gold Poli
 ## Preview deployment observation — 2026-08-04
 
 The `touchline-football-platform` sibling Vercel project failed after a successful build because its `api/players/search-and-build-card` function measured 711.82 MB uncompressed, exceeding Vercel's 250 MB function limit. This is a deployment configuration/bundle gate specific to that project, not a product-code test failure; the approved `touchline-arena-official` Preview is still deploying. No production alias was changed. Next executable action: inspect the official deployment result first, then remove the oversized route dependency or apply the project-scoped Vercel large-functions setting only after confirming it targets the intended non-production project.
+
+## Market Value Engine — 2026-08-05
+
+**Status:** `CODE_COMPLETE`, local migration and workflow only; remote migration and licensed values remain deliberately unapplied.
+
+Migration `050_touchline_market_value_engine.sql` defines the TouchLine-owned canonical current-value table, immutable player-value history, import runs/items, pending/mapping queue, job definitions/runs and service-role-only RLS. It preserves the earlier card-economy history by renaming it, and removes legacy triggers that changed card classifications during a generic football-data update. The approved 30-day annual refresh, seven-day delta check, daily transfer-window roster detection, and manual one-player import are recorded as inert job definitions. CSV parsing is native; spreadsheet parsing and licensed-source retrieval are injected server-side interfaces with no enabled default. The protected owner UI is `/admin/market-values`; public profiles and authoritative ClubOwner roster reads accept only verified canonical values, otherwise `Market Value Pending`.
+
+Local evidence: TypeScript pass, ESLint pass, full test suite `646/646` pass. No data was scraped, no external source was activated, no remote migration was applied and no production alias changed. Template and migration safety review: `docs/touchline-arena/market-values/`.
