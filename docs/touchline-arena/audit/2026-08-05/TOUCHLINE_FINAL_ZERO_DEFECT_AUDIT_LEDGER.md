@@ -64,10 +64,11 @@ Production: read-only validation only; no production promotion is permitted for 
 - Production build: passed.
 - Local server roster read: all 20 England clubs, 565 unique canonical players, snapshot source only.
 - Targeted commercial-price and Match Centre tests: 12 passed.
+- Full automated suite: 636 passed.
 - TypeScript and ESLint: passed after the commercial and responsive corrections.
 - Production build: passed after the commercial and responsive corrections.
 - Visual evidence: `evidence/match-centre-mobile-390x844.png` (before) and `evidence/match-centre-mobile-after-390x844.png` (after); kept locally only.
 
 ## Next audited action
 
-Continue from the first unverified authenticated journey: a controlled ClubOwner with an already-persisted coach, then validate Market, roster, Training Centre, Inbox and notifications without changing production data. Follow with the tablet/desktop viewport matrix and the remaining server/API/RLS review.
+Continue from the first unverified authenticated journey: a controlled ClubOwner with an already-persisted coach, then validate Market, roster, Training Centre, Inbox and notifications without changing production data. Follow with the tablet/desktop viewport matrix and the remaining server/API/RLS review. The route inventory contains 74 Next page/route handlers; audit-only and visual-QA routes remain excluded from production acceptance evidence.
