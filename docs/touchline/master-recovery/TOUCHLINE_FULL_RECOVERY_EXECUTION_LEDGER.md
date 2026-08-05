@@ -105,6 +105,10 @@ Latest safe commits after checkpoint: `eb79bb12`, `ca182d1d`, `ab608662`, `88bc9
 
 Production schema application is now verified for migrations `043`, `047` and `048` in `vxireiswggllwhbsmdcj`. Central messages/receipts persist under RLS, `coach_provider_id` persists in the owner state, and the three server-only player-season read-model tables exist. The remaining gates are controlled browser/persona evidence, historical football coverage and deliberate production promotion — not missing schema.
 
+## Continuing audit regression note — 2026-08-05
+
+Checkpoint `67dd5cd2` restores the intended ClubOwner commercial boundary without reopening the economy design: a card sourced from an active server-side inventory/contract retains its stored tier colour and displays the approved current England nominal number. The audit found all 600 inventory cards have a valid tier; 595 still carry the explicitly retired `2026-07-tc-v2` marker. That retired marker is recognized only for an already-owned card and maps to the replacement 0/1/2/4/7/10/15 policy; its former numeric values are never displayed. An unknown table or missing tier remains unavailable. Public Market and ClubHub offers still require a verified current football value and therefore remain `Pendente`/`Pending` when it is absent. This was validated with 30 targeted tests, the full 640-test suite, TypeScript, ESLint and production build. Visual confirmation with a controlled persisted ClubOwner remains part of Block 35 and does not use a real-user account.
+
 Latest safe checkpoint: `766f0d78` — applied-migration evidence plus Gold Polish canonical field, card-spacing and unified bench validation, all Preview-only.
 
 ## Preview deployment observation — 2026-08-04
