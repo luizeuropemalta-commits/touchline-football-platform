@@ -2,6 +2,16 @@ import { AuthForm } from "@/components/auth-form";
 import { AuthLayout } from "@/components/auth-layout";
 import { getTouchLineAuthCopy, normalizeTouchLineAuthLocale } from "@/lib/touchlineArena/auth-i18n";
 
+const loginErrors = new Set([
+  "auth_callback",
+  "invalid_credentials",
+  "email_not_confirmed",
+  "account_disabled",
+  "profile_setup_failed",
+  "session_cookie_failure",
+  "auth_unavailable",
+]);
+
 export default async function Login({
   searchParams,
 }: {
@@ -20,7 +30,7 @@ export default async function Login({
         mode="login"
         locale={locale}
         returnTo={returnTo}
-        initialError={error === "auth_callback" ? "auth_callback" : null}
+        initialError={typeof error === "string" && loginErrors.has(error) ? error as Parameters<typeof AuthForm>[0]["initialError"] : null}
       />
     </AuthLayout>
   );

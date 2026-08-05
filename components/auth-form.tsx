@@ -18,7 +18,15 @@ import { Button, Input } from "./ui";
 
 type Mode = "login" | "register" | "forgot";
 type SocialAuthProvider = "google" | "apple" | "facebook";
-type AuthEntryError = "auth_callback" | null;
+type AuthEntryError =
+  | "auth_callback"
+  | "invalid_credentials"
+  | "email_not_confirmed"
+  | "account_disabled"
+  | "profile_setup_failed"
+  | "session_cookie_failure"
+  | "auth_unavailable"
+  | null;
 
 function buildTouchLineAuthCallbackUrl(nextHref: string) {
   const callbackUrl = new URL("/auth/callback", resolveTouchLineAuthOrigin({
@@ -114,7 +122,21 @@ export function AuthForm({
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialAuthProvider | null>(null);
   const [isArenaTransitioning, setIsArenaTransitioning] = useState(false);
-  const initialMessage = initialError === "auth_callback" ? copy.confirmationLinkError : "";
+  const initialMessage = initialError === "auth_callback"
+    ? copy.confirmationLinkError
+    : initialError === "invalid_credentials"
+      ? copy.invalidCredentials
+      : initialError === "email_not_confirmed"
+        ? copy.emailNotConfirmed
+        : initialError === "account_disabled"
+          ? copy.accountDisabled
+          : initialError === "profile_setup_failed"
+            ? copy.profileSetupFailed
+            : initialError === "session_cookie_failure"
+              ? copy.sessionCookieFailure
+              : initialError === "auth_unavailable"
+                ? copy.authenticationUnavailable
+                : "";
   const [message, setMessage] = useState(initialMessage);
   const [messageTone, setMessageTone] = useState<"success" | "error" | null>(
     initialMessage ? "error" : null,
@@ -133,22 +155,6 @@ export function AuthForm({
     // server-issued Supabase session available before Arena guards run and is
     // more reliable than a client-router transition after Safari AutoFill.
     window.location.assign(href);
-  }
-
-  async function signInWithTouchlinePassword(email: string, password: string) {
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "content-type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const payload = await response.json().catch(() => null) as {
-      ok?: boolean;
-      error?: string;
-    } | null;
-    if (response.ok && payload?.ok) return;
-    if (payload?.error === "invalid_credentials") throw new Error("invalid_credentials");
-    if (payload?.error === "arena_access_unavailable") throw new Error("arena_access_unavailable");
-    throw new Error("auth_unavailable");
   }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -175,10 +181,7 @@ export function AuthForm({
     }
     let loginRedirect: string | null = null;
     try {
-      if (mode === "login") {
-        await signInWithTouchlinePassword(normalizedEmail, effectivePassword);
-        loginRedirect = arenaHref;
-      } else if (mode === "register") {
+      if (mode === "register") {
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password: effectivePassword,
@@ -319,7 +322,13 @@ export function AuthForm({
 
   return (
     <>
-    <form onSubmit={submit} className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}>
+    <form
+      action={mode === "login" ? "/api/auth/login" : undefined}
+      method={mode === "login" ? "post" : undefined}
+      onSubmit={mode === "login" ? undefined : submit}
+      className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}
+    >
+      {mode === "login" ? <input type="hidden" name="return_to" value={arenaHref} /> : null}
       {mode === "register" && <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.fullName}</span><Input required name="full_name" value={name} onChange={e=>setName(e.target.value)} placeholder={copy.fullNamePlaceholder} autoComplete="name"/></label>}
       <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.email}</span><Input required name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={copy.emailPlaceholder} autoComplete="email"/></label>
       {mode !== "forgot" && (

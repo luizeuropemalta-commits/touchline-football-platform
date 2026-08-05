@@ -160,25 +160,18 @@ test("email, Google, Apple and Facebook access are supported and social buttons 
 });
 
 test("login remains a returning entry while every registration continuation requests first entry", () => {
-  const loginFlow = formSource.slice(
-    formSource.indexOf('if (mode === "login")'),
-    formSource.indexOf('} else if (mode === "register")'),
-  );
-  const registrationFlow = formSource.slice(
-    formSource.indexOf('} else if (mode === "register")'),
-    formSource.indexOf("} else {", formSource.indexOf('} else if (mode === "register")') + 1),
-  );
-
-  assert.match(loginFlow, /loginRedirect = arenaHref/);
-  assert.doesNotMatch(loginFlow, /loginRedirect = firstEntryHref/);
-  assert.match(registrationFlow, /emailRedirectTo: buildTouchLineAuthCallbackUrl\(firstEntryHref\)/);
-  assert.match(registrationFlow, /await enterArena\(firstEntryHref\)/);
+  assert.match(formSource, /name="return_to" value=\{arenaHref\}/);
+  assert.doesNotMatch(formSource, /name="return_to" value=\{firstEntryHref\}/);
+  assert.match(formSource, /emailRedirectTo: buildTouchLineAuthCallbackUrl\(firstEntryHref\)/);
+  assert.match(formSource, /await enterArena\(firstEntryHref\)/);
   assert.match(formSource, /mode === "register" \? firstEntryHref : arenaHref/);
 });
 
 test("invalid or expired confirmation callbacks show a clear localized recovery message", () => {
-  assert.match(loginSource, /error === "auth_callback" \? "auth_callback" : null/);
-  assert.match(formSource, /initialError === "auth_callback" \? copy\.confirmationLinkError/);
+  assert.match(loginSource, /"auth_callback"/);
+  assert.match(loginSource, /"invalid_credentials"/);
+  assert.match(loginSource, /loginErrors\.has\(error\)/);
+  assert.match(formSource, /initialError === "auth_callback"\s*\?\s*copy\.confirmationLinkError/);
   assert.match(getTouchLineAuthCopy("pt-BR").form.confirmationLinkError, /inválido ou expirou/);
 });
 

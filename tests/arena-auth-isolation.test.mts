@@ -82,20 +82,14 @@ test("password login and immediate-session registration require Arena access bef
   );
   assert.match(authFormSource, /await fetch\("\/api\/touchline-arena\/access"/);
 
-  const passwordLogin = authFormSource.slice(
-    authFormSource.indexOf('if (mode === "login")'),
-    authFormSource.indexOf('} else if (mode === "register")'),
-  );
-  assert.match(passwordLogin, /await signInWithTouchlinePassword\(normalizedEmail, effectivePassword\)/);
-  assert.match(passwordLogin, /loginRedirect = arenaHref/);
-  assert.doesNotMatch(passwordLogin, /supabase\.auth\.setSession/);
+  assert.match(authFormSource, /action=\{mode === "login" \? "\/api\/auth\/login" : undefined\}/);
+  assert.match(authFormSource, /method=\{mode === "login" \? "post" : undefined\}/);
+  assert.match(authFormSource, /name="return_to" value=\{arenaHref\}/);
+  assert.doesNotMatch(authFormSource, /supabase\.auth\.setSession/);
 
-  const registration = authFormSource.slice(
-    authFormSource.indexOf('} else if (mode === "register")'),
-    authFormSource.indexOf("} else {", authFormSource.indexOf('} else if (mode === "register")') + 1),
-  );
-  assert.match(registration, /if \(data\.session\)/);
-  assert.ok(registration.indexOf("await finishTouchlineArenaAccessOrSignOut(") < registration.indexOf("await enterArena(firstEntryHref)"));
+  assert.match(authFormSource, /if \(mode === "register"\)/);
+  assert.match(authFormSource, /if \(data\.session\)/);
+  assert.ok(authFormSource.indexOf("await finishTouchlineArenaAccessOrSignOut(") < authFormSource.indexOf("await enterArena(firstEntryHref)"));
   assert.match(authFormSource, /const \{ error: signOutError \} = await supabase\.auth\.signOut/);
   assert.match(authFormSource, /if \(signOutError\) throw new Error/);
 });
