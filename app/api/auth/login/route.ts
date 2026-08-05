@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
 import { ensureTouchlineArenaAccess } from "@/lib/server/touchline-arena-access";
@@ -6,39 +6,10 @@ import { ensureTouchlineArenaAccess } from "@/lib/server/touchline-arena-access"
 type LoginPayload = {
   email?: unknown;
   password?: unknown;
-  return_to?: unknown;
 };
-
-function applySessionCookies(response: NextResponse, responseWithSession: NextResponse) {
-  // Copy through the cookies as cookies, not as a raw Headers object.  This is
-  // important for Safari: it must receive the Supabase session Set-Cookie on
-  // the same first-party response that confirms the sign-in.
-  responseWithSession.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
-  return response;
-}
-
-function successResponse(responseWithSession: NextResponse, access: Awaited<ReturnType<typeof ensureTouchlineArenaAccess>>) {
-  const response = NextResponse.json({ ok: true, ...access });
-  applySessionCookies(response, responseWithSession);
-  return response;
-}
 
 function invalidRequest() {
   return NextResponse.json({ ok: false, error: "invalid_credentials" }, { status: 400 });
-}
-
-function safeReturnTo(request: NextRequest, value: unknown) {
-  if (typeof value !== "string" || !value.startsWith("/")) return "/arena";
-  const target = new URL(value, request.url);
-  return target.origin === request.nextUrl.origin ? `${target.pathname}${target.search}` : "/arena";
-}
-
-function loginErrorRedirect(request: NextRequest, error: string, returnTo: unknown) {
-  const redirectUrl = new URL("/login", request.url);
-  redirectUrl.searchParams.set("error", error);
-  const target = safeReturnTo(request, returnTo);
-  if (target !== "/arena") redirectUrl.searchParams.set("returnTo", target);
-  return NextResponse.redirect(redirectUrl, { status: 303 });
 }
 
 /**
@@ -49,74 +20,53 @@ function loginErrorRedirect(request: NextRequest, error: string, returnTo: unkno
  */
 export async function POST(request: NextRequest) {
   let payload: LoginPayload;
-  const nativeFormPost = request.headers.get("content-type")?.includes("application/x-www-form-urlencoded") ?? false;
   try {
-    if (nativeFormPost) {
-      const formData = await request.formData();
-      payload = {
-        email: formData.get("email"),
-        password: formData.get("password"),
-        return_to: formData.get("return_to"),
-      };
-    } else {
-      payload = await request.json() as LoginPayload;
-    }
+    payload = await request.json() as LoginPayload;
   } catch {
-    return nativeFormPost ? loginErrorRedirect(request, "invalid_credentials", undefined) : invalidRequest();
+    return invalidRequest();
   }
 
   const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
   const password = typeof payload.password === "string" ? payload.password : "";
-  if (!email || !password) {
-    return nativeFormPost ? loginErrorRedirect(request, "invalid_credentials", payload.return_to) : invalidRequest();
-  }
+  if (!email || !password) return invalidRequest();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    return nativeFormPost
-      ? loginErrorRedirect(request, "auth_unavailable", payload.return_to)
-      : NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
-  }
+  if (!url || !key) return NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
 
-  // Keep the response object that will return to Safari. Supabase writes its
-  // authenticated cookie into this exact response, instead of relying on a
-  // framework cookie mutation that can be lost at a route-handler boundary.
-  const response = NextResponse.json({ ok: true });
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (items) => {
-        items.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-      },
-    },
+  // Do not return an HTTP Set-Cookie from this endpoint. Safari was dropping
+  // the connection while processing the large chunked session header. The
+  // browser client receives the short-lived session payload over HTTPS and
+  // stores it through its canonical Supabase cookie adapter instead.
+  const supabase = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error || !data.user) {
-      return nativeFormPost
-        ? loginErrorRedirect(request, "invalid_credentials", payload.return_to)
-        : NextResponse.json({ ok: false, error: "invalid_credentials" }, { status: 401 });
+      return NextResponse.json({ ok: false, error: "invalid_credentials" }, { status: 401 });
     }
 
     try {
-      const access = await ensureTouchlineArenaAccess(data.user);
-      if (nativeFormPost) {
-        const destination = new URL(safeReturnTo(request, payload.return_to), request.url);
-        const redirect = NextResponse.redirect(destination, { status: 303 });
-        return applySessionCookies(redirect, response);
+      await ensureTouchlineArenaAccess(data.user);
+      if (!data.session?.access_token || !data.session.refresh_token) {
+        return NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
       }
-      return successResponse(response, access);
+      return NextResponse.json(
+        {
+          ok: true,
+          session: {
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          },
+        },
+        { headers: { "Cache-Control": "no-store" } },
+      );
     } catch {
-      await supabase.auth.signOut({ scope: "local" });
-      return nativeFormPost
-        ? loginErrorRedirect(request, "arena_access_unavailable", payload.return_to)
-        : NextResponse.json({ ok: false, error: "arena_access_unavailable" }, { status: 503 });
+      return NextResponse.json({ ok: false, error: "arena_access_unavailable" }, { status: 503 });
     }
   } catch {
-    return nativeFormPost
-      ? loginErrorRedirect(request, "auth_unavailable", payload.return_to)
-      : NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
+    return NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
   }
 }

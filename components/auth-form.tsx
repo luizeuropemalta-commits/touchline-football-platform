@@ -18,7 +18,7 @@ import { Button, Input } from "./ui";
 
 type Mode = "login" | "register" | "forgot";
 type SocialAuthProvider = "google" | "apple" | "facebook";
-type AuthEntryError = "auth_callback" | "invalid_credentials" | "arena_access_unavailable" | "auth_unavailable" | null;
+type AuthEntryError = "auth_callback" | null;
 
 function buildTouchLineAuthCallbackUrl(nextHref: string) {
   const callbackUrl = new URL("/auth/callback", resolveTouchLineAuthOrigin({
@@ -114,15 +114,7 @@ export function AuthForm({
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialAuthProvider | null>(null);
   const [isArenaTransitioning, setIsArenaTransitioning] = useState(false);
-  const initialMessage = initialError === "auth_callback"
-    ? copy.confirmationLinkError
-    : initialError === "invalid_credentials"
-      ? copy.invalidCredentials
-      : initialError === "arena_access_unavailable"
-        ? copy.welcomeUnavailable
-        : initialError === "auth_unavailable"
-          ? copy.authenticationUnavailable
-          : "";
+  const initialMessage = initialError === "auth_callback" ? copy.confirmationLinkError : "";
   const [message, setMessage] = useState(initialMessage);
   const [messageTone, setMessageTone] = useState<"success" | "error" | null>(
     initialMessage ? "error" : null,
@@ -143,11 +135,26 @@ export function AuthForm({
     window.location.assign(href);
   }
 
+  async function signInWithTouchlinePassword(email: string, password: string) {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const payload = await response.json().catch(() => null) as {
+      ok?: boolean;
+      error?: string;
+      session?: { access_token?: string; refresh_token?: string };
+    } | null;
+    if (response.ok && payload?.ok && payload.session?.access_token && payload.session.refresh_token) {
+      return { access_token: payload.session.access_token, refresh_token: payload.session.refresh_token };
+    }
+    if (payload?.error === "invalid_credentials") throw new Error("invalid_credentials");
+    if (payload?.error === "arena_access_unavailable") throw new Error("arena_access_unavailable");
+    throw new Error("auth_unavailable");
+  }
+
   async function submit(e: React.FormEvent<HTMLFormElement>) {
-    // Password login intentionally uses a browser-native form POST.  Safari
-    // then stores the server-issued first-party session cookie before it
-    // follows the redirect into Arena, avoiding a fragile fetch hand-off.
-    if (mode === "login") return;
     e.preventDefault();
     // Safari Password AutoFill can populate the native inputs without
     // dispatching React's change event. Read the submitted form directly so
@@ -169,8 +176,14 @@ export function AuthForm({
       setLoading(false);
       return;
     }
+    let loginRedirect: string | null = null;
     try {
-      if (mode === "register") {
+      if (mode === "login") {
+        const session = await signInWithTouchlinePassword(normalizedEmail, effectivePassword);
+        const { error } = await supabase.auth.setSession(session);
+        if (error) throw new Error("auth_unavailable");
+        loginRedirect = arenaHref;
+      } else if (mode === "register") {
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password: effectivePassword,
@@ -207,7 +220,11 @@ export function AuthForm({
       );
       setMessageTone("error");
     }
-    finally { setLoading(false); }
+    finally {
+      if (!loginRedirect) setLoading(false);
+    }
+
+    if (loginRedirect) window.location.assign(loginRedirect);
   }
 
   async function socialLogin(provider: SocialAuthProvider) {
@@ -307,13 +324,7 @@ export function AuthForm({
 
   return (
     <>
-    <form
-      onSubmit={submit}
-      action={mode === "login" ? "/api/auth/login" : undefined}
-      method={mode === "login" ? "post" : undefined}
-      className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}
-    >
-      {mode === "login" ? <input type="hidden" name="return_to" value={arenaHref} /> : null}
+    <form onSubmit={submit} className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}>
       {mode === "register" && <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.fullName}</span><Input required name="full_name" value={name} onChange={e=>setName(e.target.value)} placeholder={copy.fullNamePlaceholder} autoComplete="name"/></label>}
       <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.email}</span><Input required name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={copy.emailPlaceholder} autoComplete="email"/></label>
       {mode !== "forgot" && (
