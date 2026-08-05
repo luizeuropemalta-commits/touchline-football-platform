@@ -18,7 +18,7 @@ import { Button, Input } from "./ui";
 
 type Mode = "login" | "register" | "forgot";
 type SocialAuthProvider = "google" | "apple" | "facebook";
-type AuthEntryError = "auth_callback" | null;
+type AuthEntryError = "auth_callback" | "invalid_credentials" | "arena_access_unavailable" | "auth_unavailable" | null;
 
 function buildTouchLineAuthCallbackUrl(nextHref: string) {
   const callbackUrl = new URL("/auth/callback", resolveTouchLineAuthOrigin({
@@ -52,20 +52,6 @@ async function finishTouchlineArenaAccessOrSignOut(
     if (signOutError) throw new Error(`${fallbackError} ${signOutError.message}`);
     throw error;
   }
-}
-
-async function signInWithTouchlinePassword(email: string, password: string) {
-  const response = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: { "content-type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
-  if (response.ok && payload?.ok === true) return;
-
-  if (payload?.error === "invalid_credentials") throw new Error("invalid_credentials");
-  if (payload?.error === "arena_access_unavailable") throw new Error("arena_access_unavailable");
-  throw new Error("auth_unavailable");
 }
 
 export function AuthForm({
@@ -128,9 +114,18 @@ export function AuthForm({
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialAuthProvider | null>(null);
   const [isArenaTransitioning, setIsArenaTransitioning] = useState(false);
-  const [message, setMessage] = useState(initialError === "auth_callback" ? copy.confirmationLinkError : "");
+  const initialMessage = initialError === "auth_callback"
+    ? copy.confirmationLinkError
+    : initialError === "invalid_credentials"
+      ? copy.invalidCredentials
+      : initialError === "arena_access_unavailable"
+        ? copy.welcomeUnavailable
+        : initialError === "auth_unavailable"
+          ? copy.authenticationUnavailable
+          : "";
+  const [message, setMessage] = useState(initialMessage);
   const [messageTone, setMessageTone] = useState<"success" | "error" | null>(
-    initialError === "auth_callback" ? "error" : null,
+    initialMessage ? "error" : null,
   );
   const [registrationConfirmationEmail, setRegistrationConfirmationEmail] = useState("");
   const [confirmationResendLoading, setConfirmationResendLoading] = useState(false);
@@ -149,6 +144,10 @@ export function AuthForm({
   }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
+    // Password login intentionally uses a browser-native form POST.  Safari
+    // then stores the server-issued first-party session cookie before it
+    // follows the redirect into Arena, avoiding a fragile fetch hand-off.
+    if (mode === "login") return;
     e.preventDefault();
     // Safari Password AutoFill can populate the native inputs without
     // dispatching React's change event. Read the submitted form directly so
@@ -170,15 +169,8 @@ export function AuthForm({
       setLoading(false);
       return;
     }
-    let loginRedirect: string | null = null;
     try {
-      if (mode === "login") {
-        await signInWithTouchlinePassword(normalizedEmail, effectivePassword);
-        // Keep a successful sign-in outside the error boundary below.  Safari
-        // can reject a client transition after accepting the login response;
-        // that must never be shown as a failed authentication.
-        loginRedirect = arenaHref;
-      } else if (mode === "register") {
+      if (mode === "register") {
         const { data, error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password: effectivePassword,
@@ -215,15 +207,7 @@ export function AuthForm({
       );
       setMessageTone("error");
     }
-    finally {
-      if (!loginRedirect) setLoading(false);
-    }
-
-    if (loginRedirect) {
-      // Do a native document navigation after the first-party session cookie
-      // has been written.  This avoids a stale client router cache in Safari.
-      window.location.replace(loginRedirect);
-    }
+    finally { setLoading(false); }
   }
 
   async function socialLogin(provider: SocialAuthProvider) {
@@ -323,7 +307,13 @@ export function AuthForm({
 
   return (
     <>
-    <form onSubmit={submit} className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}>
+    <form
+      onSubmit={submit}
+      action={mode === "login" ? "/api/auth/login" : undefined}
+      method={mode === "login" ? "post" : undefined}
+      className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}
+    >
+      {mode === "login" ? <input type="hidden" name="return_to" value={arenaHref} /> : null}
       {mode === "register" && <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.fullName}</span><Input required name="full_name" value={name} onChange={e=>setName(e.target.value)} placeholder={copy.fullNamePlaceholder} autoComplete="name"/></label>}
       <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.email}</span><Input required name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={copy.emailPlaceholder} autoComplete="email"/></label>
       {mode !== "forgot" && (

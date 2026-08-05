@@ -20,7 +20,11 @@ export default async function Login({
         mode="login"
         locale={locale}
         returnTo={returnTo}
-        initialError={error === "auth_callback" ? "auth_callback" : null}
+        initialError={
+          error === "auth_callback" || error === "invalid_credentials" || error === "arena_access_unavailable" || error === "auth_unavailable"
+            ? error
+            : null
+        }
       />
     </AuthLayout>
   );
