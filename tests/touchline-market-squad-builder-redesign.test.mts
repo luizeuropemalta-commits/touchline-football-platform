@@ -24,12 +24,13 @@ test("canonical TouchLine England squad rules remain in one server-independent r
 });
 
 test("the guided journey unlocks coach, Starting XI, bench and full squad in order", () => {
-  assert.equal(resolveTouchlineSquadJourney({ hasCoach: false, starterCount: 0, benchCount: 0, contractedCount: 0 }).currentStep, "coach");
-  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, starterCount: 10, benchCount: 0, contractedCount: 10 }).currentStep, "starting-xi");
-  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, starterCount: 11, benchCount: 8, contractedCount: 19 }).currentStep, "bench");
-  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, starterCount: 11, benchCount: 9, contractedCount: 34 }).currentStep, "full-squad");
-  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, starterCount: 11, benchCount: 9, contractedCount: 35 }).reviewAvailable, true);
-  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, starterCount: 12, benchCount: 10, contractedCount: 36 }).reviewAvailable, true);
+  assert.equal(resolveTouchlineSquadJourney({ hasCoach: false, hasFormation: false, starterCount: 0, benchCount: 0, contractedCount: 0 }).currentStep, "coach");
+  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: false, starterCount: 0, benchCount: 0, contractedCount: 0 }).currentStep, "formation");
+  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: true, starterCount: 10, benchCount: 0, contractedCount: 10 }).currentStep, "starting-xi");
+  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: true, starterCount: 11, benchCount: 8, contractedCount: 19 }).currentStep, "bench");
+  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: true, starterCount: 11, benchCount: 9, contractedCount: 34 }).currentStep, "full-squad");
+  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: true, starterCount: 11, benchCount: 9, contractedCount: 35 }).reviewAvailable, true);
+  assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: true, starterCount: 12, benchCount: 10, contractedCount: 36 }).reviewAvailable, true);
 });
 
 test("the Market owns one premium squad-building stage with distinct player groups", async () => {
@@ -85,7 +86,10 @@ test("successful contracts fill eligible Starting XI slots before bench and pres
 test("coach remains a dedicated entity outside every player slot", async () => {
   const arenaSource = await readFile(arenaClientPath, "utf8");
   const source = await readFile(stagePath, "utf8");
-  assert.match(arenaSource, /MERCADO · PASSO 1 DE 6/);
+  assert.match(arenaSource, /MERCADO · PASSO 1 DE 10/);
+  assert.match(arenaSource, /TOUCHLINE_MARKET_POSITION_SEQUENCE/);
+  assert.match(arenaSource, /Substituir contrato/);
+  assert.match(arenaSource, /contrato encerrado sem reembolso/);
   assert.match(source, /className=\{styles\.technicalArea\}/);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);
   assert.doesNotMatch(source, /role:\s*["']coach["']/);

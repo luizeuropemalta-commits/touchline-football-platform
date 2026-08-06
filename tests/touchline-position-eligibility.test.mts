@@ -4,6 +4,8 @@ import test from "node:test";
 
 import {
   TOUCHLINE_MARKET_POSITION_LIMITS,
+  TOUCHLINE_MARKET_POSITION_SEQUENCE,
+  TOUCHLINE_MARKET_APPROVED_SQUAD_SIZE,
   touchlineMarketPositionBucket,
   touchlineMarketPositionBucketCount,
   touchlineMarketPositionBucketLabel,
@@ -12,21 +14,38 @@ import {
 } from "../lib/touchlineArena/position-eligibility.ts";
 
 test("maps real football positions beyond broad GK DEF MID FWD filters", () => {
-  assert.equal(touchlineMarketPositionBucket("ST", "forward"), "striker");
-  assert.equal(touchlineMarketPositionBucket("CF", "forward"), "striker");
-  assert.equal(touchlineMarketPositionBucket("Centroavante", "forward"), "striker");
+  assert.equal(touchlineMarketPositionBucket("ST", "forward"), "centre-forward");
+  assert.equal(touchlineMarketPositionBucket("CF", "forward"), "centre-forward");
+  assert.equal(touchlineMarketPositionBucket("Centroavante", "forward"), "centre-forward");
   assert.equal(touchlineMarketPositionBucket("CDM", "midfielder"), "defensive-midfield");
   assert.equal(touchlineMarketPositionBucket("Volante", "midfielder"), "defensive-midfield");
-  assert.equal(touchlineMarketPositionBucket("CAM", "midfielder"), "attacking-midfield");
-  assert.equal(touchlineMarketPositionBucket("LW", "forward"), "winger");
-  assert.equal(touchlineMarketPositionBucket("RB", "defender"), "full-back");
+  assert.equal(touchlineMarketPositionBucket("CAM", "midfielder"), "midfield");
+  assert.equal(touchlineMarketPositionBucket("LW", "forward"), "attacker");
+  assert.equal(touchlineMarketPositionBucket("RB", "defender"), "right-back");
+  assert.equal(touchlineMarketPositionBucket("LB", "defender"), "left-back");
   assert.equal(touchlineMarketPositionBucket("CB", "defender"), "centre-back");
 });
 
-test("enforces Reality roster limits before a ClubOwner buys unusable cards", () => {
-  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS.striker, 2);
+test("enforces the approved 35-player ClubOwner position limits", () => {
+  assert.equal(TOUCHLINE_MARKET_APPROVED_SQUAD_SIZE, 35);
+  assert.deepEqual([...TOUCHLINE_MARKET_POSITION_SEQUENCE], [
+    "goalkeeper",
+    "centre-back",
+    "right-back",
+    "left-back",
+    "defensive-midfield",
+    "midfield",
+    "attacker",
+    "centre-forward",
+  ]);
+  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["centre-forward"], 5);
+  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["right-back"], 2);
+  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["left-back"], 2);
   assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["defensive-midfield"], 3);
   assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS.goalkeeper, 3);
+  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["centre-back"], 6);
+  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS.midfield, 6);
+  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS.attacker, 8);
 
   const counts = touchlineMarketPositionBucketCount([
     { position: "ST", role: "forward" },
@@ -36,20 +55,20 @@ test("enforces Reality roster limits before a ClubOwner buys unusable cards", ()
     { position: "Defensive Midfielder", role: "midfielder" },
   ]);
 
-  assert.equal(counts.striker, 2);
+  assert.equal(counts["centre-forward"], 2);
   assert.equal(counts["defensive-midfield"], 3);
 });
 
 test("derives one reusable progress view without altering approved position limits", () => {
   const progress = touchlineMarketPositionProgress({
-    striker: 2,
+    "centre-forward": 5,
     "defensive-midfield": 2,
   });
 
-  assert.deepEqual(progress.find((entry) => entry.bucket === "striker"), {
-    bucket: "striker",
-    count: 2,
-    limit: 2,
+  assert.deepEqual(progress.find((entry) => entry.bucket === "centre-forward"), {
+    bucket: "centre-forward",
+    count: 5,
+    limit: 5,
     isFull: true,
   });
   assert.deepEqual(progress.find((entry) => entry.bucket === "defensive-midfield"), {
@@ -61,9 +80,9 @@ test("derives one reusable progress view without altering approved position limi
 });
 
 test("shows football language for Portuguese and English buyers", () => {
-  assert.equal(touchlineMarketPositionBucketLabel("striker", "pt-BR"), "Centroavante / ST");
+  assert.equal(touchlineMarketPositionBucketLabel("centre-forward", "pt-BR"), "Centroavante / ST");
   assert.equal(touchlineMarketPositionBucketLabel("defensive-midfield", "pt-BR"), "Volante / CDM");
-  assert.equal(touchlineMarketPositionBucketLabel("striker", "en-GB"), "Centre-forward / ST");
+  assert.equal(touchlineMarketPositionBucketLabel("centre-forward", "en-GB"), "Centre-forward / ST");
   assert.match(touchlineTwoStrikerFormationHint("pt-BR"), /4-4-2/);
 });
 

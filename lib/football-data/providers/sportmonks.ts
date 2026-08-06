@@ -496,7 +496,10 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       return [{
         player,
         jerseyNumber: asNumber(item.jersey_number),
-        position: asString(positionRaw?.name) ?? asString(detailedPositionRaw?.name),
+        // Squad construction needs the provider's exact position (RB, LB,
+        // centre-back, defensive midfield, etc.). The broad parent position
+        // remains available in raw data, but must not erase this detail.
+        position: asString(detailedPositionRaw?.name) ?? asString(positionRaw?.name),
         raw: { ...item, player: mergedPlayerRaw },
       }];
     });
@@ -679,8 +682,9 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const country = this.relationEntity(raw, "nationality") ?? (raw.nationality as SportmonksEntity | undefined);
     const fallbackCountry = this.relationEntity(raw, "country") ?? (raw.country as SportmonksEntity | undefined);
     const position =
-      this.relationEntity(raw, "position") ??
       this.relationEntity(raw, "detailedPosition") ??
+      this.relationEntity(raw, "position") ??
+      (raw.detailedPosition as SportmonksEntity | undefined) ??
       (raw.position as SportmonksEntity | undefined);
     const teams = this.relationArray(raw, "teams");
     const currentTeam = teams[0];

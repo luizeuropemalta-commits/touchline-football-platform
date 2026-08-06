@@ -5,12 +5,12 @@ export type TouchlineRosterRole = "goalkeeper" | "defender" | "midfielder" | "fo
 export type TouchlineMarketPositionBucket =
   | "goalkeeper"
   | "centre-back"
-  | "full-back"
+  | "right-back"
+  | "left-back"
   | "defensive-midfield"
-  | "central-midfield"
-  | "attacking-midfield"
-  | "winger"
-  | "striker"
+  | "midfield"
+  | "attacker"
+  | "centre-forward"
   | "outfield";
 
 export type TouchlineMarketPositionInput = {
@@ -21,17 +21,40 @@ export type TouchlineMarketPositionInput = {
 export const TOUCHLINE_MARKET_POSITION_LIMITS: Record<TouchlineMarketPositionBucket, number> = {
   goalkeeper: 3,
   "centre-back": 6,
-  "full-back": 6,
+  "right-back": 2,
+  "left-back": 2,
   "defensive-midfield": 3,
-  "central-midfield": 6,
-  "attacking-midfield": 4,
-  winger: 6,
-  striker: 2,
-  outfield: 34,
+  midfield: 6,
+  attacker: 8,
+  "centre-forward": 5,
+  // Unknown provider positions stay visible for review but can never consume
+  // a ClubOwner contract slot until TouchLine classifies them.
+  outfield: 0,
 };
 
 export const TOUCHLINE_MARKET_POSITION_BUCKETS = Object.freeze(
   Object.keys(TOUCHLINE_MARKET_POSITION_LIMITS) as TouchlineMarketPositionBucket[],
+);
+
+/**
+ * Canonical first-squad purchase journey. The total of these limits is the
+ * approved 35-player ClubOwner roster. The first build advances one completed
+ * category at a time; replacement remains available through the contract flow.
+ */
+export const TOUCHLINE_MARKET_POSITION_SEQUENCE = Object.freeze([
+  "goalkeeper",
+  "centre-back",
+  "right-back",
+  "left-back",
+  "defensive-midfield",
+  "midfield",
+  "attacker",
+  "centre-forward",
+] as const satisfies readonly TouchlineMarketPositionBucket[]);
+
+export const TOUCHLINE_MARKET_APPROVED_SQUAD_SIZE = TOUCHLINE_MARKET_POSITION_SEQUENCE.reduce(
+  (total, bucket) => total + TOUCHLINE_MARKET_POSITION_LIMITS[bucket],
+  0,
 );
 
 export type TouchlineMarketPositionProgress = {
@@ -56,16 +79,16 @@ export function touchlineMarketPositionBucket(position?: string | null, role?: T
 
   if (role === "goalkeeper" || /\b(gk|keeper|goalkeeper|goleiro)\b/.test(value)) return "goalkeeper";
   if (/\b(cb|centre back|center back|central defender|zagueiro)\b/.test(value)) return "centre-back";
-  if (/\b(lb|rb|lwb|rwb|full back|wing back|left back|right back|lateral)\b/.test(value)) return "full-back";
+  if (/\b(rb|rwb|right back|right wing back|lateral direito|ld)\b/.test(value)) return "right-back";
+  if (/\b(lb|lwb|left back|left wing back|lateral esquerdo|le)\b/.test(value)) return "left-back";
   if (/\b(cdm|dm|defensive midfielder|holding midfielder|defensive mid|volante|trinco|pivo)\b/.test(value)) return "defensive-midfield";
-  if (/\b(cam|am|attacking midfielder|advanced midfielder|meia ofensivo|meia atacante)\b/.test(value)) return "attacking-midfield";
-  if (/\b(cm|central midfielder|box to box|midfielder|meia central|meio campo|meio campista)\b/.test(value)) return "central-midfield";
-  if (/\b(lw|rw|lm|rm|winger|left wing|right wing|wide midfielder|ponta|ala)\b/.test(value)) return "winger";
-  if (/\b(st|cf|striker|centre forward|center forward|forward|centroavante|atacante central)\b/.test(value)) return "striker";
+  if (/\b(st|cf|striker|centre forward|center forward|centroavante|atacante central|number 9)\b/.test(value)) return "centre-forward";
+  if (/\b(lw|rw|winger|left wing|right wing|secondary striker|second striker|ss|ponta|segundo atacante|atacante)\b/.test(value)) return "attacker";
+  if (/\b(cm|cam|am|lm|rm|central midfielder|attacking midfielder|advanced midfielder|left midfielder|right midfielder|wide midfielder|box to box|midfielder|meia central|meia ofensivo|meia atacante|meio campo|meio campista|meia)\b/.test(value)) return "midfield";
 
   if (role === "defender") return "centre-back";
-  if (role === "midfielder") return "central-midfield";
-  if (role === "forward") return "striker";
+  if (role === "midfielder") return "midfield";
+  if (role === "forward") return "attacker";
   return "outfield";
 }
 
@@ -77,24 +100,24 @@ export function touchlineMarketPositionBucketLabel(
   if (normalizedLocale === "pt-BR") {
     if (bucket === "goalkeeper") return "Goleiro / GK";
     if (bucket === "centre-back") return "Zagueiro / CB";
-    if (bucket === "full-back") return "Lateral / FB";
+    if (bucket === "right-back") return "Lateral direito / RB";
+    if (bucket === "left-back") return "Lateral esquerdo / LB";
     if (bucket === "defensive-midfield") return "Volante / CDM";
-    if (bucket === "central-midfield") return "Meia / CM";
-    if (bucket === "attacking-midfield") return "Meia ofensivo / CAM";
-    if (bucket === "winger") return "Ponta / W";
-    if (bucket === "striker") return "Centroavante / ST";
-    return "Jogador de linha";
+    if (bucket === "midfield") return "Meia / MID";
+    if (bucket === "attacker") return "Atacante / ATT";
+    if (bucket === "centre-forward") return "Centroavante / ST";
+    return "Posição em classificação";
   }
 
   if (bucket === "goalkeeper") return "Goalkeeper / GK";
   if (bucket === "centre-back") return "Centre-back / CB";
-  if (bucket === "full-back") return "Full-back / FB";
+  if (bucket === "right-back") return "Right-back / RB";
+  if (bucket === "left-back") return "Left-back / LB";
   if (bucket === "defensive-midfield") return "Defensive midfielder / CDM";
-  if (bucket === "central-midfield") return "Midfielder / CM";
-  if (bucket === "attacking-midfield") return "Attacking midfielder / CAM";
-  if (bucket === "winger") return "Winger / W";
-  if (bucket === "striker") return "Centre-forward / ST";
-  return "Outfield player";
+  if (bucket === "midfield") return "Midfielder / MID";
+  if (bucket === "attacker") return "Attacker / ATT";
+  if (bucket === "centre-forward") return "Centre-forward / ST";
+  return "Position pending classification";
 }
 
 export function touchlineMarketPositionBucketCount(players: TouchlineMarketPositionInput[]) {

@@ -76,10 +76,12 @@ import { getTouchLineMarketCopy } from "@/lib/touchlineArena/market-i18n";
 import { TOUCHLINE_SQUAD_RULES } from "@/lib/touchlineArena/squad-rules";
 import {
   TOUCHLINE_MARKET_POSITION_LIMITS,
+  TOUCHLINE_MARKET_POSITION_SEQUENCE,
   touchlineMarketPositionBucket,
   touchlineMarketPositionBucketCount,
   touchlineMarketPositionBucketLabel,
   touchlineTwoStrikerFormationHint,
+  type TouchlineMarketPositionBucket,
 } from "@/lib/touchlineArena/position-eligibility";
 import {
   normalizeTouchlineCountryCode3,
@@ -181,6 +183,7 @@ const ARENA_PERSISTENCE_RESOURCES = {
   formationLocks: "formation-locks",
   marketWallet: "market-wallet-tc",
   coach: "coach",
+  marketFormation: "market-formation-confirmation",
 } as const;
 
 type ArenaPlayer = ArenaLineupPlayer;
@@ -288,6 +291,16 @@ type TeamBuilderSquadPlayer = {
   matchStats?: TouchlineEliteExactPlayer["matchStats"];
 };
 
+type MarketPositionReplacementCandidate = {
+  id: string;
+  name: string;
+  shortName: string;
+  position: string;
+  role: ArenaPlayer["role"];
+  inventoryId?: string | null;
+  location: "field" | "reserve";
+};
+
 type LiveMatchSquadsState = {
   fixtureId: string;
   home: TeamBuilderSquadPlayer[];
@@ -345,6 +358,7 @@ type TouchlineMarketContractReleaseResult = {
 
 type TouchlineMarketInventoryMode = "checking" | "authoritative" | "demo" | "unavailable";
 type TouchlineMarketPositionFilter = "all" | ArenaPlayer["role"];
+type TouchlineMarketPositionBucketFilter = "all" | TouchlineMarketPositionBucket;
 type TouchlineMarketSortMode = "recommended" | "price-asc" | "price-desc" | "value-desc" | "name";
 
 function parseTouchlineMarketCheckoutResult(value: unknown): TouchlineMarketCheckoutResult | null {
@@ -3283,7 +3297,9 @@ export default function ArenaClient({
   const [selectedBuilderPlayerId, setSelectedBuilderPlayerId] = useState<string | null>(null);
   const [marketSearch, setMarketSearch] = useState("");
   const [marketPositionFilter, setMarketPositionFilter] = useState<TouchlineMarketPositionFilter>("all");
+  const [marketPositionBucketFilter, setMarketPositionBucketFilter] = useState<TouchlineMarketPositionBucketFilter>("all");
   const [marketNeedsOnly, setMarketNeedsOnly] = useState(false);
+  const [marketFormationConfirmed, setMarketFormationConfirmed] = useState(false);
   const [marketSortMode, setMarketSortMode] = useState<TouchlineMarketSortMode>("recommended");
   const [marketCartPlayers, setMarketCartPlayers] = useState<TeamBuilderSquadPlayer[]>([]);
   const [marketWalletBalanceTc, setMarketWalletBalanceTc] = useState(0);
@@ -3291,6 +3307,7 @@ export default function ArenaClient({
   const [marketInventoryMode, setMarketInventoryMode] = useState<TouchlineMarketInventoryMode>("checking");
   const [isMarketCheckoutPending, setIsMarketCheckoutPending] = useState(false);
   const [isMarketCheckoutConfirmationOpen, setIsMarketCheckoutConfirmationOpen] = useState(false);
+  const [pendingMarketReplacementPlayerId, setPendingMarketReplacementPlayerId] = useState<string | null>(null);
   const [isContractReleasePending, setIsContractReleasePending] = useState(false);
   const [marketInventoryRevision, setMarketInventoryRevision] = useState(0);
   const marketCheckoutAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
@@ -3308,13 +3325,15 @@ export default function ArenaClient({
   }, [activeArenaPanel]);
 
   useEffect(() => {
-    if (!isMarketCheckoutConfirmationOpen) return;
+    if (!isMarketCheckoutConfirmationOpen && !pendingMarketReplacementPlayerId) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsMarketCheckoutConfirmationOpen(false);
+      if (event.key !== "Escape") return;
+      setIsMarketCheckoutConfirmationOpen(false);
+      setPendingMarketReplacementPlayerId(null);
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isMarketCheckoutConfirmationOpen]);
+  }, [isMarketCheckoutConfirmationOpen, pendingMarketReplacementPlayerId]);
 
   useEffect(() => {
     const syncArenaPanelFromUrl = () => {
@@ -3677,15 +3696,60 @@ export default function ArenaClient({
   const isBuilderSquadCurrent = builderSquadClubKey === selectedBuilderClub.teamId;
   const currentBuilderSquad = isBuilderSquadCurrent ? builderSquad : [];
   const sortedBuilderSquad = [...currentBuilderSquad].sort((a, b) => roleSortWeight(a.role) - roleSortWeight(b.role) || a.name.localeCompare(b.name));
+  const authoritativeOwnedSquadCount = marketInventorySnapshot?.activeContractCount ?? ownedSquadCount;
+  const pendingMarketReplacementPlayer = pendingMarketReplacementPlayerId
+    ? sortedBuilderSquad.find((player) => stableBuilderPlayerId(player) === pendingMarketReplacementPlayerId) ?? null
+    : null;
+  const pendingMarketReplacementBucket = pendingMarketReplacementPlayer
+    ? touchlineMarketPositionBucket(pendingMarketReplacementPlayer.position, pendingMarketReplacementPlayer.role)
+    : null;
+  const marketPositionReplacementCandidates: MarketPositionReplacementCandidate[] = pendingMarketReplacementBucket
+    ? [
+        ...players.map((player): MarketPositionReplacementCandidate => ({
+          id: player.id,
+          name: player.name,
+          shortName: player.shortName,
+          position: player.card?.position || roleLabel(player.role),
+          role: player.role,
+          inventoryId: player.card?.inventoryId,
+          location: "field",
+        })),
+        ...benchPlayers.map((player): MarketPositionReplacementCandidate => ({
+          id: player.id,
+          name: player.name,
+          shortName: player.shortName,
+          position: player.position,
+          role: player.role,
+          inventoryId: player.inventoryId,
+          location: "reserve",
+        })),
+      ].filter((player) => touchlineMarketPositionBucket(player.position, player.role) === pendingMarketReplacementBucket)
+    : [];
   const normalizedMarketSearch = normalizeTextKey(marketSearch);
   const marketPositionCounts = touchlineMarketPositionBucketCount([
     ...players.map((player) => ({ position: player.card?.position, role: player.role })),
     ...benchPlayers.map((bench) => ({ position: bench.position, role: bench.role })),
     ...marketCartPlayers.map((player) => ({ position: player.position, role: player.role })),
   ]);
+  const currentMarketPositionStep = TOUCHLINE_MARKET_POSITION_SEQUENCE.find(
+    (bucket) => (marketPositionCounts[bucket] ?? 0) < TOUCHLINE_MARKET_POSITION_LIMITS[bucket],
+  ) ?? null;
+  const currentMarketPositionStepIndex = currentMarketPositionStep
+    ? TOUCHLINE_MARKET_POSITION_SEQUENCE.indexOf(currentMarketPositionStep)
+    : TOUCHLINE_MARKET_POSITION_SEQUENCE.length;
+  const isInitialMarketSquadBuild = authoritativeOwnedSquadCount + marketCartPlayers.length < TOUCHLINE_SQUAD_RULES.contracted;
+  const effectiveMarketPositionBucketFilter: TouchlineMarketPositionBucketFilter = marketFormationConfirmed
+    && isInitialMarketSquadBuild
+    && currentMarketPositionStep
+      ? currentMarketPositionStep
+      : marketPositionBucketFilter;
   const visibleMarketPlayers = sortedBuilderSquad
     .filter((player) => {
       if (marketPositionFilter !== "all" && player.role !== marketPositionFilter) return false;
+      if (
+        effectiveMarketPositionBucketFilter !== "all"
+        && touchlineMarketPositionBucket(player.position, player.role) !== effectiveMarketPositionBucketFilter
+      ) return false;
       if (marketNeedsOnly) {
         const bucket = touchlineMarketPositionBucket(player.position, player.role);
         if ((marketPositionCounts[bucket] ?? 0) >= TOUCHLINE_MARKET_POSITION_LIMITS[bucket]) return false;
@@ -3736,12 +3800,13 @@ export default function ArenaClient({
     || marketInventoryMode === "authoritative"
     || marketInventoryMode === "unavailable";
   const selectedBuilderInventoryUnavailable = Boolean(
-    !selectedBuilderPlayer?.inventoryId || !builderPlayerHasVerifiedMarketValue(selectedBuilderPlayer),
+    !selectedBuilderPlayer?.inventoryId
+    || !builderPlayerHasVerifiedMarketValue(selectedBuilderPlayer)
+    || touchlineMarketPositionBucket(selectedBuilderPlayer?.position, selectedBuilderPlayer?.role) === "outfield",
   );
   const isMarketDataRefreshing = marketInventoryMode === "checking";
   const currentLocale = TOUCHLINE_SUPPORTED_LOCALES.find((locale) => locale.code === siteLanguage) ?? TOUCHLINE_SUPPORTED_LOCALES[0];
   const marketPlayerCount = sortedBuilderSquad.length;
-  const authoritativeOwnedSquadCount = marketInventorySnapshot?.activeContractCount ?? ownedSquadCount;
   const openContractSlots = marketInventorySnapshot?.openContractSlots
     ?? Math.max(0, TOUCHLINE_SQUAD_RULES.contracted - ownedSquadCount);
   const isContractRosterFull = openContractSlots === 0;
@@ -4020,6 +4085,7 @@ export default function ArenaClient({
       const lineupStorageKey = arenaStorageKey(principal, ARENA_PERSISTENCE_RESOURCES.lineup);
       const formationLocksStorageKey = arenaStorageKey(principal, ARENA_PERSISTENCE_RESOURCES.formationLocks);
       const coachStorageKey = arenaStorageKey(principal, ARENA_PERSISTENCE_RESOURCES.coach);
+      const marketFormationStorageKey = arenaStorageKey(principal, ARENA_PERSISTENCE_RESOURCES.marketFormation);
       const remoteCoachProviderId = typeof remoteState?.coach_provider_id === "string"
         ? remoteState.coach_provider_id.trim()
         : "";
@@ -4036,6 +4102,11 @@ export default function ArenaClient({
       let effectiveFormationKey = remoteState
         ? parseArenaFormationKey(remoteState.formation_key ?? null)
         : parseArenaFormationKey(readBrowserStorage("localStorage", formationStorageKey));
+      const storedMarketFormation = readBrowserStorage("localStorage", marketFormationStorageKey);
+      const hasExistingRemoteLineup = Boolean(remoteState && Array.isArray(remoteState.lineup) && remoteState.lineup.length > 0);
+      setMarketFormationConfirmed(
+        hasExistingRemoteLineup || storedMarketFormation === effectiveFormationKey,
+      );
 
       if (remoteState?.saved_formation_layouts && typeof remoteState.saved_formation_layouts === "object") {
         writeBrowserStorage(
@@ -4063,6 +4134,8 @@ export default function ArenaClient({
         setIsDemoLineup(false);
         removeBrowserStorage("localStorage", formationStorageKey);
         removeBrowserStorage("localStorage", lineupStorageKey);
+        removeBrowserStorage("localStorage", marketFormationStorageKey);
+        setMarketFormationConfirmed(false);
         const clearedUrl = new URL(window.location.href);
         clearedUrl.searchParams.delete("clearLineup");
         window.history.replaceState(null, "", `${clearedUrl.pathname}${clearedUrl.search}${clearedUrl.hash}`);
@@ -5732,14 +5805,43 @@ export default function ArenaClient({
     setOwnerCoachProviderId(coach.coach.providerId);
     setHasLoadedOwnerCoach(true);
     setIsCoachSpotlightOpen(false);
-    // Selecting the coach opens the first player stage of the guided Market
-    // Transfer journey. The player may still browse other positions, but the
-    // recommended sequence is coach → goalkeeper → defence → midfield → attack.
+    // Formation is an explicit, mandatory second decision. A new ClubOwner
+    // never falls through from coach selection into an accidental default XI.
     if (standaloneExperience === "market") {
-      setMarketPositionFilter("goalkeeper");
-      setMarketNeedsOnly(true);
+      removeBrowserStorage(
+        "localStorage",
+        arenaStorageKey(arenaPersistencePrincipal, ARENA_PERSISTENCE_RESOURCES.marketFormation),
+      );
+      setMarketFormationConfirmed(false);
+      setMarketPositionFilter("all");
+      setMarketPositionBucketFilter("all");
+      setMarketNeedsOnly(false);
     }
     setSaveStatus(siteLanguage === "pt-BR" ? "Treinador oficial selecionado" : "Official coach selected");
+  }
+
+  function confirmMarketFormation(formationKey: ArenaFormationKey) {
+    if (!ownerCoachProviderId || !arenaPersistencePrincipal) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Escolha o treinador antes da formação." : "Choose the coach before formation.");
+      return;
+    }
+    changeFormation(formationKey);
+    writeBrowserStorage(
+      "localStorage",
+      arenaStorageKey(arenaPersistencePrincipal, ARENA_PERSISTENCE_RESOURCES.marketFormation),
+      formationKey,
+    );
+    setMarketFormationConfirmed(true);
+    setMarketPositionFilter("all");
+    setMarketPositionBucketFilter("goalkeeper");
+    setMarketNeedsOnly(false);
+    setSaveStatus(siteLanguage === "pt-BR"
+      ? `${formationKey} confirmada · comece pelos goleiros`
+      : `${formationKey} confirmed · start with goalkeepers`);
+    window.requestAnimationFrame(() => {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      marketSelectionRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    });
   }
 
   async function toggleArenaFullscreen() {
@@ -6017,6 +6119,14 @@ export default function ArenaClient({
   }
 
   function toggleBuilderPlayerInCart(builderPlayer: TeamBuilderSquadPlayer) {
+    if (!ownerCoachProviderId) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Escolha o treinador antes de contratar jogadores." : "Choose the coach before signing players.");
+      return;
+    }
+    if (!marketFormationConfirmed) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Confirme a formação antes de contratar jogadores." : "Confirm the formation before signing players.");
+      return;
+    }
     const contractId = builderPlayerSquadContractId(builderPlayer);
     const alreadyOwned = players.some((player) => matchesBuilderPlayer(player, builderPlayer))
       || benchPlayers.some((bench) => matchesBuilderBenchPlayer(bench, builderPlayer))
@@ -6054,11 +6164,24 @@ export default function ArenaClient({
     }
 
     const positionBucket = touchlineMarketPositionBucket(builderPlayer.position, builderPlayer.role);
+    if (positionBucket === "outfield") {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Posição em classificação. Este jogador ainda não pode ser contratado." : "Position pending classification. This player cannot be signed yet.");
+      return;
+    }
+    if (isInitialMarketSquadBuild && currentMarketPositionStep && positionBucket !== currentMarketPositionStep) {
+      const requiredLabel = touchlineMarketPositionBucketLabel(currentMarketPositionStep, siteLanguage).split(" / ")[0];
+      setMarketPositionFilter("all");
+      setMarketPositionBucketFilter(currentMarketPositionStep);
+      setSaveStatus(siteLanguage === "pt-BR"
+        ? `Conclua primeiro: ${requiredLabel}.`
+        : `Complete first: ${requiredLabel}.`);
+      return;
+    }
     const positionLimit = TOUCHLINE_MARKET_POSITION_LIMITS[positionBucket];
     const positionCount = marketPositionCounts[positionBucket] ?? 0;
     if (positionCount >= positionLimit) {
       const positionLabel = touchlineMarketPositionBucketLabel(positionBucket, siteLanguage);
-      const tacticalHint = positionBucket === "striker" ? ` ${touchlineTwoStrikerFormationHint(siteLanguage)}` : "";
+      const tacticalHint = positionBucket === "centre-forward" ? ` ${touchlineTwoStrikerFormationHint(siteLanguage)}` : "";
       setSaveStatus(`${marketUi.positionLimitReached(positionLabel, positionLimit)}.${tacticalHint}`);
       return;
     }
@@ -6275,6 +6398,36 @@ export default function ArenaClient({
       if (marketMutationPendingRef.current === "release") marketMutationPendingRef.current = null;
       setIsContractReleasePending(false);
     }
+  }
+
+  function openMarketPositionReplacement(player: TeamBuilderSquadPlayer) {
+    setSelectedBuilderPlayerId(stableBuilderPlayerId(player));
+    setPendingMarketReplacementPlayerId(stableBuilderPlayerId(player));
+    setIsMarketCheckoutConfirmationOpen(false);
+  }
+
+  async function releaseMarketPositionContract(candidate: MarketPositionReplacementCandidate) {
+    const incoming = pendingMarketReplacementPlayer;
+    if (!incoming) return;
+    const released = await releaseAuthoritativeContract(candidate.inventoryId, candidate.location);
+    if (!released) return;
+
+    const nextPlayers = players.filter((player) => player.id !== candidate.id);
+    const nextBench = benchPlayers.filter((player) => player.id !== candidate.id);
+    setPlayers(nextPlayers);
+    setBenchPlayers(nextBench);
+    persistArenaRoster(nextPlayers, nextBench);
+    setPendingMarketReplacementPlayerId(null);
+    marketCheckoutAttemptRef.current = null;
+    setMarketCartPlayers((current) => {
+      const contractId = builderPlayerSquadContractId(incoming);
+      return current.some((player) => builderPlayerSquadContractId(player) === contractId)
+        ? current
+        : [...current, incoming];
+    });
+    setSaveStatus(siteLanguage === "pt-BR"
+      ? `${candidate.shortName}: contrato encerrado sem reembolso · ${incoming.shortName} selecionado para nova contratação`
+      : `${candidate.shortName}: contract ended without refund · ${incoming.shortName} selected for a new signing`);
   }
 
   async function releaseSelectedBenchContract() {
@@ -6497,9 +6650,9 @@ export default function ArenaClient({
         ) : isCoachSelectionRequired ? (
           <section className={`arena-coach-first-gate${coachOfferStatus !== "ready" ? " is-offer-pending" : ""}`} aria-label={siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"} data-testid="arena-coach-first-gate">
             <div className="arena-coach-first-copy">
-              <span>{siteLanguage === "pt-BR" ? "MERCADO · PASSO 1 DE 6" : "MARKET · STEP 1 OF 6"}</span>
+              <span>{siteLanguage === "pt-BR" ? "MERCADO · PASSO 1 DE 10" : "MARKET · STEP 1 OF 10"}</span>
               <h1>{siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"}</h1>
-              <p>{siteLanguage === "pt-BR" ? "Comece pelo treinador oficial. Depois, monte o elenco por posição: goleiros, defensores, meio-campistas e atacantes. A escolha fica ligada ao seu ClubOwner." : "Start with your official coach, then build by position: goalkeepers, defenders, midfielders and forwards. This choice stays linked to your ClubOwner."}</p>
+              <p>{siteLanguage === "pt-BR" ? "Comece pelo treinador e confirme a formação. Depois complete, em ordem: goleiros, zagueiros, lateral direito, lateral esquerdo, volantes, meias, atacantes e centroavantes." : "Start with the coach and confirm the formation. Then complete, in order: goalkeepers, centre-backs, right-backs, left-backs, defensive midfielders, midfielders, attackers and centre-forwards."}</p>
               {coachSelectionError ? <p className="arena-coach-selection-error" role="alert">{coachSelectionError}</p> : null}
             </div>
             <div className="arena-coach-choice-rail" role="list">
@@ -7650,6 +7803,9 @@ export default function ArenaClient({
                   <TouchlineSquadBuilderStage
                     locale={siteLanguage}
                     formation={selectedFormationKey}
+                    formationConfirmed={marketFormationConfirmed}
+                    formationOptions={ARENA_FORMATIONS.filter((formation) => isFinalizedArenaFormation(formation.key)).map((formation) => formation.key)}
+                    onSelectFormation={(formation) => confirmMarketFormation(formation as ArenaFormationKey)}
                     coachName={activeArenaCoachIdentity?.coach?.displayName ?? coachSlot.coach?.displayName ?? null}
                     coachCard={coachSlot.coach ? (
                       <TouchlineCoachCard
@@ -7679,7 +7835,8 @@ export default function ArenaClient({
                     selectedRole={marketPositionFilter}
                     onSelectRole={(role) => {
                       setMarketPositionFilter(role);
-                      setMarketNeedsOnly(true);
+                      setMarketPositionBucketFilter("all");
+                      setMarketNeedsOnly(false);
                       window.requestAnimationFrame(() => {
                         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
                         marketSelectionRef.current?.scrollIntoView({
@@ -7768,6 +7925,50 @@ export default function ArenaClient({
                     </div>
                   ) : null}
 
+                  {pendingMarketReplacementPlayer && pendingMarketReplacementBucket ? (
+                    <div className="team-builder-confirm-layer" role="presentation" onMouseDown={(event) => {
+                      if (event.currentTarget === event.target) setPendingMarketReplacementPlayerId(null);
+                    }}>
+                      <section className="team-builder-confirm-dialog team-builder-replacement-dialog" role="dialog" aria-modal="true" aria-labelledby="market-replacement-title">
+                        <button type="button" className="team-builder-confirm-close" onClick={() => setPendingMarketReplacementPlayerId(null)} aria-label={marketUi.cancel}>
+                          <X aria-hidden="true" />
+                        </button>
+                        <div className="team-builder-confirm-head">
+                          <TouchlineSelectedPlayersMark size={34} />
+                          <span>
+                            <small>{touchlineMarketPositionBucketLabel(pendingMarketReplacementBucket, siteLanguage)}</small>
+                            <strong id="market-replacement-title">
+                              {siteLanguage === "pt-BR" ? "Substituir contrato" : "Replace contract"}
+                            </strong>
+                          </span>
+                        </div>
+                        <p className="team-builder-replacement-warning">
+                          {siteLanguage === "pt-BR"
+                            ? `Você já atingiu ${TOUCHLINE_MARKET_POSITION_LIMITS[pendingMarketReplacementBucket]}/${TOUCHLINE_MARKET_POSITION_LIMITS[pendingMarketReplacementBucket]} nesta posição. Escolha quem sairá. O contrato será encerrado sem reembolso; ${pendingMarketReplacementPlayer.shortName} será adicionado ao carrinho para uma nova contratação.`
+                            : `You already reached ${TOUCHLINE_MARKET_POSITION_LIMITS[pendingMarketReplacementBucket]}/${TOUCHLINE_MARKET_POSITION_LIMITS[pendingMarketReplacementBucket]} in this position. Choose who leaves. The contract ends without refund; ${pendingMarketReplacementPlayer.shortName} will be added to the cart as a new signing.`}
+                        </p>
+                        <div className="team-builder-replacement-list">
+                          {marketPositionReplacementCandidates.length ? marketPositionReplacementCandidates.map((candidate) => (
+                            <button
+                              key={`${candidate.location}:${candidate.id}`}
+                              type="button"
+                              disabled={isContractReleasePending || isMarketCheckoutPending || !candidate.inventoryId}
+                              onClick={() => void releaseMarketPositionContract(candidate)}
+                            >
+                              <span>
+                                <strong>{candidate.shortName}</strong>
+                                <small>{candidate.position} · {candidate.location === "field" ? (siteLanguage === "pt-BR" ? "titular" : "starting XI") : (siteLanguage === "pt-BR" ? "reserva" : "reserve")}</small>
+                              </span>
+                              <b>{siteLanguage === "pt-BR" ? "Encerrar e substituir" : "Release and replace"}</b>
+                            </button>
+                          )) : (
+                            <p>{siteLanguage === "pt-BR" ? "Não foi encontrado um contrato substituível nesta posição. Atualize o elenco e tente novamente." : "No replaceable contract was found in this position. Refresh the squad and try again."}</p>
+                          )}
+                        </div>
+                      </section>
+                    </div>
+                  ) : null}
+
                   <div className="team-builder-board" ref={marketSelectionRef}>
                     <section className="team-builder-clubs" aria-label={marketUi.ariaEnglandClubs}>
                       <div className="team-builder-section-title">
@@ -7840,25 +8041,42 @@ export default function ArenaClient({
                           ) : null}
                         </div>
                         <div className="team-builder-position-filters" aria-label={marketUi.ariaPositionFilters}>
-                          {([
-                            ["all", marketUi.filterAll],
-                            ["goalkeeper", "GK"],
-                            ["defender", "DEF"],
-                            ["midfielder", "MID"],
-                            ["forward", "FWD"],
-                          ] as const).map(([value, label]) => (
-                            <button
-                              key={value}
-                              type="button"
-                              className={marketPositionFilter === value ? "is-active" : ""}
-                              onClick={() => {
-                                setMarketPositionFilter(value);
-                                if (value === "all") setMarketNeedsOnly(false);
-                              }}
-                            >
-                              {label}
-                            </button>
-                          ))}
+                          <button
+                            type="button"
+                            className={effectiveMarketPositionBucketFilter === "all" && marketPositionFilter === "all" ? "is-active" : ""}
+                            onClick={() => {
+                              setMarketPositionFilter("all");
+                              setMarketPositionBucketFilter("all");
+                              setMarketNeedsOnly(false);
+                            }}
+                            disabled={!marketFormationConfirmed || isInitialMarketSquadBuild}
+                          >
+                            <span>{marketUi.filterAll}</span>
+                            <small>{authoritativeOwnedSquadCount}/35</small>
+                          </button>
+                          {TOUCHLINE_MARKET_POSITION_SEQUENCE.map((bucket, bucketIndex) => {
+                            const count = marketPositionCounts[bucket] ?? 0;
+                            const limit = TOUCHLINE_MARKET_POSITION_LIMITS[bucket];
+                            const label = touchlineMarketPositionBucketLabel(bucket, siteLanguage).split(" / ")[0];
+                            const isSequentialStepLocked = isInitialMarketSquadBuild && bucketIndex !== currentMarketPositionStepIndex;
+                            return (
+                              <button
+                                key={bucket}
+                                type="button"
+                                className={`${effectiveMarketPositionBucketFilter === bucket ? "is-active" : ""}${count >= limit ? " is-full" : ""}${isSequentialStepLocked ? " is-locked" : ""}`}
+                                onClick={() => {
+                                  setMarketPositionFilter("all");
+                                  setMarketPositionBucketFilter(bucket);
+                                  setMarketNeedsOnly(false);
+                                }}
+                                disabled={!marketFormationConfirmed || isSequentialStepLocked}
+                                aria-label={`${label}: ${count} de ${limit}${isSequentialStepLocked ? (siteLanguage === "pt-BR" ? ", etapa bloqueada" : ", locked step") : ""}`}
+                              >
+                                <span>{label}</span>
+                                <small>{count}/{limit}</small>
+                              </button>
+                            );
+                          })}
                         </div>
                         <label className="team-builder-market-sort">
                           <ArrowUpDown aria-hidden="true" />
@@ -7894,7 +8112,9 @@ export default function ArenaClient({
                           const positionCount = marketPositionCounts[positionBucket] ?? 0;
                           const isPositionLimitReached = !isInCart && !isInField && !isInSquad && positionCount >= positionLimit;
                           const isInventoryUnavailable = Boolean(
-                            !player.inventoryId || !builderPlayerHasVerifiedMarketValue(player),
+                            positionBucket === "outfield"
+                            || !player.inventoryId
+                            || !builderPlayerHasVerifiedMarketValue(player),
                           );
                           const replacementAlreadyStaged = isContractRosterFull
                             && marketCartPlayers.length >= 1
@@ -7902,7 +8122,7 @@ export default function ArenaClient({
                           const isQuickActionDisabled = isInventoryUnavailable
                             || isMarketDataRefreshing
                             || isSoldOut
-                            || isPositionLimitReached
+                            || !marketFormationConfirmed
                             || (replacementAlreadyStaged && !isInField && !isInSquad)
                             || (isMarketCartAtCapacity && !isInCart && !isInField && !isInSquad);
                           const palette = isInventoryUnavailable
@@ -7939,7 +8159,11 @@ export default function ArenaClient({
                                 className="team-builder-quick-buy"
                                 onClick={() => {
                                   setSelectedBuilderPlayerId(fieldId);
-                                  toggleBuilderPlayerInCart(player);
+                                  if (isPositionLimitReached) {
+                                    openMarketPositionReplacement(player);
+                                  } else {
+                                    toggleBuilderPlayerInCart(player);
+                                  }
                                 }}
                                 disabled={isQuickActionDisabled}
                               >
@@ -7954,7 +8178,7 @@ export default function ArenaClient({
                                         : isSoldOut
                                           ? t("soldOut")
                                           : isPositionLimitReached
-                                            ? marketUi.positionLimitReached(positionLabel, positionLimit)
+                                            ? (siteLanguage === "pt-BR" ? `Substituir ${positionLabel.split(" / ")[0].toLowerCase()}` : `Replace ${positionLabel.split(" / ")[0].toLowerCase()}`)
                                           : isContractRosterFull
                                             ? t("releaseContractFirst")
                                             : t("addToCart")}
@@ -8060,7 +8284,7 @@ export default function ArenaClient({
                           {selectedBuilderPositionIsFull ? (
                             <div className="team-builder-position-warning">
                               {marketUi.positionLimitReached(selectedBuilderPositionLabel, selectedBuilderPositionLimit)}
-                              {selectedBuilderPositionBucket === "striker" ? ` · ${touchlineTwoStrikerFormationHint(siteLanguage)}` : ""}
+                              {selectedBuilderPositionBucket === "centre-forward" ? ` · ${touchlineTwoStrikerFormationHint(siteLanguage)}` : ""}
                             </div>
                           ) : null}
                           <a className="team-builder-profile-link" href={touchlinePlayerProfileHref({
@@ -8074,8 +8298,10 @@ export default function ArenaClient({
                           <button
                             type="button"
                             className="team-builder-send"
-                            onClick={() => toggleBuilderPlayerInCart(selectedBuilderPlayer)}
-                            disabled={selectedBuilderInventoryUnavailable || selectedBuilderIsSoldOut || selectedBuilderPositionIsFull || (isContractRosterFull && marketCartPlayers.length >= 1 && !selectedBuilderIsInCart && !selectedBuilderIsOnPitch && !selectedBuilderIsInSquad) || (isMarketCartAtCapacity && !selectedBuilderIsInCart && !selectedBuilderIsOnPitch && !selectedBuilderIsInSquad)}
+                            onClick={() => selectedBuilderPositionIsFull
+                              ? openMarketPositionReplacement(selectedBuilderPlayer)
+                              : toggleBuilderPlayerInCart(selectedBuilderPlayer)}
+                            disabled={!marketFormationConfirmed || selectedBuilderInventoryUnavailable || selectedBuilderIsSoldOut || (isContractRosterFull && marketCartPlayers.length >= 1 && !selectedBuilderIsInCart && !selectedBuilderIsOnPitch && !selectedBuilderIsInSquad && !selectedBuilderPositionIsFull) || (isMarketCartAtCapacity && !selectedBuilderIsInCart && !selectedBuilderIsOnPitch && !selectedBuilderIsInSquad && !selectedBuilderPositionIsFull)}
                           >
                             {selectedBuilderIsOnPitch
                               ? t("openOnPitch")
@@ -8086,7 +8312,7 @@ export default function ArenaClient({
                                 : isMarketCartAtCapacity
                                   ? t("cartCapacityReached")
                                 : selectedBuilderPositionIsFull
-                                  ? marketUi.positionLimitReached(selectedBuilderPositionLabel, selectedBuilderPositionLimit)
+                                  ? (siteLanguage === "pt-BR" ? `Substituir ${selectedBuilderPositionLabel.split(" / ")[0].toLowerCase()}` : `Replace ${selectedBuilderPositionLabel.split(" / ")[0].toLowerCase()}`)
                                 : selectedBuilderInventoryUnavailable
                                   ? t("marketValuePending")
                                 : selectedBuilderIsSoldOut
@@ -15932,15 +16158,41 @@ export default function ArenaClient({
         }
 
         .team-builder-position-filters button {
+          display: grid;
+          align-content: center;
+          justify-items: start;
+          gap: 2px;
           flex: 0 0 auto;
-          min-height: 30px;
+          min-height: 38px;
           border: 1px solid rgba(255,255,255,.1);
           border-radius: 8px;
           background: rgba(255,255,255,.035);
-          padding: 0 8px;
+          padding: 5px 9px;
           color: rgba(255,255,255,.52);
           font-size: 7px;
           font-weight: 1000;
+        }
+
+        .team-builder-position-filters button span,
+        .team-builder-position-filters button small {
+          display: block;
+          line-height: 1.05;
+        }
+
+        .team-builder-position-filters button small {
+          color: rgba(174,234,255,.72);
+          font-size: 6.5px;
+        }
+
+        .team-builder-position-filters button.is-full {
+          border-color: rgba(181,255,75,.26);
+          color: rgba(223,255,135,.78);
+        }
+
+        .team-builder-position-filters button.is-locked,
+        .team-builder-position-filters button:disabled {
+          cursor: not-allowed;
+          opacity: .42;
         }
 
         .team-builder-position-filters button.is-active {
@@ -17011,6 +17263,66 @@ export default function ArenaClient({
           background: linear-gradient(135deg, #89d931, #c7ff56);
           color: #071006;
           box-shadow: 0 12px 26px rgba(181,255,75,.16);
+        }
+
+        .team-builder-replacement-warning {
+          margin: 18px 0 0;
+          border: 1px solid rgba(255,190,76,.24);
+          border-radius: 12px;
+          padding: 12px;
+          background: rgba(255,154,46,.08);
+          color: rgba(255,244,210,.82);
+          font-size: 12px;
+          font-weight: 760;
+          line-height: 1.5;
+        }
+
+        .team-builder-replacement-list {
+          display: grid;
+          gap: 8px;
+          margin-top: 14px;
+        }
+
+        .team-builder-replacement-list > button {
+          display: flex;
+          min-height: 58px;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          border: 1px solid rgba(255,255,255,.1);
+          border-radius: 13px;
+          padding: 10px 12px;
+          background: rgba(255,255,255,.035);
+          color: white;
+          text-align: left;
+        }
+
+        .team-builder-replacement-list > button:hover:not(:disabled),
+        .team-builder-replacement-list > button:focus-visible {
+          border-color: rgba(181,255,75,.52);
+          background: rgba(181,255,75,.08);
+        }
+
+        .team-builder-replacement-list span,
+        .team-builder-replacement-list strong,
+        .team-builder-replacement-list small {
+          display: block;
+        }
+
+        .team-builder-replacement-list strong {
+          font-size: 13px;
+        }
+
+        .team-builder-replacement-list small {
+          margin-top: 3px;
+          color: rgba(255,255,255,.54);
+          font-size: 10px;
+        }
+
+        .team-builder-replacement-list b {
+          color: #dfff87;
+          font-size: 10px;
+          text-align: right;
         }
 
         @media (max-width: 1040px) {
@@ -18112,8 +18424,10 @@ export default function ArenaClient({
           }
 
           .touchline-game.is-market-standalone .team-builder-position-filters button {
-            flex: 1 1 0;
-            min-width: 44px;
+            flex: 0 0 auto;
+            min-width: 92px;
+            justify-items: center;
+            text-align: center;
           }
         }
 

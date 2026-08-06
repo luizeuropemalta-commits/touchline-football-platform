@@ -36,6 +36,9 @@ type FormationSlot = {
 type Props = {
   locale: string;
   formation: string;
+  formationConfirmed: boolean;
+  formationOptions: readonly string[];
+  onSelectFormation: (formation: string) => void;
   coachName?: string | null;
   coachCard?: ReactNode;
   starters: TouchlineSquadBuilderStarter[];
@@ -88,6 +91,9 @@ function roleLabel(role: TouchlineSquadBuilderRole, portuguese: boolean) {
 export default function TouchlineSquadBuilderStage({
   locale,
   formation,
+  formationConfirmed,
+  formationOptions,
+  onSelectFormation,
   coachName,
   coachCard,
   starters,
@@ -106,12 +112,14 @@ export default function TouchlineSquadBuilderStage({
   }
   const journey = resolveTouchlineSquadJourney({
     hasCoach: Boolean(coachName),
+    hasFormation: formationConfirmed,
     starterCount: starters.length,
     benchCount: bench.length,
     contractedCount,
   });
   const steps = [
     { key: "coach", label: portuguese ? "Treinador" : "Coach", complete: journey.coachComplete },
+    { key: "formation", label: portuguese ? "Formação" : "Formation", complete: journey.formationComplete },
     { key: "starting-xi", label: portuguese ? "Time titular" : "Starting XI", complete: journey.startingXiComplete },
     { key: "bench", label: portuguese ? "Banco" : "Bench", complete: journey.benchComplete },
     { key: "full-squad", label: portuguese ? "Elenco completo" : "Full squad", complete: journey.fullSquadComplete },
@@ -140,6 +148,29 @@ export default function TouchlineSquadBuilderStage({
         ))}
       </ol>
 
+      <section className={`${styles.formationStep} ${journey.formationComplete ? styles.completeFormation : ""}`} aria-labelledby="market-formation-title">
+        <div>
+          <span>{portuguese ? "PASSO 2 · OBRIGATÓRIO" : "STEP 2 · REQUIRED"}</span>
+          <strong id="market-formation-title">{portuguese ? "Escolha a formação do Meu Clube" : "Choose My Club formation"}</strong>
+          <small>{portuguese ? "Depois de confirmar, as posições do Market Transfer serão liberadas." : "Once confirmed, Market Transfer positions will unlock."}</small>
+        </div>
+        <div role="group" aria-label={portuguese ? "Formações disponíveis" : "Available formations"}>
+          {formationOptions.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={journey.formationComplete && formation === option ? styles.activeFormation : ""}
+              onClick={() => onSelectFormation(option)}
+              aria-pressed={journey.formationComplete && formation === option}
+              disabled={!journey.coachComplete}
+            >
+              <b>{option}</b>
+              <span>{portuguese ? "Usar formação" : "Use formation"}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <div className={styles.workspace}>
         <div className={styles.pitchColumn}>
           <TouchlinePitchSurface className={styles.pitch} ariaLabel={portuguese ? `Time titular ${formation}` : `${formation} Starting XI`}>
@@ -152,6 +183,7 @@ export default function TouchlineSquadBuilderStage({
                   className={styles.playerSlot}
                   style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                   onClick={() => onSelectRole(slot.role)}
+                  disabled={!journey.formationComplete}
                   aria-label={`${player.name} · ${roleLabel(slot.role, portuguese)}`}
                 >
                   <span aria-hidden="true">
@@ -174,6 +206,7 @@ export default function TouchlineSquadBuilderStage({
                   className={`${styles.emptySlot} ${selectedRole === slot.role ? styles.selected : ""}`}
                   style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                   onClick={() => onSelectRole(slot.role)}
+                  disabled={!journey.formationComplete}
                   aria-label={`${portuguese ? "Adicionar" : "Add"} ${roleLabel(slot.role, portuguese)}`}
                   aria-pressed={selectedRole === slot.role}
                 >
@@ -196,6 +229,8 @@ export default function TouchlineSquadBuilderStage({
           <h3>
             {!journey.coachComplete
               ? (portuguese ? "Escolha seu treinador" : "Choose your coach")
+              : !journey.formationComplete
+                ? (portuguese ? "Confirme a formação" : "Confirm formation")
               : !journey.startingXiComplete
                 ? (portuguese ? `Complete o time titular · ${starters.length}/11` : `Complete the Starting XI · ${starters.length}/11`)
                 : !journey.benchComplete
@@ -204,7 +239,9 @@ export default function TouchlineSquadBuilderStage({
                     ? (portuguese ? `Complete o elenco · ${contractedCount}/35` : `Complete the squad · ${contractedCount}/35`)
                     : (portuguese ? "Revise e confirme seu clube" : "Review and confirm your club")}
           </h3>
-          <p>{portuguese ? "Selecione uma posição vazia. O Market mostrará somente atletas elegíveis para esse setor." : "Select an empty slot. Market will show only players eligible for that area."}</p>
+          <p>{journey.formationComplete
+            ? (portuguese ? "Selecione uma posição vazia. O Market mostrará somente atletas elegíveis para esse setor." : "Select an empty slot. Market will show only players eligible for that area.")
+            : (portuguese ? "Treinador e formação são obrigatórios antes da primeira contratação." : "Coach and formation are required before the first signing.")}</p>
           <div className={styles.summary}>
             <span><small>{portuguese ? "Titulares" : "Starting XI"}</small><strong>{starters.length}/11</strong></span>
             <span><small>{portuguese ? "Banco" : "Bench"}</small><strong>{bench.length}/9</strong></span>

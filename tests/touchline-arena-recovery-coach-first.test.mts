@@ -91,7 +91,7 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /coachOfferStatus === "idle"[\s\S]*?Entre na sua conta para carregar as ofertas oficiais dos treinadores/);
   assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?\/market-transfer\?lang=/);
   assert.match(arena, /className="arena-coach-login-link" href=\{coachFirstLoginHref\}/);
-  assert.match(arena, /MERCADO · PASSO 1 DE 6/);
+  assert.match(arena, /MERCADO · PASSO 1 DE 10/);
   assert.match(arena, /<TouchlineSquadBuilderStage/);
   assert.match(arena, /data-testid="arena-coach-bootstrap"/);
   assert.match(arena, /params\.get\("onboarding"\) !== "market"/);
@@ -111,7 +111,8 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
     selectCoach.indexOf("const mustPersistForClubOwner") < selectCoach.indexOf('writeBrowserStorage("localStorage", coachStorageKey'),
     "authenticated ClubOwner coach selection must be accepted by the server before local cache is written",
   );
-  assert.match(selectCoach, /standaloneExperience === "market"[\s\S]*?setMarketPositionFilter\("goalkeeper"\)/);
+  assert.match(selectCoach, /standaloneExperience === "market"[\s\S]*?setMarketFormationConfirmed\(false\)/);
+  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?setMarketPositionBucketFilter\("goalkeeper"\)/);
   assert.match(arena, /coachOffersByProviderId/);
   assert.match(arena, /offer\.displayPrice/);
   assert.match(arena, /selectArenaFixtureRound\(premierLiveFixtures\)/);

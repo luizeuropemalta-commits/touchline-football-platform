@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "work"
+    "work",
+    "docs/touchline-arena/audit/premium-responsive-fix/block-6/checkpoints"
   ]
 }
