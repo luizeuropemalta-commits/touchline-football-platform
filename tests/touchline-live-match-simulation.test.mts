@@ -34,6 +34,7 @@ const globalCssSource = readFileSync(
   new URL("../app/globals.css", import.meta.url),
   "utf8",
 );
+const stableLivePlayerCardCalls = arenaClientSource.match(/<StableLivePlayerCard\b[^>]*\/>/g) ?? [];
 
 test("Live builds both elevens only from the clubs selected for the fixture", () => {
   assert.match(arenaClientSource, /\/api\/football-data\/premier-squad\?\$\{params\.toString\(\)\}/);
@@ -129,7 +130,8 @@ test("Live opens immediately, prioritizes saved squads and reveals complete card
   assert.match(arenaClientSource, /querySelectorAll<HTMLImageElement>\("img\[data-live-card-asset\]"\)/);
   assert.match(arenaClientSource, /const StableLivePlayerCard = memo\(TouchlineEliteExactCard\)/);
   assert.match(arenaClientSource, /<StableLivePlayerCard[\s\S]*?optimizeForLiveCompact[\s\S]*?runtimeLocaleOverride=\{siteLanguage\}[\s\S]*?subscribeToRanking/);
-  assert.doesNotMatch(arenaClientSource, /<StableLivePlayerCard[\s\S]*?subscribeToRanking=\{false\}/);
+  assert.ok(stableLivePlayerCardCalls.length > 0);
+  stableLivePlayerCardCalls.forEach((call) => assert.doesNotMatch(call, /subscribeToRanking=\{false\}/));
   assert.match(arenaClientSource, /function liveCanonicalPlayerAssetUrls\(player: TeamBuilderSquadPlayer\)/);
   assert.match(arenaClientSource, /\.\.\.Object\.values\(TOUCHLINE_SHIRT_DIGIT_ASSETS\)/);
   assert.doesNotMatch(eliteCardSource, /data-card-sleeve-guard="official-tier-frame"/);
@@ -222,7 +224,8 @@ test("Live only warms the current 22 player and two coach card products", () => 
   assert.match(arenaClientSource, /setReadyLiveCardProductsSignature\(liveCardProductsSignature\)/);
   assert.match(arenaClientSource, /\.arena-live-card-spotlight > \.arena-player-spotlight-backdrop/);
   assert.match(arenaClientSource, /rgba\(0,0,0,\.985\)/);
-  assert.doesNotMatch(arenaClientSource, /subscribeToRanking=\{false\}/);
+  assert.ok(stableLivePlayerCardCalls.length > 0);
+  stableLivePlayerCardCalls.forEach((call) => assert.doesNotMatch(call, /subscribeToRanking=\{false\}/));
   assert.match(arenaClientSource, /enableInteractiveNeon=\{false\}/);
   assert.match(arenaClientSource, /layoutOverride=\{TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT\}/);
   assert.match(eliteCardSource, /LIVE_COMPACT_CLUB_TEMPLATE_ROOT/);

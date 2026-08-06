@@ -62,6 +62,16 @@ test("the Market keeps account capacity first and guides a field slot directly t
   assert.doesNotMatch(source, /<a className=\{activeArenaPanel === "market"/);
 });
 
+test("the Market Card View stays static while unrelated live data updates", async () => {
+  const source = await readFile(arenaClientPath, "utf8");
+
+  assert.match(source, /const StableMarketPreviewCard = memo\(TouchlineEliteExactCard\)/);
+  assert.match(source, /const selectedBuilderPreviewCard = useMemo\(/);
+  assert.match(source, /<StableMarketPreviewCard[\s\S]*?rankingMode="preview"[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}/);
+  assert.match(source, /\.arena-action-panel-market \.team-builder-preview-card > \.touchline-card-surface\[data-card-motion="true"\] \{[\s\S]*?transition: none !important;[\s\S]*?will-change: auto !important;[\s\S]*?filter: none !important;/);
+  assert.match(source, /\.arena-action-panel-market \.team-builder-preview-status i \{[\s\S]*?animation: none;/);
+});
+
 test("successful contracts fill eligible Starting XI slots before bench and preserve canonical pricing", async () => {
   const source = await readFile(arenaClientPath, "utf8");
   assert.match(source, /function placeNewContractsInSquad\(/);

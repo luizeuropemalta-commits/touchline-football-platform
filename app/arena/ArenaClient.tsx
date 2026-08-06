@@ -1858,6 +1858,7 @@ function LiveAtomicCardShell({
 
 const StableLiveCoachCard = memo(TouchlineCoachCard);
 const StableLivePlayerCard = memo(TouchlineEliteExactCard);
+const StableMarketPreviewCard = memo(TouchlineEliteExactCard);
 
 type LiveSimulationPlayerCardProps = {
   cardLabels: Partial<TouchlineEliteExactCardLabels>;
@@ -3703,6 +3704,10 @@ export default function ArenaClient({
     ?? sortedBuilderSquad.find(builderPlayerHasVerifiedMarketValue)
     ?? sortedBuilderSquad[0]
     ?? null;
+  const selectedBuilderPreviewCard = useMemo(
+    () => selectedBuilderPlayer ? builderPlayerToPreviewCard(selectedBuilderPlayer) : null,
+    [selectedBuilderPlayer],
+  );
   const selectedBuilderContractId = selectedBuilderPlayer ? builderPlayerSquadContractId(selectedBuilderPlayer) : null;
   const selectedBuilderPitchPlayer = selectedBuilderPlayer
     ? players.find((arenaPlayer) => matchesBuilderPlayer(arenaPlayer, selectedBuilderPlayer))
@@ -7983,7 +7988,19 @@ export default function ArenaClient({
                             </span>
                           </div>
                           <div className={`team-builder-preview-card ${selectedBuilderInventoryUnavailable ? "is-market-pending" : ""}`}>
-                            <TouchlineEliteExactCard player={builderPlayerToPreviewCard(selectedBuilderPlayer)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} />
+                            <StableMarketPreviewCard
+                              className="team-builder-preview-card-surface"
+                              player={selectedBuilderPreviewCard!}
+                              layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
+                              labels={cardLabels}
+                              runtimeLocaleOverride={siteLanguage}
+                              rankingMode="preview"
+                              subscribeToRanking={false}
+                              enableInteractiveNeon={false}
+                              showCardActions={false}
+                              showProfileAction={false}
+                              showSocialMetrics={false}
+                            />
                           </div>
                           <div
                             className="team-builder-preview-card-meta"
@@ -16632,6 +16649,37 @@ export default function ArenaClient({
           min-width: 0;
           backdrop-filter: blur(9px);
           -webkit-backdrop-filter: blur(9px);
+        }
+
+        /* The Market Card View is a stable product preview, not a live card.
+           Safari can repaint a sticky, backdrop-filtered ancestor when a
+           filtered child transitions or subscribes to live ranking changes.
+           Keep this one card on a static paint layer so it never flashes while
+           the user scrolls the player list or while unrelated Arena data ticks. */
+        .arena-action-panel-market .team-builder-preview {
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+        }
+
+        .arena-action-panel-market .team-builder-preview-card > .touchline-card-surface[data-card-motion="true"] {
+          transform: none !important;
+          transition: none !important;
+          will-change: auto !important;
+          -webkit-filter: none !important;
+          filter: none !important;
+        }
+
+        .arena-action-panel-market .team-builder-preview-card [data-touchline-card-frame="true"] {
+          animation: none !important;
+          transition: none !important;
+          will-change: auto !important;
+          -webkit-filter: none !important;
+          filter: none !important;
+        }
+
+        .arena-action-panel-market .team-builder-preview-status i {
+          animation: none;
+          opacity: 1;
         }
 
         .arena-action-panel-market .team-builder-club-grid button {

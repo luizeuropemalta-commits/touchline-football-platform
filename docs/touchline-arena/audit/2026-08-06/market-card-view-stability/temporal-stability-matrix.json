@@ -1,0 +1,47 @@
+{
+  "route": "/market-transfer?lang=pt-BR&demoLineup=1",
+  "validatedAt": "2026-08-06",
+  "desktop": {
+    "viewport": "1440x900",
+    "samples": 60,
+    "uniqueVisualStates": 1,
+    "documentHorizontalOverflowPx": 0,
+    "card": {
+      "opacity": "1",
+      "visibility": "visible",
+      "transform": "none",
+      "filter": "none"
+    }
+  },
+  "tablet": {
+    "viewport": "820x1180",
+    "samples": 60,
+    "uniqueVisualStates": 1,
+    "documentHorizontalOverflowPx": 0,
+    "card": {
+      "opacity": "1",
+      "visibility": "visible",
+      "transform": "none",
+      "filter": "none"
+    }
+  },
+  "mobile": {
+    "viewport": "390x844",
+    "samples": 60,
+    "uniqueVisualStates": 1,
+    "documentHorizontalOverflowPx": 0,
+    "card": {
+      "opacity": "1",
+      "visibility": "visible",
+      "transform": "none",
+      "filter": "none"
+    }
+  },
+  "playerSelection": {
+    "from": "Gianluigi Donnarumma",
+    "to": "James Trafford",
+    "samplesAfterSelection": 75,
+    "uniqueVisualStates": 1
+  },
+  "result": "PASS"
+}
