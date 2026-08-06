@@ -23,9 +23,9 @@ export const TOUCHLINE_MARKET_POSITION_LIMITS: Record<TouchlineMarketPositionBuc
   "centre-back": 6,
   "right-back": 2,
   "left-back": 2,
-  "defensive-midfield": 3,
+  "defensive-midfield": 5,
   midfield: 6,
-  attacker: 8,
+  attacker: 6,
   "centre-forward": 5,
   // Unknown provider positions stay visible for review but can never consume
   // a ClubOwner contract slot until TouchLine classifies them.

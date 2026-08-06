@@ -41,11 +41,11 @@ test("enforces the approved 35-player ClubOwner position limits", () => {
   assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["centre-forward"], 5);
   assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["right-back"], 2);
   assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["left-back"], 2);
-  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["defensive-midfield"], 3);
+  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["defensive-midfield"], 5);
   assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS.goalkeeper, 3);
   assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS["centre-back"], 6);
   assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS.midfield, 6);
-  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS.attacker, 8);
+  assert.equal(TOUCHLINE_MARKET_POSITION_LIMITS.attacker, 6);
 
   const counts = touchlineMarketPositionBucketCount([
     { position: "ST", role: "forward" },
@@ -74,7 +74,7 @@ test("derives one reusable progress view without altering approved position limi
   assert.deepEqual(progress.find((entry) => entry.bucket === "defensive-midfield"), {
     bucket: "defensive-midfield",
     count: 2,
-    limit: 3,
+    limit: 5,
     isFull: false,
   });
 });

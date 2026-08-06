@@ -16,9 +16,9 @@ Production domain: `https://touchline.com.br`
 | 2 | Zagueiro | 6 |
 | 3 | Lateral direito | 2 |
 | 4 | Lateral esquerdo | 2 |
-| 5 | Volante | 3 |
+| 5 | Volante | 5 |
 | 6 | Meia | 6 |
-| 7 | Atacante | 8 |
+| 7 | Atacante | 6 |
 | 8 | Centroavante | 5 |
 |  | **Total** | **35** |
 
@@ -45,7 +45,7 @@ Production domain: `https://touchline.com.br`
 - Preview URL: `https://touchline-arena-official-h8a48q82g-fifa-agent-plataform.vercel.app`.
 - Production: `dpl_12WhAtuYc5x8VpEU7XmQtXwZpFfG`, Ready and aliased to `touchline.com.br` and `www.touchline.com.br`.
 - Production smoke: home 200, login 200, protected Market Transfer localized redirect 307.
-- Authenticated production DOM: `Goleiro 0/3`, `Zagueiro 0/6`, `Lateral direito 0/2`, `Lateral esquerdo 0/2`, `Volante 0/3`, `Meia 0/6`, `Atacante 0/8`, `Centroavante 0/5`.
+- Authenticated production DOM after the balancing update: `Goleiro 0/3`, `Zagueiro 0/6`, `Lateral direito 0/2`, `Lateral esquerdo 0/2`, `Volante 0/5`, `Meia 0/6`, `Atacante 0/6`, `Centroavante 0/5`.
 - Desktop width 1280: no page-level horizontal overflow.
 - Mobile 390×844: no page-level horizontal overflow.
 - Browser console errors during production validation: none.
