@@ -16,8 +16,8 @@
   "preview": {
     "project": "touchline-arena-official",
     "project_id": "prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM",
-    "production_promotion": "prohibited until all mandatory gates pass",
-    "state": "Preview Ready for application checkpoint e0e555e9: dpl_Bxj9rrsGrbnxgzK7yVgmMJNXPKL3 at https://touchline-arena-official-cyj6gza71-fifa-agent-plataform.vercel.app; idle Arena temporal validation passed locally; public unauthenticated smoke passed; controlled authenticated ClubOwner validation remains pending"
+    "production_promotion": "The Market Transfer position-journey change was explicitly authorised by Luiz for touchline.com.br and promoted after Preview smoke and responsive validation; broader commercial gates remain unchanged.",
+    "state": "Application checkpoint 0c8e3f99 is Ready in Preview dpl_HKg7j1uNo6XNChb6kCn7MTjZrKB6 and production dpl_12WhAtuYc5x8VpEU7XmQtXwZpFfG. touchline.com.br exposes the approved 35-player composition, including right-back 2/2, left-back 2/2 and centre-forward 5/5. Controlled purchase/replacement validation with a funded ClubOwner remains pending."
   },
   "current_mission": [
     "Market Value Engine",
@@ -72,8 +72,8 @@
       "CSV/API delivery method"
     ]
   },
-  "next_executable_action": "Run the controlled authenticated ClubOwner journey and device/browser matrix on Preview dpl_Bxj9rrsGrbnxgzK7yVgmMJNXPKL3. Confirm ordinary Arena visits keep zero owner cards while explicit matchday/demo activation remains functional. Then continue the first independent Final Zero-Defect Audit item. Keep the queued Training Centre to Arena XI preview behind the server-owned competition-engine eligibility boundary.",
-  "last_validated_at": "2026-08-06T11:04:00+02:00",
+  "next_executable_action": "Run one funded controlled ClubOwner purchase/replacement journey against the published 35-player position sequence, then continue the first independent Final Zero-Defect Audit item. Keep the queued Training Centre to Arena XI preview behind the server-owned competition-engine eligibility boundary.",
+  "last_validated_at": "2026-08-06T14:00:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
