@@ -1,6 +1,6 @@
 # TouchLine Final Zero-Defect Audit — Execution Ledger
 
-Status: IN PROGRESS  
+Status: GOLD PUBLIC/READ-ONLY AND RESPONSIVE MATRIX COMPLETE; CONTROLLED STATEFUL JOURNEYS REMAIN  
 Scope: full commercial-release audit requested on 2026-08-05.  
 Production: read-only validation only; no production promotion is permitted for this audit.
 
@@ -96,3 +96,35 @@ Production: read-only validation only; no production promotion is permitted for 
 ## Next audited action
 
 Continue from the first unverified authenticated journey: a controlled ClubOwner with an already-persisted coach, including visual confirmation of the corrected contracted-card colours and canonical values, then validate Market, roster, Training Centre, Inbox and notifications without changing production data. Follow with Arena live/finished states, the tablet/desktop viewport matrix and the remaining server/API/RLS review. The route inventory contains 74 Next page/route handlers; audit-only and visual-QA routes remain excluded from production acceptance evidence.
+
+## 2026-08-05 mobile-first full-site checkpoint
+
+- Responsive route matrix: complete.
+- Authenticated read-only routes: 41 checked at 390×844, 844×390, 768×1024 and 1440×900.
+- England ClubHubs: 20/20 checked individually on mobile portrait.
+- Chromium/WebKit public and protected matrix: 432 checks across 54 URLs and four viewports; no 5xx, Next.js runtime error or document-level horizontal overflow.
+- Admin boundary: all seven Admin entries redirected the tested non-admin ClubOwner to Arena without leaking Admin content.
+- Corrections published to Preview only: public TouchLine verification branding, shared 44 px quick-navigation targets and 44 px ClubHub actions.
+- Final Preview: `https://touchline-arena-official-44cfzu02w-fifa-agent-plataform.vercel.app`.
+- Final commit: `b3ca769e6ce19a0b5315dbd4395e69625b04a2d5`.
+- Final technical validation: TypeScript PASS, ESLint PASS, 653/653 tests PASS, production build PASS.
+- Consolidated report: `full-mobile-site-audit/TOUCHLINE_FULL_SITE_MOBILE_FIRST_AUDIT_REPORT_2026-08-05.md`.
+- Remaining responsive/product findings: incomplete Portuguese localisation in Notifications/Football Search, compact-landscape targets below 44 px, heavy ClubHub rendering and a persistent empty-roster Arena CTA.
+- Production was not promoted and no database, financial or commercial mutation was performed.
+
+## 2026-08-05 Gold Product Experience + Market/Squad Builder checkpoint
+
+- Canonical squad contract centralized as 35 contracted players, 11 starters, 9 match-bench players and 15 remaining players. Matchday remains 20 players and five substitutions; the coach is never a player slot.
+- Market Transfer now owns one guided six-step builder: coach, goalkeeper, defence, midfield, attack and review/Arena handoff.
+- Successful eligible player contracts fill the Starting XI before the match bench; the match bench and remaining contracted squad are disjoint views of the same authoritative roster.
+- Coach-first content is inert and hidden from assistive technology until coach state is resolved. The safe login route preserves the Market return destination.
+- Gold accessibility correction raised genuine compact actions to effective 44 px targets and removed duplicated compact social actions from the profile-card artwork while retaining the full external actions.
+- Final local validation: TypeScript PASS, ESLint PASS, 666/666 tests PASS, production build PASS, 118/118 static pages generated.
+- Browser evidence: 180-check audited-surface matrix, 72-check target correction and 24-check closeout all completed with zero navigation, server, overflow, console or network errors; the final Arena/Player closeout also recorded zero undersized interactive controls.
+- Local Market human journey: 6/6 PASS in Chromium/WebKit across mobile portrait, short landscape and desktop.
+- Implementation checkpoint: `3cd62c17`; pushed to `origin/safety/touchline-2026-06-28-wip`.
+- Preview: `https://touchline-arena-official-ql37xycvx-fifa-agent-plataform.vercel.app`; 36/36 public/auth-boundary smoke checks passed with zero navigation, server, overflow, console, network or undersized-target failures.
+- Preview correctly protects Market and preserves the localized `returnTo`. Full authenticated coach persistence, contract placement and cross-session validation remain an external controlled-persona gate; no real account was used.
+- No U23 or real-club quota was invented because neither exists in the approved canonical squad rules. A future rule requires Luiz's explicit versioned decision.
+- Consolidated report: `gold-product-experience/TOUCHLINE_GOLD_PRODUCT_EXPERIENCE_REPORT_2026-08-05.md`.
+- Production was not promoted. Stripe, Wallet, real payments, commercial rules and production data were not modified.
