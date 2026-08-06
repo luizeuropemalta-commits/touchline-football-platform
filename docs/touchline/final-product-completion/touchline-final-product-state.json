@@ -17,7 +17,7 @@
     "project": "touchline-arena-official",
     "project_id": "prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM",
     "production_promotion": "prohibited until all mandatory gates pass",
-    "state": "Preview Ready for f45cac2f: dpl_5sjRVafBiiuq2Md9sdu8THx3nFCD; public unauthenticated smoke passed, controlled ClubOwner validation remains pending"
+    "state": "Preview Ready for application checkpoint e0e555e9: dpl_Bxj9rrsGrbnxgzK7yVgmMJNXPKL3 at https://touchline-arena-official-cyj6gza71-fifa-agent-plataform.vercel.app; idle Arena temporal validation passed locally; public unauthenticated smoke passed; controlled authenticated ClubOwner validation remains pending"
   },
   "current_mission": [
     "Market Value Engine",
@@ -32,6 +32,12 @@
     "Preview validation",
     "Final Zero-Defect Audit"
   ],
+  "queued_product_flow": {
+    "name": "Training Centre to Arena XI preview",
+    "status": "NOT_STARTED",
+    "decision": "Market Transfer builds the full club; Training Centre owns the starting XI, nine-player match bench and remaining squad; an explicit Arena preview presents only the saved XI; substitutions return to Training Centre and the next preview reads the saved change; ordinary Arena visits remain empty.",
+    "eligibility_boundary": "Official matchday eligibility must come from the server-owned TouchLine competition engine."
+  },
   "market_value_commercial_enquiry": {
     "status": "AWAITING_FOOTBALL_BENCHMARK_RESPONSE",
     "product_requested": "Player Valuation only",
@@ -66,12 +72,12 @@
       "CSV/API delivery method"
     ]
   },
-  "next_executable_action": "Publish and validate the Git-integrated Preview for the current committed HEAD: a new ClubOwner must see the localized 6.5-second Arena welcome, then continue to Market Transfer for coach → goalkeeper → defence → midfield → attack; ordinary Arena visits must not redirect. Keep any later game-day dispatch bound only to the server-owned TouchLine competition engine, never an external fixture calendar; retain the Market Value Engine source boundary until the Football Benchmark written proposal confirms a suitable licence or an approved licensed export exists.",
-  "last_validated_at": "2026-08-05T19:04:00+02:00",
+  "next_executable_action": "Run the controlled authenticated ClubOwner journey and device/browser matrix on Preview dpl_Bxj9rrsGrbnxgzK7yVgmMJNXPKL3. Confirm ordinary Arena visits keep zero owner cards while explicit matchday/demo activation remains functional. Then continue the first independent Final Zero-Defect Audit item. Keep the queued Training Centre to Arena XI preview behind the server-owned competition-engine eligibility boundary.",
+  "last_validated_at": "2026-08-06T11:04:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
-    "unit": "651 passed, 0 failed",
+    "unit": "668 passed, 0 failed",
     "build": "pass"
   }
 }
