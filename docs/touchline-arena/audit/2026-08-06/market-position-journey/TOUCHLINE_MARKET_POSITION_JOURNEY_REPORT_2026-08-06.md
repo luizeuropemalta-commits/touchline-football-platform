@@ -2,9 +2,9 @@
 
 Date: 2026-08-06
 
-Application checkpoint: `0c8e3f9942fc9b77c07c554cd394f3aea6f9ffcf`
+Application checkpoint: `dc680148b3a94182d90a6c00920801330faaf358`
 
-Production deployment: `dpl_12WhAtuYc5x8VpEU7XmQtXwZpFfG`
+Production deployment: `dpl_AP1jAy6MjLcEx4e45mrc5Q9DtSmf`
 
 Production domain: `https://touchline.com.br`
 
@@ -41,9 +41,9 @@ Production domain: `https://touchline.com.br`
 - ESLint: PASS.
 - Full automated suite: 668 passed, 0 failed.
 - Production build: PASS, 118 routes generated/validated.
-- Preview: `dpl_HKg7j1uNo6XNChb6kCn7MTjZrKB6`, Ready.
-- Preview URL: `https://touchline-arena-official-h8a48q82g-fifa-agent-plataform.vercel.app`.
-- Production: `dpl_12WhAtuYc5x8VpEU7XmQtXwZpFfG`, Ready and aliased to `touchline.com.br` and `www.touchline.com.br`.
+- Preview: `dpl_14JQEhc3QCPrLsMEGpbnDNagUBnC`, Ready.
+- Preview URL: `https://touchline-arena-official-77aa2x7od-fifa-agent-plataform.vercel.app`.
+- Production: `dpl_AP1jAy6MjLcEx4e45mrc5Q9DtSmf`, Ready and aliased to `touchline.com.br` and `www.touchline.com.br`.
 - Production smoke: home 200, login 200, protected Market Transfer localized redirect 307.
 - Authenticated production DOM after the balancing update: `Goleiro 0/3`, `Zagueiro 0/6`, `Lateral direito 0/2`, `Lateral esquerdo 0/2`, `Volante 0/5`, `Meia 0/6`, `Atacante 0/6`, `Centroavante 0/5`.
 - Desktop width 1280: no page-level horizontal overflow.

@@ -17,7 +17,7 @@
     "project": "touchline-arena-official",
     "project_id": "prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM",
     "production_promotion": "The Market Transfer position-journey change was explicitly authorised by Luiz for touchline.com.br and promoted after Preview smoke and responsive validation; broader commercial gates remain unchanged.",
-    "state": "Application checkpoint 0c8e3f99 is Ready in Preview dpl_HKg7j1uNo6XNChb6kCn7MTjZrKB6 and production dpl_12WhAtuYc5x8VpEU7XmQtXwZpFfG. touchline.com.br exposes the approved 35-player composition, including right-back 2/2, left-back 2/2 and centre-forward 5/5. Controlled purchase/replacement validation with a funded ClubOwner remains pending."
+    "state": "Application checkpoint dc680148 is Ready in Preview dpl_14JQEhc3QCPrLsMEGpbnDNagUBnC and production dpl_AP1jAy6MjLcEx4e45mrc5Q9DtSmf. touchline.com.br exposes the balanced approved 35-player composition, including defensive midfielder 5/5, attacker 6/6, right-back 2/2, left-back 2/2 and centre-forward 5/5. Controlled purchase/replacement validation with a funded ClubOwner remains pending."
   },
   "current_mission": [
     "Market Value Engine",
@@ -73,7 +73,7 @@
     ]
   },
   "next_executable_action": "Run one funded controlled ClubOwner purchase/replacement journey against the published 35-player position sequence, then continue the first independent Final Zero-Defect Audit item. Keep the queued Training Centre to Arena XI preview behind the server-owned competition-engine eligibility boundary.",
-  "last_validated_at": "2026-08-06T14:00:00+02:00",
+  "last_validated_at": "2026-08-06T14:12:00+02:00",
   "tests": {
     "typescript": "pass",
     "eslint": "pass",
