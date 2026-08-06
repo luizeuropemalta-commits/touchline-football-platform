@@ -1019,7 +1019,7 @@ export default async function ClubOwnerProfileRenderer({
 
         .club-owner-best-player > a {
           display: inline-flex;
-          min-height: 30px;
+          min-height: 44px;
           align-items: center;
           justify-content: center;
           border: 1px solid rgba(163,255,18,.28);
@@ -1325,7 +1325,7 @@ export default async function ClubOwnerProfileRenderer({
         .club-owner-add-funds { position: relative; flex: 0 0 auto; }
         .club-owner-add-funds summary {
           display: inline-flex;
-          min-height: 38px;
+          min-height: 44px;
           align-items: center;
           gap: 7px;
           border: 1px solid rgba(163,255,18,.48);
@@ -1878,7 +1878,7 @@ export default async function ClubOwnerProfileRenderer({
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 34px;
+          min-height: 44px;
           border: 1px solid rgba(181,255,75,.34);
           border-radius: 999px;
           background: rgba(181,255,75,.12);
@@ -1941,6 +1941,9 @@ export default async function ClubOwnerProfileRenderer({
         }
 
         .club-owner-profile-card-meta a {
+          display: flex;
+          min-height: 44px;
+          align-items: center;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;

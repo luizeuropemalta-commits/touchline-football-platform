@@ -71,7 +71,7 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired/);
   assert.match(
     arena,
-    /className="arena-coach-gated-content"[\s\S]*?inert=\{isCoachSelectionRequired \? true : undefined\}[\s\S]*?aria-hidden=\{isCoachSelectionRequired\}/,
+    /className="arena-coach-gated-content"[\s\S]*?inert=\{isCoachSelectionRequired \|\| isCoachSelectionBootstrapPending \? true : undefined\}[\s\S]*?aria-hidden=\{isCoachSelectionRequired \|\| isCoachSelectionBootstrapPending\}/,
   );
   assert.match(arena, /is-market-standalone \.arena-coach-gated-content > :not\(\.arena-action-layer\)/);
   assert.match(arena, /is-panel-standalone \.arena-coach-first-gate \{\s*inset: 10px;/);
@@ -82,8 +82,9 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /coachOfferStatus === "idle"[\s\S]*?Entre na sua conta para carregar as ofertas oficiais dos treinadores/);
   assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?\/market-transfer\?lang=/);
   assert.match(arena, /className="arena-coach-login-link" href=\{coachFirstLoginHref\}/);
-  assert.match(arena, /MERCADO · PASSO 1 DE 5/);
-  assert.match(arena, /className="team-builder-onboarding-flow"/);
+  assert.match(arena, /MERCADO · PASSO 1 DE 6/);
+  assert.match(arena, /<TouchlineSquadBuilderStage/);
+  assert.match(arena, /data-testid="arena-coach-bootstrap"/);
   assert.match(arena, /params\.get\("onboarding"\) !== "market"/);
   assert.match(arena, /window\.location\.replace\(`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\)/);
   assert.match(arena, /\}, 6_500\);/);

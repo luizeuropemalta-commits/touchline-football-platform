@@ -34,7 +34,11 @@ function clearRecoveryGrant(response: NextResponse, requestUrl: string) {
 export async function GET(request: Request) {
   const recovery = await authenticatedRecovery();
   if ("error" in recovery) {
-    const status = recovery.error === "unavailable" ? 503 : 401;
+    // Session probing is a read-only UI check. An expired or absent recovery
+    // grant is an expected state, not a failed protected operation, so return a
+    // safe 200 payload and let the form render the localized expired-link UI.
+    // Service unavailability remains a genuine 503.
+    const status = recovery.error === "unavailable" ? 503 : 200;
     return clearRecoveryGrant(
       NextResponse.json({ ok: false, error: recovery.error }, { status }),
       request.url,

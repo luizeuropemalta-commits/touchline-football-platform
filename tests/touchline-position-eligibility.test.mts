@@ -69,11 +69,14 @@ test("shows football language for Portuguese and English buyers", () => {
 
 test("Market Transfer uses centralized position eligibility on list, preview and checkout action", () => {
   const source = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+  const squadBuilder = readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8");
 
   assert.match(source, /touchlineMarketPositionBucketCount/);
-  assert.match(source, /touchlineMarketPositionProgress/);
   assert.match(source, /marketNeedsOnly/);
-  assert.match(source, /team-builder-club-progress/);
+  assert.match(source, /<TouchlineSquadBuilderStage/);
+  assert.match(source, /selectedRole=\{marketPositionFilter\}/);
+  assert.match(squadBuilder, /const steps = \[/);
+  assert.match(squadBuilder, /className=\{styles\.progress\}/);
   assert.match(source, /isPositionLimitReached/);
   assert.match(source, /selectedBuilderPositionIsFull/);
   assert.match(source, /marketUi\.positionLimitReached/);
@@ -86,10 +89,13 @@ test("Market Transfer uses centralized position eligibility on list, preview and
 
 test("Market Transfer keeps the buying workspace visible on Safari/mobile landscape", () => {
   const source = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+  const squadBuilderStyles = readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8");
 
   assert.match(source, /Market Transfer — short landscape\/mobile audit pass/);
   assert.match(source, /max-width: 940px\) and \(max-height: 540px\)/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-deal-flow \{[\s\S]*?display: none;/);
+  assert.match(squadBuilderStyles, /max-height: 480px\) and \(orientation: landscape\)/);
+  assert.match(squadBuilderStyles, /\.workspace \{ grid-template-columns: minmax\(0, 1\.4fr\) minmax\(230px, \.6fr\); \}/);
+  assert.match(squadBuilderStyles, /\.pitch \{ min-height: 330px; \}/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-bank \{[\s\S]*?display: none;/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-board \{[\s\S]*?"clubs clubs"[\s\S]*?"roster preview"/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-preview \{[\s\S]*?position: sticky;[\s\S]*?max-height: calc\(100svh - 14px\);/);

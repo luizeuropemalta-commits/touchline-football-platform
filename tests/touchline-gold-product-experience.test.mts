@@ -45,9 +45,21 @@ test("Arena exposes a persistent non-financial recovery journey for incomplete c
 });
 
 test("compact Arena and Market controls retain effective 44px targets", async () => {
-  const source = await read("app/arena/ArenaClient.tsx");
+  const [source, auth, quickNav, social, matchCentre, rankings] = await Promise.all([
+    read("app/arena/ArenaClient.tsx"),
+    read("components/auth-form.tsx"),
+    read("components/touchline/TouchlineProfileQuickNav.module.css"),
+    read("components/touchline/social/TouchlineSocial.module.css"),
+    read("components/touchline/match-centre/touchline-match-centre.module.css"),
+    read("app/touchline-player-card-rankings/page.tsx"),
+  ]);
   assert.match(source, /\.club-symbol-arrow \{ width: 44px; height: 44px/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-position-filters button,[\s\S]*min-height: 44px/);
+  assert.match(auth, /grid size-11/);
+  assert.match(quickNav, /\.shortcuts a \{[\s\S]*min-height: 44px/);
+  assert.match(social, /\.post footer button, \.post footer a \{[^\n]*min-height: 44px/);
+  assert.match(matchCentre, /\.brand \{[^\n]*min-height: 44px/);
+  assert.match(rankings, /\.tl-card-rankings-featured-copy a,[\s\S]*min-height: 44px/);
 });
 
 test("the shared card localizes its league-statistics label", async () => {

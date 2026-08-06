@@ -1067,6 +1067,12 @@ a, button { outline: none; }
 }
 
 .auth-account-switch a {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding-inline: .2rem;
   color: #c5ff6d;
   font-weight: 900;
   text-decoration: underline;
@@ -1267,7 +1273,7 @@ a, button { outline: none; }
 
 @media (max-width: 480px) {
   .auth-language-switcher {
-    min-height: 40px;
+    min-height: 44px;
     padding-left: .65rem;
   }
 

@@ -359,11 +359,11 @@ export function AuthForm({
         <div className="block">
           <div className="mb-2 flex items-center justify-between">
             <label htmlFor="touchline-auth-password" className="text-xs font-semibold">{copy.password}</label>
-            {mode === "login" && <Link href={forgotPasswordHref} className="text-xs font-semibold text-[#8fc7b8] transition hover:text-cyan-100">{copy.forgotPassword}</Link>}
+            {mode === "login" && <Link href={forgotPasswordHref} className="inline-flex min-h-11 items-center text-xs font-semibold text-[#8fc7b8] transition hover:text-cyan-100">{copy.forgotPassword}</Link>}
           </div>
           <div className="relative">
             <Input id="touchline-auth-password" required name="password" minLength={8} type={show ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder={copy.passwordPlaceholder} autoComplete={mode === "login" ? "current-password" : "new-password"} className="pr-11" />
-            <button type="button" aria-controls="touchline-auth-password" aria-label={show ? copy.hidePassword : copy.showPassword} onClick={() => setShow(!show)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b9592]">{show ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+            <button type="button" aria-controls="touchline-auth-password" aria-label={show ? copy.hidePassword : copy.showPassword} onClick={() => setShow(!show)} className="absolute right-1 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full text-[#8b9592] transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#a3ff12]">{show ? <EyeOff size={16} /> : <Eye size={16} />}</button>
           </div>
         </div>
       )}

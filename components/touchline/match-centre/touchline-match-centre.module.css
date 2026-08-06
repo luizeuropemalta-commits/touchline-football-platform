@@ -1,11 +1,11 @@
 .shell { min-height: 100vh; background: radial-gradient(circle at 55% -10%, #254a3e 0, transparent 33%), #060a09; color: #f7fbf7; font-family: Arial, sans-serif; }
 .header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 clamp(18px, 4vw, 60px); border-bottom: 1px solid rgba(220,255,206,.12); background: rgba(4,10,8,.92); }
-.brand { font-size: 13px; font-weight: 950; letter-spacing: .13em; color: #f7fbf7; text-decoration: none; }
+.brand { display: inline-flex; min-height: 44px; align-items: center; font-size: 13px; font-weight: 950; letter-spacing: .13em; color: #f7fbf7; text-decoration: none; }
 .brand span, .header > div span { color: #b7ff4b; }
 .header > div { display: grid; gap: 3px; text-align: center; }
 .header > div span { font-size: 9px; font-weight: 900; letter-spacing: .16em; }
 .header > div strong { font-size: 16px; letter-spacing: .04em; }
-.return { display: flex; gap: 4px; align-items: center; color: #dfffaf; text-decoration: none; font-size: 12px; font-weight: 800; }
+.return { display: flex; min-height: 44px; gap: 4px; align-items: center; color: #dfffaf; text-decoration: none; font-size: 12px; font-weight: 800; }
 .layout { display: grid; grid-template-columns: minmax(270px, 320px) minmax(0, 1fr); max-width: 1540px; min-height: calc(100vh - 72px); margin: auto; }
 .fixtureRail { border-right: 1px solid rgba(220,255,206,.12); background: rgba(4,9,7,.72); }
 .railHeading { display: flex; align-items: center; gap: 8px; padding: 22px 20px 16px; border-bottom: 1px solid rgba(220,255,206,.1); color: #d8ff94; }

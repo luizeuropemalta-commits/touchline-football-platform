@@ -834,8 +834,9 @@ export default async function TouchLinePlayerProfilePage({
               playerProfileHref={profileHref}
               runtimeLocaleOverride={locale}
               rankingMode={previewTier ? "preview" : "live"}
-              showCardActions
+              showCardActions={false}
               showProfileAction={false}
+              showSocialMetrics={false}
             />
             </div>
           </div>

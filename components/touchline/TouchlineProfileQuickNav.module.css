@@ -50,7 +50,7 @@
 .shortcuts::-webkit-scrollbar { display: none; }
 
 .shortcuts a {
-  min-height: 30px;
+  min-height: 44px;
   gap: 6px;
   border: 1px solid rgba(255,255,255,.11);
   border-radius: 999px;

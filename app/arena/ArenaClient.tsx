@@ -10,6 +10,7 @@ import TouchlineCoachCard, { touchlineLiveCompactCoachFrameUrl } from "@/compone
 import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntro";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import { TouchlineCoinMark, TouchlineSelectedPlayersMark } from "@/components/touchline/market/TouchlineMarketMarks";
+import TouchlineSquadBuilderStage from "@/components/touchline/market/TouchlineSquadBuilderStage";
 import { createClient } from "@/lib/supabase/client";
 import {
   buildArenaPlayersFromFantasyLineup,
@@ -72,12 +73,12 @@ import {
 } from "@/lib/touchlineArena/i18n";
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { getTouchLineMarketCopy } from "@/lib/touchlineArena/market-i18n";
+import { TOUCHLINE_SQUAD_RULES } from "@/lib/touchlineArena/squad-rules";
 import {
   TOUCHLINE_MARKET_POSITION_LIMITS,
   touchlineMarketPositionBucket,
   touchlineMarketPositionBucketCount,
   touchlineMarketPositionBucketLabel,
-  touchlineMarketPositionProgress,
   touchlineTwoStrikerFormationHint,
 } from "@/lib/touchlineArena/position-eligibility";
 import {
@@ -482,16 +483,6 @@ const ARENA_FORMATION_POSITION_RULES: Record<ArenaFormationKey, string> = {
   "5-3-2": "1 GK, 3 CB, 2 FB, 3 MID, 2 ST",
   "5-4-1": "1 GK, 3 CB, 2 FB, 2 MID, 2 WIDE, 1 ST",
 };
-const TOUCHLINE_SQUAD_RULES = {
-  contracted: 35,
-  matchday: 20,
-  starters: 11,
-  bench: 9,
-  reserveVault: 15,
-  goalkeepers: 3,
-  matchdayBenchGoalkeepers: 1,
-  substitutions: 5,
-};
 const TOUCHLINE_MARKET_CARD_SUPPLY_PER_PLAYER = 1000;
 const TOUCHLINE_DEMO_PROMOTIONAL_BALANCE_TC = 60;
 const ARENA_FORMATION_POSITION_CAPS: Record<ArenaFormationKey, Partial<Record<ArenaPositionGroup, number>>> = {
@@ -889,6 +880,43 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
       matchStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
     },
   };
+}
+
+function placeNewContractsInSquad(
+  currentPlayers: ArenaPlayer[],
+  currentBench: BenchOption[],
+  newContracts: BenchOption[],
+  formationKey: ArenaFormationKey,
+) {
+  let nextPlayers = [...currentPlayers];
+  const nextBench = [...currentBench];
+
+  for (const contract of newContracts) {
+    const roleCapacity = maxArenaPlayersForRole(contract.role, formationKey);
+    const roleCount = nextPlayers.filter((player) => player.role === contract.role).length;
+    const hasStartingSlot = nextPlayers.length < TOUCHLINE_SQUAD_RULES.starters && roleCount < roleCapacity;
+
+    if (!hasStartingSlot) {
+      nextBench.push(contract);
+      continue;
+    }
+
+    const emptyTarget: ArenaPlayer = {
+      id: `empty-${contract.role}-${roleCount}`,
+      name: contract.name,
+      shortName: contract.shortName,
+      role: contract.role,
+      x: 50,
+      y: 50,
+      heightVh: ARENA_CARD_COMPACT_HEIGHT_VH,
+    };
+    nextPlayers = normalizeArenaPlayersForFormation(
+      [...nextPlayers, benchOptionToArenaPlayer(contract, emptyTarget)],
+      formationKey,
+    );
+  }
+
+  return { players: nextPlayers, bench: nextBench };
 }
 
 function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOption): BenchOption {
@@ -3431,6 +3459,9 @@ export default function ArenaClient({
   const arenaCoachClubLogoUrl = ownerCoachClub?.logoUrl;
   const arenaCoachClubAccent = ownerCoachClub?.accent ?? "#b5ff4b";
   const arenaCoachCountryCode3 = activeArenaCoachIdentity?.countryCode3 ?? "ENG";
+  const isCoachSelectionBootstrapPending = Boolean(
+    standaloneExperience === "market" && !hasLoadedOwnerCoach,
+  );
   const isCoachSelectionRequired = Boolean(
     isArenaFunctionalReady
     && hasLoadedOwnerCoach
@@ -3644,7 +3675,6 @@ export default function ArenaClient({
     ...benchPlayers.map((bench) => ({ position: bench.position, role: bench.role })),
     ...marketCartPlayers.map((player) => ({ position: player.position, role: player.role })),
   ]);
-  const marketPositionProgress = touchlineMarketPositionProgress(marketPositionCounts);
   const visibleMarketPlayers = sortedBuilderSquad
     .filter((player) => {
       if (marketPositionFilter !== "all" && player.role !== marketPositionFilter) return false;
@@ -6118,17 +6148,21 @@ export default function ArenaClient({
       .replace("{count}", String(completedItemCount))
       .replace("{total}", String(completedTotalTc));
 
+    const placement = placeNewContractsInSquad(
+      isDemoLineup ? [] : players,
+      isDemoLineup ? [] : benchPlayers,
+      newBenchCards,
+      selectedFormationKey,
+    );
     setIsDemoLineup(false);
-    setBenchPlayers((currentBench) => {
-      const nextBench = [...currentBench, ...newBenchCards];
-      persistArenaRoster(players, nextBench);
-      return nextBench;
-    });
+    setPlayers(placement.players);
+    setBenchPlayers(placement.bench);
+    persistArenaRoster(placement.players, placement.bench);
     setMarketWalletBalanceTc(nextWalletBalanceTc);
     if (!isAuthoritativeCheckout && arenaPersistencePrincipal) {
       writeMarketWalletBalanceTc(nextWalletBalanceTc, arenaPersistencePrincipal);
     }
-    setSelectedBenchId(newBenchCards.at(-1)?.id ?? selectedBenchId);
+    setSelectedBenchId(placement.bench.at(-1)?.id ?? selectedBenchId);
     setMarketCartPlayers([]);
     setIsMarketCheckoutConfirmationOpen(false);
     setShouldRenderPlayers(true);
@@ -6428,10 +6462,24 @@ export default function ArenaClient({
             </div>
           </aside>
         ) : null}
-        {isCoachSelectionRequired ? (
-          <section className="arena-coach-first-gate" aria-label={siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"} data-testid="arena-coach-first-gate">
+        {isCoachSelectionBootstrapPending ? (
+          <section
+            className="arena-coach-first-gate is-bootstrap-pending"
+            aria-label={siteLanguage === "pt-BR" ? "Preparando Market Transfer" : "Preparing Market Transfer"}
+            aria-busy="true"
+            data-testid="arena-coach-bootstrap"
+          >
             <div className="arena-coach-first-copy">
-              <span>{siteLanguage === "pt-BR" ? "MERCADO · PASSO 1 DE 5" : "MARKET · STEP 1 OF 5"}</span>
+              <span>{siteLanguage === "pt-BR" ? "TOUCHLINE MARKET" : "TOUCHLINE MARKET"}</span>
+              <h1>{siteLanguage === "pt-BR" ? "Preparando seu clube" : "Preparing your club"}</h1>
+              <p>{siteLanguage === "pt-BR" ? "Confirmando treinador e elenco para abrir a etapa correta." : "Confirming your coach and squad so we can open the correct step."}</p>
+            </div>
+            <div className="arena-coach-bootstrap-pulse" aria-hidden="true"><i /><i /><i /></div>
+          </section>
+        ) : isCoachSelectionRequired ? (
+          <section className={`arena-coach-first-gate${coachOfferStatus !== "ready" ? " is-offer-pending" : ""}`} aria-label={siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"} data-testid="arena-coach-first-gate">
+            <div className="arena-coach-first-copy">
+              <span>{siteLanguage === "pt-BR" ? "MERCADO · PASSO 1 DE 6" : "MARKET · STEP 1 OF 6"}</span>
               <h1>{siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"}</h1>
               <p>{siteLanguage === "pt-BR" ? "Comece pelo treinador oficial. Depois, monte o elenco por posição: goleiros, defensores, meio-campistas e atacantes. A escolha fica ligada ao seu ClubOwner." : "Start with your official coach, then build by position: goalkeepers, defenders, midfielders and forwards. This choice stays linked to your ClubOwner."}</p>
               {coachSelectionError ? <p className="arena-coach-selection-error" role="alert">{coachSelectionError}</p> : null}
@@ -6501,8 +6549,8 @@ export default function ArenaClient({
         ) : null}
         <div
           className="arena-coach-gated-content"
-          inert={isCoachSelectionRequired ? true : undefined}
-          aria-hidden={isCoachSelectionRequired}
+          inert={isCoachSelectionRequired || isCoachSelectionBootstrapPending ? true : undefined}
+          aria-hidden={isCoachSelectionRequired || isCoachSelectionBootstrapPending}
         >
         <div
           className="arena-field-selection-clear-layer"
@@ -7254,7 +7302,7 @@ export default function ArenaClient({
             <div className={`arena-action-panel arena-action-panel-${activeArenaPanel}`}>
               <div className="arena-action-topline">
                 <div>
-                  <p>{t("touchlineArenaOnline")}</p>
+                  <p>{activeArenaPanel === "market" ? t("touchlineMarketTransfer") : t("touchlineArenaOnline")}</p>
                   <h2>
                     {activeArenaPanel === "bench" ? t("myClub") : null}
                     {activeArenaPanel === "market" ? t("touchlineMarketTransfer") : null}
@@ -7554,39 +7602,43 @@ export default function ArenaClient({
 
               {activeArenaPanel === "market" ? (
                 <div className="team-builder-shell">
-                  <nav className="team-builder-onboarding-flow" aria-label={siteLanguage === "pt-BR" ? "Sequência para montar o elenco" : "Squad-building sequence"}>
-                    <span className="is-complete"><b>01</b><strong>{siteLanguage === "pt-BR" ? "Treinador" : "Coach"}</strong><small>{activeArenaCoachIdentity?.coach?.displayName ?? (siteLanguage === "pt-BR" ? "Definido" : "Set")}</small></span>
-                    {([
-                      ["goalkeeper", "02", siteLanguage === "pt-BR" ? "Goleiros" : "Goalkeepers"],
-                      ["defender", "03", siteLanguage === "pt-BR" ? "Defensores" : "Defenders"],
-                      ["midfielder", "04", siteLanguage === "pt-BR" ? "Meio-campistas" : "Midfielders"],
-                      ["forward", "05", siteLanguage === "pt-BR" ? "Atacantes" : "Forwards"],
-                    ] as const).map(([position, number, label]) => (
-                      <button
-                        key={position}
-                        type="button"
-                        className={marketPositionFilter === position ? "is-active" : ""}
-                        aria-pressed={marketPositionFilter === position}
-                        onClick={() => {
-                          setMarketPositionFilter(position);
-                          setMarketNeedsOnly(true);
-                        }}
-                      >
-                        <b>{number}</b><strong>{label}</strong>
-                      </button>
-                    ))}
-                  </nav>
-                  <div className="team-builder-deal-flow" aria-label={marketUi.negotiationRoom}>
-                    <div>
-                      <Handshake aria-hidden="true" />
-                      <span><small>{marketUi.negotiationRoom}</small><strong>{marketUi.officialContracts}</strong></span>
-                    </div>
-                    <ol>
-                      <li><b>01</b><span>{marketUi.dealSearch}</span></li>
-                      <li><b>02</b><span>{marketUi.dealCart}</span></li>
-                      <li><b>03</b><span>{marketUi.dealConfirm}</span></li>
-                    </ol>
-                  </div>
+                  <TouchlineSquadBuilderStage
+                    locale={siteLanguage}
+                    formation={selectedFormationKey}
+                    coachName={activeArenaCoachIdentity?.coach?.displayName ?? coachSlot.coach?.displayName ?? null}
+                    coachCard={coachSlot.coach ? (
+                      <TouchlineCoachCard
+                        coach={coachSlot.coach}
+                        slot={coachSlot}
+                        clubName={arenaCoachClubName}
+                        clubLogoUrl={arenaCoachClubLogoUrl}
+                        clubAccent={arenaCoachClubAccent}
+                        countryCode3={arenaCoachCountryCode3}
+                        formation={selectedFormationKey}
+                        locale={siteLanguage}
+                        displayMode="compact"
+                        optimizeForLiveCompact
+                        enableInteractiveNeon={false}
+                      />
+                    ) : null}
+                    starters={players.map((player) => ({
+                      id: player.id,
+                      name: player.name,
+                      shortName: player.shortName,
+                      role: player.role,
+                      card: arenaCardToPlayer(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.name) : undefined),
+                    }))}
+                    bench={matchdayBenchPlayers.map((player) => ({ id: player.id, shortName: player.shortName, position: player.position }))}
+                    remainingSquad={reserveVaultPlayers.map((player) => ({ id: player.id, shortName: player.shortName, position: player.position }))}
+                    contractedCount={authoritativeOwnedSquadCount}
+                    selectedRole={marketPositionFilter}
+                    onSelectRole={(role) => {
+                      setMarketPositionFilter(role);
+                      setMarketNeedsOnly(true);
+                    }}
+                    trainingHref={touchlineClubOwnerSubstitutionHref(siteLanguage)}
+                    arenaHref={`/arena?skipIntro=1&lang=${encodeURIComponent(siteLanguage)}`}
+                  />
 
                   <div className="team-builder-bank" aria-label={t("touchlineMarketTransfer")}>
                     <span>
@@ -7610,31 +7662,6 @@ export default function ArenaClient({
                       <strong>{marketPlayerCount}</strong>
                     </span>
                   </div>
-
-                  <section className="team-builder-club-progress" aria-label={marketUi.ariaMyClubProgress}>
-                    <header>
-                      <span>
-                        <small>{marketUi.myClub}</small>
-                        <strong>{marketUi.squadProgress(authoritativeOwnedSquadCount + marketCartPlayers.length, TOUCHLINE_SQUAD_RULES.contracted)}</strong>
-                        <em>{marketUi.playersRemaining(Math.max(0, openContractSlots - marketCartPlayers.length))}</em>
-                      </span>
-                      <button
-                        type="button"
-                        aria-pressed={marketNeedsOnly}
-                        onClick={() => setMarketNeedsOnly((current) => !current)}
-                      >
-                        {marketNeedsOnly ? marketUi.showAllPositions : marketUi.showOnlyNeededPositions}
-                      </button>
-                    </header>
-                    <div className="team-builder-position-progress-list">
-                      {marketPositionProgress.filter(({ bucket, count }) => bucket !== "outfield" || count > 0).map(({ bucket, count, limit, isFull }) => (
-                        <span key={bucket} className={isFull ? "is-full" : ""}>
-                          <small>{touchlineMarketPositionBucketLabel(bucket, siteLanguage)}</small>
-                          <strong>{marketUi.positionRosterCount(count, limit)}</strong>
-                        </span>
-                      ))}
-                    </div>
-                  </section>
 
                   <div className={`team-builder-cart-dock ${marketCartPlayers.length ? "has-items" : "is-empty"}`} aria-label={t("marketCart")}>
                     <div className="team-builder-cart-title">
@@ -7797,7 +7824,10 @@ export default function ArenaClient({
                               key={value}
                               type="button"
                               className={marketPositionFilter === value ? "is-active" : ""}
-                              onClick={() => setMarketPositionFilter(value)}
+                              onClick={() => {
+                                setMarketPositionFilter(value);
+                                if (value === "all") setMarketNeedsOnly(false);
+                              }}
                             >
                               {label}
                             </button>
@@ -9575,6 +9605,50 @@ export default function ArenaClient({
         .arena-coach-first-copy p { margin: 2px 0 0; color: rgba(239,255,210,.66); font-size: 12px; line-height: 1.42; }
         .arena-coach-first-copy .arena-coach-selection-error { color: #ffd6c7; font-weight: 800; }
 
+        .arena-coach-first-gate.is-bootstrap-pending {
+          grid-template-rows: auto auto;
+          align-content: center;
+          justify-items: center;
+          text-align: center;
+        }
+
+        .arena-coach-first-gate.is-offer-pending {
+          grid-template-rows: auto auto;
+          align-content: center;
+        }
+
+        .arena-coach-first-gate.is-offer-pending .arena-coach-offer-status {
+          align-self: start;
+        }
+
+        .arena-coach-first-gate.is-bootstrap-pending .arena-coach-first-copy {
+          justify-items: center;
+        }
+
+        .arena-coach-bootstrap-pulse {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          min-height: 44px;
+        }
+
+        .arena-coach-bootstrap-pulse i {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #b5ff4b;
+          box-shadow: 0 0 16px rgba(181,255,75,.7);
+          animation: arena-coach-bootstrap-pulse 1s ease-in-out infinite alternate;
+        }
+
+        .arena-coach-bootstrap-pulse i:nth-child(2) { animation-delay: .16s; }
+        .arena-coach-bootstrap-pulse i:nth-child(3) { animation-delay: .32s; }
+
+        @keyframes arena-coach-bootstrap-pulse {
+          from { opacity: .34; transform: translateY(2px) scale(.82); }
+          to { opacity: 1; transform: translateY(-2px) scale(1); }
+        }
+
         .arena-coach-choice-rail {
           display: grid;
           grid-auto-flow: column;
@@ -9616,7 +9690,7 @@ export default function ArenaClient({
         .arena-coach-choice small { overflow: hidden; color: rgba(255,255,255,.55); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
         .arena-coach-offer-status { display: grid; align-self: center; gap: 9px; max-width: 340px; color: rgba(239,255,210,.7); font-size: 11px; line-height: 1.45; }
         .arena-coach-offer-status p { margin: 0; }
-        .arena-coach-login-link { display: inline-flex; width: fit-content; align-items: center; min-height: 34px; border: 1px solid rgba(181,255,75,.58); border-radius: 999px; padding: 0 13px; color: #e4ffc1; background: rgba(101,176,15,.14); font-size: 10px; font-weight: 950; text-decoration: none; }
+        .arena-coach-login-link { display: inline-flex; width: fit-content; align-items: center; min-height: 44px; border: 1px solid rgba(181,255,75,.58); border-radius: 999px; padding: 0 15px; color: #e4ffc1; background: rgba(101,176,15,.14); font-size: 10px; font-weight: 950; text-decoration: none; }
         .arena-coach-login-link:hover, .arena-coach-login-link:focus-visible { border-color: #c5ff6d; background: rgba(181,255,75,.24); color: #fff; outline: none; }
         .arena-coach-choice-offer { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; color: #c8ff77; font-size: 7px; font-weight: 950; letter-spacing: .035em; }
         .arena-coach-choice-offer b:last-child { color: #fff4b1; font-size: 10px; }
@@ -9626,7 +9700,7 @@ export default function ArenaClient({
         @media (max-width: 760px) {
           .arena-intro-actions { top: max(12px, calc(env(safe-area-inset-top) + 6px)); right: max(10px, env(safe-area-inset-right)); }
           .arena-intro-actions .arena-intro-replay-toggle,
-          .arena-intro-actions .arena-entry-skip-toggle { min-height: 38px; gap: 6px; padding: 0 12px; font-size: 8px; }
+          .arena-intro-actions .arena-entry-skip-toggle { min-height: 44px; gap: 6px; padding: 0 12px; font-size: 8px; }
           .arena-coach-first-gate { inset: max(54px, calc(env(safe-area-inset-top) + 46px)) 10px max(10px, calc(env(safe-area-inset-bottom) + 6px)); padding: 13px; }
           .arena-coach-first-copy p { font-size: 10px; }
           .arena-coach-choice-rail { grid-auto-columns: 108px; gap: 7px; }
@@ -9637,6 +9711,10 @@ export default function ArenaClient({
           .arena-coach-choice-offer b:last-child { font-size: 8px; }
           .arena-coach-choice-reason { font-size: 5px !important; }
           .arena-coach-choice em { font-size: 5px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .arena-coach-bootstrap-pulse i { animation: none; }
         }
 
         .club-symbol-carousel {
@@ -10194,7 +10272,7 @@ export default function ArenaClient({
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 40px;
+          min-height: 44px;
           border-radius: 12px;
           background: rgba(181,255,75,.18);
           padding: 0 14px;
@@ -10257,6 +10335,31 @@ export default function ArenaClient({
           border-color: rgba(181,255,75,.22);
           background: rgba(2,8,11,.82);
           box-shadow: 0 40px 120px rgba(0,0,0,.55), inset 0 0 0 1px rgba(181,255,75,.06);
+        }
+
+        .touchline-game.is-market-standalone .arena-action-topline h2 {
+          display: none;
+        }
+
+        .touchline-game.is-market-standalone .arena-action-topline {
+          justify-content: flex-end;
+          padding-bottom: 10px;
+        }
+
+        .touchline-game.is-market-standalone .arena-action-topline > div {
+          display: none;
+        }
+
+        .touchline-game.is-market-standalone .arena-action-topline .arena-market-return,
+        .touchline-game.is-market-standalone .arena-club-sections a,
+        .touchline-game.is-market-standalone .team-builder-section-title a,
+        .touchline-game.is-market-standalone .team-builder-club-hub {
+          min-height: 44px;
+        }
+
+        .touchline-game.is-market-standalone .team-builder-market-search input,
+        .touchline-game.is-market-standalone .team-builder-market-sort select {
+          min-height: 44px;
         }
 
         .touchline-game.is-market-standalone .arena-action-panel-market .team-builder-shell {
@@ -13126,109 +13229,6 @@ export default function ArenaClient({
           font-variant-numeric: tabular-nums;
         }
 
-        .team-builder-club-progress {
-          display: grid;
-          gap: 9px;
-          border: 1px solid rgba(181,255,75,.2);
-          border-radius: 15px;
-          background: linear-gradient(115deg, rgba(25,61,31,.26), rgba(4,12,16,.36));
-          box-shadow: inset 0 0 0 1px rgba(255,255,255,.035);
-          padding: 10px 12px;
-          backdrop-filter: blur(12px);
-        }
-
-        .team-builder-club-progress header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-        }
-
-        .team-builder-club-progress header > span {
-          display: grid;
-          grid-template-columns: auto auto;
-          align-items: baseline;
-          column-gap: 8px;
-          min-width: 0;
-        }
-
-        .team-builder-club-progress small {
-          color: rgba(181,255,75,.78);
-          font-size: 8px;
-          font-weight: 1000;
-          letter-spacing: .08em;
-          text-transform: uppercase;
-        }
-
-        .team-builder-club-progress header strong {
-          color: white;
-          font-size: 15px;
-          font-weight: 1000;
-          font-variant-numeric: tabular-nums;
-        }
-
-        .team-builder-club-progress header em {
-          grid-column: 1 / -1;
-          color: rgba(255,255,255,.54);
-          font-size: 9px;
-          font-style: normal;
-          font-weight: 800;
-        }
-
-        .team-builder-club-progress header button {
-          min-height: 30px;
-          border: 1px solid rgba(181,255,75,.34);
-          border-radius: 9px;
-          background: rgba(181,255,75,.09);
-          color: #efff9b;
-          padding: 0 10px;
-          font-size: 8px;
-          font-weight: 1000;
-        }
-
-        .team-builder-club-progress header button[aria-pressed="true"] {
-          background: rgba(181,255,75,.23);
-          box-shadow: inset 0 0 16px rgba(181,255,75,.12);
-        }
-
-        .team-builder-position-progress-list {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 6px;
-        }
-
-        .team-builder-position-progress-list > span {
-          display: grid;
-          gap: 3px;
-          min-width: 0;
-          border: 1px solid rgba(122,231,255,.14);
-          border-radius: 9px;
-          background: rgba(0,0,0,.14);
-          padding: 6px 7px;
-        }
-
-        .team-builder-position-progress-list > span.is-full {
-          border-color: rgba(255,106,133,.44);
-          background: rgba(255,74,96,.09);
-        }
-
-        .team-builder-position-progress-list > span small {
-          overflow: hidden;
-          color: rgba(255,255,255,.58);
-          font-size: 7px;
-          letter-spacing: .04em;
-          text-overflow: ellipsis;
-          text-transform: none;
-          white-space: nowrap;
-        }
-
-        .team-builder-position-progress-list > span strong {
-          color: white;
-          font-size: 11px;
-          font-weight: 1000;
-          font-variant-numeric: tabular-nums;
-        }
-
         .touchline-tc-balance b {
           font: inherit;
         }
@@ -15779,170 +15779,6 @@ export default function ArenaClient({
           grid-template-rows: auto auto auto minmax(540px, 1fr);
         }
 
-        .team-builder-onboarding-flow {
-          display: grid;
-          grid-template-columns: 1.22fr repeat(4, minmax(0, 1fr));
-          gap: 7px;
-          margin: 0;
-          border: 1px solid rgba(181,255,75,.25);
-          border-radius: 15px;
-          padding: 8px;
-          background: linear-gradient(125deg, rgba(181,255,75,.08), rgba(4,16,17,.86) 42%);
-        }
-
-        .team-builder-onboarding-flow > span,
-        .team-builder-onboarding-flow > button {
-          display: grid;
-          min-width: 0;
-          grid-template-columns: auto minmax(0, 1fr);
-          align-items: center;
-          gap: 3px 7px;
-          border: 1px solid rgba(255,255,255,.09);
-          border-radius: 10px;
-          padding: 7px 9px;
-          background: rgba(0,0,0,.16);
-          color: rgba(255,255,255,.72);
-          text-align: left;
-        }
-
-        .team-builder-onboarding-flow > button {
-          cursor: pointer;
-          font: inherit;
-          transition: border-color .18s ease, background .18s ease, transform .18s ease;
-        }
-
-        .team-builder-onboarding-flow > button:hover,
-        .team-builder-onboarding-flow > button:focus-visible,
-        .team-builder-onboarding-flow > button.is-active {
-          border-color: rgba(181,255,75,.66);
-          outline: none;
-          background: rgba(181,255,75,.12);
-          color: #fff;
-          transform: translateY(-1px);
-        }
-
-        .team-builder-onboarding-flow b {
-          grid-row: span 2;
-          color: #b5ff4b;
-          font-size: 8px;
-          font-weight: 1000;
-        }
-
-        .team-builder-onboarding-flow strong,
-        .team-builder-onboarding-flow small {
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .team-builder-onboarding-flow strong {
-          color: currentColor;
-          font-size: 9px;
-          font-weight: 1000;
-        }
-
-        .team-builder-onboarding-flow small {
-          color: rgba(122,231,255,.78);
-          font-size: 7px;
-          font-weight: 800;
-        }
-
-        .team-builder-onboarding-flow > span.is-complete {
-          border-color: rgba(181,255,75,.42);
-          background: rgba(181,255,75,.1);
-          color: #fff;
-        }
-
-        .team-builder-deal-flow {
-          display: grid;
-          grid-template-columns: minmax(210px, .7fr) minmax(420px, 1.3fr);
-          gap: 18px;
-          align-items: center;
-          min-height: 62px;
-          overflow: hidden;
-          border: 1px solid rgba(181,255,75,.28);
-          border-radius: 16px;
-          padding: 10px 14px;
-          background:
-            radial-gradient(circle at 8% 50%, rgba(181,255,75,.13), transparent 34%),
-            linear-gradient(120deg, rgba(8,24,19,.94), rgba(3,11,13,.9));
-          box-shadow: inset 0 0 0 1px rgba(255,255,255,.035), 0 18px 40px rgba(0,0,0,.18);
-        }
-
-        .team-builder-deal-flow > div {
-          display: flex;
-          min-width: 0;
-          align-items: center;
-          gap: 11px;
-        }
-
-        .team-builder-deal-flow > div > svg {
-          width: 28px;
-          height: 28px;
-          flex: 0 0 auto;
-          color: #b5ff4b;
-          filter: drop-shadow(0 0 10px rgba(181,255,75,.58));
-        }
-
-        .team-builder-deal-flow > div span,
-        .team-builder-deal-flow > div small,
-        .team-builder-deal-flow > div strong {
-          display: block;
-          min-width: 0;
-        }
-
-        .team-builder-deal-flow > div small {
-          color: rgba(122,231,255,.78);
-          font-size: 7px;
-          font-weight: 1000;
-          letter-spacing: .08em;
-          text-transform: uppercase;
-        }
-
-        .team-builder-deal-flow > div strong {
-          margin-top: 4px;
-          color: #fff;
-          font-size: 13px;
-          font-weight: 1000;
-        }
-
-        .team-builder-deal-flow ol {
-          display: grid;
-          grid-template-columns: repeat(3,minmax(0,1fr));
-          gap: 7px;
-          margin: 0;
-          padding: 0;
-          list-style: none;
-        }
-
-        .team-builder-deal-flow li {
-          display: flex;
-          min-width: 0;
-          min-height: 36px;
-          align-items: center;
-          gap: 7px;
-          border: 1px solid rgba(255,255,255,.09);
-          border-radius: 10px;
-          padding: 6px 8px;
-          background: rgba(255,255,255,.025);
-        }
-
-        .team-builder-deal-flow li b {
-          color: #b5ff4b;
-          font-size: 8px;
-          font-weight: 1000;
-        }
-
-        .team-builder-deal-flow li span {
-          overflow: hidden;
-          color: rgba(255,255,255,.7);
-          font-size: 8px;
-          font-weight: 900;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
         .arena-action-panel-market .team-builder-cart-dock {
           border-color: rgba(122,231,255,.3);
           background:
@@ -16524,31 +16360,9 @@ export default function ArenaClient({
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
-          .team-builder-onboarding-flow {
-            grid-auto-flow: column;
-            grid-auto-columns: minmax(126px, 46vw);
-            grid-template-columns: none;
-            overflow-x: auto;
-            overscroll-behavior-x: contain;
-            padding-bottom: 10px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(181,255,75,.5) rgba(255,255,255,.06);
-          }
-
-          .team-builder-onboarding-flow::-webkit-scrollbar {
-            display: block;
-            height: 4px;
-          }
-
-          .team-builder-onboarding-flow::-webkit-scrollbar-thumb,
           .arena-action-panel-market .team-builder-club-grid::-webkit-scrollbar-thumb {
             border-radius: 999px;
             background: rgba(181,255,75,.5);
-          }
-
-          .team-builder-onboarding-flow > span,
-          .team-builder-onboarding-flow > button {
-            min-height: 48px;
           }
 
           .arena-action-panel-market .team-builder-shell {
@@ -16559,24 +16373,7 @@ export default function ArenaClient({
             max-width: 100%;
           }
 
-          .team-builder-deal-flow {
-            grid-template-columns: 1fr;
-            width: 100%;
-            min-width: 0;
-            max-width: 100%;
-          }
-
-          .team-builder-deal-flow ol {
-            grid-template-columns: 1fr;
-            min-width: 0;
-          }
-
-          .team-builder-deal-flow li span {
-            white-space: normal;
-          }
-
           .arena-action-panel-market .team-builder-bank,
-          .arena-action-panel-market .team-builder-club-progress,
           .arena-action-panel-market .team-builder-cart-dock,
           .arena-action-panel-market .team-builder-board,
           .arena-action-panel-market .team-builder-clubs,
@@ -17147,19 +16944,6 @@ export default function ArenaClient({
         }
 
         @media (max-width: 1040px) {
-          .team-builder-deal-flow li {
-            min-height: 48px;
-            align-items: flex-start;
-          }
-
-          .team-builder-deal-flow li span {
-            overflow: visible;
-            font-size: 9px;
-            line-height: 1.2;
-            text-overflow: clip;
-            white-space: normal;
-          }
-
           .arena-action-panel-market .team-builder-board {
             grid-template-areas:
               "clubs preview"
@@ -17185,40 +16969,7 @@ export default function ArenaClient({
             gap: 10px;
           }
 
-          .team-builder-deal-flow {
-            grid-template-columns: minmax(0, 1fr);
-            gap: 10px;
-            padding: 12px;
-          }
-
-          .team-builder-deal-flow ol {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
-
-          .team-builder-deal-flow li {
-            min-height: 48px;
-            align-items: flex-start;
-          }
-
-          .team-builder-deal-flow li span,
-          .team-builder-deal-flow > div small {
-            font-size: 10px;
-            white-space: normal;
-          }
-
-          .team-builder-deal-flow > div strong {
-            font-size: 15px;
-          }
-
           .arena-action-panel-market .team-builder-bank {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .arena-action-panel-market .team-builder-club-progress {
-            padding: 10px;
-          }
-
-          .team-builder-position-progress-list {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
@@ -17488,35 +17239,8 @@ export default function ArenaClient({
             margin-top: 6px;
           }
 
-          .touchline-game.is-market-standalone .team-builder-deal-flow {
-            display: none;
-          }
-
           .touchline-game.is-market-standalone .team-builder-bank {
             display: none;
-          }
-
-          .touchline-game.is-market-standalone .team-builder-club-progress {
-            position: sticky;
-            top: max(6px, env(safe-area-inset-top));
-            z-index: 4;
-            gap: 6px;
-            border-radius: 10px;
-            padding: 7px;
-          }
-
-          .touchline-game.is-market-standalone .team-builder-club-progress header strong {
-            font-size: 12px;
-          }
-
-          .touchline-game.is-market-standalone .team-builder-club-progress header em,
-          .touchline-game.is-market-standalone .team-builder-club-progress header button {
-            font-size: 7px;
-          }
-
-          .touchline-game.is-market-standalone .team-builder-club-progress header button {
-            min-height: 26px;
-            padding: 0 7px;
           }
 
           .touchline-game.is-market-standalone .team-builder-cart-dock {
@@ -17897,14 +17621,6 @@ export default function ArenaClient({
             margin-top: 10px;
           }
 
-          .touchline-game.is-market-standalone .team-builder-onboarding-flow {
-            margin-inline: -2px;
-          }
-
-          .touchline-game.is-market-standalone .team-builder-deal-flow {
-            display: none;
-          }
-
           .touchline-game.is-market-standalone .team-builder-bank {
             display: grid;
             grid-auto-flow: column;
@@ -18187,6 +17903,45 @@ export default function ArenaClient({
           .arena-live-moving-card {
             animation: none !important;
             transition-duration: 1ms !important;
+          }
+        }
+
+        /* Gold accessibility pass: the compact Arena HUD and matchweek rail
+           keep their visual density, but every genuine action retains a
+           WCAG-sized touch target on phones, tablets and short landscape. */
+        .arena-quick-toggle,
+        .arena-quick-links button,
+        .arena-quick-links a,
+        .language-trigger,
+        .club-symbol-kicker,
+        .club-symbol-pill,
+        .club-symbol-match-centre {
+          min-height: 44px;
+        }
+
+        .club-symbol-kicker,
+        .club-symbol-arrow {
+          min-width: 44px;
+        }
+
+        .club-symbol-arrow {
+          width: 44px;
+          height: 44px;
+        }
+
+        .club-symbol-open {
+          grid-template-columns: auto 44px minmax(0, 1fr) 44px auto;
+        }
+
+        @media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
+          .arena-quick-dock.is-collapsed {
+            width: 52px;
+            min-width: 52px;
+          }
+
+          .arena-quick-dock.is-collapsed .arena-quick-toggle {
+            min-width: 44px;
+            min-height: 44px;
           }
         }
       `}</style>

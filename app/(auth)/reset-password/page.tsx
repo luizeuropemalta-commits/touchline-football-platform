@@ -19,7 +19,7 @@ export default async function ResetPassword({
 
   return (
     <AuthLayout locale={locale}>
-      <Link href={touchLineAuthHref("/login", locale)} className="mb-8 inline-flex items-center gap-2 text-[9px] font-black text-slate-600">
+      <Link href={touchLineAuthHref("/login", locale)} className="mb-8 inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-[9px] font-black text-slate-600">
         <ArrowLeft size={12} /> {copy.back}
       </Link>
       <p className="text-[9px] font-black text-cyan-300">{copy.eyebrow}</p>

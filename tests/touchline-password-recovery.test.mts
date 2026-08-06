@@ -48,6 +48,12 @@ test("new password is written only after the recovery user is revalidated", () =
   );
 });
 
+test("an absent recovery grant renders an expired-link state without a noisy browser 401", () => {
+  assert.match(recoveryRouteSource, /recovery\.error === "unavailable" \? 503 : 200/);
+  assert.match(resetFormSource, /payload\?\.ok !== true/);
+  assert.match(recoveryRouteSource, /export async function POST[\s\S]*recovery\.error === "unavailable" \? 503 : 401/);
+});
+
 test("password recovery grants are signed, user-bound and short-lived", () => {
   const previousSecret = process.env.TOUCHLINE_AUTH_RECOVERY_SECRET;
   process.env.TOUCHLINE_AUTH_RECOVERY_SECRET = "test-only-password-recovery-secret";

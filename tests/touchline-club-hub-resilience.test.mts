@@ -5,6 +5,7 @@ import { resolveTouchlineInternalAppOrigin, touchlineInternalUrl } from "../lib/
 import { fetchTouchlineInternalJson } from "../lib/server/safe-internal-fetch.ts";
 
 const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+const squadGridSource = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
 const officialLineupSource = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 const errorBoundarySource = readFileSync(new URL("../app/error.tsx", import.meta.url), "utf8");
 const safeFetchSource = readFileSync(new URL("../lib/server/safe-internal-fetch.ts", import.meta.url), "utf8");
@@ -22,7 +23,8 @@ test("ClubHub bounds squad loading and distinguishes unavailable data from a nor
 });
 
 test("ClubHub prioritizes only the first visible squad cards and defers remaining card artwork", () => {
-  assert.match(source, /imageLoading=\{index < 6 \? "eager" : "lazy"\}/);
+  assert.match(squadGridSource, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);
+  assert.match(squadGridSource, /CARD_BATCH_SIZE = 8/);
   assert.match(officialLineupSource, /imageLoading="lazy"/);
 });
 

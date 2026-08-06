@@ -111,6 +111,7 @@ test("ClubOwner keeps a clean identity layout on every device and scales its fea
 
 test("ClubHub line-up contains its wide desktop pitch and fits every player on mobile", () => {
   const clubHubPage = source("app/touchline-clubs/[club]/page.tsx");
+  const squadGrid = source("components/touchline/ClubHubSquadGrid.tsx");
   const lineupComponent = source("components/touchline/ClubHubOfficialLineup.tsx");
   const lineupCss = source("components/touchline/ClubHubOfficialLineup.module.css");
   const cardZoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
@@ -124,10 +125,10 @@ test("ClubHub line-up contains its wide desktop pitch and fits every player on m
   assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitchViewport \{[\s\S]*?overflow: hidden/);
   assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitch \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?min-height: 540px/);
   assert.match(lineupCss, /@media \(min-width: 721px\) and \(max-width: 1100px\) and \(min-height: 521px\)/);
-  assert.match(clubHubPage, /<TouchlineCardZoom/);
+  assert.match(squadGrid, /<TouchlineCardZoom/);
   assert.match(lineupComponent, /<TouchlineCardZoom/);
   assert.match(lineupComponent, /showSocialMetrics=\{false\}/);
-  assert.match(clubHubPage, /className="club-hub-card-meta"/);
+  assert.match(squadGrid, /className="club-hub-card-meta"/);
   assert.doesNotMatch(clubHubPage, /t\("topClubAssets"\)/);
   assert.doesNotMatch(clubHubPage, /\.club-hub-card div \{/);
   assert.match(clubHubPage, /\/market-transfer\?\$\{localeQuery\}/);
@@ -178,7 +179,7 @@ test("profile quick links stay compact and keep one active neon destination", ()
   assert.doesNotMatch(quickNav, /Tabela ClubOwner|TouchLine England|Best XI da Rodada/);
   assert.match(quickNav, /aria-current=\{activeKey === shortcut\.key \? "page" : undefined\}/);
   assert.match(quickNavCss, /\.shortcuts a\.isActive/);
-  assert.match(quickNavCss, /min-height: 30px/);
+  assert.match(quickNavCss, /min-height: 44px/);
   assert.match(athleteProfile, /TouchlineProfileQuickNav/);
 });
 

@@ -8,15 +8,16 @@ function source(relativePath: string) {
 
 test("ClubHub compact cards keep navigation outside the zoom trigger", () => {
   const clubHubPage = source("app/touchline-clubs/[club]/page.tsx");
+  const squadGrid = source("components/touchline/ClubHubSquadGrid.tsx");
   const officialLineup = source("components/touchline/ClubHubOfficialLineup.tsx");
 
-  for (const compactCardSource of [clubHubPage, officialLineup]) {
+  for (const compactCardSource of [squadGrid, officialLineup]) {
     assert.match(
       compactCardSource,
       /playerProfileHref=\{profileHref\}\s+showProfileAction=\{false\}\s+showSocialMetrics=\{false\}/,
     );
   }
-  assert.match(clubHubPage, /className="club-hub-card-meta"[\s\S]*?<a\s+href=\{profileHref\}/);
+  assert.match(squadGrid, /className="club-hub-card-meta"[\s\S]*?<a\s+href=\{profileHref\}/);
   assert.match(officialLineup, /styles\.playerName/);
   assert.doesNotMatch(officialLineup, /styles\.playerLink/);
 });

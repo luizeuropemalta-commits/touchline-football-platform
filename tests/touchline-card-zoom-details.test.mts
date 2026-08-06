@@ -49,7 +49,7 @@ test("fails closed for missing provider market values instead of inventing a fre
 test("reuses the shared player zoom details in Arena, ClubHub, ClubOwner and player profile", () => {
   const sources = [
     "../app/arena/ArenaClient.tsx",
-    "../app/touchline-clubs/[club]/page.tsx",
+    "../components/touchline/ClubHubSquadGrid.tsx",
     "../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
     "../app/touchline-players/[player]/page.tsx",
   ].map((source) => readFileSync(new URL(source, import.meta.url), "utf8"));

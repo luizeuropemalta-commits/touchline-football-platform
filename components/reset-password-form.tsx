@@ -30,8 +30,9 @@ export function ResetPasswordForm({ locale = "en-GB" }: { locale?: string }) {
         cache: "no-store",
         headers: { Accept: "application/json" },
       }).catch(() => null);
+      const payload = await response?.json().catch(() => null) as { ok?: boolean; error?: string } | null;
       if (!active) return;
-      if (!response?.ok) {
+      if (!response?.ok || payload?.ok !== true) {
         setMessage(response?.status === 503 ? copy.authenticationUnavailable : copy.recoveryInvalid);
         setStatus("invalid");
         return;
@@ -130,7 +131,7 @@ export function ResetPasswordForm({ locale = "en-GB" }: { locale?: string }) {
         <label htmlFor="touchline-reset-password" className="mb-2 block text-xs font-semibold">{copy.newPassword}</label>
         <div className="relative">
           <Input id="touchline-reset-password" required minLength={8} type={show ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={copy.passwordPlaceholder} autoComplete="new-password" className="pr-11" />
-          <button type="button" aria-controls="touchline-reset-password" aria-label={show ? copy.hidePassword : copy.showPassword} onClick={() => setShow(!show)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8b9592]">
+          <button type="button" aria-controls="touchline-reset-password" aria-label={show ? copy.hidePassword : copy.showPassword} onClick={() => setShow(!show)} className="absolute right-1 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full text-[#8b9592] transition hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#a3ff12]">
             {show ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>

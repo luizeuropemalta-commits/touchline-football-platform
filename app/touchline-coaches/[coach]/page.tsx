@@ -153,7 +153,7 @@ export default async function TouchlineCoachProfilePage({
       <style>{`
         .coach-profile-page { min-height: 100dvh; padding: clamp(18px,4vw,64px); color:#efffd5; background:radial-gradient(circle at 82% 10%,rgba(181,255,75,.13),transparent 32%),linear-gradient(145deg,#020708,#07140f); }
         .coach-profile-nav { display:flex; flex-wrap:wrap; gap:10px; max-width:1180px; margin:0 auto 24px; }
-        .coach-profile-nav a { border:1px solid rgba(181,255,75,.28); border-radius:999px; padding:9px 13px; color:#efffd5; font-size:12px; font-weight:800; text-decoration:none; }
+        .coach-profile-nav a { display:inline-flex; min-height:44px; align-items:center; border:1px solid rgba(181,255,75,.28); border-radius:999px; padding:0 13px; color:#efffd5; font-size:12px; font-weight:800; text-decoration:none; }
         .coach-profile-hero,.coach-profile-grid { max-width:1180px; margin:0 auto; display:grid; gap:clamp(22px,4vw,56px); grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr); align-items:center; }
         .coach-profile-copy > span,.coach-profile-grid article > span { color:#b5ff4b; font-size:10px; font-weight:950; letter-spacing:.13em; }
         .coach-profile-copy h1 { margin:9px 0 5px; font-size:clamp(38px,7vw,82px); line-height:.93; letter-spacing:-.065em; }

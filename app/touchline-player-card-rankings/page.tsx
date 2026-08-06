@@ -511,7 +511,7 @@ export default async function TouchLinePlayerCardRankingsPage({
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 36px;
+          min-height: 44px;
           border: 1px solid rgba(181,255,75,.32);
           border-radius: 999px;
           background: rgba(181,255,75,.12);

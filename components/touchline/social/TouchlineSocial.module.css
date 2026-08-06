@@ -139,7 +139,7 @@
 .avatarFooter .profileActions button,
 .avatarFooter .profileActions a {
   width: auto;
-  min-height: 32px;
+  min-height: 44px;
   gap: 7px;
   border-radius: 8px;
   padding: 0 12px;
@@ -291,7 +291,7 @@
 .postMetrics span { margin-top: 2px; color: rgba(255,255,255,.4); font-size: 7px; font-weight: 900; text-transform: uppercase; }
 
 .post footer { display: flex; min-height: 54px; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 17px 10px 20px; border-top: 1px solid rgba(255,255,255,.07); }
-.post footer button, .post footer a { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 0 11px; color: rgba(255,255,255,.58); background: transparent; font: inherit; font-size: 9px; font-weight: 900; text-decoration: none; cursor: pointer; }
+.post footer button, .post footer a { display: inline-flex; min-height: 44px; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 0 13px; color: rgba(255,255,255,.58); background: transparent; font: inherit; font-size: 9px; font-weight: 900; text-decoration: none; cursor: pointer; }
 .post footer button strong:empty { display: none; }
 .post footer button[aria-pressed="true"] { color: var(--post-accent); background: color-mix(in srgb, var(--post-accent) 8%, transparent); filter: drop-shadow(0 0 7px var(--post-accent)); }
 .post footer a { border: 1px solid color-mix(in srgb, var(--post-accent) 34%, transparent); color: var(--post-accent); background: color-mix(in srgb, var(--post-accent) 7%, transparent); }

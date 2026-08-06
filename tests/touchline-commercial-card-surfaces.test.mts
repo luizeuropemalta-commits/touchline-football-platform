@@ -8,7 +8,7 @@ const publicCardPriceSurfaces = [
   "components/touchline/ClubHubOfficialLineup.tsx",
   "components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
   "app/arena/ArenaClient.tsx",
-  "app/touchline-clubs/[club]/page.tsx",
+  "components/touchline/ClubHubSquadGrid.tsx",
   "app/touchline-players/[player]/page.tsx",
   "app/touchline-player-card-rankings/page.tsx",
   "app/touchline-tables/touchline-tables-client.tsx",

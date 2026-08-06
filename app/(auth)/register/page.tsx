@@ -19,7 +19,7 @@ export default async function Register({
 
   return (
     <AuthLayout cinematic locale={locale}>
-      <Link href={touchLineAuthEntryHref("/login", locale, returnTo)} className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-[9px] font-black text-slate-300 transition hover:border-[#a3ff12]/30 hover:text-[#c5ff6d]">
+      <Link href={touchLineAuthEntryHref("/login", locale, returnTo)} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 text-[9px] font-black text-slate-300 transition hover:border-[#a3ff12]/30 hover:text-[#c5ff6d]">
         <ArrowLeft size={12} />
         {copy.back}
       </Link>
