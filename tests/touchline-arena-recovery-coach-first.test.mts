@@ -68,7 +68,16 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /arenaPersistencePrincipal\?\.kind === "demo"[\s\S]*?TOUCHLINE_DEMO_COACH/);
   assert.match(arena, /data-testid="arena-coach-first-gate"/);
   assert.match(arena, /const isCoachSelectionRequired = Boolean\([\s\S]*?standaloneExperience === "market"/);
-  assert.match(arena, /const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired/);
+  assert.match(
+    arena,
+    /const shouldRenderArenaOwnerLayer = shouldRenderPlayers[\s\S]*?&& \(isArenaMatchdayViewActive \|\| isDemoLineup\)[\s\S]*?&& standaloneExperience !== "live"[\s\S]*?&& !isCoachSelectionRequired/,
+  );
+  assert.match(arena, /setIsArenaMatchdayViewActive\(showPlayers\)/);
+  assert.match(
+    arena,
+    /setPlayers\(normalizeArenaPlayersForFormation\(lineupPlayers[\s\S]*?setIsArenaMatchdayViewActive\(true\)[\s\S]*?setShouldRenderPlayers\(true\)/,
+  );
+  assert.match(arena, /\.catch\(\(error: Error\) => \{[\s\S]*?setIsArenaMatchdayViewActive\(false\)/);
   assert.match(
     arena,
     /className="arena-coach-gated-content"[\s\S]*?inert=\{isCoachSelectionRequired \|\| isCoachSelectionBootstrapPending \? true : undefined\}[\s\S]*?aria-hidden=\{isCoachSelectionRequired \|\| isCoachSelectionBootstrapPending\}/,

@@ -1,0 +1,26 @@
+{
+  "validated_at": "2026-08-06",
+  "route": "/arena?lang=pt-BR&skipIntro=1",
+  "idle_temporal": {
+    "after_3_seconds": { "player_cards": 0, "coach_cards": 0, "field_layers": 0 },
+    "after_10_seconds": { "player_cards": 0, "coach_cards": 0, "field_layers": 0 }
+  },
+  "responsive": {
+    "desktop_reload_after_8_seconds": { "player_cards": 0, "coach_cards": 0, "field_layers": 0 },
+    "mobile_portrait_reload_after_8_seconds": { "player_cards": 0, "coach_cards": 0, "field_layers": 0 }
+  },
+  "explicit_demo_matchday": {
+    "route": "/arena?lang=pt-BR&skipIntro=1&demoLineup=1",
+    "player_cards": 11,
+    "coach_cards": 1,
+    "field_layers": 1
+  },
+  "quality": {
+    "typescript": "PASS",
+    "eslint_changed_files": "PASS",
+    "focused_tests": "18/18 PASS",
+    "full_tests": "668/668 PASS",
+    "production_build": "PASS"
+  },
+  "production_promoted": false
+}

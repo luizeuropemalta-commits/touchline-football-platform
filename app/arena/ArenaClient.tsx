@@ -3224,6 +3224,7 @@ export default function ArenaClient({
   const [arenaAccountSyncStatus, setArenaAccountSyncStatus] = useState<ArenaAccountSyncStatus>("pending");
   const [arenaRosterSyncStatus, setArenaRosterSyncStatus] = useState<ArenaAccountSyncStatus>("pending");
   const [shouldRenderPlayers, setShouldRenderPlayers] = useState(false);
+  const [isArenaMatchdayViewActive, setIsArenaMatchdayViewActive] = useState(false);
   const [readyArenaFieldCardsSignature, setReadyArenaFieldCardsSignature] = useState("");
   const [loopCameraIndex, setLoopCameraIndex] = useState(0);
   const [isArenaNavOpen, setIsArenaNavOpen] = useState(false);
@@ -3541,9 +3542,14 @@ export default function ArenaClient({
     standaloneExperience,
   ]);
 
-  // The personal field remains intentionally separate from the standalone
-  // Match Centre. The Market Transfer owns the coach-first acquisition gate.
-  const shouldRenderArenaOwnerLayer = shouldRenderPlayers && standaloneExperience !== "live" && !isCoachSelectionRequired;
+  // Owning a roster is not permission to paint it on an idle Arena. The owner
+  // card layer mounts only for an explicit matchday/fixture journey (or the
+  // isolated demo QA route), so saved cards and the coach can never flash over
+  // the empty field while account and roster state are being reconciled.
+  const shouldRenderArenaOwnerLayer = shouldRenderPlayers
+    && (isArenaMatchdayViewActive || isDemoLineup)
+    && standaloneExperience !== "live"
+    && !isCoachSelectionRequired;
   const selectedLiveHomeCoachSlot = useMemo(
     () => selectedLiveHomeClub
       ? createTouchlineArenaCoachSlot(
@@ -4376,6 +4382,10 @@ export default function ArenaClient({
         )
       : DEFAULT_ARENA_FORMATION_KEY;
 
+    // `showPlayers=1` is an explicit internal/QA matchday view. A canonical
+    // fixture activates the public layer only after its complete lineup has
+    // loaded, preventing a previously saved card from flashing meanwhile.
+    queueMicrotask(() => setIsArenaMatchdayViewActive(showPlayers));
     if (showPlayers) queueMicrotask(() => setShouldRenderPlayers(true));
     if (!fixtureId) return;
 
@@ -4409,12 +4419,14 @@ export default function ArenaClient({
 
         setIsDemoLineup(false);
         setPlayers(normalizeArenaPlayersForFormation(lineupPlayers, fixtureFormationKey, arenaPersistencePrincipal));
+        setIsArenaMatchdayViewActive(true);
         setShouldRenderPlayers(true);
         setFixtureStatus(`${feed.fixture.name || PUBLIC_DATA_SOURCE_LABEL} ${t("fixtureLoaded")}`);
         setSaveStatus(`${PUBLIC_DATA_SOURCE_LABEL} · ${t("saved")}`);
       })
       .catch((error: Error) => {
         if (cancelled) return;
+        setIsArenaMatchdayViewActive(false);
         setFixtureStatus((error.message || `${PUBLIC_DATA_SOURCE_LABEL} failed`).replace(/SportMonks/gi, PUBLIC_DATA_SOURCE_LABEL));
         setSaveStatus(`${PUBLIC_DATA_SOURCE_LABEL} · ${t("sourceUnavailable")}`);
       });
