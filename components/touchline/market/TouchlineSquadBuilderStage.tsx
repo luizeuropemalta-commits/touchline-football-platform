@@ -44,7 +44,6 @@ type Props = {
   contractedCount: number;
   selectedRole: "all" | TouchlineSquadBuilderRole;
   onSelectRole: (role: TouchlineSquadBuilderRole) => void;
-  trainingHref: string;
   arenaHref: string;
 };
 
@@ -97,7 +96,6 @@ export default function TouchlineSquadBuilderStage({
   contractedCount,
   selectedRole,
   onSelectRole,
-  trainingHref,
   arenaHref,
 }: Props) {
   const portuguese = locale === "pt-BR";
@@ -212,10 +210,10 @@ export default function TouchlineSquadBuilderStage({
             <span><small>{portuguese ? "Banco" : "Bench"}</small><strong>{bench.length}/9</strong></span>
             <span><small>{portuguese ? "Elenco" : "Squad"}</small><strong>{contractedCount}/35</strong></span>
           </div>
-          <a href={trainingHref}>{portuguese ? "Organizar elenco" : "Organise squad"}<ChevronRight aria-hidden="true" /></a>
           <a className={journey.reviewAvailable ? styles.primaryAction : styles.disabledAction} href={journey.reviewAvailable ? arenaHref : undefined} aria-disabled={!journey.reviewAvailable}>
             <ShieldCheck aria-hidden="true" />
             {portuguese ? "Confirmar clube e entrar na Arena" : "Confirm club and enter Arena"}
+            <ChevronRight aria-hidden="true" />
           </a>
         </aside>
       </div>

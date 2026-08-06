@@ -3295,6 +3295,7 @@ export default function ArenaClient({
   const marketContractReleaseAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
   const marketMutationPendingRef = useRef<"checkout" | "release" | null>(null);
   const marketBootstrapAttemptRef = useRef<string | null>(null);
+  const marketSelectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (activeArenaPanel !== "bench") return;
@@ -7325,6 +7326,31 @@ export default function ArenaClient({
                 )}
               </div>
 
+              {activeArenaPanel === "market" ? (
+                <div className="team-builder-bank" aria-label={t("touchlineMarketTransfer")}>
+                  <span>
+                    <small>{marketUi.signingBalance}</small>
+                    <strong className="touchline-tc-balance"><TouchlineCoinMark size={24} /><b>{marketWalletBalanceTc}</b><em>TC</em></strong>
+                  </span>
+                  <span>
+                    <small>{marketUi.squadTcValue}</small>
+                    <strong className="touchline-card-value"><b>{rosterCardValueDisplay}</b></strong>
+                  </span>
+                  <span>
+                    <small>{marketUi.activeContracts}</small>
+                    <strong>{authoritativeOwnedSquadCount}/{TOUCHLINE_SQUAD_RULES.contracted}</strong>
+                  </span>
+                  <span>
+                    <small>{marketUi.contractSlots}</small>
+                    <strong>{openContractSlots}</strong>
+                  </span>
+                  <span>
+                    <small>{marketUi.clubPlayers}</small>
+                    <strong>{marketPlayerCount}</strong>
+                  </span>
+                </div>
+              ) : null}
+
               {["bench", "market", "rankings"].includes(activeArenaPanel) ? (
                 <nav className="arena-club-sections" aria-label={t("clubControl")}>
                   <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
@@ -7336,9 +7362,11 @@ export default function ArenaClient({
                   <a className={activeArenaPanel === "bench" ? "is-active" : ""} href={touchlineClubOwnerSubstitutionHref(siteLanguage)}>
                     {t("substitutesBench")}
                   </a>
-                  <a className={activeArenaPanel === "market" ? "is-active" : ""} href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
-                    {t("marketTransfer")}
-                  </a>
+                  {activeArenaPanel !== "market" ? (
+                    <a href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
+                      {t("marketTransfer")}
+                    </a>
+                  ) : null}
                   <a className={activeArenaPanel === "rankings" ? "is-active" : ""} href={`/touchline-tables?lang=${encodeURIComponent(siteLanguage)}`}>
                     {t("rankings")}
                   </a>
@@ -7635,33 +7663,16 @@ export default function ArenaClient({
                     onSelectRole={(role) => {
                       setMarketPositionFilter(role);
                       setMarketNeedsOnly(true);
+                      window.requestAnimationFrame(() => {
+                        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                        marketSelectionRef.current?.scrollIntoView({
+                          behavior: reduceMotion ? "auto" : "smooth",
+                          block: "start",
+                        });
+                      });
                     }}
-                    trainingHref={touchlineClubOwnerSubstitutionHref(siteLanguage)}
                     arenaHref={`/arena?skipIntro=1&lang=${encodeURIComponent(siteLanguage)}`}
                   />
-
-                  <div className="team-builder-bank" aria-label={t("touchlineMarketTransfer")}>
-                    <span>
-                      <small>{marketUi.signingBalance}</small>
-                      <strong className="touchline-tc-balance"><TouchlineCoinMark size={24} /><b>{marketWalletBalanceTc}</b><em>TC</em></strong>
-                    </span>
-                    <span>
-                      <small>{marketUi.squadTcValue}</small>
-                      <strong className="touchline-card-value"><b>{rosterCardValueDisplay}</b></strong>
-                    </span>
-                    <span>
-                      <small>{marketUi.activeContracts}</small>
-                      <strong>{authoritativeOwnedSquadCount}/{TOUCHLINE_SQUAD_RULES.contracted}</strong>
-                    </span>
-                    <span>
-                      <small>{marketUi.contractSlots}</small>
-                      <strong>{openContractSlots}</strong>
-                    </span>
-                    <span>
-                      <small>{marketUi.clubPlayers}</small>
-                      <strong>{marketPlayerCount}</strong>
-                    </span>
-                  </div>
 
                   <div className={`team-builder-cart-dock ${marketCartPlayers.length ? "has-items" : "is-empty"}`} aria-label={t("marketCart")}>
                     <div className="team-builder-cart-title">
@@ -7740,14 +7751,13 @@ export default function ArenaClient({
                     </div>
                   ) : null}
 
-                  <div className="team-builder-board">
+                  <div className="team-builder-board" ref={marketSelectionRef}>
                     <section className="team-builder-clubs" aria-label={marketUi.ariaEnglandClubs}>
                       <div className="team-builder-section-title">
                         <div>
                           <span>{t("touchlineMarketTransfer")}</span>
                           <strong>{t("premierClubs")}</strong>
                         </div>
-                        <a href={`/touchline-player-card-rankings?lang=${encodeURIComponent(siteLanguage)}`}>{t("ranking")}</a>
                       </div>
                       <div className="team-builder-club-grid" role="region" tabIndex={0} aria-label={marketUi.ariaEnglandClubs}>
                         {TEAM_BUILDER_CLUBS.map((club) => (
@@ -17878,6 +17888,172 @@ export default function ArenaClient({
           .touchline-game.is-market-standalone .team-builder-player-select,
           .touchline-game.is-market-standalone .team-builder-quick-buy {
             min-height: 44px;
+          }
+        }
+
+        /* Market Transfer — human walkthrough correction.
+           The account summary stays available at the top, the club/player
+           workspace has one readable hierarchy, and names are never reduced
+           to fragments merely to keep a decorative three-column layout. */
+        .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank {
+          position: sticky;
+          z-index: 30;
+          top: 0;
+          display: grid;
+          margin-top: 8px;
+          padding: 6px;
+          border: 1px solid rgba(181,255,75,.22);
+          border-radius: 16px;
+          background: rgba(3,13,11,.96);
+          box-shadow: 0 12px 28px rgba(0,0,0,.32), inset 0 1px rgba(255,255,255,.04);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+        }
+
+        .touchline-game.is-market-standalone .team-builder-board {
+          scroll-margin-top: 94px;
+        }
+
+        .touchline-game.is-market-standalone .team-builder-section-title > div {
+          min-width: 0;
+        }
+
+        @media (min-width: 1181px) {
+          .touchline-game.is-market-standalone .team-builder-board {
+            grid-template-areas: "clubs roster preview";
+            grid-template-columns: minmax(154px, 176px) minmax(560px, 1fr) minmax(300px, 340px);
+            gap: 14px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-list {
+            grid-template-columns: minmax(0, 1fr);
+            grid-auto-rows: minmax(104px, auto);
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-list > article {
+            min-height: 104px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-select {
+            grid-template-columns: 42px minmax(180px, 1fr) minmax(128px, auto);
+            min-height: 64px;
+            padding: 10px 12px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-copy strong {
+            display: block;
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+            font-size: 16px;
+            line-height: 1.12;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-listing-meta {
+            min-width: 128px;
+            text-align: right;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-listing-meta > * {
+            max-width: none;
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-list > article > .team-builder-quick-buy {
+            min-height: 40px;
+            padding-inline: 12px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-preview-card {
+            width: min(210px, 76%);
+          }
+        }
+
+        @media (min-width: 761px) and (max-width: 1180px) {
+          .touchline-game.is-market-standalone .team-builder-board {
+            grid-template-areas:
+              "clubs clubs"
+              "roster preview";
+            grid-template-columns: minmax(440px, 1fr) minmax(280px, 340px);
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-grid {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(150px, 1fr);
+            grid-template-columns: none;
+            max-height: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 7px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-list {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-copy strong {
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+            font-size: 14px;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .touchline-game.is-market-standalone .arena-action-panel-market {
+            overflow: visible;
+          }
+
+          .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank {
+            top: -1px;
+            grid-auto-flow: row;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            margin-top: 6px;
+            padding: 5px;
+            overflow: hidden;
+          }
+
+          .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span {
+            min-height: 62px;
+            padding: 8px;
+          }
+
+          .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span:nth-child(2),
+          .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span:nth-child(5) {
+            display: none;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-board {
+            grid-template-areas:
+              "clubs"
+              "roster"
+              "preview";
+            scroll-margin-top: 86px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-copy strong {
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-market-tools {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .touchline-game.is-market-standalone .team-builder-position-filters,
+          .touchline-game.is-market-standalone .team-builder-market-sort {
+            grid-column: 1;
+            width: 100%;
+            min-width: 0;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-position-filters button {
+            flex: 1 1 0;
+            min-width: 44px;
           }
         }
 

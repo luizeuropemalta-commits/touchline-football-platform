@@ -42,6 +42,24 @@ test("the Market owns one premium squad-building stage with distinct player grou
   assert.match(source, /Array\.from\(\{ length: TOUCHLINE_SQUAD_RULES\.bench \}/);
   assert.match(source, /aria-current=\{index === currentStepIndex \? "step"/);
   assert.match(source, /aria-label=\{portuguese \? "Área técnica" : "Technical area"\}/);
+  assert.doesNotMatch(source, /Organizar elenco/);
+});
+
+test("the Market keeps account capacity first and guides a field slot directly to player selection", async () => {
+  const source = await readFile(arenaClientPath, "utf8");
+  const bankIndex = source.indexOf('className="team-builder-bank"');
+  const stageIndex = source.indexOf("<TouchlineSquadBuilderStage");
+  const boardIndex = source.indexOf('className="team-builder-board" ref={marketSelectionRef}');
+
+  assert.ok(bankIndex > 0);
+  assert.ok(stageIndex > bankIndex);
+  assert.ok(boardIndex > stageIndex);
+  assert.match(source, /marketSelectionRef\.current\?\.scrollIntoView/);
+  assert.match(source, /behavior: reduceMotion \? "auto" : "smooth"/);
+  assert.match(source, /scroll-margin-top: 94px/);
+  assert.match(source, /@media \(min-width: 1181px\) \{[\s\S]*?team-builder-player-list \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(source, /@media \(max-width: 760px\) \{[\s\S]*?grid-template-areas:[\s\S]*?"clubs"[\s\S]*?"roster"[\s\S]*?"preview"/);
+  assert.doesNotMatch(source, /<a className=\{activeArenaPanel === "market"/);
 });
 
 test("successful contracts fill eligible Starting XI slots before bench and preserve canonical pricing", async () => {
