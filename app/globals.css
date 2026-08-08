@@ -856,6 +856,15 @@ a, button { outline: none; }
 .touchline-card-surface[data-card-tier="emerald-green"] { --touchline-card-light: 34 197 94; }
 .touchline-card-surface[data-card-tier="clear-diamond"] { --touchline-card-light: 224 242 254; }
 .touchline-card-surface[data-card-tier="diamond-gold"] { --touchline-card-light: 255 224 138; }
+.touchline-card-surface[data-card-tier="pending"] {
+  --touchline-card-light: 148 163 184;
+}
+.touchline-card-surface[data-card-tier="neutral"] {
+  --touchline-card-light: 148 163 184;
+}
+.touchline-card-surface[data-card-classification="pending"] [data-touchline-card-frame="true"] {
+  filter: grayscale(1) saturate(.35) brightness(.88);
+}
 
 .touchline-card-surface[data-card-motion="true"]::before {
   display: none;

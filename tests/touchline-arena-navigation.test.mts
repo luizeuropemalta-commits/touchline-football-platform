@@ -28,7 +28,7 @@ describe("TouchLine Arena navigation", () => {
   it("keeps one canonical ClubHub destination when no club context exists", () => {
     assert.equal(
       touchlineClubHubHref("pt-BR"),
-      "/touchline-clubs/manchester-united?lang=pt-BR",
+      "/touchline-clubs?lang=pt-BR",
     );
     assert.equal(
       touchlineClubHubHref("en-GB", "chelsea"),
@@ -46,17 +46,17 @@ describe("TouchLine Arena navigation", () => {
   it("routes former Arena panels to independent full-page experiences", () => {
     assert.equal(
       touchlineArenaPanelHref("formation", "pt-BR"),
-      "/club-owner/luiz-lopez/substitution?lang=pt-BR",
+      "/club-owner/me/substitution?lang=pt-BR",
     );
-    assert.equal(touchlineArenaPanelHref("bench", "pt-BR"), "/club-owner/luiz-lopez/substitution?lang=pt-BR");
+    assert.equal(touchlineArenaPanelHref("bench", "pt-BR"), "/club-owner/me/substitution?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("live", "pt-BR"), "/live?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("watch", "pt-BR"), "/live?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("rankings", "pt-BR"), "/touchline-tables?lang=pt-BR");
-    assert.equal(touchlineArenaPanelHref("news", "pt-BR"), "/club-owner/luiz-lopez?lang=pt-BR");
+    assert.equal(touchlineArenaPanelHref("news", "pt-BR"), "/club-owner/me?lang=pt-BR");
   });
 
   it("keeps ClubOwner links centralized while allowing future owner slugs", () => {
-    assert.equal(touchlineClubOwnerProfileHref("pt-BR"), "/club-owner/luiz-lopez?lang=pt-BR");
+    assert.equal(touchlineClubOwnerProfileHref("pt-BR"), "/club-owner/me?lang=pt-BR");
     assert.equal(
       touchlineClubOwnerProfileHref("en-GB", "ana-silva"),
       "/club-owner/ana-silva?lang=en-GB",

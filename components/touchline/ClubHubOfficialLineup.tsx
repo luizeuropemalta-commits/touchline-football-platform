@@ -10,6 +10,13 @@ import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigatio
 import { resolveTouchlineVerifiedPlayerEconomy, touchlineArenaTierForKey, touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { formatTouchlineCommercialCardPrice, formatTouchlineContractedCommercialCardPrice, resolveTouchlineCommercialCardPrice } from "@/lib/touchlineArena/commercial-card-pricing";
 import { formatPlayerMarketTierRange, formatPlayerMarketValueEur } from "@/lib/touchlineArena/player-market-tiers";
+import {
+  hasTouchlinePublicCardState,
+  resolveTouchlinePublicCardPresentation,
+  TOUCHLINE_NEUTRAL_CARD_ACCENT,
+  touchlinePublicCardStatusLabel,
+  touchlinePublicMarketValueStatusLabel,
+} from "@/lib/touchlineArena/public-card-presentation";
 
 import styles from "./ClubHubOfficialLineup.module.css";
 
@@ -68,6 +75,8 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
               marketValue: card.marketValue,
               marketValueSource: card.marketValueSource,
             });
+            const hasCanonicalPublicState = hasTouchlinePublicCardState(card);
+            const presentation = hasCanonicalPublicState ? resolveTouchlinePublicCardPresentation(card) : null;
             const contractedTier = card.cardPriceAuthority === "active-contract"
               ? touchlineArenaTierForKey(card.cardTier)
               : null;
@@ -78,42 +87,90 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                 position: card.position,
                 shirtNumber: card.shirtNumber,
                 countryCode3: card.countryCode3,
-              }, locale, { previewTier: card.cardTier });
-            const zoomTier = contractedTier?.key ?? (economy.status === "resolved" ? economy.tierKey : card.cardTier);
+              }, locale);
             const updating = isPortuguese ? "Em atualização" : "Updating";
-            const commercialPrice = contractedTier
+            const presentationStatus = presentation
+              ? touchlinePublicCardStatusLabel(presentation.visualState, locale)
+              : updating;
+            const legacyZoomTier = contractedTier?.key ?? (economy.status === "resolved" ? economy.tierKey : card.cardTier);
+            const commercialPrice = presentation
+              ? presentation.canExposeCommercialPresentation && presentation.tierKey
+                ? presentation.isActiveContract
               ? formatTouchlineContractedCommercialCardPrice({
-                tierKey: contractedTier.key,
+                tierKey: presentation.tierKey,
                 priceTableVersion: card.cardPriceVersion,
                 competition: "england",
                 locale,
               })
-              : economy.status === "resolved"
-              ? formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
-                tierKey: economy.tierKey,
+              : formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
+                tierKey: presentation.tierKey,
                 competition: "england",
               }))
-              : updating;
+                : null
+              : contractedTier
+                ? formatTouchlineContractedCommercialCardPrice({
+                  tierKey: contractedTier.key,
+                  priceTableVersion: card.cardPriceVersion,
+                  competition: "england",
+                  locale,
+                })
+                : economy.status === "resolved"
+                  ? formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
+                    tierKey: economy.tierKey,
+                    competition: "england",
+                  }))
+                  : updating;
+            const marketValueText = presentation
+              ? presentation.marketValueState === "verified" && economy.status === "resolved"
+                ? formatPlayerMarketValueEur(economy.marketValueEur, locale)
+                : touchlinePublicMarketValueStatusLabel(presentation.marketValueState, locale)
+              : economy.status === "resolved"
+                ? formatPlayerMarketValueEur(economy.marketValueEur, locale)
+                : updating;
+            const marketTierRange = presentation
+              ? presentation.canExposeCommercialPresentation && economy.status === "resolved"
+                ? formatPlayerMarketTierRange(economy.tier, locale)
+                : presentationStatus
+              : economy.status === "resolved"
+                ? formatPlayerMarketTierRange(economy.tier, locale)
+                : updating;
+            const tierAccent = presentation
+              ? presentation.tierKey
+                ? touchlineCardTierPalette(presentation.tierKey).accent
+                : TOUCHLINE_NEUTRAL_CARD_ACCENT
+              : touchlineCardTierPalette(legacyZoomTier).accent;
+            const tierLabel = presentation
+              ? presentation.tierKey
+                ? touchlineCardTierName(presentation.tierKey, locale)
+                : presentationStatus
+              : contractedTier
+                ? touchlineCardTierName(contractedTier.key, locale)
+                : economy.status === "resolved"
+                  ? touchlineCardTierName(economy.tierKey, locale)
+                  : updating;
             return (
               <article
                 key={card.id}
                 className={styles.player}
+                data-lineup-edge={x <= 12 ? "left" : x >= 88 ? "right" : undefined}
                 style={{ "--lineup-x": `${x}%`, "--lineup-y": `${y}%` } as CSSProperties}
               >
                 <span className={styles.playerName}>{card.name}</span>
                 <TouchlineCardZoom
                   ariaLabel={`${isPortuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}
-                  contractHref={touchlineArenaContractHref({
-                    locale,
-                    playerId: card.id,
-                    playerName: card.name,
-                    clubId: findTouchLineClub(card.clubName)?.teamId,
-                  })}
+                  contractHref={presentation && !presentation.canExposeCommercialPresentation
+                    ? undefined
+                    : touchlineArenaContractHref({
+                      locale,
+                      playerId: card.id,
+                      playerName: card.name,
+                      clubId: findTouchLineClub(card.clubName)?.teamId,
+                    })}
                   contractLabel={isPortuguese ? "Contratar" : "Contract player"}
-                  contractValue={commercialPrice}
-                  contractTermLabel={isPortuguese ? "Contrato · 1 temporada" : "Contract · 1 season"}
-                  tierAccent={touchlineCardTierPalette(zoomTier).accent}
-                  tierLabel={contractedTier ? touchlineCardTierName(contractedTier.key, locale) : economy.status === "resolved" ? touchlineCardTierName(economy.tierKey, locale) : updating}
+                  contractValue={commercialPrice ?? undefined}
+                  contractTermLabel={presentation && !presentation.canExposeCommercialPresentation ? undefined : (isPortuguese ? "Contrato · 1 temporada" : "Contract · 1 season")}
+                  tierAccent={tierAccent}
+                  tierLabel={tierLabel}
                   details={{
                     eyebrow: isPortuguese ? "Perfil económico oficial" : "Official economic profile",
                     title: card.name,
@@ -121,23 +178,23 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                     fields: [
                       {
                         label: isPortuguese ? "Valor de mercado" : "Market value",
-                        value: economy.status === "resolved" ? formatPlayerMarketValueEur(economy.marketValueEur, locale) : updating,
-                        accent: economy.status === "resolved",
+                        value: marketValueText,
+                        accent: presentation ? presentation.marketValueState === "verified" && economy.status === "resolved" : economy.status === "resolved",
                       },
                       {
                         label: isPortuguese ? "Borda oficial" : "Official tier",
-                        value: economy.status === "resolved" ? touchlineCardTierName(economy.tierKey, locale) : updating,
+                        value: tierLabel,
                       },
                       {
                         label: isPortuguese ? "Faixa de valor" : "Market range",
-                        value: economy.status === "resolved" ? formatPlayerMarketTierRange(economy.tier, locale) : updating,
+                        value: marketTierRange,
                       },
                       {
                         label: isPortuguese ? "Preço do card" : "Card price",
-                        value: commercialPrice,
+                        value: commercialPrice ?? presentationStatus,
                       },
                       { label: isPortuguese ? "Posição" : "Position", value: card.position },
-                      { label: isPortuguese ? "Nacionalidade" : "Nationality", value: card.countryCode3 || updating },
+                      { label: isPortuguese ? "Nacionalidade" : "Nationality", value: card.countryCode3 || presentationStatus },
                     ],
                     profileHref,
                     profileLabel: isPortuguese ? "Ver perfil completo" : "View full profile",
@@ -148,6 +205,7 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                       labels={labels}
                       imageLoading="lazy"
                       playerProfileHref={profileHref}
+                      staticRenderScale={390 / 430}
                       forceNeonActive
                     />
                   )}
@@ -158,6 +216,7 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                     labels={labels}
                     imageLoading="lazy"
                     playerProfileHref={profileHref}
+                    staticRenderScale={80 / 430}
                     showProfileAction={false}
                     showSocialMetrics={false}
                   />

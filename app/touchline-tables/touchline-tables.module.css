@@ -52,13 +52,12 @@
 .rankingPending p { max-width: 680px; margin: 0; color: rgba(230, 255, 226, .72); line-height: 1.55; }
 
 .topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 52px;
+  display: grid;
+  gap: 5px;
   margin-bottom: 18px;
 }
+
+.globalNavigation { width: 100%; }
 
 .backLink,
 .status {
@@ -76,7 +75,7 @@
   text-decoration: none;
 }
 
-.status { color: var(--lime); }
+.status { justify-self: end; color: var(--lime); }
 
 .hero {
   display: grid;
@@ -288,8 +287,8 @@
   top: 5px;
   right: -42px;
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   place-items: center;
   border: 0;
@@ -557,7 +556,7 @@
   .zoomContent {
     width: min(250px, calc(100vw - 76px), calc((100dvh - 190px) * .6223));
   }
-  .zoomClose { top: 0; right: -36px; width: 32px; height: 32px; }
+  .zoomClose { top: 0; right: -46px; width: 44px; height: 44px; }
 }
 
 @media (max-height: 520px) and (orientation: landscape) {

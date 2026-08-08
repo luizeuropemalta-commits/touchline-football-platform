@@ -1,4 +1,5 @@
 import { touchlineClubOwnerProfileHref, touchlineClubOwnerSubstitutionHref } from "./club-owner-routes.ts";
+import { resolveTouchLinePresentationLocale } from "./root-locale.ts";
 
 export const TOUCHLINE_ARENA_PANEL_KEYS = [
   "live",
@@ -13,20 +14,30 @@ export const TOUCHLINE_ARENA_PANEL_KEYS = [
 export type TouchlineArenaPanelKey = (typeof TOUCHLINE_ARENA_PANEL_KEYS)[number];
 
 export function touchlineArenaHref(locale: string) {
-  return `/arena?lang=${encodeURIComponent(locale)}`;
+  return `/arena?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale))}`;
 }
 
 export function touchlineArenaDemoHref(locale: string) {
   const params = new URLSearchParams({
     demoLineup: "1",
     skipIntro: "1",
-    lang: locale,
+    lang: resolveTouchLinePresentationLocale(locale),
   });
   return `/arena?${params.toString()}`;
 }
 
-export function touchlineClubHubHref(locale: string, clubSlug = "manchester-united") {
-  return `/touchline-clubs/${encodeURIComponent(clubSlug)}?lang=${encodeURIComponent(locale)}`;
+/**
+ * Opens the ClubHub discovery directory unless a caller has an explicit club
+ * context. A generic navigation affordance must never quietly choose a club
+ * for the visitor.
+ */
+export function touchlineClubHubHref(locale: string, clubSlug?: string | null) {
+  const lang = encodeURIComponent(resolveTouchLinePresentationLocale(locale));
+  const contextualSlug = clubSlug?.trim();
+
+  return contextualSlug
+    ? `/touchline-clubs/${encodeURIComponent(contextualSlug)}?lang=${lang}`
+    : `/touchline-clubs?lang=${lang}`;
 }
 
 export function parseTouchlineArenaPanel(value?: string | string[] | null): TouchlineArenaPanelKey | null {
@@ -37,12 +48,13 @@ export function parseTouchlineArenaPanel(value?: string | string[] | null): Touc
 }
 
 export function touchlineArenaPanelHref(panel: TouchlineArenaPanelKey, locale: string) {
-  const lang = `lang=${encodeURIComponent(locale)}`;
+  const effectiveLocale = resolveTouchLinePresentationLocale(locale);
+  const lang = `lang=${encodeURIComponent(effectiveLocale)}`;
   if (panel === "market") return `/market-transfer?${lang}`;
-  if (panel === "bench" || panel === "formation") return touchlineClubOwnerSubstitutionHref(locale);
+  if (panel === "bench" || panel === "formation") return touchlineClubOwnerSubstitutionHref(effectiveLocale);
   if (panel === "live" || panel === "watch") return `/live?${lang}`;
   if (panel === "rankings") return `/touchline-tables?${lang}`;
-  return touchlineClubOwnerProfileHref(locale);
+  return touchlineClubOwnerProfileHref(effectiveLocale);
 }
 
 export function touchlineArenaContractHref(input: {
@@ -52,7 +64,7 @@ export function touchlineArenaContractHref(input: {
   clubId?: string | number | null;
 }) {
   const params = new URLSearchParams({
-    lang: input.locale,
+    lang: resolveTouchLinePresentationLocale(input.locale),
     contractPlayer: String(input.playerId),
     contractName: input.playerName,
   });

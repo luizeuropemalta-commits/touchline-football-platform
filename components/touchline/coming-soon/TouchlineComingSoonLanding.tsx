@@ -24,6 +24,7 @@ type TouchlineCrowdAudio = {
   stop: () => void;
 };
 type TouchlineComingSoonLocale = "pt" | "en";
+type MotionPreference = "pending" | "normal" | "reduce";
 type ComingSoonCopy = {
   aria: string;
   soundOn: string;
@@ -67,14 +68,26 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
   const [phase, setPhase] = useState<TouchlineArenaIntroPhase>("suspense");
   const [cycle, setCycle] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [motionPreference, setMotionPreference] = useState<MotionPreference>("pending");
   const entryVideoRef = useRef<HTMLVideoElement | null>(null);
   const loopVideoRef = useRef<HTMLVideoElement | null>(null);
   const crowdAudioRef = useRef<TouchlineCrowdAudio | null>(null);
   const fireworkCueRef = useRef("");
   const locale = resolveComingSoonLocale(requestedLocale);
   const copy = copyByLocale[locale];
-  const isLoopVisible = phase === "reveal";
-  const isEntryVisible = phase === "stadium";
+  const reducedMotion = motionPreference === "reduce";
+  const displayPhase: TouchlineArenaIntroPhase = reducedMotion ? "reveal" : phase;
+  const isLoopVisible = !reducedMotion && phase === "reveal";
+  const isEntryVisible = !reducedMotion && phase === "stadium";
+  const isPanelVisible = reducedMotion || isLoopVisible;
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => setMotionPreference(media.matches ? "reduce" : "normal");
+    syncPreference();
+    media.addEventListener("change", syncPreference);
+    return () => media.removeEventListener("change", syncPreference);
+  }, []);
 
   const syncCrowdAudioToPicture = useCallback(() => {
     const audio = crowdAudioRef.current;
@@ -83,13 +96,13 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
     let targetVolume = 0.004;
     let targetFrequency = 520;
 
-    if (phase === "energy") {
+    if (displayPhase === "energy") {
       targetVolume = 0.032;
       targetFrequency = 720;
-    } else if (phase === "slogan") {
+    } else if (displayPhase === "slogan") {
       targetVolume = 0.16;
       targetFrequency = 1_020;
-    } else if (phase === "stadium") {
+    } else if (displayPhase === "stadium") {
       const videoTime = entryVideoRef.current?.currentTime ?? 0;
       const closeToCrowd = Math.min(1, Math.max(0, (videoTime - 0.55) / 1.55));
       const droneRisingAway = Math.min(1, Math.max(0, (videoTime - 2.55) / 0.9));
@@ -106,7 +119,7 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
         audio.firework(0.86);
         fireworkCueRef.current = `${fireworkCueRef.current}|${secondCue}`;
       }
-    } else if (phase === "reveal") {
+    } else if (displayPhase === "reveal") {
       const videoTime = loopVideoRef.current?.currentTime ?? 0;
       targetVolume = 0.19 + Math.sin(videoTime * 0.7) * 0.025;
       targetFrequency = 880 + Math.sin(videoTime * 0.38) * 90;
@@ -114,11 +127,16 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
 
     audio.gain.gain.cancelScheduledValues(now);
     audio.lowPass.frequency.cancelScheduledValues(now);
-    audio.gain.gain.setTargetAtTime(Math.max(0.001, targetVolume), now, phase === "stadium" ? 0.18 : 0.75);
+    audio.gain.gain.setTargetAtTime(Math.max(0.001, targetVolume), now, displayPhase === "stadium" ? 0.18 : 0.75);
     audio.lowPass.frequency.setTargetAtTime(Math.max(420, targetFrequency), now, 0.28);
-  }, [cycle, phase]);
+  }, [cycle, displayPhase]);
 
   useEffect(() => {
+    if (motionPreference === "pending") return;
+    // This page has no user-controlled animation. A reduced-motion visitor
+    // receives the completed, static state rather than a shortened autoplay.
+    if (motionPreference === "reduce") return;
+
     const timeline = touchlineArenaIntroTimeline(false);
     const timers = [
       window.setTimeout(() => setPhase("suspense"), 0),
@@ -130,9 +148,14 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
       window.setTimeout(() => setCycle((value) => value + 1), CYCLE_MS),
     ];
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [cycle]);
+  }, [cycle, motionPreference]);
 
   useEffect(() => {
+    if (reducedMotion) {
+      entryVideoRef.current?.pause();
+      loopVideoRef.current?.pause();
+      return;
+    }
     if (phase === "stadium") {
       const video = entryVideoRef.current;
       if (video) {
@@ -147,7 +170,7 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
         void video.play().catch(() => undefined);
       }
     }
-  }, [phase, cycle]);
+  }, [phase, cycle, reducedMotion]);
 
   useEffect(() => {
     if (!soundEnabled) return;
@@ -276,9 +299,13 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
       className={styles.root}
       data-testid="touchline-coming-soon"
       data-mode="first"
-      data-phase={phase}
+      data-phase={displayPhase}
+      data-reduced-motion={reducedMotion ? "true" : "false"}
       aria-label={copy.aria}
-      style={{ "--touchline-arena-intro-poster": `url(${TOUCHLINE_ARENA_VIDEO_POSTER})` } as CSSProperties}
+      style={{
+        "--touchline-arena-intro-poster": `url(${TOUCHLINE_ARENA_VIDEO_POSTER})`,
+        backgroundColor: reducedMotion ? "#020604" : undefined,
+      } as CSSProperties}
     >
       <video
         ref={entryVideoRef}
@@ -289,7 +316,7 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
         preload="auto"
         poster={TOUCHLINE_ARENA_VIDEO_POSTER}
         aria-hidden="true"
-        style={cinematicVideoStyle(isEntryVisible, 0.88)}
+        style={cinematicVideoStyle(isEntryVisible, 0.88, reducedMotion)}
       />
       <video
         ref={loopVideoRef}
@@ -301,7 +328,7 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
         preload="auto"
         poster={TOUCHLINE_ARENA_VIDEO_POSTER}
         aria-hidden="true"
-        style={cinematicVideoStyle(isLoopVisible, 0.58)}
+        style={cinematicVideoStyle(isLoopVisible, 0.58, reducedMotion)}
       />
       <div className={styles.arenaPreview} aria-hidden="true" />
       <div className={styles.vignette} aria-hidden="true" />
@@ -348,11 +375,11 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
           <strong>THIS IS REALITY.</strong>
         </p>
         <span className={styles.srOnly} role="status" aria-live="polite">
-          {phase === "slogan" ? TOUCHLINE_ARENA_INTRO_SLOGAN : ""}
+          {displayPhase === "slogan" ? TOUCHLINE_ARENA_INTRO_SLOGAN : ""}
         </span>
       </div>
 
-      <section aria-label={copy.aria} style={comingSoonPanelStyle(isLoopVisible)}>
+      <section aria-label={copy.aria} style={comingSoonPanelStyle(isPanelVisible, reducedMotion)}>
         <Image src={TOUCHLINE_ARENA_OFFICIAL_LOGO} alt="TouchLine" width={54} height={54} priority unoptimized />
         <span style={panelKickerStyle}>{copy.privateBuild}</span>
         <h1 style={panelTitleStyle}>{copy.headline}</h1>
@@ -362,7 +389,7 @@ export function TouchlineComingSoonLanding({ locale: requestedLocale = "pt-BR" }
   );
 }
 
-function cinematicVideoStyle(isVisible: boolean, opacity: number): CSSProperties {
+function cinematicVideoStyle(isVisible: boolean, opacity: number, reducedMotion: boolean): CSSProperties {
   return {
     position: "absolute",
     inset: 0,
@@ -372,7 +399,7 @@ function cinematicVideoStyle(isVisible: boolean, opacity: number): CSSProperties
     objectFit: "cover",
     opacity: isVisible ? opacity : 0,
     filter: "saturate(1.08) contrast(1.08) brightness(0.62)",
-    transition: "opacity 900ms ease, filter 900ms ease",
+    transition: reducedMotion ? "none" : "opacity 900ms ease, filter 900ms ease",
   };
 }
 
@@ -384,7 +411,7 @@ const soundButtonStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 9,
-  minHeight: 42,
+  minHeight: 44,
   border: "1px solid rgba(156, 255, 46, 0.3)",
   borderRadius: 999,
   padding: "0 15px",
@@ -399,7 +426,7 @@ const soundButtonStyle: CSSProperties = {
   cursor: "pointer",
 };
 
-function comingSoonPanelStyle(isVisible: boolean): CSSProperties {
+function comingSoonPanelStyle(isVisible: boolean, reducedMotion: boolean): CSSProperties {
   return {
     position: "absolute",
     left: "50%",
@@ -418,7 +445,7 @@ function comingSoonPanelStyle(isVisible: boolean): CSSProperties {
     backdropFilter: "blur(18px)",
     opacity: isVisible ? 1 : 0,
     transform: `translate(-50%, ${isVisible ? "0" : "26px"})`,
-    transition: "opacity 900ms ease, transform 900ms cubic-bezier(.2,.9,.2,1)",
+    transition: reducedMotion ? "none" : "opacity 900ms ease, transform 900ms cubic-bezier(.2,.9,.2,1)",
     pointerEvents: isVisible ? "auto" : "none",
     textAlign: "center",
   };

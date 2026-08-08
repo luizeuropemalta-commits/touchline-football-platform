@@ -48,8 +48,10 @@ test("public club page reads safe snapshots and never calls provider-backed fant
 
 test("ClubHub no longer presents a seeded demonstration as an England results table", async () => {
   const pageSource = await readFile(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
-  assert.match(pageSource, /buildOfficialStandings/);
-  assert.match(pageSource, /officialTablePending/);
+  assert.match(pageSource, /loadTouchlineOfficialLeagueTable/);
+  assert.match(pageSource, /<TouchlineOfficialLeagueTable/);
+  assert.match(pageSource, /official-league-table/);
+  assert.doesNotMatch(pageSource, /buildOfficialStandings/);
   assert.doesNotMatch(pageSource, /buildTouchLineEnglandClubTable/);
   assert.doesNotMatch(pageSource, /tableDemoDescription/);
 });

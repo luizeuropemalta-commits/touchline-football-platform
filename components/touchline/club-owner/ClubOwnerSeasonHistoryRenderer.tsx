@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Archive, CircleAlert, LockKeyhole, ShieldCheck, Trophy } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import TouchlineProfileQuickNav from "@/components/touchline/TouchlineProfileQuickNav";
-import { touchlineArenaHref } from "@/lib/touchlineArena/arena-navigation";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
+import { touchlineClubOwnerSelfHref } from "@/lib/touchlineArena/club-owner-routes";
 import { normalizeTouchlineClubOwnerSlug, touchlineClubOwnerSlugForUser } from "@/lib/touchlineArena/club-owner-page-identity";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { readTouchlinePostSeasonHistory } from "@/lib/touchlineArena/post-season-history-server";
@@ -52,13 +52,17 @@ export default async function ClubOwnerSeasonHistoryRenderer({
   const loginHref = touchLineAuthEntryHref(
     "/login",
     locale,
-    `/club-owner/${requestedSlug}/history?lang=${locale}`,
+    touchlineClubOwnerSelfHref(locale, "history"),
   );
 
   return <main className={styles.page}><div className={styles.shell}>
-    <TouchlineProfileQuickNav locale={locale} clubOwnerSlug={isOwner ? userSlug : requestedSlug} />
+    <TouchlineGlobalNavigation
+      locale={locale}
+      currentRoute="clubOwnerHistory"
+      surface={isOwner ? "authenticated" : "public"}
+    />
     <section className={styles.hero}><div className={styles.heroCopy}><span className={styles.eyebrow}><Archive aria-hidden="true" /> TouchLine ClubOwner</span><h1>{copy.title}</h1><p>{copy.description}</p></div><div className={styles.heroState}><span>{copy.secure}</span><strong>{copy.readOnly}</strong></div></section>
     {!user ? <section className={styles.empty}><div><LockKeyhole aria-hidden="true" size={30} /><h2>{copy.signedOut}</h2><p>{copy.signedOutCopy}</p><Link href={loginHref}>{pt ? "Entrar na TouchLine" : "Sign in to TouchLine"}</Link></div></section> : history && !history.ok ? <section className={styles.notice}><CircleAlert aria-hidden="true" /><div><strong>{copy.unavailable}</strong><span>{copy.unavailableCopy}</span></div></section> : items.length === 0 ? <section className={styles.empty}><div><ShieldCheck aria-hidden="true" size={30} /><h2>{copy.empty}</h2><p>{copy.emptyCopy}</p></div></section> : <section className={styles.panel}><header className={styles.panelHead}><div><h2>{copy.title}</h2><p>{copy.description}</p></div></header><div className={styles.list}>{items.map((item) => <article className={styles.item} key={item.summaryId}><div className={styles.player}><strong>{item.seasonName}</strong><span>{item.summaryState === "FROZEN" ? (pt ? "Histórico congelado" : "Frozen history") : (pt ? "Resultado validado" : "Validated result")}</span></div><div className={styles.price}><span>{copy.finalRank}</span><strong>{item.finalRank === null ? "—" : `#${item.finalRank}`}</strong></div><span className={styles.status}>{item.totalTouchlinePoints === null ? "—" : `${item.totalTouchlinePoints} TL`}</span></article>)}</div></section>}
-    <p className={styles.footnote}><Trophy aria-hidden="true" /> {pt ? "Dados oficiais, somente leitura e preservados por temporada." : "Official, read-only and season-preserved data."}</p><Link href={touchlineArenaHref(locale)} className={styles.footnote}>← TouchLine Arena</Link>
+    <p className={styles.footnote}><Trophy aria-hidden="true" /> {pt ? "Dados oficiais, somente leitura e preservados por temporada." : "Official, read-only and season-preserved data."}</p>
   </div></main>;
 }

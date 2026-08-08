@@ -11,6 +11,16 @@ import {
   touchLinePostAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
+import { touchlineClubOwnerSlugForUser } from "@/lib/touchlineArena/club-owner-page-identity";
+import { resolveTouchlineClubOwnerRouteAccess } from "@/lib/touchlineArena/club-owner-route-access";
+import {
+  touchlineClubOwnerSelfHref,
+  type TouchlineClubOwnerSelfArea,
+} from "@/lib/touchlineArena/club-owner-routes";
+import {
+  resolveTouchLinePresentationLocale,
+  TOUCHLINE_PRESENTATION_LOCALE_HEADER,
+} from "@/lib/touchlineArena/root-locale";
 import {
   hasTouchlineAuditToken,
   isTouchlineAuditExpired,
@@ -28,15 +38,22 @@ function matchesRoute(pathname: string, route: string) {
   return pathname === route || pathname.startsWith(`${route}/`);
 }
 
-function offlineResponse() {
+function offlineResponse(locale: "en-GB" | "pt-BR") {
+  const isPortuguese = locale === "pt-BR";
+  const title = isPortuguese ? "TouchLine — Em breve" : "TouchLine — Coming soon";
+  const description = isPortuguese
+    ? "Estamos preparando uma nova experiência premium de futebol, cards oficiais, ClubOwners e competições TouchLine."
+    : "We are preparing a new premium football experience, official cards, ClubOwners and TouchLine competitions.";
+  const statusLabel = isPortuguese ? "Em breve" : "Coming soon";
+
   return new NextResponse(
     `<!doctype html>
-<html lang="pt-BR">
+<html lang="${locale}" dir="ltr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow,noarchive" />
-    <title>TouchLine — Em breve</title>
+    <title>${title}</title>
     <style>
       :root { color-scheme: dark; }
       * { box-sizing: border-box; }
@@ -152,8 +169,8 @@ function offlineResponse() {
       <img src="/touchlineArena/brand/tl-shield-lime.png" alt="TouchLine" />
       <small>Private build</small>
       <h1>TouchLine Arena</h1>
-      <p>Estamos preparando uma nova experiência premium de futebol, cards oficiais, ClubOwners e competições TouchLine.</p>
-      <strong>Em breve</strong>
+      <p>${description}</p>
+      <strong>${statusLabel}</strong>
     </main>
   </body>
 </html>`,
@@ -192,6 +209,111 @@ function loginRedirect(request: NextRequest, sourceResponse?: NextResponse) {
   return redirectWithSupabaseCookies(loginUrl, sourceResponse);
 }
 
+function requestLocale(request: NextRequest) {
+  return resolveTouchLinePresentationLocale(request.nextUrl.searchParams.get("lang"));
+}
+
+/**
+ * App Router layouts do not receive query parameters. Forward the canonical
+ * public presentation locale through the request so `<html lang>` and the
+ * first server render match `?lang=` before client hydration runs.
+ */
+function nextResponseWithPresentationLocale(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, requestLocale(request));
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
+function clubOwnerLoginRedirect(
+  request: NextRequest,
+  area: TouchlineClubOwnerSelfArea,
+  sourceResponse?: NextResponse,
+) {
+  const locale = requestLocale(request);
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("lang", locale);
+  loginUrl.searchParams.set("returnTo", touchlineClubOwnerSelfHref(locale, area));
+  return redirectWithSupabaseCookies(loginUrl, sourceResponse);
+}
+
+function clubOwnerSelfRedirect(
+  request: NextRequest,
+  area: TouchlineClubOwnerSelfArea,
+  sourceResponse?: NextResponse,
+) {
+  const locale = requestLocale(request);
+  return redirectWithSupabaseCookies(
+    new URL(touchlineClubOwnerSelfHref(locale, area), request.url),
+    sourceResponse,
+  );
+}
+
+/**
+ * `notFound()` after an async session lookup starts the App Router stream and
+ * can leave the HTTP status at 200. Private ClubOwner paths are authorized in
+ * this availability boundary instead, so a foreign owner URL receives an
+ * actual 404 without disclosing which ClubOwner identity was requested.
+ */
+function clubOwnerNotFoundResponse(request: NextRequest, sourceResponse?: NextResponse) {
+  const isPortuguese = requestLocale(request) === "pt-BR";
+  const arenaHref = `/arena?lang=${isPortuguese ? "pt-BR" : "en-GB"}`;
+  const response = new NextResponse(
+    `<!doctype html>
+<html lang="${isPortuguese ? "pt-BR" : "en-GB"}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <title>TouchLine — ${isPortuguese ? "Navegação segura" : "Safe navigation"}</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { min-height: 100svh; margin: 0; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 16%, rgba(169,255,66,.15), transparent 30%), #030806; color: #f4fff1; font-family: Inter, Arial, sans-serif; }
+      main { width: min(560px, 100%); padding: clamp(30px, 7vw, 60px); border: 1px solid rgba(183,255,91,.28); border-radius: 28px; background: rgba(4,14,10,.9); box-shadow: 0 28px 90px rgba(0,0,0,.54); text-align: center; }
+      small { color: #bdff75; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+      h1 { margin: 14px 0 10px; font-size: clamp(30px, 7vw, 48px); letter-spacing: -.04em; }
+      p { margin: 0; color: rgba(244,255,241,.72); line-height: 1.65; }
+      a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 24px; padding: 0 20px; border-radius: 999px; background: #b7ff5b; color: #071006; font-weight: 900; text-decoration: none; }
+      a:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+    </style>
+  </head>
+  <body><main>
+    <small>TouchLine</small>
+    <h1>${isPortuguese ? "Navegação segura" : "Safe navigation"}</h1>
+    <p>${isPortuguese ? "Esta área não está disponível." : "This area is not available."}</p>
+    <a href="${arenaHref}">${isPortuguese ? "Voltar para a Arena" : "Return to Arena"}</a>
+  </main></body>
+</html>`,
+    {
+      status: 404,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store, no-cache, must-revalidate",
+        "x-robots-tag": "noindex, nofollow, noarchive, nosnippet",
+      },
+    },
+  );
+  sourceResponse?.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
+  return response;
+}
+
+function resolveClubOwnerFailureBoundary(request: NextRequest, sourceResponse?: NextResponse) {
+  const clubOwnerAccess = resolveTouchlineClubOwnerRouteAccess({
+    pathname: request.nextUrl.pathname,
+    isAuthenticated: false,
+  });
+  if (clubOwnerAccess?.action === "login") {
+    return clubOwnerLoginRedirect(request, clubOwnerAccess.area, sourceResponse);
+  }
+  if (clubOwnerAccess?.action === "redirect-self") {
+    return clubOwnerSelfRedirect(request, clubOwnerAccess.area, sourceResponse);
+  }
+  if (clubOwnerAccess?.action === "not-found") {
+    return clubOwnerNotFoundResponse(request, sourceResponse);
+  }
+  return null;
+}
+
 function arenaRedirect(request: NextRequest, sourceResponse?: NextResponse) {
   const arenaUrl = new URL("/arena", request.url);
   const lang = request.nextUrl.searchParams.get("lang");
@@ -227,7 +349,7 @@ async function handleTouchLineRequest(request: NextRequest) {
     request.nextUrl.hostname,
   );
   const isLocalDev = localDevHosts.has(hostname);
-  if (isLocalDev) return NextResponse.next();
+  if (isLocalDev) return nextResponseWithPresentationLocale(request);
 
   const pathname = request.nextUrl.pathname;
 
@@ -242,7 +364,7 @@ async function handleTouchLineRequest(request: NextRequest) {
     if (!isAuditPath || !validToken || isTouchlineAuditExpired()) {
       return auditNotFound();
     }
-    const response = NextResponse.next({ request });
+    const response = nextResponseWithPresentationLocale(request);
     response.headers.set("cache-control", "no-store, no-cache, must-revalidate");
     response.headers.set("x-robots-tag", "noindex, nofollow, noarchive, nosnippet");
     return response;
@@ -264,15 +386,24 @@ async function handleTouchLineRequest(request: NextRequest) {
   const isEmergencyOffline = siteOffline && !isVercelHost;
 
   if (isEmergencyOffline && !isProtectedArenaRoute && !isAuth) {
-    return offlineResponse();
+    return offlineResponse(requestLocale(request));
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return isProtectedArenaRoute ? loginRedirect(request) : NextResponse.next();
+  if (!url || !key) {
+    const clubOwnerFailure = resolveClubOwnerFailureBoundary(request);
+    if (clubOwnerFailure) return clubOwnerFailure;
+    return isProtectedArenaRoute ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
+  }
 
-  let response = NextResponse.next({ request });
-  let user: { email?: string | null; app_metadata?: Record<string, unknown>; user_metadata?: Record<string, unknown> } | null = null;
+  let response = nextResponseWithPresentationLocale(request);
+  let user: {
+    id?: string;
+    email?: string | null;
+    app_metadata?: Record<string, unknown>;
+    user_metadata?: Record<string, unknown>;
+  } | null = null;
   let isOwnerEmail: (email: string | null | undefined) => boolean = () => false;
 
   try {
@@ -287,7 +418,7 @@ async function handleTouchLineRequest(request: NextRequest) {
         getAll: () => request.cookies.getAll(),
         setAll: (cookies) => {
           cookies.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = nextResponseWithPresentationLocale(request);
           cookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
       },
@@ -298,11 +429,32 @@ async function handleTouchLineRequest(request: NextRequest) {
   }
 
   const isAdmin = isOwnerEmail(user?.email);
+  const clubOwnerSlug = user?.id && !isAdmin
+    ? touchlineClubOwnerSlugForUser({
+      id: user.id,
+      email: user.email,
+      user_metadata: user.user_metadata,
+    })
+    : null;
+  const clubOwnerAccess = resolveTouchlineClubOwnerRouteAccess({
+    pathname,
+    isAuthenticated: Boolean(user),
+    ownerSlug: clubOwnerSlug,
+  });
+  if (clubOwnerAccess?.action === "login") {
+    return clubOwnerLoginRedirect(request, clubOwnerAccess.area, response);
+  }
+  if (clubOwnerAccess?.action === "redirect-self") {
+    return clubOwnerSelfRedirect(request, clubOwnerAccess.area, response);
+  }
+  if (clubOwnerAccess?.action === "not-found") {
+    return clubOwnerNotFoundResponse(request, response);
+  }
   if (!user && isProtectedArenaRoute) return loginRedirect(request, response);
   const hasArenaAccess = hasTouchLineArenaAccess(user);
   if (user && isProtectedArenaRoute && !hasArenaAccess) return loginRedirect(request, response);
   if (user && isAdminOnlyArenaRoute && !isAdmin) return arenaRedirect(request, response);
-  if (isEmergencyOffline && user && !isAdmin && !isAuth) return offlineResponse();
+  if (isEmergencyOffline && user && !isAdmin && !isAuth) return offlineResponse(requestLocale(request));
   if (user && hasArenaAccess && isAuthEntry) {
     const lang = request.nextUrl.searchParams.get("lang");
     const returnTo = normalizeTouchLineAuthReturnTo(request.nextUrl.searchParams.get("returnTo"));
@@ -322,8 +474,12 @@ export async function proxy(request: NextRequest) {
   try {
     return await handleTouchLineRequest(request);
   } catch {
+    // If an edge dependency fails, private ClubOwner routes must still fail
+    // closed instead of reaching a streamed `notFound()` response with 200.
+    const clubOwnerFailure = resolveClubOwnerFailureBoundary(request);
+    if (clubOwnerFailure) return clubOwnerFailure;
     const isProtectedArenaRoute = protectedArenaPaths.some((path) => matchesRoute(request.nextUrl.pathname, path));
-    return isProtectedArenaRoute ? loginRedirect(request) : NextResponse.next();
+    return isProtectedArenaRoute ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
   }
 }
 

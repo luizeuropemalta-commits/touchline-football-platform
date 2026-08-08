@@ -8,6 +8,7 @@ import { loadTouchLinePublishedTopEleven } from "@/lib/touchlineArena/card-ranki
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import { formatTouchlineCommercialCardTotal } from "@/lib/touchlineArena/commercial-card-pricing";
+import type { TouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import TouchLineTablesClient from "./touchline-tables-client";
 
 export const metadata = { title: "TouchLine Tables" };
@@ -63,6 +64,7 @@ export default async function TouchLineTablesPage({
       locale={locale}
       rankMode={copy.marketMode}
       publishedTopEleven={publishedTopEleven}
+      navigationSurface={(user ? "authenticated" : "public") satisfies TouchlineGlobalNavigationSurface}
       rosterCards={rosterCards}
       totalCards={0}
       totalOwnerValue={formatTouchlineCommercialCardTotal({

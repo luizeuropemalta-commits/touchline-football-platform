@@ -1,20 +1,45 @@
-export const TOUCHLINE_DEFAULT_CLUB_OWNER_SLUG = "luiz-lopez" as const;
+import { resolveTouchLinePresentationLocale } from "./root-locale.ts";
+
 export const TOUCHLINE_CLUB_OWNER_ROUTE_BASE = "/club-owner" as const;
+export const TOUCHLINE_CLUB_OWNER_SELF_SEGMENT = "me" as const;
+
+export type TouchlineClubOwnerSelfArea = "profile" | "history" | "renewals" | "substitution";
 
 function normalizeClubOwnerSlug(ownerSlug?: string | null) {
   const normalized = ownerSlug?.trim().replace(/^\/+|\/+$/g, "");
-  return normalized || TOUCHLINE_DEFAULT_CLUB_OWNER_SLUG;
+  // `me` is a reserved server-resolved identity route. A missing, blank or
+  // reserved slug must never silently open the public Luiz profile.
+  return normalized && normalized !== TOUCHLINE_CLUB_OWNER_SELF_SEGMENT
+    ? normalized
+    : null;
 }
 
 function withLocale(pathname: string, locale?: string | null) {
   const normalizedLocale = locale?.trim();
   if (!normalizedLocale) return pathname;
-  const params = new URLSearchParams({ lang: normalizedLocale });
+  const params = new URLSearchParams({
+    lang: resolveTouchLinePresentationLocale(normalizedLocale),
+  });
   return `${pathname}?${params.toString()}`;
 }
 
 export function touchlineClubOwnerBasePath(ownerSlug?: string | null) {
-  return `${TOUCHLINE_CLUB_OWNER_ROUTE_BASE}/${encodeURIComponent(normalizeClubOwnerSlug(ownerSlug))}`;
+  const normalizedOwnerSlug = normalizeClubOwnerSlug(ownerSlug);
+  return `${TOUCHLINE_CLUB_OWNER_ROUTE_BASE}/${encodeURIComponent(
+    normalizedOwnerSlug ?? TOUCHLINE_CLUB_OWNER_SELF_SEGMENT,
+  )}`;
+}
+
+export function touchlineClubOwnerSelfPath(area: TouchlineClubOwnerSelfArea = "profile") {
+  const basePath = `${TOUCHLINE_CLUB_OWNER_ROUTE_BASE}/${TOUCHLINE_CLUB_OWNER_SELF_SEGMENT}`;
+  if (area === "history") return `${basePath}/history`;
+  if (area === "renewals") return `${basePath}/renewals`;
+  if (area === "substitution") return `${basePath}/substitution`;
+  return basePath;
+}
+
+export function touchlineClubOwnerSelfHref(locale?: string | null, area: TouchlineClubOwnerSelfArea = "profile") {
+  return withLocale(touchlineClubOwnerSelfPath(area), locale);
 }
 
 export function touchlineClubOwnerProfileHref(locale?: string | null, ownerSlug?: string | null) {

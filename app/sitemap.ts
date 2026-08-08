@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 import { TOUCHLINE_PUBLIC_ORIGIN } from "@/lib/touchlineArena/public-origin";
 
-const publicPaths = ["/", "/login", "/register", "/forgot-password", "/touchline-clubs/manchester-united"];
+const publicPaths = ["/", "/login", "/register", "/forgot-password", "/touchline-clubs"];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return publicPaths.map((path) => ({

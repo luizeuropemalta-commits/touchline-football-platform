@@ -151,7 +151,8 @@ test("Live opens immediately, prioritizes saved squads and reveals complete card
   assert.match(eliteCardSource, /const \[useWebKitCompactPaintScale, setUseWebKitCompactPaintScale\] = useState\(false\)/);
   assert.match(eliteCardSource, /const isWebKitEngine =[\s\S]*?AppleWebKit[\s\S]*?Chrome\|Chromium\|Edg\|OPR\|SamsungBrowser/);
   assert.match(eliteCardSource, /useWebKitCompactPaintScale \? "atomic-transform" : "atomic-layout"/);
-  assert.match(eliteCardSource, /zoom: optimizeForLiveCompact && !useWebKitCompactPaintScale \? scale : undefined/);
+  assert.match(eliteCardSource, /zoom: hasStaticRenderScale[\s\S]*?optimizeForLiveCompact && !useWebKitCompactPaintScale[\s\S]*?\? scale/);
+  assert.match(eliteCardSource, /hasStaticRenderScale[\s\S]*?`scale\(var\(--touchline-card-static-scale, \$\{scale\}\)\)`/);
   assert.match(eliteCardSource, /useWebKitCompactPaintScale \? `scale\(\$\{scale\}\)` : "none"/);
   assert.match(globalCssSource, /\[data-card-live-scale-mode="atomic-layout"\][\s\S]*?-webkit-text-size-adjust: none/);
   assert.doesNotMatch(globalCssSource, /@supports \(zoom: 1\)[\s\S]*?transform: none !important/);

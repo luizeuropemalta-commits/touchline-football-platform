@@ -76,7 +76,7 @@ export function AuthForm({
   const copy = getTouchLineAuthCopy(normalizedLocale).form;
   const normalizedReturnTo = normalizeTouchLineAuthReturnTo(returnTo);
   const arenaHref = touchLinePostAuthHref(normalizedReturnTo, normalizedLocale);
-  const publicClubHref = touchLineAuthHref("/touchline-clubs/manchester-united", normalizedLocale);
+  const publicClubHref = touchLineAuthHref("/touchline-clubs", normalizedLocale);
   const loginHref = touchLineAuthEntryHref("/login", normalizedLocale, normalizedReturnTo);
   const registerHref = touchLineAuthEntryHref("/register", normalizedLocale, normalizedReturnTo);
   const forgotPasswordHref = touchLineAuthEntryHref("/forgot-password", normalizedLocale, normalizedReturnTo);

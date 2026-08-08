@@ -147,7 +147,7 @@ test("the proxy protects the Arena itself and its current operations without leg
   assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return arenaRedirect\(request, response\)/);
   assert.match(proxySource, /loginUrl\.searchParams\.set\("returnTo"/);
   assert.match(proxySource, /sourceResponse\?\.cookies\.getAll\(\)/);
-  assert.match(proxySource, /if \(isEmergencyOffline && user && !isAdmin && !isAuth\) return offlineResponse\(\)/);
+  assert.match(proxySource, /if \(isEmergencyOffline && user && !isAdmin && !isAuth\) return offlineResponse\(requestLocale\(request\)\)/);
   assert.doesNotMatch(proxySource, /isPublicArenaPreview/);
   assert.doesNotMatch(proxySource, /@\/lib\/billing\/plans/);
   assert.doesNotMatch(proxySource, /billing_subscriptions/);

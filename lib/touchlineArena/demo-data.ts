@@ -38,6 +38,9 @@ export type ClubOwnerSquadCard = {
   countryCode3: string;
   marketValue: string;
   marketValueSource?: "provider" | "verified-cache" | "unavailable";
+  /** Server-owned public state; absence retains the existing legacy card path. */
+  marketValueState?: "verified" | "pending" | "unavailable" | "error";
+  classificationState?: "verified" | "pending" | "unavailable" | "error";
   cardTier?: TouchlineCardTierKey;
   cardPriceVersion?: string;
   /** Present only for a roster read from an active server-side card contract. */
@@ -321,8 +324,13 @@ export function squadCardToExactPlayer(
 ): TouchlineEliteExactPlayer {
   const marketValue = card.marketValue;
   const club = findTouchLineClub(card.clubName);
-  const cardTier = touchlineArenaTierForKey(card.cardTier)?.key
+  const approvedCardTier = touchlineArenaTierForKey(card.cardTier)?.key ?? null;
+  const templateTier = approvedCardTier
     ?? touchlineArenaCompetitionTierForCard(card.cardTier).key;
+  const hasCanonicalPublicState = card.marketValueState != null || card.classificationState != null;
+  const cardTier = hasCanonicalPublicState
+    ? approvedCardTier
+    : templateTier;
 
   return {
     sportmonksPlayerId: card.id,
@@ -338,6 +346,8 @@ export function squadCardToExactPlayer(
     leagueName: "TouchLine England",
     marketValue,
     marketValueSource: card.marketValueSource || "unavailable",
+    marketValueState: card.marketValueState,
+    classificationState: card.classificationState,
     cardTier,
     cardPriceVersion: card.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     cardPriceAuthority: card.cardPriceAuthority,
@@ -347,7 +357,7 @@ export function squadCardToExactPlayer(
     foot: "--",
     contract: "ClubOwner contract",
     nationality: card.countryCode3,
-    cardTemplateUrl: touchlineArenaClubTemplateForCard(card.clubName, marketValue, cardTier) || null,
+    cardTemplateUrl: touchlineArenaClubTemplateForCard(card.clubName, marketValue, templateTier) || null,
     fantasyPoints: card.touchlinePoints,
   };
 }

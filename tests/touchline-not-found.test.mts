@@ -10,8 +10,9 @@ test("the global not-found boundary uses the TouchLine safe navigation surface",
   assert.match(page, /<TouchlineNotFound/);
   assert.match(renderer, /useSearchParams\(\)/);
   assert.match(renderer, /normalizeTouchLineLocale\(searchParams\.get\("lang"\)\)/);
-  assert.match(renderer, /touchlineArenaHref\(locale\)/);
-  assert.match(renderer, /touchlineClubHubHref\(locale\)/);
+  assert.match(renderer, /TouchlineGlobalNavigation/);
+  assert.match(renderer, /currentRoute="notFound"/);
+  assert.match(renderer, /surface="public"/);
   assert.match(renderer, /Nenhum dado do seu clube foi alterado/);
   assert.match(renderer, /No club data was changed/);
 });

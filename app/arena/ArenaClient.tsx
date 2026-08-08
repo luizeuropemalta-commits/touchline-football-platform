@@ -6592,6 +6592,9 @@ export default function ArenaClient({
           inert={isArenaFunctionalReady ? undefined : true}
           aria-hidden={!isArenaFunctionalReady}
         >
+        {!isMarketOnboardingWelcomeVisible && !isCoachSelectionBootstrapPending && !isCoachSelectionRequired ? (
+          <h1 className="sr-only">TouchLine Arena</h1>
+        ) : null}
         {isMarketOnboardingWelcomeVisible ? (
           <section className="arena-market-welcome" role="status" aria-live="polite" aria-label={`${marketOnboardingWelcomeCopy.titleLead} ${marketOnboardingWelcomeCopy.titleAccent}`}>
             <div className="arena-market-welcome-rings" aria-hidden="true"><i /><i /><i /></div>

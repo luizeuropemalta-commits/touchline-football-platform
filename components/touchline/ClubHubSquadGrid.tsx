@@ -19,6 +19,13 @@ import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-z
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import {
+  hasTouchlinePublicCardState,
+  resolveTouchlinePublicCardPresentation,
+  TOUCHLINE_NEUTRAL_CARD_ACCENT,
+  touchlinePublicCardStatusLabel,
+  touchlinePublicMarketValueStatusLabel,
+} from "@/lib/touchlineArena/public-card-presentation";
 
 const INITIAL_CARD_COUNT = 8;
 const CARD_BATCH_SIZE = 8;
@@ -68,8 +75,22 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
             marketValue: card.marketValue,
             marketValueSource: card.marketValueSource,
           });
+          const hasCanonicalPublicState = hasTouchlinePublicCardState(card);
+          const presentation = hasCanonicalPublicState ? resolveTouchlinePublicCardPresentation(card) : null;
           const updating = pt ? "Em atualização" : "Updating";
-          const zoomTier = economy.status === "resolved" ? economy.tierKey : card.cardTier;
+          const legacyZoomTier = economy.status === "resolved" ? economy.tierKey : card.cardTier;
+          const tierAccent = presentation
+            ? presentation.tierKey
+              ? touchlineCardTierPalette(presentation.tierKey).accent
+              : TOUCHLINE_NEUTRAL_CARD_ACCENT
+            : touchlineCardTierPalette(legacyZoomTier).accent;
+          const tierLabel = presentation
+            ? presentation.tierKey
+              ? touchlineCardTierName(presentation.tierKey, locale)
+              : touchlinePublicCardStatusLabel(presentation.visualState, locale)
+            : economy.status === "resolved"
+              ? touchlineCardTierName(economy.tierKey, locale)
+              : updating;
           const profileHref = touchlinePlayerProfileHref({
             sportmonksPlayerId: card.id,
             name: card.name,
@@ -77,24 +98,32 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
             position: card.position,
             shirtNumber: card.shirtNumber,
             countryCode3: card.countryCode3,
-          }, locale, { previewTier: card.cardTier });
+          }, locale);
 
           return (
             <article key={card.id} className="club-hub-card">
               <span className="club-hub-rank">#{index + 1}</span>
               <TouchlineCardZoom
                 ariaLabel={`${pt ? "Ampliar card de" : "Expand card for"} ${card.name}`}
-                contractHref={touchlineArenaContractHref({ locale, playerId: card.id, playerName: card.name, clubId })}
+                contractHref={presentation
+                  ? presentation.canExposeCommercialPresentation
+                    ? touchlineArenaContractHref({ locale, playerId: card.id, playerName: card.name, clubId })
+                    : undefined
+                  : touchlineArenaContractHref({ locale, playerId: card.id, playerName: card.name, clubId })}
                 contractLabel={pt ? "Contratar" : "Contract player"}
-                contractValue={formatTouchlineVerifiedCommercialCardPrice({
-                  marketValue: card.marketValue,
-                  marketValueSource: card.marketValueSource,
-                  competition: "england",
-                  locale,
-                })}
-                contractTermLabel={pt ? "Contrato · 1 temporada" : "Contract · 1 season"}
-                tierAccent={touchlineCardTierPalette(zoomTier).accent}
-                tierLabel={economy.status === "resolved" ? touchlineCardTierName(economy.tierKey, locale) : updating}
+                contractValue={presentation && !presentation.canExposeCommercialPresentation
+                  ? undefined
+                  : formatTouchlineVerifiedCommercialCardPrice({
+                    marketValue: card.marketValue,
+                    marketValueSource: card.marketValueSource,
+                    competition: "england",
+                    locale,
+                  })}
+                contractTermLabel={presentation && !presentation.canExposeCommercialPresentation
+                  ? undefined
+                  : (pt ? "Contrato · 1 temporada" : "Contract · 1 season")}
+                tierAccent={tierAccent}
+                tierLabel={tierLabel}
                 details={buildTouchlinePlayerCardZoomDetails({
                   locale,
                   name: card.name,
@@ -113,6 +142,7 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
                     imageLoading="lazy"
                     layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                     playerProfileHref={profileHref}
+                    staticRenderScale={390 / 430}
                     forceNeonActive
                   />
                 )}
@@ -122,7 +152,7 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
                   player={exactPlayer}
                   labels={labels}
                   imageLoading={index < 4 ? "eager" : "lazy"}
-                  initialRenderScale={180 / 430}
+                  staticRenderScale={180 / 430}
                   layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                   playerProfileHref={profileHref}
                   showProfileAction={false}
@@ -132,7 +162,13 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
               <div className="club-hub-card-meta">
                 <a href={profileHref} aria-label={`${openProfileLabel}: ${card.name}`}>{openProfileLabel}</a>
                 <small>
-                  {localizedPosition(card.position, pt)} / {economy.status === "resolved" ? card.marketValue : (pt ? "Valor de mercado pendente" : "Market value pending")} / {card.touchlinePoints} pts
+                  {localizedPosition(card.position, pt)} / {presentation
+                    ? presentation.marketValueState === "verified" && economy.status === "resolved"
+                      ? card.marketValue
+                      : touchlinePublicMarketValueStatusLabel(presentation.marketValueState, locale)
+                    : economy.status === "resolved"
+                      ? card.marketValue
+                      : (pt ? "Valor de mercado pendente" : "Market value pending")} / {card.touchlinePoints} pts
                 </small>
               </div>
             </article>

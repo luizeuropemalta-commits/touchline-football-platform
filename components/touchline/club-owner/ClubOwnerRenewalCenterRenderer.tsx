@@ -2,9 +2,9 @@ import Link from "next/link";
 import { CalendarClock, CircleAlert, LockKeyhole, ShieldCheck, WalletCards } from "lucide-react";
 import { notFound } from "next/navigation";
 
-import TouchlineProfileQuickNav from "@/components/touchline/TouchlineProfileQuickNav";
-import { touchlineArenaHref } from "@/lib/touchlineArena/arena-navigation";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
+import { touchlineClubOwnerSelfHref } from "@/lib/touchlineArena/club-owner-routes";
 import {
   normalizeTouchlineClubOwnerSlug,
   touchlineClubOwnerSlugForUser,
@@ -134,13 +134,17 @@ export default async function ClubOwnerRenewalCenterRenderer({
   const loginHref = touchLineAuthEntryHref(
     "/login",
     locale,
-    `/club-owner/${requestedSlug}/renewals?lang=${locale}`,
+    touchlineClubOwnerSelfHref(locale, "renewals"),
   );
 
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
-        <TouchlineProfileQuickNav locale={locale} clubOwnerSlug={isOwner ? userSlug : requestedSlug} />
+        <TouchlineGlobalNavigation
+          locale={locale}
+          currentRoute="clubOwnerRenewals"
+          surface={isOwner ? "authenticated" : "public"}
+        />
         <section className={styles.hero} aria-labelledby="renewal-centre-title">
           <div className={styles.heroCopy}>
             <span className={styles.eyebrow}><CalendarClock aria-hidden="true" /> TouchLine ClubOwner</span>
@@ -199,7 +203,6 @@ export default async function ClubOwnerRenewalCenterRenderer({
           </>
         )}
         <p className={styles.footnote}><WalletCards aria-hidden="true" /> {copy.footnote}</p>
-        <Link href={touchlineArenaHref(locale)} className={styles.footnote}>← TouchLine Arena</Link>
       </div>
     </main>
   );

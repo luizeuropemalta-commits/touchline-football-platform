@@ -1,11 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 import { notFound } from "next/navigation";
-import { readdir } from "fs/promises";
-import path from "path";
 import type { CSSProperties } from "react";
 import ClubTrophyCarousel from "@/components/touchline/ClubTrophyCarousel";
 import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import type { TouchlineFantasyLineupMember, TouchlineFixture, TouchlineTeam } from "@/lib/football-data/types";
 import {
   TOUCHLINE_ENGLAND_CLUBS,
@@ -22,53 +22,22 @@ import {
 import { readLiveScoreSnapshot } from "@/lib/football-data/live-score-snapshot";
 import { readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fantasy-snapshot";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
-import { buildOfficialStandings } from "@/lib/football-data/official-standings";
+import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import {
   parseMarketValueEur,
 } from "@/lib/touchlineArena/card-rules";
 import { buildTouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
-import { touchlineArenaHref } from "@/lib/touchlineArena/arena-navigation";
 import {
   normalizeTouchLineLocale,
   touchLineT,
   type TouchLineLocale,
 } from "@/lib/touchlineArena/i18n";
 import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
+import { getTouchlineClubTrophyAssets } from "@/lib/touchlineArena/club-trophy-manifest";
 import { fetchTouchlineInternalJson } from "@/lib/server/safe-internal-fetch";
 
 export const dynamic = "force-dynamic";
-
-const TROPHY_FOLDER_BY_CLUB_CODE: Record<string, string> = {
-  BOU: "afc-bournemouth",
-  ARS: "arsenal",
-  AVL: "aston-villa",
-  BRE: "brentford",
-  BHA: "brighton-and-hove-albion",
-  CHE: "chelsea",
-  COV: "coventry-city",
-  CRY: "crystal-palace",
-  EVE: "everton",
-  FUL: "fulham",
-  HUL: "hull-city",
-  IPS: "ipswich-town",
-  LEE: "leeds-united",
-  LIV: "liverpool",
-  MCI: "manchester-city",
-  MUN: "manchester-united",
-  NEW: "newcastle-united",
-  NFO: "nottingham-forest",
-  SUN: "sunderland",
-  TOT: "tottenham-hotspur",
-};
-
-type ClubTrophyAsset = {
-  id: string;
-  label: string;
-  count: number;
-  imageUrl: string;
-  tone: "gold" | "silver" | "blue" | "green";
-};
 
 type ClubHubPageProps = {
   params: Promise<{
@@ -119,43 +88,11 @@ type ClubMatchSnapshot = {
   formation: string | null;
 };
 
-function trophyTone(label: string): ClubTrophyAsset["tone"] {
-  const normalized = label.toLowerCase();
-  if (normalized.includes("champions") || normalized.includes("league champions") || normalized.includes("world")) return "gold";
-  if (normalized.includes("fa cup") || normalized.includes("conference")) return "blue";
-  if (normalized.includes("league cup") || normalized.includes("football league")) return "green";
-  return "silver";
-}
-
-function parseTrophyFileName(fileName: string, folderSlug: string): ClubTrophyAsset {
-  const baseName = fileName.replace(/\.png$/i, "");
-  const match = baseName.match(/^(.*)\s-\s(\d+)$/);
-  const label = (match?.[1] ?? baseName).replace(/\s*Trophy$/i, "").trim();
-  const count = Number.parseInt(match?.[2] ?? "1", 10);
-
-  return {
-    id: `${folderSlug}-${baseName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-    label,
-    count: Number.isFinite(count) && count > 0 ? count : 1,
-    imageUrl: `/touchlineArena/clubs/${folderSlug}/trophies/${encodeURIComponent(fileName)}`,
-    tone: trophyTone(label),
-  };
-}
-
 async function loadClubTrophyAssets(club: NonNullable<ReturnType<typeof findTouchLineClub>>) {
-  const folderSlug = TROPHY_FOLDER_BY_CLUB_CODE[club.shortCode] ?? club.slug;
-  const trophyDir = path.join(process.cwd(), "public", "touchlineArena", "clubs", folderSlug, "trophies");
-
-  try {
-    const fileNames = await readdir(trophyDir);
-    return fileNames
-      .filter((fileName) => fileName.toLowerCase().endsWith(".png"))
-      .sort((first, second) => first.localeCompare(second))
-      .map((fileName) => parseTrophyFileName(fileName, folderSlug))
-      .sort((first, second) => second.count - first.count || first.label.localeCompare(second.label));
-  } catch {
-    return [];
-  }
+  return getTouchlineClubTrophyAssets({
+    shortCode: club.shortCode,
+    clubSlug: club.slug,
+  });
 }
 
 export function generateStaticParams() {
@@ -368,11 +305,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const club = findTouchLineClub(clubParam);
   if (!club) notFound();
 
-  const [squadLoad, matchSnapshot, clubHonours, officialFixtures] = await Promise.all([
+  const [squadLoad, matchSnapshot, clubHonours, officialLeagueTable] = await Promise.all([
     loadClubSquadCards(club, locale),
     loadClubMatchSnapshot(club, locale),
     loadClubTrophyAssets(club),
-    readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
+    loadTouchlineOfficialLeagueTable(),
   ]);
   const matchPreview = matchSnapshot.preview;
   const clubCards = squadLoad.cards.sort(rankClubOwnerCards);
@@ -390,18 +327,20 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const hasCompleteClubValue = clubCards.length > 0 && clubCards.every((card) => parseMarketValueEur(card.marketValue) > 0);
   const touchLinePoints = clubCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
   const squadStatus = locale === "pt-BR" ? `${clubCards.length} cards TouchLine` : squadLoad.status;
-  const leagueTable = buildOfficialStandings({
-    teams: TOUCHLINE_ENGLAND_CLUBS.map((entry) => ({
-      providerTeamId: entry.teamId,
-      name: entry.name,
-      value: entry,
-    })),
-    fixtures: officialFixtures,
-  });
-
   return (
     <main className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent } as CSSProperties}>
-      <a className="club-hub-back" href={touchlineArenaHref(locale)}>{t("backToArena")}</a>
+      <TouchlineGlobalNavigation
+        locale={locale}
+        currentRoute="clubProfile"
+        surface="public"
+        trustedContext={{
+          club: {
+            teamId: club.teamId,
+            slug: club.slug,
+            name: club.name,
+          },
+        }}
+      />
       <section className="club-hub-shell">
         <header className="club-hub-hero">
           <div className="club-hub-identity">
@@ -428,7 +367,12 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                     nextLabel={t("nextTrophy")}
                   />
                 </div>
-              ) : null}
+              ) : (
+                <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
+                  <span>{t("clubHonours")}</span>
+                  <p className="club-hub-honours-empty" role="status">{t("clubHonoursUnavailable")}</p>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -447,37 +391,13 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           labels={cardLabels}
         />
 
-        <section className="club-hub-league-table" aria-label="TouchLine England table">
-          <div className="club-hub-section-head">
-            <div><span>{locale === "pt-BR" ? "Tabela TouchLine England" : "TouchLine England Table"}</span><strong>{t("clubTable")}</strong></div>
-            <div className="club-hub-section-actions">
-              <a href={`/touchline-tables?${localeQuery}`}>{t("fullTables")}</a>
-              <small>{t("officialTableDescription")}</small>
-            </div>
-          </div>
-          {leagueTable.completedFixtures ? <div className="club-hub-table-list" role="region" tabIndex={0} aria-label={locale === "pt-BR" ? "Tabela rolável da TouchLine England" : "Scrollable TouchLine England table"}>
-            {leagueTable.rows.map((row, index) => (
-              <a
-                key={row.team.teamId}
-                href={`/touchline-clubs/${row.team.slug}?${localeQuery}`}
-                className={`club-hub-table-row ${row.team.teamId === club.teamId ? "is-current" : ""}`}
-              >
-                <span>{index + 1}</span>
-                {row.team.logoUrl ? <img src={row.team.logoUrl} alt="" draggable={false} /> : <i>{row.team.shortCode}</i>}
-                <strong>{row.team.name}</strong>
-                <small>{t("playedShort")} {row.played}</small>
-                <small>{t("winsShort")} {row.won}</small>
-                <small>{t("drawsShort")} {row.drawn}</small>
-                <small>{t("lossesShort")} {row.lost}</small>
-                <small>{t("goalsForShort")} {row.goalsFor}</small>
-                <small>{t("goalsAgainstShort")} {row.goalsAgainst}</small>
-                <small>{t("goalDifferenceShort")} {row.goalDifference}</small>
-                <b>{t("pointsShort")} {row.points}</b>
-                <small className="club-hub-table-form" aria-label={`${t("formShort")}: ${row.form.join(" ")}`}>{row.form.join(" · ") || "—"}</small>
-              </a>
-            ))}
-          </div> : <div className="club-hub-table-empty" role="status"><strong>{t("officialTablePending")}</strong><p>{t("officialTablePendingDescription")}</p></div>}
-        </section>
+        <TouchlineOfficialLeagueTable
+          table={officialLeagueTable}
+          locale={locale}
+          variant="profile"
+          currentTeamId={club.teamId}
+          action={{ href: `/touchline-clubs?${localeQuery}#official-league-table`, label: t("fullTables") }}
+        />
 
         <section className="club-hub-board">
           <article className="club-hub-fixture">
@@ -642,6 +562,18 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           padding: 0;
           background: transparent;
           overflow: hidden;
+        }
+        .club-hub-honours-empty {
+          margin: 10px 0 0;
+          padding: 13px 15px;
+          border: 1px solid rgba(255,255,255,.14);
+          border-left-color: color-mix(in srgb, var(--club-accent) 66%, #fff);
+          border-radius: 10px;
+          background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(0,0,0,.22));
+          color: rgba(255,255,255,.72);
+          font-size: 12px;
+          line-height: 1.45;
+          font-weight: 800;
         }
         .club-hub-honour-row {
           display: block;
@@ -1068,6 +1000,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         }
         .club-hub-rendered-card {
           width: min(100%, 180px) !important;
+          --touchline-card-static-scale: .4186046512;
           position: relative;
           z-index: 1;
         }
@@ -1253,7 +1186,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             align-items: stretch;
             flex-direction: column;
           }
-          .club-hub-rendered-card { width: min(100%, 190px) !important; }
+          .club-hub-rendered-card {
+            width: min(100%, 190px) !important;
+            --touchline-card-static-scale: .4418604651;
+          }
+          .club-hub-card-meta a { min-height: 44px; }
           .club-hub-fixture-row { gap: 8px; }
           .club-hub-fixture-row img { height: 72px; }
         }

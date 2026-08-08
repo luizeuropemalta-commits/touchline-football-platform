@@ -125,7 +125,9 @@
 
 .cardFrame {
   position: relative;
-  width: min(100%, 372px);
+  width: 372px;
+  max-width: 100%;
+  --touchline-card-static-scale: .8651162791;
   filter: drop-shadow(0 22px 22px rgba(0, 0, 0, 0.36));
 }
 
@@ -857,6 +859,11 @@
     gap: 30px;
   }
 
+  .cardFrame {
+    width: 300px;
+    --touchline-card-static-scale: .6976744186;
+  }
+
   .identity h1 {
     font-size: 52px;
   }
@@ -909,6 +916,11 @@
     grid-template-columns: minmax(250px, 270px) minmax(0, 1fr);
     gap: 24px;
     padding: 28px;
+  }
+
+  .cardFrame {
+    width: 250px;
+    --touchline-card-static-scale: .5813953488;
   }
 
   .identityHeading {
@@ -965,7 +977,8 @@
   }
 
   .cardFrame {
-    width: min(78vw, 310px);
+    width: 310px;
+    --touchline-card-static-scale: .7209302326;
   }
 
   .identityHeading {
@@ -1049,6 +1062,13 @@
   }
 }
 
+@media (max-width: 359px) {
+  .cardFrame {
+    width: 250px;
+    --touchline-card-static-scale: .5813953488;
+  }
+}
+
 @media (orientation: landscape) and (max-height: 520px) {
   .shell {
     width: min(100% - 18px, 1120px);
@@ -1076,6 +1096,7 @@
 
   .cardFrame {
     width: 202px;
+    --touchline-card-static-scale: .4697674419;
   }
 
   .identity h1 {

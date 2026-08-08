@@ -16,7 +16,7 @@ export function AuthLayout({
 }) {
   const normalizedLocale = normalizeTouchLineAuthLocale(locale);
   const copy = getTouchLineAuthCopy(normalizedLocale).layout;
-  const publicArenaHref = touchLineAuthHref("/touchline-clubs/manchester-united", normalizedLocale);
+  const publicArenaHref = touchLineAuthHref("/touchline-clubs", normalizedLocale);
 
   return (
     <main className={`arena-bg console-shell relative min-h-[100dvh] overflow-x-clip bg-[#02050a]${cinematic ? " auth-cinematic" : ""}`}>

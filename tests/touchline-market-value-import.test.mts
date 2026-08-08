@@ -56,7 +56,8 @@ test("migration freezes legacy automatic card reclassification and protects immu
 test("public consumers use only the approved TouchLine value read model", () => {
   const profile = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
   const roster = readFileSync(new URL("../lib/touchlineArena/authoritative-roster-server.ts", import.meta.url), "utf8");
-  assert.match(profile, /loadTouchlineVerifiedMarketValueByProviderPlayerId/);
+  assert.match(profile, /loadTouchlinePublicPlayerProjections/);
+  assert.doesNotMatch(profile, /loadTouchlineVerifiedMarketValueByProviderPlayerId/);
   assert.match(roster, /football_player_market_values/);
   assert.match(roster, /approvedMarketValuesByPlayerId/);
 });

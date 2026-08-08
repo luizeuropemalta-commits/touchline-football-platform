@@ -22,6 +22,13 @@ export type OfficialStandingsRow<T> = Readonly<{
 export type OfficialStandings<T> = Readonly<{
   rows: readonly OfficialStandingsRow<T>[];
   completedFixtures: number;
+  duplicateFixtures: number;
+  /**
+   * Fixture results alone cannot decide every competition tie-break. A caller
+   * must not promote a stable sort fallback (such as a club name) to an
+   * official position.
+   */
+  hasUnresolvedTieBreaks: boolean;
 }>;
 
 const FINAL_STATUS = /^(?:ft|finished|full[ -]?time|after extra time|aet|after penalties)$/i;
@@ -57,10 +64,18 @@ export function buildOfficialStandings<T>(input: {
     form: [] as Array<"W" | "D" | "L">,
   }]));
   let completedFixtures = 0;
+  let duplicateFixtures = 0;
+  const completedFixtureIds = new Set<string>();
 
   for (const fixture of input.fixtures) {
     if (!FINAL_STATUS.test(fixture.status?.trim() ?? "")
       || !isScore(fixture.homeScore) || !isScore(fixture.awayScore)) continue;
+    const providerFixtureId = fixture.providerId.trim();
+    if (!providerFixtureId) continue;
+    if (completedFixtureIds.has(providerFixtureId)) {
+      duplicateFixtures += 1;
+      continue;
+    }
     const homeId = fixture.homeTeam?.providerId;
     const awayId = fixture.awayTeam?.providerId;
     if (!homeId || !awayId || homeId === awayId || !teamsByProviderId.has(homeId) || !teamsByProviderId.has(awayId)) continue;
@@ -81,16 +96,27 @@ export function buildOfficialStandings<T>(input: {
       else if (result === "D") { row.drawn += 1; row.points += 1; }
       else row.lost += 1;
     }
+    completedFixtureIds.add(providerFixtureId);
     completedFixtures += 1;
   }
 
+  const rankedRows = [...rows.values()]
+    .sort((left, right) => right.points - left.points
+      || (right.goalsFor - right.goalsAgainst) - (left.goalsFor - left.goalsAgainst)
+      || right.goalsFor - left.goalsFor);
+  const hasUnresolvedTieBreaks = rankedRows.some((row, index) => {
+    const previous = rankedRows[index - 1];
+    return Boolean(previous
+      && row.points === previous.points
+      && row.goalsFor - row.goalsAgainst === previous.goalsFor - previous.goalsAgainst
+      && row.goalsFor === previous.goalsFor);
+  });
+
   return {
     completedFixtures,
-    rows: [...rows.values()]
-      .sort((left, right) => right.points - left.points
-        || (right.goalsFor - right.goalsAgainst) - (left.goalsFor - left.goalsAgainst)
-        || right.goalsFor - left.goalsFor
-        || left.name.localeCompare(right.name, "en"))
+    duplicateFixtures,
+    hasUnresolvedTieBreaks,
+    rows: rankedRows
       .map((row) => ({
         team: row.team,
         played: row.played,

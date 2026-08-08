@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
-import TouchlineProfileQuickNav from "@/components/touchline/TouchlineProfileQuickNav";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   CLUB_OWNER_SQUAD_CARDS,
@@ -23,6 +23,7 @@ import {
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import {
   resolveTouchLinePlayerProfile,
+  resolveTouchLineUnavailableOfficialProfile,
   type TouchLinePlayerProfileSearchParams,
 } from "@/lib/touchlineArena/player-profile";
 import {
@@ -30,7 +31,7 @@ import {
   touchlinePlayerProfileHref,
 } from "@/lib/touchlineArena/player-links";
 import { loadTouchLineOfficialPlayerIdentity } from "@/lib/touchlineArena/player-profile-official";
-import { loadTouchlineVerifiedMarketValueByProviderPlayerId } from "@/lib/touchlineArena/market-value-read-model";
+import { loadTouchlinePublicPlayerProjections } from "@/lib/touchlineArena/market-value-read-model";
 import { loadTouchLinePlayerStatisticsReadModel } from "@/lib/touchlineArena/player-season-statistics-server";
 import {
   touchLinePlayerSeasonCoverageMessage,
@@ -41,7 +42,6 @@ import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-se
 import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
 import { TOUCHLINE_POSITION_RANKING_LABELS } from "@/lib/touchlineArena/card-ranking";
 import {
-  resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaTierForKey,
   touchlineCardTierName,
   touchlineCardTierPalette,
@@ -50,6 +50,13 @@ import {
   formatTouchlineVerifiedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
+import {
+  resolveTouchlinePublicCardPresentation,
+  TOUCHLINE_NEUTRAL_CARD_ACCENT,
+  TOUCHLINE_NEUTRAL_CARD_SECONDARY,
+  touchlinePublicCardStatusLabel,
+  touchlinePublicMarketValueStatusLabel,
+} from "@/lib/touchlineArena/public-card-presentation";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import {
   normalizeTouchlineCountryCode3,
@@ -62,6 +69,7 @@ import {
   type TouchlineSocialPost,
 } from "@/components/touchline/social/TouchlineSocial";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
+import { createClient } from "@/lib/supabase/server";
 import styles from "./player-profile.module.css";
 
 export const dynamic = "force-dynamic";
@@ -536,78 +544,131 @@ export default async function TouchLinePlayerProfilePage({
   );
   const text = locale === "pt-BR" ? copy.pt : copy.en;
   const isPortuguese = locale === "pt-BR";
-  const profile = resolveTouchLinePlayerProfile(playerKey, query);
-  const { card, exactPlayer, club, isLocalCard } = profile;
+  const supabase = await createClient();
+  const currentUserPromise = supabase
+    ? supabase.auth.getUser().then(({ data }) => data.user)
+    : Promise.resolve(null);
+  const fallbackProfile = resolveTouchLinePlayerProfile(playerKey, query);
   const officialLookup = resolveTouchLineOfficialLookup({
     providerPlayerId: Array.isArray(query.playerId) ? query.playerId[0] : query.playerId,
     requestedName: Array.isArray(query.name) ? query.name[0] : query.name,
-    fallbackName: card.name,
+    fallbackName: fallbackProfile.card.name,
   });
-  const [official, activeRanking] = await Promise.all([
+  const [publicProjectionBatch, official, activeRanking, currentUser] = await Promise.all([
+    loadTouchlinePublicPlayerProjections({
+      providerPlayerIds: [officialLookup.providerPlayerId],
+    }),
     loadTouchLineOfficialPlayerIdentity({
       name: officialLookup.name,
       providerPlayerId: officialLookup.providerPlayerId,
     }),
     loadTouchLineActiveRanking(),
+    currentUserPromise,
   ]);
+  const navigationSurface = currentUser ? "authenticated" : "public";
+  const publicProjection = officialLookup.providerPlayerId
+    ? publicProjectionBatch.projections.find((projection) => projection.providerPlayerId === officialLookup.providerPlayerId)
+    : undefined;
+  const canonicalIdentity = publicProjection?.identity.status === "verified"
+    && publicProjection.identity.value
+    ? {
+      providerPlayerId: publicProjection.providerPlayerId,
+      name: publicProjection.identity.value.name,
+      displayName: publicProjection.identity.value.displayName,
+      clubName: publicProjection.currentClub.status === "verified"
+        ? publicProjection.currentClub.value?.name ?? null
+        : null,
+      position: publicProjection.membership.status === "verified"
+        ? publicProjection.membership.value?.position ?? null
+        : null,
+      nationality: publicProjection.identity.value.nationality,
+      jerseyNumber: publicProjection.membership.status === "verified"
+        ? publicProjection.membership.value?.jerseyNumber ?? null
+        : null,
+    }
+    : null;
+  // A numeric provider ID identifies an official public profile. If its
+  // canonical row cannot be loaded, show a controlled unavailable state rather
+  // than letting a URL slug or demo seed substitute another footballer.
+  const profile = canonicalIdentity
+    ? resolveTouchLinePlayerProfile(playerKey, query, canonicalIdentity)
+    : officialLookup.providerPlayerId
+    ? resolveTouchLineUnavailableOfficialProfile(officialLookup.providerPlayerId)
+    : resolveTouchLinePlayerProfile(playerKey, query);
+  const { card, exactPlayer, club, isLocalCard } = profile;
+  const canonicalProviderPlayerId = canonicalIdentity?.providerPlayerId
+    ?? officialLookup.providerPlayerId
+    ?? official.providerPlayerId;
   const playerStatistics = await loadTouchLinePlayerStatisticsReadModel({
-    providerPlayerId: official.providerPlayerId ?? officialLookup.providerPlayerId,
+    providerPlayerId: canonicalProviderPlayerId,
     selectedFixtureId: Array.isArray(query.fixture) ? query.fixture[0] : query.fixture,
   });
-  if (official.providerPlayerId) exactPlayer.sportmonksPlayerId = official.providerPlayerId;
-  const verifiedMarketValue = await loadTouchlineVerifiedMarketValueByProviderPlayerId(
-    official.providerPlayerId ?? officialLookup.providerPlayerId,
-  );
-  if (verifiedMarketValue.status === "verified" && verifiedMarketValue.marketValueEur !== null) {
-    exactPlayer.marketValue = formatCompactEuro(verifiedMarketValue.marketValueEur);
+  if (canonicalProviderPlayerId) exactPlayer.sportmonksPlayerId = canonicalProviderPlayerId;
+  const canonicalMarketValue = publicProjection?.marketValue;
+  const canonicalClassification = publicProjection?.classification;
+  if (canonicalMarketValue?.status === "verified" && canonicalMarketValue.value) {
+    exactPlayer.marketValue = formatCompactEuro(canonicalMarketValue.value.eur);
     exactPlayer.marketValueSource = "verified-cache";
+    exactPlayer.marketValueState = "verified";
   } else {
     exactPlayer.marketValue = "Pending";
     exactPlayer.marketValueSource = "unavailable";
+    exactPlayer.marketValueState = canonicalMarketValue?.status ?? "unavailable";
+  }
+  if (canonicalClassification?.status === "verified" && canonicalClassification.value) {
+    exactPlayer.cardTier = canonicalClassification.value.tierKey;
+    exactPlayer.cardPriceVersion = canonicalClassification.value.policyVersion;
+    exactPlayer.classificationState = "verified";
+  } else {
+    exactPlayer.cardTier = null;
+    exactPlayer.classificationState = canonicalClassification?.status ?? canonicalMarketValue?.status ?? "unavailable";
   }
   const competition = resolveTouchlineCardCompetition({
     state: activeRanking,
     playerId: card.id,
-    providerPlayerId: official.providerPlayerId,
+    providerPlayerId: canonicalProviderPlayerId,
   });
   const requestedPreviewTier = Array.isArray(query.previewTier) ? query.previewTier[0] : query.previewTier;
-  // The owned demo roster is a controlled TouchLine source. Preserve its
-  // published preview tier across Arena, ClubOwner, feeds and the player
-  // profile even on the review deployment. External profiles remain live-only.
-  const previewTier = isLocalCard || process.env.NODE_ENV !== "production"
+  // Preview tiers are available only for an explicit local-development demo.
+  // A public numeric provider ID never accepts a visual/economic tier from a
+  // query parameter, even if its slug collides with a demo card.
+  const previewTier = !officialLookup.providerPlayerId && isLocalCard && process.env.NODE_ENV !== "production"
     ? touchlineArenaTierForKey(requestedPreviewTier)
       ?? touchlineArenaTierForKey(touchlineDemoTierForPlayer(card.id, exactPlayer.sportmonksPlayerId, card.name))
     : null;
-  if (previewTier) exactPlayer.cardTier = previewTier.key;
-  // Market value controls the economic tier. Ranking remains independent and
-  // contributes only points and sporting position information.
-  const economy = resolveTouchlineVerifiedPlayerEconomy({
-    marketValue: exactPlayer.marketValue,
-    marketValueSource: exactPlayer.marketValueSource,
-  });
-  const economicTier = economy.status === "resolved"
-    ? touchlineArenaTierForKey(economy.tierKey)
+  if (previewTier) {
+    exactPlayer.cardTier = previewTier.key;
+    exactPlayer.classificationState = "verified";
+  }
+  const isExplicitLocalDevelopmentDemo = !officialLookup.providerPlayerId
+    && isLocalCard
+    && process.env.NODE_ENV !== "production";
+  const publicPresentation = resolveTouchlinePublicCardPresentation(exactPlayer);
+  const developmentTier = isExplicitLocalDevelopmentDemo
+    ? previewTier ?? touchlineArenaTierForKey(card.cardTier)
     : null;
-  const tier = economicTier ?? previewTier
-    ?? touchlineArenaTierForKey(card.cardTier)
-    ?? touchlineArenaTierForKey("ruby-red")!;
-  const displayedPriceText = formatTouchlineVerifiedCommercialCardPrice({
-    marketValue: exactPlayer.marketValue,
-    marketValueSource: exactPlayer.marketValueSource,
-    competition: "england",
-    locale,
-  });
-  const hasVerifiedCardOffer = economy.status === "resolved";
-  const displayedMarketValue = exactPlayer.marketValue && exactPlayer.marketValue.trim().toLowerCase() !== "pending"
+  const tier = publicPresentation.tierKey
+    ? touchlineArenaTierForKey(publicPresentation.tierKey)
+    : developmentTier;
+  const displayedPriceText = publicPresentation.canExposeCommercialPresentation
+    ? formatTouchlineVerifiedCommercialCardPrice({
+      marketValue: exactPlayer.marketValue,
+      marketValueSource: exactPlayer.marketValueSource,
+      competition: "england",
+      locale,
+    })
+    : touchlinePublicCardStatusLabel(publicPresentation.visualState, locale);
+  const hasVerifiedCardOffer = publicPresentation.canExposeCommercialPresentation;
+  const displayedMarketValue = publicPresentation.hasVerifiedMarketValue && exactPlayer.marketValue
     ? exactPlayer.marketValue
-    : text.rankPending;
+    : touchlinePublicMarketValueStatusLabel(publicPresentation.marketValueState, locale);
   const officialSyncTime = formatOfficialSyncTime(official.fetchedAt, locale);
   const rankingGroupLabel = competition.positionGroup
     ? TOUCHLINE_POSITION_RANKING_LABELS[competition.positionGroup][locale === "pt-BR" ? "pt" : "en"]
     : text.rankPending;
-  const displayPosition = localizedPositionLabel(official.player?.position ?? card.position, locale);
-  const displayNationality = localizedCountryLabel(official.player?.nationality ?? card.countryCode3, locale);
-  const officialNationality = official.player?.nationality?.trim();
+  const displayPosition = localizedPositionLabel(canonicalIdentity?.position ?? (!officialLookup.providerPlayerId ? official.player?.position : null) ?? card.position, locale);
+  const displayNationality = localizedCountryLabel(canonicalIdentity?.nationality ?? (!officialLookup.providerPlayerId ? official.player?.nationality : null) ?? card.countryCode3, locale);
+  const officialNationality = canonicalIdentity?.nationality?.trim() ?? (!officialLookup.providerPlayerId ? official.player?.nationality?.trim() : null);
   const officialCountryCode3 = touchlineCountryCode3FromName(officialNationality)
     ?? (officialNationality && officialNationality.length <= 3
       ? normalizeTouchlineCountryCode3(officialNationality)
@@ -623,8 +684,12 @@ export default async function TouchLinePlayerProfilePage({
     locale,
     previewTier ? { previewTier: previewTier.key } : undefined,
   );
-  const tierPalette = touchlineCardTierPalette(tier.key);
-  const tierDisplayName = touchlineCardTierName(tier.key, locale);
+  const tierPalette = tier
+    ? touchlineCardTierPalette(tier.key)
+    : { accent: TOUCHLINE_NEUTRAL_CARD_ACCENT, secondary: TOUCHLINE_NEUTRAL_CARD_SECONDARY };
+  const tierDisplayName = tier
+    ? touchlineCardTierName(tier.key, locale)
+    : touchlinePublicCardStatusLabel(publicPresentation.visualState, locale);
   const accent = tierPalette.accent;
   const secondaryAccent = tierPalette.secondary;
   const pageStyle = {
@@ -642,10 +707,10 @@ export default async function TouchLinePlayerProfilePage({
       ariaLabel={ariaLabel}
       contractHref={hasVerifiedCardOffer ? marketHref : undefined}
       contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
-      contractValue={displayedPriceText}
-      contractTermLabel={locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season"}
+      contractValue={hasVerifiedCardOffer ? displayedPriceText : undefined}
+      contractTermLabel={hasVerifiedCardOffer ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
       tierAccent={tierPalette.accent}
-      tierLabel={economy.status === "resolved" ? touchlineCardTierName(economy.tierKey, locale) : (isPortuguese ? "Em atualização" : "Updating")}
+      tierLabel={tierDisplayName}
       details={buildTouchlinePlayerCardZoomDetails({
         locale,
         name: card.name,
@@ -669,6 +734,7 @@ export default async function TouchLinePlayerProfilePage({
           playerProfileHref={profileHref}
           runtimeLocaleOverride={locale}
           rankingMode={previewTier ? "preview" : "live"}
+          staticRenderScale={390 / 430}
           showCardActions
           showProfileAction
           forceNeonActive
@@ -680,6 +746,7 @@ export default async function TouchLinePlayerProfilePage({
         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
         runtimeLocaleOverride={locale}
         rankingMode={previewTier ? "preview" : "live"}
+        staticRenderScale={178 / 430}
         showProfileAction={false}
         showSocialMetrics={false}
       />
@@ -687,7 +754,7 @@ export default async function TouchLinePlayerProfilePage({
   );
   const playerSocialPosts: TouchlineSocialPost[] = [
     {
-      id: `card-status-${card.id}-${tier.key}`,
+      id: `card-status-${card.id}-${tier?.key ?? publicPresentation.visualState}`,
       kind: "official",
       title: hasVerifiedCardOffer
         ? (isPortuguese ? "Card disponível para contratação na TouchLine" : "Card available to contract on TouchLine")
@@ -821,9 +888,14 @@ export default async function TouchLinePlayerProfilePage({
     <main className={styles.page} style={pageStyle}>
       <div className={styles.backgroundGlow} aria-hidden="true" />
       <div className={styles.shell}>
-        <nav className={styles.topbar} aria-label={text.back}>
-          <TouchlineProfileQuickNav locale={locale} className={styles.profileQuickNav} />
-        </nav>
+        <div className={styles.topbar}>
+          <TouchlineGlobalNavigation
+            locale={locale}
+            currentRoute="playerProfile"
+            surface={navigationSurface}
+            className={styles.profileQuickNav}
+          />
+        </div>
 
         <section className={styles.identityBand}>
           <div className={styles.cardColumn}>
@@ -834,6 +906,7 @@ export default async function TouchLinePlayerProfilePage({
               playerProfileHref={profileHref}
               runtimeLocaleOverride={locale}
               rankingMode={previewTier ? "preview" : "live"}
+              staticRenderScale={372 / 430}
               showCardActions={false}
               showProfileAction={false}
               showSocialMetrics={false}
@@ -1036,7 +1109,7 @@ export default async function TouchLinePlayerProfilePage({
             </div>
             <div>
               <small>{text.lastMarketUpdate}</small>
-              <strong>{verifiedMarketValue.lastVerified ? formatOfficialSyncTime(verifiedMarketValue.lastVerified, locale) : text.rankPending}</strong>
+              <strong>{canonicalMarketValue?.status === "verified" && canonicalMarketValue.value?.lastVerified ? formatOfficialSyncTime(canonicalMarketValue.value.lastVerified, locale) : text.rankPending}</strong>
             </div>
           </div>
 

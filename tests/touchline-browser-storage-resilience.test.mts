@@ -85,8 +85,9 @@ test("id generation falls back when Web Crypto is missing or throws", () => {
 });
 
 test("locale, analytics and Arena bootstrap use resilient browser boundaries", () => {
-  assert.match(localeSyncSource, /readBrowserStorage\("localStorage"/);
   assert.match(localeSyncSource, /writeBrowserStorage\("localStorage"/);
+  assert.match(localeSyncSource, /requestedLocale === null \? initialLocale : requestedLocale/);
+  assert.doesNotMatch(localeSyncSource, /readBrowserStorage\("localStorage"/);
   assert.match(activityTrackerSource, /getOrCreateBrowserSessionId/);
   assert.match(activityTrackerSource, /void start\(\)\.catch/);
   assert.match(arenaSource, /queueResilientAsyncTask\(async \(\) =>/);

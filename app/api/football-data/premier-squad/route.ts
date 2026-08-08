@@ -11,12 +11,12 @@ import {
 } from "@/lib/football-data/squad-snapshot-store";
 import type { TouchlineSquadMember } from "@/lib/football-data/types";
 import { resolveOfficialShirtNumber } from "@/lib/football-data/official-shirt-numbers";
+import { parseMarketValueEur, type TouchlineCardTierKey } from "@/lib/touchlineArena/card-rules";
 import {
-  TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-  parseMarketValueEur,
-  touchlineArenaCompetitionTierForCard,
-  type TouchlineCardTierKey,
-} from "@/lib/touchlineArena/card-rules";
+  loadTouchlinePublicPlayerProjections,
+  type TouchlinePublicPlayerProjection,
+  type TouchlinePublicProjectionStatus,
+} from "@/lib/touchlineArena/market-value-read-model";
 import { publicFootballDataFailure } from "@/lib/football-data/public-error";
 import {
   hasTouchlineCountryFlag,
@@ -164,12 +164,6 @@ function countryNameCandidateFromRaw(raw: unknown) {
   return stringCandidate(country, ["name", "display_name"]);
 }
 
-function formatMarketValue(value: unknown) {
-  const marketValue = parseMarketValueEur(typeof value === "number" || typeof value === "string" ? value : null);
-  if (!marketValue) return null;
-  return `€${Math.round(marketValue / 1_000_000)}M`;
-}
-
 function mapSquadMember(
   member: TouchlineSquadMember,
   clubTeamId: string,
@@ -197,9 +191,6 @@ function mapSquadMember(
     countryCodeCandidateFromRaw(member.raw) ?? countryCodeCandidateFromRaw(player.source.raw),
   );
   const flagUrl = touchlineCountryFlagUrl(countryCode);
-  const marketValue = formatMarketValue(rawMarketValue);
-  const cardTier: TouchlineCardTierKey = touchlineArenaCompetitionTierForCard().key;
-
   return {
     id: player.providerId,
     providerId: player.providerId,
@@ -216,10 +207,17 @@ function mapSquadMember(
     clubName,
     clubShortCode,
     clubLogoUrl,
-    marketValue,
-    marketValueSource: marketValue ? "provider" : "unavailable",
-    cardTier,
-    cardPriceVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    // This raw candidate is persisted only for internal provider/snapshot
+    // recovery. It is deliberately replaced before the route returns JSON.
+    rawMarketValueEur: parseMarketValueEur(
+      typeof rawMarketValue === "number" || typeof rawMarketValue === "string" ? rawMarketValue : null,
+    ),
+    marketValue: null,
+    marketValueSource: "unavailable" as const,
+    marketValueState: "unavailable" as TouchlinePublicProjectionStatus,
+    classificationState: "unavailable" as TouchlinePublicProjectionStatus,
+    cardTier: null as TouchlineCardTierKey | null,
+    cardPriceVersion: null,
     countryCode3: countryCode,
     flagUrl,
     nationality,
@@ -243,9 +241,6 @@ function mapPersistedSquadPlayer(
   const role = inferArenaRole(player.position ?? undefined);
   const countryCode = countryCode3(player.nationality, null);
   const flagUrl = touchlineCountryFlagUrl(countryCode);
-  const marketValue = formatMarketValue(player.marketValue);
-  const cardTier: TouchlineCardTierKey = touchlineArenaCompetitionTierForCard().key;
-
   return {
     id: player.providerId,
     providerId: player.providerId,
@@ -262,10 +257,15 @@ function mapPersistedSquadPlayer(
     clubName,
     clubShortCode,
     clubLogoUrl,
-    marketValue,
-    marketValueSource: marketValue ? "verified-cache" : "unavailable",
-    cardTier,
-    cardPriceVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    // Keep the existing snapshot available for internal resilience, but never
+    // expose its raw market value to a public card surface.
+    rawMarketValueEur: parseMarketValueEur(player.marketValue),
+    marketValue: null,
+    marketValueSource: "unavailable" as const,
+    marketValueState: "unavailable" as TouchlinePublicProjectionStatus,
+    classificationState: "unavailable" as TouchlinePublicProjectionStatus,
+    cardTier: null as TouchlineCardTierKey | null,
+    cardPriceVersion: null,
     countryCode3: countryCode,
     flagUrl,
     nationality: player.nationality,
@@ -273,15 +273,144 @@ function mapPersistedSquadPlayer(
   };
 }
 
-function roleSortWeight(role: ReturnType<typeof inferArenaRole>) {
-  if (role === "goalkeeper") return 0;
-  if (role === "defender") return 1;
-  if (role === "midfielder") return 2;
-  return 3;
+type SquadCandidate = ReturnType<typeof mapSquadMember>;
+
+type PublicSquadPlayer = Omit<
+  SquadCandidate,
+  | "rawMarketValueEur"
+  | "marketValue"
+  | "marketValueSource"
+  | "marketValueState"
+  | "classificationState"
+  | "cardTier"
+  | "cardPriceVersion"
+> & Readonly<{
+  marketValue: string | null;
+  marketValueSource: "verified-cache" | "unavailable";
+  marketValueState: TouchlinePublicProjectionStatus;
+  classificationState: TouchlinePublicProjectionStatus;
+  cardTier: TouchlineCardTierKey | null;
+  cardPriceVersion: string | null;
+  marketValueEur: number | null;
+  marketValueUpdatedAt: string | null;
+  authoritativeMarketValueSource: "verified-cache" | null;
+  publicProjectionState: "ready" | "partial";
+}>;
+
+type PendingPublicSquadPlayer = Readonly<{
+  id: string;
+  providerId: string;
+  name: string;
+  position: string | null;
+  reason: string;
+}>;
+
+function formatApprovedMarketValue(value: number) {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "EUR",
+    notation: "compact",
+    maximumFractionDigits: value >= 10_000_000 ? 0 : 1,
+  }).format(value);
 }
 
-function squadPayload(
-  mappedPlayers: Array<ReturnType<typeof mapSquadMember>>,
+function publicProjectionOmission(
+  candidate: SquadCandidate,
+  projection: TouchlinePublicPlayerProjection | undefined,
+): PendingPublicSquadPlayer {
+  const identity = projection?.identity.status === "verified" ? projection.identity.value : null;
+  const membership = projection?.membership;
+  return {
+    id: candidate.id,
+    providerId: candidate.providerId,
+    // Provider identity is a lookup candidate only. If it cannot be resolved
+    // locally, do not publish its name as a verified TouchLine card.
+    name: identity?.displayName ?? "TouchLine player",
+    position: membership?.value?.position ?? null,
+    reason: membership?.reason
+      ?? projection?.identity.reason
+      ?? "canonical-player-unavailable",
+  };
+}
+
+/**
+ * One public adapter for live, fresh-snapshot and outage-snapshot paths.
+ * It replaces provider identity/value/tier fallbacks with the bounded
+ * server-owned projection and omits a player if the current club does not
+ * match the requested roster. No inventory, offer or contract is queried.
+ */
+async function projectSquadForPublic(
+  candidates: SquadCandidate[],
+  expectedClubProviderTeamId: string,
+): Promise<{
+  state: "ready" | "partial" | "error";
+  players: PublicSquadPlayer[];
+  omitted: PendingPublicSquadPlayer[];
+}> {
+  const batch = await loadTouchlinePublicPlayerProjections({
+    providerPlayerIds: candidates.map((candidate) => candidate.providerId),
+    context: { expectedClubProviderTeamId },
+  });
+  if (batch.status === "error") return { state: "error", players: [], omitted: [] };
+
+  const projections = new Map(batch.projections.map((projection) => [projection.providerPlayerId, projection] as const));
+  const players: PublicSquadPlayer[] = [];
+  const omitted: PendingPublicSquadPlayer[] = [];
+
+  for (const candidate of candidates) {
+    const projection = projections.get(candidate.providerId);
+    const identity = projection?.identity.status === "verified" ? projection.identity.value : null;
+    const club = projection?.currentClub.status === "verified" ? projection.currentClub.value : null;
+    const membership = projection?.membership.status === "verified" ? projection.membership.value : null;
+    if (!projection || !identity || !club || !membership || club.providerTeamId !== expectedClubProviderTeamId) {
+      omitted.push(publicProjectionOmission(candidate, projection));
+      continue;
+    }
+
+    const marketValue = projection.marketValue;
+    const classification = projection.classification;
+    const marketValueEur = marketValue.status === "verified" ? marketValue.value?.eur ?? null : null;
+    const classificationTier = classification.status === "verified" ? classification.value?.tierKey ?? null : null;
+    // `rawMarketValueEur` is retained only in the internal snapshot write path.
+    // Do not accidentally spread it into the public JSON response.
+    const { rawMarketValueEur: _rawMarketValueEur, ...publicCandidate } = candidate;
+    players.push({
+      ...publicCandidate,
+      id: projection.providerPlayerId,
+      providerId: projection.providerPlayerId,
+      name: identity.displayName,
+      shortName: makeArenaShortName(identity.displayName),
+      role: inferArenaRole(membership.position ?? undefined),
+      position: membership.position,
+      shirtNumber: membership.jerseyNumber,
+      shirtNumberSource: "verified-cache",
+      shirtNumberVerifiedAt: null,
+      shirtNumberSourceUrl: null,
+      cardEligibility: membership.jerseyNumber ? "eligible" : "awaiting-shirt-number",
+      clubTeamId: club.providerTeamId,
+      clubName: club.name,
+      countryCode3: identity.countryCode3 ?? "N/A",
+      flagUrl: touchlineCountryFlagUrl(identity.countryCode3 ?? "N/A"),
+      nationality: identity.nationality,
+      marketValue: marketValueEur === null ? null : formatApprovedMarketValue(marketValueEur),
+      marketValueSource: marketValueEur === null ? "unavailable" : "verified-cache",
+      marketValueState: marketValue.status,
+      classificationState: classification.status,
+      cardTier: classificationTier,
+      cardPriceVersion: classification.status === "verified" ? classification.value?.policyVersion ?? null : null,
+      marketValueEur,
+      marketValueUpdatedAt: marketValue.status === "verified" ? marketValue.value?.lastVerified ?? null : null,
+      authoritativeMarketValueSource: marketValueEur === null ? null : "verified-cache",
+      source: "touchline_verified",
+      publicProjectionState: projection.readState === "partial" ? "partial" : "ready",
+    });
+  }
+
+  return { state: batch.status, players, omitted };
+}
+
+async function publicSquadResponse(
+  candidates: SquadCandidate[],
   metadata: {
     teamId: string;
     clubName: string;
@@ -292,12 +421,49 @@ function squadPayload(
     databaseStored?: boolean;
     degraded?: boolean;
   },
+  options: { headers?: HeadersInit } = {},
+) {
+  const projected = await projectSquadForPublic(candidates, metadata.teamId);
+  if (projected.state === "error") {
+    return NextResponse.json({
+      ok: false,
+      error: "TouchLine verified player data is temporarily unavailable.",
+      status: "canonical-player-data-unavailable",
+    }, {
+      status: 503,
+      headers: { "Cache-Control": "private, no-store", ...options.headers },
+    });
+  }
+  return NextResponse.json(squadPayload(projected.players, metadata, projected), options);
+}
+
+function roleSortWeight(role: ReturnType<typeof inferArenaRole>) {
+  if (role === "goalkeeper") return 0;
+  if (role === "defender") return 1;
+  if (role === "midfielder") return 2;
+  return 3;
+}
+
+function squadPayload(
+  mappedPlayers: PublicSquadPlayer[],
+  metadata: {
+    teamId: string;
+    clubName: string;
+    clubShortCode: string;
+    fetchedAt: string;
+    cached: boolean;
+    databaseSource: "live-provider" | "fresh-snapshot" | "outage-fallback";
+    databaseStored?: boolean;
+    degraded?: boolean;
+  },
+  projection: Pick<Awaited<ReturnType<typeof projectSquadForPublic>>, "state" | "omitted">,
 ) {
   const sortedPlayers = mappedPlayers
     .filter((player) => Boolean(player.name))
     .sort((a, b) => roleSortWeight(a.role) - roleSortWeight(b.role) || a.name.localeCompare(b.name));
   const players = sortedPlayers.filter((player) => player.cardEligibility === "eligible");
-  const pendingPlayers = sortedPlayers
+  const pendingPlayers = [
+    ...sortedPlayers
     .filter((player) => player.cardEligibility === "awaiting-shirt-number")
     .map((player) => ({
       id: player.id,
@@ -305,7 +471,9 @@ function squadPayload(
       name: player.name,
       position: player.position,
       reason: "awaiting-shirt-number" as const,
-    }));
+    })),
+    ...projection.omitted,
+  ];
 
   return {
     ok: true as const,
@@ -321,6 +489,7 @@ function squadPayload(
       totalPlayers: sortedPlayers.length,
       cardEligiblePlayers: players.length,
       awaitingShirtNumberPlayers: pendingPlayers.length,
+      canonicalProjectionState: projection.state,
     },
     status: pendingPlayers.length
       ? `${players.length} TouchLine England players · ${pendingPlayers.length} awaiting official shirt number`
@@ -361,15 +530,14 @@ export async function GET(request: Request) {
   );
 
   if (preferSnapshot && persistedSnapshot?.players.length) {
-    return NextResponse.json(squadPayload(
-      persistedSnapshot.players.map((player) => mapPersistedSquadPlayer(
+    const candidates = persistedSnapshot.players.map((player) => mapPersistedSquadPlayer(
         player,
         teamId,
         clubName,
         clubShortCode,
         clubLogoUrl,
-      )),
-      {
+      ));
+    return publicSquadResponse(candidates, {
         teamId,
         clubName,
         clubShortCode,
@@ -377,9 +545,10 @@ export async function GET(request: Request) {
         cached: true,
         databaseSource: persistedSnapshot.fresh ? "fresh-snapshot" : "outage-fallback",
         degraded: !persistedSnapshot.fresh,
-      },
-    ), {
-      headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=86400" },
+      }, {
+      // Do not let a browser retain a pre-approval Pending card for a day.
+      // The server projection itself has short, selectively invalidatable tags.
+      headers: { "Cache-Control": "private, no-store" },
     });
   }
 
@@ -395,23 +564,21 @@ export async function GET(request: Request) {
   }
 
   if (persistedSnapshot?.fresh) {
-    return NextResponse.json(squadPayload(
-      persistedSnapshot.players.map((player) => mapPersistedSquadPlayer(
+    const candidates = persistedSnapshot.players.map((player) => mapPersistedSquadPlayer(
         player,
         teamId,
         clubName,
         clubShortCode,
         clubLogoUrl,
-      )),
-      {
+      ));
+    return publicSquadResponse(candidates, {
         teamId,
         clubName,
         clubShortCode,
         fetchedAt: persistedSnapshot.capturedAt,
         cached: true,
         databaseSource: "fresh-snapshot",
-      },
-    ));
+      });
   }
 
   const provider = createFootballDataProvider();
@@ -422,15 +589,14 @@ export async function GET(request: Request) {
       persistedSnapshot = await readSnapshotForLiveRefresh(persistedSnapshotPromise);
     }
     if (persistedSnapshot?.players.length) {
-      return NextResponse.json(squadPayload(
-        persistedSnapshot.players.map((player) => mapPersistedSquadPlayer(
+      const candidates = persistedSnapshot.players.map((player) => mapPersistedSquadPlayer(
           player,
           teamId,
           clubName,
           clubShortCode,
           clubLogoUrl,
-        )),
-        {
+        ));
+      return publicSquadResponse(candidates, {
           teamId,
           clubName,
           clubShortCode,
@@ -438,8 +604,7 @@ export async function GET(request: Request) {
           cached: true,
           databaseSource: "outage-fallback",
           degraded: true,
-        },
-      ));
+        });
     }
 
     return NextResponse.json(
@@ -467,7 +632,7 @@ export async function GET(request: Request) {
     nationality: player.nationality,
     position: player.position,
     shirtNumber: player.shirtNumber,
-    marketValue: parseMarketValueEur(player.marketValue),
+    marketValue: player.rawMarketValueEur,
   }));
   const snapshotClub = { teamId, clubName, clubShortCode, clubLogoUrl };
   const persistence = backgroundRefresh
@@ -480,7 +645,7 @@ export async function GET(request: Request) {
     });
   }
 
-  return NextResponse.json(squadPayload(mappedPlayers, {
+  return publicSquadResponse(mappedPlayers, {
     teamId,
     clubName,
     clubShortCode,
@@ -488,5 +653,5 @@ export async function GET(request: Request) {
     cached: squad.cached ?? false,
     databaseSource: "live-provider",
     databaseStored: persistence.stored,
-  }));
+  });
 }

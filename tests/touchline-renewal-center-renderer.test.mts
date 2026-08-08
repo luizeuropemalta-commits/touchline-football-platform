@@ -14,7 +14,7 @@ test("Renewal Center screen keeps the user scope server-owned and offers no chec
 
   assert.match(renderer, /readTouchlineRenewalCenter\(admin, user\.id\)/);
   assert.match(renderer, /requestedSlug === userSlug/);
-  assert.match(renderer, /touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?renewals\?lang=/);
+  assert.match(renderer, /touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?touchlineClubOwnerSelfHref\(locale, "renewals"\)/);
   assert.match(renderer, /if \(user && !isOwner\) notFound\(\)/);
   assert.match(renderer, /Sem checkout ativo/);
   assert.match(renderer, /No checkout active/);

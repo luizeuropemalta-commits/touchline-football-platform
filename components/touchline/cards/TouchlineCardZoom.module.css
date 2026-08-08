@@ -67,14 +67,18 @@
   overflow: visible !important;
 }
 
+.expandedCard {
+  --touchline-card-static-scale: .9069767442;
+}
+
 .close {
   position: absolute;
   z-index: 8;
   top: -12px;
   right: -12px;
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 1px solid rgba(158, 255, 45, .62);
   border-radius: 50%;
@@ -244,7 +248,11 @@
     align-items: start;
     overflow: visible;
   }
-  .panelWithDetails .expandedCard { width: min(290px, 100%) !important; margin-inline: auto; }
+  .panelWithDetails .expandedCard {
+    width: min(290px, 100%) !important;
+    --touchline-card-static-scale: .6744186047;
+    margin-inline: auto;
+  }
   .details { padding: 16px; }
   .detailsGrid { grid-template-columns: 1fr 1fr; }
 }

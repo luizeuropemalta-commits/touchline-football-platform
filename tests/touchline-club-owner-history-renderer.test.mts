@@ -6,7 +6,7 @@ const renderer = readFileSync(new URL("../components/touchline/club-owner/ClubOw
 
 test("ClubOwner history is server-only, owner-scoped and contains no write operation", () => {
   assert.match(renderer, /readTouchlinePostSeasonHistory\(admin, user\.id,/);
-  assert.match(renderer, /touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?history\?lang=/);
+  assert.match(renderer, /touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?touchlineClubOwnerSelfHref\(locale, "history"\)/);
   assert.match(renderer, /if \(user && !isOwner\) notFound\(\);/);
   assert.match(renderer, /history && !history\.ok/);
   assert.match(renderer, /items\.length === 0/);

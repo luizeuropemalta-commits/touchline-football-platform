@@ -3,7 +3,7 @@
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
-import TouchlineProfileQuickNav from "@/components/touchline/TouchlineProfileQuickNav";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import ClubOwnerAvatarUpload from "@/components/touchline/ClubOwnerAvatarUpload";
 import { Activity, ArrowRight, BarChart3, CalendarClock, Coins, Handshake, Landmark, LockKeyhole, Repeat2, ShieldCheck, Users, WalletCards } from "lucide-react";
 import { cookies } from "next/headers";
@@ -359,7 +359,11 @@ export default async function ClubOwnerProfileRenderer({
       } as CSSProperties}
     >
       <section className="club-owner-profile-shell">
-        <TouchlineProfileQuickNav locale={locale} clubOwnerSlug={ownerIdentity.slug} />
+        <TouchlineGlobalNavigation
+          locale={locale}
+          currentRoute={ownerIdentity.isAuthenticatedClubOwner ? "myClub" : "clubProfile"}
+          surface={ownerIdentity.isAuthenticatedClubOwner ? "authenticated" : "public"}
+        />
 
         <section className="club-owner-profile-info" aria-label={t("clubOwnerInformation")}>
           <TouchlineSocialProfileHeader

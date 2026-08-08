@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 type ClubTrophyCarouselItem = {
   id: string;
@@ -18,6 +18,11 @@ type ClubTrophyCarouselProps = {
   previousLabel: string;
 };
 
+type CarouselMetrics = {
+  manualStepDistance: number;
+  setWidth: number;
+};
+
 export default function ClubTrophyCarousel({
   ariaLabel,
   honours,
@@ -28,7 +33,19 @@ export default function ClubTrophyCarousel({
   const trackRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<Animation | null>(null);
   const manualStepMsRef = useRef(0);
+  const manualOffsetRef = useRef(0);
+  const metricsRef = useRef<CarouselMetrics>({ manualStepDistance: 0, setWidth: 0 });
   const [isCarousel, setIsCarousel] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const viewportId = useId();
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => setPrefersReducedMotion(media.matches);
+    syncPreference();
+    media.addEventListener("change", syncPreference);
+    return () => media.removeEventListener("change", syncPreference);
+  }, []);
 
   useEffect(() => {
     const row = rowRef.current;
@@ -52,21 +69,26 @@ export default function ClubTrophyCarousel({
 
       const shouldScroll = setWidth > rowWidth;
       setIsCarousel(shouldScroll);
+      manualOffsetRef.current = 0;
+      metricsRef.current = { manualStepDistance: 0, setWidth: 0 };
       if (!shouldScroll) {
         animationRef.current = null;
         manualStepMsRef.current = 0;
         return;
       }
 
+      const firstHonour = track.querySelector<HTMLElement>(".club-hub-honour");
+      const gap = honourSet ? Number.parseFloat(window.getComputedStyle(honourSet).columnGap) || 0 : 0;
+      const manualStepDistance = (firstHonour?.offsetWidth ?? 98) + gap;
+      metricsRef.current = { manualStepDistance, setWidth };
+
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         animationRef.current = null;
+        manualStepMsRef.current = 0;
         return;
       }
 
       const duration = Math.max(10000, (setWidth / 42) * 1000);
-      const firstHonour = track.querySelector<HTMLElement>(".club-hub-honour");
-      const gap = honourSet ? Number.parseFloat(window.getComputedStyle(honourSet).columnGap) || 0 : 0;
-      const manualStepDistance = (firstHonour?.offsetWidth ?? 98) + gap;
       manualStepMsRef.current = duration * (manualStepDistance / setWidth);
       animation = track.animate(
         [
@@ -98,36 +120,54 @@ export default function ClubTrophyCarousel({
       animation?.cancel();
       animationRef.current = null;
       manualStepMsRef.current = 0;
+      manualOffsetRef.current = 0;
+      metricsRef.current = { manualStepDistance: 0, setWidth: 0 };
     };
-  }, [honours]);
+  }, [honours, prefersReducedMotion]);
 
   const shiftCarousel = (direction: -1 | 1) => {
     const animation = animationRef.current;
     const timing = animation?.effect?.getTiming();
     const duration = Number(timing?.duration);
-    if (!animation || !Number.isFinite(duration) || duration <= 0) return;
+    if (animation && Number.isFinite(duration) && duration > 0) {
+      const currentTime = Number(animation.currentTime ?? 0);
+      const currentIterationStart = currentTime - (currentTime % duration);
+      const currentIterationTime = currentTime % duration;
+      const step = manualStepMsRef.current || 1800;
+      const nextIterationTime = (currentIterationTime + direction * step + duration) % duration;
+      animation.currentTime = currentIterationStart + nextIterationTime;
+      animation.play();
+      return;
+    }
 
-    const currentTime = Number(animation.currentTime ?? 0);
-    const currentIterationStart = currentTime - (currentTime % duration);
-    const currentIterationTime = currentTime % duration;
-    const step = manualStepMsRef.current || 1800;
-    const nextIterationTime = (currentIterationTime + direction * step + duration) % duration;
-    animation.currentTime = currentIterationStart + nextIterationTime;
-    animation.play();
+    const track = trackRef.current;
+    const { manualStepDistance, setWidth } = metricsRef.current;
+    if (!track || !manualStepDistance || !setWidth) return;
+
+    const nextOffset = (manualOffsetRef.current + direction * manualStepDistance + setWidth) % setWidth;
+    manualOffsetRef.current = nextOffset;
+    track.style.transform = `translate3d(${-nextOffset}px, 0, 0)`;
   };
 
   return (
-    <div ref={rowRef} className={`club-hub-honour-row ${isCarousel ? "is-carousel" : "is-static"}`} aria-label={ariaLabel}>
+    <div
+      ref={rowRef}
+      className={`club-hub-honour-row ${isCarousel ? "is-carousel" : "is-static"}`}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={ariaLabel}
+    >
       {isCarousel ? (
         <button
           type="button"
           className="club-hub-honour-arrow is-previous"
+          aria-controls={viewportId}
           aria-label={previousLabel}
           onClick={() => shiftCarousel(-1)}
         >
         </button>
       ) : null}
-      <div className="club-hub-honour-viewport">
+      <div id={viewportId} className="club-hub-honour-viewport">
         <div ref={trackRef} className="club-hub-honour-track">
           {(isCarousel ? [0, 1, 2, 3] : [0]).map((copyIndex) => (
             <div
@@ -155,6 +195,7 @@ export default function ClubTrophyCarousel({
         <button
           type="button"
           className="club-hub-honour-arrow is-next"
+          aria-controls={viewportId}
           aria-label={nextLabel}
           onClick={() => shiftCarousel(1)}
         >

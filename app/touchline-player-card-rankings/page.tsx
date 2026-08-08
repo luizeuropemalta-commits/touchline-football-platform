@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
-import TouchlineProfileQuickNav from "@/components/touchline/TouchlineProfileQuickNav";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   findTouchLineClub,
@@ -153,7 +153,12 @@ export default async function TouchLinePlayerCardRankingsPage({
 
   return (
     <main className="tl-card-rankings">
-      <TouchlineProfileQuickNav locale={locale} />
+      <TouchlineGlobalNavigation
+        locale={locale}
+        currentRoute="rankings"
+        surface={user ? "authenticated" : "public"}
+        className="tl-card-rankings-global-navigation"
+      />
 
       <section className="tl-card-rankings-shell">
         <header className="tl-card-rankings-hero">
@@ -330,6 +335,10 @@ export default async function TouchLinePlayerCardRankingsPage({
         .tl-card-rankings-back,
         .tl-card-rankings a {
           text-decoration: none;
+        }
+
+        .tl-card-rankings-global-navigation {
+          width: min(1540px, 100%);
         }
 
         .tl-card-rankings-back {

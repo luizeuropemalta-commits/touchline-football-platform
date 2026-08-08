@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import {
   ChevronRight,
   ExternalLink,
@@ -13,9 +13,10 @@ import {
   X,
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
+import { useTouchlineDialog } from "@/components/touchline/a11y/TouchlineDialog";
 import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
-import TouchlineProfileQuickNav from "@/components/touchline/TouchlineProfileQuickNav";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import {
   touchlineCardTierName,
@@ -26,6 +27,7 @@ import {
   formatTouchlineVerifiedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import type { TouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   squadCardToExactPlayer,
@@ -44,6 +46,7 @@ type TouchLineTablesClientProps = {
   cardPlayerRank: ClubOwnerSquadCard[];
   copy: RankingsCopy;
   locale: TouchLineLocale;
+  navigationSurface: TouchlineGlobalNavigationSurface;
   rankMode: string;
   publishedTopEleven: TouchlinePublishedTopEleven | null;
   rosterCards: ClubOwnerSquadCard[];
@@ -110,6 +113,7 @@ export default function TouchLineTablesClient({
   cardPlayerRank,
   copy,
   locale,
+  navigationSurface,
   rankMode,
   publishedTopEleven,
   rosterCards,
@@ -118,6 +122,8 @@ export default function TouchLineTablesClient({
   touchLineEnglandTable,
 }: TouchLineTablesClientProps) {
   const [zoomedCardId, setZoomedCardId] = useState<string | null>(null);
+  const zoomTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const zoomCloseRef = useRef<HTMLButtonElement | null>(null);
   const selection = publishedTopEleven?.slots ?? null;
   const zoomedCard = rosterCards.find((card) => card.id === zoomedCardId) ?? null;
   const isPortuguese = locale === "pt-BR";
@@ -143,19 +149,23 @@ export default function TouchLineTablesClient({
       })
     : "#";
 
-  useEffect(() => {
-    if (!zoomedCardId) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setZoomedCardId(null);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [zoomedCardId]);
+  const { dialogProps: zoomDialogProps } = useTouchlineDialog<HTMLDivElement>({
+    open: Boolean(zoomedCard),
+    onDismiss: () => setZoomedCardId(null),
+    label: `${isPortuguese ? "Card ampliado de" : "Expanded card for"} ${zoomedCard?.name ?? ""}`.trim(),
+    initialFocusRef: zoomCloseRef,
+    returnFocusRef: zoomTriggerRef,
+  });
 
   return (
     <main className={styles.page}>
       <header className={styles.topbar}>
-        <TouchlineProfileQuickNav locale={locale} />
+        <TouchlineGlobalNavigation
+          locale={locale}
+          currentRoute="rankings"
+          surface={navigationSurface}
+          className={styles.globalNavigation}
+        />
         <span className={styles.status}>
           <ShieldCheck aria-hidden="true" size={18} />
           {isPortuguese ? "Competição TouchLine" : "TouchLine competition"}
@@ -201,7 +211,10 @@ export default function TouchLineTablesClient({
                   type="button"
                   className={styles.cardButton}
                   aria-label={`${isPortuguese ? "Ampliar card de" : "Open card for"} ${card.name}`}
-                  onClick={() => setZoomedCardId(card.id)}
+                  onClick={(event) => {
+                    zoomTriggerRef.current = event.currentTarget;
+                    setZoomedCardId(card.id);
+                  }}
                 >
                   <CompactPlayerCard card={card} locale={locale} />
                 </button>
@@ -279,7 +292,10 @@ export default function TouchLineTablesClient({
                   type="button"
                   className={styles.playerRankCardButton}
                   aria-label={`${isPortuguese ? "Ampliar card de" : "Open card for"} ${card.name}`}
-                  onClick={() => setZoomedCardId(card.id)}
+                  onClick={(event) => {
+                    zoomTriggerRef.current = event.currentTarget;
+                    setZoomedCardId(card.id);
+                  }}
                 >
                   <CompactPlayerCard card={card} locale={locale} />
                 </button>
@@ -295,13 +311,7 @@ export default function TouchLineTablesClient({
       </div>
 
       {zoomedCard ? (
-        <div
-          className={styles.zoomBackdrop}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${isPortuguese ? "Card ampliado de" : "Expanded card for"} ${zoomedCard.name}`}
-          onClick={() => setZoomedCardId(null)}
-        >
+        <div {...zoomDialogProps} className={styles.zoomBackdrop} onClick={() => setZoomedCardId(null)}>
           <div
             className={styles.zoomContent}
             style={{ "--touchline-card-accent": zoomedCardTierAccent } as CSSProperties}
@@ -312,6 +322,7 @@ export default function TouchLineTablesClient({
             }}
           >
             <button
+              ref={zoomCloseRef}
               type="button"
               className={styles.zoomClose}
               aria-label={isPortuguese ? "Fechar" : "Close"}

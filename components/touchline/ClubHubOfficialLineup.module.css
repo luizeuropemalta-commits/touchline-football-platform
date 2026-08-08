@@ -145,7 +145,8 @@
   z-index: 3;
   left: var(--lineup-x);
   top: var(--lineup-y);
-  width: clamp(68px, 7.1vw, 96px);
+  width: 80px;
+  --touchline-card-static-scale: .1860465116;
   display: grid;
   justify-items: center;
   overflow: visible;
@@ -161,11 +162,11 @@
   bottom: calc(100% + clamp(7px, .8vw, 12px));
   left: 50%;
   width: min(168%, 154px);
-  max-width: 154px;
+  max-width: 132px;
   overflow: hidden;
   transform: translateX(-50%);
   color: #fff;
-  font-size: clamp(9px, .83vw, 13px);
+  font-size: clamp(8px, .76vw, 11px);
   font-weight: 1000;
   line-height: 1.08;
   letter-spacing: .025em;
@@ -175,6 +176,19 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.player[data-lineup-edge="left"] .playerName {
+  left: 0;
+  transform: translateX(0);
+  text-align: left;
+}
+
+.player[data-lineup-edge="right"] .playerName {
+  right: 0;
+  left: auto;
+  transform: translateX(0);
+  text-align: right;
 }
 
 .card {
@@ -204,6 +218,17 @@
   .statusPanel { min-width: 0; justify-items: start; }
   .syncStrip { grid-template-columns: repeat(2, 1fr); }
   .syncStrip span:nth-child(2)::after { display: none; }
+  .player {
+    width: 58px;
+    --touchline-card-static-scale: .1348837209;
+  }
+}
+
+@media (min-width: 981px) and (max-width: 1199px) {
+  .player {
+    width: 68px;
+    --touchline-card-static-scale: .1581395349;
+  }
 }
 
 @media (max-width: 720px) {
@@ -268,16 +293,20 @@
   .pitch {
     width: 100%;
     min-width: 0;
-    min-height: clamp(500px, 128vw, 610px);
+    min-height: clamp(610px, 154vw, 720px);
   }
 
   .player {
-    width: clamp(44px, 13vw, 70px);
+    width: 58px;
+    --touchline-card-static-scale: .1348837209;
   }
 
   .playerName {
     bottom: calc(100% + 5px);
-    font-size: clamp(8px, 2.08vw, 10px);
+    width: clamp(58px, 18vw, 72px);
+    max-width: 72px;
+    font-size: clamp(7px, 1.9vw, 8.5px);
+    letter-spacing: .01em;
   }
 
 }
@@ -359,12 +388,15 @@
   }
 
   .player {
-    width: clamp(52px, 7vw, 62px);
+    width: 58px;
+    --touchline-card-static-scale: .1348837209;
   }
 
   .playerName {
     bottom: calc(100% + 5px);
-    font-size: clamp(8px, 1.08vw, 9px);
+    width: clamp(54px, 9vw, 72px);
+    max-width: 72px;
+    font-size: clamp(6.8px, .9vw, 8px);
   }
 
 }
@@ -381,11 +413,14 @@
   }
 
   .player {
-    width: clamp(66px, 7vw, 82px);
+    width: 58px;
+    --touchline-card-static-scale: .1348837209;
   }
 
   .playerName {
-    font-size: clamp(8px, 1vw, 11px);
+    width: clamp(68px, 10vw, 92px);
+    max-width: 92px;
+    font-size: clamp(7px, .88vw, 9px);
   }
 
 }

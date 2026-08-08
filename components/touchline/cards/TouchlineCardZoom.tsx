@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useTouchlineDialog } from "@/components/touchline/a11y/TouchlineDialog";
 import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import styles from "./TouchlineCardZoom.module.css";
 
@@ -71,23 +72,18 @@ export default function TouchlineCardZoom({
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const closeControl = closeRef.current;
-    const trigger = triggerRef.current;
-    closeControl?.focus();
-    return () => trigger?.focus();
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [isOpen]);
+  const { dialogProps } = useTouchlineDialog<HTMLDivElement>({
+    open: isOpen,
+    onDismiss: () => setIsOpen(false),
+    label: ariaLabel,
+    initialFocusRef: closeRef,
+    returnFocusRef: triggerRef,
+  });
+  // CardZoom is client-only when expanded, so this reads the currently
+  // resolved document language without creating a server/client text mismatch.
+  const closeLabel = typeof document !== "undefined" && document.documentElement.lang === "pt-BR"
+    ? "Fechar card"
+    : "Close card";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -146,7 +142,7 @@ export default function TouchlineCardZoom({
       </div>
 
       {isOpen ? createPortal(
-        <div className={styles.backdrop} role="dialog" aria-modal="true" aria-label={ariaLabel} onClick={() => setIsOpen(false)}>
+        <div {...dialogProps} className={styles.backdrop} onClick={() => setIsOpen(false)}>
           <div
             className={`${styles.panel} ${details ? styles.panelWithDetails : ""}`}
             style={{ "--touchline-card-zoom-accent": tierAccent } as CSSProperties}
@@ -156,7 +152,7 @@ export default function TouchlineCardZoom({
               setIsOpen(false);
             }}
           >
-            <button ref={closeRef} type="button" className={styles.close} aria-label="Fechar card" onClick={() => setIsOpen(false)}>
+            <button ref={closeRef} type="button" className={styles.close} aria-label={closeLabel} onClick={() => setIsOpen(false)}>
               ×
             </button>
             <div className={styles.cardColumn}>

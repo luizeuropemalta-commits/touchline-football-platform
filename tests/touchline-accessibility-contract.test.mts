@@ -20,12 +20,15 @@ test("keyboard focus remains visible for every standard editable control", () =>
 
 test("card zoom moves keyboard focus into its modal and restores it on close", () => {
   const cardZoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
+  const dialog = source("components/touchline/a11y/TouchlineDialog.tsx");
   assert.match(cardZoom, /const triggerRef = useRef<HTMLDivElement>/);
   assert.match(cardZoom, /const closeRef = useRef<HTMLButtonElement>/);
-  assert.match(cardZoom, /const closeControl = closeRef\.current/);
-  assert.match(cardZoom, /const trigger = triggerRef\.current/);
-  assert.match(cardZoom, /closeControl\?\.focus\(\)/);
-  assert.match(cardZoom, /trigger\?\.focus\(\)/);
+  assert.match(cardZoom, /useTouchlineDialog<HTMLDivElement>\(/);
+  assert.match(cardZoom, /initialFocusRef: closeRef/);
+  assert.match(cardZoom, /returnFocusRef: triggerRef/);
   assert.match(cardZoom, /ref=\{triggerRef\}/);
   assert.match(cardZoom, /ref=\{closeRef\}/);
+  assert.match(dialog, /event\.key === "Escape"/);
+  assert.match(dialog, /FOCUSABLE_SELECTOR/);
+  assert.match(dialog, /lockSiblingBackground/);
 });

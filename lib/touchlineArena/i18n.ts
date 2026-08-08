@@ -249,6 +249,7 @@ export type TouchLineTranslationKey =
   | "officialShop"
   | "clubHubDescription"
   | "clubHonours"
+  | "clubHonoursUnavailable"
   | "previousTrophy"
   | "nextTrophy"
   | "touchlineCards"
@@ -558,6 +559,7 @@ const en: Record<TouchLineTranslationKey, string> = {
   officialShop: "Official Shop",
   clubHubDescription: "Premium club presence for cards, supporters, shop activation and approved partner visibility.",
   clubHonours: "Club Honours",
+  clubHonoursUnavailable: "Club honours are not yet available in the TouchLine verified catalogue.",
   previousTrophy: "Previous trophy",
   nextTrophy: "Next trophy",
   touchlineCards: "TouchLine Cards",
@@ -868,6 +870,7 @@ const ptBR: Record<TouchLineTranslationKey, string> = {
   officialShop: "Loja oficial",
   clubHubDescription: "Presença premium do clube para cards, torcedores, loja e visibilidade de parceiros autorizados.",
   clubHonours: "Títulos do clube",
+  clubHonoursUnavailable: "Os títulos do clube ainda não estão disponíveis no catálogo verificado da TouchLine.",
   previousTrophy: "Troféu anterior",
   nextTrophy: "Próximo troféu",
   touchlineCards: "Cards TouchLine",
@@ -963,11 +966,15 @@ const completeTranslations: Partial<Record<TouchLineLocale, Record<TouchLineTran
 };
 
 export function normalizeTouchLineLocale(locale?: string | null): TouchLineLocale {
-  return TOUCHLINE_SUPPORTED_LOCALES.some((item) => item.code === locale) ? (locale as TouchLineLocale) : TOUCHLINE_DEFAULT_LOCALE;
+  // Public rendering is deliberately limited to the two complete catalogues.
+  // Keeping this normalizer narrow makes the URL, SSR HTML language, client
+  // state and links agree instead of advertising an incomplete language over
+  // English fallback copy.
+  return locale === "pt-BR" || locale === "en-GB" ? locale : TOUCHLINE_DEFAULT_LOCALE;
 }
 
 export function isTouchLineLocaleComplete(locale?: string | null) {
-  return Boolean(completeTranslations[normalizeTouchLineLocale(locale)]);
+  return locale === "en-GB" || locale === "pt-BR";
 }
 
 export function touchLineT(locale: string | null | undefined, key: TouchLineTranslationKey) {

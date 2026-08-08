@@ -6,11 +6,17 @@ import React, { useId, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { Heart, Share2, ShieldCheck, UserPlus, UserRound } from "lucide-react";
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+  parseMarketValueEur,
   resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaClubTemplateForTierPreview,
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "@/lib/touchlineArena/card-rules";
+import {
+  resolveTouchlinePublicCardPresentation,
+  touchlinePublicCardStatusLabel,
+  touchlinePublicMarketValueStatusLabel,
+} from "@/lib/touchlineArena/public-card-presentation";
 import {
   formatTouchlineCommercialCardPrice,
   formatTouchlineContractedCommercialCardPrice,
@@ -177,6 +183,9 @@ export type TouchlineEliteExactPlayer = {
   leagueLogoUrl?: string | null;
   marketValue: string | null;
   marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+  /** Explicit canonical public state; absent keeps the established legacy path. */
+  marketValueState?: "verified" | "pending" | "unavailable" | "error" | null;
+  classificationState?: "verified" | "pending" | "unavailable" | "error" | null;
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
   /** Set exclusively by the active-contract roster mapper. */
@@ -285,6 +294,8 @@ type Props = {
    * a transparent card while the client ResizeObserver initializes.
    */
   initialRenderScale?: number;
+  /** CSS-owned public compact scale; it avoids a blank first paint. */
+  staticRenderScale?: number;
   optimizeForLiveCompact?: boolean;
   runtimeLocaleOverride?: string | null;
   subscribeToRanking?: boolean;
@@ -433,6 +444,25 @@ function valueDisplaySize(value: string) {
   if (length >= 7) return 17;
   if (length >= 5) return 20;
   return 22;
+}
+
+function cardMarketValueText(
+  player: TouchlineEliteExactPlayer,
+  locale: string | null,
+  state: "verified" | "pending" | "unavailable" | "error",
+) {
+  if (state !== "verified") return touchlinePublicMarketValueStatusLabel(state, locale);
+  const value = parseMarketValueEur(player.marketValue);
+  const source = player.marketValueSource ?? "unavailable";
+  if ((source !== "provider" && source !== "verified-cache") || value < 0 || (value === 0 && player.marketValue === null)) {
+    return touchlinePublicMarketValueStatusLabel("unavailable", locale);
+  }
+  return new Intl.NumberFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+    notation: "compact",
+    maximumFractionDigits: value >= 10_000_000 ? 0 : 1,
+  }).format(value);
 }
 
 function isLegacyTemplateUrl(value?: string | null) {
@@ -635,6 +665,7 @@ export function TouchlineEliteExactCard({
   labels,
   imageLoading = "eager",
   initialRenderScale,
+  staticRenderScale,
   optimizeForLiveCompact = false,
   runtimeLocaleOverride = null,
   subscribeToRanking = true,
@@ -653,7 +684,9 @@ export function TouchlineEliteExactCard({
   const shellRef = useRef<HTMLDivElement | null>(null);
   const shirtNameMaskRef = useRef<HTMLDivElement | null>(null);
   const shouldUseStoredLayout = isEditable && !ignoreStoredLayout;
+  const hasStaticRenderScale = typeof staticRenderScale === "number" && Number.isFinite(staticRenderScale);
   const [scale, setScale] = useState(() => {
+    if (hasStaticRenderScale) return Math.max(0, Math.min(1, staticRenderScale));
     if (typeof initialRenderScale !== "number" || !Number.isFinite(initialRenderScale)) return 0;
     return Math.max(0, Math.min(1, initialRenderScale));
   });
@@ -823,8 +856,11 @@ export function TouchlineEliteExactCard({
     playerId: player.formationPlayerId,
     providerPlayerId: player.sportmonksPlayerId,
   });
-  // Ranking is authoritative only for sporting points. Card color and its
-  // nominal commercial price are economic attributes supplied by the tier.
+  // Ranking is authoritative only for sporting points. The legacy branch is
+  // intentionally retained byte-for-byte in behaviour for every surface that
+  // has not supplied a canonical public state. That preserves existing offer,
+  // Free-season, wallet and active-contract presentation.
+  const hasCanonicalPublicState = player.marketValueState != null || player.classificationState != null;
   const totalPointsText = touchlineCardMetricText(liveCompetition.touchlinePoints);
   const previewTier = touchlineArenaTierForKey(player.cardTier) || touchlineArenaTierForKey("ruby-red")!;
   const verifiedEconomy = resolveTouchlineVerifiedPlayerEconomy({
@@ -838,9 +874,24 @@ export function TouchlineEliteExactCard({
   const contractedTier = player.cardPriceAuthority === "active-contract"
     ? touchlineArenaTierForKey(player.cardTier)
     : null;
-  const marketTier = contractedTier ?? (verifiedEconomy.status === "resolved"
+  const legacyMarketTier = contractedTier ?? (verifiedEconomy.status === "resolved"
     ? touchlineArenaTierForKey(verifiedEconomy.tierKey) ?? previewTier
     : previewTier);
+  const publicPresentation = hasCanonicalPublicState
+    ? resolveTouchlinePublicCardPresentation({
+      marketValue: player.marketValue,
+      marketValueSource: player.marketValueSource,
+      marketValueState: player.marketValueState,
+      classificationState: player.classificationState,
+      cardTier: player.cardTier,
+      cardPriceAuthority: player.cardPriceAuthority,
+    })
+    : null;
+  const marketTier = publicPresentation?.tierKey
+    ? touchlineArenaTierForKey(publicPresentation.tierKey)
+    : hasCanonicalPublicState
+      ? null
+      : legacyMarketTier;
   // England cards always keep the approved numeric tier value and use GBP as
   // their official currency. This is deliberately not a Touch Credits value,
   // currency conversion or wallet balance.
@@ -855,23 +906,43 @@ export function TouchlineEliteExactCard({
       locale: runtimeLocale,
     })
     : null;
-  const cardPriceText = contractedCardPriceText ?? (verifiedEconomy.status === "resolved"
+  const legacyCardPriceText = contractedCardPriceText ?? (verifiedEconomy.status === "resolved"
     ? formatTouchlineCommercialCardPrice(
       resolveTouchlineCommercialCardPrice({
-        tierKey: marketTier.key,
+        tierKey: legacyMarketTier.key,
         competition: "england",
       }),
     )
     : runtimeLocale === "pt-BR" ? "Pendente" : "Pending");
+  const cardPriceText = hasCanonicalPublicState
+    ? publicPresentation?.canExposeCommercialPresentation && marketTier
+      ? contractedCardPriceText ?? formatTouchlineCommercialCardPrice(
+        resolveTouchlineCommercialCardPrice({
+          tierKey: marketTier.key,
+          competition: "england",
+        }),
+      )
+      : touchlinePublicCardStatusLabel(publicPresentation?.visualState ?? "unavailable", runtimeLocale)
+    : legacyCardPriceText;
+  const marketValueText = hasCanonicalPublicState
+    ? cardMarketValueText(player, runtimeLocale, publicPresentation?.marketValueState ?? "unavailable")
+    : totalPointsText;
+  const cardPriceLabel = hasCanonicalPublicState && !publicPresentation?.canExposeCommercialPresentation
+    ? (runtimeLocale === "pt-BR" ? "STATUS DO CARD" : "CARD STATUS")
+    : null;
   const preseasonMissingValue = liveCompetition.phase === "preseason" ? "0" : "—";
   const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
     ? preseasonMissingValue
     : touchlineCardMetricText(player.matchFantasyPoints);
-  const totalPointsSize = valueDisplaySize(totalPointsText);
+  const totalPointsSize = valueDisplaySize(marketValueText);
   const cardPriceSize = valueDisplaySize(cardPriceText);
-  const cardTemplateUrl = touchlineArenaClubTemplateForTierPreview(player.clubName, marketTier.key) || cleanCardTemplateUrl(player.cardTemplateUrl) || DEFAULT_CLUB_TEMPLATE_URL;
-  const versionedCardTemplateUrl = `${cardTemplateUrl}${cardTemplateUrl.includes("?") ? "&" : "?"}v=${CARD_TEMPLATE_ASSET_VERSION}`;
-  const tierGlow = marketTierGlow(marketTier.key);
+  const cardTemplateUrl = marketTier
+    ? touchlineArenaClubTemplateForTierPreview(player.clubName, marketTier.key) || cleanCardTemplateUrl(player.cardTemplateUrl) || DEFAULT_CLUB_TEMPLATE_URL
+    : null;
+  const versionedCardTemplateUrl = cardTemplateUrl
+    ? `${cardTemplateUrl}${cardTemplateUrl.includes("?") ? "&" : "?"}v=${CARD_TEMPLATE_ASSET_VERSION}`
+    : null;
+  const tierGlow = marketTier ? marketTierGlow(marketTier.key) : "rgba(148,163,184,.52)";
   const cardPriceVersion = player.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION;
   const localPlayerFlagUrl = player.flagUrl?.startsWith("/") ? player.flagUrl : null;
   const flagImageUrl = touchlineCountryFlagUrl(countryCode3) || localPlayerFlagUrl;
@@ -940,6 +1011,23 @@ export function TouchlineEliteExactCard({
   const cardLabels = { ...localizedCardLabels(runtimeLocale), ...labels };
 
   function cardFrameImage() {
+    if (!versionedCardTemplateUrl) {
+      return (
+        <div
+          data-touchline-card-frame="neutral"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1,
+            border: "2px solid rgba(148,163,184,.72)",
+            borderRadius: 22,
+            background: "linear-gradient(152deg, rgba(71,85,105,.82), rgba(15,23,42,.98) 62%, rgba(30,41,59,.96))",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,.08), inset 0 0 42px rgba(0,0,0,.5)",
+          }}
+        />
+      );
+    }
     const liveCompactFrameUrl = touchlineLiveCompactFrameUrl(versionedCardTemplateUrl);
     const zoomFrameUrl = touchlineZoomFrameUrl(versionedCardTemplateUrl);
     const liveCompactFallbackUrl = touchlineLiveCompactFrameUrl(DEFAULT_CLUB_TEMPLATE_URL);
@@ -1033,7 +1121,7 @@ export function TouchlineEliteExactCard({
     return touchlinePlayerProfileHref(
       player,
       runtimeLocale,
-      rankingMode === "preview" ? { previewTier: marketTier.key } : undefined,
+      rankingMode === "preview" && marketTier ? { previewTier: marketTier.key } : undefined,
     );
   }
 
@@ -1214,7 +1302,10 @@ export function TouchlineEliteExactCard({
     <div
       ref={shellRef}
       className={["touchline-card-surface", className].filter(Boolean).join(" ")}
-      data-card-tier={marketTier.key}
+      data-card-tier={marketTier?.key ?? "neutral"}
+      data-card-classification={publicPresentation?.classificationState}
+      data-card-market-value-state={publicPresentation?.marketValueState}
+      data-card-presentation-state={publicPresentation?.visualState}
       data-card-motion={isEditable ? "false" : "true"}
       data-card-neon="permanent-tier-art"
       data-neon-active={forceNeonActive || isNeonActive ? "true" : "false"}
@@ -1291,7 +1382,7 @@ export function TouchlineEliteExactCard({
       ) : null}
       <div
         data-card-price-version={cardPriceVersion}
-        data-card-tier={marketTier.key}
+        data-card-tier={marketTier?.key ?? "neutral"}
         data-card-live-scale-mode={
           optimizeForLiveCompact
             ? (useWebKitCompactPaintScale ? "atomic-transform" : "atomic-layout")
@@ -1307,12 +1398,18 @@ export function TouchlineEliteExactCard({
              a post-layout paint scale so its minimum text metrics cannot grow
              compact labels independently from the frame. Full-card and zoom
              presentations remain on their existing transform path. */
-          zoom: optimizeForLiveCompact && !useWebKitCompactPaintScale ? scale : undefined,
-          transform: optimizeForLiveCompact
-            ? (useWebKitCompactPaintScale ? `scale(${scale})` : "none")
-            : `scale(${scale})`,
+          zoom: hasStaticRenderScale
+            ? undefined
+            : optimizeForLiveCompact && !useWebKitCompactPaintScale
+              ? scale
+              : undefined,
+          transform: hasStaticRenderScale
+            ? `scale(var(--touchline-card-static-scale, ${scale}))`
+            : optimizeForLiveCompact
+              ? (useWebKitCompactPaintScale ? `scale(${scale})` : "none")
+              : `scale(${scale})`,
           transformOrigin: "top left",
-          opacity: scale > 0 ? 1 : 0,
+          opacity: hasStaticRenderScale || scale > 0 ? 1 : 0,
           overflow: "hidden",
           background: "transparent",
           WebkitTextSizeAdjust: "none",
@@ -1468,8 +1565,8 @@ export function TouchlineEliteExactCard({
             padding: "0 6px",
           }}
         >
-          <div style={{ color: "rgba(226,246,255,.76)", fontSize: 8 * fieldScale("marketValue"), lineHeight: `${10 * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>{cardLabels.totalPoints}</div>
-          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: totalPointsSize * fieldScale("marketValue"), lineHeight: `${(totalPointsSize + 2) * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{totalPointsText}</div>
+          <div style={{ color: "rgba(226,246,255,.76)", fontSize: 8 * fieldScale("marketValue"), lineHeight: `${10 * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>{hasCanonicalPublicState ? (runtimeLocale === "pt-BR" ? "VALOR DE MERCADO" : "MARKET VALUE") : cardLabels.totalPoints}</div>
+          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: totalPointsSize * fieldScale("marketValue"), lineHeight: `${(totalPointsSize + 2) * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{marketValueText}</div>
         </div>
 
         <div
@@ -1490,7 +1587,7 @@ export function TouchlineEliteExactCard({
           }}
         >
           <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 * fieldScale("cardPrice"), color: "rgba(254,240,138,.88)", fontSize: 8 * fieldScale("cardPrice"), lineHeight: `${10 * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>
-            <span>{cardLabels.cardPrice}</span>
+            <span>{cardPriceLabel ?? cardLabels.cardPrice}</span>
           </div>
           <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: cardPriceSize * fieldScale("cardPrice"), lineHeight: `${(cardPriceSize + 2) * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{cardPriceText}</div>
         </div>

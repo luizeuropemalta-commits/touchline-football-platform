@@ -6,6 +6,8 @@ import {
   type ClubOwnerSquadCard,
 } from "./demo-data.ts";
 import { TOUCHLINE_CARD_PRICE_TABLE_VERSION } from "./card-rules.ts";
+import { inferArenaRole } from "../football-data/arena-lineup.ts";
+import { touchlineCountryCode3FromName } from "./country-flags.ts";
 import { normalizeTouchLinePlayerKey } from "./player-links.ts";
 
 export type TouchLinePlayerProfileSearchParams = Record<
@@ -43,6 +45,20 @@ export type TouchLineResolvedPlayerProfile = {
   isLocalCard: boolean;
   real: TouchLineRealPlayerDetails;
 };
+
+/**
+ * The minimal server-owned identity needed to render a public player profile.
+ * This is intentionally separate from URL metadata and TouchLine card economy.
+ */
+export type TouchLineCanonicalPlayerIdentity = Readonly<{
+  providerPlayerId: string;
+  name: string;
+  displayName: string;
+  clubName: string | null;
+  position: string | null;
+  nationality: string | null;
+  jerseyNumber: number | null;
+}>;
 
 function queryValue(
   searchParams: TouchLinePlayerProfileSearchParams,
@@ -118,6 +134,63 @@ function fallbackCard(
   };
 }
 
+function canonicalCard(identity: TouchLineCanonicalPlayerIdentity): ClubOwnerSquadCard {
+  const position = identity.position ?? "Position unavailable";
+  const countryCode3 = touchlineCountryCode3FromName(identity.nationality) ?? "N/A";
+  const name = identity.displayName || identity.name;
+
+  return {
+    // Every value here is either canonical or an explicit unavailable state.
+    // Never inherit a current club, shirt, tier or price from a URL or demo
+    // card just because the public slug happens to match a legacy entry.
+    id: identity.providerPlayerId,
+    name,
+    shortName: name,
+    role: inferArenaRole(identity.position ?? undefined),
+    position,
+    clubName: identity.clubName ?? "Club unavailable",
+    shirtNumber: identity.jerseyNumber,
+    countryCode3,
+    marketValue: "Pending",
+    marketValueSource: "unavailable",
+    marketValueState: "pending",
+    classificationState: "pending",
+    touchlinePoints: 0,
+  };
+}
+
+export function resolveTouchLineUnavailableOfficialProfile(providerPlayerId: string): TouchLineResolvedPlayerProfile {
+  const card: ClubOwnerSquadCard = {
+    id: providerPlayerId,
+    name: "TouchLine player",
+    shortName: "TouchLine player",
+    role: "player",
+    position: "Player data unavailable",
+    clubName: "Club unavailable",
+    shirtNumber: null,
+    countryCode3: "N/A",
+    marketValue: "Pending",
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
+    touchlinePoints: 0,
+  };
+  const exactPlayer = squadCardToExactPlayer(card);
+  exactPlayer.age = "--";
+  exactPlayer.height = "--";
+  exactPlayer.foot = "--";
+  exactPlayer.contract = "Pending provider sync";
+  exactPlayer.nationality = card.countryCode3;
+  return {
+    card,
+    exactPlayer,
+    club: undefined,
+    cardRank: null,
+    isLocalCard: false,
+    real: genericRealDetails(card),
+  };
+}
+
 function genericRealDetails(card: ClubOwnerSquadCard): TouchLineRealPlayerDetails {
   return {
     displayPosition: card.position || card.role || "Player",
@@ -143,9 +216,11 @@ function uniqueRankedCards() {
 export function resolveTouchLinePlayerProfile(
   playerKey: string,
   searchParams: TouchLinePlayerProfileSearchParams = {},
+  canonicalIdentity?: TouchLineCanonicalPlayerIdentity | null,
 ): TouchLineResolvedPlayerProfile {
   const localCard = findLocalCard(playerKey, searchParams);
-  const card = localCard ?? fallbackCard(playerKey, searchParams);
+  const fallback = localCard ?? fallbackCard(playerKey, searchParams);
+  const card = canonicalIdentity ? canonicalCard(canonicalIdentity) : fallback;
   const exactPlayer = squadCardToExactPlayer(card);
   const detailKey = normalizeTouchLinePlayerKey(card.id || card.name);
   const rankedCards = uniqueRankedCards();
@@ -166,7 +241,9 @@ export function resolveTouchLinePlayerProfile(
     exactPlayer,
     club: findTouchLineClub(card.clubName),
     cardRank: rankIndex >= 0 ? rankIndex + 1 : null,
-    isLocalCard: Boolean(localCard),
+    // A resolved official provider ID makes this an external public profile,
+    // even if its slug happens to overlap a legacy demo card.
+    isLocalCard: Boolean(localCard) && !canonicalIdentity,
     real,
   };
 }

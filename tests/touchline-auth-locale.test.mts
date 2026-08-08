@@ -82,7 +82,7 @@ test("form links and authentication callbacks retain the selected language", () 
   assert.match(formSource, /resolveTouchLineAuthOrigin/);
   assert.match(formSource, /NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN/);
   assert.doesNotMatch(formSource, /touchline-football-platform/);
-  assert.match(layoutSource, /const publicArenaHref = touchLineAuthHref\("\/touchline-clubs\/manchester-united", normalizedLocale\)/);
+  assert.match(layoutSource, /const publicArenaHref = touchLineAuthHref\("\/touchline-clubs", normalizedLocale\)/);
   assert.match(layoutSource, /<Logo href=\{publicArenaHref\}/);
   assert.match(layoutSource, /<Link href=\{publicArenaHref\}/);
   assert.match(layoutSource, /<AuthLanguageSwitcher locale=\{normalizedLocale\}/);
@@ -92,9 +92,9 @@ test("form links and authentication callbacks retain the selected language", () 
   assert.match(languageSwitcherSource, /"en-GB"/);
 });
 
-test("public club exploration opens Manchester United in the selected language", () => {
-  assert.match(formSource, /touchLineAuthHref\("\/touchline-clubs\/manchester-united", normalizedLocale\)/);
-  assert.doesNotMatch(formSource, /touchline-clubs\/crystal-palace/);
+test("public club exploration opens the ClubHub directory in the selected language", () => {
+  assert.match(formSource, /touchLineAuthHref\("\/touchline-clubs", normalizedLocale\)/);
+  assert.doesNotMatch(formSource, /touchline-clubs\/(?:manchester-united|crystal-palace)/);
 });
 
 test("login and registration clearly link to each other", () => {
