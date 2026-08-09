@@ -378,6 +378,7 @@ export default async function ClubOwnerProfileRenderer({
             avatarUrl={ownerIdentity.avatarUrl}
             avatarAlt={ownerIdentity.name}
             accent={CLUB_OWNER_TOUCHLINE_NEON}
+            clubOwnerPortraitTrace
             showCover={false}
             featuredLabel={isPortuguese ? "Melhor da semana" : "Best of the Week"}
             backgroundAccent={bestPlayerPalette.accent}

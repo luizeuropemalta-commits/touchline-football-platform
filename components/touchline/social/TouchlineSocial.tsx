@@ -13,6 +13,7 @@ import {
   UserPlus,
   Zap,
 } from "lucide-react";
+import { ClubOwnerPortraitPerimeterTrace } from "./ClubOwnerPortraitPerimeterTrace";
 import styles from "./TouchlineSocial.module.css";
 
 export type TouchlineSocialPost = {
@@ -50,6 +51,8 @@ export function TouchlineSocialProfileHeader({
   backgroundAccent,
   backgroundSecondary,
   profileDetails = [],
+  clubOwnerPortraitTrace = false,
+  portraitTraceActive = false,
   children,
 }: {
   kind: string;
@@ -66,6 +69,10 @@ export function TouchlineSocialProfileHeader({
   backgroundAccent?: string;
   backgroundSecondary?: string;
   profileDetails?: Array<{ label: string; value: string }>;
+  /** Decorative opt-in reserved for the Club Owner identity surface. */
+  clubOwnerPortraitTrace?: boolean;
+  /** Static local visual-QA control; product callers keep this false. */
+  portraitTraceActive?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -87,8 +94,19 @@ export function TouchlineSocialProfileHeader({
           {visual ? (
             <div className={styles.socialCardVisual}>{visual}</div>
           ) : (
-            <div className={styles.socialAvatar}>
-              <img src={avatarUrl} alt={avatarAlt || name} />
+            <div
+              className={styles.socialAvatar}
+              data-club-owner-portrait-trace={clubOwnerPortraitTrace ? "touchline-logo-green" : undefined}
+              data-club-owner-portrait-trace-active={portraitTraceActive ? "true" : undefined}
+            >
+              {clubOwnerPortraitTrace ? <ClubOwnerPortraitPerimeterTrace /> : null}
+              {clubOwnerPortraitTrace ? (
+                <div className={styles.socialAvatarPhoto}>
+                  <img src={avatarUrl} alt={avatarAlt || name} />
+                </div>
+              ) : (
+                <img src={avatarUrl} alt={avatarAlt || name} />
+              )}
             </div>
           )}
           {featuredVisual && children ? <div className={styles.avatarFooter}>{children}</div> : null}

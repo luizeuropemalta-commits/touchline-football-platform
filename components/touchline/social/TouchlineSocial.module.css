@@ -73,11 +73,73 @@
 .socialIdentity.hasCardVisual { grid-template-columns: 210px minmax(0,1fr) auto; align-items: center; }
 .socialIdentity.hasFeaturedVisual { grid-template-columns: 190px minmax(0,1fr) minmax(370px, 430px); gap: clamp(28px, 3.2vw, 52px); align-items: center; }
 .identityVisualStack { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 16px; }
-.socialAvatar { position: relative; width: 190px; height: 190px; margin-top: -92px; overflow: hidden; border: 7px solid #030a0a; border-radius: 50%; background: #020606; box-shadow: 0 0 0 2px var(--social-accent), 0 0 0 8px rgba(2,9,9,.82), 0 0 0 9px color-mix(in srgb, var(--social-accent) 28%, transparent), 0 0 26px var(--social-accent), 0 0 72px color-mix(in srgb, var(--social-accent) 45%, transparent), 0 26px 44px rgba(0,0,0,.58); transition: transform 200ms cubic-bezier(.2,.8,.2,1), box-shadow 200ms ease, filter 200ms ease; }
+.socialAvatar { --club-owner-portrait-border-width: 7px; position: relative; width: 190px; height: 190px; margin-top: -92px; overflow: hidden; border: var(--club-owner-portrait-border-width) solid #030a0a; border-radius: 50%; background: #020606; box-shadow: 0 0 0 2px var(--social-accent), 0 0 0 8px rgba(2,9,9,.82), 0 0 0 9px color-mix(in srgb, var(--social-accent) 28%, transparent), 0 0 26px var(--social-accent), 0 0 72px color-mix(in srgb, var(--social-accent) 45%, transparent), 0 26px 44px rgba(0,0,0,.58); transition: transform 200ms cubic-bezier(.2,.8,.2,1), box-shadow 200ms ease, filter 200ms ease; }
 .socialAvatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 38%; transform: scale(1.025); }
 
+/*
+ * Club Owner only: photo crop and perimeter are deliberately separate. The
+ * trace stays a continuous centre-line above the frame, not a filtered glow
+ * clipped by the photograph's circular crop.
+ */
+.socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"] {
+  --club-owner-portrait-trace-color: #a3ff12;
+  isolation: isolate;
+  overflow: visible;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  transition: transform 200ms cubic-bezier(.2,.8,.2,1);
+}
+
+.socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"] .socialAvatarPhoto {
+  position: absolute;
+  inset: calc(var(--club-owner-portrait-border-width) * -1);
+  z-index: 1;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: var(--club-owner-portrait-border-width) solid #030a0a;
+  border-radius: 50%;
+  background: #020606;
+  box-shadow: 0 26px 44px rgba(0,0,0,.58);
+}
+
+.socialAvatar [data-club-owner-portrait-neon-trace="true"] {
+  position: absolute;
+  inset: calc(var(--club-owner-portrait-border-width) * -1);
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.socialAvatar [data-club-owner-portrait-neon-trace="true"] circle {
+  fill: none;
+  stroke: var(--club-owner-portrait-trace-color, #a3ff12);
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.socialAvatar [data-club-owner-portrait-neon-trace-base="true"] {
+  stroke-width: 1.4;
+  opacity: .34;
+}
+
+.socialAvatar [data-club-owner-portrait-neon-trace-run="true"] {
+  stroke-width: 3.1;
+  stroke-dasharray: 2 98;
+  stroke-dashoffset: 0;
+  opacity: 0;
+}
+
+@keyframes club-owner-portrait-perimeter-trace {
+  0% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
+  9% { stroke-dasharray: 14 86; opacity: .82; }
+  71% { stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: .72; }
+  88% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .44; }
+  100% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .28; }
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .identityOnly .socialAvatar:hover {
+  .identityOnly .socialAvatar:not([data-club-owner-portrait-trace]):hover {
     transform: translateY(-4px) scale(1.035);
     filter: saturate(1.12) brightness(1.04);
     box-shadow:
@@ -87,6 +149,30 @@
       0 0 38px var(--social-accent),
       0 0 100px color-mix(in srgb, var(--social-accent) 72%, transparent),
       0 30px 52px rgba(0,0,0,.62);
+  }
+
+  .identityOnly .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"]:hover {
+    transform: translateY(-2px);
+  }
+
+  .identityOnly .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"]:hover [data-club-owner-portrait-neon-trace-run="true"] {
+    animation: club-owner-portrait-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
+  }
+}
+
+.socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"]:focus-within [data-club-owner-portrait-neon-trace-run="true"],
+.socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"][data-club-owner-portrait-trace-active="true"] [data-club-owner-portrait-neon-trace-run="true"] {
+  animation: club-owner-portrait-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
+}
+
+/* Touch press is transient and never relies on Safari's synthetic hover. */
+@media (hover: none), (pointer: coarse) {
+  .identityOnly .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"]:active {
+    transform: translateY(-2px);
+  }
+
+  .identityOnly .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"]:active [data-club-owner-portrait-neon-trace-run="true"] {
+    animation: club-owner-portrait-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
   }
 }
 .socialCardVisual { position: relative; z-index: 2; width: 210px; margin-top: -112px; filter: drop-shadow(0 18px 26px rgba(0,0,0,.5)); }
@@ -351,7 +437,7 @@
     align-self: center;
     padding-top: 0;
   }
-  .socialAvatar { width: 92px; height: 92px; margin-top: -42px; border-width: 4px; }
+  .socialAvatar { --club-owner-portrait-border-width: 4px; width: 92px; height: 92px; margin-top: -42px; }
   .identityOnly .socialIdentity { min-height: 0; padding-top: 24px; }
   .identityOnly .socialAvatar, .identityOnly .socialCardVisual { margin-top: 0; }
   .identityOnly .socialName h1 { font-size: 37.8px; }
@@ -381,6 +467,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .socialAvatar { transition: none; }
+  .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"] { transform: none !important; }
+  .socialAvatar [data-club-owner-portrait-neon-trace-run="true"] { animation: none !important; opacity: 0; }
+  .socialAvatar [data-club-owner-portrait-neon-trace-base="true"] { opacity: .76; }
   .post { transition: none; }
   .post:hover { transform: none; }
 }

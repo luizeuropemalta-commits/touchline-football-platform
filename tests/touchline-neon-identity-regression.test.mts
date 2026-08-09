@@ -105,14 +105,19 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.match(zoomUsages, /tierLabel=\{touchlineCardTierName/);
 });
 
-test("ClubOwner identity has no cover and strengthens its circular neon on hover", () => {
+test("ClubOwner identity has no cover and opts into its fixed-green circular perimeter trace", () => {
   const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
+  const social = source("components/touchline/social/TouchlineSocial.tsx");
   const socialCss = source("components/touchline/social/TouchlineSocial.module.css");
+  const trace = source("components/touchline/social/ClubOwnerPortraitPerimeterTrace.tsx");
 
   assert.match(profilePage, /showCover=\{false\}/);
-  assert.match(socialCss, /\.identityOnly \.socialAvatar:hover/);
-  assert.match(socialCss, /translateY\(-4px\) scale\(1\.035\)/);
-  assert.match(socialCss, /0 0 100px color-mix/);
+  assert.match(profilePage, /clubOwnerPortraitTrace/);
+  assert.match(social, /ClubOwnerPortraitPerimeterTrace/);
+  assert.match(trace, /data-club-owner-portrait-neon-trace="true"/);
+  assert.match(socialCss, /--club-owner-portrait-trace-color: #a3ff12/);
+  assert.match(socialCss, /@keyframes club-owner-portrait-perimeter-trace/);
+  assert.match(socialCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation: none !important/);
 });
 
 test("ClubOwner keeps a clean identity layout on every device and scales its feature only on mobile", () => {
