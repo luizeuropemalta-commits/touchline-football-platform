@@ -32,7 +32,6 @@ Regenerate and validate locally with:
 
 ```sh
 node scripts/build-owner-approved-transcript-staging.mjs --check
-node scripts/build-owner-approved-transcript-staging.mjs --write
 ```
 
 ## Offline canonical-roster reconciliation
@@ -45,10 +44,11 @@ review candidate: canonical player UUID, numeric Sportmonks player ID, current
 club/team identity, and active Premier League (`provider_competition_id=8`)
 membership.
 
-Without that versioned local export, generate the honest blocked report only:
+Without that versioned local export, generate the honest blocked report only
+(without writing or replacing an archive):
 
 ```sh
-node scripts/reconcile-owner-approved-transcript-market-values.mjs --write --allow-unavailable
+node scripts/reconcile-owner-approved-transcript-market-values.mjs --check --allow-unavailable
 ```
 
 It records zero matches, review/pending counts by club, and no application
@@ -61,3 +61,62 @@ contract, wallet, or offer action is authorized by this directory. A future
 write requires reviewed UUID/provider/team/membership bindings, duplicate and
 conflict resolution, an atomic guarded migration, rollback preflight, SQL
 incident closure, and a separately authorized environment.
+
+## Versioned read-only roster audit archive
+
+**Current hold:** the canonical SQL Editor incident gate suspends every
+database action, including this read-only export. The exporter deliberately
+fails before creating a client or reading configuration with
+`TL_SQL_EDITOR_INCIDENT_HOLD_REQUIRES_INDEPENDENT_CLOSURE`. Do not bypass it
+with an environment flag. A separately reviewed local change is required
+after the incident is independently closed and recorded.
+
+The audit covers the 19 manual-value clubs plus Liverpool as an explicitly
+out-of-manual-value-scope twentieth club. A real audit must use a dedicated
+authenticated, read-only session — never a service role — and writes only
+new local files. It requires the following process-only configuration names;
+their values must never be recorded in an artifact or terminal output:
+
+- `TOUCHLINE_ROSTER_EXPORT_MODE=read-only`
+- `TOUCHLINE_ROSTER_EXPORT_URL`
+- `TOUCHLINE_ROSTER_EXPORT_ANON_KEY`
+- `TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN` (JWT role/audience `authenticated`)
+
+The export script performs select-only reads twice and fails if its club,
+player, or active-membership revision fence changes. It will not write unless
+each target is a new path and `--write-new` is explicit. Use a fresh UTC-dated
+directory for every run, for example:
+
+```text
+roster-audits/YYYY-MM-DDTHH-mm-ssZ/
+  canonical-roster-export.json
+  owner-value-reconciliation.json
+  quarantined-pending.json
+  validation-results.txt
+```
+
+Example, after confirming all target files do not exist:
+
+```sh
+node scripts/export-touchline-canonical-roster-readonly.mjs \
+  --output roster-audits/YYYY-MM-DDTHH-mm-ssZ/canonical-roster-export.json \
+  --write-new
+
+node scripts/reconcile-owner-approved-transcript-market-values.mjs \
+  --roster roster-audits/YYYY-MM-DDTHH-mm-ssZ/canonical-roster-export.json \
+  --output roster-audits/YYYY-MM-DDTHH-mm-ssZ/owner-value-reconciliation.json \
+  --quarantine-output roster-audits/YYYY-MM-DDTHH-mm-ssZ/quarantined-pending.json \
+  --write-new
+```
+
+The reconciliation output is review-only even for a unique player/club/ID
+candidate. A DB-only active player in a manual-value club is reported only as
+`QUARANTINED/PENDING` with a null value; Liverpool is
+`OUT_OF_MANUAL_VALUE_SCOPE_LIVERPOOL`; and a supplied blank value remains
+`OWNER_LISTED_PENDING_VALUE`. None of these labels is written to a membership
+or player table.
+
+The dated `validation-results.txt` and the canonical ledger must record the
+exact commands, exit codes, test totals, export/reconciliation/quarantine
+paths, source revision, and checkpoint commit. Existing staging, reports, and
+historical artifacts must never be overwritten.

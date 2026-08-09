@@ -933,3 +933,40 @@ Preview, production checkpoint, or a dirty worktree.
   this same chain. No database, provider, sync, import, Preview, deployment,
   or payment action occurred. The generated `tsconfig.tsbuildinfo` remains
   deliberately preserved outside this logical documentation checkpoint.
+
+## 2026-08-09 SQL Editor incident supersession — HOLD / REQUIRES_LUIZ_DECISION
+
+- **Authority:** the canonical SQL Editor / roster-currency incident gate
+  supersedes the earlier read-only-export authorization. No database
+  connection, query, SQL Editor action, sync, migration, import, Preview, or
+  deployment may resume until that separate incident is independently closed
+  with its own evidence and decision.
+- **What did not happen:** no DB connection or query was made. The locally
+  available process had no configured read-only credential; the one local
+  exporter preflight failed before creating a client. No canonical export,
+  reconciliation archive, quarantine archive, player ID, club ID, roster
+  freshness, or "two extras" result was produced.
+- **Preserved local preparation:** the new
+  `scripts/export-touchline-canonical-roster-readonly.mjs` accepts only a
+  dedicated `authenticated` session plus public anon key, rejects service-role
+  semantics, performs select-only two-pass revision fencing, and creates only
+  explicitly named new files. It now has a hard
+  `TL_SQL_EDITOR_INCIDENT_HOLD_REQUIRES_INDEPENDENT_CLOSURE` stop before any
+  configuration/client read; there is intentionally no environment-variable
+  bypass. The reconciler now validates all 20 club/team IDs (Liverpool is
+  explicitly out of manual-value scope), UUID/provider/current-club/active
+  membership/freshness evidence, expected team IDs, and emits report-only
+  `QUARANTINED/PENDING` / Liverpool / owner-pending sections only into new,
+  non-overwriting dated files.
+- **Archive contract:** the staging README documents the future dated archive
+  set: canonical export, club/player/value reconciliation,
+  quarantined-pending report, validation results, ledger paths, and commit.
+  Existing staging and historical blocked reports are never overwritten.
+- **Local validation:** 14 focused staging/reconciliation/export tests passed;
+  `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed (only the
+  pre-existing Babel size note). These tests prove local fail-closed behavior,
+  not any DB result.
+- **HOLD:** preserve the two alleged extras and every existing artifact. Do
+  not name, quarantine, value, inactivate, delete, or otherwise mutate a
+  player until the independent incident closure supplies a new explicit
+  decision. The next allowable work remains documentary/local only.

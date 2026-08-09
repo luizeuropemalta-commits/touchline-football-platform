@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   OWNER_TRANSCRIPT_PROVIDER_TEAM_IDS,
+  TOUCHLINE_ROSTER_AUDIT_PROVIDER_TEAM_IDS,
   reconcileOwnerTranscriptRows,
 } from "../scripts/reconcile-owner-approved-transcript-market-values.mjs";
 
@@ -28,22 +29,49 @@ function sourceRow(overrides: Record<string, string> = {}) {
   };
 }
 
+const timestamp = "2026-08-09T18:00:00.000Z";
+
+function uuid(index: number) {
+  return `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+}
+
 function canonicalRoster(overrides: Record<string, unknown> = {}) {
+  const teams = Object.entries(TOUCHLINE_ROSTER_AUDIT_PROVIDER_TEAM_IDS);
+  const competitionId = uuid(1);
+  const clubs = teams.map(([clubName, providerTeamId], index) => ({
+    id: uuid(index + 10),
+    provider: "sportmonks",
+    provider_team_id: providerTeamId,
+    competition_id: competitionId,
+    name: clubName,
+    source_updated_at: timestamp,
+  }));
+  const players = teams.map(([_name, providerTeamId], index) => ({
+    id: uuid(index + 100),
+    provider: "sportmonks",
+    provider_player_id: String(1000 + index),
+    current_club_id: clubs[index].id,
+    name: providerTeamId === "19" ? "Martin Ødegaard" : `Roster Player ${providerTeamId}`,
+    display_name: providerTeamId === "19" ? "Martin Ødegaard" : `Roster Player ${providerTeamId}`,
+    source_updated_at: timestamp,
+  }));
+  const memberships = players.map((player, index) => ({
+    id: uuid(index + 200),
+    provider: "sportmonks",
+    player_id: player.id,
+    club_id: clubs[index].id,
+    competition_id: competitionId,
+    status: "active",
+    source_updated_at: timestamp,
+  }));
   const roster = {
     schemaVersion: "touchline-canonical-roster-export-v1",
-    exportedAt: "2026-08-09T18:00:00.000Z",
+    exportedAt: timestamp,
     source: { runId: "read-only-audit-run", sourceRevision: "snapshot-1" },
-    competitions: [{ id: "competition", provider: "sportmonks", provider_competition_id: "8" }],
-    clubs: [{ id: "club", provider: "sportmonks", provider_team_id: "19", competition_id: "competition", name: "Arsenal FC" }],
-    players: [{
-      id: "canonical-player",
-      provider: "sportmonks",
-      provider_player_id: "1001",
-      current_club_id: "club",
-      name: "Martin Ødegaard",
-      display_name: "Martin Ødegaard",
-    }],
-    memberships: [{ player_id: "canonical-player", club_id: "club", competition_id: "competition", status: "active" }],
+    competitions: [{ id: competitionId, provider: "sportmonks", provider_competition_id: "8", source_updated_at: timestamp }],
+    clubs,
+    players,
+    memberships,
   };
   return { ...roster, ...overrides };
 }
@@ -70,21 +98,24 @@ test("a unique exact current-club canonical roster candidate remains review-only
   const result = reconcileOwnerTranscriptRows([sourceRow()], canonicalRoster());
   assert.equal(result.runStatus, "completed-local-review");
   assert.equal(result.rows[0].reconciliation_outcome, "MATCHED_EXACT_NAME_CURRENT_CLUB_REVIEW_REQUIRED");
-  assert.equal(result.rows[0].candidate_canonical_player_id, "canonical-player");
-  assert.equal(result.rows[0].candidate_provider_player_id, "1001");
+  assert.equal(result.rows[0].candidate_canonical_player_id, uuid(100));
+  assert.equal(result.rows[0].candidate_provider_player_id, "1000");
   assert.equal(result.rows[0].candidate_provider_team_id, "19");
   assert.equal(result.rows[0].application_eligible, false);
 });
 
 test("ambiguous, invalid, and other-club name candidates never become automatic identity bindings", () => {
+  const base = canonicalRoster();
+  const arsenal = base.players.find((player) => player.provider_player_id === "1000")!;
+  const arsenalMembership = base.memberships.find((membership) => membership.player_id === arsenal.id)!;
   const ambiguous = canonicalRoster({
     players: [
-      ...canonicalRoster().players,
-      { ...canonicalRoster().players[0], id: "other-player", provider_player_id: "1002" },
+      ...base.players,
+      { ...arsenal, id: uuid(999), provider_player_id: "2002" },
     ],
     memberships: [
-      ...canonicalRoster().memberships,
-      { player_id: "other-player", club_id: "club", competition_id: "competition", status: "active" },
+      ...base.memberships,
+      { ...arsenalMembership, id: uuid(998), player_id: uuid(999) },
     ],
   });
   assert.equal(
@@ -92,14 +123,28 @@ test("ambiguous, invalid, and other-club name candidates never become automatic 
     "REVIEW_AMBIGUOUS_NAME_CURRENT_CLUB",
   );
 
-  const invalid = canonicalRoster({ memberships: [{ player_id: "canonical-player", club_id: "club", competition_id: "competition", status: "inactive" }] });
+  const invalid = canonicalRoster({
+    memberships: base.memberships.map((membership) => membership.player_id === arsenal.id ? { ...membership, status: "inactive" } : membership),
+  });
   assert.equal(
     reconcileOwnerTranscriptRows([sourceRow()], invalid).rows[0].reconciliation_outcome,
-    "REVIEW_CANONICAL_ROSTER_INVALID_OR_DUPLICATE",
+    "REVIEW_CANONICAL_ROSTER_EXPORT_INCOMPLETE",
   );
 
+  const city = base.clubs.find((club) => club.provider_team_id === "9")!;
+  const arsenalClub = base.clubs.find((club) => club.provider_team_id === "19")!;
+  const cityPlayer = base.players.find((player) => player.current_club_id === city.id)!;
   const otherClub = canonicalRoster({
-    clubs: [{ id: "club", provider: "sportmonks", provider_team_id: "9", competition_id: "competition", name: "Manchester City" }],
+    players: base.players.map((player) => {
+      if (player.id === arsenal.id) return { ...player, current_club_id: city.id };
+      if (player.id === cityPlayer.id) return { ...player, current_club_id: arsenalClub.id };
+      return player;
+    }),
+    memberships: base.memberships.map((membership) => {
+      if (membership.player_id === arsenal.id) return { ...membership, club_id: city.id };
+      if (membership.player_id === cityPlayer.id) return { ...membership, club_id: arsenalClub.id };
+      return membership;
+    }),
   });
   assert.equal(
     reconcileOwnerTranscriptRows([sourceRow()], otherClub).rows[0].reconciliation_outcome,
@@ -107,13 +152,78 @@ test("ambiguous, invalid, and other-club name candidates never become automatic 
   );
 });
 
+test("provider-team mismatch, audit coverage, and DB-only members fail closed into review/quarantine output", () => {
+  const base = canonicalRoster();
+  const arsenal = base.players.find((player) => player.provider_player_id === "1000")!;
+  const city = base.clubs.find((club) => club.provider_team_id === "9")!;
+  const cityPlayer = base.players.find((player) => player.current_club_id === city.id)!;
+  const mismatch = canonicalRoster({
+    clubs: base.clubs.map((club) => {
+      if (club.id === city.id) return { ...club, name: "Arsenal FC" };
+      if (club.provider_team_id === "19") return { ...club, name: "Arsenal Reserve" };
+      return club;
+    }),
+    players: base.players.map((player) => {
+      if (player.id === cityPlayer.id) return { ...player, name: "Martin Ødegaard", display_name: "Martin Ødegaard" };
+      if (player.id === arsenal.id) return { ...player, name: "Arsenal Player", display_name: "Arsenal Player" };
+      return player;
+    }),
+  });
+  assert.equal(
+    reconcileOwnerTranscriptRows([sourceRow()], mismatch).rows[0].reconciliation_outcome,
+    "REVIEW_EXPECTED_PROVIDER_TEAM_ID_MISMATCH",
+  );
+
+  const arsenalClub = base.clubs.find((club) => club.provider_team_id === "19")!;
+  const extraPlayer = {
+    id: uuid(700),
+    provider: "sportmonks",
+    provider_player_id: "7700",
+    current_club_id: arsenalClub.id,
+    name: "DB Only Player",
+    display_name: "DB Only Player",
+    source_updated_at: timestamp,
+  };
+  const withExtra = canonicalRoster({
+    players: [...base.players, extraPlayer],
+    memberships: [...base.memberships, {
+      id: uuid(701),
+      provider: "sportmonks",
+      player_id: extraPlayer.id,
+      club_id: arsenalClub.id,
+      competition_id: base.competitions[0].id,
+      status: "active",
+      source_updated_at: timestamp,
+    }],
+  });
+  const coverage = reconcileOwnerTranscriptRows([sourceRow()], withExtra).rosterCoverageAudit;
+  assert.equal(coverage.state, "ready");
+  assert.ok(coverage.quarantined.some((row) => row.provider_player_id === "7700" && row.market_value_eur === null && row.application_eligible === false));
+  assert.ok(coverage.outOfManualValueScope.some((row) => row.provider_team_id === "8"));
+
+  const incomplete = canonicalRoster({ clubs: base.clubs.filter((club) => club.provider_team_id !== "8") });
+  const incompleteResult = reconcileOwnerTranscriptRows([sourceRow()], incomplete);
+  assert.equal(incompleteResult.runStatus, "blocked");
+  assert.equal(incompleteResult.blocker, "ROSTER_AUDIT_EXPORT_INCOMPLETE");
+  assert.equal(incompleteResult.rows[0].reconciliation_outcome, "REVIEW_CANONICAL_ROSTER_EXPORT_INCOMPLETE");
+});
+
 test("reconciliation is a local read-only boundary with the exact 19-club team registry", () => {
   assert.equal(Object.keys(OWNER_TRANSCRIPT_PROVIDER_TEAM_IDS).length, 19);
+  assert.equal(Object.keys(TOUCHLINE_ROSTER_AUDIT_PROVIDER_TEAM_IDS).length, 20);
+  assert.equal(TOUCHLINE_ROSTER_AUDIT_PROVIDER_TEAM_IDS["Liverpool FC"], "8");
   assert.equal(OWNER_TRANSCRIPT_PROVIDER_TEAM_IDS["Arsenal FC"], "19");
   assert.equal(OWNER_TRANSCRIPT_PROVIDER_TEAM_IDS["Manchester City"], "9");
   assert.equal(OWNER_TRANSCRIPT_PROVIDER_TEAM_IDS["Nottingham Forest"], "63");
   assert.doesNotMatch(reconciliationSource, /fetch\s*\(|createClient|supabase|createFootballDataProvider|sportmonksFetch|process\.env|insert into|update public\.|delete from/i);
   assert.match(reconciliationSource, /LOCAL_CANONICAL_ROSTER_EXPORT_UNAVAILABLE/);
+  assert.match(reconciliationSource, /ROSTER_AUDIT_EXPORT_INCOMPLETE/);
+  assert.match(reconciliationSource, /REVIEW_EXPECTED_PROVIDER_TEAM_ID_MISMATCH/);
+  assert.match(reconciliationSource, /QUARANTINED/);
+  assert.match(reconciliationSource, /touchline-roster-quarantine-report-v1/);
+  assert.match(reconciliationSource, /OUTPUT_AND_QUARANTINE_OUTPUT_REQUIRED_FOR_WRITE_NEW/);
+  assert.match(reconciliationSource, /OUTPUT_OUTSIDE_VERSIONED_ARCHIVE_FORBIDDEN/);
+  assert.match(reconciliationSource, /flag: "wx"/);
   assert.match(reconciliationSource, /MATCHED_EXACT_NAME_CURRENT_CLUB_REVIEW_REQUIRED/);
 });
 
