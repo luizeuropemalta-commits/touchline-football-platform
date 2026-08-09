@@ -1655,3 +1655,32 @@ Preview, production checkpoint, or a dirty worktree.
   `tests/touchline-owner-approved-market-value-binding.test.mts`, and
   persistent implementation checkpoint `e3a13739`
   (`feat(market-values): add canonical binding preflight`).
+
+## 2026-08-10 canonical value-binding runner behavioral fence — LOCAL COMPLETE / NOT EXECUTED
+
+- **Purpose:** convert the canonical binding adapter's two-pass revision-fence
+  claim from source-only coverage into behavioral proof without connecting to
+  a database.
+- **Implementation:** extracted pure batching/orchestration into
+  `lib/touchlineArena/owner-approved-market-value-binding-runner.ts`; the
+  server-only canonical reader remains the sole default reader and injects
+  into it. The runner has no Supabase/client/env/provider/route/write import.
+- **Behavioral evidence:** injected local readers prove 19 stable team-local
+  reads run twice and return exactly 533 review-only bound rows; a changed
+  second-pass revision, blocked second pass or thrown reader blocks the entire
+  manifest with zero rows. Reader-response contract errors also fail closed.
+- **Scope preserved:** the candidate's five value-missing, 23 provider-only
+  pending and 20 owner-only review records remain outside the binding output
+  and every future write set. No real UUID binding was generated.
+- **Validation:** focused candidate/binding/reconciliation suite **25/25
+  passed**; `pnpm typecheck`, `pnpm lint` and `git diff --check` passed. All
+  readers were local fakes: no credential, database query/write, provider,
+  sync, migration, cache invalidation, Preview or deployment action occurred.
+- **Gate:** an authorized fresh canonical read must still pass this runner
+  before any dated 533-row manifest is created. Binding remains neither an
+  import nor a write authorization; atomic executor, rollback/preflight and
+  explicit write gates remain separate.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-10-MARKET-VALUE-CANONICAL-BINDING-RUNNER-BEHAVIORAL-TEST.md`;
+  persistent checkpoint `065a1cbc`
+  (`test(market-values): exercise canonical binding fence`).

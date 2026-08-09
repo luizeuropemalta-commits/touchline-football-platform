@@ -84,6 +84,9 @@ write/provider/import/cache capability in the adapter source.
 
 Commands run for this checkpoint are recorded in the final ledger entry.
 
+Behavioral two-pass-fence evidence with injected local readers is recorded in
+`docs/touchline-arena/audit/2026-08-10-MARKET-VALUE-CANONICAL-BINDING-RUNNER-BEHAVIORAL-TEST.md`.
+
 **Persistent implementation checkpoint:** `e3a13739`
 (`feat(market-values): add canonical binding preflight`).
 
