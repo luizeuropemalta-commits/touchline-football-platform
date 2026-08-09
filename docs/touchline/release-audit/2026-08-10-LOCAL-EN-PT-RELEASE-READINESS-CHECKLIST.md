@@ -145,3 +145,5 @@ functional public release can be called ready:
 - tests/touchline-visual-qa-locale.test.mts
 - docs/touchline/release-audit/RELEASE_GATE_3eb163da_2026-08-09.md
 - docs/touchline-arena/audit/2026-08-09-MARKET-VALUE-APPLICATION-LOCAL-PREFLIGHT-HOLD.md
+
+Persistent checkpoint: `0f646328` (`feat(release): add local EN PT readiness checklist`).

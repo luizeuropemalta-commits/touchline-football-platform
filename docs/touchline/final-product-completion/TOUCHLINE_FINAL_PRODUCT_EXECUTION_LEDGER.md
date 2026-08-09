@@ -1559,5 +1559,5 @@ Preview, production checkpoint, or a dirty worktree.
   docs/touchline/release-audit/2026-08-10-LOCAL-EN-PT-RELEASE-READINESS-CHECKLIST.md,
   scripts/check-touchline-release-readiness.mjs,
   tests/touchline-release-readiness-local.test.mts, and
-  tests/touchline-visual-qa-locale.test.mts. Persistent commit link is added
-  after the checkpoint is created.
+  tests/touchline-visual-qa-locale.test.mts. Persistent checkpoint:
+  `0f646328` (`feat(release): add local EN PT readiness checklist`).
