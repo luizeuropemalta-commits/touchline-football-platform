@@ -95,4 +95,5 @@ Liga` in the approved order.
 - `scripts/check-touchline-release-readiness.mjs`
 - `docs/touchline/release-audit/2026-08-10-LOCAL-EN-PT-RELEASE-READINESS-CHECKLIST.md`
 
-Persistent checkpoint: pending commit for this visual-QA block.
+Persistent implementation checkpoint: `3ed3d378`
+(`test(visual): validate local EN PT fixture matrix`).

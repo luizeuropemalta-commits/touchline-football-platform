@@ -1584,4 +1584,5 @@ Preview, production checkpoint, or a dirty worktree.
   keyboard-focus observations remain explicitly external gates.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-LOCAL-STATIC-VISUAL-QA-MATRIX.md`.
-  Persistent checkpoint: pending commit for this visual-QA block.
+  Persistent implementation checkpoint: `3ed3d378`
+  (`test(visual): validate local EN PT fixture matrix`).
