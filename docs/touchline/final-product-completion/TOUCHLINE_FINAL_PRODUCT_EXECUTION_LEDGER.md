@@ -970,3 +970,30 @@ Preview, production checkpoint, or a dirty worktree.
   not name, quarantine, value, inactivate, delete, or otherwise mutate a
   player until the independent incident closure supplies a new explicit
   decision. The next allowable work remains documentary/local only.
+
+## 2026-08-09 Bruno Guimaraes roster placement — PRODUCT DECISION / HOLD
+
+- **Owner decision recorded:** Bruno Guimaraes at **Arsenal FC** is
+  intentional/correct. Any TouchLine presentation still assigning him to
+  **Newcastle United** is a discrepancy to resolve later; it is not authority
+  to move him back to Newcastle or to alter the owner-approved Arsenal row.
+  The durable evidence record is
+  `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/PRODUCT_DECISION_BRUNO_GUIMARAES_2026-08-09.md`.
+- **No inference:** this decision does not prove a canonical UUID, Sportmonks
+  player ID, membership, source timestamp, or sync cause. No database,
+  provider, export, sync, or patch was performed to create this record.
+- **Authority split:** Sportmonks is the definitive canonical source for
+  clubs, players, and roster membership. The owner-approved transcript is
+  authoritative only for the supplied market values. The Arsenal result is an
+  expected reconciliation outcome, not a one-player override or a reason to
+  block preparation of the complete 20-club reconciliation.
+- **HOLD preserved:** the SQL Editor / roster-currency incident still blocks
+  every DB operation. The future correction must be a full 20-club canonical
+  reconciliation with review, atomic delta, audit trail, and rollback plan;
+  a one-player manual patch is prohibited.
+- **Minimum resume gate:** independent incident closure plus explicit
+  read-only-resume authorization; then a fresh immutable 20-club Sportmonks
+  export with UUID/provider-ID/current-club/active-membership/freshness
+  provenance; integrity/coverage validation; and new non-overwriting
+  reconciliation plus `QUARANTINED/PENDING` reports. A write proposal remains
+  a separate later decision.
