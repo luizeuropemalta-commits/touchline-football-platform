@@ -1047,3 +1047,28 @@ Preview, production checkpoint, or a dirty worktree.
   duplicates, drift, and rollback before any later explicit write decision.
 - **Updated evidence/proposal:**
   `docs/touchline-arena/audit/2026-08-09-SQL-EDITOR-ROSTER-CURRENCY-INDEPENDENT-AUDIT.md`.
+
+## 2026-08-09 permanent owner authorization record — Liverpool market values
+
+- **Owner authorization:** Luiz Lopes, TouchLine owner, explicitly confirms
+  that the manual activity on **2026-08-07** was authorized by him and was
+  limited to **Liverpool market values**. This is the owner authority that
+  resolves the former unknown-execution classification; it is not new
+  authorization for any current DB/sync/write action.
+- **Linked artifacts:** preserved migration `052`
+  (`61aae0dcb81c225ba2b0ea5fe3a53cf465a2d831111fad245af2455029c32f30`),
+  inventory-source migration `053`
+  (`45706497a9f927089faffe650de2bf80ae6413d65589523ccf72a22a88d4a3fd`),
+  and the publishing report
+  (`674d1a5f12120e28d25e6ac1915b3e5c220c8c32f46522eb31ee54a028e1ffc5`)
+  are linked in
+  `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/PRODUCT_DECISION_BRUNO_GUIMARAES_2026-08-09.md`.
+  Source baseline commit: `c74eb8f`; related audit/attestation commits:
+  `46c7b32e`, `9953bf01`.
+- **Provenance limitation:** `052`, `053`, and the publication report remain
+  untracked legacy artifacts with no Git commit of their own. Their hashes
+  bind the recorded owner authorization to exact files but do not fabricate a
+  remote execution receipt.
+- **Active gate unchanged:** no data was altered. The mandatory next step is
+  still a separately authorized, verifiable read-only 20-club snapshot and
+  offline dry-run; any write needs a later explicit decision.

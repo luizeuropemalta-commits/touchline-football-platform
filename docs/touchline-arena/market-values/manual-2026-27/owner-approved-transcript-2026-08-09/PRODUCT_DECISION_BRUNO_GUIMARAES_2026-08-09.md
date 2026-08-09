@@ -1,9 +1,9 @@
 # Bruno Guimaraes roster placement — product decision
 
-**Recorded:** 2026-08-09  
-**Authority:** Luiz Lopes, TouchLine owner  
+**Recorded:** 2026-08-09
+**Authority:** Luiz Lopes, TouchLine owner
 **Source:** owner confirmation in Codex source thread
-`019fdfb2-003a-7fa0-aa05-6b268b203143`  
+`019fdfb2-003a-7fa0-aa05-6b268b203143`
 **Status:** `PRODUCT_DECISION_RECORDED` / `HOLD_ACTIVE`
 
 ## Decision
@@ -66,3 +66,47 @@ rollback plan. A one-player/manual correction is explicitly out of scope.
 5. Only after the resulting reviewed delta, audit trail, and rollback plan are
    accepted may a separate write proposal be considered. This document grants
    no write or sync authority.
+
+## Linked owner authorization — Liverpool manual market values (2026-08-07)
+
+**Recorded:** 2026-08-09
+**Authority:** Luiz Lopes, TouchLine owner
+**Source:** explicit owner confirmation in Codex source thread
+`019fdfb2-003a-7fa0-aa05-6b268b203143`
+**Authorization:** `OWNER_AUTHORIZED_HISTORICAL_ACTIVITY`
+
+Luiz Lopes confirms that the manual Liverpool activity performed on
+**2026-08-07** was explicitly authorized by him. Its approved scope was
+**Liverpool market values**. This resolves the former classification of that
+activity as an unknown execution; it does not authorize a new Liverpool write,
+a compensating patch, or any current database action.
+
+### Linked provenance
+
+- [Migration 052 — Liverpool manual market values](</Users/luizlopez/Documents/Codex/2026-06-22/build-phase-1-of-a-premium/supabase/migrations/052_touchline_liverpool_manual_market_values_2026_08_07.sql>)
+  — SHA-256
+  `61aae0dcb81c225ba2b0ea5fe3a53cf465a2d831111fad245af2455029c32f30`.
+- [Migration 053 — Liverpool inventory read-model source](</Users/luizlopez/Documents/Codex/2026-06-22/build-phase-1-of-a-premium/supabase/migrations/053_touchline_liverpool_market_value_read_model_source.sql>)
+  — SHA-256
+  `45706497a9f927089faffe650de2bf80ae6413d65589523ccf72a22a88d4a3fd`.
+- [Liverpool publishing report](</Users/luizlopez/Documents/Codex/2026-06-22/build-phase-1-of-a-premium/docs/touchline-arena/audit/2026-08-07/liverpool-market-value-research/LIVERPOOL_MARKET_VALUE_PUBLISHING_REPORT_2026-08-07.md>)
+  — SHA-256
+  `674d1a5f12120e28d25e6ac1915b3e5c220c8c32f46522eb31ee54a028e1ffc5`.
+- **Git/source linkage:** `c74eb8ffa0b45decdf7124acffad57bf84c5031f`
+  (`feat: add touchline market value engine`) is the versioned source baseline
+  for migration 050. The incident-audit/owner-attestation checkpoints are
+  `46c7b32e` and `9953bf01`.
+
+The two 2026-08-07 SQL files and the publishing report are untracked in their
+preserved legacy worktree and have no Git commit of their own. Their hashes
+link this authorization to the exact local artifacts without falsely claiming
+that Git or the platform supplied an execution receipt. The durable commit for
+this authorization record is recorded in the canonical ledger at checkpoint
+creation.
+
+### Non-actions preserved
+
+This historical authorization changes no value, tier, card, contract, price,
+membership, roster, database, migration, sync, export, Preview, or deployment
+state. The future 20-club snapshot and offline dry-run gate remains mandatory
+before any separate write decision.
