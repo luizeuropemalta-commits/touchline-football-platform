@@ -36,8 +36,8 @@ function fixture(input: Partial<TouchlineOfficialLeagueTableFixture> = {}): Touc
     status: input.status ?? "Finished",
     homeClubId: input.homeClubId ?? "club-1",
     awayClubId: input.awayClubId ?? "club-2",
-    homeScore: input.homeScore ?? 2,
-    awayScore: input.awayScore ?? 0,
+    homeScore: input.homeScore === undefined ? 2 : input.homeScore,
+    awayScore: input.awayScore === undefined ? 0 : input.awayScore,
     startsAt: input.startsAt ?? "2026-08-21T19:00:00.000Z",
     sourceUpdatedAt: input.sourceUpdatedAt ?? "2026-08-21T21:00:00.000Z",
   };
@@ -57,8 +57,37 @@ test("official league table scopes fixtures to its canonical current season", ()
   assert.equal(result.coverage.fixturesInSeason, 1);
   assert.equal(result.coverage.completedFixtures, 0);
   assert.equal(result.rows.length, 20);
+  assert.deepEqual(result.rows.map((row) => row.team.providerTeamId), teams().map((team) => team.providerTeamId));
   assert.ok(result.rows.every((row) => row.position === null));
-  assert.ok(result.rows.every((row) => row.played === 0 && row.points === 0 && row.form.length === 0));
+  assert.ok(result.rows.every((row) => (
+    row.played === 0
+    && row.won === 0
+    && row.drawn === 0
+    && row.lost === 0
+    && row.goalsFor === 0
+    && row.goalsAgainst === 0
+    && row.goalDifference === 0
+    && row.points === 0
+    && row.form.length === 0
+  )));
+});
+
+test("scheduled, live, cancelled and scoreless fixtures retain the neutral initial table", () => {
+  const result = resolveTouchlineOfficialLeagueTable({
+    season,
+    teams: teams(),
+    fixtures: [
+      fixture({ providerFixtureId: "scheduled", status: "Not Started", homeScore: null, awayScore: null }),
+      fixture({ providerFixtureId: "live", status: "LIVE", homeClubId: "club-3", awayClubId: "club-4", homeScore: 1, awayScore: 0 }),
+      fixture({ providerFixtureId: "cancelled", status: "Cancelled", homeClubId: "club-5", awayClubId: "club-6", homeScore: null, awayScore: null }),
+      fixture({ providerFixtureId: "scoreless", status: "Finished", homeClubId: "club-7", awayClubId: "club-8", homeScore: null, awayScore: null }),
+    ],
+  });
+
+  assert.equal(result.state, "pending_no_final");
+  assert.equal(result.coverage.completedFixtures, 0);
+  assert.equal(result.rows.length, 20);
+  assert.ok(result.rows.every((row) => row.position === null && row.points === 0 && row.goalDifference === 0));
 });
 
 test("official league table deduplicates a provider fixture before totals are calculated", () => {
@@ -150,6 +179,11 @@ test("shared table component and pages keep data loading on the server boundary"
 
   assert.match(component, /variant: "directory" \| "profile"/);
   assert.match(component, /currentTeamId/);
+  assert.match(component, /status && !table\.rows\.length/);
+  assert.match(component, /Initial table — all 20 clubs are level\./);
+  assert.match(component, /Tabela inicial — os 20 clubes estão empatados\./);
+  assert.match(component, /row\.position \?\? "—"/);
+  assert.match(component, /table\.rows\.map/);
   assert.doesNotMatch(component, /from ["'][^"']*(?:card|market|wallet|supabase)/i);
   assert.doesNotMatch(component, /\bfetch\(/);
   assert.match(serverReader, /unstable_cache/);

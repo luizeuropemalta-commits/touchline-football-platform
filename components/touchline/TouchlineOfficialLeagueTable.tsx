@@ -58,8 +58,8 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     form: "Form",
     currentClub: "Current club",
     finalResults: "verified final results",
-    pendingTitle: "The 20-club season roster is ready; positions begin after the first verified final result.",
-    pendingDescription: "Every club is shown with neutral statistics. No league position is invented before a final result is verified.",
+    pendingTitle: "Initial table — all 20 clubs are level.",
+    pendingDescription: "Every club is shown with neutral statistics. Positions begin after the first verified final result; no league leader or position is invented.",
     partialTitle: "Verified results are available; official tie-break positions are still being confirmed.",
     partialDescription: "Statistics are shown without invented positions until the canonical ordering is complete.",
     unavailableTitle: "Official standings are temporarily unavailable.",
@@ -83,8 +83,8 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     form: "Forma",
     currentClub: "Clube atual",
     finalResults: "resultados finais verificados",
-    pendingTitle: "Os 20 clubes da temporada estão prontos; as posições começam após o primeiro resultado final verificado.",
-    pendingDescription: "Todos os clubes aparecem com estatísticas neutras. Nenhuma posição é inventada antes de um resultado final verificado.",
+    pendingTitle: "Tabela inicial — os 20 clubes estão empatados.",
+    pendingDescription: "Todos os clubes aparecem com estatísticas neutras. As posições começam após o primeiro resultado final verificado; nenhuma liderança ou posição é inventada.",
     partialTitle: "Há resultados verificados; as posições de desempate oficial ainda estão sendo confirmadas.",
     partialDescription: "As estatísticas aparecem sem posições inventadas até a ordenação canônica ser concluída.",
     unavailableTitle: "A tabela oficial está temporariamente indisponível.",
@@ -138,7 +138,7 @@ export default function TouchlineOfficialLeagueTable({
         </div>
       </header>
 
-      {status && table.state !== "partial" ? (
+      {status && !table.rows.length ? (
         <div className={styles.status} role={status.role}>
           <strong>{status.title}</strong>
           <p>{status.description}</p>
