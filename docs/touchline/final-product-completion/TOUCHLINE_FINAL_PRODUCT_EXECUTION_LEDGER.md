@@ -1192,3 +1192,30 @@ Preview, production checkpoint, or a dirty worktree.
 - **Persistent preflight checkpoint:**
   `ed4c510bf6d6ed7502faa03e8c40eed89a62447b`
   (`feat(roster): harden authenticated export preflight`).
+
+## 2026-08-09 remote roster-exporter role validation — NO-GO
+
+- **Owner-authorized scope:** Luiz authorized a dedicated
+  `touchline_roster_exporter` role only if it could be constrained to the five
+  canonical roster tables, provider `sportmonks`, competition `8`, and the 20
+  declared provider-team IDs — with no service role, DML, RPC, public access
+  expansion, Auth administration, sync, data change, or deployment.
+- **Remote evidence:** authenticated dashboard metadata queries against the
+  TouchLine Arena project found no existing exporter role. The target tables
+  have `SELECT TO authenticated USING (true)` policies, not an exporter-role
+  policy. More importantly, `PUBLIC` currently grants `CONNECT` and
+  `TEMPORARY` on the database, `USAGE` on `public`, and `EXECUTE` on a
+  non-empty catalogue of `public` functions. Any new PostgreSQL role inherits
+  those capabilities; a role-local revoke cannot override a `PUBLIC` grant.
+- **Decision:** do not create the role, password, JWT, policy, grant, or
+  credential; do not run the export. The no-RPC/no-broad-access acceptance
+  gate failed before issuance. The two extras remain
+  `PRESERVED_UNIDENTIFIED_PENDING`, with no ID/value/membership change.
+- **Evidence artifact:**
+  `docs/touchline-arena/audit/2026-08-09-ROSTER-EXPORTER-REMOTE-SCOPE-VALIDATION.md`
+  records purpose, sanitized metadata evidence, failed criteria, safe future
+  path, and revocation/rollback status. No secret was retrieved or recorded.
+- **Separate future decision required:** revoking `EXECUTE` from `PUBLIC` and
+  regranting only legitimate application functions would be a project-wide
+  authorization change. It needs caller inventory, impact review and a new
+  explicit authorization; it must not be folded into the roster-export role.
