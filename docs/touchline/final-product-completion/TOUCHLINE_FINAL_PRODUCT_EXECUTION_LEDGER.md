@@ -1104,6 +1104,9 @@ Preview, production checkpoint, or a dirty worktree.
   targeted ESLint passed locally. These results prove the local planner only,
   not a remote roster state. The generated `tsconfig.tsbuildinfo` remains
   outside the logical candidate commit and is preserved untouched.
+- **Persistent implementation checkpoint:**
+  `023ac46a18504f8db08db5af0bf7eb6aec3b8424`
+  (`feat(roster): add 20-club reconciliation planner`).
 - **Separate application gate:** the SQL-editor HOLD is not lifted. A later
   application needs a newly authorised, least-privilege, revision-fenced
   read-only 20-club export; offline plan/review; immutable before/after and
