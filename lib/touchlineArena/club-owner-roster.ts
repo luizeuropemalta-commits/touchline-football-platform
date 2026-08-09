@@ -1,6 +1,7 @@
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   parseMarketValueEur,
+  parseMarketValueEurOrNull,
   touchlineArenaCompetitionTierForCard,
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
@@ -48,6 +49,12 @@ type CompactRosterCardV4 = [
   cardPriceAuthority: "active-contract" | null,
 ];
 
+type CompactRosterCardV5 = [
+  ...CompactRosterCardV4,
+  marketValueState: NonNullable<ClubOwnerSquadCard["marketValueState"]> | null,
+  classificationState: NonNullable<ClubOwnerSquadCard["classificationState"]> | null,
+];
+
 type ClubOwnerRosterDeltaV1 = {
   v: 1;
   r: string[];
@@ -81,7 +88,14 @@ type ClubOwnerRosterDeltaV5 = {
   o: string[];
 };
 
-type ClubOwnerRosterDelta = ClubOwnerRosterDeltaV1 | ClubOwnerRosterDeltaV2 | ClubOwnerRosterDeltaV3 | ClubOwnerRosterDeltaV4 | ClubOwnerRosterDeltaV5;
+type ClubOwnerRosterDeltaV6 = {
+  v: 6;
+  r: string[];
+  u: CompactRosterCardV5[];
+  o: string[];
+};
+
+type ClubOwnerRosterDelta = ClubOwnerRosterDeltaV1 | ClubOwnerRosterDeltaV2 | ClubOwnerRosterDeltaV3 | ClubOwnerRosterDeltaV4 | ClubOwnerRosterDeltaV5 | ClubOwnerRosterDeltaV6;
 
 type ClubOwnerRosterFallback = "demo" | "empty";
 
@@ -132,7 +146,7 @@ function defaultCardFor(card: Pick<ClubOwnerSquadCard, "id" | "name" | "clubName
   )) ?? CLUB_OWNER_SQUAD_CARDS.find((candidate) => normalizeRosterIdentity(candidate.name) === name);
 }
 
-function compactCard(card: ClubOwnerSquadCard): CompactRosterCardV4 {
+function compactCard(card: ClubOwnerSquadCard): CompactRosterCardV5 {
   return [
     card.id,
     card.name,
@@ -149,10 +163,12 @@ function compactCard(card: ClubOwnerSquadCard): CompactRosterCardV4 {
     card.cardPriceVersion ?? null,
     card.inventoryId ?? null,
     card.cardPriceAuthority ?? null,
+    card.marketValueState ?? null,
+    card.classificationState ?? null,
   ];
 }
 
-function expandCard(card: CompactRosterCardV1 | CompactRosterCardV2 | CompactRosterCardV3 | CompactRosterCardV4): ClubOwnerSquadCard {
+function expandCard(card: CompactRosterCardV1 | CompactRosterCardV2 | CompactRosterCardV3 | CompactRosterCardV4 | CompactRosterCardV5): ClubOwnerSquadCard {
   return {
     id: card[0],
     name: card[1],
@@ -168,7 +184,9 @@ function expandCard(card: CompactRosterCardV1 | CompactRosterCardV2 | CompactRos
     cardTier: card.length >= 13 ? card[11] ?? undefined : undefined,
     cardPriceVersion: card.length >= 13 ? card[12] ?? undefined : undefined,
     inventoryId: card.length >= 14 ? card[13] ?? undefined : undefined,
-    cardPriceAuthority: card.length === 15 ? card[14] ?? undefined : undefined,
+    cardPriceAuthority: card.length >= 15 ? card[14] ?? undefined : undefined,
+    marketValueState: card.length >= 17 ? card[15] ?? undefined : undefined,
+    classificationState: card.length >= 17 ? card[16] ?? undefined : undefined,
   };
 }
 
@@ -207,30 +225,47 @@ function isCompactRosterCardV4(value: unknown): value is CompactRosterCardV4 {
     && (value[14] === null || value[14] === "active-contract");
 }
 
+function isCompactRosterCardV5(value: unknown): value is CompactRosterCardV5 {
+  const publicStates = ["verified", "pending", "unavailable", "error"];
+  return Array.isArray(value)
+    && value.length === 17
+    && isCompactRosterCardV4(value.slice(0, 15))
+    && (value[15] === null || publicStates.includes(String(value[15])))
+    && (value[16] === null || publicStates.includes(String(value[16])));
+}
+
 function cardsMatch(first: ClubOwnerSquadCard, second: ClubOwnerSquadCard) {
   return JSON.stringify(compactCard(first)) === JSON.stringify(compactCard(second));
 }
 
 export function canonicalClubOwnerRosterCard(card: ClubOwnerSquadCard): ClubOwnerSquadCard {
   const defaultCard = defaultCardFor(card);
-  const hasCardMarketValue = parseMarketValueEur(card.marketValue) > 0;
-  const keepsSuppliedMarketValue = hasCardMarketValue && (
+  const hasCanonicalPublicState = card.marketValueState != null || card.classificationState != null;
+  const hasCardMarketValue = parseMarketValueEurOrNull(card.marketValue) !== null;
+  const hasVerifiedSource = (
     card.marketValueSource === "provider"
     || card.marketValueSource === "verified-cache"
   );
-  const canonicalMarketValue = card.marketValueSource === "unavailable"
-    ? "Pending"
-    : keepsSuppliedMarketValue
+  const keepsSuppliedMarketValue = hasCardMarketValue
+    && hasVerifiedSource
+    && (!hasCanonicalPublicState || card.marketValueState === "verified");
+  const canonicalMarketValue = hasCanonicalPublicState
+    ? keepsSuppliedMarketValue
       ? card.marketValue
-      : defaultCard?.marketValue ?? "Pending";
-  const canonicalMarketValueSource = card.marketValueSource === "unavailable"
-    ? "unavailable"
-    : keepsSuppliedMarketValue
-      ? card.marketValueSource
+      : "Pending"
+    : card.marketValueSource === "unavailable"
+      ? "Pending"
+      : keepsSuppliedMarketValue
+        ? card.marketValue
+        : defaultCard?.marketValue ?? "Pending";
+  const canonicalMarketValueSource = keepsSuppliedMarketValue
+    ? card.marketValueSource
+    : hasCanonicalPublicState || card.marketValueSource === "unavailable"
+      ? "unavailable"
       : defaultCard?.marketValueSource ?? "unavailable";
-  const cardTier = touchlineArenaCompetitionTierForCard(
-    card.cardTier ?? defaultCard?.cardTier,
-  ).key;
+  const cardTier = hasCanonicalPublicState
+    ? card.cardTier ?? undefined
+    : touchlineArenaCompetitionTierForCard(card.cardTier ?? defaultCard?.cardTier).key;
 
   return {
     ...card,
@@ -281,13 +316,13 @@ export function partitionClubOwnerRoster(cards: ClubOwnerSquadCard[]): Touchline
   };
 }
 
-export function createClubOwnerRosterDelta(cards: ClubOwnerSquadCard[]): ClubOwnerRosterDeltaV5 {
+export function createClubOwnerRosterDelta(cards: ClubOwnerSquadCard[]): ClubOwnerRosterDeltaV6 {
   const currentCards = uniqueClubOwnerRosterCards(cards);
   const currentById = new Map(currentCards.map((card) => [card.id, card]));
   const defaultsById = new Map(CLUB_OWNER_SQUAD_CARDS.map((card) => [card.id, card]));
 
   return {
-    v: 5,
+    v: 6,
     r: CLUB_OWNER_SQUAD_CARDS
       .filter((card) => !currentById.has(card.id))
       .map((card) => card.id),
@@ -318,7 +353,7 @@ export function applyClubOwnerRosterDelta(delta?: ClubOwnerRosterDelta | null) {
   }
 
   const uniqueRoster = uniqueClubOwnerRosterCards(roster);
-  if (delta.v !== 3 && delta.v !== 4 && delta.v !== 5) return uniqueRoster;
+  if (delta.v !== 3 && delta.v !== 4 && delta.v !== 5 && delta.v !== 6) return uniqueRoster;
 
   const cardsById = new Map(uniqueRoster.map((card) => [card.id, card]));
   const orderedCards = delta.o
@@ -349,11 +384,11 @@ export function parseClubOwnerRoster(
 
   try {
     const parsed = JSON.parse(decodeURIComponent(value)) as Record<string, unknown>;
-    const hasValidHeader = (parsed.v === 1 || parsed.v === 2 || parsed.v === 3 || parsed.v === 4 || parsed.v === 5)
+    const hasValidHeader = (parsed.v === 1 || parsed.v === 2 || parsed.v === 3 || parsed.v === 4 || parsed.v === 5 || parsed.v === 6)
       && Array.isArray(parsed.r)
       && parsed.r.every((id) => typeof id === "string")
       && Array.isArray(parsed.u)
-      && ((parsed.v !== 3 && parsed.v !== 4 && parsed.v !== 5) || (
+      && ((parsed.v !== 3 && parsed.v !== 4 && parsed.v !== 5 && parsed.v !== 6) || (
         Array.isArray(parsed.o)
         && parsed.o.every((id) => typeof id === "string")
         && new Set(parsed.o).size === parsed.o.length
@@ -366,6 +401,8 @@ export function parseClubOwnerRoster(
           ? (parsed.u as unknown[]).every(isCompactRosterCardV3)
           : parsed.v === 5
             ? (parsed.u as unknown[]).every(isCompactRosterCardV4)
+            : parsed.v === 6
+              ? (parsed.u as unknown[]).every(isCompactRosterCardV5)
         : false;
 
     if (!hasValidHeader || !hasValidCards) {

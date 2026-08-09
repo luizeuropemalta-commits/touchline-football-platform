@@ -9,6 +9,7 @@ import {
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
+import { resolveTouchlineContractedCommercialCardPrice } from "./commercial-card-pricing.ts";
 import { touchlineClubOwnerBasePath } from "./club-owner-routes.ts";
 
 export { TOUCHLINE_CARD_STUDIO_LAYOUT_KEY };
@@ -243,6 +244,13 @@ export function clubOwnerSquadMarketValue(cards: ClubOwnerSquadCard[] = CLUB_OWN
 export function clubOwnerSquadTcValue(cards: ClubOwnerSquadCard[] = CLUB_OWNER_SQUAD_CARDS) {
   return cards.reduce(
     (sum, card) => {
+      if (card.cardPriceAuthority === "active-contract") {
+        return sum + (resolveTouchlineContractedCommercialCardPrice({
+          tierKey: card.cardTier,
+          priceTableVersion: card.cardPriceVersion,
+          competition: "england",
+        })?.numericPrice ?? 0);
+      }
       const economy = resolveTouchlineVerifiedPlayerEconomy({
         marketValue: card.marketValue,
         marketValueSource: card.marketValueSource,

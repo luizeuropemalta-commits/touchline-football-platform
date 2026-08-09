@@ -800,3 +800,52 @@ Preview, production checkpoint, or a dirty worktree.
   complete next snapshot. Remote gates remain SQL-incident closure, authorized
   read-only export, identity review, environment clearance, and later explicit
   apply authorization.
+- **Luiz decision — non-blocking extras:** once a provenance-bearing,
+  read-only 20-club export identifies any DB-only records, preserve them in
+  the roster and emit `QUARANTINED/PENDING` in the reconciliation report with
+  canonical player/provider IDs, club, membership status, source freshness,
+  and reason. Do not inactivate, delete, overwrite, assign a manual value, or
+  call the roster fully synchronized until the cause is reviewed. This is a
+  report classification only; it authorizes no database state change.
+
+## 2026-08-09 canonical card-state propagation and local visual fixture — LOCAL PROPOSAL
+
+- **Evidence before change:** normal ClubHub API cards receive the canonical
+  `marketValueState` and `classificationState`, but its persisted fallback
+  labels raw legacy player value as verified and loses those states; the V5
+  local roster serialization drops both states on round-trip; the Arena bench
+  preview drops `cardPriceAuthority`; Arena aggregate/label helpers can
+  recompute an active-contract price from current value; and ClubHub card zoom
+  can recompute commercial tier/price even where the main card is neutral.
+  These are presentation-state propagation defects, not approval to change
+  tier bands, colour palette, contracts, offers, inventory, or pricing rules.
+- **Local correction scope:** carry canonical states through fallback only when
+  they are actually present (otherwise fail closed to pending/unavailable),
+  V5 serialization, Arena bench/preview conversions, price label/aggregate
+  helpers, and ClubHub zoom details. Preserve an active contract's stored
+  authority/tier/price; use EUR 0 only when its state is explicitly verified;
+  keep missing or review values neutral and non-commercial.
+- **Isolated render fixture:** add an admin-gated `/visual-qa` fixture with
+  three clearly labelled synthetic local props only: verified value/classified
+  tier, pending/no-tier, and pending current value with an active stored
+  contract. It must disable editing, storage persistence, actions, social
+  metrics, ranking subscription, interactive neon, network fetches, and all
+  provider/DB/account dependencies. It is visual QA only and is not product
+  data or a public route.
+- **Acceptance:** (1) a pending value never receives a fallback Ruby/tier,
+  price, or commercial zoom; (2) an explicitly verified EUR 0 remains Ruby;
+  (3) active contract keeps its stored tier/price in main card, bench, zoom,
+  label, and aggregate; (4) V5 serialize/parse retains the canonical states;
+  (5) focused source/round-trip tests pass and a controlled local desktop and
+  mobile render of the isolated fixture has no console/network/hydration error.
+  Market inventory reconciliation remains a separate product decision/gate.
+- **Safety:** no database, SQL, provider, sync, deployment, Preview, account,
+  payment, contract, tier-policy, or inventory mutation is authorized by this
+  local presentation block.
+- **Checkpoint validation:** local propagation implementation is complete and
+  persisted separately from any visual sign-off. Focused card/roster/fixture
+  tests passed 50/50; `pnpm typecheck`, `pnpm lint`, and `git diff --check`
+  passed (only the pre-existing Babel size note for `ArenaClient`). The static
+  fixture remains unrendered by direction: desktop/mobile visual QA is paused
+  pending the roster-base audit or an explicit pending result. Generated
+  `tsconfig.tsbuildinfo` is intentionally excluded from the logical commit.

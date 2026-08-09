@@ -14,7 +14,10 @@ import {
   touchlineCardTierName,
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
-import { formatTouchlineVerifiedCommercialCardPrice } from "@/lib/touchlineArena/commercial-card-pricing";
+import {
+  formatTouchlineContractedCommercialCardPrice,
+  formatTouchlineVerifiedCommercialCardPrice,
+} from "@/lib/touchlineArena/commercial-card-pricing";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
@@ -113,12 +116,19 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
                 contractLabel={pt ? "Contratar" : "Contract player"}
                 contractValue={presentation && !presentation.canExposeCommercialPresentation
                   ? undefined
-                  : formatTouchlineVerifiedCommercialCardPrice({
-                    marketValue: card.marketValue,
-                    marketValueSource: card.marketValueSource,
-                    competition: "england",
-                    locale,
-                  })}
+                  : presentation?.isActiveContract
+                    ? formatTouchlineContractedCommercialCardPrice({
+                      tierKey: presentation.tierKey,
+                      priceTableVersion: card.cardPriceVersion,
+                      competition: "england",
+                      locale,
+                    })
+                    : formatTouchlineVerifiedCommercialCardPrice({
+                      marketValue: card.marketValue,
+                      marketValueSource: card.marketValueSource,
+                      competition: "england",
+                      locale,
+                    })}
                 contractTermLabel={presentation && !presentation.canExposeCommercialPresentation
                   ? undefined
                   : (pt ? "Contrato · 1 temporada" : "Contract · 1 season")}
@@ -132,6 +142,11 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
                   nationality: card.countryCode3,
                   marketValue: card.marketValue,
                   marketValueSource: card.marketValueSource,
+                  marketValueState: card.marketValueState,
+                  classificationState: card.classificationState,
+                  cardTier: card.cardTier,
+                  cardPriceAuthority: card.cardPriceAuthority,
+                  cardPriceVersion: card.cardPriceVersion,
                   touchlinePoints: card.touchlinePoints,
                   profileHref,
                 })}

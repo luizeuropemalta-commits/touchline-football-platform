@@ -40,6 +40,7 @@ import {
 import {
   formatTouchlineCommercialCardPrice,
   formatTouchlineCommercialCardTotal,
+  formatTouchlineContractedCommercialCardPrice,
   resolveTouchlineCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import {
@@ -2919,6 +2920,7 @@ function benchOptionToPreviewCard(bench: BenchOption, previewTier?: TouchlineCar
     classificationState: bench.classificationState,
     cardTier: previewTier ?? touchlineArenaCompetitionTierForCard(bench.cardTier).key,
     cardPriceVersion: bench.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    cardPriceAuthority: bench.cardPriceAuthority ?? undefined,
     updatedAt: PUBLIC_DATA_SOURCE_LABEL,
     age: "N/A",
     height: "N/A",
@@ -2997,6 +2999,13 @@ function builderPlayerCommercialPrice(player: TeamBuilderSquadPlayer, pendingLab
 }
 
 function squadCardPriceLabel(card: ClubOwnerSquadCard, pendingLabel: string) {
+  if (card.cardPriceAuthority === "active-contract") {
+    return formatTouchlineContractedCommercialCardPrice({
+      tierKey: card.cardTier,
+      priceTableVersion: card.cardPriceVersion,
+      competition: "england",
+    });
+  }
   const economy = resolveTouchlineVerifiedPlayerEconomy({
     marketValue: card.marketValue,
     marketValueSource: card.marketValueSource,
@@ -3047,6 +3056,7 @@ function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEl
     classificationState: player.classificationState,
     cardTier: touchlineArenaCompetitionTierForCard(player.cardTier).key,
     cardPriceVersion: player.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    cardPriceAuthority: player.cardPriceAuthority ?? undefined,
     updatedAt: PUBLIC_DATA_SOURCE_LABEL,
     age: "N/A",
     height: "N/A",
@@ -3079,6 +3089,11 @@ function arenaPlayerZoomDetails(
     nationality: player.nationality || player.countryCode3,
     marketValue: player.marketValue,
     marketValueSource: player.marketValueSource,
+    marketValueState: player.marketValueState,
+    classificationState: player.classificationState,
+    cardTier: player.cardTier,
+    cardPriceAuthority: player.cardPriceAuthority,
+    cardPriceVersion: player.cardPriceVersion,
     touchlinePoints: player.fantasyPoints,
     profileHref,
   });

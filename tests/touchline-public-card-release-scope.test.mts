@@ -35,6 +35,10 @@ const authoritativeArenaState = readFileSync(
   new URL("../lib/touchlineArena/authoritative-arena-state.ts", import.meta.url),
   "utf8",
 );
+const zoomDetails = readFileSync(
+  new URL("../lib/touchlineArena/card-zoom-details.ts", import.meta.url),
+  "utf8",
+);
 
 test("canonical pending states are neutral while an active contract keeps its stored tier", () => {
   const pending = resolveTouchlinePublicCardPresentation({
@@ -90,11 +94,13 @@ test("ClubHub and Arena preserve canonical pending states through every card ada
   assert.match(clubHubPage, /classificationState\?: ClubOwnerSquadCard\["classificationState"\]/);
   assert.match(clubHubPage, /marketValueState: player\.marketValueState/);
   assert.match(clubHubPage, /classificationState: player\.classificationState/);
+  assert.match(clubHubPage, /marketValueState: "unavailable"/);
+  assert.match(clubHubPage, /classificationState: "unavailable"/);
 
   assert.match(arenaLineup, /marketValueState\?: "verified" \| "pending" \| "unavailable" \| "error" \| null/);
   assert.match(arenaLineup, /classificationState\?: "verified" \| "pending" \| "unavailable" \| "error" \| null/);
-  assert.match(authoritativeArenaState, /marketValueState: rosterCard\.marketValueState/);
-  assert.match(authoritativeArenaState, /classificationState: rosterCard\.classificationState/);
+  assert.match(authoritativeArenaState, /rosterCard\.marketValueState != null/);
+  assert.match(authoritativeArenaState, /rosterCard\.classificationState != null/);
 
   for (const expression of [
     "marketValueState: squadPlayer.marketValueState ?? player.card.marketValueState",
@@ -108,6 +114,14 @@ test("ClubHub and Arena preserve canonical pending states through every card ada
   ]) {
     assert.ok(arena.includes(expression), `Arena state propagation is missing ${expression}`);
   }
+  assert.match(arena, /cardPriceAuthority: bench\.cardPriceAuthority \?\? undefined/);
+  assert.match(arena, /cardPriceAuthority: player\.cardPriceAuthority \?\? undefined/);
+  assert.match(arena, /formatTouchlineContractedCommercialCardPrice\(\{/);
+  assert.match(grid, /marketValueState: card\.marketValueState/);
+  assert.match(grid, /classificationState: card\.classificationState/);
+  assert.match(grid, /cardPriceAuthority: card\.cardPriceAuthority/);
+  assert.match(zoomDetails, /resolveTouchlinePublicCardPresentation\(\{/);
+  assert.match(zoomDetails, /formatTouchlineContractedCommercialCardPrice\(\{/);
 });
 
 test("Arena treats a verified EUR 0 value as Ruby rather than a fabricated pending state", () => {

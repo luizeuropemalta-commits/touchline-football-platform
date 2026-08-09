@@ -23,9 +23,7 @@ import { readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fa
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
-import {
-  parseMarketValueEur,
-} from "@/lib/touchlineArena/card-rules";
+import { parseMarketValueEurOrNull } from "@/lib/touchlineArena/card-rules";
 import { buildTouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
 import {
   normalizeTouchLineLocale,
@@ -120,8 +118,6 @@ function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): Clu
 }
 
 function persistedSquadPlayerToCard(player: PersistedSquadPlayer, clubName: string): ClubOwnerSquadCard {
-  const marketValue = parseMarketValueEur(player.marketValue);
-
   return {
     id: player.providerId,
     name: player.displayName || player.name,
@@ -131,8 +127,13 @@ function persistedSquadPlayerToCard(player: PersistedSquadPlayer, clubName: stri
     clubName,
     shirtNumber: normalizeOfficialShirtNumber(player.jerseyNumber),
     countryCode3: touchlineCountryCode3FromName(player.nationality) || "N/A",
-    marketValue: marketValue ? `€${Math.round(marketValue / 1_000_000)}M` : "Pending",
-    marketValueSource: marketValue ? "verified-cache" : "unavailable",
+    // A squad snapshot proves player membership, not the current public
+    // market-value/classification projection. Never revive a legacy tier or
+    // commercial value when the canonical projection endpoint is unavailable.
+    marketValue: "Pending",
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
     touchlinePoints: 0,
   };
 }
@@ -323,8 +324,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
     officialLineup: matchSnapshot.lineups,
     formation: matchSnapshot.formation,
   });
-  const clubValue = clubCards.reduce((sum, card) => sum + parseMarketValueEur(card.marketValue), 0);
-  const hasCompleteClubValue = clubCards.length > 0 && clubCards.every((card) => parseMarketValueEur(card.marketValue) > 0);
+  const verifiedMarketValue = (card: ClubOwnerSquadCard) => (
+    card.marketValueState === "verified" ? parseMarketValueEurOrNull(card.marketValue) : null
+  );
+  const clubValue = clubCards.reduce((sum, card) => sum + (verifiedMarketValue(card) ?? 0), 0);
+  const hasCompleteClubValue = clubCards.length > 0 && clubCards.every((card) => verifiedMarketValue(card) !== null);
   const touchLinePoints = clubCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
   const squadStatus = locale === "pt-BR" ? `${clubCards.length} cards TouchLine` : squadLoad.status;
   return (

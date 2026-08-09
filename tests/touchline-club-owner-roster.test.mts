@@ -196,7 +196,7 @@ describe("TouchLine ClubOwner roster accounting", () => {
     assert.equal(restored.cardPriceVersion, "provider-regression-v2");
   });
 
-  it("preserves the authoritative contract identity through the V5 roster round trip", () => {
+  it("preserves the authoritative contract identity through the current roster round trip", () => {
     const inventoryId = "cb58b289-dbb6-4a2f-8db5-bf3af1cb8d6e";
     const seeded = CLUB_OWNER_SQUAD_CARDS[0];
     const restored = parseClubOwnerRoster(serializeClubOwnerRoster([
@@ -206,6 +206,41 @@ describe("TouchLine ClubOwner roster accounting", () => {
     assert.equal(restored.length, 1);
     assert.equal(restored[0].inventoryId, inventoryId);
     assert.equal(restored[0].cardPriceAuthority, "active-contract");
+  });
+
+  it("preserves canonical public states and verified EUR 0 through the V6 roster round trip", () => {
+    const seeded = CLUB_OWNER_SQUAD_CARDS[0];
+    const restored = parseClubOwnerRoster(serializeClubOwnerRoster([
+      {
+        ...seeded,
+        marketValue: "€0",
+        marketValueSource: "verified-cache",
+        marketValueState: "verified",
+        classificationState: "verified",
+        cardTier: "ruby-red",
+      },
+    ]), { fallback: "empty" });
+
+    assert.equal(restored.length, 1);
+    assert.equal(restored[0]?.marketValue, "€0");
+    assert.equal(restored[0]?.marketValueState, "verified");
+    assert.equal(restored[0]?.classificationState, "verified");
+    assert.equal(restored[0]?.cardTier, "ruby-red");
+  });
+
+  it("keeps an active contract's stored nominal value when its live market value is pending", () => {
+    const activeContract = {
+      ...CLUB_OWNER_SQUAD_CARDS[0],
+      marketValue: "Pending",
+      marketValueSource: "unavailable" as const,
+      marketValueState: "pending" as const,
+      classificationState: "pending" as const,
+      cardTier: "emerald-green" as const,
+      cardPriceVersion: "2026-07-premier-v1",
+      cardPriceAuthority: "active-contract" as const,
+    };
+
+    assert.equal(clubOwnerSquadTcValue([activeContract]), 7);
   });
 
   it("keeps a new authenticated roster empty when no namespaced value exists", () => {

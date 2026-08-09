@@ -130,6 +130,11 @@ function clubOwnerCardZoomDetails(card: ClubOwnerSquadCard, locale: string) {
     nationality: card.countryCode3,
     marketValue: card.marketValue,
     marketValueSource: card.marketValueSource,
+    marketValueState: card.marketValueState,
+    classificationState: card.classificationState,
+    cardTier: card.cardTier,
+    cardPriceAuthority: card.cardPriceAuthority,
+    cardPriceVersion: card.cardPriceVersion,
     touchlinePoints: card.touchlinePoints,
     profileHref,
   });

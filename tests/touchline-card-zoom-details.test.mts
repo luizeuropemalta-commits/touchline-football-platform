@@ -46,6 +46,42 @@ test("fails closed for missing provider market values instead of inventing a fre
   ]);
 });
 
+test("keeps a canonical pending card neutral in its zoom instead of deriving a tier or price", () => {
+  const details = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Pending player",
+    marketValue: null,
+    marketValueSource: "unavailable",
+    marketValueState: "pending",
+    classificationState: "pending",
+  });
+
+  assert.deepEqual(details.fields.slice(0, 4).map((field) => field.value), [
+    "Market value pending",
+    "Pending",
+    "Pending",
+    "Pending",
+  ]);
+});
+
+test("keeps an active contract's stored tier and price when current market value is pending", () => {
+  const details = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Contracted player",
+    marketValue: null,
+    marketValueSource: "unavailable",
+    marketValueState: "pending",
+    classificationState: "pending",
+    cardTier: "emerald-green",
+    cardPriceAuthority: "active-contract",
+    cardPriceVersion: "2026-07-premier-v1",
+  });
+
+  assert.equal(details.fields[0]?.value, "Market value pending");
+  assert.equal(details.fields[1]?.value, "Emerald Green");
+  assert.equal(details.fields[3]?.value, "£7");
+});
+
 test("reuses the shared player zoom details in Arena, ClubHub, ClubOwner and player profile", () => {
   const sources = [
     "../app/arena/ArenaClient.tsx",
