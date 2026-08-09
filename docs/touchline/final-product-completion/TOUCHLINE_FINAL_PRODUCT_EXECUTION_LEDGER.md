@@ -1613,3 +1613,45 @@ Preview, production checkpoint, or a dirty worktree.
   `docs/touchline-arena/audit/2026-08-10-ROSTER-EXPORTER-LOCAL-ROLE-CONTRACT.md`.
   Persistent implementation checkpoint: `43974feb`
   (`feat(roster): require dedicated exporter JWT role`).
+
+## 2026-08-10 owner-approved canonical value binding adapter — LOCAL COMPLETE / NOT EXECUTED
+
+- **Purpose:** close the local code gap between the immutable owner-approved
+  Sportmonks candidate and a future writer. The new private adapter binds only
+  exact `(provider_team_id, provider_player_id)` pairs to canonical TouchLine
+  player, club and active-membership UUIDs; it never re-matches a player name.
+- **Implementation:** pure fail-closed builder
+  `lib/touchlineArena/owner-approved-market-value-binding.ts` and server-only
+  fresh reader/facade
+  `lib/touchlineArena/owner-approved-market-value-binding-server.ts`.
+  The reader uses only `football_players`, `football_squad_members`,
+  `football_clubs` and `football_competitions`; it has no route, importer,
+  provider, cache or mutation path.
+- **Safety gate:** batches are capped at 60 provider IDs, read twice, and
+  block the entire manifest on a query error, missing/duplicate identity,
+  wrong team/current club, zero or multiple active memberships, invalid
+  UUID/timestamp, competition mismatch or revision-fingerprint change. The
+  manifest remains `BOUND_PENDING_SEPARATE_WRITE_AUTHORIZATION` and every
+  row remains `application_eligible: false`.
+- **Fixed scope:** tests bind the exact 533 explicit-EUR rows from the current
+  `558 / 538 / 533 / 5 / 23 / 20 / 0` candidate vector. The five
+  `PENDING_VALUE_MISSING`, 23 provider-only `PENDING` and 20 owner-only
+  `REVIEW` entries are explicit exclusions from the manifest and every future
+  write set; no value is invented or null-overwritten.
+- **Validation:** focused value/binding/reconciliation suite **22/22 passed**;
+  `pnpm typecheck`, `pnpm lint`, and staged `git diff --check` passed. The
+  checks used no application credentials and made no database/provider/network
+  request.
+- **Non-actions:** no canonical DB read was invoked, so no real UUID manifest
+  was created; no import, data write, sync, migration, cache invalidation,
+  Preview or deployment ran. No card tier, price, contract, colour, inventory
+  or roster data changed.
+- **Next gate:** an explicitly authorized run of the server-only adapter must
+  produce a new dated manifest from a stable canonical read. Even a successful
+  533-row manifest is not import authorization: an atomic executor,
+  rollback/preflight evidence and separate write decision remain required.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-10-MARKET-VALUE-CANONICAL-BINDING-ADAPTER.md`,
+  `tests/touchline-owner-approved-market-value-binding.test.mts`, and
+  persistent implementation checkpoint `e3a13739`
+  (`feat(market-values): add canonical binding preflight`).
