@@ -74,4 +74,5 @@ values remain local-only; the five owner missing values remain `PENDING`, the
 - `docs/touchline-arena/audit/2026-08-09-ROSTER-EXPORTER-REMOTE-SCOPE-VALIDATION.md`
 - `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/README.md`
 
-Persistent checkpoint: pending commit for this local-only contract.
+Persistent implementation checkpoint: `43974feb`
+(`feat(roster): require dedicated exporter JWT role`).

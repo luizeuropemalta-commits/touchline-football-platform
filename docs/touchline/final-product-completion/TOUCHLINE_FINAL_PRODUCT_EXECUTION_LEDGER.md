@@ -1611,4 +1611,5 @@ Preview, production checkpoint, or a dirty worktree.
   provider-only rows remain pending, and 20 owner-only rows remain review.
 - **Evidence:**
   `docs/touchline-arena/audit/2026-08-10-ROSTER-EXPORTER-LOCAL-ROLE-CONTRACT.md`.
-  Persistent checkpoint: pending commit for this local-only contract.
+  Persistent implementation checkpoint: `43974feb`
+  (`feat(roster): require dedicated exporter JWT role`).
