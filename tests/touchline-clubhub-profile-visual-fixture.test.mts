@@ -16,9 +16,22 @@ test("ClubHub profile visual fixture stays static, local and split between confi
   assert.match(source, /ClubHubMatchdayTechnicalArea/);
   assert.match(source, /ClubHubOutsideMatchRoster/);
   assert.match(source, /TouchlineOfficialLeagueTable/);
+  assert.match(source, /<ClubHubOfficialLineup[\s\S]*?staticVisualQa/);
   assert.match(source, /fixtures: \[\]/);
   assert.match(source, /390PX MOBILE · PENDING MATCHDAY SHEET/);
   assert.match(source, /src="\/visual-qa\/clubhub-profile-contract\?state=pending&viewport=mobile"/);
   assert.doesNotMatch(source, /\bfetch\(/);
   assert.doesNotMatch(source, /create(?:Admin)?Client|supabase|createFootballDataProvider|providers\/sportmonks|process\.env|market-value-import|wallet/i);
+});
+
+test("the ClubHub line-up can isolate the static fixture from ranking activity", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /staticVisualQa = false/);
+  assert.match(source, /subscribeToRanking=\{!staticVisualQa\}/);
+  assert.match(source, /enableInteractiveNeon=\{!staticVisualQa\}/);
+  assert.match(source, /rankingMode=\{staticVisualQa \? "preview" : "live"\}/);
 });

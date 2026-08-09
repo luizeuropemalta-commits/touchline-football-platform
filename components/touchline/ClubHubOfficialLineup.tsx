@@ -24,6 +24,8 @@ type ClubHubOfficialLineupProps = {
   clubName: string;
   lineup: TouchLineClubLineup;
   locale: string;
+  /** Isolates the static local visual fixture from card-ranking activity. */
+  staticVisualQa?: boolean;
   labels: {
     nationality: string;
     points: string;
@@ -32,7 +34,13 @@ type ClubHubOfficialLineupProps = {
   };
 };
 
-export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels }: ClubHubOfficialLineupProps) {
+export default function ClubHubOfficialLineup({
+  clubName,
+  lineup,
+  locale,
+  staticVisualQa = false,
+  labels,
+}: ClubHubOfficialLineupProps) {
   const isPortuguese = locale === "pt-BR";
   const confirmed = lineup.status === "confirmed";
   const title = confirmed
@@ -199,6 +207,9 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                       imageLoading="lazy"
                       playerProfileHref={profileHref}
                       staticRenderScale={390 / 430}
+                      subscribeToRanking={!staticVisualQa}
+                      enableInteractiveNeon={!staticVisualQa}
+                      rankingMode={staticVisualQa ? "preview" : "live"}
                       forceNeonActive
                     />
                   )}
@@ -210,6 +221,9 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
                     imageLoading="lazy"
                     playerProfileHref={profileHref}
                     staticRenderScale={80 / 430}
+                    subscribeToRanking={!staticVisualQa}
+                    enableInteractiveNeon={!staticVisualQa}
+                    rankingMode={staticVisualQa ? "preview" : "live"}
                     showProfileAction={false}
                     showSocialMetrics={false}
                   />

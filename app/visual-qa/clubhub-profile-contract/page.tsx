@@ -192,6 +192,7 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
           clubName={staticClub.name}
           lineup={presentation.lineup}
           locale="en-GB"
+          staticVisualQa
           labels={{ nationality: "Nationality", points: "Points", totalPoints: "TouchLine points", cardPrice: "Card price" }}
         />
         <ClubHubMatchdayTechnicalArea
