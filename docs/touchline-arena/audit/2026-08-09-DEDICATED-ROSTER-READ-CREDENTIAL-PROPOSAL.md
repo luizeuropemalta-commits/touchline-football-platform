@@ -96,3 +96,40 @@ then retain only its identifier, creation/revocation timestamps and outcome in
 the audit ledger. No football row is rolled back because this credential has
 no data mutation path. Do not use this plan to delete any existing user or
 credential; it applies only to a future newly created dedicated principal.
+
+## Post-proposal auth/RLS audit — NO-GO
+
+The local auth/RLS audit found that a normal Supabase Auth user does **not**
+meet the strict target above. No platform credential was created.
+
+- `005_role_grants_and_api_season.sql` grants `authenticated`
+  `SELECT, INSERT, UPDATE, DELETE` across all current public tables and sets
+  the same default privileges for future tables. The later football migration's
+  `SELECT` grants do not revoke those inherited table grants.
+- `013_football_data_foundation.sql` gives every `authenticated` JWT
+  `SELECT USING (true)` on seven football tables: the five export targets plus
+  `football_seasons` and `football_provider_mappings`. It does not use a
+  subject, app-metadata claim, dedicated role, club scope or column scope.
+- RLS currently lacks DML policies for the core football tables, so generic
+  DML should fail at policy evaluation; however, the principal still has broad
+  base DML grants and therefore fails the explicit “no write grants” and
+  least-privilege acceptance criteria.
+- Creating an Auth user is itself not inert: the `on_auth_user_created`
+  trigger in `001_initial_schema.sql` inserts a related `public.users` row.
+  It would create remote state before the roster export even runs.
+
+**Decision:** `NO_GO — DO NOT PROVISION A GENERIC AUTHENTICATED CREDENTIAL`.
+No browser/dashboard or platform creation action was performed after this
+finding. This satisfies the required stop condition: a compliant credential
+would require remote role/claim/RLS/grant work, which is outside the current
+authorization.
+
+### Separate future design, not implemented
+
+A future approved design would need a distinct JWT/DB role such as
+`touchline_roster_exporter`, explicit `SELECT` only against a narrowly scoped
+security-invoker projection for competition `8` and the 20 provider-team IDs,
+no access to unrelated tables/columns, short-lived issuer-bound token
+issuance, and negative authorization tests for every DML/RPC/other-table
+attempt. That requires remote DDL/RLS/grant/token-issuance work and a new
+specific authorization; it must not be approximated by a generic Auth user.

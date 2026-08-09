@@ -1164,6 +1164,28 @@ Preview, production checkpoint, or a dirty worktree.
   `docs/touchline-arena/audit/2026-08-09-DEDICATED-ROSTER-READ-CREDENTIAL-PROPOSAL.md`
   records the target, permissions, risks, acceptance criteria and future
   credential-only revocation plan. This entry precedes any platform action.
+
+## 2026-08-09 dedicated roster read credential — NO-GO / STOP CONDITION MET
+
+- **Result:** no generic Supabase Auth credential was created. The current
+  platform model cannot prove the strict, five-table, no-write effective scope
+  required for the roster exporter without remote RLS/grant/role work.
+- **Evidence:** `005_role_grants_and_api_season.sql` gives `authenticated`
+  base `SELECT/INSERT/UPDATE/DELETE` grants across public/current and future
+  tables. `013_football_data_foundation.sql` grants all `authenticated` JWTs
+  `SELECT USING (true)` across seven football tables, not only the five export
+  tables or the requested 20 clubs. RLS should reject football DML without
+  policies, but the inherited grants still violate the no-write-grant / least
+  privilege criteria. A normal Auth user also invokes the
+  `on_auth_user_created` trigger that writes `public.users`.
+- **Non-actions:** no dashboard/browser credential creation, Auth-user
+  creation, RLS/grant change, migration, DB query/write, sync, deployment, or
+  secret retrieval occurred after the audit. The two extras remain untouched.
+- **Future only:** a separately authorized remote design needs a dedicated
+  role/claim, restricted projection for competition `8` + 20 team IDs,
+  `SELECT`-only grants, short-lived revocable token issuance and negative
+  authorization tests. Do not substitute a generic `authenticated` user or
+  service role.
 - **Persistent preflight checkpoint:**
   `ed4c510bf6d6ed7502faa03e8c40eed89a62447b`
   (`feat(roster): harden authenticated export preflight`).
