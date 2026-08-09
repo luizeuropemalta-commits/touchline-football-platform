@@ -114,10 +114,8 @@ test("Live opens immediately, prioritizes saved squads and reveals complete card
   assert.match(arenaClientSource, /source: "live-club-preview"/);
   assert.match(arenaClientSource, /home: immediateHome, away: immediateAway, status: "ready"/);
   assert.match(arenaClientSource, /params\.set\("preferSnapshot", "1"\)/);
-  assert.match(
-    premierSquadRouteSource,
-    /preferSnapshot && persistedSnapshot\?\.players\.length/,
-  );
+  assert.match(premierSquadRouteSource, /readPersistedSquadSnapshot\(teamId\)/);
+  assert.doesNotMatch(premierSquadRouteSource, /createFootballDataProvider|persistSquadSnapshot|preferSnapshot/);
   assert.match(arenaClientSource, /normalizeLiveClubSquad\(payload\.players, club, payload\.teamId\)/);
   assert.match(arenaClientSource, /className=\{`\$\{className\} is-card-ready`\}/);
   assert.doesNotMatch(arenaClientSource, /<LiveSimulationPlayerCard[\s\S]*?isReady=/);

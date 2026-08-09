@@ -5,7 +5,6 @@ import test from "node:test";
 import { publicFootballDataFailure } from "../lib/football-data/public-error.ts";
 
 const publicProviderRoutes = [
-  "../app/api/football-data/premier-squad/route.ts",
   "../app/api/football-data/fantasy/events/route.ts",
   "../app/api/football-data/fantasy/capabilities/route.ts",
   "../app/api/football-data/fantasy/fixture/route.ts",
@@ -33,4 +32,15 @@ test("shared football-data routes do not return raw provider error messages", ()
   }
   assert.doesNotMatch(rumoursRoute, /publicError\(result\.error\.message\)|publicError\(liveEvents\.error\.message\)/);
   assert.match(rumoursRoute, /return `\$\{PUBLIC_SOURCE_LABEL\} updates are temporarily unavailable\.`/);
+});
+
+test("the public squad reader fails closed when its canonical snapshot is unavailable", () => {
+  const squadRoute = readFileSync(
+    new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(squadRoute, /canonical-squad-unavailable/);
+  assert.match(squadRoute, /No coherent persisted squad snapshot is available/);
+  assert.doesNotMatch(squadRoute, /createFootballDataProvider|persistSquadSnapshot|publicFootballDataFailure/);
 });

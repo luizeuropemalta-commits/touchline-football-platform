@@ -42,7 +42,7 @@ const allowedApplicationEnvironmentKeys = new Set<string>(
   TOUCHLINE_ISOLATED_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS,
 );
 
-function isPresent(value: string | undefined) {
+function isPresent(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 

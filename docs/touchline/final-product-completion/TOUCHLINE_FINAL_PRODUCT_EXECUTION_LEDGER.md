@@ -299,3 +299,39 @@ Preview, production checkpoint, or a dirty worktree.
   independently observed `/preview` response remain required. It is also not
   a functional product QA Preview while public provider/data paths and the
   six incomplete human locales remain unresolved.
+
+## 2026-08-09 public persisted-read boundary — SQUAD SLICE PROPOSED
+
+- Candidate: `work/public-read-boundary-recovery-20260809` at
+  `e6db61d37e05b44fb6b7f0a367e1600f68d47826`, created clean from the
+  isolated-Preview checkpoint.
+- Static evidence: public/Browser callers can reach `premier-squad`, which
+  currently calls the football provider and persists a snapshot when stale or
+  missing. Fixture feed/livescore, rumours and player-profile surfaces have
+  additional provider/write chains and remain separate slices.
+- This first local-only change must turn `premier-squad` into a thin wrapper
+  over a server-only coherent persisted snapshot + verified projection reader.
+  It must fail closed on a missing snapshot, label a coherent stale snapshot
+  as degraded/LKG, and ignore `refresh` rather than treat it as a write grant.
+- Proposal, risk and acceptance are recorded in
+  `docs/touchline/architecture/PUBLIC_PERSISTED_READ_BOUNDARY_2026-08-09.md`.
+  No provider/data call, sync, migration, database operation, server, browser,
+  Preview or deployment is authorised by this local code slice.
+
+### SQUAD SLICE IMPLEMENTED AND LOCALLY VALIDATED
+
+- `premier-squad` now reads only the coherent persisted snapshot and verified
+  public projection. It has no provider factory, provider fetch, background
+  task, snapshot persistence, or refresh/prefer-snapshot upgrade branch.
+- Missing/incoherent snapshot: `503 canonical-squad-unavailable`. Coherent
+  stale snapshot: explicit `outage-fallback`/`degraded`; it is never refreshed
+  from this public request.
+- Evidence: 37/37 focused no-network Node tests passed; `pnpm typecheck`,
+  focused ESLint and `git diff --check` passed. The typecheck also exposed and
+  corrected a strict narrowing defect in the inherited Preview isolation
+  helper (`isPresent` is now a TypeScript predicate). No remote action was
+  performed.
+- This is not a release clearance: the fixture/livescore/schedule/rumours/
+  player-profile public boundaries, least-privilege reader, canonical shared
+  projections, durable match state, six human locale catalogues, rendered QA,
+  and external Preview gates remain blocked.

@@ -100,7 +100,7 @@ test("live score cache atomically replaces coherent snapshots and expires them",
   resetLiveScoreSnapshotForTests();
 });
 
-test("Live reads coherent local data first and refreshes providers only in background", () => {
+test("Live client preserves its local presentation cache while squad reads stay server-owned", () => {
   assert.match(arenaClientSource, /readStoredLiveFixtureSnapshot\(\)/);
   assert.match(arenaClientSource, /readBrowserStorage\("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY\)/);
   assert.match(arenaClientSource, /\/football-data\/fixture-schedule/);
@@ -109,22 +109,19 @@ test("Live reads coherent local data first and refreshes providers only in backg
   assert.match(arenaClientSource, /must never replace[\s\S]*?round schedule/);
   assert.match(arenaClientSource, /loadClubSquad\(homeClub, true\)/);
   assert.match(arenaClientSource, /loadClubSquad\(homeClub, false\)/);
-  assert.match(arenaClientSource, /params\.set\("refresh", "1"\)/);
   assert.match(arenaClientSource, /timeoutMs: snapshotOnly[\s\S]*?ARENA_LIVE_LOCAL_REQUEST_TIMEOUT_MS[\s\S]*?ARENA_LIVE_PROVIDER_REQUEST_TIMEOUT_MS/);
   assert.doesNotMatch(arenaClientSource, /window\.localStorage|localStorage\.(?:getItem|setItem|removeItem)/);
 });
 
-test("snapshot-only endpoints never fall through to Sportmonks and keep outage fallback", () => {
+test("snapshot-only live scores and public squads never fall through to Sportmonks", () => {
   const liveSnapshotBranch = liveScoresRouteSource.indexOf("if (snapshotOnly)");
   const liveProviderCall = liveScoresRouteSource.indexOf("const provider = createFootballDataProvider");
   assert.ok(liveSnapshotBranch >= 0 && liveSnapshotBranch < liveProviderCall);
   assert.match(liveScoresRouteSource, /snapshotResponse\("outage-fallback"\)/);
 
-  const squadSnapshotBranch = premierSquadRouteSource.indexOf("if (preferSnapshot)");
-  const squadProviderCall = premierSquadRouteSource.indexOf("createFootballDataProvider()");
-  assert.ok(squadSnapshotBranch >= 0 && squadSnapshotBranch < squadProviderCall);
-  assert.match(premierSquadRouteSource, /No coherent local squad snapshot is available/);
-  assert.match(premierSquadRouteSource, /after\(async \(\) => \{[\s\S]*?persistSquadSnapshot/);
+  assert.match(premierSquadRouteSource, /readPersistedSquadSnapshot\(teamId\)/);
+  assert.match(premierSquadRouteSource, /No coherent persisted squad snapshot is available/);
+  assert.doesNotMatch(premierSquadRouteSource, /createFootballDataProvider|persistSquadSnapshot|readSnapshotForLiveRefresh|backgroundRefresh|after\(|\.getSquad\(/);
 });
 
 test("Sportmonks bounds and parallelizes the two squad requests", () => {
