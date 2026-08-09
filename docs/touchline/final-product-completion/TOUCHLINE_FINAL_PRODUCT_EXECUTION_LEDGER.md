@@ -444,3 +444,24 @@ Preview, production checkpoint, or a dirty worktree.
   free space from `102 MiB` to `576 MiB`; a temporary three-byte write probe
   succeeded and was removed. No source, Git data, Downloads, assets, database,
   network, sync, Preview or deployment was touched.
+
+## 2026-08-09 public persisted-read boundary — CLUBHUB FIXTURE SLICE PROPOSED
+
+- Evidence: the public ClubHub profile merges a process-memory live snapshot
+  with persisted feeds/schedule and can fall back to a fixture-provided remote
+  logo URL.
+- Local proposal: use only the two persisted readers, retain the honest empty
+  fallback, remove provider-specific page hints and permit only canonical local
+  club crest assets. No immutable matchweek/version is claimed or created.
+- Acceptance: static tests prove no `readLiveScoreSnapshot`, provider literal,
+  raw fixture-logo fallback or write ingress remains in that public page.
+
+### CLUBHUB FIXTURE SLICE IMPLEMENTED AND LOCALLY TESTED
+
+- ClubHub now reads only the persisted fantasy-feed and schedule readers. The
+  process-memory snapshot and page-level provider hints were removed.
+- Fixture team previews use only a canonical local club crest; no raw fixture
+  logo URL can enter the rendered fallback.
+- Focused ClubHub/signals boundary regressions passed `6/6`. The broader
+  type/build suite remains separately blocked by the local filesystem I/O
+  condition recorded above; no release pass is implied.

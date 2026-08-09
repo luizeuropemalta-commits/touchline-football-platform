@@ -31,13 +31,13 @@ test("public club fixture selector prefers live and rejects stale finished rows"
   assert.equal(picked?.providerId, "live");
 });
 
-test("public club page reads safe snapshots and never calls provider-backed fantasy routes", async () => {
+test("public club page reads durable snapshots and never calls provider-backed fantasy routes", async () => {
   const pageSource = await readFile(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   const snapshotSource = await readFile(new URL("../lib/football-data/public-fantasy-snapshot.ts", import.meta.url), "utf8");
 
-  assert.match(pageSource, /readLiveScoreSnapshot/);
   assert.match(pageSource, /readPublicFantasyFixtureSnapshots/);
   assert.match(pageSource, /readPublicCompetitionFixtures/);
+  assert.doesNotMatch(pageSource, /readLiveScoreSnapshot|provider: "sportmonks"|competitionProviderId: "8"/);
   assert.doesNotMatch(pageSource, /\/api\/football-data\/fantasy\/livescores/);
   assert.doesNotMatch(pageSource, /\/api\/football-data\/fantasy\/fixture/);
 

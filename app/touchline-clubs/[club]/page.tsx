@@ -19,7 +19,6 @@ import {
   readPersistedSquadSnapshot,
   type PersistedSquadPlayer,
 } from "@/lib/football-data/squad-snapshot-store";
-import { readLiveScoreSnapshot } from "@/lib/football-data/live-score-snapshot";
 import { readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fantasy-snapshot";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
@@ -66,7 +65,6 @@ type PremierSquadPlayer = {
 };
 
 type ClubMatchPreview = {
-  fixtureId?: string;
   home: {
     name: string;
     shortCode: string;
@@ -203,7 +201,7 @@ function previewTeamFromFixtureTeam(team: TouchlineTeam | undefined, fallback: N
   return {
     name: team?.name ?? matchedClub.name,
     shortCode: team?.shortCode ?? matchedClub.shortCode,
-    logoUrl: matchedClub.logoUrl ?? team?.logoUrl,
+    logoUrl: matchedClub.logoUrl,
   };
 }
 
@@ -256,14 +254,13 @@ async function loadClubMatchSnapshot(
   };
 
   try {
-    const [liveSnapshot, persistedFeeds, scheduledFixtures] = await Promise.all([
-      Promise.resolve(readLiveScoreSnapshot()),
-      readPublicFantasyFixtureSnapshots({ provider: "sportmonks" }),
-      readPublicCompetitionFixtures({ provider: "sportmonks", competitionProviderId: "8" }),
+    const [persistedFeeds, scheduledFixtures] = await Promise.all([
+      readPublicFantasyFixtureSnapshots(),
+      readPublicCompetitionFixtures(),
     ]);
     const persistedFixtures = persistedFeeds.map((feed) => feed.fixture);
     const fixture = selectPublicClubFixture(
-      [...(liveSnapshot?.fixtures ?? []), ...persistedFixtures, ...scheduledFixtures],
+      [...persistedFixtures, ...scheduledFixtures],
       (candidate) => fixtureHasClub(candidate, club),
     );
     if (!fixture) return empty;
@@ -272,7 +269,6 @@ async function loadClubMatchSnapshot(
     const formation = persistedFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
     return {
       preview: {
-        fixtureId: fixture.providerId,
         home: previewTeamFromFixtureTeam(fixture.homeTeam, club),
         away: previewTeamFromFixtureTeam(fixture.awayTeam, club),
         status: fixture.status ?? "TouchLine England",

@@ -211,3 +211,37 @@ before anything can be published.
   reader subset passed `9/9`) before a later local filesystem read timeout
   affected unrelated legacy files. That I/O condition is an environment gate,
   not a pass claim for the remaining type/build suite.
+
+## Fifth local slice: ClubHub profile fixture surface — proposed
+
+The public ClubHub profile currently combines a process-memory live snapshot
+with persisted feeds and schedule rows. It also permits a persisted fixture
+team logo URL to become a rendered image fallback. Neither is valid as a
+shared, durable public source.
+
+This local slice will use only the existing persisted feed and schedule
+readers, preserve the current empty/unavailable fallback, remove provider
+hints from the page call site, and map a fixture team only to an existing local
+club crest. It will not create an immutable fixture projection, canonical
+matchweek, new data source, or remote data operation.
+
+### Risks and acceptance
+
+- A process-local live update may cease appearing before the durable reader has
+  it; the page must show the persisted result or its existing honest fallback,
+  never merge visitor-specific state.
+- Unknown fixture teams deliberately fall back to the selected canonical club
+  crest rather than rendering a remote logo URL.
+- Tests must prove the public page has no memory snapshot/provider call hint or
+  raw team-logo fallback, while keeping both persisted readers and its empty
+  state.
+
+### Local implementation evidence — 2026-08-09
+
+- The ClubHub profile now reads only `readPublicFantasyFixtureSnapshots()` and
+  `readPublicCompetitionFixtures()`; the process-memory live snapshot and
+  provider-specific page arguments are gone.
+- Fixture previews use the matched canonical club asset only; no raw fixture
+  team logo URL can become a public image fallback.
+- The existing ClubHub snapshot test and the new persisted-fixture boundary
+  test passed `6/6` together with the signals boundary regression.
