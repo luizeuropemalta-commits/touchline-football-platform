@@ -1146,6 +1146,24 @@ Preview, production checkpoint, or a dirty worktree.
   missing input for the actual two-pass export. Once supplied, a new dated
   export must pass this integrity gate and the local planner before a real
   `QUARANTINED/PENDING` report can name any DB-only player.
+
+## 2026-08-09 dedicated roster read credential — PRE-PLATFORM PROPOSAL
+
+- **Owner authorization:** Luiz authorized evaluation and, only if the
+  platform can enforce it without broadening access, provisioning of a
+  dedicated non-mutating credential for the 20-club canonical roster export.
+  No service-role, grant, RLS, migration, sync, deployment, card/value, or
+  roster-data change is authorized.
+- **Target and gate:** the proposed principal may only `SELECT` the five
+  canonical football tables required by the exporter. Existing migration `013`
+  shows authenticated SELECT policies on those tables and service-role-only
+  DML, but a generic `authenticated` user may inherit broader project access.
+  If exact five-table effective scope cannot be demonstrated without adding or
+  broadening RLS/grants, provisioning stops.
+- **Evidence / rollback:**
+  `docs/touchline-arena/audit/2026-08-09-DEDICATED-ROSTER-READ-CREDENTIAL-PROPOSAL.md`
+  records the target, permissions, risks, acceptance criteria and future
+  credential-only revocation plan. This entry precedes any platform action.
 - **Persistent preflight checkpoint:**
   `ed4c510bf6d6ed7502faa03e8c40eed89a62447b`
   (`feat(roster): harden authenticated export preflight`).
