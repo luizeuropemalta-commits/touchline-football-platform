@@ -1146,3 +1146,6 @@ Preview, production checkpoint, or a dirty worktree.
   missing input for the actual two-pass export. Once supplied, a new dated
   export must pass this integrity gate and the local planner before a real
   `QUARANTINED/PENDING` report can name any DB-only player.
+- **Persistent preflight checkpoint:**
+  `ed4c510bf6d6ed7502faa03e8c40eed89a62447b`
+  (`feat(roster): harden authenticated export preflight`).
