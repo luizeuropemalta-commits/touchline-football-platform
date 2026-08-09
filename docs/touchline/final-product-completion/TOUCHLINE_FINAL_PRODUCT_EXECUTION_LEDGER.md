@@ -1372,9 +1372,15 @@ Preview, production checkpoint, or a dirty worktree.
   `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed. Browser QA
   covered a desktop confirmed 11+9 fixture and a 390px pending fixture. No
   database, Sportmonks, sync, migration, Preview or deployment action ran.
+  The static fixture disables card-ranking subscription and recorded zero
+  `/api/*` browser resources in both states.
 - **Checkpoint:** `230909d60c4f18ed4c1784d2a8ed9b6197311018`
   (`feat(clubhub): separate verified matchday profile sections`). Generated
   `next-env.d.ts` and `tsconfig.tsbuildinfo` remain preserved and uncommitted.
+- **Isolation follow-up:** `87be02d1cd73c46c6ce8f194c81dd20e0b2ade38`
+  (`fix(qa): isolate ClubHub fixture from card ranking`) explicitly prevents
+  static QA cards from subscribing to ranking activity; production behaviour
+  is unchanged.
 - **Remaining gate:** a sanitized, persisted matchday-coach DTO is necessary
   before production may name a coach or nine-player official bench. A later
   data-backed EN/PT pass needs the separately authorized read-only source.

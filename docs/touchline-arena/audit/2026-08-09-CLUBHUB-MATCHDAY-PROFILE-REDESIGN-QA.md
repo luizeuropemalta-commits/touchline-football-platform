@@ -53,6 +53,9 @@ the XI, bench and outside-matchday roster.
 - `components/touchline/ClubHubOfficialLineup.module.css` uses a compensated
   safe top inset and dark, two-line nameplates. It removes ellipsis and fits
   the visual stress names at 390px without overlap or page overflow.
+- The static visual fixture passes `staticVisualQa` to the line-up. That
+  explicitly disables card-ranking subscription and interactive neon for its
+  fixture cards, while leaving the production ClubHub card behaviour intact.
 
 ## Local validation
 
@@ -76,6 +79,9 @@ database, provider or economic data.
   nine blank technical places, 20 table rows, no horizontal overflow. All 11
   pitch labels had normal whitespace, clipped-text mode rather than ellipsis,
   no hidden third line and no label-to-label overlap.
+- Browser resource timing contained **zero** `/api/*` resources for both the
+  desktop confirmed and mobile pending fixtures after static isolation was
+  enabled.
 
 The user-provided remote Vercel screenshot showing an Updating card is useful
 as a current-product observation only. It was not used as acceptance evidence
@@ -106,3 +112,6 @@ contract or value rules.
 
 `230909d60c4f18ed4c1784d2a8ed9b6197311018`
 (`feat(clubhub): separate verified matchday profile sections`)
+
+`87be02d1cd73c46c6ce8f194c81dd20e0b2ade38`
+(`fix(qa): isolate ClubHub fixture from card ranking`)
