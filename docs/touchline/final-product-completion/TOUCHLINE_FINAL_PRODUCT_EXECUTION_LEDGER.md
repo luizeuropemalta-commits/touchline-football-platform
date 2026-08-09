@@ -575,3 +575,51 @@ Preview, production checkpoint, or a dirty worktree.
 - Do not generate a consolidated 19-club import or fill any missing rows until
   the original owner-approved data artifact is recovered. The generic template
   and synthetic test fixtures are not evidence and must not be reused as data.
+
+## 2026-08-09 card-value rendering preflight — REQUIRES_LUIZ_DECISION
+
+- Current source chain is split. A verified current value in
+  `football_player_market_values` is exposed to public profile/ClubHub
+  projections and their public classification currently derives a tier, border
+  colour and nominal tier price from the approved market-value bands. Pending
+  values are intentionally displayed as pending/unavailable.
+- Active contracts are a separate exception: their stored card tier and price
+  table remain authoritative and must not be recoloured or repriced by a value
+  import. Migration `051` preserves this by not writing inventory, contracts,
+  tiers or price tables.
+- Market/Arena currently consume the separate `touchline_card_inventory` read
+  model. That model is not updated by `051`; therefore a future City import can
+  make a public profile verified while a Market/Arena card remains stale or
+  pending. This is a consistency failure, not a valid end-to-end card pass.
+- The public projection cache can retain a prior state for up to five minutes;
+  a future approved run must publish/invalidate a coherent revision before any
+  visual assertion of immediate value freshness.
+
+### Proposed decision and acceptance boundary
+
+- **REQUIRES_LUIZ_DECISION:** for uncontracted cards, should a newly verified
+  fixed market value recompute the public tier/border colour and nominal price
+  using the existing seven-band policy, or should a season-published
+  classification be frozen separately? The current code does the former;
+  Admin copy describes an active-season freeze. Do not silently choose between
+  them.
+- Any approved reconciliation must feed Profile, ClubHub, Market and Arena
+  from one server-owned, versioned projection; preserve active contracts;
+  keep pending explicit; invalidate/publish atomically; and audit before/after
+  tier/colour/nominal-price effects by player.
+- Visual acceptance after that gate: controlled verified and pending fixtures
+  must show the fixed value only when verified, show no invented value when
+  pending, preserve active-contract tier/price, exercise all seven tier border
+  bands, and be observed at desktop and mobile. This cannot be claimed from
+  the current unapplied City SQL artifact alone.
+
+## 2026-08-09 future manual-application authority — GATED
+
+- Luiz has authorised database application of the complete manual-value batch
+  without another commercial approval **only after** every club input is
+  technically complete, IDs/clubs/counts/rollback plan validate, the SQL
+  incident and environment are independently cleared, and the card-projection
+  decision above has a coherent implementation path.
+- This does not authorise a partial 19-club application, a database query,
+  SQL Editor execution, remote sync, deployment, payment or any action while
+  those gates remain open.
