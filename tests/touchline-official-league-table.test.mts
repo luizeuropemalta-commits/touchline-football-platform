@@ -56,7 +56,9 @@ test("official league table scopes fixtures to its canonical current season", ()
   assert.equal(result.state, "pending_no_final");
   assert.equal(result.coverage.fixturesInSeason, 1);
   assert.equal(result.coverage.completedFixtures, 0);
-  assert.deepEqual(result.rows, []);
+  assert.equal(result.rows.length, 20);
+  assert.ok(result.rows.every((row) => row.position === null));
+  assert.ok(result.rows.every((row) => row.played === 0 && row.points === 0 && row.form.length === 0));
 });
 
 test("official league table deduplicates a provider fixture before totals are calculated", () => {
@@ -93,6 +95,7 @@ test("pending no-final data is different from an unavailable canonical source", 
   assert.equal(pending.state, "pending_no_final");
   assert.equal(unavailable.state, "unavailable");
   assert.equal(pending.coverage.completedFixtures, 0);
+  assert.equal(pending.rows.length, 20);
   assert.equal(unavailable.rows.length, 0);
 });
 

@@ -107,6 +107,28 @@
   outline: none;
 }
 
+.clubCard::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, transparent 0 64%, var(--club-accent) 72%, #fff 78%, var(--club-secondary) 84%, transparent 92%);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.clubCard:hover::after,
+.clubCard:focus-visible::after,
+.clubCard:active::after {
+  opacity: .95;
+  animation: touchlineClubEdgeTravel .78s linear 1;
+}
+
 .clubIndex {
   color: rgba(255,255,255,.36);
   font-size: 11px;
@@ -172,6 +194,8 @@
   text-transform: uppercase;
 }
 
+@keyframes touchlineClubEdgeTravel { to { transform: rotate(1turn); } }
+
 @media (max-width: 1120px) {
   .clubGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -232,4 +256,10 @@
   .footer {
     flex-direction: column;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clubCard:hover::after,
+  .clubCard:focus-visible::after,
+  .clubCard:active::after { animation: none; }
 }

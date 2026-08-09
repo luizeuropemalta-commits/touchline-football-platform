@@ -187,6 +187,36 @@ function tableRows(
 }
 
 /**
+ * Before the first verified final, the canonical 20-club scope is useful but
+ * no sporting position exists. Keep the server-provided club order intact and
+ * publish neutral zero statistics with null positions rather than inventing a
+ * table or hiding the season entirely.
+ */
+function preSeasonRows(
+  teams: readonly TouchlineOfficialLeagueTableTeam[],
+): readonly TouchlineOfficialLeagueTableRow[] {
+  return teams.flatMap((team) => team.slug ? [{
+    position: null,
+    team: {
+      providerTeamId: team.providerTeamId,
+      name: team.name,
+      shortCode: team.shortCode,
+      slug: team.slug,
+      logoUrl: team.logoUrl,
+    },
+    played: 0,
+    won: 0,
+    drawn: 0,
+    lost: 0,
+    goalsFor: 0,
+    goalsAgainst: 0,
+    goalDifference: 0,
+    points: 0,
+    form: [],
+  }] : []);
+}
+
+/**
  * Pure public-table resolver. It never fetches a provider or database, so the
  * caller must supply one canonical competition and one canonical season.
  * A query failure is deliberately distinct from a pre-season with no finals.
@@ -243,7 +273,11 @@ export function resolveTouchlineOfficialLeagueTable(input: ResolveInput): Touchl
     ...fixturesInSeason.map((fixture) => fixture.sourceUpdatedAt),
   ]);
   if (!standings.completedFixtures) {
-    return { ...emptyTable(input, "pending_no_final", "no-verified-final", coverage), asOf };
+    return {
+      ...emptyTable(input, "pending_no_final", "no-verified-final", coverage),
+      asOf,
+      rows: preSeasonRows(input.teams),
+    };
   }
 
   const hasProvisionalOrdering = standings.hasUnresolvedTieBreaks || standings.duplicateFixtures > 0;

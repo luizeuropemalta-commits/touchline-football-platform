@@ -1,30 +1,31 @@
 export const TOUCHLINE_DEFAULT_LOCALE = "en-GB";
 export const TOUCHLINE_LOCALE_STORAGE_KEY = "touchline:locale:v1";
 
-export const TOUCHLINE_SUPPORTED_LOCALES = [
+/**
+ * Product-approved locale vocabulary. This is deliberately not a promise that
+ * every locale below may be rendered yet: a locale becomes public only once
+ * its complete, human-reviewed catalogue is present.
+ */
+export const TOUCHLINE_APPROVED_LOCALES = [
   { code: "en-GB", shortLabel: "EN", label: "English", flag: "🇬🇧" },
   { code: "pt-BR", shortLabel: "PT", label: "Português", flag: "🇧🇷" },
   { code: "es-ES", shortLabel: "ES", label: "Español", flag: "🇪🇸" },
-  { code: "fr-FR", shortLabel: "FR", label: "Français", flag: "🇫🇷" },
-  { code: "de-DE", shortLabel: "DE", label: "Deutsch", flag: "🇩🇪" },
   { code: "it-IT", shortLabel: "IT", label: "Italiano", flag: "🇮🇹" },
-  { code: "nl-NL", shortLabel: "NL", label: "Nederlands", flag: "🇳🇱" },
-  { code: "sv-SE", shortLabel: "SV", label: "Svenska", flag: "🇸🇪" },
-  { code: "no-NO", shortLabel: "NO", label: "Norsk", flag: "🇳🇴" },
-  { code: "da-DK", shortLabel: "DA", label: "Dansk", flag: "🇩🇰" },
-  { code: "pl-PL", shortLabel: "PL", label: "Polski", flag: "🇵🇱" },
-  { code: "tr-TR", shortLabel: "TR", label: "Türkçe", flag: "🇹🇷" },
+  { code: "fr-FR", shortLabel: "FR", label: "Français", flag: "🇫🇷" },
   { code: "ar-SA", shortLabel: "AR", label: "العربية", flag: "🇸🇦" },
-  { code: "hi-IN", shortLabel: "HI", label: "हिन्दी", flag: "🇮🇳" },
-  { code: "zh-CN", shortLabel: "ZH", label: "中文", flag: "🇨🇳" },
-  { code: "ja-JP", shortLabel: "JA", label: "日本語", flag: "🇯🇵" },
-  { code: "ko-KR", shortLabel: "KO", label: "한국어", flag: "🇰🇷" },
-  { code: "id-ID", shortLabel: "ID", label: "Bahasa Indonesia", flag: "🇮🇩" },
-  { code: "th-TH", shortLabel: "TH", label: "ไทย", flag: "🇹🇭" },
-  { code: "vi-VN", shortLabel: "VI", label: "Tiếng Việt", flag: "🇻🇳" },
+  { code: "tr-TR", shortLabel: "TR", label: "Türkçe", flag: "🇹🇷" },
+  { code: "de-DE", shortLabel: "DE", label: "Deutsch", flag: "🇩🇪" },
 ] as const;
 
-export type TouchLineLocale = (typeof TOUCHLINE_SUPPORTED_LOCALES)[number]["code"];
+/** Kept as the UI-facing name for existing consumers. */
+export const TOUCHLINE_SUPPORTED_LOCALES = TOUCHLINE_APPROVED_LOCALES;
+
+export type TouchLineLocale = (typeof TOUCHLINE_APPROVED_LOCALES)[number]["code"];
+export const TOUCHLINE_COMPLETE_LOCALES = ["en-GB", "pt-BR"] as const;
+export type TouchLineCompleteLocale = (typeof TOUCHLINE_COMPLETE_LOCALES)[number];
+
+/** Arabic becomes RTL only when its complete reviewed catalogue is enabled. */
+export const TOUCHLINE_RTL_LOCALES = ["ar-SA"] as const;
 
 export type TouchLineTranslationKey =
   | "language"
@@ -973,8 +974,16 @@ export function normalizeTouchLineLocale(locale?: string | null): TouchLineLocal
   return locale === "pt-BR" || locale === "en-GB" ? locale : TOUCHLINE_DEFAULT_LOCALE;
 }
 
-export function isTouchLineLocaleComplete(locale?: string | null) {
+export function isTouchLineLocaleApproved(locale?: string | null): locale is TouchLineLocale {
+  return TOUCHLINE_APPROVED_LOCALES.some((candidate) => candidate.code === locale);
+}
+
+export function isTouchLineLocaleComplete(locale?: string | null): locale is TouchLineCompleteLocale {
   return locale === "en-GB" || locale === "pt-BR";
+}
+
+export function isTouchLineRtlLocale(locale?: string | null) {
+  return TOUCHLINE_RTL_LOCALES.some((candidate) => candidate === locale);
 }
 
 export function touchLineT(locale: string | null | undefined, key: TouchLineTranslationKey) {

@@ -19,6 +19,7 @@ import {
 } from "@/lib/touchlineArena/club-owner-routes";
 import {
   resolveTouchLinePresentationLocale,
+  touchlineLocaleRequestNeedsCanonicalRedirect,
   TOUCHLINE_PRESENTATION_LOCALE_HEADER,
 } from "@/lib/touchlineArena/root-locale";
 import {
@@ -213,6 +214,15 @@ function requestLocale(request: NextRequest) {
   return resolveTouchLinePresentationLocale(request.nextUrl.searchParams.get("lang"));
 }
 
+function canonicalPresentationLocaleRedirect(request: NextRequest) {
+  const requestedLocale = request.nextUrl.searchParams.get("lang");
+  if (!touchlineLocaleRequestNeedsCanonicalRedirect(requestedLocale)) return null;
+
+  const canonicalUrl = request.nextUrl.clone();
+  canonicalUrl.searchParams.set("lang", requestLocale(request));
+  return NextResponse.redirect(canonicalUrl, 307);
+}
+
 /**
  * App Router layouts do not receive query parameters. Forward the canonical
  * public presentation locale through the request so `<html lang>` and the
@@ -348,6 +358,8 @@ async function handleTouchLineRequest(request: NextRequest) {
     request.headers.get("host"),
     request.nextUrl.hostname,
   );
+  const localeRedirect = canonicalPresentationLocaleRedirect(request);
+  if (localeRedirect) return localeRedirect;
   const isLocalDev = localDevHosts.has(hostname);
   if (isLocalDev) return nextResponseWithPresentationLocale(request);
 

@@ -10,14 +10,31 @@ import { touchlineClubOwnerProfileHref } from "../lib/touchlineArena/club-owner-
 import {
   resolveTouchLinePresentationLocale,
   resolveTouchLineRootLocale,
+  touchlineDocumentDirection,
+  touchlineLocaleRequestNeedsCanonicalRedirect,
 } from "../lib/touchlineArena/root-locale.ts";
+import {
+  isTouchLineLocaleApproved,
+  isTouchLineLocaleComplete,
+  TOUCHLINE_APPROVED_LOCALES,
+} from "../lib/touchlineArena/i18n.ts";
 
 const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
 const localeSync = readFileSync(new URL("../components/touchline/DocumentLocaleSync.tsx", import.meta.url), "utf8");
 const comingSoon = readFileSync(new URL("../app/coming-soon/page.tsx", import.meta.url), "utf8");
 const proxy = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 
-test("public presentation locale is complete English or Portuguese only", () => {
+test("the approved locale vocabulary is exact while only reviewed catalogues render publicly", () => {
+  assert.deepEqual(
+    TOUCHLINE_APPROVED_LOCALES.map((locale) => locale.code),
+    ["en-GB", "pt-BR", "es-ES", "it-IT", "fr-FR", "ar-SA", "tr-TR", "de-DE"],
+  );
+  assert.equal(isTouchLineLocaleApproved("de-DE"), true);
+  assert.equal(isTouchLineLocaleApproved("nl-NL"), false);
+  assert.equal(isTouchLineLocaleComplete("en-GB"), true);
+  assert.equal(isTouchLineLocaleComplete("pt-BR"), true);
+  assert.equal(isTouchLineLocaleComplete("es-ES"), false);
+  assert.equal(isTouchLineLocaleComplete("ar-SA"), false);
   assert.equal(resolveTouchLinePresentationLocale("en-GB"), "en-GB");
   assert.equal(resolveTouchLinePresentationLocale("pt-BR"), "pt-BR");
   assert.equal(resolveTouchLinePresentationLocale("es-ES"), "en-GB");
@@ -25,6 +42,20 @@ test("public presentation locale is complete English or Portuguese only", () => 
   assert.equal(resolveTouchLinePresentationLocale("invalid"), "en-GB");
   assert.equal(resolveTouchLinePresentationLocale(["pt-BR", "en-GB"]), "pt-BR");
   assert.equal(resolveTouchLineRootLocale("es-ES"), "en-GB");
+});
+
+test("incomplete locale URLs canonicalize before SSR while Arabic direction remains ready", () => {
+  assert.equal(touchlineLocaleRequestNeedsCanonicalRedirect("en-GB"), false);
+  assert.equal(touchlineLocaleRequestNeedsCanonicalRedirect("pt-BR"), false);
+  assert.equal(touchlineLocaleRequestNeedsCanonicalRedirect("es-ES"), true);
+  assert.equal(touchlineLocaleRequestNeedsCanonicalRedirect("de-DE"), true);
+  assert.equal(touchlineLocaleRequestNeedsCanonicalRedirect("ar-SA"), true);
+  assert.equal(touchlineLocaleRequestNeedsCanonicalRedirect("invalid"), true);
+  assert.equal(touchlineDocumentDirection("en-GB"), "ltr");
+  assert.equal(touchlineDocumentDirection("ar-SA"), "rtl");
+  assert.match(proxy, /function canonicalPresentationLocaleRedirect/);
+  assert.match(proxy, /touchlineLocaleRequestNeedsCanonicalRedirect/);
+  assert.match(proxy, /canonicalUrl\.searchParams\.set\("lang", requestLocale\(request\)\)/);
 });
 
 test("root document receives the request locale before hydration and has one reusable skip target", () => {

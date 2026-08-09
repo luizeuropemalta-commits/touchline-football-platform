@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineCoachCategoryShowcase from "@/components/touchline/TouchlineCoachCategoryShowcase";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK } from "@/lib/touchlineArena/demo-data";
@@ -97,6 +98,8 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
         locale={locale}
         variant="directory"
       />
+
+      <TouchlineCoachCategoryShowcase locale={locale} />
 
       <footer className={styles.footer}>
         <span>{dictionary.clubs}</span>

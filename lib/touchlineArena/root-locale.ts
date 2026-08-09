@@ -1,5 +1,6 @@
 import {
   isTouchLineLocaleComplete,
+  isTouchLineRtlLocale,
   normalizeTouchLineLocale,
   type TouchLineLocale,
 } from "./i18n.ts";
@@ -25,8 +26,8 @@ function firstLocaleValue(value?: string | string[] | null) {
 
 /**
  * Resolves the language that may be presented to a public visitor today.
- * `normalizeTouchLineLocale` still understands all future menu locales, while
- * this narrower resolver is deliberately used at public rendering boundaries
+ * `TOUCHLINE_APPROVED_LOCALES` records the product vocabulary, while this
+ * narrower resolver is deliberately used at public rendering boundaries
  * until their complete translations exist.
  */
 export function resolveTouchLinePresentationLocale(
@@ -38,10 +39,19 @@ export function resolveTouchLinePresentationLocale(
     : "en-GB";
 }
 
-export function touchlineDocumentDirection(_locale: TouchLinePresentationLocale) {
-  // Both currently complete public locales are left-to-right. Keeping this in
-  // the resolver makes a future complete RTL locale an explicit addition.
-  return "ltr" as const;
+export function touchlineDocumentDirection(locale: TouchLinePresentationLocale | string) {
+  return isTouchLineRtlLocale(locale) ? "rtl" as const : "ltr" as const;
+}
+
+/**
+ * An incomplete or unapproved `lang` must not remain in the public URL while
+ * the server renders English. The edge boundary uses this before SSR.
+ */
+export function touchlineLocaleRequestNeedsCanonicalRedirect(value?: string | string[] | null) {
+  const requested = firstLocaleValue(value);
+  return requested !== undefined
+    && requested !== null
+    && requested !== resolveTouchLinePresentationLocale(requested);
 }
 
 /**

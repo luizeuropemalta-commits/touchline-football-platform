@@ -40,6 +40,53 @@ not be inferred from a Premier League date, a browser clock, or a public fixture
 feed. No client-only game-day gate is claimed until that engine state is exposed
 and validated end-to-end.
 
+## 2026-08-09 persistent recovery checkpoint
+
+### Incident and preservation rule
+
+- The macOS restart removed uncommitted candidate worktrees under `/private/tmp`.
+  No production, database, import, sync, payment, or deployment action was made
+  from those worktrees. The committed baseline and the user’s original dirty
+  worktree remained intact, but the uncommitted candidate overlays are not
+  recoverable as Git commits.
+- All newly validated local work must now live in a persistent workspace worktree
+  and receive an explicit local Git commit before another independent block
+  begins. Generated `.next`, `next-env.d.ts`, and `tsconfig.tsbuildinfo` output is
+  never part of that checkpoint.
+
+### Reconstructed public-only checkpoint
+
+- Candidate: `work/public-immutable-recovery-20260809`, based on
+  `a2dce1a9a18ee084c7201ac9f80aa6e275b99aa7`.
+- Scope: an exact approved-locale registry for `en-GB`, `pt-BR`, `es-ES`,
+  `it-IT`, `fr-FR`, `ar-SA`, `tr-TR`, and `de-DE`; fail-closed rendering for the
+  two complete human catalogues only (`en-GB`, `pt-BR`); pre-SSR canonicalisation
+  of incomplete/invalid locale requests to English; a human-translation review
+  contract; an honest 20-club pre-season official-table state; and a static,
+  non-personal seven-category coach-card framework in Club Hub.
+- Evidence: focused tests passed (18/18), direct TypeScript checking passed, and
+  `git diff --check` passed. Local no-credential visual checks covered Club Hub
+  at desktop, 390px mobile, and 768px tablet for EN/PT and the intentional
+  incomplete-locale fallback; the table correctly showed `unavailable` with no
+  configured data source.
+
+### Release gates retained
+
+- This checkpoint is **not production-ready**. Six approved locales have no
+  complete human catalogue or route-by-route/RTL review. Arabic remains
+  render-disabled until its catalogue and RTL QA are complete.
+- Shared public data still needs immutable server-owned projection/version
+  contracts; a five-minute mutable table cache is not a completed global
+  canonical projection.
+- Arena fixture-round selection and real Quick Substitution require a durable
+  server-owned match context, revision, idempotent event/audit design, and a
+  remote-approved persistence integration. They must not be promoted from a
+  local presentation state.
+- Isolated Preview requires a dedicated, independently verified Vercel project,
+  strict credential allowlist, project binding, and no-auth/no-data route
+  envelope. No Preview or production deployment is authorised by this local
+  checkpoint alone.
+
 ## Current external gates
 
 - Controlled non-financial ClubOwner/Admin personas for cross-session and device validation.
@@ -48,6 +95,7 @@ and validated end-to-end.
 - Native WebKit/phone accessible validation.
 - Deliberate production promotion after all acceptance gates pass.
 
-Latest safe checkpoint must always be resolved from the newest committed HEAD on
-`safety/touchline-2026-06-28-wip`; application checkpoint `0c8e3f99` contains
-the published Market Transfer position journey and is the active baseline.
+Historical release evidence above remains historical evidence only. The latest
+safe checkpoint must always be resolved from the newest committed HEAD of the
+candidate currently under validation; never infer eligibility from an older
+Preview, production checkpoint, or a dirty worktree.
