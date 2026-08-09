@@ -64,26 +64,33 @@ incident closure, and a separately authorized environment.
 
 ## Versioned read-only roster audit archive
 
-**Current credential gate:** the owner has authorized a dedicated,
-authenticated, non-mutating roster export. The SQL Editor incident does not
-authorize any write, sync, migration, import, or deployment. The export
-script therefore accepts only an explicit `--check` or `--write-new` command
-and still refuses service-role semantics. The 2026-08-09 credential preflight
-found no dedicated authenticated credential in the local process or worktree,
-so it failed before creating a client with
+**Current credential gate:** the local exporter accepts only a future,
+dedicated JWT carrying exactly `role=touchline_roster_exporter`; it rejects
+generic `authenticated`, `service_role`, `anon`, and every other role. The
+SQL Editor incident does not authorize any write, sync, migration, import, or
+deployment. The script therefore accepts only an explicit `--check` or
+`--write-new` command and still refuses service-role semantics. The 2026-08-09
+credential preflight found no suitable exporter credential in the local process
+or worktree, so it failed before creating a client with
 `TL_ROSTER_EXPORT_READ_ONLY_MODE_REQUIRED`. See
 `roster-audits/2026-08-09T18-27-31Z/read-only-export-preflight.json`.
 
 The audit covers the 19 manual-value clubs plus Liverpool as an explicitly
-out-of-manual-value-scope twentieth club. A real audit must use a dedicated
-authenticated, read-only session — never a service role — and writes only
-new local files. It requires the following process-only configuration names;
-their values must never be recorded in an artifact or terminal output:
+out-of-manual-value-scope twentieth club. A real audit must use the future
+dedicated exporter role — never a generic authenticated or service-role token
+— and writes only new local files. It requires the following process-only
+configuration names; their values must never be recorded in an artifact or
+terminal output:
 
 - `TOUCHLINE_ROSTER_EXPORT_MODE=read-only`
 - `TOUCHLINE_ROSTER_EXPORT_URL`
 - `TOUCHLINE_ROSTER_EXPORT_ANON_KEY`
-- `TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN` (JWT role/audience `authenticated`)
+- `TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN` (JWT role
+  `touchline_roster_exporter`, audience `authenticated`)
+
+Accepting that claim in local code does **not** create, prove, configure, or
+validate a remote role or token. Export remains blocked until the separately
+recorded remote privilege/RLS/token-issuance gates pass.
 
 The export script performs select-only reads twice and fails if its club,
 player, or active-membership revision fence changes. It will not write unless

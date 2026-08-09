@@ -10,6 +10,7 @@ import { TOUCHLINE_ROSTER_AUDIT_PROVIDER_TEAM_IDS } from "./reconcile-owner-appr
 
 const PROVIDER = "sportmonks";
 const COMPETITION_PROVIDER_ID = "8";
+const ROSTER_EXPORTER_ROLE = "touchline_roster_exporter";
 const PAGE_SIZE = 500;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ARCHIVE_DIRECTORY = resolve("docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/roster-audits");
@@ -67,8 +68,9 @@ function expectedAuthIssuer(url) {
   }
 }
 
-// Deliberately accepts a dedicated authenticated session only. A service-role
-// key is not a database-enforced read-only capability and is never accepted.
+// Deliberately accepts only the future dedicated exporter JWT role. Generic
+// authenticated and service-role credentials are not database-enforced
+// read-only capabilities and are never accepted.
 export function readOnlyConnectionConfig(environment = process.env) {
   const url = text(environment.TOUCHLINE_ROSTER_EXPORT_URL);
   const anonKey = text(environment.TOUCHLINE_ROSTER_EXPORT_ANON_KEY);
@@ -84,13 +86,13 @@ export function readOnlyConnectionConfig(environment = process.env) {
   if (anonPayload.role !== "anon") {
     throw new Error("TL_ROSTER_EXPORT_ANON_KEY_REQUIRED");
   }
-  const accessPayload = decodeJwtPayload(accessToken, "TL_ROSTER_EXPORT_AUTHENTICATED_TOKEN_REQUIRED");
+  const accessPayload = decodeJwtPayload(accessToken, "TL_ROSTER_EXPORT_DEDICATED_EXPORTER_TOKEN_REQUIRED");
   if (
-    accessPayload.role !== "authenticated"
+    accessPayload.role !== ROSTER_EXPORTER_ROLE
     || accessPayload.aud !== "authenticated"
     || text(accessPayload.iss) !== issuer
   ) {
-    throw new Error("TL_ROSTER_EXPORT_AUTHENTICATED_TOKEN_REQUIRED");
+    throw new Error("TL_ROSTER_EXPORT_DEDICATED_EXPORTER_TOKEN_REQUIRED");
   }
   return { url, anonKey, accessToken };
 }

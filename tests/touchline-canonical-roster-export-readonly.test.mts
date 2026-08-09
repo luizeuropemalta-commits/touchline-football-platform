@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -12,6 +13,7 @@ const source = readFileSync(
   new URL("../scripts/export-touchline-canonical-roster-readonly.mjs", import.meta.url),
   "utf8",
 );
+const exporterPath = new URL("../scripts/export-touchline-canonical-roster-readonly.mjs", import.meta.url);
 const timestamp = "2026-08-09T18:00:00.000Z";
 
 function uuid(index: number) {
@@ -113,17 +115,26 @@ test("canonical export preserves invalid active rows as exceptions rather than f
   assert.deepEqual(document.audit.exceptionalMemberships[0].reasons, ["MEMBERSHIP_PROVIDER_NOT_SPORTMONKS"]);
 });
 
-test("read-only connection requires a dedicated authenticated token and never accepts service role semantics", () => {
+test("read-only connection accepts only the dedicated roster-exporter token role", () => {
   const environment = {
     TOUCHLINE_ROSTER_EXPORT_MODE: "read-only",
     TOUCHLINE_ROSTER_EXPORT_URL: "https://example.supabase.co",
     TOUCHLINE_ROSTER_EXPORT_ANON_KEY: jwt({ role: "anon", aud: "authenticated" }),
-    TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "authenticated", aud: "authenticated", iss: "https://example.supabase.co/auth/v1" }),
+    TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "touchline_roster_exporter", aud: "authenticated", iss: "https://example.supabase.co/auth/v1" }),
   };
   assert.equal(readOnlyConnectionConfig(environment).url, environment.TOUCHLINE_ROSTER_EXPORT_URL);
+  for (const role of ["authenticated", "service_role", "anon", "other_role", ""]) {
+    assert.throws(
+      () => readOnlyConnectionConfig({
+        ...environment,
+        TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role, aud: "authenticated", iss: "https://example.supabase.co/auth/v1" }),
+      }),
+      /TL_ROSTER_EXPORT_DEDICATED_EXPORTER_TOKEN_REQUIRED/,
+    );
+  }
   assert.throws(
-    () => readOnlyConnectionConfig({ ...environment, TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "service_role", aud: "authenticated" }) }),
-    /TL_ROSTER_EXPORT_AUTHENTICATED_TOKEN_REQUIRED/,
+    () => readOnlyConnectionConfig({ ...environment, TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: "not-a-jwt" }),
+    /TL_ROSTER_EXPORT_DEDICATED_EXPORTER_TOKEN_REQUIRED/,
   );
   assert.throws(
     () => readOnlyConnectionConfig({ ...environment, TOUCHLINE_ROSTER_EXPORT_ANON_KEY: jwt({ role: "service_role", aud: "authenticated" }) }),
@@ -136,16 +147,38 @@ test("read-only connection requires a dedicated authenticated token and never ac
   assert.throws(
     () => readOnlyConnectionConfig({
       ...environment,
-      TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "authenticated", aud: "authenticated", iss: "https://other.supabase.co/auth/v1" }),
+      TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "touchline_roster_exporter", aud: "authenticated", iss: "https://other.supabase.co/auth/v1" }),
     }),
-    /TL_ROSTER_EXPORT_AUTHENTICATED_TOKEN_REQUIRED/,
+    /TL_ROSTER_EXPORT_DEDICATED_EXPORTER_TOKEN_REQUIRED/,
   );
+  assert.throws(
+    () => readOnlyConnectionConfig({
+      ...environment,
+      TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "touchline_roster_exporter", aud: "other", iss: "https://example.supabase.co/auth/v1" }),
+    }),
+    /TL_ROSTER_EXPORT_DEDICATED_EXPORTER_TOKEN_REQUIRED/,
+  );
+});
+
+test("exporter --check fails closed without configuration before a client can be created", () => {
+  const result = spawnSync(process.execPath, [exporterPath.pathname, "--check"], {
+    encoding: "utf8",
+    env: {
+      PATH: process.env.PATH ?? "",
+      TOUCHLINE_ROSTER_EXPORT_MODE: "read-only",
+    },
+  });
+  assert.equal(result.status, 1);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr, "TL_ROSTER_EXPORT_READ_ONLY_CONFIGURATION_REQUIRED\n");
 });
 
 test("exporter is select-only, revision-fenced, explicit, and refuses output overwrite", () => {
   assert.match(source, /two-pass-membership-revision-fence/);
   assert.match(source, /TL_ROSTER_EXPORT_CHECK_OR_WRITE_NEW_REQUIRED/);
   assert.match(source, /TL_ROSTER_EXPORT_CHECK_AND_WRITE_NEW_CONFLICT/);
+  assert.match(source, /const ROSTER_EXPORTER_ROLE = "touchline_roster_exporter"/);
+  assert.doesNotMatch(source, /accessPayload\.role !== "authenticated"/);
   assert.ok(source.indexOf("readOnlyConnectionConfig()") < source.indexOf("createClient(config.url"));
   assert.match(source, /TL_ROSTER_EXPORT_OUTPUT_OUTSIDE_VERSIONED_ARCHIVE_FORBIDDEN/);
   assert.match(source, /flag: "wx"/);

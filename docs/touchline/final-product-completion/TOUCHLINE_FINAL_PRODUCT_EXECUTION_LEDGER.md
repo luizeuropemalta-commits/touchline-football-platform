@@ -1586,3 +1586,29 @@ Preview, production checkpoint, or a dirty worktree.
   `docs/touchline/release-audit/2026-08-10-LOCAL-STATIC-VISUAL-QA-MATRIX.md`.
   Persistent implementation checkpoint: `3ed3d378`
   (`test(visual): validate local EN PT fixture matrix`).
+
+## 2026-08-10 dedicated roster-exporter local contract — COMPLETE / REMOTE NOT PROVISIONED
+
+- **Local boundary:** the canonical roster exporter now accepts only the
+  future JWT claim `role=touchline_roster_exporter`. It rejects generic
+  `authenticated`, `service_role`, `anon`, malformed, missing and arbitrary
+  roles while retaining HTTPS issuer and `aud=authenticated` checks.
+- **Fail-closed proof:** a child-process `--check` with missing configuration
+  exits before client construction with a stable error and empty stdout; no
+  configuration value is printed. Select-only queries, two-pass revision
+  fencing and fresh `wx` archive writes remain unchanged.
+- **Validation:** focused exporter suite **6/6 passed**; TypeScript, focused
+  ESLint and `git diff --check` passed. A separate direct no-configuration
+  `--check` returned only
+  `TL_ROSTER_EXPORT_READ_ONLY_CONFIGURATION_REQUIRED` with exit `1`.
+- **Non-actions:** no role, token, environment variable, Vercel setting,
+  database connection/query/write, RLS/grant/migration, sync, value import,
+  Preview or deployment was performed. The local claim is not evidence that a
+  remote role exists.
+- **Gate:** the remote `PUBLIC` privilege/RLS/token-issuance NO-GO remains
+  controlling. Do not substitute a generic authenticated session or
+  service-role key. The 533 values remain local-only; five owner rows and 23
+  provider-only rows remain pending, and 20 owner-only rows remain review.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-10-ROSTER-EXPORTER-LOCAL-ROLE-CONTRACT.md`.
+  Persistent checkpoint: pending commit for this local-only contract.
