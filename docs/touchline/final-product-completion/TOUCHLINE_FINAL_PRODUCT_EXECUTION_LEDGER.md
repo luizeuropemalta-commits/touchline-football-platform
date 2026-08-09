@@ -888,3 +888,48 @@ Preview, production checkpoint, or a dirty worktree.
   import, provider call, or payment action was performed. The next release
   gate is a clean, isolated EN/PT candidate that removes/fail-closes the
   provider, analytics and real-data paths before rendered QA.
+
+## 2026-08-09 roster / owner-value / card-validation chain — BLOCKED WITH EVIDENCE
+
+- **Scope lock:** this closes only the ordered roster/value chain: (1) a
+  read-only 20-club Sportmonks roster audit, (2) preservation of claimed
+  extras, (3) identity-and-club reconciliation of owner-approved values,
+  (4) a local import artifact, and (5) real-card visual validation. It does
+  not begin a new release, Preview, sync, or product scope.
+- **Step 1 — roster audit:** blocked under the no-DB rule. No local
+  `touchline-canonical-roster-export-v1` exists with canonical player UUID,
+  numeric Sportmonks player ID, club/team identity, competition `8`, active
+  membership, `source_updated_at`, and provenance/revision. Consequently the
+  claimed two DB-only records cannot be named, counted, dated, or assigned a
+  sync cause from local evidence; no assertion of `589`, `560`, or a
+  100%-synchronised roster is made.
+- **Step 2 — extras:** no member was inactivated, deleted, overwritten, or
+  given a value. Once an authorised read-only export identifies a valid
+  DB-only active member, it is report-only `QUARANTINED/PENDING` with
+  `market_value_eur: null` and `application_eligible: false`; this must not
+  be written into `football_squad_members.status` or used as a value import.
+- **Step 3 — owner-value reconciliation:** source staging integrity passed
+  locally: 19 clubs, 558 rows, 553 explicit EUR values, five missing-value
+  rows, and EUR 12,191,600,000; ordered source-selection hash
+  `192692cf3a9cc303df1fd936a84b19e7e41e796f1cb0cf965f399ff08d319f94`.
+  The offline reconciliation and its focused tests passed 9/9 *fail-closed*:
+  `LOCAL_CANONICAL_ROSTER_EXPORT_UNAVAILABLE`, zero matched, 553 review,
+  five pending, zero unmatched, and 558/558 rows non-application-eligible.
+  The missing values remain PENDING, never EUR 0.
+- **Step 4 — import artifact:** no migration/import artifact was generated
+  from this 19-club batch, correctly. Every candidate ID is blank and a
+  name-plus-club result would still require identity review; generating a
+  write artifact would misrepresent review data as canonical data.
+- **Step 5 — card validation:** the isolated static card-state fixture's
+  source test passed 3/3, but it is synthetic only. It proves no real
+  owner-approved value, ID mapping, desktop/mobile pixel render, or
+  cross-surface product state. Real-card visual QA is blocked until a
+  provenance-bearing read-only export, reconciled matched records, and a
+  local guarded projection/application path are available.
+- **Exact resume gate:** retain a saved, versioned local read-only export with
+  the fields above; validate all 20 clubs, active memberships, freshness,
+  duplicates, and the DB-only outer diff; then produce the report-only
+  quarantine list, reconcile only unique ID/club candidates, and continue
+  this same chain. No database, provider, sync, import, Preview, deployment,
+  or payment action occurred. The generated `tsconfig.tsbuildinfo` remains
+  deliberately preserved outside this logical documentation checkpoint.
