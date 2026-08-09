@@ -538,7 +538,7 @@ Preview, production checkpoint, or a dirty worktree.
   validation failure must be recorded rather than hidden and still permits a
   clearly marked source-only checkpoint.
 
-### MANCHESTER CITY LOCAL ARTIFACT IMPLEMENTED — NOT APPLIED
+### MANCHESTER CITY LEGACY CHECKPOINT — SUPERSEDED, NOT CURRENT CANDIDATE
 
 - Candidate: `work/touchline-manchester-city-manual-import-20260809`, based on
   `64fd1f2b64f13b09e7c40ff836d557ff1bab6a23` before this local checkpoint.
@@ -560,6 +560,11 @@ Preview, production checkpoint, or a dirty worktree.
   not a claimed type/lint pass. No generated source artifact changed.
 - No SQL was executed; no database, sync, import, deployment, Preview,
   provider call, card, tier, price, contract or payment state changed.
+- Luiz subsequently designated the owner-supplied conversation table as the
+  only current City authority. Its old staging manifest, unapplied migration,
+  and focused test were removed from this candidate after the replacement
+  transcript staging passed. This section is retained solely as historical
+  checkpoint evidence and must never be used as a data source or applied.
 
 ### REMAINING 18-CLUB DATASET RECOVERY — SOURCE GAP
 
@@ -664,3 +669,51 @@ Preview, production checkpoint, or a dirty worktree.
   Controlled desktop/mobile rendered QA remains required later, with a safe
   verified/pending/active-contract fixture; it is not evidence from this
   source-only patch.
+
+## 2026-08-09 owner-approved transcript 19-club recovery/reconciliation — LOCAL STAGED, NOT APPLIED
+
+- **Historical correction:** this supersedes the earlier remaining-18-club
+  source-gap conclusion only as to source availability. That earlier
+  read-only result remains historical evidence of the then-visible workspace.
+- **Source provenance:** exact selected `user_message` records are read from
+  `/Users/luizlopez/.codex/sessions/2026/08/08/rollout-2026-08-08T06-46-52-019fdfb2-003a-7fa0-aa05-6b268b203143.jsonl`, under the owner-supplied
+  line-to-club mapping. The manifest records each physical JSONL line, UTC
+  timestamp, SHA-256 of the message content, and ordered selection hash
+  `192692cf3a9cc303df1fd936a84b19e7e41e796f1cb0cf965f399ff08d319f94`.
+  A whole-file hash is deliberately not used because the session JSONL
+  appends. Raw messages are not copied into the repository or public output.
+- **Scope/result:** 19 assigned club blocks; 558 roster rows; 553 explicit
+  EUR values; 5 missing-value rows; source total EUR 12,191,600,000. The
+  transcript approval timestamp is provenance only, so `valuation_date`
+  remains blank. Generated local artifacts are
+  `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/owner-approved-market-values-2026-08-09.csv`
+  and its JSON manifest.
+- **Parsing and identity:** only explicit owner-supplied EUR M/m/K/k/mil forms
+  are converted. Missing/unparseable values remain pending; no EUR 0, Ruby,
+  tier, price, or identity is fabricated. Display-name normalization is a
+  review candidate only. All 558 rows lack reviewed canonical UUID, provider
+  ID, canonical club, team, and active-membership evidence; no row is
+  VERIFIED or eligible for a current-value/history write.
+- **City source supersession:** Luiz has explicitly designated the
+  owner-supplied conversation table as the current Manchester City authority.
+  The former FootballTransfers CSV and its local checkpoint are not used,
+  combined, compared, or eligible for application. The physical legacy CSV was
+  removed after the transcript staging passed; prior derivative checkpoint
+  commits are historical only. Every transcript-City row is now
+  `REVIEW_PROVIDER_ID_MISSING`, exactly like the other explicit rows, until
+  canonical UUID/provider/team/active-membership review completes.
+- **Known raw gaps:** transcript values are absent for Denner, Mykhaylo Mudryk,
+  Julian Eyestone, Dermot Mee, and Leo Shahar. Mudryk's separate provisional
+  owner decision (EUR 41.6m; Emerald only after exact identity review) is not
+  inferred from or merged into this name-only transcript batch.
+- **Safety boundary:** no tier, colour, price, inventory, contract, wallet,
+  offer, database, SQL, sync, provider, Preview, or deployment action was
+  performed. A future remote execution remains blocked by SQL-incident
+  closure plus complete identity/club/membership review, conflict/duplicate
+  report, count/rollback preflight, the card-projection policy decision, and
+  independent environment clearance.
+- **Local validation:** generator `--check` verified every message hash,
+  per-club count, pending count, and total before the local artifacts were
+  written. Focused parser/staging tests must verify the no-identity/no-write
+  state and City source supersession. Full typecheck/lint/build and rendered desktop/
+  mobile QA are separate gates and are not implied by this staging artifact.

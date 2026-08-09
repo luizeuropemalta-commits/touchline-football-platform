@@ -1,29 +1,17 @@
-# Manchester City manual-value staging — 2026/27
+# Owner-approved manual market-value staging — 2026/27
 
-This local-only intake was created after Luiz explicitly authorised the
-Manchester City staging artifact for a future, guarded TouchLine import. It is
-not a database import, a provider feed, a product claim, or authority to alter
-cards, tiers, prices, contracts, wallets or production.
+The current local source of truth is the review-only transcript package in
+[`owner-approved-transcript-2026-08-09`](./owner-approved-transcript-2026-08-09/).
+It contains the 19 owner-assigned club blocks, provenance hashes, explicit EUR
+values, and honest pending/review states.
 
-## Preserved source facts
+The former Manchester City FootballTransfers-derived staging CSV and its
+unapplied migration were removed from this candidate after the transcript
+staging validated. They are historical local checkpoints only and are not an
+input, comparison source, or application candidate.
 
-- Source artifact: `manchester-city-2026-27-staging.csv` from the preserved
-  2026-08-07 staging directory.
-- SHA-256 at local recovery: `f8ee885f9e939db1ac0f79a620cca02d2d57a9a32afd98c8e9a04ec21984b44a`.
-- Rows: 32 total; 31 have explicit EUR values; one has no value or currency.
-- The source has no player-name or valuation-date column. Those fields remain
-  blank here rather than inferred. `source_artifact_date` is provenance only,
-  not a valuation date.
-- The external IDs and URLs are retained only for protected import-run audit
-  traceability. TouchLine UUIDs are the only import identity key. No URL was
-  requested, scraped or verified during this local preparation.
-
-## Application gate
-
-The accompanying migration validates each UUID against an active Manchester
-City membership and canonical team ID `9` at execution time. Any mismatch
-rolls back the entire transaction. The blank-value record remains a `pending`
-import item and must never clear, replace or fabricate a canonical value.
-
-Remote application remains blocked by the SQL-editor incident, identity review
-at the future database state, and a separate explicit owner authorisation.
+No item in this directory authorizes a database import, provider request, card
+tier/colour/price update, contract change, wallet operation, deployment, or
+production action. A future guarded batch can only be created after exact
+canonical identity and active-club-membership review for every intended row,
+the SQL incident is independently closed, and the remote preflight passes.

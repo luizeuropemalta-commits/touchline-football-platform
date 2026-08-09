@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "owner-approved-transcript-market-values-v1",
+  "batchId": "owner-approved-2026-08-09-19-club-transcript-v1",
+  "source": {
+    "kind": "owner_approved_transcript",
+    "sourceFile": "/Users/luizlopez/.codex/sessions/2026/08/08/rollout-2026-08-08T06-46-52-019fdfb2-003a-7fa0-aa05-6b268b203143.jsonl",
+    "sourceSelectionSha256": "192692cf3a9cc303df1fd936a84b19e7e41e796f1cb0cf965f399ff08d319f94",
+    "parserVersion": "owner-transcript-eur-v1",
+    "ownerApprovedDateUtc": "2026-08-09",
+    "providerVerified": false,
+    "notes": "Values are owner-supplied transcript input. Do not attribute them to a provider or use transcript names as provider IDs."
+  },
+  "reconciliation": {
+    "rule": "name normalization may create a review candidate only; a future write requires reviewed canonical player UUID, provider player ID, canonical club identity and active membership evidence",
+    "canonicalIdentityReviewRequired": true,
+    "remoteApplicationAllowed": false,
+    "currentState": "local-staging-only"
+  },
+  "supersededLegacyManchesterCityArtifact": {
+    "status": "superseded-by-owner-approved-transcript",
+    "legacyStagingPath": "docs/touchline-arena/audit/2026-08-07/premier-league-market-value-staging/manchester-city-2026-27-staging.csv",
+    "disposition": "removed after transcript staging validation; not present in this candidate",
+    "recovery": "any prior derivative checkpoint commit is historical only; never an input, comparison source, or application candidate",
+    "replacement": "Manchester City transcript rows in this manifest are the owner-approved City source and remain identity-review-only"
+  },
+  "clubs": [
+    {
+      "clubName": "Arsenal FC",
+      "sourceJsonlLine": 8842,
+      "ownerApprovalTimestampUtc": "2026-08-09T01:11:15.956Z",
+      "sourceMessageSha256": "0f075ff1275c1ac0d9ac7a1617b573205e26787a813ff2c8a514deb36357b59b",
+      "rows": 29,
+      "explicit": 29,
+      "pending": 0,
+      "total": 1406500000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Hull City",
+      "sourceJsonlLine": 9508,
+      "ownerApprovalTimestampUtc": "2026-08-09T01:40:26.203Z",
+      "sourceMessageSha256": "3f42f535ca54ed77d9292d5f95f5d9409500f1be9b513d11586a8ed15af3b600",
+      "rows": 27,
+      "explicit": 27,
+      "pending": 0,
+      "total": 105300000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Chelsea FC",
+      "sourceJsonlLine": 9593,
+      "ownerApprovalTimestampUtc": "2026-08-09T01:45:23.665Z",
+      "sourceMessageSha256": "4073a60e9d9cf028769a4900d18e9c1d8a7410a0df134b3a09083a0919fb71ba",
+      "rows": 41,
+      "explicit": 39,
+      "pending": 2,
+      "total": 1406700000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Brentford FC",
+      "sourceJsonlLine": 9693,
+      "ownerApprovalTimestampUtc": "2026-08-09T01:51:23.236Z",
+      "sourceMessageSha256": "d5378869e43931d78b057784e44e2fa30d87b84479dc512698c8865e4b564b01",
+      "rows": 33,
+      "explicit": 32,
+      "pending": 1,
+      "total": 565400000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "AFC Bournemouth",
+      "sourceJsonlLine": 9730,
+      "ownerApprovalTimestampUtc": "2026-08-09T01:55:09.420Z",
+      "sourceMessageSha256": "ff4aa002e0baa0dfdac5be4ed6eb9b8eb09833533bc222a5cf5ba599f503295b",
+      "rows": 31,
+      "explicit": 31,
+      "pending": 0,
+      "total": 572875000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Tottenham Hotspur",
+      "sourceJsonlLine": 9758,
+      "ownerApprovalTimestampUtc": "2026-08-09T01:56:47.435Z",
+      "sourceMessageSha256": "a92cf7b254e058d5913ccbedc4f5adba801e1ef127d5cfabe0d22c77f5965238",
+      "rows": 36,
+      "explicit": 36,
+      "pending": 0,
+      "total": 920500000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Crystal Palace",
+      "sourceJsonlLine": 9777,
+      "ownerApprovalTimestampUtc": "2026-08-09T01:57:39.213Z",
+      "sourceMessageSha256": "5b843830c3ee3814def599fb55dcd9df1507048242479b2c221888ec2a046bae",
+      "rows": 29,
+      "explicit": 29,
+      "pending": 0,
+      "total": 504700000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Leeds United",
+      "sourceJsonlLine": 9812,
+      "ownerApprovalTimestampUtc": "2026-08-09T01:59:28.301Z",
+      "sourceMessageSha256": "0e072067e731abc521bbff5af9ed4ef7b1a30c7a9e7ef0d43b33d80a9c7545f8",
+      "rows": 27,
+      "explicit": 27,
+      "pending": 0,
+      "total": 426950000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Ipswich Town",
+      "sourceJsonlLine": 9841,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:00:14.748Z",
+      "sourceMessageSha256": "29c9f6a0142dd5a8eb98f07c6595fdd27120e07455dc64564d0fbc1382220404",
+      "rows": 31,
+      "explicit": 31,
+      "pending": 0,
+      "total": 280150000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Manchester United",
+      "sourceJsonlLine": 9875,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:01:18.735Z",
+      "sourceMessageSha256": "b7d130f0cb6c222f670d9963a6d4dedf046c5be7dc6cfef3f01073e7efd4c293",
+      "rows": 30,
+      "explicit": 29,
+      "pending": 1,
+      "total": 874300000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Aston Villa",
+      "sourceJsonlLine": 9912,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:02:22.339Z",
+      "sourceMessageSha256": "9663b25124073c953a148ed7aab2ae04959f47f9307ec1e9ab5b9c35626f8b45",
+      "rows": 27,
+      "explicit": 27,
+      "pending": 0,
+      "total": 536000000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Sunderland AFC",
+      "sourceJsonlLine": 9922,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:03:12.161Z",
+      "sourceMessageSha256": "802270783425d6a963b5b6886940ac2b2f7f8567f2ad45240d82f28dc598e427",
+      "rows": 30,
+      "explicit": 30,
+      "pending": 0,
+      "total": 392075000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Fulham FC",
+      "sourceJsonlLine": 9972,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:04:27.994Z",
+      "sourceMessageSha256": "7453f9eac3fb3984cb19239464f6b975276668b30ab186753ff26de3d929df90",
+      "rows": 21,
+      "explicit": 21,
+      "pending": 0,
+      "total": 328800000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Manchester City",
+      "sourceJsonlLine": 10062,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:06:48.787Z",
+      "sourceMessageSha256": "7ba4346b3794d8730d5f91e822a450a3f0efc3b0ae7a26cf714296d6cced0d0a",
+      "rows": 31,
+      "explicit": 31,
+      "pending": 0,
+      "total": 1470300000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Brighton & Hove Albion",
+      "sourceJsonlLine": 10078,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:08:31.634Z",
+      "sourceMessageSha256": "0df60974fee2c4be449717fbd2363079651b1a35c2b383ff3cf539e9e986a004",
+      "rows": 30,
+      "explicit": 30,
+      "pending": 0,
+      "total": 619500000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Coventry City",
+      "sourceJsonlLine": 10088,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:09:26.735Z",
+      "sourceMessageSha256": "4e55da757a298c19c89b1cf144b7f8c8e8d1970a69530f57e6d120af0998fe05",
+      "rows": 27,
+      "explicit": 27,
+      "pending": 0,
+      "total": 236850000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Newcastle United",
+      "sourceJsonlLine": 10104,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:10:13.803Z",
+      "sourceMessageSha256": "eb07eba8420545d10f7a61f291b6514e73aa5fb8d1d4bf18166f6ee9284d061f",
+      "rows": 26,
+      "explicit": 25,
+      "pending": 1,
+      "total": 567800000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Everton FC",
+      "sourceJsonlLine": 10139,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:12:19.882Z",
+      "sourceMessageSha256": "ce70612a611ffb5af53fa47b1a3012f6a64ea27d5d95d9054b21ba627d5c45b5",
+      "rows": 24,
+      "explicit": 24,
+      "pending": 0,
+      "total": 459100000,
+      "reconciliationStatus": "review-provider-identity-required"
+    },
+    {
+      "clubName": "Nottingham Forest",
+      "sourceJsonlLine": 10176,
+      "ownerApprovalTimestampUtc": "2026-08-09T02:13:44.926Z",
+      "sourceMessageSha256": "eba19c1d09bba3b9c9031a080344d5a76f70ee22809cf3f5cd97409ac9ff30d6",
+      "rows": 28,
+      "explicit": 28,
+      "pending": 0,
+      "total": 517800000,
+      "reconciliationStatus": "review-provider-identity-required"
+    }
+  ],
+  "totals": {
+    "allTranscriptRows": 558,
+    "allTranscriptExplicitValues": 553,
+    "allTranscriptPendingValues": 5,
+    "allTranscriptExplicitTotalEur": 12191600000,
+    "nonCityRows": 527,
+    "nonCityExplicitValues": 522,
+    "nonCityPendingValues": 5,
+    "nonCityExplicitTotalEur": 10721300000,
+    "canonicalIdentityMatched": 0,
+    "canonicalIdentityReviewRequired": 558,
+    "reviewStatusCounts": {
+      "PENDING_VALUE_MISSING": 5,
+      "REVIEW_PROVIDER_ID_MISSING": 553
+    }
+  }
+}
