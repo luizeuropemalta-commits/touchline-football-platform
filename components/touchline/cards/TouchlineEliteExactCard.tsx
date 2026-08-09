@@ -30,6 +30,7 @@ import { normalizeTouchlineCountryCode3, touchlineCountryFlagUrl } from "@/lib/t
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineShirtNumberPaletteForClub } from "@/lib/touchlineArena/shirt-number-colors";
+import { TouchlineClubCrestPerimeterTrace } from "@/components/touchline/cards/TouchlineClubCrestPerimeterTrace";
 import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/TouchlineCardPerimeterTrace";
 import { TouchlineShirtNumber } from "@/components/touchline/cards/TouchlineShirtNumber";
 import masterCardLayout from "@/public/touchlineArena/card-layouts/master-shirt-back-layout.json";
@@ -1098,16 +1099,19 @@ export function TouchlineEliteExactCard({
     } as const;
 
     return (
-      <img
-        src={resolvedClubLogoUrl}
-        alt={`${player.clubName} crest`}
-        draggable={false}
-        loading={imageLoading}
-        data-club-crest-visual-scale={CLUB_CREST_VISUAL_SCALE}
-        data-touchline-card-crest="true"
-        data-live-card-asset="crest"
-        style={crestStyle}
-      />
+      <span data-touchline-card-crest-trace-host="true">
+        <TouchlineClubCrestPerimeterTrace />
+        <img
+          src={resolvedClubLogoUrl}
+          alt={`${player.clubName} crest`}
+          draggable={false}
+          loading={imageLoading}
+          data-club-crest-visual-scale={CLUB_CREST_VISUAL_SCALE}
+          data-touchline-card-crest="true"
+          data-live-card-asset="crest"
+          style={crestStyle}
+        />
+      </span>
     );
   }
 

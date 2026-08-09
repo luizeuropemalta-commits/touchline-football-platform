@@ -864,14 +864,64 @@ a, button { outline: none; }
   stroke-dasharray: 2 98;
   stroke-dashoffset: 0;
   opacity: 0;
+  animation: touchline-card-perimeter-trace 8s cubic-bezier(.22,.74,.28,1) infinite;
 }
 
 @keyframes touchline-card-perimeter-trace {
   0% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
-  9% { stroke-dasharray: 14 86; opacity: .82; }
-  71% { stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: .72; }
-  88% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .44; }
-  100% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .28; }
+  1.7% { stroke-dasharray: 14 86; opacity: .82; }
+  13.3% { stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: .72; }
+  16.5% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .44; }
+  18.75%, 89% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .28; }
+  94% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: 0; }
+  100% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
+}
+
+[data-touchline-card-crest-trace-host="true"] {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  isolation: isolate;
+  overflow: visible;
+  transform: translateZ(0);
+  transform-origin: center;
+  transition: transform 180ms ease;
+}
+
+[data-touchline-card-crest-trace="true"] {
+  position: absolute;
+  z-index: 2;
+  inset: 2%;
+  display: block;
+  width: 96%;
+  height: 96%;
+  overflow: visible;
+  color: var(--touchline-club-crest-color);
+  pointer-events: none;
+  user-select: none;
+}
+
+[data-touchline-card-crest-trace-base="true"],
+[data-touchline-card-crest-trace-run="true"] {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-touchline-card-crest-trace-base="true"] {
+  stroke-width: 1.35;
+  opacity: .34;
+}
+
+[data-touchline-card-crest-trace-run="true"] {
+  stroke-width: 3.1;
+  stroke-dasharray: 2 98;
+  stroke-dashoffset: 0;
+  opacity: 0;
+  animation: touchline-card-perimeter-trace 8s cubic-bezier(.22,.74,.28,1) infinite;
 }
 
 .touchline-card-surface[data-card-classification="pending"] [data-touchline-card-frame="true"] {
@@ -884,11 +934,7 @@ a, button { outline: none; }
     transform: translateZ(0) scale(1.035) !important;
   }
 
-  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-neon-trace-run="true"] {
-    animation: touchline-card-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
-  }
-
-  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-crest="true"] {
+  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-crest-trace-host="true"] {
     transform: translate3d(0, -1px, 0);
   }
 }
@@ -898,27 +944,16 @@ a, button { outline: none; }
   z-index: 4;
 }
 
-.touchline-card-surface[data-card-motion="true"]:is(:focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-run="true"],
-:is(.is-selected, .is-active, [aria-pressed="true"], [aria-selected="true"]) > .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"],
-:is(.is-selected, .is-active, [aria-pressed="true"], [aria-selected="true"]) .arena-field-card > .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"],
-.touchline-card-surface[data-card-motion="true"][data-card-zoom="true"] [data-touchline-card-neon-trace-run="true"],
-[data-card-zoom="expanded"] .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"],
-.zoomCardVisual .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"],
-.zoomContent .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"] {
-  animation: touchline-card-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
-}
-
 .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest="true"] {
+  position: relative;
+  z-index: 1;
   display: block;
   border-radius: 50%;
   outline: 1px solid color-mix(in srgb, var(--touchline-club-crest-color) 58%, transparent);
   outline-offset: 1px;
   background: radial-gradient(circle, color-mix(in srgb, var(--touchline-club-crest-color) 12%, transparent) 0 54%, transparent 58%);
   box-shadow: 0 2px 6px rgba(0,0,0,.42);
-  transform: translateZ(0);
-  transform-origin: center;
-  transition: transform 180ms ease, outline-color 180ms ease, background-color 180ms ease;
-  will-change: transform;
+  transition: outline-color 180ms ease, background-color 180ms ease;
 }
 
 .touchline-card-surface[data-card-motion="true"]:is(:focus-within, [data-neon-active="true"]) [data-touchline-card-crest="true"] {
@@ -933,8 +968,14 @@ a, button { outline: none; }
   }
 
   .touchline-card-surface[data-card-motion="true"]:focus-within,
-  .touchline-card-surface[data-card-motion="true"][data-neon-active="true"] {
+  .touchline-card-surface[data-card-motion="true"][data-neon-active="true"],
+  .touchline-card-surface[data-card-motion="true"]:active {
     transform: translate3d(0, 0, 0) scale(1.028) !important;
+  }
+
+  .touchline-card-surface[data-card-motion="true"]:active [data-touchline-card-crest-trace-host="true"],
+  .touchline-card-surface[data-card-motion="true"][data-neon-active="true"] [data-touchline-card-crest-trace-host="true"] {
+    transform: translate3d(0, -1px, 0);
   }
 }
 
@@ -949,7 +990,7 @@ a, button { outline: none; }
   }
 
   .touchline-card-surface[data-card-motion="true"]:hover,
-  .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest="true"] {
+  .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest-trace-host="true"] {
     transform: none !important;
     transition: none;
   }
@@ -960,6 +1001,16 @@ a, button { outline: none; }
   }
 
   [data-touchline-card-neon-trace-run="true"] {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  [data-touchline-card-crest-trace-base="true"] {
+    stroke-width: 1.9;
+    opacity: .72;
+  }
+
+  [data-touchline-card-crest-trace-run="true"] {
     animation: none !important;
     opacity: 0 !important;
   }

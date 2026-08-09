@@ -11451,7 +11451,8 @@ export default function ArenaClient({
            They retain the shared perimeter base stroke, but the travelling
            trace is disabled here so Safari never composites a new animated
            layer for every player. */
-        .arena-live-moving-card .arena-live-compact-card-product > .touchline-card-surface [data-touchline-card-neon-trace-run="true"] {
+        .arena-live-moving-card .arena-live-compact-card-product > .touchline-card-surface :is([data-touchline-card-neon-trace-run="true"], [data-touchline-card-crest-trace-run="true"]),
+        .arena-live-coach-card .arena-live-coach-card-art.touchline-card-surface :is([data-touchline-card-neon-trace-run="true"], [data-touchline-card-crest-trace-run="true"]) {
           animation: none !important;
           opacity: 0 !important;
           transition: none !important;

@@ -41,7 +41,9 @@ test("the Club Owner portrait uses an opt-in fixed-green continuous perimeter tr
   assert.doesNotMatch(traceCss, /mask|clip-path|filter:|overflow: hidden|var\(--social-accent\)/);
   assert.match(css, /\.socialAvatarPhoto \{[\s\S]*?overflow: hidden/);
   assert.doesNotMatch(traceCss, /touch-action:\s*none/);
-  assert.match(css, /@keyframes club-owner-portrait-perimeter-trace \{[\s\S]*?9% \{ stroke-dasharray: 14 86; opacity: \.82; \}[\s\S]*?71% \{ stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: \.72; \}[\s\S]*?100% \{ stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: \.28; \}/);
+  assert.match(traceCss, /animation: club-owner-portrait-perimeter-trace 8s cubic-bezier\(\.22,\.74,\.28,1\) infinite/);
+  assert.match(css, /@keyframes club-owner-portrait-perimeter-trace \{[\s\S]*?1\.7% \{ stroke-dasharray: 14 86; opacity: \.82; \}[\s\S]*?13\.3% \{ stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: \.72; \}[\s\S]*?18\.75%, 89% \{ stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: \.28; \}[\s\S]*?100% \{ stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; \}/);
+  assert.doesNotMatch(css, /club-owner-portrait-perimeter-trace 1500ms/);
 });
 
 test("the Club Owner portrait trace keeps hover, reduced-motion and photo boundaries safe", () => {
@@ -56,18 +58,16 @@ test("the Club Owner portrait trace keeps hover, reduced-motion and photo bounda
 
   assert.match(hoverScope, /\.socialAvatar:not\(\[data-club-owner-portrait-trace\]\):hover/);
   assert.match(hoverScope, /data-club-owner-portrait-trace="touchline-logo-green"\]:hover \{[\s\S]*?translateY\(-2px\)/);
-  assert.match(hoverScope, /:hover \[data-club-owner-portrait-neon-trace-run="true"\][\s\S]*?animation: club-owner-portrait-perimeter-trace 1500ms cubic-bezier\(\.22,\.74,\.28,1\) both/);
-  assert.match(css, /:focus-within \[data-club-owner-portrait-neon-trace-run="true"\]/);
   assert.match(css, /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?data-club-owner-portrait-trace="touchline-logo-green"\]:active \{[\s\S]*?translateY\(-2px\)/);
-  assert.match(css, /:active \[data-club-owner-portrait-neon-trace-run="true"\][\s\S]*?animation: club-owner-portrait-perimeter-trace 1500ms cubic-bezier\(\.22,\.74,\.28,1\) both/);
   assert.match(reducedMotion, /\[data-club-owner-portrait-neon-trace-run="true"\] \{ animation: none !important; opacity: 0; \}/);
   assert.match(reducedMotion, /\[data-club-owner-portrait-neon-trace-base="true"\] \{ opacity: \.76; \}/);
   assert.match(reducedMotion, /data-club-owner-portrait-trace="touchline-logo-green"\] \{ transform: none !important; \}/);
   assert.doesNotMatch(reducedMotion, /touch-action:\s*none/);
   // Card/crest touch elevation was delivered in the preceding card-trace
   // checkpoint. Validate that contract here instead of adding a parallel rule.
-  assert.match(globalCss, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]:hover \[data-touchline-card-crest="true"\][\s\S]*?translate3d\(0, -1px, 0\)/);
-  assert.match(globalCss, /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]\[data-neon-active="true"\] \{[\s\S]*?scale\(1\.028\)/);
+  assert.match(globalCss, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]:hover \[data-touchline-card-crest-trace-host="true"\][\s\S]*?translate3d\(0, -1px, 0\)/);
+  assert.match(globalCss, /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]\[data-neon-active="true"\][\s\S]*?scale\(1\.028\)/);
+  assert.match(globalCss, /:active \[data-touchline-card-crest-trace-host="true"\][\s\S]*?translate3d\(0, -1px, 0\)/);
   assert.match(globalCss, /touch-action: manipulation/);
   assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]:hover,[\s\S]*?transform: none !important/);
 });

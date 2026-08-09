@@ -29,7 +29,8 @@ test("the fixture exercises both shared card implementations with canonical loca
   assert.match(fixtureSource, /classificationState: "verified"/);
   assert.match(fixtureSource, /clubAccent=\{club\.accent\}/);
   assert.match(fixtureSource, /layoutOverride=\{TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT\}/);
-  assert.match(fixtureSource, /forceNeonActive/);
+  assert.match(fixtureSource, /completes one calm loop[\s\S]*?restarts automatically/);
+  assert.doesNotMatch(fixtureSource, /forceNeonActive/);
 });
 
 test("the fixture cannot read or mutate runtime data", () => {

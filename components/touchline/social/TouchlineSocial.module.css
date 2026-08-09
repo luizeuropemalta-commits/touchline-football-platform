@@ -128,14 +128,17 @@
   stroke-dasharray: 2 98;
   stroke-dashoffset: 0;
   opacity: 0;
+  animation: club-owner-portrait-perimeter-trace 8s cubic-bezier(.22,.74,.28,1) infinite;
 }
 
 @keyframes club-owner-portrait-perimeter-trace {
   0% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
-  9% { stroke-dasharray: 14 86; opacity: .82; }
-  71% { stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: .72; }
-  88% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .44; }
-  100% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .28; }
+  1.7% { stroke-dasharray: 14 86; opacity: .82; }
+  13.3% { stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: .72; }
+  16.5% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .44; }
+  18.75%, 89% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .28; }
+  94% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: 0; }
+  100% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -155,14 +158,6 @@
     transform: translateY(-2px);
   }
 
-  .identityOnly .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"]:hover [data-club-owner-portrait-neon-trace-run="true"] {
-    animation: club-owner-portrait-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
-  }
-}
-
-.socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"]:focus-within [data-club-owner-portrait-neon-trace-run="true"],
-.socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"][data-club-owner-portrait-trace-active="true"] [data-club-owner-portrait-neon-trace-run="true"] {
-  animation: club-owner-portrait-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
 }
 
 /* Touch press is transient and never relies on Safari's synthetic hover. */
@@ -171,9 +166,6 @@
     transform: translateY(-2px);
   }
 
-  .identityOnly .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"]:active [data-club-owner-portrait-neon-trace-run="true"] {
-    animation: club-owner-portrait-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
-  }
 }
 .socialCardVisual { position: relative; z-index: 2; width: 210px; margin-top: -112px; filter: drop-shadow(0 18px 26px rgba(0,0,0,.5)); }
 .socialName { min-width: 0; padding-top: 18px; }

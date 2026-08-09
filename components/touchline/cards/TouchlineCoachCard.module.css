@@ -9,9 +9,10 @@
   transition: transform .2s ease;
 }
 
-.shell:hover,
-.shell:focus-within {
-  transform: translateY(-3px) scale(1.018);
+.shell:focus-within { transform: translateY(-3px) scale(1.018); }
+
+@media (hover: hover) and (pointer: fine) {
+  .shell:hover { transform: translateY(-3px) scale(1.018); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -122,11 +123,20 @@
   box-shadow: 0 0 10px rgba(255,255,255,.22), 0 3px 12px rgba(0,0,0,.55);
 }
 
-.clubBadge img {
+.clubBadge [data-touchline-card-crest-trace-host="true"] {
+  position: relative;
+  display: grid;
   width: var(--coach-crest-size, 132px);
   height: var(--coach-crest-size, 132px);
   max-width: none;
   margin-top: -1px;
+  place-items: center;
+}
+
+.clubBadge [data-touchline-card-crest-trace-host="true"] > img {
+  width: var(--coach-crest-size, 132px);
+  height: var(--coach-crest-size, 132px);
+  max-width: none;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,.48));
 }
@@ -350,9 +360,10 @@
 
 /* The pitch card can be only 40–88px wide. Do not let the minimum pixel sizes
    from the profile/spotlight card expand its content beyond the official art. */
-.shell[data-coach-card-display="compact"]:hover,
-.shell[data-coach-card-display="compact"]:focus-within {
-  transform: translateY(-1px) scale(1.018);
+.shell[data-coach-card-display="compact"]:focus-within { transform: translateY(-1px) scale(1.018); }
+
+@media (hover: hover) and (pointer: fine) {
+  .shell[data-coach-card-display="compact"]:hover { transform: translateY(-1px) scale(1.018); }
 }
 
 .shell[data-coach-card-display="compact"] .identity span,
@@ -374,10 +385,15 @@
   border-radius: .5px;
 }
 
-.shell[data-coach-card-display="compact"] .clubBadge img {
+.shell[data-coach-card-display="compact"] .clubBadge [data-touchline-card-crest-trace-host="true"] {
   width: min(var(--coach-club-crest-w, 14%), 12px);
-  height: auto;
-  max-height: 12px;
+  height: min(var(--coach-club-crest-w, 14%), 12px);
+}
+
+.shell[data-coach-card-display="compact"] .clubBadge [data-touchline-card-crest-trace-host="true"] > img {
+  width: 100%;
+  height: 100%;
+  max-height: none;
 }
 
 .shell[data-coach-card-display="compact"] .nameplate {

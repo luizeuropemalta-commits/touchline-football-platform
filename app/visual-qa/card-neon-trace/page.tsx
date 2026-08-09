@@ -74,7 +74,6 @@ function StaticPlayerCard() {
       showMatchPoints={false}
       rankingMode="preview"
       showSocialMetrics={false}
-      forceNeonActive
     />
   );
 }
@@ -93,7 +92,6 @@ function StaticCoachCard() {
       displayMode="default"
       optimizeForLiveCompact={false}
       enableInteractiveNeon={false}
-      forceNeonActive
     />
   );
 }
@@ -144,7 +142,7 @@ export default function CardNeonTraceVisualQaPage() {
         aria-label="Fixture safety boundary"
         style={{ width: "min(1180px, 100%)", margin: "32px auto 0", borderRadius: 16, border: "1px solid rgba(163, 230, 53, .24)", background: "rgba(77, 124, 15, .12)", padding: "14px 16px", color: "rgba(236,252,203,.88)", fontSize: 13, lineHeight: 1.55 }}
       >
-        Static fixture only. The travelling line finishes as a soft residual border; reduced-motion users receive the illuminated static border with no animation. Interaction, data subscriptions, layout persistence and provider access are disabled.
+        Static fixture only. The travelling line completes one calm loop, rests as a soft residual border, then restarts automatically; reduced-motion users receive the illuminated static border with no animation. Interaction, data subscriptions, layout persistence and provider access are disabled.
       </aside>
     </main>
   );

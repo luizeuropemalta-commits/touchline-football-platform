@@ -44,16 +44,15 @@ export default function ClubOwnerPortraitNeonVisualQaPage() {
           backgroundSecondary={TOUCHLINE_LOGO_GREEN}
           showCover={false}
           clubOwnerPortraitTrace
-          portraitTraceActive
           profileDetails={[
             { label: "Fixture", value: "Static only" },
-            { label: "Motion", value: "Trace active" },
+            { label: "Motion", value: "Automatic calm loop" },
           ]}
         />
       </section>
 
       <aside style={{ width: "min(1080px, 100%)", margin: "24px auto 0", border: "1px solid rgba(163,255,18,.28)", borderRadius: 16, padding: "14px 16px", color: "rgba(236,252,203,.9)", background: "rgba(77,124,15,.12)", fontSize: 13, lineHeight: 1.55 }}>
-        The moving line is decorative and pointer-safe. Reduced-motion users receive the static green perimeter with no animation; the fixture does not read or persist any product state.
+        The moving line completes a circular pass, rests as a soft residual perimeter, then restarts automatically. It is decorative and pointer-safe; reduced-motion users receive the static green perimeter with no animation. The fixture does not read or persist any product state.
       </aside>
     </main>
   );
