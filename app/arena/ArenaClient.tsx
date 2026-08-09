@@ -60,7 +60,11 @@ import {
   type TouchlineMarketInventorySnapshot,
 } from "@/lib/touchlineArena/market-inventory";
 import { resolveTouchlineMarketCardReadModel } from "@/lib/touchlineArena/market-read-model";
-import { resolvePlayerMarketTier } from "@/lib/touchlineArena/player-market-tiers";
+import {
+  resolveTouchlineMarketContractReadiness,
+  type TouchlineMarketContractReadiness,
+} from "@/lib/touchlineArena/market-contract-readiness";
+import type { TouchlinePublicProjectionStatus } from "@/lib/touchlineArena/public-player-projection";
 import {
   TOUCHLINE_DEFAULT_LOCALE,
   TOUCHLINE_LOCALE_STORAGE_KEY,
@@ -261,6 +265,8 @@ type TeamBuilderSquadPlayer = {
   clubLogoUrl?: string | null;
   marketValue?: string | null;
   marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+  marketValueState?: TouchlinePublicProjectionStatus | null;
+  classificationState?: TouchlinePublicProjectionStatus | null;
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
   cardPriceAuthority?: "active-contract" | null;
@@ -269,7 +275,9 @@ type TeamBuilderSquadPlayer = {
   nationality?: string | null;
   source?: string | null;
   inventoryId?: string | null;
+  inventoryTierKey?: TouchlineCardTierKey | null;
   inventoryPriceTc?: number | null;
+  inventoryPriceTableVersion?: string | null;
   inventorySupplyLimit?: number | null;
   inventorySoldCopies?: number | null;
   inventoryAvailableCopies?: number | null;
@@ -2763,10 +2771,10 @@ function connectBuilderSquadToMarketInventory(
     if (!inventory) return player;
     return {
       ...player,
-      cardTier: inventory.tierKey,
-      cardPriceVersion: inventory.priceTableVersion,
       inventoryId: inventory.inventoryId,
+      inventoryTierKey: inventory.tierKey,
       inventoryPriceTc: inventory.priceTc,
+      inventoryPriceTableVersion: inventory.priceTableVersion,
       inventorySupplyLimit: inventory.supplyLimit,
       inventorySoldCopies: inventory.soldCopies,
       inventoryAvailableCopies: inventory.availableCopies,
@@ -2777,11 +2785,8 @@ function connectBuilderSquadToMarketInventory(
       // existing contract-facing source shape without retaining a nullable
       // snapshot reference in this branch.
       inventorySource: cardReadModel.source === "supabase" ? ("supabase" as const) : null,
-      marketValueEur: inventory.marketValueEur,
       previousMarketValueEur: inventory.previousMarketValueEur,
       marketValueChangeEur: inventory.marketValueChangeEur,
-      marketValueUpdatedAt: inventory.marketValueUpdatedAt,
-      authoritativeMarketValueSource: inventory.marketValueSource,
     };
   });
 }
@@ -2951,24 +2956,6 @@ function builderPlayerRetailPriceTc(player: TeamBuilderSquadPlayer) {
   return economy.priceTc ?? 0;
 }
 
-function builderPlayerCommercialPrice(player: TeamBuilderSquadPlayer, pendingLabel: string) {
-  if (player.officialOffer?.displayPrice) return player.officialOffer.displayPrice;
-  const authoritativeSource = player.authoritativeMarketValueSource?.trim().toLowerCase();
-  const marketValueSource = authoritativeSource === "provider" || authoritativeSource === "verified-cache"
-    ? authoritativeSource
-    : player.marketValueSource;
-  const economy = resolveTouchlineVerifiedPlayerEconomy({
-    marketValue: player.marketValueEur ?? player.marketValue,
-    marketValueSource,
-  });
-  return economy.status !== "resolved"
-    ? pendingLabel
-    : formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
-        tierKey: economy.tierKey,
-        competition: "england",
-      }));
-}
-
 function squadCardPriceLabel(card: ClubOwnerSquadCard, pendingLabel: string) {
   const economy = resolveTouchlineVerifiedPlayerEconomy({
     marketValue: card.marketValue,
@@ -2982,19 +2969,50 @@ function squadCardPriceLabel(card: ClubOwnerSquadCard, pendingLabel: string) {
       }));
 }
 
+function builderPlayerContractReadiness(player: TeamBuilderSquadPlayer): TouchlineMarketContractReadiness {
+  return resolveTouchlineMarketContractReadiness({
+    marketValueState: player.marketValueState,
+    classificationState: player.classificationState,
+    marketValueEur: player.marketValueEur,
+    marketValueUpdatedAt: player.marketValueUpdatedAt,
+    canonicalTierKey: player.cardTier,
+    inventoryId: player.inventoryId,
+    inventoryTierKey: player.inventoryTierKey,
+    transactionPriceTc: player.inventoryPriceTc,
+    transactionPriceTableVersion: player.inventoryPriceTableVersion,
+  });
+}
+
 function builderPlayerHasVerifiedMarketValue(player: TeamBuilderSquadPlayer) {
-  const marketValueEur = player.marketValueEur;
-  const marketValueSource = player.authoritativeMarketValueSource?.trim().toLowerCase();
-  const marketValueUpdatedAt = player.marketValueUpdatedAt;
+  return builderPlayerContractReadiness(player).status === "contract-ready";
+}
 
-  if (!Number.isInteger(marketValueEur) || Number(marketValueEur) < 0) return false;
-  if (!marketValueSource || marketValueSource === "unavailable") return false;
-  if (!marketValueUpdatedAt || !Number.isFinite(Date.parse(marketValueUpdatedAt))) return false;
+function builderPlayerNominalPriceLabel(
+  player: TeamBuilderSquadPlayer,
+  pendingLabel: string,
+) {
+  const readiness = builderPlayerContractReadiness(player);
+  return readiness.status === "contract-ready"
+    ? `${readiness.nominalPriceTc} TC`
+    : pendingLabel;
+}
 
-  const authoritativeTier = resolvePlayerMarketTier(Number(marketValueEur));
-  return authoritativeTier.status === "resolved"
-    && player.cardTier === authoritativeTier.tier.id
-    && player.inventoryPriceTc === authoritativeTier.tier.touchCreditPrice;
+function builderPlayerTransactionPriceLabel(
+  player: TeamBuilderSquadPlayer,
+  pendingLabel: string,
+) {
+  const readiness = builderPlayerContractReadiness(player);
+  return readiness.status === "contract-ready"
+    ? `${readiness.transactionPriceTc} TC`
+    : pendingLabel;
+}
+
+function builderPlayerMarketAvailabilityLabel(
+  readiness: TouchlineMarketContractReadiness,
+  pendingLabel: string,
+  unavailableLabel: string,
+) {
+  return readiness.status === "pending-value" ? pendingLabel : unavailableLabel;
 }
 
 function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEliteExactPlayer {
@@ -3799,9 +3817,11 @@ export default function ArenaClient({
   const requiresAuthoritativeMarketInventory = marketInventoryMode === "checking"
     || marketInventoryMode === "authoritative"
     || marketInventoryMode === "unavailable";
+  const selectedBuilderContractReadiness = selectedBuilderPlayer
+    ? builderPlayerContractReadiness(selectedBuilderPlayer)
+    : null;
   const selectedBuilderInventoryUnavailable = Boolean(
-    !selectedBuilderPlayer?.inventoryId
-    || !builderPlayerHasVerifiedMarketValue(selectedBuilderPlayer)
+    selectedBuilderContractReadiness?.status !== "contract-ready"
     || touchlineMarketPositionBucket(selectedBuilderPlayer?.position, selectedBuilderPlayer?.role) === "outfield",
   );
   const isMarketDataRefreshing = marketInventoryMode === "checking";
@@ -3841,7 +3861,7 @@ export default function ArenaClient({
         id: player.inventoryId || contractId,
         cardTier: player.cardTier,
         authoritativeUnitPriceTc: player.inventoryPriceTc,
-        authoritativePriceTableVersion: player.inventoryId ? player.cardPriceVersion : undefined,
+        authoritativePriceTableVersion: player.inventoryId ? player.inventoryPriceTableVersion : undefined,
         alreadyOwned: player.inventoryAlreadyOwned ?? alreadyOwned,
         availableCopies: player.inventoryAvailableCopies
           ?? (TOUCHLINE_MARKET_CARD_SUPPLY_PER_PLAYER - (alreadyOwned ? 1 : 0)),
@@ -3858,6 +3878,13 @@ export default function ArenaClient({
   });
   const t = useCallback((key: Parameters<typeof touchLineT>[1]) => touchLineT(siteLanguage, key), [siteLanguage]);
   const marketUi = useMemo(() => getTouchLineMarketCopy(siteLanguage), [siteLanguage]);
+  const selectedBuilderMarketAvailabilityLabel = selectedBuilderContractReadiness
+    ? builderPlayerMarketAvailabilityLabel(
+        selectedBuilderContractReadiness,
+        marketUi.marketDataPending,
+        marketUi.marketContractUnavailable,
+      )
+    : marketUi.marketContractUnavailable;
   const builderStatus = builderLoadState.status === "loading"
     ? `${marketUi.updatingClub}: ${selectedBuilderClub.name}`
     : builderLoadState.status === "ready"
@@ -6132,8 +6159,13 @@ export default function ArenaClient({
       || benchPlayers.some((bench) => matchesBuilderBenchPlayer(bench, builderPlayer))
       || builderPlayer.inventoryAlreadyOwned === true;
 
-    if (!builderPlayer.inventoryId || !builderPlayerHasVerifiedMarketValue(builderPlayer)) {
-      setSaveStatus(t("marketValuePending"));
+    const contractReadiness = builderPlayerContractReadiness(builderPlayer);
+    if (contractReadiness.status !== "contract-ready") {
+      setSaveStatus(builderPlayerMarketAvailabilityLabel(
+        contractReadiness,
+        marketUi.marketDataPending,
+        marketUi.marketContractUnavailable,
+      ));
       return;
     }
 
@@ -7863,7 +7895,7 @@ export default function ArenaClient({
                       {marketCartPlayers.length ? marketCartPlayers.map((player) => (
                         <button key={builderPlayerSquadContractId(player)} type="button" onClick={() => toggleBuilderPlayerInCart(player)} title={t("removeFromCart")}>
                           <span>{player.shortName}</span>
-                          <strong>{builderPlayerCommercialPrice(player, t("marketValuePending"))}</strong>
+                          <strong>{builderPlayerTransactionPriceLabel(player, marketUi.marketContractUnavailable)}</strong>
                           <X aria-hidden="true" />
                         </button>
                       )) : (
@@ -7905,7 +7937,7 @@ export default function ArenaClient({
                           {marketCartPlayers.map((player) => (
                             <span key={builderPlayerSquadContractId(player)}>
                               <b>{player.shortName}</b>
-                              <strong>{builderPlayerCommercialPrice(player, t("marketValuePending"))}</strong>
+                              <strong>{builderPlayerTransactionPriceLabel(player, marketUi.marketContractUnavailable)}</strong>
                             </span>
                           ))}
                         </div>
@@ -8114,10 +8146,15 @@ export default function ArenaClient({
                           const positionLimit = TOUCHLINE_MARKET_POSITION_LIMITS[positionBucket];
                           const positionCount = marketPositionCounts[positionBucket] ?? 0;
                           const isPositionLimitReached = !isInCart && !isInField && !isInSquad && positionCount >= positionLimit;
+                          const contractReadiness = builderPlayerContractReadiness(player);
                           const isInventoryUnavailable = Boolean(
                             positionBucket === "outfield"
-                            || !player.inventoryId
-                            || !builderPlayerHasVerifiedMarketValue(player),
+                            || contractReadiness.status !== "contract-ready",
+                          );
+                          const marketAvailabilityLabel = builderPlayerMarketAvailabilityLabel(
+                            contractReadiness,
+                            marketUi.marketDataPending,
+                            marketUi.marketContractUnavailable,
                           );
                           const replacementAlreadyStaged = isContractRosterFull
                             && marketCartPlayers.length >= 1
@@ -8187,7 +8224,7 @@ export default function ArenaClient({
                                             : t("addToCart")}
                                 </span>
                                 {!isInField && !isInSquad && !isInCart && !isSoldOut ? (
-                                  <strong>{isInventoryUnavailable ? t("marketValuePending") : player.officialOffer?.displayPrice ?? t("marketValuePending")}</strong>
+                                  <strong>{isInventoryUnavailable ? marketAvailabilityLabel : builderPlayerNominalPriceLabel(player, marketAvailabilityLabel)}</strong>
                                 ) : null}
                               </button>
                             </article>
@@ -8210,7 +8247,7 @@ export default function ArenaClient({
                             <small>
                               {selectedBuilderPlayer.clubName} / {selectedBuilderPositionLabel} / {arenaShirtNumberLabel(selectedBuilderPlayer.shirtNumber)} / {displayBuilderMarketValue(selectedBuilderPlayer.marketValue, t("marketValuePending"))}
                             </small>
-                            <b>{selectedBuilderInventoryUnavailable ? t("marketValuePending") : selectedBuilderPlayer.officialOffer?.displayPrice ?? t("marketValuePending")}</b>
+                            <b>{selectedBuilderInventoryUnavailable ? selectedBuilderMarketAvailabilityLabel : builderPlayerNominalPriceLabel(selectedBuilderPlayer, selectedBuilderMarketAvailabilityLabel)}</b>
                           </div>
                           <div className="team-builder-market-ledger" aria-label={marketUi.ariaMarketCardAccounting}>
                             <span>
@@ -8250,7 +8287,7 @@ export default function ArenaClient({
                             <span>{marketUi.oneSeasonContract}</span>
                             <strong>
                               {selectedBuilderInventoryUnavailable
-                                ? t("marketValuePending")
+                                ? selectedBuilderMarketAvailabilityLabel
                                 : touchlineCardTierName(selectedBuilderPlayer.cardTier, siteLanguage)}
                             </strong>
                           </div>
@@ -8269,12 +8306,19 @@ export default function ArenaClient({
                             </span>
                             <span>
                               <small>{marketUi.touchlinePrice}</small>
-                              <strong>{selectedBuilderInventoryUnavailable ? t("marketValuePending") : selectedBuilderPlayer.officialOffer?.displayPrice ?? t("marketValuePending")}</strong>
+                              <strong>{selectedBuilderInventoryUnavailable ? selectedBuilderMarketAvailabilityLabel : builderPlayerNominalPriceLabel(selectedBuilderPlayer, selectedBuilderMarketAvailabilityLabel)}</strong>
                             </span>
                             <span>
                               <small>{marketUi.cardTier}</small>
-                              <strong>{selectedBuilderInventoryUnavailable ? t("marketValuePending") : touchlineCardTierName(selectedBuilderPlayer.cardTier, siteLanguage)}</strong>
+                              <strong>{selectedBuilderInventoryUnavailable ? selectedBuilderMarketAvailabilityLabel : touchlineCardTierName(selectedBuilderPlayer.cardTier, siteLanguage)}</strong>
                             </span>
+                            {selectedBuilderContractReadiness?.status === "contract-ready"
+                              && selectedBuilderContractReadiness.transactionPriceTc !== selectedBuilderContractReadiness.nominalPriceTc ? (
+                                <span>
+                                  <small>{marketUi.currentContractPrice}</small>
+                                  <strong>{selectedBuilderContractReadiness.transactionPriceTc} TC</strong>
+                                </span>
+                              ) : null}
                             <span>
                               <small>{marketUi.marketChange}</small>
                               <strong>{displayMarketChange(selectedBuilderPlayer.marketValueChangeEur, siteLanguage, t("marketValuePending"))}</strong>
@@ -8317,12 +8361,12 @@ export default function ArenaClient({
                                 : selectedBuilderPositionIsFull
                                   ? (siteLanguage === "pt-BR" ? `Substituir ${selectedBuilderPositionLabel.split(" / ")[0].toLowerCase()}` : `Replace ${selectedBuilderPositionLabel.split(" / ")[0].toLowerCase()}`)
                                 : selectedBuilderInventoryUnavailable
-                                  ? t("marketValuePending")
-                                : selectedBuilderIsSoldOut
+                                  ? selectedBuilderMarketAvailabilityLabel
+                                  : selectedBuilderIsSoldOut
                                   ? t("soldOut")
                                 : isContractRosterFull
                                   ? t("releaseContractFirst")
-                                  : `${t("addToCart")} · ${builderPlayerCommercialPrice(selectedBuilderPlayer, t("marketValuePending"))}`}
+                                  : `${t("addToCart")} · ${builderPlayerNominalPriceLabel(selectedBuilderPlayer, selectedBuilderMarketAvailabilityLabel)}`}
                           </button>
                           <div className="team-builder-checkout-trust"><Check aria-hidden="true" /> {marketUi.secureCheckout}</div>
                         </>
