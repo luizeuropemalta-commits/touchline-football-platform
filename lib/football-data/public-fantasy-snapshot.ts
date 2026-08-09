@@ -20,6 +20,11 @@ type PersistedFantasyFixtureRow = {
   last_synced_at?: unknown;
 };
 
+export type PersistedFantasyFixtureFeedSnapshot = Readonly<{
+  feed: TouchlineFantasyFixtureFeed;
+  capturedAt: string;
+}>;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -38,6 +43,12 @@ function safeTimestamp(value: unknown) {
   return typeof value === "string" && Number.isFinite(Date.parse(value))
     ? value
     : new Date(0).toISOString();
+}
+
+function persistedTimestamp(value: unknown) {
+  return typeof value === "string" && Number.isFinite(Date.parse(value))
+    ? value
+    : null;
 }
 
 function normalizePersistedRow(row: PersistedFantasyFixtureRow): TouchlineFantasyFixtureFeed | null {
@@ -88,4 +99,35 @@ export async function readPublicFantasyFixtureSnapshots(options: {
   return data
     .map((row) => normalizePersistedRow(row as PersistedFantasyFixtureRow))
     .filter((feed): feed is TouchlineFantasyFixtureFeed => Boolean(feed));
+}
+
+/**
+ * Reads one already-persisted fixture feed. This is an internal server read
+ * model: callers must still map it through an explicit public DTO before
+ * serialising it to a browser.
+ */
+export async function readPersistedFantasyFixtureFeed(
+  fixtureId: string,
+): Promise<PersistedFantasyFixtureFeedSnapshot | null> {
+  const normalizedFixtureId = fixtureId.trim();
+  if (!/^[0-9]{1,20}$/.test(normalizedFixtureId)) return null;
+
+  const supabase = createAdminClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("football_fantasy_fixture_feeds")
+    .select("provider,provider_fixture_id,fixture_payload,lineups_payload,formations_payload,sidelined_payload,events_payload,last_synced_at")
+    .eq("provider", "sportmonks")
+    .eq("provider_fixture_id", normalizedFixtureId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  const row = data as PersistedFantasyFixtureRow;
+  const capturedAt = persistedTimestamp(row.last_synced_at);
+  if (!capturedAt || String(row.provider_fixture_id ?? "").trim() !== normalizedFixtureId) return null;
+  const feed = normalizePersistedRow(row);
+  if (!feed) return null;
+
+  return { feed, capturedAt };
 }

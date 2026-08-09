@@ -1,4 +1,4 @@
-import type { TouchlineFantasyLineupMember } from "./types";
+import type { TouchlinePublicFantasyLineupMember } from "./public-fantasy-fixture";
 import type { TouchlineCardTierKey } from "../touchlineArena/card-rules";
 
 export type ArenaLineupRole = "forward" | "midfielder" | "defender" | "goalkeeper";
@@ -144,7 +144,10 @@ export function findApprovedArenaAsset(playerName: string) {
   return entry?.[1];
 }
 
-export function buildArenaPlayersFromFantasyLineup(lineups: TouchlineFantasyLineupMember[]) {
+export function buildArenaPlayersFromFantasyLineup(lineups: readonly Pick<
+  TouchlinePublicFantasyLineupMember,
+  "playerId" | "playerName" | "position" | "isStarter"
+>[]) {
   const starters = lineups.filter((player) => player.isStarter);
   const sourcePlayers = (starters.length >= 11 ? starters : lineups).slice(0, 11);
   const roleCounts: Record<ArenaLineupRole, number> = {

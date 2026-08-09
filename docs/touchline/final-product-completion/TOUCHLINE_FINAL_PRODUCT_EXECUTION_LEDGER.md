@@ -355,3 +355,31 @@ Preview, production checkpoint, or a dirty worktree.
   named translator/reviewer and route-by-route visual/persistence evidence;
   English/Portuguese also need their remaining whole-site metadata/PWA/auth/
   private-surface audit evidence.
+
+## 2026-08-09 public persisted-read boundary — FIXTURE SLICE PROPOSED
+
+- Evidence: the authenticated fixture GET still instantiates the provider and
+  the owner POST persists it. Its client transport inherits provider-labelled
+  fields despite raw media removal.
+- Local proposal: exact persisted-feed reader + explicit public allowlist;
+  named unavailable on absence; no provider/write branch; POST `405`; Arena
+  caller consumes neutral fields and drops `persist=0`.
+- Risk/gate: this does not create canonical matchweek/version/coverage state,
+  does not clear Arena account-state persistence, and retains the separate
+  least-privilege DB reader/isolated Preview requirements. No remote work is
+  authorised by this proposal.
+
+### FIXTURE SLICE IMPLEMENTED AND LOCALLY VALIDATED
+
+- Added exact persisted-feed lookup and explicit public DTO allowlist. Fixture
+  GET is now persisted-read-only and named-unavailable on absence; POST is
+  `405`. It no longer imports/uses provider, fetch or persistence functions.
+- The public serialised feed excludes provider-labelled metadata, raw payloads,
+  external URLs, remote media and media-policy data. Arena consumes neutral
+  fixture/team IDs and no longer sends `persist=0`.
+- Evidence: 27/27 focused Node tests passed; `pnpm typecheck`, focused ESLint
+  and `git diff --check` passed. The linter emitted only its existing large
+  `ArenaClient` Babel advisory. No remote action occurred.
+- Remaining blockers: stored Club Hub feed transport, livescores/schedule,
+  rumours/player profiles, immutable shared projections/canonical round,
+  durable match authority, six human locales, Preview and rendered QA.

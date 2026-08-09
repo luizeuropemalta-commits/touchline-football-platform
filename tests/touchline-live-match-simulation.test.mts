@@ -50,7 +50,7 @@ test("Live builds both elevens only from the clubs selected for the fixture", ()
   assert.match(arenaClientSource, /fixtureStarterPlayersForClub\(fixtureLineups, awaySquad, lineupAwayClub\)/);
   assert.match(
     arenaClientSource,
-    /\/api\/football-data\/fantasy\/fixture\?fixtureId=\$\{encodeURIComponent\(providerFixtureId\)\}&persist=0/,
+    /\/api\/football-data\/fantasy\/fixture\?fixtureId=\$\{encodeURIComponent\(providerFixtureId\)\}/,
   );
   assert.match(
     arenaClientSource,

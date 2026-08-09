@@ -11,7 +11,7 @@ const liveScoresRoute = await readFile(
   "utf8",
 );
 
-test("fixture GET authenticates before loading a provider fixture and never persists", () => {
+test("fixture GET authenticates before reading a persisted fixture and never reaches a provider", () => {
   const getHandler = fixtureRoute.slice(
     fixtureRoute.indexOf("export async function GET"),
     fixtureRoute.indexOf("export async function POST"),
@@ -20,24 +20,19 @@ test("fixture GET authenticates before loading a provider fixture and never pers
   assert.match(getHandler, /requireAuthenticatedOrLocalTouchlineEditor\(request\)/);
   assert.ok(
     getHandler.indexOf("requireAuthenticatedOrLocalTouchlineEditor(request)") <
-      getHandler.indexOf("loadFixtureFeed(request)"),
+      getHandler.indexOf("readPersistedFantasyFixtureFeed(fixtureId)"),
   );
-  assert.doesNotMatch(getHandler, /persistFantasyFixtureFeed/);
-  assert.match(getHandler, /reason: "read_only_request"/);
+  assert.match(getHandler, /canonical-fixture-feed-unavailable/);
+  assert.match(getHandler, /toPublicFantasyFixtureFeed/);
+  assert.doesNotMatch(getHandler, /createFootballDataProvider|persistFantasyFixtureFeed|getFixtureFantasyFeed/);
 });
 
-test("fixture persistence is restricted to the owner-authorized POST handler", () => {
+test("fixture POST is fail-closed and cannot be an ingestion path", () => {
   const postHandler = fixtureRoute.slice(fixtureRoute.indexOf("export async function POST"));
 
-  assert.match(postHandler, /requireOwnerOrLocalTouchlineEditor\(request\)/);
-  assert.ok(
-    postHandler.indexOf("requireOwnerOrLocalTouchlineEditor(request)") <
-      postHandler.indexOf("loadFixtureFeed(request)"),
-  );
-  assert.ok(
-    postHandler.indexOf("requireOwnerOrLocalTouchlineEditor(request)") <
-      postHandler.indexOf("persistFantasyFixtureFeed(loaded.data)"),
-  );
+  assert.match(postHandler, /status: 405/);
+  assert.match(postHandler, /Allow: "GET"/);
+  assert.doesNotMatch(postHandler, /persistFantasyFixtureFeed|createFootballDataProvider|readPersistedFantasyFixtureFeed/);
 });
 
 test("public livescore reads stop at sanitized snapshots before provider access", () => {

@@ -7,7 +7,6 @@ import { publicFootballDataFailure } from "../lib/football-data/public-error.ts"
 const publicProviderRoutes = [
   "../app/api/football-data/fantasy/events/route.ts",
   "../app/api/football-data/fantasy/capabilities/route.ts",
-  "../app/api/football-data/fantasy/fixture/route.ts",
   "../app/api/football-data/fantasy/livescores/route.ts",
 ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
 const rumoursRoute = readFileSync(new URL("../app/api/touchline-arena/rumours/route.ts", import.meta.url), "utf8");
@@ -43,4 +42,15 @@ test("the public squad reader fails closed when its canonical snapshot is unavai
   assert.match(squadRoute, /canonical-squad-unavailable/);
   assert.match(squadRoute, /No coherent persisted squad snapshot is available/);
   assert.doesNotMatch(squadRoute, /createFootballDataProvider|persistSquadSnapshot|publicFootballDataFailure/);
+});
+
+test("the public fixture reader fails closed when its canonical feed is unavailable", () => {
+  const fixtureRoute = readFileSync(
+    new URL("../app/api/football-data/fantasy/fixture/route.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(fixtureRoute, /canonical-fixture-feed-unavailable/);
+  assert.match(fixtureRoute, /No coherent persisted fixture feed is available/);
+  assert.doesNotMatch(fixtureRoute, /createFootballDataProvider|persistFantasyFixtureFeed|publicFootballDataFailure/);
 });

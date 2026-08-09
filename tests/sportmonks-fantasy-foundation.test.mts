@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildArenaPlayersFromFantasyLineup } from "../lib/football-data/arena-lineup.ts";
 import { sanitizeFantasyFixtureFeedForClient } from "../lib/football-data/fantasy-sanitize.ts";
+import { toPublicFantasyFixtureFeed } from "../lib/football-data/public-fantasy-fixture.ts";
 import type { TouchlineFantasyFixtureFeed, TouchlineFantasyLineupMember } from "../lib/football-data/types.ts";
 
 function lineupPlayer(index: number, name: string, positionName: string): TouchlineFantasyLineupMember {
@@ -120,5 +121,40 @@ describe("SportMonks fantasy foundation", () => {
     assert.equal(sanitized.events[0].raw, undefined);
     assert.equal(serialized.includes("cdn.sportmonks.com"), false);
     assert.equal(serialized.includes("must-not-leak"), false);
+  });
+
+  it("uses an explicit provider-neutral allowlist for persisted fixture transport", () => {
+    const feed: TouchlineFantasyFixtureFeed = {
+      fixture: {
+        id: "sportmonks:fixture-1",
+        providerId: "fixture-1",
+        provider: "sportmonks",
+        name: "Home vs Away",
+        homeTeam: {
+          id: "sportmonks:home", providerId: "home", provider: "sportmonks", name: "Home",
+          logoUrl: "https://cdn.sportmonks.com/official-logo.png",
+          source: { provider: "sportmonks", providerId: "home", externalUrl: "https://provider.invalid/home" },
+        },
+        source: { provider: "sportmonks", providerId: "fixture-1", externalUrl: "https://provider.invalid/fixture" },
+      },
+      lineups: [lineupPlayer(1, "Aaron Ramsdale", "Goalkeeper")],
+      formations: [],
+      sidelined: [],
+      events: [],
+      fetchedAt: "2026-08-09T10:00:00.000Z",
+      mediaPolicy: { officialMediaExposed: false, note: "Internal-only policy" },
+    };
+
+    const publicFeed = toPublicFantasyFixtureFeed(feed);
+    assert.ok(publicFeed);
+    const serialized = JSON.stringify(publicFeed);
+    assert.equal(publicFeed?.fixture.id, "fixture-1");
+    assert.equal(publicFeed?.fixture.homeTeam?.id, "home");
+    assert.equal(serialized.includes("sportmonks"), false);
+    assert.equal(serialized.includes("providerId"), false);
+    assert.equal(serialized.includes("externalUrl"), false);
+    assert.equal(serialized.includes("official-logo"), false);
+    assert.equal(serialized.includes("mediaPolicy"), false);
+    assert.equal(serialized.includes("raw"), false);
   });
 });

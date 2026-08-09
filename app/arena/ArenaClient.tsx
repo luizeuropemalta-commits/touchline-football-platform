@@ -19,7 +19,11 @@ import {
   normalizeOfficialShirtNumber,
   type ArenaLineupPlayer,
 } from "@/lib/football-data/arena-lineup";
-import type { TouchlineFantasyFixtureFeed, TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
+import type { TouchlineFixture } from "@/lib/football-data/types";
+import type {
+  TouchlinePublicFantasyFixtureFeed,
+  TouchlinePublicFantasyLineupMember,
+} from "@/lib/football-data/public-fantasy-fixture";
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
@@ -1671,7 +1675,7 @@ function normalizeLiveClubSquad(
 }
 
 function fixtureStarterPlayersForClub(
-  lineups: TouchlineFantasyLineupMember[],
+  lineups: TouchlinePublicFantasyLineupMember[],
   squad: TeamBuilderSquadPlayer[],
   club: PremierClubVisual,
 ) {
@@ -4466,12 +4470,12 @@ export default function ArenaClient({
     queueMicrotask(() => setFixtureStatus(t("loadingSource")));
 
     touchlineJsonRequest<
-      | { ok: true; data: TouchlineFantasyFixtureFeed }
+      | { ok: true; data: TouchlinePublicFantasyFixtureFeed }
       | { ok?: false; error?: string }
     >(`/api/football-data/fantasy/fixture?fixtureId=${encodeURIComponent(fixtureId)}`)
       .then(({ ok, payload }) => {
         const fixturePayload = payload as
-          | { ok: true; data: TouchlineFantasyFixtureFeed }
+          | { ok: true; data: TouchlinePublicFantasyFixtureFeed }
           | { ok?: false; error?: string };
 
         if (!ok || fixturePayload.ok !== true) {
@@ -4875,18 +4879,18 @@ export default function ArenaClient({
 
     async function loadFixtureLineups() {
       const providerFixtureId = String(lineupFixture.providerId ?? "").trim();
-      if (!/^[0-9]{1,20}$/.test(providerFixtureId)) return [] as TouchlineFantasyLineupMember[];
+      if (!/^[0-9]{1,20}$/.test(providerFixtureId)) return [] as TouchlinePublicFantasyLineupMember[];
       try {
         const { ok, payload } = await touchlineJsonRequest<
-          | { ok: true; data: TouchlineFantasyFixtureFeed }
+          | { ok: true; data: TouchlinePublicFantasyFixtureFeed }
           | { ok: false; error?: string }
-        >(`/api/football-data/fantasy/fixture?fixtureId=${encodeURIComponent(providerFixtureId)}&persist=0`, {
+        >(`/api/football-data/fantasy/fixture?fixtureId=${encodeURIComponent(providerFixtureId)}`, {
           timeoutMs: ARENA_LIVE_PROVIDER_REQUEST_TIMEOUT_MS,
           signal: requestController.signal,
         });
         if (!ok || payload.ok === false) return [];
-        const feedHomeTeamId = String(payload.data.fixture.homeTeam?.providerId ?? "").trim();
-        const feedAwayTeamId = String(payload.data.fixture.awayTeam?.providerId ?? "").trim();
+        const feedHomeTeamId = String(payload.data.fixture.homeTeam?.id ?? "").trim();
+        const feedAwayTeamId = String(payload.data.fixture.awayTeam?.id ?? "").trim();
         if (feedHomeTeamId !== lineupHomeClub.teamId || feedAwayTeamId !== lineupAwayClub.teamId) return [];
         return payload.data.lineups;
       } catch {
@@ -4898,7 +4902,7 @@ export default function ArenaClient({
     async function applyCompleteSquadSnapshot(
       homeSquad: TeamBuilderSquadPlayer[],
       awaySquad: TeamBuilderSquadPlayer[],
-      fixtureLineups: TouchlineFantasyLineupMember[],
+      fixtureLineups: TouchlinePublicFantasyLineupMember[],
       priority: number,
     ) {
       if (
