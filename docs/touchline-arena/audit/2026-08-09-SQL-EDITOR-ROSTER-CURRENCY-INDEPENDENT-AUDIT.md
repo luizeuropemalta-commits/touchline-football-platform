@@ -3,7 +3,7 @@
 **Audit date:** 2026-08-09  
 **Scope:** TouchLine production project metadata, preserved local artifacts,
 Git provenance, and the canonical task transcript.  
-**Status:** `INCONCLUSIVE — HOLD CONTINUES`  
+**Status:** `OWNER-ATTESTED AUTHORIZED LIVERPOOL ACTIVITY — DATABASE HOLD REMAINS`
 **Remote action during this audit:** dashboard metadata/log/history views only;
 no SQL or direct table read was initiated, and no database, sync, migration,
 export, Preview, or deployment action was performed.
@@ -17,9 +17,13 @@ remote data change.
 
 ## Finding
 
-The potential direct SQL execution cannot be confirmed or disproven from the
-available evidence. The remote migration baseline is also not established.
-Accordingly, the canonical HOLD remains in force.
+Luiz Lopes has attested that the activity in the investigated 2026-08-07
+window was the team's authorized Liverpool change, not an unknown execution.
+That resolves the authorization classification. The prior technical evidence
+still cannot identify the exact statement, commit receipt, or row count, and
+the remote migration/schema baseline is not established. The active HOLD now
+applies to new database, sync, import, and write work—not to an alleged
+unknown Liverpool action.
 
 ## Evidence
 
@@ -39,6 +43,19 @@ remote database:
 
 This is evidence that a write-capable query was visible. It is not evidence
 that its transaction committed.
+
+### 1a. Owner attestation — superseding authorization classification
+
+Luiz Lopes, TouchLine owner, has explicitly confirmed that the
+2026-08-07 activity in this window was an authorized Liverpool change made by
+the team. The execution is therefore no longer classified as unknown or
+unauthorized.
+
+This attestation does **not** invent a query receipt, a row count, or a remote
+migration record. It changes the incident classification only: preserve the
+technical provenance gap for later governance, but do not use it to block the
+future complete 20-club reconciliation or to justify a manual compensating
+patch.
 
 ### 2. Independent Supabase dashboard metadata inspection
 
@@ -103,47 +120,60 @@ and the Admin route’s history insertion path.
 
 ## Cause and risk assessment
 
-**Immediate cause:** a saved, write-capable SQL Editor query was displayed in
-a production project without an auditable execution receipt. Its current view
-cannot distinguish a prior execution from an unexecuted saved query.
+**Immediate classification (updated):** the owner has resolved the question
+of authorization: the Liverpool activity was an approved team action. The
+saved SQL Editor query still lacks an auditable execution receipt, so its
+exact technical outcome remains unverified rather than unknown/unauthorized.
 
 **Systemic cause:** local SQL artifacts, production schema changes, and
 platform migration/audit records are not reconciled into one immutable
 execution ledger. Direct SQL lacks a row-history trigger for this inventory
 surface, and there was no independently constrained audit identity available.
 
-**Risk:** do not issue a compensating update. Doing so could convert an
-unconfirmed incident into a real mutation, obscure timestamps, and make a
-future forensic comparison less reliable. Remote schema drift also makes it
-unsafe to assume that local migrations describe production.
+**Residual risk:** do not issue a compensating update. It could create a new
+mutation, obscure timestamps, and make a future reconciliation less reliable.
+Remote schema drift also makes it unsafe to assume that local migrations
+describe production. These are reconciliation-control risks, not a finding of
+an unauthorized Liverpool write.
 
-## Minimum closure protocol — proposal only
+## Minimum reconciliation-entry protocol — proposal only
 
 No item below is authorized or executed by this audit.
 
-1. Obtain an independent Supabase control-plane record for
-   `2026-08-07 21:12–21:40 UTC`: SQL Editor/query history or audit-log export
-   with query text/hash, actor, start/end time, result, transaction
-   commit/rollback state, and affected-row count. Store it as a new dated,
-   hashed evidence artifact; do not overwrite prior reports.
-2. Classify every remotely visible migration/schema change against the current
-   source baseline and the historical `014`, temporary `051`, and untracked
-   `052`/`053` artifacts. Do not fabricate migration-history rows to make the
-   UI appear complete.
-3. If control-plane evidence is insufficient, the HOLD remains. Only after a
-   separate authorization may an independently provisioned, least-privilege
-   Postgres audit identity be used for a narrow corroboration. It must be
-   non-superuser, have no DML/DDL privilege, enforce
-   `default_transaction_read_only=on`, and prove that setting at session
-   start. Never substitute `service_role`, a browser token, or the SQL Editor.
-4. That later read-only audit must fingerprint only the required schema,
-   migration metadata, grants/triggers, currency invariants, and roster
-   membership invariants. It must produce a new immutable report before any
-   roster export, sync, manual patch, or value import is reconsidered.
+1. Obtain a new explicit authorization for a constrained, verifiable
+   **read-only snapshot**. Provision an independent non-superuser identity
+   with no DML/DDL privilege and `default_transaction_read_only=on`; never
+   substitute `service_role`, a browser token, or SQL Editor access.
+2. Capture one immutable `touchline-canonical-roster-export-v1` for the 20
+   configured Sportmonks clubs. It must include canonical club/player UUIDs,
+   numeric provider IDs, competition `8`, active memberships,
+   `source_updated_at`, source revision, and run provenance. Separately
+   fingerprint the relevant schema, grants, triggers, and migration metadata;
+   classify any drift rather than fabricating history rows.
+3. Take a two-pass revision-fenced snapshot and write it only as a new,
+   dated, hashed artifact. Preserve all DB-only roster records in a separate
+   report-only `QUARANTINED/PENDING` list; do not inactivate, delete, or value
+   them.
+4. Run the existing reconciliation **offline** against that saved snapshot and
+   the owner-approved value staging. The dry-run must produce per-club
+   matched/review/unmatched/duplicate counts and a proposed delta only. It
+   must not update values, tiers, cards, contracts, memberships, prices, or
+   offers.
+5. Accept the dry-run only if all 20 clubs are covered, every proposed value
+   has a unique UUID/provider-ID/current-club/active-membership match, extras
+   remain preserved, and the schema/migration baseline has no unexplained
+   material drift. A rollback plan and a separate explicit write decision are
+   required after that; this proposal grants neither.
+
+The earlier request for SQL Editor/query-history evidence remains useful as a
+governance archive, but is no longer an authorization blocker because of the
+owner attestation. If it remains unavailable, record that fact without
+reclassifying the authorized Liverpool activity as unknown.
 
 ## Decision
 
-`HOLD_CONTINUES`. The evidence is insufficient to prove a safe remote state
-or an unknown execution outcome. No manual Bruno/Arsenal correction,
-compensating Liverpool update, database connection, sync, export, migration,
-or deployment is permitted by this document.
+`OWNER_ATTESTED_LIVERPOOL_ACTIVITY; DATABASE_HOLD_REMAINS`. The unknown-
+execution classification is resolved by the owner. No manual Bruno/Arsenal
+correction, compensating Liverpool update, database connection, sync, export,
+migration, or deployment is permitted until the separate snapshot/dry-run
+gate is explicitly authorized and passes.

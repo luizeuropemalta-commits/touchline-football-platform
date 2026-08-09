@@ -1024,3 +1024,26 @@ Preview, production checkpoint, or a dirty worktree.
   remains. A separately authorized, least-privilege read-only schema audit is
   only a later corroboration path; it cannot be replaced by `service_role` or
   SQL Editor access.
+
+## 2026-08-09 owner attestation — Liverpool activity authorized / snapshot gate remains
+
+- **Authorization classification resolved:** Luiz Lopes confirmed that the
+  activity in the investigated 2026-08-07 window was the team's authorized
+  Liverpool change. It is no longer classified as an unknown or unauthorized
+  execution. The prior lack of query receipt/row count remains a provenance
+  gap, not a reason to issue a compensating patch or block reconciliation
+  preparation.
+- **Active HOLD narrowed, not lifted:** no database connection, sync, import,
+  migration, export, or write is authorized now. The remaining gate is a
+  verifiable remote schema/roster baseline followed by an offline dry-run;
+  the owner attestation is not permission to write.
+- **Minimum future sequence:** after a separate read-only authorization, use
+  a least-privilege identity with enforced `default_transaction_read_only=on`
+  to capture a two-pass, revision-fenced 20-club canonical roster snapshot
+  plus schema/migration fingerprint. Archive it as a new dated/hash-verified
+  artifact, produce report-only `QUARANTINED/PENDING` records for DB-only
+  extras, then run the owner-value reconciliation offline. The dry-run must
+  validate coverage, UUID/provider/current-club/active-membership identity,
+  duplicates, drift, and rollback before any later explicit write decision.
+- **Updated evidence/proposal:**
+  `docs/touchline-arena/audit/2026-08-09-SQL-EDITOR-ROSTER-CURRENCY-INDEPENDENT-AUDIT.md`.
