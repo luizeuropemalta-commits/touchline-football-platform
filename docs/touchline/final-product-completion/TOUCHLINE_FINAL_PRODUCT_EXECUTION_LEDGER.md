@@ -87,6 +87,48 @@ and validated end-to-end.
   envelope. No Preview or production deployment is authorised by this local
   checkpoint alone.
 
+## 2026-08-09 Arena Quick Substitution — durable-state proposal (LOCAL_ONLY)
+
+### Diagnosis
+
+- The current `confirmBenchSwap` implementation is a Training Centre roster
+  swap: it replaces an XI card with a bench card, returns the outgoing card to
+  the bench, and persists the edited lineup. Its selection is React-only.
+- `/api/touchline-arena/state` persists formation and a canonical XI only. It
+  has no match identifier, frozen nine-player matchday bench, revision, event
+  ledger, or `substituted_out` state. Browser storage cannot provide audit or
+  reload-safe authority.
+
+### Safe local implementation
+
+- Add a pure, server-agnostic protocol/reducer only. It must accept an
+  immutable match snapshot with exactly 11 active inventory IDs and exactly 9
+  bench inventory IDs, and apply an idempotent command containing a command ID,
+  expected revision, actor, incoming/outgoing IDs and timestamp.
+- It must reject stale revisions, unknown IDs, inactive outgoing players,
+  active/non-bench incoming players, duplicate command conflicts, and any
+  attempt to re-enter after an outgoing player is substituted out. It must not
+  infer or enforce a maximum number of substitutions.
+- This local protocol has no browser, fetch, database, Supabase, storage, API,
+  or UI wiring. It is a testable contract, not a deployed game feature.
+
+### Risks and acceptance
+
+- A real feature requires a server-owned per-match snapshot/event projection,
+  protected transactional command endpoint, ownership/revision checks,
+  correction/retraction policy, immutable audit records and controlled-session
+  QA. Those require remote schema/API work and remain blocked by the SQL
+  incident.
+- Acceptance for this local block: exact 11+9 validation; successful
+  substitution records the outgoing ID as `substituted_out`; replay of the same
+  command is idempotent; a reconstructed state still rejects re-entry; invalid
+  IDs/revisions are rejected; no maximum-substitution limit is encoded; tests
+  prove the module has no I/O boundary.
+- Local evidence: the pure protocol and its seven focused tests pass; direct
+  strict TypeScript checking of the module and `git diff --check` pass. No
+  full-app typecheck is claimed from this worktree because its dependencies are
+  intentionally not installed there.
+
 ## Current external gates
 
 - Controlled non-financial ClubOwner/Admin personas for cross-session and device validation.
