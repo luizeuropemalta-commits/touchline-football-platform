@@ -225,3 +225,31 @@ Historical release evidence above remains historical evidence only. The latest
 safe checkpoint must always be resolved from the newest committed HEAD of the
 candidate currently under validation; never infer eligibility from an older
 Preview, production checkpoint, or a dirty worktree.
+
+## 2026-08-09 recovery release-audit checkpoint — NO-GO
+
+- Candidate: `work/public-release-audit-recovery-20260809` at
+  `3eb163da74e43977aecbfbbbb35cdd3b30d27cb1`, based on
+  `a2dce1a9a18ee084c7201ac9f80aa6e275b99aa7`. The candidate is a persistent
+  local checkpoint for public Club Hub/table/locale work and a pure durable
+  Quick Sub protocol; it is not a release implementation of the Arena feature.
+- The full provenance, included/excluded file-scope description, binary gate
+  matrix and required validation evidence live in
+  `docs/touchline/release-audit/RELEASE_GATE_3eb163da_2026-08-09.md`.
+- `PREVIEW = NO-GO` and `PRODUCTION = NO-GO`: six approved human locales are
+  incomplete; real Arena Quick Sub still navigates to a separate route and
+  mutates saved roster state; durable server match authority and an immutable
+  shared-public projection model are absent; the browser/data boundary and
+  Vercel isolation remain unproven; Admin is separate; and no full validation
+  run exists for this exact SHA.
+- Static public-data audit confirms the browser/data boundary is a concrete
+  blocker rather than a hypothetical one: the public Club Hub squad GET may
+  reach a provider and persist; public player profiles and Arena rumours have
+  provider paths; Arena live-score/refresh paths may persist; and authenticated
+  layouts record telemetry. Public server readers use the admin client, so a
+  Preview with inherited credentials cannot be called isolated. The required
+  fix is persisted-only public readers plus a proxy-first fail-closed Preview
+  envelope and independently verified dedicated-project environment.
+- The next safe action is local-only: close the static public-data/Preview
+  boundary audit and commit that evidence. Do not treat a historical Preview or
+  production deployment as validation of this recovery checkpoint.
