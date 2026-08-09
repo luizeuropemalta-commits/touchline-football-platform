@@ -1219,3 +1219,25 @@ Preview, production checkpoint, or a dirty worktree.
   regranting only legitimate application functions would be a project-wide
   authorization change. It needs caller inventory, impact review and a new
   explicit authorization; it must not be folded into the roster-export role.
+
+## 2026-08-09 Sportmonks direct 20-club roster read — PRE-FLIGHT BLOCKED
+
+- **Changed route:** Luiz stopped remote-role provisioning before any DDL and
+  authorized a direct, server-side-only Sportmonks read instead. No role,
+  token, policy, grant, DB action, sync, migration, deploy, or card/value
+  change followed the stop instruction.
+- **Credential result:** `SPORTMONKS_API_TOKEN` and related provider
+  configuration names are absent from the controlled process; the worktree
+  has only `.env.example`, no local credential file, no linked Vercel CLI, and
+  no running local application. No Keychain, Vercel secret, browser storage,
+  network, or secret value was inspected.
+- **Provider boundary:** the existing `getSquad()` integration uses only two
+  provider GETs per team and no database write, but it is unpaged. It cannot
+  establish an exact complete roster snapshot until a dedicated fail-closed
+  read extractor handles pagination/partiality/duplicates and an existing
+  server-side token is made available safely.
+- **Result:** no API request and no local manifest were produced. The alleged
+  extras remain `PRESERVED_UNIDENTIFIED_PENDING`, with no inferred IDs, value,
+  or membership action.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-09-SPORTMONKS-20-CLUB-READ-PREFLIGHT.md`.
