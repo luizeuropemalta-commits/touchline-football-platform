@@ -28,13 +28,31 @@ test("field art is a shared component rather than separate page drawings", () =>
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });
 
-test("ClubHub formation keeps every complete player name above its card", () => {
+test("ClubHub formation keeps player names legible above cards without ellipses or edge collisions", () => {
   assert.match(clubHubLineup, /playerProfileHref=\{profileHref\}/);
   assert.match(clubHubLineup, /<span className=\{styles\.playerName\}>\{card\.name\}<\/span>/);
   assert.match(clubHubLineupCss, /\.playerName[\s\S]*?bottom: calc\(100% \+/);
   assert.match(clubHubLineupCss, /\.playerName[\s\S]*?text-transform: uppercase/);
-  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?white-space: nowrap/);
+  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?-webkit-line-clamp: 2/);
+  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?white-space: normal/);
+  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?text-overflow: clip/);
+  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?background: linear-gradient\(180deg, rgba\(1,6,7,/);
+  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?box-shadow: 0 5px 16px rgba\(0,0,0,/);
+  assert.doesNotMatch(clubHubLineupCss, /\.playerName[\s\S]*?text-overflow: ellipsis/);
   assert.doesNotMatch(clubHubLineupCss, /\.playerLink/);
+});
+
+test("ClubHub lowers the player assembly with a compensated safe top inset on desktop and mobile", () => {
+  assert.match(clubHubLineupCss, /\.pitch[\s\S]*?--lineup-safe-top-inset: clamp\(42px, 4\.4vw, 62px\)/);
+  assert.match(clubHubLineupCss, /\.player[\s\S]*?top: calc\(var\(--lineup-y\) \+ var\(--lineup-safe-top-inset\)\)/);
+  assert.match(
+    clubHubLineupCss,
+    /@media \(max-width: 720px\)[\s\S]*?--lineup-safe-top-inset: clamp\(36px, 10vw, 46px\)[\s\S]*?min-height: calc\(var\(--lineup-pitch-core-height\) \+ var\(--lineup-safe-top-inset\)\)/,
+  );
+  assert.match(
+    clubHubLineupCss,
+    /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)[\s\S]*?--lineup-safe-top-inset: 32px[\s\S]*?min-height: calc\(var\(--lineup-pitch-core-height\) \+ var\(--lineup-safe-top-inset\)\)/,
+  );
 });
 
 test("ClubHub preserves canonical player coordinates without local role refinements", () => {

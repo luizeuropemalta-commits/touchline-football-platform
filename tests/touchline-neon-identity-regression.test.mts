@@ -121,11 +121,11 @@ test("ClubHub line-up contains its wide desktop pitch and fits every player on m
   assert.match(clubHubPage, /\.club-hub-shell \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
   assert.match(clubHubPage, /\.club-hub-shell > \* \{[\s\S]*?min-width: 0/);
   assert.match(lineupCss, /\.pitchViewport \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
-  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitch \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?min-height: clamp\(610px, 154vw, 720px\)/);
+  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitch \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?--lineup-pitch-core-height: clamp\(610px, 154vw, 720px\);[\s\S]*?min-height: calc\(var\(--lineup-pitch-core-height\) \+ var\(--lineup-safe-top-inset\)\)/);
   assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.player \{[\s\S]*?width: 58px;[\s\S]*?--touchline-card-static-scale: \.1348837209/);
   assert.match(lineupCss, /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)/);
   assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitchViewport \{[\s\S]*?overflow: hidden/);
-  assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitch \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?min-height: 540px/);
+  assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitch \{[\s\S]*?width: 100%;[\s\S]*?min-width: 0;[\s\S]*?--lineup-pitch-core-height: 540px;[\s\S]*?min-height: calc\(var\(--lineup-pitch-core-height\) \+ var\(--lineup-safe-top-inset\)\)/);
   assert.match(lineupCss, /@media \(min-width: 721px\) and \(max-width: 1100px\) and \(min-height: 521px\)/);
   assert.match(squadGrid, /<TouchlineCardZoom/);
   assert.match(lineupComponent, /<TouchlineCardZoom/);
@@ -133,9 +133,8 @@ test("ClubHub line-up contains its wide desktop pitch and fits every player on m
   assert.match(squadGrid, /className="club-hub-card-meta"/);
   assert.doesNotMatch(clubHubPage, /t\("topClubAssets"\)/);
   assert.doesNotMatch(clubHubPage, /\.club-hub-card div \{/);
-  assert.match(clubHubPage, /\/market-transfer\?\$\{localeQuery\}/);
-  assert.match(clubHubPage, /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)[\s\S]*?\.club-hub-metrics \{[\s\S]*?repeat\(4/);
-  assert.match(clubHubPage, /max-height: 520px\)[\s\S]*?\.club-hub-board \{[\s\S]*?repeat\(3/);
+  assert.doesNotMatch(clubHubPage, /\/market-transfer\?\$\{localeQuery\}/);
+  assert.match(clubHubPage, /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)[\s\S]*?\.club-hub-board \{[\s\S]*?repeat\(2/);
   assert.match(cardZoom, /createPortal\(/);
   assert.match(cardZoom, /document\.body/);
 });
@@ -348,16 +347,16 @@ test("Market Transfer remains readable without horizontal clipping on compact la
   assert.match(arenaClient, /\.arena-action-panel-market \.team-builder-preview-card \{[\s\S]*?width: min\(150px, 86%\)/);
 });
 
-test("ClubHub owns one shared official line-up distribution surface", () => {
+test("ClubHub owns one fixture-scoped line-up surface without cross-product distribution claims", () => {
   const clubHubPage = source("app/touchline-clubs/[club]/page.tsx");
   const lineupComponent = source("components/touchline/ClubHubOfficialLineup.tsx");
 
-  assert.match(clubHubPage, /buildTouchLineClubLineup/);
+  assert.match(clubHubPage, /buildTouchLineClubMatchdayPresentation/);
   assert.match(clubHubPage, /ClubHubOfficialLineup/);
-  assert.match(lineupComponent, /ClubHub Match Centre/);
-  assert.match(lineupComponent, /TouchLine Arena/);
-  assert.match(lineupComponent, /ClubOwners/);
-  assert.match(lineupComponent, /Player Feeds/);
+  assert.match(lineupComponent, /Matchday line-up/);
+  assert.doesNotMatch(lineupComponent, /TouchLine Arena/);
+  assert.doesNotMatch(lineupComponent, /ClubOwners/);
+  assert.doesNotMatch(lineupComponent, /Player Feeds/);
   assert.match(lineupComponent, /Provável escalação/);
 });
 

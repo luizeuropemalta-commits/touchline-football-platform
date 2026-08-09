@@ -2,7 +2,9 @@
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import ClubTrophyCarousel from "@/components/touchline/ClubTrophyCarousel";
+import ClubHubMatchdayTechnicalArea from "@/components/touchline/ClubHubMatchdayTechnicalArea";
 import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup";
+import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
@@ -24,7 +26,7 @@ import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-sched
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import { parseMarketValueEurOrNull } from "@/lib/touchlineArena/card-rules";
-import { buildTouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
+import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import {
   normalizeTouchLineLocale,
   touchLineT,
@@ -82,8 +84,11 @@ type ClubMatchPreview = {
 
 type ClubMatchSnapshot = {
   preview: ClubMatchPreview;
+  fixtureId: string | null;
   lineups: TouchlineFantasyLineupMember[];
   formation: string | null;
+  /** No persisted matchday-coach DTO exists yet. Never infer a coach by club. */
+  coach: null;
 };
 
 async function loadClubTrophyAssets(club: NonNullable<ReturnType<typeof findTouchLineClub>>) {
@@ -254,8 +259,10 @@ async function loadClubMatchSnapshot(
 ): Promise<ClubMatchSnapshot> {
   const empty = {
     preview: fallbackClubMatch(club, locale),
+    fixtureId: null as string | null,
     lineups: [] as TouchlineFantasyLineupMember[],
     formation: null as string | null,
+    coach: null,
   };
 
   try {
@@ -282,8 +289,10 @@ async function loadClubMatchSnapshot(
           : touchLineT(locale, "kickoffPending"),
         source: touchLineT(locale, "dataCache"),
       },
+      fixtureId: fixture.providerId ?? null,
       lineups: persistedFeed?.lineups ?? [],
       formation,
+      coach: null,
     };
   } catch {
     return empty;
@@ -318,18 +327,22 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const squadRecoveryCopy = locale === "pt-BR"
     ? { title: "Não foi possível carregar o elenco agora.", action: "Tentar novamente" }
     : { title: "The squad could not be loaded right now.", action: "Try again" };
-  const clubLineup = buildTouchLineClubLineup({
+  const matchdayPresentation = buildTouchLineClubMatchdayPresentation({
     club,
     squadCards: clubCards,
     officialLineup: matchSnapshot.lineups,
     formation: matchSnapshot.formation,
+    fixtureId: matchSnapshot.fixtureId,
+    officialCoach: matchSnapshot.coach,
   });
+  const clubLineup = matchdayPresentation.lineup;
+  const displayedMatchdayPlayerIds = new Set(matchdayPresentation.displayedPlayerIds.map(String));
+  const outsideMatchdayCards = clubCards.filter((card) => !displayedMatchdayPlayerIds.has(String(card.id)));
   const verifiedMarketValue = (card: ClubOwnerSquadCard) => (
     card.marketValueState === "verified" ? parseMarketValueEurOrNull(card.marketValue) : null
   );
   const clubValue = clubCards.reduce((sum, card) => sum + (verifiedMarketValue(card) ?? 0), 0);
   const hasCompleteClubValue = clubCards.length > 0 && clubCards.every((card) => verifiedMarketValue(card) !== null);
-  const touchLinePoints = clubCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
   const squadStatus = locale === "pt-BR" ? `${clubCards.length} cards TouchLine` : squadLoad.status;
   return (
     <main className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent } as CSSProperties}>
@@ -352,15 +365,16 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               <div className="club-hub-logo" aria-label={`${club.name} logo`}>
                 {club.logoUrl ? <img src={club.logoUrl} alt="" draggable={false} /> : <span>{club.shortCode}</span>}
               </div>
-              <div className="club-hub-actions">
-                {club.shopUrl ? <a href={club.shopUrl} target="_blank" rel="noreferrer">{t("officialShop")}</a> : null}
-                <a href={`/market-transfer?${localeQuery}`}>{t("transfer")}</a>
-              </div>
             </div>
             <div className="club-hub-title-block">
-              <span>TouchLine {t("clubHub")}</span>
+              <span>{locale === "pt-BR" ? "Perfil oficial do clube" : "Official club profile"}</span>
               <h1>{club.name}</h1>
-              <p>{t("clubHubDescription")}</p>
+              <dl className="club-hub-official-value">
+                <div>
+                  <dt>{locale === "pt-BR" ? "Valor oficial do clube" : "Official club value"}</dt>
+                  <dd>{hasCompleteClubValue ? formatCompactEuro(clubValue) : t("marketValuePending")}</dd>
+                </div>
+              </dl>
               {clubHonours.length ? (
                 <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
                   <span>{t("clubHonours")}</span>
@@ -377,22 +391,43 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                   <p className="club-hub-honours-empty" role="status">{t("clubHonoursUnavailable")}</p>
                 </div>
               )}
+              <article className="club-hub-next-match" aria-label={`${club.name} ${t("nextMatch")}`}>
+                <span>{t("nextMatch")}</span>
+                <div className="club-hub-fixture-row">
+                  <div>
+                    {matchPreview.home.logoUrl ? <img src={matchPreview.home.logoUrl} alt="" draggable={false} /> : null}
+                    <strong>{matchPreview.home.shortCode}</strong>
+                  </div>
+                  <b>VS</b>
+                  <div className={!matchPreview.away.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
+                    {matchPreview.away.logoUrl ? <img src={matchPreview.away.logoUrl} alt="" draggable={false} /> : null}
+                    <strong>{matchPreview.away.shortCode}</strong>
+                  </div>
+                </div>
+                <p>{matchPreview.home.name} vs {matchPreview.away.name}</p>
+                <small>{[localizedFixtureStatus(matchPreview.status, locale), matchPreview.startsAt, matchPreview.source].filter(Boolean).join(" / ")}</small>
+              </article>
             </div>
           </div>
         </header>
-
-        <section className="club-hub-metrics" aria-label={`${club.name} TouchLine metrics`}>
-          <article><span>{t("touchlineCards")}</span><strong>{clubCards.length}</strong></article>
-          <article><span>{t("clubValue")}</span><strong>{hasCompleteClubValue ? formatCompactEuro(clubValue) : t("marketValuePending")}</strong></article>
-          <article><span>{t("touchlinePoints")}</span><strong>{touchLinePoints}</strong></article>
-          <article><span>{t("squadSource")}</span><strong>{squadLoad.source}</strong></article>
-        </section>
 
         <ClubHubOfficialLineup
           clubName={club.name}
           lineup={clubLineup}
           locale={locale}
           labels={cardLabels}
+        />
+
+        <ClubHubMatchdayTechnicalArea
+          clubName={club.name}
+          technical={matchdayPresentation.technical}
+          locale={locale}
+        />
+
+        <ClubHubOutsideMatchRoster
+          clubName={club.name}
+          cards={outsideMatchdayCards}
+          locale={locale}
         />
 
         <TouchlineOfficialLeagueTable
@@ -403,41 +438,25 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           action={{ href: `/touchline-clubs?${localeQuery}#official-league-table`, label: t("fullTables") }}
         />
 
-        <section className="club-hub-board">
-          <article className="club-hub-fixture">
-            <span>{t("nextMatch")}</span>
-            <div className="club-hub-fixture-row">
-              <div>
-                {matchPreview.home.logoUrl ? <img src={matchPreview.home.logoUrl} alt="" draggable={false} /> : null}
-                <strong>{matchPreview.home.shortCode}</strong>
-              </div>
-              <b>VS</b>
-              <div className={!matchPreview.away.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
-                {matchPreview.away.logoUrl ? <img src={matchPreview.away.logoUrl} alt="" draggable={false} /> : null}
-                <strong>{matchPreview.away.shortCode}</strong>
-              </div>
-            </div>
-            <p>{matchPreview.home.name} vs {matchPreview.away.name}</p>
-            <small>{[localizedFixtureStatus(matchPreview.status, locale), matchPreview.startsAt, matchPreview.source].filter(Boolean).join(" / ")}</small>
-          </article>
+        <section className="club-hub-board" aria-label={locale === "pt-BR" ? "Informações oficiais do clube" : "Official club information"}>
           <article><span>{t("clubStore")}</span><strong>{t("officialShopTraffic")}</strong><p>{t("clubStoreDescription")}</p></article>
           <article><span>{t("partnerSlots")}</span><strong>{club.sponsorSlots} {t("spaces")}</strong><p>{t("partnerDescription")}</p></article>
         </section>
 
-        <section className="club-hub-cards" aria-label={`${club.name} player cards`}>
+        <section className="club-hub-touchline" aria-label={`${club.name} TouchLine player cards`}>
           <div className="club-hub-section-head">
             <div>
-              <span>{locale === "pt-BR" ? "Elenco completo" : "Full squad"}</span>
+              <span>{locale === "pt-BR" ? "Cards TouchLine" : "TouchLine player cards"}</span>
               <strong>{club.name}</strong>
             </div>
             <div className="club-hub-section-actions">
               <a href={`/touchline-player-card-rankings?${localeQuery}`}>{t("playerCardsRanking")}</a>
-              <small>{squadStatus}. {t("playerOrderDescription")}</small>
+              <small>{locale === "pt-BR" ? `${outsideMatchdayCards.length} fora da equipe de jogo.` : `${outsideMatchdayCards.length} outside the matchday squad.`} {squadStatus}. {t("playerOrderDescription")}</small>
             </div>
           </div>
-          {clubCards.length ? (
+          {outsideMatchdayCards.length ? (
             <ClubHubSquadGrid
-              cards={clubCards}
+              cards={outsideMatchdayCards}
               clubId={club.teamId}
               locale={locale}
               labels={cardLabels}
@@ -489,18 +508,14 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           max-width: 100%;
         }
         .club-hub-hero,
-        .club-hub-metrics,
         .club-hub-board,
-        .club-hub-cards {
+        .club-hub-touchline {
           border: 1px solid rgba(255,255,255,.14);
           border-radius: 8px;
           background: linear-gradient(135deg, rgba(4,12,9,.76), rgba(12,28,18,.62));
           box-shadow: 0 30px 90px rgba(0,0,0,.38);
           backdrop-filter: blur(18px);
         }
-        .club-hub-cards { order: 1; }
-        .club-hub-league-table,
-        .club-hub-board { order: 2; }
         .club-hub-hero {
           min-height: 300px;
           padding: clamp(24px, 4vw, 52px);
@@ -520,14 +535,13 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         .club-hub-hero::after {
           display: none;
         }
-        .club-hub-identity,
-        .club-hub-actions {
+        .club-hub-identity {
           position: relative;
           z-index: 1;
         }
         .club-hub-identity {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: clamp(34px, 5vw, 78px);
           flex: 1;
           min-width: 0;
@@ -548,7 +562,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         .club-hub-logo-stack {
           display: grid;
           justify-items: center;
-          gap: 16px;
           flex: 0 0 auto;
         }
         .club-hub-logo img {
@@ -566,6 +579,28 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           padding: 0;
           background: transparent;
           overflow: hidden;
+        }
+        .club-hub-official-value {
+          width: min(360px, 100%);
+          margin: 18px 0 0;
+          border: 1px solid color-mix(in srgb, var(--club-accent) 42%, rgba(255,255,255,.15));
+          border-radius: 10px;
+          padding: 12px 14px;
+          background: linear-gradient(135deg, rgba(0,0,0,.26), color-mix(in srgb, var(--club-accent) 10%, rgba(0,0,0,.26)));
+        }
+        .club-hub-official-value dt {
+          color: rgba(232,255,222,.72);
+          font-size: 9px;
+          font-weight: 950;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+        }
+        .club-hub-official-value dd {
+          margin: 7px 0 0;
+          color: #f8fff5;
+          font-size: clamp(19px, 2.2vw, 29px);
+          font-weight: 1000;
+          line-height: 1;
         }
         .club-hub-honours-empty {
           margin: 10px 0 0;
@@ -714,7 +749,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         .club-hub-identity span,
         .club-hub-board span,
         .club-hub-section-head span,
-        .club-hub-metrics span {
+        .club-hub-next-match > span {
           color: #b6ff4d;
                     font-size: 11px;
           font-weight: 950;        }
@@ -724,6 +759,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           line-height: .94;        }
         .club-hub-identity p,
         .club-hub-board p,
+        .club-hub-next-match p,
         .club-hub-section-head small,
         .club-hub-feature-list small {
           max-width: 650px;
@@ -733,31 +769,15 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           line-height: 1.7;
           font-weight: 800;
         }
-        .club-hub-actions {
-          display: grid;
-          gap: 10px;
-          width: min(250px, 100%);
-        }
-        .club-hub-metrics,
         .club-hub-board {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 1px;
           overflow: hidden;
         }
-        .club-hub-board {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-        .club-hub-metrics article,
         .club-hub-board article {
           padding: 22px;
           background: rgba(0,0,0,.24);
-        }
-        .club-hub-metrics strong {
-          display: block;
-          margin-top: 10px;
-          font-size: clamp(28px, 3vw, 44px);
-          line-height: 1;
         }
         .club-hub-league-table {
           padding: 24px;
@@ -845,9 +865,13 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           margin: 12px 0;
           font-size: 24px;
                   }
-        .club-hub-fixture {
+        .club-hub-next-match {
           display: grid;
           gap: 12px;
+          width: min(760px, 100%);
+          margin-top: 20px;
+          border-top: 1px solid rgba(255,255,255,.14);
+          padding-top: 18px;
         }
         .club-hub-fixture-row {
           display: grid;
@@ -891,11 +915,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           font-size: 15px;
           font-weight: 1000;          opacity: .86;
         }
-        .club-hub-fixture small {
+        .club-hub-next-match small {
           color: rgba(255,255,255,.56);
           font-size: 10px;
           font-weight: 900;                  }
-        .club-hub-cards {
+        .club-hub-touchline {
           padding: 24px;
         }
         .club-hub-section-head {
@@ -1112,7 +1136,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           .club-hub-honour-row {
             margin-inline: -4px;
           }
-          .club-hub-metrics,
           .club-hub-board { grid-template-columns: 1fr; }
           .club-hub-league-table { padding: 18px; }
           .club-hub-table-list {
@@ -1151,16 +1174,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           .club-hub-identity { gap: 20px; }
           .club-hub-logo-stack { width: 100%; }
           .club-hub-logo { width: min(190px, 58vw); }
-          .club-hub-actions {
-            width: 100%;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-          .club-hub-actions a {
-            min-width: 0;
-            min-height: 44px;
-            padding: 0 10px;
-            text-align: center;
-          }
           .club-hub-identity h1 {
             margin-top: 10px;
             font-size: clamp(38px, 13vw, 56px);
@@ -1172,10 +1185,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             font-size: 11px;
             line-height: 1.55;
           }
-          .club-hub-metrics article,
           .club-hub-board article { padding: 17px; }
           .club-hub-league-table,
-          .club-hub-cards {
+          .club-hub-touchline {
             min-width: 0;
             overflow: hidden;
             padding: 16px;
@@ -1232,17 +1244,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           .club-hub-logo {
             width: 136px;
           }
-          .club-hub-actions {
-            width: 180px;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 6px;
-          }
-          .club-hub-actions a {
-            min-width: 0;
-            min-height: 44px;
-            padding-inline: 8px;
-            text-align: center;
-          }
           .club-hub-identity h1 {
             margin: 7px 0 9px;
             font-size: clamp(38px, 6vw, 52px);
@@ -1252,19 +1253,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             font-size: 10px;
             line-height: 1.45;
           }
-          .club-hub-metrics {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
           .club-hub-board {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
           }
-          .club-hub-metrics article,
           .club-hub-board article {
             padding: 14px;
-          }
-          .club-hub-metrics strong {
-            margin-top: 7px;
-            font-size: clamp(22px, 3vw, 30px);
           }
           .club-hub-section-head {
             gap: 18px;

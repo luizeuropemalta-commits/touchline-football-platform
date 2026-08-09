@@ -95,37 +95,6 @@
   font-weight: 1000;
 }
 
-.syncStrip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1px;
-  margin: 14px 0;
-  overflow: hidden;
-  border: 1px solid rgba(122,231,255,.14);
-  border-radius: 10px;
-  background: rgba(122,231,255,.08);
-}
-
-.syncStrip span {
-  position: relative;
-  min-height: 36px;
-  display: grid;
-  place-items: center;
-  background: rgba(3,11,13,.78);
-  color: rgba(255,255,255,.64);
-  font-size: 8px;
-  font-weight: 950;
-}
-
-.syncStrip span:not(:last-child)::after {
-  content: "›";
-  position: absolute;
-  right: -5px;
-  z-index: 1;
-  color: #a3ff12;
-  font-size: 15px;
-}
-
 .pitchViewport {
   width: 100%;
   min-width: 0;
@@ -137,14 +106,16 @@
 .pitch {
   position: relative;
   min-width: 900px;
-  min-height: 660px;
+  --lineup-safe-top-inset: clamp(42px, 4.4vw, 62px);
+  --lineup-pitch-core-height: 660px;
+  min-height: calc(var(--lineup-pitch-core-height) + var(--lineup-safe-top-inset));
 }
 
 .player {
   position: absolute;
   z-index: 3;
   left: var(--lineup-x);
-  top: var(--lineup-y);
+  top: calc(var(--lineup-y) + var(--lineup-safe-top-inset));
   width: 80px;
   --touchline-card-static-scale: .1860465116;
   display: grid;
@@ -161,11 +132,19 @@
   z-index: 5;
   bottom: calc(100% + clamp(7px, .8vw, 12px));
   left: 50%;
-  width: min(168%, 154px);
-  max-width: 132px;
+  width: min(196%, 172px);
+  max-width: 156px;
   overflow: hidden;
+  display: -webkit-box;
   transform: translateX(-50%);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 7px;
+  padding: 4px 6px;
   color: #fff;
+  background: linear-gradient(180deg, rgba(1,6,7,.94), rgba(1,6,7,.69));
+  box-shadow: 0 5px 16px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.07);
   font-size: clamp(8px, .76vw, 11px);
   font-weight: 1000;
   line-height: 1.08;
@@ -173,8 +152,8 @@
   text-align: center;
   text-shadow: 0 2px 5px rgba(0,0,0,.96), 0 0 10px rgba(0,0,0,.78);
   text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-overflow: clip;
+  white-space: normal;
   pointer-events: none;
 }
 
@@ -216,8 +195,6 @@
   .shell { padding: 18px; }
   .header { align-items: stretch; flex-direction: column; }
   .statusPanel { min-width: 0; justify-items: start; }
-  .syncStrip { grid-template-columns: repeat(2, 1fr); }
-  .syncStrip span:nth-child(2)::after { display: none; }
   .player {
     width: 58px;
     --touchline-card-static-scale: .1348837209;
@@ -274,17 +251,6 @@
     font-size: 19px;
   }
 
-  .syncStrip {
-    margin: 10px 0;
-  }
-
-  .syncStrip span {
-    min-height: 31px;
-    padding: 0 4px;
-    font-size: 6.5px;
-    text-align: center;
-  }
-
   .pitchViewport {
     overflow: hidden;
     padding-bottom: 0;
@@ -293,7 +259,9 @@
   .pitch {
     width: 100%;
     min-width: 0;
-    min-height: clamp(610px, 154vw, 720px);
+    --lineup-safe-top-inset: clamp(36px, 10vw, 46px);
+    --lineup-pitch-core-height: clamp(610px, 154vw, 720px);
+    min-height: calc(var(--lineup-pitch-core-height) + var(--lineup-safe-top-inset));
   }
 
   .player {
@@ -303,10 +271,12 @@
 
   .playerName {
     bottom: calc(100% + 5px);
-    width: clamp(58px, 18vw, 72px);
-    max-width: 72px;
-    font-size: clamp(7px, 1.9vw, 8.5px);
-    letter-spacing: .01em;
+    /* At 390px the longest real names still fit in two complete lines. The
+       compact plate keeps adjacent formation lanes from colliding. */
+    width: clamp(82px, 24vw, 108px);
+    max-width: 108px;
+    font-size: clamp(5.5px, 1.45vw, 7.25px);
+    letter-spacing: 0;
   }
 
 }
@@ -362,20 +332,6 @@
     font-size: 18px;
   }
 
-  .syncStrip {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    margin: 9px 0;
-  }
-
-  .syncStrip span {
-    min-height: 29px;
-    font-size: 6.5px;
-  }
-
-  .syncStrip span:nth-child(2)::after {
-    display: block;
-  }
-
   .pitchViewport {
     overflow: hidden;
     padding-bottom: 0;
@@ -384,7 +340,9 @@
   .pitch {
     width: 100%;
     min-width: 0;
-    min-height: 540px;
+    --lineup-safe-top-inset: 32px;
+    --lineup-pitch-core-height: 540px;
+    min-height: calc(var(--lineup-pitch-core-height) + var(--lineup-safe-top-inset));
   }
 
   .player {
@@ -394,8 +352,8 @@
 
   .playerName {
     bottom: calc(100% + 5px);
-    width: clamp(54px, 9vw, 72px);
-    max-width: 72px;
+    width: clamp(76px, 12vw, 106px);
+    max-width: 106px;
     font-size: clamp(6.8px, .9vw, 8px);
   }
 
@@ -418,8 +376,8 @@
   }
 
   .playerName {
-    width: clamp(68px, 10vw, 92px);
-    max-width: 92px;
+    width: clamp(82px, 12vw, 118px);
+    max-width: 118px;
     font-size: clamp(7px, .88vw, 9px);
   }
 

@@ -43,12 +43,12 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
     <section className={styles.shell} aria-label={`${clubName} ${title}`}>
       <header className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>ClubHub Match Centre</span>
+          <span className={styles.eyebrow}>{isPortuguese ? "Escalação da partida" : "Matchday line-up"}</span>
           <h2>{title}</h2>
           <p>
             {confirmed
-              ? (isPortuguese ? "Titulares verificados pela TouchLine e distribuídos automaticamente por toda a plataforma." : "Starting XI verified by TouchLine and distributed automatically across the platform.")
-              : (isPortuguese ? "Prévia baseada no elenco disponível. Assim que a TouchLine verificar os titulares, esta formação será atualizada automaticamente." : "Preview based on the available squad. This formation updates automatically as soon as TouchLine verifies the Starting XI.")}
+              ? (isPortuguese ? "Titulares da súmula persistida para esta partida." : "Starting XI from the persisted team sheet for this fixture.")
+              : (isPortuguese ? "Prévia do elenco disponível. A escalação oficial aparece somente quando a súmula desta partida estiver completa." : "Preview from the available squad. The official XI appears only when this fixture's team sheet is complete.")}
           </p>
         </div>
         <div className={styles.statusPanel}>
@@ -59,13 +59,6 @@ export default function ClubHubOfficialLineup({ clubName, lineup, locale, labels
           <strong className={styles.formation}>{lineup.formation}</strong>
         </div>
       </header>
-
-      <div className={styles.syncStrip} aria-label={isPortuguese ? "Distribuição da escalação" : "Line-up distribution"}>
-        <span>ClubHub</span>
-        <span>TouchLine Arena</span>
-        <span>ClubOwners</span>
-        <span>{isPortuguese ? "Feeds de Jogadores" : "Player Feeds"}</span>
-      </div>
 
       <div className={styles.pitchViewport}>
         <TouchlinePitchSurface className={styles.pitch} ariaLabel={`${clubName} ${isPortuguese ? "campo de escalação" : "line-up pitch"}`}>

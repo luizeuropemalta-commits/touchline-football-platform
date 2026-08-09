@@ -1,6 +1,6 @@
 import type { TouchlineFantasyLineupMember } from "../football-data/types.ts";
-import { inferArenaRole, makeArenaShortName, normalizeOfficialShirtNumber } from "../football-data/arena-lineup.ts";
-import { findTouchLineClub, type ClubOwnerSquadCard, type TouchLineClubVisual } from "./demo-data.ts";
+import { inferArenaRole, normalizeOfficialShirtNumber } from "../football-data/arena-lineup.ts";
+import { type ClubOwnerSquadCard, type TouchLineClubVisual } from "./demo-data.ts";
 import { TOUCHLINE_STANDARD_433_SLOTS } from "./pitch-layout.ts";
 
 export type TouchLineClubLineupStatus = "confirmed" | "preview";
@@ -17,56 +17,59 @@ export type TouchLineClubLineup = {
   players: TouchLineClubLineupSlot[];
 };
 
+export type TouchLineClubOfficialMatchdayCoach = Readonly<{
+  fixtureId: string;
+  teamId: string;
+  name: string;
+}>;
+
+export type TouchLineClubMatchdayTechnicalState = "confirmed" | "awaiting_official_team_sheet";
+
+export type TouchLineClubMatchdayPresentation = Readonly<{
+  lineup: TouchLineClubLineup;
+  technical: Readonly<{
+    state: TouchLineClubMatchdayTechnicalState;
+    coach: TouchLineClubOfficialMatchdayCoach | null;
+    bench: readonly ClubOwnerSquadCard[];
+  }>;
+  /** Every named player shown in the XI or confirmed technical bench. */
+  displayedPlayerIds: readonly string[];
+}>;
+
 const FORMATION_433_SLOTS = TOUCHLINE_STANDARD_433_SLOTS;
 
-function normalizeIdentity(value?: string | null) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+function memberPlayerId(member: TouchlineFantasyLineupMember) {
+  const playerId = String(member.playerId ?? "").trim();
+  return playerId || null;
 }
 
-function lineupMemberBelongsToClub(member: TouchlineFantasyLineupMember, club: TouchLineClubVisual) {
-  if (member.teamId && String(member.teamId) === club.teamId) return true;
-  const memberClub = findTouchLineClub(member.teamName);
-  return memberClub?.teamId === club.teamId;
+function isStrictMatchdayMember(
+  member: TouchlineFantasyLineupMember,
+  club: TouchLineClubVisual,
+  fixtureId: string | null | undefined,
+) {
+  const selectedFixtureId = String(fixtureId ?? "").trim();
+  return Boolean(
+    selectedFixtureId
+    && String(member.fixtureId ?? "").trim() === selectedFixtureId
+    && String(member.teamId ?? "").trim() === club.teamId
+    && memberPlayerId(member),
+  );
 }
 
-function cardForOfficialMember(
+function strictCardForOfficialMember(
   member: TouchlineFantasyLineupMember,
   squadCards: ClubOwnerSquadCard[],
-  club: TouchLineClubVisual,
-): ClubOwnerSquadCard {
-  const providerPlayerId = String(member.playerId ?? "").trim();
-  const memberName = normalizeIdentity(member.playerName);
-  const existing = squadCards.find((card) => (
-    (providerPlayerId && String(card.id) === providerPlayerId) || normalizeIdentity(card.name) === memberName
-  ));
-
-  if (existing) {
-    return {
-      ...existing,
-      role: inferArenaRole(member.position || existing.position),
-      position: member.position || existing.position,
-      shirtNumber: normalizeOfficialShirtNumber(member.jerseyNumber, existing.shirtNumber),
-    };
-  }
-
+) {
+  const providerPlayerId = memberPlayerId(member);
+  if (!providerPlayerId) return null;
+  const existing = squadCards.find((card) => String(card.id) === providerPlayerId);
+  if (!existing) return null;
   return {
-    id: providerPlayerId || member.providerId || `lineup-${memberName}`,
-    name: member.playerName,
-    shortName: makeArenaShortName(member.playerName),
-    role: inferArenaRole(member.position),
-    position: member.position || "MID",
-    clubName: club.name,
-    shirtNumber: normalizeOfficialShirtNumber(member.jerseyNumber),
-    countryCode3: "N/A",
-    marketValue: "Pending",
-    marketValueSource: "unavailable",
-    touchlinePoints: 0,
+    ...existing,
+    role: inferArenaRole(member.position || existing.position),
+    position: member.position || existing.position,
+    shirtNumber: normalizeOfficialShirtNumber(member.jerseyNumber, existing.shirtNumber),
   };
 }
 
@@ -99,17 +102,80 @@ export function buildTouchLineClubLineup(input: {
   squadCards: ClubOwnerSquadCard[];
   officialLineup?: TouchlineFantasyLineupMember[];
   formation?: string | null;
+  fixtureId?: string | null;
 }): TouchLineClubLineup {
-  const officialStarters = (input.officialLineup ?? [])
-    .filter((member) => member.isStarter && lineupMemberBelongsToClub(member, input.club));
-  const hasConfirmedStartingEleven = officialStarters.length >= 11;
+  return buildTouchLineClubMatchdayPresentation(input).lineup;
+}
+
+/**
+ * Pure ClubHub read model. A public matchday is confirmed only after the
+ * selected fixture supplies one exact 11-player XI and the complete technical
+ * team sheet (coach plus nine unique substitutes). It never infers a coach,
+ * bench member, fixture or player identity.
+ */
+export function buildTouchLineClubMatchdayPresentation(input: {
+  club: TouchLineClubVisual;
+  squadCards: ClubOwnerSquadCard[];
+  officialLineup?: TouchlineFantasyLineupMember[];
+  formation?: string | null;
+  fixtureId?: string | null;
+  officialCoach?: TouchLineClubOfficialMatchdayCoach | null;
+}): TouchLineClubMatchdayPresentation {
+  const strictMembers = (input.officialLineup ?? []).filter((member) => (
+    isStrictMatchdayMember(member, input.club, input.fixtureId)
+  ));
+  const officialStarters = strictMembers.filter((member) => member.isStarter);
+  const starterIds = officialStarters.map(memberPlayerId);
+  const startersAreUnique = starterIds.every((id): id is string => Boolean(id))
+    && new Set(starterIds).size === starterIds.length;
+  const confirmedStarterCards = startersAreUnique && officialStarters.length === 11
+    ? officialStarters.map((member) => strictCardForOfficialMember(member, input.squadCards))
+    : [];
+  const hasConfirmedStartingEleven = confirmedStarterCards.length === 11 && confirmedStarterCards.every(Boolean);
   const cards = hasConfirmedStartingEleven
-    ? officialStarters.slice(0, 11).map((member) => cardForOfficialMember(member, input.squadCards, input.club))
+    ? confirmedStarterCards as ClubOwnerSquadCard[]
     : previewStartingEleven(input.squadCards);
 
-  return {
+  const lineup: TouchLineClubLineup = {
     status: hasConfirmedStartingEleven ? "confirmed" : "preview",
     formation: hasConfirmedStartingEleven && input.formation?.trim() ? input.formation.trim() : "4-3-3",
     players: arrangeCards(cards),
+  };
+
+  const officialBench = strictMembers.filter((member) => member.isSubstitute);
+  const benchIds = officialBench.map(memberPlayerId);
+  const benchAreUnique = benchIds.every((id): id is string => Boolean(id))
+    && new Set(benchIds).size === benchIds.length
+    && benchIds.every((id) => !starterIds.includes(id));
+  const confirmedBenchCards = benchAreUnique && officialBench.length === 9
+    ? officialBench.map((member) => strictCardForOfficialMember(member, input.squadCards))
+    : [];
+  const coach = input.officialCoach
+    && input.fixtureId
+    && input.officialCoach.fixtureId === input.fixtureId
+    && input.officialCoach.teamId === input.club.teamId
+    && input.officialCoach.name.trim()
+    ? input.officialCoach
+    : null;
+  const hasConfirmedTechnicalTeamSheet = hasConfirmedStartingEleven
+    && coach !== null
+    && confirmedBenchCards.length === 9
+    && confirmedBenchCards.every(Boolean);
+  const bench = hasConfirmedTechnicalTeamSheet
+    ? confirmedBenchCards as ClubOwnerSquadCard[]
+    : [];
+  const displayedPlayerIds = [...new Set([
+    ...lineup.players.map(({ card }) => card.id),
+    ...bench.map((card) => card.id),
+  ])];
+
+  return {
+    lineup,
+    technical: {
+      state: hasConfirmedTechnicalTeamSheet ? "confirmed" : "awaiting_official_team_sheet",
+      coach: hasConfirmedTechnicalTeamSheet ? coach : null,
+      bench,
+    },
+    displayedPlayerIds,
   };
 }
