@@ -335,3 +335,23 @@ Preview, production checkpoint, or a dirty worktree.
   player-profile public boundaries, least-privilege reader, canonical shared
   projections, durable match state, six human locale catalogues, rendered QA,
   and external Preview gates remain blocked.
+
+## 2026-08-09 eight-locale surface contract — LOCAL_ONLY
+
+- Proposal/risk: a locale catalogue alone cannot clear release when metadata,
+  PWA, error, auth, owner/Admin, private market and public data pages can still
+  render unreviewed copy. The exact approved vocabulary must remain eight and
+  the six incomplete catalogues must remain fail-closed.
+- Implemented a checked-in release-surface manifest and review template:
+  root/navigation; Club Hub/profiles; Live/rankings/tables; market/cards;
+  auth/recovery; private owner/Admin/Inbox; metadata/PWA/recovery. Each record
+  requires content, metadata, viewport and persistence review; Arabic also
+  requires RTL review.
+- Acceptance evidence: 12/12 focused locale-contract/public-boundary tests,
+  `pnpm typecheck`, focused ESLint and `git diff --check` passed locally. No
+  human translation was invented, no incomplete locale was enabled, and no
+  remote/browser/deploy action occurred.
+- Release remains blocked until the six human catalogues have source/hash,
+  named translator/reviewer and route-by-route visual/persistence evidence;
+  English/Portuguese also need their remaining whole-site metadata/PWA/auth/
+  private-surface audit evidence.
