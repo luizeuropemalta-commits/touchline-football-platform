@@ -27,6 +27,11 @@ import {
   isTouchlineAuditExpired,
   isTouchlineAuditMode,
 } from "@/lib/touchlineAudit/access";
+import {
+  resolveTouchlineIsolatedPreviewRoutePolicy,
+  TOUCHLINE_ISOLATED_PREVIEW_HEADER,
+  type TouchlineIsolatedPreviewRoutePolicy,
+} from "@/lib/touchlinePreview/isolation";
 
 const siteOffline = process.env.TOUCHLINE_SITE_OFFLINE === "true";
 const localDevHosts = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -234,6 +239,39 @@ function nextResponseWithPresentationLocale(request: NextRequest) {
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
+function applyIsolatedPreviewHeaders(response: NextResponse) {
+  response.headers.set("cache-control", "no-store, no-cache, must-revalidate");
+  response.headers.set("x-robots-tag", "noindex, nofollow, noarchive, nosnippet");
+  response.headers.set("x-touchline-preview", "isolated");
+  response.headers.set(
+    "content-security-policy",
+    "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'",
+  );
+  return response;
+}
+
+function isolatedPreviewBlockedResponse(
+  policy: Extract<TouchlineIsolatedPreviewRoutePolicy, { status: "blocked" }>,
+) {
+  const status = policy.reason === "invalid-preview-contract" ? 503 : 404;
+  const message = policy.reason === "invalid-preview-contract"
+    ? "The isolated Preview configuration is unavailable."
+    : "This route is unavailable in the isolated Preview.";
+  return applyIsolatedPreviewHeaders(
+    new NextResponse(message, {
+      status,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    }),
+  );
+}
+
+function isolatedPreviewResponse(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, requestLocale(request));
+  requestHeaders.set(TOUCHLINE_ISOLATED_PREVIEW_HEADER, "true");
+  return applyIsolatedPreviewHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
+}
+
 function clubOwnerLoginRedirect(
   request: NextRequest,
   area: TouchlineClubOwnerSelfArea,
@@ -353,6 +391,13 @@ function clearInvalidSupabaseSession(request: NextRequest, response: NextRespons
 }
 
 async function handleTouchLineRequest(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  // The isolated Preview guard deliberately runs before host normalisation,
+  // locale redirects, audit handling, auth and any Supabase import/work.
+  const previewPolicy = resolveTouchlineIsolatedPreviewRoutePolicy(pathname);
+  if (previewPolicy.status === "blocked") return isolatedPreviewBlockedResponse(previewPolicy);
+  if (previewPolicy.status === "allow-preview") return isolatedPreviewResponse(request);
+
   const hostname = resolveTouchLineRequestHostname(
     request.headers.get("x-forwarded-host"),
     request.headers.get("host"),
@@ -362,8 +407,6 @@ async function handleTouchLineRequest(request: NextRequest) {
   if (localeRedirect) return localeRedirect;
   const isLocalDev = localDevHosts.has(hostname);
   if (isLocalDev) return nextResponseWithPresentationLocale(request);
-
-  const pathname = request.nextUrl.pathname;
 
   const isAuditPath = pathname === "/audit-index" || pathname.startsWith("/audit/");
 
@@ -498,5 +541,5 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // API traffic is intentionally included: an audit deployment must reject it
   // before any route handler has a chance to read or mutate external state.
-  matcher: ["/((?!_next/static|_next/image|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|woff2?)$).*)"],
+  matcher: ["/((?!_next/static|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|woff2?)$).*)"],
 };

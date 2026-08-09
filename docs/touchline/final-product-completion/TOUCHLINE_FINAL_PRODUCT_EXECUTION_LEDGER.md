@@ -253,3 +253,49 @@ Preview, production checkpoint, or a dirty worktree.
 - The next safe action is local-only: close the static public-data/Preview
   boundary audit and commit that evidence. Do not treat a historical Preview or
   production deployment as validation of this recovery checkpoint.
+
+## 2026-08-09 isolated Preview boundary proposal — LOCAL_ONLY
+
+- Candidate: `work/preview-isolation-boundary-recovery-20260809` at
+  `69273380f88d1f21b85e73d993eb9c6f9b69de79`, created clean from the
+  persisted release-audit checkpoint.
+- Evidence before code: a generic Preview may inherit real admin/auth/provider
+  credentials; public paths currently include provider/persist behaviour; an
+  unknown Vercel host can resolve auth callbacks to `touchline.com.br`; and
+  page-level analytics can write after an authenticated render. A different
+  hostname alone is not isolation.
+- Proposal, risks, local acceptance and external Vercel gate are recorded in
+  `docs/touchline/architecture/ISOLATED_PREVIEW_BOUNDARY_2026-08-09.md`.
+  The local implementation must be a proxy-first, no-store/noindex, no-
+  redirect envelope that blocks all dynamic product/API/auth routes in explicit
+  `isolated-preview` mode. It intentionally is not a functional product QA
+  Preview.
+- No deployment, Vercel linking, dashboard access, remote environment change,
+  browser validation, database operation, sync or payment action is authorised
+  by this proposal.
+
+### Local boundary implementation and validation
+
+- Added a pure strict environment/route contract in
+  `lib/touchlinePreview/isolation.ts`. A Preview is active only with exact
+  `isolated-preview` server/public markers, Vercel `preview` identity, valid
+  generated hostname and matching injected project/team IDs. Recognised app
+  credential/integration settings reject by key name without exposing values.
+- `next.config.ts` fails a declared Vercel Preview configuration that does not
+  satisfy that contract. `proxy.ts` applies the policy before hostname, locale,
+  audit, auth or Supabase; only inert `/preview` is allowed, while all other
+  dynamic routes (including API/auth/private/product and `/_next/image`) are
+  no-store/noindex/CSP-restricted and never redirect.
+- The inert Preview shell has no product data/auth/analytics integration, and
+  root layout suppresses `TouchlineActivityTracker` plus production canonical
+  metadata when it receives the proxy marker.
+- Local evidence: 4/4 focused boundary tests passed; direct config import
+  accepted a synthetic valid isolated environment and rejected a synthetic
+  forbidden-key environment without echoing the value; `git diff --check`
+  passed. No full application build, browser, Vercel, database/provider/auth
+  call, remote environment or deployment was made.
+- This does **not** clear the external Preview gate. The dedicated Vercel
+  project/effective name-only environment readback, no-production alias and
+  independently observed `/preview` response remain required. It is also not
+  a functional product QA Preview while public provider/data paths and the
+  six incomplete human locales remain unresolved.

@@ -4,6 +4,10 @@ import { Suspense } from "react";
 
 import DocumentLocaleSync from "@/components/touchline/DocumentLocaleSync";
 import { TouchlineActivityTracker } from "@/components/touchline-activity-tracker";
+import {
+  isTouchlineIsolatedPreviewRequest,
+  TOUCHLINE_ISOLATED_PREVIEW_HEADER,
+} from "@/lib/touchlinePreview/isolation";
 import { TOUCHLINE_PUBLIC_ORIGIN } from "@/lib/touchlineArena/public-origin";
 import {
   resolveTouchLinePresentationLocale,
@@ -12,7 +16,7 @@ import {
 } from "@/lib/touchlineArena/root-locale";
 import "./globals.css";
 
-export const metadata: Metadata = {
+const productMetadata: Metadata = {
   metadataBase: new URL(TOUCHLINE_PUBLIC_ORIGIN),
   title: "TouchLine Arena / TouchLine England",
   description: "TouchLine England is the first TouchLine Arena competition experience for premium football cards, squads and clubowner gameplay.",
@@ -34,6 +38,18 @@ export const metadata: Metadata = {
   },
 };
 
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  if (isTouchlineIsolatedPreviewRequest(requestHeaders.get(TOUCHLINE_ISOLATED_PREVIEW_HEADER))) {
+    return {
+      title: "TouchLine isolated Preview",
+      description: "Isolated Preview boundary. Product data and authentication are disabled.",
+      robots: { index: false, follow: false },
+    };
+  }
+  return productMetadata;
+}
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -46,6 +62,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const locale = resolveTouchLinePresentationLocale(
     requestHeaders.get(TOUCHLINE_PRESENTATION_LOCALE_HEADER),
   );
+  const isIsolatedPreview = isTouchlineIsolatedPreviewRequest(
+    requestHeaders.get(TOUCHLINE_ISOLATED_PREVIEW_HEADER),
+  );
   const skipLabel = locale === "pt-BR" ? "Pular para o conteúdo principal" : "Skip to main content";
 
   return (
@@ -57,10 +76,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         >
           {skipLabel}
         </a>
-        <Suspense fallback={null}>
-          <DocumentLocaleSync initialLocale={locale} />
-          <TouchlineActivityTracker />
-        </Suspense>
+        {!isIsolatedPreview ? (
+          <Suspense fallback={null}>
+            <DocumentLocaleSync initialLocale={locale} />
+            <TouchlineActivityTracker />
+          </Suspense>
+        ) : null}
         {/*
           This is a single focus destination rather than another `main`
           landmark. Each route keeps its own semantic main; the wrapper lets

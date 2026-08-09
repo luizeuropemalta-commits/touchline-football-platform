@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 
+import { assertTouchlineIsolatedPreviewEnvironment } from "./lib/touchlinePreview/isolation.ts";
+
+// A Vercel Preview that is not explicitly bound to the isolated contract must
+// fail at config load rather than inherit the normal product environment.
+assertTouchlineIsolatedPreviewEnvironment();
+
 const configuredDevOrigins = (process.env.TOUCHLINE_DEV_ORIGINS ?? "")
   .split(",")
   .map((origin) => origin.trim())
