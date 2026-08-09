@@ -132,7 +132,7 @@ deterministic idempotency keys, no database/provider/sync/mutation capability,
 and prohibited persistent economic surfaces.
 
 **Persistent candidate checkpoint:**
-`a241ce7862a3b90450000bd70f4edc7a1b0c6ce6`
+`a241ce78329f33c8cca9f2362eadcc6f4742ec6c`
 (`feat(market-values): stage owner Sportmonks application candidate`).
 
 The next permitted step is a separately authorized immutable canonical
