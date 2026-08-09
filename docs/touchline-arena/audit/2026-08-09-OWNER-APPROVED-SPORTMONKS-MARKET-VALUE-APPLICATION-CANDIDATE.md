@@ -1,6 +1,6 @@
 # Owner-approved × Sportmonks market-value application candidate
 
-**Recorded:** 2026-08-09  
+**Recorded:** 2026-08-09
 **Status:** `LOCAL PLAN ONLY — NOT DATABASE-EXECUTABLE`
 
 ## Purpose and boundary
@@ -130,6 +130,10 @@ The focused test proves the precise `538 / 533 / 5 / 23 / 20 / 0` result,
 source/provider-ID uniqueness, fail-closed partial/ambiguous/duplicate input,
 deterministic idempotency keys, no database/provider/sync/mutation capability,
 and prohibited persistent economic surfaces.
+
+**Persistent candidate checkpoint:**
+`a241ce7862a3b90450000bd70f4edc7a1b0c6ce6`
+(`feat(market-values): stage owner Sportmonks application candidate`).
 
 The next permitted step is a separately authorized immutable canonical
 UUID/current-club/active-membership export and dry-run binding. It must also

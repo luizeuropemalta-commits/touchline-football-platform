@@ -1307,5 +1307,6 @@ Preview, production checkpoint, or a dirty worktree.
   the generator syntax/check and unique archive creation passed. Full scope,
   artifact hashes, application proposal, and visual QA criteria are in
   `docs/touchline-arena/audit/2026-08-09-OWNER-APPROVED-SPORTMONKS-MARKET-VALUE-APPLICATION-CANDIDATE.md`.
-  No application was attempted. Persistent commit is recorded after the full
-  local validation checkpoint.
+  No application was attempted. Persistent candidate checkpoint:
+  `a241ce7862a3b90450000bd70f4edc7a1b0c6ce6`
+  (`feat(market-values): stage owner Sportmonks application candidate`).
