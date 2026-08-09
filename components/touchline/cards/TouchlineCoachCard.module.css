@@ -1,13 +1,6 @@
 .shell {
   --coach-touchline: #a8ff38;
   --coach-touchline-soft: #d8ff9f;
-  --touchline-card-frame-neon-filter:
-    drop-shadow(0 0 2px rgb(var(--touchline-card-light) / .55))
-    drop-shadow(0 0 9px rgb(var(--touchline-card-light) / .32));
-  --touchline-card-neon-active-filter:
-    drop-shadow(0 0 3px rgb(var(--touchline-card-light) / .82))
-    drop-shadow(0 0 12px rgb(var(--touchline-card-light) / .52))
-    drop-shadow(0 0 24px rgb(var(--touchline-card-light) / .26));
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 3;
@@ -19,6 +12,15 @@
 .shell:hover,
 .shell:focus-within {
   transform: translateY(-3px) scale(1.018);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell,
+  .shell:hover,
+  .shell:focus-within {
+    transform: none !important;
+    transition: none;
+  }
 }
 
 .inner {

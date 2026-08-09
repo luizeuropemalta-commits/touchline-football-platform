@@ -17,6 +17,7 @@ import {
   type TouchlineCoachCardLayout,
   type TouchlineCoachLayerKey,
 } from "@/lib/touchlineArena/coach-card-layout";
+import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/TouchlineCardPerimeterTrace";
 
 import styles from "./TouchlineCoachCard.module.css";
 
@@ -250,6 +251,8 @@ export default function TouchlineCoachCard({
     "--coach-club-accent": clubAccent,
     "--coach-tier-accent": tierPalette.accent,
     "--coach-tier-secondary": tierPalette.secondary,
+    "--touchline-card-frame-color": tierPalette.accent,
+    "--touchline-club-crest-color": clubAccent,
     "--coach-nationality-x": `${layout.layers.nationality.x}%`,
     "--coach-nationality-y": `${layout.layers.nationality.y}%`,
     "--coach-nationality-w": `${layout.layers.nationality.w}%`,
@@ -374,6 +377,7 @@ export default function TouchlineCoachCard({
         }
       }}
     >
+      <TouchlineCardPerimeterTrace />
       <div className={styles.inner} data-coach-card-inner="true">
         <div className={styles.identity} {...editableLayerProps("nationality", "Nacionalidade")}>
           <span>{isPortuguese ? "Nacionalidade" : "Nationality"}</span>
@@ -384,7 +388,7 @@ export default function TouchlineCoachCard({
         {runtimeClubLogoUrl ? (
           <div className={styles.clubBadge} {...editableLayerProps("clubCrest", "Escudo do clube")}>
             <span>{isPortuguese ? "Clube atual" : "Current club"}</span>
-            <img ref={crestRef} src={runtimeClubLogoUrl} alt={clubName} draggable={false} />
+            <img ref={crestRef} src={runtimeClubLogoUrl} alt={clubName} draggable={false} data-touchline-card-crest="true" />
           </div>
         ) : null}
 

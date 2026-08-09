@@ -816,90 +816,120 @@ a, button { outline: none; }
 }
 
 .touchline-card-surface[data-card-motion="true"] {
-  --touchline-card-light: 248 113 113;
-  --touchline-card-neon-filter:
-    drop-shadow(0 8px 11px rgba(0,0,0,.30));
-  --touchline-card-frame-neon-filter:
-    drop-shadow(0 0 1.5px rgb(var(--touchline-card-light) / .14));
-  --touchline-card-neon-active-filter:
-    drop-shadow(0 0 3px rgb(var(--touchline-card-light) / .58))
-    drop-shadow(0 0 9px rgb(var(--touchline-card-light) / .34))
-    drop-shadow(0 0 18px rgb(var(--touchline-card-light) / .16));
-  --touchline-card-neon-zoom-filter:
-    drop-shadow(0 0 4px rgb(var(--touchline-card-light) / .72))
-    drop-shadow(0 0 13px rgb(var(--touchline-card-light) / .44))
-    drop-shadow(0 0 25px rgb(var(--touchline-card-light) / .22));
+  /* Values are supplied by the shared player/coach components from the
+     canonical tier and club palettes. The fallbacks are only for legacy
+     surfaces which have not yet supplied a colour token. */
+  --touchline-card-frame-color: #ff4d5e;
+  --touchline-club-crest-color: #a3ff12;
   isolation: isolate;
   transform: translateZ(0) scale(1);
   transform-origin: 50% 54%;
-  transition: transform 240ms cubic-bezier(.2,.8,.2,1), filter 280ms ease, -webkit-filter 280ms ease;
-  will-change: transform, filter;
+  transition: transform 240ms cubic-bezier(.2,.8,.2,1);
+  will-change: transform;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  -webkit-filter: var(--touchline-card-neon-filter) !important;
-  filter: var(--touchline-card-neon-filter) !important;
 }
 
-.touchline-card-surface[data-card-motion="true"] [data-touchline-card-frame="true"] {
-  -webkit-filter: var(--touchline-card-frame-neon-filter) !important;
-  filter: var(--touchline-card-frame-neon-filter) !important;
-  transition: filter 280ms ease, -webkit-filter 280ms ease;
-  will-change: filter;
+[data-touchline-card-neon-trace="true"] {
+  position: absolute;
+  z-index: 56;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--touchline-card-frame-color);
+  pointer-events: none;
+  user-select: none;
 }
 
-.touchline-card-surface[data-card-tier="sapphire-blue"] { --touchline-card-light: 56 189 248; }
-.touchline-card-surface[data-card-tier="amethyst-purple"] { --touchline-card-light: 168 85 247; }
-.touchline-card-surface[data-card-tier="radiant-gold"] { --touchline-card-light: 250 204 21; }
-.touchline-card-surface[data-card-tier="emerald-green"] { --touchline-card-light: 34 197 94; }
-.touchline-card-surface[data-card-tier="clear-diamond"] { --touchline-card-light: 224 242 254; }
-.touchline-card-surface[data-card-tier="diamond-gold"] { --touchline-card-light: 255 224 138; }
-.touchline-card-surface[data-card-tier="pending"] {
-  --touchline-card-light: 148 163 184;
+[data-touchline-card-neon-trace-base="true"] {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.35;
+  opacity: .34;
 }
-.touchline-card-surface[data-card-tier="neutral"] {
-  --touchline-card-light: 148 163 184;
+
+[data-touchline-card-neon-trace-run="true"] {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3.1;
+  stroke-dasharray: 2 98;
+  stroke-dashoffset: 0;
+  opacity: 0;
 }
+
+@keyframes touchline-card-perimeter-trace {
+  0% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
+  9% { stroke-dasharray: 14 86; opacity: .82; }
+  71% { stroke-dasharray: 16 84; stroke-dashoffset: -74; opacity: .72; }
+  88% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .44; }
+  100% { stroke-dasharray: 100 0; stroke-dashoffset: -100; opacity: .28; }
+}
+
 .touchline-card-surface[data-card-classification="pending"] [data-touchline-card-frame="true"] {
   filter: grayscale(1) saturate(.35) brightness(.88);
 }
 
-.touchline-card-surface[data-card-motion="true"]::before {
-  display: none;
-}
-
-.touchline-card-surface[data-card-motion="true"]::after {
-  display: none;
-}
-
 @media (hover: hover) and (pointer: fine) {
   .touchline-card-surface[data-card-motion="true"]:hover {
-    --touchline-card-neon-filter: var(--touchline-card-neon-active-filter);
-    --touchline-card-frame-neon-filter: var(--touchline-card-neon-active-filter);
     z-index: 4;
     transform: translateZ(0) scale(1.035) !important;
   }
 
+  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-neon-trace-run="true"] {
+    animation: touchline-card-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
+  }
+
+  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-crest="true"] {
+    transform: translate3d(0, -1px, 0);
+  }
 }
 
 .touchline-card-surface[data-card-motion="true"]:focus-within,
 .touchline-card-surface[data-card-motion="true"][data-neon-active="true"] {
-  --touchline-card-neon-filter: var(--touchline-card-neon-active-filter);
-  --touchline-card-frame-neon-filter: var(--touchline-card-neon-active-filter);
   z-index: 4;
 }
 
+.touchline-card-surface[data-card-motion="true"]:is(:focus-within, [data-neon-active="true"]) [data-touchline-card-neon-trace-run="true"],
+:is(.is-selected, .is-active, [aria-pressed="true"], [aria-selected="true"]) > .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"],
+:is(.is-selected, .is-active, [aria-pressed="true"], [aria-selected="true"]) .arena-field-card > .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"],
+.touchline-card-surface[data-card-motion="true"][data-card-zoom="true"] [data-touchline-card-neon-trace-run="true"],
+[data-card-zoom="expanded"] .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"],
+.zoomCardVisual .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"],
+.zoomContent .touchline-card-surface[data-card-motion="true"] [data-touchline-card-neon-trace-run="true"] {
+  animation: touchline-card-perimeter-trace 1500ms cubic-bezier(.22,.74,.28,1) both;
+}
+
+.touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest="true"] {
+  display: block;
+  border-radius: 50%;
+  outline: 1px solid color-mix(in srgb, var(--touchline-club-crest-color) 58%, transparent);
+  outline-offset: 1px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--touchline-club-crest-color) 12%, transparent) 0 54%, transparent 58%);
+  box-shadow: 0 2px 6px rgba(0,0,0,.42);
+  transform: translateZ(0);
+  transform-origin: center;
+  transition: transform 180ms ease, outline-color 180ms ease, background-color 180ms ease;
+  will-change: transform;
+}
+
+.touchline-card-surface[data-card-motion="true"]:is(:focus-within, [data-neon-active="true"]) [data-touchline-card-crest="true"] {
+  outline-color: color-mix(in srgb, var(--touchline-club-crest-color) 86%, white 14%);
+}
+
 /* Touch screens do not have desktop hover. A tap-selected card receives the
-   same premium lift and tier glow without relying on Safari's synthetic hover. */
+   same premium lift and perimeter trace without relying on Safari's synthetic hover. */
 @media (hover: none), (pointer: coarse) {
   .touchline-card-surface[data-card-motion="true"] {
     touch-action: manipulation;
-    --touchline-card-neon-filter:
-      drop-shadow(0 8px 11px rgba(0,0,0,.30));
-    --touchline-card-frame-neon-filter:
-      drop-shadow(0 0 1px rgb(var(--touchline-card-light) / .08));
   }
 
   .touchline-card-surface[data-card-motion="true"]:focus-within,
@@ -908,54 +938,30 @@ a, button { outline: none; }
   }
 }
 
-/* Mobile browsers do not report pointer capabilities consistently (notably
-   Safari in standalone mode). Screen width is the final guarantee that cards
-   open unlit and only the explicitly selected card receives the tier neon. */
-@media (max-width: 920px) {
-  .touchline-card-surface[data-card-motion="true"] {
-    --touchline-card-neon-filter:
-      drop-shadow(0 8px 11px rgba(0,0,0,.30));
-    --touchline-card-frame-neon-filter:
-      drop-shadow(0 0 1px rgb(var(--touchline-card-light) / .08));
-  }
-
-  .touchline-card-surface[data-card-motion="true"]:focus-within,
-  .touchline-card-surface[data-card-motion="true"][data-neon-active="true"] {
-    --touchline-card-frame-neon-filter: var(--touchline-card-neon-active-filter);
-  }
-}
-
 :is(.is-selected, .is-active, [aria-pressed="true"], [aria-selected="true"]) > .touchline-card-surface[data-card-motion="true"],
 :is(.is-selected, .is-active, [aria-pressed="true"], [aria-selected="true"]) .arena-field-card > .touchline-card-surface[data-card-motion="true"] {
-  --touchline-card-frame-neon-filter: var(--touchline-card-neon-active-filter);
   z-index: 3;
 }
 
-.touchline-card-surface[data-card-motion="true"][data-card-zoom="true"],
-[data-card-zoom="expanded"] .touchline-card-surface[data-card-motion="true"],
-.zoomCardVisual .touchline-card-surface[data-card-motion="true"],
-.zoomContent .touchline-card-surface[data-card-motion="true"] {
-  --touchline-card-frame-neon-filter: var(--touchline-card-neon-zoom-filter);
-}
-
-:is(.is-selected, .is-active, [aria-pressed="true"], [aria-selected="true"]) .touchline-card-surface[data-card-motion="true"]::before {
-  opacity: .92;
-  transform: scale(1);
-}
-
-:is(.is-selected, .is-active, [aria-pressed="true"], [aria-selected="true"]) .touchline-card-surface[data-card-motion="true"]::after {
-  opacity: .28;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .touchline-card-surface[data-card-motion="true"],
-  .touchline-card-surface[data-card-motion="true"]::before,
-  .touchline-card-surface[data-card-motion="true"]::after {
-    transition-duration: 1ms;
+  .touchline-card-surface[data-card-motion="true"] {
+    transition: none;
   }
 
-  .touchline-card-surface[data-card-motion="true"]:hover {
-    transform: none;
+  .touchline-card-surface[data-card-motion="true"]:hover,
+  .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest="true"] {
+    transform: none !important;
+    transition: none;
+  }
+
+  [data-touchline-card-neon-trace-base="true"] {
+    stroke-width: 1.9;
+    opacity: .72;
+  }
+
+  [data-touchline-card-neon-trace-run="true"] {
+    animation: none !important;
+    opacity: 0 !important;
   }
 }
 /* Registration keeps the form immediately usable while the Arena creates the first impression. */

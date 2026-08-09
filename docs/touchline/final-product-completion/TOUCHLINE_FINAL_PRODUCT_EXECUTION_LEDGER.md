@@ -1394,3 +1394,34 @@ Preview, production checkpoint, or a dirty worktree.
 - **Boundary:** this is a separate visual-only block. It must not change card
   tiers, values, prices, contracts, inventory or the current ClubHub profile
   scope.
+
+## 2026-08-09 canonical card perimeter trace — LOCAL COMPLETE / NOT DEPLOYED
+
+- **Implementation:** the clipped tier `filter`/`drop-shadow` neon was
+  replaced with one shared, stroke-only SVG perimeter geometry outside the
+  cropped player/coach artwork containers. Its static base and travelling dash
+  follow the same continuous path; it runs once on hover, focus, selected/
+  active and zoom surfaces, then retains a soft residual outline. It never
+  fills, masks or clips the frame.
+- **Canonical colour source:** player cards pass the approved
+  `touchlineCardTierPalette(...).accent` token, coach cards pass their existing
+  `tierPalette.accent`, and neutral cards use the established neutral public
+  accent. Player and coach crests use their canonical club accent and a
+  fine-pointer-only lift. No asset, tier, value, price, contract or ranking
+  rule changed.
+- **Motion and compact safety:** reduced-motion explicitly leaves only a
+  brighter static outline and no crest/card transform. The trace is pointer
+  inert and preserves `touch-action: manipulation`. Arena Live's 22 moving
+  compact cards retain the static outline and deliberately suppress the
+  travelling layer to preserve the existing Safari anti-flicker boundary.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-09-CARD-PERIMETER-TRACE-VISUAL-QA.md`;
+  local static fixture `app/visual-qa/card-neon-trace/page.tsx`.
+- **Validation:** focused visual/card/motion regression suite **78/78
+  passed**; `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed.
+  Local browser QA at 1280px, 768px and 390px recorded no horizontal overflow
+  and trace bounds inside both player and coach cards. Reduced motion is
+  covered by explicit CSS and regression assertions; the local browser surface
+  does not expose OS media emulation, so no system setting was changed.
+- **Boundary:** local only. No DB, sync, migration, Preview, deployment,
+  product data or generated workspace artifact is included in this checkpoint.

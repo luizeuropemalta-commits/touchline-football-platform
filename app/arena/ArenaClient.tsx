@@ -11447,6 +11447,17 @@ export default function ArenaClient({
           will-change: auto !important;
         }
 
+        /* Twenty-two live cards deliberately stay on static paint layers.
+           They retain the shared perimeter base stroke, but the travelling
+           trace is disabled here so Safari never composites a new animated
+           layer for every player. */
+        .arena-live-moving-card .arena-live-compact-card-product > .touchline-card-surface [data-touchline-card-neon-trace-run="true"] {
+          animation: none !important;
+          opacity: 0 !important;
+          transition: none !important;
+          will-change: auto !important;
+        }
+
         .arena-live-lineup-status {
           position: absolute;
           left: 50%;

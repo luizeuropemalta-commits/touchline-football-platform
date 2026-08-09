@@ -10,6 +10,12 @@ function source(relativePath: string) {
 test("every TouchLine card keeps the permanent tier neon contract", () => {
   const globalCss = source("app/globals.css");
   const exactCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
+  const coachCard = source("components/touchline/cards/TouchlineCoachCard.tsx");
+  const trace = source("components/touchline/cards/TouchlineCardPerimeterTrace.tsx");
+  const traceCss = globalCss.slice(
+    globalCss.indexOf('[data-touchline-card-neon-trace="true"]'),
+    globalCss.indexOf('.touchline-card-surface[data-card-classification="pending"]'),
+  );
 
   assert.match(exactCard, /data-card-neon="permanent-tier-art"/);
   assert.match(exactCard, /TouchLine England League Stats/);
@@ -21,25 +27,35 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(exactCard, /touchlinePublicCardStatusLabel\(publicPresentation\?\.visualState \?\? "unavailable", runtimeLocale\)/);
   assert.doesNotMatch(exactCard, /TC Value/);
   assert.match(globalCss, /\.touchline-card-surface\[data-card-motion="true"\]/);
-  assert.match(globalCss, /data-card-tier="sapphire-blue"/);
-  assert.match(globalCss, /data-card-tier="amethyst-purple"/);
-  assert.match(globalCss, /data-card-tier="radiant-gold"/);
-  assert.match(globalCss, /data-card-tier="emerald-green"/);
-  assert.match(globalCss, /data-card-tier="clear-diamond"/);
-  assert.match(globalCss, /data-card-tier="diamond-gold"/);
   assert.match(globalCss, /\.touchline-card-surface\[data-card-motion="true"\]:hover/);
-  assert.match(globalCss, /--touchline-card-neon-filter:/);
-  assert.match(globalCss, /--touchline-card-frame-neon-filter:/);
-  assert.match(globalCss, /\[data-touchline-card-frame="true"\]/);
-  assert.match(globalCss, /-webkit-filter: var\(--touchline-card-neon-filter\) !important/);
-  assert.match(globalCss, /-webkit-filter: var\(--touchline-card-frame-neon-filter\) !important/);
-  assert.match(globalCss, /will-change: transform, filter/);
+  assert.match(trace, /data-touchline-card-neon-trace="true"/);
+  assert.match(trace, /aria-hidden="true"/);
+  assert.match(trace, /focusable="false"/);
+  assert.match(trace, /pathLength="100"/);
+  assert.match(trace, /fill="none"/);
+  assert.match(trace, /TOUCHLINE_CARD_PERIMETER_PATH/);
+  assert.match(traceCss, /pointer-events: none/);
+  assert.match(traceCss, /overflow: visible/);
+  assert.match(traceCss, /@keyframes touchline-card-perimeter-trace/);
+  assert.match(traceCss, /stroke-dashoffset/);
+  assert.doesNotMatch(traceCss, /mask|clip-path|filter:|background:/);
+  assert.doesNotMatch(traceCss, /overflow: hidden/);
+  assert.match(exactCard, /touchlineCardTierPalette\(marketTier\.key\)\.accent/);
+  assert.match(exactCard, /--touchline-card-frame-color": cardTraceColor/);
+  assert.match(exactCard, /--touchline-club-crest-color": resolvedClub\?\.accent \?\? cardTraceColor/);
+  assert.match(coachCard, /--touchline-card-frame-color": tierPalette\.accent/);
+  assert.match(coachCard, /--touchline-club-crest-color": clubAccent/);
+  assert.match(exactCard, /<TouchlineCardPerimeterTrace\s*\/>/);
+  assert.match(coachCard, /<TouchlineCardPerimeterTrace\s*\/>/);
+  assert.match(exactCard, /data-touchline-card-crest="true"/);
+  assert.match(coachCard, /data-touchline-card-crest="true"/);
+  assert.match(globalCss, /\[data-touchline-card-crest="true"\][\s\S]*?--touchline-club-crest-color/);
+  assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-run="true"\][\s\S]*?animation: none !important/);
+  assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-base="true"\][\s\S]*?opacity: \.72/);
+  assert.match(globalCss, /touch-action: manipulation/);
+  assert.doesNotMatch(traceCss, /touch-action:\s*none/);
   assert.match(globalCss, /\[data-neon-active="true"\]/);
   assert.match(globalCss, /@media \(hover: none\), \(pointer: coarse\)/);
-  assert.match(
-    globalCss,
-    /@media \(max-width: 920px\)[\s\S]*?drop-shadow\(0 8px 11px rgba\(0,0,0,\.30\)\)[\s\S]*?--touchline-card-frame-neon-filter:[\s\S]*?rgb\(var\(--touchline-card-light\) \/ \.08\)/,
-  );
   assert.match(exactCard, /data-touchline-card-frame="true"/);
   assert.match(exactCard, /src=\{zoomFrameUrl\}/);
   assert.match(exactCard, /data-card-delivery="zoom-optimized"/);
@@ -409,8 +425,9 @@ test("coach uses official coach art with player-card nationality and club identi
   assert.match(coachCardStyles, /\.inner \{[\s\S]*?background: transparent;/);
   assert.match(coachCardStyles, /\.inner::before \{[\s\S]*?display: none;/);
   assert.doesNotMatch(coachCardStyles, /\.inner \{[\s\S]*?rgba\(1, 5, 7, \.82\)/);
-  assert.match(coachCardStyles, /--touchline-card-frame-neon-filter:[\s\S]*?\/ \.55/);
-  assert.match(coachCardStyles, /--touchline-card-neon-active-filter:[\s\S]*?\/ \.82/);
+  assert.doesNotMatch(coachCardStyles, /--touchline-card-frame-neon-filter/);
+  assert.doesNotMatch(coachCardStyles, /--touchline-card-neon-active-filter/);
+  assert.match(coachCardStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.shell:hover[\s\S]*?transform: none !important/);
   assert.match(coachCardStyles, /\.shell\[data-coach-card-editable="true"\] \[data-coach-layer\] \{[\s\S]*?pointer-events: auto;/);
   assert.match(coachCardStyles, /\.shell\[data-coach-card-editable="true"\] \[data-coach-layer\] \{[\s\S]*?outline: 0;/);
   assert.match(coachCardStyles, /\.clubBadge img \{[\s\S]*?width: var\(--coach-crest-size, 132px\)/);

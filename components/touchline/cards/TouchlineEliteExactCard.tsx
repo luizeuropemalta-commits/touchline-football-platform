@@ -9,11 +9,13 @@ import {
   parseMarketValueEur,
   resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaClubTemplateForTierPreview,
+  touchlineCardTierPalette,
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "@/lib/touchlineArena/card-rules";
 import {
   resolveTouchlinePublicCardPresentation,
+  TOUCHLINE_NEUTRAL_CARD_ACCENT,
   touchlinePublicCardStatusLabel,
   touchlinePublicMarketValueStatusLabel,
 } from "@/lib/touchlineArena/public-card-presentation";
@@ -28,6 +30,7 @@ import { normalizeTouchlineCountryCode3, touchlineCountryFlagUrl } from "@/lib/t
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineShirtNumberPaletteForClub } from "@/lib/touchlineArena/shirt-number-colors";
+import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/TouchlineCardPerimeterTrace";
 import { TouchlineShirtNumber } from "@/components/touchline/cards/TouchlineShirtNumber";
 import masterCardLayout from "@/public/touchlineArena/card-layouts/master-shirt-back-layout.json";
 
@@ -953,6 +956,9 @@ export function TouchlineEliteExactCard({
   // An explicit local asset can be a view-specific derivative (for example,
   // the 160 px Live crest). The canonical 512 px crest remains the fallback.
   const resolvedClubLogoUrl = touchlineRuntimeCrestUrl(localPlayerClubLogoUrl || resolvedClub?.logoUrl || "");
+  const cardTraceColor = marketTier
+    ? touchlineCardTierPalette(marketTier.key).accent
+    : TOUCHLINE_NEUTRAL_CARD_ACCENT;
   const shirtNamePadding = shirtNameSafePadding(layout, Boolean(resolvedClubLogoUrl));
   const numberPalette = touchlineShirtNumberPaletteForClub(player.clubName);
   const textPalette = {
@@ -1089,7 +1095,6 @@ export function TouchlineEliteExactCard({
       objectFit: "contain",
       pointerEvents: "none",
       userSelect: "none",
-      filter: "drop-shadow(0 2px 4px rgba(0,0,0,.48))",
     } as const;
 
     return (
@@ -1099,6 +1104,7 @@ export function TouchlineEliteExactCard({
         draggable={false}
         loading={imageLoading}
         data-club-crest-visual-scale={CLUB_CREST_VISUAL_SCALE}
+        data-touchline-card-crest="true"
         data-live-card-asset="crest"
         style={crestStyle}
       />
@@ -1330,8 +1336,11 @@ export function TouchlineEliteExactCard({
         maxWidth: "100%",
         overflow: "visible",
         contain: shellExtraHeight ? undefined : "layout size",
-      }}
+        "--touchline-card-frame-color": cardTraceColor,
+        "--touchline-club-crest-color": resolvedClub?.accent ?? cardTraceColor,
+      } as React.CSSProperties}
     >
+      <TouchlineCardPerimeterTrace />
       {showMatchPoints ? (
         <div
           aria-label={`${runtimeLocale === "pt-BR" ? "Pontos da partida" : "Match points"}: ${matchPointsText}`}
