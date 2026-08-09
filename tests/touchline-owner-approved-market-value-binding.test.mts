@@ -7,6 +7,12 @@ import {
   type OwnerApprovedMarketValueApplicationCandidate,
   type TouchlineCanonicalMarketValueBinding,
 } from "../lib/touchlineArena/owner-approved-market-value-binding.ts";
+import {
+  OWNER_APPROVED_MARKET_VALUE_BINDING_BATCH_SIZE,
+  ownerApprovedMarketValueBindingBatchRequests,
+  prepareOwnerApprovedMarketValueCanonicalBinding,
+  type TouchlineCanonicalMarketValueBindingReadRequest,
+} from "../lib/touchlineArena/owner-approved-market-value-binding-runner.ts";
 
 const candidateDirectory = new URL(
   "../docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/application-candidates/2026-08-09T19-25-39-089Z/",
@@ -19,6 +25,10 @@ const coreSource = readFileSync(
 );
 const serverSource = readFileSync(
   new URL("../lib/touchlineArena/owner-approved-market-value-binding-server.ts", import.meta.url),
+  "utf8",
+);
+const runnerSource = readFileSync(
+  new URL("../lib/touchlineArena/owner-approved-market-value-binding-runner.ts", import.meta.url),
   "utf8",
 );
 
@@ -46,6 +56,23 @@ function bindings(): TouchlineCanonicalMarketValueBinding[] {
 }
 
 const revision = "a".repeat(64);
+
+function revisionFor(request: TouchlineCanonicalMarketValueBindingReadRequest, character = "a") {
+  return `${character}${request.expectedProviderTeamId}`.padEnd(64, character).slice(0, 64);
+}
+
+function readyRead(request: TouchlineCanonicalMarketValueBindingReadRequest, character = "a") {
+  return {
+    status: "ready" as const,
+    request,
+    sourceRevisionSha256: revisionFor(request, character),
+    bindings: bindings().filter((binding) => (
+      binding.providerTeamId === request.expectedProviderTeamId
+      && request.providerPlayerIds.includes(binding.providerPlayerId)
+    )),
+    issues: [],
+  };
+}
 
 test("binds exactly the 533 explicit EUR rows and keeps 5/23/20 outside every write set", () => {
   const manifest = bindOwnerApprovedMarketValueCandidate({
@@ -153,12 +180,93 @@ test("fails closed when candidate counts, source rows, UUIDs or freshness proof 
   assert.ok(pendingResult.issues.some((entry) => entry.code === "CANDIDATE_ROW_INVALID"));
 });
 
+test("the pure runner performs 19 stable team-local reads twice before returning all 533 bindings", async () => {
+  const requests = ownerApprovedMarketValueBindingBatchRequests(candidate);
+  assert.equal(requests.length, 19);
+  assert.equal(new Set(requests.flatMap((request) => request.providerPlayerIds)).size, 533);
+  assert.ok(requests.every((request) => request.providerPlayerIds.length <= OWNER_APPROVED_MARKET_VALUE_BINDING_BATCH_SIZE));
+
+  const calls: TouchlineCanonicalMarketValueBindingReadRequest[] = [];
+  const manifest = await prepareOwnerApprovedMarketValueCanonicalBinding({
+    candidate,
+    readBatch: async (request) => {
+      calls.push(request);
+      return readyRead(request);
+    },
+  });
+
+  assert.equal(calls.length, requests.length * 2);
+  assert.equal(manifest.status, "review-required");
+  assert.equal(manifest.rows.length, 533);
+  assert.equal(manifest.applicationEligible, false);
+  assert.deepEqual(manifest.excluded, {
+    pendingValueMissing: 5,
+    providerOnlyPending: 23,
+    ownerOnlyReview: 20,
+    excludedFromEveryWriteSet: true,
+  });
+});
+
+test("the pure runner blocks every row when a second-pass revision changes", async () => {
+  const callsByTeam = new Map<string, number>();
+  const manifest = await prepareOwnerApprovedMarketValueCanonicalBinding({
+    candidate,
+    readBatch: async (request) => {
+      const count = (callsByTeam.get(request.expectedProviderTeamId) ?? 0) + 1;
+      callsByTeam.set(request.expectedProviderTeamId, count);
+      return readyRead(request, count === 2 && request.expectedProviderTeamId === "19" ? "b" : "a");
+    },
+  });
+
+  assert.equal(manifest.status, "blocked");
+  assert.equal(manifest.rows.length, 0);
+  assert.ok(manifest.issues.some((entry) => /two fresh canonical projection reads/i.test(entry.detail)));
+});
+
+test("the pure runner blocks on a failed second pass and on a reader exception without a partial manifest", async () => {
+  const requests = ownerApprovedMarketValueBindingBatchRequests(candidate);
+  let callCount = 0;
+  const blockedSecondPass = await prepareOwnerApprovedMarketValueCanonicalBinding({
+    candidate,
+    readBatch: async (request) => {
+      callCount += 1;
+      if (callCount > requests.length) return {
+        status: "blocked" as const,
+        request,
+        sourceRevisionSha256: null,
+        bindings: [],
+        issues: [{
+          code: "CANONICAL_READ_BLOCKED" as const,
+          detail: "synthetic read failure",
+          providerPlayerId: null,
+          providerTeamId: null,
+        }],
+      };
+      return readyRead(request);
+    },
+  });
+  assert.equal(blockedSecondPass.status, "blocked");
+  assert.equal(blockedSecondPass.rows.length, 0);
+  assert.ok(blockedSecondPass.issues.some((entry) => entry.detail === "synthetic read failure"));
+
+  const thrown = await prepareOwnerApprovedMarketValueCanonicalBinding({
+    candidate,
+    readBatch: async () => {
+      throw new Error("synthetic reader exception");
+    },
+  });
+  assert.equal(thrown.status, "blocked");
+  assert.equal(thrown.rows.length, 0);
+  assert.ok(thrown.issues.some((entry) => /reader threw/i.test(entry.detail)));
+});
+
 test("the server-only facade reads fresh canonical identity tables twice and has no write or provider path", () => {
   assert.match(serverSource, /import "server-only"/);
   assert.match(serverSource, /readTouchlineCanonicalMarketValueBindingBatch/);
-  assert.match(serverSource, /const first = await readAllBatches/);
-  assert.match(serverSource, /const second = await readAllBatches/);
-  assert.match(serverSource, /MAX_PROVIDER_IDS_PER_BATCH = 60/);
+  assert.match(serverSource, /prepareWithCanonicalBindingReader/);
+  assert.match(runnerSource, /const first = await readAllBatches/);
+  assert.match(runnerSource, /const second = await readAllBatches/);
+  assert.match(runnerSource, /OWNER_APPROVED_MARKET_VALUE_BINDING_BATCH_SIZE = 60/);
   for (const table of [
     "football_competitions",
     "football_clubs",
@@ -182,4 +290,7 @@ test("the server-only facade reads fresh canonical identity tables twice and has
   assert.equal(coreSource.includes("createAdminClient"), false);
   assert.equal(coreSource.includes("process.env"), false);
   assert.equal(coreSource.includes("fetch("), false);
+  for (const forbidden of ["createAdminClient", "process.env", "fetch(", "createFootballDataProvider", "market-value-import"]) {
+    assert.equal(runnerSource.includes(forbidden), false, `forbidden pure runner capability: ${forbidden}`);
+  }
 });

@@ -1,38 +1,31 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
-
 import { createAdminClient } from "../supabase/admin.ts";
 import {
-  bindOwnerApprovedMarketValueCandidate,
   type OwnerApprovedMarketValueApplicationCandidate,
   type OwnerApprovedMarketValueBindingIssue,
   type OwnerApprovedMarketValueBindingManifest,
   type TouchlineCanonicalMarketValueBinding,
 } from "./owner-approved-market-value-binding.ts";
+import {
+  OWNER_APPROVED_MARKET_VALUE_BINDING_BATCH_SIZE,
+  prepareOwnerApprovedMarketValueCanonicalBinding as prepareWithCanonicalBindingReader,
+  touchlineCanonicalMarketValueBindingRevision,
+  type TouchlineCanonicalMarketValueBindingBatchReader,
+  type TouchlineCanonicalMarketValueBindingRead,
+  type TouchlineCanonicalMarketValueBindingReadRequest,
+} from "./owner-approved-market-value-binding-runner.ts";
 
-const MAX_PROVIDER_IDS_PER_BATCH = 60;
+export type {
+  TouchlineCanonicalMarketValueBindingBatchReader,
+  TouchlineCanonicalMarketValueBindingRead,
+  TouchlineCanonicalMarketValueBindingReadRequest,
+} from "./owner-approved-market-value-binding-runner.ts";
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type DatabaseRow = Record<string, unknown>;
 type QueryResult = Readonly<{ data: DatabaseRow[]; error: unknown | null }>;
-
-export type TouchlineCanonicalMarketValueBindingReadRequest = Readonly<{
-  providerPlayerIds: readonly string[];
-  expectedProviderTeamId: string;
-}>;
-
-export type TouchlineCanonicalMarketValueBindingRead = Readonly<{
-  status: "ready" | "blocked";
-  request: TouchlineCanonicalMarketValueBindingReadRequest;
-  sourceRevisionSha256: string | null;
-  bindings: readonly TouchlineCanonicalMarketValueBinding[];
-  issues: readonly OwnerApprovedMarketValueBindingIssue[];
-}>;
-
-export type TouchlineCanonicalMarketValueBindingBatchReader = (
-  request: TouchlineCanonicalMarketValueBindingReadRequest,
-) => Promise<TouchlineCanonicalMarketValueBindingRead>;
 
 function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -50,19 +43,6 @@ function asRows(value: unknown): DatabaseRow[] {
   return Array.isArray(value)
     ? value.filter((row): row is DatabaseRow => Boolean(row && typeof row === "object"))
     : [];
-}
-
-function stableValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stableValue);
-  if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(Object.keys(value as Record<string, unknown>).sort().map((key) => [
-    key,
-    stableValue((value as Record<string, unknown>)[key]),
-  ]));
-}
-
-function sha256(value: unknown) {
-  return createHash("sha256").update(JSON.stringify(stableValue(value)), "utf8").digest("hex");
 }
 
 function issue(
@@ -88,7 +68,7 @@ function normalizedRequest(request: TouchlineCanonicalMarketValueBindingReadRequ
   if (
     !expectedProviderTeamId.match(/^\d+$/)
     || !providerPlayerIds.length
-    || providerPlayerIds.length > MAX_PROVIDER_IDS_PER_BATCH
+    || providerPlayerIds.length > OWNER_APPROVED_MARKET_VALUE_BINDING_BATCH_SIZE
     || providerPlayerIds.some((providerPlayerId) => !providerPlayerId.match(/^\d+$/))
   ) return null;
   return { expectedProviderTeamId, providerPlayerIds };
@@ -279,45 +259,10 @@ export async function readTouchlineCanonicalMarketValueBindingBatch(
   return Object.freeze({
     status: "ready",
     request: Object.freeze({ providerPlayerIds: normalized.providerPlayerIds, expectedProviderTeamId: normalized.expectedProviderTeamId }),
-    sourceRevisionSha256: sha256(sortedBindings),
+    sourceRevisionSha256: touchlineCanonicalMarketValueBindingRevision(sortedBindings),
     bindings: Object.freeze(sortedBindings),
     issues: Object.freeze([]),
   });
-}
-
-function chunks<T>(items: readonly T[], size: number) {
-  const result: T[][] = [];
-  for (let index = 0; index < items.length; index += size) result.push([...items.slice(index, index + size)]);
-  return result;
-}
-
-function batchRequests(candidate: OwnerApprovedMarketValueApplicationCandidate): TouchlineCanonicalMarketValueBindingReadRequest[] {
-  const byTeam = new Map<string, string[]>();
-  for (const row of candidate.rows) {
-    if (row.reconciliation_state !== "READY_AFTER_CANONICAL_UUID_BINDING") continue;
-    const providerTeamId = text(row.provider_team_id);
-    const providerPlayerId = text(row.provider_player_id);
-    byTeam.set(providerTeamId, [...(byTeam.get(providerTeamId) ?? []), providerPlayerId]);
-  }
-  return [...byTeam.entries()]
-    .sort(([left], [right]) => Number(left) - Number(right))
-    .flatMap(([expectedProviderTeamId, providerPlayerIds]) => chunks([...new Set(providerPlayerIds)].sort((left, right) => Number(left) - Number(right)), MAX_PROVIDER_IDS_PER_BATCH)
-      .map((ids) => Object.freeze({ providerPlayerIds: Object.freeze(ids), expectedProviderTeamId })));
-}
-
-async function readAllBatches(
-  requests: readonly TouchlineCanonicalMarketValueBindingReadRequest[],
-  readBatch: TouchlineCanonicalMarketValueBindingBatchReader,
-) {
-  return Promise.all(requests.map((request) => readBatch(request)));
-}
-
-function combinedRevision(reads: readonly TouchlineCanonicalMarketValueBindingRead[]) {
-  return sha256(reads.map((read) => ({
-    expectedProviderTeamId: read.request.expectedProviderTeamId,
-    providerPlayerIds: read.request.providerPlayerIds,
-    sourceRevisionSha256: read.sourceRevisionSha256,
-  })));
 }
 
 /**
@@ -329,35 +274,8 @@ export async function prepareOwnerApprovedMarketValueCanonicalBinding(input: Rea
   candidate: OwnerApprovedMarketValueApplicationCandidate;
   readBatch?: TouchlineCanonicalMarketValueBindingBatchReader;
 }>): Promise<OwnerApprovedMarketValueBindingManifest> {
-  const requests = batchRequests(input.candidate);
-  const readBatch = input.readBatch ?? readTouchlineCanonicalMarketValueBindingBatch;
-  const first = await readAllBatches(requests, readBatch);
-  const firstIssues = first.flatMap((read) => read.status === "blocked" ? read.issues : []);
-  if (firstIssues.length) {
-    return bindOwnerApprovedMarketValueCandidate({
-      candidate: input.candidate,
-      canonicalBindings: [],
-      canonicalReadRevisionSha256: "",
-      preflightIssues: firstIssues,
-    });
-  }
-  const second = await readAllBatches(requests, readBatch);
-  const secondIssues = second.flatMap((read) => read.status === "blocked" ? read.issues : []);
-  const revisionChanged = first.some((read, index) => read.sourceRevisionSha256 !== second[index]?.sourceRevisionSha256);
-  if (secondIssues.length || revisionChanged) {
-    return bindOwnerApprovedMarketValueCandidate({
-      candidate: input.candidate,
-      canonicalBindings: [],
-      canonicalReadRevisionSha256: "",
-      preflightIssues: [
-        ...secondIssues,
-        ...(revisionChanged ? [issue("The two fresh canonical projection reads did not have the same revision fingerprint.")] : []),
-      ],
-    });
-  }
-  return bindOwnerApprovedMarketValueCandidate({
+  return prepareWithCanonicalBindingReader({
     candidate: input.candidate,
-    canonicalBindings: first.flatMap((read) => read.bindings),
-    canonicalReadRevisionSha256: combinedRevision(first),
+    readBatch: input.readBatch ?? readTouchlineCanonicalMarketValueBindingBatch,
   });
 }
