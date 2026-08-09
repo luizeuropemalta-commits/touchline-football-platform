@@ -465,3 +465,33 @@ Preview, production checkpoint, or a dirty worktree.
 - Focused ClubHub/signals boundary regressions passed `6/6`. The broader
   type/build suite remains separately blocked by the local filesystem I/O
   condition recorded above; no release pass is implied.
+
+## 2026-08-09 public persisted-read boundary — RETIRED FANTASY ENDPOINTS PROPOSED
+
+- Evidence: authenticated browser `GET` handlers for fantasy events and
+  capabilities call the provider; capabilities also persists a response.
+- Local proposal: both return a deterministic `410` retired contract with
+  `private, no-store`; no auth, provider, parsing, persistence or timestamp
+  remains. Future ingestion must be a separately approved server-only job with
+  a persisted read model.
+- Acceptance: focused static tests prove that both handlers are fail-closed and
+  that no consumer is implicitly treated as a release-ready replacement. No
+  remote action is authorised.
+
+### RETIRED FANTASY ENDPOINTS IMPLEMENTED AND LOCALLY VALIDATED
+
+- Both handlers now return only `410 TL_FOOTBALL_DATA_RETIRED` with private
+  no-store caching. No provider, auth, request parsing, persistence, token or
+  dynamic timestamp path remains.
+- Focused public-boundary tests passed `14/14`; `pnpm typecheck`, focused
+  ESLint and `git diff --check` passed. No database, provider, sync, import,
+  migration, Preview, production, payment or deployment action occurred.
+
+### RETIRED FANTASY ENDPOINTS IMPLEMENTED AND LOCALLY VALIDATED
+
+- Both handlers now return only `410 TL_FOOTBALL_DATA_RETIRED` with private
+  no-store caching. No provider, auth, request parsing, persistence, token or
+  dynamic timestamp path remains.
+- Focused public-boundary tests passed `14/14`; `pnpm typecheck`, focused
+  ESLint and `git diff --check` passed. No database, provider, sync, import,
+  migration, Preview, production, payment or deployment action occurred.

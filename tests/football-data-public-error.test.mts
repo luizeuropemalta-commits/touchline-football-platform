@@ -4,10 +4,6 @@ import test from "node:test";
 
 import { publicFootballDataFailure } from "../lib/football-data/public-error.ts";
 
-const providerBackedRoutes = [
-  "../app/api/football-data/fantasy/events/route.ts",
-  "../app/api/football-data/fantasy/capabilities/route.ts",
-].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
 const rumoursRoute = readFileSync(new URL("../app/api/touchline-arena/rumours/route.ts", import.meta.url), "utf8");
 
 test("public football-data failures expose stable codes instead of provider messages", () => {
@@ -23,11 +19,7 @@ test("public football-data failures expose stable codes instead of provider mess
   });
 });
 
-test("remaining provider-backed football-data routes do not return raw provider error messages", () => {
-  for (const source of providerBackedRoutes) {
-    assert.match(source, /publicFootballDataFailure\(/);
-    assert.doesNotMatch(source, /result\.error\.message/);
-  }
+test("the retired signals surface does not return raw provider error messages", () => {
   assert.doesNotMatch(rumoursRoute, /publicError\(result\.error\.message\)|publicError\(liveEvents\.error\.message\)/);
   assert.match(rumoursRoute, /No canonical persisted signal snapshot is available/);
   assert.doesNotMatch(rumoursRoute, /createFootballDataProvider|footballDataFetchJson|process\.env/);

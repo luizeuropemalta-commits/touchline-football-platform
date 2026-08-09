@@ -1,44 +1,21 @@
 import { NextResponse } from "next/server";
 
-import { persistProviderCapabilities } from "@/lib/football-data/fantasy-store";
-import { footballDataErrorHttpStatus } from "@/lib/football-data/http";
-import { publicFootballDataFailure } from "@/lib/football-data/public-error";
-import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
-import type { TouchlineProviderCapability } from "@/lib/football-data/types";
-import { requireOwnerOrLocalTouchlineEditor } from "@/lib/touchlineArena/api-access";
+const RETIRED_ERROR = "On-demand fantasy capability retrieval is retired. Use a published persisted projection when available.";
 
-function stripCapabilityRaw(capability: TouchlineProviderCapability): TouchlineProviderCapability {
-  const clean = { ...capability };
-  delete clean.raw;
-  return clean;
-}
-
-export async function GET(request: Request) {
-  const accessError = await requireOwnerOrLocalTouchlineEditor(request);
-  if (accessError) return accessError;
-
-  const provider = createFootballDataProvider("sportmonks");
-  const result = await provider.getSubscriptionCapabilities();
-
-  if (!result.ok) {
-    return NextResponse.json(
-      publicFootballDataFailure(result.error.code),
-      { status: footballDataErrorHttpStatus(result.error.status) },
-    );
-  }
-
-  const persistence = await persistProviderCapabilities(result.data);
-
+/**
+ * Browser GETs must not trigger provider ingestion or capability persistence.
+ * Future ingestion belongs to a protected server-only job boundary.
+ */
+export async function GET() {
   return NextResponse.json({
-    ok: true,
-    data: {
-      provider: result.data.provider,
-      fetchedAt: result.data.fetchedAt,
-      resources: result.data.resources.map(stripCapabilityRaw),
-      enrichments: result.data.enrichments.map(stripCapabilityRaw),
+    ok: false,
+    code: "TL_FOOTBALL_DATA_RETIRED",
+    error: RETIRED_ERROR,
+  }, {
+    status: 410,
+    headers: {
+      allow: "GET",
+      "cache-control": "private, no-store",
     },
-    cached: result.cached ?? false,
-    fetchedAt: result.fetchedAt,
-    persistence,
   });
 }

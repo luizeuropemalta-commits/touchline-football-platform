@@ -1,43 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-import { footballDataErrorHttpStatus } from "@/lib/football-data/http";
-import { publicFootballDataFailure } from "@/lib/football-data/public-error";
-import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
-import type { TouchlineFantasyEvent } from "@/lib/football-data/types";
-import { requireOwnerOrLocalTouchlineEditor } from "@/lib/touchlineArena/api-access";
+const RETIRED_ERROR = "On-demand fantasy event retrieval is retired. Use a published persisted projection when available.";
 
-const SPORTMONKS_ID_PATTERN = /^[0-9]{1,20}$/;
-
-function stripEventRaw(event: TouchlineFantasyEvent): TouchlineFantasyEvent {
-  const clean = { ...event };
-  delete clean.raw;
-  return clean;
-}
-
-export async function GET(request: NextRequest) {
-  const accessError = await requireOwnerOrLocalTouchlineEditor(request);
-  if (accessError) return accessError;
-
-  const rawFixtureId = request.nextUrl.searchParams.get("fixtureId")?.trim();
-  if (rawFixtureId && !SPORTMONKS_ID_PATTERN.test(rawFixtureId)) {
-    return NextResponse.json({ ok: false, error: "fixtureId must be a valid numeric TouchLine fixture identifier." }, { status: 400 });
-  }
-
-  const fixtureId = rawFixtureId || undefined;
-  const provider = createFootballDataProvider("sportmonks");
-  const result = await provider.getLiveFantasyEvents(fixtureId);
-
-  if (!result.ok) {
-    return NextResponse.json(
-      publicFootballDataFailure(result.error.code),
-      { status: footballDataErrorHttpStatus(result.error.status) },
-    );
-  }
-
+/**
+ * Browser GETs must not trigger provider ingestion. A future replacement must
+ * be a protected server job that publishes a versioned persisted read model.
+ */
+export async function GET() {
   return NextResponse.json({
-    ok: true,
-    data: result.data.map(stripEventRaw),
-    cached: result.cached ?? false,
-    fetchedAt: result.fetchedAt,
+    ok: false,
+    code: "TL_FOOTBALL_DATA_RETIRED",
+    error: RETIRED_ERROR,
+  }, {
+    status: 410,
+    headers: {
+      allow: "GET",
+      "cache-control": "private, no-store",
+    },
   });
 }

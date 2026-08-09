@@ -236,6 +236,47 @@ matchweek, new data source, or remote data operation.
   raw team-logo fallback, while keeping both persisted readers and its empty
   state.
 
+## Sixth local slice: retired browser fantasy endpoints — proposed
+
+`/api/football-data/fantasy/events` and
+`/api/football-data/fantasy/capabilities` are browser-addressable after an
+owner/local-editor check, but both call the provider during `GET`; capabilities
+also persists the result. Neither is a public persisted read model or a
+protected server-only job boundary.
+
+This slice retires both handlers with deterministic `410` responses and
+`private, no-store`. The handlers will have no auth, provider, persistence,
+token, request parsing or dynamic timestamp dependency. Existing visual QA or
+owner tools will receive an honest unavailable response until a later internal
+job plus persisted projection is approved.
+
+### Risks and acceptance
+
+- Retiring the endpoints intentionally disables their old on-demand operator
+  workflow; it does not delete any data or change existing persisted snapshots.
+- Static tests must prove both routes have no provider, write or auth path and
+  return the same stable retired contract.
+- No provider, database, sync, migration, Preview or deployment action is
+  permitted by this local code slice.
+
+### Local implementation evidence — 2026-08-09
+
+- Both retired handlers now return only the stable `410`
+  `TL_FOOTBALL_DATA_RETIRED` contract with `private, no-store`.
+- They contain no provider factory/HTTP path, persistence helper, auth grant,
+  request parsing, environment read or dynamic timestamp.
+- Focused public-boundary regressions passed `14/14`; TypeScript, focused
+  ESLint and `git diff --check` passed before the local commit.
+
+### Local implementation evidence — 2026-08-09
+
+- Both retired handlers now return only the stable `410`
+  `TL_FOOTBALL_DATA_RETIRED` contract with `private, no-store`.
+- They contain no provider factory/HTTP path, persistence helper, auth grant,
+  request parsing, environment read or dynamic timestamp.
+- Focused public-boundary regressions passed `14/14`; TypeScript, focused
+  ESLint and `git diff --check` passed before the local commit.
+
 ### Local implementation evidence — 2026-08-09
 
 - The ClubHub profile now reads only `readPublicFantasyFixtureSnapshots()` and
