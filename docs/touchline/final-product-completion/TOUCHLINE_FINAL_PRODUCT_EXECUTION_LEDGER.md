@@ -717,3 +717,86 @@ Preview, production checkpoint, or a dirty worktree.
   written. Focused parser/staging tests must verify the no-identity/no-write
   state and City source supersession. Full typecheck/lint/build and rendered desktop/
   mobile QA are separate gates and are not implied by this staging artifact.
+
+## 2026-08-09 transcript-to-canonical-roster reconciliation — LOCAL PROPOSAL
+
+- **Owner direction:** reconcile the owner-approved transcript against the
+  canonical Sportmonks roster only by exact normalized player name plus exact
+  current club. This creates a review report, not a value write, VERIFIED
+  identity, migration seed, or remote call.
+- **Local evidence gap:** no committed snapshot exists with the required
+  four-way current binding: canonical player UUID, numeric provider player ID,
+  canonical current club/team, and active Premier League membership. Runtime
+  readers can construct that binding only through a prohibited remote DB read.
+  The static club/team registry validates expected team scope but is not player
+  identity evidence.
+- **Fail-closed design:** the offline reconciler accepts only a separately
+  supplied local `touchline-canonical-roster-export-v1` with source run/revision
+  provenance and active `provider_competition_id=8` membership. It rejects
+  invalid provider IDs, stale/current-club disagreement, inactive membership,
+  duplicate candidates, and cross-club names. Without the export it writes a
+  blocked report: `LOCAL_CANONICAL_ROSTER_EXPORT_UNAVAILABLE`, zero matched,
+  no invented unmatched result, and every explicit row remains review-only.
+- **Acceptance:** report one count set per assigned club (`matchedCandidates`,
+  `review`, `unmatched`, `pendingValues`), source/manifest hashes, roster
+  provenance/hash when provided, candidate IDs only on a unique exact match,
+  and `applicationEligible:false` on every row. Pure tests must cover missing
+  export, unique candidate, ambiguity, inactive/stale membership, other-club
+  name, pending value, and absence of provider/DB/write code.
+- **Remote gate:** only a later independently authorized read-only canonical
+  roster audit/export may supply the missing binding. SQL incident, identity
+  review, duplicate handling, guarded migration, rollback preflight, and the
+  card-projection decision all remain required before any application.
+- **Local report executed:**
+  `owner-approved-market-values-2026-08-09.reconciliation-report.json` was
+  produced with `--allow-unavailable` and is explicitly `blocked`, not a
+  partial success: 558 rows, 553 explicit values in review due to unavailable
+  local roster export, 5 pending values, 0 matched candidates, 0 fabricated
+  unmatched results, and `applicationEligible:false` for every row. Its
+  expected club/team registry covers the exact 19 owner-assigned clubs only.
+
+## 2026-08-09 Luiz permanent file-preservation rule — ACTIVE
+
+- Do not delete, clean, move, rename, overwrite, or otherwise retire files,
+  histories, data, migrations, or artifacts without Luiz's explicit
+  authorization for the exact target. Do not infer broader authorization from
+  a related deletion. If target or scope is ambiguous, stop that action and
+  request confirmation.
+- The physical legacy City CSV removal was an explicit exception. No future
+  cleanup or restoration is implied by that exception.
+
+## 2026-08-09 20-club roster delta / Sportmonks sync diagnosis — READ-ONLY
+
+- **Claim under audit:** owner supplied the current-count observation of 589
+  active members over 20 clubs and 560 members over the 19 non-Liverpool
+  clubs, versus 558 owner-transcript rows. Local artifacts do not prove those
+  counts or identify two player names/IDs. The only local 589/560 occurrence
+  is a synthetic test fixture and is not database evidence. No DB query,
+  provider call, refresh, sync, deletion, or membership mutation was run.
+- **Cause status:** unproven. A numeric difference alone does not establish
+  two true extras; it could be stale/duplicate/inactive-scope/current-club
+  mismatch, an owner-list omission, or a count-scope difference. Names and IDs
+  must remain unknown until a provenance-bearing read-only canonical export is
+  available.
+- **Required future read-only export:** a versioned
+  `touchline-canonical-roster-export-v1` for provider `sportmonks`, Premier
+  League provider competition ID `8`, and the exact 19 team IDs. It must carry
+  clubs, players, active and exceptional memberships, provider mappings,
+  `source_updated_at`, source run/revision/hash/actor, and correlated sync-run
+  facts. It must not silently filter invalid rows. The local reconciler already
+  consumes the core arrays but remains review-only even for a unique exact
+  name/current-club candidate.
+- **Current sync risk:** `sync-starter` can call provider and write from GET or
+  POST; `starter-sync` writes per player without one club transaction; and
+  `persistSquadSnapshot` can auto-inactivate members absent from a payload.
+  Those paths do not meet the required no-implicit-exclusion/atomic-audit
+  contract and remain blocked.
+- **Future safe-sync proposal / acceptance:** immutable per-club source
+  snapshot+hash, complete preflight diff, one transaction/RPC per club with a
+  revision fence, explicit reviewed add/change/active-to-inactive command,
+  append-only per-run/item before-after audit and conditional compensating
+  rollback. A retry must be idempotent; incomplete/duplicate/club-mismatch
+  inputs must alter nothing; public readers must observe only previous or
+  complete next snapshot. Remote gates remain SQL-incident closure, authorized
+  read-only export, identity review, environment clearance, and later explicit
+  apply authorization.

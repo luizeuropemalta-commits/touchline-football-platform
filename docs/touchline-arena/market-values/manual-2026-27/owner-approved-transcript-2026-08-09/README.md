@@ -35,6 +35,27 @@ node scripts/build-owner-approved-transcript-staging.mjs --check
 node scripts/build-owner-approved-transcript-staging.mjs --write
 ```
 
+## Offline canonical-roster reconciliation
+
+`reconcile-owner-approved-transcript-market-values.mjs` never opens a network
+connection, database client, provider client, or product API. It can consume a
+separately delivered local JSON export with the exact schema
+`touchline-canonical-roster-export-v1` and the four-way proof required for a
+review candidate: canonical player UUID, numeric Sportmonks player ID, current
+club/team identity, and active Premier League (`provider_competition_id=8`)
+membership.
+
+Without that versioned local export, generate the honest blocked report only:
+
+```sh
+node scripts/reconcile-owner-approved-transcript-market-values.mjs --write --allow-unavailable
+```
+
+It records zero matches, review/pending counts by club, and no application
+candidate. A unique exact normalized-name/current-club result from a future
+export is still `MATCHED_EXACT_NAME_CURRENT_CLUB_REVIEW_REQUIRED`, never
+`VERIFIED` or write-eligible.
+
 No database, SQL Editor, remote sync, deployment, card inventory, tier, price,
 contract, wallet, or offer action is authorized by this directory. A future
 write requires reviewed UUID/provider/team/membership bindings, duplicate and
