@@ -997,3 +997,30 @@ Preview, production checkpoint, or a dirty worktree.
   provenance; integrity/coverage validation; and new non-overwriting
   reconciliation plus `QUARANTINED/PENDING` reports. A write proposal remains
   a separate later decision.
+
+## 2026-08-09 SQL Editor / roster-currency independent audit — HOLD CONTINUES
+
+- **Purpose and status:** an independent read-only audit checked preserved
+  local provenance plus visible Supabase control-plane metadata/log views. It
+  did not execute SQL, query tables, sync, export, migrate, deploy, or mutate
+  any remote data. Result: `INCONCLUSIVE — HOLD CONTINUES`.
+- **Evidence:** saved query `f180a411-06e1-4eca-9d22-25b8f89779be` is visible
+  in the production SQL Editor, but exposes no actor, execution time, job ID,
+  row count, or commit receipt; its current Results panel says “Click Run to
+  execute your query.” The two-day Postgres Logs view returned “No data,” and
+  the Database Migrations view showed “Run your first migration” rather than
+  a recorded migration list. Neither negative observation disproves direct or
+  unregistered SQL. Local `052`/`053` Liverpool SQL files are untracked and
+  correlate temporally only; they are not execution proof.
+- **Risk:** no compensating/manual update is safe. A direct `053` commit could
+  have relabelled source/timestamps on eligible Liverpool inventory rows while
+  bypassing the API-owned inventory history table. Remote schema/migration
+  drift remains unclassified.
+- **Evidence record and closure proposal:**
+  `docs/touchline-arena/audit/2026-08-09-SQL-EDITOR-ROSTER-CURRENCY-INDEPENDENT-AUDIT.md`.
+  The required next evidence is an independent control-plane audit/history
+  record for `2026-08-07 21:12–21:40 UTC` with query hash/text, actor,
+  start/end, result, commit/rollback and affected rows. If unavailable, HOLD
+  remains. A separately authorized, least-privilege read-only schema audit is
+  only a later corroboration path; it cannot be replaced by `service_role` or
+  SQL Editor access.
