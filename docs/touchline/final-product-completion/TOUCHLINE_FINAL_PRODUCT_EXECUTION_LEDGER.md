@@ -1459,3 +1459,35 @@ Preview, production checkpoint, or a dirty worktree.
   is included.
 - **Persistent checkpoint:** `e4c957a0`
   (`feat(owner): add circular portrait perimeter trace`).
+
+## 2026-08-09 calm card/crest/Club Owner neon loop — LOCAL COMPLETE / NOT DEPLOYED
+
+- **Implementation:** player-card, coach-card and Club Owner traces are now
+  autonomous eight-second cycles: a complete travelling pass, several seconds
+  of soft residual illumination, then an invisible reset and repeat. The
+  Club Owner remains a fixed TouchLine-green circular trace; card frames retain
+  their canonical tier-border colour; new crest circles use their existing
+  canonical club accent only.
+- **Interaction/accessibility:** fine-pointer hover lifts card/crest/portrait
+  subtly; coarse `:active` receives the same temporary lift without synthetic
+  hover. Reduced-motion retains a bright static base with no travelling trace
+  or transform. The new SVGs are pointer-inert and do not change pinch-zoom
+  behaviour.
+- **Safari stability exception:** all 22 moving compact Arena Live player
+  cards plus the two compact live coach cards explicitly suppress both
+  travelling frame and crest paths while retaining their static base. This
+  preserves the existing anti-flicker boundary.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-09-CALM-NEON-LOOP-QA.md`; local static
+  fixtures `app/visual-qa/card-neon-trace` and
+  `app/visual-qa/club-owner-portrait-neon`.
+- **Validation:** focused neon/fixture suite **38/38 passed**; `pnpm
+  typecheck`, `pnpm lint` and `git diff --check` passed. Local loopback QA at
+  390px, 768px and 1280px confirmed no horizontal overflow and trace bounds
+  within card, crest and portrait surfaces; pass/residual/restart were observed
+  from computed SVG stroke state. No DB, provider, sync, migration, Preview or
+  deployment action ran.
+- **Boundary:** visual-only local candidate. No card art, tier, price,
+  contract, value, ranking, Club Owner data or generated workspace artifact is
+  included. Persistent checkpoint: `d5ae9bc3`
+  (`feat(visual): loop card and crest perimeter traces`).
