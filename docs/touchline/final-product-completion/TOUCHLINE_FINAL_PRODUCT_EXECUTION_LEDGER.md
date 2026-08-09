@@ -1491,3 +1491,40 @@ Preview, production checkpoint, or a dirty worktree.
   contract, value, ranking, Club Owner data or generated workspace artifact is
   included. Persistent checkpoint: `d5ae9bc3`
   (`feat(visual): loop card and crest perimeter traces`).
+
+## 2026-08-09 owner-approved market-value application preflight — HOLD / NOT APPLIED
+
+- **Result:** the controlling local candidate continues to reproduce the exact
+  `538 / 533 / 5 / 23 / 20 / 0` vector: 538 exact owner/provider pairs, 533
+  explicit EUR values requiring canonical UUID binding, five matched missing
+  values, 23 provider-only `PENDING`, 20 owner-only `REVIEW`, and zero
+  ambiguous groups. Every row remains `application_eligible: false`; no
+  market value is in Preview or the database.
+- **Concrete hold:** no local `touchline-canonical-roster-export-v1` proves
+  the canonical player UUID, canonical club UUID, current-club equality,
+  active competition-8 membership and freshness for the 533 rows. The two
+  direct Sportmonks snapshots have provider IDs only. The four required
+  dedicated read-only exporter configuration names are absent by
+  presence-only inspection; no secret value was read or recorded. Generic
+  authenticated and service-role credentials remain disallowed.
+- **Safe local candidate:** the existing deterministic application package at
+  `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/application-candidates/2026-08-09T19-25-39-089Z/`
+  has per-row idempotency keys and confines a future executor to
+  `football_player_market_values`, immutable history, and import/job audit
+  tables. It does not execute. The generic importer is not eligible because it
+  lacks the strict identity/membership proof, batch transaction, and durable
+  batch fingerprint required here.
+- **Value/economy boundary:** no player, club, membership, inventory,
+  contract, price catalogue, tier, colour, offer or wallet write is permitted.
+  A future value write must separately test derived public uncontracted
+  presentation; stored active-contract tier/price authority remains outside
+  this batch.
+- **Validation:** local candidate syntax/check and `6/6` focused tests passed;
+  `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed. No remote
+  connection, database write, sync, migration, provider request, Preview or
+  deployment ran.
+- **Evidence and next gate:**
+  `docs/touchline-arena/audit/2026-08-09-MARKET-VALUE-APPLICATION-LOCAL-PREFLIGHT-HOLD.md`.
+  Preserve the 20 REVIEW, five pending and 23 provider-only pending records;
+  stop until a fresh least-privilege canonical roster export and its local
+  UUID/membership dry-run exist.
