@@ -1272,3 +1272,40 @@ Preview, production checkpoint, or a dirty worktree.
   fail-closed and omits raw payloads/request URLs/credential. Focused tests
   passed 6/6; `pnpm typecheck`, `pnpm lint` and `git diff --check` passed.
   Full evidence: `docs/touchline-arena/audit/2026-08-09-SPORTMONKS-20-CLUB-READ-RESULT.md`.
+
+## 2026-08-09 owner-approved × Sportmonks market-value application candidate — LOCAL / NOT APPLIED
+
+- **Purpose and evidence:** a new dated local package joins the immutable
+  owner-approved 19-club CSV/manifest to the controlling Sportmonks direct-GET
+  20-club snapshot, without a database, sync, migration, deployment, or value
+  mutation. Package:
+  `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/application-candidates/2026-08-09T19-25-39-089Z/`.
+  Its manifest records owner CSV `55dac15d…299cd3`, owner selection
+  `192692cf…19f94`, provider snapshot `b3d4d672…7ae94d`, source revision
+  `c332d196…9b4829`, and candidate fingerprint `60c03e78…64b5`.
+- **Result:** 538 unique exact owner-name/provider-team pairs were staged,
+  with 533 explicit positive EUR values ready only **after** canonical UUID
+  binding and five `PENDING_VALUE_MISSING` rows. All 538 records remain
+  `application_eligible: false`. The package separately preserves 23
+  provider-only `PENDING` / null-value records and 20 owner-only `REVIEW`
+  records; neither set is in any future write set. Ambiguous groups and
+  duplicate staged provider IDs are zero.
+- **Idempotency and safety:** every staged pair has a deterministic row key;
+  future execution requires a fresh canonical UUID/current-club/active
+  membership snapshot, human identity review, exact-batch lock/fingerprint,
+  atomic unchanged replay, rollback preflight, and separate write approval.
+  It may target only canonical market-value/audit-run tables. It explicitly
+  excludes player, club, membership, inventory, card-contract, price, tier,
+  colour, wallet, offer, and roster writes. No generic import server, direct
+  provider-ID-to-Transfermarkt mapping, or name-only SQL resolution is used.
+- **Presentation gate:** this proves no persistent inventory/contract/tier/
+  price/colour mutation in the local candidate. A later verified market value
+  can still change a public uncontracted card's derived presentation under the
+  current policy; that requires the documented product decision and desktop/
+  mobile EN/PT QA, including pending and active-contract cases.
+- **Validation and documentation:** focused candidate test **6/6** passed;
+  the generator syntax/check and unique archive creation passed. Full scope,
+  artifact hashes, application proposal, and visual QA criteria are in
+  `docs/touchline-arena/audit/2026-08-09-OWNER-APPROVED-SPORTMONKS-MARKET-VALUE-APPLICATION-CANDIDATE.md`.
+  No application was attempted. Persistent commit is recorded after the full
+  local validation checkpoint.

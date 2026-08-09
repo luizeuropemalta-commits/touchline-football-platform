@@ -123,3 +123,24 @@ The dated `validation-results.txt` and the canonical ledger must record the
 exact commands, exit codes, test totals, export/reconciliation/quarantine
 paths, source revision, and checkpoint commit. Existing staging, reports, and
 historical artifacts must never be overwritten.
+
+## Sportmonks exact-match application candidate
+
+The direct Sportmonks snapshot has been joined locally with the owner CSV in a
+new immutable package under `application-candidates/`. The controlling
+candidate is `2026-08-09T19-25-39-089Z/`: 538 exact name/team pairs, of which
+533 have an explicit owner EUR value and 5 remain `PENDING_VALUE_MISSING`.
+Its 23 provider-only members remain `PENDING` with null value, and its 20
+owner-only rows remain `REVIEW`; no row is database-application eligible.
+
+Use the pure generator only to validate or create a new archive, never to
+apply data:
+
+```sh
+node scripts/build-owner-approved-sportmonks-application-candidate.mjs --check
+```
+
+See
+`docs/touchline-arena/audit/2026-08-09-OWNER-APPROVED-SPORTMONKS-MARKET-VALUE-APPLICATION-CANDIDATE.md`
+for the idempotent future-application gate, immutable hashes, prohibited
+economic surfaces, and post-application visual QA requirements.

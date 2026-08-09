@@ -1,0 +1,189 @@
+{
+  "schemaVersion": "touchline-owner-only-market-value-review-v1",
+  "candidateId": "owner-approved-sportmonks-2026-27-60c03e7858bc0fd379f7ca183174f9f6612dc098e709f34061c301a1597564b5",
+  "candidateFingerprintSha256": "60c03e7858bc0fd379f7ca183174f9f6612dc098e709f34061c301a1597564b5",
+  "status": "REVIEW_ONLY",
+  "applicationEligible": false,
+  "rows": [
+    {
+      "source_row_sha256": "01e535e8ecb338608aa237467e71953087a123cd45843517039a51cb0674c7ef",
+      "club_name": "Newcastle United",
+      "player_name": "Lukas Hornicek",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "0e8b3fef74cf725bbde2dfebad39029e0bc509cd8387325687cc41d6d8fc9ddf",
+      "club_name": "Tottenham Hotspur",
+      "player_name": "Min-hyeok Yang",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "1a8112f68faa16f816d2e78f0888a0a728a84490b53f6d5b0724f42f9206cb80",
+      "club_name": "AFC Bournemouth",
+      "player_name": "António Silva",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "33a91660c8d6387d5e280f77b03c8906c144a11c2c98bf13dcec6b12a13ae551",
+      "club_name": "Ipswich Town",
+      "player_name": "Saša Lukić",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "3d647f4ccce1ff06de11e5de21951f2d04dacd63351bc557525745f28343e812",
+      "club_name": "AFC Bournemouth",
+      "player_name": "Junior Kroupi",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "49eb1e5a8b45fdb69d5f3845477568f6413b669218aa391ed29cc8f907d7d23a",
+      "club_name": "Manchester United",
+      "player_name": "Tyler Fletcher",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "510fa57dea816c7e97b753ca55e27cdcc87029dcaae5139836db21766b51bbbf",
+      "club_name": "Ipswich Town",
+      "player_name": "Abdul Fatawu",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "5688e5c680422cfa4365d05db2baf3adf0a568c707f21259ed8e201d58455ecc",
+      "club_name": "Aston Villa",
+      "player_name": "Brian Madjo",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "5d935404a4c31066edbdce747d55d557000246fabed09ad46fd9963333ddbe8a",
+      "club_name": "Hull City",
+      "player_name": "David Akintola",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "6b11b6b2cca34285f2278ff43bfcc356d69a66734ec04fe4aa02e5e3f3b101bf",
+      "club_name": "Ipswich Town",
+      "player_name": "Florentino",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "90fb13e9de713755eb1059c34d1d10cfb08d773345ee144b670c693f1b77a2ea",
+      "club_name": "Hull City",
+      "player_name": "Paddy McNair",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "9489adca0d4466492ca43007539727bf97a2d4cbef69eeb268067655ab4fe42a",
+      "club_name": "Crystal Palace",
+      "player_name": "Takehiro Tomiyasu",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "a872265cd5a220f46f92fec0d5c5f6abcdbffca5cf3550059b43581ef4840497",
+      "club_name": "Hull City",
+      "player_name": "Oli McBurnie",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "abdad9a2283b4376a309f405a798c976e29e3aa5ccccfbfe4e995b97f24d1304",
+      "club_name": "AFC Bournemouth",
+      "player_name": "Juanlu Sánchez",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "b0e25fc984e2f52e4fbec84a57b565b63e77cba8ec2da832999c0eef9070dcde",
+      "club_name": "Hull City",
+      "player_name": "Konstantinos Tzolakis",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "b90d9783d87463d35ab4671a6bc0b4e36db7540d819ff52efc43333a948e4ccb",
+      "club_name": "Leeds United",
+      "player_name": "James Trafford",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "d0c84eb2d9b6272d2edfe6396337c7f922c0f3cab6627a02da17db93727c7e95",
+      "club_name": "Everton FC",
+      "player_name": "Christian Nørgaard",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "de5ca71eb51e7809154a9132683307979a93704fe247ddc35529af5ed1d31c1c",
+      "club_name": "Hull City",
+      "player_name": "Jens Hjertø-Dahl",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "e683db13fd77f190ce3ea11733649589b636493296155546c9fcafba542f3785",
+      "club_name": "Arsenal FC",
+      "player_name": "Bruno Guimarães",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "source_row_sha256": "fcc50e11abd1f1c7cfec7aadb9469231e4f50adcfb4e30fea48ad3c207d077e3",
+      "club_name": "Manchester United",
+      "player_name": "Shea Lacey",
+      "reconciliation_state": "OWNER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "REVIEW",
+      "market_value_eur": null,
+      "application_eligible": false
+    }
+  ]
+}

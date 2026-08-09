@@ -1,0 +1,239 @@
+{
+  "schemaVersion": "touchline-provider-only-quarantine-pending-v1",
+  "candidateId": "owner-approved-sportmonks-2026-27-60c03e7858bc0fd379f7ca183174f9f6612dc098e709f34061c301a1597564b5",
+  "candidateFingerprintSha256": "60c03e7858bc0fd379f7ca183174f9f6612dc098e709f34061c301a1597564b5",
+  "status": "REVIEW_ONLY_PENDING",
+  "applicationEligible": false,
+  "rows": [
+    {
+      "provider_team_id": "11",
+      "club_name": "Fulham FC",
+      "provider_player_id": "130248",
+      "player_name": "Saša Lukić",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "116",
+      "club_name": "Ipswich Town",
+      "provider_player_id": "37560897",
+      "player_name": "Issahaku Fatawu",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "116",
+      "club_name": "Ipswich Town",
+      "provider_player_id": "6067",
+      "player_name": "Wes Burns",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "116",
+      "club_name": "Ipswich Town",
+      "provider_player_id": "8740",
+      "player_name": "Sammie Szmodics",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "14",
+      "club_name": "Manchester United",
+      "provider_player_id": "31625938",
+      "player_name": "Radek Vitek",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "14",
+      "club_name": "Manchester United",
+      "provider_player_id": "37581768",
+      "player_name": "Tyler Fredricson",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "14",
+      "club_name": "Manchester United",
+      "provider_player_id": "37665753",
+      "player_name": "S. Lacey",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "14",
+      "club_name": "Manchester United",
+      "provider_player_id": "37678829",
+      "player_name": "T. Fletcher",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "14",
+      "club_name": "Manchester United",
+      "provider_player_id": "438751",
+      "player_name": "Altay Bayındır",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "19",
+      "club_name": "Arsenal FC",
+      "provider_player_id": "31609",
+      "player_name": "Christian Nørgaard",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "20",
+      "club_name": "Newcastle United",
+      "provider_player_id": "459145",
+      "player_name": "Bruno Guimarães",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "22",
+      "club_name": "Hull City",
+      "provider_player_id": "1001",
+      "player_name": "Patrick James Coleman McNair",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "22",
+      "club_name": "Hull City",
+      "provider_player_id": "31238169",
+      "player_name": "Thimothee Lo-Tutala",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "22",
+      "club_name": "Hull City",
+      "provider_player_id": "37261082",
+      "player_name": "Elliot Stroud",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "22",
+      "club_name": "Hull City",
+      "provider_player_id": "37563931",
+      "player_name": "Mason Burstow",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "22",
+      "club_name": "Hull City",
+      "provider_player_id": "4746",
+      "player_name": "Oliver McBurnie",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "22",
+      "club_name": "Hull City",
+      "provider_player_id": "85228",
+      "player_name": "Babajide David Akintola",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "3",
+      "club_name": "Sunderland AFC",
+      "provider_player_id": "37660283",
+      "player_name": "Ahmed Abdullahi",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "52",
+      "club_name": "AFC Bournemouth",
+      "provider_player_id": "37632336",
+      "player_name": "Eli Kroupi",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "6",
+      "club_name": "Tottenham Hotspur",
+      "provider_player_id": "37700504",
+      "player_name": "Minhyeok Yang",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "71",
+      "club_name": "Leeds United",
+      "provider_player_id": "37604648",
+      "player_name": "Charlie Crew",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "78",
+      "club_name": "Brighton & Hove Albion",
+      "provider_player_id": "37568149",
+      "player_name": "Facundo Buonanotte",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    },
+    {
+      "provider_team_id": "9",
+      "club_name": "Manchester City",
+      "provider_player_id": "28575686",
+      "player_name": "James Trafford",
+      "reconciliation_state": "PROVIDER_ONLY_REVIEW_PENDING",
+      "manual_value_state": "PENDING",
+      "market_value_eur": null,
+      "application_eligible": false
+    }
+  ]
+}
