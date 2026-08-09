@@ -1,0 +1,5553 @@
+{
+  "schemaVersion": "touchline-sportmonks-roster-snapshot-v1",
+  "startedAt": "2026-08-09T19:11:27.889Z",
+  "completedAt": "2026-08-09T19:11:32.598Z",
+  "source": {
+    "provider": "sportmonks",
+    "readMode": "direct-get-only",
+    "scope": {
+      "competitionProviderId": "8",
+      "providerTeamIds": [
+        "3",
+        "6",
+        "8",
+        "9",
+        "11",
+        "13",
+        "14",
+        "15",
+        "18",
+        "19",
+        "20",
+        "22",
+        "51",
+        "52",
+        "63",
+        "71",
+        "78",
+        "116",
+        "117",
+        "236"
+      ]
+    },
+    "containsRawPayload": false,
+    "containsRequestUrls": false,
+    "containsCredential": false,
+    "sourceRevision": "c332d196ba28aaa02129eb26be97f44afca254a69c9d8f80159569609a9b4829"
+  },
+  "clubs": [
+    {
+      "providerTeamId": "3",
+      "clubName": "Sunderland AFC",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:28.241Z",
+      "members": [
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37581992",
+          "playerName": "Habib Diarra",
+          "jerseyNumber": 19,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "163108",
+          "playerName": "Reinildo Mandava",
+          "jerseyNumber": 17,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "61517",
+          "playerName": "Thomas Meunier",
+          "jerseyNumber": 12,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37590634",
+          "playerName": "Chemsdine Talbi",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "5999",
+          "playerName": "Luke O'Nien",
+          "jerseyNumber": 13,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37325016",
+          "playerName": "Melker Ellborg",
+          "jerseyNumber": 31,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37781519",
+          "playerName": "Jocelin Ta Bi",
+          "jerseyNumber": 37,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "97669",
+          "playerName": "Nordi Mukiele",
+          "jerseyNumber": 20,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37567350",
+          "playerName": "Nilson Angulo",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "1887",
+          "playerName": "Granit Xhaka",
+          "jerseyNumber": 34,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "5666460",
+          "playerName": "Wilson Isidor",
+          "jerseyNumber": 18,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "258137",
+          "playerName": "Omar Alderete",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "12433171",
+          "playerName": "Dan Ballard",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "7330507",
+          "playerName": "Brian Brobbey",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "24816771",
+          "playerName": "Trai Hume",
+          "jerseyNumber": 32,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37660283",
+          "playerName": "Ahmed Abdullahi",
+          "jerseyNumber": 29,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37630179",
+          "playerName": "Noah Sadiki",
+          "jerseyNumber": 27,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37342615",
+          "playerName": "Abdoullah Ba",
+          "jerseyNumber": 46,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37397144",
+          "playerName": "Robin Roefs",
+          "jerseyNumber": 22,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37259208",
+          "playerName": "Romaine Mundle",
+          "jerseyNumber": 14,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37598297",
+          "playerName": "Chris Rigg",
+          "jerseyNumber": 11,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "7026744",
+          "playerName": "Enzo Le Fée",
+          "jerseyNumber": 28,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37592732",
+          "playerName": "Luís Semedo",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "4969692",
+          "playerName": "Anthony Patterson",
+          "jerseyNumber": 0,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37555816",
+          "playerName": "Simon Adingra",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37546753",
+          "playerName": "Jenson Seelt",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "37336214",
+          "playerName": "Leo Hjelde",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "3449",
+          "playerName": "Alan Browne",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "2875848",
+          "playerName": "Aji Alese",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "1941",
+          "playerName": "Arthur Masuaku",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "3",
+          "clubName": "Sunderland AFC",
+          "providerPlayerId": "2891",
+          "playerName": "Simon Moore",
+          "jerseyNumber": 21,
+          "position": "Goalkeeper"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "6",
+      "clubName": "Tottenham Hotspur",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:28.501Z",
+      "members": [
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37593240",
+          "playerName": "Wilson Odobert",
+          "jerseyNumber": 28,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37296248",
+          "playerName": "Micky van de Ven",
+          "jerseyNumber": 37,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "219633",
+          "playerName": "Richarlison",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "989",
+          "playerName": "Ben Davies",
+          "jerseyNumber": 33,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37430162",
+          "playerName": "Antonín Kinský",
+          "jerseyNumber": 31,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "540476",
+          "playerName": "Brandon Austin",
+          "jerseyNumber": 40,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "32777506",
+          "playerName": "Destiny Udogie",
+          "jerseyNumber": 13,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37582649",
+          "playerName": "Ashley Phillips",
+          "jerseyNumber": 35,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "1494245",
+          "playerName": "Conor Gallagher",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "5640849",
+          "playerName": "Mohammed Kudus",
+          "jerseyNumber": 20,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37593153",
+          "playerName": "Mateus Fernandes",
+          "jerseyNumber": 18,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37259210",
+          "playerName": "Dane Scarlett",
+          "jerseyNumber": 44,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37651099",
+          "playerName": "Mikey Moore",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "333797",
+          "playerName": "Rodrigo Bentancur",
+          "jerseyNumber": 30,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37342694",
+          "playerName": "Pape Matar Sarr",
+          "jerseyNumber": 29,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37700504",
+          "playerName": "Minhyeok Yang",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "7026573",
+          "playerName": "Djed Spence",
+          "jerseyNumber": 24,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37689556",
+          "playerName": "Souza",
+          "jerseyNumber": 38,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37317392",
+          "playerName": "Xavi Simons",
+          "jerseyNumber": 7,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37581741",
+          "playerName": "Archie Gray",
+          "jerseyNumber": 14,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "2823228",
+          "playerName": "Sandro Tonali",
+          "jerseyNumber": 16,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "14338024",
+          "playerName": "Dejan Kulusevski",
+          "jerseyNumber": 21,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37607151",
+          "playerName": "Lucas Bergvall",
+          "jerseyNumber": 15,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "4203",
+          "playerName": "Dominic Solanke",
+          "jerseyNumber": 19,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "133779",
+          "playerName": "Guglielmo Vicario",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "8456257",
+          "playerName": "Pedro Porro",
+          "jerseyNumber": 23,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "6838",
+          "playerName": "James Maddison",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "333731",
+          "playerName": "Cristian Romero",
+          "jerseyNumber": 17,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37531504",
+          "playerName": "Mathys Tel",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "33079",
+          "playerName": "Kevin Danso",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "24818803",
+          "playerName": "Jan Paul van Hecke",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "333989",
+          "playerName": "Marcos Senesi",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "80889",
+          "playerName": "Martin Dúbravka",
+          "jerseyNumber": 39,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "1078",
+          "playerName": "Andrew Robertson",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "37597409",
+          "playerName": "Kota Takai",
+          "jerseyNumber": 25,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "6",
+          "clubName": "Tottenham Hotspur",
+          "providerPlayerId": "125482",
+          "playerName": "Manor Solomon",
+          "jerseyNumber": 27,
+          "position": "Attacker"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "8",
+      "clubName": "Liverpool FC",
+      "manualValueScope": false,
+      "fetchedAt": "2026-08-09T19:11:28.699Z",
+      "members": [
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37260590",
+          "playerName": "Calvin Ramsay",
+          "jerseyNumber": 47,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37316834",
+          "playerName": "Harvey Davies",
+          "jerseyNumber": 95,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37669492",
+          "playerName": "Trey Nyoni",
+          "jerseyNumber": 42,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "34053",
+          "playerName": "Alexander Isak",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37288979",
+          "playerName": "Hugo Ekitiké",
+          "jerseyNumber": 22,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "8403182",
+          "playerName": "Jeremie Frimpong",
+          "jerseyNumber": 30,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37429246",
+          "playerName": "Florian Wirtz",
+          "jerseyNumber": 7,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "14685650",
+          "playerName": "Giorgi Mamardashvili",
+          "jerseyNumber": 25,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37381778",
+          "playerName": "Milos Kerkez",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37565677",
+          "playerName": "Stefan Bajcetic",
+          "jerseyNumber": 43,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37685025",
+          "playerName": "Giovanni Leoni",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "9606060",
+          "playerName": "Vitezslav Jaros",
+          "jerseyNumber": 56,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "4357",
+          "playerName": "Freddie Woodman",
+          "jerseyNumber": 28,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "309344",
+          "playerName": "Wataru Endo",
+          "jerseyNumber": 3,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "216612",
+          "playerName": "Alexis Mac Allister",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "4545513",
+          "playerName": "Curtis Jones",
+          "jerseyNumber": 17,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "785998",
+          "playerName": "Dominik Szoboszlai",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37721333",
+          "playerName": "Rio Ngumoha",
+          "jerseyNumber": 73,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "5270462",
+          "playerName": "Ryan Gravenberch",
+          "jerseyNumber": 38,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "1453",
+          "playerName": "Joe Gomez",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "129836",
+          "playerName": "Federico Chiesa",
+          "jerseyNumber": 14,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "129820",
+          "playerName": "Alisson",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "1743",
+          "playerName": "Virgil van Dijk",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37316835",
+          "playerName": "Conor Bradley",
+          "jerseyNumber": 12,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "30062",
+          "playerName": "Cody Gakpo",
+          "jerseyNumber": 18,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37595819",
+          "playerName": "Víctor Muñoz",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "37631909",
+          "playerName": "Jérémy Jacquet",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "84627",
+          "playerName": "Konstantinos Tsimikas",
+          "jerseyNumber": 21,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "8",
+          "clubName": "Liverpool FC",
+          "providerPlayerId": "23269836",
+          "playerName": "Harvey Elliott",
+          "jerseyNumber": 19,
+          "position": "Midfielder"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "9",
+      "clubName": "Manchester City",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:28.879Z",
+      "members": [
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "186910",
+          "playerName": "Rodri",
+          "jerseyNumber": 16,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "10990678",
+          "playerName": "Antoine Semenyo",
+          "jerseyNumber": 42,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37548599",
+          "playerName": "Max Alleyne",
+          "jerseyNumber": 68,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "4536500",
+          "playerName": "Marc Guéhi",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "3268",
+          "playerName": "Marcus Bettinelli",
+          "jerseyNumber": 13,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "28575686",
+          "playerName": "James Trafford",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "24838191",
+          "playerName": "Josko Gvardiol",
+          "jerseyNumber": 24,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "336133",
+          "playerName": "Phil Foden",
+          "jerseyNumber": 47,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "294000",
+          "playerName": "Omar Marmoush",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "332047",
+          "playerName": "Elliot Anderson",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "3354",
+          "playerName": "Kalvin Phillips",
+          "jerseyNumber": 44,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37740614",
+          "playerName": "Jeremy Monga",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37689559",
+          "playerName": "Vitor Reis",
+          "jerseyNumber": 22,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "13590962",
+          "playerName": "Rayan Aït-Nouri",
+          "jerseyNumber": 21,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "3156873",
+          "playerName": "Tijjani Reijnders",
+          "jerseyNumber": 4,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "21781428",
+          "playerName": "Matheus Nunes",
+          "jerseyNumber": 27,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "23269737",
+          "playerName": "Nico González",
+          "jerseyNumber": 14,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "162536",
+          "playerName": "Rúben Dias",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "129771",
+          "playerName": "Gianluigi Donnarumma",
+          "jerseyNumber": 25,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "73147",
+          "playerName": "Mateo Kovacic",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37717875",
+          "playerName": "Juma Bah",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "21072805",
+          "playerName": "Rayan Cherki",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37459073",
+          "playerName": "Rico Lewis",
+          "jerseyNumber": 82,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "154421",
+          "playerName": "Erling Haaland",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37623459",
+          "playerName": "Abdukodir Khusanov",
+          "jerseyNumber": 45,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "23697990",
+          "playerName": "Jérémy Doku",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37527169",
+          "playerName": "Savinho",
+          "jerseyNumber": 26,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37562487",
+          "playerName": "Nico O'Reilly",
+          "jerseyNumber": 33,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "30446925",
+          "playerName": "Issa Kaboré",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "24838234",
+          "playerName": "Josh Wilson-Esbrand",
+          "jerseyNumber": 97,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "37639080",
+          "playerName": "Claudio Echeverri",
+          "jerseyNumber": 30,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "9",
+          "clubName": "Manchester City",
+          "providerPlayerId": "1116",
+          "playerName": "Jack Grealish",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "11",
+      "clubName": "Fulham FC",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:29.080Z",
+      "members": [
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "2285",
+          "playerName": "Tom Cairney",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "37286732",
+          "playerName": "Oscar Bobb",
+          "jerseyNumber": 14,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "37628371",
+          "playerName": "César Palacios",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "37593253",
+          "playerName": "Gonzalo García",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "37430894",
+          "playerName": "Kevin",
+          "jerseyNumber": 22,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "95093",
+          "playerName": "Benjamin Lecomte",
+          "jerseyNumber": 23,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "37714583",
+          "playerName": "Jonah Kusi-Asare",
+          "jerseyNumber": 18,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "130248",
+          "playerName": "Saša Lukić",
+          "jerseyNumber": 20,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "581067",
+          "playerName": "Antonee Robinson",
+          "jerseyNumber": 33,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "6610",
+          "playerName": "Ryan Sessegnon",
+          "jerseyNumber": 30,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "784373",
+          "playerName": "Jorge Cuenca",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "1494446",
+          "playerName": "Emile Smith Rowe",
+          "jerseyNumber": 32,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "1409",
+          "playerName": "Harrison Reed",
+          "jerseyNumber": 6,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "62337",
+          "playerName": "Timothy Castagne",
+          "jerseyNumber": 21,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "540027",
+          "playerName": "Calvin Bassey",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "37656924",
+          "playerName": "Josh King",
+          "jerseyNumber": 24,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "37402350",
+          "playerName": "Rodrigo Muniz",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "1881",
+          "playerName": "Alex Iwobi",
+          "jerseyNumber": 17,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "31342",
+          "playerName": "Bernd Leno",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "64193",
+          "playerName": "Sander Berge",
+          "jerseyNumber": 16,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "25284",
+          "playerName": "Joachim Andersen",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "11",
+          "clubName": "Fulham FC",
+          "providerPlayerId": "25400",
+          "playerName": "Kenny Tete",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "13",
+      "clubName": "Everton FC",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:29.292Z",
+      "members": [
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "6038",
+          "playerName": "Tom King",
+          "jerseyNumber": 31,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "22169319",
+          "playerName": "Mark Travers",
+          "jerseyNumber": 12,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37650058",
+          "playerName": "Adam Aznou",
+          "jerseyNumber": 39,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37590847",
+          "playerName": "Thierno Barry",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37561126",
+          "playerName": "Tyler Dibling",
+          "jerseyNumber": 20,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "25188269",
+          "playerName": "Hayden Hackney",
+          "jerseyNumber": 30,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "21773178",
+          "playerName": "Beto",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "1826",
+          "playerName": "Jordan Pickford",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37260638",
+          "playerName": "Nathan Patterson",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "32404895",
+          "playerName": "Jarrad Branthwaite",
+          "jerseyNumber": 32,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "1639",
+          "playerName": "James Tarkowski",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "540613",
+          "playerName": "Kiernan Dewsbury-Hall",
+          "jerseyNumber": 22,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37680389",
+          "playerName": "Harrison Armstrong",
+          "jerseyNumber": 45,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "537271",
+          "playerName": "Vitaliy Mykolenko",
+          "jerseyNumber": 16,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "23661272",
+          "playerName": "Iliman Ndiaye",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "4536524",
+          "playerName": "James Garner",
+          "jerseyNumber": 37,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37266009",
+          "playerName": "Merlin Röhl",
+          "jerseyNumber": 34,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37592037",
+          "playerName": "Tyrique George",
+          "jerseyNumber": 19,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "881",
+          "playerName": "Michael Keane",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "4598726",
+          "playerName": "Dwight McNeil",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37259239",
+          "playerName": "Tim Iroegbunam",
+          "jerseyNumber": 42,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37528754",
+          "playerName": "Jake O'Brien",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "13",
+          "clubName": "Everton FC",
+          "providerPlayerId": "37410255",
+          "playerName": "Carlos Alcaraz",
+          "jerseyNumber": 24,
+          "position": "Midfielder"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "14",
+      "clubName": "Manchester United",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:29.524Z",
+      "members": [
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "1846739",
+          "playerName": "Matheus Cunha",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "537121",
+          "playerName": "Mason Mount",
+          "jerseyNumber": 7,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "893705",
+          "playerName": "Manuel Ugarte",
+          "jerseyNumber": 25,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "955",
+          "playerName": "Luke Shaw",
+          "jerseyNumber": 23,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "23269670",
+          "playerName": "Senne Lammens",
+          "jerseyNumber": 31,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "1878",
+          "playerName": "Marcus Rashford",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "31625938",
+          "playerName": "Radek Vitek",
+          "jerseyNumber": 40,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "129602",
+          "playerName": "Bruno Fernandes",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "438751",
+          "playerName": "Altay Bayındır",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37581768",
+          "playerName": "Tyler Fredricson",
+          "jerseyNumber": 33,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37540234",
+          "playerName": "Kobbie Mainoo",
+          "jerseyNumber": 37,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "2206665",
+          "playerName": "Lisandro Martínez",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37317015",
+          "playerName": "Amad Diallo",
+          "jerseyNumber": 16,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "9605680",
+          "playerName": "Joshua Zirkzee",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37600357",
+          "playerName": "Leny Yoro",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "28716",
+          "playerName": "Noussair Mazraoui",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "164061",
+          "playerName": "Diogo Dalot",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "26768",
+          "playerName": "Matthijs de Ligt",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "1454",
+          "playerName": "Tom Heaton",
+          "jerseyNumber": 22,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "529689",
+          "playerName": "Bryan Mbeumo",
+          "jerseyNumber": 19,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "24818280",
+          "playerName": "Benjamin Sesko",
+          "jerseyNumber": 30,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "2884",
+          "playerName": "Harry Maguire",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37665753",
+          "playerName": "S. Lacey",
+          "jerseyNumber": 46,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37562129",
+          "playerName": "Andrey Santos",
+          "jerseyNumber": 17,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "1397",
+          "playerName": "Karl Darlow",
+          "jerseyNumber": 12,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "62342",
+          "playerName": "Youri Tielemans",
+          "jerseyNumber": 18,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "28912799",
+          "playerName": "Dermot Mee",
+          "jerseyNumber": 45,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37676786",
+          "playerName": "Ayden Heaven",
+          "jerseyNumber": 26,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37653176",
+          "playerName": "Patrick Dorgu",
+          "jerseyNumber": 13,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37675777",
+          "playerName": "Harry Amass",
+          "jerseyNumber": 41,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "30851415",
+          "playerName": "Toby Collyer",
+          "jerseyNumber": 43,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37678829",
+          "playerName": "T. Fletcher",
+          "jerseyNumber": 39,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "14",
+          "clubName": "Manchester United",
+          "providerPlayerId": "37654112",
+          "playerName": "Jack Fletcher",
+          "jerseyNumber": 38,
+          "position": "Midfielder"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "15",
+      "clubName": "Aston Villa",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:29.735Z",
+      "members": [
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "380970",
+          "playerName": "Pau Torres",
+          "jerseyNumber": 14,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "7124",
+          "playerName": "Ezri Konsa",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "1094",
+          "playerName": "Tyrone Mings",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "97626",
+          "playerName": "Boubacar Kamara",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "37539349",
+          "playerName": "Lamare Bogarde",
+          "jerseyNumber": 26,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "33716",
+          "playerName": "Leon Bailey",
+          "jerseyNumber": 31,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "37681576",
+          "playerName": "Johan Manzambi",
+          "jerseyNumber": 44,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "37747533",
+          "playerName": "Alysson",
+          "jerseyNumber": 47,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "3139",
+          "playerName": "Tammy Abraham",
+          "jerseyNumber": 18,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "172611",
+          "playerName": "John McGinn",
+          "jerseyNumber": 7,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "95368",
+          "playerName": "Lucas Digne",
+          "jerseyNumber": 12,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "186660",
+          "playerName": "Emiliano Buendía",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "24238",
+          "playerName": "Marco Bizot",
+          "jerseyNumber": 40,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "160206",
+          "playerName": "Victor Lindelöf",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "37316549",
+          "playerName": "Alejandro Garnacho",
+          "jerseyNumber": 17,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "6524",
+          "playerName": "Matty Cash",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "12145",
+          "playerName": "Ollie Watkins",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "37402348",
+          "playerName": "João Gomes",
+          "jerseyNumber": 35,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "1343",
+          "playerName": "Emiliano Martínez",
+          "jerseyNumber": 23,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "23311159",
+          "playerName": "Ian Maatsen",
+          "jerseyNumber": 22,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "968",
+          "playerName": "Ross Barkley",
+          "jerseyNumber": 6,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "22878573",
+          "playerName": "Amadou Onana",
+          "jerseyNumber": 24,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "37764605",
+          "playerName": "Modou Kéba Cissé",
+          "jerseyNumber": 48,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "21782219",
+          "playerName": "Evann Guessand",
+          "jerseyNumber": 29,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "37600647",
+          "playerName": "Kosta Nedeljkovic",
+          "jerseyNumber": 32,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "15",
+          "clubName": "Aston Villa",
+          "providerPlayerId": "33186836",
+          "playerName": "Samuel Iling-Junior",
+          "jerseyNumber": 33,
+          "position": "Attacker"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "18",
+      "clubName": "Chelsea FC",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:29.942Z",
+      "members": [
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37261500",
+          "playerName": "Moisés Caicedo",
+          "jerseyNumber": 25,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "581220",
+          "playerName": "Reece James",
+          "jerseyNumber": 24,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "28912747",
+          "playerName": "Cole Palmer",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37525712",
+          "playerName": "Caleb Wiley",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "28912976",
+          "playerName": "Liam Delap",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "9938919",
+          "playerName": "Mykhaylo Mudryk",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37600243",
+          "playerName": "Jorrel Hato",
+          "jerseyNumber": 21,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37701999",
+          "playerName": "Estêvão",
+          "jerseyNumber": 41,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "5666458",
+          "playerName": "Maxence Lacroix",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37664041",
+          "playerName": "Marc Guiu",
+          "jerseyNumber": 38,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37373590",
+          "playerName": "Teddy Sharman-Lowe",
+          "jerseyNumber": 28,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37590621",
+          "playerName": "Mike Penders",
+          "jerseyNumber": 39,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "28931574",
+          "playerName": "João Pedro",
+          "jerseyNumber": 20,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "4592198",
+          "playerName": "Morgan Rogers",
+          "jerseyNumber": 17,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "35659570",
+          "playerName": "Gabriel Slonina",
+          "jerseyNumber": 44,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37778829",
+          "playerName": "Denner",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37577727",
+          "playerName": "Valentín Barco",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "537117",
+          "playerName": "Trevoh Chalobah",
+          "jerseyNumber": 23,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "496775",
+          "playerName": "Pedro Neto",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "23715941",
+          "playerName": "Filip Jørgensen",
+          "jerseyNumber": 12,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "11311795",
+          "playerName": "Wesley Fofana",
+          "jerseyNumber": 29,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "4545394",
+          "playerName": "Benoît Badiashile",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37536874",
+          "playerName": "Roméo Lavia",
+          "jerseyNumber": 45,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "29709995",
+          "playerName": "Enzo Fernández",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37317367",
+          "playerName": "Malo Gusto",
+          "jerseyNumber": 27,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37316840",
+          "playerName": "Jamie Gittens",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37564315",
+          "playerName": "Dário Essugo",
+          "jerseyNumber": 14,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "323",
+          "playerName": "Jordan Henderson",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "627",
+          "playerName": "Danny Welbeck",
+          "jerseyNumber": 18,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "5241",
+          "playerName": "Tosin Adarabioyo",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "581000",
+          "playerName": "Robert Sánchez",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37259180",
+          "playerName": "Levi Colwill",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37631362",
+          "playerName": "Josh Acheampong",
+          "jerseyNumber": 34,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37400423",
+          "playerName": "Emmanuel Emegha",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "100385",
+          "playerName": "Axel Disasi",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37700784",
+          "playerName": "Aarón Anselmino",
+          "jerseyNumber": 30,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37540621",
+          "playerName": "Nicolas Jackson",
+          "jerseyNumber": 15,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37532344",
+          "playerName": "Mamadou Sarr",
+          "jerseyNumber": 19,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37656652",
+          "playerName": "Geovany Quenda",
+          "jerseyNumber": 47,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37555964",
+          "playerName": "David Datro Fofana",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "18",
+          "clubName": "Chelsea FC",
+          "providerPlayerId": "37653289",
+          "playerName": "Marco Palestra",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "19",
+      "clubName": "Arsenal FC",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:30.153Z",
+      "members": [
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "37261496",
+          "playerName": "Piero Hincapié",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "5273",
+          "playerName": "Declan Rice",
+          "jerseyNumber": 41,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "31609",
+          "playerName": "Christian Nørgaard",
+          "jerseyNumber": 16,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "5329",
+          "playerName": "Gabriel Jesus",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "186606",
+          "playerName": "Kepa Arrizabalaga",
+          "jerseyNumber": 13,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "37720618",
+          "playerName": "Max Dowman",
+          "jerseyNumber": 56,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "530762",
+          "playerName": "Martín Zubimendi",
+          "jerseyNumber": 36,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "37592228",
+          "playerName": "Cristhian Mosquera",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "7643",
+          "playerName": "Eberechi Eze",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "194167",
+          "playerName": "Viktor Gyökeres",
+          "jerseyNumber": 14,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "97811",
+          "playerName": "Gabriel",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "432881",
+          "playerName": "Illan Meslier",
+          "jerseyNumber": 30,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "37600439",
+          "playerName": "Tommy Setford",
+          "jerseyNumber": 35,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "26823",
+          "playerName": "Martin Ødegaard",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "3259",
+          "playerName": "Ben White",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "5270466",
+          "playerName": "Jurriën Timber",
+          "jerseyNumber": 12,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "23278684",
+          "playerName": "Riccardo Calafiori",
+          "jerseyNumber": 33,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "16827155",
+          "playerName": "Bukayo Saka",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "25217662",
+          "playerName": "Noni Madueke",
+          "jerseyNumber": 20,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "10959356",
+          "playerName": "Gabriel Martinelli",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "24817182",
+          "playerName": "Christos Tzolis",
+          "jerseyNumber": 17,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "3130",
+          "playerName": "David Raya",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "32710",
+          "playerName": "Mikel Merino",
+          "jerseyNumber": 23,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "32612",
+          "playerName": "Kai Havertz",
+          "jerseyNumber": 29,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "17544737",
+          "playerName": "William Saliba",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "37568815",
+          "playerName": "Myles Lewis-Skelly",
+          "jerseyNumber": 49,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "37568808",
+          "playerName": "Ethan Nwaneri",
+          "jerseyNumber": 22,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "5270497",
+          "playerName": "Fábio Vieira",
+          "jerseyNumber": 21,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "19",
+          "clubName": "Arsenal FC",
+          "providerPlayerId": "537759",
+          "playerName": "Reiss Nelson",
+          "jerseyNumber": 24,
+          "position": "Attacker"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "20",
+      "clubName": "Newcastle United",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:30.413Z",
+      "members": [
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "96928",
+          "playerName": "Yoane Wissa",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "459145",
+          "playerName": "Bruno Guimarães",
+          "jerseyNumber": 39,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37722794",
+          "playerName": "Sean Steur",
+          "jerseyNumber": 14,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37630813",
+          "playerName": "Aidan Harris",
+          "jerseyNumber": 31,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37594985",
+          "playerName": "Leo Shahar",
+          "jerseyNumber": 51,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37717075",
+          "playerName": "Aladji Bamba",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37573066",
+          "playerName": "Alex Murphy",
+          "jerseyNumber": 37,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "10601",
+          "playerName": "Harvey Barnes",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37581796",
+          "playerName": "Lewis Miley",
+          "jerseyNumber": 67,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37559767",
+          "playerName": "William Osula",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "3071",
+          "playerName": "Jacob Murphy",
+          "jerseyNumber": 23,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "21762216",
+          "playerName": "Malick Thiaw",
+          "jerseyNumber": 12,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "5270468",
+          "playerName": "Sven Botman",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "2763",
+          "playerName": "Nick Pope",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "11705406",
+          "playerName": "Jacob Ramsey",
+          "jerseyNumber": 41,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "28912805",
+          "playerName": "Anthony Elanga",
+          "jerseyNumber": 19,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "2815",
+          "playerName": "Dan Burn",
+          "jerseyNumber": 33,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37658280",
+          "playerName": "Bazoumana Touré",
+          "jerseyNumber": 17,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "33645",
+          "playerName": "Joelinton",
+          "jerseyNumber": 7,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "24799911",
+          "playerName": "Tino Livramento",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "1494447",
+          "playerName": "Joe Willock",
+          "jerseyNumber": 28,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37459072",
+          "playerName": "Lewis Hall",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "32777430",
+          "playerName": "Nick Woltemade",
+          "jerseyNumber": 27,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "32372",
+          "playerName": "Fabian Schär",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "7855",
+          "playerName": "Mark Gillespie",
+          "jerseyNumber": 29,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "20",
+          "clubName": "Newcastle United",
+          "providerPlayerId": "37584641",
+          "playerName": "Ewen Jaouen",
+          "jerseyNumber": 24,
+          "position": "Goalkeeper"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "22",
+      "clubName": "Hull City",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:30.640Z",
+      "members": [
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "4892",
+          "playerName": "Kieran Dowell",
+          "jerseyNumber": 26,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "3305",
+          "playerName": "John Egan",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "37555035",
+          "playerName": "Mohamed Belloumi",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "31238169",
+          "playerName": "Thimothee Lo-Tutala",
+          "jerseyNumber": 32,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "4746",
+          "playerName": "Oliver McBurnie",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "202531",
+          "playerName": "Abdülkadir Ömür",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "1387",
+          "playerName": "Matt Targett",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "37595365",
+          "playerName": "Óscar Zambrano",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "11022894",
+          "playerName": "Hidemasa Morita",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "4545516",
+          "playerName": "Liam Millar",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "32796077",
+          "playerName": "Darko Gyabi",
+          "jerseyNumber": 24,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "37261082",
+          "playerName": "Elliot Stroud",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "37563931",
+          "playerName": "Mason Burstow",
+          "jerseyNumber": 48,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "1462",
+          "playerName": "Jack Butland",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "37255842",
+          "playerName": "Matty Jacob",
+          "jerseyNumber": 16,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "1001",
+          "playerName": "Patrick James Coleman McNair",
+          "jerseyNumber": 37,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "85228",
+          "playerName": "Babajide David Akintola",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "6572",
+          "playerName": "Lewie Coyle",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "455410",
+          "playerName": "Regan Slater",
+          "jerseyNumber": 27,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "21412958",
+          "playerName": "Cody Drameh",
+          "jerseyNumber": 18,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "37392977",
+          "playerName": "Charlie Hughes",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "21412837",
+          "playerName": "Eliot Matazo",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "3058",
+          "playerName": "Matt Crooks",
+          "jerseyNumber": 25,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "5986",
+          "playerName": "Dillon Phillips",
+          "jerseyNumber": 12,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "3066",
+          "playerName": "Semi Ajayi",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "14338473",
+          "playerName": "Ryan Giles",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "37375216",
+          "playerName": "Enis Destan",
+          "jerseyNumber": 39,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "22",
+          "clubName": "Hull City",
+          "providerPlayerId": "37259217",
+          "playerName": "Abu Kamara",
+          "jerseyNumber": 17,
+          "position": "Attacker"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "51",
+      "clubName": "Crystal Palace",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:30.854Z",
+      "members": [
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "310131",
+          "playerName": "Daichi Kamada",
+          "jerseyNumber": 18,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "12647",
+          "playerName": "Dean Henderson",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "5640926",
+          "playerName": "Cheick Doucouré",
+          "jerseyNumber": 28,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37537937",
+          "playerName": "Chadi Riad",
+          "jerseyNumber": 34,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "96722",
+          "playerName": "Ismaïla Sarr",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "4598710",
+          "playerName": "Tyrick Mitchell",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "2332",
+          "playerName": "Will Hughes",
+          "jerseyNumber": 19,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37561117",
+          "playerName": "David Ozoh",
+          "jerseyNumber": 52,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37610432",
+          "playerName": "Romain Esse",
+          "jerseyNumber": 21,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "539961",
+          "playerName": "Eddie Nketiah",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "97383",
+          "playerName": "Walter Benítez",
+          "jerseyNumber": 44,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "537595",
+          "playerName": "Óscar Mingueza",
+          "jerseyNumber": 30,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "24468970",
+          "playerName": "Yéremy Pino",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37541456",
+          "playerName": "Justin Devenny",
+          "jerseyNumber": 55,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "34455847",
+          "playerName": "Jesurun Rak-Sakyi",
+          "jerseyNumber": 49,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37651069",
+          "playerName": "Caleb Kporha",
+          "jerseyNumber": 58,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "74160",
+          "playerName": "Borna Sosa",
+          "jerseyNumber": 24,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "458682",
+          "playerName": "Jørgen Strand Larsen",
+          "jerseyNumber": 22,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37651070",
+          "playerName": "Rio Cardines",
+          "jerseyNumber": 59,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "524045",
+          "playerName": "Daniel Muñoz",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "9278",
+          "playerName": "Remi Matthews",
+          "jerseyNumber": 31,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37688184",
+          "playerName": "Jaydee Canvot",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "25930790",
+          "playerName": "Brennan Johnson",
+          "jerseyNumber": 23,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "18218609",
+          "playerName": "Chris Richards",
+          "jerseyNumber": 26,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37350704",
+          "playerName": "Adam Wharton",
+          "jerseyNumber": 20,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "96950",
+          "playerName": "Jean-Philippe Mateta",
+          "jerseyNumber": 14,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "37567285",
+          "playerName": "Matheus França",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "51",
+          "clubName": "Crystal Palace",
+          "providerPlayerId": "186766",
+          "playerName": "Jefferson Lerma",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "52",
+      "clubName": "AFC Bournemouth",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:31.124Z",
+      "members": [
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "22169325",
+          "playerName": "James Hill",
+          "jerseyNumber": 23,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "1095",
+          "playerName": "Adam Smith",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37632336",
+          "playerName": "Eli Kroupi",
+          "jerseyNumber": 22,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "14004542",
+          "playerName": "Amine Adli",
+          "jerseyNumber": 21,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37659710",
+          "playerName": "Veljko Milosavljevic",
+          "jerseyNumber": 44,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "28543553",
+          "playerName": "Adrien Truffert",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37624325",
+          "playerName": "Alex Tóth",
+          "jerseyNumber": 27,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "1494663",
+          "playerName": "Max Aarons",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37391641",
+          "playerName": "Daniel Jebbison",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37679567",
+          "playerName": "Rayan",
+          "jerseyNumber": 37,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "22536030",
+          "playerName": "Bafodé Diakité",
+          "jerseyNumber": 18,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "538472",
+          "playerName": "Djordje Petrovic",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37623493",
+          "playerName": "Matai Akinmboni",
+          "jerseyNumber": 45,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37602125",
+          "playerName": "Ben Gannon-Doak",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37627749",
+          "playerName": "Julio Soler",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "172752",
+          "playerName": "Ryan Christie",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "1241",
+          "playerName": "Fraser Forster",
+          "jerseyNumber": 17,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37601803",
+          "playerName": "Álvaro Rodríguez",
+          "jerseyNumber": 30,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "262324",
+          "playerName": "Tyler Adams",
+          "jerseyNumber": 12,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "1834",
+          "playerName": "Lewis Cook",
+          "jerseyNumber": 4,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "537493",
+          "playerName": "Marcus Tavernier",
+          "jerseyNumber": 16,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37550443",
+          "playerName": "Alex Scott",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "11298616",
+          "playerName": "Evanilson",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "9808",
+          "playerName": "David Brooks",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "26803",
+          "playerName": "Justin Kluivert",
+          "jerseyNumber": 19,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "26354",
+          "playerName": "Enes Ünal",
+          "jerseyNumber": 26,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37325112",
+          "playerName": "Will Dennis",
+          "jerseyNumber": 0,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "37549912",
+          "playerName": "Ben Winterburn",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "52",
+          "clubName": "AFC Bournemouth",
+          "providerPlayerId": "23260605",
+          "playerName": "Julián Araujo",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "63",
+      "clubName": "Nottingham Forest",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:31.468Z",
+      "members": [
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "7926",
+          "playerName": "Morgan Gibbs-White",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "36073933",
+          "playerName": "Morato",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "37627036",
+          "playerName": "Murillo",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "5270372",
+          "playerName": "Dilane Bakwa",
+          "jerseyNumber": 29,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "28575676",
+          "playerName": "James McAtee",
+          "jerseyNumber": 24,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "37376834",
+          "playerName": "Nicolò Savona",
+          "jerseyNumber": 37,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "19978623",
+          "playerName": "Dan Ndoye",
+          "jerseyNumber": 14,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "37536911",
+          "playerName": "Omari Hutchinson",
+          "jerseyNumber": 20,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "37627298",
+          "playerName": "Jair Cunha",
+          "jerseyNumber": 23,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "29328429",
+          "playerName": "Igor Jesus",
+          "jerseyNumber": 19,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "52867",
+          "playerName": "Xaver Schlager",
+          "jerseyNumber": 21,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "219900",
+          "playerName": "John Victor",
+          "jerseyNumber": 13,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "23707367",
+          "playerName": "Luca Netz",
+          "jerseyNumber": 25,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "26506",
+          "playerName": "Taiwo Awoniyi",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "37583502",
+          "playerName": "Zach Abbott",
+          "jerseyNumber": 44,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "37645422",
+          "playerName": "Eric da Silva Moreira",
+          "jerseyNumber": 17,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "335653",
+          "playerName": "Nicolás Domínguez",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "2875858",
+          "playerName": "Callum Hudson-Odoi",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "96943",
+          "playerName": "Ibrahim Sangaré",
+          "jerseyNumber": 6,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "10831",
+          "playerName": "Ryan Yates",
+          "jerseyNumber": 22,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "11720838",
+          "playerName": "Neco Williams",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "1956",
+          "playerName": "Ola Aina",
+          "jerseyNumber": 34,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "2975",
+          "playerName": "Matz Sels",
+          "jerseyNumber": 26,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "178032",
+          "playerName": "Nikola Milenković",
+          "jerseyNumber": 31,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "914",
+          "playerName": "Chris Wood",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "581206",
+          "playerName": "Omar Richards",
+          "jerseyNumber": 27,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "23269650",
+          "playerName": "Arnaud Kalimuendo",
+          "jerseyNumber": 15,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "63",
+          "clubName": "Nottingham Forest",
+          "providerPlayerId": "37708644",
+          "playerName": "Tyler Bindon",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "71",
+      "clubName": "Leeds United",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:31.675Z",
+      "members": [
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "460159",
+          "playerName": "Lucas Perri",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "193196",
+          "playerName": "Gabriel Gudmundsson",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "4536574",
+          "playerName": "Sebastiaan Bornauw",
+          "jerseyNumber": 23,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "5141",
+          "playerName": "Dominic Calvert-Lewin",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "21762788",
+          "playerName": "Joe Gelhardt",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "5403",
+          "playerName": "Harry Wilson",
+          "jerseyNumber": 17,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "12514",
+          "playerName": "James Justin",
+          "jerseyNumber": 24,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "37529525",
+          "playerName": "Tarik Muharemović",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "37568967",
+          "playerName": "Mateo Joseph",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "37604648",
+          "playerName": "Charlie Crew",
+          "jerseyNumber": 50,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "1928",
+          "playerName": "Sam Byram",
+          "jerseyNumber": 25,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "3861741",
+          "playerName": "Ilia Gruev",
+          "jerseyNumber": 44,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "12542",
+          "playerName": "Ethan Ampadu",
+          "jerseyNumber": 4,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "5569",
+          "playerName": "Alex Cairns",
+          "jerseyNumber": 21,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "581158",
+          "playerName": "Jayden Bogle",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "37316986",
+          "playerName": "Wilfried Gnonto",
+          "jerseyNumber": 29,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "4552689",
+          "playerName": "Brenden Aaronson",
+          "jerseyNumber": 11,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "29382",
+          "playerName": "Joël Piroe",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "2178735",
+          "playerName": "Anton Stach",
+          "jerseyNumber": 18,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "173737",
+          "playerName": "Sean Longstaff",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "461027",
+          "playerName": "Ao Tanaka",
+          "jerseyNumber": 22,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "339112",
+          "playerName": "Joe Rodon",
+          "jerseyNumber": 6,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "5149",
+          "playerName": "Daniel James",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "4536529",
+          "playerName": "Noah Okafor",
+          "jerseyNumber": 19,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "537217",
+          "playerName": "Lukas Nmecha",
+          "jerseyNumber": 14,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "1548632",
+          "playerName": "Jaka Bijol",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "71",
+          "clubName": "Leeds United",
+          "providerPlayerId": "13981024",
+          "playerName": "Largie Ramazani",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "78",
+      "clubName": "Brighton & Hove Albion",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:31.881Z",
+      "members": [
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "54191",
+          "playerName": "Igor Julio",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37655226",
+          "playerName": "Yankuba Minteh",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37549513",
+          "playerName": "Ibrahim Osman",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37682332",
+          "playerName": "Malick Yalcouyé",
+          "jerseyNumber": 40,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37565028",
+          "playerName": "Amario Cozier-Duberry",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37664293",
+          "playerName": "Charalampos Kostoulas",
+          "jerseyNumber": 19,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "96513",
+          "playerName": "Olivier Boscagli",
+          "jerseyNumber": 21,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "23269659",
+          "playerName": "Maxim De Cuyper",
+          "jerseyNumber": 29,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37601748",
+          "playerName": "Stefanos Tzimas",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37568149",
+          "playerName": "Facundo Buonanotte",
+          "jerseyNumber": 0,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37253456",
+          "playerName": "Evan Ferguson",
+          "jerseyNumber": 28,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "1494712",
+          "playerName": "Matt O'Riley",
+          "jerseyNumber": 33,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "1491407",
+          "playerName": "Michael Svoboda",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "581004",
+          "playerName": "Tom McGill",
+          "jerseyNumber": 38,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "2461",
+          "playerName": "Lewis Dunk",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "28912974",
+          "playerName": "Eiran Cashin",
+          "jerseyNumber": 16,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "24082563",
+          "playerName": "Mats Wieffer",
+          "jerseyNumber": 27,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "2683",
+          "playerName": "Jason Steele",
+          "jerseyNumber": 23,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37526157",
+          "playerName": "Yasin Ayari",
+          "jerseyNumber": 26,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37588823",
+          "playerName": "Carlos Baleba",
+          "jerseyNumber": 17,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37561625",
+          "playerName": "Jack Hinshelwood",
+          "jerseyNumber": 13,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "31504",
+          "playerName": "Pascal Groß",
+          "jerseyNumber": 30,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37657587",
+          "playerName": "Luka Vuskovic",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37257596",
+          "playerName": "Bart Verbruggen",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "21782390",
+          "playerName": "Georginio Rutter",
+          "jerseyNumber": 10,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "25738",
+          "playerName": "Ferdi Kadıoğlu",
+          "jerseyNumber": 24,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37563876",
+          "playerName": "Diego Gómez",
+          "jerseyNumber": 25,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "21437534",
+          "playerName": "Kaoru Mitoma",
+          "jerseyNumber": 22,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "37974187",
+          "playerName": "Zadok Yohanna",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "19606968",
+          "playerName": "Costinha",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "78",
+          "clubName": "Brighton & Hove Albion",
+          "providerPlayerId": "29478",
+          "playerName": "Pascal Struijk",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "116",
+      "clubName": "Ipswich Town",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:32.105Z",
+      "members": [
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "28575734",
+          "playerName": "Anis Mehmeti",
+          "jerseyNumber": 33,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "37550477",
+          "playerName": "Cameron Humphreys",
+          "jerseyNumber": 30,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "122090",
+          "playerName": "Chiedozie Ogbene",
+          "jerseyNumber": 21,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "37577447",
+          "playerName": "Emersonn",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "1913",
+          "playerName": "Chuba Akpom",
+          "jerseyNumber": 29,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "2823",
+          "playerName": "David Button",
+          "jerseyNumber": 27,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "6067",
+          "playerName": "Wes Burns",
+          "jerseyNumber": 7,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "29495",
+          "playerName": "Azor Matusiwa",
+          "jerseyNumber": 5,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "29470",
+          "playerName": "Kjell Scherpen",
+          "jerseyNumber": 0,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "37583537",
+          "playerName": "Kayne van Oevelen",
+          "jerseyNumber": 0,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "96799",
+          "playerName": "Issa Diop",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "319282",
+          "playerName": "Daizen Maeda",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "37560897",
+          "playerName": "Issahaku Fatawu",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "28575743",
+          "playerName": "Kasey McAteer",
+          "jerseyNumber": 20,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "4507",
+          "playerName": "Darnell Furlong",
+          "jerseyNumber": 19,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "37405012",
+          "playerName": "Marcelino Núñez",
+          "jerseyNumber": 32,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "37601923",
+          "playerName": "Sindre Walle Egeli",
+          "jerseyNumber": 8,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "4633",
+          "playerName": "Alex Palmer",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "33186827",
+          "playerName": "Jaden Philogene",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "581199",
+          "playerName": "Ben Johnson",
+          "jerseyNumber": 18,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "10310765",
+          "playerName": "Jack Clarke",
+          "jerseyNumber": 47,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "581094",
+          "playerName": "Dara O'Shea",
+          "jerseyNumber": 26,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "7577",
+          "playerName": "George Hirst",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "37255841",
+          "playerName": "Jacob Greaves",
+          "jerseyNumber": 24,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "25567988",
+          "playerName": "Leif Davis",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "13042",
+          "playerName": "Jack Taylor",
+          "jerseyNumber": 14,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "2965",
+          "playerName": "Christian Walton",
+          "jerseyNumber": 28,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "20216",
+          "playerName": "Cédric Kipré",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "8740",
+          "playerName": "Sammie Szmodics",
+          "jerseyNumber": 23,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "28575866",
+          "playerName": "Ali Al-Hamadi",
+          "jerseyNumber": 16,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "116",
+          "clubName": "Ipswich Town",
+          "providerPlayerId": "7026563",
+          "playerName": "Harry Clarke",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "117",
+      "clubName": "Coventry City",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:32.300Z",
+      "members": [
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "2813",
+          "playerName": "Jake Bidwell",
+          "jerseyNumber": 21,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "28912807",
+          "playerName": "Carl Rushworth",
+          "jerseyNumber": 19,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "32404898",
+          "playerName": "Jack Rudoni",
+          "jerseyNumber": 5,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "538042",
+          "playerName": "Joel Latibeaudiere",
+          "jerseyNumber": 22,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "37609172",
+          "playerName": "Kai Andrews",
+          "jerseyNumber": 54,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "37316916",
+          "playerName": "Raphael Borges Rodrigues",
+          "jerseyNumber": 17,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "263186",
+          "playerName": "Haji Wright",
+          "jerseyNumber": 11,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "37328095",
+          "playerName": "Aurèle Amenda",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "37593264",
+          "playerName": "Jahnoah Markelo",
+          "jerseyNumber": 24,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "2816063",
+          "playerName": "Luke Woolfenden",
+          "jerseyNumber": 26,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "537721",
+          "playerName": "Victor Torp",
+          "jerseyNumber": 29,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "30979492",
+          "playerName": "Tatsuhiro Sakamoto",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "15076357",
+          "playerName": "Ellis Simms",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "13425",
+          "playerName": "Ephron Mason-Clark",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "37547195",
+          "playerName": "Miguel Ángel Brau",
+          "jerseyNumber": 33,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "37337041",
+          "playerName": "Loum Tchaouna",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "32819174",
+          "playerName": "Oliver Dovin",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "17177173",
+          "playerName": "Milan van Ewijk",
+          "jerseyNumber": 27,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "28912779",
+          "playerName": "Kaine Kesler-Hayden",
+          "jerseyNumber": 20,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "9543",
+          "playerName": "Brandon Thomas-Asante",
+          "jerseyNumber": 23,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "4441",
+          "playerName": "Matt Grimes",
+          "jerseyNumber": 6,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "10310763",
+          "playerName": "Liam Kitching",
+          "jerseyNumber": 15,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "3261",
+          "playerName": "Ben Wilson",
+          "jerseyNumber": 13,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "10496",
+          "playerName": "Jay Dasilva",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "23223363",
+          "playerName": "Josh Eccles",
+          "jerseyNumber": 28,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "537108",
+          "playerName": "Frank Onyeka",
+          "jerseyNumber": 16,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "117",
+          "clubName": "Coventry City",
+          "providerPlayerId": "37518832",
+          "playerName": "Bobby Thomas",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    },
+    {
+      "providerTeamId": "236",
+      "clubName": "Brentford FC",
+      "manualValueScope": true,
+      "fetchedAt": "2026-08-09T19:11:32.598Z",
+      "members": [
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "11658171",
+          "playerName": "Sepp van den Berg",
+          "jerseyNumber": 4,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37407204",
+          "playerName": "Igor Thiago",
+          "jerseyNumber": 9,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "27440826",
+          "playerName": "Aaron Hickey",
+          "jerseyNumber": 2,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37392849",
+          "playerName": "Jaidon Anthony",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "339093",
+          "playerName": "Josh Dasilva",
+          "jerseyNumber": 10,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37643341",
+          "playerName": "Julian Eyestone",
+          "jerseyNumber": 41,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37656906",
+          "playerName": "Kaye Furo",
+          "jerseyNumber": 47,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37614062",
+          "playerName": "Jayden Meghoma",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "896225",
+          "playerName": "Caoimhín Kelleher",
+          "jerseyNumber": 1,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "7306",
+          "playerName": "Ellery Balcombe",
+          "jerseyNumber": 31,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37575228",
+          "playerName": "Antoni Milambo",
+          "jerseyNumber": 17,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "1065",
+          "playerName": "Callum Wilson",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37543248",
+          "playerName": "Dango Ouattara",
+          "jerseyNumber": 19,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37683527",
+          "playerName": "Benjamin Fredrick",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37627277",
+          "playerName": "Ji-soo Kim",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37709434",
+          "playerName": "Yunus Konak",
+          "jerseyNumber": 26,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37600942",
+          "playerName": "Michael Kayode",
+          "jerseyNumber": 33,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37536953",
+          "playerName": "Mamadou Sangaré",
+          "jerseyNumber": 18,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "28552845",
+          "playerName": "Keane Lewis-Potter",
+          "jerseyNumber": 23,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37633890",
+          "playerName": "Jannik Schuster",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "11705403",
+          "playerName": "Nathan Collins",
+          "jerseyNumber": 22,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "21412957",
+          "playerName": "Fábio Carvalho",
+          "jerseyNumber": 14,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "7993",
+          "playerName": "Rico Henry",
+          "jerseyNumber": 3,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "84426",
+          "playerName": "Mathias Jensen",
+          "jerseyNumber": 8,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "8449373",
+          "playerName": "Mikkel Damsgaard",
+          "jerseyNumber": 24,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "36633",
+          "playerName": "Vitaly Janelt",
+          "jerseyNumber": 27,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "531971",
+          "playerName": "Hákon Valdimarsson",
+          "jerseyNumber": 12,
+          "position": "Goalkeeper"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "15665",
+          "playerName": "Ethan Pinnock",
+          "jerseyNumber": 5,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "151418",
+          "playerName": "Kristoffer Ajer",
+          "jerseyNumber": 20,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "27067062",
+          "playerName": "Kevin Schade",
+          "jerseyNumber": 7,
+          "position": "Attacker"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37509395",
+          "playerName": "Yegor Yarmolyuk",
+          "jerseyNumber": 6,
+          "position": "Midfielder"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37655005",
+          "playerName": "Benjamin Arthur",
+          "jerseyNumber": 0,
+          "position": "Defender"
+        },
+        {
+          "providerTeamId": "236",
+          "clubName": "Brentford FC",
+          "providerPlayerId": "37704861",
+          "playerName": "Gustavo Nunes",
+          "jerseyNumber": 0,
+          "position": "Attacker"
+        }
+      ],
+      "errors": [],
+      "state": "ready"
+    }
+  ],
+  "validation": {
+    "state": "ready",
+    "clubStates": [
+      {
+        "providerTeamId": "3",
+        "clubName": "Sunderland AFC",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 31,
+        "errors": []
+      },
+      {
+        "providerTeamId": "6",
+        "clubName": "Tottenham Hotspur",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 36,
+        "errors": []
+      },
+      {
+        "providerTeamId": "8",
+        "clubName": "Liverpool FC",
+        "manualValueScope": false,
+        "state": "ready",
+        "memberCount": 29,
+        "errors": []
+      },
+      {
+        "providerTeamId": "9",
+        "clubName": "Manchester City",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 32,
+        "errors": []
+      },
+      {
+        "providerTeamId": "11",
+        "clubName": "Fulham FC",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 22,
+        "errors": []
+      },
+      {
+        "providerTeamId": "13",
+        "clubName": "Everton FC",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 23,
+        "errors": []
+      },
+      {
+        "providerTeamId": "14",
+        "clubName": "Manchester United",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 33,
+        "errors": []
+      },
+      {
+        "providerTeamId": "15",
+        "clubName": "Aston Villa",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 26,
+        "errors": []
+      },
+      {
+        "providerTeamId": "18",
+        "clubName": "Chelsea FC",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 41,
+        "errors": []
+      },
+      {
+        "providerTeamId": "19",
+        "clubName": "Arsenal FC",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 29,
+        "errors": []
+      },
+      {
+        "providerTeamId": "20",
+        "clubName": "Newcastle United",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 26,
+        "errors": []
+      },
+      {
+        "providerTeamId": "22",
+        "clubName": "Hull City",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 28,
+        "errors": []
+      },
+      {
+        "providerTeamId": "51",
+        "clubName": "Crystal Palace",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 28,
+        "errors": []
+      },
+      {
+        "providerTeamId": "52",
+        "clubName": "AFC Bournemouth",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 29,
+        "errors": []
+      },
+      {
+        "providerTeamId": "63",
+        "clubName": "Nottingham Forest",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 28,
+        "errors": []
+      },
+      {
+        "providerTeamId": "71",
+        "clubName": "Leeds United",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 27,
+        "errors": []
+      },
+      {
+        "providerTeamId": "78",
+        "clubName": "Brighton & Hove Albion",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 31,
+        "errors": []
+      },
+      {
+        "providerTeamId": "116",
+        "clubName": "Ipswich Town",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 31,
+        "errors": []
+      },
+      {
+        "providerTeamId": "117",
+        "clubName": "Coventry City",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 27,
+        "errors": []
+      },
+      {
+        "providerTeamId": "236",
+        "clubName": "Brentford FC",
+        "manualValueScope": true,
+        "state": "ready",
+        "memberCount": 33,
+        "errors": []
+      }
+    ],
+    "duplicateProviderPlayerIds": [],
+    "pendingProviderOnly": [
+      {
+        "providerTeamId": "52",
+        "clubName": "AFC Bournemouth",
+        "providerPlayerId": "37632336",
+        "playerName": "Eli Kroupi",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "19",
+        "clubName": "Arsenal FC",
+        "providerPlayerId": "31609",
+        "playerName": "Christian Nørgaard",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "78",
+        "clubName": "Brighton & Hove Albion",
+        "providerPlayerId": "37568149",
+        "playerName": "Facundo Buonanotte",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "11",
+        "clubName": "Fulham FC",
+        "providerPlayerId": "130248",
+        "playerName": "Saša Lukić",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "22",
+        "clubName": "Hull City",
+        "providerPlayerId": "85228",
+        "playerName": "Babajide David Akintola",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "22",
+        "clubName": "Hull City",
+        "providerPlayerId": "37261082",
+        "playerName": "Elliot Stroud",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "22",
+        "clubName": "Hull City",
+        "providerPlayerId": "37563931",
+        "playerName": "Mason Burstow",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "22",
+        "clubName": "Hull City",
+        "providerPlayerId": "4746",
+        "playerName": "Oliver McBurnie",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "22",
+        "clubName": "Hull City",
+        "providerPlayerId": "1001",
+        "playerName": "Patrick James Coleman McNair",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "22",
+        "clubName": "Hull City",
+        "providerPlayerId": "31238169",
+        "playerName": "Thimothee Lo-Tutala",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "116",
+        "clubName": "Ipswich Town",
+        "providerPlayerId": "37560897",
+        "playerName": "Issahaku Fatawu",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "116",
+        "clubName": "Ipswich Town",
+        "providerPlayerId": "8740",
+        "playerName": "Sammie Szmodics",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "116",
+        "clubName": "Ipswich Town",
+        "providerPlayerId": "6067",
+        "playerName": "Wes Burns",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "71",
+        "clubName": "Leeds United",
+        "providerPlayerId": "37604648",
+        "playerName": "Charlie Crew",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "9",
+        "clubName": "Manchester City",
+        "providerPlayerId": "28575686",
+        "playerName": "James Trafford",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "14",
+        "clubName": "Manchester United",
+        "providerPlayerId": "438751",
+        "playerName": "Altay Bayındır",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "14",
+        "clubName": "Manchester United",
+        "providerPlayerId": "31625938",
+        "playerName": "Radek Vitek",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "14",
+        "clubName": "Manchester United",
+        "providerPlayerId": "37665753",
+        "playerName": "S. Lacey",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "14",
+        "clubName": "Manchester United",
+        "providerPlayerId": "37678829",
+        "playerName": "T. Fletcher",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "14",
+        "clubName": "Manchester United",
+        "providerPlayerId": "37581768",
+        "playerName": "Tyler Fredricson",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "20",
+        "clubName": "Newcastle United",
+        "providerPlayerId": "459145",
+        "playerName": "Bruno Guimarães",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "3",
+        "clubName": "Sunderland AFC",
+        "providerPlayerId": "37660283",
+        "playerName": "Ahmed Abdullahi",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "providerTeamId": "6",
+        "clubName": "Tottenham Hotspur",
+        "providerPlayerId": "37700504",
+        "playerName": "Minhyeok Yang",
+        "reconciliationState": "PROVIDER_ONLY_REVIEW_PENDING",
+        "manualValueState": "PENDING",
+        "marketValueEur": null,
+        "applicationEligible": false
+      }
+    ],
+    "ownerOnlyReview": [
+      {
+        "clubName": "AFC Bournemouth",
+        "playerName": "António Silva",
+        "sourceRowSha256": "1a8112f68faa16f816d2e78f0888a0a728a84490b53f6d5b0724f42f9206cb80",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "AFC Bournemouth",
+        "playerName": "Juanlu Sánchez",
+        "sourceRowSha256": "abdad9a2283b4376a309f405a798c976e29e3aa5ccccfbfe4e995b97f24d1304",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "AFC Bournemouth",
+        "playerName": "Junior Kroupi",
+        "sourceRowSha256": "3d647f4ccce1ff06de11e5de21951f2d04dacd63351bc557525745f28343e812",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Arsenal FC",
+        "playerName": "Bruno Guimarães",
+        "sourceRowSha256": "e683db13fd77f190ce3ea11733649589b636493296155546c9fcafba542f3785",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Aston Villa",
+        "playerName": "Brian Madjo",
+        "sourceRowSha256": "5688e5c680422cfa4365d05db2baf3adf0a568c707f21259ed8e201d58455ecc",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Crystal Palace",
+        "playerName": "Takehiro Tomiyasu",
+        "sourceRowSha256": "9489adca0d4466492ca43007539727bf97a2d4cbef69eeb268067655ab4fe42a",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Everton FC",
+        "playerName": "Christian Nørgaard",
+        "sourceRowSha256": "d0c84eb2d9b6272d2edfe6396337c7f922c0f3cab6627a02da17db93727c7e95",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Hull City",
+        "playerName": "David Akintola",
+        "sourceRowSha256": "5d935404a4c31066edbdce747d55d557000246fabed09ad46fd9963333ddbe8a",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Hull City",
+        "playerName": "Jens Hjertø-Dahl",
+        "sourceRowSha256": "de5ca71eb51e7809154a9132683307979a93704fe247ddc35529af5ed1d31c1c",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Hull City",
+        "playerName": "Konstantinos Tzolakis",
+        "sourceRowSha256": "b0e25fc984e2f52e4fbec84a57b565b63e77cba8ec2da832999c0eef9070dcde",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Hull City",
+        "playerName": "Oli McBurnie",
+        "sourceRowSha256": "a872265cd5a220f46f92fec0d5c5f6abcdbffca5cf3550059b43581ef4840497",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Hull City",
+        "playerName": "Paddy McNair",
+        "sourceRowSha256": "90fb13e9de713755eb1059c34d1d10cfb08d773345ee144b670c693f1b77a2ea",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Ipswich Town",
+        "playerName": "Abdul Fatawu",
+        "sourceRowSha256": "510fa57dea816c7e97b753ca55e27cdcc87029dcaae5139836db21766b51bbbf",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Ipswich Town",
+        "playerName": "Florentino",
+        "sourceRowSha256": "6b11b6b2cca34285f2278ff43bfcc356d69a66734ec04fe4aa02e5e3f3b101bf",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Ipswich Town",
+        "playerName": "Saša Lukić",
+        "sourceRowSha256": "33a91660c8d6387d5e280f77b03c8906c144a11c2c98bf13dcec6b12a13ae551",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Leeds United",
+        "playerName": "James Trafford",
+        "sourceRowSha256": "b90d9783d87463d35ab4671a6bc0b4e36db7540d819ff52efc43333a948e4ccb",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Manchester United",
+        "playerName": "Shea Lacey",
+        "sourceRowSha256": "fcc50e11abd1f1c7cfec7aadb9469231e4f50adcfb4e30fea48ad3c207d077e3",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Manchester United",
+        "playerName": "Tyler Fletcher",
+        "sourceRowSha256": "49eb1e5a8b45fdb69d5f3845477568f6413b669218aa391ed29cc8f907d7d23a",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Newcastle United",
+        "playerName": "Lukas Hornicek",
+        "sourceRowSha256": "01e535e8ecb338608aa237467e71953087a123cd45843517039a51cb0674c7ef",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      },
+      {
+        "clubName": "Tottenham Hotspur",
+        "playerName": "Min-hyeok Yang",
+        "sourceRowSha256": "0e8b3fef74cf725bbde2dfebad39029e0bc509cd8387325687cc41d6d8fc9ddf",
+        "reconciliationState": "OWNER_ONLY_REVIEW_PENDING",
+        "manualValueState": "REVIEW",
+        "marketValueEur": null,
+        "applicationEligible": false
+      }
+    ],
+    "ambiguousNameGroups": [],
+    "exactNameMatches": 538,
+    "counts": {
+      "expectedClubs": 20,
+      "readyClubs": 20,
+      "partialClubs": 0,
+      "members": 590,
+      "duplicateProviderPlayerIds": 0,
+      "exactNameMatches": 538,
+      "pendingProviderOnly": 23,
+      "ownerOnlyReview": 20,
+      "ambiguousNameGroups": 0
+    }
+  }
+}

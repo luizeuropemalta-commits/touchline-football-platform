@@ -1241,3 +1241,34 @@ Preview, production checkpoint, or a dirty worktree.
   or membership action.
 - **Evidence:**
   `docs/touchline-arena/audit/2026-08-09-SPORTMONKS-20-CLUB-READ-PREFLIGHT.md`.
+
+## 2026-08-09 Sportmonks direct 20-club roster read — COMPLETE / REVIEW HOLD
+
+- **Credential boundary:** Luiz identified the main-worktree `.env.local` as
+  an existing server-side Sportmonks source. It was loaded only into one
+  `env -i` Node process through `--env-file`; its content was never printed,
+  copied, persisted, committed or inspected. The process made direct HTTPS
+  GETs only; no TouchLine DB client, sync route, migration, deployment, card
+  or value operation ran.
+- **Coverage:** the controlling provider-only snapshot is
+  `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/provider-roster-audits/2026-08-09T19-11-27-889Z/sportmonks-roster-snapshot.json`
+  (`sha256 b3d4d672...7ae94d`, source revision
+  `c332d196...9b4829`). It records all 20 teams ready, 590 members, zero
+  duplicate provider player IDs and no partial result. The preceding
+  `19-08-46-265Z` snapshot is retained as historical evidence, not deleted or
+  overwritten.
+- **Owner-list review only:** provider non-Liverpool roster has 561 members
+  versus 558 owner rows: 538 exact normalized name pairs, 23
+  `PROVIDER_ONLY_REVIEW_PENDING` with null value, 20
+  `OWNER_ONLY_REVIEW_PENDING`, zero ambiguous groups and net `+3`. These are
+  not a DB reconciliation and none is application eligible. The two alleged
+  DB extras remain unmodified/unidentified in DB terms.
+- **Conflict:** Sportmonks returned Bruno Guimarães / provider ID `459145`
+  under Newcastle team `20`, contrary to Luiz's Arsenal product decision. It
+  remains pending; no manual patch/sync/value action is authorized. Resolve
+  this through the later canonical reconciliation decision, not a one-player
+  correction.
+- **Validation:** new direct reader is GET-only, pagination/partial/duplicate
+  fail-closed and omits raw payloads/request URLs/credential. Focused tests
+  passed 6/6; `pnpm typecheck`, `pnpm lint` and `git diff --check` passed.
+  Full evidence: `docs/touchline-arena/audit/2026-08-09-SPORTMONKS-20-CLUB-READ-RESULT.md`.
