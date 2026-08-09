@@ -1527,4 +1527,6 @@ Preview, production checkpoint, or a dirty worktree.
   `docs/touchline-arena/audit/2026-08-09-MARKET-VALUE-APPLICATION-LOCAL-PREFLIGHT-HOLD.md`.
   Preserve the 20 REVIEW, five pending and 23 provider-only pending records;
   stop until a fresh least-privilege canonical roster export and its local
-  UUID/membership dry-run exist.
+  UUID/membership dry-run exist. Persistent checkpoint:
+  `f9b91bc108b9b885f20c82383707dffd93530dd3`
+  (`docs(market-values): record application preflight hold`).

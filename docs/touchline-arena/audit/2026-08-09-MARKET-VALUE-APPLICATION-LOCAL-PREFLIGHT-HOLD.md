@@ -118,6 +118,9 @@ prove deterministic keys, partial/ambiguous/duplicate fail-closed behavior,
 excluded pending/review rows, and no provider/database/sync/mutation capability
 in the local candidate generator.
 
+**Persistent checkpoint:** `f9b91bc108b9b885f20c82383707dffd93530dd3`
+(`docs(market-values): record application preflight hold`).
+
 ## Minimum next gate
 
 Do not write any data. First provision or inject a demonstrably least-privilege
