@@ -8,6 +8,7 @@ import {
 } from "@/lib/touchlineArena/coach-card";
 import { TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT } from "@/lib/touchlineArena/coach-card-layout";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
+import { resolveTouchlineVisualQaLocale } from "@/lib/touchlineArena/visual-qa-locale";
 
 export const metadata = {
   title: "TouchLine · Card perimeter trace visual QA",
@@ -24,7 +25,7 @@ const player: TouchlineEliteExactPlayer = {
   role: "midfielder",
   position: "CM",
   countryCode3: "ENG",
-  name: "STATIC TRACE PLAYER",
+  name: "TRACE",
   clubName: club.name,
   clubLogoUrl: club.logoUrl,
   leagueName: "TouchLine England",
@@ -56,7 +57,7 @@ const coachSlot = {
   status: "awaiting-match-evidence" as const,
 };
 
-function StaticPlayerCard() {
+function StaticPlayerCard({ locale }: Readonly<{ locale: "en-GB" | "pt-BR" }>) {
   return (
     <TouchlineEliteExactCard
       player={player}
@@ -66,7 +67,7 @@ function StaticPlayerCard() {
       startUnlocked={false}
       isRemovalMarkerEnabled={false}
       staticRenderScale={0.7}
-      runtimeLocaleOverride="en-GB"
+      runtimeLocaleOverride={locale}
       subscribeToRanking={false}
       enableInteractiveNeon={false}
       showCardActions={false}
@@ -78,7 +79,7 @@ function StaticPlayerCard() {
   );
 }
 
-function StaticCoachCard() {
+function StaticCoachCard({ locale }: Readonly<{ locale: "en-GB" | "pt-BR" }>) {
   return (
     <TouchlineCoachCard
       coach={TOUCHLINE_DEMO_COACH}
@@ -87,7 +88,7 @@ function StaticCoachCard() {
       clubLogoUrl={club.logoUrl}
       clubAccent={club.accent}
       countryCode3="ITA"
-      locale="en-GB"
+      locale={locale}
       layoutOverride={TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT}
       displayMode="default"
       optimizeForLiveCompact={false}
@@ -96,10 +97,35 @@ function StaticCoachCard() {
   );
 }
 
-export default function CardNeonTraceVisualQaPage() {
+type VisualQaPageProps = Readonly<{
+  searchParams: Promise<Readonly<{ lang?: string }>>;
+}>;
+
+export default async function CardNeonTraceVisualQaPage({ searchParams }: VisualQaPageProps) {
+  const locale = resolveTouchlineVisualQaLocale((await searchParams).lang);
+  const copy = locale === "pt-BR"
+    ? {
+      title: "Traço perimetral canônico do card",
+      description: "Um card estático de Jogador e um de Treinador exercitam o traço compartilhado pelo centro da borda, o token de tier canônico e o tratamento do escudo do clube. Não usa conta, provedor, elenco, contrato ou layout persistido.",
+      player: "JOGADOR · RADIANT GOLD · ESCUDO DO MANCHESTER CITY",
+      coach: "TREINADOR · RADIANT GOLD · ESCUDO DO MANCHESTER CITY",
+      boundary: "Apenas fixture estático. A linha viajante completa um loop calmo, descansa como borda residual suave e reinicia automaticamente; usuários com redução de movimento recebem a borda estática iluminada, sem animação. Interação, assinaturas de dados, persistência de layout e acesso a provedor estão desativados.",
+      cases: "Fixtures estáticos de traço perimetral do card",
+    }
+    : {
+      title: "Canonical card perimeter trace",
+      description: "One static Player card and one static Coach card exercise the shared centre-line trace, canonical tier token and club-crest treatment. No account, provider, roster, contract or persisted-layout data is used.",
+      player: "PLAYER · RADIANT GOLD · MANCHESTER CITY CREST",
+      coach: "COACH · RADIANT GOLD · MANCHESTER CITY CREST",
+      boundary: "Static fixture only. The travelling line completes one calm loop, rests as a soft residual border, then restarts automatically; reduced-motion users receive the illuminated static border with no animation. Interaction, data subscriptions, layout persistence and provider access are disabled.",
+      cases: "Static card perimeter trace fixtures",
+    };
+
   return (
     <main
       data-card-neon-trace-fixture="static"
+      data-visual-qa-locale={locale}
+      lang={locale}
       style={{
         minHeight: "100dvh",
         overflowX: "clip",
@@ -110,14 +136,14 @@ export default function CardNeonTraceVisualQaPage() {
     >
       <header style={{ width: "min(1180px, 100%)", margin: "0 auto", borderBottom: "1px solid rgba(255, 242, 168, .24)", paddingBottom: 22 }}>
         <p style={{ margin: 0, color: "#fff2a8", fontSize: 12, fontWeight: 900, letterSpacing: ".14em" }}>ADMIN-GATED · STATIC LOCAL VISUAL QA</p>
-        <h1 style={{ margin: "9px 0 0", fontSize: "clamp(31px, 5vw, 56px)", letterSpacing: "-.05em", lineHeight: 1 }}>Canonical card perimeter trace</h1>
+        <h1 style={{ margin: "9px 0 0", fontSize: "clamp(31px, 5vw, 56px)", letterSpacing: "-.05em", lineHeight: 1 }}>{copy.title}</h1>
         <p style={{ maxWidth: 800, margin: "15px 0 0", color: "rgba(226,232,240,.72)", fontSize: 15, lineHeight: 1.65 }}>
-          One static Player card and one static Coach card exercise the shared centre-line trace, canonical tier token and club-crest treatment. No account, provider, roster, contract or persisted-layout data is used.
+          {copy.description}
         </p>
       </header>
 
       <section
-        aria-label="Static card perimeter trace fixtures"
+        aria-label={copy.cases}
         style={{
           width: "min(1180px, 100%)",
           margin: "32px auto 0",
@@ -129,12 +155,12 @@ export default function CardNeonTraceVisualQaPage() {
         }}
       >
         <article data-card-neon-trace-case="player" style={{ width: "min(100%, 420px)", display: "grid", justifyItems: "center", gap: 14 }}>
-          <p style={{ margin: 0, color: "rgba(255,255,255,.74)", fontSize: 12, fontWeight: 850, letterSpacing: ".08em" }}>PLAYER · RADIANT GOLD · MANCHESTER CITY CREST</p>
-          <StaticPlayerCard />
+          <p style={{ margin: 0, color: "rgba(255,255,255,.74)", fontSize: 12, fontWeight: 850, letterSpacing: ".08em" }}>{copy.player}</p>
+          <StaticPlayerCard locale={locale} />
         </article>
         <article data-card-neon-trace-case="coach" style={{ width: "min(100%, 420px)", display: "grid", justifyItems: "center", gap: 14 }}>
-          <p style={{ margin: 0, color: "rgba(255,255,255,.74)", fontSize: 12, fontWeight: 850, letterSpacing: ".08em" }}>COACH · RADIANT GOLD · MANCHESTER CITY CREST</p>
-          <div style={{ width: "min(330px, 100%)" }}><StaticCoachCard /></div>
+          <p style={{ margin: 0, color: "rgba(255,255,255,.74)", fontSize: 12, fontWeight: 850, letterSpacing: ".08em" }}>{copy.coach}</p>
+          <div style={{ width: "min(330px, 100%)" }}><StaticCoachCard locale={locale} /></div>
         </article>
       </section>
 
@@ -142,7 +168,7 @@ export default function CardNeonTraceVisualQaPage() {
         aria-label="Fixture safety boundary"
         style={{ width: "min(1180px, 100%)", margin: "32px auto 0", borderRadius: 16, border: "1px solid rgba(163, 230, 53, .24)", background: "rgba(77, 124, 15, .12)", padding: "14px 16px", color: "rgba(236,252,203,.88)", fontSize: 13, lineHeight: 1.55 }}
       >
-        Static fixture only. The travelling line completes one calm loop, rests as a soft residual border, then restarts automatically; reduced-motion users receive the illuminated static border with no animation. Interaction, data subscriptions, layout persistence and provider access are disabled.
+        {copy.boundary}
       </aside>
     </main>
   );

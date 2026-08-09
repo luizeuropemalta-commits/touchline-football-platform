@@ -20,6 +20,9 @@ function currentRepositoryInput() {
     nextConfigSource: source("../next.config.ts"),
     clubHubFixtureSource: source("../app/visual-qa/clubhub-profile-contract/page.tsx"),
     cardFixtureSource: source("../app/visual-qa/card-value-states/page.tsx"),
+    cardNeonFixtureSource: source("../app/visual-qa/card-neon-trace/page.tsx"),
+    ownerPortraitFixtureSource: source("../app/visual-qa/club-owner-portrait-neon/page.tsx"),
+    officialTableFixtureSource: source("../app/visual-qa/official-league-table-initial/page.tsx"),
   };
 }
 
@@ -35,6 +38,9 @@ test("the local release checklist maps the public route, name-only environment c
   assert.ok(result.localCommands.includes("pnpm build"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/clubhub-profile-contract?lang=pt-BR"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/card-value-states?lang=pt-BR"));
+  assert.ok(result.fixtureMatrix.includes("/visual-qa/card-neon-trace?lang=pt-BR"));
+  assert.ok(result.fixtureMatrix.includes("/visual-qa/club-owner-portrait-neon?lang=pt-BR"));
+  assert.ok(result.fixtureMatrix.includes("/visual-qa/official-league-table-initial?lang=pt-BR"));
   assert.ok(result.manualGates.some((gate) => gate.includes("Safari/WebKit")));
   assert.ok(result.externalGates.some((gate) => gate.includes("Vercel project binding")));
 });

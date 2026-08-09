@@ -1561,3 +1561,27 @@ Preview, production checkpoint, or a dirty worktree.
   tests/touchline-release-readiness-local.test.mts, and
   tests/touchline-visual-qa-locale.test.mts. Persistent checkpoint:
   `0f646328` (`feat(release): add local EN PT readiness checklist`).
+
+## 2026-08-10 EN/PT local static visual matrix — PASS / NOT DEPLOYED
+
+- **Scope:** executed only the static local production fixtures for ClubHub,
+  card value states, card/crest trace, Club Owner portrait trace and the
+  initial official table. Every applicable fixture now has an explicit EN/PT
+  query contract; the six deferred locales remain outside this scope.
+- **Observed:** 30 local browser visits (five fixtures × EN/PT × 390/768/1280)
+  had no root horizontal overflow. ClubHub retained the approved section order
+  and readable field names; the initial table rendered 20 zero-stat rows;
+  card/crest and Club Owner traces visibly performed their eight-second
+  travelling pass, residual pause and restart. Decorative SVG paths are
+  pointer-inert and leave touch-action unrestricted.
+- **Safe fixture-only correction:** shortened oversized synthetic fixture
+  labels that cropped at 390px. No live player content, art, value, tier,
+  price, contract, economy, ranking, database, provider, sync, migration,
+  Preview or deployment changed.
+- **Validation:** the release-readiness, TypeScript, ESLint, full test
+  (807/807), production-build package checks and `git diff --check` passed.
+  Native Safari/WebKit, iOS Safari, Chrome Android, real touch and
+  keyboard-focus observations remain explicitly external gates.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-LOCAL-STATIC-VISUAL-QA-MATRIX.md`.
+  Persistent checkpoint: pending commit for this visual-QA block.

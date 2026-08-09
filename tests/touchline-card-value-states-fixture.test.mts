@@ -41,6 +41,13 @@ test("the fixture supplies exactly the three canonical value-state cases", () =>
   assert.match(fixtureSource, /cardTier: "emerald-green"/);
   assert.match(fixtureSource, /cardPriceAuthority: "active-contract"/);
   assert.match(fixtureSource, /cardPriceVersion: "2026-07-premier-v1"/);
+
+  // Keep the static shirt identifiers short enough for the fixed artwork's
+  // mobile nameplate; semantic fixture labels above carry the longer context.
+  for (const shirtName of ["VERIFIED", "PENDING", "ACTIVE"]) {
+    assert.match(fixtureSource, new RegExp(`name: "${shirtName}"`));
+  }
+  assert.doesNotMatch(fixtureSource, /STATIC (VERIFIED|PENDING|ACTIVE CONTRACT) FIXTURE/);
 });
 
 test("the fixture disables card interactivity, persistence and data subscriptions", () => {

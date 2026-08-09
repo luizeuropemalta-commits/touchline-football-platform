@@ -15,6 +15,8 @@ test("the card perimeter-trace fixture is static, local and admin-gated", () => 
   assert.match(proxySource, /protectedArenaPaths = \[[\s\S]*?"\/visual-qa"/);
   assert.match(proxySource, /adminOnlyArenaPaths = \[[\s\S]*?"\/visual-qa"/);
   assert.match(fixtureSource, /data-card-neon-trace-fixture="static"/);
+  assert.match(fixtureSource, /data-visual-qa-locale=\{locale\}/);
+  assert.match(fixtureSource, /resolveTouchlineVisualQaLocale/);
   assert.match(fixtureSource, /ADMIN-GATED · STATIC LOCAL VISUAL QA/);
   assert.match(fixtureSource, /robots: \{ index: false, follow: false \}/);
 });
@@ -27,6 +29,11 @@ test("the fixture exercises both shared card implementations with canonical loca
   assert.match(fixtureSource, /marketValue: "€20M"/);
   assert.match(fixtureSource, /marketValueState: "verified"/);
   assert.match(fixtureSource, /classificationState: "verified"/);
+  assert.match(fixtureSource, /name: "TRACE"/);
+  assert.doesNotMatch(fixtureSource, /STATIC TRACE PLAYER/);
+  assert.match(fixtureSource, /runtimeLocaleOverride=\{locale\}/);
+  assert.match(fixtureSource, /locale=\{locale\}/);
+  assert.match(fixtureSource, /Traço perimetral canônico do card/);
   assert.match(fixtureSource, /clubAccent=\{club\.accent\}/);
   assert.match(fixtureSource, /layoutOverride=\{TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT\}/);
   assert.match(fixtureSource, /completes one calm loop[\s\S]*?restarts automatically/);

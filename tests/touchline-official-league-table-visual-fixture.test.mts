@@ -15,8 +15,11 @@ test("initial official-table visual fixture stays local, static and presentation
   assert.equal((source.match(/\["\d+", ".+?", ".+?"\]/g) ?? []).length, 20);
   assert.match(source, /fixtures: \[\]/);
   assert.match(source, /viewport === "mobile"/);
-  assert.match(source, /390PX MOBILE VIEWPORT/);
-  assert.match(source, /src="\/visual-qa\/official-league-table-initial\?viewport=mobile"/);
+  assert.match(source, /resolveTouchlineVisualQaLocale/);
+  assert.match(source, /data-visual-qa-locale=\{locale\}/);
+  assert.match(source, /locale=\{locale\}/);
+  assert.match(source, /Tabela oficial inicial da liga/);
+  assert.match(source, /viewport=mobile&lang=\$\{locale\}/);
   assert.doesNotMatch(source, /\bfetch\(/);
   assert.doesNotMatch(source, /create(?:Admin)?Client|supabase|market-value|card-ranking|wallet/i);
 });

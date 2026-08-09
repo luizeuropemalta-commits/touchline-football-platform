@@ -15,10 +15,15 @@ test("the Club Owner portrait trace fixture is static and admin-gated", () => {
   assert.match(proxySource, /protectedArenaPaths = \[[\s\S]*?"\/visual-qa"/);
   assert.match(proxySource, /adminOnlyArenaPaths = \[[\s\S]*?"\/visual-qa"/);
   assert.match(fixtureSource, /data-club-owner-portrait-neon-fixture="static"/);
+  assert.match(fixtureSource, /data-visual-qa-locale=\{locale\}/);
+  assert.match(fixtureSource, /resolveTouchlineVisualQaLocale/);
   assert.match(fixtureSource, /ADMIN-GATED · STATIC LOCAL VISUAL QA/);
   assert.match(fixtureSource, /robots: \{ index: false, follow: false \}/);
   assert.match(fixtureSource, /clubOwnerPortraitTrace/);
   assert.match(fixtureSource, /Automatic calm loop/);
+  assert.match(fixtureSource, /name="OWNER"/);
+  assert.doesNotMatch(fixtureSource, /STATIC CLUB OWNER/);
+  assert.match(fixtureSource, /Perímetro do retrato do Club Owner/);
   assert.doesNotMatch(fixtureSource, /portraitTraceActive/);
   assert.match(fixtureSource, /accent=\{TOUCHLINE_LOGO_GREEN\}/);
   assert.match(fixtureSource, /\/touchlineArena\/club-owner\/avatars\/luiz-lopez-owner-avatar-v1\.png/);

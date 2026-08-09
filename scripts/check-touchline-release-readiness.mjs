@@ -62,6 +62,9 @@ export function evaluateTouchlineReleaseReadiness({
   nextConfigSource,
   clubHubFixtureSource,
   cardFixtureSource,
+  cardNeonFixtureSource,
+  ownerPortraitFixtureSource,
+  officialTableFixtureSource,
 }) {
   const scripts = packageJson?.scripts ?? {};
   const templateNames = envNamesFromTemplate(envTemplate);
@@ -94,6 +97,23 @@ export function evaluateTouchlineReleaseReadiness({
       "data-visual-qa-locale={locale}",
       "runtimeLocaleOverride={locale}",
     ]).map((token) => `card-fixture:${token}`),
+    ...missingTokens(cardNeonFixtureSource, [
+      "resolveTouchlineVisualQaLocale",
+      "data-visual-qa-locale={locale}",
+      "runtimeLocaleOverride={locale}",
+      "locale={locale}",
+    ]).map((token) => `card-neon-fixture:${token}`),
+    ...missingTokens(ownerPortraitFixtureSource, [
+      "resolveTouchlineVisualQaLocale",
+      "data-visual-qa-locale={locale}",
+      "Perímetro do retrato do Club Owner",
+    ]).map((token) => `owner-portrait-fixture:${token}`),
+    ...missingTokens(officialTableFixtureSource, [
+      "resolveTouchlineVisualQaLocale",
+      "data-visual-qa-locale={locale}",
+      "locale={locale}",
+      "Tabela oficial inicial da liga",
+    ]).map((token) => `official-table-fixture:${token}`),
   ];
 
   return Object.freeze({
@@ -129,9 +149,12 @@ export function evaluateTouchlineReleaseReadiness({
       "/visual-qa/clubhub-profile-contract?lang=pt-BR",
       "/visual-qa/card-value-states?lang=en-GB",
       "/visual-qa/card-value-states?lang=pt-BR",
-      "/visual-qa/card-neon-trace",
-      "/visual-qa/club-owner-portrait-neon",
-      "/visual-qa/official-league-table-initial",
+      "/visual-qa/card-neon-trace?lang=en-GB",
+      "/visual-qa/card-neon-trace?lang=pt-BR",
+      "/visual-qa/club-owner-portrait-neon?lang=en-GB",
+      "/visual-qa/club-owner-portrait-neon?lang=pt-BR",
+      "/visual-qa/official-league-table-initial?lang=en-GB",
+      "/visual-qa/official-league-table-initial?lang=pt-BR",
     ]),
     manualGates: Object.freeze([
       "Use the static fixtures at 390px, 768px, and 1280px; record no horizontal overflow, readable cards, ClubHub order, and EN/PT labels.",
@@ -154,7 +177,7 @@ function parseArgs(args) {
 
 async function readRepositoryInputs(rootDirectory) {
   const read = (path) => readFile(resolve(rootDirectory, path), "utf8");
-  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource] = await Promise.all([
+  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource, cardNeonFixtureSource, ownerPortraitFixtureSource, officialTableFixtureSource] = await Promise.all([
     read("package.json"),
     read(".env.example"),
     read("lib/touchlineArena/public-origin.ts"),
@@ -162,6 +185,9 @@ async function readRepositoryInputs(rootDirectory) {
     read("next.config.ts"),
     read("app/visual-qa/clubhub-profile-contract/page.tsx"),
     read("app/visual-qa/card-value-states/page.tsx"),
+    read("app/visual-qa/card-neon-trace/page.tsx"),
+    read("app/visual-qa/club-owner-portrait-neon/page.tsx"),
+    read("app/visual-qa/official-league-table-initial/page.tsx"),
   ]);
   return {
     packageJson: JSON.parse(packageText),
@@ -171,6 +197,9 @@ async function readRepositoryInputs(rootDirectory) {
     nextConfigSource,
     clubHubFixtureSource,
     cardFixtureSource,
+    cardNeonFixtureSource,
+    ownerPortraitFixtureSource,
+    officialTableFixtureSource,
   };
 }
 
