@@ -487,11 +487,19 @@ Preview, production checkpoint, or a dirty worktree.
   ESLint and `git diff --check` passed. No database, provider, sync, import,
   migration, Preview, production, payment or deployment action occurred.
 
-### RETIRED FANTASY ENDPOINTS IMPLEMENTED AND LOCALLY VALIDATED
+## 2026-08-09 owner release-locale decision — CURRENT RELEASE SCOPE
 
-- Both handlers now return only `410 TL_FOOTBALL_DATA_RETIRED` with private
-  no-store caching. No provider, auth, request parsing, persistence, token or
-  dynamic timestamp path remains.
-- Focused public-boundary tests passed `14/14`; `pnpm typecheck`, focused
-  ESLint and `git diff --check` passed. No database, provider, sync, import,
-  migration, Preview, production, payment or deployment action occurred.
+- Luiz explicitly authorises this release target in **`en-GB` and `pt-BR`
+  only**. The other approved future locales (`es-ES`, `it-IT`, `fr-FR`,
+  `ar-SA`, `tr-TR`, `de-DE`) remain disabled/fail-closed and are deferred to a
+  later, separately reviewed update; they must never be represented as
+  localized in this release.
+- This decision supersedes only the prior requirement that the six deferred
+  catalogues block the present release. It does **not** clear the EN/PT
+  whole-site copy/metadata/PWA/auth visual checks, Arabic/other-language work,
+  public-data boundaries, durable Arena state, isolated Preview or production
+  gates.
+- No deployment is authorised by this decision. Publication remains contingent
+  on a clean immutable candidate, all applicable technical tests, isolated
+  Preview evidence, rendered EN/PT page-by-page QA, and the remaining release
+  gates below.
