@@ -59,6 +59,8 @@ type PremierSquadPlayer = {
   clubShortCode: string;
   marketValue?: string | null;
   marketValueSource?: ClubOwnerSquadCard["marketValueSource"];
+  marketValueState?: ClubOwnerSquadCard["marketValueState"];
+  classificationState?: ClubOwnerSquadCard["classificationState"];
   cardTier?: ClubOwnerSquadCard["cardTier"];
   cardPriceVersion?: string | null;
   countryCode3?: string | null;
@@ -109,6 +111,8 @@ function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): Clu
     countryCode3: player.countryCode3 || "N/A",
     marketValue: player.marketValue || "Pending",
     marketValueSource: player.marketValueSource || "unavailable",
+    marketValueState: player.marketValueState,
+    classificationState: player.classificationState,
     cardTier: player.cardTier,
     cardPriceVersion: player.cardPriceVersion || undefined,
     touchlinePoints: 0,

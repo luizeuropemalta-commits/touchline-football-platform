@@ -155,6 +155,8 @@ function canonicalArenaPlayer(
       fantasyPoints: rosterCard.touchlinePoints,
       marketValue: rosterCard.marketValue,
       marketValueSource: rosterCard.marketValueSource ?? "unavailable",
+      marketValueState: rosterCard.marketValueState,
+      classificationState: rosterCard.classificationState,
       cardTier: rosterCard.cardTier,
       cardPriceVersion: rosterCard.cardPriceVersion,
       cardPriceAuthority: rosterCard.cardPriceAuthority,

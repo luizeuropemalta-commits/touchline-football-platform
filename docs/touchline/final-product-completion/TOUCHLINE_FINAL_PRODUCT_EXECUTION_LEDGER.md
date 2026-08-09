@@ -637,3 +637,30 @@ Preview, production checkpoint, or a dirty worktree.
 - This does not authorise a partial 19-club application, a database query,
   SQL Editor execution, remote sync, deployment, payment or any action while
   those gates remain open.
+
+## 2026-08-09 pending card-state propagation — LOCAL PROPOSAL
+
+- **Evidence:** the persisted public squad response carries
+  `marketValueState` and `classificationState`, and the exact-card component
+  already renders a neutral, explicit pending state when either is present.
+  The ClubHub and Arena adapter DTOs currently discard those fields, which can
+  route a pending player into the legacy Ruby/points presentation.
+- **Local-only scope:** forward the two server-owned states unchanged through
+  ClubHub, Arena lineup/bench/preview and authoritative-roster rebuild DTOs.
+  Correct the adapter-only `> 0` checks so a verified EUR 0 value remains a
+  valid Ruby value; missing/non-numeric values remain pending. Do not change
+  tier thresholds, commercial pricing, active-contract precedence, inventory,
+  contracts, database data or API semantics.
+- **Risk:** this exposes an existing inconsistency rather than resolving it:
+  uncontracted public cards currently derive a classification from a verified
+  value, while active contracts preserve their stored tier/price. Market
+  inventory is a distinct read model and is not updated by the City artifact.
+  The fix must not imply immediate cross-surface consistency or change an
+  active card.
+- **Acceptance:** a pending state reaches `TouchlineEliteExactCard` on
+  ClubHub and Arena and renders `data-card-tier="neutral"`, explicit pending
+  copy and no invented price; verified EUR 0 can retain Ruby; an active
+  contract retains its stored tier/price. Focused regression tests must pass.
+  Controlled desktop/mobile rendered QA remains required later, with a safe
+  verified/pending/active-contract fixture; it is not evidence from this
+  source-only patch.

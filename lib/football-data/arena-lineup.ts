@@ -22,6 +22,10 @@ export type ArenaLineupPlayer = {
     fantasyPoints?: string | number | null;
     marketValue?: string | null;
     marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+    /** Server-owned public value state. Never infer it from a display string. */
+    marketValueState?: "verified" | "pending" | "unavailable" | "error" | null;
+    /** Server-owned public classification state paired with marketValueState. */
+    classificationState?: "verified" | "pending" | "unavailable" | "error" | null;
     cardTier?: TouchlineCardTierKey | null;
     cardPriceVersion?: string | null;
     /** Only active server-side contracts may freeze the card classification. */

@@ -19,6 +19,22 @@ const lineup = readFileSync(
   new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url),
   "utf8",
 );
+const clubHubPage = readFileSync(
+  new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url),
+  "utf8",
+);
+const arena = readFileSync(
+  new URL("../app/arena/ArenaClient.tsx", import.meta.url),
+  "utf8",
+);
+const arenaLineup = readFileSync(
+  new URL("../lib/football-data/arena-lineup.ts", import.meta.url),
+  "utf8",
+);
+const authoritativeArenaState = readFileSync(
+  new URL("../lib/touchlineArena/authoritative-arena-state.ts", import.meta.url),
+  "utf8",
+);
 
 test("canonical pending states are neutral while an active contract keeps its stored tier", () => {
   const pending = resolveTouchlinePublicCardPresentation({
@@ -38,6 +54,15 @@ test("canonical pending states are neutral while an active contract keeps its st
 
   assert.deepEqual([pending.visualState, pending.tierKey, pending.canExposeCommercialPresentation], ["pending", null, false]);
   assert.deepEqual([contract.visualState, contract.tierKey, contract.canExposeCommercialPresentation], ["active-contract", "sapphire-blue", true]);
+
+  const verifiedZero = resolveTouchlinePublicCardPresentation({
+    marketValue: 0,
+    marketValueSource: "verified-cache",
+    marketValueState: "verified",
+    classificationState: "verified",
+    cardTier: "ruby-red",
+  });
+  assert.deepEqual([verifiedZero.visualState, verifiedZero.tierKey, verifiedZero.canExposeCommercialPresentation], ["verified", "ruby-red", true]);
 });
 
 test("release card layer retains the established commercial branch and adds no launch-offer rule", () => {
@@ -58,4 +83,37 @@ test("public card hardening is opt-in and keeps legacy ClubHub offers intact", (
   assert.match(lineup, /const presentation = hasCanonicalPublicState \? resolveTouchlinePublicCardPresentation\(card\) : null/);
   assert.match(lineup, /const contractedTier = card\.cardPriceAuthority === "active-contract"/);
   assert.match(lineup, /: touchlineArenaContractHref\(\{/);
+});
+
+test("ClubHub and Arena preserve canonical pending states through every card adapter", () => {
+  assert.match(clubHubPage, /marketValueState\?: ClubOwnerSquadCard\["marketValueState"\]/);
+  assert.match(clubHubPage, /classificationState\?: ClubOwnerSquadCard\["classificationState"\]/);
+  assert.match(clubHubPage, /marketValueState: player\.marketValueState/);
+  assert.match(clubHubPage, /classificationState: player\.classificationState/);
+
+  assert.match(arenaLineup, /marketValueState\?: "verified" \| "pending" \| "unavailable" \| "error" \| null/);
+  assert.match(arenaLineup, /classificationState\?: "verified" \| "pending" \| "unavailable" \| "error" \| null/);
+  assert.match(authoritativeArenaState, /marketValueState: rosterCard\.marketValueState/);
+  assert.match(authoritativeArenaState, /classificationState: rosterCard\.classificationState/);
+
+  for (const expression of [
+    "marketValueState: squadPlayer.marketValueState ?? player.card.marketValueState",
+    "classificationState: squadPlayer.classificationState ?? player.card.classificationState",
+    "marketValueState: bench.marketValueState",
+    "classificationState: bench.classificationState",
+    "marketValueState: player.marketValueState",
+    "classificationState: player.classificationState",
+    "marketValueState: card?.marketValueState",
+    "classificationState: card?.classificationState",
+  ]) {
+    assert.ok(arena.includes(expression), `Arena state propagation is missing ${expression}`);
+  }
+});
+
+test("Arena treats a verified EUR 0 value as Ruby rather than a fabricated pending state", () => {
+  assert.match(arena, /parseMarketValueEurOrNull/);
+  assert.match(arena, /if \(marketValue === null\) return "Pending"/);
+  assert.match(arena, /return parseMarketValueEurOrNull\(value\) !== null/);
+  assert.doesNotMatch(arena, /function normalizeMarketValueLabel[\s\S]{0,220}marketValue <= 0/);
+  assert.doesNotMatch(arena, /function displayBuilderMarketValue[\s\S]{0,220}marketValue <= 0/);
 });

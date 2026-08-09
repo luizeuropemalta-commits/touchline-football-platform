@@ -28,6 +28,7 @@ import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   parseMarketValueEur,
+  parseMarketValueEurOrNull,
   resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaClubTemplateForCard,
   touchlineArenaClubTemplateForTierPreview,
@@ -203,6 +204,8 @@ type BenchOption = {
   shirtNumber: number | null;
   marketValue: string;
   marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+  marketValueState?: ClubOwnerSquadCard["marketValueState"];
+  classificationState?: ClubOwnerSquadCard["classificationState"];
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
   cardPriceAuthority?: "active-contract" | null;
@@ -265,6 +268,8 @@ type TeamBuilderSquadPlayer = {
   clubLogoUrl?: string | null;
   marketValue?: string | null;
   marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+  marketValueState?: ClubOwnerSquadCard["marketValueState"];
+  classificationState?: ClubOwnerSquadCard["classificationState"];
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
   cardPriceAuthority?: "active-contract" | null;
@@ -716,13 +721,13 @@ function arenaShirtNumberLabel(value: unknown) {
 }
 
 function normalizeMarketValueLabel(value?: string | null) {
-  const marketValue = parseMarketValueEur(value);
-  if (marketValue <= 0) return "Pending";
+  const marketValue = parseMarketValueEurOrNull(value);
+  if (marketValue === null) return "Pending";
   return `€${Math.round(marketValue / 1_000_000)}M`;
 }
 
 function hasUsableMarketValue(value?: string | null) {
-  return parseMarketValueEur(value) > 0;
+  return parseMarketValueEurOrNull(value) !== null;
 }
 
 function hasVerifiedMarketValueSource(source?: BenchOption["marketValueSource"]) {
@@ -856,6 +861,8 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
       fantasyPoints: player.card.fantasyPoints ?? "0.0",
       marketValue,
       marketValueSource,
+      marketValueState: squadPlayer.marketValueState ?? player.card.marketValueState,
+      classificationState: squadPlayer.classificationState ?? player.card.classificationState,
       cardTier,
       cardPriceVersion: player.card.cardPriceVersion || squadPlayer.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
       cardPriceAuthority: player.card.cardPriceAuthority ?? squadPlayer.cardPriceAuthority ?? null,
@@ -891,6 +898,8 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
       fantasyPoints: "0.0",
       marketValue,
       marketValueSource: hasUsableMarketValue(marketValue) ? marketValueSource : "unavailable",
+      marketValueState: bench.marketValueState,
+      classificationState: bench.classificationState,
       cardTier,
       cardPriceVersion: bench.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
       cardPriceAuthority: bench.cardPriceAuthority ?? null,
@@ -949,6 +958,8 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
     shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
     marketValue: card?.marketValue || "Pending",
     marketValueSource: card?.marketValueSource || "unavailable",
+    marketValueState: card?.marketValueState ?? undefined,
+    classificationState: card?.classificationState ?? undefined,
     cardTier: touchlineArenaCompetitionTierForCard(card?.cardTier).key,
     cardPriceVersion: card?.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     cardPriceAuthority: card?.cardPriceAuthority ?? undefined,
@@ -971,6 +982,8 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
     shirtNumber: normalizeOfficialShirtNumber(player.shirtNumber),
     marketValue: verifiedMarketValueLabel(displayBuilderMarketValue(player.marketValue), marketValueSource),
     marketValueSource,
+    marketValueState: player.marketValueState,
+    classificationState: player.classificationState,
     cardTier: touchlineArenaCompetitionTierForCard(player.cardTier).key,
     cardPriceVersion: player.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     cardPriceAuthority: player.cardPriceAuthority ?? null,
@@ -1002,6 +1015,8 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
     countryCode3: card?.countryCode3 || "N/A",
     marketValue: card?.marketValue || "Pending",
     marketValueSource: card?.marketValueSource || "unavailable",
+    marketValueState: card?.marketValueState ?? undefined,
+    classificationState: card?.classificationState ?? undefined,
     cardTier: card?.cardTier || defaultCard?.cardTier,
     cardPriceVersion: card?.cardPriceVersion || defaultCard?.cardPriceVersion,
     cardPriceAuthority: card?.cardPriceAuthority ?? defaultCard?.cardPriceAuthority,
@@ -1024,6 +1039,8 @@ function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
     countryCode3: bench.countryCode3,
     marketValue: bench.marketValue,
     marketValueSource: bench.marketValueSource || "unavailable",
+    marketValueState: bench.marketValueState,
+    classificationState: bench.classificationState,
     cardTier: bench.cardTier || defaultCard?.cardTier,
     cardPriceVersion: bench.cardPriceVersion || defaultCard?.cardPriceVersion,
     cardPriceAuthority: bench.cardPriceAuthority ?? defaultCard?.cardPriceAuthority,
@@ -1047,6 +1064,8 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
       shirtNumber: card.shirtNumber,
       marketValue: card.marketValue,
       marketValueSource: card.marketValueSource || "unavailable",
+      marketValueState: card.marketValueState,
+      classificationState: card.classificationState,
       cardTier: card.cardTier,
       cardPriceVersion: card.cardPriceVersion,
       cardPriceAuthority: card.cardPriceAuthority,
@@ -1065,6 +1084,8 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
     shirtNumber: card.shirtNumber,
     marketValue: card.marketValue,
     marketValueSource: card.marketValueSource || "unavailable",
+    marketValueState: card.marketValueState,
+    classificationState: card.classificationState,
     cardTier: card.cardTier,
     cardPriceVersion: card.cardPriceVersion,
     cardPriceAuthority: card.cardPriceAuthority,
@@ -1515,8 +1536,8 @@ function slugifyBuilderId(value: string) {
 }
 
 function displayBuilderMarketValue(value?: string | null, pendingLabel = "Pending") {
-  const marketValue = parseMarketValueEur(value);
-  if (marketValue <= 0) return pendingLabel;
+  const marketValue = parseMarketValueEurOrNull(value);
+  if (marketValue === null) return pendingLabel;
   return `€${Math.round(marketValue / 1_000_000)}M`;
 }
 
@@ -2831,6 +2852,8 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
     leagueLogoUrl: "",
     marketValue: card?.marketValue || "Pending",
     marketValueSource: card?.marketValueSource || "unavailable",
+    marketValueState: card?.marketValueState,
+    classificationState: card?.classificationState,
     cardTier: previewTier ?? touchlineArenaCompetitionTierForCard(card?.cardTier).key,
     cardPriceVersion: card?.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     cardPriceAuthority: card?.cardPriceAuthority ?? undefined,
@@ -2892,6 +2915,8 @@ function benchOptionToPreviewCard(bench: BenchOption, previewTier?: TouchlineCar
     leagueLogoUrl: "",
     marketValue,
     marketValueSource: bench.marketValueSource || "unavailable",
+    marketValueState: bench.marketValueState,
+    classificationState: bench.classificationState,
     cardTier: previewTier ?? touchlineArenaCompetitionTierForCard(bench.cardTier).key,
     cardPriceVersion: bench.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     updatedAt: PUBLIC_DATA_SOURCE_LABEL,
@@ -3018,6 +3043,8 @@ function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEl
     leagueLogoUrl: "",
     marketValue,
     marketValueSource: player.marketValueSource || "unavailable",
+    marketValueState: player.marketValueState,
+    classificationState: player.classificationState,
     cardTier: touchlineArenaCompetitionTierForCard(player.cardTier).key,
     cardPriceVersion: player.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     updatedAt: PUBLIC_DATA_SOURCE_LABEL,
