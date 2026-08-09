@@ -173,3 +173,41 @@ freshness. Schedule POST will fail closed with `405`.
 
 This is a local code checkpoint only. It does not create a matchweek pointer,
 durable Quick Sub state, remote data run, Preview, or production release.
+
+## Fourth local slice: Arena signals/news — proposed
+
+`GET /api/touchline-arena/rumours` currently uses provider news, fixture-feed
+and live-event calls directly from a browser-reachable route. There is no
+persisted, versioned public signal projection that can safely replace those
+calls today.
+
+The safe local change is deliberately fail-closed: return a stable empty,
+explicitly unavailable response; remove all provider, cache, HTTP and
+environment-token code; and stop the Arena news client from passing fixture
+identifiers to the route. This does not deny that future signal data can exist:
+it requires a separately approved server-owned, versioned persisted projection
+before anything can be published.
+
+### Risks and acceptance
+
+- The news panel will show an honest unavailable state rather than live news,
+  lineup, injury or event claims. That is preferable to fetching, writing or
+  fabricating data during a public request.
+- The replacement must contain no provider factory, provider HTTP helper,
+  provider token, cache wrapper, dynamic timestamp or source branding.
+- The Arena caller must not derive or send raw fixture identifiers solely for
+  this unavailable route.
+- Focused tests must prove the route and caller boundary; no remote provider,
+  database, browser, Preview or deployment operation is part of acceptance.
+
+### Local implementation evidence — 2026-08-09
+
+- The route now returns a stable empty `state: "unavailable"` response with
+  `private, no-store`; it has no request argument, provider/cache/HTTP imports,
+  environment access, synthetic timestamp or source label.
+- Arena News now calls the fixed route literal and no longer derives or sends
+  fixture identifiers to it.
+- The dedicated signals boundary test passed `2/2` (and the combined persisted
+  reader subset passed `9/9`) before a later local filesystem read timeout
+  affected unrelated legacy files. That I/O condition is an environment gate,
+  not a pass claim for the remaining type/build suite.

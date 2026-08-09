@@ -5098,12 +5098,6 @@ export default function ArenaClient({
     if (activeArenaPanel !== "news") return;
 
     let cancelled = false;
-    const realFixtureIds = liveFixtures
-      .map((fixture) => fixture.providerId)
-      .filter((fixtureId) => /^\d+$/.test(fixtureId))
-      .slice(0, 4);
-    const params = new URLSearchParams();
-    if (realFixtureIds.length) params.set("fixtureIds", realFixtureIds.join(","));
 
     queueMicrotask(() => {
       if (cancelled) return;
@@ -5114,7 +5108,7 @@ export default function ArenaClient({
     touchlineJsonRequest<
       | { ok: true; data: TouchLineArenaRumourSignal[]; status?: string; fetchedAt?: string; warnings?: string[] }
       | { ok?: false; error?: string }
-    >(`/api/touchline-arena/rumours${params.toString() ? `?${params.toString()}` : ""}`)
+    >("/api/touchline-arena/rumours")
       .then(({ ok, payload }) => {
         const rumoursPayload = payload as
           | { ok: true; data: TouchLineArenaRumourSignal[]; status?: string; fetchedAt?: string; warnings?: string[] }
@@ -5142,7 +5136,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [activeArenaPanel, liveFixtures, t]);
+  }, [activeArenaPanel, t]);
 
   useEffect(() => {
     const sortedSquad = builderSquadClubKey === selectedBuilderClubKey

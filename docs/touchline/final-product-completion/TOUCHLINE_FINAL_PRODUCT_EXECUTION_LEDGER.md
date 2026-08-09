@@ -415,3 +415,32 @@ Preview, production checkpoint, or a dirty worktree.
   matchweek/finalisation pointer or immutable coverage/version; real durable
   Quick Sub requires server match authority; six approved human locales remain
   incomplete; and all Preview/visual/release gates are still open.
+
+## 2026-08-09 public persisted-read boundary — ARENA SIGNALS SLICE PROPOSED
+
+- Evidence: the browser-reachable rumours endpoint directly requests provider
+  news, fixture feeds and live events. No versioned persisted public signal
+  projection exists today.
+- Local proposal: remove that ingress entirely and return an explicit,
+  stable unavailable state with no fabricated signal, provider/source branding,
+  token, request-time freshness or write. Arena will stop sending fixture IDs
+  to this unavailable endpoint.
+- Risk/acceptance: News becomes honestly unavailable until a separately
+  approved server-owned persisted signal projection exists. Static tests must
+  prove no provider/cache/HTTP/environment dependencies or fixture-ID caller
+  parameter remain. No remote operation is authorised.
+
+### ARENA SIGNALS SLICE IMPLEMENTED — LOCAL I/O VALIDATION GATE
+
+- The endpoint now returns only an empty unavailable state and `private,
+  no-store`; it no longer imports provider news/live/fixture code, environment
+  credentials, cache helpers or a request-time timestamp. Arena News no longer
+  passes fixture identifiers to the endpoint.
+- The focused signals boundary suite passed `2/2`; the combined persisted
+  reader subset passed `9/9` before a separate legacy-file read returned local
+  `ETIMEDOUT` during a broader test invocation. This is recorded as an
+  environment validation gate, not as a release pass.
+- Local disk recovery removed only a confirmed old `.next` cache. It increased
+  free space from `102 MiB` to `576 MiB`; a temporary three-byte write probe
+  succeeded and was removed. No source, Git data, Downloads, assets, database,
+  network, sync, Preview or deployment was touched.

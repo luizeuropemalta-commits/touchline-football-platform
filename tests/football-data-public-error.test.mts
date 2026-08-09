@@ -4,10 +4,9 @@ import test from "node:test";
 
 import { publicFootballDataFailure } from "../lib/football-data/public-error.ts";
 
-const publicProviderRoutes = [
+const providerBackedRoutes = [
   "../app/api/football-data/fantasy/events/route.ts",
   "../app/api/football-data/fantasy/capabilities/route.ts",
-  "../app/api/football-data/fantasy/livescores/route.ts",
 ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
 const rumoursRoute = readFileSync(new URL("../app/api/touchline-arena/rumours/route.ts", import.meta.url), "utf8");
 
@@ -24,13 +23,14 @@ test("public football-data failures expose stable codes instead of provider mess
   });
 });
 
-test("shared football-data routes do not return raw provider error messages", () => {
-  for (const source of publicProviderRoutes) {
+test("remaining provider-backed football-data routes do not return raw provider error messages", () => {
+  for (const source of providerBackedRoutes) {
     assert.match(source, /publicFootballDataFailure\(/);
     assert.doesNotMatch(source, /result\.error\.message/);
   }
   assert.doesNotMatch(rumoursRoute, /publicError\(result\.error\.message\)|publicError\(liveEvents\.error\.message\)/);
-  assert.match(rumoursRoute, /return `\$\{PUBLIC_SOURCE_LABEL\} updates are temporarily unavailable\.`/);
+  assert.match(rumoursRoute, /No canonical persisted signal snapshot is available/);
+  assert.doesNotMatch(rumoursRoute, /createFootballDataProvider|footballDataFetchJson|process\.env/);
 });
 
 test("the public squad reader fails closed when its canonical snapshot is unavailable", () => {
