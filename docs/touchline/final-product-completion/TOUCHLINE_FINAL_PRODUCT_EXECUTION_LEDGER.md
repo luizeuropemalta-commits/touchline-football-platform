@@ -613,6 +613,20 @@ Preview, production checkpoint, or a dirty worktree.
   bands, and be observed at desktop and mobile. This cannot be claimed from
   the current unapplied City SQL artifact alone.
 
+### Current PENDING card failure — BLOCKER
+
+- The persisted squad API correctly emits `marketValueState` and
+  `classificationState` with no `cardTier` for pending players. The ClubHub
+  profile mapper currently drops those state fields, which makes the exact-card
+  component take its legacy fallback path: a Ruby template and `Total Points`
+  `0` rather than the explicit `Market Value Pending` state. Player Profile
+  retains the state correctly; ClubHub does not.
+- This is a real fail against the owner acceptance criterion, not a visual
+  preference. The future local fix must carry both states through the ClubHub
+  DTO, render the neutral/pending card path, add a regression test and then
+  undergo desktop/mobile visual QA. No tier/price rule change is authorised by
+  that fix.
+
 ## 2026-08-09 future manual-application authority — GATED
 
 - Luiz has authorised database application of the complete manual-value batch
