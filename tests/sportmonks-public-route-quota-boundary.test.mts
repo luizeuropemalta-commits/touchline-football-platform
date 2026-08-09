@@ -35,15 +35,13 @@ test("fixture POST is fail-closed and cannot be an ingestion path", () => {
   assert.doesNotMatch(postHandler, /persistFantasyFixtureFeed|createFootballDataProvider|readPersistedFantasyFixtureFeed/);
 });
 
-test("public livescore reads stop at sanitized snapshots before provider access", () => {
-  const snapshotBranch = liveScoresRoute.indexOf("if (snapshotOnly)");
-  const accessCheck = liveScoresRoute.indexOf("requireAuthenticatedOrLocalTouchlineEditor(request)");
-  const providerCall = liveScoresRoute.indexOf('createFootballDataProvider("sportmonks")');
-
-  assert.ok(snapshotBranch >= 0 && snapshotBranch < accessCheck);
-  assert.ok(accessCheck >= 0 && accessCheck < providerCall);
-  assert.match(
+test("public livescore reads use a durable snapshot or honest persisted schedule only", () => {
+  assert.match(liveScoresRoute, /readPersistedLiveScoreSnapshot/);
+  assert.match(liveScoresRoute, /readPublicCompetitionFixtures/);
+  assert.match(liveScoresRoute, /partial-persisted-schedule/);
+  assert.match(liveScoresRoute, /persisted-live-data-unavailable/);
+  assert.doesNotMatch(
     liveScoresRoute,
-    /if \(accessError\) \{[\s\S]*?snapshotResponse\("local-snapshot"\) \?\? accessError/,
+    /createFootballDataProvider|persistLiveScoreSnapshot|writeLiveScoreSnapshot|readLiveScoreSnapshot|mergeTouchlineLiveFixtureDeltas|requireAuthenticatedOrLocalTouchlineEditor/,
   );
 });

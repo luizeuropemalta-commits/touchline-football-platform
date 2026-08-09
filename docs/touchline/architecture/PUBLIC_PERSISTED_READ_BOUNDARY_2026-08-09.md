@@ -125,3 +125,51 @@ The local-only change is to:
 - This does not clear the separate public Club Hub stored-feed transport,
   livescores/schedule/rumours/player-profile routes, canonical-round model,
   durable Arena match state, or release gates.
+
+## Third local slice: live scores and fixture schedule — proposed
+
+The normal livescore GET currently authenticates, calls the provider, merges a
+process-memory delta and writes both memory and durable state. Fixture-schedule
+POST can run a provider sync, while schedule GET currently labels a request
+time as if it were source freshness.
+
+This local-only slice will make every livescore GET a read of either one
+already-persisted coherent live snapshot or an honest partial persisted
+schedule. It will not merge snapshots at request time, write memory or a
+database, fetch a provider, or use a request-time timestamp as source
+freshness. Schedule POST will fail closed with `405`.
+
+### Explicit limits
+
+- Existing fixture tables have no immutable matchweek projection, coverage
+  proof, finalisation pointer or shared version. A partial persisted schedule
+  must not be called a canonical ten-fixture round or drive the required rail.
+- Existing generic public fixture transport still requires a separate global
+  crest/identifier DTO hardening before a production claim of fully
+  provider-neutral public transport. This slice removes the remote ingress and
+  write behavior only.
+- Arena local storage remains a presentation cache, not canonical shared state;
+  client and shared-projection work remain separate release gates.
+
+### Local implementation evidence — 2026-08-09
+
+- `GET /api/football-data/fantasy/livescores` now reads exactly one durable
+  `readPersistedLiveScoreSnapshot` result. It returns that snapshot with its
+  stored timestamp, or an explicitly degraded partial persisted schedule when
+  no durable live snapshot exists. It no longer imports or calls the provider,
+  process-memory snapshot reader, delta merger, or any persistence helper.
+- `GET /api/football-data/fixture-schedule` now reads only
+  `readPublicCompetitionFixtures`. It reports an honest partial persisted
+  schedule with no fabricated capture timestamp; an absent schedule returns
+  `503 persisted-fixture-schedule-unavailable`.
+- Both route mutations are fail-closed: schedule `POST` returns `405` with
+  `Allow: GET`; no browser-visible route remains an ingestion/sync path in
+  this slice.
+- Arena's polling names and request paths were narrowed to persisted snapshot
+  reads. The removed `refresh`/`preferSnapshot` query hints can no longer
+  upgrade a public squad read into a provider refresh.
+- Focused boundary, latency, fixture, schedule, squad and Live regressions
+  passed `32/32`; TypeScript, focused ESLint and `git diff --check` passed.
+
+This is a local code checkpoint only. It does not create a matchweek pointer,
+durable Quick Sub state, remote data run, Preview, or production release.

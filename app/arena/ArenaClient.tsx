@@ -165,7 +165,7 @@ const ARENA_LIVE_SQUAD_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
 const ARENA_LIVE_SQUAD_REFRESH_DEDUP_MS = 1000 * 60 * 5;
 const ARENA_LIVE_SQUAD_REQUEST_SETTLE_MS = 180;
 const ARENA_LIVE_LOCAL_REQUEST_TIMEOUT_MS = 700;
-const ARENA_LIVE_PROVIDER_REQUEST_TIMEOUT_MS = 4_000;
+const ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS = 4_000;
 const ARENA_LIVE_VISUAL_ASSET_VERSION = "2026-07-28-1";
 const ARENA_ANONYMOUS_SESSION_STORAGE_KEY = "touchline:arena:anonymous-session:v1";
 const LIVE_MATCH_SIMULATION_POSITIONS = [
@@ -1813,18 +1813,16 @@ function readStoredLiveFixtureSnapshot() {
 
 function writeStoredLiveFixtureSnapshot(fixtures: TouchlineFixture[], fetchedAt?: string) {
   if (typeof window === "undefined" || !fixtures.every(isStoredLiveFixture)) return;
+  if (!fetchedAt || !Number.isFinite(Date.parse(fetchedAt))) return;
   const now = Date.now();
-  const normalizedFetchedAt = fetchedAt && Number.isFinite(Date.parse(fetchedAt))
-    ? fetchedAt
-    : new Date(now).toISOString();
-  const savedAt = Math.min(now, Date.parse(normalizedFetchedAt));
+  const savedAt = Math.min(now, Date.parse(fetchedAt));
   writeBrowserStorage(
     "localStorage",
     ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY,
     JSON.stringify({
       version: 1,
       savedAt,
-      fetchedAt: normalizedFetchedAt,
+      fetchedAt,
       fixtures,
     } satisfies StoredLiveFixtureSnapshot),
   );
@@ -4675,13 +4673,12 @@ export default function ArenaClient({
   }, [arenaAccountSyncStatus, arenaPersistencePrincipal, hasLoadedSavedLineup, players, t]);
 
   useEffect(() => {
-    // Every Arena paint reads the already-canonical schedule so its Match
-    // Centre carousel is never dependent on opening the Live dock. Only the
-    // explicit Live experience may refresh the provider on an interval.
-    const shouldPollLiveProvider = isLiveDockOpen || standalonePanel === "live";
+    // Every Arena paint reads the persisted schedule. The optional Live dock
+    // only re-reads the durable snapshot; browser code never refreshes data.
+    const shouldPollPersistedLiveSnapshot = isLiveDockOpen || standalonePanel === "live";
 
     let cancelled = false;
-    let hasCanonicalSchedule = false;
+    let hasPersistedSchedule = false;
     const requestController = new AbortController();
     const storedSnapshot = readStoredLiveFixtureSnapshot();
     if (storedSnapshot?.fixtures.length) {
@@ -4692,7 +4689,7 @@ export default function ArenaClient({
       });
     }
 
-    function applyCanonicalSchedule(payload: {
+    function applyPersistedSchedule(payload: {
       data: TouchlineFixture[];
       cached?: boolean;
       degraded?: boolean;
@@ -4703,39 +4700,34 @@ export default function ArenaClient({
         || !Array.isArray(payload.data)
         || !payload.data.every(isStoredLiveFixture)
       ) return false;
-      hasCanonicalSchedule = true;
+      hasPersistedSchedule = true;
       writeStoredLiveFixtureSnapshot(payload.data, payload.fetchedAt);
       setLiveFixtures(payload.data);
       setLiveFeedStatus(
         payload.data.some(isPremierFixture)
-          ? (payload.cached || payload.degraded ? "England cache" : "England live")
+          ? "England cache"
           : "TouchLine England",
       );
       return true;
     }
 
-    function applyLiveFixtureUpdates(payload: {
+    function applyPersistedLiveSnapshot(payload: {
       data: TouchlineFixture[];
       cached?: boolean;
       degraded?: boolean;
       fetchedAt?: string;
     }) {
       if (cancelled || !payload.data.length || !payload.data.every(isStoredLiveFixture)) return false;
-      setLiveFixtures((current) => {
-        // Provider polling is a delta for real events; it must never replace
-        // the round schedule and make the carousel disappear outside kickoff.
-        const updates = new Map(payload.data.map((fixture) => [fixture.id, fixture]));
-        const merged = current.length
-          ? current.map((fixture) => updates.get(fixture.id) ?? fixture)
-          : payload.data;
-        writeStoredLiveFixtureSnapshot(merged, payload.fetchedAt);
-        return merged;
-      });
+      // The endpoint emits one durable server snapshot. Do not merge it with
+      // browser state: a future canonical-round projection must be selected
+      // server-side rather than recomputed from visitor-specific inputs.
+      writeStoredLiveFixtureSnapshot(payload.data, payload.fetchedAt);
+      setLiveFixtures(payload.data);
       setLiveFeedStatus(payload.cached || payload.degraded ? "England cache" : "England live");
       return true;
     }
 
-    async function loadCanonicalSchedule() {
+    async function loadPersistedSchedule() {
       try {
         const { ok, payload } = await touchlineJsonRequest<
           | { ok: true; data: TouchlineFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
@@ -4746,7 +4738,7 @@ export default function ArenaClient({
         });
 
         if (!ok || payload.ok === false) return;
-        applyCanonicalSchedule(payload);
+        applyPersistedSchedule(payload);
       } catch {
         // The coherent browser snapshot or bundled simulation remains visible.
       }
@@ -4758,7 +4750,7 @@ export default function ArenaClient({
           | { ok: true; data: TouchlineFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
           | { ok: false; error?: string; code?: string }
         >("/api/football-data/fantasy/livescores", {
-          timeoutMs: ARENA_LIVE_PROVIDER_REQUEST_TIMEOUT_MS,
+          timeoutMs: ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS,
           signal: requestController.signal,
         });
 
@@ -4771,17 +4763,17 @@ export default function ArenaClient({
           return;
         }
 
-        applyLiveFixtureUpdates(payload);
+        applyPersistedLiveSnapshot(payload);
       } catch {
-        if (!cancelled && !storedSnapshot && !hasCanonicalSchedule) {
+        if (!cancelled && !storedSnapshot && !hasPersistedSchedule) {
           setLiveFeedStatus("No canonical fixture snapshot");
         }
       }
     }
 
-    void loadCanonicalSchedule();
-    if (shouldPollLiveProvider) void refreshLiveFixtures();
-    const interval = shouldPollLiveProvider
+    void loadPersistedSchedule();
+    if (shouldPollPersistedLiveSnapshot) void refreshLiveFixtures();
+    const interval = shouldPollPersistedLiveSnapshot
       ? window.setInterval(() => void refreshLiveFixtures(), 45_000)
       : null;
     return () => {
@@ -4853,18 +4845,14 @@ export default function ArenaClient({
         : { fixtureId: fixture.id, home: immediateHome, away: immediateAway, status: "ready" });
     });
 
-    async function loadClubSquad(club: PremierClubVisual, snapshotOnly: boolean) {
+    async function loadClubSquad(club: PremierClubVisual) {
       const params = new URLSearchParams({ teamId: club.teamId });
-      if (snapshotOnly) params.set("preferSnapshot", "1");
-      else params.set("refresh", "1");
       const { ok, payload } = await touchlineJsonRequest<
         | { ok: true; teamId: string; players: TeamBuilderSquadPlayer[] }
         | { ok: false; error?: string }
       >(`/api/football-data/premier-squad?${params.toString()}`, {
-        cache: snapshotOnly ? "default" : "no-store",
-        timeoutMs: snapshotOnly
-          ? ARENA_LIVE_LOCAL_REQUEST_TIMEOUT_MS
-          : ARENA_LIVE_PROVIDER_REQUEST_TIMEOUT_MS,
+        cache: "no-store",
+        timeoutMs: ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS,
         signal: requestController.signal,
       });
       if (!ok || payload.ok === false) throw new Error(payload.ok === false ? payload.error || "Squad unavailable" : "Squad unavailable");
@@ -4885,7 +4873,7 @@ export default function ArenaClient({
           | { ok: true; data: TouchlinePublicFantasyFixtureFeed }
           | { ok: false; error?: string }
         >(`/api/football-data/fantasy/fixture?fixtureId=${encodeURIComponent(providerFixtureId)}`, {
-          timeoutMs: ARENA_LIVE_PROVIDER_REQUEST_TIMEOUT_MS,
+          timeoutMs: ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS,
           signal: requestController.signal,
         });
         if (!ok || payload.ok === false) return [];
@@ -4964,8 +4952,8 @@ export default function ArenaClient({
         || priority !== appliedSquadPriority
       ) return;
 
-      // Provider refreshes replace the complete XI and its ready signature in
-      // the same batch. Score updates can no longer expose dots, partial cards
+      // Persisted snapshot reads replace the complete XI and its ready
+      // signature in the same batch. Score updates can no longer expose dots, partial cards
       // or an empty pitch while Safari decodes a new frame.
       setLiveMatchSquads({ fixtureId: lineupFixture.id, home, away, status: "ready" });
       setReadyLiveCardProductsSignature(targetProductSignature);
@@ -4975,7 +4963,7 @@ export default function ArenaClient({
       if (cancelled) return;
 
       if (!hasCompleteStoredSquads) {
-        void Promise.all([loadClubSquad(homeClub, true), loadClubSquad(awayClub, true)])
+        void Promise.all([loadClubSquad(homeClub), loadClubSquad(awayClub)])
           .then(([homeSquad, awaySquad]) => {
             void applyCompleteSquadSnapshot(homeSquad, awaySquad, [], 1);
           })
@@ -4985,7 +4973,7 @@ export default function ArenaClient({
       }
 
       if (shouldRefreshSquads) {
-        void Promise.all([loadClubSquad(homeClub, false), loadClubSquad(awayClub, false), loadFixtureLineups()])
+        void Promise.all([loadClubSquad(homeClub), loadClubSquad(awayClub), loadFixtureLineups()])
           .then(([homeSquad, awaySquad, fixtureLineups]) => {
             if (cancelled || loadedLiveSquadFixtureRef.current !== squadRequestId) return;
             void applyCompleteSquadSnapshot(homeSquad, awaySquad, fixtureLineups, 2);

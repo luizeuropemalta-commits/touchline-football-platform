@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("Arena has no fabricated fixture fallback and consumes the canonical snapshot", async () => {
+test("Arena has no fabricated fixture fallback and consumes persisted fixture reads", async () => {
   const arena = await readFile(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const liveRoute = await readFile(new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url), "utf8");
 
   assert.doesNotMatch(arena, /FALLBACK_LIVE_FIXTURES|premier-touchline-arsenal-coventry|Demo live/);
   assert.match(liveRoute, /readPublicCompetitionFixtures/);
-  assert.match(liveRoute, /mergeCanonicalFixtures/);
+  assert.match(liveRoute, /readPersistedLiveScoreSnapshot/);
+  assert.doesNotMatch(liveRoute, /mergeCanonicalFixtures|createFootballDataProvider|persistLiveScoreSnapshot/);
 });
 
 test("fixture schedule migration is normalized and server-only", async () => {

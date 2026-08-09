@@ -113,7 +113,7 @@ test("Live opens immediately, prioritizes saved squads and reveals complete card
   );
   assert.match(arenaClientSource, /source: "live-club-preview"/);
   assert.match(arenaClientSource, /home: immediateHome, away: immediateAway, status: "ready"/);
-  assert.match(arenaClientSource, /params\.set\("preferSnapshot", "1"\)/);
+  assert.doesNotMatch(arenaClientSource, /params\.set\("preferSnapshot", "1"\)/);
   assert.match(premierSquadRouteSource, /readPersistedSquadSnapshot\(teamId\)/);
   assert.doesNotMatch(premierSquadRouteSource, /createFootballDataProvider|persistSquadSnapshot|preferSnapshot/);
   assert.match(arenaClientSource, /normalizeLiveClubSquad\(payload\.players, club, payload\.teamId\)/);
@@ -243,13 +243,10 @@ test("Live only warms the current 22 player and two coach card products", () => 
   assert.match(livePageSource, /initialLocale=\{initialLocale\}/);
 });
 
-test("Live keeps no-store by default, bounds requests and honors the Premier squad snapshot cache", () => {
+test("Live keeps no-store by default and bounds persisted read requests", () => {
   assert.match(arenaClientSource, /cacheOrOptions: RequestCache \| \{ cache\?: RequestCache; timeoutMs\?: number; signal\?: AbortSignal \} = "no-store"/);
   assert.match(arenaClientSource, /controller\.abort\(\)/);
-  assert.match(
-    arenaClientSource,
-    /cache: snapshotOnly \? "default" : "no-store"/,
-  );
+  assert.match(arenaClientSource, /cache: "no-store",[\s\S]*?timeoutMs: ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS/);
 });
 
 test("Live aborts obsolete fixture work and deduplicates completed squad refreshes", () => {
@@ -259,7 +256,7 @@ test("Live aborts obsolete fixture work and deduplicates completed squad refresh
   assert.match(arenaClientSource, /window\.clearTimeout\(squadRequestTimer\)/);
   assert.match(arenaClientSource, /liveSquadRefreshAtRef\.current\.get\(squadFixtureSignature\)/);
   assert.match(arenaClientSource, /Date\.now\(\) - lastProviderRefreshAt > ARENA_LIVE_SQUAD_REFRESH_DEDUP_MS/);
-  assert.match(arenaClientSource, /if \(!hasCompleteStoredSquads\) \{[\s\S]*?loadClubSquad\(homeClub, true\)/);
+  assert.match(arenaClientSource, /if \(!hasCompleteStoredSquads\) \{[\s\S]*?loadClubSquad\(homeClub\)/);
   assert.match(arenaClientSource, /liveSquadRefreshAtRef\.current\.set\(squadFixtureSignature, Date\.now\(\)\)/);
 });
 

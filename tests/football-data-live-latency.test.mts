@@ -100,24 +100,24 @@ test("live score cache atomically replaces coherent snapshots and expires them",
   resetLiveScoreSnapshotForTests();
 });
 
-test("Live client preserves its local presentation cache while squad reads stay server-owned", () => {
+test("Live client preserves only presentation cache while server reads stay persisted-only", () => {
   assert.match(arenaClientSource, /readStoredLiveFixtureSnapshot\(\)/);
   assert.match(arenaClientSource, /readBrowserStorage\("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY\)/);
   assert.match(arenaClientSource, /\/football-data\/fixture-schedule/);
   assert.match(arenaClientSource, /void refreshLiveFixtures\(\)/);
-  assert.match(arenaClientSource, /function applyLiveFixtureUpdates/);
-  assert.match(arenaClientSource, /must never replace[\s\S]*?round schedule/);
-  assert.match(arenaClientSource, /loadClubSquad\(homeClub, true\)/);
-  assert.match(arenaClientSource, /loadClubSquad\(homeClub, false\)/);
-  assert.match(arenaClientSource, /timeoutMs: snapshotOnly[\s\S]*?ARENA_LIVE_LOCAL_REQUEST_TIMEOUT_MS[\s\S]*?ARENA_LIVE_PROVIDER_REQUEST_TIMEOUT_MS/);
+  assert.match(arenaClientSource, /function applyPersistedLiveSnapshot/);
+  assert.match(arenaClientSource, /canonical-round projection must be selected[\s\S]*?server-side/);
+  assert.match(arenaClientSource, /loadClubSquad\(homeClub\)/);
+  assert.match(arenaClientSource, /ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS/);
+  assert.doesNotMatch(arenaClientSource, /params\.set\("refresh", "1"\)|params\.set\("preferSnapshot", "1"\)/);
   assert.doesNotMatch(arenaClientSource, /window\.localStorage|localStorage\.(?:getItem|setItem|removeItem)/);
 });
 
-test("snapshot-only live scores and public squads never fall through to Sportmonks", () => {
-  const liveSnapshotBranch = liveScoresRouteSource.indexOf("if (snapshotOnly)");
-  const liveProviderCall = liveScoresRouteSource.indexOf("const provider = createFootballDataProvider");
-  assert.ok(liveSnapshotBranch >= 0 && liveSnapshotBranch < liveProviderCall);
-  assert.match(liveScoresRouteSource, /snapshotResponse\("outage-fallback"\)/);
+test("live scores and public squads never fall through to Sportmonks", () => {
+  assert.match(liveScoresRouteSource, /readPersistedLiveScoreSnapshot/);
+  assert.match(liveScoresRouteSource, /readPublicCompetitionFixtures/);
+  assert.match(liveScoresRouteSource, /persisted-live-data-unavailable/);
+  assert.doesNotMatch(liveScoresRouteSource, /createFootballDataProvider|persistLiveScoreSnapshot|writeLiveScoreSnapshot|readLiveScoreSnapshot|mergeTouchlineLiveFixtureDeltas|new Date\(/);
 
   assert.match(premierSquadRouteSource, /readPersistedSquadSnapshot\(teamId\)/);
   assert.match(premierSquadRouteSource, /No coherent persisted squad snapshot is available/);

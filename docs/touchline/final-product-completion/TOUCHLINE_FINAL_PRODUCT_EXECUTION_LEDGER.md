@@ -383,3 +383,35 @@ Preview, production checkpoint, or a dirty worktree.
 - Remaining blockers: stored Club Hub feed transport, livescores/schedule,
   rumours/player profiles, immutable shared projections/canonical round,
   durable match authority, six human locales, Preview and rendered QA.
+
+## 2026-08-09 public persisted-read boundary — LIVE/SCHEDULE SLICE PROPOSED
+
+- Evidence: normal livescores GET can provider-fetch, merge process memory and
+  persist; schedule POST can sync/write; schedule GET uses request time as a
+  false source freshness marker.
+- Local proposal: persisted live snapshot *or* partial persisted schedule only,
+  no merge/fetch/write/auth escalation; no fabricated freshness; schedule POST
+  `405`.
+- Explicit non-goal/gate: no matchweek pointer/version/coverage or permanent
+  canonical rail is created. Generic fixture DTO/remote crest hardening and
+  Arena browser-cache authority remain separately blocked.
+
+### LIVE/SCHEDULE SLICE IMPLEMENTED AND LOCALLY VALIDATED
+
+- Candidate: `work/public-read-boundary-recovery-20260809`, pending its
+  dedicated local Git checkpoint.
+- `fantasy/livescores` now returns one persisted durable live snapshot, or an
+  honestly degraded partial persisted schedule. It cannot provider-fetch,
+  merge process memory, write a live snapshot, or emit request-time freshness.
+- `fixture-schedule` GET is a persisted reader only; missing data is an honest
+  `503`. Its POST is fail-closed with `405 Allow: GET` and cannot run a sync.
+- Arena calls the endpoints as persisted reads and no longer sends
+  `refresh`/`preferSnapshot` upgrade hints for squad loading.
+- Focused tests: `32/32` passed across persisted squad/fixture/live/schedule,
+  latency and Live integration boundaries. `pnpm typecheck`, focused ESLint
+  and `git diff --check` passed. No browser, provider, database, sync,
+  migration, Preview, deployment or payment action was performed.
+- Release remains **NO-GO**: the stored fixture model has no canonical
+  matchweek/finalisation pointer or immutable coverage/version; real durable
+  Quick Sub requires server match authority; six approved human locales remain
+  incomplete; and all Preview/visual/release gates are still open.
