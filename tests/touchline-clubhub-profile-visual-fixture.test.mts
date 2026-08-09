@@ -16,10 +16,14 @@ test("ClubHub profile visual fixture stays static, local and split between confi
   assert.match(source, /ClubHubMatchdayTechnicalArea/);
   assert.match(source, /ClubHubOutsideMatchRoster/);
   assert.match(source, /TouchlineOfficialLeagueTable/);
+  assert.match(source, /resolveTouchlineVisualQaLocale/);
+  assert.match(source, /data-visual-qa-locale=\{locale\}/);
+  assert.match(source, /locale=\{locale\}/);
   assert.match(source, /<ClubHubOfficialLineup[\s\S]*?staticVisualQa/);
   assert.match(source, /fixtures: \[\]/);
   assert.match(source, /390PX MOBILE · PENDING MATCHDAY SHEET/);
-  assert.match(source, /src="\/visual-qa\/clubhub-profile-contract\?state=pending&viewport=mobile"/);
+  assert.match(source, /390PX MOBILE · FICHA DE JOGO PENDENTE/);
+  assert.match(source, /src=\{`\/visual-qa\/clubhub-profile-contract\?state=pending&viewport=mobile&lang=\$\{locale\}`\}/);
   assert.doesNotMatch(source, /\bfetch\(/);
   assert.doesNotMatch(source, /create(?:Admin)?Client|supabase|createFootballDataProvider|providers\/sportmonks|process\.env|market-value-import|wallet/i);
 });

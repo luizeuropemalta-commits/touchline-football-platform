@@ -7,10 +7,12 @@ const eventsRoute = await readFile(
   "utf8",
 );
 
-test("the live fantasy-event QA endpoint requires owner access outside local development", () => {
-  assert.match(eventsRoute, /requireOwnerOrLocalTouchlineEditor\(request\)/);
-  assert.ok(
-    eventsRoute.indexOf("requireOwnerOrLocalTouchlineEditor(request)") <
-      eventsRoute.indexOf('createFootballDataProvider("sportmonks")'),
+test("the retired fantasy-event endpoint fails closed before auth or provider work", () => {
+  assert.match(eventsRoute, /code: "TL_FOOTBALL_DATA_RETIRED"/);
+  assert.match(eventsRoute, /status: 410/);
+  assert.match(eventsRoute, /"cache-control": "private, no-store"/);
+  assert.doesNotMatch(
+    eventsRoute,
+    /requireOwnerOrLocalTouchlineEditor|createFootballDataProvider|footballDataFetchJson|SPORTMONKS_|process\.env|fetch\(/,
   );
 });

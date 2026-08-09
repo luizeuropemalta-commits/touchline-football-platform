@@ -15,6 +15,8 @@ test("the card value-state fixture is an admin-gated static route", () => {
   assert.match(proxySource, /protectedArenaPaths = \[[\s\S]*?"\/visual-qa"/);
   assert.match(proxySource, /adminOnlyArenaPaths = \[[\s\S]*?"\/visual-qa"/);
   assert.match(fixtureSource, /data-card-value-states-fixture="static"/);
+  assert.match(fixtureSource, /data-visual-qa-locale=\{locale\}/);
+  assert.match(fixtureSource, /resolveTouchlineVisualQaLocale/);
   assert.match(fixtureSource, /ADMIN-GATED · STATIC LOCAL VISUAL QA/);
 });
 
@@ -56,7 +58,7 @@ test("the fixture disables card interactivity, persistence and data subscription
     "showSocialMetrics={false}",
     "forceNeonActive={false}",
     'rankingMode="preview"',
-    'runtimeLocaleOverride="en-GB"',
+    "runtimeLocaleOverride={locale}",
   ]) {
     assert.ok(fixtureSource.includes(prop), `missing disabled fixture prop: ${prop}`);
   }
@@ -80,4 +82,11 @@ test("the fixture disables card interactivity, persistence and data subscription
   ]) {
     assert.doesNotMatch(fixtureSource, forbidden);
   }
+});
+
+test("the fixture supports only the reviewed EN/PT visual QA locales", () => {
+  assert.match(fixtureSource, /VERIFICADO · €20M/);
+  assert.match(fixtureSource, /PENDENTE · SEM VALOR/);
+  assert.match(fixtureSource, /Estados canônicos de valor do card/);
+  assert.match(fixtureSource, /searchParams: Promise<Readonly<\{ lang\?: string \}>>/);
 });

@@ -14,6 +14,7 @@ import {
   findTouchLineClub,
   type ClubOwnerSquadCard,
 } from "@/lib/touchlineArena/demo-data";
+import { resolveTouchlineVisualQaLocale } from "@/lib/touchlineArena/visual-qa-locale";
 
 export const metadata = {
   title: "TouchLine · ClubHub profile contract visual QA",
@@ -144,11 +145,11 @@ const initialTable = resolveTouchlineOfficialLeagueTable({
 });
 
 type VisualQaPageProps = Readonly<{
-  searchParams: Promise<Readonly<{ state?: string; viewport?: string }>>;
+  searchParams: Promise<Readonly<{ state?: string; viewport?: string; lang?: string }>>;
 }>;
 
 export default async function ClubHubProfileContractVisualQaPage({ searchParams }: VisualQaPageProps) {
-  const { state, viewport } = await searchParams;
+  const { state, viewport, lang } = await searchParams;
   const pending = state === "pending";
   const presentation = buildTouchLineClubMatchdayPresentation({
     club: staticClub,
@@ -160,6 +161,38 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
       ? null
       : { fixtureId: "static-fixture-2026-27-1", teamId: staticClub.teamId, name: "Static Official Coach" },
   });
+  const locale = resolveTouchlineVisualQaLocale(lang);
+  const ptBr = locale === "pt-BR";
+  const copy = ptBr
+    ? {
+      title: "Contrato visual do perfil ClubHub",
+      description: "Apenas fixture local: uma ficha estática de 11 + 9, um estado pendente separado, elenco simples fora do jogo e a tabela oficial inicial com 20 clubes. Não usa conta, requisição externa, banco de dados ou dados econômicos.",
+      coach: "Treinador oficial estático",
+      playerContent: "O conteúdo de cards TouchLine começa abaixo da tabela oficial.",
+      mobileSheet: "390PX MOBILE · FICHA DE JOGO PENDENTE",
+      mobileTitle: "Ficha pendente do perfil ClubHub em viewport de 390 pixels",
+      labels: { nationality: "Nacionalidade", points: "Pontos", totalPoints: "Pontos TouchLine", cardPrice: "Preço do card" },
+    }
+    : {
+      title: "ClubHub profile contract",
+      description: "Local fixture only: a static 11 + 9 team sheet, a separate pending state, plain out-of-matchday roster and the initial 20-club official table. It has no account, external request, database or economic data.",
+      coach: "Static Official Coach",
+      playerContent: "TouchLine player-card content begins below the official table.",
+      mobileSheet: "390PX MOBILE · PENDING MATCHDAY SHEET",
+      mobileTitle: "ClubHub profile pending matchday sheet at 390 pixel viewport",
+      labels: { nationality: "Nationality", points: "Points", totalPoints: "TouchLine points", cardPrice: "Card price" },
+    };
+  const localizedPresentation = pending
+    ? presentation
+    : {
+      ...presentation,
+      technical: {
+        ...presentation.technical,
+        coach: presentation.technical.coach
+          ? { ...presentation.technical.coach, name: copy.coach }
+          : null,
+      },
+    };
   const displayed = new Set(presentation.displayedPlayerIds);
   const outsideMatchdayCards = staticCards.filter((card) => !displayed.has(card.id));
   const mobile = viewport === "mobile";
@@ -167,6 +200,8 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
   return (
     <main
       data-clubhub-profile-fixture={pending ? "pending-static" : "confirmed-static"}
+      data-visual-qa-locale={locale}
+      lang={locale}
       style={{
         minHeight: "100dvh",
         padding: mobile ? 12 : "clamp(16px, 4vw, 56px)",
@@ -179,10 +214,10 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
             ADMIN-GATED · STATIC LOCAL VISUAL QA
           </p>
           <h1 style={{ margin: "10px 0 0", fontSize: "clamp(30px, 5vw, 56px)", letterSpacing: "-.05em", lineHeight: 1 }}>
-            ClubHub profile contract
+            {copy.title}
           </h1>
           <p style={{ maxWidth: 790, margin: "14px 0 0", color: "rgba(247, 251, 247, .72)", fontSize: 15, lineHeight: 1.6 }}>
-            Local fixture only: a static 11 + 9 team sheet, a separate pending state, plain out-of-matchday roster and the initial 20-club official table. It has no account, external request, database or economic data.
+            {copy.description}
           </p>
         </header>
       ) : null}
@@ -190,40 +225,40 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
       <div style={{ width: "min(1180px, 100%)", margin: "0 auto", display: "grid", gap: 18 }}>
         <ClubHubOfficialLineup
           clubName={staticClub.name}
-          lineup={presentation.lineup}
-          locale="en-GB"
+          lineup={localizedPresentation.lineup}
+          locale={locale}
           staticVisualQa
-          labels={{ nationality: "Nationality", points: "Points", totalPoints: "TouchLine points", cardPrice: "Card price" }}
+          labels={copy.labels}
         />
         <ClubHubMatchdayTechnicalArea
           clubName={staticClub.name}
-          technical={presentation.technical}
-          locale="en-GB"
+          technical={localizedPresentation.technical}
+          locale={locale}
         />
         <ClubHubOutsideMatchRoster
           clubName={staticClub.name}
           cards={outsideMatchdayCards}
-          locale="en-GB"
+          locale={locale}
         />
         <TouchlineOfficialLeagueTable
           table={initialTable}
-          locale="en-GB"
+          locale={locale}
           variant="profile"
           currentTeamId={staticClub.teamId}
         />
         <section style={{ border: "1px solid rgba(181,255,75,.22)", borderRadius: 12, padding: 18, color: "#f8fff5", background: "rgba(4,12,9,.68)" }}>
-          <strong>TouchLine player-card content begins below the official table.</strong>
+          <strong>{copy.playerContent}</strong>
         </section>
       </div>
 
       {!mobile ? (
         <section aria-label="390 pixel mobile pending fixture" style={{ width: "min(1180px, 100%)", margin: "32px auto 0", color: "#f8fff5" }}>
           <p style={{ margin: "0 0 12px", color: "#93ddff", fontSize: 11, fontWeight: 900, letterSpacing: ".13em" }}>
-            390PX MOBILE · PENDING MATCHDAY SHEET
+            {copy.mobileSheet}
           </p>
           <iframe
-            title="ClubHub profile pending matchday sheet at 390 pixel viewport"
-            src="/visual-qa/clubhub-profile-contract?state=pending&viewport=mobile"
+            title={copy.mobileTitle}
+            src={`/visual-qa/clubhub-profile-contract?state=pending&viewport=mobile&lang=${locale}`}
             style={{ width: 390, maxWidth: "100%", height: 900, display: "block", border: "1px solid rgba(147,221,255,.28)", borderRadius: 20, background: "#03070d" }}
           />
         </section>

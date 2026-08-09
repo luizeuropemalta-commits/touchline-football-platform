@@ -1530,3 +1530,34 @@ Preview, production checkpoint, or a dirty worktree.
   UUID/membership dry-run exist. Persistent checkpoint:
   `f9b91bc108b9b885f20c82383707dffd93530dd3`
   (`docs(market-values): record application preflight hold`).
+
+## 2026-08-10 EN/PT local release-readiness checklist — LOCAL GATE COMPLETE / NOT DEPLOYED
+
+- **Purpose and scope:** added an executable local release checklist for the
+  approved en-GB / pt-BR surface only. It maps the canonical
+  https://touchline.com.br route, www 308 policy, build chain and local-visual
+  matrix without reading credential values, contacting Vercel, changing remote
+  configuration, or deploying.
+- **Safe fixes:** static ClubHub and card-value visual fixtures now explicitly
+  render EN/PT from a strict shared resolver and fail unknown locales back to
+  English. Two stale regressions now assert the retired provider-event route's
+  410 fail-closed response and the current persisted Arena snapshot path. No
+  product data, value, tier, price, contract, card art, ranking, database or
+  deployment configuration changed.
+- **Validation:** local checker PASS
+  (LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL); focused suite 16/16 PASS; full
+  suite 807/807 PASS; pnpm typecheck, pnpm lint, local production pnpm build,
+  and git diff --check PASS. The build used an empty application environment
+  and did not make a remote request.
+- **Remaining gates:** this is not a production/Preview approval. Pin a clean
+  candidate excluding the preserved generated workspace files, verify Vercel
+  project/alias/effective environment externally, capture 390/768/1280 and
+  Safari/iOS/Chrome Android fixture QA, and retain the independently recorded
+  Quick Sub, immutable-data/public-boundary and market-value UUID/membership
+  holds.
+- **Evidence:**
+  docs/touchline/release-audit/2026-08-10-LOCAL-EN-PT-RELEASE-READINESS-CHECKLIST.md,
+  scripts/check-touchline-release-readiness.mjs,
+  tests/touchline-release-readiness-local.test.mts, and
+  tests/touchline-visual-qa-locale.test.mts. Persistent commit link is added
+  after the checkpoint is created.

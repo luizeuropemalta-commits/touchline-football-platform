@@ -1,0 +1,189 @@
+#!/usr/bin/env node
+
+/**
+ * Read-only, local release checklist. It validates repository contracts and
+ * prints the exact follow-up commands/gates; it never reads runtime values,
+ * contacts a platform, or makes a deployment decision.
+ */
+
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+
+export const TOUCHLINE_FUNCTIONAL_RELEASE_ENVIRONMENT_NAMES = Object.freeze([
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN",
+  "SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "TOUCHLINE_AUTH_RECOVERY_SECRET",
+  "TOUCHLINE_CURRENT_SEASON",
+  "TOUCHLINE_OWNER_EMAILS",
+  "TOUCHLINE_SITE_OFFLINE",
+]);
+
+export const TOUCHLINE_ISOLATED_PREVIEW_ENVIRONMENT_NAMES = Object.freeze([
+  "NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE",
+  "TOUCHLINE_DEPLOYMENT_MODE",
+  "TOUCHLINE_ISOLATED_PREVIEW_PROJECT_ID",
+  "TOUCHLINE_ISOLATED_PREVIEW_TEAM_ID",
+  "VERCEL_ENV",
+  "VERCEL_URL",
+  "VERCEL_PROJECT_ID",
+  "VERCEL_ORG_ID",
+]);
+
+const REQUIRED_SCRIPTS = Object.freeze({
+  test: "node --test --experimental-strip-types tests/*.test.mts",
+  typecheck: "tsc --noEmit",
+  lint: "eslint .",
+  build: "next build --webpack",
+});
+
+function envNamesFromTemplate(source) {
+  return new Set(
+    [...source.matchAll(/^([A-Za-z_][A-Za-z0-9_]*)=/gm)].map((match) => match[1]),
+  );
+}
+
+function missingTokens(source, tokens) {
+  return tokens.filter((token) => !source.includes(token));
+}
+
+/**
+ * This accepts text already loaded by the caller so unit tests do not need a
+ * worktree, platform settings, credential values, or browser session.
+ */
+export function evaluateTouchlineReleaseReadiness({
+  packageJson,
+  envTemplate,
+  publicOriginSource,
+  proxySource,
+  nextConfigSource,
+  clubHubFixtureSource,
+  cardFixtureSource,
+}) {
+  const scripts = packageJson?.scripts ?? {};
+  const templateNames = envNamesFromTemplate(envTemplate);
+  const missingEnvironmentNames = TOUCHLINE_FUNCTIONAL_RELEASE_ENVIRONMENT_NAMES
+    .filter((name) => !templateNames.has(name));
+  const missingScripts = Object.entries(REQUIRED_SCRIPTS)
+    .filter(([name, command]) => scripts[name] !== command)
+    .map(([name]) => name);
+  const staticContractFailures = [
+    ...missingTokens(publicOriginSource, [
+      'TOUCHLINE_PUBLIC_ORIGIN = "https://touchline.com.br"',
+      'TOUCHLINE_PUBLIC_WWW_HOSTNAME = "www.touchline.com.br"',
+      "return TOUCHLINE_PUBLIC_ORIGIN;",
+    ]).map((token) => `public-origin:${token}`),
+    ...missingTokens(proxySource, [
+      "isTouchLinePublicWwwHost(hostname)",
+      "NextResponse.redirect(canonicalUrl, 308)",
+      '"/visual-qa"',
+    ]).map((token) => `proxy:${token}`),
+    ...missingTokens(nextConfigSource, [
+      "assertTouchlineIsolatedPreviewEnvironment();",
+    ]).map((token) => `next-config:${token}`),
+    ...missingTokens(clubHubFixtureSource, [
+      "resolveTouchlineVisualQaLocale",
+      "data-visual-qa-locale={locale}",
+      "locale={locale}",
+    ]).map((token) => `clubhub-fixture:${token}`),
+    ...missingTokens(cardFixtureSource, [
+      "resolveTouchlineVisualQaLocale",
+      "data-visual-qa-locale={locale}",
+      "runtimeLocaleOverride={locale}",
+    ]).map((token) => `card-fixture:${token}`),
+  ];
+
+  return Object.freeze({
+    schemaVersion: "touchline-release-readiness-local-check-v1",
+    status: missingEnvironmentNames.length || missingScripts.length || staticContractFailures.length
+      ? "LOCAL_CONTRACT_INVALID"
+      : "LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL",
+    publicRoute: Object.freeze({
+      canonicalOrigin: "https://touchline.com.br",
+      wwwPolicy: "308-to-canonical-origin",
+      technicalOrigin: "https://touchline-arena-official.vercel.app",
+    }),
+    environment: Object.freeze({
+      mode: "names-only; no runtime values inspected",
+      functionalReleaseNames: TOUCHLINE_FUNCTIONAL_RELEASE_ENVIRONMENT_NAMES,
+      internalOrigin: "TOUCHLINE_INTERNAL_APP_ORIGIN or platform VERCEL_URL",
+      providerAndPayments: "keep SPORTMONKS_*, FOOTBALL_DATA_*, and STRIPE_* absent or disabled unless separately approved",
+      isolatedPreviewNames: TOUCHLINE_ISOLATED_PREVIEW_ENVIRONMENT_NAMES,
+      isolatedPreviewLimitation: "valid isolated Preview serves only /preview; it is not ClubHub/card product QA",
+      missingTemplateNames: missingEnvironmentNames,
+    }),
+    localCommands: Object.freeze([
+      "git diff --check",
+      "pnpm run check:release-readiness",
+      "pnpm typecheck",
+      "pnpm lint",
+      "pnpm test",
+      "pnpm build",
+      "pnpm start",
+    ]),
+    fixtureMatrix: Object.freeze([
+      "/visual-qa/clubhub-profile-contract?lang=en-GB",
+      "/visual-qa/clubhub-profile-contract?lang=pt-BR",
+      "/visual-qa/card-value-states?lang=en-GB",
+      "/visual-qa/card-value-states?lang=pt-BR",
+      "/visual-qa/card-neon-trace",
+      "/visual-qa/club-owner-portrait-neon",
+      "/visual-qa/official-league-table-initial",
+    ]),
+    manualGates: Object.freeze([
+      "Use the static fixtures at 390px, 768px, and 1280px; record no horizontal overflow, readable cards, ClubHub order, and EN/PT labels.",
+      "Observe the same static fixtures in Safari/WebKit plus Chrome Android or an approved equivalent; keyboard, touch, and reduced-motion remain manual evidence.",
+      "Keep functional product Preview separate: isolated Preview deliberately blocks ClubHub/cards and must not inherit data/auth/payment variables.",
+    ]),
+    externalGates: Object.freeze([
+      "No tracked Vercel project binding or domain/alias verification exists in this repository.",
+      "Known durable Quick Sub, immutable shared-data, and functional Preview/data-boundary gates remain separate release NO-GO evidence.",
+    ]),
+    missingScripts,
+    staticContractFailures,
+  });
+}
+
+function parseArgs(args) {
+  if (args.length === 1 && args[0] === "--check") return;
+  throw new Error("TL_RELEASE_READINESS_CHECK_REQUIRES_CHECK_MODE");
+}
+
+async function readRepositoryInputs(rootDirectory) {
+  const read = (path) => readFile(resolve(rootDirectory, path), "utf8");
+  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource] = await Promise.all([
+    read("package.json"),
+    read(".env.example"),
+    read("lib/touchlineArena/public-origin.ts"),
+    read("proxy.ts"),
+    read("next.config.ts"),
+    read("app/visual-qa/clubhub-profile-contract/page.tsx"),
+    read("app/visual-qa/card-value-states/page.tsx"),
+  ]);
+  return {
+    packageJson: JSON.parse(packageText),
+    envTemplate,
+    publicOriginSource,
+    proxySource,
+    nextConfigSource,
+    clubHubFixtureSource,
+    cardFixtureSource,
+  };
+}
+
+async function main() {
+  parseArgs(process.argv.slice(2));
+  const result = evaluateTouchlineReleaseReadiness(await readRepositoryInputs(process.cwd()));
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  if (result.status !== "LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL") process.exitCode = 1;
+}
+
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  main().catch((error) => {
+    process.stderr.write(`${error instanceof Error ? error.message : "TL_RELEASE_READINESS_CHECK_FAILED"}\n`);
+    process.exitCode = 1;
+  });
+}
