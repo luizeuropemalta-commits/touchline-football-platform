@@ -1310,3 +1310,32 @@ Preview, production checkpoint, or a dirty worktree.
   No application was attempted. Persistent candidate checkpoint:
   `a241ce78329f33c8cca9f2362eadcc6f4742ec6c`
   (`feat(market-values): stage owner Sportmonks application candidate`).
+
+## 2026-08-09 official league table initial state — LOCAL COMPLETE
+
+- **Scope:** the real TouchLine England official league table only. No
+  TouchLine ranking, card, market-value, roster, sync, database, migration,
+  Preview or production deployment changed.
+- **Behavior:** before a verified final result, the canonical 20-club scope is
+  now visibly retained with neutral J/V/E/D/GF/GA/SG/Pts values, `—` positions
+  and one explicit initial-table notice. No leader or ranking is invented.
+  A verified final continues through the existing canonical real-standings
+  calculation; incomplete club/fixture identity stays fail-closed.
+- **Presentation:** the duplicate `pending_no_final` message was removed. EN:
+  “Initial table — all 20 clubs are level.” PT-BR: “Tabela inicial — os 20
+  clubes estão empatados.”
+- **Evidence:** local static QA route
+  `app/visual-qa/official-league-table-initial/page.tsx` uses the same pure
+  resolver, a fixed 20-club/zero-final fixture and a 390px iframe for mobile
+  inspection. It has no database, provider, account, market, card or ranking
+  dependency. The dated report is
+  `docs/touchline-arena/audit/2026-08-09-OFFICIAL-LEAGUE-TABLE-INITIAL-STATE-QA.md`.
+- **Validation:** focused table + fixture tests **9/9 passed**; `pnpm
+  typecheck`, `pnpm lint` and `git diff --check` passed. Local browser DOM
+  QA confirmed desktop 20 rows/one notice/no page overflow and the 390px
+  fixture's 20 rows with Pos/Club/P/GD/Pts columns. The only lint note was
+  the existing Babel size note for `ArenaClient.tsx`.
+- **Checkpoint:** `d254d129f0af1119688a17e5de132d2ede5b0376`
+  (`fix(public): clarify initial official league table`). Generated
+  `next-env.d.ts` and `tsconfig.tsbuildinfo` remain intentionally uncommitted
+  workspace artifacts.
