@@ -849,3 +849,42 @@ Preview, production checkpoint, or a dirty worktree.
   fixture remains unrendered by direction: desktop/mobile visual QA is paused
   pending the roster-base audit or an explicit pending result. Generated
   `tsconfig.tsbuildinfo` is intentionally excluded from the logical commit.
+
+## 2026-08-09 EN/PT demonstrable-release audit — NO-GO
+
+- **Audited checkpoint:** `98c2cc0cac55f59eb6b57fb04c5910b0f1b33654`
+  on `work/manchester-city-manual-import-20260809`. It is not an immutable
+  release candidate: the worktree retains a generated tracked
+  `tsconfig.tsbuildinfo` change, deliberately preserved and excluded under the
+  file-preservation rule.
+- **What passed locally:** 24 static/pure critical-route suites passed
+  111/111 under an empty test environment. This covers EN/PT locale boundary,
+  navigation, ClubHub/table, persisted Live routes, Market/auth boundaries,
+  isolated-preview source boundary, and card state. It is not rendered QA or
+  evidence of a deployable environment.
+- **Hard safety/product blockers:** public player profile rendering still
+  constructs the Sportmonks provider; the root activity tracker can post
+  analytics for authenticated visitors; ClubHub/Live/rankings read real
+  Supabase state; the strict isolated Preview deliberately exposes only
+  `/preview`, not product routes; and Arena's UI Quick Sub still swaps the
+  outgoing player to bench/persists roster state rather than using the durable
+  frozen 11+9 protocol. The rail also lacks an immutable canonical matchweek
+  projection. Any one of these blocks a safe functional demo release.
+- **EN/PT quality gates:** only EN/PT are enabled correctly, but whole-route
+  rendered locale QA is absent and emitted metadata remains inconsistent
+  (for example Live is Portuguese under EN and root metadata is English under
+  PT). This blocks a presentation-quality claim.
+- **Build evidence:** the local production build stream was interrupted after
+  webpack compilation work began; its trace is marked failed and no
+  `.next/BUILD_ID` or production manifest was produced. Treat build as
+  **inconclusive/failed gate**, not as a pass. A fresh run must be captured
+  from a clean pinned candidate after the above safety blockers are resolved.
+- **Manual values/extras:** the 19-club transcript remains local review-only.
+  No canonical roster export is available, so no value row is matched or
+  application-eligible. Future DB-only roster records are report-only
+  `QUARANTINED/PENDING`, with no inactivation, deletion, overwrite, or manual
+  value; this does not unblock a release or claim a 100% sync.
+- **Result:** no Preview, production deployment, database read/write, sync,
+  import, provider call, or payment action was performed. The next release
+  gate is a clean, isolated EN/PT candidate that removes/fail-closes the
+  provider, analytics and real-data paths before rendered QA.
