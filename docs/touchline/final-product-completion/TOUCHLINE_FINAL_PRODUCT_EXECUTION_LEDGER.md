@@ -503,3 +503,75 @@ Preview, production checkpoint, or a dirty worktree.
   on a clean immutable candidate, all applicable technical tests, isolated
   Preview evidence, rendered EN/PT page-by-page QA, and the remaining release
   gates below.
+
+## 2026-08-09 Manchester City manual-value import — LOCAL PROPOSAL
+
+- Owner-authorised input is the local staging artifact
+  `docs/touchline-arena/audit/2026-08-07/premier-league-market-value-staging/manchester-city-2026-27-staging.csv`
+  in the preserved source workspace. It contains 32 TouchLine player UUIDs:
+  31 rows with an explicit EUR value and one fully blank-value row. The
+  artifact has no player-name or valuation-date column; its path date is
+  **artifact provenance only**, not an asserted valuation date.
+- Local migration design: seed the exact UUID/external-ID/value rows, require
+  every UUID to resolve to one active Manchester City membership and the
+  canonical team ID `9`, then fail the whole transaction on any count,
+  identity, club or membership mismatch. The seed uses the UUID as the only
+  identity key; names and external IDs are not inferred.
+- The 31 explicit EUR rows may upsert only the TouchLine-owned
+  `football_player_market_values` record, immutable value history and protected
+  import/job audit rows. The blank row stays `pending`, creates only a pending
+  import-item audit record, and never inserts, clears or fabricates a current
+  value.
+- Explicit exclusions: no update to `touchline_card_inventory`,
+  `touchline_card_contracts`, card tier, card price, price table, wallet,
+  order, supply or active-contract state. This artifact is local SQL only and
+  is not authorised to run against any database.
+- Risks: current remote club membership and previous values are unknown under
+  the open SQL-incident freeze; execution must remain fail-closed. The CSV's
+  external URL is retained only as protected import provenance and is never
+  fetched or exposed as public product copy.
+- Acceptance: a static test must prove 32 unique UUID rows, exactly 31
+  `verified` and one `pending`, exact club/membership guards, no current-value
+  write for the pending UUID, immutable history only for verified rows, and no
+  tier/price/inventory/contract mutation. A focused test, typecheck, lint and
+  whitespace check are required before any remote application; a bounded local
+  validation failure must be recorded rather than hidden and still permits a
+  clearly marked source-only checkpoint.
+
+### MANCHESTER CITY LOCAL ARTIFACT IMPLEMENTED — NOT APPLIED
+
+- Candidate: `work/touchline-manchester-city-manual-import-20260809`, based on
+  `64fd1f2b64f13b09e7c40ff836d557ff1bab6a23` before this local checkpoint.
+- Added local migration `051_touchline_manchester_city_manual_market_values_2026_08_09.sql`, an exact source-transparent staging manifest and a static
+  guard test. It seeds the 32 supplied UUID rows and requires all of them to
+  resolve to one active Manchester City membership with canonical team ID `9`.
+  Any database-state mismatch aborts the transaction before a value write.
+- Projected import scope: 31 explicit `verified` EUR values totalling
+  EUR 1,312,900,000; one `pending` UUID
+  `b5d80b41-b77c-4459-9dc3-5d56d35e3e86` with no current-value/history write.
+  The pending row is audit-only with `TL_OWNER_VALUE_MISSING`; it preserves any
+  pre-existing last-known-good value rather than clearing it.
+- Direct local source-transcription comparison passed for all 32 rows. The
+  focused static suite passed `5/5`, covering exact data, identity/membership
+  fail-closed guards, pending isolation and economy/contract exclusions.
+- Full `tsc`/ESLint validation was started but could not complete because the
+  local filesystem had pre-existing stuck I/O workers; the owned `tsc` child
+  was stopped after the bounded attempt. This is a **local validation gate**,
+  not a claimed type/lint pass. No generated source artifact changed.
+- No SQL was executed; no database, sync, import, deployment, Preview,
+  provider call, card, tier, price, contract or payment state changed.
+
+### REMAINING 18-CLUB DATASET RECOVERY — SOURCE GAP
+
+- Local read-only recovery found no verified owner-approved values, per-club
+  CSVs, consolidated manifest or player/club mapping for Arsenal FC, Aston
+  Villa, AFC Bournemouth, Brentford FC, Brighton & Hove Albion, Chelsea FC,
+  Coventry City, Crystal Palace, Everton FC, Fulham FC, Hull City, Ipswich
+  Town, Leeds United, Manchester United, Newcastle United, Nottingham Forest,
+  Sunderland AFC or Tottenham Hotspur.
+- Liverpool is excluded from this batch by owner direction, but local files do
+  not prove whether its historical `052` artifact ever committed remotely; the
+  open SQL-incident audit remains the only authority for that question.
+- Do not generate a consolidated 19-club import or fill any missing rows until
+  the original owner-approved data artifact is recovered. The generic template
+  and synthetic test fixtures are not evidence and must not be reused as data.
