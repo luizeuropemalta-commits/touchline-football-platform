@@ -1425,3 +1425,37 @@ Preview, production checkpoint, or a dirty worktree.
   does not expose OS media emulation, so no system setting was changed.
 - **Boundary:** local only. No DB, sync, migration, Preview, deployment,
   product data or generated workspace artifact is included in this checkpoint.
+
+## 2026-08-09 Club Owner portrait perimeter trace — LOCAL COMPLETE / NOT DEPLOYED
+
+- **Scope:** visual-only replacement of the live Club Owner avatar's clipped
+  green frame glow. The portrait image, identity, ownership data, contracts,
+  economy, values, cards, tiers, prices, rankings and layout are unchanged.
+- **Implementation:** the Club Owner is the only `TouchlineSocialProfileHeader`
+  caller opting into the new circular SVG trace. The photo stays in its own
+  clipped circular child; the stroke-only SVG is a visible sibling, follows
+  the exact card trace timing (1500ms / travelling dash / residual), remains
+  fully within the avatar bounds and uses only fixed TouchLine logo green
+  `#a3ff12` — never a club or tier token.
+- **Interaction and accessibility:** fine-pointer hover lifts the portrait
+  lightly; coarse-pointer `:active` gets the same transient lift and trace
+  without synthetic hover. The SVG is pointer-inert and no touch-action
+  restriction was added, preserving pinch zoom. Reduced motion leaves a
+  static illuminated perimeter with no transform or animation. Existing card
+  and crest fine/coarse/reduced-motion rules were validated rather than
+  duplicated.
+- **Evidence:** local static, admin-gated fixture
+  `app/visual-qa/club-owner-portrait-neon/page.tsx`; dated report
+  `docs/touchline-arena/audit/2026-08-09-CLUB-OWNER-PORTRAIT-PERIMETER-TRACE-QA.md`.
+  The fixture has no runtime product-data dependency.
+- **Validation:** focused source/fixture/card regression suite **35/35
+  passed**. Local browser QA at 390px, 768px and 1280px recorded matching
+  portrait/trace bounds and no horizontal overflow. Reduced motion is covered
+  by explicit regression assertions; the local browser has no OS
+  media-emulation capability. Typecheck, lint and final diff evidence are
+  recorded with this checkpoint.
+- **Boundary:** local only. No DB, sync, migration, Preview, deployment,
+  provider request, card/economy/data change or generated workspace artifact
+  is included.
+- **Persistent checkpoint:** `e4c957a0`
+  (`feat(owner): add circular portrait perimeter trace`).
