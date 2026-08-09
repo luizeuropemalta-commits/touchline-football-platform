@@ -1186,6 +1186,9 @@ Preview, production checkpoint, or a dirty worktree.
   `SELECT`-only grants, short-lived revocable token issuance and negative
   authorization tests. Do not substitute a generic `authenticated` user or
   service role.
+- **Persistent NO-GO checkpoint:**
+  `2141ce85252eca0183068047eedbcbea8a5f0565`
+  (`docs(roster): record credential provisioning no-go`).
 - **Persistent preflight checkpoint:**
   `ed4c510bf6d6ed7502faa03e8c40eed89a62447b`
   (`feat(roster): harden authenticated export preflight`).
