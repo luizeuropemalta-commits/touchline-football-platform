@@ -1072,3 +1072,41 @@ Preview, production checkpoint, or a dirty worktree.
 - **Active gate unchanged:** no data was altered. The mandatory next step is
   still a separately authorized, verifiable read-only 20-club snapshot and
   offline dry-run; any write needs a later explicit decision.
+
+## 2026-08-09 20-club roster reconciliation — LOCAL SERVER-ONLY CANDIDATE
+
+- **Purpose:** a new local dry-run planner now prepares the complete
+  Sportmonks Premier League 20-club roster reconciliation from two explicitly
+  supplied, versioned canonical snapshot inputs. It is not a sync, importer,
+  database reader, or executor. Candidate record:
+  `docs/touchline-arena/audit/2026-08-09-20-CLUB-ROSTER-RECONCILIATION-LOCAL-CANDIDATE.md`.
+- **Artifacts:** pure planner
+  `lib/football-data/twenty-club-roster-reconciliation.ts`; server-only facade
+  `lib/football-data/twenty-club-roster-reconciliation-server.ts`; focused
+  proof `tests/touchline-twenty-club-roster-reconciliation.test.mts`. The
+  facade has `import "server-only"`, accepts only already captured input, and
+  returns an invariant `applicationEligible: false` / `execution:
+  "dry-run-only"` plan. No route, client, provider, filesystem, environment
+  dependency, or apply method was added.
+- **Fail-closed behavior:** partial 20-club responses, missing provenance,
+  duplicate provider player IDs, duplicate active memberships, and invalid
+  provider/current-club/competition/freshness bindings block the entire plan
+  with zero operations. Complete transfers, additions and unseen baseline
+  players remain only explicit review operations; no absent player is
+  implicitly inactivated or deleted.
+- **Extras:** after a future complete read-only export, an active manual-scope
+  player absent from the owner roster is report-only `QUARANTINED/PENDING`,
+  without a market value or membership status write. Liverpool is included in
+  the 20-club audit but excluded from the 19-club manual-value scope. The two
+  alleged extras remain unidentified/preserved until that export exists; this
+  candidate does not invent IDs or alter them.
+- **Evidence:** focused planner test passed **6/6**; `pnpm typecheck` and
+  targeted ESLint passed locally. These results prove the local planner only,
+  not a remote roster state. The generated `tsconfig.tsbuildinfo` remains
+  outside the logical candidate commit and is preserved untouched.
+- **Separate application gate:** the SQL-editor HOLD is not lifted. A later
+  application needs a newly authorised, least-privilege, revision-fenced
+  read-only 20-club export; offline plan/review; immutable before/after and
+  rollback preflight; and a separate explicit write authorization for a new
+  atomic executor. No DB write, sync, migration, import, deployment, Preview,
+  or payment action happened in this block.
