@@ -156,6 +156,63 @@ closed, the persisted-only public data boundary, complete reviewed locales, and
 the full validation matrix; it must not use this protocol checkpoint as a
 substitute for those requirements.
 
+## 2026-08-09 Arena Quick Sub UI integration audit — REMOTE GATED
+
+### Rendered local evidence
+
+- Candidate: `work/arena-durable-protocol-recovery-20260809` at
+  `df0ec7a2933873adba8f88170da973fdb45e5d26`, launched locally without an
+  `.env.local` or authenticated session. `?demoLineup=1` rendered an Arena XI
+  and the Arena Menu.
+- The rendered `Quick substitution` control is a link to
+  `/club-owner/me/substitution`, not an in-Arena Quick Sub mode. The legacy
+  ClubOwner route redirects the unauthenticated local session to login. This
+  confirms the requested no-route-change/no-flicker experience does not exist.
+- Local dev logs show only GET requests during this reproduction; no POST or
+  PUT was issued. Some existing Arena effects nevertheless requested fixture,
+  squad and ranking endpoints. Their responses were unavailable/read-only in
+  the observed local run, but those route families can reach persisted/provider
+  readers when credentials exist. The local server was stopped immediately and
+  no further browser QA is permitted until the fail-closed Preview/data boundary
+  is implemented and proven.
+- Source boundary: `confirmBenchSwap` changes `players` and `benchPlayers`,
+  puts the outgoing player back on the bench, and calls browser roster
+  persistence. The generic state effect subsequently PUTs the XI to
+  `/api/touchline-arena/state`. The state route stores no match ID, frozen
+  nine-player bench, event log, revision or `substituted_out` state.
+- The current fixture rail is independent of the bench route, has team/status
+  controls, and may render any non-empty fixture selection. It is not a
+  server-published exact-ten-fixture canonical round.
+
+### Integration proposal and risk
+
+- The pure protocol in `durable-quick-substitution.ts` is the future reducer,
+  not a client-side replacement for server authority. A future Arena UI must
+  render a server-published match snapshot, dispatch protected idempotent
+  commands, and derive field/bench state from the published projection.
+- It must not mutate saved roster/XI state, return an outgoing player to the
+  bench, open a separate ClubOwner route, or infer a maximum substitution cap.
+- It also needs a server-owned canonical matchweek/fixture pointer before the
+  rail can be hidden/restored truthfully around a substitution.
+
+### Minimal external gate and acceptance
+
+- Required before UI/API wiring: approved schema and transaction for match
+  snapshot + event ledger; protected command endpoint with owner/match/revision
+  validation; correction/retraction policy; persisted canonical round pointer;
+  and controlled authenticated-session QA. These are remote/schema changes and
+  remain prohibited while the SQL incident is open.
+- After that gate, acceptance is: exactly 11 active + 9 frozen bench IDs;
+  entire Quick Sub flow stays within Arena; outgoing is visibly and
+  semantically `substituted_out`; reload/reconnect preserves no-reentry;
+  carousel hides/restores without changing route; no current roster/XI PUT is
+  issued; and controlled desktop/mobile/tablet/TV/WebKit accessibility QA
+  passes.
+
+**Decision:** do not integrate the protocol into the current client UI. The
+next safe work advances to public-candidate/release-audit preparation while the
+remote match-state gate remains open.
+
 ## Current external gates
 
 - Controlled non-financial ClubOwner/Admin personas for cross-session and device validation.
