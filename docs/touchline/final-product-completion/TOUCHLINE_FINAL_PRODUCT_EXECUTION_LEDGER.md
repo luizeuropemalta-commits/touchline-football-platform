@@ -1339,3 +1339,52 @@ Preview, production checkpoint, or a dirty worktree.
   (`fix(public): clarify initial official league table`). Generated
   `next-env.d.ts` and `tsconfig.tsbuildinfo` remain intentionally uncommitted
   workspace artifacts.
+
+## 2026-08-09 ClubHub matchday profile redesign — LOCAL COMPLETE / NOT DEPLOYED
+
+- **Approved composition:** Club identity, complete verified club value,
+  honours and Next Match now precede the existing XI pitch. The new technical
+  area follows the XI; a plain outside-matchday roster follows the technical
+  area; the real server-owned Official League Table follows that roster; and
+  TouchLine card/ranking content is below the table. The former hero
+  TouchLine Cards, TouchLine Points and Squad Source metrics are removed.
+- **Matchday safety:** the current public feed has line-up member identity and
+  `isStarter`/`isSubstitute`, but no official matchday coach. The pure
+  presentation model exposes a coach and exactly nine bench names only for a
+  complete, selected-fixture/team-bound XI + coach + nine unique substitutes.
+  Present production data therefore remains explicitly awaiting an official
+  team sheet; no coach/bench inference, static coach seed or provider call is
+  used. XI, bench and outside roster are identity-partitioned, with no
+  duplicates.
+- **Pitch accessibility:** names use dark plates, two lines, no ellipsis, and
+  a compensated safe-top inset. Local 390px QA verified complete stress names,
+  zero label overlap and no horizontal page overflow.
+- **Value boundary:** the hero emits a club total only if every source card is
+  verified; otherwise it uses the existing Updating/Em atualização state. It
+  does not change tiers, colours, card prices, contracts, inventory or values.
+  The 533 owner-approved EUR values remain a local-only application candidate,
+  not Preview or database data.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-09-CLUBHUB-MATCHDAY-PROFILE-REDESIGN-QA.md`;
+  static no-data QA route
+  `app/visual-qa/clubhub-profile-contract/page.tsx`.
+- **Validation:** focused ClubHub/table/card boundary suite **39/39 passed**;
+  `pnpm typecheck`, `pnpm lint`, and `git diff --check` passed. Browser QA
+  covered a desktop confirmed 11+9 fixture and a 390px pending fixture. No
+  database, Sportmonks, sync, migration, Preview or deployment action ran.
+- **Checkpoint:** `230909d60c4f18ed4c1784d2a8ed9b6197311018`
+  (`feat(clubhub): separate verified matchday profile sections`). Generated
+  `next-env.d.ts` and `tsconfig.tsbuildinfo` remain preserved and uncommitted.
+- **Remaining gate:** a sanitized, persisted matchday-coach DTO is necessary
+  before production may name a coach or nine-player official bench. A later
+  data-backed EN/PT pass needs the separately authorized read-only source.
+
+## Next card/crest neon visual proposal — NOT STARTED
+
+- **Requested direction:** replace the clipped neon effect with one continuous
+  trace through the centre of the canonical card border, a soft trail and
+  ignition, canonical tier-border colour, club-colour crest treatment, no
+  cropping, and a `prefers-reduced-motion` static alternative.
+- **Boundary:** this is a separate visual-only block. It must not change card
+  tiers, values, prices, contracts, inventory or the current ClubHub profile
+  scope.

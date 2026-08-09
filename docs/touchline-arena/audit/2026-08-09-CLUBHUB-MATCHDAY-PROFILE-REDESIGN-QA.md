@@ -101,3 +101,8 @@ with a soft trail and ignition, canonical tier-border colour, club-colour
 crest treatment, and a `prefers-reduced-motion` static alternative. It must
 not be folded into this ClubHub profile change or alter card tier, price,
 contract or value rules.
+
+## Persistent checkpoint
+
+`230909d60c4f18ed4c1784d2a8ed9b6197311018`
+(`feat(clubhub): separate verified matchday profile sections`)
