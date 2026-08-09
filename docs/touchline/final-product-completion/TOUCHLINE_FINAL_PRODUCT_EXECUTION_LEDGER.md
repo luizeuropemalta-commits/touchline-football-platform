@@ -129,6 +129,33 @@ and validated end-to-end.
   full-app typecheck is claimed from this worktree because its dependencies are
   intentionally not installed there.
 
+## 2026-08-09 release static audit — NO-GO
+
+- Audited candidate: `work/arena-durable-protocol-recovery-20260809` at
+  `ba71e48c9f0960c0e62488f137fc1c237732372b`; its Git worktree is clean and
+  persisted locally. It is a protocol checkpoint, not a release candidate.
+- `app/arena/ArenaClient.tsx` is unchanged from the `a2dce1a9` baseline. The
+  current UI still returns outgoing players to the bench and saves lineup state;
+  it does not consume the durable protocol, hide the rail in Quick Sub mode, or
+  guarantee reload-safe no-reentry.
+- The current fixture rail can show partial selections and retains text/status
+  presentation; it is not the required canonical, persisted, exact-ten-fixture
+  matchweek projection.
+- Six approved human locales remain incomplete and fail closed to English.
+- Arena/Live browser paths can still reach internal football endpoints that
+  fetch provider data and can persist a live-score snapshot; this violates the
+  current remote-data freeze for Preview or authenticated QA.
+- The shared official table remains a mutable five-minute server cache, not an
+  immutable versioned public projection. Admin is not part of this candidate.
+- No isolated Vercel project/environment/callback envelope is proven, and no
+  fresh full-suite/lint/typecheck/build/device QA is claimed for this commit.
+
+**Decision:** Preview and production are blocked. The next release-oriented
+candidate must include the durable server integration after the SQL incident is
+closed, the persisted-only public data boundary, complete reviewed locales, and
+the full validation matrix; it must not use this protocol checkpoint as a
+substitute for those requirements.
+
 ## Current external gates
 
 - Controlled non-financial ClubOwner/Admin personas for cross-session and device validation.
