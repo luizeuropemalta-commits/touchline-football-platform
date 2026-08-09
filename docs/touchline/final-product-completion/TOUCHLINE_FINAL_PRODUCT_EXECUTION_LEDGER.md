@@ -1113,3 +1113,36 @@ Preview, production checkpoint, or a dirty worktree.
   rollback preflight; and a separate explicit write authorization for a new
   atomic executor. No DB write, sync, migration, import, deployment, Preview,
   or payment action happened in this block.
+
+## 2026-08-09 authenticated 20-club roster export — PRE-FLIGHT BLOCKED
+
+- **Authorization and boundary:** Luiz authorized only a dedicated,
+  authenticated, non-mutating read of the 20 canonical Sportmonks rosters.
+  The export path was narrowed to an explicit `--check` or `--write-new`
+  invocation, accepts an anon key plus issuer-bound `authenticated` bearer
+  session only, and continues to reject service-role semantics. No write,
+  sync, migration, SQL mutation, deployment, or Preview action is authorized.
+- **Credential result:** no dedicated `TOUCHLINE_ROSTER_EXPORT_*` credential
+  was configured in the process or current/sibling worktrees. The sanitized
+  `--check` therefore exited `1` with
+  `TL_ROSTER_EXPORT_READ_ONLY_MODE_REQUIRED` before a client or network was
+  created. No secret value was printed.
+- **Integrity hardening:** the local exporter now fails its audit state on
+  partial 20-club coverage, invalid source timestamps/bindings, exceptional
+  memberships, duplicate provider player IDs, duplicate active memberships,
+  or duplicate membership IDs. Its two-pass revision fence covers the full
+  select payload, not only timestamps. Focused export/planner/reconciliation
+  tests passed **17/17** after this change.
+- **Evidence:** dated report
+  `docs/touchline-arena/audit/2026-08-09-AUTHENTICATED-ROSTER-EXPORT-PREFLIGHT.md`
+  and immutable no-connection manifest
+  `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/roster-audits/2026-08-09T18-27-31Z/read-only-export-preflight.json`, plus its
+  `validation-results.txt` test record.
+  Every one of the 20 requested club/team IDs is recorded as not read, rather
+  than fabricated as complete/partial.
+- **Extras and next gate:** the alleged two extras are still
+  `PRESERVED_UNIDENTIFIED_PENDING`, with no ID, value or membership mutation.
+  A process-only dedicated authenticated read-only credential is the sole
+  missing input for the actual two-pass export. Once supplied, a new dated
+  export must pass this integrity gate and the local planner before a real
+  `QUARANTINED/PENDING` report can name any DB-only player.

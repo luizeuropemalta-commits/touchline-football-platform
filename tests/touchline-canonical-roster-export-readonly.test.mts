@@ -118,7 +118,7 @@ test("read-only connection requires a dedicated authenticated token and never ac
     TOUCHLINE_ROSTER_EXPORT_MODE: "read-only",
     TOUCHLINE_ROSTER_EXPORT_URL: "https://example.supabase.co",
     TOUCHLINE_ROSTER_EXPORT_ANON_KEY: jwt({ role: "anon", aud: "authenticated" }),
-    TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "authenticated", aud: "authenticated" }),
+    TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "authenticated", aud: "authenticated", iss: "https://example.supabase.co/auth/v1" }),
   };
   assert.equal(readOnlyConnectionConfig(environment).url, environment.TOUCHLINE_ROSTER_EXPORT_URL);
   assert.throws(
@@ -133,16 +133,37 @@ test("read-only connection requires a dedicated authenticated token and never ac
     () => readOnlyConnectionConfig({ ...environment, TOUCHLINE_ROSTER_EXPORT_MODE: "" }),
     /TL_ROSTER_EXPORT_READ_ONLY_MODE_REQUIRED/,
   );
+  assert.throws(
+    () => readOnlyConnectionConfig({
+      ...environment,
+      TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN: jwt({ role: "authenticated", aud: "authenticated", iss: "https://other.supabase.co/auth/v1" }),
+    }),
+    /TL_ROSTER_EXPORT_AUTHENTICATED_TOKEN_REQUIRED/,
+  );
 });
 
-test("exporter is select-only, revision-fenced, and refuses output overwrite", () => {
+test("exporter is select-only, revision-fenced, explicit, and refuses output overwrite", () => {
   assert.match(source, /two-pass-membership-revision-fence/);
-  assert.match(source, /TL_SQL_EDITOR_INCIDENT_HOLD_REQUIRES_INDEPENDENT_CLOSURE/);
-  assert.ok(source.indexOf("assertSqlIncidentHold();") < source.indexOf("readOnlyConnectionConfig()"));
+  assert.match(source, /TL_ROSTER_EXPORT_CHECK_OR_WRITE_NEW_REQUIRED/);
+  assert.match(source, /TL_ROSTER_EXPORT_CHECK_AND_WRITE_NEW_CONFLICT/);
+  assert.ok(source.indexOf("readOnlyConnectionConfig()") < source.indexOf("createClient(config.url"));
   assert.match(source, /TL_ROSTER_EXPORT_OUTPUT_OUTSIDE_VERSIONED_ARCHIVE_FORBIDDEN/);
   assert.match(source, /flag: "wx"/);
   assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|\.insert\s*\(|\.delete\s*\(|\.upsert\s*\(|\.rpc\s*\(/);
-  assert.doesNotMatch(source, /\.from\([^\n]+\)[\s\S]{0,160}\.update\s*\(/);
+  assert.doesNotMatch(source, /\.(?:insert|delete|upsert|rpc)\s*\(/);
+  assert.doesNotMatch(source, /\.from\([\s\S]{0,400}?\.update\s*\(/);
   assert.match(source, /\.select\(/);
   assert.match(source, /TL_ROSTER_EXPORT_REVISION_CHANGED_DURING_READ/);
+});
+
+test("duplicate provider identities and active memberships make the exported audit incomplete", () => {
+  const input = snapshot();
+  const firstPlayer = input.players[0]!;
+  input.players[1] = { ...input.players[1], provider_player_id: firstPlayer.provider_player_id };
+  input.memberships.push({ ...input.memberships[0], id: uuid(999) });
+  const document = buildCanonicalRosterExport({ ...input, exportedAt: timestamp });
+
+  assert.equal(document.audit.state, "incomplete");
+  assert.equal(document.audit.duplicateProviderPlayerIds.length, 1);
+  assert.equal(document.audit.duplicateActiveMemberships.length, 1);
 });

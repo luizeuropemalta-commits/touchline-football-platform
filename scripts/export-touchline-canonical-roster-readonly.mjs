@@ -14,14 +14,6 @@ const PAGE_SIZE = 500;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ARCHIVE_DIRECTORY = resolve("docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/roster-audits");
 
-// The canonical ledger's SQL Editor incident gate supersedes the earlier
-// read-only authorization. Keep this hard stop in code rather than accepting
-// an environment-variable bypass; a separately reviewed change may remove it
-// only after the incident has independently been closed.
-function assertSqlIncidentHold() {
-  throw new Error("TL_SQL_EDITOR_INCIDENT_HOLD_REQUIRES_INDEPENDENT_CLOSURE");
-}
-
 function text(value) {
   return String(value ?? "").trim();
 }
@@ -32,6 +24,10 @@ function sha256(value) {
 
 function isUuid(value) {
   return UUID_PATTERN.test(text(value));
+}
+
+function hasTimestamp(value) {
+  return Boolean(text(value)) && Number.isFinite(Date.parse(text(value)));
 }
 
 function isNewArchivePath(path) {
@@ -61,6 +57,16 @@ function decodeJwtPayload(token, errorCode) {
   }
 }
 
+function expectedAuthIssuer(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || !parsed.hostname) throw new Error("invalid URL");
+    return `${parsed.origin}/auth/v1`;
+  } catch {
+    throw new Error("TL_ROSTER_EXPORT_URL_INVALID");
+  }
+}
+
 // Deliberately accepts a dedicated authenticated session only. A service-role
 // key is not a database-enforced read-only capability and is never accepted.
 export function readOnlyConnectionConfig(environment = process.env) {
@@ -73,12 +79,17 @@ export function readOnlyConnectionConfig(environment = process.env) {
   if (!url || !anonKey || !accessToken) {
     throw new Error("TL_ROSTER_EXPORT_READ_ONLY_CONFIGURATION_REQUIRED");
   }
+  const issuer = expectedAuthIssuer(url);
   const anonPayload = decodeJwtPayload(anonKey, "TL_ROSTER_EXPORT_ANON_KEY_REQUIRED");
   if (anonPayload.role !== "anon") {
     throw new Error("TL_ROSTER_EXPORT_ANON_KEY_REQUIRED");
   }
   const accessPayload = decodeJwtPayload(accessToken, "TL_ROSTER_EXPORT_AUTHENTICATED_TOKEN_REQUIRED");
-  if (accessPayload.role !== "authenticated" || accessPayload.aud !== "authenticated") {
+  if (
+    accessPayload.role !== "authenticated"
+    || accessPayload.aud !== "authenticated"
+    || text(accessPayload.iss) !== issuer
+  ) {
     throw new Error("TL_ROSTER_EXPORT_AUTHENTICATED_TOKEN_REQUIRED");
   }
   return { url, anonKey, accessToken };
@@ -121,6 +132,7 @@ export function buildCanonicalRosterExport({ competitions, clubs, players, membe
     text(competition.provider) === PROVIDER
     && text(competition.provider_competition_id) === COMPETITION_PROVIDER_ID
     && isUuid(competition.id)
+    && hasTimestamp(competition.source_updated_at)
   ));
   const targetCompetition = targetCompetitions.length === 1 ? targetCompetitions[0] : null;
   const targetCompetitionId = text(targetCompetition?.id);
@@ -138,6 +150,8 @@ export function buildCanonicalRosterExport({ competitions, clubs, players, membe
           ? "DUPLICATE_CLUB"
           : text(club.competition_id) !== targetCompetitionId
             ? "CLUB_COMPETITION_MISMATCH"
+            : !hasTimestamp(club.source_updated_at)
+              ? "CLUB_SOURCE_TIMESTAMP_MISSING"
             : activeMembershipCount === 0
               ? "NO_ACTIVE_MEMBERSHIP"
               : "READY";
@@ -151,14 +165,63 @@ export function buildCanonicalRosterExport({ competitions, clubs, players, membe
     });
   const playersById = new Map(normalized.players.map((player) => [text(player.id), player]));
   const clubsById = new Map(normalized.clubs.map((club) => [text(club.id), club]));
+  const scopedClubIds = new Set(scopeChecks.map((check) => check.canonicalClubId).filter(Boolean));
+  const activeScopedMemberships = normalized.memberships.filter((membership) => (
+    text(membership.status) === "active"
+    && scopedClubIds.has(text(membership.club_id))
+  ));
+  const activeMembershipsByPlayerId = new Map();
+  const activeMembershipsByProviderPlayerId = new Map();
+  const activeMembershipsById = new Map();
+  for (const membership of activeScopedMemberships) {
+    const playerId = text(membership.player_id);
+    const membershipId = text(membership.id);
+    const player = playersById.get(playerId);
+    const providerPlayerId = text(player?.provider_player_id);
+    activeMembershipsByPlayerId.set(playerId, [...(activeMembershipsByPlayerId.get(playerId) ?? []), membership]);
+    activeMembershipsById.set(membershipId, [...(activeMembershipsById.get(membershipId) ?? []), membership]);
+    if (text(player?.provider) === PROVIDER && /^\d+$/.test(providerPlayerId)) {
+      activeMembershipsByProviderPlayerId.set(
+        providerPlayerId,
+        [...(activeMembershipsByProviderPlayerId.get(providerPlayerId) ?? []), membership],
+      );
+    }
+  }
+  const duplicateActiveMemberships = [...activeMembershipsByPlayerId.entries()]
+    .filter(([, memberships]) => memberships.length > 1)
+    .map(([canonicalPlayerId, memberships]) => ({
+      canonicalPlayerId,
+      providerPlayerId: text(playersById.get(canonicalPlayerId)?.provider_player_id),
+      canonicalMembershipIds: memberships.map((membership) => text(membership.id)).sort(),
+      providerTeamIds: memberships.map((membership) => text(clubsById.get(text(membership.club_id))?.provider_team_id)).sort(),
+    }));
+  const duplicateProviderPlayerIds = [...activeMembershipsByProviderPlayerId.entries()]
+    .filter(([, memberships]) => memberships.length > 1)
+    .map(([providerPlayerId, memberships]) => ({
+      providerPlayerId,
+      canonicalPlayerIds: memberships.map((membership) => text(membership.player_id)).sort(),
+      canonicalMembershipIds: memberships.map((membership) => text(membership.id)).sort(),
+      providerTeamIds: memberships.map((membership) => text(clubsById.get(text(membership.club_id))?.provider_team_id)).sort(),
+    }));
+  const duplicateMembershipIds = [...activeMembershipsById.entries()]
+    .filter(([membershipId, memberships]) => membershipId && memberships.length > 1)
+    .map(([canonicalMembershipId, memberships]) => ({
+      canonicalMembershipId,
+      canonicalPlayerIds: memberships.map((membership) => text(membership.player_id)).sort(),
+      providerTeamIds: memberships.map((membership) => text(clubsById.get(text(membership.club_id))?.provider_team_id)).sort(),
+    }));
   const exceptionalMemberships = normalized.memberships.map((membership) => {
     const player = playersById.get(text(membership.player_id));
     const club = clubsById.get(text(membership.club_id));
     const reasons = [
       text(membership.provider) !== PROVIDER ? "MEMBERSHIP_PROVIDER_NOT_SPORTMONKS" : null,
       text(membership.status) !== "active" ? "MEMBERSHIP_NOT_ACTIVE" : null,
+      !isUuid(membership.id) ? "INVALID_MEMBERSHIP_UUID" : null,
+      !hasTimestamp(membership.source_updated_at) ? "MEMBERSHIP_SOURCE_TIMESTAMP_MISSING" : null,
       text(player?.provider) !== PROVIDER ? "PLAYER_PROVIDER_NOT_SPORTMONKS" : null,
+      !isUuid(player?.id) ? "INVALID_PLAYER_UUID" : null,
       !/^\d+$/.test(text(player?.provider_player_id)) ? "INVALID_PROVIDER_PLAYER_ID" : null,
+      !hasTimestamp(player?.source_updated_at) ? "PLAYER_SOURCE_TIMESTAMP_MISSING" : null,
       text(player?.current_club_id) !== text(club?.id) ? "PLAYER_CURRENT_CLUB_MISMATCH" : null,
       text(membership.competition_id) !== text(club?.competition_id) ? "MEMBERSHIP_CLUB_COMPETITION_MISMATCH" : null,
       text(club?.competition_id) !== targetCompetitionId ? "CLUB_NOT_COMPETITION_8" : null,
@@ -199,8 +262,18 @@ export function buildCanonicalRosterExport({ competitions, clubs, players, membe
     audit: {
       scopeChecks,
       exceptionalMemberships,
+      duplicateActiveMemberships,
+      duplicateProviderPlayerIds,
+      duplicateMembershipIds,
       observedSyncRuns: normalized.syncRuns,
-      state: targetCompetition && scopeChecks.every((check) => check.state === "READY") ? "ready" : "incomplete",
+      state: targetCompetition
+        && scopeChecks.every((check) => check.state === "READY")
+        && exceptionalMemberships.length === 0
+        && duplicateActiveMemberships.length === 0
+        && duplicateProviderPlayerIds.length === 0
+        && duplicateMembershipIds.length === 0
+        ? "ready"
+        : "incomplete",
     },
   };
 }
@@ -290,16 +363,11 @@ async function readSnapshot(db) {
 }
 
 function revisionFence(snapshot) {
-  return sha256(stableStringify({
-    competitions: canonicalRows(snapshot.competitions).map((competition) => ({ id: competition.id, source_updated_at: competition.source_updated_at })),
-    clubs: canonicalRows(snapshot.clubs).map((club) => ({ id: club.id, source_updated_at: club.source_updated_at })),
-    players: canonicalRows(snapshot.players).map((player) => ({ id: player.id, source_updated_at: player.source_updated_at })),
-    memberships: canonicalRows(snapshot.memberships).map((membership) => ({ id: membership.id, source_updated_at: membership.source_updated_at })),
-  }));
+  return sha256(stableStringify(sourceRevisionPayload(snapshot)));
 }
 
 function parseArgs(args) {
-  const result = { output: null, writeNew: false };
+  const result = { output: null, writeNew: false, check: false };
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === "--write-new") result.writeNew = true;
@@ -308,12 +376,13 @@ function parseArgs(args) {
       if (!value || value.startsWith("--")) throw new Error("TL_ROSTER_EXPORT_OUTPUT_REQUIRED");
       result.output = resolve(value);
       index += 1;
-    } else if (argument === "--check") {
-      // A live DB read is still performed; the result is printed only.
-    } else {
+    } else if (argument === "--check") result.check = true;
+    else {
       throw new Error(`TL_ROSTER_EXPORT_UNKNOWN_ARGUMENT:${argument}`);
     }
   }
+  if (!result.check && !result.writeNew) throw new Error("TL_ROSTER_EXPORT_CHECK_OR_WRITE_NEW_REQUIRED");
+  if (result.check && result.writeNew) throw new Error("TL_ROSTER_EXPORT_CHECK_AND_WRITE_NEW_CONFLICT");
   if (result.writeNew && !result.output) throw new Error("TL_ROSTER_EXPORT_OUTPUT_REQUIRED");
   if (result.output && !result.writeNew) throw new Error("TL_ROSTER_EXPORT_WRITE_NEW_REQUIRED");
   if (result.output && !isNewArchivePath(result.output)) throw new Error("TL_ROSTER_EXPORT_OUTPUT_OUTSIDE_VERSIONED_ARCHIVE_FORBIDDEN");
@@ -322,7 +391,6 @@ function parseArgs(args) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  assertSqlIncidentHold();
   const config = readOnlyConnectionConfig();
   const db = createClient(config.url, config.anonKey, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
@@ -349,8 +417,12 @@ async function main() {
       players: exportDocument.players.length,
       activeMemberships: exportDocument.memberships.length,
       exceptionalMemberships: exportDocument.audit.exceptionalMemberships.length,
+      duplicateActiveMemberships: exportDocument.audit.duplicateActiveMemberships.length,
+      duplicateProviderPlayerIds: exportDocument.audit.duplicateProviderPlayerIds.length,
+      duplicateMembershipIds: exportDocument.audit.duplicateMembershipIds.length,
     },
   }, null, 2)}\n`);
+  if (exportDocument.audit.state !== "ready") process.exitCode = 2;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

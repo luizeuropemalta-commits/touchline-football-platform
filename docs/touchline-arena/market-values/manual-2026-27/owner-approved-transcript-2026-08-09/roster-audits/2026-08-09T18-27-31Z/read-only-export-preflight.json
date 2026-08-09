@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "touchline-canonical-roster-export-preflight-v1",
+  "recordedAt": "2026-08-09T18:27:31Z",
+  "status": "blocked",
+  "execution": "no-connection",
+  "requestedScope": {
+    "provider": "sportmonks",
+    "providerCompetitionId": "8",
+    "clubs": [
+      { "clubName": "Sunderland AFC", "providerTeamId": "3", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Tottenham Hotspur", "providerTeamId": "6", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Liverpool FC", "providerTeamId": "8", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Manchester City", "providerTeamId": "9", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Fulham FC", "providerTeamId": "11", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Everton FC", "providerTeamId": "13", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Manchester United", "providerTeamId": "14", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Aston Villa", "providerTeamId": "15", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Chelsea FC", "providerTeamId": "18", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Arsenal FC", "providerTeamId": "19", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Newcastle United", "providerTeamId": "20", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Hull City", "providerTeamId": "22", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Crystal Palace", "providerTeamId": "51", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "AFC Bournemouth", "providerTeamId": "52", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Nottingham Forest", "providerTeamId": "63", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Leeds United", "providerTeamId": "71", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Brighton & Hove Albion", "providerTeamId": "78", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Ipswich Town", "providerTeamId": "116", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Coventry City", "providerTeamId": "117", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" },
+      { "clubName": "Brentford FC", "providerTeamId": "236", "coverage": "NOT_READ_NO_AUTHENTICATED_CREDENTIAL" }
+    ]
+  },
+  "credentialPreflight": {
+    "requiredNames": [
+      "TOUCHLINE_ROSTER_EXPORT_MODE",
+      "TOUCHLINE_ROSTER_EXPORT_URL",
+      "TOUCHLINE_ROSTER_EXPORT_ANON_KEY",
+      "TOUCHLINE_ROSTER_EXPORT_ACCESS_TOKEN"
+    ],
+    "serviceRoleAccepted": false,
+    "dedicatedAuthenticatedCredentialAvailable": false,
+    "secretValuesRecorded": false
+  },
+  "attempt": {
+    "commandClass": "sanitized-local-check",
+    "arguments": ["--check"],
+    "observedExitCode": 1,
+    "observedErrorCode": "TL_ROSTER_EXPORT_READ_ONLY_MODE_REQUIRED",
+    "clientCreated": false,
+    "databaseConnectionAttempted": false,
+    "providerRequestAttempted": false,
+    "databaseMutationAttempted": false
+  },
+  "integrity": {
+    "coverageState": "NOT_EVALUATED",
+    "duplicateProviderPlayerIds": "NOT_EVALUATED",
+    "duplicateActiveMemberships": "NOT_EVALUATED",
+    "sourceFreshness": "NOT_EVALUATED"
+  },
+  "extras": {
+    "state": "PRESERVED_UNIDENTIFIED_PENDING",
+    "identifiedCount": null,
+    "canonicalPlayerIds": [],
+    "marketValueAssignment": "NONE"
+  },
+  "nextGate": "Provide a process-only dedicated authenticated read-only credential; rerun the explicit revision-fenced export and retain this preflight artifact unchanged."
+}

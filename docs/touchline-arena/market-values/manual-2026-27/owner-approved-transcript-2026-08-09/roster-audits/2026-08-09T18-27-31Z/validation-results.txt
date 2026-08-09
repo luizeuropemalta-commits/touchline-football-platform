@@ -1,0 +1,33 @@
+TouchLine authenticated 20-club roster export preflight
+Recorded: 2026-08-09T18:27:31Z
+Status: BLOCKED_NO_AUTHENTICATED_READ_ONLY_CREDENTIAL
+
+Sanitized execution (no application credentials present):
+  env -i PATH=<bundled-node> node scripts/export-touchline-canonical-roster-readonly.mjs --check
+Result:
+  exit=1
+  TL_ROSTER_EXPORT_READ_ONLY_MODE_REQUIRED
+  clientCreated=false
+  databaseConnectionAttempted=false
+  providerRequestAttempted=false
+  databaseMutationAttempted=false
+
+Focused local tests:
+  node --test --experimental-strip-types \
+    tests/touchline-canonical-roster-export-readonly.test.mts \
+    tests/touchline-twenty-club-roster-reconciliation.test.mts \
+    tests/owner-approved-transcript-reconciliation.test.mts
+  result: 17 passed, 0 failed
+
+Static/build validation:
+  pnpm typecheck
+  result: passed
+  pnpm lint
+  result: passed (existing ArenaClient Babel-size note only)
+  git diff --check
+  result: passed
+
+No roster export, canonical IDs, coverage count, duplicate report, or named
+QUARANTINED/PENDING record was produced because a dedicated authenticated
+read-only credential was unavailable. This file is a preflight record, not a
+canonical roster export.

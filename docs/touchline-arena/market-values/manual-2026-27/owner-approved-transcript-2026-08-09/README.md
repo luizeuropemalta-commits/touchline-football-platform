@@ -64,12 +64,15 @@ incident closure, and a separately authorized environment.
 
 ## Versioned read-only roster audit archive
 
-**Current hold:** the canonical SQL Editor incident gate suspends every
-database action, including this read-only export. The exporter deliberately
-fails before creating a client or reading configuration with
-`TL_SQL_EDITOR_INCIDENT_HOLD_REQUIRES_INDEPENDENT_CLOSURE`. Do not bypass it
-with an environment flag. A separately reviewed local change is required
-after the incident is independently closed and recorded.
+**Current credential gate:** the owner has authorized a dedicated,
+authenticated, non-mutating roster export. The SQL Editor incident does not
+authorize any write, sync, migration, import, or deployment. The export
+script therefore accepts only an explicit `--check` or `--write-new` command
+and still refuses service-role semantics. The 2026-08-09 credential preflight
+found no dedicated authenticated credential in the local process or worktree,
+so it failed before creating a client with
+`TL_ROSTER_EXPORT_READ_ONLY_MODE_REQUIRED`. See
+`roster-audits/2026-08-09T18-27-31Z/read-only-export-preflight.json`.
 
 The audit covers the 19 manual-value clubs plus Liverpool as an explicitly
 out-of-manual-value-scope twentieth club. A real audit must use a dedicated
