@@ -4903,6 +4903,16 @@ export default function ArenaClient({
 
   useEffect(() => {
     if (!hasLoadedSavedLineup || !hasLoadedClubOwnerRoster || isDemoLineup || !arenaPersistencePrincipal) return;
+    // Quick Substitution is a match-session projection, never an Arena roster
+    // save. An empty lineup is likewise not a valid automatic state update:
+    // `?clearLineup=1` must not silently erase the owner's remote lineup.
+    if (standalonePanel === "bench" || players.length === 0) {
+      if (accountLineupSaveTimerRef.current) {
+        window.clearTimeout(accountLineupSaveTimerRef.current);
+        accountLineupSaveTimerRef.current = null;
+      }
+      return;
+    }
     saveLineup(players, selectedFormationKey, arenaPersistencePrincipal);
     if (
       !canPersistArenaAccountState(arenaPersistencePrincipal, arenaAccountSyncStatus)
@@ -4939,7 +4949,7 @@ export default function ArenaClient({
     return () => {
       if (accountLineupSaveTimerRef.current) window.clearTimeout(accountLineupSaveTimerRef.current);
     };
-  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isDemoLineup, players, selectedFormationKey, t]);
+  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isDemoLineup, players, selectedFormationKey, standalonePanel, t]);
 
   useEffect(() => {
     if (!hasLoadedSavedLineup || !players.some(hasMissingCardIdentityData)) return;

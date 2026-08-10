@@ -25,6 +25,21 @@ test("a standalone match substitution never persists or swaps the saved roster",
   assert.doesNotMatch(sessionBranch, /setPlayers\(|setBenchPlayers\(|persistArenaRoster\(/);
 });
 
+test("opening standalone Quick Sub cannot auto-save an empty or match-session lineup", () => {
+  const persistenceEffectStart = arenaSource.indexOf("useEffect(() => {\n    if (!hasLoadedSavedLineup || !hasLoadedClubOwnerRoster || isDemoLineup || !arenaPersistencePrincipal) return;");
+  const nextEffectStart = arenaSource.indexOf("\n  useEffect(() => {", persistenceEffectStart + 1);
+  const persistenceEffect = arenaSource.slice(persistenceEffectStart, nextEffectStart);
+  const guardIndex = persistenceEffect.indexOf('standalonePanel === "bench" || players.length === 0');
+  const localSaveIndex = persistenceEffect.indexOf("saveLineup(players");
+  const remotePutIndex = persistenceEffect.indexOf('fetch("/api/touchline-arena/state"');
+
+  assert.ok(persistenceEffectStart >= 0);
+  assert.ok(nextEffectStart > persistenceEffectStart);
+  assert.ok(guardIndex >= 0);
+  assert.ok(localSaveIndex > guardIndex);
+  assert.ok(remotePutIndex > guardIndex);
+});
+
 test("substituted-out players are visible, locked, and outside the available bench", () => {
   assert.match(arenaSource, /data-substitution-status="substituted-out"/);
   assert.match(arenaSource, /Jogadores que saíram da partida/);

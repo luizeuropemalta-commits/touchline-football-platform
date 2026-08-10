@@ -1851,3 +1851,27 @@ Preview, production checkpoint, or a dirty worktree.
   applied to the database; native device QA remains external.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-PAGE-BY-PAGE-CUSTOMER-VISUAL-AUDIT.md`.
+
+## 2026-08-10 Quick Sub unintended state-write guard — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Problem:** merely opening authenticated standalone Quick Sub, or an empty
+  `clearLineup` state, could schedule a generic Arena-state PUT and risk an
+  unconfirmed empty-lineup upsert.
+- **Correction:** standalone Quick Sub and empty lineups now return before
+  client/remote persistence, cancelling any delayed save; the state API also
+  rejects `lineup: []`.
+- **Validation:** focused **36/36**, full **835/835**, strict TypeScript,
+  full ESLint, Webpack production build and `git diff --check` passed.
+- **Non-actions:** no database, roster, contract, card, value, provider, sync,
+  migration or deployment action was performed.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-10-QUICK-SUB-UNINTENDED-STATE-WRITE-GUARD.md`.
+
+## 2026-08-10 programming audit — block 1
+
+- **Status:** confirmed code findings recorded without data mutation. The
+  remaining P1/P2 items cover server-owned Quick Sub authority, stale Live
+  presentation, deployment gate coverage, TypeScript coverage/cache hygiene,
+  and fail-closed roster/demo fallbacks.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-PROGRAMMING-AUDIT-BLOCK-1.md`.

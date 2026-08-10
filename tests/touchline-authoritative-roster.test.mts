@@ -456,7 +456,7 @@ test("Arena state PUT validates ownership and persists only a canonical lineup",
   const upsertIndex = route.indexOf('.from("touchline_user_arena_state").upsert(');
 
   assert.match(route, /readAuthoritativeTouchlineRoster\(admin, user\.id\)/);
-  assert.match(route, /Array\.isArray\(body\?\.lineup\)\s*&&\s*body\.lineup\.length <= 11/);
+  assert.match(route, /Array\.isArray\(body\?\.lineup\)\s*&&\s*body\.lineup\.length > 0\s*&&\s*body\.lineup\.length <= 11/);
   assert.ok(validationIndex > 0);
   assert.ok(canonicalIndex > validationIndex);
   assert.ok(upsertIndex > canonicalIndex);

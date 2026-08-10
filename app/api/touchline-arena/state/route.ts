@@ -86,7 +86,9 @@ export async function PUT(request: Request) {
   if (!admin) return NextResponse.json({ ok: false }, { status: 503 });
   const body = await request.json().catch(() => null);
   const formation = typeof body?.formation === "string" && FORMATIONS.has(body.formation) ? body.formation : null;
-  const lineup = Array.isArray(body?.lineup) && body.lineup.length <= 11 ? body.lineup : null;
+  // A client can save a complete/partial tactical lineup, but never use this
+  // generic state endpoint to erase the saved lineup as an empty array.
+  const lineup = Array.isArray(body?.lineup) && body.lineup.length > 0 && body.lineup.length <= 11 ? body.lineup : null;
   const suppliedLayouts = body?.savedFormationLayouts ?? {};
   if (!formation || !lineup || JSON.stringify(lineup).length > 150_000 || JSON.stringify(suppliedLayouts).length > 150_000) return NextResponse.json({ ok: false }, { status: 400 });
 
