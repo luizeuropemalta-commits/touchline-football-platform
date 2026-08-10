@@ -10,6 +10,10 @@ const scheduleRoute = readFileSync(
   new URL("../app/api/football-data/fixture-schedule/route.ts", import.meta.url),
   "utf8",
 );
+const matchCentre = readFileSync(
+  new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+  "utf8",
+);
 
 test("live scores read one durable snapshot or honest partial schedule without ingress or writes", () => {
   assert.match(liveRoute, /readPersistedLiveScoreSnapshot/);
@@ -21,6 +25,17 @@ test("live scores read one durable snapshot or honest partial schedule without i
     liveRoute,
     /createFootballDataProvider|persistLiveScoreSnapshot|writeLiveScoreSnapshot|readLiveScoreSnapshot|mergeTouchlineLiveFixtureDeltas|new Date\(/,
   );
+});
+
+test("Live preserves server-calculated freshness and visibly downgrades stale live labels", () => {
+  assert.match(liveRoute, /degraded: Date\.now\(\) - liveSnapshot\.storedAt > LIVE_SNAPSHOT_STALE_AFTER_MS/);
+  assert.match(liveRoute, /degraded: true/);
+  assert.match(matchCentre, /initialReadMetadata/);
+  assert.match(matchCentre, /isTouchlineLiveReadMetadata/);
+  assert.match(matchCentre, /touchlineMatchCentreDisplayState\(fixture, readMetadata\) === "live"/);
+  assert.match(matchCentre, /dictionary\.liveDataUpdating/);
+  assert.match(matchCentre, /dictionary\.lastVerified/);
+  assert.doesNotMatch(matchCentre, /createFootballDataProvider|persistLiveScoreSnapshot|writeLiveScoreSnapshot/);
 });
 
 test("schedule endpoint is a read-only partial projection and POST is fail-closed", () => {

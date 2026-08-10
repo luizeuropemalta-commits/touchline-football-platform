@@ -1,11 +1,28 @@
 import type { TouchlineFixture } from "@/lib/football-data/types";
 
 export type TouchlineMatchState = "live" | "upcoming" | "finished" | "unknown";
+export type TouchlineMatchCentreDisplayState = TouchlineMatchState | "stale";
+
+export type TouchlineLiveReadState = "persisted-live-snapshot" | "partial-persisted-schedule";
+
+/**
+ * Browser-safe freshness metadata emitted by the persisted Live endpoint.
+ * This is presentation information only: it never asks the browser to
+ * estimate freshness from its own clock.
+ */
+export type TouchlineLiveReadMetadata = {
+  state: TouchlineLiveReadState;
+  degraded: boolean;
+  fetchedAt?: string;
+};
+
+type TouchlineFixtureStateSource = Pick<TouchlineFixture, "startsAt" | "status">;
+type TouchlineFixtureSelectionSource = TouchlineFixtureStateSource & Pick<TouchlineFixture, "id" | "providerId">;
 
 const LIVE_STATUS = /(?:live|in[ -]?play|in progress|1st|2nd|half[ -]?time|extra time|penalt)/i;
 const FINISHED_STATUS = /(?:^ft(?:_|$)|full[ -]?time|finished|after extra time|aet|after penalties|cancelled|canceled|abandoned|awarded|walkover)/i;
 
-export function touchlineFixtureState(fixture: TouchlineFixture): TouchlineMatchState {
+export function touchlineFixtureState(fixture: TouchlineFixtureStateSource): TouchlineMatchState {
   const status = fixture.status?.trim() ?? "";
   if (LIVE_STATUS.test(status)) return "live";
   if (FINISHED_STATUS.test(status)) return "finished";
@@ -13,13 +30,36 @@ export function touchlineFixtureState(fixture: TouchlineFixture): TouchlineMatch
   return "unknown";
 }
 
-export function selectTouchlineMatchCentreFixture(fixtures: TouchlineFixture[], requestedFixtureId?: string | null) {
+export function isTouchlineLiveReadMetadata(value: unknown): value is TouchlineLiveReadMetadata {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    (candidate.state === "persisted-live-snapshot" || candidate.state === "partial-persisted-schedule")
+    && typeof candidate.degraded === "boolean"
+    && (candidate.fetchedAt === undefined || typeof candidate.fetchedAt === "string")
+  );
+}
+
+/**
+ * A stale persisted live snapshot must never retain the visual "LIVE" state.
+ * Completed and scheduled fixtures keep their normal classification; the
+ * surrounding notice still explains that the shared data is being refreshed.
+ */
+export function touchlineMatchCentreDisplayState(
+  fixture: TouchlineFixtureStateSource,
+  metadata?: TouchlineLiveReadMetadata | null,
+): TouchlineMatchCentreDisplayState {
+  const state = touchlineFixtureState(fixture);
+  return metadata?.degraded && state === "live" ? "stale" : state;
+}
+
+export function selectTouchlineMatchCentreFixture<T extends TouchlineFixtureSelectionSource>(fixtures: T[], requestedFixtureId?: string | null): T | null {
   const requested = requestedFixtureId ? fixtures.find((fixture) => fixture.id === requestedFixtureId || fixture.providerId === requestedFixtureId) : null;
   if (requested) return requested;
 
-  const byDate = (first: TouchlineFixture, second: TouchlineFixture) =>
+  const byDate = (first: T, second: T) =>
     (Date.parse(first.startsAt ?? "") || Number.POSITIVE_INFINITY) - (Date.parse(second.startsAt ?? "") || Number.POSITIVE_INFINITY);
-  const latestFirst = (first: TouchlineFixture, second: TouchlineFixture) => -byDate(first, second);
+  const latestFirst = (first: T, second: T) => -byDate(first, second);
   const live = fixtures.filter((fixture) => touchlineFixtureState(fixture) === "live").sort(byDate)[0];
   if (live) return live;
   const upcoming = fixtures.filter((fixture) => touchlineFixtureState(fixture) === "upcoming").sort(byDate)[0];

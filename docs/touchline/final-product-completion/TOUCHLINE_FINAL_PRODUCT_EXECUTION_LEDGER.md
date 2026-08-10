@@ -1875,3 +1875,22 @@ Preview, production checkpoint, or a dirty worktree.
   and fail-closed roster/demo fallbacks.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-PROGRAMMING-AUDIT-BLOCK-1.md`.
+
+## 2026-08-10 Live stale-snapshot presentation guard — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Problem:** the persisted Live endpoint already marked stale snapshots as
+  `degraded`, but Match Centre discarded that metadata and could still display
+  an in-play result as `LIVE` / `AO VIVO`.
+- **Correction:** the public presentation now consumes the server-calculated
+  read state, announces degraded data visibly in EN/PT, and renders an in-play
+  stale snapshot as `LAST VERIFIED` / `ÚLTIMO VERIFICADO` rather than current
+  live data. The initial server schedule is explicitly marked partial until a
+  fresh persisted live snapshot arrives.
+- **Validation:** focused **20/20**, full suite **837/837**, strict
+  TypeScript, ESLint, Webpack production build and `git diff --check` passed.
+  A local production render at 1280 × 720 had no horizontal overflow or active
+  animation in the degraded notice.
+- **Non-actions:** no provider, database, cache refresh, sync, migration,
+  credential, value/card/contract or deployment action was performed.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-LIVE-STALE-SNAPSHOT-PRESENTATION-GUARD.md`.

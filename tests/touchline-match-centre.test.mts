@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { selectTouchlineMatchCentreFixture, touchlineFixtureState, touchlineMatchCentreHref } from "../lib/touchlineArena/match-centre.ts";
+import {
+  isTouchlineLiveReadMetadata,
+  selectTouchlineMatchCentreFixture,
+  touchlineFixtureState,
+  touchlineMatchCentreDisplayState,
+  touchlineMatchCentreHref,
+} from "../lib/touchlineArena/match-centre.ts";
 import type { TouchlineFixture } from "../lib/football-data/types.ts";
 
 function fixture(id: string, startsAt: string, status: string): TouchlineFixture {
@@ -32,4 +38,21 @@ test("Match Centre preserves an explicit fixture deep link", () => {
   const target = fixture("20", "2026-08-22T14:00:00Z", "Not Started");
   assert.equal(selectTouchlineMatchCentreFixture([first, target], target.id)?.id, target.id);
   assert.equal(touchlineMatchCentreHref(target, "pt-BR"), "/live?fixture=sportmonks%3A20&lang=pt-BR");
+});
+
+test("Match Centre never presents a degraded live snapshot as currently live", () => {
+  const live = fixture("30", "2026-08-20T14:00:00Z", "2nd Half");
+  const upcoming = fixture("20", "2026-08-21T14:00:00Z", "Not Started");
+  const staleSnapshot = {
+    state: "persisted-live-snapshot",
+    degraded: true,
+    fetchedAt: "2026-08-20T13:40:00.000Z",
+  } as const;
+
+  assert.equal(isTouchlineLiveReadMetadata(staleSnapshot), true);
+  assert.equal(touchlineMatchCentreDisplayState(live, staleSnapshot), "stale");
+  assert.equal(touchlineMatchCentreDisplayState(upcoming, staleSnapshot), "upcoming");
+  assert.equal(touchlineMatchCentreDisplayState(live, { ...staleSnapshot, degraded: false }), "live");
+  assert.equal(isTouchlineLiveReadMetadata({ state: "persisted-live-snapshot", degraded: "true" }), false);
+  assert.equal(isTouchlineLiveReadMetadata({ state: "unknown", degraded: true }), false);
 });

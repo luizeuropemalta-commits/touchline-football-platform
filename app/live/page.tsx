@@ -26,5 +26,13 @@ export default async function TouchLineLivePage({
     : null;
 
   const fixtures = await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 });
-  return <TouchlineMatchCentre initialFixtures={fixtures} initialFixtureId={requestedFixture} initialLocale={initialLocale} />;
+  return <TouchlineMatchCentre
+    initialFixtures={fixtures}
+    initialFixtureId={requestedFixture}
+    initialLocale={initialLocale}
+    // The server page starts from the persisted schedule, not from a live
+    // snapshot. The client endpoint can replace this only with its own
+    // server-calculated freshness metadata.
+    initialReadMetadata={{ state: "partial-persisted-schedule", degraded: true }}
+  />;
 }

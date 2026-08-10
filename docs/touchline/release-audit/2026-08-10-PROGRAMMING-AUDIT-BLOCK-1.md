@@ -46,6 +46,9 @@ not yet surface that degraded state when rendering the fixture list. A safe
 future presentation fix should label the timestamp/staleness or fail closed;
 it must not fetch a provider from public display.
 
+**Disposition:** corrected locally after this audit; pending deployment. See
+`docs/touchline/release-audit/2026-08-10-LIVE-STALE-SNAPSHOT-PRESENTATION-GUARD.md`.
+
 ### P1 — release checks are not enforced by the deployment command
 
 The project has separate tests/typecheck/lint/readiness scripts, but no
@@ -86,4 +89,3 @@ neutral opponent mark instead; it must not invent opponent identity.
 - Lint, strict TypeScript, production build and diff check passed.
 - No credentials, remote state, database, Vercel configuration or production
   data were inspected or changed by this audit.
-

@@ -13,11 +13,16 @@ test("Match Centre exposes one page heading, a selected-fixture state and motion
   assert.equal((component.match(/<h1\b/g) ?? []).length, 1);
   assert.match(component, /<h1 className=\{styles\.title\}>\{dictionary\.title\}<\/h1>/);
   assert.match(component, /role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(component, /className=\{styles\.freshnessNotice\} role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(component, /dictionary\.liveDataUpdating/);
+  assert.match(component, /dictionary\.lastVerified/);
   assert.match(component, /aria-pressed=\{isSelected\}/);
   assert.match(component, /aria-controls=\{selected \? "touchline-match-panel" : undefined\}/);
   assert.match(component, /window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches \? "auto" : "smooth"/);
   assert.match(styles, /\.fixture:focus-visible, \.selectedFixture:focus-visible/);
   assert.match(styles, /\.selectionAnnouncement \{[\s\S]*?clip-path: inset\(50%\)/);
+  assert.match(styles, /\.freshnessNotice \{[\s\S]*?border: 1px solid/);
+  assert.doesNotMatch(styles.slice(styles.indexOf(".freshnessNotice"), styles.indexOf(".return")), /animation:/);
   assert.match(styles, /@media \(max-width: 850px\) \{[\s\S]*?\.header > div \{ display: grid; \}[\s\S]*?\.header > div span \{ display: none; \}/);
 });
 
