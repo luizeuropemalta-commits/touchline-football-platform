@@ -1943,3 +1943,24 @@ Preview, production checkpoint, or a dirty worktree.
   overflow, plus a profile hero trace that remained outside the crest art.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-CLUBHUB-CREST-PERIMETER-TRACE.md`.
+
+## 2026-08-10 Arena main-field visual fixture and premium score-rail correction — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Correction:** added a no-data, admin-gated static 4-3-3 Arena fixture for
+  390/768/1280 EN/PT visual QA. The real premium rail now keeps a future
+  fixture as localized `Next` / `Próximo`, while preserving live/final state
+  and verified score; it no longer places a calendar date on the Arena
+  surface.
+- **Visual evidence:** the local browser rendered actual-width `1280`, `768`
+  and `390` iframe viewports (not desktop-scaled canvases). Each showed 11/11
+  cards visibly inside the pitch, zero visible intersections and no outer
+  page-width overflow. The deliberately synthetic static score rail showed
+  team A vs team B plus LIVE/FT state, with no date. Native device
+  Safari/iOS/Android remains external QA.
+- **Validation:** focused **5/5**, full local suite **846/846**, strict
+  TypeScript, ESLint, Webpack production build and `git diff --check` passed.
+- **Safety:** no account, roster, database, provider, sync, migration, card
+  value/tier/price, contract, credential, deployment configuration or Quick
+  Sub authority was changed.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-ARENA-MAIN-FIELD-VISUAL-QA-AND-SCORE-RAIL.md`.

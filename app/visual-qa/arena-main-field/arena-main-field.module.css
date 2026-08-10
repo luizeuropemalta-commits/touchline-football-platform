@@ -1,0 +1,286 @@
+.page {
+  min-height: 100dvh;
+  overflow-x: clip;
+  padding: clamp(14px, 3vw, 44px);
+  color: #f7fff4;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(105, 255, 142, .15), transparent 33%),
+    linear-gradient(145deg, #03070d, #06150d 54%, #020406);
+}
+
+.header,
+.viewportCanvas,
+.frameMatrix {
+  width: min(var(--fixture-width, 1280px), 100%);
+  margin-inline: auto;
+}
+
+.header {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.header p,
+.frameMatrix > p,
+.technicalArea > p,
+.scoreRail > p {
+  margin: 0;
+  color: #b5ff4b;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(31px, 5vw, 56px);
+  letter-spacing: -.052em;
+  line-height: .98;
+}
+
+.header span {
+  max-width: 780px;
+  color: rgba(239, 255, 242, .72);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.arenaGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(104px, 14vw, 168px);
+  gap: clamp(12px, 2vw, 24px);
+  align-items: end;
+}
+
+.pitch {
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+}
+
+.fieldPlayerLayer {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  pointer-events: none;
+}
+
+.fieldPlayer {
+  position: absolute;
+  z-index: 4;
+  left: var(--field-x);
+  top: var(--field-y);
+  width: clamp(46px, 7vw, 88px);
+  aspect-ratio: 430 / 691;
+  transform: translate(-50%, -100%);
+  outline: 0;
+  pointer-events: auto;
+}
+
+.fieldPlayer:focus-visible {
+  outline: 2px solid rgba(181, 255, 75, .95);
+  outline-offset: 5px;
+  border-radius: 10px;
+}
+
+.playerGroundShadow {
+  position: absolute;
+  z-index: -1;
+  bottom: -2px;
+  left: 50%;
+  width: 118%;
+  height: 13%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, .58), transparent 70%);
+  transform: translateX(-50%);
+}
+
+.fieldCard {
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+.technicalArea {
+  display: grid;
+  gap: 10px;
+  align-items: end;
+  justify-items: center;
+  padding: 12px 9px 14px;
+  border: 1px solid rgba(181, 255, 75, .26);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(10, 28, 17, .92), rgba(3, 9, 7, .9));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .05), 0 16px 28px rgba(0, 0, 0, .24);
+}
+
+.technicalArea > p {
+  color: rgba(230, 255, 195, .84);
+  text-align: center;
+}
+
+.coachCard {
+  width: min(100%, 136px) !important;
+}
+
+.scoreRail {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  margin-top: 2px;
+  padding: 13px;
+  border: 1px solid rgba(181, 255, 75, .24);
+  border-radius: 17px;
+  background: linear-gradient(110deg, rgba(4, 15, 10, .95), rgba(6, 25, 15, .86));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .04), 0 16px 30px rgba(0, 0, 0, .22);
+}
+
+.scoreFixtures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scoreFixtures article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 12px;
+  background: rgba(2, 7, 5, .56);
+}
+
+.scoreFixtures strong {
+  overflow: hidden;
+  color: rgba(249, 255, 246, .92);
+  font-size: clamp(10px, 1.35vw, 13px);
+  font-weight: 850;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.scoreFixtures strong:nth-of-type(2) { text-align: right; }
+
+.scoreFixtures span {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreFixtures b { color: rgba(212, 255, 202, .56); }
+
+.scoreFixtures em {
+  grid-column: 1 / -1;
+  justify-self: center;
+  color: #b5ff4b;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 950;
+  letter-spacing: .1em;
+}
+
+.boundary {
+  margin: 13px 0 0;
+  color: rgba(235, 255, 239, .58);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.frameMatrix {
+  display: grid;
+  gap: 12px;
+  margin-top: 42px;
+}
+
+.frameMatrix > div {
+  display: grid;
+  gap: 24px;
+}
+
+.frameMatrix article {
+  display: grid;
+  gap: 8px;
+  overflow: auto hidden;
+}
+
+.frameMatrix article > strong {
+  color: rgba(230, 255, 195, .82);
+  font-size: 11px;
+  letter-spacing: .12em;
+}
+
+.frameMatrix iframe {
+  display: block;
+  width: 100%;
+  min-width: 390px;
+  border: 1px solid rgba(181, 255, 75, .28);
+  border-radius: 18px;
+  background: #03070d;
+}
+
+/* A fixed-width QA canvas must behave like the named viewport even while the
+   inspector itself runs in a wider desktop browser. */
+.page[data-arena-main-field-viewport="768"] .arenaGrid,
+.page[data-arena-main-field-viewport="390"] .arenaGrid {
+  grid-template-columns: 1fr;
+}
+
+.page[data-arena-main-field-viewport="768"] .technicalArea,
+.page[data-arena-main-field-viewport="390"] .technicalArea {
+  width: min(180px, 100%);
+  margin-inline: auto;
+}
+
+.page[data-arena-main-field-viewport="768"] .fieldPlayer {
+  width: 52px;
+}
+
+.page[data-arena-main-field-viewport="390"] .pitch {
+  min-height: 480px;
+  aspect-ratio: auto;
+}
+
+.page[data-arena-main-field-viewport="390"] .fieldPlayer {
+  width: 46px;
+}
+
+.page[data-arena-main-field-viewport="390"] .scoreFixtures {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 860px) {
+  .arenaGrid { grid-template-columns: 1fr; }
+  .pitch { min-height: 0; aspect-ratio: 16 / 9; }
+  .technicalArea { width: min(180px, 100%); margin-inline: auto; }
+  .coachCard { width: min(100%, 124px) !important; }
+}
+
+@media (max-width: 520px) {
+  .page { padding: 12px; }
+  .pitch { min-height: 480px; aspect-ratio: auto; }
+  .fieldPlayer { width: 46px; }
+  .scoreFixtures { grid-template-columns: 1fr; }
+  .scoreFixtures article { min-height: 46px; }
+  .scoreFixtures strong { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fieldPlayer,
+  .technicalArea,
+  .coachCard {
+    transition: none !important;
+  }
+
+  /* Field-player translation is positional layout, not motion. Keep it so
+     the reduced-motion field cannot shift cards off their formation slots. */
+  .technicalArea,
+  .coachCard { transform: none !important; }
+}

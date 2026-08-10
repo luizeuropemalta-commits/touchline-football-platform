@@ -1634,7 +1634,11 @@ function buildFixtureClubMatches(fixtures: TouchlineFixture[]): ArenaClubMatch[]
             ? "FT"
             : fixtureHasScore(fixture)
               ? formatFixtureScore(fixture)
-              : formatFixtureDateTime(fixture.startsAt),
+              // The Arena rail is a premium live-result surface, not the
+              // fixture calendar. A future kickoff remains an honest
+              // localized "Next" label; its date and time belong only in
+              // Live / Match Centre.
+              : "Next",
         matchup: fixtureLabel(fixture),
       };
     })
