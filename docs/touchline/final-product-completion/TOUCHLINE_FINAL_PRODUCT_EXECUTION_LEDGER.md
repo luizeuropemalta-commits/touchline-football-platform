@@ -1773,3 +1773,81 @@ Preview, production checkpoint, or a dirty worktree.
 - **Evidence:**
   `docs/touchline-arena/audit/2026-08-10-OWNER-APPROVED-MARKET-VALUE-APPLICATION-PLAN-DRY-RUN.md`,
   `tests/touchline-owner-approved-market-value-application-plan.test.mts`.
+
+## 2026-08-10 customer visual audit — Arena / Quick Substitution block
+
+- **Observed locally:** the static Quick Substitution fixture rendered its
+  synthetic 35/35 squad, 20/20 matchday and 9/9 bench at 1280 × 720 without
+  horizontal overflow; the shared action surface scrolled independently.
+- **Validated:** focused readiness, session, durable protocol and canonical
+  pitch tests passed **23/23**. The no-reentry projection remains verified by
+  tests, with no roster or database persistence on a match substitution.
+- **Open product gap:** a filled 4-3-3 currently labels multiple reserve cards
+  as locked rather than highlighting compatible outgoing pitch targets. The
+  requested inline score-rail replacement is also not implemented by the
+  existing standalone Training Centre surface. Neither was changed during the
+  audit.
+- **Limit:** desktop local observation only; 390/768 and native
+  Safari/iOS/Android remain external visual gates.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-PAGE-BY-PAGE-CUSTOMER-VISUAL-AUDIT.md`.
+
+## 2026-08-10 customer visual audit — Live / Match Centre block
+
+- **Observed locally:** PT-BR and EN both rendered the intentional, explicit
+  empty-schedule state at 1280 × 720 without horizontal overflow. No fixture,
+  opponent, date or result was fabricated when the local persisted schedule
+  was unavailable.
+- **Validated:** focused Match Centre, fixture-schedule, persisted-live and
+  motion suite **11/11 passed**; the public schedule boundary remains
+  read-only and POST is fail-closed.
+- **Limit:** no populated canonical fixture was locally available, so no
+  visual claim is made for live-score/final-score cards. Native devices remain
+  external visual gates.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-PAGE-BY-PAGE-CUSTOMER-VISUAL-AUDIT.md`.
+
+## 2026-08-10 customer visual audit — Club Owner public profile block
+
+- **Observed locally:** the PT-BR and EN public profile hero, portrait,
+  navigation and feature card fitted the 1280 × 720 desktop viewport without
+  horizontal overflow. The circular portrait trace stayed on the perimeter,
+  outside the photo crop.
+- **Status:** market/card copy remains explicitly pending where value authority
+  is unavailable; no value, tier, contract or account state was changed.
+- **Validated:** focused portrait/neon/motion suite **8/8 passed**.
+- **Limit:** authenticated owner, mobile/tablet and native device behavior
+  remain separate visual gates.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-PAGE-BY-PAGE-CUSTOMER-VISUAL-AUDIT.md`.
+
+## 2026-08-10 customer visual audit — ClubHub block
+
+- **Observed locally:** the ClubHub chooser exposed 20 club links, and the
+  City profile placed verified club identity/value status, honours and Next
+  Match ahead of matchday content. It fails closed with explicit pending text
+  when the local canonical roster is unavailable.
+- **Static presentation proof:** the local profile fixture displayed a
+  confirmed 11 + 9 sheet, separate technical/outside-match sections and a
+  20-club neutral initial official table in the required order.
+- **Validated:** focused ClubHub/official-table suite **27/27 passed**;
+  inspected desktop paths had no horizontal overflow.
+- **Open visual queue:** the trophy carousel still permits a partial entering
+  or leaving tile; the requested full-exit transition was not altered here.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-PAGE-BY-PAGE-CUSTOMER-VISUAL-AUDIT.md`.
+
+## 2026-08-10 customer visual audit — cards/neon block
+
+- **Observed locally:** static PT-BR/EN card fixtures rendered verified,
+  pending and active-contract boundaries with art frames; player and coach
+  both rendered their centred perimeter trace and club crest treatment with
+  no 1280px horizontal overflow.
+- **Motion:** the normal preference exposed the calm 8-second looping trace;
+  focused tests verify a static illuminated outline under reduced motion.
+- **Validated:** focused cards/neon/accessibility/motion suite **50/50
+  passed**. Fixtures have no account, database, provider or persistence path.
+- **Limit:** this is presentation proof, not proof of owner-batch values being
+  applied to the database; native device QA remains external.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-PAGE-BY-PAGE-CUSTOMER-VISUAL-AUDIT.md`.
