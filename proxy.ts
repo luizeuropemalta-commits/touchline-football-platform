@@ -297,6 +297,22 @@ function clubOwnerSelfRedirect(
 }
 
 /**
+ * Avoid streaming the generic global loading screen while `/me/substitution`
+ * performs a second server-side auth redirect. The edge already has the
+ * authenticated ClubOwner slug, so this narrow redirect is equivalent to the
+ * self route while preserving its locale and cookies.
+ */
+function clubOwnerCanonicalSubstitutionRedirect(
+  request: NextRequest,
+  ownerSlug: string,
+  sourceResponse?: NextResponse,
+) {
+  const canonicalUrl = request.nextUrl.clone();
+  canonicalUrl.pathname = `/club-owner/${encodeURIComponent(ownerSlug)}/substitution`;
+  return redirectWithSupabaseCookies(canonicalUrl, sourceResponse);
+}
+
+/**
  * `notFound()` after an async session lookup starts the App Router stream and
  * can leave the HTTP status at 200. Private ClubOwner paths are authorized in
  * this availability boundary instead, so a foreign owner URL receives an
@@ -501,6 +517,14 @@ async function handleTouchLineRequest(request: NextRequest) {
   }
   if (clubOwnerAccess?.action === "redirect-self") {
     return clubOwnerSelfRedirect(request, clubOwnerAccess.area, response);
+  }
+  if (
+    clubOwnerAccess?.action === "allow"
+    && clubOwnerAccess.kind === "self"
+    && clubOwnerSlug
+    && pathname === "/club-owner/me/substitution"
+  ) {
+    return clubOwnerCanonicalSubstitutionRedirect(request, clubOwnerSlug, response);
   }
   if (clubOwnerAccess?.action === "not-found") {
     return clubOwnerNotFoundResponse(request, response);

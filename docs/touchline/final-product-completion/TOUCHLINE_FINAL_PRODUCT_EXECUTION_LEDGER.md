@@ -1684,3 +1684,23 @@ Preview, production checkpoint, or a dirty worktree.
   `docs/touchline-arena/audit/2026-08-10-MARKET-VALUE-CANONICAL-BINDING-RUNNER-BEHAVIORAL-TEST.md`;
   persistent checkpoint `065a1cbc`
   (`test(market-values): exercise canonical binding fence`).
+
+## 2026-08-10 Quick Substitution readiness hotfix — LOCAL COMPLETE / NOT DEPLOYED
+
+- **Problem confirmed:** the authenticated self route could briefly show the
+  opaque global black loader before its second redirect, then rendered an empty
+  standalone bench for a `0/11` / `0/9` matchday.
+- **Local correction:** direct canonical self redirect, route-local readable
+  loading shell, and a pure readiness gate. The standalone panel opens only
+  with exactly 11 starters and 9 substitutes; otherwise it presents real
+  counts plus a Market Transfer action and creates no player/card/contract.
+- **Validation:** focused route/readiness/durable suite **20/20 passed**;
+  typecheck, lint and `git diff --check` passed. Local browser observation at
+  390/768/1280 had no horizontal overflow; demo proof rendered 11 field and 9
+  bench cards, while the empty fixture displayed the explicit setup state.
+- **Non-actions:** no database/write/sync/provider/value/economy/migration or
+  deployment action was performed. The durable match-substitution authority is
+  still a separate gate.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-10-QUICK-SUBSTITUTION-READINESS-HOTFIX.md`,
+  `tests/touchline-quick-substitution-readiness.test.mts`.

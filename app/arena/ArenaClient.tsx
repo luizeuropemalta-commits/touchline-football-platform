@@ -80,6 +80,7 @@ import {
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { getTouchLineMarketCopy } from "@/lib/touchlineArena/market-i18n";
 import { TOUCHLINE_SQUAD_RULES } from "@/lib/touchlineArena/squad-rules";
+import { resolveTouchlineQuickSubstitutionReadiness } from "@/lib/touchlineArena/quick-substitution-readiness";
 import {
   TOUCHLINE_MARKET_POSITION_LIMITS,
   TOUCHLINE_MARKET_POSITION_SEQUENCE,
@@ -3186,6 +3187,10 @@ type ArenaClientProps = {
   initialIntroIntent?: TouchlineArenaIntroIntent;
   standaloneMarket?: boolean;
   standalonePanel?: "bench" | "live";
+  /** Local-only visual QA can supply a deterministic non-persistent lineup. */
+  initialDemoLineup?: boolean;
+  /** Local-only visual QA can exercise the empty matchday state without storage. */
+  initialEmptyLineup?: boolean;
 };
 
 type ArenaDragState = {
@@ -3243,6 +3248,8 @@ export default function ArenaClient({
   initialIntroIntent = null,
   standaloneMarket = false,
   standalonePanel,
+  initialDemoLineup = false,
+  initialEmptyLineup = false,
 }: ArenaClientProps) {
   const standaloneExperience = standaloneMarket ? "market" : standalonePanel ?? null;
   const initialBuilderClubKey = TEAM_BUILDER_CLUBS.some((club) => club.teamId === initialContractClubId)
@@ -3423,6 +3430,39 @@ export default function ArenaClient({
   const matchdayBenchPlayers = buildMatchdayBench(benchPlayers);
   const matchdayBenchIds = new Set(matchdayBenchPlayers.map((bench) => bench.id));
   const reserveVaultPlayers = orderTouchlineBenchByPosition(benchPlayers.filter((bench) => !matchdayBenchIds.has(bench.id)));
+  const standaloneQuickSubstitutionReadiness = standalonePanel === "bench"
+    ? resolveTouchlineQuickSubstitutionReadiness({
+      hasLoadedSavedLineup,
+      hasLoadedClubOwnerRoster,
+      starterCount: players.length,
+      benchCount: matchdayBenchPlayers.length,
+    })
+    : null;
+  const standaloneQuickSubstitutionCopy = siteLanguage === "pt-BR"
+    ? {
+      loadingEyebrow: "SUBSTITUIÇÃO RÁPIDA",
+      loadingTitle: "Preparando sua escalação",
+      loadingMessage: "Estamos confirmando titulares e banco antes de liberar uma troca.",
+      setupEyebrow: "ESCALAÇÃO AINDA NÃO PRONTA",
+      setupTitle: "A substituição rápida precisa de um time completo",
+      setupMessage: "Nenhum jogador é criado automaticamente. Complete titulares e banco no Market Transfer para liberar a substituição.",
+      starters: "titulares",
+      bench: "banco",
+      openMarket: "Abrir Market Transfer",
+      returnClub: "Voltar ao Meu Clube",
+    }
+    : {
+      loadingEyebrow: "QUICK SUBSTITUTION",
+      loadingTitle: "Preparing your matchday squad",
+      loadingMessage: "We are confirming starters and substitutes before allowing a change.",
+      setupEyebrow: "MATCHDAY SQUAD NOT READY",
+      setupTitle: "Quick Substitution needs a complete team sheet",
+      setupMessage: "No players are created automatically. Complete your starters and bench in Market Transfer to unlock a substitution.",
+      starters: "starters",
+      bench: "bench",
+      openMarket: "Open Market Transfer",
+      returnClub: "Return to My Club",
+    };
   const isSelectedBenchInMatchday = Boolean(selectedBench && matchdayBenchPlayers.some((bench) => bench.id === selectedBench.id));
   const selectedBenchFormationLocked = Boolean(selectedBench && isBenchFormationLocked(selectedBench, players, selectedFormationKey, replacementTarget));
   const canSelectedBenchReplaceTarget = Boolean(selectedBench && replacementTarget && canBenchReplaceTarget(selectedBench, replacementTarget));
@@ -4081,7 +4121,7 @@ export default function ArenaClient({
 
       const params = new URLSearchParams(window.location.search);
       const shouldSkipIntro = params.get(TOUCHLINE_ARENA_SKIP_INTRO_QUERY_PARAM) === "1";
-      const isDemoRequest = params.get(DEMO_LINEUP_QUERY_PARAM) === "1";
+      const isDemoRequest = initialDemoLineup || initialEmptyLineup || params.get(DEMO_LINEUP_QUERY_PARAM) === "1";
       const requestedClub = findPremierClubByHubParam(params.get("club"));
       const anonymousPrincipal = browserAnonymousArenaPrincipal();
       let syncResolution = resolveArenaAccountSync<TouchlineArenaRemoteState>({
@@ -4200,6 +4240,19 @@ export default function ArenaClient({
         setShouldRenderPlayers(true);
       }
 
+      if (initialEmptyLineup) {
+        setIsDemoLineup(false);
+        setArenaRosterSyncStatus("demo");
+        setPlayers([]);
+        setBenchPlayers([]);
+        setSelectedBenchId("");
+        setSelectedPlayerId(null);
+        setShouldRenderPlayers(false);
+        setHasLoadedClubOwnerRoster(true);
+        setHasLoadedSavedLineup(true);
+        return;
+      }
+
       if (isDemoRequest) {
         setIsDemoLineup(true);
         setArenaRosterSyncStatus("demo");
@@ -4260,7 +4313,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [initialLocale]);
+  }, [initialDemoLineup, initialEmptyLineup, initialLocale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -7575,6 +7628,51 @@ export default function ArenaClient({
               ) : null}
 
               {activeArenaPanel === "bench" ? (
+                standaloneQuickSubstitutionReadiness && standaloneQuickSubstitutionReadiness.state !== "ready" ? (
+                  <section
+                    className="arena-standalone-bench-readiness"
+                    role="status"
+                    aria-live="polite"
+                    aria-busy={standaloneQuickSubstitutionReadiness.state === "loading"}
+                    data-quick-substitution-readiness={standaloneQuickSubstitutionReadiness.state}
+                  >
+                    <span>
+                      {standaloneQuickSubstitutionReadiness.state === "loading"
+                        ? standaloneQuickSubstitutionCopy.loadingEyebrow
+                        : standaloneQuickSubstitutionCopy.setupEyebrow}
+                    </span>
+                    <h2>
+                      {standaloneQuickSubstitutionReadiness.state === "loading"
+                        ? standaloneQuickSubstitutionCopy.loadingTitle
+                        : standaloneQuickSubstitutionCopy.setupTitle}
+                    </h2>
+                    <p>
+                      {standaloneQuickSubstitutionReadiness.state === "loading"
+                        ? standaloneQuickSubstitutionCopy.loadingMessage
+                        : standaloneQuickSubstitutionCopy.setupMessage}
+                    </p>
+                    <div className="arena-standalone-bench-readiness-counts" aria-label={siteLanguage === "pt-BR" ? "Progresso da escalação" : "Team sheet progress"}>
+                      <strong>
+                        <b>{standaloneQuickSubstitutionReadiness.starterCount}</b>/{TOUCHLINE_SQUAD_RULES.starters}
+                        <small>{standaloneQuickSubstitutionCopy.starters}</small>
+                      </strong>
+                      <strong>
+                        <b>{standaloneQuickSubstitutionReadiness.benchCount}</b>/{TOUCHLINE_SQUAD_RULES.bench}
+                        <small>{standaloneQuickSubstitutionCopy.bench}</small>
+                      </strong>
+                    </div>
+                    {standaloneQuickSubstitutionReadiness.state === "setup-required" ? (
+                      <div className="arena-standalone-bench-readiness-actions">
+                        <a className="is-primary" href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
+                          {standaloneQuickSubstitutionCopy.openMarket}
+                        </a>
+                        <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
+                          {standaloneQuickSubstitutionCopy.returnClub}
+                        </a>
+                      </div>
+                    ) : null}
+                  </section>
+                ) : (
                 <div className="arena-bench-board">
                   <div ref={benchListShellRef} className="bench-list-shell">
                     <div className="bench-roster-summary" aria-label={t("clubControl")}>
@@ -7827,6 +7925,7 @@ export default function ArenaClient({
                     )}
                   </div>
                 </div>
+                )
               ) : null}
 
               {activeArenaPanel === "market" ? (
@@ -10677,6 +10776,111 @@ export default function ArenaClient({
 
         .touchline-game.is-bench-standalone .arena-bench-board {
           overflow: visible;
+        }
+
+        .arena-standalone-bench-readiness {
+          display: grid;
+          width: min(720px, 100%);
+          min-height: min(560px, calc(100dvh - 190px));
+          align-content: center;
+          justify-items: center;
+          gap: 16px;
+          margin: 0 auto;
+          border: 1px solid rgba(181,255,75,.28);
+          border-radius: 24px;
+          background:
+            radial-gradient(circle at 50% 0%, rgba(181,255,75,.13), transparent 42%),
+            linear-gradient(145deg, rgba(6,22,16,.93), rgba(2,7,10,.92));
+          padding: clamp(28px, 6vw, 56px);
+          color: #f7fff0;
+          text-align: center;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 28px 80px rgba(0,0,0,.42);
+        }
+
+        .arena-standalone-bench-readiness > span {
+          color: #caff72;
+          font-size: 10px;
+          font-weight: 1000;
+          letter-spacing: .16em;
+        }
+
+        .arena-standalone-bench-readiness h2 {
+          max-width: 620px;
+          margin: 0;
+          font-size: clamp(28px, 5vw, 50px);
+          line-height: .98;
+          letter-spacing: -.045em;
+        }
+
+        .arena-standalone-bench-readiness p {
+          max-width: 560px;
+          margin: 0;
+          color: rgba(244,255,239,.74);
+          font-size: 15px;
+          line-height: 1.65;
+        }
+
+        .arena-standalone-bench-readiness-counts {
+          display: grid;
+          width: min(380px, 100%);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 4px;
+        }
+
+        .arena-standalone-bench-readiness-counts strong {
+          display: grid;
+          gap: 5px;
+          border: 1px solid rgba(255,255,255,.13);
+          border-radius: 15px;
+          background: rgba(0,0,0,.2);
+          padding: 14px 10px;
+          color: #fff;
+          font-size: 21px;
+          font-weight: 1000;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .arena-standalone-bench-readiness-counts b { color: #b5ff4b; }
+
+        .arena-standalone-bench-readiness-counts small {
+          color: rgba(215,255,166,.78);
+          font-size: 9px;
+          font-weight: 950;
+          letter-spacing: .09em;
+          text-transform: uppercase;
+        }
+
+        .arena-standalone-bench-readiness-actions {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 10px;
+          margin-top: 2px;
+        }
+
+        .arena-standalone-bench-readiness-actions a {
+          display: inline-flex;
+          min-height: 44px;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(181,255,75,.32);
+          border-radius: 999px;
+          padding: 0 18px;
+          color: #efffc4;
+          font-size: 12px;
+          font-weight: 950;
+          text-decoration: none;
+        }
+
+        .arena-standalone-bench-readiness-actions a.is-primary {
+          color: #071006;
+          background: #b5ff4b;
+        }
+
+        .arena-standalone-bench-readiness-actions a:focus-visible {
+          outline: 3px solid white;
+          outline-offset: 4px;
         }
 
         .touchline-game.is-live-standalone .arena-functional-layer > :not(.arena-live-dock):not(.arena-live-card-spotlight):not(.arena-coach-gated-content),
