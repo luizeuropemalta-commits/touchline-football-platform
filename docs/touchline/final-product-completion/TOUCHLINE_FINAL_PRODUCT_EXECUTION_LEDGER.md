@@ -1894,3 +1894,17 @@ Preview, production checkpoint, or a dirty worktree.
   credential, value/card/contract or deployment action was performed.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-LIVE-STALE-SNAPSHOT-PRESENTATION-GUARD.md`.
+
+## 2026-08-10 ClubHub opponent-crest fail-closed guard — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Problem:** an unresolved fixture opponent could inherit the current club's
+  crest from a page-local fallback and look like a confirmed match identity.
+- **Correction:** fixture teams now resolve only through the local canonical
+  club registry. Unknown opponents retain a name if supplied but show no
+  crest; missing identities show the explicit EN/PT pending-opponent state.
+- **Validation:** focused ClubHub suite **15/15**, strict TypeScript, ESLint
+  and `git diff --check` passed.
+- **Non-actions:** no provider, database, schedule, sync, migration, value,
+  card, contract or deployment action was performed.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-CLUBHUB-OPPONENT-CREST-FAIL-CLOSED.md`.

@@ -83,6 +83,9 @@ If a future opponent name cannot be found in the static registry, the ClubHub
 fallback can use the current club crest. A presentation guard should show a
 neutral opponent mark instead; it must not invent opponent identity.
 
+**Disposition:** corrected locally after this audit; pending deployment. See
+`docs/touchline/release-audit/2026-08-10-CLUBHUB-OPPONENT-CREST-FAIL-CLOSED.md`.
+
 ## Evidence and verification
 
 - Full suite after the P0 fix: **835/835 passed**.

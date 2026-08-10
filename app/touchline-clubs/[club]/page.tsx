@@ -8,7 +8,7 @@ import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatc
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
-import type { TouchlineFantasyLineupMember, TouchlineFixture, TouchlineTeam } from "@/lib/football-data/types";
+import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
 import {
   TOUCHLINE_ENGLAND_CLUBS,
   findTouchLineClub,
@@ -27,6 +27,10 @@ import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-l
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import { parseMarketValueEurOrNull } from "@/lib/touchlineArena/card-rules";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
+import {
+  resolveTouchlineClubMatchPreviewTeam,
+  type TouchlineClubMatchPreviewTeam,
+} from "@/lib/touchlineArena/club-match-preview";
 import {
   normalizeTouchLineLocale,
   touchLineT,
@@ -67,16 +71,8 @@ type PremierSquadPlayer = {
 };
 
 type ClubMatchPreview = {
-  home: {
-    name: string;
-    shortCode: string;
-    logoUrl?: string;
-  };
-  away: {
-    name: string;
-    shortCode: string;
-    logoUrl?: string;
-  };
+  home: TouchlineClubMatchPreviewTeam;
+  away: TouchlineClubMatchPreviewTeam;
   status: string;
   startsAt: string;
   source?: string;
@@ -206,15 +202,6 @@ function previewTeamFromClub(club: NonNullable<ReturnType<typeof findTouchLineCl
   };
 }
 
-function previewTeamFromFixtureTeam(team: TouchlineTeam | undefined, fallback: NonNullable<ReturnType<typeof findTouchLineClub>>) {
-  const matchedClub = findTouchLineClub(team?.name) ?? findTouchLineClub(team?.shortCode) ?? fallback;
-  return {
-    name: team?.name ?? matchedClub.name,
-    shortCode: team?.shortCode ?? matchedClub.shortCode,
-    logoUrl: matchedClub.logoUrl,
-  };
-}
-
 function fixtureHasClub(fixture: TouchlineFixture, club: NonNullable<ReturnType<typeof findTouchLineClub>>) {
   return [fixture.homeTeam?.providerId, fixture.awayTeam?.providerId, fixture.homeTeam?.name, fixture.awayTeam?.name, fixture.homeTeam?.shortCode, fixture.awayTeam?.shortCode]
     .filter(Boolean)
@@ -281,8 +268,8 @@ async function loadClubMatchSnapshot(
     const formation = persistedFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
     return {
       preview: {
-        home: previewTeamFromFixtureTeam(fixture.homeTeam, club),
-        away: previewTeamFromFixtureTeam(fixture.awayTeam, club),
+        home: resolveTouchlineClubMatchPreviewTeam(fixture.homeTeam, club, locale),
+        away: resolveTouchlineClubMatchPreviewTeam(fixture.awayTeam, club, locale),
         status: fixture.status ?? "TouchLine England",
         startsAt: fixture.startsAt
           ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(fixture.startsAt))
@@ -394,7 +381,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               <article className="club-hub-next-match" aria-label={`${club.name} ${t("nextMatch")}`}>
                 <span>{t("nextMatch")}</span>
                 <div className="club-hub-fixture-row">
-                  <div>
+                  <div className={!matchPreview.home.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
                     {matchPreview.home.logoUrl ? <img src={matchPreview.home.logoUrl} alt="" draggable={false} /> : null}
                     <strong>{matchPreview.home.shortCode}</strong>
                   </div>
