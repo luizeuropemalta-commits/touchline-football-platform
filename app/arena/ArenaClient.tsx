@@ -82,6 +82,12 @@ import { getTouchLineMarketCopy } from "@/lib/touchlineArena/market-i18n";
 import { TOUCHLINE_SQUAD_RULES } from "@/lib/touchlineArena/squad-rules";
 import { resolveTouchlineQuickSubstitutionReadiness } from "@/lib/touchlineArena/quick-substitution-readiness";
 import {
+  applyTouchlineQuickSubstitutionSession,
+  createTouchlineQuickSubstitutionSession,
+  isTouchlineQuickSubstitutionSessionState,
+  type TouchlineQuickSubstitutionSessionState,
+} from "@/lib/touchlineArena/quick-substitution-session";
+import {
   TOUCHLINE_MARKET_POSITION_LIMITS,
   TOUCHLINE_MARKET_POSITION_SEQUENCE,
   touchlineMarketPositionBucket,
@@ -1161,6 +1167,132 @@ function buildMatchdayBench(benchPlayers: BenchOption[]) {
   const outfield = ordered.filter((bench) => bench.role !== "goalkeeper");
   const matchdayBench = [...outfield.slice(0, firstGoalkeeper ? 8 : 9), firstGoalkeeper].filter((bench): bench is BenchOption => Boolean(bench));
   return orderTouchlineBenchByPosition(matchdayBench.slice(0, 9));
+}
+
+type QuickSubstitutionSessionSource = Readonly<{
+  matchId: string;
+  ownerId: string;
+  rosterRevision: string;
+  startingSlots: readonly Readonly<{ positionSlotId: string; inventoryId: string }>[];
+  benchInventoryIds: readonly string[];
+  playerByPositionSlotId: ReadonlyMap<string, ArenaPlayer>;
+  playerByInventoryId: ReadonlyMap<string, ArenaPlayer>;
+  benchByInventoryId: ReadonlyMap<string, BenchOption>;
+  pitchSlotByPositionSlotId: ReadonlyMap<string, { x: number; y: number }>;
+}>;
+
+function quickSubstitutionDemoInventoryId(index: number) {
+  return `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+}
+
+function quickSubstitutionInventoryId(value: unknown, demoIndex: number, allowDemoIdentity: boolean) {
+  return normalizeTouchlineMarketInventoryId(value)
+    ?? (allowDemoIdentity ? quickSubstitutionDemoInventoryId(demoIndex) : null);
+}
+
+function quickSubstitutionOwnerId(principal: ArenaPersistencePrincipal | null) {
+  if (!principal) return null;
+  if (principal.kind === "authenticated") return `owner:${principal.userId}`;
+  if (principal.kind === "anonymous") return `session:${principal.sessionId}`;
+  return `demo:${principal.demoId ?? "default"}`;
+}
+
+/**
+ * Turns a complete owned 11 + 9 into a local match-session source. The source
+ * has no roster persistence: it is only the identity/slot proof consumed by
+ * the durable Quick Sub reducer while a protected match event store is absent.
+ */
+function buildQuickSubstitutionSessionSource(input: Readonly<{
+  principal: ArenaPersistencePrincipal | null;
+  players: readonly ArenaPlayer[];
+  matchdayBench: readonly BenchOption[];
+  allowDemoIdentity: boolean;
+}>): QuickSubstitutionSessionSource | null {
+  const ownerId = quickSubstitutionOwnerId(input.principal);
+  if (!ownerId || input.players.length !== TOUCHLINE_SQUAD_RULES.starters || input.matchdayBench.length !== TOUCHLINE_SQUAD_RULES.bench) {
+    return null;
+  }
+
+  const initialPitchSlots = trainingCenterPlayerSlots([...input.players]);
+  const playerByPositionSlotId = new Map<string, ArenaPlayer>();
+  const playerByInventoryId = new Map<string, ArenaPlayer>();
+  const benchByInventoryId = new Map<string, BenchOption>();
+  const pitchSlotByPositionSlotId = new Map<string, { x: number; y: number }>();
+  const startingSlots = input.players.map((player, index) => {
+    const inventoryId = quickSubstitutionInventoryId(
+      player.card?.inventoryId,
+      index,
+      input.allowDemoIdentity,
+    );
+    if (!inventoryId) return null;
+    const positionSlotId = `pitch-slot:${index + 1}`;
+    playerByPositionSlotId.set(positionSlotId, player);
+    playerByInventoryId.set(inventoryId, player);
+    pitchSlotByPositionSlotId.set(positionSlotId, initialPitchSlots.get(player.id) ?? { x: 50, y: 50 });
+    return Object.freeze({ positionSlotId, inventoryId });
+  });
+  const benchInventoryIds = input.matchdayBench.map((bench, index) => {
+    const inventoryId = quickSubstitutionInventoryId(
+      bench.inventoryId,
+      input.players.length + index,
+      input.allowDemoIdentity,
+    );
+    if (!inventoryId) return null;
+    benchByInventoryId.set(inventoryId, bench);
+    return inventoryId;
+  });
+
+  if (startingSlots.some((slot) => !slot)
+    || benchInventoryIds.some((inventoryId) => !inventoryId)
+    || playerByInventoryId.size !== input.players.length
+    || benchByInventoryId.size !== input.matchdayBench.length) {
+    return null;
+  }
+
+  const resolvedStartingSlots = startingSlots as readonly Readonly<{ positionSlotId: string; inventoryId: string }>[];
+  const resolvedBenchInventoryIds = benchInventoryIds as readonly string[];
+  const allInventoryIds = [
+    ...resolvedStartingSlots.map((slot) => slot.inventoryId),
+    ...resolvedBenchInventoryIds,
+  ];
+  if (new Set(allInventoryIds).size !== allInventoryIds.length) return null;
+
+  const rosterRevision = `quick-sub-roster:${allInventoryIds.join("|")}`;
+  return Object.freeze({
+    matchId: `quick-sub-session:${ownerId}:${rosterRevision}`,
+    ownerId,
+    rosterRevision,
+    startingSlots: Object.freeze([...resolvedStartingSlots]),
+    benchInventoryIds: Object.freeze([...resolvedBenchInventoryIds]),
+    playerByPositionSlotId,
+    playerByInventoryId,
+    benchByInventoryId,
+    pitchSlotByPositionSlotId,
+  });
+}
+
+function arenaPlayerToSubstitutedOutOption(player: ArenaPlayer): BenchOption {
+  const card = player.card;
+  return {
+    id: `substituted-out-${player.id}`,
+    name: card?.playerName || player.name,
+    shortName: player.shortName,
+    role: player.role,
+    club: card?.clubName || "TouchLine XI",
+    position: card?.position || roleLabel(player.role),
+    shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
+    marketValue: card?.marketValue || "Pending",
+    marketValueSource: card?.marketValueSource || "unavailable",
+    marketValueState: card?.marketValueState ?? undefined,
+    classificationState: card?.classificationState ?? undefined,
+    cardTier: touchlineArenaCompetitionTierForCard(card?.cardTier).key,
+    cardPriceVersion: card?.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    cardPriceAuthority: card?.cardPriceAuthority ?? undefined,
+    inventoryId: card?.inventoryId ?? null,
+    countryCode3: card?.countryCode3 || "N/A",
+    impact: "substituted-out",
+    status: "risk",
+  };
 }
 
 type ArenaPositionGroup = "goalkeeper" | "centre-back" | "full-back" | "midfield" | "winger" | "striker" | "outfield";
@@ -3329,6 +3461,7 @@ export default function ArenaClient({
   const [selectedBenchId, setSelectedBenchId] = useState("");
   const [draggingBenchId, setDraggingBenchId] = useState<string | null>(null);
   const [replacementTargetId, setReplacementTargetId] = useState<string | null>(null);
+  const [quickSubstitutionSession, setQuickSubstitutionSession] = useState<TouchlineQuickSubstitutionSessionState | null>(null);
   const [pendingContractReleaseTargetId, setPendingContractReleaseTargetId] = useState<string | null>(null);
   const [isDemoLineup, setIsDemoLineup] = useState(false);
   const [liveFixtures, setLiveFixtures] = useState<TouchlineFixture[]>([]);
@@ -3419,17 +3552,12 @@ export default function ArenaClient({
   const [lockedFormationKeys, setLockedFormationKeys] = useState<ArenaFormationKey[]>([]);
   const [cameraEditSlots, setCameraEditSlots] = useState<Record<string, Record<string, ArenaFieldSlot>>>({});
 
-  const selectedPlayer = players.find((player) => player.id === selectedPlayerId) ?? players[0] ?? null;
-  const spotlightPlayer = players.find((player) => player.id === spotlightPlayerId) ?? null;
-  const selectedBench = benchPlayers.find((bench) => bench.id === selectedBenchId) ?? benchPlayers[0] ?? null;
-  const replacementTarget = replacementTargetId
-    ? players.find((player) => player.id === replacementTargetId) ?? null
-    : null;
-  const clubOwnerRoster = arenaClubOwnerRoster(players, benchPlayers);
-  const ownedSquadCount = clubOwnerRoster.length;
-  const matchdayBenchPlayers = buildMatchdayBench(benchPlayers);
-  const matchdayBenchIds = new Set(matchdayBenchPlayers.map((bench) => bench.id));
-  const reserveVaultPlayers = orderTouchlineBenchByPosition(benchPlayers.filter((bench) => !matchdayBenchIds.has(bench.id)));
+  const matchdayBenchPlayers = useMemo(() => buildMatchdayBench(benchPlayers), [benchPlayers]);
+  const matchdayBenchIds = useMemo(() => new Set(matchdayBenchPlayers.map((bench) => bench.id)), [matchdayBenchPlayers]);
+  const reserveVaultPlayers = useMemo(
+    () => orderTouchlineBenchByPosition(benchPlayers.filter((bench) => !matchdayBenchIds.has(bench.id))),
+    [benchPlayers, matchdayBenchIds],
+  );
   const standaloneQuickSubstitutionReadiness = standalonePanel === "bench"
     ? resolveTouchlineQuickSubstitutionReadiness({
       hasLoadedSavedLineup,
@@ -3438,11 +3566,172 @@ export default function ArenaClient({
       benchCount: matchdayBenchPlayers.length,
     })
     : null;
+  const quickSubstitutionSessionSource = useMemo(() => {
+    if (standalonePanel !== "bench" || standaloneQuickSubstitutionReadiness?.state !== "ready") return null;
+    return buildQuickSubstitutionSessionSource({
+      principal: arenaPersistencePrincipal,
+      players,
+      matchdayBench: matchdayBenchPlayers,
+      allowDemoIdentity: isDemoLineup,
+    });
+  }, [arenaPersistencePrincipal, isDemoLineup, matchdayBenchPlayers, players, standalonePanel, standaloneQuickSubstitutionReadiness?.state]);
+  const quickSubstitutionSessionStorageKey = useMemo(
+    () => (arenaPersistencePrincipal
+      ? arenaPersistenceKeys(arenaPersistencePrincipal, "quick-substitution-session").storageKey
+      : null),
+    [arenaPersistencePrincipal],
+  );
+
+  useEffect(() => {
+    if (!quickSubstitutionSessionSource || !quickSubstitutionSessionStorageKey) {
+      return;
+    }
+
+    let nextState: TouchlineQuickSubstitutionSessionState | null = null;
+    const storedState = readBrowserStorage("sessionStorage", quickSubstitutionSessionStorageKey);
+    if (storedState) {
+      try {
+        const restored: unknown = JSON.parse(storedState);
+        if (
+          isTouchlineQuickSubstitutionSessionState(restored)
+          && restored.matchId === quickSubstitutionSessionSource.matchId
+          && restored.ownerId === quickSubstitutionSessionSource.ownerId
+          && restored.rosterRevision === quickSubstitutionSessionSource.rosterRevision
+        ) {
+          nextState = restored;
+        }
+      } catch {
+        // A malformed browser-session record is not match authority. Rebuild
+        // only from the current complete owned 11 + 9 snapshot below.
+      }
+    }
+
+    if (!nextState) {
+      const initialized = createTouchlineQuickSubstitutionSession({
+        matchId: quickSubstitutionSessionSource.matchId,
+        ownerId: quickSubstitutionSessionSource.ownerId,
+        rosterRevision: quickSubstitutionSessionSource.rosterRevision,
+        startingSlots: quickSubstitutionSessionSource.startingSlots,
+        benchInventoryIds: quickSubstitutionSessionSource.benchInventoryIds,
+      });
+      nextState = initialized.status === "ready" ? initialized.state : null;
+    }
+
+    const frame = window.requestAnimationFrame(() => setQuickSubstitutionSession(nextState));
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    quickSubstitutionSessionSource,
+    quickSubstitutionSessionSource?.matchId,
+    quickSubstitutionSessionSource?.ownerId,
+    quickSubstitutionSessionSource?.rosterRevision,
+    quickSubstitutionSessionStorageKey,
+  ]);
+
+  useEffect(() => {
+    if (!quickSubstitutionSession || !quickSubstitutionSessionStorageKey || !quickSubstitutionSessionSource) return;
+    if (
+      quickSubstitutionSession.matchId !== quickSubstitutionSessionSource.matchId
+      || quickSubstitutionSession.rosterRevision !== quickSubstitutionSessionSource.rosterRevision
+    ) return;
+    writeBrowserStorage("sessionStorage", quickSubstitutionSessionStorageKey, JSON.stringify(quickSubstitutionSession));
+  }, [
+    quickSubstitutionSession,
+    quickSubstitutionSessionSource,
+    quickSubstitutionSessionSource?.matchId,
+    quickSubstitutionSessionSource?.rosterRevision,
+    quickSubstitutionSessionStorageKey,
+  ]);
+
+  const quickSubstitutionFieldPlayers = useMemo(() => {
+    if (!quickSubstitutionSession || !quickSubstitutionSessionSource) return null;
+    if (
+      quickSubstitutionSession.matchId !== quickSubstitutionSessionSource.matchId
+      || quickSubstitutionSession.rosterRevision !== quickSubstitutionSessionSource.rosterRevision
+    ) return null;
+
+    const field = quickSubstitutionSession.activeSlots.map((slot) => {
+      const startingPlayer = quickSubstitutionSessionSource.playerByPositionSlotId.get(slot.positionSlotId);
+      if (!startingPlayer) return null;
+      const originalPlayer = quickSubstitutionSessionSource.playerByInventoryId.get(slot.inventoryId);
+      if (originalPlayer) {
+        return {
+          ...originalPlayer,
+          id: slot.positionSlotId,
+          x: startingPlayer.x,
+          y: startingPlayer.y,
+          heightVh: startingPlayer.heightVh,
+          role: startingPlayer.role,
+        };
+      }
+      const incomingBench = quickSubstitutionSessionSource.benchByInventoryId.get(slot.inventoryId);
+      if (!incomingBench) return null;
+      return {
+        ...benchOptionToArenaPlayer(incomingBench, startingPlayer),
+        id: slot.positionSlotId,
+      };
+    });
+    return field.every((player): player is ArenaPlayer => Boolean(player)) ? field : null;
+  }, [quickSubstitutionSession, quickSubstitutionSessionSource]);
+  const quickSubstitutionAvailableBenchPlayers = useMemo(() => {
+    if (!quickSubstitutionSession || !quickSubstitutionSessionSource) return null;
+    const bench = quickSubstitutionSession.availableBenchInventoryIds.map((inventoryId) => (
+      quickSubstitutionSessionSource.benchByInventoryId.get(inventoryId) ?? null
+    ));
+    return bench.every((player): player is BenchOption => Boolean(player)) ? bench : null;
+  }, [quickSubstitutionSession, quickSubstitutionSessionSource]);
+  const quickSubstitutionSubstitutedOutPlayers = useMemo(() => {
+    if (!quickSubstitutionSession || !quickSubstitutionSessionSource) return [] as BenchOption[];
+    return quickSubstitutionSession.substitutedOutInventoryIds.flatMap((inventoryId) => {
+      const startingPlayer = quickSubstitutionSessionSource.playerByInventoryId.get(inventoryId);
+      if (startingPlayer) return [arenaPlayerToSubstitutedOutOption(startingPlayer)];
+      const benchPlayer = quickSubstitutionSessionSource.benchByInventoryId.get(inventoryId);
+      return benchPlayer ? [benchPlayer] : [];
+    });
+  }, [quickSubstitutionSession, quickSubstitutionSessionSource]);
+  const isQuickSubstitutionSessionActive = Boolean(
+    standalonePanel === "bench"
+    && quickSubstitutionSessionSource
+    && quickSubstitutionSession
+    && quickSubstitutionSession.matchId === quickSubstitutionSessionSource.matchId
+    && quickSubstitutionSession.ownerId === quickSubstitutionSessionSource.ownerId
+    && quickSubstitutionSession.rosterRevision === quickSubstitutionSessionSource.rosterRevision
+    && quickSubstitutionFieldPlayers
+    && quickSubstitutionAvailableBenchPlayers,
+  );
+  const quickSubstitutionInteractivePlayers = isQuickSubstitutionSessionActive
+    ? quickSubstitutionFieldPlayers!
+    : players;
+  const quickSubstitutionInteractiveBench = isQuickSubstitutionSessionActive
+    ? quickSubstitutionAvailableBenchPlayers!
+    : matchdayBenchPlayers;
+  const standaloneQuickSubstitutionSessionState = standalonePanel === "bench" && standaloneQuickSubstitutionReadiness?.state === "ready"
+      ? !quickSubstitutionSessionSource
+      ? "identity-required"
+      : isQuickSubstitutionSessionActive
+        ? "ready"
+        : "session-loading"
+    : standaloneQuickSubstitutionReadiness?.state ?? null;
+  const selectedPlayer = quickSubstitutionInteractivePlayers.find((player) => player.id === selectedPlayerId) ?? quickSubstitutionInteractivePlayers[0] ?? null;
+  const spotlightPlayer = quickSubstitutionInteractivePlayers.find((player) => player.id === spotlightPlayerId) ?? null;
+  const selectedBench = selectedBenchId
+    ? quickSubstitutionInteractiveBench.find((bench) => bench.id === selectedBenchId) ?? null
+    : null;
+  const replacementTarget = replacementTargetId
+    ? quickSubstitutionInteractivePlayers.find((player) => player.id === replacementTargetId) ?? null
+    : null;
+  const clubOwnerRoster = arenaClubOwnerRoster(players, benchPlayers);
+  const ownedSquadCount = clubOwnerRoster.length;
   const standaloneQuickSubstitutionCopy = siteLanguage === "pt-BR"
     ? {
       loadingEyebrow: "SUBSTITUIÇÃO RÁPIDA",
       loadingTitle: "Preparando sua escalação",
       loadingMessage: "Estamos confirmando titulares e banco antes de liberar uma troca.",
+      identityEyebrow: "PARTIDA AINDA EM REVISÃO",
+      identityTitle: "A substituição precisa de cards de contrato válidos",
+      identityMessage: "Não liberamos uma troca até que os 11 titulares e os 9 reservas tenham IDs de contrato únicos.",
+      sessionEyebrow: "SUBSTITUIÇÃO RÁPIDA",
+      sessionTitle: "Preparando a sessão da partida",
+      sessionMessage: "Estamos protegendo titulares, banco e histórico de quem já saiu antes de liberar a troca.",
       setupEyebrow: "ESCALAÇÃO AINDA NÃO PRONTA",
       setupTitle: "A substituição rápida precisa de um time completo",
       setupMessage: "Nenhum jogador é criado automaticamente. Complete titulares e banco no Market Transfer para liberar a substituição.",
@@ -3455,6 +3744,12 @@ export default function ArenaClient({
       loadingEyebrow: "QUICK SUBSTITUTION",
       loadingTitle: "Preparing your matchday squad",
       loadingMessage: "We are confirming starters and substitutes before allowing a change.",
+      identityEyebrow: "MATCHDAY IDENTITY PENDING",
+      identityTitle: "Quick Substitution needs verified contract cards",
+      identityMessage: "A change stays locked until all 11 starters and 9 substitutes have unique contract IDs.",
+      sessionEyebrow: "QUICK SUBSTITUTION",
+      sessionTitle: "Preparing the match session",
+      sessionMessage: "We are protecting the starters, bench, and substituted-out history before enabling a change.",
       setupEyebrow: "MATCHDAY SQUAD NOT READY",
       setupTitle: "Quick Substitution needs a complete team sheet",
       setupMessage: "No players are created automatically. Complete your starters and bench in Market Transfer to unlock a substitution.",
@@ -3463,8 +3758,8 @@ export default function ArenaClient({
       openMarket: "Open Market Transfer",
       returnClub: "Return to My Club",
     };
-  const isSelectedBenchInMatchday = Boolean(selectedBench && matchdayBenchPlayers.some((bench) => bench.id === selectedBench.id));
-  const selectedBenchFormationLocked = Boolean(selectedBench && isBenchFormationLocked(selectedBench, players, selectedFormationKey, replacementTarget));
+  const isSelectedBenchInMatchday = Boolean(selectedBench && quickSubstitutionInteractiveBench.some((bench) => bench.id === selectedBench.id));
+  const selectedBenchFormationLocked = Boolean(selectedBench && isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, replacementTarget));
   const canSelectedBenchReplaceTarget = Boolean(selectedBench && replacementTarget && canBenchReplaceTarget(selectedBench, replacementTarget));
   const selectedBuilderClub = PREMIER_CLUB_VISUALS.find((club) => club.teamId === selectedBuilderClubKey) ?? PREMIER_CLUB_VISUALS[0];
   const selectedBuilderClubHubHref = clubHubHref(selectedBuilderClub, siteLanguage);
@@ -5664,10 +5959,10 @@ export default function ArenaClient({
   }
 
   function handleBenchDrop(target: ArenaPlayer, benchId: string) {
-    const bench = matchdayBenchPlayers.find((candidate) => candidate.id === benchId);
+    const bench = quickSubstitutionInteractiveBench.find((candidate) => candidate.id === benchId);
     setDraggingBenchId(null);
     if (!bench) return;
-    if (isBenchFormationLocked(bench, players, selectedFormationKey, target) || !canBenchReplaceTarget(bench, target)) {
+    if (isBenchFormationLocked(bench, quickSubstitutionInteractivePlayers, selectedFormationKey, target) || !canBenchReplaceTarget(bench, target)) {
       setSaveStatus(`${bench.shortName} ${t("locked")}: ${t("choosePosition")} ${positionGroupLabel(arenaPositionGroup(target.card?.position, target.role), t)}`);
       return;
     }
@@ -6150,6 +6445,45 @@ export default function ArenaClient({
       return;
     }
 
+    if (isQuickSubstitutionSessionActive && quickSubstitutionSession && quickSubstitutionSessionSource) {
+      const incomingInventoryId = quickSubstitutionSession.availableBenchInventoryIds.find((inventoryId) => (
+        quickSubstitutionSessionSource.benchByInventoryId.get(inventoryId)?.id === selectedBench.id
+      ));
+      if (!incomingInventoryId) {
+        setSaveStatus(siteLanguage === "pt-BR"
+          ? "Esse reserva não está mais disponível para esta partida."
+          : "This substitute is no longer available for this match.");
+        return;
+      }
+
+      const commandId = createResilientBrowserId("quick-sub");
+      const result = applyTouchlineQuickSubstitutionSession(quickSubstitutionSession, {
+        commandId,
+        commandHash: `${quickSubstitutionSession.matchId}:${quickSubstitutionSession.revision}:${replacementTarget.id}:${incomingInventoryId}:${commandId}`,
+        expectedRevision: quickSubstitutionSession.revision,
+        outgoingPositionSlotId: replacementTarget.id,
+        incomingInventoryId,
+        occurredAt: new Date().toISOString(),
+      });
+      if (result.status !== "applied" && result.status !== "replayed") {
+        setSaveStatus(result.reason === "player_cannot_reenter"
+          ? (siteLanguage === "pt-BR" ? "Este jogador já saiu e não pode voltar nesta partida." : "This player has already left and cannot return in this match.")
+          : (siteLanguage === "pt-BR" ? "A substituição não pôde ser confirmada com segurança." : "The substitution could not be safely confirmed."));
+        return;
+      }
+
+      setQuickSubstitutionSession(result.state);
+      setSelectedBenchId("");
+      setReplacementTargetId(null);
+      setSelectedPlayerId(replacementTarget.id);
+      setSpotlightPlayerId(replacementTarget.id);
+      setPendingContractReleaseTargetId(null);
+      setSaveStatus(siteLanguage === "pt-BR"
+        ? `${selectedBench.shortName} entrou; ${replacementTarget.shortName} saiu e não pode voltar.`
+        : `${selectedBench.shortName} is on; ${replacementTarget.shortName} is out and cannot return.`);
+      return;
+    }
+
     const incomingPlayer = benchOptionToArenaPlayer(selectedBench, replacementTarget);
     const outgoingBench = arenaPlayerToBenchOption(replacementTarget, selectedBench);
     const nextPlayers = players.map((player) => (player.id === replacementTarget.id ? incomingPlayer : player));
@@ -6574,7 +6908,9 @@ export default function ArenaClient({
   const lockedCameraPositions = roleLayoutForPlayers(players, lockedCameraLayout, loopCameraIndex);
   const cameraEditPositions = cameraEditSlots[currentCameraEditKey];
   const fieldPlayerPositions = new Map(lockedCameraPositions ?? projectedFieldPlayerPositions);
-  const trainingCenterSlots = trainingCenterPlayerSlots(players);
+  const trainingCenterSlots = isQuickSubstitutionSessionActive && quickSubstitutionSessionSource
+    ? new Map(quickSubstitutionSessionSource.pitchSlotByPositionSlotId)
+    : trainingCenterPlayerSlots(players);
   if (cameraEditPositions) {
     for (const [playerId, slot] of Object.entries(cameraEditPositions)) {
       const player = players.find((candidate) => candidate.id === playerId);
@@ -7628,40 +7964,52 @@ export default function ArenaClient({
               ) : null}
 
               {activeArenaPanel === "bench" ? (
-                standaloneQuickSubstitutionReadiness && standaloneQuickSubstitutionReadiness.state !== "ready" ? (
+                standaloneQuickSubstitutionSessionState && standaloneQuickSubstitutionSessionState !== "ready" ? (
                   <section
                     className="arena-standalone-bench-readiness"
                     role="status"
                     aria-live="polite"
-                    aria-busy={standaloneQuickSubstitutionReadiness.state === "loading"}
-                    data-quick-substitution-readiness={standaloneQuickSubstitutionReadiness.state}
+                    aria-busy={standaloneQuickSubstitutionSessionState === "loading" || standaloneQuickSubstitutionSessionState === "session-loading"}
+                    data-quick-substitution-readiness={standaloneQuickSubstitutionSessionState}
                   >
                     <span>
-                      {standaloneQuickSubstitutionReadiness.state === "loading"
+                      {standaloneQuickSubstitutionSessionState === "loading"
                         ? standaloneQuickSubstitutionCopy.loadingEyebrow
-                        : standaloneQuickSubstitutionCopy.setupEyebrow}
+                        : standaloneQuickSubstitutionSessionState === "identity-required"
+                          ? standaloneQuickSubstitutionCopy.identityEyebrow
+                          : standaloneQuickSubstitutionSessionState === "setup-required"
+                            ? standaloneQuickSubstitutionCopy.setupEyebrow
+                            : standaloneQuickSubstitutionCopy.sessionEyebrow}
                     </span>
                     <h2>
-                      {standaloneQuickSubstitutionReadiness.state === "loading"
+                      {standaloneQuickSubstitutionSessionState === "loading"
                         ? standaloneQuickSubstitutionCopy.loadingTitle
-                        : standaloneQuickSubstitutionCopy.setupTitle}
+                        : standaloneQuickSubstitutionSessionState === "identity-required"
+                          ? standaloneQuickSubstitutionCopy.identityTitle
+                          : standaloneQuickSubstitutionSessionState === "setup-required"
+                            ? standaloneQuickSubstitutionCopy.setupTitle
+                            : standaloneQuickSubstitutionCopy.sessionTitle}
                     </h2>
                     <p>
-                      {standaloneQuickSubstitutionReadiness.state === "loading"
+                      {standaloneQuickSubstitutionSessionState === "loading"
                         ? standaloneQuickSubstitutionCopy.loadingMessage
-                        : standaloneQuickSubstitutionCopy.setupMessage}
+                        : standaloneQuickSubstitutionSessionState === "identity-required"
+                          ? standaloneQuickSubstitutionCopy.identityMessage
+                          : standaloneQuickSubstitutionSessionState === "setup-required"
+                            ? standaloneQuickSubstitutionCopy.setupMessage
+                            : standaloneQuickSubstitutionCopy.sessionMessage}
                     </p>
                     <div className="arena-standalone-bench-readiness-counts" aria-label={siteLanguage === "pt-BR" ? "Progresso da escalação" : "Team sheet progress"}>
                       <strong>
-                        <b>{standaloneQuickSubstitutionReadiness.starterCount}</b>/{TOUCHLINE_SQUAD_RULES.starters}
+                        <b>{standaloneQuickSubstitutionReadiness?.starterCount ?? players.length}</b>/{TOUCHLINE_SQUAD_RULES.starters}
                         <small>{standaloneQuickSubstitutionCopy.starters}</small>
                       </strong>
                       <strong>
-                        <b>{standaloneQuickSubstitutionReadiness.benchCount}</b>/{TOUCHLINE_SQUAD_RULES.bench}
+                        <b>{standaloneQuickSubstitutionReadiness?.benchCount ?? matchdayBenchPlayers.length}</b>/{TOUCHLINE_SQUAD_RULES.bench}
                         <small>{standaloneQuickSubstitutionCopy.bench}</small>
                       </strong>
                     </div>
-                    {standaloneQuickSubstitutionReadiness.state === "setup-required" ? (
+                    {standaloneQuickSubstitutionSessionState === "setup-required" ? (
                       <div className="arena-standalone-bench-readiness-actions">
                         <a className="is-primary" href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
                           {standaloneQuickSubstitutionCopy.openMarket}
@@ -7745,7 +8093,7 @@ export default function ArenaClient({
                         <strong title={ARENA_FORMATION_POSITION_RULES[selectedFormationKey]}>{selectedFormationKey}</strong>
                       </div>
                       <TouchlinePitchSurface className="training-center-pitch" ariaLabel={t("startingXi")}>
-                        {players.map((player) => {
+                        {quickSubstitutionInteractivePlayers.map((player) => {
                           const slot = trainingCenterSlots.get(player.id) ?? { x: 50, y: 50 };
                           const isReplacementTarget = replacementTargetId === player.id;
                           return (
@@ -7789,8 +8137,8 @@ export default function ArenaClient({
                       <strong>{replacementTarget ? `${positionGroupLabel(arenaPositionGroup(replacementTarget.card?.position, replacementTarget.role), t)}: ${t("slotSelected")}` : t("selectPitchCard")}</strong>
                     </div>
                     <div className="bench-list" aria-label="TouchLine matchday substitute deck">
-                    {matchdayBenchPlayers.map((bench) => {
-                      const isFormationLocked = isBenchFormationLocked(bench, players, selectedFormationKey, replacementTarget);
+                    {quickSubstitutionInteractiveBench.map((bench) => {
+                      const isFormationLocked = isBenchFormationLocked(bench, quickSubstitutionInteractivePlayers, selectedFormationKey, replacementTarget);
                       const isSlotLocked = Boolean(replacementTarget && !canBenchReplaceTarget(bench, replacementTarget));
                       const isLocked = isFormationLocked || isSlotLocked;
                       return (
@@ -7828,6 +8176,33 @@ export default function ArenaClient({
                       );
                     })}
                     </div>
+                    {isQuickSubstitutionSessionActive && quickSubstitutionSubstitutedOutPlayers.length ? (
+                      <section className="quick-substitution-substituted-out" aria-label={siteLanguage === "pt-BR" ? "Jogadores que saíram da partida" : "Players substituted out"}>
+                        <div className="bench-group-title">
+                          <span>{siteLanguage === "pt-BR" ? "SAÍRAM DA PARTIDA" : "SUBSTITUTED OUT"}</span>
+                          <strong>{siteLanguage === "pt-BR" ? "Não podem voltar" : "Cannot re-enter"}</strong>
+                        </div>
+                        <ul>
+                          {quickSubstitutionSubstitutedOutPlayers.map((player) => (
+                            <li
+                              key={player.id}
+                              data-substitution-status="substituted-out"
+                              aria-label={siteLanguage === "pt-BR"
+                                ? `${player.name} saiu da partida e não pode voltar`
+                                : `${player.name} has left the match and cannot re-enter`}
+                            >
+                              <span className="bench-player-card bench-player-card-real" aria-hidden="true">
+                                <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} showProfileAction={false} showSocialMetrics={false} />
+                              </span>
+                              <span>
+                                <strong>{player.shortName}</strong>
+                                <small>{siteLanguage === "pt-BR" ? "Substituído — não pode voltar nesta partida" : "Substituted out — cannot return in this match"}</small>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ) : null}
                     <div className="bench-group-title bench-group-title-vault">
                       <span>{t("reserveVault")}</span>
                       <strong>{reserveVaultPlayers.length} {t("outsideMatchSheet")}</strong>
@@ -7894,28 +8269,32 @@ export default function ArenaClient({
                       <Check aria-hidden="true" />
                       <span>{t("confirmSubstitution")}</span>
                     </button>
-                    <button
-                      type="button"
-                      className="bench-release-target-contract"
-                      disabled={isContractReleasePending || isMarketCheckoutPending || !replacementTarget || !isSelectedBenchInMatchday || selectedBenchFormationLocked || !canSelectedBenchReplaceTarget}
-                      onClick={() => setPendingContractReleaseTargetId((current) => current === replacementTarget?.id ? null : replacementTarget?.id ?? null)}
-                    >
-                      <X aria-hidden="true" />
-                      <span>{t("replaceAndReleaseContract")}</span>
-                    </button>
-                    {replacementTarget && pendingContractReleaseTargetId === replacementTarget.id ? (
-                      <div className="bench-contract-confirmation" role="alert">
-                        <p>{t("contractTerminationWarning").replace("{incoming}", selectedBench.shortName).replace("{outgoing}", replacementTarget.shortName)}</p>
-                        <div>
-                          <button type="button" disabled={isContractReleasePending || isMarketCheckoutPending} onClick={() => setPendingContractReleaseTargetId(null)}>{t("cancelContractTermination")}</button>
-                          <button type="button" disabled={isContractReleasePending || isMarketCheckoutPending} onClick={() => void replaceAndReleaseSelectedContract()}>{t("confirmContractTermination")}</button>
-                        </div>
-                      </div>
+                    {standalonePanel !== "bench" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="bench-release-target-contract"
+                          disabled={isContractReleasePending || isMarketCheckoutPending || !replacementTarget || !isSelectedBenchInMatchday || selectedBenchFormationLocked || !canSelectedBenchReplaceTarget}
+                          onClick={() => setPendingContractReleaseTargetId((current) => current === replacementTarget?.id ? null : replacementTarget?.id ?? null)}
+                        >
+                          <X aria-hidden="true" />
+                          <span>{t("replaceAndReleaseContract")}</span>
+                        </button>
+                        {replacementTarget && pendingContractReleaseTargetId === replacementTarget.id ? (
+                          <div className="bench-contract-confirmation" role="alert">
+                            <p>{t("contractTerminationWarning").replace("{incoming}", selectedBench.shortName).replace("{outgoing}", replacementTarget.shortName)}</p>
+                            <div>
+                              <button type="button" disabled={isContractReleasePending || isMarketCheckoutPending} onClick={() => setPendingContractReleaseTargetId(null)}>{t("cancelContractTermination")}</button>
+                              <button type="button" disabled={isContractReleasePending || isMarketCheckoutPending} onClick={() => void replaceAndReleaseSelectedContract()}>{t("confirmContractTermination")}</button>
+                            </div>
+                          </div>
+                        ) : null}
+                        <button type="button" className="bench-release-contract" disabled={isContractReleasePending || isMarketCheckoutPending} onClick={() => void releaseSelectedBenchContract()}>
+                          <X aria-hidden="true" />
+                          <span>{t("releaseSelectedReserve")} · {selectedBench.shortName}</span>
+                        </button>
+                      </>
                     ) : null}
-                    <button type="button" className="bench-release-contract" disabled={isContractReleasePending || isMarketCheckoutPending} onClick={() => void releaseSelectedBenchContract()}>
-                      <X aria-hidden="true" />
-                      <span>{t("releaseSelectedReserve")} · {selectedBench.shortName}</span>
-                    </button>
                     </>
                     ) : (
                       <div className="bench-contract-confirmation" role="status">
@@ -12840,6 +13219,69 @@ export default function ArenaClient({
           padding: 4px 8px 30px 4px;
         }
 
+        .quick-substitution-substituted-out {
+          margin-top: 12px;
+          border-top: 1px solid rgba(255,255,255,.08);
+          padding-top: 2px;
+        }
+
+        .quick-substitution-substituted-out ul {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin: 0;
+          padding: 0;
+          list-style: none;
+        }
+
+        .quick-substitution-substituted-out li[data-substitution-status="substituted-out"] {
+          display: grid;
+          grid-template-columns: minmax(40px, 56px) minmax(0, 1fr);
+          align-items: center;
+          gap: 8px;
+          min-height: 88px;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,.09);
+          border-radius: 13px;
+          background: rgba(3,10,12,.26);
+          padding: 7px;
+          opacity: .42;
+          pointer-events: none;
+        }
+
+        .quick-substitution-substituted-out .bench-player-card {
+          width: min(52px, 100%);
+          min-height: 76px;
+          justify-self: center;
+        }
+
+        .quick-substitution-substituted-out li > span:last-child {
+          display: grid;
+          min-width: 0;
+          gap: 4px;
+        }
+
+        .quick-substitution-substituted-out li > span:last-child strong,
+        .quick-substitution-substituted-out li > span:last-child small {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .quick-substitution-substituted-out li > span:last-child strong {
+          color: rgba(255,255,255,.68);
+          font-size: 10px;
+          font-weight: 1000;
+        }
+
+        .quick-substitution-substituted-out li > span:last-child small {
+          color: rgba(255,255,255,.44);
+          font-size: 7px;
+          font-weight: 850;
+          line-height: 1.2;
+          white-space: normal;
+        }
+
         .bench-vault-list {
           display: grid;
           grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -15205,6 +15647,10 @@ export default function ArenaClient({
         }
 
         @media (max-width: 760px) {
+          .quick-substitution-substituted-out ul {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
           .game-hud {
             top: max(8px, env(safe-area-inset-top));
             left: max(4px, env(safe-area-inset-left));
@@ -15598,6 +16044,12 @@ export default function ArenaClient({
           .player-name-tag {
             transform: translate(-50%, calc(-100% - 4px));
             font-size: 7px;
+          }
+        }
+
+        @media (max-width: 460px) {
+          .quick-substitution-substituted-out ul {
+            grid-template-columns: 1fr;
           }
         }
 

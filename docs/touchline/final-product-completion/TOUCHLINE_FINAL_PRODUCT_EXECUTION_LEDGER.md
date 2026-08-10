@@ -1721,3 +1721,22 @@ Preview, production checkpoint, or a dirty worktree.
   server-owned match-state gate.
 - **Evidence:**
   `docs/touchline-arena/audit/2026-08-10-QUICK-SUBSTITUTION-SELF-ROUTE-LOOP-HOTFIX.md`.
+
+## 2026-08-10 Quick Substitution no-reentry session projection — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Problem:** the old standalone bench interaction put the outgoing field
+  player back in the selectable bench and persisted that roster-style swap.
+- **Correction:** a complete, identity-backed 11 + 9 sheet now feeds a pure
+  match-session projection. The incoming player takes the outgoing fixed
+  pitch slot; the outgoing player goes to a dim, non-interactive
+  `Substituted out / Saiu da partida` rail and is rejected if selected again.
+- **Scope:** the standalone Quick Substitution path does not mutate the saved
+  roster, bench, contract, economy, value, card tier or database. It stores
+  only an owner/match/revision-scoped browser-session projection. Contract
+  release actions are not offered there.
+- **Validation:** focused durable/readiness/session/UI suite **23/23 passed**;
+  `pnpm typecheck`, `pnpm lint` and `git diff --check` passed locally.
+- **Remaining boundary:** a server-owned match snapshot/event log is still
+  required before this can be called an official reload-safe match record.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-10-QUICK-SUBSTITUTION-NO-REENTRY-SESSION-PROJECTION.md`.

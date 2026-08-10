@@ -88,7 +88,7 @@ test("the standalone panel renders an honest readiness state instead of an empty
   assert.match(arenaSource, /data-quick-substitution-readiness=/);
   assert.match(arenaSource, /Nenhum jogador é criado automaticamente/);
   assert.match(arenaSource, /href=\{`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/);
-  assert.match(arenaSource, /standaloneQuickSubstitutionReadiness\.state !== "ready"/);
+  assert.match(arenaSource, /standaloneQuickSubstitutionSessionState && standaloneQuickSubstitutionSessionState !== "ready"/);
 });
 
 test("the authenticated self route skips the opaque redirect handoff and both substitution routes have a local loader", () => {
