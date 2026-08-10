@@ -138,6 +138,14 @@ test("owner route access fails closed for a different ClubOwner and keeps public
   );
   assert.deepEqual(
     resolveTouchlineClubOwnerRouteAccess({
+      pathname: "/club-owner/luiz-lopez/substitution",
+      isAuthenticated: true,
+      ownerSlug: "luiz-lopez",
+    }),
+    { action: "allow", kind: "own-private" },
+  );
+  assert.deepEqual(
+    resolveTouchlineClubOwnerRouteAccess({
       pathname: "/club-owner/me",
       isAuthenticated: true,
       ownerSlug: "me",
@@ -154,7 +162,7 @@ test("owner route access fails closed for a different ClubOwner and keeps public
   );
 });
 
-test("all self route pages are server-resolved and legacy substitution no longer renders a public demo squad", () => {
+test("all self route pages are server-resolved and the Luiz substitution path can render only its authenticated owner", () => {
   for (const path of [
     "../app/club-owner/me/page.tsx",
     "../app/club-owner/me/history/page.tsx",
@@ -165,8 +173,10 @@ test("all self route pages are server-resolved and legacy substitution no longer
     assert.match(source, /redirectTouchlineClubOwnerSelfRoute/);
     assert.doesNotMatch(source, /PUBLIC_CLUB_OWNER|luiz-lopez|params:\s*Promise/);
   }
-  assert.match(legacySubstitutionSource, /redirectTouchlineClubOwnerSelfRoute\(\{ area: "substitution"/);
-  assert.doesNotMatch(legacySubstitutionSource, /<ClubOwnerSubstitutionRenderer/);
+  assert.match(legacySubstitutionSource, /PUBLIC_CLUB_OWNER_SLUG/);
+  assert.match(legacySubstitutionSource, /resolveTouchlineClubOwnerPageIdentity/);
+  assert.match(legacySubstitutionSource, /<ClubOwnerSubstitutionRenderer\s*\/>/);
+  assert.doesNotMatch(legacySubstitutionSource, /redirectTouchlineClubOwnerSelfRoute/);
 });
 
 test("private navigation is self-scoped and foreign public profiles cannot expose another owner's areas", () => {

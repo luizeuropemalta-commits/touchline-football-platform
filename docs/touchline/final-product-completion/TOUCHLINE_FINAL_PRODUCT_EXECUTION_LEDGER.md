@@ -1704,3 +1704,20 @@ Preview, production checkpoint, or a dirty worktree.
 - **Evidence:**
   `docs/touchline-arena/audit/2026-08-10-QUICK-SUBSTITUTION-READINESS-HOTFIX.md`,
   `tests/touchline-quick-substitution-readiness.test.mts`.
+
+## 2026-08-10 Quick Substitution self-route loop hotfix — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Problem confirmed in production:** the authenticated Luiz route cycled
+  `/club-owner/me/substitution` → `/club-owner/luiz-lopez/substitution` →
+  `/club-owner/me/substitution`, which Safari rejected as too many redirects.
+- **Correction:** the canonical Luiz substitution pathname is now permitted as
+  `own-private` for Luiz only, and its legacy static page uses the same
+  authenticated identity boundary as the dynamic owner route. Other owners
+  remain self-scoped and signed-out visitors still go to login.
+- **Validation:** focused route/readiness suite **13/13 passed**; typecheck,
+  lint, production build and `git diff --check` passed.
+- **Boundary:** no roster, contract, value, card, match or database data was
+  modified. Durable no-reentry match substitution remains a separate,
+  server-owned match-state gate.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-10-QUICK-SUBSTITUTION-SELF-ROUTE-LOOP-HOTFIX.md`.

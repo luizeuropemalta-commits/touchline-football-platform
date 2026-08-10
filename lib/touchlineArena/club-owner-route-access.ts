@@ -58,8 +58,15 @@ export function resolveTouchlineClubOwnerRouteAccess({
 
   // This was historically a public-demo path rather than a private owner
   // destination. Preserve the bookmark as a self-scoped alias; it can never
-  // reveal or select Luiz's squad for a different authenticated visitor.
+  // reveal or select Luiz's squad for a different authenticated visitor. The
+  // authenticated owner whose canonical slug is `luiz-lopez` is the one
+  // exception: their canonical destination is this exact pathname, so
+  // redirecting it back through `/me` would create a redirect cycle.
   if (route.requestedSlug === PUBLIC_CLUB_OWNER_SLUG && route.area === "substitution") {
+    if (!isAuthenticated) return { action: "login", area: "substitution" };
+    if (resolvedOwnerSlug === PUBLIC_CLUB_OWNER_SLUG) {
+      return { action: "allow", kind: "own-private" };
+    }
     return { action: "redirect-self", area: "substitution" };
   }
 
