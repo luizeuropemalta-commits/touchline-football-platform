@@ -137,20 +137,38 @@
 }
 
 .logoWrap {
+  --touchline-club-crest-color: var(--club-accent);
   width: clamp(82px, 9vw, 124px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   justify-self: center;
   border-radius: 50%;
+  overflow: visible;
+  isolation: isolate;
   background: radial-gradient(circle, rgba(255,255,255,.13), rgba(255,255,255,.035) 58%, transparent 70%);
 }
 
 .logoWrap img {
   width: 78%;
   height: 78%;
+  position: relative;
+  z-index: 1;
   object-fit: contain;
   filter: drop-shadow(0 12px 22px rgba(0,0,0,.32));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .clubCard:hover .logoWrap,
+  .clubCard:focus-visible .logoWrap {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .clubCard:active .logoWrap {
+    transform: translate3d(0, -1px, 0);
+  }
 }
 
 .clubInfo {
@@ -262,4 +280,11 @@
   .clubCard:hover::after,
   .clubCard:focus-visible::after,
   .clubCard:active::after { animation: none; }
+
+  .clubCard:hover .logoWrap,
+  .clubCard:focus-visible .logoWrap,
+  .clubCard:active .logoWrap {
+    transform: none !important;
+    transition: none;
+  }
 }

@@ -1926,3 +1926,20 @@ Preview, production checkpoint, or a dirty worktree.
   value/card/contract state or deployment was changed during local validation.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-CLUBHUB-TROPHY-CAROUSEL-FULL-EXIT.md`.
+
+## 2026-08-10 ClubHub canonical crest perimeter trace — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Correction:** ClubHub directory, profile hero and canonical Next Match
+  crests now reuse the shared calm 8-second centre-line trace. Each trace
+  receives its colour solely from the canonical club registry; unresolved
+  opponents remain without a crest or accent.
+- **Safety:** the SVG is pointer-safe and contained within its own host; it
+  uses no mask, clip-path or trace filter. Reduced-motion remains a static
+  outline. No value, tier, price, contract, ranking, provider, database, sync,
+  migration or credential state was changed.
+- **Validation:** focused **4/4**, full local suite **841/841**, strict
+  TypeScript, ESLint, Webpack production build and `git diff --check` passed.
+  Local 1280 × 720 inspection found 20 directory trace hosts with no horizontal
+  overflow, plus a profile hero trace that remained outside the crest art.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-CLUBHUB-CREST-PERIMETER-TRACE.md`.

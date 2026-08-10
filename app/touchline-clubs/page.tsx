@@ -1,10 +1,10 @@
-/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineCoachCategoryShowcase from "@/components/touchline/TouchlineCoachCategoryShowcase";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
+import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK } from "@/lib/touchlineArena/demo-data";
 import { normalizeTouchLineLocale, type TouchLineLocale } from "@/lib/touchlineArena/i18n";
@@ -80,9 +80,14 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
             } as CSSProperties}
           >
             <span className={styles.clubIndex}>{String(index + 1).padStart(2, "0")}</span>
-            <span className={styles.logoWrap}>
-              <img src={club.logoUrl} alt="" loading={index < 6 ? "eager" : "lazy"} />
-            </span>
+            {club.logoUrl ? (
+              <ClubHubCrestTrace
+                accent={club.accent}
+                className={styles.logoWrap}
+                loading={index < 6 ? "eager" : "lazy"}
+                src={club.logoUrl}
+              />
+            ) : <span className={styles.logoWrap} aria-hidden="true">{club.shortCode}</span>}
             <span className={styles.clubInfo}>
               <strong>{club.name}</strong>
               <small>{club.shortCode} · {dictionary.verified}</small>

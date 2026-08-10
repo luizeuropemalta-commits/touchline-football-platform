@@ -32,6 +32,7 @@ test("ClubHub never substitutes the current club crest for an unknown opponent",
   assert.equal(opponent.name, "Unknown United");
   assert.equal(opponent.shortCode, "UU");
   assert.equal(opponent.logoUrl, undefined);
+  assert.equal(opponent.accent, undefined);
   assert.notEqual(opponent.logoUrl, city.logoUrl);
 });
 
@@ -49,7 +50,10 @@ test("ClubHub uses only a canonical club crest or an explicit pending opponent",
   );
 
   assert.equal(knownOpponent.logoUrl, arsenal.logoUrl);
+  assert.equal(knownOpponent.accent, arsenal.accent);
   assert.equal(missingOpponent.name, "Adversário a confirmar");
   assert.equal(missingOpponent.logoUrl, undefined);
+  assert.equal(missingOpponent.accent, undefined);
   assert.equal(currentClub.logoUrl, city.logoUrl);
+  assert.equal(currentClub.accent, city.accent);
 });

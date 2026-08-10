@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import ClubTrophyCarousel from "@/components/touchline/ClubTrophyCarousel";
@@ -6,6 +5,7 @@ import ClubHubMatchdayTechnicalArea from "@/components/touchline/ClubHubMatchday
 import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup";
 import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
+import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
@@ -196,6 +196,7 @@ async function loadClubSquadCards(club: NonNullable<ReturnType<typeof findTouchL
 
 function previewTeamFromClub(club: NonNullable<ReturnType<typeof findTouchLineClub>>) {
   return {
+    accent: club.accent,
     name: club.name,
     shortCode: club.shortCode,
     logoUrl: club.logoUrl,
@@ -349,9 +350,15 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         <header className="club-hub-hero">
           <div className="club-hub-identity">
             <div className="club-hub-logo-stack">
-              <div className="club-hub-logo" aria-label={`${club.name} logo`}>
-                {club.logoUrl ? <img src={club.logoUrl} alt="" draggable={false} /> : <span>{club.shortCode}</span>}
-              </div>
+              {club.logoUrl ? (
+                <ClubHubCrestTrace
+                  accent={club.accent}
+                  ariaLabel={`${club.name} logo`}
+                  className="club-hub-logo"
+                  loading="eager"
+                  src={club.logoUrl}
+                />
+              ) : <div className="club-hub-logo"><span>{club.shortCode}</span></div>}
             </div>
             <div className="club-hub-title-block">
               <span>{locale === "pt-BR" ? "Perfil oficial do clube" : "Official club profile"}</span>
@@ -382,12 +389,24 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                 <span>{t("nextMatch")}</span>
                 <div className="club-hub-fixture-row">
                   <div className={!matchPreview.home.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
-                    {matchPreview.home.logoUrl ? <img src={matchPreview.home.logoUrl} alt="" draggable={false} /> : null}
+                    {matchPreview.home.logoUrl && matchPreview.home.accent ? (
+                      <ClubHubCrestTrace
+                        accent={matchPreview.home.accent}
+                        className="club-hub-fixture-crest"
+                        src={matchPreview.home.logoUrl}
+                      />
+                    ) : null}
                     <strong>{matchPreview.home.shortCode}</strong>
                   </div>
                   <b>VS</b>
                   <div className={!matchPreview.away.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
-                    {matchPreview.away.logoUrl ? <img src={matchPreview.away.logoUrl} alt="" draggable={false} /> : null}
+                    {matchPreview.away.logoUrl && matchPreview.away.accent ? (
+                      <ClubHubCrestTrace
+                        accent={matchPreview.away.accent}
+                        className="club-hub-fixture-crest"
+                        src={matchPreview.away.logoUrl}
+                      />
+                    ) : null}
                     <strong>{matchPreview.away.shortCode}</strong>
                   </div>
                 </div>
@@ -545,6 +564,10 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           border: 0;
           border-radius: 0;
           background: transparent;
+          overflow: visible;
+          isolation: isolate;
+          transform: translateZ(0);
+          transition: transform 180ms ease;
         }
         .club-hub-logo-stack {
           display: grid;
@@ -554,6 +577,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         .club-hub-logo img {
           width: 96%;
           height: 96%;
+          position: relative;
+          z-index: 1;
           object-fit: contain;
           background: transparent;
           border: 0;
@@ -870,6 +895,17 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           box-shadow: none;
           outline: 0;
         }
+        .club-hub-fixture-row .club-hub-fixture-crest {
+          width: min(104px, 100%);
+          height: auto;
+          aspect-ratio: 1;
+          display: grid;
+          place-items: center;
+          overflow: visible;
+          isolation: isolate;
+          transform: translateZ(0);
+          transition: transform 180ms ease;
+        }
         .club-hub-fixture-row img {
           width: min(112px, 100%);
           height: 92px;
@@ -878,6 +914,36 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           border: 0;
           box-shadow: none;
           filter: none;
+        }
+        .club-hub-fixture-row .club-hub-fixture-crest img {
+          width: 100%;
+          height: 100%;
+          position: relative;
+          z-index: 1;
+          object-fit: contain;
+        }
+        @media (hover: hover) and (pointer: fine) {
+          .club-hub-logo:hover,
+          .club-hub-fixture-crest:hover {
+            transform: translate3d(0, -2px, 0);
+          }
+        }
+        @media (hover: none), (pointer: coarse) {
+          .club-hub-logo:active,
+          .club-hub-fixture-crest:active {
+            transform: translate3d(0, -1px, 0);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .club-hub-logo,
+          .club-hub-fixture-crest,
+          .club-hub-logo:hover,
+          .club-hub-fixture-crest:hover,
+          .club-hub-logo:active,
+          .club-hub-fixture-crest:active {
+            transform: none !important;
+            transition: none;
+          }
         }
         .club-hub-fixture-row strong {
           margin: 10px 0 0;
@@ -1195,6 +1261,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           .club-hub-card-meta a { min-height: 44px; }
           .club-hub-fixture-row { gap: 8px; }
           .club-hub-fixture-row img { height: 72px; }
+          .club-hub-fixture-row .club-hub-fixture-crest { width: min(72px, 100%); }
+          .club-hub-fixture-row .club-hub-fixture-crest img { height: 100%; }
         }
         @media (orientation: landscape) and (max-width: 1100px) and (max-height: 520px) {
           .club-hub {

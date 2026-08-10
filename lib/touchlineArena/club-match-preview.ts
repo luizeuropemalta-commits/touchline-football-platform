@@ -6,6 +6,8 @@ import {
 import { touchLineT, type TouchLineLocale } from "./i18n.ts";
 
 export type TouchlineClubMatchPreviewTeam = {
+  /** Defined only for a canonical local club identity. */
+  accent?: string;
   name: string;
   shortCode: string;
   logoUrl?: string;
@@ -36,6 +38,7 @@ export function resolveTouchlineClubMatchPreviewTeam(
 
   if (canonicalClub) {
     return {
+      accent: canonicalClub.accent,
       name: trimOrNull(team?.name) ?? canonicalClub.name,
       shortCode: trimOrNull(team?.shortCode) ?? canonicalClub.shortCode,
       logoUrl: canonicalClub.logoUrl,
@@ -44,6 +47,7 @@ export function resolveTouchlineClubMatchPreviewTeam(
 
   if (team?.providerId === currentClub.teamId) {
     return {
+      accent: currentClub.accent,
       name: currentClub.name,
       shortCode: currentClub.shortCode,
       logoUrl: currentClub.logoUrl,
