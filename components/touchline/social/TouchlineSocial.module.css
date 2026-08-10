@@ -105,7 +105,11 @@
 
 .socialAvatar [data-club-owner-portrait-neon-trace="true"] {
   position: absolute;
-  inset: calc(var(--club-owner-portrait-border-width) * -1);
+  top: calc(var(--club-owner-portrait-border-width) * -1);
+  left: calc(var(--club-owner-portrait-border-width) * -1);
+  width: calc(100% + var(--club-owner-portrait-border-width) + var(--club-owner-portrait-border-width));
+  height: calc(100% + var(--club-owner-portrait-border-width) + var(--club-owner-portrait-border-width));
+  display: block;
   z-index: 2;
   overflow: visible;
   pointer-events: none;

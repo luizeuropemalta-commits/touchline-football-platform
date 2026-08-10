@@ -17,7 +17,7 @@ export function ClubOwnerPortraitPerimeterTrace() {
         data-club-owner-portrait-neon-trace-base="true"
         cx="50"
         cy="50"
-        r="46.5"
+        r="48"
         pathLength="100"
         fill="none"
       />
@@ -25,7 +25,7 @@ export function ClubOwnerPortraitPerimeterTrace() {
         data-club-owner-portrait-neon-trace-run="true"
         cx="50"
         cy="50"
-        r="46.5"
+        r="48"
         pathLength="100"
         fill="none"
       />

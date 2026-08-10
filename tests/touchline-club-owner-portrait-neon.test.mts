@@ -33,10 +33,12 @@ test("the Club Owner portrait uses an opt-in fixed-green continuous perimeter tr
   assert.match(trace, /fill="none"/);
   assert.match(trace, /data-club-owner-portrait-neon-trace-base="true"/);
   assert.match(trace, /data-club-owner-portrait-neon-trace-run="true"/);
-  assert.match(trace, /r="46\.5"/);
+  assert.match(trace, /r="48"/);
   assert.match(ownerCss, /--club-owner-portrait-trace-color: #a3ff12/);
   assert.match(traceCss, /overflow: visible/);
   assert.match(traceCss, /pointer-events: none/);
+  assert.match(traceCss, /width: calc\(100% \+ var\(--club-owner-portrait-border-width\) \+ var\(--club-owner-portrait-border-width\)\)/);
+  assert.match(traceCss, /height: calc\(100% \+ var\(--club-owner-portrait-border-width\) \+ var\(--club-owner-portrait-border-width\)\)/);
   assert.match(traceCss, /stroke-dasharray: 2 98/);
   assert.doesNotMatch(traceCss, /mask|clip-path|filter:|overflow: hidden|var\(--social-accent\)/);
   assert.match(css, /\.socialAvatarPhoto \{[\s\S]*?overflow: hidden/);
