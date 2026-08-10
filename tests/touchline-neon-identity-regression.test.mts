@@ -585,18 +585,20 @@ test("ClubOwner headquarters centralizes squad decisions and Arena keeps substit
   assert.match(arenaClient, /Central da partida/);
 });
 
-test("ClubHub honours stay static when they fit and loop only when they overflow", () => {
+test("ClubHub honours use complete discrete pages rather than a continuous partial-card loop", () => {
   const trophyCarousel = source("components/touchline/ClubTrophyCarousel.tsx");
   const clubHubPage = source("app/touchline-clubs/[club]/page.tsx");
 
-  assert.match(trophyCarousel, /const shouldScroll = setWidth > rowWidth/);
-  assert.match(trophyCarousel, /\(isCarousel \? \[0, 1, 2, 3\] : \[0\]\)\.map/);
+  assert.match(trophyCarousel, /function splitIntoPages/);
+  assert.match(trophyCarousel, /const isCarousel = pages\.length > 1/);
   assert.match(trophyCarousel, /className=\{`club-hub-honour-row \$\{isCarousel \? "is-carousel" : "is-static"\}`\}/);
-  assert.match(trophyCarousel, /track\.style\.transform = "translate3d\(0, 0, 0\)"/);
-  assert.match(trophyCarousel, /\{ transform: "translate3d\(0, 0, 0\)" \}/);
-  assert.match(trophyCarousel, /\{ transform: `translate3d\(\$\{-setWidth\}px, 0, 0\)` \}/);
-  assert.doesNotMatch(trophyCarousel, /translate3d\(\$\{rowWidth\}px/);
-  assert.match(clubHubPage, /\.club-hub-honour-track \{[\s\S]*?transform: translate3d\(0, 0, 0\)/);
+  assert.match(trophyCarousel, /setPhase\("exit"\)[\s\S]*?setPhase\("empty"\)[\s\S]*?setActivePage[\s\S]*?setPhase\("enter"\)/);
+  assert.match(trophyCarousel, /\{phase !== "empty" \?/);
+  assert.doesNotMatch(trophyCarousel, /track\.animate|\[0, 1, 2, 3\]|translate3d\(\$\{-setWidth\}/);
+  assert.match(clubHubPage, /\.club-hub-honour-page \{[\s\S]*?grid-template-columns: repeat\(var\(--club-hub-trophy-page-columns\)/);
+  assert.match(clubHubPage, /\.club-hub-honour-page\[data-transition-phase="exit"\][\s\S]*?opacity: 0/);
+  const honoursStyles = clubHubPage.slice(clubHubPage.indexOf(".club-hub-honour-viewport"), clubHubPage.indexOf(".club-hub-honour-arrow"));
+  assert.doesNotMatch(honoursStyles, /mask-image|club-hub-honour-track|club-hub-honour-set/);
 });
 
 test("TouchLine tables enlarged cards expose the same football contract language outside the frame", () => {

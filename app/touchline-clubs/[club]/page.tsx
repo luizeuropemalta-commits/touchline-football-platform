@@ -614,34 +614,29 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           width: 100%;
           min-height: inherit;
           overflow: hidden;
-          -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
-          mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
         }
-        .club-hub-honour-row.is-static .club-hub-honour-viewport {
-          -webkit-mask-image: none;
-          mask-image: none;
-        }
-        .club-hub-honour-track {
-          display: flex;
-          width: max-content;
-          gap: 0;
+        .club-hub-honour-page {
+          display: grid;
+          grid-template-columns: repeat(var(--club-hub-trophy-page-columns), minmax(0, 112px));
+          justify-content: center;
+          gap: 12px;
+          padding-inline: 12px;
+          opacity: 1;
           transform: translate3d(0, 0, 0);
-          backface-visibility: hidden;
-          will-change: transform;
+          transition: opacity .22s ease, transform .22s ease;
+          will-change: opacity, transform;
         }
-        .club-hub-honour-row.is-static .club-hub-honour-track {
-          width: 100%;
+        .club-hub-honour-page[data-transition-phase="exit"] {
+          opacity: 0;
+          transform: translate3d(-12px, 0, 0);
+        }
+        .club-hub-honour-page[data-transition-phase="enter"] {
+          opacity: 0;
+          transform: translate3d(12px, 0, 0);
+        }
+        .club-hub-honour-row.is-static .club-hub-honour-page {
           justify-content: flex-start;
           will-change: auto;
-        }
-        .club-hub-honour-row.is-static .club-hub-honour-set {
-          flex-wrap: wrap;
-        }
-        .club-hub-honour-set {
-          display: flex;
-          gap: 12px;
-          flex: 0 0 auto;
-          padding-inline: 12px;
         }
         .club-hub-honour-arrow {
           position: absolute;
@@ -693,8 +688,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           right: 2px;
         }
         .club-hub-honour {
-          flex: 0 0 98px;
-          min-width: 98px;
+          min-width: 0;
           border: 1px solid rgba(255,255,255,.13);
           border-radius: 8px;
           padding: 10px 7px 9px;
@@ -1150,6 +1144,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         }
         @media (max-width: 720px) {
           .club-hub { padding: 18px 10px 36px; }
+          .club-hub-honour-page {
+            grid-template-columns: repeat(var(--club-hub-trophy-page-columns), minmax(0, 1fr));
+            gap: 8px;
+            padding-inline: 8px;
+          }
           .club-hub-shell {
             margin-top: 24px;
             gap: 12px;

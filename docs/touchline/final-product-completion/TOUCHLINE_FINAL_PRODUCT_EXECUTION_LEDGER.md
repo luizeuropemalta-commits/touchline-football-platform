@@ -1908,3 +1908,21 @@ Preview, production checkpoint, or a dirty worktree.
   card, contract or deployment action was performed.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-CLUBHUB-OPPONENT-CREST-FAIL-CLOSED.md`.
+
+## 2026-08-10 ClubHub trophy carousel full-exit pagination — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Problem:** the previous continuously translating honours strip, combined
+  with a fading edge mask, let trophies appear partially at both ends of the
+  viewport.
+- **Correction:** honours now render as complete responsive pages. A page
+  exits fully, is briefly absent, and only then is the next complete page
+  mounted; the edge mask and duplicated moving sets are gone. Reduced-motion
+  users retain static, manually operable pages.
+- **Validation:** focused **35/35**, full suite **839/839**, strict
+  TypeScript, ESLint, Webpack production build and `git diff --check` passed.
+  Local production observation at 1280 × 720 found five full City trophies and
+  no horizontal overflow or cropped edge cards.
+- **Non-actions:** no trophy asset, provider, database, sync, migration,
+  value/card/contract state or deployment was changed during local validation.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-CLUBHUB-TROPHY-CAROUSEL-FULL-EXIT.md`.

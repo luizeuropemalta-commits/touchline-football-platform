@@ -44,9 +44,10 @@ test("Club trophies remain manually operable without autoplay when reduced motio
   const component = source("components/touchline/ClubTrophyCarousel.tsx");
 
   assert.match(component, /window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
-  assert.match(component, /if \(window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches\) \{[\s\S]*?animationRef\.current = null;[\s\S]*?return;/);
-  assert.match(component, /const nextOffset = \(manualOffsetRef\.current \+ direction \* manualStepDistance \+ setWidth\) % setWidth/);
-  assert.match(component, /track\.style\.transform = `translate3d\(\$\{-nextOffset\}px, 0, 0\)`/);
+  assert.match(component, /if \(prefersReducedMotion\) \{[\s\S]*?moveImmediately\(\);[\s\S]*?return;/);
+  assert.match(component, /if \(!isCarousel \|\| prefersReducedMotion \|\| phase !== "idle"\) return;/);
+  assert.match(component, /AUTO_ADVANCE_DELAY_MS/);
+  assert.doesNotMatch(component, /track\.animate|iterations: Infinity/);
   assert.match(component, /role="region"[\s\S]*?aria-roledescription="carousel"/);
   assert.match(component, /aria-controls=\{viewportId\}/);
 });

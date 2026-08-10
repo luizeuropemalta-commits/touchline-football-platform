@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 
 type ClubTrophyCarouselItem = {
   id: string;
@@ -18,10 +18,29 @@ type ClubTrophyCarouselProps = {
   previousLabel: string;
 };
 
-type CarouselMetrics = {
-  manualStepDistance: number;
-  setWidth: number;
-};
+type TrophyTransitionPhase = "idle" | "exit" | "empty" | "enter";
+
+const AUTO_ADVANCE_DELAY_MS = 5600;
+const EXIT_DURATION_MS = 220;
+const EMPTY_GAP_MS = 90;
+const ENTER_DURATION_MS = 220;
+
+function pageSizeForWidth(width: number, itemCount: number) {
+  const cardWidth = 98;
+  const gap = 12;
+  const horizontalPadding = 24;
+  const capacity = Math.max(1, Math.floor((width - horizontalPadding + gap) / (cardWidth + gap)));
+  const pageCount = Math.max(1, Math.ceil(itemCount / capacity));
+  return Math.max(1, Math.ceil(itemCount / pageCount));
+}
+
+function splitIntoPages<T>(items: readonly T[], pageSize: number) {
+  const pages: T[][] = [];
+  for (let start = 0; start < items.length; start += pageSize) {
+    pages.push(items.slice(start, start + pageSize));
+  }
+  return pages;
+}
 
 export default function ClubTrophyCarousel({
   ariaLabel,
@@ -30,14 +49,28 @@ export default function ClubTrophyCarousel({
   previousLabel,
 }: ClubTrophyCarouselProps) {
   const rowRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<Animation | null>(null);
-  const manualStepMsRef = useRef(0);
-  const manualOffsetRef = useRef(0);
-  const metricsRef = useRef<CarouselMetrics>({ manualStepDistance: 0, setWidth: 0 });
-  const [isCarousel, setIsCarousel] = useState(false);
+  const transitionTimersRef = useRef<number[]>([]);
+  const transitionFrameRef = useRef<number | null>(null);
+  const transitionInFlightRef = useRef(false);
+  const [pageSize, setPageSize] = useState(6);
+  const [activePage, setActivePage] = useState(0);
+  const [phase, setPhase] = useState<TrophyTransitionPhase>("idle");
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const viewportId = useId();
+  const pages = useMemo(() => splitIntoPages(honours, pageSize), [honours, pageSize]);
+  const isCarousel = pages.length > 1;
+  const currentPageIndex = Math.min(activePage, Math.max(0, pages.length - 1));
+  const activeHonours = pages[currentPageIndex] ?? [];
+
+  const clearTransition = useCallback(() => {
+    for (const timer of transitionTimersRef.current) window.clearTimeout(timer);
+    transitionTimersRef.current = [];
+    if (transitionFrameRef.current !== null) {
+      window.cancelAnimationFrame(transitionFrameRef.current);
+      transitionFrameRef.current = null;
+    }
+    transitionInFlightRef.current = false;
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -49,105 +82,64 @@ export default function ClubTrophyCarousel({
 
   useEffect(() => {
     const row = rowRef.current;
-    const track = trackRef.current;
-    if (!row || !track || !honours.length) return;
+    if (!row) return;
 
-    let animation: Animation | null = null;
-    let frame = 0;
-    let lastSize = "";
-
-    const start = () => {
-      const rowWidth = Math.round(row.clientWidth);
-      const honourSet = track.querySelector<HTMLElement>(".club-hub-honour-set");
-      const setWidth = Math.round(honourSet?.scrollWidth ?? 0);
-      const size = `${rowWidth}:${setWidth}`;
-      if (!rowWidth || !setWidth || size === lastSize) return;
-      lastSize = size;
-
-      animation?.cancel();
-      track.style.transform = "translate3d(0, 0, 0)";
-
-      const shouldScroll = setWidth > rowWidth;
-      setIsCarousel(shouldScroll);
-      manualOffsetRef.current = 0;
-      metricsRef.current = { manualStepDistance: 0, setWidth: 0 };
-      if (!shouldScroll) {
-        animationRef.current = null;
-        manualStepMsRef.current = 0;
-        return;
-      }
-
-      const firstHonour = track.querySelector<HTMLElement>(".club-hub-honour");
-      const gap = honourSet ? Number.parseFloat(window.getComputedStyle(honourSet).columnGap) || 0 : 0;
-      const manualStepDistance = (firstHonour?.offsetWidth ?? 98) + gap;
-      metricsRef.current = { manualStepDistance, setWidth };
-
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        animationRef.current = null;
-        manualStepMsRef.current = 0;
-        return;
-      }
-
-      const duration = Math.max(10000, (setWidth / 42) * 1000);
-      manualStepMsRef.current = duration * (manualStepDistance / setWidth);
-      animation = track.animate(
-        [
-          { transform: "translate3d(0, 0, 0)" },
-          { transform: `translate3d(${-setWidth}px, 0, 0)` },
-        ],
-        {
-          duration,
-          easing: "linear",
-          iterations: Infinity,
-        },
-      );
-      animationRef.current = animation;
+    const syncPageSize = () => {
+      const nextPageSize = pageSizeForWidth(Math.round(row.clientWidth), honours.length);
+      setPageSize((current) => current === nextPageSize ? current : nextPageSize);
     };
 
-    const scheduleStart = () => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(start);
-    };
-
-    const resizeObserver = new ResizeObserver(scheduleStart);
+    const resizeObserver = new ResizeObserver(syncPageSize);
     resizeObserver.observe(row);
-    resizeObserver.observe(track);
-    scheduleStart();
+    syncPageSize();
+    return () => resizeObserver.disconnect();
+  }, [honours.length]);
 
-    return () => {
-      window.cancelAnimationFrame(frame);
-      resizeObserver.disconnect();
-      animation?.cancel();
-      animationRef.current = null;
-      manualStepMsRef.current = 0;
-      manualOffsetRef.current = 0;
-      metricsRef.current = { manualStepDistance: 0, setWidth: 0 };
+  const movePage = useCallback((direction: -1 | 1) => {
+    if (pages.length < 2 || transitionInFlightRef.current) return;
+
+    const moveImmediately = () => {
+      setActivePage((current) => (current + direction + pages.length) % pages.length);
+      setPhase("idle");
     };
-  }, [honours, prefersReducedMotion]);
 
-  const shiftCarousel = (direction: -1 | 1) => {
-    const animation = animationRef.current;
-    const timing = animation?.effect?.getTiming();
-    const duration = Number(timing?.duration);
-    if (animation && Number.isFinite(duration) && duration > 0) {
-      const currentTime = Number(animation.currentTime ?? 0);
-      const currentIterationStart = currentTime - (currentTime % duration);
-      const currentIterationTime = currentTime % duration;
-      const step = manualStepMsRef.current || 1800;
-      const nextIterationTime = (currentIterationTime + direction * step + duration) % duration;
-      animation.currentTime = currentIterationStart + nextIterationTime;
-      animation.play();
+    if (prefersReducedMotion) {
+      moveImmediately();
       return;
     }
 
-    const track = trackRef.current;
-    const { manualStepDistance, setWidth } = metricsRef.current;
-    if (!track || !manualStepDistance || !setWidth) return;
+    transitionInFlightRef.current = true;
+    setPhase("exit");
+    const exitTimer = window.setTimeout(() => {
+      setPhase("empty");
+      const emptyTimer = window.setTimeout(() => {
+        setActivePage((current) => (current + direction + pages.length) % pages.length);
+        setPhase("enter");
+        transitionFrameRef.current = window.requestAnimationFrame(() => {
+          transitionFrameRef.current = null;
+          setPhase("idle");
+        });
+        const finishTimer = window.setTimeout(() => {
+          transitionInFlightRef.current = false;
+        }, ENTER_DURATION_MS);
+        transitionTimersRef.current.push(finishTimer);
+      }, EMPTY_GAP_MS);
+      transitionTimersRef.current.push(emptyTimer);
+    }, EXIT_DURATION_MS);
+    transitionTimersRef.current.push(exitTimer);
+  }, [pages.length, prefersReducedMotion]);
 
-    const nextOffset = (manualOffsetRef.current + direction * manualStepDistance + setWidth) % setWidth;
-    manualOffsetRef.current = nextOffset;
-    track.style.transform = `translate3d(${-nextOffset}px, 0, 0)`;
-  };
+  useEffect(() => {
+    if (!isCarousel || prefersReducedMotion || phase !== "idle") return;
+    const timer = window.setTimeout(() => movePage(1), AUTO_ADVANCE_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [isCarousel, movePage, phase, prefersReducedMotion]);
+
+  useEffect(() => clearTransition, [clearTransition]);
+
+  const pageStyle = {
+    "--club-hub-trophy-page-columns": Math.max(1, Math.min(pageSize, activeHonours.length)),
+  } as CSSProperties;
 
   return (
     <div
@@ -163,33 +155,28 @@ export default function ClubTrophyCarousel({
           className="club-hub-honour-arrow is-previous"
           aria-controls={viewportId}
           aria-label={previousLabel}
-          onClick={() => shiftCarousel(-1)}
-        >
-        </button>
+          disabled={phase !== "idle"}
+          onClick={() => movePage(-1)}
+        />
       ) : null}
-      <div id={viewportId} className="club-hub-honour-viewport">
-        <div ref={trackRef} className="club-hub-honour-track">
-          {(isCarousel ? [0, 1, 2, 3] : [0]).map((copyIndex) => (
-            <div
-              key={copyIndex}
-              className="club-hub-honour-set"
-              aria-hidden={copyIndex === 0 ? undefined : true}
-            >
-              {honours.map((honour) => (
-                <article
-                  key={`${copyIndex}-${honour.id}`}
-                  className={`club-hub-honour is-${honour.tone}`}
-                >
-                  <div className="club-hub-honour-avatar" aria-hidden="true">
-                    <img src={honour.imageUrl} alt="" draggable={false} />
-                  </div>
-                  <strong>{honour.count}</strong>
-                  <small title={honour.label}>{honour.label}</small>
-                </article>
-              ))}
-            </div>
-          ))}
-        </div>
+      <div id={viewportId} className="club-hub-honour-viewport" aria-live="polite">
+        {phase !== "empty" ? (
+          <div
+            className="club-hub-honour-page"
+            data-transition-phase={phase}
+            style={pageStyle}
+          >
+            {activeHonours.map((honour) => (
+              <article key={honour.id} className={`club-hub-honour is-${honour.tone}`}>
+                <div className="club-hub-honour-avatar" aria-hidden="true">
+                  <img src={honour.imageUrl} alt="" draggable={false} />
+                </div>
+                <strong>{honour.count}</strong>
+                <small title={honour.label}>{honour.label}</small>
+              </article>
+            ))}
+          </div>
+        ) : null}
       </div>
       {isCarousel ? (
         <button
@@ -197,9 +184,9 @@ export default function ClubTrophyCarousel({
           className="club-hub-honour-arrow is-next"
           aria-controls={viewportId}
           aria-label={nextLabel}
-          onClick={() => shiftCarousel(1)}
-        >
-        </button>
+          disabled={phase !== "idle"}
+          onClick={() => movePage(1)}
+        />
       ) : null}
     </div>
   );
