@@ -73,6 +73,9 @@ test("release card layer retains the established commercial branch and adds no l
   assert.match(card, /const legacyCardPriceText = contractedCardPriceText/);
   assert.match(card, /const hasCanonicalPublicState = player\.marketValueState != null \|\| player\.classificationState != null/);
   assert.match(card, /data-card-tier=\{marketTier\?\.key \?\? "neutral"\}/);
+  assert.match(card, /const assignedVisualTemplateUrl = cleanCardTemplateUrl\(player\.cardTemplateUrl\) \|\| DEFAULT_CLUB_TEMPLATE_URL/);
+  assert.match(card, /: assignedVisualTemplateUrl;/);
+  assert.match(card, /touchlineArenaClubTemplateForTierPreview\(player\.clubName, marketTier\.key\) \|\| assignedVisualTemplateUrl/);
   assert.match(card, /staticRenderScale\?: number/);
   assert.match(card, /opacity: hasStaticRenderScale \|\| scale > 0 \? 1 : 0/);
   assert.doesNotMatch(card, /displayPrice/);

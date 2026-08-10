@@ -899,9 +899,10 @@ export function TouchlineEliteExactCard({
   // England cards always keep the approved numeric tier value and use GBP as
   // their official currency. This is deliberately not a Touch Credits value,
   // currency conversion or wallet balance.
-  // A fallback frame keeps the card visually coherent while live football
-  // data is syncing, but it is not evidence of a commercial tier. Never turn
-  // that visual fallback into a £0 public price.
+  // The assigned template is visual artwork, not commercial classification.
+  // Keep it visible while market data is pending, but never use it to expose
+  // a tier, price, or market value before those have been verified.
+  const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl) || DEFAULT_CLUB_TEMPLATE_URL;
   const contractedCardPriceText = player.cardPriceAuthority === "active-contract"
     ? formatTouchlineContractedCommercialCardPrice({
       tierKey: player.cardTier,
@@ -941,8 +942,8 @@ export function TouchlineEliteExactCard({
   const totalPointsSize = valueDisplaySize(marketValueText);
   const cardPriceSize = valueDisplaySize(cardPriceText);
   const cardTemplateUrl = marketTier
-    ? touchlineArenaClubTemplateForTierPreview(player.clubName, marketTier.key) || cleanCardTemplateUrl(player.cardTemplateUrl) || DEFAULT_CLUB_TEMPLATE_URL
-    : null;
+    ? touchlineArenaClubTemplateForTierPreview(player.clubName, marketTier.key) || assignedVisualTemplateUrl
+    : assignedVisualTemplateUrl;
   const versionedCardTemplateUrl = cardTemplateUrl
     ? `${cardTemplateUrl}${cardTemplateUrl.includes("?") ? "&" : "?"}v=${CARD_TEMPLATE_ASSET_VERSION}`
     : null;
