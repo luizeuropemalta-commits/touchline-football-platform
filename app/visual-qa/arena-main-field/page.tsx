@@ -139,6 +139,7 @@ export default async function ArenaMainFieldVisualQaPage({ searchParams }: Visua
       scoreRail: "Placares premium · sem data nesta superfície",
       live: "AO VIVO · 63′",
       final: "FINAL",
+      next: "PRÓXIMO",
       staticNotice: "ADMIN-GATED · STATIC LOCAL VISUAL QA",
       frames: "Matrizes de viewport estáticas",
       desktop: "1280PX · DESKTOP",
@@ -154,6 +155,7 @@ export default async function ArenaMainFieldVisualQaPage({ searchParams }: Visua
       scoreRail: "Premium scores · no date on this surface",
       live: "LIVE · 63′",
       final: "FT",
+      next: "NEXT",
       staticNotice: "ADMIN-GATED · STATIC LOCAL VISUAL QA",
       frames: "Static viewport matrix",
       desktop: "1280PX · DESKTOP",
@@ -221,6 +223,9 @@ export default async function ArenaMainFieldVisualQaPage({ searchParams }: Visua
               </article>
               <article data-static-arena-score="final">
                 <strong>Liverpool</strong><span>2</span><b aria-hidden="true">—</b><span>1</span><strong>Chelsea</strong><em>{copy.final}</em>
+              </article>
+              <article data-static-arena-score="next">
+                <strong>Tottenham</strong><b aria-hidden="true">—</b><strong>Newcastle</strong><em>{copy.next}</em>
               </article>
             </div>
           </section>

@@ -1964,3 +1964,19 @@ Preview, production checkpoint, or a dirty worktree.
   Sub authority was changed.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-ARENA-MAIN-FIELD-VISUAL-QA-AND-SCORE-RAIL.md`.
+
+## 2026-08-10 Arena scheduled rail state visual QA — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Correction:** the same admin-gated static Arena fixture now also renders
+  the third premium rail state: a scheduled fixture as localized `Next` /
+  `Próximo`, with two team names and no kickoff date. It is included in the
+  local EN/PT release-readiness fixture matrix.
+- **Evidence:** all six direct local variants (EN/PT × 1280/768/390) rendered
+  `Next`/`Próximo`, LIVE/AO VIVO and FT/FINAL together without a date or root
+  horizontal overflow. The data remain synthetic fixture-only state.
+- **Safety:** no account, roster, database, provider, sync, migration, value,
+  contract, card tier/price, credential or deployment configuration changed.
+- **Validation:** focused **8/8**, full suite **846/846**, strict TypeScript,
+  ESLint, Webpack production build and `git diff --check` passed.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-ARENA-SCHEDULED-RAIL-VISUAL-QA.md`.

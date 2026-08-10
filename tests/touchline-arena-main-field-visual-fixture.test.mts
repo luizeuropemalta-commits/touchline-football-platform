@@ -34,8 +34,11 @@ test("the fixture shows exactly a static 4-3-3, technical coach, and premium sco
   assert.match(fixtureSource, /<TouchlineCoachCard/);
   assert.match(fixtureSource, /data-static-arena-score="live"/);
   assert.match(fixtureSource, /data-static-arena-score="final"/);
+  assert.match(fixtureSource, /data-static-arena-score="next"/);
   assert.match(fixtureSource, /LIVE · 63′/);
   assert.match(fixtureSource, /FT/);
+  assert.match(fixtureSource, /next: "PRÓXIMO"/);
+  assert.match(fixtureSource, /next: "NEXT"/);
   assert.match(fixtureSource, /sem data nesta superfície/);
   assert.doesNotMatch(fixtureSource, /formatFixtureDateTime|<time\b|startsAt|kickoff/i);
 });
