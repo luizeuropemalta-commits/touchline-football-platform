@@ -1740,3 +1740,36 @@ Preview, production checkpoint, or a dirty worktree.
   required before this can be called an official reload-safe match record.
 - **Evidence:**
   `docs/touchline-arena/audit/2026-08-10-QUICK-SUBSTITUTION-NO-REENTRY-SESSION-PROJECTION.md`.
+
+## 2026-08-10 owner-approved 533-value application plan — LOCAL COMPLETE / NOT EXECUTED
+
+- **Purpose:** create a pure, fail-closed dry-run hand-off from a future fresh
+  canonical UUID binding to a separately authorized atomic writer; it is not a
+  database client or import path.
+- **Implementation:**
+  `lib/touchlineArena/owner-approved-market-value-application-plan.ts` accepts
+  only a clean 533-row canonical binding manifest and produces a
+  `review-required`, `applicationEligible: false`, `dry-run-only` plan. It
+  allows only the future market-value/audit table set and protects card tier,
+  card price, contract and club assignment.
+- **Fail-closed proof:** any issue, incomplete count, duplicate source/player/
+  membership identity, changed club mapping, stale/invalid provenance or
+  missing manual-scope club blocks the entire plan with zero rows. The fixed
+  `533 / 5 / 23 / 20` vector is retained: five value-missing owner entries,
+  23 provider-only entries and 20 owner-only entries remain outside every
+  write set.
+- **Validation:** focused application-plan plus binding suite **10/10 passed**;
+  strict TypeScript (`tsc --noEmit --incremental false`), full ESLint,
+  `git diff --check`, full repository suite **834/834**, and the Webpack
+  production build passed. Tests use synthetic bindings and source checks
+  prove no environment, HTTP, client/query or mutation capability.
+- **Non-actions:** no credential, database/provider read or write, sync,
+  migration, cache invalidation, card/value/contract change, Preview or
+  deployment occurred.
+- **Gate:** a real dated two-pass canonical 533-row binding is still required;
+  an atomic, idempotent transaction with rollback/preflight proof and separate
+  write authorization remains a distinct future decision. The generic
+  sequential importer is not authorized for this batch.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-10-OWNER-APPROVED-MARKET-VALUE-APPLICATION-PLAN-DRY-RUN.md`,
+  `tests/touchline-owner-approved-market-value-application-plan.test.mts`.

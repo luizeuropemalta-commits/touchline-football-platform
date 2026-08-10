@@ -97,6 +97,6 @@ test("coach remains a dedicated entity outside every player slot", async () => {
 
 test("matchday bench and remaining squad are disjoint views of the same authoritative roster", async () => {
   const source = await readFile(arenaClientPath, "utf8");
-  assert.match(source, /const matchdayBenchIds = new Set\(matchdayBenchPlayers\.map/);
+  assert.match(source, /const matchdayBenchIds = useMemo\(\(\) => new Set\(matchdayBenchPlayers\.map/);
   assert.match(source, /benchPlayers\.filter\(\(bench\) => !matchdayBenchIds\.has\(bench\.id\)\)/);
 });
