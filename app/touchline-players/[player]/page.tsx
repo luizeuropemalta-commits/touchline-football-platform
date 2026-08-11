@@ -18,7 +18,6 @@ import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNav
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   CLUB_OWNER_SQUAD_CARDS,
-  formatCompactEuro,
 } from "@/lib/touchlineArena/demo-data";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import {
@@ -46,17 +45,13 @@ import {
   touchlineCardTierName,
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
-import {
-  formatTouchlineVerifiedCommercialCardPrice,
-} from "@/lib/touchlineArena/commercial-card-pricing";
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
 import {
-  resolveTouchlinePublicCardPresentation,
   TOUCHLINE_NEUTRAL_CARD_ACCENT,
   TOUCHLINE_NEUTRAL_CARD_SECONDARY,
-  touchlinePublicCardStatusLabel,
-  touchlinePublicMarketValueStatusLabel,
 } from "@/lib/touchlineArena/public-card-presentation";
+import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
+import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import {
   normalizeTouchlineCountryCode3,
@@ -99,11 +94,8 @@ const copy = {
     points: "TouchLine points",
     rank: "Position rank",
     rankGroup: "Ranking group",
-    marketValue: "Market value",
     price: "Card price",
     frame: "Current frame",
-    marketChange: "Market change",
-    lastMarketUpdate: "Last market update",
     shirt: "Shirt number",
     career: "Career path",
     season: "TouchLine season",
@@ -169,11 +161,8 @@ const copy = {
     points: "Pontos TouchLine",
     rank: "Rank da posição",
     rankGroup: "Grupo do ranking",
-    marketValue: "Valor de mercado",
     price: "Preço do card",
     frame: "Moldura atual",
-    marketChange: "Variação de mercado",
-    lastMarketUpdate: "Última atualização de mercado",
     shirt: "Número da camisa",
     career: "Trajetória",
     season: "Temporada TouchLine",
@@ -557,6 +546,7 @@ export default async function TouchLinePlayerProfilePage({
   const [publicProjectionBatch, official, activeRanking, currentUser] = await Promise.all([
     loadTouchlinePublicPlayerProjections({
       providerPlayerIds: [officialLookup.providerPlayerId],
+      includeMarketValues: false,
     }),
     loadTouchLineOfficialPlayerIdentity({
       name: officialLookup.name,
@@ -604,25 +594,17 @@ export default async function TouchLinePlayerProfilePage({
     selectedFixtureId: Array.isArray(query.fixture) ? query.fixture[0] : query.fixture,
   });
   if (canonicalProviderPlayerId) exactPlayer.sportmonksPlayerId = canonicalProviderPlayerId;
-  const canonicalMarketValue = publicProjection?.marketValue;
-  const canonicalClassification = publicProjection?.classification;
-  if (canonicalMarketValue?.status === "verified" && canonicalMarketValue.value) {
-    exactPlayer.marketValue = formatCompactEuro(canonicalMarketValue.value.eur);
-    exactPlayer.marketValueSource = "verified-cache";
-    exactPlayer.marketValueState = "verified";
-  } else {
-    exactPlayer.marketValue = "Pending";
-    exactPlayer.marketValueSource = "unavailable";
-    exactPlayer.marketValueState = canonicalMarketValue?.status ?? "unavailable";
-  }
-  if (canonicalClassification?.status === "verified" && canonicalClassification.value) {
-    exactPlayer.cardTier = canonicalClassification.value.tierKey;
-    exactPlayer.cardPriceVersion = canonicalClassification.value.policyVersion;
-    exactPlayer.classificationState = "verified";
-  } else {
-    exactPlayer.cardTier = null;
-    exactPlayer.classificationState = canonicalClassification?.status ?? canonicalMarketValue?.status ?? "unavailable";
-  }
+  const canonicalPlayerId = canonicalIdentity ? publicProjection?.identity.value?.playerId : null;
+  const publishedCards = canonicalPlayerId
+    ? await loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
+    : new Map();
+  const editorialCard = canonicalPlayerId ? publishedCards.get(canonicalPlayerId) ?? null : null;
+  exactPlayer.editorialCard = editorialCard;
+  exactPlayer.marketValue = null;
+  exactPlayer.marketValueSource = "unavailable";
+  exactPlayer.marketValueState = "unavailable";
+  exactPlayer.cardTier = editorialCard?.tierKey ?? null;
+  exactPlayer.classificationState = "unavailable";
   const competition = resolveTouchlineCardCompetition({
     state: activeRanking,
     playerId: card.id,
@@ -630,7 +612,7 @@ export default async function TouchLinePlayerProfilePage({
   });
   const requestedPreviewTier = Array.isArray(query.previewTier) ? query.previewTier[0] : query.previewTier;
   // Preview tiers are available only for an explicit local-development demo.
-  // A public numeric provider ID never accepts a visual/economic tier from a
+  // A public numeric provider ID never accepts a visual tier from a
   // query parameter, even if its slug collides with a demo card.
   const previewTier = !officialLookup.providerPlayerId && isLocalCard && process.env.NODE_ENV !== "production"
     ? touchlineArenaTierForKey(requestedPreviewTier)
@@ -643,25 +625,17 @@ export default async function TouchLinePlayerProfilePage({
   const isExplicitLocalDevelopmentDemo = !officialLookup.providerPlayerId
     && isLocalCard
     && process.env.NODE_ENV !== "production";
-  const publicPresentation = resolveTouchlinePublicCardPresentation(exactPlayer);
   const developmentTier = isExplicitLocalDevelopmentDemo
     ? previewTier ?? touchlineArenaTierForKey(card.cardTier)
     : null;
-  const tier = publicPresentation.tierKey
-    ? touchlineArenaTierForKey(publicPresentation.tierKey)
+  const tier = editorialCard
+    ? touchlineArenaTierForKey(editorialCard.tierKey)
     : developmentTier;
-  const displayedPriceText = publicPresentation.canExposeCommercialPresentation
-    ? formatTouchlineVerifiedCommercialCardPrice({
-      marketValue: exactPlayer.marketValue,
-      marketValueSource: exactPlayer.marketValueSource,
-      competition: "england",
-      locale,
-    })
-    : touchlinePublicCardStatusLabel(publicPresentation.visualState, locale);
-  const hasVerifiedCardOffer = publicPresentation.canExposeCommercialPresentation;
-  const displayedMarketValue = publicPresentation.hasVerifiedMarketValue && exactPlayer.marketValue
-    ? exactPlayer.marketValue
-    : touchlinePublicMarketValueStatusLabel(publicPresentation.marketValueState, locale);
+  const displayedPriceText = editorialCard
+    ? formatTouchlineEditorialCardPrice(editorialCard.cardPrice, locale)
+    : null;
+  const hasActiveContractOffer = false;
+  const hasPublishedEditorialCard = Boolean(editorialCard);
   const officialSyncTime = formatOfficialSyncTime(official.fetchedAt, locale);
   const rankingGroupLabel = competition.positionGroup
     ? TOUCHLINE_POSITION_RANKING_LABELS[competition.positionGroup][locale === "pt-BR" ? "pt" : "en"]
@@ -689,7 +663,7 @@ export default async function TouchLinePlayerProfilePage({
     : { accent: TOUCHLINE_NEUTRAL_CARD_ACCENT, secondary: TOUCHLINE_NEUTRAL_CARD_SECONDARY };
   const tierDisplayName = tier
     ? touchlineCardTierName(tier.key, locale)
-    : touchlinePublicCardStatusLabel(publicPresentation.visualState, locale);
+    : null;
   const accent = tierPalette.accent;
   const secondaryAccent = tierPalette.secondary;
   const pageStyle = {
@@ -702,23 +676,22 @@ export default async function TouchLinePlayerProfilePage({
     playerName: card.name,
     clubId: club?.teamId,
   });
-  const socialCardVisual = (ariaLabel: string) => (
+  const socialCardVisual = (ariaLabel: string) => editorialCard ? (
     <TouchlineCardZoom
       ariaLabel={ariaLabel}
-      contractHref={hasVerifiedCardOffer ? marketHref : undefined}
+      contractHref={hasActiveContractOffer ? marketHref : undefined}
       contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
-      contractValue={hasVerifiedCardOffer ? displayedPriceText : undefined}
-      contractTermLabel={hasVerifiedCardOffer ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
+      contractValue={hasActiveContractOffer ? displayedPriceText ?? undefined : undefined}
+      contractTermLabel={hasActiveContractOffer ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
       tierAccent={tierPalette.accent}
-      tierLabel={tierDisplayName}
+      tierLabel={tierDisplayName ?? undefined}
       details={buildTouchlinePlayerCardZoomDetails({
         locale,
         name: card.name,
         clubName: card.clubName,
         position: displayPosition,
         nationality: displayNationality,
-        marketValue: exactPlayer.marketValue,
-        marketValueSource: exactPlayer.marketValueSource,
+        editorialCard,
         touchlinePoints: competition.touchlinePoints,
         profileHref,
         eyebrow: isPortuguese ? "Perfil oficial do atleta" : "Official player profile",
@@ -751,26 +724,26 @@ export default async function TouchLinePlayerProfilePage({
         showSocialMetrics={false}
       />
     </TouchlineCardZoom>
-  );
+  ) : undefined;
   const playerSocialPosts: TouchlineSocialPost[] = [
     {
-      id: `card-status-${card.id}-${tier?.key ?? publicPresentation.visualState}`,
+      id: `card-status-${card.id}-${tier?.key ?? "unpublished"}`,
       kind: "official",
-      title: hasVerifiedCardOffer
-        ? (isPortuguese ? "Card disponível para contratação na TouchLine" : "Card available to contract on TouchLine")
-        : (isPortuguese ? "Preço do card aguardando verificação TouchLine" : "Card price awaiting TouchLine verification"),
+      title: hasPublishedEditorialCard
+        ? (isPortuguese ? "Perfil editorial do card publicado" : "Editorial card profile published")
+        : (isPortuguese ? "Perfil do card TouchLine" : "TouchLine card profile"),
       body: isPortuguese
-        ? "Categoria, preço do card e pontos acumulados são atualizados pelo sistema oficial do card."
-        : "Category, card price and cumulative points are updated by the official card system.",
-      meta: isPortuguese ? "Mercado TouchLine" : "TouchLine Market",
+        ? "Tier e preço só aparecem quando a equipa editorial publica este card."
+        : "Tier and price appear only when the editorial team publishes this card.",
+      meta: "TouchLine",
       accent,
-      badge: `${displayedPriceText} · ${competition.touchlinePoints} ${isPortuguese ? "pontos acumulados" : "cumulative points"}`,
+      badge: tierDisplayName ?? `${competition.touchlinePoints} ${isPortuguese ? "pontos acumulados" : "cumulative points"}`,
       visual: socialCardVisual(`${isPortuguese ? "Ampliar card atual de" : "Open current card for"} ${card.name}`),
       visualTheme: "market",
       metrics: [
-        { label: isPortuguese ? "Status" : "Status", value: hasVerifiedCardOffer ? (isPortuguese ? "Disponível" : "Available") : (isPortuguese ? "Em atualização" : "Updating") },
         { label: isPortuguese ? "Pontos" : "Points", value: String(competition.touchlinePoints) },
-        { label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText },
+        ...(tierDisplayName ? [{ label: isPortuguese ? "Tier do card" : "Card tier", value: tierDisplayName }] : []),
+        ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
       ],
     },
     {
@@ -844,17 +817,17 @@ export default async function TouchLinePlayerProfilePage({
       {
         id: `simulation-tier-${card.id}`,
         kind: "simulation",
-        title: isPortuguese ? "O valor de mercado mudou a categoria" : "Market value changed the card tier",
+        title: isPortuguese ? "A equipa editorial atualizou o tier do card" : "The editorial team updated the card tier",
         body: isPortuguese
-          ? "Exemplo visual de uma mudança económica gerada somente após a atualização do valor oficial de mercado."
-          : "Visual example of an economic change generated only after the official market value is updated.",
-        meta: isPortuguese ? "Demonstração · mercado atualizado" : "Demo · market updated",
+          ? "Exemplo visual de uma alteração editorial independente de qualquer valuation."
+          : "Visual example of an editorial change independent of any valuation.",
+        meta: isPortuguese ? "Demonstração · revisão editorial" : "Demo · editorial review",
         accent,
-        badge: `${isPortuguese ? "Categoria atualizada" : "Tier updated"} · ${displayedPriceText}`,
+        badge: `${isPortuguese ? "Categoria atualizada" : "Tier updated"}${tierDisplayName ? ` · ${tierDisplayName}` : ""}`,
         visual: socialCardVisual(`${isPortuguese ? "Ampliar card evoluído de" : "Open upgraded card for"} ${card.name}`),
         visualTheme: "evolution",
         metrics: [
-          { label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText },
+          ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
           { label: isPortuguese ? "Evolução" : "Progress", value: isPortuguese ? "Confirmada" : "Confirmed" },
           { label: "Status", value: isPortuguese ? "Evoluiu" : "Upgraded" },
         ],
@@ -946,7 +919,7 @@ export default async function TouchLinePlayerProfilePage({
                 followerCount={playerFollowerCount(card.id)}
                 accent={accent}
                 locale={locale}
-                purchaseHref={hasVerifiedCardOffer ? marketHref : undefined}
+                purchaseHref={hasActiveContractOffer ? marketHref : undefined}
                 purchaseLabel={locale === "pt-BR" ? "Contratar jogador" : "Contract player"}
               />
             </div>
@@ -1028,13 +1001,13 @@ export default async function TouchLinePlayerProfilePage({
           accent={accent}
           locale={locale}
           highlights={[
-            { label: isPortuguese ? "Status do card" : "Card status", value: isPortuguese ? "Ativo" : "Active" },
-            { label: isPortuguese ? "Valor" : "Value", value: displayedPriceText },
+            ...(tierDisplayName ? [{ label: isPortuguese ? "Tier do card" : "Card tier", value: tierDisplayName }] : []),
+            ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
             { label: isPortuguese ? "Pontos acumulados" : "Cumulative points", value: String(competition.touchlinePoints) },
             { label: isPortuguese ? "Posição" : "Position", value: displayPosition || "—" },
           ]}
-          defaultActionHref={hasVerifiedCardOffer ? marketHref : undefined}
-          defaultActionLabel={hasVerifiedCardOffer ? `${locale === "pt-BR" ? "Contratar jogador" : "Contract player"} · ${displayedPriceText}` : undefined}
+          defaultActionHref={hasActiveContractOffer ? marketHref : undefined}
+          defaultActionLabel={hasActiveContractOffer && displayedPriceText ? `${locale === "pt-BR" ? "Contratar jogador" : "Contract player"} · ${displayedPriceText}` : undefined}
         />
 
         <section className={styles.officialBand} id="official-performance">
@@ -1091,26 +1064,18 @@ export default async function TouchLinePlayerProfilePage({
               <small>{text.rankGroup}</small>
               <strong>{rankingGroupLabel}</strong>
             </div>
-            <div>
-              <small>{text.marketValue}</small>
-              <strong>{displayedMarketValue}</strong>
-            </div>
-            <div>
-              <small>{text.price}</small>
-              <strong>{displayedPriceText}</strong>
-            </div>
-            <div>
-              <small>{text.frame}</small>
-              <strong>{tierDisplayName}</strong>
-            </div>
-            <div>
-              <small>{text.marketChange}</small>
-              <strong>{text.rankPending}</strong>
-            </div>
-            <div>
-              <small>{text.lastMarketUpdate}</small>
-              <strong>{canonicalMarketValue?.status === "verified" && canonicalMarketValue.value?.lastVerified ? formatOfficialSyncTime(canonicalMarketValue.value.lastVerified, locale) : text.rankPending}</strong>
-            </div>
+            {tierDisplayName ? (
+              <div>
+                <small>{text.frame}</small>
+                <strong>{tierDisplayName}</strong>
+              </div>
+            ) : null}
+            {displayedPriceText ? (
+              <div>
+                <small>{text.price}</small>
+                <strong>{displayedPriceText}</strong>
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.statusGrid}>
