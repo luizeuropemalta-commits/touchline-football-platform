@@ -7,7 +7,7 @@ const arenaSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.
 test("the standalone Quick Sub UI uses the no-reentry session projection", () => {
   assert.match(arenaSource, /createTouchlineQuickSubstitutionSession/);
   assert.match(arenaSource, /applyTouchlineQuickSubstitutionSession/);
-  assert.match(arenaSource, /isTouchlineQuickSubstitutionSessionState/);
+  assert.match(arenaSource, /restoreTouchlineQuickSubstitutionSession/);
   assert.match(arenaSource, /quickSubstitutionSessionStorageKey/);
   assert.match(arenaSource, /quickSubstitutionAvailableBenchPlayers/);
   assert.match(arenaSource, /quickSubstitutionSubstitutedOutPlayers/);
@@ -25,11 +25,11 @@ test("a standalone match substitution never persists or swaps the saved roster",
   assert.doesNotMatch(sessionBranch, /setPlayers\(|setBenchPlayers\(|persistArenaRoster\(/);
 });
 
-test("opening standalone Quick Sub cannot auto-save an empty or match-session lineup", () => {
+test("opening standalone Quick Sub or a fixture matchday view cannot auto-save a derived lineup", () => {
   const persistenceEffectStart = arenaSource.indexOf("useEffect(() => {\n    if (!hasLoadedSavedLineup || !hasLoadedClubOwnerRoster || isDemoLineup || !arenaPersistencePrincipal) return;");
   const nextEffectStart = arenaSource.indexOf("\n  useEffect(() => {", persistenceEffectStart + 1);
   const persistenceEffect = arenaSource.slice(persistenceEffectStart, nextEffectStart);
-  const guardIndex = persistenceEffect.indexOf('standalonePanel === "bench" || players.length === 0');
+  const guardIndex = persistenceEffect.indexOf('standalonePanel === "bench" || isArenaMatchdayViewActive || players.length === 0');
   const localSaveIndex = persistenceEffect.indexOf("saveLineup(players");
   const remotePutIndex = persistenceEffect.indexOf('fetch("/api/touchline-arena/state"');
 
