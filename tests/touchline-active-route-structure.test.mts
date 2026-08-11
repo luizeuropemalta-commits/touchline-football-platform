@@ -43,7 +43,11 @@ test("ClubOwner collection rows use the canonical player profile helper", () => 
 
   assert.match(
     ownerPage,
-    /sortedClubOwnerSquadCards\.map\(\(card, index\) => \{[\s\S]*?squadCardToExactPlayer\(card, \{ useSuppliedTier: true \}\)[\s\S]*?touchlinePlayerProfileHref\(player, locale, \{ previewTier: card\.cardTier \}\)[\s\S]*?<a key=\{card\.id\} href=\{profileHref\}/,
+    /publishedClubOwnerSquadCards = sortedClubOwnerSquadCards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/,
+  );
+  assert.match(
+    ownerPage,
+    /publishedClubOwnerSquadCards\.map\(\(card, index\) => \{[\s\S]*?squadCardToExactPlayer\(card, \{ useSuppliedTier: true \}\)[\s\S]*?touchlinePlayerProfileHref\(player, locale, \{ previewTier: card\.cardTier \}\)[\s\S]*?<a key=\{card\.id\} href=\{profileHref\}/,
   );
   assert.doesNotMatch(ownerPage, /\/club-owner\/luiz-lopez\?player=\$\{card\.id\}/);
 });
