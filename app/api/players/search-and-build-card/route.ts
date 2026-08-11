@@ -1007,6 +1007,23 @@ export async function POST(req: Request) {
     const accessError = await requireAuthenticatedOrLocalTouchlineEditor(req);
     if (accessError) return accessError;
 
+    // Temporary product policy: a card must come from a reviewed manual
+    // editorial profile, never from an automated player/valuation lookup.
+    // Keep the legacy implementation below intact for a separately approved
+    // migration, but make this endpoint fail closed before it can read a
+    // provider or assemble an automatic card.
+    return playerRouteJson(
+      {
+        ok: false,
+        code: "manual_editorial_catalog_only",
+        error: "Player cards are published manually by the TouchLine editorial team.",
+      },
+      {
+        status: 410,
+        headers: { "Cache-Control": "private, no-store" },
+      },
+    );
+
     const { query, playerName, clubQuery, sportmonksPlayerId, searchOnly } = await req.json();
 
     const searchQuery = String(query || playerName || "").trim();
