@@ -30,11 +30,18 @@ const player: TouchlineEliteExactPlayer = {
   clubLogoUrl: club.logoUrl,
   leagueName: "TouchLine England",
   leagueLogoUrl: null,
-  marketValue: "€20M",
-  marketValueSource: "verified-cache",
-  marketValueState: "verified",
-  classificationState: "verified",
+  // Compatibility-only legacy fields stay neutral. The fixture exercises the
+  // published manual editorial profile below, never a player valuation.
+  marketValue: null,
+  marketValueSource: "unavailable",
+  marketValueState: "unavailable",
+  classificationState: "unavailable",
   cardTier: "radiant-gold",
+  editorialCard: {
+    tierKey: "radiant-gold",
+    cardPrice: { amountMinor: 1500, currency: "GBP" },
+    lastReviewedAt: "2026-08-11T00:00:00.000Z",
+  },
   cardPriceVersion: "2026-07-premier-v1",
   updatedAt: "STATIC LOCAL QA FIXTURE",
   age: "—",
