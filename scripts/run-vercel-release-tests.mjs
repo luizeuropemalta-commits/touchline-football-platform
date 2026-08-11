@@ -6,6 +6,9 @@ import { resolve } from "node:path";
 // validate immutable local audit artifacts under docs/, so they remain part of
 // `pnpm test` but cannot run inside the production build sandbox.
 const DOCS_ARTIFACT_TESTS = new Set([
+  "owner-approved-sportmonks-application-candidate.test.mts",
+  "owner-approved-transcript-market-values.test.mts",
+  "owner-approved-transcript-reconciliation.test.mts",
   "touchline-existing-verified-liverpool-publication-manifest.test.mts",
   "touchline-owner-approved-market-value-application-plan.test.mts",
   "touchline-owner-approved-market-value-binding.test.mts",
