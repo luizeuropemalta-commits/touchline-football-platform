@@ -20,6 +20,7 @@ const testFiles = (await readdir(testsDirectory))
 const result = spawnSync(process.execPath, [
   "--test",
   "--test-force-exit",
+  "--test-timeout=30000",
   "--experimental-strip-types",
   ...testFiles,
 ], { stdio: "inherit" });
