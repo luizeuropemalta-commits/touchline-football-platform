@@ -26,8 +26,10 @@ test("the server-rendered player profile explicitly passes its resolved locale t
   assert.equal(localeOverrides.length, profileCards.length);
 });
 
-test("the player profile does not leak the English pending market-value sentinel into Portuguese", () => {
-  assert.match(playerProfileSource, /const displayedMarketValue = publicPresentation\.hasVerifiedMarketValue/);
-  assert.match(playerProfileSource, /touchlinePublicMarketValueStatusLabel\(publicPresentation\.marketValueState, locale\)/);
-  assert.match(playerProfileSource, /<strong>\{displayedMarketValue\}<\/strong>/);
+test("the player profile uses the editorial card projection and has no valuation placeholder", () => {
+  assert.match(playerProfileSource, /findTouchlineEditorialCardPresentation\(publicProjection\?\.identity\.value\?\.playerId\)/);
+  assert.match(playerProfileSource, /includeMarketValues: false/);
+  assert.match(playerProfileSource, /editorialCard,/);
+  assert.doesNotMatch(playerProfileSource, /touchlinePublicMarketValueStatusLabel/);
+  assert.doesNotMatch(playerProfileSource, /Market value pending|Valor de mercado pendente|Em atualização|Updating/);
 });

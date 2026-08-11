@@ -107,6 +107,20 @@ test("player search and card build remain data-only without generative providers
   assert.match(route, /const playerCard = buildPlayerCard\(savedPlayer\)/);
 });
 
+test("manual editorial mode fails closed before an automatic player or valuation lookup", () => {
+  const postStart = route.indexOf("export async function POST");
+  assert.notEqual(postStart, -1);
+  const post = route.slice(postStart);
+  const manualGate = post.indexOf('code: "manual_editorial_catalog_only"');
+  const requestBodyRead = post.indexOf("await req.json()");
+
+  assert.ok(manualGate >= 0, "manual editorial gate must be present");
+  assert.ok(requestBodyRead >= 0, "legacy request parsing remains below the gate");
+  assert.ok(manualGate < requestBodyRead, "the endpoint must stop before automatic lookup work");
+  assert.match(post, /status: 410/);
+  assert.match(post, /Cache-Control": "private, no-store"/);
+});
+
 test("Card Studio keeps the official editor without Runway or avatar-generation controls", () => {
   assert.doesNotMatch(
     cardStudio,

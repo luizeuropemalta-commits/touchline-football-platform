@@ -21,3 +21,9 @@ test("the public squad route has no provider, mutation, or request-upgrade path"
     /createFootballDataProvider|persistSquadSnapshot|readSnapshotForLiveRefresh|backgroundRefresh|after\(|\.getSquad\(|preferSnapshot|searchParams\.get\("refresh"\)/,
   );
 });
+
+test("the public squad route reads identity and membership only, then applies the server-only editorial catalogue", () => {
+  assert.match(routeSource, /includeMarketValues: false/);
+  assert.match(routeSource, /findTouchlineEditorialCardPresentation\(identity\.playerId\)/);
+  assert.doesNotMatch(routeSource, /football_player_market_values|resolveTouchlineVerifiedPlayerEconomy/);
+});

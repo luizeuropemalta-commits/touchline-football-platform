@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -55,4 +56,15 @@ test("Match Centre never presents a degraded live snapshot as currently live", (
   assert.equal(touchlineMatchCentreDisplayState(live, { ...staleSnapshot, degraded: false }), "live");
   assert.equal(isTouchlineLiveReadMetadata({ state: "persisted-live-snapshot", degraded: "true" }), false);
   assert.equal(isTouchlineLiveReadMetadata({ state: "unknown", degraded: true }), false);
+});
+
+test("Match Centre never invents a zero score when only one side is present", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const scoreFunction = source.match(/function score\(fixture: TouchlinePublicFixture\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
+  assert.match(scoreFunction, /Number\.isFinite\(fixture\.homeScore\) && Number\.isFinite\(fixture\.awayScore\)/);
+  assert.match(scoreFunction, /return "VS"/);
+  assert.doesNotMatch(scoreFunction, /\?\? 0/);
 });

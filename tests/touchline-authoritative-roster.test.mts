@@ -24,6 +24,15 @@ const PLAYER_ID = "123e4567-e89b-42d3-a456-426614174003";
 const CLUB_ID = "123e4567-e89b-42d3-a456-426614174004";
 const OTHER_INVENTORY_ID = "123e4567-e89b-42d3-a456-426614174005";
 const RELEASED_INVENTORY_ID = "123e4567-e89b-42d3-a456-426614174006";
+const PUBLISHED_EDITORIAL_CARD = {
+  tierKey: "emerald-green" as const,
+  cardPrice: { amountMinor: 4_900, currency: "GBP" as const },
+  lastReviewedAt: "2026-08-11T00:00:00.000Z",
+};
+
+function publishedCards() {
+  return new Map([[PLAYER_ID, PUBLISHED_EDITORIAL_CARD]]);
+}
 
 function authoritativeCard(): ClubOwnerSquadCard {
   return {
@@ -35,8 +44,8 @@ function authoritativeCard(): ClubOwnerSquadCard {
     clubName: "Manchester City",
     shirtNumber: 9,
     countryCode3: "NOR",
-    marketValue: "€180M",
-    marketValueSource: "verified-cache",
+    marketValue: "",
+    marketValueSource: "unavailable",
     cardTier: "emerald-green",
     cardPriceVersion: "2026-07-premier-v1",
     cardPriceAuthority: "active-contract",
@@ -75,8 +84,6 @@ function completeRows() {
       nationality: "Norway",
       country_id: "157",
       position: "Centre Forward",
-      market_value: "180000000",
-      market_value_currency: "EUR",
     }],
     clubs: [{
       id: CLUB_ID,
@@ -95,7 +102,7 @@ function completeRows() {
 }
 
 test("maps active contracts to complete canonical roster cards with real UUIDs", () => {
-  const result = mapAuthoritativeRosterRows(completeRows());
+  const result = mapAuthoritativeRosterRows(completeRows(), publishedCards());
   assert.equal(result.ok, true);
   if (!result.ok) return;
 
@@ -110,13 +117,13 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
     clubName: "Manchester City",
     shirtNumber: 9,
     countryCode3: "NOR",
-    marketValue: "€180M",
-    marketValueSource: "verified-cache",
+    canonicalPlayerId: PLAYER_ID,
+    marketValue: "",
+    marketValueSource: "unavailable",
     cardTier: "emerald-green",
-    cardPriceVersion: "2026-07-premier-v1",
-    cardPriceAuthority: "active-contract",
     inventoryId: INVENTORY_ID,
     touchlinePoints: 12,
+    editorialCard: PUBLISHED_EDITORIAL_CARD,
   });
 });
 
@@ -138,35 +145,33 @@ test("rejects malformed active-contract rows instead of treating them as an empt
   });
 });
 
-test("rejects an owned card with a missing tier or a stale price table rather than displaying an invented price", () => {
+test("uses only the published editorial card instead of legacy inventory tiers or price tables", () => {
   const missingTier = completeRows();
   missingTier.inventories[0].competition_tier = null;
   missingTier.contracts[0].purchase_tier = null;
-  assert.deepEqual(mapAuthoritativeRosterRows(missingTier), {
-    ok: false,
-    error: "TL_ROSTER_DATA_INCOMPLETE",
-  });
+  const missingTierResult = mapAuthoritativeRosterRows(missingTier, publishedCards());
+  assert.equal(missingTierResult.ok, true);
+  if (!missingTierResult.ok) return;
+  assert.equal(missingTierResult.snapshot.cards[0]?.editorialCard?.tierKey, "emerald-green");
 
   const staleTable = completeRows();
   staleTable.inventories[0].price_table_version = "obsolete-price-table";
-  assert.deepEqual(mapAuthoritativeRosterRows(staleTable), {
-    ok: false,
-    error: "TL_ROSTER_DATA_INCOMPLETE",
-  });
+  const staleTableResult = mapAuthoritativeRosterRows(staleTable, publishedCards());
+  assert.equal(staleTableResult.ok, true);
+  if (!staleTableResult.ok) return;
+  assert.equal(staleTableResult.snapshot.cards[0]?.editorialCard?.cardPrice.amountMinor, 4_900);
 });
 
-test("maps the known retired inventory table to the current approved tier policy", () => {
+test("keeps a published card independent from a retired inventory price-table identifier", () => {
   const rows = completeRows();
   rows.inventories[0].price_table_version = "2026-07-tc-v2";
-  const result = mapAuthoritativeRosterRows(rows);
+  const result = mapAuthoritativeRosterRows(rows, publishedCards());
   assert.equal(result.ok, true);
   if (!result.ok) return;
-  assert.equal(result.snapshot.cards[0].cardPriceAuthority, "active-contract");
-  assert.equal(result.snapshot.cards[0].cardPriceVersion, "2026-07-tc-v2");
   assert.equal(result.snapshot.cards[0].cardTier, "emerald-green");
+  assert.equal(result.snapshot.cards[0].editorialCard?.cardPrice.amountMinor, 4_900);
   const exactCardPlayer = squadCardToExactPlayer(result.snapshot.cards[0], { useSuppliedTier: true });
-  assert.equal(exactCardPlayer.cardPriceAuthority, "active-contract");
-  assert.equal(exactCardPlayer.cardPriceVersion, "2026-07-tc-v2");
+  assert.equal(exactCardPlayer.editorialCard?.tierKey, "emerald-green");
 });
 
 test("strict lineup ownership guard reports missing, foreign and duplicate cards", () => {
@@ -252,8 +257,8 @@ test("Arena persistence rebuilds spoofed card identity, tier, value, points and 
     countryCode3: "NOR",
     flagUrl: null,
     fantasyPoints: 12,
-    marketValue: "€180M",
-    marketValueSource: "verified-cache",
+    marketValue: "",
+    marketValueSource: "unavailable",
     cardTier: "emerald-green",
     cardPriceVersion: "2026-07-premier-v1",
     cardPriceAuthority: "active-contract",
@@ -443,6 +448,10 @@ test("server roster query is restricted to the authenticated user's active contr
     helper,
     /\.from\("touchline_card_contracts"\)[\s\S]*?\.eq\("user_id", requestedUserId\)[\s\S]*?\.eq\("status", "active"\)/,
   );
+  assert.match(helper, /import\("\.\/card-publication-read-model\.ts"\)/);
+  assert.match(helper, /loadTouchlinePublishedCardPresentations/);
+  assert.doesNotMatch(helper, /\.from\("football_player_market_values"\)/);
+  assert.doesNotMatch(helper, /resolveTouchlineVerifiedPlayerEconomy/);
   assert.doesNotMatch(helper, /cookie|localStorage|sessionStorage/);
 });
 

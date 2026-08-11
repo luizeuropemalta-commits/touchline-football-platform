@@ -71,9 +71,9 @@ describe("TouchLine ClubOwner roster accounting", () => {
     assert.equal(clubOwnerSquadTcValue(CLUB_OWNER_SQUAD_CARDS.slice(0, 11)), 0);
   });
 
-  it("never presents local demo market values as official football data", () => {
+  it("keeps local demo cards neutral rather than presenting a valuation", () => {
     assert.equal(clubOwnerSquadMarketValue(CLUB_OWNER_SQUAD_CARDS), 0);
-    assert.ok(CLUB_OWNER_SQUAD_CARDS.every((card) => card.marketValue === "Pending"));
+    assert.ok(CLUB_OWNER_SQUAD_CARDS.every((card) => card.marketValue === ""));
     assert.ok(CLUB_OWNER_SQUAD_CARDS.every((card) => card.marketValueSource === "unavailable"));
   });
 
@@ -162,7 +162,7 @@ describe("TouchLine ClubOwner roster accounting", () => {
       marketValueSource: undefined,
     });
 
-    assert.equal(canonical.marketValue, "Pending");
+    assert.equal(canonical.marketValue, "");
     assert.equal(canonical.marketValueSource, "unavailable");
   });
 

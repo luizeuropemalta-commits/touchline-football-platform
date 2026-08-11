@@ -6,6 +6,7 @@ import {
   applyTouchlineQuickSubstitutionSession,
   createTouchlineQuickSubstitutionSession,
   isTouchlineQuickSubstitutionSessionState,
+  restoreTouchlineQuickSubstitutionSession,
   TOUCHLINE_QUICK_SUBSTITUTION_SESSION_RULES,
   type TouchlineQuickSubstitutionSessionCommand,
   type TouchlineQuickSubstitutionSessionSnapshot,
@@ -200,6 +201,38 @@ test("the session rejects missing inventory, unknown pitch slots, and malformed 
         index === 0 ? { ...slot, inventoryId: "" } : slot
       )),
     }, command(state)),
+    { status: "rejected", reason: "invalid_session_state" },
+  );
+});
+
+test("a restored browser session is replayed from the canonical snapshot and rejects forged derived fields", () => {
+  const initial = readyState();
+  const first = applyTouchlineQuickSubstitutionSession(initial, command(initial, {
+    outgoingPositionSlotId: "pitch-slot:2",
+    incomingInventoryId: "contract:bench-1",
+  }));
+  assert.equal(first.status, "applied");
+  if (first.status !== "applied") return;
+
+  const restored = restoreTouchlineQuickSubstitutionSession(snapshot(), JSON.parse(JSON.stringify(first.state)));
+  assert.equal(restored.status, "ready");
+  if (restored.status === "ready") assert.deepEqual(restored.state, first.state);
+
+  const forged = JSON.parse(JSON.stringify(first.state)) as TouchlineQuickSubstitutionSessionState;
+  forged.activeSlots = forged.activeSlots.map((slot, index) => (
+    index === 1 ? { ...slot, inventoryId: "contract:xi-2" } : slot
+  ));
+  forged.availableBenchInventoryIds = ["contract:bench-2", ...forged.availableBenchInventoryIds.slice(1)];
+  forged.substitutedOutInventoryIds = ["contract:bench-1"];
+  forged.durableState = {
+    ...forged.durableState,
+    activeInventoryIds: forged.activeSlots.map((slot) => slot.inventoryId),
+    availableBenchInventoryIds: forged.availableBenchInventoryIds,
+    substitutedOutInventoryIds: forged.substitutedOutInventoryIds,
+  };
+  assert.equal(isTouchlineQuickSubstitutionSessionState(forged), true);
+  assert.deepEqual(
+    restoreTouchlineQuickSubstitutionSession(snapshot(), forged),
     { status: "rejected", reason: "invalid_session_state" },
   );
 });

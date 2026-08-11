@@ -43,6 +43,14 @@ test("the fixture shows exactly a static 4-3-3, technical coach, and premium sco
   assert.doesNotMatch(fixtureSource, /formatFixtureDateTime|<time\b|startsAt|kickoff/i);
 });
 
+test("the static field cards use published editorial profiles, never valuation placeholders", () => {
+  assert.match(fixtureSource, /const STATIC_NOMINAL_PRICE_GBP: Record<TouchlineCardTierKey, number>/);
+  assert.match(fixtureSource, /editorialCard: \{[\s\S]*?tierKey: slot\.cardTier[\s\S]*?currency: "GBP"/);
+  assert.match(fixtureSource, /marketValue: null/);
+  assert.match(fixtureSource, /marketValueState: "unavailable"/);
+  assert.doesNotMatch(fixtureSource, /marketValue: "€20M"/);
+});
+
 test("the fixture isolates every rendered card and cannot read, save, or drag runtime state", () => {
   for (const required of [
     "persistLayoutToMaster={false}",

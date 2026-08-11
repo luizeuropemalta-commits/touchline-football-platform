@@ -53,13 +53,15 @@ test("migration freezes legacy automatic card reclassification and protects immu
   assert.match(migration, /transfer_window_roster_detection/i);
 });
 
-test("public consumers use only the approved TouchLine value read model", () => {
+test("editorial public card consumers opt out of the legacy valuation read model", () => {
   const profile = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
   const roster = readFileSync(new URL("../lib/touchlineArena/authoritative-roster-server.ts", import.meta.url), "utf8");
   assert.match(profile, /loadTouchlinePublicPlayerProjections/);
+  assert.match(profile, /includeMarketValues: false/);
+  assert.match(profile, /findTouchlineEditorialCardPresentation/);
   assert.doesNotMatch(profile, /loadTouchlineVerifiedMarketValueByProviderPlayerId/);
-  assert.match(roster, /football_player_market_values/);
-  assert.match(roster, /approvedMarketValuesByPlayerId/);
+  assert.match(roster, /findTouchlineEditorialCardPresentation\(playerId\)/);
+  assert.doesNotMatch(roster, /football_player_market_values|approvedMarketValuesByPlayerId|resolveTouchlineVerifiedPlayerEconomy/);
 });
 
 test("missing or unsafe values become explicit queue states instead of invented tiers", () => {

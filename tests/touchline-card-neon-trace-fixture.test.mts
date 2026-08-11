@@ -26,9 +26,11 @@ test("the fixture exercises both shared card implementations with canonical loca
   assert.match(fixtureSource, /import TouchlineEliteExactCard/);
   assert.match(fixtureSource, /findTouchLineClub\("manchester-city"\)/);
   assert.match(fixtureSource, /cardTier: "radiant-gold"/);
-  assert.match(fixtureSource, /marketValue: "€20M"/);
-  assert.match(fixtureSource, /marketValueState: "verified"/);
-  assert.match(fixtureSource, /classificationState: "verified"/);
+  assert.match(fixtureSource, /editorialCard: \{/);
+  assert.match(fixtureSource, /cardPrice: \{ amountMinor: 1500, currency: "GBP" \}/);
+  assert.match(fixtureSource, /marketValue: null/);
+  assert.match(fixtureSource, /marketValueState: "unavailable"/);
+  assert.match(fixtureSource, /classificationState: "unavailable"/);
   assert.match(fixtureSource, /name: "TRACE"/);
   assert.doesNotMatch(fixtureSource, /STATIC TRACE PLAYER/);
   assert.match(fixtureSource, /runtimeLocaleOverride=\{locale\}/);

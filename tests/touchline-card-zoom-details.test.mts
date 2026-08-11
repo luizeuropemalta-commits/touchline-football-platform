@@ -3,89 +3,118 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { buildTouchlinePlayerCardZoomDetails } from "../lib/touchlineArena/card-zoom-details.ts";
+import { resolveTouchlinePublicEditorialCardPresentation } from "../lib/touchlineArena/editorial-card-profile.ts";
 
-test("uses one resolved market-value explanation for every card zoom surface", () => {
+const PLAYER_ID = "d9428888-122b-11e1-b85c-61cd3cbb3210";
+
+function publishedEditorialRecord(overrides: Record<string, unknown> = {}) {
+  return {
+    playerId: PLAYER_ID,
+    tierKey: "diamond-gold",
+    cardPrice: { amountMinor: 1500, currency: "GBP" },
+    publicationState: "published",
+    lastReviewedAt: "2026-08-10T10:15:30.000Z",
+    internalNote: "Editorial-only note that must never reach the zoom.",
+    internalSource: "Internal editorial review board.",
+    ...overrides,
+  };
+}
+
+test("renders a published manual editorial tier and price in Portuguese", () => {
+  const editorialCard = resolveTouchlinePublicEditorialCardPresentation(publishedEditorialRecord());
+  assert.ok(editorialCard);
+
   const details = buildTouchlinePlayerCardZoomDetails({
     locale: "pt-BR",
     name: "Jogador de teste",
     clubName: "Arsenal FC",
     position: "Centroavante / ST",
     nationality: "BRA",
-    marketValue: "€70m",
-    marketValueSource: "provider",
+    editorialCard,
     touchlinePoints: 19,
     profileHref: "/touchline-players/jogador-de-teste?lang=pt-BR",
   });
 
+  assert.equal(details.eyebrow, "Perfil do card");
   assert.equal(details.title, "Jogador de teste");
   assert.equal(details.subtitle, "Arsenal FC · Centroavante / ST");
-  assert.deepEqual(details.fields.slice(0, 4).map((field) => field.value), [
-    "€\u00a070.000.000",
-    "Diamante Dourado",
-    "€\u00a070.000.000+",
-    "£15",
+  assert.deepEqual(details.fields, [
+    { label: "Tier do card", value: "Diamante Dourado", accent: true },
+    { label: "Preço do card", value: "£ 15,00", accent: true },
+    { label: "Posição", value: "Centroavante / ST", accent: false },
+    { label: "Nacionalidade", value: "BRA", accent: false },
+    { label: "Pontos TouchLine", value: "19", accent: false },
   ]);
-  assert.equal(details.fields[3]?.label, "Preço do card");
-  assert.equal(details.fields.at(-1)?.value, "19");
   assert.equal(details.profileHref, "/touchline-players/jogador-de-teste?lang=pt-BR");
+  assert.equal(details.profileLabel, "Ver perfil completo");
 });
 
-test("fails closed for missing provider market values instead of inventing a free tier", () => {
+test("renders the same published editorial profile with English labels", () => {
+  const editorialCard = resolveTouchlinePublicEditorialCardPresentation(publishedEditorialRecord());
+  assert.ok(editorialCard);
+
   const details = buildTouchlinePlayerCardZoomDetails({
     locale: "en-GB",
-    name: "Pending player",
-    marketValue: null,
-    marketValueSource: "unavailable",
+    name: "Test player",
+    clubName: "Arsenal FC",
+    position: "Forward",
+    nationality: "BRA",
+    editorialCard,
   });
 
-  assert.deepEqual(details.fields.slice(0, 4).map((field) => field.value), [
-    "Updating",
-    "Updating",
-    "Updating",
-    "Updating",
+  assert.equal(details.eyebrow, "Card profile");
+  assert.deepEqual(details.fields, [
+    { label: "Card tier", value: "Diamond Gold", accent: true },
+    { label: "Card price", value: "£15.00", accent: true },
+    { label: "Position", value: "Forward", accent: false },
+    { label: "Nationality", value: "BRA", accent: false },
   ]);
+  assert.equal(details.profileLabel, "View full profile");
 });
 
-test("keeps a canonical pending card neutral in its zoom instead of deriving a tier or price", () => {
+test("an unpublished player keeps only real identity fields with no valuation placeholder", () => {
   const details = buildTouchlinePlayerCardZoomDetails({
     locale: "en-GB",
-    name: "Pending player",
-    marketValue: null,
-    marketValueSource: "unavailable",
-    marketValueState: "pending",
-    classificationState: "pending",
-  });
-
-  assert.deepEqual(details.fields.slice(0, 4).map((field) => field.value), [
-    "Market value pending",
-    "Pending",
-    "Pending",
-    "Pending",
-  ]);
-});
-
-test("keeps an active contract's stored tier and price when current market value is pending", () => {
-  const details = buildTouchlinePlayerCardZoomDetails({
-    locale: "en-GB",
-    name: "Contracted player",
-    marketValue: null,
-    marketValueSource: "unavailable",
+    name: "Unpublished player",
+    position: "Midfielder",
+    nationality: "ENG",
+    touchlinePoints: 0,
+    // Legacy inputs must be ignored rather than leaking an economic state.
+    marketValue: "€70m",
+    marketValueSource: "provider",
     marketValueState: "pending",
     classificationState: "pending",
     cardTier: "emerald-green",
     cardPriceAuthority: "active-contract",
-    cardPriceVersion: "2026-07-premier-v1",
   });
 
-  assert.equal(details.fields[0]?.value, "Market value pending");
-  assert.equal(details.fields[1]?.value, "Emerald Green");
-  assert.equal(details.fields[3]?.value, "£7");
+  assert.deepEqual(details.fields, [
+    { label: "Position", value: "Midfielder", accent: false },
+    { label: "Nationality", value: "ENG", accent: false },
+    { label: "TouchLine points", value: "0", accent: false },
+  ]);
+  assert.doesNotMatch(JSON.stringify(details), /market value|market range|economic|pending|updating/i);
 });
 
-test("reuses the shared player zoom details in Arena, ClubHub, ClubOwner and player profile", () => {
+test("the zoom receives only the public editorial projection, never internal notes or sources", () => {
+  const editorialCard = resolveTouchlinePublicEditorialCardPresentation(publishedEditorialRecord());
+  assert.ok(editorialCard);
+
+  const details = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Private notes remain private",
+    editorialCard,
+  });
+
+  const serialized = JSON.stringify(details);
+  assert.doesNotMatch(serialized, /editorial-only note|internal editorial review board|internalnote|internalsource/i);
+  assert.deepEqual(Object.keys(editorialCard).sort(), ["cardPrice", "lastReviewedAt", "tierKey"]);
+});
+
+test("reuses the shared editorial zoom builder in ClubHub, ClubOwner and player profile", () => {
   const sources = [
-    "../app/arena/ArenaClient.tsx",
     "../components/touchline/ClubHubSquadGrid.tsx",
+    "../components/touchline/ClubHubOfficialLineup.tsx",
     "../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
     "../app/touchline-players/[player]/page.tsx",
   ].map((source) => readFileSync(new URL(source, import.meta.url), "utf8"));

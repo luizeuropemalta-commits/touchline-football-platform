@@ -16,19 +16,22 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   const arenaClient = source("app/arena/ArenaClient.tsx");
   const traceCss = globalCss.slice(
     globalCss.indexOf('[data-touchline-card-neon-trace="true"]'),
-    globalCss.indexOf('.touchline-card-surface[data-card-classification="pending"]'),
+    globalCss.indexOf('.touchline-card-surface[data-card-tier="neutral"][data-card-classification="pending"]'),
   );
 
   assert.match(exactCard, /data-card-neon="permanent-tier-art"/);
   assert.match(exactCard, /TouchLine England League Stats/);
   assert.doesNotMatch(exactCard, /TouchLine Arena Points/);
-  assert.match(exactCard, /resolveTouchlineCommercialCardPrice\(\{[\s\S]*?competition: "england"/);
-  assert.match(exactCard, /formatTouchlineCommercialCardPrice/);
-  assert.match(exactCard, /<span>\{cardPriceLabel \?\? cardLabels\.cardPrice\}<\/span>/);
+  assert.match(exactCard, /formatTouchlineEditorialCardPrice/);
+  assert.doesNotMatch(exactCard, /formatTouchlineContractedCommercialCardPrice/);
+  assert.match(exactCard, /<span>\{compactSecondaryLabel\}<\/span>/);
   assert.match(exactCard, /data-card-tier=\{marketTier\?\.key \?\? "neutral"\}/);
-  assert.match(exactCard, /touchlinePublicCardStatusLabel\(publicPresentation\?\.visualState \?\? "unavailable", runtimeLocale\)/);
+  assert.match(exactCard, /data-card-editorial-state=\{editorialCard \? "published" : "unpublished"\}/);
+  assert.doesNotMatch(exactCard, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation/);
   assert.doesNotMatch(exactCard, /TC Value/);
   assert.match(globalCss, /\.touchline-card-surface\[data-card-motion="true"\]/);
+  assert.match(globalCss, /\.touchline-card-surface\[data-card-tier="neutral"\]\[data-card-classification="pending"\]/);
+  assert.doesNotMatch(globalCss, /\.touchline-card-surface\[data-card-classification="pending"\]\s+\[data-touchline-card-frame="true"\]/);
   assert.match(globalCss, /\.touchline-card-surface\[data-card-motion="true"\]:hover/);
   assert.match(trace, /data-touchline-card-neon-trace="true"/);
   assert.match(trace, /aria-hidden="true"/);
@@ -278,7 +281,9 @@ test("dedicated player-card ranking reuses the shared zoom and keeps compact car
   assert.match(rankingsSource, /<TouchlineCardZoom[\s\S]*?forceNeonActive/);
   assert.match(rankingsSource, /showProfileAction=\{false\}[\s\S]*?showSocialMetrics=\{false\}/);
   assert.match(rankingsSource, /imageLoading="eager"[\s\S]*?showCardActions[\s\S]*?showProfileAction/);
-  assert.match(source("lib/touchlineArena/rankings-i18n.ts"), /valor de mercado verificado define separadamente a moldura aprovada e o preço nominal do card/);
+  assert.match(rankingsSource, /published TouchLine cards only/);
+  assert.match(rankingsSource, /tier and card price come from the card-publication process/);
+  assert.doesNotMatch(rankingsSource, /resolveTouchlineVerifiedPlayerEconomy|Market value|market value pending/);
 });
 
 test("ClubOwner feed promotes the owned card and keeps compact controls outside it", () => {
@@ -329,10 +334,13 @@ test("athlete feed publishes the canonical card instead of a detached frame imag
   assert.match(socialCardSection, /showSocialMetrics=\{false\}/);
   assert.match(playerSource, /visual: socialCardVisual\(/);
   assert.doesNotMatch(playerSource, /visualImageUrl: tier\.frameUrl/);
-  assert.match(playerSource, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale\)[\s\S]*?touchlinePublicCardStatusLabel\(publicPresentation\.visualState, locale\)/);
+  assert.match(playerSource, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale\)/);
+  assert.match(playerSource, /loadTouchlinePublishedCardPresentations/);
+  assert.match(playerSource, /const editorialCard = canonicalPlayerId/);
+  assert.doesNotMatch(playerSource, /touchlinePublicCardStatusLabel/);
   assert.doesNotMatch(playerSource, /value: tier\.label/);
   assert.match(playerSource, /Sapphire Blue|tierDisplayName/);
-  assert.match(playerSource, /Card available to contract on TouchLine/);
+  assert.doesNotMatch(playerSource, /Card available to contract on TouchLine/);
   assert.match(playerSource, /Official player data updated/);
 });
 

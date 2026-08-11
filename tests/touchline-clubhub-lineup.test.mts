@@ -178,28 +178,32 @@ test("ClubHub fail-closes the named technical bench for incomplete or mismatched
   }
 });
 
-test("ClubHub presents England card prices in the canonical competition currency", () => {
+test("ClubHub renders only a published card profile without valuation or contract fallback", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /resolveTouchlineCommercialCardPrice\(\{[\s\S]*?competition: "england"/);
-  assert.match(source, /formatTouchlineCommercialCardPrice/);
-  assert.match(source, /Card price/);
-  assert.doesNotMatch(source, /\$\{economy\.priceTc\} TC/);
+  assert.match(source, /lineup\.players\.filter\(\(\{ card \}\) => Boolean\(card\.editorialCard\)\)/);
+  assert.match(source, /editorialCard: card\.editorialCard/);
+  assert.match(source, /activeContractCard: null/);
+  assert.match(source, /buildTouchlinePlayerCardZoomDetails/);
+  assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation|activeContractCard: activeContract/);
 });
 
-test("shared player cards never present the England commercial price as Touch Credits", () => {
+test("shared player cards require the manual published profile as the sole game-card authority", () => {
   const source = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /resolveTouchlineCommercialCardPrice\(\{[\s\S]*?competition: "england"/);
-  assert.match(source, /Card price/);
-  assert.doesNotMatch(source, /TC Value/);
+  assert.match(source, /const editorialCard = player\.editorialCard \?\? null/);
+  assert.match(source, /formatTouchlineEditorialCardPrice/);
+  assert.match(source, /if \(!editorialCard\) return null/);
+  assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|Market value|Valor de mercado|formatTouchlineContractedCommercialCardPrice|cardPriceAuthority === "active-contract"/);
 });
 
-test("shared player cards keep public unavailable values pending and allow a stored price only for an active contract", () => {
-  const source = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
+test("unpublished ClubHub players remain in the football roster but are absent from the card grid", () => {
+  const grid = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /player\.cardPriceAuthority === "active-contract"/);
-  assert.match(source, /formatTouchlineContractedCommercialCardPrice/);
-  assert.match(source, /verifiedEconomy\.status === "resolved"/);
-  assert.match(source, /runtimeLocale === "pt-BR" \? "Pendente" : "Pending"/);
+  assert.match(grid, /const publishedCards = useMemo\(\(\) => cards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/);
+  assert.match(grid, /const tierKey = card\.editorialCard\?\.tierKey \?\? null/);
+  assert.match(grid, /contractHref=\{undefined\}/);
+  assert.match(grid, /publishedCards\.length/);
+  assert.doesNotMatch(grid, /marketValueState: card\.marketValueState|classificationState: card\.classificationState/);
+  assert.doesNotMatch(grid, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation|cardPriceAuthority|formatTouchlineContractedCommercialCardPrice/);
 });

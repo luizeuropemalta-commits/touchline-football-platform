@@ -39,3 +39,17 @@ test("the ClubHub line-up can isolate the static fixture from ranking activity",
   assert.match(source, /enableInteractiveNeon=\{!staticVisualQa\}/);
   assert.match(source, /rankingMode=\{staticVisualQa \? "preview" : "live"\}/);
 });
+
+test("the confirmed nine-player bench keeps long names readable without ellipsis", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/ClubHubMatchdayTechnicalArea.module.css", import.meta.url),
+    "utf8",
+  );
+
+  const filledSlotNameRule = source.match(/\.filledSlot strong\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+  assert.match(filledSlotNameRule, /overflow-wrap:\s*anywhere/);
+  assert.match(filledSlotNameRule, /text-overflow:\s*clip/);
+  assert.match(filledSlotNameRule, /white-space:\s*normal/);
+  assert.doesNotMatch(filledSlotNameRule, /text-overflow:\s*ellipsis/);
+  assert.doesNotMatch(filledSlotNameRule, /white-space:\s*nowrap/);
+});

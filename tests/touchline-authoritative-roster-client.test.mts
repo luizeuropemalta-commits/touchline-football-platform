@@ -21,12 +21,17 @@ function validPayload() {
       clubName: "Manchester City",
       shirtNumber: 9,
       countryCode3: "NOR",
-      marketValue: "€180M",
-      marketValueSource: "verified-cache",
+      marketValue: "",
+      marketValueSource: "unavailable",
       cardTier: "emerald-green",
       cardPriceVersion: "2026-07-tc-v2",
       cardPriceAuthority: "active-contract",
       touchlinePoints: 12,
+      editorialCard: {
+        tierKey: "radiant-gold",
+        cardPrice: { amountMinor: 1500, currency: "TC" },
+        lastReviewedAt: "2026-08-10T10:15:30.000Z",
+      },
     }],
   };
 }
@@ -39,6 +44,12 @@ test("accepts a complete authoritative roster and preserves its inventory identi
   assert.equal(result.cards[0].cardTier, "emerald-green");
   assert.equal(result.cards[0].cardPriceAuthority, "active-contract");
   assert.equal(result.cards[0].shirtNumber, 9);
+  assert.equal(result.cards[0].canonicalPlayerId, result.cards[0].id);
+  assert.deepEqual(result.cards[0].editorialCard, {
+    tierKey: "radiant-gold",
+    cardPrice: { amountMinor: 1500, currency: "TC" },
+    lastReviewedAt: "2026-08-10T10:15:30.000Z",
+  });
 });
 
 test("rejects a partial count, malformed UUID, duplicate contract or non-authoritative state", () => {
@@ -58,4 +69,18 @@ test("rejects a partial count, malformed UUID, duplicate contract or non-authori
   const anonymous = validPayload();
   anonymous.state = "anonymous";
   assert.deepEqual(parseAuthoritativeRosterResponse(anonymous), { ok: false });
+});
+
+test("drops malformed or private editorial fields at the browser boundary", () => {
+  const payload = validPayload();
+  payload.cards[0].editorialCard = {
+    tierKey: "radiant-gold",
+    cardPrice: { amountMinor: 1500, currency: "TC" },
+    lastReviewedAt: "2026-08-10T10:15:30.000Z",
+    internalNote: "must never cross the server boundary",
+  } as never;
+  const result = parseAuthoritativeRosterResponse(payload);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.cards[0].editorialCard, null);
 });

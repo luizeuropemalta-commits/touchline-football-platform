@@ -28,8 +28,7 @@ test("ClubHub places real club identity, honours and next match before matchday 
   assert.ok(technicalStart < outsideStart);
   assert.ok(outsideStart < tableStart);
   assert.ok(tableStart < touchlineCardsStart);
-  assert.match(hero, /Official club value/);
-  assert.match(hero, /hasCompleteClubValue \? formatCompactEuro\(clubValue\) : t\("marketValuePending"\)/);
+  assert.doesNotMatch(hero, /Official club value|Valor oficial do clube|marketValuePending|formatCompactEuro/);
   assert.doesNotMatch(hero, /touchlineCards|touchlinePoints|squadSource|club-hub-metrics/);
   assert.doesNotMatch(hero, /market-transfer/);
 });
