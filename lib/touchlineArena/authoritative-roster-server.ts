@@ -5,11 +5,7 @@ import {
   makeArenaShortName,
   normalizeOfficialShirtNumber,
 } from "../football-data/arena-lineup.ts";
-import {
-  touchlineArenaTierForKey,
-  type TouchlineCardTierKey,
-} from "./card-rules.ts";
-import { isTouchlineAcceptedContractedCardPriceTableVersion } from "./commercial-card-pricing.ts";
+import type { TouchlinePublicEditorialCardPresentation } from "./editorial-card-profile.ts";
 import {
   hasTouchlineCountryFlag,
   normalizeTouchlineCountryCode3,
@@ -79,67 +75,12 @@ function asFiniteNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function compactMarketValue(value: number, currency: string) {
-  const absolute = Math.abs(value);
-  const divisor = absolute >= 1_000_000_000
-    ? 1_000_000_000
-    : absolute >= 1_000_000
-      ? 1_000_000
-      : absolute >= 1_000
-        ? 1_000
-        : 1;
-  const suffix = divisor === 1_000_000_000
-    ? "B"
-    : divisor === 1_000_000
-      ? "M"
-      : divisor === 1_000
-        ? "K"
-        : "";
-  const scaled = value / divisor;
-  const formatted = Number.isInteger(scaled)
-    ? String(scaled)
-    : scaled.toFixed(1).replace(/\.0$/, "");
-  const prefix = currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency === "USD" ? "$" : "";
-  const postfix = prefix ? "" : ` ${currency}`;
-  return `${prefix}${formatted}${suffix}${postfix}`.trim();
-}
-
-function marketValueForPlayer(player: DatabaseRecord) {
-  const amount = asFiniteNumber(player.market_value);
-  if (amount === null || amount <= 0) {
-    return { marketValue: "Pending", marketValueSource: "unavailable" as const };
-  }
-
-  const currency = (asString(player.market_value_currency) ?? "EUR").toUpperCase();
-  return {
-    marketValue: compactMarketValue(amount, currency),
-    marketValueSource: "verified-cache" as const,
-  };
-}
-
 function countryCodeForPlayer(player: DatabaseRecord) {
   const fromName = touchlineCountryCode3FromName(asString(player.nationality));
   if (fromName && hasTouchlineCountryFlag(fromName)) return fromName;
 
   const fromStoredCode = normalizeTouchlineCountryCode3(asString(player.country_id));
   return hasTouchlineCountryFlag(fromStoredCode) ? fromStoredCode : "N/A";
-}
-
-function currentTier(
-  inventory: DatabaseRecord,
-  contract: DatabaseRecord,
-): TouchlineCardTierKey | null {
-  const inventoryTier = asString(inventory.competition_tier);
-  if (inventoryTier && touchlineArenaTierForKey(inventoryTier)) {
-    return inventoryTier as TouchlineCardTierKey;
-  }
-
-  const purchaseTier = asString(contract.purchase_tier);
-  if (purchaseTier && touchlineArenaTierForKey(purchaseTier)) {
-    return purchaseTier as TouchlineCardTierKey;
-  }
-
-  return null;
 }
 
 function touchlinePointsFor(
@@ -182,6 +123,7 @@ function preferredSquadMember(
  */
 export function mapAuthoritativeRosterRows(
   rows: AuthoritativeRosterRows,
+  publishedCards: ReadonlyMap<string, TouchlinePublicEditorialCardPresentation> = new Map(),
 ): AuthoritativeRosterReadResult {
   const allRows = [
     ...rows.contracts,
@@ -243,22 +185,15 @@ export function mapAuthoritativeRosterRows(
     const position = asString(squadMember?.position)
       ?? asString(player.position)
       ?? "Player";
-    const marketValue = marketValueForPlayer(player);
-    const cardTier = currentTier(inventory, contract);
-    const cardPriceVersion = asString(inventory.price_table_version)
-      ?? asString(contract.purchase_price_table_version)
-      ?? undefined;
-    // A contracted card may show its stored nominal price only when both
-    // economic fields match a known approved policy source. The retired v2
-    // marker is deliberately mapped to the current canonical 0/1/2/4/7/10/15
-    // policy; arbitrary unknown tables stay fail-closed. Never turn a missing
-    // tier into a visual Ruby card or a public-looking £0 offer.
-    if (!cardTier || !isTouchlineAcceptedContractedCardPriceTableVersion(cardPriceVersion)) {
-      return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
-    }
+    const editorialCard = publishedCards.get(playerId) ?? null;
+    // An inventory/contract row is not itself a game-card publication. Keep
+    // historical ownership intact but do not expose an unclassified card to
+    // Arena, squad selection or other game consumers.
+    if (!editorialCard) continue;
 
     cards.push({
       id: playerId,
+      canonicalPlayerId: playerId,
       name,
       shortName: makeArenaShortName(name),
       role: inferArenaRole(position),
@@ -266,13 +201,16 @@ export function mapAuthoritativeRosterRows(
       clubName,
       shirtNumber: normalizeOfficialShirtNumber(squadMember?.jersey_number),
       countryCode3: countryCodeForPlayer(player),
-      marketValue: marketValue.marketValue,
-      marketValueSource: marketValue.marketValueSource,
-      cardTier,
-      cardPriceVersion,
-      cardPriceAuthority: "active-contract",
+      // The authoritative roster is a card/contract read, not a valuation
+      // feed. Legacy fields stay inert for DTO compatibility; the shared card
+      // component ignores them in favour of the manual editorial profile or
+      // the frozen active-contract terms below.
+      marketValue: "",
+      marketValueSource: "unavailable",
+      cardTier: editorialCard.tierKey,
       inventoryId,
       touchlinePoints: touchlinePointsFor(contract, inventory),
+      editorialCard,
     });
     inventoryIds.push(inventoryId);
   }
@@ -368,7 +306,7 @@ export async function readAuthoritativeTouchlineRoster(
   const playersResponse = await admin
     .from("football_players")
     .select(
-      "id,provider_player_id,current_club_id,name,display_name,nationality,country_id,position,market_value,market_value_currency",
+      "id,provider_player_id,current_club_id,name,display_name,nationality,country_id,position",
     )
     .in("id", playerIds);
   if (playersResponse.error) {
@@ -378,32 +316,6 @@ export async function readAuthoritativeTouchlineRoster(
   if (!players || players.length !== playerIds.length) {
     return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
   }
-
-  // The ClubOwner/Arena roster consumes the same TouchLine-owned approved
-  // value read model as public profiles. A missing migration or unverified
-  // row becomes Pending; it never falls back to a live provider value.
-  const marketValuesResponse = await admin
-    .from("football_player_market_values")
-    .select("player_id,market_value_eur,status,confidence")
-    .in("player_id", playerIds);
-  const marketValues = dataRows(marketValuesResponse.data) ?? [];
-  const approvedMarketValuesByPlayerId = new Map(
-    marketValues.flatMap((row) => {
-      const playerId = asUuid(row.player_id);
-      const amount = asFiniteNumber(row.market_value_eur);
-      return playerId && amount !== null && amount >= 0 && asString(row.status) === "verified" && asString(row.confidence) === "verified"
-        ? [[playerId, amount] as const]
-        : [];
-    }),
-  );
-  const canonicalPlayers = players.map((player) => {
-    const approved = approvedMarketValuesByPlayerId.get(asUuid(player.id) ?? "");
-    return {
-      ...player,
-      market_value: approved ?? null,
-      market_value_currency: approved === undefined ? null : "EUR",
-    };
-  });
 
   const clubIds = [...new Set([
     ...inventories.map((inventory) => asUuid(inventory.club_id)),
@@ -437,13 +349,18 @@ export async function readAuthoritativeTouchlineRoster(
     return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
   }
 
+  const { loadTouchlinePublishedCardPresentations } = await import("./card-publication-read-model.ts");
+  const publishedCards = await loadTouchlinePublishedCardPresentations({
+    playerIds,
+  });
+
   return mapAuthoritativeRosterRows({
     contracts,
     inventories,
-    players: canonicalPlayers,
+    players,
     clubs,
     squadMembers,
-  });
+  }, publishedCards);
 }
 
 function lineupInventoryId(value: unknown) {
