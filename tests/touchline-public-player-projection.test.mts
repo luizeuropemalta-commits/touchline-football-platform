@@ -166,12 +166,14 @@ test("fails closed when an official player is requested for the wrong club", () 
   assert.equal(projection.classification.reason, "club-mismatch");
 });
 
-test("the public squad adapter strips the private raw snapshot valuation", () => {
+test("the public squad adapter keeps valuation data out of the publication path", () => {
   const route = readFileSync(
     new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url),
     "utf8",
   );
 
-  assert.match(route, /const \{ rawMarketValueEur: _rawMarketValueEur, \.\.\.publicCandidate \} = candidate/);
-  assert.match(route, /players\.push\(\{\s+\.\.\.publicCandidate,/);
+  assert.doesNotMatch(route, /rawMarketValueEur/);
+  assert.match(route, /includeMarketValues: !publicationGateEnabled/);
+  assert.match(route, /marketValueEur: null/);
+  assert.match(route, /editorialCard,/);
 });
