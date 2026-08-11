@@ -15,13 +15,19 @@ type FetchImplementation = (input: URL, init?: RequestInit) => Promise<Response>
  */
 export async function fetchTouchlineInternalJson<T>(
   pathname: string,
-  options: { fetchImplementation?: FetchImplementation; timeoutMs?: number } = {},
+  options: {
+    fetchImplementation?: FetchImplementation;
+    timeoutMs?: number;
+    /** Test-only seam; production always resolves the trusted server origin. */
+    internalUrl?: (pathname: string) => URL;
+  } = {},
 ): Promise<TouchlineInternalJsonResult<T>> {
   const timeoutMs = options.timeoutMs ?? TOUCHLINE_INTERNAL_FETCH_TIMEOUT_MS;
   const fetchImplementation = options.fetchImplementation ?? fetch;
+  const internalUrl = options.internalUrl ?? touchlineInternalUrl;
 
   try {
-    const response = await fetchImplementation(touchlineInternalUrl(pathname), {
+    const response = await fetchImplementation(internalUrl(pathname), {
       cache: "no-store",
       signal: AbortSignal.timeout(timeoutMs),
     });

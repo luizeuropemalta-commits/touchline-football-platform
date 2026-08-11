@@ -39,7 +39,7 @@ test("ClubHub resolves its internal API URL without request-controlled host head
     "https://touchline-preview.vercel.app",
   );
   assert.equal(
-    touchlineInternalUrl("/api/football-data/premier-squad?teamId=19").href,
+    new URL("/api/football-data/premier-squad?teamId=19", resolveTouchlineInternalAppOrigin({ NODE_ENV: "development" })).href,
     "http://127.0.0.1:3000/api/football-data/premier-squad?teamId=19",
   );
 });
@@ -68,7 +68,9 @@ test("unexpected rendering failures use a safe recovery boundary without exposin
 });
 
 test("internal JSON reads preserve a normal response and classify empty, invalid and 500 replies as unavailable", async () => {
+  const internalUrl = (pathname: string) => new URL(pathname, "http://127.0.0.1:3000");
   const normal = await fetchTouchlineInternalJson<{ ok: boolean }>("/api/football-data/premier-squad?teamId=19", {
+    internalUrl,
     fetchImplementation: async (url) => {
       assert.equal(url.origin, "http://127.0.0.1:3000");
       return new Response('{"ok":true}', { status: 200 });
@@ -77,16 +79,19 @@ test("internal JSON reads preserve a normal response and classify empty, invalid
   assert.deepEqual(normal, { state: "ready", data: { ok: true }, status: 200 });
 
   const invalid = await fetchTouchlineInternalJson("/api/test", {
+    internalUrl,
     fetchImplementation: async () => new Response("not json", { status: 200 }),
   });
   assert.deepEqual(invalid, { state: "unavailable", reason: "invalid-json" });
 
   const empty = await fetchTouchlineInternalJson("/api/test", {
+    internalUrl,
     fetchImplementation: async () => new Response("", { status: 200 }),
   });
   assert.deepEqual(empty, { state: "unavailable", reason: "empty" });
 
   const serverFailure = await fetchTouchlineInternalJson("/api/test", {
+    internalUrl,
     fetchImplementation: async () => new Response("server failed", { status: 500 }),
   });
   assert.deepEqual(serverFailure, { state: "unavailable", reason: "http" });
@@ -95,6 +100,7 @@ test("internal JSON reads preserve a normal response and classify empty, invalid
 test("internal failures are bounded and do not retry automatically", async () => {
   let calls = 0;
   const timeout = await fetchTouchlineInternalJson("/api/test", {
+    internalUrl: (pathname) => new URL(pathname, "http://127.0.0.1:3000"),
     fetchImplementation: async () => {
       calls += 1;
       throw new DOMException("timed out", "TimeoutError");
