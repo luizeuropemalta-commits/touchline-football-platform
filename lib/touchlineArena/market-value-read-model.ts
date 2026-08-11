@@ -23,6 +23,11 @@ export type TouchlineVerifiedMarketValue = Readonly<{
 export type TouchlinePublicPlayerProjectionRequest = Readonly<{
   providerPlayerIds: readonly (string | number | null | undefined)[];
   context?: TouchlinePublicProjectionContext;
+  /**
+   * Identity/membership-only public reads must opt out of the legacy
+   * valuation table. Editorial card surfaces use this mode.
+   */
+  includeMarketValues?: boolean;
   /** Test-only dependency injection: bypasses the Next cache. */
   providedAdmin?: ReturnType<typeof createAdminClient>;
 }>;
@@ -82,6 +87,7 @@ async function queryRows(query: PromiseLike<{ data: unknown; error: unknown | nu
 async function readTouchlinePublicPlayerProjections(
   providerPlayerIds: readonly string[],
   inputContext: TouchlinePublicProjectionContext,
+  includeMarketValues: boolean,
   providedAdmin?: ReturnType<typeof createAdminClient>,
 ): Promise<TouchlinePublicProjectionBatch> {
   const context = normalizeTouchlinePublicProjectionContext(inputContext);
@@ -120,7 +126,7 @@ async function readTouchlinePublicPlayerProjections(
       .in("player_id", playerIds)
       .in("club_id", clubIds.length ? clubIds : ["__none__"]))
     : Promise.resolve({ data: [], error: null } as QueryResult);
-  const marketValuesPromise = playerIds.length
+  const marketValuesPromise = includeMarketValues && playerIds.length
     ? queryRows(admin
       .from("football_player_market_values")
       .select("player_id,market_value_eur,verified_season,status,confidence,last_verified")
@@ -152,7 +158,7 @@ async function readTouchlinePublicPlayerProjections(
       clubs: clubsResult.error ? "error" : "ready",
       competitions: competitionsResult.error ? "error" : "ready",
       memberships: membershipsResult.error ? "error" : "ready",
-      marketValues: marketValuesResult.error ? "error" : "ready",
+      marketValues: includeMarketValues && marketValuesResult.error ? "error" : "ready",
     },
   }, context);
 }
@@ -171,8 +177,9 @@ export async function loadTouchlinePublicPlayerProjections(
   }
 
   const context = normalizeTouchlinePublicProjectionContext(request.context);
+  const includeMarketValues = request.includeMarketValues !== false;
   if (request.providedAdmin) {
-    return readTouchlinePublicPlayerProjections(providerPlayerIds, context, request.providedAdmin);
+    return readTouchlinePublicPlayerProjections(providerPlayerIds, context, includeMarketValues, request.providedAdmin);
   }
 
   const cacheKey = [
@@ -180,10 +187,11 @@ export async function loadTouchlinePublicPlayerProjections(
     context.competitionProviderId,
     context.effectiveSeason,
     context.expectedClubProviderTeamId ?? "any-club",
+    includeMarketValues ? "with-market-values" : "identity-membership-only",
     providerPlayerIds.join(","),
   ];
   const cached = unstable_cache(
-    () => readTouchlinePublicPlayerProjections(providerPlayerIds, context),
+    () => readTouchlinePublicPlayerProjections(providerPlayerIds, context, includeMarketValues),
     cacheKey,
     { revalidate: 300, tags: projectionCacheTags(providerPlayerIds, context) },
   );

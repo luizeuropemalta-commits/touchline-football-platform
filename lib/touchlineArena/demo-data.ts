@@ -2,8 +2,6 @@ import type { TouchlineEliteExactPlayer } from "@/components/touchline/cards/Tou
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
-  parseMarketValueEur,
-  resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaClubTemplateForCard,
   touchlineArenaCompetitionTierForCard,
   touchlineArenaTierForKey,
@@ -11,6 +9,7 @@ import {
 } from "./card-rules.ts";
 import { resolveTouchlineContractedCommercialCardPrice } from "./commercial-card-pricing.ts";
 import { touchlineClubOwnerBasePath } from "./club-owner-routes.ts";
+import type { TouchlinePublicEditorialCardPresentation } from "./editorial-card-profile.ts";
 
 export { TOUCHLINE_CARD_STUDIO_LAYOUT_KEY };
 
@@ -30,6 +29,8 @@ export type TouchLineClubVisual = {
 
 export type ClubOwnerSquadCard = {
   id: string;
+  /** Canonical TouchLine UUID when the persisted public roster has resolved it. */
+  canonicalPlayerId?: string | null;
   name: string;
   shortName: string;
   role: string;
@@ -46,6 +47,8 @@ export type ClubOwnerSquadCard = {
   cardPriceVersion?: string;
   /** Present only for a roster read from an active server-side card contract. */
   cardPriceAuthority?: "active-contract";
+  /** Public-safe manual card profile. Internal editorial fields never enter this DTO. */
+  editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   inventoryId?: string | null;
   touchlinePoints: number;
 };
@@ -195,7 +198,8 @@ const CLUB_OWNER_SQUAD_IDENTITIES: Array<Omit<ClubOwnerSquadCard, "marketValue" 
 
 export const CLUB_OWNER_SQUAD_CARDS: ClubOwnerSquadCard[] = CLUB_OWNER_SQUAD_IDENTITIES.map((card) => ({
   ...card,
-  marketValue: "Pending",
+  // Compatibility-only legacy field. Public card surfaces never present it.
+  marketValue: "",
   marketValueSource: "unavailable",
 }));
 
@@ -233,12 +237,10 @@ export function rankClubOwnerCards(first: ClubOwnerSquadCard, second: ClubOwnerS
   return first.clubName.localeCompare(second.clubName) || first.name.localeCompare(second.name);
 }
 
-export function clubOwnerSquadMarketValue(cards: ClubOwnerSquadCard[] = CLUB_OWNER_SQUAD_CARDS) {
-  return cards.reduce((sum, card) => (
-    card.marketValueSource === "provider" || card.marketValueSource === "verified-cache"
-      ? sum + parseMarketValueEur(card.marketValue)
-      : sum
-  ), 0);
+export function clubOwnerSquadMarketValue(_cards: ClubOwnerSquadCard[] = CLUB_OWNER_SQUAD_CARDS) {
+  // Kept for callers still transitioning away from the legacy shape. Market
+  // value is deliberately not estimated, imported, or aggregated.
+  return 0;
 }
 
 export function clubOwnerSquadTcValue(cards: ClubOwnerSquadCard[] = CLUB_OWNER_SQUAD_CARDS) {
@@ -251,11 +253,7 @@ export function clubOwnerSquadTcValue(cards: ClubOwnerSquadCard[] = CLUB_OWNER_S
           competition: "england",
         })?.numericPrice ?? 0);
       }
-      const economy = resolveTouchlineVerifiedPlayerEconomy({
-        marketValue: card.marketValue,
-        marketValueSource: card.marketValueSource,
-      });
-      return sum + (economy.priceTc ?? 0);
+      return sum;
     },
     0,
   );
@@ -300,11 +298,8 @@ export function buildTouchLineEnglandClubTable(): TouchLineEnglandClubStanding[]
   return TOUCHLINE_ENGLAND_CLUBS_BY_RANK.map((club, index) => {
     const clubCards = cardsForTouchLineClub(club);
     const touchlinePoints = clubCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
-    const clubValue = clubCards.reduce((sum, card) => (
-      card.marketValueSource === "provider" || card.marketValueSource === "verified-cache"
-        ? sum + parseMarketValueEur(card.marketValue)
-        : sum
-    ), 0);
+    // League rows never infer or publish a club valuation.
+    const clubValue = 0;
 
     return {
       club,
@@ -330,15 +325,15 @@ export function squadCardToExactPlayer(
   card: ClubOwnerSquadCard,
   _options?: { useSuppliedTier?: boolean },
 ): TouchlineEliteExactPlayer {
-  const marketValue = card.marketValue;
   const club = findTouchLineClub(card.clubName);
-  const approvedCardTier = touchlineArenaTierForKey(card.cardTier)?.key ?? null;
-  const templateTier = approvedCardTier
-    ?? touchlineArenaCompetitionTierForCard(card.cardTier).key;
-  const hasCanonicalPublicState = card.marketValueState != null || card.classificationState != null;
-  const cardTier = hasCanonicalPublicState
-    ? approvedCardTier
-    : templateTier;
+  // This bridge is imported by browser components, so it accepts an already
+  // sanitised public editorial presentation only. The raw editorial catalogue
+  // stays server-only and is never imported here.
+  const editorialCard = card.editorialCard ?? null;
+  const contractedTier = card.cardPriceAuthority === "active-contract"
+    ? touchlineArenaTierForKey(card.cardTier)?.key ?? null
+    : null;
+  const cardTier = editorialCard?.tierKey ?? contractedTier;
 
   return {
     sportmonksPlayerId: card.id,
@@ -352,10 +347,13 @@ export function squadCardToExactPlayer(
     clubName: card.clubName,
     clubLogoUrl: club?.logoUrl ?? null,
     leagueName: "TouchLine England",
-    marketValue,
-    marketValueSource: card.marketValueSource || "unavailable",
-    marketValueState: card.marketValueState,
-    classificationState: card.classificationState,
+    // Public card presentation no longer consumes a player valuation. These
+    // compatibility fields remain neutral while older consumers migrate to
+    // the editorial profile.
+    marketValue: null,
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
     cardTier,
     cardPriceVersion: card.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     cardPriceAuthority: card.cardPriceAuthority,
@@ -365,7 +363,11 @@ export function squadCardToExactPlayer(
     foot: "--",
     contract: "ClubOwner contract",
     nationality: card.countryCode3,
-    cardTemplateUrl: touchlineArenaClubTemplateForCard(card.clubName, marketValue, templateTier) || null,
+    editorialCard,
+    // Keep the pre-existing club artwork as a presentation fallback while an
+    // editorial profile is still unpublished. `cardTier` and price remain
+    // null in that state, so this asset cannot imply a commercial tier.
+    cardTemplateUrl: touchlineArenaClubTemplateForCard(card.clubName, null, cardTier) || null,
     fantasyPoints: card.touchlinePoints,
   };
 }

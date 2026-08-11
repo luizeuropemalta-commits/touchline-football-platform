@@ -74,6 +74,16 @@ export type TouchlineQuickSubstitutionSessionInitializationResult =
   | Readonly<{
       status: "rejected";
       reason: "invalid_snapshot";
+  }>;
+
+export type TouchlineQuickSubstitutionSessionRestoreResult =
+  | Readonly<{
+      status: "ready";
+      state: TouchlineQuickSubstitutionSessionState;
+    }>
+  | Readonly<{
+      status: "rejected";
+      reason: "invalid_snapshot" | "invalid_session_state";
     }>;
 
 export type TouchlineQuickSubstitutionSessionResult =
@@ -274,6 +284,33 @@ function createSessionState(
   });
 }
 
+function hasSameSessionState(
+  left: TouchlineQuickSubstitutionSessionState,
+  right: TouchlineQuickSubstitutionSessionState,
+) {
+  return left.matchId === right.matchId
+    && left.ownerId === right.ownerId
+    && left.rosterRevision === right.rosterRevision
+    && left.revision === right.revision
+    && hasSameOrderedValues(
+      left.activeSlots.map((slot) => `${slot.positionSlotId}:${slot.inventoryId}`),
+      right.activeSlots.map((slot) => `${slot.positionSlotId}:${slot.inventoryId}`),
+    )
+    && hasSameOrderedValues(left.availableBenchInventoryIds, right.availableBenchInventoryIds)
+    && hasSameOrderedValues(left.substitutedOutInventoryIds, right.substitutedOutInventoryIds)
+    && left.appliedEvents.length === right.appliedEvents.length
+    && left.appliedEvents.every((event, index) => {
+      const candidate = right.appliedEvents[index];
+      return candidate?.commandId === event.commandId
+        && candidate.commandHash === event.commandHash
+        && candidate.outgoingPositionSlotId === event.outgoingPositionSlotId
+        && candidate.outgoingInventoryId === event.outgoingInventoryId
+        && candidate.incomingInventoryId === event.incomingInventoryId
+        && candidate.resultingRevision === event.resultingRevision
+        && candidate.occurredAt === event.occurredAt;
+    });
+}
+
 /**
  * Initializes the session only from a complete, inventory-backed matchday.
  * Position slot IDs remain fixed; substitutions replace only their inventory
@@ -307,6 +344,48 @@ export function createTouchlineQuickSubstitutionSession(
     status: "ready",
     state: createSessionState(initialized.state, snapshot.startingSlots, []),
   };
+}
+
+/**
+ * Rebuilds a browser-restored projection exclusively by replaying its event
+ * log against the current 11 + 9 snapshot. The serialized derived fields are
+ * never trusted: a changed slot, bench partition or forged re-entry is
+ * discarded and the caller can start a fresh local session instead.
+ */
+export function restoreTouchlineQuickSubstitutionSession(
+  snapshot: TouchlineQuickSubstitutionSessionSnapshot,
+  persisted: unknown,
+): TouchlineQuickSubstitutionSessionRestoreResult {
+  const initialized = createTouchlineQuickSubstitutionSession(snapshot);
+  if (initialized.status !== "ready") return initialized;
+  if (!isTouchlineQuickSubstitutionSessionState(persisted)
+    || persisted.matchId !== snapshot.matchId
+    || persisted.ownerId !== snapshot.ownerId
+    || persisted.rosterRevision !== snapshot.rosterRevision) {
+    return { status: "rejected", reason: "invalid_session_state" };
+  }
+
+  let replayed = initialized.state;
+  for (const event of persisted.appliedEvents) {
+    const result = applyTouchlineQuickSubstitutionSession(replayed, {
+      commandId: event.commandId,
+      commandHash: event.commandHash,
+      expectedRevision: replayed.revision,
+      outgoingPositionSlotId: event.outgoingPositionSlotId,
+      incomingInventoryId: event.incomingInventoryId,
+      occurredAt: event.occurredAt,
+    });
+    if (result.status !== "applied"
+      || result.event.outgoingInventoryId !== event.outgoingInventoryId
+      || result.event.resultingRevision !== event.resultingRevision) {
+      return { status: "rejected", reason: "invalid_session_state" };
+    }
+    replayed = result.state;
+  }
+
+  return hasSameSessionState(replayed, persisted)
+    ? { status: "ready", state: replayed }
+    : { status: "rejected", reason: "invalid_session_state" };
 }
 
 /**
