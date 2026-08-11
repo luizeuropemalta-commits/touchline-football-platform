@@ -142,12 +142,12 @@
 }
 
 .filledSlot strong {
-  overflow: hidden;
   color: #f6fdff;
   font-size: 11px;
   line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .filledSlot small {
