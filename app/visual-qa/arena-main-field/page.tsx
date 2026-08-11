@@ -4,6 +4,7 @@ import TouchlineEliteExactCard, {
   type TouchlineEliteExactPlayer,
 } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
+import type { TouchlineCardTierKey } from "@/lib/touchlineArena/card-rules";
 import { TOUCHLINE_DEMO_COACH, createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT } from "@/lib/touchlineArena/coach-card-layout";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
@@ -23,6 +24,16 @@ function requireStaticClub() {
 }
 
 const staticClub = requireStaticClub();
+const STATIC_EDITORIAL_REVIEWED_AT = "2026-08-11T00:00:00.000Z";
+const STATIC_NOMINAL_PRICE_GBP: Record<TouchlineCardTierKey, number> = {
+  "ruby-red": 0,
+  "sapphire-blue": 1,
+  "amethyst-purple": 2,
+  "radiant-gold": 4,
+  "emerald-green": 7,
+  "clear-diamond": 10,
+  "diamond-gold": 15,
+};
 
 const STATIC_FIELD_SLOTS = [
   { id: "gk", name: "Harper Quinn", position: "GK", role: "goalkeeper", shirtNumber: 1, x: 50, y: 98, cardTier: "clear-diamond" },
@@ -59,12 +70,20 @@ function staticPlayer(slot: StaticFieldSlot): TouchlineEliteExactPlayer {
     clubLogoUrl: staticClub.logoUrl,
     leagueName: "TouchLine England",
     leagueLogoUrl: null,
-    marketValue: "€20M",
-    marketValueSource: "verified-cache",
-    marketValueState: "verified",
-    classificationState: "verified",
-    cardTier: slot.cardTier,
-    cardPriceVersion: "2026-07-premier-v1",
+    marketValue: null,
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
+    cardTier: null,
+    cardPriceVersion: null,
+    editorialCard: {
+      tierKey: slot.cardTier,
+      cardPrice: {
+        amountMinor: STATIC_NOMINAL_PRICE_GBP[slot.cardTier] * 100,
+        currency: "GBP",
+      },
+      lastReviewedAt: STATIC_EDITORIAL_REVIEWED_AT,
+    },
     updatedAt: "STATIC LOCAL QA FIXTURE",
     age: "—",
     height: "—",
