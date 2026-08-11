@@ -22,8 +22,9 @@ test("the public squad route has no provider, mutation, or request-upgrade path"
   );
 });
 
-test("the public squad route reads identity and membership only, then applies the server-only editorial catalogue", () => {
-  assert.match(routeSource, /includeMarketValues: false/);
-  assert.match(routeSource, /findTouchlineEditorialCardPresentation\(identity\.playerId\)/);
+test("the public squad route uses the publication gate and server-only card catalogue", () => {
+  assert.match(routeSource, /isTouchlineCardPublicationGateEnabled/);
+  assert.match(routeSource, /includeMarketValues: !publicationGateEnabled/);
+  assert.match(routeSource, /loadTouchlinePublishedCardPresentations/);
   assert.doesNotMatch(routeSource, /football_player_market_values|resolveTouchlineVerifiedPlayerEconomy/);
 });
