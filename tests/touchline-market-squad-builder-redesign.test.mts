@@ -80,7 +80,8 @@ test("successful contracts fill eligible Starting XI slots before bench and pres
   assert.match(source, /nextPlayers\.length < TOUCHLINE_SQUAD_RULES\.starters/);
   assert.match(source, /const placement = placeNewContractsInSquad\(/);
   assert.match(source, /persistArenaRoster\(placement\.players, placement\.bench\)/);
-  assert.match(source, /resolveTouchlineCommercialCardPrice/);
+  assert.match(source, /function builderPlayerRetailPriceTc\(/);
+  assert.match(source, /parseTouchlinePublicEditorialCardPresentation/);
 });
 
 test("coach remains a dedicated entity outside every player slot", async () => {
