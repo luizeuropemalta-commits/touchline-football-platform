@@ -24,6 +24,7 @@ function currentRepositoryInput() {
     ownerPortraitFixtureSource: source("../app/visual-qa/club-owner-portrait-neon/page.tsx"),
     officialTableFixtureSource: source("../app/visual-qa/official-league-table-initial/page.tsx"),
     arenaMainFieldFixtureSource: source("../app/visual-qa/arena-main-field/page.tsx"),
+    twentyClubGalleryFixtureSource: source("../app/visual-qa/twenty-club-card-gallery/page.tsx"),
   };
 }
 
@@ -43,6 +44,8 @@ test("the local release checklist maps the public route, name-only environment c
   assert.ok(result.fixtureMatrix.includes("/visual-qa/club-owner-portrait-neon?lang=pt-BR"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/official-league-table-initial?lang=pt-BR"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/arena-main-field?lang=pt-BR"));
+  assert.ok(result.fixtureMatrix.includes("/visual-qa/twenty-club-card-gallery?lang=en-GB"));
+  assert.ok(result.fixtureMatrix.includes("/visual-qa/twenty-club-card-gallery?lang=pt-BR"));
   assert.ok(result.manualGates.some((gate) => gate.includes("Safari/WebKit")));
   assert.ok(result.externalGates.some((gate) => gate.includes("Vercel project binding")));
 });
