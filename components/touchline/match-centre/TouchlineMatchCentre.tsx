@@ -47,7 +47,7 @@ function fixtureDate(fixture: Pick<TouchlinePublicFixture, "startsAt">, locale: 
 }
 
 function score(fixture: TouchlinePublicFixture) {
-  if (typeof fixture.homeScore === "number" || typeof fixture.awayScore === "number") return `${fixture.homeScore ?? 0} — ${fixture.awayScore ?? 0}`;
+  if (Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore)) return `${fixture.homeScore} — ${fixture.awayScore}`;
   return "VS";
 }
 
