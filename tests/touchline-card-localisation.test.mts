@@ -27,7 +27,7 @@ test("the server-rendered player profile explicitly passes its resolved locale t
 });
 
 test("the player profile uses the editorial card projection and has no valuation placeholder", () => {
-  assert.match(playerProfileSource, /findTouchlineEditorialCardPresentation\(publicProjection\?\.identity\.value\?\.playerId\)/);
+  assert.match(playerProfileSource, /loadTouchlinePublishedCardPresentations/);
   assert.match(playerProfileSource, /includeMarketValues: false/);
   assert.match(playerProfileSource, /editorialCard,/);
   assert.doesNotMatch(playerProfileSource, /touchlinePublicMarketValueStatusLabel/);

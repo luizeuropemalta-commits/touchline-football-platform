@@ -58,9 +58,9 @@ test("editorial public card consumers opt out of the legacy valuation read model
   const roster = readFileSync(new URL("../lib/touchlineArena/authoritative-roster-server.ts", import.meta.url), "utf8");
   assert.match(profile, /loadTouchlinePublicPlayerProjections/);
   assert.match(profile, /includeMarketValues: false/);
-  assert.match(profile, /findTouchlineEditorialCardPresentation/);
+  assert.match(profile, /loadTouchlinePublishedCardPresentations/);
   assert.doesNotMatch(profile, /loadTouchlineVerifiedMarketValueByProviderPlayerId/);
-  assert.match(roster, /findTouchlineEditorialCardPresentation\(playerId\)/);
+  assert.match(roster, /loadTouchlinePublishedCardPresentations/);
   assert.doesNotMatch(roster, /football_player_market_values|approvedMarketValuesByPlayerId|resolveTouchlineVerifiedPlayerEconomy/);
 });
 
