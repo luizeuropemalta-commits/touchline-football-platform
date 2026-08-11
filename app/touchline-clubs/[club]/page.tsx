@@ -12,7 +12,6 @@ import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/footb
 import {
   TOUCHLINE_ENGLAND_CLUBS,
   findTouchLineClub,
-  formatCompactEuro,
   rankClubOwnerCards,
   type ClubOwnerSquadCard,
 } from "@/lib/touchlineArena/demo-data";
@@ -25,7 +24,7 @@ import { readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fa
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
-import { parseMarketValueEurOrNull } from "@/lib/touchlineArena/card-rules";
+import type { TouchlinePublicEditorialCardPresentation } from "@/lib/touchlineArena/editorial-card-profile";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import {
   resolveTouchlineClubMatchPreviewTeam,
@@ -53,6 +52,7 @@ type ClubHubPageProps = {
 
 type PremierSquadPlayer = {
   id: string;
+  canonicalPlayerId?: string | null;
   providerId?: string | null;
   name: string;
   shortName: string;
@@ -67,6 +67,7 @@ type PremierSquadPlayer = {
   classificationState?: ClubOwnerSquadCard["classificationState"];
   cardTier?: ClubOwnerSquadCard["cardTier"];
   cardPriceVersion?: string | null;
+  editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   countryCode3?: string | null;
 };
 
@@ -101,6 +102,7 @@ export function generateStaticParams() {
 function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): ClubOwnerSquadCard {
   return {
     id: player.providerId || player.id,
+    canonicalPlayerId: player.canonicalPlayerId ?? null,
     name: player.name,
     shortName: player.shortName || player.name,
     role: player.role || "midfielder",
@@ -108,12 +110,14 @@ function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): Clu
     clubName,
     shirtNumber: normalizeOfficialShirtNumber(player.shirtNumber),
     countryCode3: player.countryCode3 || "N/A",
-    marketValue: player.marketValue || "Pending",
+    // Legacy compatibility only: public cards no longer expose valuations.
+    marketValue: "",
     marketValueSource: player.marketValueSource || "unavailable",
     marketValueState: player.marketValueState,
     classificationState: player.classificationState,
     cardTier: player.cardTier,
     cardPriceVersion: player.cardPriceVersion || undefined,
+    editorialCard: player.editorialCard ?? null,
     touchlinePoints: 0,
   };
 }
@@ -131,7 +135,7 @@ function persistedSquadPlayerToCard(player: PersistedSquadPlayer, clubName: stri
     // A squad snapshot proves player membership, not the current public
     // market-value/classification projection. Never revive a legacy tier or
     // commercial value when the canonical projection endpoint is unavailable.
-    marketValue: "Pending",
+    marketValue: "",
     marketValueSource: "unavailable",
     marketValueState: "unavailable",
     classificationState: "unavailable",
@@ -326,11 +330,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const clubLineup = matchdayPresentation.lineup;
   const displayedMatchdayPlayerIds = new Set(matchdayPresentation.displayedPlayerIds.map(String));
   const outsideMatchdayCards = clubCards.filter((card) => !displayedMatchdayPlayerIds.has(String(card.id)));
-  const verifiedMarketValue = (card: ClubOwnerSquadCard) => (
-    card.marketValueState === "verified" ? parseMarketValueEurOrNull(card.marketValue) : null
-  );
-  const clubValue = clubCards.reduce((sum, card) => sum + (verifiedMarketValue(card) ?? 0), 0);
-  const hasCompleteClubValue = clubCards.length > 0 && clubCards.every((card) => verifiedMarketValue(card) !== null);
   const squadStatus = locale === "pt-BR" ? `${clubCards.length} cards TouchLine` : squadLoad.status;
   return (
     <main className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent } as CSSProperties}>
@@ -363,12 +362,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             <div className="club-hub-title-block">
               <span>{locale === "pt-BR" ? "Perfil oficial do clube" : "Official club profile"}</span>
               <h1>{club.name}</h1>
-              <dl className="club-hub-official-value">
-                <div>
-                  <dt>{locale === "pt-BR" ? "Valor oficial do clube" : "Official club value"}</dt>
-                  <dd>{hasCompleteClubValue ? formatCompactEuro(clubValue) : t("marketValuePending")}</dd>
-                </div>
-              </dl>
               {clubHonours.length ? (
                 <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
                   <span>{t("clubHonours")}</span>
@@ -463,7 +456,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           {outsideMatchdayCards.length ? (
             <ClubHubSquadGrid
               cards={outsideMatchdayCards}
-              clubId={club.teamId}
               locale={locale}
               labels={cardLabels}
               openProfileLabel={t("openSelectedPlayerProfile")}
@@ -591,28 +583,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           padding: 0;
           background: transparent;
           overflow: hidden;
-        }
-        .club-hub-official-value {
-          width: min(360px, 100%);
-          margin: 18px 0 0;
-          border: 1px solid color-mix(in srgb, var(--club-accent) 42%, rgba(255,255,255,.15));
-          border-radius: 10px;
-          padding: 12px 14px;
-          background: linear-gradient(135deg, rgba(0,0,0,.26), color-mix(in srgb, var(--club-accent) 10%, rgba(0,0,0,.26)));
-        }
-        .club-hub-official-value dt {
-          color: rgba(232,255,222,.72);
-          font-size: 9px;
-          font-weight: 950;
-          letter-spacing: .1em;
-          text-transform: uppercase;
-        }
-        .club-hub-official-value dd {
-          margin: 7px 0 0;
-          color: #f8fff5;
-          font-size: clamp(19px, 2.2vw, 29px);
-          font-weight: 1000;
-          line-height: 1;
         }
         .club-hub-honours-empty {
           margin: 10px 0 0;
