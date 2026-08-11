@@ -4,16 +4,17 @@ import TouchlineEliteExactCard, {
 import { resolveTouchlineVisualQaLocale } from "@/lib/touchlineArena/visual-qa-locale";
 
 export const metadata = {
-  title: "TouchLine · Canonical card-state visual QA",
+  title: "TouchLine · Editorial card-state visual QA",
   robots: { index: false, follow: false },
 };
 
 type CardFixture = Readonly<{
-  id: "verified" | "pending" | "active-contract";
+  id: "published" | "review" | "draft";
   label: string;
   description: string;
   expectedTier: string;
-  expectedCommercialState: string;
+  expectedPresentation: string;
+  editorialState: "published" | "review" | "draft";
   player: TouchlineEliteExactPlayer;
 }>;
 
@@ -64,67 +65,74 @@ const FIXTURE_BASE: Omit<
 
 const CARD_FIXTURES: readonly CardFixture[] = [
   {
-    id: "verified",
-    label: "VERIFIED · €20M",
-    description: "Synthetic verified value with its explicit approved Radiant Gold classification.",
+    id: "published",
+    label: "PUBLISHED · MANUAL PROFILE",
+    description: "A synthetic published editorial profile with an explicitly approved tier and card price.",
     expectedTier: "Radiant Gold",
-    expectedCommercialState: "Verified value · £4 nominal card price",
+    expectedPresentation: "Manual tier · manual card price",
+    editorialState: "published",
     player: {
       ...FIXTURE_BASE,
-      sportmonksPlayerId: "visual-fixture-verified",
-      formationPlayerId: "visual-fixture-verified",
+      sportmonksPlayerId: "visual-fixture-published",
+      formationPlayerId: "visual-fixture-published",
       overall: 17,
       shirtNumber: 17,
-      name: "VERIFIED",
-      marketValue: "€20M",
-      marketValueSource: "verified-cache",
-      marketValueState: "verified",
-      classificationState: "verified",
-      cardTier: "radiant-gold",
-      cardPriceVersion: "2026-07-premier-v1",
+      name: "PUBLISHED",
+      marketValue: null,
+      marketValueSource: "unavailable",
+      marketValueState: "unavailable",
+      classificationState: "unavailable",
+      cardTier: null,
+      cardPriceVersion: null,
+      editorialCard: {
+        tierKey: "radiant-gold",
+        cardPrice: { amountMinor: 1500, currency: "GBP" },
+        lastReviewedAt: "2026-08-10T09:00:00Z",
+      },
     },
   },
   {
-    id: "pending",
-    label: "PENDING · NO VALUE",
-    description: "Synthetic missing value. It must remain neutral, explicit and non-commercial.",
+    id: "review",
+    label: "REVIEW · NOT PUBLIC",
+    description: "A synthetic editorial review remains neutral until an editor explicitly publishes its profile.",
     expectedTier: "Neutral",
-    expectedCommercialState: "Market value pending · no nominal card price",
+    expectedPresentation: "No public card profile",
+    editorialState: "review",
     player: {
       ...FIXTURE_BASE,
-      sportmonksPlayerId: "visual-fixture-pending",
-      formationPlayerId: "visual-fixture-pending",
+      sportmonksPlayerId: "visual-fixture-review",
+      formationPlayerId: "visual-fixture-review",
       overall: 18,
       shirtNumber: 18,
-      name: "PENDING",
+      name: "REVIEW",
       marketValue: null,
       marketValueSource: "unavailable",
-      marketValueState: "pending",
-      classificationState: "pending",
+      marketValueState: "unavailable",
+      classificationState: "unavailable",
       cardTier: null,
       cardPriceVersion: null,
     },
   },
   {
-    id: "active-contract",
-    label: "ACTIVE CONTRACT · STORED EMERALD",
-    description: "Synthetic pending live value with a stored active-contract tier and approved price-table version.",
-    expectedTier: "Emerald Green",
-    expectedCommercialState: "Active contract · stored £7 nominal card price",
+    id: "draft",
+    label: "DRAFT · NOT PUBLIC",
+    description: "A synthetic editorial draft stays neutral and exposes no unpublished card profile.",
+    expectedTier: "Neutral",
+    expectedPresentation: "No public card profile",
+    editorialState: "draft",
     player: {
       ...FIXTURE_BASE,
-      sportmonksPlayerId: "visual-fixture-active-contract",
-      formationPlayerId: "visual-fixture-active-contract",
+      sportmonksPlayerId: "visual-fixture-draft",
+      formationPlayerId: "visual-fixture-draft",
       overall: 19,
       shirtNumber: 19,
-      name: "ACTIVE",
+      name: "DRAFT",
       marketValue: null,
       marketValueSource: "unavailable",
-      marketValueState: "pending",
-      classificationState: "pending",
-      cardTier: "emerald-green",
-      cardPriceVersion: "2026-07-premier-v1",
-      cardPriceAuthority: "active-contract",
+      marketValueState: "unavailable",
+      classificationState: "unavailable",
+      cardTier: null,
+      cardPriceVersion: null,
     },
   },
 ];
@@ -159,23 +167,23 @@ type VisualQaPageProps = Readonly<{
 function fixtureCopy(fixture: CardFixture, locale: "en-GB" | "pt-BR") {
   if (locale !== "pt-BR") return fixture;
   const localized = {
-    verified: {
-      label: "VERIFICADO · €20M",
-      description: "Valor verificado sintético com a classificação Radiant Gold aprovada e explícita.",
+    published: {
+      label: "PUBLICADO · PERFIL MANUAL",
+      description: "Perfil editorial sintético publicado, com tier e preço do card aprovados explicitamente.",
       expectedTier: "Radiant Gold",
-      expectedCommercialState: "Valor verificado · preço nominal de card £4",
+      expectedPresentation: "Tier manual · preço manual do card",
     },
-    pending: {
-      label: "PENDENTE · SEM VALOR",
-      description: "Valor ausente sintético. Deve ficar neutro, explícito e sem conteúdo comercial.",
+    review: {
+      label: "EM REVISÃO · NÃO PÚBLICO",
+      description: "Revisão editorial sintética permanece neutra até a publicação explícita do perfil.",
       expectedTier: "Neutro",
-      expectedCommercialState: "Valor de mercado pendente · sem preço nominal de card",
+      expectedPresentation: "Sem perfil público de card",
     },
-    "active-contract": {
-      label: "CONTRATO ATIVO · EMERALD ARMAZENADO",
-      description: "Valor ao vivo pendente sintético com tier de contrato ativo armazenado e versão aprovada da tabela de preços.",
-      expectedTier: "Emerald Green",
-      expectedCommercialState: "Contrato ativo · preço nominal armazenado de £7",
+    draft: {
+      label: "RASCUNHO · NÃO PÚBLICO",
+      description: "Rascunho editorial sintético permanece neutro e não expõe perfil de card não publicado.",
+      expectedTier: "Neutro",
+      expectedPresentation: "Sem perfil público de card",
     },
   } as const;
   return { ...fixture, ...localized[fixture.id] };
@@ -186,15 +194,15 @@ export default async function CardValueStatesVisualQaPage({ searchParams }: Visu
   const ptBr = locale === "pt-BR";
   const copy = ptBr
     ? {
-      title: "Estados canônicos de valor do card",
-      description: "Três fixtures sintéticos exercitam a fronteira de apresentação pública controlada pelo servidor. Não contêm dados de jogador, elenco, provedor, contrato ou conta.",
+      title: "Estados editoriais do card",
+      description: "Três fixtures sintéticos exercitam a fronteira de publicação editorial controlada pelo servidor. Não contêm dados de jogador, elenco, provedor, contrato ou conta.",
       expectedBorder: "Borda esperada",
       expectedPresentation: "Apresentação esperada",
       safety: "Apenas fixture visual estático. Assinatura de ranking, ações de card, links de perfil, seleção de neon, edição de layout e acesso a layout persistido estão desativados.",
     }
     : {
-      title: "Canonical card value states",
-      description: "Three synthetic fixtures exercise the server-owned public presentation boundary. They contain no player, roster, provider, contract or account data.",
+      title: "Editorial card states",
+      description: "Three synthetic fixtures exercise the server-owned editorial publication boundary. They contain no player, roster, provider, contract or account data.",
       expectedBorder: "Expected border",
       expectedPresentation: "Expected presentation",
       safety: "Static visual fixture only. Ranking subscription, card actions, profile links, neon selection, layout editing and persisted layout access are disabled.",
@@ -221,7 +229,7 @@ export default async function CardValueStatesVisualQaPage({ searchParams }: Visu
       </header>
 
       <section
-        aria-label="Canonical card-value state fixtures"
+        aria-label="Editorial card-state fixtures"
         style={{
           width: "min(1280px, 100%)",
           margin: "32px auto 0",
@@ -237,6 +245,7 @@ export default async function CardValueStatesVisualQaPage({ searchParams }: Visu
           <article
             key={fixture.id}
             data-card-fixture={fixture.id}
+            data-editorial-state={fixture.editorialState}
             style={{
               display: "grid",
               gap: 16,
@@ -254,7 +263,7 @@ export default async function CardValueStatesVisualQaPage({ searchParams }: Visu
             <StaticCanonicalCard player={localizedFixture.player} locale={locale} />
             <dl style={{ display: "grid", gap: 8, margin: 0, color: "rgba(226,232,240,.78)", fontSize: 13 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}><dt style={{ color: "rgba(186,230,253,.62)" }}>{copy.expectedBorder}</dt><dd style={{ margin: 0, fontWeight: 850, textAlign: "right" }}>{localizedFixture.expectedTier}</dd></div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}><dt style={{ color: "rgba(186,230,253,.62)" }}>{copy.expectedPresentation}</dt><dd style={{ margin: 0, fontWeight: 850, textAlign: "right" }}>{localizedFixture.expectedCommercialState}</dd></div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}><dt style={{ color: "rgba(186,230,253,.62)" }}>{copy.expectedPresentation}</dt><dd style={{ margin: 0, fontWeight: 850, textAlign: "right" }}>{localizedFixture.expectedPresentation}</dd></div>
             </dl>
           </article>
           );
