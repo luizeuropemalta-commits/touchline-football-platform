@@ -4,6 +4,7 @@ import {
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
 import type { ClubOwnerSquadCard } from "./demo-data.ts";
+import { parseTouchlinePublicEditorialCardPresentation } from "./editorial-card-profile.ts";
 import { normalizeTouchlineMarketInventoryId } from "./market-inventory.ts";
 
 export type AuthoritativeRosterClientResult =
@@ -61,7 +62,10 @@ export function parseAuthoritativeRosterResponse(
     const position = requiredText(card?.position);
     const clubName = requiredText(card?.clubName);
     const countryCode3 = requiredText(card?.countryCode3);
-    const marketValue = requiredText(card?.marketValue);
+    // Legacy valuation fields are not authority for cards anymore. Keep a
+    // neutral compatibility value only so older persisted roster helpers can
+    // deserialize the payload while the shared card consumes editorial data.
+    const marketValue = optionalText(card?.marketValue) ?? "";
     const source = marketValueSource(card?.marketValueSource);
     const tier = requiredText(card?.cardTier);
     const priceAuthority = card?.cardPriceAuthority === "active-contract"
@@ -70,6 +74,7 @@ export function parseAuthoritativeRosterResponse(
     const points = typeof card?.touchlinePoints === "number" && Number.isFinite(card.touchlinePoints)
       ? card.touchlinePoints
       : null;
+    const editorialCard = parseTouchlinePublicEditorialCardPresentation(card?.editorialCard);
 
     if (
       !id
@@ -81,7 +86,6 @@ export function parseAuthoritativeRosterResponse(
       || !position
       || !clubName
       || !countryCode3
-      || !marketValue
       || !source
       || !tier
       || !priceAuthority
@@ -105,6 +109,8 @@ export function parseAuthoritativeRosterResponse(
       cardTier: tier as TouchlineCardTierKey,
       cardPriceVersion: optionalText(card?.cardPriceVersion),
       cardPriceAuthority: priceAuthority,
+      canonicalPlayerId: id,
+      editorialCard,
       touchlinePoints: points,
     });
   }
