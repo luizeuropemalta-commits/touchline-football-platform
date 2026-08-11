@@ -924,7 +924,10 @@ a, button { outline: none; }
   animation: touchline-card-perimeter-trace 8s cubic-bezier(.22,.74,.28,1) infinite;
 }
 
-.touchline-card-surface[data-card-classification="pending"] [data-touchline-card-frame="true"] {
+/* A generic legacy pending flag must never desaturate a card that already has
+   a real published/contract tier. Only a truly neutral, unresolved card may
+   use the quiet fallback treatment. */
+.touchline-card-surface[data-card-tier="neutral"][data-card-classification="pending"] [data-touchline-card-frame="true"] {
   filter: grayscale(1) saturate(.35) brightness(.88);
 }
 
