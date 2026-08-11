@@ -31,7 +31,7 @@ test("ClubHub mounts its heavy squad cards progressively", async () => {
   ]);
   assert.match(page, /<ClubHubSquadGrid/);
   assert.match(grid, /const INITIAL_CARD_COUNT = 8/);
-  assert.match(grid, /cards\.slice\(0, visibleCount\)/);
+  assert.match(grid, /publishedCards\.slice\(0, visibleCount\)/);
   assert.match(grid, /View.*more/);
 });
 
