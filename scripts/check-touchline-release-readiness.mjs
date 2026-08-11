@@ -66,6 +66,7 @@ export function evaluateTouchlineReleaseReadiness({
   ownerPortraitFixtureSource,
   officialTableFixtureSource,
   arenaMainFieldFixtureSource,
+  twentyClubGalleryFixtureSource,
 }) {
   const scripts = packageJson?.scripts ?? {};
   const templateNames = envNamesFromTemplate(envTemplate);
@@ -124,6 +125,14 @@ export function evaluateTouchlineReleaseReadiness({
       'next: "PRÓXIMO"',
       'next: "NEXT"',
     ]).map((token) => `arena-main-field-fixture:${token}`),
+    ...missingTokens(twentyClubGalleryFixtureSource, [
+      'data-twenty-club-card-gallery="static"',
+      "TOUCHLINE_ENGLAND_CLUBS.map",
+      "TOUCHLINE_CARD_TIER_KEYS",
+      'currency: "GBP"',
+      "ADMIN-GATED · STATIC LOCAL VISUAL QA",
+      "resolveTouchlineVisualQaLocale",
+    ]).map((token) => `twenty-club-gallery-fixture:${token}`),
   ];
 
   return Object.freeze({
@@ -167,9 +176,11 @@ export function evaluateTouchlineReleaseReadiness({
       "/visual-qa/official-league-table-initial?lang=pt-BR",
       "/visual-qa/arena-main-field?lang=en-GB",
       "/visual-qa/arena-main-field?lang=pt-BR",
+      "/visual-qa/twenty-club-card-gallery?lang=en-GB",
+      "/visual-qa/twenty-club-card-gallery?lang=pt-BR",
     ]),
     manualGates: Object.freeze([
-      "Use the static fixtures at 390px, 768px, and 1280px; record no horizontal overflow, readable cards, ClubHub order, and EN/PT labels.",
+      "Use the static fixtures at 390px, 768px, and 1280px; include the twenty-club gallery and record no horizontal overflow, readable cards, ClubHub order, canonical crest/frame/neon coverage, and EN/PT labels.",
       "Observe the same static fixtures in Safari/WebKit plus Chrome Android or an approved equivalent; keyboard, touch, and reduced-motion remain manual evidence.",
       "Keep functional product Preview separate: isolated Preview deliberately blocks ClubHub/cards and must not inherit data/auth/payment variables.",
     ]),
@@ -189,7 +200,7 @@ function parseArgs(args) {
 
 async function readRepositoryInputs(rootDirectory) {
   const read = (path) => readFile(resolve(rootDirectory, path), "utf8");
-  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource, cardNeonFixtureSource, ownerPortraitFixtureSource, officialTableFixtureSource, arenaMainFieldFixtureSource] = await Promise.all([
+  const [packageText, envTemplate, publicOriginSource, proxySource, nextConfigSource, clubHubFixtureSource, cardFixtureSource, cardNeonFixtureSource, ownerPortraitFixtureSource, officialTableFixtureSource, arenaMainFieldFixtureSource, twentyClubGalleryFixtureSource] = await Promise.all([
     read("package.json"),
     read(".env.example"),
     read("lib/touchlineArena/public-origin.ts"),
@@ -201,6 +212,7 @@ async function readRepositoryInputs(rootDirectory) {
     read("app/visual-qa/club-owner-portrait-neon/page.tsx"),
     read("app/visual-qa/official-league-table-initial/page.tsx"),
     read("app/visual-qa/arena-main-field/page.tsx"),
+    read("app/visual-qa/twenty-club-card-gallery/page.tsx"),
   ]);
   return {
     packageJson: JSON.parse(packageText),
@@ -214,6 +226,7 @@ async function readRepositoryInputs(rootDirectory) {
     ownerPortraitFixtureSource,
     officialTableFixtureSource,
     arenaMainFieldFixtureSource,
+    twentyClubGalleryFixtureSource,
   };
 }
 

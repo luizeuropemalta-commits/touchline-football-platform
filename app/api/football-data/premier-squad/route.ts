@@ -8,7 +8,13 @@ import {
   type PersistedSquadPlayer,
 } from "@/lib/football-data/squad-snapshot-store";
 import { resolveOfficialShirtNumber } from "@/lib/football-data/official-shirt-numbers";
-import { parseMarketValueEur, type TouchlineCardTierKey } from "@/lib/touchlineArena/card-rules";
+import type { TouchlineCardTierKey } from "@/lib/touchlineArena/card-rules";
+import { isTouchlineCardPublicationGateEnabled } from "@/lib/touchlineArena/card-publication-gate";
+import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
+import {
+  parseTouchlinePublicEditorialCardPresentation,
+  type TouchlinePublicEditorialCardPresentation,
+} from "@/lib/touchlineArena/editorial-card-profile";
 import {
   loadTouchlinePublicPlayerProjections,
   type TouchlinePublicPlayerProjection,
@@ -67,15 +73,16 @@ function mapPersistedSquadPlayer(
     clubName,
     clubShortCode,
     clubLogoUrl,
-    // Keep the persisted snapshot available for internal resilience, but never
-    // expose its raw market value to a public card surface.
-    rawMarketValueEur: parseMarketValueEur(player.marketValue),
+    // Keep roster identity/membership data only. Public card presentation is
+    // editorial and never reads a player valuation from this snapshot.
     marketValue: null,
     marketValueSource: "unavailable" as const,
     marketValueState: "unavailable" as TouchlinePublicProjectionStatus,
     classificationState: "unavailable" as TouchlinePublicProjectionStatus,
     cardTier: null as TouchlineCardTierKey | null,
     cardPriceVersion: null,
+    canonicalPlayerId: null as string | null,
+    editorialCard: null as TouchlinePublicEditorialCardPresentation | null,
     countryCode3: countryCode,
     flagUrl,
     nationality: player.nationality,
@@ -87,13 +94,15 @@ type SquadCandidate = ReturnType<typeof mapPersistedSquadPlayer>;
 
 type PublicSquadPlayer = Omit<
   SquadCandidate,
-  | "rawMarketValueEur"
   | "marketValue"
   | "marketValueSource"
   | "marketValueState"
   | "classificationState"
   | "cardTier"
   | "cardPriceVersion"
+  | "canonicalPlayerId"
+  | "editorialCard"
+  | "source"
 > & Readonly<{
   marketValue: string | null;
   marketValueSource: "verified-cache" | "unavailable";
@@ -104,6 +113,9 @@ type PublicSquadPlayer = Omit<
   marketValueEur: number | null;
   marketValueUpdatedAt: string | null;
   authoritativeMarketValueSource: "verified-cache" | null;
+  canonicalPlayerId: string;
+  editorialCard: TouchlinePublicEditorialCardPresentation | null;
+  source: "touchline_database" | "touchline_editorial" | "touchline_legacy_verified";
   publicProjectionState: "ready" | "partial";
 }>;
 
@@ -114,15 +126,6 @@ type PendingPublicSquadPlayer = Readonly<{
   position: string | null;
   reason: string;
 }>;
-
-function formatApprovedMarketValue(value: number) {
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "EUR",
-    notation: "compact",
-    maximumFractionDigits: value >= 10_000_000 ? 0 : 1,
-  }).format(value);
-}
 
 function publicProjectionOmission(
   candidate: SquadCandidate,
@@ -144,6 +147,29 @@ function publicProjectionOmission(
 }
 
 /**
+ * Transitional display only. While the publication gate is OFF, an already
+ * verified canonical value/classification may keep its existing game card.
+ * It never exposes the EUR value and disappears as soon as the explicit
+ * publication gate is enabled after backfill/cutover proof.
+ */
+function legacyVerifiedCardPresentation(
+  projection: TouchlinePublicPlayerProjection | undefined,
+) {
+  const classification = projection?.classification.status === "verified"
+    ? projection.classification.value
+    : null;
+  const lastReviewedAt = projection?.marketValue.status === "verified"
+    ? projection.marketValue.value?.lastVerified
+    : null;
+  if (!classification || !lastReviewedAt) return null;
+  return parseTouchlinePublicEditorialCardPresentation({
+    tierKey: classification.tierKey,
+    cardPrice: { amountMinor: classification.nominalPrice * 100, currency: "GBP" },
+    lastReviewedAt,
+  });
+}
+
+/**
  * One public adapter for coherent persisted snapshots.
  * It replaces provider identity/value/tier fallbacks with the bounded
  * server-owned projection and omits a player if the current club does not
@@ -157,13 +183,22 @@ async function projectSquadForPublic(
   players: PublicSquadPlayer[];
   omitted: PendingPublicSquadPlayer[];
 }> {
+  const publicationGateEnabled = isTouchlineCardPublicationGateEnabled();
   const batch = await loadTouchlinePublicPlayerProjections({
     providerPlayerIds: candidates.map((candidate) => candidate.providerId),
     context: { expectedClubProviderTeamId },
+    includeMarketValues: !publicationGateEnabled,
   });
   if (batch.status === "error") return { state: "error", players: [], omitted: [] };
 
   const projections = new Map(batch.projections.map((projection) => [projection.providerPlayerId, projection] as const));
+  const publishedCards = publicationGateEnabled
+    ? await loadTouchlinePublishedCardPresentations({
+      playerIds: batch.projections.flatMap((projection) => projection.identity.status === "verified" && projection.identity.value
+        ? [projection.identity.value.playerId]
+        : []),
+    })
+    : new Map<string, TouchlinePublicEditorialCardPresentation>();
   const players: PublicSquadPlayer[] = [];
   const omitted: PendingPublicSquadPlayer[] = [];
 
@@ -177,13 +212,10 @@ async function projectSquadForPublic(
       continue;
     }
 
-    const marketValue = projection.marketValue;
-    const classification = projection.classification;
-    const marketValueEur = marketValue.status === "verified" ? marketValue.value?.eur ?? null : null;
-    const classificationTier = classification.status === "verified" ? classification.value?.tierKey ?? null : null;
-    // `rawMarketValueEur` is retained only in the internal snapshot read path.
-    // Do not accidentally spread it into the public JSON response.
-    const { rawMarketValueEur: _rawMarketValueEur, ...publicCandidate } = candidate;
+    const editorialCard = publicationGateEnabled
+      ? publishedCards.get(identity.playerId) ?? null
+      : legacyVerifiedCardPresentation(projection);
+    const publicCandidate = candidate;
     players.push({
       ...publicCandidate,
       id: projection.providerPlayerId,
@@ -202,16 +234,18 @@ async function projectSquadForPublic(
       countryCode3: identity.countryCode3 ?? "N/A",
       flagUrl: touchlineCountryFlagUrl(identity.countryCode3 ?? "N/A"),
       nationality: identity.nationality,
-      marketValue: marketValueEur === null ? null : formatApprovedMarketValue(marketValueEur),
-      marketValueSource: marketValueEur === null ? "unavailable" : "verified-cache",
-      marketValueState: marketValue.status,
-      classificationState: classification.status,
-      cardTier: classificationTier,
-      cardPriceVersion: classification.status === "verified" ? classification.value?.policyVersion ?? null : null,
-      marketValueEur,
-      marketValueUpdatedAt: marketValue.status === "verified" ? marketValue.value?.lastVerified ?? null : null,
-      authoritativeMarketValueSource: marketValueEur === null ? null : "verified-cache",
-      source: "touchline_verified",
+      marketValue: null,
+      marketValueSource: "unavailable",
+      marketValueState: "unavailable",
+      classificationState: "unavailable",
+      cardTier: editorialCard?.tierKey ?? null,
+      cardPriceVersion: null,
+      marketValueEur: null,
+      marketValueUpdatedAt: null,
+      authoritativeMarketValueSource: null,
+      canonicalPlayerId: identity.playerId,
+      editorialCard,
+      source: publicationGateEnabled ? "touchline_editorial" : "touchline_legacy_verified",
       publicProjectionState: projection.readState === "partial" ? "partial" : "ready",
     });
   }

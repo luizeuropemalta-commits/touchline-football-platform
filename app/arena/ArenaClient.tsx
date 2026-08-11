@@ -27,21 +27,18 @@ import type {
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
-  parseMarketValueEur,
-  parseMarketValueEurOrNull,
-  resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaClubTemplateForCard,
   touchlineArenaClubTemplateForTierPreview,
   touchlineArenaCompetitionTierForCard,
+  touchlineArenaTierForKey,
+  TOUCHLINE_CARD_TIER_KEYS,
   touchlineCardTierPalette,
   touchlineCardTierName,
   type TouchlineCardTierKey,
 } from "@/lib/touchlineArena/card-rules";
 import {
-  formatTouchlineCommercialCardPrice,
   formatTouchlineCommercialCardTotal,
   formatTouchlineContractedCommercialCardPrice,
-  resolveTouchlineCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
 import {
   CLUB_OWNER_SQUAD_CARDS,
@@ -66,7 +63,6 @@ import {
   type TouchlineMarketInventorySnapshot,
 } from "@/lib/touchlineArena/market-inventory";
 import { resolveTouchlineMarketCardReadModel } from "@/lib/touchlineArena/market-read-model";
-import { resolvePlayerMarketTier } from "@/lib/touchlineArena/player-market-tiers";
 import {
   TOUCHLINE_DEFAULT_LOCALE,
   TOUCHLINE_LOCALE_STORAGE_KEY,
@@ -84,7 +80,7 @@ import { resolveTouchlineQuickSubstitutionReadiness } from "@/lib/touchlineArena
 import {
   applyTouchlineQuickSubstitutionSession,
   createTouchlineQuickSubstitutionSession,
-  isTouchlineQuickSubstitutionSessionState,
+  restoreTouchlineQuickSubstitutionSession,
   type TouchlineQuickSubstitutionSessionState,
 } from "@/lib/touchlineArena/quick-substitution-session";
 import {
@@ -130,6 +126,11 @@ import { touchlinePlayerIdentityMatches } from "@/lib/touchlineArena/player-iden
 import { TOUCHLINE_SHIRT_DIGIT_ASSETS } from "@/lib/touchlineArena/shirt-number-art";
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
+import {
+  formatTouchlineEditorialCardPrice,
+  parseTouchlinePublicEditorialCardPresentation,
+  type TouchlinePublicEditorialCardPresentation,
+} from "@/lib/touchlineArena/editorial-card-profile";
 import { exitTouchlineFullscreen, requestTouchlineFullscreen, touchlineFullscreenElement } from "@/lib/touchlineArena/fullscreen";
 import {
   arenaPersistenceKeys,
@@ -199,7 +200,14 @@ const ARENA_PERSISTENCE_RESOURCES = {
   marketFormation: "market-formation-confirmation",
 } as const;
 
-type ArenaPlayer = ArenaLineupPlayer;
+type ArenaCard = NonNullable<ArenaLineupPlayer["card"]> & {
+  /** Public projection only; raw editorial notes never enter the Arena. */
+  editorialCard?: TouchlinePublicEditorialCardPresentation | null;
+};
+
+type ArenaPlayer = Omit<ArenaLineupPlayer, "card"> & {
+  card?: ArenaCard;
+};
 export type ArenaPanelKey = TouchlineArenaPanelKey;
 
 type BenchOption = {
@@ -217,6 +225,7 @@ type BenchOption = {
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
   cardPriceAuthority?: "active-contract" | null;
+  editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   inventoryId?: string | null;
   countryCode3: string;
   impact: string;
@@ -281,6 +290,8 @@ type TeamBuilderSquadPlayer = {
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
   cardPriceAuthority?: "active-contract" | null;
+  /** Public-only editorial tier/price received from the roster projection. */
+  editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   countryCode3?: string | null;
   flagUrl?: string | null;
   nationality?: string | null;
@@ -376,7 +387,7 @@ type TouchlineMarketContractReleaseResult = {
 type TouchlineMarketInventoryMode = "checking" | "authoritative" | "demo" | "unavailable";
 type TouchlineMarketPositionFilter = "all" | ArenaPlayer["role"];
 type TouchlineMarketPositionBucketFilter = "all" | TouchlineMarketPositionBucket;
-type TouchlineMarketSortMode = "recommended" | "price-asc" | "price-desc" | "value-desc" | "name";
+type TouchlineMarketSortMode = "recommended" | "price-asc" | "price-desc" | "tier-desc" | "name";
 
 function parseTouchlineMarketCheckoutResult(value: unknown): TouchlineMarketCheckoutResult | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -723,32 +734,60 @@ function normalizeTextKey(value: string) {
     .trim();
 }
 
+type ArenaPublicCardPresentation = Readonly<{
+  editorialCard: TouchlinePublicEditorialCardPresentation | null;
+  cardTier: TouchlineCardTierKey | null;
+  cardPriceAuthority?: "active-contract";
+  cardPriceVersion?: string | null;
+}>;
+
+/**
+ * Browser-facing Arena cards may receive only the strict public editorial
+ * projection, or an already-frozen active contract. This stays deliberately
+ * separate from the market/checkout read models below: a valuation is never a
+ * visual-card authority here.
+ */
+function resolveArenaPublicCardPresentation(input: Readonly<{
+  editorialCard?: unknown;
+  cardTier?: unknown;
+  cardPriceAuthority?: unknown;
+  cardPriceVersion?: unknown;
+}>): ArenaPublicCardPresentation {
+  const editorialCard = parseTouchlinePublicEditorialCardPresentation(input.editorialCard);
+  if (editorialCard) {
+    return Object.freeze({
+      editorialCard,
+      cardTier: editorialCard.tierKey,
+    });
+  }
+
+  const contractedTier = input.cardPriceAuthority === "active-contract"
+    && typeof input.cardTier === "string"
+    ? touchlineArenaTierForKey(input.cardTier)
+    : null;
+  if (!contractedTier) {
+    return Object.freeze({ editorialCard: null, cardTier: null });
+  }
+
+  return Object.freeze({
+    editorialCard: null,
+    cardTier: contractedTier.key,
+    cardPriceAuthority: "active-contract",
+    cardPriceVersion: typeof input.cardPriceVersion === "string" && input.cardPriceVersion.trim()
+      ? input.cardPriceVersion
+      : null,
+  });
+}
+
+function arenaPublishedCardTemplateUrl(clubName: string, cardTier: TouchlineCardTierKey | null | undefined) {
+  return cardTier
+    ? touchlineArenaClubTemplateForTierPreview(clubName, cardTier) || ""
+    : "";
+}
+
 function arenaShirtNumberLabel(value: unknown) {
   const shirtNumber = normalizeOfficialShirtNumber(value);
   return shirtNumber ? `#${shirtNumber}` : "--";
-}
-
-function normalizeMarketValueLabel(value?: string | null) {
-  const marketValue = parseMarketValueEurOrNull(value);
-  if (marketValue === null) return "Pending";
-  return `€${Math.round(marketValue / 1_000_000)}M`;
-}
-
-function hasUsableMarketValue(value?: string | null) {
-  return parseMarketValueEurOrNull(value) !== null;
-}
-
-function hasVerifiedMarketValueSource(source?: BenchOption["marketValueSource"]) {
-  return source === "provider" || source === "verified-cache";
-}
-
-function verifiedMarketValueLabel(
-  value: string | null | undefined,
-  source: BenchOption["marketValueSource"],
-  pendingLabel = "Pending",
-) {
-  if (!hasVerifiedMarketValueSource(source) || !hasUsableMarketValue(value)) return pendingLabel;
-  return normalizeMarketValueLabel(value);
 }
 
 function normalizeArenaPlayerCard(player: Partial<ArenaPlayer>) {
@@ -756,22 +795,23 @@ function normalizeArenaPlayerCard(player: Partial<ArenaPlayer>) {
 
   const card = { ...player.card } as typeof player.card & { cardPrice?: unknown };
   delete card.cardPrice;
-  const source: NonNullable<BenchOption["marketValueSource"]> = player.card.marketValueSource || "unavailable";
-  const marketValue = verifiedMarketValueLabel(player.card.marketValue, source);
-  const marketValueSource: NonNullable<BenchOption["marketValueSource"]> = hasUsableMarketValue(marketValue) ? source : "unavailable";
-  const cardTier = touchlineArenaCompetitionTierForCard(player.card.cardTier).key;
-  const templateUrl = touchlineArenaClubTemplateForCard(player.card.clubName, marketValue, cardTier) || "";
+  const presentation = resolveArenaPublicCardPresentation(player.card);
   const shirtNumber = normalizeOfficialShirtNumber(player.card.shirtNumber);
 
   return {
     ...card,
-    templateUrl,
+    templateUrl: arenaPublishedCardTemplateUrl(player.card.clubName, presentation.cardTier),
     shirtNumber,
-    marketValue,
-    marketValueSource,
-    cardTier,
-    cardPriceVersion: player.card.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-    cardPriceAuthority: player.card.cardPriceAuthority ?? null,
+    // Legacy data remains structurally compatible, but no public card reads
+    // a valuation from this client-side persistence boundary.
+    marketValue: "",
+    marketValueSource: "unavailable" as const,
+    cardTier: presentation.cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
   };
 }
 
@@ -786,9 +826,7 @@ function hasMissingCardIdentityData(player: ArenaPlayer) {
     !normalizeTouchlineMarketInventoryId(player.card.inventoryId) ||
     !hasUsableCountryCode(player.card.countryCode3) ||
     !player.card.flagUrl ||
-    !player.card.shirtNumber ||
-    !hasVerifiedMarketValueSource(player.card.marketValueSource) ||
-    !hasUsableMarketValue(player.card.marketValue)
+    !player.card.shirtNumber
   );
 }
 
@@ -828,27 +866,20 @@ function matchesBuilderBenchPlayer(player: BenchOption, candidate: TeamBuilderSq
   );
 }
 
-function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuilderSquadPlayer) {
+function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuilderSquadPlayer): ArenaPlayer {
   if (!player.card) return player;
 
   const card = { ...player.card } as typeof player.card & { cardPrice?: unknown };
   delete card.cardPrice;
-  const currentSource: NonNullable<BenchOption["marketValueSource"]> = player.card.marketValueSource || "unavailable";
-  const squadSource: NonNullable<BenchOption["marketValueSource"]> = squadPlayer.marketValueSource || "unavailable";
-  const hasCurrentMarketValue = hasVerifiedMarketValueSource(currentSource) && hasUsableMarketValue(player.card.marketValue);
-  const hasSquadMarketValue = hasVerifiedMarketValueSource(squadSource) && hasUsableMarketValue(displayBuilderMarketValue(squadPlayer.marketValue));
-  const marketValueSource: NonNullable<BenchOption["marketValueSource"]> = hasCurrentMarketValue
-    ? currentSource
-    : hasSquadMarketValue
-      ? squadSource
-      : "unavailable";
-  const marketValue = verifiedMarketValueLabel(
-    hasCurrentMarketValue ? player.card.marketValue : displayBuilderMarketValue(squadPlayer.marketValue),
-    marketValueSource,
-  );
+  const currentPresentation = resolveArenaPublicCardPresentation(player.card);
+  const squadPresentation = resolveArenaPublicCardPresentation(squadPlayer);
+  // Existing owned contracts remain frozen. If there is no such contract on
+  // the saved card, a published editorial profile from the roster may supply
+  // the visual tier and display price.
+  const presentation = currentPresentation.editorialCard || currentPresentation.cardPriceAuthority
+    ? currentPresentation
+    : squadPresentation;
   const clubName = player.card.clubName || squadPlayer.clubName;
-  const cardTier = touchlineArenaCompetitionTierForCard(player.card.cardTier || squadPlayer.cardTier).key;
-  const templateUrl = touchlineArenaClubTemplateForCard(clubName, marketValue, cardTier) || "";
   const countryCode3 = hasUsableCountryCode(player.card.countryCode3) ? player.card.countryCode3 : squadPlayer.countryCode3 || null;
   const shirtNumber = normalizeOfficialShirtNumber(player.card.shirtNumber, squadPlayer.shirtNumber);
 
@@ -859,7 +890,7 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
     role: player.role || squadPlayer.role,
     card: {
       ...card,
-      templateUrl,
+      templateUrl: arenaPublishedCardTemplateUrl(clubName, presentation.cardTier),
       playerName: player.card.playerName || squadPlayer.name,
       shirtNumber,
       clubName,
@@ -867,13 +898,16 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
       countryCode3,
       flagUrl: player.card.flagUrl || squadPlayer.flagUrl || null,
       fantasyPoints: player.card.fantasyPoints ?? "0.0",
-      marketValue,
-      marketValueSource,
+      marketValue: "",
+      marketValueSource: "unavailable" as const,
       marketValueState: squadPlayer.marketValueState ?? player.card.marketValueState,
       classificationState: squadPlayer.classificationState ?? player.card.classificationState,
-      cardTier,
-      cardPriceVersion: player.card.cardPriceVersion || squadPlayer.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-      cardPriceAuthority: player.card.cardPriceAuthority ?? squadPlayer.cardPriceAuthority ?? null,
+      cardTier: presentation.cardTier,
+      cardPriceVersion: presentation.cardPriceAuthority
+        ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+        : null,
+      cardPriceAuthority: presentation.cardPriceAuthority,
+      editorialCard: presentation.editorialCard,
       inventoryId: player.card.inventoryId ?? squadPlayer.inventoryId ?? null,
       matchStats: player.card.matchStats ?? { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
     },
@@ -881,10 +915,7 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
 }
 
 function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): ArenaPlayer {
-  const marketValueSource: NonNullable<BenchOption["marketValueSource"]> = bench.marketValueSource || "unavailable";
-  const marketValue = verifiedMarketValueLabel(bench.marketValue, marketValueSource);
-  const cardTier = touchlineArenaCompetitionTierForCard(bench.cardTier).key;
-  const templateUrl = touchlineArenaClubTemplateForCard(bench.club, marketValue, cardTier) || "";
+  const presentation = resolveArenaPublicCardPresentation(bench);
 
   return {
     id: `field-${bench.id}`,
@@ -896,7 +927,7 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
     y: target.y,
     heightVh: target.heightVh,
     card: {
-      templateUrl,
+      templateUrl: arenaPublishedCardTemplateUrl(bench.club, presentation.cardTier),
       playerName: bench.name,
       shirtNumber: bench.shirtNumber,
       clubName: bench.club,
@@ -904,13 +935,16 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
       countryCode3: bench.countryCode3,
       flagUrl: null,
       fantasyPoints: "0.0",
-      marketValue,
-      marketValueSource: hasUsableMarketValue(marketValue) ? marketValueSource : "unavailable",
+      marketValue: "",
+      marketValueSource: "unavailable",
       marketValueState: bench.marketValueState,
       classificationState: bench.classificationState,
-      cardTier,
-      cardPriceVersion: bench.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-      cardPriceAuthority: bench.cardPriceAuthority ?? null,
+      cardTier: presentation.cardTier,
+      cardPriceVersion: presentation.cardPriceAuthority
+        ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+        : null,
+      cardPriceAuthority: presentation.cardPriceAuthority,
+      editorialCard: presentation.editorialCard,
       inventoryId: bench.inventoryId ?? null,
       matchStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
     },
@@ -956,6 +990,7 @@ function placeNewContractsInSquad(
 
 function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOption): BenchOption {
   const card = player.card;
+  const presentation = resolveArenaPublicCardPresentation(card ?? {});
   return {
     id: `bench-${player.id.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`,
     name: card?.playerName || player.name,
@@ -964,13 +999,16 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
     club: card?.clubName || "TouchLine XI",
     position: card?.position || roleLabel(player.role),
     shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
-    marketValue: card?.marketValue || "Pending",
-    marketValueSource: card?.marketValueSource || "unavailable",
-    marketValueState: card?.marketValueState ?? undefined,
-    classificationState: card?.classificationState ?? undefined,
-    cardTier: touchlineArenaCompetitionTierForCard(card?.cardTier).key,
-    cardPriceVersion: card?.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-    cardPriceAuthority: card?.cardPriceAuthority ?? undefined,
+    marketValue: "",
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
+    cardTier: presentation.cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? null,
     countryCode3: card?.countryCode3 || "ENG",
     impact: replacedBench.impact,
@@ -979,7 +1017,7 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
 }
 
 function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption {
-  const marketValueSource: NonNullable<BenchOption["marketValueSource"]> = player.marketValueSource || "unavailable";
+  const presentation = resolveArenaPublicCardPresentation(player);
   return {
     id: builderPlayerSquadContractId(player),
     name: player.name,
@@ -988,13 +1026,16 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
     club: player.clubName,
     position: player.position || roleLabel(player.role),
     shirtNumber: normalizeOfficialShirtNumber(player.shirtNumber),
-    marketValue: verifiedMarketValueLabel(displayBuilderMarketValue(player.marketValue), marketValueSource),
-    marketValueSource,
+    marketValue: "",
+    marketValueSource: "unavailable",
     marketValueState: player.marketValueState,
     classificationState: player.classificationState,
-    cardTier: touchlineArenaCompetitionTierForCard(player.cardTier).key,
-    cardPriceVersion: player.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-    cardPriceAuthority: player.cardPriceAuthority ?? null,
+    cardTier: presentation.cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
     inventoryId: player.inventoryId ?? null,
     countryCode3: player.countryCode3 || "N/A",
     impact: "+ squad depth",
@@ -1009,6 +1050,7 @@ function defaultClubOwnerCardByName(name: string) {
 
 function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
   const card = player.card;
+  const presentation = resolveArenaPublicCardPresentation(card ?? {});
   const name = card?.playerName || player.name;
   const defaultCard = defaultClubOwnerCardByName(name);
   return canonicalClubOwnerRosterCard({
@@ -1021,13 +1063,16 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
     clubName: card?.clubName || "TouchLine XI",
     shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
     countryCode3: card?.countryCode3 || "N/A",
-    marketValue: card?.marketValue || "Pending",
-    marketValueSource: card?.marketValueSource || "unavailable",
-    marketValueState: card?.marketValueState ?? undefined,
-    classificationState: card?.classificationState ?? undefined,
-    cardTier: card?.cardTier || defaultCard?.cardTier,
-    cardPriceVersion: card?.cardPriceVersion || defaultCard?.cardPriceVersion,
-    cardPriceAuthority: card?.cardPriceAuthority ?? defaultCard?.cardPriceAuthority,
+    marketValue: "",
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
+    cardTier: presentation.cardTier ?? undefined,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : undefined,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? defaultCard?.inventoryId ?? null,
     touchlinePoints: Number.parseFloat(String(card?.fantasyPoints ?? "")) || defaultCard?.touchlinePoints || 0,
   });
@@ -1035,6 +1080,7 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
 
 function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
   const defaultCard = defaultClubOwnerCardByName(bench.name);
+  const presentation = resolveArenaPublicCardPresentation(bench);
   return canonicalClubOwnerRosterCard({
     ...(defaultCard ?? {}),
     id: defaultCard?.id ?? bench.id,
@@ -1047,11 +1093,14 @@ function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
     countryCode3: bench.countryCode3,
     marketValue: bench.marketValue,
     marketValueSource: bench.marketValueSource || "unavailable",
-    marketValueState: bench.marketValueState,
-    classificationState: bench.classificationState,
-    cardTier: bench.cardTier || defaultCard?.cardTier,
-    cardPriceVersion: bench.cardPriceVersion || defaultCard?.cardPriceVersion,
-    cardPriceAuthority: bench.cardPriceAuthority ?? defaultCard?.cardPriceAuthority,
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
+    cardTier: presentation.cardTier ?? undefined,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : undefined,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
     inventoryId: bench.inventoryId ?? defaultCard?.inventoryId ?? null,
     touchlinePoints: defaultCard?.touchlinePoints || 0,
   });
@@ -1077,6 +1126,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
       cardTier: card.cardTier,
       cardPriceVersion: card.cardPriceVersion,
       cardPriceAuthority: card.cardPriceAuthority,
+      editorialCard: card.editorialCard ?? null,
       inventoryId: card.inventoryId ?? null,
       countryCode3: card.countryCode3,
     };
@@ -1097,6 +1147,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
     cardTier: card.cardTier,
     cardPriceVersion: card.cardPriceVersion,
     cardPriceAuthority: card.cardPriceAuthority,
+    editorialCard: card.editorialCard ?? null,
     inventoryId: card.inventoryId ?? null,
     countryCode3: card.countryCode3,
     impact: "+ squad depth",
@@ -1273,6 +1324,7 @@ function buildQuickSubstitutionSessionSource(input: Readonly<{
 
 function arenaPlayerToSubstitutedOutOption(player: ArenaPlayer): BenchOption {
   const card = player.card;
+  const presentation = resolveArenaPublicCardPresentation(card ?? {});
   return {
     id: `substituted-out-${player.id}`,
     name: card?.playerName || player.name,
@@ -1281,13 +1333,16 @@ function arenaPlayerToSubstitutedOutOption(player: ArenaPlayer): BenchOption {
     club: card?.clubName || "TouchLine XI",
     position: card?.position || roleLabel(player.role),
     shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
-    marketValue: card?.marketValue || "Pending",
-    marketValueSource: card?.marketValueSource || "unavailable",
+    marketValue: "",
+    marketValueSource: "unavailable",
     marketValueState: card?.marketValueState ?? undefined,
     classificationState: card?.classificationState ?? undefined,
-    cardTier: touchlineArenaCompetitionTierForCard(card?.cardTier).key,
-    cardPriceVersion: card?.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-    cardPriceAuthority: card?.cardPriceAuthority ?? undefined,
+    cardTier: presentation.cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? null,
     countryCode3: card?.countryCode3 || "N/A",
     impact: "substituted-out",
@@ -1435,20 +1490,6 @@ function formatFixtureTime(startsAt?: string) {
   const date = new Date(startsAt.replace(" ", "T"));
   if (Number.isNaN(date.getTime())) return "Next";
   return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
-
-function formatFixtureDateTime(startsAt?: string) {
-  if (!startsAt) return "Upcoming";
-  const date = new Date(startsAt.replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return "Upcoming";
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -1673,34 +1714,9 @@ function slugifyBuilderId(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-function displayBuilderMarketValue(value?: string | null, pendingLabel = "Pending") {
-  const marketValue = parseMarketValueEurOrNull(value);
-  if (marketValue === null) return pendingLabel;
-  return `€${Math.round(marketValue / 1_000_000)}M`;
-}
-
-function displayAuthoritativeMarketValue(value: number | null | undefined, locale: TouchLineLocale, pendingLabel: string) {
-  if (value === null || value === undefined || !Number.isFinite(value) || value < 0) return pendingLabel;
-  return new Intl.NumberFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function displayMarketChange(value: number | null | undefined, locale: TouchLineLocale, pendingLabel: string) {
-  if (value === null || value === undefined || !Number.isFinite(value)) return pendingLabel;
-  const prefix = value > 0 ? "↑ +" : value < 0 ? "↓ −" : "— ";
-  return `${prefix}${displayAuthoritativeMarketValue(Math.abs(value), locale, pendingLabel)}`;
-}
-
-function displayMarketUpdate(value: string | null | undefined, locale: TouchLineLocale, pendingLabel: string) {
-  if (!value || !Number.isFinite(Date.parse(value))) return pendingLabel;
-  return new Intl.DateTimeFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
+function cardTierSortWeight(tierKey: TouchlineCardTierKey | null | undefined) {
+  const index = tierKey ? TOUCHLINE_CARD_TIER_KEYS.indexOf(tierKey) : -1;
+  return index;
 }
 
 function roleLabel(role: ArenaPlayer["role"]) {
@@ -2236,10 +2252,8 @@ function buildLiveProductSignature({
 
 function liveCompactPlayerFrameUrl(player: TeamBuilderSquadPlayer) {
   const previewCard = builderPlayerToPreviewCard(player);
-  const sourceUrl = touchlineArenaClubTemplateForTierPreview(previewCard.clubName, previewCard.cardTier)
-    || previewCard.cardTemplateUrl
-    || "/touchlineArena/cards/templates/clubs/Manchester%20City/market-tiers/diamond-gold.png";
-  return touchlineLiveCompactFrameUrl(sourceUrl);
+  const sourceUrl = previewCard.cardTemplateUrl;
+  return sourceUrl ? touchlineLiveCompactFrameUrl(sourceUrl) : null;
 }
 
 function liveCanonicalPlayerAssetUrls(player: TeamBuilderSquadPlayer) {
@@ -2974,6 +2988,10 @@ function matchesRequestedMarketContract(
 function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierKey): TouchlineEliteExactPlayer {
   const card = player.card;
   const clubLogoUrl = getPremierClubVisual(card?.clubName)?.logoUrl ?? "";
+  const presentation = resolveArenaPublicCardPresentation(card ?? {});
+  // `previewTier` is passed only by the explicit local demo fixtures. Every
+  // non-demo/public card uses the adapter result below.
+  const cardTier = previewTier ?? presentation.cardTier;
 
   return {
     sportmonksPlayerId: player.id,
@@ -2988,13 +3006,16 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
     clubLogoUrl,
     leagueName: "Premier League",
     leagueLogoUrl: "",
-    marketValue: card?.marketValue || "Pending",
-    marketValueSource: card?.marketValueSource || "unavailable",
-    marketValueState: card?.marketValueState,
-    classificationState: card?.classificationState,
-    cardTier: previewTier ?? touchlineArenaCompetitionTierForCard(card?.cardTier).key,
-    cardPriceVersion: card?.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-    cardPriceAuthority: card?.cardPriceAuthority ?? undefined,
+    marketValue: null,
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
+    cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
     updatedAt: PUBLIC_DATA_SOURCE_LABEL,
     age: "N/A",
     height: "N/A",
@@ -3006,9 +3027,7 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
     avatarStatus: "formation-card",
     sourcePhotoUrl: "",
     frameUrl: "",
-    cardTemplateUrl: previewTier
-      ? touchlineArenaClubTemplateForTierPreview(card?.clubName || "", previewTier)
-      : touchlineArenaClubTemplateForCard(card?.clubName || "", card?.marketValue, card?.cardTier) || null,
+    cardTemplateUrl: arenaPublishedCardTemplateUrl(card?.clubName || "", cardTier) || null,
     fantasyPoints: card?.fantasyPoints ?? "0.0",
     matchFantasyPoints: card?.fantasyPoints ?? "0.0",
     matchStats: card?.matchStats,
@@ -3017,10 +3036,9 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
 
 function arenaFieldCanonicalCardAssetUrls(player: ArenaPlayer, previewTier?: TouchlineCardTierKey) {
   const previewCard = arenaCardToPlayer(player, previewTier);
-  const frameUrl = touchlineLiveCompactFrameUrl(
-    previewCard.cardTemplateUrl
-    || "/touchlineArena/cards/templates/clubs/Manchester%20City/market-tiers/diamond-gold.png",
-  );
+  const frameUrl = previewCard.cardTemplateUrl
+    ? touchlineLiveCompactFrameUrl(previewCard.cardTemplateUrl)
+    : null;
   const countryCode = normalizeTouchlineCountryCode3(previewCard.countryCode3);
   const flagUrl = touchlineCountryFlagUrl(countryCode) || previewCard.flagUrl;
   const clubLogoUrl = liveOptimizedClubLogoUrl(previewCard.clubLogoUrl) ?? previewCard.clubLogoUrl;
@@ -3035,8 +3053,11 @@ function arenaFieldCanonicalCardAssetUrls(player: ArenaPlayer, previewTier?: Tou
 }
 
 function benchOptionToPreviewCard(bench: BenchOption, previewTier?: TouchlineCardTierKey): TouchlineEliteExactPlayer {
-  const marketValue = normalizeMarketValueLabel(bench.marketValue);
   const clubLogoUrl = getPremierClubVisual(bench.club)?.logoUrl ?? "";
+  const presentation = resolveArenaPublicCardPresentation(bench);
+  // This remains an explicit demo-only visual override; normal bench cards
+  // receive their tier exclusively through the public presentation adapter.
+  const cardTier = previewTier ?? presentation.cardTier;
 
   return {
     sportmonksPlayerId: bench.id,
@@ -3051,13 +3072,16 @@ function benchOptionToPreviewCard(bench: BenchOption, previewTier?: TouchlineCar
     clubLogoUrl,
     leagueName: "Premier League",
     leagueLogoUrl: "",
-    marketValue,
-    marketValueSource: bench.marketValueSource || "unavailable",
-    marketValueState: bench.marketValueState,
-    classificationState: bench.classificationState,
-    cardTier: previewTier ?? touchlineArenaCompetitionTierForCard(bench.cardTier).key,
-    cardPriceVersion: bench.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-    cardPriceAuthority: bench.cardPriceAuthority ?? undefined,
+    marketValue: null,
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
+    cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
     updatedAt: PUBLIC_DATA_SOURCE_LABEL,
     age: "N/A",
     height: "N/A",
@@ -3069,9 +3093,7 @@ function benchOptionToPreviewCard(bench: BenchOption, previewTier?: TouchlineCar
     avatarStatus: "bench-preview",
     sourcePhotoUrl: "",
     frameUrl: "",
-    cardTemplateUrl: previewTier
-      ? touchlineArenaClubTemplateForTierPreview(bench.club, previewTier)
-      : touchlineArenaClubTemplateForCard(bench.club, marketValue, bench.cardTier) || null,
+    cardTemplateUrl: arenaPublishedCardTemplateUrl(bench.club, cardTier) || null,
   };
 }
 
@@ -3106,36 +3128,35 @@ function parseTouchlineMarketContractReleaseResult(
 }
 
 function builderPlayerRetailPriceTc(player: TeamBuilderSquadPlayer) {
-  const authoritativeSource = player.authoritativeMarketValueSource?.trim().toLowerCase();
-  const marketValueSource = authoritativeSource === "provider" || authoritativeSource === "verified-cache"
-    ? authoritativeSource
-    : player.marketValueSource;
-  const economy = resolveTouchlineVerifiedPlayerEconomy({
-    marketValue: player.marketValueEur ?? player.marketValue,
-    marketValueSource,
-  });
-  return economy.priceTc ?? 0;
+  const presentation = resolveArenaPublicCardPresentation(player);
+  if (presentation.editorialCard) return presentation.editorialCard.cardPrice.amountMinor / 100;
+  return presentation.cardPriceAuthority === "active-contract"
+    && Number.isSafeInteger(player.inventoryPriceTc)
+    && Number(player.inventoryPriceTc) >= 0
+    ? Number(player.inventoryPriceTc)
+    : 0;
 }
 
 function builderPlayerCommercialPrice(player: TeamBuilderSquadPlayer, pendingLabel: string) {
-  if (player.officialOffer?.displayPrice) return player.officialOffer.displayPrice;
-  const authoritativeSource = player.authoritativeMarketValueSource?.trim().toLowerCase();
-  const marketValueSource = authoritativeSource === "provider" || authoritativeSource === "verified-cache"
-    ? authoritativeSource
-    : player.marketValueSource;
-  const economy = resolveTouchlineVerifiedPlayerEconomy({
-    marketValue: player.marketValueEur ?? player.marketValue,
-    marketValueSource,
-  });
-  return economy.status !== "resolved"
-    ? pendingLabel
-    : formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
-        tierKey: economy.tierKey,
-        competition: "england",
-      }));
+  const presentation = resolveArenaPublicCardPresentation(player);
+  if (presentation.editorialCard) {
+    return formatTouchlineEditorialCardPrice(presentation.editorialCard.cardPrice, "en-GB");
+  }
+  if (presentation.cardPriceAuthority === "active-contract") {
+    return player.officialOffer?.displayPrice ?? formatTouchlineContractedCommercialCardPrice({
+      tierKey: presentation.cardTier,
+      priceTableVersion: presentation.cardPriceVersion,
+      competition: "england",
+    });
+  }
+  return pendingLabel;
 }
 
-function squadCardPriceLabel(card: ClubOwnerSquadCard, pendingLabel: string) {
+function squadCardPriceLabel(card: ClubOwnerSquadCard, locale: TouchLineLocale) {
+  const editorialCard = parseTouchlinePublicEditorialCardPresentation(card.editorialCard);
+  if (editorialCard) {
+    return formatTouchlineEditorialCardPrice(editorialCard.cardPrice, locale);
+  }
   if (card.cardPriceAuthority === "active-contract") {
     return formatTouchlineContractedCommercialCardPrice({
       tierKey: card.cardTier,
@@ -3143,36 +3164,20 @@ function squadCardPriceLabel(card: ClubOwnerSquadCard, pendingLabel: string) {
       competition: "england",
     });
   }
-  const economy = resolveTouchlineVerifiedPlayerEconomy({
-    marketValue: card.marketValue,
-    marketValueSource: card.marketValueSource,
-  });
-  return economy.status !== "resolved"
-    ? pendingLabel
-    : formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
-        tierKey: economy.tierKey,
-        competition: "england",
-      }));
+  return null;
 }
 
-function builderPlayerHasVerifiedMarketValue(player: TeamBuilderSquadPlayer) {
-  const marketValueEur = player.marketValueEur;
-  const marketValueSource = player.authoritativeMarketValueSource?.trim().toLowerCase();
-  const marketValueUpdatedAt = player.marketValueUpdatedAt;
-
-  if (!Number.isInteger(marketValueEur) || Number(marketValueEur) < 0) return false;
-  if (!marketValueSource || marketValueSource === "unavailable") return false;
-  if (!marketValueUpdatedAt || !Number.isFinite(Date.parse(marketValueUpdatedAt))) return false;
-
-  const authoritativeTier = resolvePlayerMarketTier(Number(marketValueEur));
-  return authoritativeTier.status === "resolved"
-    && player.cardTier === authoritativeTier.tier.id
-    && player.inventoryPriceTc === authoritativeTier.tier.touchCreditPrice;
+function builderPlayerHasPublishedCard(player: TeamBuilderSquadPlayer) {
+  const presentation = resolveArenaPublicCardPresentation(player);
+  return Boolean(
+    presentation.editorialCard
+    || (presentation.cardPriceAuthority === "active-contract" && presentation.cardTier),
+  );
 }
 
 function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEliteExactPlayer {
-  const marketValue = displayBuilderMarketValue(player.marketValue);
   const shirtNumber = normalizeOfficialShirtNumber(player.shirtNumber);
+  const presentation = resolveArenaPublicCardPresentation(player);
 
   return {
     sportmonksPlayerId: player.providerId || player.id,
@@ -3187,13 +3192,16 @@ function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEl
     clubLogoUrl: player.clubLogoUrl || "",
     leagueName: "Premier League",
     leagueLogoUrl: "",
-    marketValue,
-    marketValueSource: player.marketValueSource || "unavailable",
-    marketValueState: player.marketValueState,
-    classificationState: player.classificationState,
-    cardTier: touchlineArenaCompetitionTierForCard(player.cardTier).key,
-    cardPriceVersion: player.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-    cardPriceAuthority: player.cardPriceAuthority ?? undefined,
+    marketValue: null,
+    marketValueSource: "unavailable",
+    marketValueState: "unavailable",
+    classificationState: "unavailable",
+    cardTier: presentation.cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
     updatedAt: PUBLIC_DATA_SOURCE_LABEL,
     age: "N/A",
     height: "N/A",
@@ -3205,7 +3213,7 @@ function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEl
     avatarStatus: "team-builder-preview",
     sourcePhotoUrl: "",
     frameUrl: "",
-    cardTemplateUrl: touchlineArenaClubTemplateForCard(player.clubName, marketValue, player.cardTier) || null,
+    cardTemplateUrl: arenaPublishedCardTemplateUrl(player.clubName, presentation.cardTier) || null,
     fantasyPoints: player.touchlinePoints,
     matchFantasyPoints: player.matchFantasyPoints,
     seasonStats: player.seasonStats,
@@ -3231,6 +3239,7 @@ function arenaPlayerZoomDetails(
     cardTier: player.cardTier,
     cardPriceAuthority: player.cardPriceAuthority,
     cardPriceVersion: player.cardPriceVersion,
+    editorialCard: player.editorialCard,
     touchlinePoints: player.fantasyPoints,
     profileHref,
   });
@@ -3596,14 +3605,14 @@ export default function ArenaClient({
     if (storedState) {
       try {
         const restored: unknown = JSON.parse(storedState);
-        if (
-          isTouchlineQuickSubstitutionSessionState(restored)
-          && restored.matchId === quickSubstitutionSessionSource.matchId
-          && restored.ownerId === quickSubstitutionSessionSource.ownerId
-          && restored.rosterRevision === quickSubstitutionSessionSource.rosterRevision
-        ) {
-          nextState = restored;
-        }
+        const replayed = restoreTouchlineQuickSubstitutionSession({
+          matchId: quickSubstitutionSessionSource.matchId,
+          ownerId: quickSubstitutionSessionSource.ownerId,
+          rosterRevision: quickSubstitutionSessionSource.rosterRevision,
+          startingSlots: quickSubstitutionSessionSource.startingSlots,
+          benchInventoryIds: quickSubstitutionSessionSource.benchInventoryIds,
+        }, restored);
+        if (replayed.status === "ready") nextState = replayed.state;
       } catch {
         // A malformed browser-session record is not match authority. Rebuild
         // only from the current complete owned 11 + 9 snapshot below.
@@ -3784,12 +3793,6 @@ export default function ArenaClient({
   const spotlightPlayerTierLabel = spotlightPlayerCard
     ? touchlineCardTierName(spotlightPlayerCard.cardTier, siteLanguage)
     : "";
-  const spotlightPlayerEconomy = spotlightPlayerCard
-    ? resolveTouchlineVerifiedPlayerEconomy({
-        marketValue: spotlightPlayerCard.marketValue,
-        marketValueSource: spotlightPlayerCard.marketValueSource,
-      })
-    : null;
   const spotlightPlayerContractHref = spotlightPlayerCard
     ? touchlineArenaContractHref({
         locale: siteLanguage,
@@ -4149,12 +4152,12 @@ export default function ArenaClient({
     .sort((a, b) => {
       if (marketSortMode === "price-asc") return builderPlayerRetailPriceTc(a) - builderPlayerRetailPriceTc(b) || a.name.localeCompare(b.name);
       if (marketSortMode === "price-desc") return builderPlayerRetailPriceTc(b) - builderPlayerRetailPriceTc(a) || a.name.localeCompare(b.name);
-      if (marketSortMode === "value-desc") return parseMarketValueEur(b.marketValue) - parseMarketValueEur(a.marketValue) || a.name.localeCompare(b.name);
+      if (marketSortMode === "tier-desc") return cardTierSortWeight(b.cardTier) - cardTierSortWeight(a.cardTier) || a.name.localeCompare(b.name);
       if (marketSortMode === "name") return a.name.localeCompare(b.name);
       return roleSortWeight(a.role) - roleSortWeight(b.role) || builderPlayerRetailPriceTc(b) - builderPlayerRetailPriceTc(a) || a.name.localeCompare(b.name);
     });
   const selectedBuilderPlayer = sortedBuilderSquad.find((player) => stableBuilderPlayerId(player) === selectedBuilderPlayerId)
-    ?? sortedBuilderSquad.find(builderPlayerHasVerifiedMarketValue)
+    ?? sortedBuilderSquad.find((player) => Boolean(player.inventoryId))
     ?? sortedBuilderSquad[0]
     ?? null;
   const selectedBuilderPreviewCard = useMemo(
@@ -4184,7 +4187,7 @@ export default function ArenaClient({
     || marketInventoryMode === "unavailable";
   const selectedBuilderInventoryUnavailable = Boolean(
     !selectedBuilderPlayer?.inventoryId
-    || !builderPlayerHasVerifiedMarketValue(selectedBuilderPlayer)
+    || !builderPlayerHasPublishedCard(selectedBuilderPlayer)
     || touchlineMarketPositionBucket(selectedBuilderPlayer?.position, selectedBuilderPlayer?.role) === "outfield",
   );
   const isMarketDataRefreshing = marketInventoryMode === "checking";
@@ -4910,7 +4913,7 @@ export default function ArenaClient({
     // Quick Substitution is a match-session projection, never an Arena roster
     // save. An empty lineup is likewise not a valid automatic state update:
     // `?clearLineup=1` must not silently erase the owner's remote lineup.
-    if (standalonePanel === "bench" || players.length === 0) {
+    if (standalonePanel === "bench" || isArenaMatchdayViewActive || players.length === 0) {
       if (accountLineupSaveTimerRef.current) {
         window.clearTimeout(accountLineupSaveTimerRef.current);
         accountLineupSaveTimerRef.current = null;
@@ -4953,7 +4956,7 @@ export default function ArenaClient({
     return () => {
       if (accountLineupSaveTimerRef.current) window.clearTimeout(accountLineupSaveTimerRef.current);
     };
-  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isDemoLineup, players, selectedFormationKey, standalonePanel, t]);
+  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isArenaMatchdayViewActive, isDemoLineup, players, selectedFormationKey, standalonePanel, t]);
 
   useEffect(() => {
     if (!hasLoadedSavedLineup || !players.some(hasMissingCardIdentityData)) return;
@@ -6561,8 +6564,8 @@ export default function ArenaClient({
       || benchPlayers.some((bench) => matchesBuilderBenchPlayer(bench, builderPlayer))
       || builderPlayer.inventoryAlreadyOwned === true;
 
-    if (!builderPlayer.inventoryId || !builderPlayerHasVerifiedMarketValue(builderPlayer)) {
-      setSaveStatus(t("marketValuePending"));
+    if (!builderPlayer.inventoryId || !builderPlayerHasPublishedCard(builderPlayer)) {
+      setSaveStatus(marketUi.cardUnavailable);
       return;
     }
 
@@ -6639,7 +6642,7 @@ export default function ArenaClient({
     );
 
     if ((requiresAuthoritativeMarketInventory || hasAuthoritativeCartItems) && !isAuthoritativeCheckout) {
-      setSaveStatus(t("marketValuePending"));
+      setSaveStatus(marketUi.cardUnavailable);
       return;
     }
 
@@ -7861,10 +7864,9 @@ export default function ArenaClient({
                   <a className="arena-player-spotlight-contract" href={spotlightPlayerContractHref}>
                     <TouchlineCoinMark size={18} />
                     <span>{siteLanguage === "pt-BR" ? "Contratar" : "Contract"}</span>
-                    <strong>{spotlightPlayerEconomy?.status !== "resolved" ? t("marketValuePending") : formatTouchlineCommercialCardPrice(resolveTouchlineCommercialCardPrice({
-                      tierKey: spotlightPlayerEconomy.tierKey,
-                      competition: "england",
-                    }))}</strong>
+                    <strong>{spotlightPlayerCard.editorialCard
+                      ? formatTouchlineEditorialCardPrice(spotlightPlayerCard.editorialCard.cardPrice, siteLanguage)
+                      : marketUi.cardUnavailable}</strong>
                   </a>
                 ) : null}
               </div>
@@ -8184,7 +8186,7 @@ export default function ArenaClient({
                         <span className="bench-card-copy">
                           <strong>{bench.shortName}</strong>
                           <small>{bench.position} / {arenaShirtNumberLabel(bench.shirtNumber)} / {bench.club}</small>
-                          <em>{isSlotLocked ? `${t("needsPosition")} ${positionGroupLabel(arenaPositionGroup(replacementTarget?.card?.position, replacementTarget?.role), t)}` : isFormationLocked ? `${selectedFormationKey}: ${t("slotFull")}` : `${verifiedMarketValueLabel(bench.marketValue, bench.marketValueSource, t("marketValuePending"))} / ${benchImpactLabel(bench.impact, t)}`}</em>
+                          <em>{isSlotLocked ? `${t("needsPosition")} ${positionGroupLabel(arenaPositionGroup(replacementTarget?.card?.position, replacementTarget?.role), t)}` : isFormationLocked ? `${selectedFormationKey}: ${t("slotFull")}` : benchImpactLabel(bench.impact, t)}</em>
                         </span>
                       </button>
                       );
@@ -8383,7 +8385,7 @@ export default function ArenaClient({
                       {marketCartPlayers.length ? marketCartPlayers.map((player) => (
                         <button key={builderPlayerSquadContractId(player)} type="button" onClick={() => toggleBuilderPlayerInCart(player)} title={t("removeFromCart")}>
                           <span>{player.shortName}</span>
-                          <strong>{builderPlayerCommercialPrice(player, t("marketValuePending"))}</strong>
+                          <strong>{builderPlayerCommercialPrice(player, marketUi.cardUnavailable)}</strong>
                           <X aria-hidden="true" />
                         </button>
                       )) : (
@@ -8425,7 +8427,7 @@ export default function ArenaClient({
                           {marketCartPlayers.map((player) => (
                             <span key={builderPlayerSquadContractId(player)}>
                               <b>{player.shortName}</b>
-                              <strong>{builderPlayerCommercialPrice(player, t("marketValuePending"))}</strong>
+                              <strong>{builderPlayerCommercialPrice(player, marketUi.cardUnavailable)}</strong>
                             </span>
                           ))}
                         </div>
@@ -8607,7 +8609,7 @@ export default function ArenaClient({
                             <option value="recommended">{marketUi.sortRecommended}</option>
                             <option value="price-asc">{marketUi.sortPriceLow}</option>
                             <option value="price-desc">{marketUi.sortPriceHigh}</option>
-                            <option value="value-desc">{marketUi.sortValueHigh}</option>
+                            <option value="tier-desc">{marketUi.sortTierHigh}</option>
                             <option value="name">{marketUi.sortAlphabetical}</option>
                           </select>
                         </label>
@@ -8637,7 +8639,7 @@ export default function ArenaClient({
                           const isInventoryUnavailable = Boolean(
                             positionBucket === "outfield"
                             || !player.inventoryId
-                            || !builderPlayerHasVerifiedMarketValue(player),
+                            || !builderPlayerHasPublishedCard(player),
                           );
                           const replacementAlreadyStaged = isContractRosterFull
                             && marketCartPlayers.length >= 1
@@ -8673,7 +8675,7 @@ export default function ArenaClient({
                                   </em>
                                 </span>
                                 <span className="team-builder-listing-meta">
-                                  <span className="team-builder-value">{displayBuilderMarketValue(player.marketValue, t("marketValuePending"))}</span>
+                                  <span className="team-builder-value">{isInventoryUnavailable ? marketUi.cardUnavailable : touchlineCardTierName(player.cardTier, siteLanguage)}</span>
                                   <small>{isPositionLimitReached ? marketUi.positionLimitReached(positionLabel, positionLimit) : marketUi.copiesAvailable(availableCopies)}</small>
                                 </span>
                               </button>
@@ -8707,7 +8709,7 @@ export default function ArenaClient({
                                             : t("addToCart")}
                                 </span>
                                 {!isInField && !isInSquad && !isInCart && !isSoldOut ? (
-                                  <strong>{isInventoryUnavailable ? t("marketValuePending") : player.officialOffer?.displayPrice ?? t("marketValuePending")}</strong>
+                                  <strong>{isInventoryUnavailable ? marketUi.cardUnavailable : player.officialOffer?.displayPrice ?? marketUi.cardUnavailable}</strong>
                                 ) : null}
                               </button>
                             </article>
@@ -8728,9 +8730,9 @@ export default function ArenaClient({
                             <span>{t("marketCardPreview")}</span>
                             <strong>{selectedBuilderPlayer.name}</strong>
                             <small>
-                              {selectedBuilderPlayer.clubName} / {selectedBuilderPositionLabel} / {arenaShirtNumberLabel(selectedBuilderPlayer.shirtNumber)} / {displayBuilderMarketValue(selectedBuilderPlayer.marketValue, t("marketValuePending"))}
+                              {selectedBuilderPlayer.clubName} / {selectedBuilderPositionLabel} / {arenaShirtNumberLabel(selectedBuilderPlayer.shirtNumber)}
                             </small>
-                            <b>{selectedBuilderInventoryUnavailable ? t("marketValuePending") : selectedBuilderPlayer.officialOffer?.displayPrice ?? t("marketValuePending")}</b>
+                            <b>{selectedBuilderInventoryUnavailable ? marketUi.cardUnavailable : selectedBuilderPlayer.officialOffer?.displayPrice ?? marketUi.cardUnavailable}</b>
                           </div>
                           <div className="team-builder-market-ledger" aria-label={marketUi.ariaMarketCardAccounting}>
                             <span>
@@ -8770,11 +8772,11 @@ export default function ArenaClient({
                             <span>{marketUi.oneSeasonContract}</span>
                             <strong>
                               {selectedBuilderInventoryUnavailable
-                                ? t("marketValuePending")
+                                ? marketUi.cardUnavailable
                                 : touchlineCardTierName(selectedBuilderPlayer.cardTier, siteLanguage)}
                             </strong>
                           </div>
-                          <div className="team-builder-market-facts" aria-label={marketUi.ariaEconomicData}>
+                          <div className="team-builder-market-facts" aria-label={marketUi.ariaCardDetails}>
                             <span>
                               <small>{marketUi.position}</small>
                               <strong>{selectedBuilderPositionLabel}</strong>
@@ -8784,24 +8786,12 @@ export default function ArenaClient({
                               <strong>{marketUi.positionRosterCount(selectedBuilderPositionCount, selectedBuilderPositionLimit)}</strong>
                             </span>
                             <span>
-                              <small>{marketUi.marketValue}</small>
-                              <strong>{displayAuthoritativeMarketValue(selectedBuilderPlayer.marketValueEur, siteLanguage, t("marketValuePending"))}</strong>
-                            </span>
-                            <span>
                               <small>{marketUi.touchlinePrice}</small>
-                              <strong>{selectedBuilderInventoryUnavailable ? t("marketValuePending") : selectedBuilderPlayer.officialOffer?.displayPrice ?? t("marketValuePending")}</strong>
+                              <strong>{selectedBuilderInventoryUnavailable ? marketUi.cardUnavailable : selectedBuilderPlayer.officialOffer?.displayPrice ?? marketUi.cardUnavailable}</strong>
                             </span>
                             <span>
                               <small>{marketUi.cardTier}</small>
-                              <strong>{selectedBuilderInventoryUnavailable ? t("marketValuePending") : touchlineCardTierName(selectedBuilderPlayer.cardTier, siteLanguage)}</strong>
-                            </span>
-                            <span>
-                              <small>{marketUi.marketChange}</small>
-                              <strong>{displayMarketChange(selectedBuilderPlayer.marketValueChangeEur, siteLanguage, t("marketValuePending"))}</strong>
-                            </span>
-                            <span>
-                              <small>{marketUi.lastUpdate}</small>
-                              <strong>{displayMarketUpdate(selectedBuilderPlayer.marketValueUpdatedAt, siteLanguage, t("marketValuePending"))}</strong>
+                              <strong>{selectedBuilderInventoryUnavailable ? marketUi.cardUnavailable : touchlineCardTierName(selectedBuilderPlayer.cardTier, siteLanguage)}</strong>
                             </span>
                           </div>
                           {selectedBuilderPositionIsFull ? (
@@ -8837,12 +8827,12 @@ export default function ArenaClient({
                                 : selectedBuilderPositionIsFull
                                   ? (siteLanguage === "pt-BR" ? `Substituir ${selectedBuilderPositionLabel.split(" / ")[0].toLowerCase()}` : `Replace ${selectedBuilderPositionLabel.split(" / ")[0].toLowerCase()}`)
                                 : selectedBuilderInventoryUnavailable
-                                  ? t("marketValuePending")
+                                  ? marketUi.cardUnavailable
                                 : selectedBuilderIsSoldOut
                                   ? t("soldOut")
                                 : isContractRosterFull
                                   ? t("releaseContractFirst")
-                                  : `${t("addToCart")} · ${builderPlayerCommercialPrice(selectedBuilderPlayer, t("marketValuePending"))}`}
+                                  : `${t("addToCart")} · ${builderPlayerCommercialPrice(selectedBuilderPlayer, marketUi.cardUnavailable)}`}
                           </button>
                           <div className="team-builder-checkout-trust"><Check aria-hidden="true" /> {marketUi.secureCheckout}</div>
                         </>
@@ -8896,27 +8886,31 @@ export default function ArenaClient({
                     <small>{t("topCardsDescription")}</small>
                   </div>
                   <div className="arena-ranking-featured">
-                    {topPlayerCardRankings.slice(0, 3).map((card, index) => (
-                      <article key={card.id}>
-                        <span className="arena-ranking-position">#{index + 1}</span>
-                        <TouchlineEliteExactCard className="arena-ranking-card-render" player={squadCardToExactPlayer(card)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} />
-                        <div>
-                          <strong>{card.shortName}</strong>
-                          <small>{card.clubName} / {squadCardPriceLabel(card, t("marketValuePending"))} / {card.touchlinePoints} pts</small>
-                        </div>
-                      </article>
-                    ))}
+                    {topPlayerCardRankings.slice(0, 3).map((card, index) => {
+                      const cardPrice = squadCardPriceLabel(card, siteLanguage);
+                      return (
+                        <article key={card.id}>
+                          <span className="arena-ranking-position">#{index + 1}</span>
+                          <TouchlineEliteExactCard className="arena-ranking-card-render" player={squadCardToExactPlayer(card)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} />
+                          <div>
+                            <strong>{card.shortName}</strong>
+                            <small>{[card.clubName, cardPrice, `${card.touchlinePoints} pts`].filter(Boolean).join(" / ")}</small>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
                   <div className="arena-ranking-list">
                     {topPlayerCardRankings.map((card, index) => {
                       const club = findTouchLineClub(card.clubName);
+                      const cardPrice = squadCardPriceLabel(card, siteLanguage);
                       return (
                         <a key={card.id} href={`/touchline-player-card-rankings?lang=${encodeURIComponent(siteLanguage)}#row-${card.id}`} className="arena-ranking-row">
                           <span>#{index + 1}</span>
                           <strong>{card.shortName}</strong>
                           <small>{card.position} / {club?.shortCode ?? card.clubName}</small>
                           <b>{card.touchlinePoints} pts</b>
-                          <em>{squadCardPriceLabel(card, t("marketValuePending"))}</em>
+                          {cardPrice ? <em>{cardPrice}</em> : null}
                         </a>
                       );
                     })}

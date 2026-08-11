@@ -1980,3 +1980,585 @@ Preview, production checkpoint, or a dirty worktree.
   ESLint, Webpack production build and `git diff --check` passed.
 - **Evidence:**
   `docs/touchline/release-audit/2026-08-10-ARENA-SCHEDULED-RAIL-VISUAL-QA.md`.
+
+## 2026-08-10 ClubHub bench and pending-card readability — LOCAL COMPLETE / PENDING DEPLOYMENT
+
+- **Correction:** confirmed 9-player technical-bench names now wrap rather
+  than truncate on narrow screens; the compact pending market-value panel now
+  says `PENDENTE` / `PENDING` in full while retaining neutral/pending state.
+- **Observed evidence:** local 390px and 768px measurements found no root
+  overflow and no sampled text overflow; the 1280px ClubHub layout was also
+  visually checked in the local production render.
+- **Safety:** no player, market value, tier, price, contract, provider,
+  database, sync, migration, credential or deployment state changed.
+- **Validation:** focused **8/8**, full suite **848/848**, direct TypeScript,
+  production build, release-readiness check and `git diff --check` passed.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-10-CLUBHUB-BENCH-AND-CARD-PENDING-READABILITY.md`.
+
+## 2026-08-11 manual editorial card mode — LOCAL COMPLETE / NOT DEPLOYED
+
+- **Decision:** public compact and zoom card presentation now uses only a
+  reviewed manual editorial profile (tier + display price) or an already
+  frozen active contract. It does not derive a card from player valuation.
+- **Visual continuity:** an unpublished card may retain its already-bundled
+  club frame as visual artwork, but that asset never supplies a public tier,
+  price, status or economic claim. This preserves the visible coloured card
+  identity while editors publish profiles one player at a time.
+- **Publication rule:** `draft` and `review` expose no tier or price;
+  `published` exposes only public tier/price/review metadata. Internal note
+  and internal source stay in the server-owned local catalogue.
+- **Safety:** ClubHub/player readers request identity and membership only;
+  automatic player/card search now fails closed before a provider lookup.
+  No player, owner-value batch, contract, inventory, payment, database, sync,
+  migration, credential, environment, Vercel, or deployment action occurred.
+- **Validation:** focused editorial/public-boundary suite **94/94** passed
+  before the final Arena presentation adapter; its dedicated contract **4/4**
+  and the editorial privacy contract **7/7** passed. The final focused
+  visual-art/editorial boundary suite passed **17/17**. The fresh integrated
+  TypeScript recheck did not complete during a transient local filesystem I/O
+  stall, so it is not claimed as passed for the final combined tree. ESLint remains a required release gate because a broad
+  run was interrupted during a local I/O slowdown and is not claimed here.
+- **Evidence and operator instructions:**
+  `docs/touchline-arena/audit/2026-08-11-MANUAL-EDITORIAL-CARD-MODE-LOCAL.md`.
+
+## 2026-08-11 manual card editorial admin candidate — LOCAL COMPLETE / DATABASE NOT TOUCHED / NOT DEPLOYED
+
+- **Added:** a protected one-player manual editorial candidate. The editor
+  enters an internal whole-EUR decision, review state and private evidence;
+  the shared card policy calculates the tier and nominal TC display price.
+  Draft/review records cannot become public card presentation.
+- **Safety:** protected server validation requires a canonical player UUID,
+  current club and exactly one active Sportmonks Premier League membership.
+  The additive migration has immutable history and revokes all access from
+  public/anon/authenticated. No migration was applied, database contacted,
+  provider called, contract/checkout/payment touched or deployment made.
+- **Validation:** editorial/admin focused suite **15/15**, strict TypeScript
+  and scoped `git diff --check` passed.
+- **Evidence and operator gates:**
+  `docs/touchline-arena/audit/2026-08-11-MANUAL-CARD-EDITORIAL-ADMIN-CANDIDATE.md`.
+
+## 2026-08-11 new-player market-value alert core — LOCAL COMPLETE / NOT ACTIVATED
+
+- **Added:** a pure, deduplicated `MARKET_VALUE_REQUIRED` queue planner for
+  new/transfer/unmatched canonical roster cases. It uses the strict 20-club
+  reconciliation output and has no authority to assign a value, tier, border,
+  neon or price.
+- **Safety:** partial or duplicate provider snapshots block the entire queue;
+  already-published profiles and unresolved keys deduplicate alerts. No
+  provider poll, email, database write, cron, payment, credential or deploy
+  action occurred.
+- **Validation:** focused queue suite **3/3**, strict TypeScript and scoped
+  `git diff --check` passed.
+- **Evidence and activation gate:**
+  `docs/touchline-arena/audit/2026-08-11-TOUCHLINE-NEW-PLAYER-ALERTING-CANDIDATE.md`.
+
+## 2026-08-11 shared card neon preservation and 20-club asset QA — LOCAL COMPLETE / NOT DEPLOYED
+
+- **Correction:** a legacy generic pending selector now desaturates only a
+  truly neutral card. A published editorial tier or frozen active-contract
+  tier keeps its canonical border/neon rather than losing colour to unrelated
+  pending metadata.
+- **Technical QA:** all 20 canonical clubs × seven tiers have full, compact
+  and zoom frame assets plus canonical crests; seven palettes are complete.
+- **Validation:** 20-club asset suite **2/2**, strict TypeScript and scoped
+  `git diff --check` passed.
+- **Remaining gate:** browser/device matrix is still required; no production
+  deployment, data, value, contract or payment state changed.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-11-TOUCHLINE-NEON-CARD-VISUAL-AUDIT.md`
+  and `docs/touchline-arena/audit/2026-08-11-TOUCHLINE-20-CLUB-CARD-TECHNICAL-QA.md`.
+
+## 2026-08-11 authoritative manual market-value card-publication model — LOCAL CANDIDATE / NOT APPLIED / NOT DEPLOYED
+
+- **Decision:** this entry supersedes the earlier public “manual editorial
+  card” interpretation. `football_player_market_values` is the canonical
+  manual EUR-value store. Tier and nominal card price are calculated by the
+  TouchLine engine; an explicit protected publication lifecycle is the only
+  authority that may expose a game card.
+- **Added locally:** additive migration candidate
+  `051_touchline_manual_card_editorial_profiles.sql`, protected admin review
+  flow, strict `NAME | AGE | VALUE` bulk preview, immutable publication
+  history, and a single server-only `published` read model. ClubHub card grid
+  and match XI now omit unpublished cards while keeping real football roster
+  data available.
+- **Safety:** no database migration, player/value write, provider request,
+  Vercel environment change or deployment occurred. A missing/invalid value,
+  stale membership, invalid classification or non-published lifecycle returns
+  no game card; it never returns a grey/pending/fake-tier card.
+- **Validation so far:** focused ClubHub/public-card boundary suite **17/17**
+  passed after the authoritative rewrite. Full typecheck, lint, complete test
+  suite, build and browser/device matrix remain release gates for the combined
+  candidate.
+- **Architecture:**
+  `docs/touchline/architecture/TOUCHLINE_MANUAL_MARKET_VALUE_CARD_PUBLICATION_ARCHITECTURE.md`.
+
+## 2026-08-11 Vercel recovery audit — COMPLETE / NO EXTERNAL CHANGE
+
+- **Dashboard evidence:** project `touchline-arena-official` is on the Pro
+  team plan, with a live Git integration and Node 24/Next.js build settings.
+  A recent ready production deployment exists, but the history also has a
+  burst of errors.
+- **Root causes:** one Production deployment used an older candidate with a
+  TypeScript failure; Preview deployments are correctly blocked because
+  functional database/provider/sync variables are scoped into the isolated
+  Preview environment. Both custom domains show `DNS Change Recommended`.
+- **Safety:** no Vercel setting, secret, billing plan, domain, deployment or
+  DNS record was changed. Failed deployment history was retained.
+- **Gate:** no promotion until DNS is verified, the Preview strategy is made
+  intentionally compliant, and a clean Git-sourced build at the reviewed SHA
+  passes the required checks.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-11-VERCEL-COMPLETE-AUDIT.md`.
+
+## 2026-08-11 Liverpool pipeline and 20-club binding forensics — LOCAL EVIDENCE / REMOTE EXECUTION NOT PROVEN
+
+- **Liverpool:** the historical 052/053 SQL files are untracked local files,
+  not migrations with a Git history or remote execution receipt. They describe
+  a 29-player name-and-club bootstrap and must not be copied as a canonical
+  20-club import mechanism.
+- **20-club candidate:** the local owner/Sportmonks candidate has 558 supplied
+  rows, 538 exact matches and 533 EUR rows, but all 533 still lack the
+  read-only canonical UUID + active-membership proof required before any
+  review or write plan. The five no-value, 23 provider-only and 20 owner-only
+  rows remain excluded.
+- **Safety:** no credential, database, provider, Vercel or production action
+  occurred. The next permitted technical action is a dedicated, read-only,
+  revision-fenced canonical snapshot—not a generic importer call.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-11-LIVERPOOL_CARD_PIPELINE_FORENSIC_REPORT.md`.
+
+## 2026-08-11 Vercel build command guard — LOCAL COMPLETE / NOT DEPLOYED
+
+- **Correction:** the candidate now declares `verify:release` and
+  `vercel-build`. A Git-sourced Vercel build will have to pass strict
+  typechecking, lint, the complete test suite and the local readiness contract
+  before running Next.js production build.
+- **Safety:** the typecheck is explicitly non-incremental; this gate does not
+  delete generated cache files. It changes no Vercel setting, secret, domain,
+  database or production deployment.
+- **Validation:** source-contract test **1/1**, strict TypeScript, scoped lint
+  and `git diff --check` passed.
+- **External gates remain:** domain DNS, compliant Preview strategy and a
+  reviewed Git SHA still require separate evidence before promotion.
+
+## 2026-08-11 deferred card-publication safety gate — QUEUED / MANDATORY BEFORE ROLLOUT
+
+- **Scope:** before any remote migration, manual-value write, publication-gate
+  activation or production promotion, require an atomic publish/revert
+  transaction, safe cutover/backfill plan, nominal-price verification and a
+  rollback rehearsal.
+- **Safety:** this record neither applies migration 051 nor changes database,
+  Vercel, credentials, payments or production. It protects the current
+  fail-closed published-card behaviour from being enabled ahead of data.
+- **Evidence:**
+  `docs/touchline/release-audit/2026-08-11-DEFERRED-CARD-PUBLICATION-SAFETY-GATE.md`.
+  The exact atomic command and cutover design is recorded in
+  `docs/touchline/architecture/TOUCHLINE_CARD_PUBLICATION_ATOMIC_ROLLOUT.md`.
+
+## 2026-08-11 atomic card-publication command candidate — LOCAL ONLY / NOT MIGRATED
+
+- **Added:** forward migration candidate `052_touchline_card_publication_atomic_commands.sql`.
+  It adds explicit nominal-GBP compatibility columns and a protected atomic
+  function which locks canonical identity/membership, value and publication
+  state before writing current value, value history, publication and
+  publication history as one database command.
+- **Safety:** the function is not applied or callable remotely. It has no
+  public/anon/authenticated execute grant. The Admin route delegates only to
+  this RPC path and fails closed with 503 until the forward migration exists.
+- **Validation:** atomic-command and public-card boundary focal suite **11/11**
+  passed locally. Database transactional and rollback proof remains a required
+  pre-rollout environment gate.
+
+## 2026-08-11 nominal-price command hardening — LOCAL ONLY / NOT MIGRATED
+
+- **Added:** the atomic publish command now rejects any tier/nominal-price
+  pair outside the approved canonical GBP schedule: Ruby £0, Sapphire £1,
+  Amethyst £2, Radiant Gold £4, Emerald £7, Clear Diamond £10 and Diamond
+  Gold £15. This is enforced inside the database command, not only by the
+  Admin UI.
+- **Boundary:** the protected Admin route contains no direct current-value,
+  value-history, publication or publication-history mutation. It can call only
+  the atomic publish/revert RPC and otherwise fails closed while migration 052
+  is absent.
+- **Validation:** focused command/admin/manual-value tests **16/16**, strict
+  TypeScript, scoped lint and `git diff --check` passed locally. No migration,
+  database write, Vercel change or deployment occurred.
+- **Remaining gate:** this is source-level proof only. A real database dry-run,
+  all-or-nothing rollback rehearsal, cutover/backfill evidence and browser
+  matrix are still mandatory before first production action.
+
+## 2026-08-11 new-player manual-card alert — LOCAL ONLY / NOT MIGRATED
+
+- **Added:** protected Admin-only `NEW PLAYER · MARKET VALUE REQUIRED` alerts
+  for canonical Premier League players with exactly one active Sportmonks
+  membership and no reviewed game-card publication.
+- **Safety:** alerts are fail-closed for transfers, duplicate/inactive
+  memberships and non-Premier-League records. They neither create a player,
+  card, value, public pending state nor any provider/production write.
+- **Validation:** alert/unit and Admin-boundary tests passed; strict
+  TypeScript, scoped lint and `git diff --check` passed locally. Remote schema,
+  database and deployment remain untouched.
+
+## 2026-08-11 nominal-card-price public projection — LOCAL ONLY / NOT MIGRATED
+
+- **Correction:** manual card publication and its shared public read model now
+  render the approved **nominal GBP** tier price, never a TouchLine wallet
+  balance. The legacy `*_tc` fields remain compatibility-only in the forward
+  schema; they are not the public manual-card authority.
+- **Validation:** 44 focused shared-card, Arena, ClubHub, assets, publication
+  and visual-fixture contracts passed, including published EN/PT zoom labels
+  and no-public-pending-card assertions. No remote action occurred.
+
+## 2026-08-11 20-club card QA checkpoint — LOCAL CONTRACT PASS / BROWSER PENDING
+
+- **Evidence:** all 20 canonical clubs have every crest/full/compact/zoom
+  frame derivative and the seven canonical neon palettes. Static EN/PT card
+  fixtures use only published manual GBP card terms, never a valuation or
+  pending placeholder.
+- **Validation:** 20-club assets plus static fixtures **10/10**, and broader
+  shared-card/Arena/ClubHub boundary group **44/44**, passed locally. The
+  gallery fixture then increased the 20-club asset/static group to **12/12**.
+- **Limit:** the local Next server did not bind during the safe test window,
+  so 390/768/1280 browser observations remain explicitly pending. No browser,
+  production, database, provider or Vercel claim is made here.
+- **Report:**
+  `docs/touchline/release-audit/2026-08-11-TWENTY-CLUB-CARD-QA-CHECKPOINT.md`.
+
+## 2026-08-11 publication-gate cutover guard — LOCAL ONLY / NOT DEPLOYED
+
+- **Added:** `TOUCHLINE_CARD_PUBLICATION_GATE` is disabled by default and
+  accepts only the explicit value `enabled`. Until the backfill/cutover proof
+  exists, it preserves pre-existing verified canonical cards without exposing
+  their EUR valuation or any pending/unclassified card.
+- **Cutover:** after additive migration, backfill, dry run and visual proof,
+  the controlled environment change to `enabled` removes that transitional
+  path and makes the protected publication lifecycle the only game-card
+  authority.
+- **Validation:** publication-gate, public-card scope, read-model and zoom
+  tests **14/14** passed locally. No environment, Vercel, database or
+  deployment change occurred.
+
+## 2026-08-11 revert-offer safety checkpoint — LOCAL ONLY / NOT MIGRATED
+
+- **Added:** the protected manual-editorial history view now exposes a revert
+  control only for an immutable, complete pre-publication snapshot with
+  matching canonical player identifiers for both publication and market-value
+  state. Incomplete first-publication history is visibly non-revertible.
+- **Safety:** this presentation guard never substitutes for the future atomic
+  database command, which must still validate active membership and restore
+  value/publication/history consistently under one transaction. No automatic
+  deletion or synthetic fallback state exists.
+- **Validation:** focused revert and protected-Admin boundary tests **6/6**,
+  strict TypeScript, scoped lint and `git diff --check` passed locally. No
+  migration, database write, Vercel change or deployment occurred.
+
+## 2026-08-11 20-club visual-matrix enforcement — LOCAL CHECKPOINT / NOT DEPLOYED
+
+- **Added:** the executable release-readiness contract now includes the
+  protected static twenty-club gallery in EN/PT. A release checklist cannot
+  report local contract readiness if the gallery loses canonical registry,
+  seven-tier or nominal-GBP fixture markers.
+- **Validation:** release-readiness, gallery and canonical-asset focal group
+  **7/7** passed locally. Browser observations at 390/768/1280 and native
+  device evidence remain pending; no database, Vercel or production action
+  occurred.
+
+## 2026-08-11 Arena Market public-valuation cleanup — LOCAL ONLY / NOT DEPLOYED
+
+- **Changed:** the authenticated Arena Market no longer renders raw player
+  market value, market-value sorting, change or update fields. Listings and
+  preview show published card tier, card price and card availability instead.
+  The EN/PT Market copy was updated accordingly.
+- **Preserved:** checkout, contract inventory, wallet totals and their server
+  commands were not changed. Existing internal compatibility checks remain
+  separate from public card presentation until the protected editorial
+  publication cutover is authorised.
+- **Validation:** Arena/editorial, commercial-surface and EN/PT Market-copy
+  focal tests **14/14** passed; `git diff --check` passed. The local full
+  TypeScript process was stopped after an I/O stall before it produced a final
+  result, so it is not recorded as a pass. No database, Vercel or production
+  action occurred.
+
+## 2026-08-11 Arena visual-fixture editorial alignment — LOCAL ONLY / NOT DEPLOYED
+
+- **Corrected:** the static 4-3-3 Arena QA field now gives its 11 fictional
+  players an explicit published editorial tier and approved nominal GBP card
+  price. It no longer relies on a fake verified `€20M` input that the shared
+  card surface intentionally ignores.
+- **Safety:** the fixture remains Admin-gated, static and isolated from
+  account, provider, browser storage, drag/drop, cache and database state.
+  This does not publish a player card or alter the real Arena.
+- **Validation:** arena-field fixture tests **4/4**, strict TypeScript and
+  `git diff --check` passed locally. Browser observation is still a separate
+  pending gate because Next did not bind locally in the safe wait window.
+
+## 2026-08-11 publication read freshness hardening — LOCAL ONLY / NOT DEPLOYED
+
+- **Changed:** published game-card presentations now perform a fresh
+  server-side read rather than a 60-second cache lookup. A successful atomic
+  publication therefore appears on the next page/API read without a separate
+  cache invalidation action.
+- **Safety:** this removes cache invalidation as a possible post-commit
+  failure mode. The database command remains the all-or-nothing authority for
+  manual value, publication and immutable histories; the reader still fails
+  closed for missing, unpublished, stale or non-canonical rows.
+- **Validation:** atomic-command, protected-Admin and shared-read-model
+  tests **9/9**, strict TypeScript and `git diff --check` passed locally. No
+  migration, database write, Vercel configuration or deployment occurred.
+
+## 2026-08-11 Vercel read-only audit checkpoint — NO CONFIGURATION CHANGE
+
+- **Observed:** the connected Pro project `touchline-arena-official` is Ready
+  on `main` at `304d5bb`; `touchline.com.br` and `www.touchline.com.br` map to
+  Production. The visible six-hour observability window reported 0% errors.
+- **Gates:** both public domains show a dashboard DNS recommendation and
+  Deployment Checks are not configured. These are review gates only: no DNS,
+  environment, deployment, billing, Git or Vercel setting was changed.
+- **Evidence:** `docs/touchline/release-audit/2026-08-11-TOUCHLINE-VERCEL-COMPLETE-AUDIT.md`
+  and `docs/touchline/release-audit/VERCEL_CLEANUP_CANDIDATES.md`. The audit
+  permits continued local work only; it is not approval to deploy or migrate.
+- **Canonical-host check:** a read-only HTTPS check observed `200` with HSTS
+  from `touchline.com.br` and `308` from `www` to the canonical host. This
+  validates the current production alias path only, not the unpublished local
+  candidate or the dashboard DNS recommendation.
+
+## 2026-08-11 manual editorial EN/PT boundary — LOCAL ONLY / NOT DEPLOYED
+
+- **Changed:** the protected manual-card editor, club-scoped bulk preview and
+  immutable history/revert controls now receive the existing EN/PT route
+  locale. This is copy-only; the canonical identity, manual EUR input,
+  classification policy, publication lifecycle and private evidence boundary
+  are unchanged.
+- **Validation:** manual-editorial boundary and classification focal tests
+  **11/11** passed with `git diff --check`. No migration, database write,
+  provider call, Vercel setting or deployment occurred.
+
+## 2026-08-11 atomic manual-tier fence — LOCAL ONLY / NOT MIGRATED
+
+- **Hardened:** the deferred atomic database command now independently
+  verifies the approved EUR threshold for the requested tier as well as the
+  nominal GBP price. A privileged caller cannot persist a valid-looking
+  price/tier pair for a mismatched manual value.
+- **Preserved:** active contracts, checkout amounts, existing migrations and
+  public card reads are unchanged. Migration `052` remains local and
+  unapplied.
+- **Validation:** atomic-command and shared-manual-policy focal tests **7/7**
+  passed with `git diff --check`. No database, Vercel or deployment action
+  occurred.
+
+## 2026-08-11 Arena Market publication-policy alignment — LOCAL ONLY / NOT DEPLOYED
+
+- **Corrected:** Market card availability, price sorting and cart eligibility
+  now use the same public card policy as every other game surface: an
+  editorial card explicitly published by the owner, or an existing frozen
+  active-contract term. They no longer derive eligibility, tier or price from
+  a provider/verified-value field.
+- **Preserved:** inventory identity, checkout, wallet, contract commands and
+  active-contract terms were not changed. A card without a published profile
+  remains unavailable rather than receiving a synthetic tier or price.
+- **Validation:** Arena editorial boundary and commercial-card focal tests
+  **10/10** passed with `git diff --check`. No database, Vercel or deployment
+  action occurred.
+
+## 2026-08-11 new-player review deep link — LOCAL ONLY / NOT DEPLOYED
+
+- **Changed:** the protected new-player queue now keeps optional canonical
+  position and detected-at context, normalises malformed optional context to
+  `null`, and opens the precise canonical player in the protected manual-card
+  editor. It still never creates a player, assigns a value or exposes a game
+  card.
+- **Safety:** provider identity remains internal; email and mobile push remain
+  explicitly deferred until a server-owned queue/delivery mechanism and its
+  consent/retention gates are separately approved.
+- **Validation:** new-player-alert and owner-admin boundary tests **10/10**
+  passed; scoped `git diff --check` passed. No database, provider, Vercel or
+  production action occurred.
+
+## 2026-08-11 twenty-club static matrix revalidation — LOCAL ONLY / NOT DEPLOYED
+
+- **Validation:** twenty-club assets/gallery, ClubHub/crest/order fixtures and
+  official-table tests **22/22** passed. The shared neon regression assertions
+  now enforce the published editorial-card policy rather than the retired
+  valuation/contract formatter.
+- **Remaining gate:** a controlled local Next attempt did not become ready
+  while the workstation volume was 99% occupied (3.5 GB free), so no actual
+  390/768/desktop browser result is claimed. The stalled local process was
+  stopped; no database, Vercel or production action occurred.
+
+## 2026-08-11 manual-card typecheck and 20-club re-check — LOCAL ONLY / NOT DEPLOYED
+
+- **Validated:** strict project TypeScript passed after hardening the owner
+  manual-editor input boundary, the 50-row preview parser, the manual review
+  alert queue, the Arena published-card price formatter and the static
+  twenty-club fixture.
+- **Focused evidence:** 29/29 twenty-club/ClubHub/table/reconciliation checks,
+  24/24 editorial/Arena/manual-alert checks and 26/26 protected manual
+  lifecycle checks passed. Scope was local logic only.
+- **Unchanged:** no player record, manual value, publication state, inventory,
+  payment/contract term, database migration, Vercel setting or production
+  deployment was changed.
+- **Still gated:** authenticated browser/device QA, a real canonical roster
+  binding, application of the deferred migrations and explicit publication
+  authority are still required before promotion.
+
+## 2026-08-11 derived-matchday save fence — LOCAL ONLY / NOT DEPLOYED
+
+- **Corrected:** the Arena persistence effect now also stops before local or
+  remote save while a `fixtureId` matchday projection is active. Opening an
+  internal fixture view can no longer overwrite the owner’s saved lineup with
+  provider-derived positions.
+- **Preserved:** the standalone Quick Sub no-reentry session remains local;
+  production lineup edits outside matchday retain their existing explicit
+  persistence path. No roster, contract, card, score, database record or
+  remote request was executed by this change.
+- **Validation:** Arena fixture/Quick Sub persistence boundary checks **10/10**
+  passed and the scoped diff check is clean. The pre-existing complete
+  typecheck remains green; a repeat typecheck was stopped after the local
+  volume stalled, rather than being represented as a new pass.
+
+## 2026-08-11 Quick Sub browser-session replay fence — LOCAL ONLY / NOT DEPLOYED
+
+- **Corrected:** a serialized Quick Sub session is now reconstructed by
+  replaying its recorded substitutions against the current 11 + 9 snapshot.
+  Altered active slots, bench partitions or substituted-out history are
+  rejected instead of being treated as authoritative browser state.
+- **Boundary:** this remains a local match-session projection, not a
+  server-owned match event system. Deleting browser session storage can start
+  a new local session; durable official match history remains a separate
+  product/authority gate.
+- **Validation:** session and UI regressions **12/12** passed; scoped lint and
+  diff checks passed. No storage schema, database, provider or deployment
+  action occurred.
+
+## 2026-08-11 Match Centre partial-score fence — LOCAL ONLY / NOT DEPLOYED
+
+- **Corrected:** Match Centre now renders a numerical score only when both
+  verified sides are finite numbers. A partial snapshot renders `VS`, never an
+  invented `0` for the missing side.
+- **Validation:** Match Centre regression checks **4/4** plus scoped lint and
+  diff checks passed. This is display-only: no fixture, live snapshot, score,
+  provider, database or deployment was changed.
+
+## 2026-08-11 final local recovery gate — LOCAL ONLY / NOT DEPLOYED
+
+- **Validated:** publication, release-build and twenty-club asset focal checks
+  passed **9/9**; the executable local readiness script completed with its
+  explicit `LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL` result.
+- **Preserved:** no project data was deleted during workspace cleanup. The
+  regenerated `.next` cache is approximately 17 MB and remains a normal local
+  build cache; no database, Vercel, payment or production action occurred.
+- **Still gated:** remote migrations, a real UUID/membership binding and
+  backfill, authenticated browser/device QA, a complete build and a separate
+  explicit release authorization are required before rollout. Evidence:
+  `docs/touchline/release-audit/2026-08-11-FINAL-LOCAL-RECOVERY-GATE.md`.
+
+## 2026-08-11 manual engine fidelity re-check — LOCAL ONLY / NOT DEPLOYED
+
+- **Validated:** 24/24 protected manual-value, bulk, publication, atomic,
+  revert and new-player-alert checks passed. The sole shared engine turns a
+  private manual EUR value into tier, border/neon and nominal GBP price; name
+  and age remain matching aids, never identity writes.
+- **Confirmed:** production code contains no Liverpool-only special case. No
+  player, value, publication state, contract, migration, Vercel configuration
+  or production deployment changed.
+
+## 2026-08-11 controlled visual-QA environment attempt — LOCAL ONLY
+
+- **Observed:** the local Next server started but did not return the protected
+  static twenty-club QA route within 20 seconds. The exact local process was
+  stopped; this was not a deployment and did not make any request to product
+  infrastructure.
+- **Gate:** no browser/device visual result is claimed. Repeat the matrix in a
+  healthy controlled environment with authorised visual-QA access before
+  release sign-off.
+
+## 2026-08-11 repeat production-build attempt — LOCAL ONLY
+
+- **Observed:** with approximately 8 GB free, `pnpm build` again reached the
+  optimized-production phase and then made no CPU progress. Only its exact
+  local build and worker processes were stopped.
+- **Gate:** no build pass is claimed. This is a workstation environment gate;
+  successful controlled build evidence remains required before promotion.
+
+## 2026-08-11 remote roster-exporter preflight — NO-GO / NO REMOTE CHANGE
+
+- **Read-only evidence:** the dedicated `touchline_roster_exporter` role does
+  not exist. The generic `authenticated` role has CRUD table grants on all
+  five required canonical roster tables; all have RLS enabled. The public
+  schema has 52 functions executable by `PUBLIC`.
+- **Decision:** no role, token, RLS policy, grant, migration, data write or
+  deployment was created. A new role would inherit `PUBLIC EXECUTE`; solving
+  that needs a separate project-wide privilege hardening, not a scoped export
+  change. Evidence:
+  `docs/touchline-arena/audit/2026-08-11-ROSTER-EXPORTER-REMOTE-PREFLIGHT-NO-GO.md`.
+
+## 2026-08-11 canonical SQL Editor roster export and UUID binding — REVIEW ONLY / NOT APPLIED
+
+- **Read-only evidence:** two identical authorized SQL Editor `SELECT` exports
+  covered the 20 current clubs and returned **588** active player/membership
+  rows on each pass with the same raw CSV SHA-256. The archived canonical
+  export passed the strict 20-club, UUID, membership, timestamp and duplicate
+  checks.
+- **Bound locally:** all **533** explicit-EUR owner-approved rows now have an
+  exact canonical player UUID, club UUID and active membership UUID in a
+  fresh, immutable review-only manifest. The **5** missing-value rows, **23**
+  provider-only rows and **20** owner-only rows remain excluded from every
+  write set.
+- **Unchanged:** no SQL mutation, migration, player/card/value/tier/price,
+  contract, RLS policy, credential, Vercel setting or production deployment
+  occurred. The binding remains `applicationEligible: false` until the
+  separately gated atomic write procedure is authorized.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-11-CANONICAL-ROSTER-SELECT-ONLY-EXPORT-AND-533-BINDING.md`.
+
+## 2026-08-11 owner-approved 533 atomic backfill — APPLIED / PUBLIC CUTOVER OFF
+
+- **Applied safely:** the immutable fingerprinted 533-row owner-approved
+  manifest was prepared and promoted in one database transaction after real
+  database-level valid, invalid, idempotency and rollback proofs. It created
+  533 publication rows, 533 batch-history links and 1,066 immutable history
+  rows. The 5 value-missing, 23 provider-only and 20 owner-only rows remain
+  outside every write set.
+- **Protected:** card inventory stayed at 600 and contracts at 0, matching the
+  before-state. The batch functions are inaccessible to `anon` and
+  `authenticated`; no public grant, RLS relaxation, provider sync, roster,
+  payment, wallet, Stripe, Vercel or deployment action occurred.
+- **Cutover blocked deliberately:** Liverpool’s 29 existing verified legacy
+  values/cards have no new publication-lifecycle rows. Enabling the new public
+  gate now would hide them, so `TOUCHLINE_CARD_PUBLICATION_GATE` remains OFF.
+  A separate canonical Liverpool publication candidate must pass the same
+  atomic proof before the 20-club public cutover.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-11-OWNER-APPROVED-533-ATOMIC-BACKFILL-AND-CUTOVER-GATE.md`.
+
+## 2026-08-11 Liverpool lifecycle candidate — LOCAL REVIEW ONLY
+
+- **Read-only reconciliation:** the 29 already verified Liverpool values were
+  exported from canonical active memberships and converted to a deterministic
+  review-only lifecycle manifest. It contains no invented value or identity,
+  and has fingerprint
+  `ccbe56721b4747690df91ebea5800906a9545443428ba64acfd066848a66b490`.
+- **Gate preserved:** the existing 533-only command deliberately rejects 29
+  rows. No generic sequential importer, value rewrite, publication, Vercel
+  gate or deployment was used. A distinct atomic 29-row command must be
+  reviewed and database-proven before the public 20-club cutover.
+
+## 2026-08-11 Liverpool 29 lifecycle completion — APPLIED / PUBLIC CUTOVER STILL OFF
+
+- **Applied:** the dedicated atomic command bound and published the existing
+  **29** verified Liverpool values to the protected lifecycle. It used the
+  deterministic manifest fingerprint
+  `ccbe56721b4747690df91ebea5800906a9545443428ba64acfd066848a66b490` and
+  returned batch `16c1b5dc-5aa4-4d9f-828c-c60e5a9d1a58`.
+- **Proven:** transaction rollback preserved all 29 pre-existing values;
+  complete publish/revert was all-or-nothing; replay of the same manifest made
+  one batch with 29 links only. The dedicated command does not write
+  `football_player_market_values`.
+- **Aggregate pre-cutover result:** **562** published lifecycle cards
+  (`533 + 29`) across **20** clubs, with zero incomplete rows, wrong active
+  memberships, duplicate players, invalid nominal GBP prices, wrong tiers or
+  fake GBP-zero records. The fixed 5/23/20 exclusion sets remain out.
+- **Still gated:** `TOUCHLINE_CARD_PUBLICATION_GATE` remains off pending full
+  release/build evidence, a Ready production deployment and live smoke.
+  Evidence: `docs/touchline-arena/audit/2026-08-11-LIVERPOOL-29-LIFECYCLE-PUBLICATION-APPLIED.md`.

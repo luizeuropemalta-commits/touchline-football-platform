@@ -6,24 +6,12 @@ import React, { useId, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { Heart, Share2, ShieldCheck, UserPlus, UserRound } from "lucide-react";
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-  parseMarketValueEur,
-  resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaClubTemplateForTierPreview,
+  touchlineCardTierName,
   touchlineCardTierPalette,
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "@/lib/touchlineArena/card-rules";
-import {
-  resolveTouchlinePublicCardPresentation,
-  TOUCHLINE_NEUTRAL_CARD_ACCENT,
-  touchlinePublicCardStatusLabel,
-  touchlinePublicMarketValueStatusLabel,
-} from "@/lib/touchlineArena/public-card-presentation";
-import {
-  formatTouchlineCommercialCardPrice,
-  formatTouchlineContractedCommercialCardPrice,
-  resolveTouchlineCommercialCardPrice,
-} from "@/lib/touchlineArena/commercial-card-pricing";
 import { useTouchlineActiveRanking } from "@/lib/touchlineArena/card-ranking-client";
 import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
 import { normalizeTouchlineCountryCode3, touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
@@ -33,6 +21,10 @@ import { touchlineShirtNumberPaletteForClub } from "@/lib/touchlineArena/shirt-n
 import { TouchlineClubCrestPerimeterTrace } from "@/components/touchline/cards/TouchlineClubCrestPerimeterTrace";
 import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/TouchlineCardPerimeterTrace";
 import { TouchlineShirtNumber } from "@/components/touchline/cards/TouchlineShirtNumber";
+import {
+  formatTouchlineEditorialCardPrice,
+  type TouchlinePublicEditorialCardPresentation,
+} from "@/lib/touchlineArena/editorial-card-profile";
 import masterCardLayout from "@/public/touchlineArena/card-layouts/master-shirt-back-layout.json";
 
 const CARD_W = 430;
@@ -40,6 +32,7 @@ const CARD_H = 691;
 const CARD_ASPECT_RATIO = `${CARD_W} / ${CARD_H}`;
 const DEFAULT_CLUB_TEMPLATE_URL = "/touchlineArena/cards/templates/clubs/Manchester%20City/market-tiers/diamond-gold.png";
 const CARD_TEMPLATE_ASSET_VERSION = "2026-07-21-1";
+const TOUCHLINE_NEUTRAL_CARD_ACCENT = "#94a3b8";
 const LIVE_COMPACT_CLUB_TEMPLATE_ROOT = "/touchlineArena/cards/templates/live-compact/clubs/";
 const ZOOM_CLUB_TEMPLATE_ROOT = "/touchlineArena/cards/templates/zoom/clubs/";
 const MASTER_CARD_LAYOUT_SAVE_URL = "/api/touchline-arena/card-layout-master";
@@ -192,8 +185,10 @@ export type TouchlineEliteExactPlayer = {
   classificationState?: "verified" | "pending" | "unavailable" | "error" | null;
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
-  /** Set exclusively by the active-contract roster mapper. */
+  /** Legacy compatibility field. It is never public game-card authority. */
   cardPriceAuthority?: "active-contract";
+  /** Explicit public-safe editorial tier/price; no valuation is carried here. */
+  editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   updatedAt: string;
   age: string | number;
   height: string;
@@ -448,25 +443,6 @@ function valueDisplaySize(value: string) {
   if (length >= 7) return 17;
   if (length >= 5) return 20;
   return 22;
-}
-
-function cardMarketValueText(
-  player: TouchlineEliteExactPlayer,
-  locale: string | null,
-  state: "verified" | "pending" | "unavailable" | "error",
-) {
-  if (state !== "verified") return touchlinePublicMarketValueStatusLabel(state, locale);
-  const value = parseMarketValueEur(player.marketValue);
-  const source = player.marketValueSource ?? "unavailable";
-  if ((source !== "provider" && source !== "verified-cache") || value < 0 || (value === 0 && player.marketValue === null)) {
-    return touchlinePublicMarketValueStatusLabel("unavailable", locale);
-  }
-  return new Intl.NumberFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
-    style: "currency",
-    currency: "EUR",
-    notation: "compact",
-    maximumFractionDigits: value >= 10_000_000 ? 0 : 1,
-  }).format(value);
 }
 
 function isLegacyTemplateUrl(value?: string | null) {
@@ -860,87 +836,41 @@ export function TouchlineEliteExactCard({
     playerId: player.formationPlayerId,
     providerPlayerId: player.sportmonksPlayerId,
   });
-  // Ranking is authoritative only for sporting points. The legacy branch is
-  // intentionally retained byte-for-byte in behaviour for every surface that
-  // has not supplied a canonical public state. That preserves existing offer,
-  // Free-season, wallet and active-contract presentation.
-  const hasCanonicalPublicState = player.marketValueState != null || player.classificationState != null;
   const totalPointsText = touchlineCardMetricText(liveCompetition.touchlinePoints);
-  const previewTier = touchlineArenaTierForKey(player.cardTier) || touchlineArenaTierForKey("ruby-red")!;
-  const verifiedEconomy = resolveTouchlineVerifiedPlayerEconomy({
-    marketValue: player.marketValue,
-    marketValueSource: player.marketValueSource,
-  });
-  // An active contract stores the approved in-season classification. It is
-  // intentionally stronger than a later market-value refresh: a refreshed
-  // value may inform the following seasonal reset, never recolour an owned
-  // card in the current season.
-  const contractedTier = player.cardPriceAuthority === "active-contract"
-    ? touchlineArenaTierForKey(player.cardTier)
+  const cardLabels = { ...localizedCardLabels(runtimeLocale), ...labels };
+  // A game card exists only after the server-owned publication policy has
+  // attached a published presentation. Contract state and card artwork are
+  // never publication authority.
+  const editorialCard = player.editorialCard ?? null;
+  const editorialTier = editorialCard
+    ? touchlineArenaTierForKey(editorialCard.tierKey)
     : null;
-  const legacyMarketTier = contractedTier ?? (verifiedEconomy.status === "resolved"
-    ? touchlineArenaTierForKey(verifiedEconomy.tierKey) ?? previewTier
-    : previewTier);
-  const publicPresentation = hasCanonicalPublicState
-    ? resolveTouchlinePublicCardPresentation({
-      marketValue: player.marketValue,
-      marketValueSource: player.marketValueSource,
-      marketValueState: player.marketValueState,
-      classificationState: player.classificationState,
-      cardTier: player.cardTier,
-      cardPriceAuthority: player.cardPriceAuthority,
-    })
+  const marketTier = editorialTier;
+  // The selected artwork is only used by a published card. An asset cannot
+  // turn an unpublished football player into a game card.
+  const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl);
+  const cardPriceText = editorialCard
+    ? formatTouchlineEditorialCardPrice(editorialCard.cardPrice, runtimeLocale ?? undefined)
     : null;
-  const marketTier = publicPresentation?.tierKey
-    ? touchlineArenaTierForKey(publicPresentation.tierKey)
-    : hasCanonicalPublicState
-      ? null
-      : legacyMarketTier;
-  // England cards always keep the approved numeric tier value and use GBP as
-  // their official currency. This is deliberately not a Touch Credits value,
-  // currency conversion or wallet balance.
-  // The assigned template is visual artwork, not commercial classification.
-  // Keep it visible while market data is pending, but never use it to expose
-  // a tier, price, or market value before those have been verified.
-  const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl) || DEFAULT_CLUB_TEMPLATE_URL;
-  const contractedCardPriceText = player.cardPriceAuthority === "active-contract"
-    ? formatTouchlineContractedCommercialCardPrice({
-      tierKey: player.cardTier,
-      priceTableVersion: player.cardPriceVersion,
-      competition: "england",
-      locale: runtimeLocale,
-    })
-    : null;
-  const legacyCardPriceText = contractedCardPriceText ?? (verifiedEconomy.status === "resolved"
-    ? formatTouchlineCommercialCardPrice(
-      resolveTouchlineCommercialCardPrice({
-        tierKey: legacyMarketTier.key,
-        competition: "england",
-      }),
-    )
-    : runtimeLocale === "pt-BR" ? "Pendente" : "Pending");
-  const cardPriceText = hasCanonicalPublicState
-    ? publicPresentation?.canExposeCommercialPresentation && marketTier
-      ? contractedCardPriceText ?? formatTouchlineCommercialCardPrice(
-        resolveTouchlineCommercialCardPrice({
-          tierKey: marketTier.key,
-          competition: "england",
-        }),
-      )
-      : touchlinePublicCardStatusLabel(publicPresentation?.visualState ?? "unavailable", runtimeLocale)
-    : legacyCardPriceText;
-  const marketValueText = hasCanonicalPublicState
-    ? cardMarketValueText(player, runtimeLocale, publicPresentation?.marketValueState ?? "unavailable")
+  const hasPublishedCardProfile = Boolean(editorialCard);
+  const compactPrimaryLabel = hasPublishedCardProfile
+    ? (runtimeLocale === "pt-BR" ? "TIER DO CARD" : "CARD TIER")
+    : cardLabels.totalPoints;
+  const compactPrimaryValue = hasPublishedCardProfile && marketTier
+    ? touchlineCardTierName(marketTier.key, runtimeLocale ?? undefined)
     : totalPointsText;
-  const cardPriceLabel = hasCanonicalPublicState && !publicPresentation?.canExposeCommercialPresentation
-    ? (runtimeLocale === "pt-BR" ? "STATUS DO CARD" : "CARD STATUS")
-    : null;
+  const compactSecondaryLabel = hasPublishedCardProfile
+    ? cardLabels.cardPrice
+    : (runtimeLocale === "pt-BR" ? "POSIÇÃO" : "POSITION");
+  const compactSecondaryValue = hasPublishedCardProfile
+    ? cardPriceText ?? ""
+    : player.position;
   const preseasonMissingValue = liveCompetition.phase === "preseason" ? "0" : "—";
   const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
     ? preseasonMissingValue
     : touchlineCardMetricText(player.matchFantasyPoints);
-  const totalPointsSize = valueDisplaySize(marketValueText);
-  const cardPriceSize = valueDisplaySize(cardPriceText);
+  const totalPointsSize = valueDisplaySize(compactPrimaryValue);
+  const cardPriceSize = valueDisplaySize(compactSecondaryValue);
   const cardTemplateUrl = marketTier
     ? touchlineArenaClubTemplateForTierPreview(player.clubName, marketTier.key) || assignedVisualTemplateUrl
     : assignedVisualTemplateUrl;
@@ -948,7 +878,7 @@ export function TouchlineEliteExactCard({
     ? `${cardTemplateUrl}${cardTemplateUrl.includes("?") ? "&" : "?"}v=${CARD_TEMPLATE_ASSET_VERSION}`
     : null;
   const tierGlow = marketTier ? marketTierGlow(marketTier.key) : "rgba(148,163,184,.52)";
-  const cardPriceVersion = player.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION;
+  const cardPriceVersion = TOUCHLINE_CARD_PRICE_TABLE_VERSION;
   const localPlayerFlagUrl = player.flagUrl?.startsWith("/") ? player.flagUrl : null;
   const flagImageUrl = touchlineCountryFlagUrl(countryCode3) || localPlayerFlagUrl;
   const shirtPlayerName = backName(player.name);
@@ -1016,7 +946,6 @@ export function TouchlineEliteExactCard({
   const helperTop = CARD_H * scale + editorHeight + 8;
   const editableMarker: React.CSSProperties = canEditLayout ? { cursor: "move", touchAction: "none", userSelect: "none" } : {};
   const shouldShowCardActions = isEditable || showCardActions;
-  const cardLabels = { ...localizedCardLabels(runtimeLocale), ...labels };
 
   function cardFrameImage() {
     if (!versionedCardTemplateUrl) {
@@ -1309,14 +1238,17 @@ export function TouchlineEliteExactCard({
   ].join(", ");
   const shellExtraHeight = editorHeight + (isRemovalMarkerEnabled ? 72 : 0);
 
+  // Real football data is rendered by its profile/roster consumers. This
+  // shared game-card component intentionally renders nothing until the single
+  // server-owned publication policy has approved the card.
+  if (!editorialCard) return null;
+
   return (
     <div
       ref={shellRef}
       className={["touchline-card-surface", className].filter(Boolean).join(" ")}
       data-card-tier={marketTier?.key ?? "neutral"}
-      data-card-classification={publicPresentation?.classificationState}
-      data-card-market-value-state={publicPresentation?.marketValueState}
-      data-card-presentation-state={publicPresentation?.visualState}
+      data-card-editorial-state={editorialCard ? "published" : "unpublished"}
       data-card-motion={isEditable ? "false" : "true"}
       data-card-neon="permanent-tier-art"
       data-neon-active={forceNeonActive || isNeonActive ? "true" : "false"}
@@ -1432,7 +1364,7 @@ export function TouchlineEliteExactCard({
           fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           textTransform: "uppercase",
         }}
-        aria-label={`${player.name} TouchLine market card`}
+        aria-label={`${player.name} TouchLine card`}
       >
         {cardFrameImage()}
         <div
@@ -1579,8 +1511,8 @@ export function TouchlineEliteExactCard({
             padding: "0 6px",
           }}
         >
-          <div style={{ color: "rgba(226,246,255,.76)", fontSize: 8 * fieldScale("marketValue"), lineHeight: `${10 * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>{hasCanonicalPublicState ? (runtimeLocale === "pt-BR" ? "VALOR DE MERCADO" : "MARKET VALUE") : cardLabels.totalPoints}</div>
-          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: totalPointsSize * fieldScale("marketValue"), lineHeight: `${(totalPointsSize + 2) * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{marketValueText}</div>
+          <div style={{ color: "rgba(226,246,255,.76)", fontSize: 8 * fieldScale("marketValue"), lineHeight: `${10 * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>{compactPrimaryLabel}</div>
+          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: totalPointsSize * fieldScale("marketValue"), lineHeight: `${(totalPointsSize + 2) * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactPrimaryValue}</div>
         </div>
 
         <div
@@ -1601,9 +1533,9 @@ export function TouchlineEliteExactCard({
           }}
         >
           <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 * fieldScale("cardPrice"), color: "rgba(254,240,138,.88)", fontSize: 8 * fieldScale("cardPrice"), lineHeight: `${10 * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>
-            <span>{cardPriceLabel ?? cardLabels.cardPrice}</span>
+            <span>{compactSecondaryLabel}</span>
           </div>
-          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: cardPriceSize * fieldScale("cardPrice"), lineHeight: `${(cardPriceSize + 2) * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{cardPriceText}</div>
+          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: cardPriceSize * fieldScale("cardPrice"), lineHeight: `${(cardPriceSize + 2) * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactSecondaryValue}</div>
         </div>
 
         <div
