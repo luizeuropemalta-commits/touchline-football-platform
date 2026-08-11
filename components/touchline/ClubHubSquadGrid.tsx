@@ -10,25 +10,13 @@ import {
   type ClubOwnerSquadCard,
 } from "@/lib/touchlineArena/demo-data";
 import {
-  resolveTouchlineVerifiedPlayerEconomy,
   touchlineCardTierName,
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
-import {
-  formatTouchlineContractedCommercialCardPrice,
-  formatTouchlineVerifiedCommercialCardPrice,
-} from "@/lib/touchlineArena/commercial-card-pricing";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
-import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
-import {
-  hasTouchlinePublicCardState,
-  resolveTouchlinePublicCardPresentation,
-  TOUCHLINE_NEUTRAL_CARD_ACCENT,
-  touchlinePublicCardStatusLabel,
-  touchlinePublicMarketValueStatusLabel,
-} from "@/lib/touchlineArena/public-card-presentation";
+import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 
 const INITIAL_CARD_COUNT = 8;
 const CARD_BATCH_SIZE = 8;
@@ -45,7 +33,6 @@ function localizedPosition(value: string, pt: boolean) {
 
 type ClubHubSquadGridProps = {
   cards: ClubOwnerSquadCard[];
-  clubId: string;
   locale: TouchLineLocale;
   labels: {
     nationality: string;
@@ -63,10 +50,14 @@ type ClubHubSquadGridProps = {
  * them. This preserves the canonical card component without hydrating 25–30
  * heavy products during the first mobile render.
  */
-export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openProfileLabel }: ClubHubSquadGridProps) {
+export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel }: ClubHubSquadGridProps) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_CARD_COUNT);
-  const visibleCards = useMemo(() => cards.slice(0, visibleCount), [cards, visibleCount]);
-  const hasMore = visibleCards.length < cards.length;
+  // This grid is a TouchLine game-card surface. Real football players remain
+  // available to the ClubHub elsewhere, but only explicit PUBLISHED cards are
+  // mounted here; no grey/pending/fallback card is created for the rest.
+  const publishedCards = useMemo(() => cards.filter((card) => Boolean(card.editorialCard)), [cards]);
+  const visibleCards = useMemo(() => publishedCards.slice(0, visibleCount), [publishedCards, visibleCount]);
+  const hasMore = visibleCards.length < publishedCards.length;
   const pt = locale === "pt-BR";
 
   return (
@@ -74,26 +65,11 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
       <div className="club-hub-card-grid" aria-live="polite">
         {visibleCards.map((card, index) => {
           const exactPlayer = squadCardToExactPlayer(card);
-          const economy = resolveTouchlineVerifiedPlayerEconomy({
-            marketValue: card.marketValue,
-            marketValueSource: card.marketValueSource,
-          });
-          const hasCanonicalPublicState = hasTouchlinePublicCardState(card);
-          const presentation = hasCanonicalPublicState ? resolveTouchlinePublicCardPresentation(card) : null;
-          const updating = pt ? "Em atualização" : "Updating";
-          const legacyZoomTier = economy.status === "resolved" ? economy.tierKey : card.cardTier;
-          const tierAccent = presentation
-            ? presentation.tierKey
-              ? touchlineCardTierPalette(presentation.tierKey).accent
-              : TOUCHLINE_NEUTRAL_CARD_ACCENT
-            : touchlineCardTierPalette(legacyZoomTier).accent;
-          const tierLabel = presentation
-            ? presentation.tierKey
-              ? touchlineCardTierName(presentation.tierKey, locale)
-              : touchlinePublicCardStatusLabel(presentation.visualState, locale)
-            : economy.status === "resolved"
-              ? touchlineCardTierName(economy.tierKey, locale)
-              : updating;
+          const tierKey = card.editorialCard?.tierKey ?? null;
+          const tierAccent = tierKey
+            ? touchlineCardTierPalette(tierKey).accent
+            : TOUCHLINE_NEUTRAL_CARD_ACCENT;
+          const tierLabel = tierKey ? touchlineCardTierName(tierKey, locale) : undefined;
           const profileHref = touchlinePlayerProfileHref({
             sportmonksPlayerId: card.id,
             name: card.name,
@@ -108,30 +84,10 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
               <span className="club-hub-rank">#{index + 1}</span>
               <TouchlineCardZoom
                 ariaLabel={`${pt ? "Ampliar card de" : "Expand card for"} ${card.name}`}
-                contractHref={presentation
-                  ? presentation.canExposeCommercialPresentation
-                    ? touchlineArenaContractHref({ locale, playerId: card.id, playerName: card.name, clubId })
-                    : undefined
-                  : touchlineArenaContractHref({ locale, playerId: card.id, playerName: card.name, clubId })}
+                contractHref={undefined}
                 contractLabel={pt ? "Contratar" : "Contract player"}
-                contractValue={presentation && !presentation.canExposeCommercialPresentation
-                  ? undefined
-                  : presentation?.isActiveContract
-                    ? formatTouchlineContractedCommercialCardPrice({
-                      tierKey: presentation.tierKey,
-                      priceTableVersion: card.cardPriceVersion,
-                      competition: "england",
-                      locale,
-                    })
-                    : formatTouchlineVerifiedCommercialCardPrice({
-                      marketValue: card.marketValue,
-                      marketValueSource: card.marketValueSource,
-                      competition: "england",
-                      locale,
-                    })}
-                contractTermLabel={presentation && !presentation.canExposeCommercialPresentation
-                  ? undefined
-                  : (pt ? "Contrato · 1 temporada" : "Contract · 1 season")}
+                contractValue={undefined}
+                contractTermLabel={undefined}
                 tierAccent={tierAccent}
                 tierLabel={tierLabel}
                 details={buildTouchlinePlayerCardZoomDetails({
@@ -140,13 +96,8 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
                   clubName: card.clubName,
                   position: card.position,
                   nationality: card.countryCode3,
-                  marketValue: card.marketValue,
-                  marketValueSource: card.marketValueSource,
-                  marketValueState: card.marketValueState,
-                  classificationState: card.classificationState,
-                  cardTier: card.cardTier,
-                  cardPriceAuthority: card.cardPriceAuthority,
-                  cardPriceVersion: card.cardPriceVersion,
+                  editorialCard: card.editorialCard,
+                  activeContractCard: null,
                   touchlinePoints: card.touchlinePoints,
                   profileHref,
                 })}
@@ -177,13 +128,7 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
               <div className="club-hub-card-meta">
                 <a href={profileHref} aria-label={`${openProfileLabel}: ${card.name}`}>{openProfileLabel}</a>
                 <small>
-                  {localizedPosition(card.position, pt)} / {presentation
-                    ? presentation.marketValueState === "verified" && economy.status === "resolved"
-                      ? card.marketValue
-                      : touchlinePublicMarketValueStatusLabel(presentation.marketValueState, locale)
-                    : economy.status === "resolved"
-                      ? card.marketValue
-                      : (pt ? "Valor de mercado pendente" : "Market value pending")} / {card.touchlinePoints} pts
+                  {localizedPosition(card.position, pt)} / {card.touchlinePoints} pts
                 </small>
               </div>
             </article>
@@ -192,10 +137,10 @@ export default function ClubHubSquadGrid({ cards, clubId, locale, labels, openPr
       </div>
 
       <div className="club-hub-progressive-controls">
-        <span>{pt ? `${visibleCards.length} de ${cards.length} jogadores exibidos` : `${visibleCards.length} of ${cards.length} players shown`}</span>
+        <span>{pt ? `${visibleCards.length} de ${publishedCards.length} jogadores exibidos` : `${visibleCards.length} of ${publishedCards.length} players shown`}</span>
         {hasMore ? (
-          <button type="button" onClick={() => setVisibleCount((current) => Math.min(cards.length, current + CARD_BATCH_SIZE))}>
-            {pt ? `Ver mais ${Math.min(CARD_BATCH_SIZE, cards.length - visibleCards.length)}` : `View ${Math.min(CARD_BATCH_SIZE, cards.length - visibleCards.length)} more`}
+          <button type="button" onClick={() => setVisibleCount((current) => Math.min(publishedCards.length, current + CARD_BATCH_SIZE))}>
+            {pt ? `Ver mais ${Math.min(CARD_BATCH_SIZE, publishedCards.length - visibleCards.length)}` : `View ${Math.min(CARD_BATCH_SIZE, publishedCards.length - visibleCards.length)} more`}
           </button>
         ) : null}
       </div>
