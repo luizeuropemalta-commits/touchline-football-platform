@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/*.test.mts",
     "check:release-readiness": "node scripts/check-touchline-release-readiness.mjs --check",
-    "verify:release": "tsc --noEmit --incremental false && eslint . && node --test --experimental-strip-types tests/*.test.mts && node scripts/check-touchline-release-readiness.mjs --check",
+    "verify:release": "tsc --noEmit --incremental false && eslint . && node --test --test-force-exit --experimental-strip-types tests/*.test.mts && node scripts/check-touchline-release-readiness.mjs --check",
     "vercel-build": "pnpm run verify:release && next build --webpack",
     "audit:card-assets": "node scripts/audit-touchline-card-assets.mjs",
     "audit:player-profiles": "node --experimental-strip-types scripts/audit-touchline-player-profiles.mts"
