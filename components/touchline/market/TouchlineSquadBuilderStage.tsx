@@ -41,6 +41,7 @@ type Props = {
   onSelectFormation: (formation: string) => void;
   coachName?: string | null;
   coachCard?: ReactNode;
+  coachProfileHref?: string | null;
   starters: TouchlineSquadBuilderStarter[];
   bench: TouchlineSquadBuilderBenchPlayer[];
   remainingSquad: TouchlineSquadBuilderBenchPlayer[];
@@ -95,6 +96,7 @@ export default function TouchlineSquadBuilderStage({
   onSelectFormation,
   coachName,
   coachCard,
+  coachProfileHref,
   starters,
   bench,
   remainingSquad,
@@ -217,10 +219,17 @@ export default function TouchlineSquadBuilderStage({
 
           <aside className={styles.technicalArea} aria-label={portuguese ? "Área técnica e preparação do elenco" : "Technical area and squad preparation"}>
             <span>{portuguese ? "ÁREA TÉCNICA" : "TECHNICAL AREA"}</span>
-            <div className={styles.coachCard}>{coachCard ?? <b className={styles.emptyCoach} aria-hidden="true">+</b>}</div>
+            {coachProfileHref && coachCard ? (
+              <a className={styles.coachCardLink} href={coachProfileHref} aria-label={portuguese ? `Abrir perfil de ${coachName ?? "treinador"}` : `Open profile for ${coachName ?? "coach"}`}>
+                <div className={styles.coachCard}>{coachCard}</div>
+              </a>
+            ) : (
+              <div className={styles.coachCard}>{coachCard ?? <b className={styles.emptyCoach} aria-hidden="true">+</b>}</div>
+            )}
             <div className={styles.coachBrief}>
               <strong>{coachName ?? (portuguese ? "Escolha seu treinador" : "Choose your coach")}</strong>
               <p>{portuguese ? "Defina a formação, contrate atletas e leve o grupo completo para a Arena." : "Set the formation, sign players and take the complete group into the Arena."}</p>
+              {coachProfileHref ? <a href={coachProfileHref}>{portuguese ? "Ver perfil do treinador" : "View coach profile"}</a> : null}
             </div>
             <div className={styles.summary} aria-label={portuguese ? "Progresso do elenco" : "Squad progress"}>
               <span><small>{portuguese ? "Titulares" : "Starting XI"}</small><strong>{starters.length}/11</strong></span>

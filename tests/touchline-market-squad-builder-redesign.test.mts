@@ -62,8 +62,9 @@ test("the Market keeps account capacity first and guides a field slot directly t
   assert.match(source, /marketSelectionRef\.current\?\.scrollIntoView/);
   assert.match(source, /behavior: reduceMotion \? "auto" : "smooth"/);
   assert.match(source, /scroll-margin-top: 94px/);
-  assert.match(source, /@media \(min-width: 1181px\) \{[\s\S]*?team-builder-player-list \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
-  assert.match(source, /@media \(max-width: 760px\) \{[\s\S]*?grid-template-areas:[\s\S]*?"clubs"[\s\S]*?"roster"[\s\S]*?"preview"/);
+  assert.match(source, /Final Market Transfer gallery authority/);
+  assert.match(source, /grid-template-columns: repeat\(auto-fill, minmax\(196px, 1fr\)\)/);
+  assert.match(source, /grid-template-areas: "clubs roster"/);
   assert.doesNotMatch(source, /<a className=\{activeArenaPanel === "market"/);
 });
 
@@ -75,8 +76,12 @@ test("the Market card gallery stays static while unrelated live data updates", a
   assert.match(source, /className="team-builder-gallery-card"/);
   assert.match(source, /<StableMarketPreviewCard[\s\S]*?player=\{marketCard\}[\s\S]*?staticRenderScale=\{1\}[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}[\s\S]*?allowVisualInventoryPreview/);
   assert.doesNotMatch(source, /const selectedBuilderPreviewCard = useMemo\(/);
-  assert.match(source, /\.arena-action-panel-market \.team-builder-preview-card > \.touchline-card-surface\[data-card-motion="true"\] \{[\s\S]*?transition: none !important;[\s\S]*?will-change: auto !important;[\s\S]*?filter: none !important;/);
-  assert.match(source, /\.arena-action-panel-market \.team-builder-preview-status i \{[\s\S]*?animation: none;/);
+  assert.match(source, /className="team-builder-card-sign"/);
+  assert.match(source, /setMarketSpotlightPlayerId\(fieldId\)/);
+  assert.match(source, /className="arena-player-spotlight team-builder-card-spotlight"/);
+  assert.match(source, /<TouchlineCardZoomDetailsPanel details=\{marketSpotlightZoomDetails\}/);
+  assert.doesNotMatch(source, /className="team-builder-preview"/);
+  assert.match(source, /background: linear-gradient\(145deg, rgba\(7,25,22,.98\), rgba\(2,10,9,.98\)\) !important;/);
 });
 
 test("successful contracts fill eligible Starting XI slots before bench and preserve canonical pricing", async () => {
@@ -99,10 +104,22 @@ test("coach remains a dedicated entity outside every player slot", async () => {
   assert.match(arenaSource, /Substituir contrato/);
   assert.match(arenaSource, /contrato encerrado sem reembolso/);
   assert.match(source, /className=\{styles\.technicalArea\}/);
-  assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 150px; min-height: 236px;/);
-  assert.match(styles, /\.pitch \{\n  min-height: 510px;/);
+  assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 182px; min-height: 284px;/);
+  assert.match(styles, /\.pitch \{\n  min-height: 548px;/);
+  assert.match(source, /coachProfileHref/);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);
   assert.doesNotMatch(source, /role:\s*["']coach["']/);
+});
+
+test("the Market keeps a recoverable contract draft but only the existing checkout persists a real contract", async () => {
+  const source = await readFile(arenaClientPath, "utf8");
+  assert.match(source, /marketCart: "market-contract-draft"/);
+  assert.match(source, /function parseStoredMarketDraftIds/);
+  assert.match(source, /writeBrowserStorage\(\s*"localStorage",\s*draftKey/);
+  assert.match(source, /marketCartDraftIdsRef\.current\?\.add\(contractId\)/);
+  assert.match(source, /marketCartDraftIdsRef\.current\?\.clear\(\)/);
+  assert.match(source, /await fetch\("\/api\/touchline-arena\/market\/checkout"/);
+  assert.match(source, /persistArenaRoster\(placement\.players, placement\.bench\)/);
 });
 
 test("matchday bench and remaining squad are disjoint views of the same authoritative roster", async () => {

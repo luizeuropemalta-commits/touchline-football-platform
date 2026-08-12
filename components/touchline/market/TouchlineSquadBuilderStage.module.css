@@ -129,11 +129,11 @@
 .pitchColumn {
   position: relative;
   min-width: 0;
-  padding-right: 202px;
+  padding-right: 238px;
 }
 
 .pitch {
-  min-height: 510px;
+  min-height: 548px;
   border: 1px solid rgba(201, 255, 182, .24);
   border-radius: 20px;
   overflow: hidden;
@@ -205,16 +205,18 @@
   justify-items: center;
   align-content: start;
   gap: 12px;
-  width: 184px;
-  padding: 16px 13px;
+  width: 220px;
+  padding: 17px 15px;
   border: 1px solid rgba(170, 255, 62, .3);
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(8, 21, 14, .96), rgba(2, 8, 6, .98));
 }
 
 .technicalArea > span { color: #aaff3e; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
-.coachCard { display: grid; place-items: center; width: 150px; min-height: 236px; overflow: visible; }
-.coachCard > * { width: 146px; }
+.coachCardLink { display: block; border-radius: 17px; outline-offset: 5px; }
+.coachCardLink:focus-visible { outline: 2px solid #aaff3e; }
+.coachCard { display: grid; place-items: center; width: 182px; min-height: 284px; overflow: visible; }
+.coachCard > * { width: 178px; }
 .coachCard .emptyCoach {
   display: grid;
   place-items: center;
@@ -227,8 +229,9 @@
   font-size: 28px;
 }
 .coachBrief { display: grid; gap: 6px; text-align: center; }
-.coachBrief strong { font-size: 13px; line-height: 1.2; }
-.coachBrief p { margin: 0; color: #a9b8af; font-size: 9px; line-height: 1.45; }
+.coachBrief strong { font-size: 15px; line-height: 1.2; }
+.coachBrief p { margin: 0; color: #a9b8af; font-size: 10px; line-height: 1.45; }
+.coachBrief a { color: #baff76; font-size: 9px; font-weight: 900; text-decoration: none; }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .summary { width: 100%; margin-top: auto; }
 .summary span { display: grid; gap: 5px; padding: 10px 5px; border-radius: 10px; background: rgba(0, 0, 0, .24); text-align: center; }
@@ -275,7 +278,7 @@
 .remaining p { margin: 0; color: #89968f; font-size: 11px; }
 
 @media (max-width: 1050px) {
-  .pitch { min-height: 460px; }
+  .pitch { min-height: 490px; }
 }
 
 @media (max-width: 720px) {
@@ -312,7 +315,8 @@
   .technicalArea { inset: 0 0 0 auto; grid-template: auto auto auto 1fr / 1fr; width: 118px; height: auto; padding: 10px; }
   .coachCard { width: 88px; min-height: 142px; }
   .coachCard > * { width: 84px; }
-  .coachBrief p { display: none; }
+  .coachBrief p,
+  .coachBrief a { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
