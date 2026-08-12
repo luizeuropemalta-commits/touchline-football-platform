@@ -99,6 +99,8 @@ test("Market Transfer uses centralized position eligibility on gallery cards and
   assert.match(source, /isPositionLimitReached/);
   assert.match(source, /marketUi\.positionLimitReached/);
   assert.match(source, /touchlineTwoStrikerFormationHint/);
+  assert.match(source, /const effectiveMarketPositionBucketFilter: TouchlineMarketPositionBucketFilter = marketPositionBucketFilter;/);
+  assert.doesNotMatch(source, /Conclua primeiro:|Complete first:|isSequentialStepLocked|isInitialMarketSquadBuild/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market \{/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market \{[\s\S]*?overflow: visible;/);
   assert.match(source, /className="team-builder-card-sign"/);

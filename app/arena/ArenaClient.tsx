@@ -4143,18 +4143,10 @@ export default function ArenaClient({
     ...benchPlayers.map((bench) => ({ position: bench.position, role: bench.role })),
     ...marketCartPlayers.map((player) => ({ position: player.position, role: player.role })),
   ]);
-  const currentMarketPositionStep = TOUCHLINE_MARKET_POSITION_SEQUENCE.find(
-    (bucket) => (marketPositionCounts[bucket] ?? 0) < TOUCHLINE_MARKET_POSITION_LIMITS[bucket],
-  ) ?? null;
-  const currentMarketPositionStepIndex = currentMarketPositionStep
-    ? TOUCHLINE_MARKET_POSITION_SEQUENCE.indexOf(currentMarketPositionStep)
-    : TOUCHLINE_MARKET_POSITION_SEQUENCE.length;
-  const isInitialMarketSquadBuild = authoritativeOwnedSquadCount + marketCartPlayers.length < TOUCHLINE_SQUAD_RULES.contracted;
-  const effectiveMarketPositionBucketFilter: TouchlineMarketPositionBucketFilter = marketFormationConfirmed
-    && isInitialMarketSquadBuild
-    && currentMarketPositionStep
-      ? currentMarketPositionStep
-      : marketPositionBucketFilter;
+  // A ClubOwner can build a squad in football order, not in a forced wizard
+  // order. The selected position must always be the position being browsed;
+  // each bucket still has its approved squad limit at contract time.
+  const effectiveMarketPositionBucketFilter: TouchlineMarketPositionBucketFilter = marketPositionBucketFilter;
   const visibleMarketPlayers = sortedBuilderSquad
     .filter((player) => {
       if (marketPositionFilter !== "all" && player.role !== marketPositionFilter) return false;
@@ -6680,15 +6672,6 @@ export default function ArenaClient({
       setSaveStatus(siteLanguage === "pt-BR" ? "Posição em classificação. Este jogador ainda não pode ser contratado." : "Position pending classification. This player cannot be signed yet.");
       return;
     }
-    if (isInitialMarketSquadBuild && currentMarketPositionStep && positionBucket !== currentMarketPositionStep) {
-      const requiredLabel = touchlineMarketPositionBucketLabel(currentMarketPositionStep, siteLanguage).split(" / ")[0];
-      setMarketPositionFilter("all");
-      setMarketPositionBucketFilter(currentMarketPositionStep);
-      setSaveStatus(siteLanguage === "pt-BR"
-        ? `Conclua primeiro: ${requiredLabel}.`
-        : `Complete first: ${requiredLabel}.`);
-      return;
-    }
     const positionLimit = TOUCHLINE_MARKET_POSITION_LIMITS[positionBucket];
     const positionCount = marketPositionCounts[positionBucket] ?? 0;
     if (positionCount >= positionLimit) {
@@ -8737,6 +8720,16 @@ export default function ArenaClient({
                               setBuilderLoadState({ status: "loading" });
                               setIsMarketCheckoutConfirmationOpen(false);
                               setSelectedBuilderClubKey(club.teamId);
+                              /* The club rail is deliberately long. Pair its
+                                 selection with the athlete gallery so the
+                                 next squad never opens below the viewport. */
+                              requestAnimationFrame(() => {
+                                const shouldReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                                marketSelectionRef.current?.scrollIntoView({
+                                  behavior: shouldReduceMotion ? "auto" : "smooth",
+                                  block: "start",
+                                });
+                              });
                             }}
                           >
                             <span className="team-builder-club-logo" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent } as CSSProperties}>
@@ -8791,28 +8784,27 @@ export default function ArenaClient({
                               setMarketPositionBucketFilter("all");
                               setMarketNeedsOnly(false);
                             }}
-                            disabled={!marketFormationConfirmed || isInitialMarketSquadBuild}
+                            disabled={!marketFormationConfirmed}
                           >
                             <span>{marketUi.filterAll}</span>
                             <small>{authoritativeOwnedSquadCount}/35</small>
                           </button>
-                          {TOUCHLINE_MARKET_POSITION_SEQUENCE.map((bucket, bucketIndex) => {
+                          {TOUCHLINE_MARKET_POSITION_SEQUENCE.map((bucket) => {
                             const count = marketPositionCounts[bucket] ?? 0;
                             const limit = TOUCHLINE_MARKET_POSITION_LIMITS[bucket];
                             const label = touchlineMarketPositionBucketLabel(bucket, siteLanguage).split(" / ")[0];
-                            const isSequentialStepLocked = isInitialMarketSquadBuild && bucketIndex !== currentMarketPositionStepIndex;
                             return (
                               <button
                                 key={bucket}
                                 type="button"
-                                className={`${effectiveMarketPositionBucketFilter === bucket ? "is-active" : ""}${count >= limit ? " is-full" : ""}${isSequentialStepLocked ? " is-locked" : ""}`}
+                                className={`${effectiveMarketPositionBucketFilter === bucket ? "is-active" : ""}${count >= limit ? " is-full" : ""}`}
                                 onClick={() => {
                                   setMarketPositionFilter("all");
                                   setMarketPositionBucketFilter(bucket);
                                   setMarketNeedsOnly(false);
                                 }}
-                                disabled={!marketFormationConfirmed || isSequentialStepLocked}
-                                aria-label={`${label}: ${count} de ${limit}${isSequentialStepLocked ? (siteLanguage === "pt-BR" ? ", etapa bloqueada" : ", locked step") : ""}`}
+                                disabled={!marketFormationConfirmed}
+                                aria-label={`${label}: ${count} de ${limit}`}
                               >
                                 <span>{label}</span>
                                 <small>{count}/{limit}</small>
@@ -8892,7 +8884,9 @@ export default function ArenaClient({
                                     showCardActions={false}
                                   showProfileAction={false}
                                   showSocialMetrics={false}
-                                  staticRenderScale={1}
+                                  /* Keep the rendered 430×691 card inside its
+                                     deliberately smaller Market gallery slot. */
+                                  staticRenderScale={0.56}
                                   allowVisualInventoryPreview
                                   />
                                 </span>
@@ -9689,7 +9683,7 @@ export default function ArenaClient({
         .touchline-game.is-market-standalone .team-builder-player-list > article.is-market-pending,
         .touchline-game.is-market-standalone .team-builder-player-list > article.is-position-locked {
           min-height: 0;
-          overflow: hidden;
+          overflow: visible;
           border-color: rgba(181,255,75,.2) !important;
           background: linear-gradient(145deg, rgba(7,25,22,.98), rgba(2,10,9,.98)) !important;
           box-shadow: inset 0 1px rgba(255,255,255,.035), 0 14px 28px rgba(0,0,0,.2);
@@ -9707,9 +9701,13 @@ export default function ArenaClient({
         }
 
         .touchline-game.is-market-standalone .team-builder-gallery-card {
-          width: min(100%, 254px);
+          /* The card painting is a fixed 430px canvas. Keep its host and its
+             paint scale in the same ratio at every breakpoint so no frame is
+             ever clipped when a narrower Market column is selected. */
+          width: min(100%, 184px);
           min-height: 0;
           aspect-ratio: 430 / 691;
+          --touchline-card-static-scale: .428;
           display: grid;
           place-items: center;
           overflow: visible;
@@ -9814,6 +9812,11 @@ export default function ArenaClient({
           .touchline-game.is-market-standalone .team-builder-player-list {
             grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
           }
+
+          .touchline-game.is-market-standalone .team-builder-gallery-card {
+            width: min(100%, 215px);
+            --touchline-card-static-scale: .5;
+          }
         }
 
         @media (max-width: 760px) {
@@ -9828,7 +9831,9 @@ export default function ArenaClient({
           }
 
           .touchline-game.is-market-standalone .team-builder-gallery-card {
+            width: min(100%, 170px);
             min-height: 0;
+            --touchline-card-static-scale: .395;
           }
         }
 
@@ -19764,6 +19769,21 @@ export default function ArenaClient({
            stylesheet. Earlier responsive Arena rules serve other panels and
            used to collapse the premium gallery back to one empty-looking row. */
         @media (min-width: 1181px) {
+          /* Market is a document-length catalogue, not the fixed-height
+             line-up editor used by the other Arena panels.  Keep every
+             gallery item in normal flow; a later card must extend the page,
+             never be hidden behind the roster's old editor boundary. */
+          .touchline-game.is-market-standalone .arena-action-panel-market,
+          .touchline-game.is-market-standalone .arena-action-panel-market .team-builder-shell,
+          .touchline-game.is-market-standalone .team-builder-board,
+          .touchline-game.is-market-standalone .team-builder-roster,
+          .touchline-game.is-market-standalone .team-builder-player-list {
+            height: auto !important;
+            min-height: max-content !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
+
           .touchline-game.is-market-standalone .team-builder-board {
             grid-template-areas: "clubs roster";
             grid-template-columns: minmax(360px, 36%) minmax(0, 64%);
@@ -19803,12 +19823,19 @@ export default function ArenaClient({
             grid-auto-rows: auto;
             gap: 20px;
             padding: 8px;
+            align-items: start;
           }
 
           .touchline-game.is-market-standalone .team-builder-player-list > article {
+            /* Earlier Arena editor CSS made this a two-row fixed editor
+               cell. A Market item is a complete product card, so let its
+               artwork, caption and signing action define one natural row. */
+            display: block !important;
+            grid-template-rows: none;
             height: auto;
             min-height: 0;
-            overflow: visible;
+            overflow: visible !important;
+            align-self: start;
             border-radius: 20px;
           }
 
@@ -19830,7 +19857,10 @@ export default function ArenaClient({
           }
 
           .touchline-game.is-market-standalone .team-builder-gallery-card {
-            width: min(100%, 246px);
+            /* 430px × .56 = 240.8px: the slot and rendered art therefore
+               share the same aspect/height instead of leaving a clipped or
+               seemingly blank lower band below the card. */
+            width: min(100%, 241px);
             min-height: 0;
             aspect-ratio: 430 / 691;
             /* 30% smaller than the former .8 desktop treatment. */
