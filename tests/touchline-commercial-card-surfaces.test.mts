@@ -28,7 +28,9 @@ test("Market Transfer presents card terms without exposing a player market valua
 
   assert.match(arenaSource, /function builderPlayerCommercialPrice/);
   assert.match(arenaSource, /builderPlayerCommercialPrice\(player, marketUi\.cardUnavailable\)/);
-  assert.match(arenaSource, /builderPlayerCommercialPrice\(selectedBuilderPlayer, marketUi\.cardUnavailable\)/);
+  assert.match(arenaSource, /builderPlayerCommercialPrice\(player, marketUi\.cardUnavailable\)/);
+  assert.match(arenaSource, /marketSpotlightPlayer/);
+  assert.match(arenaSource, /<TouchlineCardZoomDetailsPanel details=\{marketSpotlightZoomDetails\}/);
   assert.doesNotMatch(arenaSource, /<strong>\{builderPlayerRetailPriceTc\(player\)\} TC<\/strong>/);
   assert.doesNotMatch(arenaSource, /builderPlayerRetailPriceTc\(selectedBuilderPlayer\)\} TC/);
   assert.match(arenaSource, /formatTouchlineCommercialCardTotal/);

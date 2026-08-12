@@ -361,11 +361,11 @@ test("Market Transfer uses football selection language and official TouchLine mo
   assert.match(arenaClient, /marketUi\.squadTcValue/);
   assert.match(arenaClient, /TouchlineCoinMark/);
   assert.match(arenaClient, /TouchlineSelectedPlayersMark/);
-  assert.match(arenaClient, /team-builder-preview-card-meta/);
-  // The compact market list still omits tier names. The selected large-card
-  // negotiation panel is the approved place for explicit economic metadata.
-  assert.match(arenaClient, /marketUi\.cardTier/);
-  assert.match(arenaClient, /touchlineCardTierName\(selectedBuilderPlayer\.cardTier/);
+  assert.match(arenaClient, /className="team-builder-gallery-card"/);
+  // The card gallery is the only compact selection surface; details are opened
+  // in the shared enlarged card overlay instead of a duplicate dossier.
+  assert.match(arenaClient, /setMarketSpotlightPlayerId\(fieldId\)/);
+  assert.match(arenaClient, /<TouchlineCardZoomDetailsPanel details=\{marketSpotlightZoomDetails\}/);
   assert.match(arenaClient, /Contrato · 1 temporada/);
   assert.doesNotMatch(arenaClient, /<ShoppingCart/);
   assert.match(translations, /marketCart: "Contratações"/);
