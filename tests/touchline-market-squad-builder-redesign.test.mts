@@ -63,7 +63,8 @@ test("the Market keeps account capacity first and guides a field slot directly t
   assert.match(source, /behavior: reduceMotion \? "auto" : "smooth"/);
   assert.match(source, /scroll-margin-top: 94px/);
   assert.match(source, /Final Market Transfer gallery authority/);
-  assert.match(source, /grid-template-columns: repeat\(auto-fill, minmax\(196px, 1fr\)\)/);
+  assert.match(source, /grid-template-columns: minmax\(270px, 30%\) minmax\(0, 70%\)/);
+  assert.match(source, /grid-template-columns: repeat\(auto-fill, minmax\(220px, 1fr\)\)/);
   assert.match(source, /grid-template-areas: "clubs roster"/);
   assert.doesNotMatch(source, /<a className=\{activeArenaPanel === "market"/);
 });
@@ -74,7 +75,8 @@ test("the Market card gallery stays static while unrelated live data updates", a
   assert.match(source, /const StableMarketPreviewCard = memo\(TouchlineEliteExactCard\)/);
   assert.match(source, /const marketCard = builderPlayerToPreviewCard\(player, \{ allowInventoryVisualPreview: true \}\)/);
   assert.match(source, /className="team-builder-gallery-card"/);
-  assert.match(source, /<StableMarketPreviewCard[\s\S]*?player=\{marketCard\}[\s\S]*?staticRenderScale=\{1\}[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}[\s\S]*?allowVisualInventoryPreview/);
+  assert.match(source, /<StableMarketPreviewCard[\s\S]*?player=\{marketCard\}[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}[\s\S]*?allowVisualInventoryPreview/);
+  assert.doesNotMatch(source, /<StableMarketPreviewCard[\s\S]*?staticRenderScale=\{1\}/);
   assert.doesNotMatch(source, /const selectedBuilderPreviewCard = useMemo\(/);
   assert.match(source, /className="team-builder-card-sign"/);
   assert.match(source, /setMarketSpotlightPlayerId\(fieldId\)/);

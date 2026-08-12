@@ -8887,7 +8887,6 @@ export default function ArenaClient({
                                     player={marketCard}
                                     runtimeLocaleOverride={siteLanguage}
                                     rankingMode="preview"
-                                    staticRenderScale={1}
                                     subscribeToRanking={false}
                                     enableInteractiveNeon={false}
                                     showCardActions={false}
@@ -9669,15 +9668,20 @@ export default function ArenaClient({
            list-layout rules retained above for non-market Arena surfaces. */
         .touchline-game.is-market-standalone .team-builder-board {
           grid-template-areas: "clubs roster";
-          grid-template-columns: minmax(210px, 250px) minmax(0, 1fr);
+          /* The club directory is deliberately substantial on desktop: it is
+             the first decision in Market, while the remaining 70% is reserved
+             for the actual player cards instead of decorative empty space. */
+          grid-template-columns: minmax(270px, 30%) minmax(0, 70%);
           align-items: start;
+          gap: 18px;
         }
 
         .touchline-game.is-market-standalone .team-builder-player-list {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
           grid-auto-rows: auto;
-          gap: 14px;
+          gap: 18px;
+          padding: 4px;
         }
 
         .touchline-game.is-market-standalone .team-builder-player-list > article,
@@ -9694,19 +9698,21 @@ export default function ArenaClient({
           display: grid;
           grid-template-columns: 1fr;
           align-content: start;
-          gap: 10px;
+          gap: 12px;
           min-height: 0;
-          padding: 12px;
+          padding: 14px 14px 10px;
           color: #f5fff3;
           background: transparent !important;
         }
 
         .touchline-game.is-market-standalone .team-builder-gallery-card {
-          width: 100%;
-          min-height: 250px;
+          width: min(100%, 254px);
+          min-height: 0;
+          aspect-ratio: 430 / 691;
           display: grid;
           place-items: center;
           overflow: visible;
+          justify-self: center;
         }
 
         .touchline-game.is-market-standalone .team-builder-player-copy,
@@ -9723,7 +9729,7 @@ export default function ArenaClient({
 
         .touchline-game.is-market-standalone .team-builder-gallery-caption strong {
           color: #f5fff3;
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.15;
         }
 
@@ -9735,9 +9741,9 @@ export default function ArenaClient({
         }
 
         .touchline-game.is-market-standalone .team-builder-card-sign {
-          width: calc(100% - 20px);
-          min-height: 42px;
-          margin: 0 10px 10px;
+          width: calc(100% - 28px);
+          min-height: 44px;
+          margin: 0 14px 14px;
           border: 1px solid rgba(181,255,75,.48);
           border-radius: 11px;
           color: #efffe8;
@@ -9763,18 +9769,38 @@ export default function ArenaClient({
         @media (min-width: 1181px) {
           .touchline-game.is-market-standalone .team-builder-board {
             grid-template-areas: "clubs roster";
-            grid-template-columns: minmax(210px, 250px) minmax(0, 1fr);
+            grid-template-columns: minmax(270px, 30%) minmax(0, 70%);
           }
 
           .touchline-game.is-market-standalone .team-builder-player-list {
-            grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             grid-auto-rows: auto;
           }
 
           .touchline-game.is-market-standalone .team-builder-player-select {
             grid-template-columns: 1fr;
             min-height: 0;
-            padding: 12px;
+            padding: 14px 14px 10px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-grid button {
+            min-height: 78px;
+            grid-template-columns: 56px minmax(0, 1fr);
+            gap: 12px;
+            padding: 11px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-logo {
+            width: 56px;
+            height: 56px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-grid strong {
+            font-size: 14px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-grid small {
+            font-size: 10px;
           }
         }
 
@@ -9785,7 +9811,7 @@ export default function ArenaClient({
           }
 
           .touchline-game.is-market-standalone .team-builder-player-list {
-            grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
           }
         }
 
@@ -9801,7 +9827,7 @@ export default function ArenaClient({
           }
 
           .touchline-game.is-market-standalone .team-builder-gallery-card {
-            min-height: 188px;
+            min-height: 0;
           }
         }
 
