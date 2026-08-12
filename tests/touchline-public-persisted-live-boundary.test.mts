@@ -22,7 +22,8 @@ test("live scores read one durable snapshot or honest partial schedule without i
   assert.match(liveRoute, /partial-persisted-schedule/);
   assert.match(liveRoute, /persisted-live-data-unavailable/);
   assert.match(liveRoute, /liveSnapshot\?\.fixtures\.length/);
-  assert.match(liveRoute, /selectArenaFixtureRound\(schedule\)/);
+  assert.match(liveRoute, /completeTouchlineOfficialFixtureSchedule/);
+  assert.match(liveRoute, /selectArenaFixtureRound\(completeTouchlineOfficialFixtureSchedule\(schedule\)\)/);
   assert.doesNotMatch(
     liveRoute,
     /createFootballDataProvider|persistLiveScoreSnapshot|writeLiveScoreSnapshot|readLiveScoreSnapshot|mergeTouchlineLiveFixtureDeltas|new Date\(/,
