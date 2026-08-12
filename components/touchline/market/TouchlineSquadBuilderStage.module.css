@@ -129,7 +129,7 @@
 .pitchColumn {
   position: relative;
   min-width: 0;
-  padding-right: 238px;
+  padding-right: 270px;
 }
 
 .pitch {
@@ -205,8 +205,8 @@
   justify-items: center;
   align-content: start;
   gap: 12px;
-  width: 220px;
-  padding: 17px 15px;
+  width: 250px;
+  padding: 19px 17px;
   border: 1px solid rgba(170, 255, 62, .3);
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(8, 21, 14, .96), rgba(2, 8, 6, .98));
@@ -215,8 +215,8 @@
 .technicalArea > span { color: #aaff3e; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
 .coachCardLink { display: block; border-radius: 17px; outline-offset: 5px; }
 .coachCardLink:focus-visible { outline: 2px solid #aaff3e; }
-.coachCard { display: grid; place-items: center; width: 182px; min-height: 284px; overflow: visible; }
-.coachCard > * { width: 178px; }
+.coachCard { display: grid; place-items: center; width: 212px; min-height: 330px; overflow: visible; }
+.coachCard > * { width: 208px; }
 .coachCard .emptyCoach {
   display: grid;
   place-items: center;

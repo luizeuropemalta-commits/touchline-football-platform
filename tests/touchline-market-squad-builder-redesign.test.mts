@@ -63,8 +63,9 @@ test("the Market keeps account capacity first and guides a field slot directly t
   assert.match(source, /behavior: reduceMotion \? "auto" : "smooth"/);
   assert.match(source, /scroll-margin-top: 94px/);
   assert.match(source, /Final Market Transfer gallery authority/);
-  assert.match(source, /grid-template-columns: minmax\(270px, 30%\) minmax\(0, 70%\)/);
-  assert.match(source, /grid-template-columns: repeat\(auto-fill, minmax\(220px, 1fr\)\)/);
+  assert.match(source, /grid-template-columns: minmax\(360px, 36%\) minmax\(0, 64%\)/);
+  assert.match(source, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(source, /width: min\(100%, 352px\)/);
   assert.match(source, /grid-template-areas: "clubs roster"/);
   assert.doesNotMatch(source, /<a className=\{activeArenaPanel === "market"/);
 });
@@ -76,7 +77,8 @@ test("the Market card gallery stays static while unrelated live data updates", a
   assert.match(source, /const marketCard = builderPlayerToPreviewCard\(player, \{ allowInventoryVisualPreview: true \}\)/);
   assert.match(source, /className="team-builder-gallery-card"/);
   assert.match(source, /<StableMarketPreviewCard[\s\S]*?player=\{marketCard\}[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}[\s\S]*?allowVisualInventoryPreview/);
-  assert.doesNotMatch(source, /<StableMarketPreviewCard[\s\S]*?staticRenderScale=\{1\}/);
+  assert.match(source, /<StableMarketPreviewCard[\s\S]*?staticRenderScale=\{1\}/);
+  assert.match(source, /--touchline-card-static-scale: \.8/);
   assert.doesNotMatch(source, /const selectedBuilderPreviewCard = useMemo\(/);
   assert.match(source, /className="team-builder-card-sign"/);
   assert.match(source, /setMarketSpotlightPlayerId\(fieldId\)/);
@@ -102,11 +104,15 @@ test("coach remains a dedicated entity outside every player slot", async () => {
   const source = await readFile(stagePath, "utf8");
   const styles = await readFile(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8");
   assert.match(arenaSource, /MERCADO · PASSO 1 DE 10/);
+  assert.match(arenaSource, /club\.teamId === String\(activeArenaCoachIdentity\.coach\.teamId\)/);
   assert.match(arenaSource, /TOUCHLINE_MARKET_POSITION_SEQUENCE/);
   assert.match(arenaSource, /Substituir contrato/);
   assert.match(arenaSource, /contrato encerrado sem reembolso/);
   assert.match(source, /className=\{styles\.technicalArea\}/);
-  assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 182px; min-height: 284px;/);
+  const coachCardStyles = await readFile(new URL("../components/touchline/cards/TouchlineCoachCard.module.css", import.meta.url), "utf8");
+  assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 212px; min-height: 330px;/);
+  assert.match(styles, /\.technicalArea \{[\s\S]*?width: 250px;/);
+  assert.match(coachCardStyles, /width: clamp\(9px, 16cqw, 28px\)/);
   assert.match(styles, /\.pitch \{\n  min-height: 548px;/);
   assert.match(source, /coachProfileHref/);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);

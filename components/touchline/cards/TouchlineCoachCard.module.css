@@ -386,8 +386,11 @@
 }
 
 .shell[data-coach-card-display="compact"] .clubBadge [data-touchline-card-crest-trace-host="true"] {
-  width: min(var(--coach-club-crest-w, 14%), 12px);
-  height: min(var(--coach-club-crest-w, 14%), 12px);
+  /* Compact is used in the Market technical area as well as the pitch. Use
+     container units rather than the crest-position percentage: the latter
+     was relative to the tiny badge and collapsed the club logo to ~12px. */
+  width: clamp(9px, 16cqw, 28px);
+  height: clamp(9px, 16cqw, 28px);
 }
 
 .shell[data-coach-card-display="compact"] .clubBadge [data-touchline-card-crest-trace-host="true"] > img {

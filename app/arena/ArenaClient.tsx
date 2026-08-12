@@ -3876,7 +3876,7 @@ export default function ArenaClient({
       ? { coach: TOUCHLINE_DEMO_COACH, countryCode3: "ITA" }
       : null);
   const ownerCoachClub = activeArenaCoachIdentity?.coach.teamId
-    ? PREMIER_CLUB_VISUALS.find((club) => club.teamId === activeArenaCoachIdentity.coach.teamId) ?? null
+    ? PREMIER_CLUB_VISUALS.find((club) => club.teamId === String(activeArenaCoachIdentity.coach.teamId)) ?? null
     : null;
   const ownerCoachOffer = activeArenaCoachIdentity?.coach
     ? coachOffersByProviderId[activeArenaCoachIdentity.coach.providerId] ?? null
@@ -8890,9 +8890,10 @@ export default function ArenaClient({
                                     subscribeToRanking={false}
                                     enableInteractiveNeon={false}
                                     showCardActions={false}
-                                    showProfileAction={false}
-                                    showSocialMetrics={false}
-                                    allowVisualInventoryPreview
+                                  showProfileAction={false}
+                                  showSocialMetrics={false}
+                                  staticRenderScale={1}
+                                  allowVisualInventoryPreview
                                   />
                                 </span>
                                 <span className="team-builder-gallery-caption">
@@ -19557,7 +19558,7 @@ export default function ArenaClient({
         @media (min-width: 1181px) {
           .touchline-game.is-market-standalone .team-builder-board {
             grid-template-areas: "clubs roster preview";
-            grid-template-columns: minmax(154px, 176px) minmax(560px, 1fr) minmax(300px, 340px);
+            grid-template-columns: minmax(360px, 36%) minmax(0, 64%);
             gap: 14px;
           }
 
@@ -19756,6 +19757,85 @@ export default function ArenaClient({
           .arena-quick-dock.is-collapsed .arena-quick-toggle {
             min-width: 44px;
             min-height: 44px;
+          }
+        }
+
+        /* Market Transfer desktop composition — keep this at the end of the
+           stylesheet. Earlier responsive Arena rules serve other panels and
+           used to collapse the premium gallery back to one empty-looking row. */
+        @media (min-width: 1181px) {
+          .touchline-game.is-market-standalone .team-builder-board {
+            grid-template-areas: "clubs roster";
+            grid-template-columns: minmax(360px, 36%) minmax(0, 64%);
+            gap: 24px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-grid {
+            gap: 12px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-grid button {
+            min-height: 86px;
+            grid-template-columns: 64px minmax(0, 1fr);
+            gap: 14px;
+            border-radius: 16px;
+            padding: 11px 13px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-logo {
+            width: 64px;
+            height: 64px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-grid strong {
+            font-size: 16px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-club-grid small {
+            font-size: 11px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 22px;
+            padding: 8px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-list > article {
+            border-radius: 20px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-player-select {
+            padding: 18px 18px 12px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-gallery-card {
+            width: min(100%, 352px);
+            min-height: 0;
+            aspect-ratio: 430 / 691;
+            --touchline-card-static-scale: .8;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-gallery-card > .touchline-card-surface {
+            width: 100% !important;
+            height: 100% !important;
+            aspect-ratio: 430 / 691;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-gallery-caption strong {
+            font-size: 17px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-gallery-caption small {
+            font-size: 12px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-card-sign {
+            min-height: 48px;
+            margin: 0 18px 18px;
+            width: calc(100% - 36px);
+            border-radius: 14px;
+            font-size: 13px;
           }
         }
       `}</style>
