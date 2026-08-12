@@ -175,7 +175,9 @@ const ARENA_LIVE_FIXTURE_CACHE_MAX_AGE_MS = 1000 * 60 * 5;
 const ARENA_LIVE_SQUAD_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
 const ARENA_LIVE_SQUAD_REFRESH_DEDUP_MS = 1000 * 60 * 5;
 const ARENA_LIVE_SQUAD_REQUEST_SETTLE_MS = 180;
-const ARENA_LIVE_LOCAL_REQUEST_TIMEOUT_MS = 700;
+// The score rail is part of the normal Arena entry. Safari can take longer
+// than a sub-second to hydrate the persisted schedule after a cold load.
+const ARENA_LIVE_SCHEDULE_REQUEST_TIMEOUT_MS = 3_500;
 const ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS = 4_000;
 const ARENA_LIVE_VISUAL_ASSET_VERSION = "2026-07-28-1";
 const ARENA_ANONYMOUS_SESSION_STORAGE_KEY = "touchline:arena:anonymous-session:v1";
@@ -5150,14 +5152,20 @@ export default function ArenaClient({
           | { ok: true; data: TouchlineFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
           | { ok: false; error?: string; code?: string }
         >("/api/football-data/fixture-schedule", {
-          timeoutMs: ARENA_LIVE_LOCAL_REQUEST_TIMEOUT_MS,
+          timeoutMs: ARENA_LIVE_SCHEDULE_REQUEST_TIMEOUT_MS,
           signal: requestController.signal,
         });
 
-        if (!ok || payload.ok === false) return;
-        applyPersistedSchedule(payload);
+        if (!ok || payload.ok === false || !applyPersistedSchedule(payload)) {
+          // The Live projection is the same server-owned, read-only fixture
+          // snapshot. Use it as a fallback so the normal Arena never leaves
+          // its premium score rail blank when the fuller schedule is delayed.
+          await refreshLiveFixtures();
+        }
       } catch {
-        // The coherent browser snapshot or bundled simulation remains visible.
+        // A delayed or failed schedule must still try the persisted Live
+        // projection; neither path refreshes a provider from the browser.
+        await refreshLiveFixtures();
       }
     }
 

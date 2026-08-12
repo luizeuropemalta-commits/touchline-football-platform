@@ -27,6 +27,7 @@ import {
   touchlineCountryFlagUrl,
 } from "@/lib/touchlineArena/country-flags";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
+import { resolveTouchlineMarketCataloguePosition } from "@/lib/touchlineArena/market-position-catalogue";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -223,7 +224,7 @@ async function projectSquadForPublic(
       name: identity.displayName,
       shortName: makeArenaShortName(identity.displayName),
       role: inferArenaRole(membership.position ?? undefined),
-      position: membership.position,
+      position: resolveTouchlineMarketCataloguePosition(projection.providerPlayerId, membership.position),
       shirtNumber: membership.jerseyNumber,
       shirtNumberSource: "verified-cache",
       shirtNumberVerifiedAt: null,
