@@ -43,6 +43,7 @@ test("Live preserves server-calculated freshness and visibly downgrades stale li
 
 test("schedule endpoint is a read-only partial projection and POST is fail-closed", () => {
   assert.match(scheduleRoute, /readPublicCompetitionFixtures/);
+  assert.match(scheduleRoute, /completeTouchlineOfficialFixtureSchedule/);
   assert.match(scheduleRoute, /partial-persisted-schedule/);
   assert.match(scheduleRoute, /capturedAt: null/);
   assert.match(scheduleRoute, /export async function POST\(\)[\s\S]*?status: 405/);
