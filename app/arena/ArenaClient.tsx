@@ -4171,10 +4171,6 @@ export default function ArenaClient({
     ?? sortedBuilderSquad.find((player) => Boolean(player.inventoryId))
     ?? sortedBuilderSquad[0]
     ?? null;
-  const selectedBuilderPreviewCard = useMemo(
-    () => selectedBuilderPlayer ? builderPlayerToPreviewCard(selectedBuilderPlayer, { allowInventoryVisualPreview: true }) : null,
-    [selectedBuilderPlayer],
-  );
   const selectedBuilderContractId = selectedBuilderPlayer ? builderPlayerSquadContractId(selectedBuilderPlayer) : null;
   const selectedBuilderPitchPlayer = selectedBuilderPlayer
     ? players.find((arenaPlayer) => matchesBuilderPlayer(arenaPlayer, selectedBuilderPlayer))
@@ -8559,7 +8555,6 @@ export default function ArenaClient({
                         });
                       });
                     }}
-                    arenaHref={`/arena?skipIntro=1&lang=${encodeURIComponent(siteLanguage)}`}
                   />
 
                   <div className={`team-builder-cart-dock ${marketCartPlayers.length ? "has-items" : "is-empty"}`} aria-label={t("marketCart")}>
@@ -8844,61 +8839,40 @@ export default function ArenaClient({
                           const isSelectedMarketPlayer = selectedBuilderPlayer
                             ? stableBuilderPlayerId(selectedBuilderPlayer) === fieldId
                             : false;
+                          const marketCard = builderPlayerToPreviewCard(player, { allowInventoryVisualPreview: true });
                           return (
                             <article
                               key={fieldId}
                               className={`${isInField || isInSquad ? "is-in-field" : ""} ${isInCart ? "is-in-cart" : ""} ${isSelectedMarketPlayer ? "is-selected" : ""} ${isInventoryUnavailable ? "is-market-pending" : ""} ${isPositionLimitReached ? "is-position-locked" : ""}`}
                               style={{ "--market-card-accent": palette.accent, "--market-card-secondary": palette.secondary } as CSSProperties}
                             >
-                              <button type="button" className="team-builder-player-select" onClick={() => setSelectedBuilderPlayerId(fieldId)}>
-                                <span className="team-builder-role">{roleLabel(player.role)}</span>
-                                <span className="team-builder-player-copy">
-                                  <strong>{player.name}</strong>
-                                  <small>
-                                    {positionLabel}
-                                    {player.shirtNumber ? ` · #${player.shirtNumber}` : ""}
-                                  </small>
-                                  <em className={isPositionLimitReached ? "team-builder-position-cap is-full" : "team-builder-position-cap"}>
-                                    {marketUi.positionRosterCount(positionCount, positionLimit)}
-                                  </em>
-                                </span>
-                                <span className="team-builder-listing-meta">
-                                  <span className="team-builder-value">{isInventoryUnavailable ? marketUi.cardUnavailable : touchlineCardTierName(player.cardTier, siteLanguage)}</span>
-                                  <small>{isPositionLimitReached ? marketUi.positionLimitReached(positionLabel, positionLimit) : marketUi.copiesAvailable(availableCopies)}</small>
-                                </span>
-                              </button>
                               <button
                                 type="button"
-                                className="team-builder-quick-buy"
-                                onClick={() => {
-                                  setSelectedBuilderPlayerId(fieldId);
-                                  if (isPositionLimitReached) {
-                                    openMarketPositionReplacement(player);
-                                  } else {
-                                    toggleBuilderPlayerInCart(player);
-                                  }
-                                }}
-                                disabled={isQuickActionDisabled}
+                                className="team-builder-player-select"
+                                onClick={() => setSelectedBuilderPlayerId(fieldId)}
+                                aria-pressed={isSelectedMarketPlayer}
+                                aria-label={`${player.name} · ${positionLabel} · ${isInventoryUnavailable ? marketUi.cardUnavailable : touchlineCardTierName(player.cardTier, siteLanguage)}`}
                               >
-                                {!isInCart && !isInField && !isInSquad ? <Plus aria-hidden="true" /> : null}
-                                <span>
-                                  {isInField
-                                    ? marketUi.onPitch
-                                    : isInSquad
-                                      ? marketUi.inSquad
-                                      : isInCart
-                                        ? t("removeFromCart")
-                                        : isSoldOut
-                                          ? t("soldOut")
-                                          : isPositionLimitReached
-                                            ? (siteLanguage === "pt-BR" ? `Substituir ${positionLabel.split(" / ")[0].toLowerCase()}` : `Replace ${positionLabel.split(" / ")[0].toLowerCase()}`)
-                                          : isContractRosterFull
-                                            ? t("releaseContractFirst")
-                                            : t("addToCart")}
+                                <span className="team-builder-gallery-card" aria-hidden="true">
+                                  <StableMarketPreviewCard
+                                    player={marketCard}
+                                    runtimeLocaleOverride={siteLanguage}
+                                    rankingMode="preview"
+                                    staticRenderScale={1}
+                                    subscribeToRanking={false}
+                                    enableInteractiveNeon={false}
+                                    showCardActions={false}
+                                    showProfileAction={false}
+                                    showSocialMetrics={false}
+                                    allowVisualInventoryPreview
+                                  />
                                 </span>
-                                {!isInField && !isInSquad && !isInCart && !isSoldOut ? (
-                                  <strong>{isInventoryUnavailable ? marketUi.cardUnavailable : player.officialOffer?.displayPrice ?? marketUi.cardUnavailable}</strong>
-                                ) : null}
+                                <span className="team-builder-gallery-caption">
+                                  <strong>{player.name}</strong>
+                                  <small>{positionLabel}{player.shirtNumber ? ` · #${player.shirtNumber}` : ""}</small>
+                                  <em className={isPositionLimitReached ? "team-builder-position-cap is-full" : "team-builder-position-cap"}>{marketUi.positionRosterCount(positionCount, positionLimit)}</em>
+                                  <b>{isInField ? marketUi.onPitch : isInSquad ? marketUi.inSquad : isInCart ? t("inCart") : isInventoryUnavailable ? marketUi.cardUnavailable : player.officialOffer?.displayPrice ?? marketUi.cardUnavailable}</b>
+                                </span>
                               </button>
                             </article>
                           );
@@ -8936,24 +8910,8 @@ export default function ArenaClient({
                               <strong>{openContractSlots}</strong>
                             </span>
                           </div>
-                          <div className={`team-builder-preview-card ${selectedBuilderInventoryUnavailable ? "is-market-pending" : ""}`}>
-                            <StableMarketPreviewCard
-                              className="team-builder-preview-card-surface"
-                              player={selectedBuilderPreviewCard!}
-                              layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
-                              labels={cardLabels}
-                              runtimeLocaleOverride={siteLanguage}
-                              rankingMode="preview"
-                              subscribeToRanking={false}
-                              enableInteractiveNeon={false}
-                              showCardActions={false}
-                              showProfileAction={false}
-                              showSocialMetrics={false}
-                              allowVisualInventoryPreview
-                            />
-                          </div>
                           <div
-                            className="team-builder-preview-card-meta"
+                            className="team-builder-preview-card-meta team-builder-player-dossier"
                             style={{
                               "--market-preview-tier-accent": touchlineCardTierPalette(selectedBuilderPlayer.cardTier).accent,
                             } as CSSProperties}
@@ -9609,6 +9567,96 @@ export default function ArenaClient({
           .arena-empty-roster-recovery a {
             width: 100%;
           }
+        }
+
+        /* Market gallery: the card itself is the selection affordance. The
+           commercial decision stays in the single detail panel, so a club
+           never becomes a wall of red list rows or duplicate buy controls. */
+        .arena-action-panel-market .team-builder-player-list {
+          grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+          grid-auto-rows: auto;
+          gap: 12px;
+          padding: 4px;
+        }
+
+        .arena-action-panel-market .team-builder-player-list > article {
+          display: block;
+          min-height: 0;
+          overflow: visible;
+          border: 1px solid rgba(255,255,255,.12);
+          border-radius: 16px;
+          background: linear-gradient(180deg, rgba(10,22,18,.92), rgba(2,8,8,.96));
+          box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 12px 28px rgba(0,0,0,.18);
+        }
+
+        .arena-action-panel-market .team-builder-player-list > article:hover,
+        .arena-action-panel-market .team-builder-player-list > article.is-selected {
+          transform: translateY(-3px);
+          border-color: rgba(181,255,75,.72);
+          box-shadow: 0 17px 34px rgba(0,0,0,.3), 0 0 18px rgba(181,255,75,.1), inset 0 0 0 1px rgba(181,255,75,.13);
+        }
+
+        .arena-action-panel-market .team-builder-player-list > article.is-position-locked {
+          border-color: rgba(255,211,92,.42);
+          box-shadow: inset 0 0 0 1px rgba(255,211,92,.08);
+        }
+
+        .arena-action-panel-market .team-builder-player-select {
+          display: grid;
+          grid-template-columns: 1fr;
+          grid-template-rows: auto auto;
+          align-content: start;
+          gap: 7px;
+          width: 100%;
+          min-height: 0;
+          padding: 8px;
+          border: 0;
+          background: transparent;
+          color: #fff;
+          text-align: left;
+          box-shadow: none;
+        }
+
+        .arena-action-panel-market .team-builder-gallery-card {
+          display: block;
+          width: 100%;
+          aspect-ratio: 430 / 691;
+          overflow: visible;
+          pointer-events: none;
+        }
+
+        .arena-action-panel-market .team-builder-gallery-card > .touchline-card-surface {
+          width: 100% !important;
+          height: 100% !important;
+          overflow: visible !important;
+          transform: none !important;
+        }
+
+        .arena-action-panel-market .team-builder-gallery-caption {
+          display: grid;
+          gap: 3px;
+          min-width: 0;
+          padding: 0 3px 2px;
+        }
+
+        .arena-action-panel-market .team-builder-gallery-caption strong,
+        .arena-action-panel-market .team-builder-gallery-caption small,
+        .arena-action-panel-market .team-builder-gallery-caption em,
+        .arena-action-panel-market .team-builder-gallery-caption b {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .arena-action-panel-market .team-builder-gallery-caption strong { font-size: 11px; line-height: 1.1; }
+        .arena-action-panel-market .team-builder-gallery-caption small { color: rgba(122,231,255,.86); font-size: 8px; font-weight: 900; }
+        .arena-action-panel-market .team-builder-gallery-caption em { color: rgba(181,255,75,.74); font-size: 7px; font-style: normal; font-weight: 950; }
+        .arena-action-panel-market .team-builder-gallery-caption em.is-full { color: #ffd35c; }
+        .arena-action-panel-market .team-builder-gallery-caption b { color: #f1ffba; font-size: 9px; font-weight: 1000; }
+
+        @media (max-width: 760px) {
+          .arena-action-panel-market .team-builder-player-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+          .arena-action-panel-market .team-builder-gallery-caption strong { font-size: 10px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -17606,6 +17654,14 @@ export default function ArenaClient({
 
         .team-builder-preview-card-meta span {
           text-align: right;
+        }
+
+        .arena-action-panel-market .team-builder-player-dossier {
+          grid-row: 3;
+          min-height: 46px;
+          border-color: rgba(181,255,75,.22);
+          background: linear-gradient(135deg, rgba(181,255,75,.1), rgba(3,13,14,.9));
+          font-size: 9px;
         }
 
         .team-builder-market-facts {

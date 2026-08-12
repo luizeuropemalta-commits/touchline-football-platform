@@ -121,7 +121,7 @@
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   min-width: 0;
 }
@@ -129,11 +129,11 @@
 .pitchColumn {
   position: relative;
   min-width: 0;
-  padding-right: 128px;
+  padding-right: 202px;
 }
 
 .pitch {
-  min-height: 440px;
+  min-height: 510px;
   border: 1px solid rgba(201, 255, 182, .24);
   border-radius: 20px;
   overflow: hidden;
@@ -197,69 +197,43 @@
 
 .technicalArea {
   position: absolute;
-  top: 20px;
+  top: 0;
   right: 0;
-  bottom: 20px;
+  bottom: 0;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto auto 1fr;
   justify-items: center;
-  gap: 8px;
-  width: 116px;
-  padding: 13px 10px;
+  align-content: start;
+  gap: 12px;
+  width: 184px;
+  padding: 16px 13px;
   border: 1px solid rgba(170, 255, 62, .3);
-  border-radius: 18px;
+  border-radius: 20px;
   background: linear-gradient(180deg, rgba(8, 21, 14, .96), rgba(2, 8, 6, .98));
 }
 
 .technicalArea > span { color: #aaff3e; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
-.technicalArea > strong { text-align: center; font-size: 10px; line-height: 1.25; }
-.coachCard { display: grid; place-items: center; width: 96px; min-height: 150px; overflow: hidden; }
-.coachCard > * { width: 92px; }
+.coachCard { display: grid; place-items: center; width: 150px; min-height: 236px; overflow: visible; }
+.coachCard > * { width: 146px; }
 .coachCard .emptyCoach {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 76px;
+  width: 96px;
+  height: 138px;
   border: 1px dashed rgba(170, 255, 62, .48);
   border-radius: 16px;
   color: #aaff3e;
   background: rgba(170, 255, 62, .06);
   font-size: 28px;
 }
-
-.nextAction {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  min-width: 0;
-  padding: 20px;
-  border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, .03);
-}
-
-.nextAction h3 { margin: 0; font-size: 24px; line-height: 1.04; letter-spacing: -.03em; }
-.nextAction p { margin: 0; color: #a9b8af; font-size: 12px; line-height: 1.55; }
+.coachBrief { display: grid; gap: 6px; text-align: center; }
+.coachBrief strong { font-size: 13px; line-height: 1.2; }
+.coachBrief p { margin: 0; color: #a9b8af; font-size: 9px; line-height: 1.45; }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.summary span { display: grid; gap: 5px; padding: 10px 7px; border-radius: 10px; background: rgba(0, 0, 0, .24); }
+.summary { width: 100%; margin-top: auto; }
+.summary span { display: grid; gap: 5px; padding: 10px 5px; border-radius: 10px; background: rgba(0, 0, 0, .24); text-align: center; }
 .summary small { color: #91a099; font-size: 8px; text-transform: uppercase; }
-.summary strong { font-size: 16px; }
-.nextAction > a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 46px;
-  padding: 10px 13px;
-  border: 1px solid rgba(170, 255, 62, .28);
-  border-radius: 11px;
-  color: #eaffd2;
-  font-size: 11px;
-  font-weight: 900;
-  text-decoration: none;
-}
-.nextAction > a svg { width: 16px; }
-.nextAction .primaryAction { color: #081106; border-color: #aaff3e; background: #aaff3e; }
-.nextAction .disabledAction { pointer-events: none; opacity: .42; }
+.summary strong { font-size: 14px; }
 
 .bench,
 .remaining {
@@ -301,13 +275,7 @@
 .remaining p { margin: 0; color: #89968f; font-size: 11px; }
 
 @media (max-width: 1050px) {
-  .workspace { grid-template-columns: 1fr; }
-  .nextAction { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-  .nextAction > span,
-  .nextAction h3,
-  .nextAction p,
-  .nextAction .summary { grid-column: 1; }
-  .nextAction > a { grid-column: 2; min-width: 190px; }
+  .pitch { min-height: 460px; }
 }
 
 @media (max-width: 720px) {
@@ -319,18 +287,14 @@
   .formationStep { grid-template-columns: 1fr; }
   .formationStep > div:last-child { width: 100%; }
   .formationStep button { flex: 1; min-width: 0; }
-  .pitchColumn { padding-right: 0; padding-bottom: 128px; }
+  .pitchColumn { padding-right: 0; padding-bottom: 172px; }
   .pitch { min-height: 330px; }
-  .technicalArea { inset: auto 0 0 0; grid-template: 1fr / auto 64px 1fr; width: auto; height: 112px; }
-  .coachCard { width: 62px; min-height: 90px; }
-  .coachCard > * { width: 60px; }
-  .nextAction { grid-template-columns: 1fr; padding: 16px; }
-  .nextAction > span,
-  .nextAction h3,
-  .nextAction p,
-  .nextAction .summary,
-  .nextAction > a { grid-column: 1; }
-  .nextAction > a { min-width: 0; }
+  .technicalArea { inset: auto 0 0 0; grid-template-columns: 72px minmax(0, 1fr) minmax(150px, 1fr); grid-template-rows: auto 1fr; width: auto; height: 154px; align-items: center; justify-items: stretch; padding: 12px; }
+  .technicalArea > span { grid-column: 1 / -1; }
+  .coachCard { width: 70px; min-height: 104px; }
+  .coachCard > * { width: 68px; }
+  .coachBrief { text-align: left; }
+  .summary { align-self: stretch; margin: 0; }
   .benchSlots { grid-template-columns: repeat(9, 78px); }
 }
 
@@ -342,19 +306,13 @@
   .formationStep { grid-template-columns: minmax(0, 1fr) auto; padding: 10px; }
   .formationStep > div:first-child small { display: none; }
   .progress li { min-height: 44px; }
-  .workspace { grid-template-columns: minmax(0, 1.4fr) minmax(230px, .6fr); }
-  .pitchColumn { padding-right: 96px; padding-bottom: 0; }
+  .workspace { grid-template-columns: 1fr; }
+  .pitchColumn { padding-right: 132px; padding-bottom: 0; }
   .pitch { min-height: 330px; }
-  .technicalArea { inset: 12px 0 12px auto; grid-template: auto 1fr auto / 1fr; width: 86px; height: auto; }
-  .coachCard { width: 68px; min-height: 104px; }
-  .coachCard > * { width: 66px; }
-  .nextAction { display: grid; grid-template-columns: 1fr; padding: 13px; }
-  .nextAction > span,
-  .nextAction h3,
-  .nextAction p,
-  .nextAction .summary,
-  .nextAction > a { grid-column: 1; }
-  .nextAction p { display: none; }
+  .technicalArea { inset: 0 0 0 auto; grid-template: auto auto auto 1fr / 1fr; width: 118px; height: auto; padding: 10px; }
+  .coachCard { width: 88px; min-height: 142px; }
+  .coachCard > * { width: 84px; }
+  .coachBrief p { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check, ChevronRight, ShieldCheck } from "lucide-react";
+import { Check } from "lucide-react";
 
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
@@ -47,7 +47,6 @@ type Props = {
   contractedCount: number;
   selectedRole: "all" | TouchlineSquadBuilderRole;
   onSelectRole: (role: TouchlineSquadBuilderRole) => void;
-  arenaHref: string;
 };
 
 function evenlySpacedY(count: number, index: number) {
@@ -102,7 +101,6 @@ export default function TouchlineSquadBuilderStage({
   contractedCount,
   selectedRole,
   onSelectRole,
-  arenaHref,
 }: Props) {
   const portuguese = locale === "pt-BR";
   const slots = formationSlots(formation);
@@ -217,42 +215,20 @@ export default function TouchlineSquadBuilderStage({
             })}
           </TouchlinePitchSurface>
 
-          <aside className={styles.technicalArea} aria-label={portuguese ? "Área técnica" : "Technical area"}>
+          <aside className={styles.technicalArea} aria-label={portuguese ? "Área técnica e preparação do elenco" : "Technical area and squad preparation"}>
             <span>{portuguese ? "ÁREA TÉCNICA" : "TECHNICAL AREA"}</span>
             <div className={styles.coachCard}>{coachCard ?? <b className={styles.emptyCoach} aria-hidden="true">+</b>}</div>
-            <strong>{coachName ?? (portuguese ? "Escolha seu treinador" : "Choose your coach")}</strong>
+            <div className={styles.coachBrief}>
+              <strong>{coachName ?? (portuguese ? "Escolha seu treinador" : "Choose your coach")}</strong>
+              <p>{portuguese ? "Defina a formação, contrate atletas e leve o grupo completo para a Arena." : "Set the formation, sign players and take the complete group into the Arena."}</p>
+            </div>
+            <div className={styles.summary} aria-label={portuguese ? "Progresso do elenco" : "Squad progress"}>
+              <span><small>{portuguese ? "Titulares" : "Starting XI"}</small><strong>{starters.length}/11</strong></span>
+              <span><small>{portuguese ? "Banco" : "Bench"}</small><strong>{bench.length}/9</strong></span>
+              <span><small>{portuguese ? "Elenco" : "Squad"}</small><strong>{contractedCount}/35</strong></span>
+            </div>
           </aside>
         </div>
-
-        <aside className={styles.nextAction} aria-live="polite">
-          <span>{portuguese ? "PRÓXIMA AÇÃO" : "NEXT ACTION"}</span>
-          <h3>
-            {!journey.coachComplete
-              ? (portuguese ? "Escolha seu treinador" : "Choose your coach")
-              : !journey.formationComplete
-                ? (portuguese ? "Confirme a formação" : "Confirm formation")
-              : !journey.startingXiComplete
-                ? (portuguese ? `Complete o time titular · ${starters.length}/11` : `Complete the Starting XI · ${starters.length}/11`)
-                : !journey.benchComplete
-                  ? (portuguese ? `Complete o banco · ${bench.length}/9` : `Complete the bench · ${bench.length}/9`)
-                  : !journey.fullSquadComplete
-                    ? (portuguese ? `Complete o elenco · ${contractedCount}/35` : `Complete the squad · ${contractedCount}/35`)
-                    : (portuguese ? "Revise e confirme seu clube" : "Review and confirm your club")}
-          </h3>
-          <p>{journey.formationComplete
-            ? (portuguese ? "Selecione uma posição vazia. O Market mostrará somente atletas elegíveis para esse setor." : "Select an empty slot. Market will show only players eligible for that area.")
-            : (portuguese ? "Treinador e formação são obrigatórios antes da primeira contratação." : "Coach and formation are required before the first signing.")}</p>
-          <div className={styles.summary}>
-            <span><small>{portuguese ? "Titulares" : "Starting XI"}</small><strong>{starters.length}/11</strong></span>
-            <span><small>{portuguese ? "Banco" : "Bench"}</small><strong>{bench.length}/9</strong></span>
-            <span><small>{portuguese ? "Elenco" : "Squad"}</small><strong>{contractedCount}/35</strong></span>
-          </div>
-          <a className={journey.reviewAvailable ? styles.primaryAction : styles.disabledAction} href={journey.reviewAvailable ? arenaHref : undefined} aria-disabled={!journey.reviewAvailable}>
-            <ShieldCheck aria-hidden="true" />
-            {portuguese ? "Confirmar clube e entrar na Arena" : "Confirm club and enter Arena"}
-            <ChevronRight aria-hidden="true" />
-          </a>
-        </aside>
       </div>
 
       <section className={styles.bench} aria-label={portuguese ? "Banco da partida" : "Matchday bench"}>

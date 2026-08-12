@@ -42,7 +42,11 @@ test("the Market owns one premium squad-building stage with distinct player grou
   assert.match(source, /Elenco restante/);
   assert.match(source, /Array\.from\(\{ length: TOUCHLINE_SQUAD_RULES\.bench \}/);
   assert.match(source, /aria-current=\{index === currentStepIndex \? "step"/);
-  assert.match(source, /aria-label=\{portuguese \? "Área técnica" : "Technical area"\}/);
+  assert.match(source, /Área técnica e preparação do elenco/);
+  assert.match(source, /Defina a formação, contrate atletas e leve o grupo completo para a Arena/);
+  assert.match(source, /className=\{styles\.coachBrief\}/);
+  assert.doesNotMatch(source, /Complete the Starting XI/);
+  assert.doesNotMatch(source, /Confirm club and enter Arena/);
   assert.doesNotMatch(source, /Organizar elenco/);
 });
 
@@ -63,13 +67,14 @@ test("the Market keeps account capacity first and guides a field slot directly t
   assert.doesNotMatch(source, /<a className=\{activeArenaPanel === "market"/);
 });
 
-test("the Market Card View stays static while unrelated live data updates", async () => {
+test("the Market card gallery stays static while unrelated live data updates", async () => {
   const source = await readFile(arenaClientPath, "utf8");
 
   assert.match(source, /const StableMarketPreviewCard = memo\(TouchlineEliteExactCard\)/);
-  assert.match(source, /builderPlayerToPreviewCard\(selectedBuilderPlayer, \{ allowInventoryVisualPreview: true \}\)/);
-  assert.match(source, /const selectedBuilderPreviewCard = useMemo\(/);
-  assert.match(source, /<StableMarketPreviewCard[\s\S]*?rankingMode="preview"[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}[\s\S]*?allowVisualInventoryPreview/);
+  assert.match(source, /const marketCard = builderPlayerToPreviewCard\(player, \{ allowInventoryVisualPreview: true \}\)/);
+  assert.match(source, /className="team-builder-gallery-card"/);
+  assert.match(source, /<StableMarketPreviewCard[\s\S]*?player=\{marketCard\}[\s\S]*?staticRenderScale=\{1\}[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}[\s\S]*?allowVisualInventoryPreview/);
+  assert.doesNotMatch(source, /const selectedBuilderPreviewCard = useMemo\(/);
   assert.match(source, /\.arena-action-panel-market \.team-builder-preview-card > \.touchline-card-surface\[data-card-motion="true"\] \{[\s\S]*?transition: none !important;[\s\S]*?will-change: auto !important;[\s\S]*?filter: none !important;/);
   assert.match(source, /\.arena-action-panel-market \.team-builder-preview-status i \{[\s\S]*?animation: none;/);
 });
@@ -88,11 +93,14 @@ test("successful contracts fill eligible Starting XI slots before bench and pres
 test("coach remains a dedicated entity outside every player slot", async () => {
   const arenaSource = await readFile(arenaClientPath, "utf8");
   const source = await readFile(stagePath, "utf8");
+  const styles = await readFile(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8");
   assert.match(arenaSource, /MERCADO · PASSO 1 DE 10/);
   assert.match(arenaSource, /TOUCHLINE_MARKET_POSITION_SEQUENCE/);
   assert.match(arenaSource, /Substituir contrato/);
   assert.match(arenaSource, /contrato encerrado sem reembolso/);
   assert.match(source, /className=\{styles\.technicalArea\}/);
+  assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 150px; min-height: 236px;/);
+  assert.match(styles, /\.pitch \{\n  min-height: 510px;/);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);
   assert.doesNotMatch(source, /role:\s*["']coach["']/);
 });

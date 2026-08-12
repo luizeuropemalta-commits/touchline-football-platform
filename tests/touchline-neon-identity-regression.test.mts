@@ -368,9 +368,9 @@ test("Market Transfer uses football selection language and official TouchLine mo
   assert.match(arenaClient, /touchlineCardTierName\(selectedBuilderPlayer\.cardTier/);
   assert.match(arenaClient, /Contrato · 1 temporada/);
   assert.doesNotMatch(arenaClient, /<ShoppingCart/);
-  assert.match(translations, /marketCart: "Selecionados"/);
+  assert.match(translations, /marketCart: "Contratações"/);
   assert.match(translations, /checkoutCart: "Contratar selecionados"/);
-  assert.match(translations, /addToCart: "Selecionar jogador"/);
+  assert.match(translations, /addToCart: "Contratar atleta"/);
   assert.doesNotMatch(translations, /Carrinho ocupa/);
   assert.match(marketMarks, /Moeda TouchLine TC/);
   assert.match(marketMarks, /Três atletas selecionados/);
