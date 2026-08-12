@@ -86,7 +86,7 @@ test("shows football language for Portuguese and English buyers", () => {
   assert.match(touchlineTwoStrikerFormationHint("pt-BR"), /4-4-2/);
 });
 
-test("Market Transfer uses centralized position eligibility on list, preview and checkout action", () => {
+test("Market Transfer uses centralized position eligibility on gallery cards and checkout action", () => {
   const source = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const squadBuilder = readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8");
 
@@ -97,12 +97,13 @@ test("Market Transfer uses centralized position eligibility on list, preview and
   assert.match(squadBuilder, /const steps = \[/);
   assert.match(squadBuilder, /className=\{styles\.progress\}/);
   assert.match(source, /isPositionLimitReached/);
-  assert.match(source, /selectedBuilderPositionIsFull/);
   assert.match(source, /marketUi\.positionLimitReached/);
   assert.match(source, /touchlineTwoStrikerFormationHint/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market \{/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market \{[\s\S]*?overflow: visible;/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market \.team-builder-preview \{[\s\S]*?position: sticky;/);
+  assert.match(source, /className="team-builder-card-sign"/);
+  assert.match(source, /isPositionLimitReached/);
+  assert.match(source, /setMarketSpotlightPlayerId\(fieldId\)/);
   assert.match(source, /\.arena-action-panel-market \.team-builder-send \{[\s\S]*?position: sticky;/);
 });
 
@@ -116,6 +117,7 @@ test("Market Transfer keeps the buying workspace visible on Safari/mobile landsc
   assert.match(squadBuilderStyles, /\.workspace \{ grid-template-columns: 1fr; \}/);
   assert.match(squadBuilderStyles, /\.pitch \{ min-height: 330px; \}/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market > \.team-builder-bank \{[\s\S]*?display: grid;/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-board \{[\s\S]*?"clubs clubs"[\s\S]*?"roster preview"/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-preview \{[\s\S]*?position: sticky;[\s\S]*?max-height: calc\(100svh - 14px\);/);
+  assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-board \{[\s\S]*?"clubs clubs"[\s\S]*?"roster roster"/);
+  assert.match(source, /Final Market Transfer gallery authority/);
+  assert.match(source, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });

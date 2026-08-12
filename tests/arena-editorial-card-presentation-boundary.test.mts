@@ -89,9 +89,10 @@ test("Arena Market gates cart availability and price sorting by the same publish
   assert.doesNotMatch(marketPricing, /resolveTouchlineVerifiedPlayerEconomy/);
   assert.doesNotMatch(marketPricing, /resolvePlayerMarketTier/);
   assert.doesNotMatch(marketPricing, /marketValueEur|authoritativeMarketValueSource/);
-  assert.match(arena, /!builderPlayerHasPublishedCard\(selectedBuilderPlayer\)/);
-  assert.match(arena, /!builderPlayerHasPublishedCard\(builderPlayer\)/);
   assert.match(arena, /!builderPlayerHasPublishedCard\(player\)/);
+  assert.match(arena, /isInventoryUnavailable/);
+  assert.match(arena, /isPositionLimitReached/);
+  assert.match(arena, /className="team-builder-card-sign"/);
 });
 
 test("Arena Market presentation never renders raw valuation, valuation sorting, or valuation-change fields", () => {
@@ -103,7 +104,8 @@ test("Arena Market presentation never renders raw valuation, valuation sorting, 
   assert.match(marketPanel, /marketUi\.cardUnavailable/);
   assert.match(marketPanel, /value="tier-desc"/);
   assert.match(marketPanel, /marketUi\.sortTierHigh/);
-  assert.match(marketPanel, /marketUi\.ariaCardDetails/);
+  assert.match(marketPanel, /setMarketSpotlightPlayerId\(fieldId\)/);
+  assert.match(marketPanel, /<TouchlineCardZoomDetailsPanel details=\{marketSpotlightZoomDetails\}/);
   assert.doesNotMatch(marketPanel, /displayBuilderMarketValue|displayAuthoritativeMarketValue|displayMarketChange|displayMarketUpdate/);
   assert.doesNotMatch(marketPanel, /marketUi\.(marketValue|marketChange|lastUpdate|ariaEconomicData|sortValueHigh)/);
   assert.doesNotMatch(marketPanel, /marketValueEur|marketValueUpdatedAt|marketValueChangeEur/);
