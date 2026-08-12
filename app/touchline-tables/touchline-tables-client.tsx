@@ -24,8 +24,8 @@ import {
 } from "@/lib/touchlineArena/card-rules";
 import {
   formatTouchlineCommercialCardTotal,
-  formatTouchlineVerifiedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
+import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import type { TouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import {
@@ -79,6 +79,19 @@ function RankingPending({ copy }: { copy: RankingsCopy }) {
   );
 }
 
+function tableCardPresentation(card: ClubOwnerSquadCard, locale: string) {
+  const tierKey = card.editorialCard?.tierKey ?? null;
+  const cardPrice = card.editorialCard
+    ? formatTouchlineEditorialCardPrice(card.editorialCard.cardPrice, locale)
+    : null;
+
+  return {
+    tierKey,
+    cardPrice,
+    hasActiveContract: false,
+  };
+}
+
 function CompactPlayerCard({
   card,
   locale,
@@ -125,29 +138,23 @@ export default function TouchLineTablesClient({
   const zoomTriggerRef = useRef<HTMLButtonElement | null>(null);
   const zoomCloseRef = useRef<HTMLButtonElement | null>(null);
   const selection = publishedTopEleven?.slots ?? null;
-  const zoomedCard = rosterCards.find((card) => card.id === zoomedCardId) ?? null;
+  const publishedRosterCards = rosterCards.filter((card) => Boolean(card.editorialCard));
+  const zoomedCard = publishedRosterCards.find((card) => card.id === zoomedCardId) ?? null;
   const isPortuguese = locale === "pt-BR";
-  const zoomedCardTierLabel = zoomedCard
-    ? touchlineCardTierName(zoomedCard.cardTier, locale)
+  const zoomedPresentation = zoomedCard ? tableCardPresentation(zoomedCard, locale) : null;
+  const zoomedCardTierLabel = zoomedPresentation?.tierKey
+    ? touchlineCardTierName(zoomedPresentation.tierKey, locale)
     : "";
-  const zoomedCardTierAccent = zoomedCard
-    ? touchlineCardTierPalette(zoomedCard.cardTier).accent
+  const zoomedCardTierAccent = zoomedPresentation?.tierKey
+    ? touchlineCardTierPalette(zoomedPresentation.tierKey).accent
     : "#b8ff46";
-  const zoomedCardContractValue = zoomedCard
-    ? formatTouchlineVerifiedCommercialCardPrice({
-        marketValue: zoomedCard.marketValue,
-        marketValueSource: zoomedCard.marketValueSource,
-        competition: "england",
-        locale,
-      })
-    : "";
-  const zoomedCardContractHref = zoomedCard
+  const zoomedCardContractHref = zoomedCard && zoomedPresentation?.hasActiveContract
     ? touchlineArenaContractHref({
         locale,
         playerId: zoomedCard.id,
         playerName: zoomedCard.name,
       })
-    : "#";
+    : null;
 
   const { dialogProps: zoomDialogProps } = useTouchlineDialog<HTMLDivElement>({
     open: Boolean(zoomedCard),
@@ -197,7 +204,7 @@ export default function TouchLineTablesClient({
 
         {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection}>
           {selection.map((slot) => {
-            const card = rosterCards.find((item) => slot.playerIds.includes(item.id));
+            const card = publishedRosterCards.find((item) => slot.playerIds.includes(item.id));
             if (!card) return null;
             const point = projectedPitchPoint(slot.x, slot.y);
             return (
@@ -334,15 +341,27 @@ export default function TouchLineTablesClient({
               <CompactPlayerCard card={zoomedCard} locale={locale} expanded />
             </div>
             <div className={styles.zoomSide}>
-              <div className={styles.zoomCardMeta}>
-                <strong>{zoomedCardTierLabel}</strong>
-                <span>{isPortuguese ? "Contrato · 1 temporada" : "Contract · 1 season"}</span>
-              </div>
-              <Link className={styles.zoomContract} href={zoomedCardContractHref}>
-                <TouchlineCoinMark size={18} />
-                <span>{isPortuguese ? "Contratar" : "Contract"}</span>
-                <strong>{zoomedCardContractValue}</strong>
-              </Link>
+              {zoomedCardTierLabel ? (
+                <div className={styles.zoomCardMeta}>
+                  <strong>{zoomedCardTierLabel}</strong>
+                  {zoomedPresentation?.hasActiveContract ? <span>{isPortuguese ? "Contrato · 1 temporada" : "Contract · 1 season"}</span> : null}
+                </div>
+              ) : null}
+              {zoomedPresentation?.cardPrice ? (
+                zoomedCardContractHref ? (
+                  <Link className={styles.zoomContract} href={zoomedCardContractHref}>
+                    <TouchlineCoinMark size={18} />
+                    <span>{isPortuguese ? "Contratar" : "Contract"}</span>
+                    <strong>{zoomedPresentation.cardPrice}</strong>
+                  </Link>
+                ) : (
+                  <div className={styles.zoomContract}>
+                    <TouchlineCoinMark size={18} />
+                    <span>{isPortuguese ? "Preço do card" : "Card price"}</span>
+                    <strong>{zoomedPresentation.cardPrice}</strong>
+                  </div>
+                )
+              ) : null}
               <div className={styles.zoomActions}>
                 <button type="button">
                   <Share2 aria-hidden="true" size={17} />

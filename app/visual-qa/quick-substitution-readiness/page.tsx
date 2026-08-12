@@ -11,7 +11,7 @@ type VisualQaPageProps = Readonly<{
 }>;
 
 /**
- * Local-only visual proof of the actual standalone Quick Substitution UI.
+ * Local-only visual proof of the actual in-Arena Quick Substitution rail.
  * The injected XI and nine substitutes are static demo data; no account,
  * roster, market, provider, or persistence is used as acceptance evidence.
  */
@@ -24,7 +24,7 @@ export default async function QuickSubstitutionReadinessVisualQaPage({ searchPar
       <ArenaClient
         initialLocale={locale}
         initialIntroIntent="skip"
-        standalonePanel="bench"
+        initialPanel="bench"
         initialDemoLineup={!isSetupScenario}
         initialEmptyLineup={isSetupScenario}
       />

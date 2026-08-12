@@ -45,7 +45,21 @@ test("parses one authoritative market inventory snapshot", () => {
   assert.equal(snapshot.cards[0].priceTc, 0);
   assert.equal(snapshot.cards[0].marketValueEur, 5_000_000);
   assert.equal(snapshot.cards[0].marketValueChangeEur, 1_000_000);
+  assert.equal(snapshot.checkoutPolicy, null);
   assert.equal(marketInventoryCardByProviderPlayerId(snapshot, "12345")?.inventoryId, INVENTORY_ID);
+});
+
+test("accepts only a complete server-authorized launch test policy", () => {
+  const payload = validSnapshot();
+  payload.checkoutPolicy = {
+    key: "launch-test-2026-27",
+    mode: "zero-tc-test",
+    notice: "Launch test period",
+  };
+  assert.deepEqual(parseTouchlineMarketInventorySnapshot(payload)?.checkoutPolicy, payload.checkoutPolicy);
+
+  payload.checkoutPolicy = { key: "launch-test-2026-27", mode: "free", notice: "no" };
+  assert.equal(parseTouchlineMarketInventorySnapshot(payload)?.checkoutPolicy, null);
 });
 
 test("accepts numeric values serialized by PostgreSQL", () => {

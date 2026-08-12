@@ -67,8 +67,9 @@ test("the Market Card View stays static while unrelated live data updates", asyn
   const source = await readFile(arenaClientPath, "utf8");
 
   assert.match(source, /const StableMarketPreviewCard = memo\(TouchlineEliteExactCard\)/);
+  assert.match(source, /builderPlayerToPreviewCard\(selectedBuilderPlayer, \{ allowInventoryVisualPreview: true \}\)/);
   assert.match(source, /const selectedBuilderPreviewCard = useMemo\(/);
-  assert.match(source, /<StableMarketPreviewCard[\s\S]*?rankingMode="preview"[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}/);
+  assert.match(source, /<StableMarketPreviewCard[\s\S]*?rankingMode="preview"[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}[\s\S]*?allowVisualInventoryPreview/);
   assert.match(source, /\.arena-action-panel-market \.team-builder-preview-card > \.touchline-card-surface\[data-card-motion="true"\] \{[\s\S]*?transition: none !important;[\s\S]*?will-change: auto !important;[\s\S]*?filter: none !important;/);
   assert.match(source, /\.arena-action-panel-market \.team-builder-preview-status i \{[\s\S]*?animation: none;/);
 });

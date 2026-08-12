@@ -128,6 +128,31 @@ test("contracts an authoritative FREE card without spending wallet balance", () 
   assert.equal(quote.items[0].priceTableVersion, "2026-07-premier-v1");
 });
 
+test("keeps the reference price while charging zero only for a server-approved launch test policy", () => {
+  const quote = quoteTouchlineMarketCart({
+    candidates: [{
+      id: "123e4567-e89b-42d3-a456-426614174000",
+      cardTier: "diamond-gold",
+      authoritativeUnitPriceTc: 15,
+      authoritativePriceTableVersion: "2026-07-premier-v1",
+      availableCopies: 1000,
+    }],
+    walletBalanceTc: 0,
+    openContractSlots: 1,
+    checkoutPolicy: {
+      key: "launch-test-2026-27",
+      mode: "zero-tc-test",
+      notice: "Launch test period",
+    },
+  });
+
+  assert.equal(quote.valid, true);
+  assert.equal(quote.items[0].referencePriceTc, 15);
+  assert.equal(quote.items[0].unitPriceTc, 0);
+  assert.equal(quote.totalTc, 0);
+  assert.equal(quote.balanceAfterTc, 0);
+});
+
 test("rejects a malformed negative authoritative price instead of treating it as FREE", () => {
   const quote = quoteTouchlineMarketCart({
     candidates: [{

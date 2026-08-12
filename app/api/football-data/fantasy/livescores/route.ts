@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { readPersistedLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
 import { toPublicTouchlineFixtures } from "@/lib/football-data/public-fixture";
+import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
 
 const LIVE_SNAPSHOT_STALE_AFTER_MS = 5 * 60 * 1_000;
 
@@ -41,7 +42,10 @@ export async function GET() {
     liveSnapshot = null;
   }
 
-  if (liveSnapshot) {
+  // An empty last-known-good Live snapshot must never hide a valid persisted
+  // weekly schedule. It is common before the first kick-off, when the score
+  // feed has been initialised but contains no fixtures yet.
+  if (liveSnapshot?.fixtures.length) {
     return response(liveSnapshot.fixtures, {
       state: "persisted-live-snapshot",
       fetchedAt: liveSnapshot.fetchedAt,
@@ -55,8 +59,9 @@ export async function GET() {
   } catch {
     schedule = [];
   }
-  if (schedule.length) {
-    return response(schedule, {
+  const weeklySchedule = selectArenaFixtureRound(schedule);
+  if (weeklySchedule.length) {
+    return response(weeklySchedule, {
       state: "partial-persisted-schedule",
       // Schedule rows do not yet carry a coherent shared run/version. Do not
       // fabricate a request-time freshness timestamp.

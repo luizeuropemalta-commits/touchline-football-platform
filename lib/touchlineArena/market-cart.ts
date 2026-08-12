@@ -4,6 +4,10 @@ import {
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
+import {
+  touchlineLaunchTestPayablePriceTc,
+  type TouchlineLaunchTestCheckoutPolicy,
+} from "./launch-test-season.ts";
 
 export type TouchlineMarketCartCandidate = {
   id: string;
@@ -26,6 +30,8 @@ export type TouchlineMarketCartErrorCode =
 export type TouchlineMarketCartQuoteItem = {
   id: string;
   cardTier: TouchlineCardTierKey;
+  /** The published card price. It is never rewritten for a test checkout. */
+  referencePriceTc: number;
   unitPriceTc: number;
   priceTableVersion: string;
 };
@@ -64,10 +70,12 @@ export function quoteTouchlineMarketCart({
   candidates,
   walletBalanceTc,
   openContractSlots,
+  checkoutPolicy = null,
 }: {
   candidates: readonly TouchlineMarketCartCandidate[];
   walletBalanceTc: number;
   openContractSlots: number;
+  checkoutPolicy?: TouchlineLaunchTestCheckoutPolicy | null;
 }): TouchlineMarketCartQuote {
   const balanceBeforeTc = nonNegativeInteger(walletBalanceTc);
   const openSlotsBefore = nonNegativeInteger(openContractSlots);
@@ -81,10 +89,13 @@ export function quoteTouchlineMarketCart({
     const tier = (hasAuthoritativeInventory ? touchlineArenaTierForKey(candidate.cardTier) : null)
       || touchlineArenaCompetitionTierForCard(candidate.cardTier);
     const id = candidate.id.trim();
-    const unitPriceTc = authoritativePriceOrTierPrice(
+    const referencePriceTc = authoritativePriceOrTierPrice(
       candidate.authoritativeUnitPriceTc,
       tier.retailPriceTc,
     );
+    const unitPriceTc = referencePriceTc === null
+      ? null
+      : touchlineLaunchTestPayablePriceTc(referencePriceTc, checkoutPolicy);
 
     if (!errorCode && seenIds.has(id)) errorCode = "duplicate-card";
     seenIds.add(id);
@@ -96,6 +107,7 @@ export function quoteTouchlineMarketCart({
     return {
       id,
       cardTier: tier.key,
+      referencePriceTc: referencePriceTc ?? 0,
       unitPriceTc: unitPriceTc ?? 0,
       priceTableVersion: authoritativePriceTableVersion(candidate.authoritativePriceTableVersion),
     };

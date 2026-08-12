@@ -36,9 +36,9 @@ export const ARENA_ONLINE_ZONES: ArenaOnlineZone[] = [
     title: "TouchLine Market Transfer",
     eyebrow: "Transfer",
     href: "/market-transfer",
-    description: "Negotiations, offers, wishlist and card value movement inside the Arena.",
+    description: "Negotiations, offers, wishlist and card-publication updates inside the Arena.",
     promise: "Every Arena signal can become a clear opportunity to build, sell or hold cards.",
-    details: ["Buy and sell", "Offers", "Value history"],
+    details: ["Buy and sell", "Offers", "Card publication history"],
   },
   {
     key: "rankings",
@@ -46,8 +46,8 @@ export const ARENA_ONLINE_ZONES: ArenaOnlineZone[] = [
     eyebrow: "Cards",
     href: "/touchline-tables",
     description: "Premium player-card ranking connected to the market, Club Hub and ClubOwner profile.",
-    promise: "The user understands which cards are most valuable, which score most and which they want to buy.",
-    details: ["Card ranking", "TouchLine Points", "Market value"],
+    promise: "The user understands which published cards score most and which they want to buy.",
+    details: ["Card ranking", "TouchLine Points", "Published card tier"],
   },
   {
     key: "news",

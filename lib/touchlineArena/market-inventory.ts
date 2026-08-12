@@ -3,6 +3,10 @@ import {
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
 import type { TouchlineCompetitionCardOffer } from "./competition-card-offer.ts";
+import {
+  parseTouchlineLaunchTestCheckoutPolicy,
+  type TouchlineLaunchTestCheckoutPolicy,
+} from "./launch-test-season.ts";
 
 export type TouchlineMarketInventoryCard = {
   inventoryId: string;
@@ -30,6 +34,7 @@ export type TouchlineMarketInventorySnapshot = {
   walletBalanceTc: number;
   activeContractCount: number;
   openContractSlots: number;
+  checkoutPolicy: TouchlineLaunchTestCheckoutPolicy | null;
   cards: TouchlineMarketInventoryCard[];
 };
 
@@ -148,6 +153,7 @@ export function parseTouchlineMarketInventorySnapshot(value: unknown): Touchline
   const walletBalanceTc = nonNegativeNumber(snapshot.walletBalanceTc);
   const activeContractCount = nonNegativeInteger(snapshot.activeContractCount);
   const openContractSlots = nonNegativeInteger(snapshot.openContractSlots);
+  const checkoutPolicy = parseTouchlineLaunchTestCheckoutPolicy(snapshot.checkoutPolicy);
   if (
     !TEAM_ID_PATTERN.test(providerTeamId)
     || walletBalanceTc === null
@@ -171,6 +177,7 @@ export function parseTouchlineMarketInventorySnapshot(value: unknown): Touchline
     walletBalanceTc,
     activeContractCount,
     openContractSlots,
+    checkoutPolicy,
     cards: parsedCards,
   };
 }

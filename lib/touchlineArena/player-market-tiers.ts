@@ -13,6 +13,11 @@ export type PlayerMarketTierConfig = Readonly<{
   borderName: string;
   minMarketValue: number;
   maxMarketValue: number | null;
+  /**
+   * Legacy compatibility name. The approved number is the nominal GBP card
+   * price; it is not a wallet balance, conversion rate or launch payable
+   * amount. New persistence uses `calculated_nominal_price_gbp`.
+   */
   touchCreditPrice: number;
   isFree: boolean;
 }>;

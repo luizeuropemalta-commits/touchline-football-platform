@@ -114,6 +114,7 @@ import {
 import {
   parseTouchlineArenaPanel,
   touchlineArenaContractHref,
+  touchlineArenaPanelHref,
   touchlineArenaPanelUrl,
   touchlineClubHubHref,
   type TouchlineArenaPanelKey,
@@ -1496,16 +1497,13 @@ function formatFixtureTime(startsAt?: string) {
   }).format(date);
 }
 
-function formatFixtureScore(fixture: TouchlineFixture) {
-  if (typeof fixture.homeScore === "number" || typeof fixture.awayScore === "number") {
-    return `${fixture.homeScore ?? 0}-${fixture.awayScore ?? 0}`;
-  }
-
-  return formatFixtureTime(fixture.startsAt);
+function fixtureHasScore(fixture: TouchlineFixture) {
+  return Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore);
 }
 
-function fixtureHasScore(fixture: TouchlineFixture) {
-  return typeof fixture.homeScore === "number" || typeof fixture.awayScore === "number";
+function formatFixtureScore(fixture: TouchlineFixture) {
+  if (fixtureHasScore(fixture)) return `${fixture.homeScore}-${fixture.awayScore}`;
+  return "VS";
 }
 
 function displayFixtureStatus(status: string, nextLabel: string) {
@@ -3175,9 +3173,18 @@ function builderPlayerHasPublishedCard(player: TeamBuilderSquadPlayer) {
   );
 }
 
-function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEliteExactPlayer {
+function builderPlayerToPreviewCard(
+  player: TeamBuilderSquadPlayer,
+  options: Readonly<{ allowInventoryVisualPreview?: boolean }> = {},
+): TouchlineEliteExactPlayer {
   const shirtNumber = normalizeOfficialShirtNumber(player.shirtNumber);
   const presentation = resolveArenaPublicCardPresentation(player);
+  // Keep the server-approved inventory tier inside the authenticated Market
+  // preview only. This is a visual frame selector, never a publication,
+  // price, contract or public-card fallback.
+  const previewTier = options.allowInventoryVisualPreview
+    ? touchlineArenaTierForKey(player.cardTier)?.key ?? presentation.cardTier
+    : presentation.cardTier;
 
   return {
     sportmonksPlayerId: player.providerId || player.id,
@@ -3196,7 +3203,7 @@ function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEl
     marketValueSource: "unavailable",
     marketValueState: "unavailable",
     classificationState: "unavailable",
-    cardTier: presentation.cardTier,
+    cardTier: previewTier,
     cardPriceVersion: presentation.cardPriceAuthority
       ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
       : null,
@@ -3213,7 +3220,7 @@ function builderPlayerToPreviewCard(player: TeamBuilderSquadPlayer): TouchlineEl
     avatarStatus: "team-builder-preview",
     sourcePhotoUrl: "",
     frameUrl: "",
-    cardTemplateUrl: arenaPublishedCardTemplateUrl(player.clubName, presentation.cardTier) || null,
+    cardTemplateUrl: arenaPublishedCardTemplateUrl(player.clubName, previewTier) || null,
     fantasyPoints: player.touchlinePoints,
     matchFantasyPoints: player.matchFantasyPoints,
     seasonStats: player.seasonStats,
@@ -3401,6 +3408,7 @@ export default function ArenaClient({
     ? initialContractClubId!
     : TEAM_BUILDER_CLUBS[0].teamId;
   const stageRef = useRef<HTMLElement | null>(null);
+  const actionLayerRef = useRef<HTMLElement | null>(null);
   const arenaFullscreenRequestedRef = useRef(false);
   const arenaNavRef = useRef<HTMLElement | null>(null);
   const benchListShellRef = useRef<HTMLDivElement | null>(null);
@@ -3571,23 +3579,25 @@ export default function ArenaClient({
     () => orderTouchlineBenchByPosition(benchPlayers.filter((bench) => !matchdayBenchIds.has(bench.id))),
     [benchPlayers, matchdayBenchIds],
   );
-  const standaloneQuickSubstitutionReadiness = standalonePanel === "bench"
-    ? resolveTouchlineQuickSubstitutionReadiness({
+  const isQuickSubstitutionOpen = activeArenaPanel === "bench";
+  // Keep the large legacy action panel closed during Quick Substitution while
+  // preserving the full panel union for the existing overlay's render types.
+  const arenaOverlayPanel = activeArenaPanel && activeArenaPanel !== "bench" ? activeArenaPanel : null;
+  const standaloneQuickSubstitutionReadiness = resolveTouchlineQuickSubstitutionReadiness({
       hasLoadedSavedLineup,
       hasLoadedClubOwnerRoster,
       starterCount: players.length,
       benchCount: matchdayBenchPlayers.length,
-    })
-    : null;
+  });
   const quickSubstitutionSessionSource = useMemo(() => {
-    if (standalonePanel !== "bench" || standaloneQuickSubstitutionReadiness?.state !== "ready") return null;
+    if (!isQuickSubstitutionOpen || standaloneQuickSubstitutionReadiness.state !== "ready") return null;
     return buildQuickSubstitutionSessionSource({
       principal: arenaPersistencePrincipal,
       players,
       matchdayBench: matchdayBenchPlayers,
       allowDemoIdentity: isDemoLineup,
     });
-  }, [arenaPersistencePrincipal, isDemoLineup, matchdayBenchPlayers, players, standalonePanel, standaloneQuickSubstitutionReadiness?.state]);
+  }, [arenaPersistencePrincipal, isDemoLineup, isQuickSubstitutionOpen, matchdayBenchPlayers, players, standaloneQuickSubstitutionReadiness.state]);
   const quickSubstitutionSessionStorageKey = useMemo(
     () => (arenaPersistencePrincipal
       ? arenaPersistenceKeys(arenaPersistencePrincipal, "quick-substitution-session").storageKey
@@ -3702,8 +3712,7 @@ export default function ArenaClient({
     });
   }, [quickSubstitutionSession, quickSubstitutionSessionSource]);
   const isQuickSubstitutionSessionActive = Boolean(
-    standalonePanel === "bench"
-    && quickSubstitutionSessionSource
+    quickSubstitutionSessionSource
     && quickSubstitutionSession
     && quickSubstitutionSession.matchId === quickSubstitutionSessionSource.matchId
     && quickSubstitutionSession.ownerId === quickSubstitutionSessionSource.ownerId
@@ -3717,13 +3726,13 @@ export default function ArenaClient({
   const quickSubstitutionInteractiveBench = isQuickSubstitutionSessionActive
     ? quickSubstitutionAvailableBenchPlayers!
     : matchdayBenchPlayers;
-  const standaloneQuickSubstitutionSessionState = standalonePanel === "bench" && standaloneQuickSubstitutionReadiness?.state === "ready"
+  const standaloneQuickSubstitutionSessionState = standaloneQuickSubstitutionReadiness.state === "ready"
       ? !quickSubstitutionSessionSource
       ? "identity-required"
       : isQuickSubstitutionSessionActive
         ? "ready"
         : "session-loading"
-    : standaloneQuickSubstitutionReadiness?.state ?? null;
+    : standaloneQuickSubstitutionReadiness.state;
   const selectedPlayer = quickSubstitutionInteractivePlayers.find((player) => player.id === selectedPlayerId) ?? quickSubstitutionInteractivePlayers[0] ?? null;
   const spotlightPlayer = quickSubstitutionInteractivePlayers.find((player) => player.id === spotlightPlayerId) ?? null;
   const selectedBench = selectedBenchId
@@ -4161,7 +4170,7 @@ export default function ArenaClient({
     ?? sortedBuilderSquad[0]
     ?? null;
   const selectedBuilderPreviewCard = useMemo(
-    () => selectedBuilderPlayer ? builderPlayerToPreviewCard(selectedBuilderPlayer) : null,
+    () => selectedBuilderPlayer ? builderPlayerToPreviewCard(selectedBuilderPlayer, { allowInventoryVisualPreview: true }) : null,
     [selectedBuilderPlayer],
   );
   const selectedBuilderContractId = selectedBuilderPlayer ? builderPlayerSquadContractId(selectedBuilderPlayer) : null;
@@ -4235,6 +4244,7 @@ export default function ArenaClient({
     }),
     walletBalanceTc: marketWalletBalanceTc,
     openContractSlots,
+    checkoutPolicy: marketInventorySnapshot?.checkoutPolicy,
   });
   const visibleRumourSignals = filterRumourSignals(rumourSignals, {
     clubKey: rumourClubKey,
@@ -4913,7 +4923,7 @@ export default function ArenaClient({
     // Quick Substitution is a match-session projection, never an Arena roster
     // save. An empty lineup is likewise not a valid automatic state update:
     // `?clearLineup=1` must not silently erase the owner's remote lineup.
-    if (standalonePanel === "bench" || isArenaMatchdayViewActive || players.length === 0) {
+    if (isQuickSubstitutionOpen || isArenaMatchdayViewActive || players.length === 0) {
       if (accountLineupSaveTimerRef.current) {
         window.clearTimeout(accountLineupSaveTimerRef.current);
         accountLineupSaveTimerRef.current = null;
@@ -4956,7 +4966,7 @@ export default function ArenaClient({
     return () => {
       if (accountLineupSaveTimerRef.current) window.clearTimeout(accountLineupSaveTimerRef.current);
     };
-  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isArenaMatchdayViewActive, isDemoLineup, players, selectedFormationKey, standalonePanel, t]);
+  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isArenaMatchdayViewActive, isDemoLineup, isQuickSubstitutionOpen, players, selectedFormationKey, t]);
 
   useEffect(() => {
     if (!hasLoadedSavedLineup || !players.some(hasMissingCardIdentityData)) return;
@@ -5682,6 +5692,43 @@ export default function ArenaClient({
     document.addEventListener("keydown", handleArenaHotkeys);
     return () => document.removeEventListener("keydown", handleArenaHotkeys);
   });
+
+  useEffect(() => {
+    if (!activeArenaPanel || !standaloneExperience) return;
+
+    function scrollStandalonePanelWithKeyboard(event: KeyboardEvent) {
+      if (
+        event.defaultPrevented
+        || event.target instanceof HTMLInputElement
+        || event.target instanceof HTMLSelectElement
+        || event.target instanceof HTMLTextAreaElement
+      ) return;
+
+      const scrollContainer = actionLayerRef.current;
+      if (!scrollContainer || scrollContainer.scrollHeight <= scrollContainer.clientHeight) return;
+
+      const pageDistance = Math.max(160, Math.round(scrollContainer.clientHeight * 0.82));
+      const lineDistance = 96;
+      let nextTop: number | null = null;
+
+      if (event.key === "ArrowDown") nextTop = scrollContainer.scrollTop + lineDistance;
+      if (event.key === "ArrowUp") nextTop = scrollContainer.scrollTop - lineDistance;
+      if (event.key === "PageDown") nextTop = scrollContainer.scrollTop + pageDistance;
+      if (event.key === "PageUp") nextTop = scrollContainer.scrollTop - pageDistance;
+      if (event.key === "Home") nextTop = 0;
+      if (event.key === "End") nextTop = scrollContainer.scrollHeight;
+      if (nextTop === null) return;
+
+      event.preventDefault();
+      scrollContainer.scrollTo({ top: nextTop, behavior: "smooth" });
+    }
+
+    // Listen during capture so a focused player card cannot swallow the vertical
+    // keys before the Market's actual scrolling surface sees them.  Inputs keep
+    // their native arrow-key behaviour through the guard above.
+    window.addEventListener("keydown", scrollStandalonePanelWithKeyboard, true);
+    return () => window.removeEventListener("keydown", scrollStandalonePanelWithKeyboard, true);
+  }, [activeArenaPanel, standaloneExperience]);
 
   useEffect(() => {
     if (!isArenaNavOpen) return;
@@ -6451,7 +6498,7 @@ export default function ArenaClient({
       setSaveStatus(`${selectedBench.shortName} ${t("outsideMatchdayBenchStatus")}`);
       return;
     }
-    if (isBenchFormationLocked(selectedBench, players, selectedFormationKey, replacementTarget)) {
+    if (isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, replacementTarget)) {
       setSaveStatus(`${selectedBench.shortName} ${t("lockedByFormation")} ${selectedFormationKey}`);
       return;
     }
@@ -7172,7 +7219,7 @@ export default function ArenaClient({
             aria-label="Editable field players"
             aria-hidden={!hasEntryVideoFinished}
           >
-            {players.map((player) => {
+            {(isQuickSubstitutionSessionActive ? quickSubstitutionInteractivePlayers : players).map((player) => {
               const fieldPosition = fieldPlayerPositions.get(player.id) ?? projectArenaPlayerForLoopCamera(player, loopCameraIndex);
               // Every card in the active match uses one camera-aware canonical
               // size. Saved/editor sizes must never create unequal match cards.
@@ -7183,7 +7230,7 @@ export default function ArenaClient({
                   key={player.id}
                   role="button"
                   tabIndex={0}
-                  className={`arena-field-player ${selectedPlayerId === player.id ? "is-selected" : ""}`}
+                  className={`arena-field-player ${selectedPlayerId === player.id ? "is-selected" : ""}${isQuickSubstitutionOpen && selectedBench && canBenchReplaceTarget(selectedBench, player) && !isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, player) ? " is-substitution-eligible" : ""}${isQuickSubstitutionOpen && replacementTargetId === player.id ? " is-substitution-target" : ""}`}
                   data-camera={arenaLoopCameraProfile(loopCameraIndex).id}
                   data-editing={isEditorOpen}
                   style={{
@@ -7242,7 +7289,7 @@ export default function ArenaClient({
 
         {shouldRenderArenaOwnerLayer && coachSlot.coach ? (
           <aside
-            className={`arena-coach-technical-area ${activeArenaPanel ? "is-panel-open" : ""} ${hasEntryVideoFinished ? "is-entry-ready" : "is-entry-hidden"}`}
+            className={`arena-coach-technical-area ${activeArenaPanel && !isQuickSubstitutionOpen ? "is-panel-open" : ""} ${hasEntryVideoFinished ? "is-entry-ready" : "is-entry-hidden"}`}
             aria-label={t("coachSlot")}
             aria-hidden={!hasEntryVideoFinished}
             style={{ "--arena-coach-field-card-height": `${arenaLoopCameraProfile(loopCameraIndex).cardHeightVh}dvh` } as CSSProperties}
@@ -7305,7 +7352,7 @@ export default function ArenaClient({
                 <a href={selectedBuilderClubHubHref}>
                   {t("clubHub")}
                 </a>
-                <a href={touchlineClubOwnerSubstitutionHref(siteLanguage)}>
+                <a href={touchlineArenaPanelHref("bench", siteLanguage)}>
                   {t("quickSubstitution")}
                 </a>
                 {hasEntryVideoFinished ? (
@@ -7612,7 +7659,124 @@ export default function ArenaClient({
           )}
         </aside> : null}
 
-        {standalonePanel !== "live" && visibleClubMatches.length ? (
+        {standalonePanel !== "live" && isQuickSubstitutionOpen ? (
+          <section
+            className="arena-quick-sub-rail"
+            aria-label={siteLanguage === "pt-BR" ? "Substituição rápida" : "Quick substitution"}
+            data-quick-substitution-rail="true"
+          >
+            {standaloneQuickSubstitutionSessionState !== "ready" ? (
+              <div className="arena-quick-sub-readiness" role="status" aria-live="polite">
+                <strong>{siteLanguage === "pt-BR" ? "ESCALAÇÃO AINDA NÃO ESTÁ PRONTA" : "MATCHDAY SQUAD NOT READY"}</strong>
+                <span>
+                  {standaloneQuickSubstitutionReadiness.starterCount}/{TOUCHLINE_SQUAD_RULES.starters} {siteLanguage === "pt-BR" ? "titulares" : "starters"}
+                  {" · "}
+                  {standaloneQuickSubstitutionReadiness.benchCount}/{TOUCHLINE_SQUAD_RULES.bench} {siteLanguage === "pt-BR" ? "reservas" : "bench"}
+                </span>
+                <button type="button" onClick={closeArenaPanel}>
+                  {siteLanguage === "pt-BR" ? "Voltar aos placares" : "Back to scores"}
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="arena-quick-sub-rail-head">
+                  <span>{siteLanguage === "pt-BR" ? "SUBSTITUIÇÃO RÁPIDA" : "QUICK SUBSTITUTION"}</span>
+                  <strong>{selectedBench ? (siteLanguage === "pt-BR" ? "Agora selecione quem sai no campo" : "Now select the player leaving the field") : (siteLanguage === "pt-BR" ? "Escolha um reserva" : "Choose a substitute")}</strong>
+                  <button type="button" onClick={closeArenaPanel} aria-label={siteLanguage === "pt-BR" ? "Fechar substituição" : "Close substitution"}>
+                    <X aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="arena-quick-sub-rail-cards" aria-label={siteLanguage === "pt-BR" ? "Banco de nove reservas" : "Nine-player substitute bench"}>
+                  {quickSubstitutionInteractiveBench.map((bench) => {
+                    const isSlotLocked = Boolean(replacementTarget && !canBenchReplaceTarget(bench, replacementTarget));
+                    const isFormationLocked = isBenchFormationLocked(bench, quickSubstitutionInteractivePlayers, selectedFormationKey, replacementTarget);
+                    const isLocked = isSlotLocked || isFormationLocked;
+                    return (
+                      <button
+                        key={bench.id}
+                        type="button"
+                        className={`arena-quick-sub-card${selectedBench?.id === bench.id ? " is-selected" : ""}${isLocked ? " is-locked" : ""}`}
+                        aria-pressed={selectedBench?.id === bench.id}
+                        aria-disabled={isLocked}
+                        draggable={!isLocked}
+                        onDragStart={(event) => {
+                          if (isLocked) return event.preventDefault();
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData("text/touchline-bench-id", bench.id);
+                          setDraggingBenchId(bench.id);
+                        }}
+                        onDragEnd={() => setDraggingBenchId(null)}
+                        onClick={() => {
+                          if (isLocked) return;
+                          prepareBenchReplacement(bench);
+                        }}
+                      >
+                        <span className="arena-quick-sub-card-art" aria-hidden="true">
+                          <TouchlineEliteExactCard
+                            player={benchOptionToPreviewCard(bench, isDemoLineup ? touchlineDemoTierForPlayer(bench.id, bench.name) : undefined)}
+                            layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
+                            labels={cardLabels}
+                            rankingMode={isDemoLineup ? "preview" : "live"}
+                            showProfileAction={false}
+                            showSocialMetrics={false}
+                            forceNeonActive={selectedBench?.id === bench.id}
+                          />
+                        </span>
+                        <span>{bench.shortName}</span>
+                    </button>
+                  );
+                })}
+                  <button
+                    type="button"
+                    className="arena-quick-sub-coach"
+                    aria-label={`${siteLanguage === "pt-BR" ? "Treinador" : "Coach"}: ${coachSlot.coach?.displayName ?? t("verifiedCoachPending")}`}
+                    onClick={() => setIsCoachSpotlightOpen(true)}
+                  >
+                    <span aria-hidden="true">
+                      <TouchlineCoachCard
+                        coach={coachSlot.coach}
+                        slot={coachSlot}
+                        clubName={arenaCoachClubName}
+                        clubLogoUrl={arenaCoachClubLogoUrl}
+                        clubAccent={arenaCoachClubAccent}
+                        countryCode3={arenaCoachCountryCode3}
+                        formation={selectedFormationKey}
+                        locale={siteLanguage}
+                        displayMode="compact"
+                        enableInteractiveNeon={false}
+                      />
+                    </span>
+                    <b>{siteLanguage === "pt-BR" ? "TREINADOR" : "COACH"}</b>
+                  </button>
+                </div>
+                {quickSubstitutionSubstitutedOutPlayers.length ? (
+                  <div className="arena-quick-sub-out" aria-label={siteLanguage === "pt-BR" ? "Jogadores que saíram da partida" : "Players substituted out"}>
+                    <span>{siteLanguage === "pt-BR" ? "SAÍRAM DA PARTIDA" : "SUBSTITUTED OUT"}</span>
+                    <ul>
+                      {quickSubstitutionSubstitutedOutPlayers.map((player) => (
+                        <li key={player.id} data-substitution-status="substituted-out" aria-label={siteLanguage === "pt-BR" ? `${player.name} saiu da partida e não pode voltar` : `${player.name} has left the match and cannot re-enter`}>
+                          {player.shortName}
+                        </li>
+                      ))}
+                    </ul>
+                    <small>{siteLanguage === "pt-BR" ? "Não podem voltar nesta partida" : "Cannot return in this match"}</small>
+                  </div>
+                ) : null}
+                {selectedBench && replacementTarget ? (
+                  <button
+                    type="button"
+                    className="arena-quick-sub-confirm"
+                    onClick={confirmBenchSwap}
+                    disabled={selectedBenchFormationLocked || !canSelectedBenchReplaceTarget}
+                  >
+                    <Check aria-hidden="true" />
+                    {siteLanguage === "pt-BR" ? `Confirmar: ${selectedBench.shortName} entra` : `Confirm: ${selectedBench.shortName} comes on`}
+                  </button>
+                ) : null}
+              </>
+            )}
+          </section>
+        ) : standalonePanel !== "live" && visibleClubMatches.length ? (
           <section className="club-symbol-carousel" aria-label="TouchLine England" data-testid="arena-club-symbol-carousel">
             <div className="club-symbol-open">
               <a className="club-symbol-kicker" href={`/live?lang=${encodeURIComponent(siteLanguage)}`}>
@@ -7688,6 +7852,18 @@ export default function ArenaClient({
                   <b>→</b>
                 </a>
               ) : null}
+            </div>
+          </section>
+        ) : standalonePanel !== "live" ? (
+          <section className="club-symbol-carousel club-symbol-carousel-empty" aria-label={siteLanguage === "pt-BR" ? "Placares da rodada" : "Round scores"} data-testid="arena-score-rail-empty">
+            <div className="club-symbol-open club-symbol-open-empty">
+              <span className="club-symbol-kicker" aria-hidden="true">
+                <strong>England</strong>
+                <small>League</small>
+              </span>
+              <strong>{siteLanguage === "pt-BR" ? "PLACARES PREMIUM" : "PREMIUM SCORES"}</strong>
+              <span>{siteLanguage === "pt-BR" ? "Aguardando placares verificados da rodada" : "Awaiting verified round scores"}</span>
+              <a href={`/live?lang=${encodeURIComponent(siteLanguage)}`}>{siteLanguage === "pt-BR" ? "Abrir Live" : "Open Live"}</a>
             </div>
           </section>
         ) : null}
@@ -7904,21 +8080,20 @@ export default function ArenaClient({
           </section>
         ) : null}
 
-        {activeArenaPanel ? (
-          <section className="arena-action-layer" aria-label="Arena action panel">
-            <div className={`arena-action-panel arena-action-panel-${activeArenaPanel}`}>
+        {arenaOverlayPanel ? (
+          <section ref={actionLayerRef} className="arena-action-layer" aria-label="Arena action panel">
+            <div className={`arena-action-panel arena-action-panel-${arenaOverlayPanel}`}>
               <div className="arena-action-topline">
                 <div>
-                  <p>{activeArenaPanel === "market" ? t("touchlineMarketTransfer") : t("touchlineArenaOnline")}</p>
+                  <p>{arenaOverlayPanel === "market" ? t("touchlineMarketTransfer") : t("touchlineArenaOnline")}</p>
                   <h2>
-                    {activeArenaPanel === "bench" ? t("myClub") : null}
-                    {activeArenaPanel === "market" ? t("touchlineMarketTransfer") : null}
-                    {activeArenaPanel === "rankings" ? t("playerCardsRanking") : null}
-                    {activeArenaPanel === "news" ? t("newRumours") : null}
-                    {activeArenaPanel === "watch" ? t("watchGuide") : null}
-                    {activeArenaPanel === "formation" ? t("formation") : null}
+                    {arenaOverlayPanel === "market" ? t("touchlineMarketTransfer") : null}
+                    {arenaOverlayPanel === "rankings" ? t("playerCardsRanking") : null}
+                    {arenaOverlayPanel === "news" ? t("newRumours") : null}
+                    {arenaOverlayPanel === "watch" ? t("watchGuide") : null}
+                    {arenaOverlayPanel === "formation" ? t("formation") : null}
                   </h2>
-                  {activeArenaPanel === "market" ? (
+                  {arenaOverlayPanel === "market" ? (
                     <span className="arena-market-subtitle">
                       <Handshake aria-hidden="true" />
                       {marketUi.negotiationRoom} · {marketUi.officialContracts}
@@ -7932,7 +8107,7 @@ export default function ArenaClient({
                 )}
               </div>
 
-              {activeArenaPanel === "market" ? (
+              {arenaOverlayPanel === "market" ? (
                 <div className="team-builder-bank" aria-label={t("touchlineMarketTransfer")}>
                   <span>
                     <small>{marketUi.signingBalance}</small>
@@ -7957,7 +8132,13 @@ export default function ArenaClient({
                 </div>
               ) : null}
 
-              {["bench", "market", "rankings"].includes(activeArenaPanel) ? (
+              {arenaOverlayPanel === "market" && marketInventorySnapshot?.checkoutPolicy ? (
+                <p className="arena-market-test-policy" role="status">
+                  {marketInventorySnapshot.checkoutPolicy.notice || marketUi.launchTestNotice}
+                </p>
+              ) : null}
+
+              {["market", "rankings"].includes(arenaOverlayPanel) ? (
                 <nav className="arena-club-sections" aria-label={t("clubControl")}>
                   <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
                     {t("profile")}
@@ -7965,21 +8146,21 @@ export default function ArenaClient({
                   <a href={selectedBuilderClubHubHref}>
                     {t("clubHub")}
                   </a>
-                  <a className={activeArenaPanel === "bench" ? "is-active" : ""} href={touchlineClubOwnerSubstitutionHref(siteLanguage)}>
+                  <a href={touchlineArenaPanelHref("bench", siteLanguage)}>
                     {t("substitutesBench")}
                   </a>
-                  {activeArenaPanel !== "market" ? (
+                  {arenaOverlayPanel !== "market" ? (
                     <a href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
                       {t("marketTransfer")}
                     </a>
                   ) : null}
-                  <a className={activeArenaPanel === "rankings" ? "is-active" : ""} href={`/touchline-tables?lang=${encodeURIComponent(siteLanguage)}`}>
+                  <a className={arenaOverlayPanel === "rankings" ? "is-active" : ""} href={`/touchline-tables?lang=${encodeURIComponent(siteLanguage)}`}>
                     {t("rankings")}
                   </a>
                 </nav>
               ) : null}
 
-              {activeArenaPanel === "bench" ? (
+              {activeArenaPanel === "bench" && Boolean(standalonePanel) ? (
                 standaloneQuickSubstitutionSessionState && standaloneQuickSubstitutionSessionState !== "ready" ? (
                   <section
                     className="arena-standalone-bench-readiness"
@@ -8510,7 +8691,6 @@ export default function ArenaClient({
                             className={club.teamId === selectedBuilderClub.teamId ? "is-active" : ""}
                             onClick={() => {
                               if (club.teamId === selectedBuilderClubKey) return;
-                              setMarketCartPlayers([]);
                               setSelectedBuilderPlayerId(null);
                               setMarketSearch("");
                               setMarketInventorySnapshot(null);
@@ -8761,6 +8941,7 @@ export default function ArenaClient({
                               showCardActions={false}
                               showProfileAction={false}
                               showSocialMetrics={false}
+                              allowVisualInventoryPreview
                             />
                           </div>
                           <div
@@ -9946,6 +10127,191 @@ export default function ArenaClient({
           transform: translate(-12%, 0);
         }
 
+        .arena-quick-sub-rail {
+          position: absolute;
+          z-index: 142;
+          left: max(18px, env(safe-area-inset-left));
+          right: max(18px, env(safe-area-inset-right));
+          bottom: max(14px, env(safe-area-inset-bottom));
+          display: grid;
+          gap: 7px;
+          border: 1px solid rgba(181,255,75,.42);
+          border-radius: 14px;
+          background: linear-gradient(180deg, rgba(2,10,9,.92), rgba(1,5,8,.96));
+          padding: 8px;
+          box-shadow: 0 18px 48px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+          backdrop-filter: blur(16px);
+          pointer-events: auto;
+        }
+
+        .arena-quick-sub-rail-head {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 9px;
+          padding: 0 2px;
+        }
+
+        .arena-quick-sub-rail-head > span,
+        .arena-quick-sub-coach > b {
+          color: #b5ff4b;
+          font-size: 6px;
+          font-weight: 1000;
+          letter-spacing: .12em;
+        }
+
+        .arena-quick-sub-rail-head > strong {
+          min-width: 0;
+          overflow: hidden;
+          color: rgba(255,255,255,.78);
+          font-size: 8px;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .arena-quick-sub-rail-head > button {
+          display: grid;
+          width: 25px;
+          height: 25px;
+          place-items: center;
+          border: 1px solid rgba(181,255,75,.3);
+          border-radius: 8px;
+          background: rgba(255,255,255,.04);
+          color: #efffc1;
+        }
+
+        .arena-quick-sub-rail-head > button svg { width: 13px; height: 13px; }
+
+        .arena-quick-sub-rail-cards {
+          display: grid;
+          grid-template-columns: repeat(10, minmax(0, 1fr));
+          gap: 7px;
+          align-items: end;
+        }
+
+        .arena-quick-sub-card,
+        .arena-quick-sub-coach {
+          position: relative;
+          display: grid;
+          min-width: 0;
+          min-height: 92px;
+          align-items: end;
+          justify-items: center;
+          overflow: hidden;
+          border: 1px solid rgba(181,255,75,.28);
+          border-radius: 10px;
+          background: radial-gradient(circle at 50% 4%, rgba(181,255,75,.11), transparent 58%), rgba(0,0,0,.42);
+          padding: 4px 3px;
+          color: #f4ffc9;
+          transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, opacity .16s ease;
+        }
+
+        .arena-quick-sub-card:hover,
+        .arena-quick-sub-card:focus-visible,
+        .arena-quick-sub-card.is-selected,
+        .arena-quick-sub-card.is-substitution-eligible {
+          border-color: rgba(181,255,75,.86);
+          box-shadow: 0 0 0 1px rgba(181,255,75,.16), 0 0 20px rgba(181,255,75,.22);
+          outline: 0;
+        }
+
+        .arena-quick-sub-card.is-locked { opacity: .35; filter: grayscale(.65); }
+        .arena-quick-sub-card:nth-of-type(n + 5) { order: 6; }
+        .arena-quick-sub-card-art { display: block; height: 72px; aspect-ratio: 430 / 691; overflow: visible; }
+        .arena-quick-sub-card-art > div { width: 100% !important; height: 100% !important; }
+        .arena-quick-sub-card > span:last-child { width: 100%; overflow: hidden; font-size: 6px; font-weight: 1000; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+
+        .arena-quick-sub-coach {
+          order: 5;
+          min-height: 126px;
+          border-color: rgba(255,215,92,.52);
+          background: radial-gradient(circle at 50% 2%, rgba(255,215,92,.14), transparent 58%), rgba(0,0,0,.46);
+        }
+
+        .arena-quick-sub-coach > span { display: block; height: 102px; aspect-ratio: 430 / 691; overflow: visible; }
+        .arena-quick-sub-coach > span > article,
+        .arena-quick-sub-coach > span > div { width: 100% !important; height: 100% !important; }
+        .arena-quick-sub-coach > b { color: #ffe88c; }
+
+        .arena-quick-sub-out {
+          display: flex;
+          min-width: 0;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          color: rgba(255,255,255,.46);
+          font-size: 6px;
+          font-weight: 900;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+        }
+
+        .arena-quick-sub-out > span { color: rgba(255,214,112,.72); }
+        .arena-quick-sub-out ul { display: flex; min-width: 0; margin: 0; padding: 0; gap: 4px; list-style: none; }
+        .arena-quick-sub-out li {
+          max-width: 74px;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,.12);
+          border-radius: 999px;
+          padding: 3px 5px;
+          opacity: .54;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .arena-quick-sub-out small { color: rgba(255,255,255,.4); font-size: 6px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+
+        .arena-quick-sub-confirm {
+          justify-self: center;
+          min-height: 32px;
+          border: 1px solid rgba(181,255,75,.62);
+          border-radius: 9px;
+          background: rgba(181,255,75,.16);
+          padding: 0 14px;
+          color: #f4ffc9;
+          font-size: 8px;
+          font-weight: 1000;
+        }
+
+        .arena-quick-sub-confirm:disabled { opacity: .44; }
+        .arena-quick-sub-confirm svg { width: 13px; height: 13px; margin-right: 5px; vertical-align: -2px; }
+
+        .arena-quick-sub-readiness {
+          display: flex;
+          min-height: 70px;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          color: rgba(255,255,255,.72);
+          text-align: center;
+        }
+
+        .arena-quick-sub-readiness strong { color: #b5ff4b; font-size: 7px; letter-spacing: .09em; }
+        .arena-quick-sub-readiness span { font-size: 8px; font-weight: 800; }
+        .arena-quick-sub-readiness button { border: 1px solid rgba(181,255,75,.36); border-radius: 8px; background: rgba(181,255,75,.1); padding: 8px 10px; color: #efffc1; font-size: 7px; font-weight: 1000; }
+
+        .arena-field-player.is-substitution-eligible {
+          --selected-card-rgb: 181 255 75;
+          filter: drop-shadow(0 20px 24px rgba(0,0,0,.52)) drop-shadow(0 0 17px rgb(var(--selected-card-rgb) / .72));
+        }
+
+        .arena-field-player.is-substitution-target { transform: translate(-50%, -100%) scale(1.05); }
+
+        @media (max-width: 720px) {
+          .arena-quick-sub-rail { left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); padding: 6px; }
+          .arena-quick-sub-rail-cards { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+          .arena-quick-sub-card { min-height: 66px; border-radius: 7px; padding: 2px; }
+          .arena-quick-sub-card-art { height: 52px; }
+          .arena-quick-sub-card > span:last-child { display: none; }
+          .arena-quick-sub-card:nth-of-type(n + 5) { order: 6; }
+          .arena-quick-sub-coach { order: 5; min-height: 92px; border-radius: 8px; }
+          .arena-quick-sub-coach > span { height: 68px; }
+          .arena-quick-sub-coach > b { display: none; }
+          .arena-quick-sub-out { flex-wrap: wrap; gap: 4px; }
+          .arena-quick-sub-out small { width: 100%; text-align: center; }
+          .arena-quick-sub-rail-head > strong { font-size: 6px; }
+          .arena-quick-sub-readiness { min-height: 62px; flex-wrap: wrap; gap: 6px; }
+        }
+
         @media (max-width: 900px), (max-height: 600px) and (orientation: landscape) {
           .arena-coach-technical-area {
             left: clamp(72%, calc(50% + 22vw), 78%);
@@ -10641,6 +11007,43 @@ export default function ArenaClient({
 
         .club-symbol-open:hover .club-symbol-stream {
           animation-play-state: paused;
+        }
+
+        .club-symbol-carousel-empty .club-symbol-open {
+          display: grid;
+          grid-template-columns: auto auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 10px;
+          min-height: 46px;
+          padding: 6px 11px;
+          color: rgba(255,255,255,.78);
+        }
+
+        .club-symbol-carousel-empty .club-symbol-open > strong {
+          color: #b5ff4b;
+          font-size: 8px;
+          letter-spacing: .09em;
+        }
+
+        .club-symbol-carousel-empty .club-symbol-open > span {
+          min-width: 0;
+          overflow: hidden;
+          color: rgba(255,255,255,.6);
+          font-size: 8px;
+          font-weight: 800;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .club-symbol-carousel-empty .club-symbol-open > a {
+          border: 1px solid rgba(122,231,255,.42);
+          border-radius: 999px;
+          padding: 7px 10px;
+          color: #e9fcff;
+          font-size: 7px;
+          font-weight: 950;
+          text-decoration: none;
+          text-transform: uppercase;
         }
 
         .club-symbol-pill {
@@ -14812,7 +15215,7 @@ export default function ArenaClient({
           background: transparent;
           color: white;
           pointer-events: auto;
-          touch-action: none;
+          touch-action: manipulation;
           cursor: pointer;
           transform: translate(-50%, -100%);
           transform-origin: 50% 100%;
@@ -14838,6 +15241,7 @@ export default function ArenaClient({
 
         .arena-field-player[data-editing="true"] {
           cursor: grab;
+          touch-action: none;
           transition: filter .12s ease;
         }
 
@@ -16745,6 +17149,18 @@ export default function ArenaClient({
           height: 14px;
           color: #b5ff4b;
           filter: drop-shadow(0 0 6px rgba(181,255,75,.6));
+        }
+
+        .arena-market-test-policy {
+          margin: 9px 0 0;
+          padding: 9px 11px;
+          border: 1px solid rgba(181,255,75,.34);
+          border-radius: 12px;
+          color: #eaffc9;
+          background: rgba(119,255,36,.08);
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 1.45;
         }
 
         .arena-action-panel-market .team-builder-shell {

@@ -22,6 +22,8 @@ test("Match Centre exposes one page heading, a selected-fixture state and motion
   assert.match(styles, /\.fixture:focus-visible, \.selectedFixture:focus-visible/);
   assert.match(styles, /\.selectionAnnouncement \{[\s\S]*?clip-path: inset\(50%\)/);
   assert.match(styles, /\.freshnessNotice \{[\s\S]*?border: 1px solid/);
+  assert.match(styles, /\.hero::before \{[\s\S]*?official-live-pitch-1600\.webp[\s\S]*?pointer-events/);
+  assert.doesNotMatch(styles.slice(styles.indexOf(".hero::before"), styles.indexOf(".hero[data-state=\"live\"]")), /animation:/);
   assert.doesNotMatch(styles.slice(styles.indexOf(".freshnessNotice"), styles.indexOf(".return")), /animation:/);
   assert.match(styles, /@media \(max-width: 850px\) \{[\s\S]*?\.header > div \{ display: grid; \}[\s\S]*?\.header > div span \{ display: none; \}/);
 });

@@ -241,6 +241,7 @@ test("Live only warms the current 22 player and two coach card products", () => 
     /subscribeToUpdates \? getActiveRankingSnapshot : getPreseasonRankingSnapshot/,
   );
   assert.match(livePageSource, /initialLocale=\{initialLocale\}/);
+  assert.match(livePageSource, /selectArenaFixtureRound\([\s\S]*?readPublicCompetitionFixtures\(\{ includeHistorical: true, limit: 240 \}\)/);
 });
 
 test("Live keeps no-store by default and bounds persisted read requests", () => {

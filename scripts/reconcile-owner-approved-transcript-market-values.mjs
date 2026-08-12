@@ -474,7 +474,7 @@ function parseArgs(args) {
     else if (argument === "--input" || argument === "--manifest" || argument === "--roster" || argument === "--output" || argument === "--quarantine-output") {
       const value = args[index + 1];
       if (!value || value.startsWith("--")) throw new Error(`TL_OWNER_TRANSCRIPT_ARGUMENT_VALUE_MISSING:${argument}`);
-      result[argument.slice(2)] = resolve(value);
+      result[argument === "--quarantine-output" ? "quarantineOutput" : argument.slice(2)] = resolve(value);
       index += 1;
     } else if (argument === "--check") {
       // Validation is always performed; this explicit flag is accepted for CI/read-only use.

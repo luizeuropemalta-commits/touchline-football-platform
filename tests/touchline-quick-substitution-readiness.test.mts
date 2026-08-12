@@ -98,9 +98,9 @@ test("the authenticated self route skips the opaque redirect handoff and both su
   assert.match(dynamicLoadingSource, /ClubOwnerSubstitutionLoading/);
 });
 
-test("the local Quick Sub visual fixture uses the actual standalone UI with deterministic demo data", () => {
+test("the local Quick Sub visual fixture uses the actual in-Arena rail with deterministic demo data", () => {
   assert.match(fixtureSource, /data-quick-substitution-readiness-fixture=\{isSetupScenario \? "setup" : "ready"\}/);
-  assert.match(fixtureSource, /standalonePanel="bench"/);
+  assert.match(fixtureSource, /initialPanel="bench"/);
   assert.match(fixtureSource, /initialDemoLineup/);
   assert.match(fixtureSource, /initialEmptyLineup/);
   assert.doesNotMatch(fixtureSource, /fetch\(|createClient\(|createAdminClient\(/);

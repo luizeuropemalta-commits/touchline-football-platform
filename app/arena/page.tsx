@@ -22,7 +22,7 @@ export default async function ArenaPage({
   const firstValue = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
   const initialPanel = parseTouchlineArenaPanel(params.panel);
 
-  if (initialPanel) {
+  if (initialPanel && initialPanel !== "bench") {
     const marketParams = new URLSearchParams();
     const lang = firstValue(params.lang);
     const contractPlayer = firstValue(params.contractPlayer);
@@ -36,7 +36,7 @@ export default async function ArenaPage({
       redirect(`/market-transfer${marketParams.size ? `?${marketParams.toString()}` : ""}`);
     }
     const suffix = marketParams.size ? `?${marketParams.toString()}` : "";
-    if (initialPanel === "bench" || initialPanel === "formation") redirect(touchlineClubOwnerSubstitutionHref(lang));
+    if (initialPanel === "formation") redirect(touchlineClubOwnerSubstitutionHref(lang));
     if (initialPanel === "live" || initialPanel === "watch") redirect(`/live${suffix}`);
     if (initialPanel === "rankings") redirect(`/touchline-tables${suffix}`);
     redirect(touchlineClubOwnerProfileHref(lang));

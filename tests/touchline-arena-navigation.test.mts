@@ -43,12 +43,12 @@ describe("TouchLine Arena navigation", () => {
     assert.equal(parseTouchlineArenaPanel(undefined), null);
   });
 
-  it("routes former Arena panels to independent full-page experiences", () => {
+  it("keeps Quick Substitution in the Arena and routes former panels deliberately", () => {
     assert.equal(
       touchlineArenaPanelHref("formation", "pt-BR"),
       "/club-owner/me/substitution?lang=pt-BR",
     );
-    assert.equal(touchlineArenaPanelHref("bench", "pt-BR"), "/club-owner/me/substitution?lang=pt-BR");
+    assert.equal(touchlineArenaPanelHref("bench", "pt-BR"), "/arena?panel=bench&lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("live", "pt-BR"), "/live?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("watch", "pt-BR"), "/live?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("rankings", "pt-BR"), "/touchline-tables?lang=pt-BR");

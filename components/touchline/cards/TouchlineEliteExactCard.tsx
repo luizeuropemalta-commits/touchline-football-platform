@@ -307,6 +307,13 @@ type Props = {
   onShare?: () => void;
   showSocialMetrics?: boolean;
   forceNeonActive?: boolean;
+  /**
+   * Market inventory has already authenticated this physical card and its
+   * tier.  It may show the artwork as a selection preview before the separate
+   * public editorial profile exists.  This never supplies a price, a CTA, or
+   * a published state, and must not be used by roster/public card surfaces.
+   */
+  allowVisualInventoryPreview?: boolean;
   followerCount?: number;
   likeCount?: number;
 };
@@ -658,6 +665,7 @@ export function TouchlineEliteExactCard({
   onShare,
   showSocialMetrics = true,
   forceNeonActive = false,
+  allowVisualInventoryPreview = false,
   followerCount,
   likeCount,
 }: Props) {
@@ -839,13 +847,17 @@ export function TouchlineEliteExactCard({
   const totalPointsText = touchlineCardMetricText(liveCompetition.touchlinePoints);
   const cardLabels = { ...localizedCardLabels(runtimeLocale), ...labels };
   // A game card exists only after the server-owned publication policy has
-  // attached a published presentation. Contract state and card artwork are
-  // never publication authority.
+  // attached a published presentation. The authenticated Market can opt into
+  // a visual-only inventory preview below; it never turns that preview into a
+  // public publication or commercial authority.
   const editorialCard = player.editorialCard ?? null;
   const editorialTier = editorialCard
     ? touchlineArenaTierForKey(editorialCard.tierKey)
     : null;
-  const marketTier = editorialTier;
+  const inventoryPreviewTier = !editorialTier && allowVisualInventoryPreview
+    ? touchlineArenaTierForKey(player.cardTier)
+    : null;
+  const marketTier = editorialTier ?? inventoryPreviewTier;
   // The selected artwork is only used by a published card. An asset cannot
   // turn an unpublished football player into a game card.
   const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl);
@@ -1238,10 +1250,10 @@ export function TouchlineEliteExactCard({
   ].join(", ");
   const shellExtraHeight = editorHeight + (isRemovalMarkerEnabled ? 72 : 0);
 
-  // Real football data is rendered by its profile/roster consumers. This
-  // shared game-card component intentionally renders nothing until the single
-  // server-owned publication policy has approved the card.
-  if (!editorialCard) return null;
+  // Real football data is rendered by its profile/roster consumers. Only the
+  // authenticated Market receives the explicitly opt-in inventory preview;
+  // all other card surfaces remain fail-closed until publication.
+  if (!editorialCard && !allowVisualInventoryPreview) return null;
 
   return (
     <div
