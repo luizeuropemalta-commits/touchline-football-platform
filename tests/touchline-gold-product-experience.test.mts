@@ -19,7 +19,8 @@ test("Portuguese Notifications and Football Search use first-party localized cop
   assert.match(notifications, /Central de Notificações/);
   assert.match(notifications, /Categorias de Notificação/);
   assert.match(search, /Pesquisa de futebol TouchLine/);
-  assert.match(playerSearch, /touchlinePlayerProfileHref/);
+  assert.match(playerSearch, /data-touchline-editorial-card-notice/);
+  assert.match(playerSearch, /Cards geridos pela equipa editorial/);
   assert.doesNotMatch(playerSearch, /visual-qa\/touchline-card-studio/);
   assert.match(shell, /Pesquisa de Futebol/);
 });

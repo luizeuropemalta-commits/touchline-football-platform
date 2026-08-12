@@ -193,7 +193,8 @@ test("shared player cards require the manual published profile as the sole game-
 
   assert.match(source, /const editorialCard = player\.editorialCard \?\? null/);
   assert.match(source, /formatTouchlineEditorialCardPrice/);
-  assert.match(source, /if \(!editorialCard\) return null/);
+  assert.match(source, /if \(!editorialCard && !allowVisualInventoryPreview\) return null/);
+  assert.match(source, /allowVisualInventoryPreview = false/);
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|Market value|Valor de mercado|formatTouchlineContractedCommercialCardPrice|cardPriceAuthority === "active-contract"/);
 });
 
