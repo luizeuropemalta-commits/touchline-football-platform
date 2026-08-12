@@ -19796,13 +19796,33 @@ export default function ArenaClient({
           }
 
           .touchline-game.is-market-standalone .team-builder-player-list {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 22px;
+            /* Keep two or three complete cards in view.  A flexible 320px
+               track avoids stretching two results into oversized tiles. */
+            grid-template-columns: repeat(auto-fit, minmax(260px, 320px));
+            justify-content: start;
+            grid-auto-rows: auto;
+            gap: 20px;
             padding: 8px;
           }
 
           .touchline-game.is-market-standalone .team-builder-player-list > article {
+            height: auto;
+            min-height: 0;
+            overflow: visible;
             border-radius: 20px;
+          }
+
+          /* The base Arena builder is a fixed-height editor.  Market is a
+             scrolling catalogue, so it must never crop the lower half of an
+             otherwise complete card. */
+          .touchline-game.is-market-standalone .team-builder-board {
+            height: auto;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-roster {
+            display: block;
+            height: auto;
+            overflow: visible;
           }
 
           .touchline-game.is-market-standalone .team-builder-player-select {
@@ -19810,10 +19830,11 @@ export default function ArenaClient({
           }
 
           .touchline-game.is-market-standalone .team-builder-gallery-card {
-            width: min(100%, 352px);
+            width: min(100%, 246px);
             min-height: 0;
             aspect-ratio: 430 / 691;
-            --touchline-card-static-scale: .8;
+            /* 30% smaller than the former .8 desktop treatment. */
+            --touchline-card-static-scale: .56;
           }
 
           .touchline-game.is-market-standalone .team-builder-gallery-card > .touchline-card-surface {
