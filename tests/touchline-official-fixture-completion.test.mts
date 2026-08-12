@@ -34,7 +34,7 @@ test("completes the owner-verified Brentford v Tottenham opening fixture without
   assert.equal(selectArenaFixtureRound(completed, Date.parse("2026-08-21T10:00:00.000Z")).length, 10);
 });
 
-test("never duplicates a sourced fixture or adds a second fixture for either club", () => {
+test("never duplicates the sourced official fixture, even when later rounds contain either club", () => {
   const sourced = fixture(1);
   sourced.providerId = "2645196";
   sourced.homeTeam!.providerId = "236";
@@ -44,5 +44,5 @@ test("never duplicates a sourced fixture or adds a second fixture for either clu
   assert.equal(completeTouchlineOfficialFixtureSchedule([{
     ...fixture(2),
     homeTeam: { ...fixture(2).homeTeam!, providerId: "236" },
-  }]).length, 1);
+  }]).length, 2);
 });

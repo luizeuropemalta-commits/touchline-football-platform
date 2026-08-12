@@ -61,12 +61,7 @@ export function completeTouchlineOfficialFixtureSchedule(
   fixtures: readonly TouchlineFixture[],
 ): TouchlineFixture[] {
   const knownFixtureIds = new Set(fixtures.map((fixture) => fixture.providerId));
-  const knownTeamIds = new Set(fixtures.flatMap(fixtureTeamIds));
-  if (
-    knownFixtureIds.has(BRENTFORD_TOTTENHAM_FIXTURE_ID)
-    || knownTeamIds.has(BRENTFORD_TEAM_ID)
-    || knownTeamIds.has(TOTTENHAM_TEAM_ID)
-  ) {
+  if (knownFixtureIds.has(BRENTFORD_TOTTENHAM_FIXTURE_ID)) {
     return fixtures.slice();
   }
   return [...fixtures, OWNER_VERIFIED_OPENING_FIXTURE];
