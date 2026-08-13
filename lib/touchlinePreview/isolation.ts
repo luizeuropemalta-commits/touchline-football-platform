@@ -9,6 +9,8 @@
 
 export const TOUCHLINE_ISOLATED_PREVIEW_MODE = "isolated-preview" as const;
 export const TOUCHLINE_ISOLATED_PREVIEW_HEADER = "x-touchline-isolated-preview";
+export const TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC =
+  "TL_PREVIEW_AUTH_UNAVAILABLE_NO_STAGING_CONFIGURATION" as const;
 
 type TouchlineEnvironment = Readonly<Record<string, string | undefined>>;
 
@@ -101,6 +103,16 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
 ): TouchlineIsolatedPreviewEnvironment {
   if (!previewSignal(environment)) return { status: "inactive", reasons: [] };
 
+  const isUndeclaredVercelPreview = environment.VERCEL_ENV === "preview"
+    && environment.TOUCHLINE_DEPLOYMENT_MODE === undefined
+    && environment.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE === undefined;
+  if (isUndeclaredVercelPreview) {
+    return {
+      status: "invalid",
+      reasons: [TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC],
+    };
+  }
+
   const reasons: string[] = [];
   if (environment.VERCEL_ENV !== "preview") reasons.push("vercel-env-not-preview");
   if (environment.TOUCHLINE_DEPLOYMENT_MODE !== TOUCHLINE_ISOLATED_PREVIEW_MODE) {
@@ -138,6 +150,10 @@ export function assertTouchlineIsolatedPreviewEnvironment(
 ) {
   const result = inspectTouchlineIsolatedPreviewEnvironment(environment);
   if (result.status === "invalid") {
+    if (result.reasons.length === 1
+      && result.reasons[0] === TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC) {
+      throw new Error(TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC);
+    }
     throw new Error(`TouchLine isolated Preview configuration rejected: ${result.reasons.join(", ")}`);
   }
   return result;

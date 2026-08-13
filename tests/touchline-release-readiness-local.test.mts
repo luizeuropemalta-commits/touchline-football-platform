@@ -36,6 +36,8 @@ test("the local release checklist maps the public route, name-only environment c
   assert.equal(result.publicRoute.wwwPolicy, "308-to-canonical-origin");
   assert.deepEqual(result.environment.functionalReleaseNames, TOUCHLINE_FUNCTIONAL_RELEASE_ENVIRONMENT_NAMES);
   assert.deepEqual(result.environment.isolatedPreviewNames, TOUCHLINE_ISOLATED_PREVIEW_ENVIRONMENT_NAMES);
+  assert.equal(result.environment.functionalPreviewAuth, "BLOCKED_BY_DESIGN_NO_STAGING_SUPABASE");
+  assert.equal(result.environment.functionalPreviewDiagnostic, "TL_PREVIEW_AUTH_UNAVAILABLE_NO_STAGING_CONFIGURATION");
   assert.deepEqual(result.environment.missingTemplateNames, []);
   assert.ok(result.localCommands.includes("pnpm build"));
   assert.ok(result.fixtureMatrix.includes("/visual-qa/clubhub-profile-contract?lang=pt-BR"));

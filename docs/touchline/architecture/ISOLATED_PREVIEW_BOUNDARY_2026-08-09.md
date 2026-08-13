@@ -95,3 +95,16 @@ a synthetic forbidden key without echoing its value; `git diff --check` passed.
 No server, browser, Vercel, database, provider, auth or remote environment was
 used. This remains an envelope implementation only, not a functional Preview
 or proof of a Vercel environment.
+
+## 2026-08-13 functional Preview incident closure
+
+- `FUNCTIONAL_PREVIEW_AUTH = BLOCKED_BY_DESIGN_NO_STAGING_SUPABASE`.
+- A normal Vercel Preview without the explicit isolated contract fails at
+  configuration load with
+  `TL_PREVIEW_AUTH_UNAVAILABLE_NO_STAGING_CONFIGURATION`.
+- The explicit isolated contract remains limited to `/preview`; it does not
+  expose login, Market, ClubHub, Arena, provider or database routes.
+- Production is outside this policy and its Supabase configuration remains
+  unchanged. No Production server credential may be copied to Preview.
+- A future authenticated Preview requires a separately authorised Supabase
+  Staging project, staging users and staging-only credentials.

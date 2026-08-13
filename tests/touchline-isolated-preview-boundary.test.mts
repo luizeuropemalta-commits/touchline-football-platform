@@ -6,6 +6,7 @@ import {
   inspectTouchlineIsolatedPreviewEnvironment,
   resolveTouchlineIsolatedPreviewRoutePolicy,
   TOUCHLINE_ISOLATED_PREVIEW_MODE,
+  TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC,
 } from "../lib/touchlinePreview/isolation.ts";
 
 function isolatedEnvironment(overrides: Record<string, string | undefined> = {}) {
@@ -60,6 +61,33 @@ test("only an exact Vercel-bound isolated contract enables the inert preview rou
       pathname,
     );
   }
+});
+
+test("an ordinary Vercel Preview fails closed because no Staging Supabase exists", () => {
+  const environment = {
+    NODE_ENV: "production",
+    VERCEL_ENV: "preview",
+    VERCEL_URL: "touchline-ordinary-pr-123.vercel.app",
+    VERCEL_PROJECT_ID: "prj_official",
+    VERCEL_ORG_ID: "team_official",
+  };
+
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(environment), {
+    status: "invalid",
+    reasons: [TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC],
+  });
+  assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/login", environment), {
+    status: "blocked",
+    reason: "invalid-preview-contract",
+  });
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment({
+    NODE_ENV: "production",
+    VERCEL_ENV: "production",
+    VERCEL_URL: "touchline.com.br",
+  }), {
+    status: "inactive",
+    reasons: [],
+  });
 });
 
 test("missing Preview identity or mode fails closed without exposing a value", () => {

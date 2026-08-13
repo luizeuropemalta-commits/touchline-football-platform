@@ -152,6 +152,8 @@ export function evaluateTouchlineReleaseReadiness({
       providerAndPayments: "keep SPORTMONKS_*, FOOTBALL_DATA_*, and STRIPE_* absent or disabled unless separately approved",
       isolatedPreviewNames: TOUCHLINE_ISOLATED_PREVIEW_ENVIRONMENT_NAMES,
       isolatedPreviewLimitation: "valid isolated Preview serves only /preview; it is not ClubHub/card product QA",
+      functionalPreviewAuth: "BLOCKED_BY_DESIGN_NO_STAGING_SUPABASE",
+      functionalPreviewDiagnostic: "TL_PREVIEW_AUTH_UNAVAILABLE_NO_STAGING_CONFIGURATION",
       missingTemplateNames: missingEnvironmentNames,
     }),
     localCommands: Object.freeze([

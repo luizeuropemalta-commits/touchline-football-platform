@@ -2562,3 +2562,17 @@ Preview, production checkpoint, or a dirty worktree.
 - **Still gated:** `TOUCHLINE_CARD_PUBLICATION_GATE` remains off pending full
   release/build evidence, a Ready production deployment and live smoke.
   Evidence: `docs/touchline-arena/audit/2026-08-11-LIVERPOOL-29-LIFECYCLE-PUBLICATION-APPLIED.md`.
+
+## 2026-08-13 Preview Supabase incident closure — LOCAL CONTRACT COMPLETE / PRODUCTION UNCHANGED
+
+- **Root cause confirmed:** Vercel Preview has no dedicated Supabase Staging
+  configuration. The earlier masked-secret theory is superseded.
+- **Fail-closed contract:** an ordinary Vercel Preview now stops at config load
+  with `TL_PREVIEW_AUTH_UNAVAILABLE_NO_STAGING_CONFIGURATION`. An explicitly
+  isolated Preview still serves only `/preview`.
+- **Boundary preserved:** no Production Supabase variable, service role, card
+  publication gate, DNS, provider, billing, database row or deployment was
+  changed. Production service-role access was not copied to Preview.
+- **Release consequence:** authenticated Preview QA remains
+  `BLOCKED_BY_DESIGN_NO_STAGING_SUPABASE`; the protected Production card
+  cutover continues through a clean reviewed SHA and gate-OFF deployment.
