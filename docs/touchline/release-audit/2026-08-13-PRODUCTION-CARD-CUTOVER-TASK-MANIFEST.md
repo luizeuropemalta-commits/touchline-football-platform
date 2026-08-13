@@ -118,6 +118,7 @@ unrelated local document.
 - `docs/touchline-arena/audit/2026-08-11-LIVERPOOL-29-LIFECYCLE-PUBLICATION-APPLIED.md`
 - `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/roster-audits/2026-08-11T18-31-00Z/owner-approved-card-publication-manifest.json`
 - `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/roster-audits/2026-08-11T19-32-00Z/liverpool-existing-verified-publication-manifest.json`
+- `docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/roster-audits/2026-08-11T19-32-00Z/liverpool-existing-verified-values.json`
 - `docs/touchline/final-product-completion/TOUCHLINE_FINAL_PRODUCT_EXECUTION_LEDGER.md`
 
 ## Explicit exclusions

@@ -24,8 +24,12 @@ describe("TouchLine standalone panel keyboard scrolling", () => {
   });
 
   it("keeps a mixed-club Market cart when the club browser changes", () => {
-    const marketClubClick = source.match(/onClick=\{\(\) => \{[\s\S]{0,700}setSelectedBuilderClubKey\(club\.teamId\);[\s\S]{0,80}\}\}/)?.[0] ?? "";
+    const marketClubHandlerStart = source.indexOf("if (club.teamId === selectedBuilderClubKey) return;");
+    const marketClubClick = marketClubHandlerStart >= 0
+      ? source.slice(marketClubHandlerStart, marketClubHandlerStart + 1_500)
+      : "";
     assert.ok(marketClubClick, "expected the Market club-switch handler");
+    assert.match(marketClubClick, /setSelectedBuilderClubKey\(club\.teamId\)/);
     assert.doesNotMatch(marketClubClick, /setMarketCartPlayers\(\[\]\)/);
   });
 });
