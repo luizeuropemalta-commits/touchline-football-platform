@@ -19889,6 +19889,82 @@ export default function ArenaClient({
             font-size: 13px;
           }
         }
+
+        /* The Market gallery owns a fixed-ratio card canvas.  Keep that
+           canvas in normal document flow: earlier Arena editor rules used
+           short grid rows and visible overflow, which let the 430×691 art
+           paint over the next catalogue item. */
+        .touchline-game.is-market-standalone .team-builder-player-list {
+          grid-auto-rows: max-content !important;
+          align-items: start;
+        }
+
+        .touchline-game.is-market-standalone .team-builder-player-list > article,
+        .touchline-game.is-market-standalone .team-builder-player-list > article.is-market-pending,
+        .touchline-game.is-market-standalone .team-builder-player-list > article.is-position-locked {
+          display: flex !important;
+          min-width: 0;
+          min-height: 0 !important;
+          height: auto !important;
+          flex-direction: column;
+          isolation: isolate;
+          /* hidden is used rather than clip for the older WebKit builds
+             we still support in the Market audience. */
+          overflow: hidden !important;
+        }
+
+        .touchline-game.is-market-standalone .team-builder-player-select {
+          min-width: 0;
+          flex: 0 0 auto;
+        }
+
+        .touchline-game.is-market-standalone .team-builder-gallery-card {
+          display: block;
+          flex: 0 0 auto;
+          max-width: 100%;
+          overflow: hidden;
+        }
+
+        /* A Market card zoom belongs to the visual viewport, not to the
+           document-length catalogue.  This keeps both the product and its
+           close control reachable on a 390px phone. */
+        .touchline-game.is-market-standalone .team-builder-card-spotlight {
+          position: fixed;
+          inset: 0;
+          min-height: 100dvh;
+          overflow: hidden;
+        }
+
+        @media (min-width: 1181px) {
+          .touchline-game.is-market-standalone .team-builder-gallery-card {
+            width: 241px;
+            height: 387px;
+          }
+        }
+
+        @media (min-width: 761px) and (max-width: 1180px) {
+          .touchline-game.is-market-standalone .team-builder-gallery-card {
+            width: 215px;
+            height: 345px;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .touchline-game.is-market-standalone .team-builder-player-list {
+            grid-template-columns: minmax(0, 1fr);
+          }
+
+          .touchline-game.is-market-standalone .team-builder-gallery-card {
+            width: 170px;
+            height: 273px;
+          }
+
+          .touchline-game.is-market-standalone .team-builder-card-spotlight .arena-player-spotlight-close {
+            position: fixed;
+            top: max(12px, env(safe-area-inset-top));
+            right: max(12px, env(safe-area-inset-right));
+          }
+        }
       `}</style>
     </main>
   );

@@ -8,5 +8,8 @@ ENV_LOCAL_ATALHO_VISIVEL
 .vercel
 .env*
 !.env.example
+.env.sentry-build-plugin
 .pnpm-store/
 *.tsbuildinfo
+playwright-report/
+test-results/
