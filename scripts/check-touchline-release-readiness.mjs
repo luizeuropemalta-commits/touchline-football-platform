@@ -33,6 +33,17 @@ export const TOUCHLINE_ISOLATED_PREVIEW_ENVIRONMENT_NAMES = Object.freeze([
   "VERCEL_ORG_ID",
 ]);
 
+export const TOUCHLINE_QA_PREVIEW_ENVIRONMENT_NAMES = Object.freeze([
+  "NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE",
+  "TOUCHLINE_DEPLOYMENT_MODE",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN",
+  "TOUCHLINE_QA_SUPABASE_PROJECT_REF",
+]);
+
 const REQUIRED_SCRIPTS = Object.freeze({
   test: "node --test --experimental-strip-types tests/*.test.mts",
   typecheck: "tsc --noEmit",
@@ -152,8 +163,9 @@ export function evaluateTouchlineReleaseReadiness({
       providerAndPayments: "keep SPORTMONKS_*, FOOTBALL_DATA_*, and STRIPE_* absent or disabled unless separately approved",
       isolatedPreviewNames: TOUCHLINE_ISOLATED_PREVIEW_ENVIRONMENT_NAMES,
       isolatedPreviewLimitation: "valid isolated Preview serves only /preview; it is not ClubHub/card product QA",
-      functionalPreviewAuth: "BLOCKED_BY_DESIGN_NO_STAGING_SUPABASE",
-      functionalPreviewDiagnostic: "TL_PREVIEW_AUTH_UNAVAILABLE_NO_STAGING_CONFIGURATION",
+      qaPreviewNames: TOUCHLINE_QA_PREVIEW_ENVIRONMENT_NAMES,
+      functionalPreviewAuth: "REQUIRES_DEDICATED_QA_SUPABASE_CONFIGURATION",
+      functionalPreviewDiagnostic: "missing-or-mismatched-qa-supabase-contract",
       missingTemplateNames: missingEnvironmentNames,
     }),
     localCommands: Object.freeze([
@@ -184,7 +196,7 @@ export function evaluateTouchlineReleaseReadiness({
     manualGates: Object.freeze([
       "Use the static fixtures at 390px, 768px, and 1280px; include the twenty-club gallery and record no horizontal overflow, readable cards, ClubHub order, canonical crest/frame/neon coverage, and EN/PT labels.",
       "Observe the same static fixtures in Safari/WebKit plus Chrome Android or an approved equivalent; keyboard, touch, and reduced-motion remain manual evidence.",
-      "Keep functional product Preview separate: isolated Preview deliberately blocks ClubHub/cards and must not inherit data/auth/payment variables.",
+      "Keep functional QA Preview separate: it requires the dedicated QA Supabase contract and may not inherit provider or payment variables. The inert isolated Preview deliberately blocks ClubHub/cards.",
     ]),
     externalGates: Object.freeze([
       "No tracked Vercel project binding or domain/alias verification exists in this repository.",

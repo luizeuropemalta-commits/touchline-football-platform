@@ -8,6 +8,12 @@
  */
 
 export const TOUCHLINE_ISOLATED_PREVIEW_MODE = "isolated-preview" as const;
+/**
+ * A branch-scoped functional QA Preview. It is intentionally distinct from
+ * the inert isolated Preview: it may use only the dedicated QA Supabase
+ * project and must never inherit Production credentials or providers.
+ */
+export const TOUCHLINE_QA_PREVIEW_MODE = "qa-preview" as const;
 export const TOUCHLINE_ISOLATED_PREVIEW_HEADER = "x-touchline-isolated-preview";
 export const TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC =
   "TL_PREVIEW_AUTH_UNAVAILABLE_NO_STAGING_CONFIGURATION" as const;
@@ -17,6 +23,7 @@ type TouchlineEnvironment = Readonly<Record<string, string | undefined>>;
 export type TouchlineIsolatedPreviewEnvironment =
   | { status: "inactive"; reasons: readonly [] }
   | { status: "active"; reasons: readonly [] }
+  | { status: "qa"; reasons: readonly [] }
   | { status: "invalid"; reasons: readonly string[] };
 
 export type TouchlineIsolatedPreviewRoutePolicy =
@@ -40,8 +47,26 @@ export const TOUCHLINE_ISOLATED_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "VERCEL_ORG_ID",
 ] as const;
 
+/** Names only. Values remain runtime secrets and are never reported. */
+export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
+  "NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE",
+  "TOUCHLINE_DEPLOYMENT_MODE",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "SUPABASE_URL",
+  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN",
+  "TOUCHLINE_QA_SUPABASE_PROJECT_REF",
+  "TOUCHLINE_CURRENT_SEASON",
+  "TOUCHLINE_OWNER_EMAILS",
+  "TOUCHLINE_SITE_OFFLINE",
+] as const;
+
 const allowedApplicationEnvironmentKeys = new Set<string>(
   TOUCHLINE_ISOLATED_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS,
+);
+const allowedQaApplicationEnvironmentKeys = new Set<string>(
+  TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS,
 );
 
 function isPresent(value: string | undefined): value is string {
@@ -52,6 +77,15 @@ function isGeneratedVercelPreviewHostname(value: string | undefined) {
   if (!isPresent(value)) return false;
   const hostname = value.trim().toLowerCase();
   return /^[a-z0-9][a-z0-9.-]*\.vercel\.app$/.test(hostname) && !hostname.includes("/");
+}
+
+function isQaSupabaseHostname(value: string | undefined, projectRef: string | undefined) {
+  if (!isPresent(value) || !isPresent(projectRef)) return false;
+  try {
+    return new URL(value).hostname === `${projectRef.trim().toLowerCase()}.supabase.co`;
+  } catch {
+    return false;
+  }
 }
 
 const touchlineApplicationEnvironmentPrefixes = [
@@ -113,6 +147,36 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
     };
   }
 
+  if (environment.TOUCHLINE_DEPLOYMENT_MODE === TOUCHLINE_QA_PREVIEW_MODE
+    || environment.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE === TOUCHLINE_QA_PREVIEW_MODE) {
+    const reasons: string[] = [];
+    if (environment.VERCEL_ENV !== "preview") reasons.push("vercel-env-not-preview");
+    if (environment.TOUCHLINE_DEPLOYMENT_MODE !== TOUCHLINE_QA_PREVIEW_MODE) {
+      reasons.push("missing-server-qa-preview-mode");
+    }
+    if (environment.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE !== TOUCHLINE_QA_PREVIEW_MODE) {
+      reasons.push("missing-public-qa-preview-mode");
+    }
+    if (!isGeneratedVercelPreviewHostname(environment.VERCEL_URL)) {
+      reasons.push("invalid-vercel-preview-hostname");
+    }
+    if (!isQaSupabaseHostname(environment.NEXT_PUBLIC_SUPABASE_URL, environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF)
+      || !isQaSupabaseHostname(environment.SUPABASE_URL, environment.TOUCHLINE_QA_SUPABASE_PROJECT_REF)
+      || !isPresent(environment.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+      || !isPresent(environment.SUPABASE_SERVICE_ROLE_KEY)) {
+      reasons.push("missing-or-mismatched-qa-supabase-contract");
+    }
+    Object.keys(environment)
+      .filter(isTouchlineApplicationEnvironmentKey)
+      .filter((name) => !allowedQaApplicationEnvironmentKeys.has(name))
+      .filter((name) => !name.startsWith("VERCEL_") && !name.startsWith("NEXT_PUBLIC_VERCEL_"))
+      .sort()
+      .forEach((name) => reasons.push(`forbidden-qa-environment-key:${name}`));
+    return reasons.length > 0
+      ? { status: "invalid", reasons }
+      : { status: "qa", reasons: [] };
+  }
+
   const reasons: string[] = [];
   if (environment.VERCEL_ENV !== "preview") reasons.push("vercel-env-not-preview");
   if (environment.TOUCHLINE_DEPLOYMENT_MODE !== TOUCHLINE_ISOLATED_PREVIEW_MODE) {
@@ -168,7 +232,7 @@ export function resolveTouchlineIsolatedPreviewRoutePolicy(
   environment: TouchlineEnvironment = process.env,
 ): TouchlineIsolatedPreviewRoutePolicy {
   const result = inspectTouchlineIsolatedPreviewEnvironment(environment);
-  if (result.status === "inactive") return { status: "inactive" };
+  if (result.status === "inactive" || result.status === "qa") return { status: "inactive" };
   if (result.status === "invalid") {
     return { status: "blocked", reason: "invalid-preview-contract" };
   }

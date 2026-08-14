@@ -6,6 +6,7 @@ import {
   inspectTouchlineIsolatedPreviewEnvironment,
   resolveTouchlineIsolatedPreviewRoutePolicy,
   TOUCHLINE_ISOLATED_PREVIEW_MODE,
+  TOUCHLINE_QA_PREVIEW_MODE,
   TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC,
 } from "../lib/touchlinePreview/isolation.ts";
 
@@ -20,6 +21,24 @@ function isolatedEnvironment(overrides: Record<string, string | undefined> = {})
     NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE: TOUCHLINE_ISOLATED_PREVIEW_MODE,
     TOUCHLINE_ISOLATED_PREVIEW_PROJECT_ID: "prj_isolated_preview",
     TOUCHLINE_ISOLATED_PREVIEW_TEAM_ID: "team_isolated_preview",
+    ...overrides,
+  };
+}
+
+function qaEnvironment(overrides: Record<string, string | undefined> = {}) {
+  return {
+    NODE_ENV: "production",
+    VERCEL_ENV: "preview",
+    VERCEL_URL: "touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app",
+    VERCEL_PROJECT_ID: "prj_official",
+    VERCEL_ORG_ID: "team_official",
+    TOUCHLINE_DEPLOYMENT_MODE: TOUCHLINE_QA_PREVIEW_MODE,
+    NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE: TOUCHLINE_QA_PREVIEW_MODE,
+    NEXT_PUBLIC_SUPABASE_URL: "https://qa-project.supabase.co",
+    SUPABASE_URL: "https://qa-project.supabase.co",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: "qa-anon",
+    SUPABASE_SERVICE_ROLE_KEY: "qa-service-role",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "qa-project",
     ...overrides,
   };
 }
@@ -88,6 +107,32 @@ test("an ordinary Vercel Preview fails closed because no Staging Supabase exists
     status: "inactive",
     reasons: [],
   });
+});
+
+test("a dedicated QA Supabase contract enables functional Preview routes without isolated headers", () => {
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment()), {
+    status: "qa",
+    reasons: [],
+  });
+  assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/market-transfer", qaEnvironment()), {
+    status: "inactive",
+  });
+
+  const missingQaServiceRole = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
+    SUPABASE_SERVICE_ROLE_KEY: undefined,
+  }));
+  assert.equal(missingQaServiceRole.status, "invalid");
+  if (missingQaServiceRole.status === "invalid") {
+    assert.ok(missingQaServiceRole.reasons.includes("missing-or-mismatched-qa-supabase-contract"));
+  }
+
+  const providerLeak = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
+    SPORTMONKS_API_TOKEN: "not-allowed",
+  }));
+  assert.equal(providerLeak.status, "invalid");
+  if (providerLeak.status === "invalid") {
+    assert.ok(providerLeak.reasons.includes("forbidden-qa-environment-key:SPORTMONKS_API_TOKEN"));
+  }
 });
 
 test("missing Preview identity or mode fails closed without exposing a value", () => {
