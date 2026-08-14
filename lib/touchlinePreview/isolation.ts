@@ -82,6 +82,7 @@ const allowedQaApplicationEnvironmentKeys = new Set<string>(
 const allowedQaPlatformRuntimeEnvironmentKeys = new Set<string>([
   "AWS_EXECUTION_ENV",
   "AWS_REGION",
+  "AWS_DEFAULT_REGION",
 ]);
 
 function isPresent(value: string | undefined): value is string {
