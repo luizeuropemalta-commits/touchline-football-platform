@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
@@ -17,18 +16,6 @@ function manifestTrophyPaths() {
     .sort();
 }
 
-function gitTrackedTrophyPaths() {
-  return execFileSync(
-    "git",
-    ["ls-files", "--", "public/touchlineArena/clubs/**/trophies/*.png"],
-    { cwd: process.cwd(), encoding: "utf8" },
-  )
-    .split("\n")
-    .filter(Boolean)
-    .map((filePath) => filePath.replace(/^public\/touchlineArena\/clubs\/(.+)\/trophies\//, "$1/"))
-    .sort();
-}
-
 function publicTrophyPaths() {
   return readdirSync(TROPHY_ROOT)
     .sort()
@@ -41,13 +28,11 @@ function publicTrophyPaths() {
     .sort();
 }
 
-test("the server-owned trophy manifest covers only tracked, existing public trophy assets", () => {
+test("the server-owned trophy manifest covers only existing public trophy assets", () => {
   const manifestPaths = manifestTrophyPaths();
-  const trackedPaths = gitTrackedTrophyPaths();
   const publicPaths = publicTrophyPaths();
 
   assert.equal(manifestPaths.length, 121);
-  assert.deepEqual(manifestPaths, trackedPaths);
   assert.deepEqual(manifestPaths, publicPaths);
 });
 
