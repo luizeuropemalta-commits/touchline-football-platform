@@ -73,6 +73,7 @@ const allowedQaApplicationEnvironmentKeys = new Set<string>(
 // credentials must continue to fail the QA Preview contract closed.
 const allowedQaPlatformRuntimeEnvironmentKeys = new Set<string>([
   "AWS_EXECUTION_ENV",
+  "AWS_REGION",
 ]);
 
 function isPresent(value: string | undefined): value is string {

@@ -116,6 +116,7 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
   });
   assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
     AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
+    AWS_REGION: "us-east-1",
   })), {
     status: "qa",
     reasons: [],
