@@ -1,7 +1,7 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
 Status: CURRENT AUTHORITATIVE INDEX
-Last reviewed: 2026-08-13
+Last reviewed: 2026-08-14
 
 Read [CURRENT_STATE.md](CURRENT_STATE.md) first for the active SHA, gates, blockers, and next action.
 

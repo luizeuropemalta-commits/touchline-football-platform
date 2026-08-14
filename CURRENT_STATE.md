@@ -1,16 +1,16 @@
 # TouchLine Current State
 
 Verified: 2026-08-14
-Canonical repository: `/Users/luizlopez/Documents/Codex/2026-08-02/continuar-a-touchline-a-partir-do/work/touchline-continuation-20260810`
-Branch: `work/continuation-20260810`
-Repository HEAD at environment-audit start: `7e61df57b4050cb9f47ba17ca704fc9ed0d02e52`
+Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
+Branch: `codex/canonical-checkout-migration-20260814`
+Validated preservation SHA: `acd274dab2cde9bacee28d6f902b5f28f19391e2`
 
 ## Production and release
 
 - Git `origin/main` was verified at the same SHA during the latest card cutover.
 - Current stable Production deployment recorded: `dpl_Bzpu9Wkx3vvi7sVSDvRGBENZQByt`.
 - `TOUCHLINE_CARD_PUBLICATION_GATE`: **disabled** after P0 rollback.
-- Latest isolated candidate evidence outside iCloud: frozen install PASS, typecheck PASS, ESLint 0 errors (4 warnings), tests 929/929 PASS, Playwright 7/7 PASS, release readiness PASS, diff check PASS, Production build PASS. This is validation evidence, not a clean-worktree claim for the iCloud checkout.
+- Canonical checkout outside iCloud: frozen install PASS, typecheck PASS, ESLint 0 errors (4 warnings), tests 929/929 PASS, Playwright 7/7 PASS, release readiness PASS, diff check PASS, Production build PASS, 131 static pages generated, and clean-worktree proof PASS.
 
 ## Database
 
@@ -24,8 +24,7 @@ Repository HEAD at environment-audit start: `7e61df57b4050cb9f47ba17ca704fc9ed0d
 - **P0 Production authentication:** login returned `auth_unavailable`. Production environment-name inventory found `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`, but `NEXT_PUBLIC_SUPABASE_URL` was absent. No environment value was changed.
 - **P1 authenticated product QA:** Market, Arena, ClubOwner, Training Centre, and Quick Sub cannot receive final authenticated Production verification until auth is restored.
 - **P1 native device QA:** native Safari/iOS/Android remains an external observation gate where unavailable.
-- **P1 CI activation:** a read-only GitHub Actions candidate now covers every required gate and passes local validation, but it is not active until its reviewed commit reaches GitHub.
-- **P1 filesystem:** the active clone is under Documents/iCloud and has previously stalled during build/I/O.
+- **P1 CI activation:** a read-only GitHub Actions candidate covers every required gate and passes local validation. It is preserved on the migration branch; activation on `main` remains a separate reviewed merge gate.
 - **P1 Sentry Production activation:** organization `touchline-rn`, project `touchline-arena`, official CLI authentication and the privacy-first Next.js instrumentation are now validated. The integration remains fail-closed and inactive in Production because no DSN or Sentry build token was added to Vercel/Production. Activation requires its own reviewed release gate.
 
 ## Next executable action

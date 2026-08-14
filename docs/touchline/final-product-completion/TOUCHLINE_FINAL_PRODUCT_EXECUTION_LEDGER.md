@@ -2604,3 +2604,12 @@ Preview, production checkpoint, or a dirty worktree.
 - **Controlled proof:** event `143a3eef94e541bca4522f23db7c8a68`, environment `engineering-validation`, arrived with release SHA `7e61df57b4050cb9f47ba17ca704fc9ed0d02e52` and was marked resolved in the authenticated Sentry UI.
 - **Fresh gates:** focused Sentry/CI tests 3/3 PASS; TypeScript PASS; ESLint PASS with four pre-existing warnings and zero errors; complete suite **929/929 PASS**; Playwright browser tooling **7/7 PASS** across 390/768/1280/1440 Chromium, desktop WebKit/Firefox and reduced motion; `actionlint` PASS; diff check PASS; clean isolated Production build PASS with 131 routes.
 - **Boundary:** no Production deployment, Sentry Production activation, Vercel environment change, Supabase/database/RLS change, DNS, billing, payment or card-publication gate change occurred. Production Sentry stays inactive pending a separately authorized DSN/environment/source-map release gate.
+
+## 2026-08-14 canonical checkout migration — COMPLETE / OLD CHECKOUT PRESERVED
+
+- **New canonical path:** `/Users/luizlopez/Developer/touchline-football-platform`, cloned cleanly from GitHub branch `codex/canonical-checkout-migration-20260814` at preservation SHA `acd274dab2cde9bacee28d6f902b5f28f19391e2` and tree `b093bd103aed4c2514f78689542f25a115a66dd9`.
+- **Preservation:** 62 explicitly reviewed paths were committed and pushed; local and remote SHA matched. The former Documents/iCloud checkout remains intact and is no longer source authority.
+- **Clean-clone proof:** no dataless files, no inherited `node_modules`, `.next`, local environment file or Vercel binding, and no tracked modification after the full validation run.
+- **Fresh gates:** frozen install PASS; release readiness PASS; TypeScript PASS; ESLint 0 errors/4 pre-existing warnings; full suite 929/929 PASS; Playwright 7/7 PASS; diff check PASS; Next.js 16.2.11 Production build PASS with 131 static pages.
+- **Authorized cleanup:** three temporary worktrees were removed only after path/status validation. Four unique uncommitted files from one temporary Preview worktree were preserved first as a verified 12 KiB patch at `/Users/luizlopez/Developer/touchline-recovery-20260814/market-p0-functional-preview-20260813.patch`.
+- **Boundary:** no Product behavior, Production deployment, Vercel environment, DNS, Supabase/database/RLS, credential, billing, Stripe or card-publication state was changed by this migration.

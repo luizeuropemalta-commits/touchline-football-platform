@@ -1,6 +1,6 @@
 # TouchLine canonical checkout migration manifest
 
-Status: PRESERVATION MANIFEST / MIGRATION IN PROGRESS
+Status: COMPLETE / OLD CHECKOUT PRESERVED
 
 ## Identity
 
@@ -8,7 +8,10 @@ Status: PRESERVATION MANIFEST / MIGRATION IN PROGRESS
 - Source branch: `work/continuation-20260810`
 - Source HEAD and `origin/main`: `7e61df57b4050cb9f47ba17ca704fc9ed0d02e52`
 - Remote: `git@github.com:luizeuropemalta-commits/touchline-football-platform.git`
-- Intended new local-only checkout: `/Users/luizlopez/Developer/touchline-football-platform`
+- New canonical local checkout: `/Users/luizlopez/Developer/touchline-football-platform`
+- Preservation branch: `codex/canonical-checkout-migration-20260814`
+- Validated preservation commit: `acd274dab2cde9bacee28d6f902b5f28f19391e2`
+- Validated tree: `b093bd103aed4c2514f78689542f25a115a66dd9`
 - Deleted files: none
 
 The exact intended resulting tree is the Git tree produced by the scoped
@@ -94,3 +97,25 @@ metadata are excluded.
   and a 131-route production build.
 - No secret value, Production change, database write or deployment belongs to
   this migration.
+
+## Completion evidence
+
+- The preservation branch was pushed to GitHub and the local/remote SHA matched.
+- A clean filtered clone was created from GitHub; it has no dataless files and
+  does not reuse the former `node_modules`, `.next`, environment files or Vercel
+  binding.
+- `pnpm install --frozen-lockfile`: PASS, 477 packages, lockfile unchanged.
+- Release-readiness contract: PASS.
+- `pnpm exec tsc --noEmit --incremental false`: PASS.
+- ESLint: PASS with zero errors and four pre-existing warnings.
+- Full Node test suite: PASS, 929/929.
+- Playwright: PASS, 7/7 across 390, 768, 1280, 1440, WebKit, Firefox and
+  reduced-motion projects.
+- `pnpm build`: PASS, Next.js 16.2.11 compiled and generated 131 static pages.
+- Final tracked worktree proof before this documentation-only completion
+  record: clean, with no modified tracked file.
+- The former iCloud checkout remains preserved and was not deleted, moved or
+  designated as source authority.
+- A 12 KiB recovery patch for four unique files found in an authorized removed
+  temporary worktree is stored at
+  `/Users/luizlopez/Developer/touchline-recovery-20260814/market-p0-functional-preview-20260813.patch`.
