@@ -76,7 +76,7 @@ test("only an exact Vercel-bound isolated contract enables the inert preview rou
   ]) {
     assert.deepEqual(
       resolveTouchlineIsolatedPreviewRoutePolicy(pathname, isolatedEnvironment()),
-      { status: "blocked", reason: "isolated-preview" },
+      { status: "blocked", reason: "isolated-preview", diagnosticReasons: [] },
       pathname,
     );
   }
@@ -98,6 +98,7 @@ test("an ordinary Vercel Preview fails closed because no Staging Supabase exists
   assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/login", environment), {
     status: "blocked",
     reason: "invalid-preview-contract",
+    diagnosticReasons: [TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC],
   });
   assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment({
     NODE_ENV: "production",
@@ -169,7 +170,14 @@ test("missing Preview identity or mode fails closed without exposing a value", (
       TOUCHLINE_DEPLOYMENT_MODE: undefined,
       VERCEL_URL: "unexpected-preview.vercel.app",
     })),
-    { status: "blocked", reason: "invalid-preview-contract" },
+    {
+      status: "blocked",
+      reason: "invalid-preview-contract",
+      diagnosticReasons: [
+        "vercel-env-not-preview",
+        "missing-server-preview-mode",
+      ],
+    },
   );
 });
 
@@ -206,6 +214,8 @@ test("proxy and Preview shell enforce the boundary before product work", () => {
   assert.ok(proxy.indexOf("resolveTouchlineIsolatedPreviewRoutePolicy(pathname)") < proxy.indexOf("canonicalPresentationLocaleRedirect(request)"));
   assert.ok(proxy.indexOf("resolveTouchlineIsolatedPreviewRoutePolicy(pathname)") < proxy.indexOf("NEXT_PUBLIC_SUPABASE_URL"));
   assert.match(proxy, /x-touchline-preview/);
+  assert.match(proxy, /request blocked by Preview contract/);
+  assert.match(proxy, /diagnosticReasons/);
   assert.match(proxy, /connect-src 'none'; form-action 'none'/);
   assert.doesNotMatch(proxy, /_next\/static\|_next\/image/);
   assert.match(config, /assertTouchlineIsolatedPreviewEnvironment\(\)/);

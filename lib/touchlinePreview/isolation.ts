@@ -29,7 +29,15 @@ export type TouchlineIsolatedPreviewEnvironment =
 export type TouchlineIsolatedPreviewRoutePolicy =
   | { status: "inactive" }
   | { status: "allow-preview" }
-  | { status: "blocked"; reason: "isolated-preview" | "invalid-preview-contract" };
+  | {
+    status: "blocked";
+    reason: "isolated-preview" | "invalid-preview-contract";
+    /**
+     * Safe, name-only diagnostics for server runtime logs. Environment values
+     * must never cross the Preview boundary or enter logs.
+     */
+    diagnosticReasons: readonly string[];
+  };
 
 /**
  * These names are the only TouchLine/Next public configuration values allowed
@@ -242,11 +250,15 @@ export function resolveTouchlineIsolatedPreviewRoutePolicy(
   const result = inspectTouchlineIsolatedPreviewEnvironment(environment);
   if (result.status === "inactive" || result.status === "qa") return { status: "inactive" };
   if (result.status === "invalid") {
-    return { status: "blocked", reason: "invalid-preview-contract" };
+    return {
+      status: "blocked",
+      reason: "invalid-preview-contract",
+      diagnosticReasons: result.reasons,
+    };
   }
   return pathname === "/preview"
     ? { status: "allow-preview" }
-    : { status: "blocked", reason: "isolated-preview" };
+    : { status: "blocked", reason: "isolated-preview", diagnosticReasons: [] };
 }
 
 export function isTouchlineIsolatedPreviewRequest(value: string | null | undefined) {

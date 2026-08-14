@@ -411,7 +411,16 @@ async function handleTouchLineRequest(request: NextRequest) {
   // The isolated Preview guard deliberately runs before host normalisation,
   // locale redirects, audit handling, auth and any Supabase import/work.
   const previewPolicy = resolveTouchlineIsolatedPreviewRoutePolicy(pathname);
-  if (previewPolicy.status === "blocked") return isolatedPreviewBlockedResponse(previewPolicy);
+  if (previewPolicy.status === "blocked") {
+    // Runtime evidence for QA contract failures. This logs only reason names,
+    // never environment values, URLs, keys, headers, cookies or user data.
+    console.error("[touchline-preview] request blocked by Preview contract", {
+      route: pathname,
+      policy: previewPolicy.reason,
+      reasons: previewPolicy.diagnosticReasons,
+    });
+    return isolatedPreviewBlockedResponse(previewPolicy);
+  }
   if (previewPolicy.status === "allow-preview") return isolatedPreviewResponse(request);
 
   const hostname = resolveTouchLineRequestHostname(
