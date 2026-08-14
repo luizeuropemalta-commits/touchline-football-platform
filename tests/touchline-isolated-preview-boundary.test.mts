@@ -114,6 +114,12 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
     status: "qa",
     reasons: [],
   });
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
+    AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
+  })), {
+    status: "qa",
+    reasons: [],
+  });
   assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy("/market-transfer", qaEnvironment()), {
     status: "inactive",
   });
@@ -132,6 +138,14 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
   assert.equal(providerLeak.status, "invalid");
   if (providerLeak.status === "invalid") {
     assert.ok(providerLeak.reasons.includes("forbidden-qa-environment-key:SPORTMONKS_API_TOKEN"));
+  }
+
+  const awsCredentialLeak = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
+    AWS_ACCESS_KEY_ID: "not-allowed",
+  }));
+  assert.equal(awsCredentialLeak.status, "invalid");
+  if (awsCredentialLeak.status === "invalid") {
+    assert.ok(awsCredentialLeak.reasons.includes("forbidden-qa-environment-key:AWS_ACCESS_KEY_ID"));
   }
 });
 

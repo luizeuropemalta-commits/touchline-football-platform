@@ -68,6 +68,12 @@ const allowedApplicationEnvironmentKeys = new Set<string>(
 const allowedQaApplicationEnvironmentKeys = new Set<string>(
   TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS,
 );
+// This is an opaque runtime marker injected by Vercel's serverless runtime.
+// It is not an AWS credential. Keep this a name-level exception: real AWS_*
+// credentials must continue to fail the QA Preview contract closed.
+const allowedQaPlatformRuntimeEnvironmentKeys = new Set<string>([
+  "AWS_EXECUTION_ENV",
+]);
 
 function isPresent(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -169,6 +175,7 @@ export function inspectTouchlineIsolatedPreviewEnvironment(
     Object.keys(environment)
       .filter(isTouchlineApplicationEnvironmentKey)
       .filter((name) => !allowedQaApplicationEnvironmentKeys.has(name))
+      .filter((name) => !allowedQaPlatformRuntimeEnvironmentKeys.has(name))
       .filter((name) => !name.startsWith("VERCEL_") && !name.startsWith("NEXT_PUBLIC_VERCEL_"))
       .sort()
       .forEach((name) => reasons.push(`forbidden-qa-environment-key:${name}`));
