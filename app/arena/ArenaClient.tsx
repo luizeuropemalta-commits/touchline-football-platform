@@ -4095,7 +4095,9 @@ export default function ArenaClient({
   const selectedLiveSimulationZoomDetails = selectedLiveSimulationPreviewCard
     ? arenaPlayerZoomDetails(selectedLiveSimulationPreviewCard, siteLanguage, selectedLiveSimulationProfileHref)
     : null;
-  const clubMatchLoop = [...visibleClubMatches, ...visibleClubMatches];
+  const clubMatchLoop = visibleClubMatches.length > 1
+    ? [...visibleClubMatches, ...visibleClubMatches]
+    : visibleClubMatches;
   const playerCardRankings = [...clubOwnerRoster].sort(rankClubOwnerCards);
   const topPlayerCardRankings = playerCardRankings.slice(0, 8);
   const clubOwnerStandings = buildDemoClubOwnerStandings(clubOwnerRoster).slice(0, 5);
@@ -7824,7 +7826,7 @@ export default function ArenaClient({
                   cycleCarouselFixture(distance > 0 ? -1 : 1);
                 }}
               >
-                <span className="club-symbol-stream">
+                <span className={`club-symbol-stream${visibleClubMatches.length <= 1 ? " is-static" : ""}`}>
                   {clubMatchLoop.map((match, index) => (
                     <a
                       key={`${match.id}-${index}`}
@@ -8934,10 +8936,15 @@ export default function ArenaClient({
               ) : null}
 
               {marketSpotlightPlayer && marketSpotlightCard ? (
-                <section className="arena-player-spotlight team-builder-card-spotlight" aria-label={`${siteLanguage === "pt-BR" ? "Card ampliado de" : "Expanded card for"} ${marketSpotlightPlayer.name}`}>
+                <section
+                  className="arena-player-spotlight team-builder-card-spotlight"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={`${siteLanguage === "pt-BR" ? "Card ampliado de" : "Expanded card for"} ${marketSpotlightPlayer.name}`}
+                >
                   <div className="arena-player-spotlight-backdrop" aria-hidden="true" onClick={() => setMarketSpotlightPlayerId(null)} />
                   <div className="arena-player-spotlight-panel arena-player-spotlight-panel-with-details" style={{ "--spotlight-accent": touchlineCardTierPalette(marketSpotlightCard.cardTier ?? "ruby-red").accent } as CSSProperties}>
-                    <button type="button" className="arena-player-spotlight-close" aria-label={t("closePreview")} onClick={() => setMarketSpotlightPlayerId(null)}><X aria-hidden="true" size={18} /></button>
+                    <button type="button" className="arena-player-spotlight-close" aria-label={t("closePreview")} autoFocus onClick={() => setMarketSpotlightPlayerId(null)}><X aria-hidden="true" size={18} /></button>
                     <div className="arena-player-spotlight-product">
                       <TouchlineEliteExactCard
                         className="arena-player-spotlight-card"
@@ -11241,6 +11248,11 @@ export default function ArenaClient({
 
         .club-symbol-open:hover .club-symbol-stream {
           animation-play-state: paused;
+        }
+
+        .club-symbol-stream.is-static {
+          animation: none;
+          will-change: auto;
         }
 
         .club-symbol-carousel-empty .club-symbol-open {

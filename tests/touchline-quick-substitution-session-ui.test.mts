@@ -23,6 +23,12 @@ test("Quick Substitution replaces the score rail with nine cards and a central c
   assert.match(arenaSource, /is-substitution-eligible/);
 });
 
+test("the score rail does not duplicate or animate a single verified fixture", () => {
+  assert.match(arenaSource, /visibleClubMatches\.length > 1\s*\? \[\.\.\.visibleClubMatches, \.\.\.visibleClubMatches\]\s*:\s*visibleClubMatches/);
+  assert.match(arenaSource, /visibleClubMatches\.length <= 1 \? " is-static" : ""/);
+  assert.match(arenaSource, /\.club-symbol-stream\.is-static\s*\{[\s\S]*?animation:\s*none/);
+});
+
 test("a standalone match substitution never persists or swaps the saved roster", () => {
   const sessionBranchStart = arenaSource.indexOf("if (isQuickSubstitutionSessionActive && quickSubstitutionSession && quickSubstitutionSessionSource)");
   const legacySwapStart = arenaSource.indexOf("const incomingPlayer = benchOptionToArenaPlayer", sessionBranchStart);

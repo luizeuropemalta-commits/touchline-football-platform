@@ -214,7 +214,7 @@ export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId
           </div>
 
           <div className={styles.infoGrid}>
-            <article><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.provider}</small></article>
+            <article><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.official}</small></article>
             <article><span>{dictionary.detail}</span><strong>{touchlineMatchCentreDisplayState(selected, readMetadata) === "stale" ? dictionary.lastVerified : touchlineFixtureState(selected) === "live" ? dictionary.liveNow : touchlineFixtureState(selected) === "finished" ? dictionary.completed : dictionary.watch}</strong><small>{dictionary.dataPending}</small></article>
             <article><span>{dictionary.archive}</span><strong>{fixtureLabel(selected)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : dictionary.provider}</small></article>
           </div>

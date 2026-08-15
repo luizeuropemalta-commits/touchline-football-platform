@@ -68,3 +68,12 @@ test("Match Centre never invents a zero score when only one side is present", ()
   assert.match(scoreFunction, /return "VS"/);
   assert.doesNotMatch(scoreFunction, /\?\? 0/);
 });
+
+test("a venue awaiting verification is not labelled as verified", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /<strong>\{dictionary\.venuePending\}<\/strong><small>\{dictionary\.official\}<\/small>/);
+  assert.doesNotMatch(source, /<strong>\{dictionary\.venuePending\}<\/strong><small>\{dictionary\.provider\}<\/small>/);
+});

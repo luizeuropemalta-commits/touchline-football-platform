@@ -100,6 +100,8 @@ test("the Market card gallery stays static while unrelated live data updates", a
   assert.match(source, /className="team-builder-card-sign"/);
   assert.match(source, /setMarketSpotlightPlayerId\(fieldId\)/);
   assert.match(source, /className="arena-player-spotlight team-builder-card-spotlight"/);
+  assert.match(source, /className="arena-player-spotlight team-builder-card-spotlight"[\s\S]*?role="dialog"[\s\S]*?aria-modal="true"/);
+  assert.match(source, /className="arena-player-spotlight-close"[\s\S]*?autoFocus/);
   assert.match(source, /arenaOverlayPanel === "market" && marketSpotlightPlayer \? " has-market-spotlight" : ""/);
   assert.match(source, /\.arena-action-panel-market\.has-market-spotlight \{[\s\S]*?-webkit-backdrop-filter: none;[\s\S]*?backdrop-filter: none;/);
   assert.match(source, /<TouchlineCardZoomDetailsPanel details=\{marketSpotlightZoomDetails\}/);
