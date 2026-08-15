@@ -97,3 +97,15 @@ test("Match Centre keeps the first server and browser render in one validated ti
   assert.doesNotMatch(componentSource, /useState\(\(\) => Date\.now\(\)\)/);
   assert.match(componentSource, /new Intl\.DateTimeFormat\(locale, \{ \.\.\.options, timeZone \}\)/);
 });
+
+test("Match Centre lets its mobile grid shrink while keeping only the fixture rail scrollable", () => {
+  const styles = readFileSync(
+    new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(styles, /\.layout \{[^}]*min-width: 0/);
+  assert.match(styles, /\.fixtureRail \{[^}]*min-width: 0/);
+  assert.match(styles, /\.matchPanel \{[^}]*min-width: 0/);
+  assert.match(styles, /\.fixtureScroller \{[^}]*overflow: auto/);
+});
