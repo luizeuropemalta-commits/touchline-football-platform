@@ -32,6 +32,9 @@ export default async function TouchLineLivePage({
   const initialTimeZone = normalizeTouchlineMatchCentreTimeZone(
     requestHeaders.get("x-vercel-ip-timezone"),
   );
+  // The request timestamp is serialized into the client boundary so the
+  // first SSR and browser renders share one clock and cannot hydrate apart.
+  // eslint-disable-next-line react-hooks/purity
   const initialNow = Date.now();
 
   // Live is intentionally a matchweek surface. The archive is reached from
