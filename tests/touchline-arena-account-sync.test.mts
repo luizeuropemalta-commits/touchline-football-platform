@@ -221,6 +221,20 @@ it("wires the account sync gate before the Arena remote PUT", async () => {
   assert.match(source, /reconcileArenaLineupWithAuthoritativeRoster\(players, roster\)/);
 });
 
+it("bootstraps account identity through the bounded authoritative server route", async () => {
+  const source = await readFile(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+
+  assert.doesNotMatch(source, /hasTouchlineBrowserSession/);
+  assert.doesNotMatch(source, /supabase\.auth\.getSession\(\)/);
+  const bootstrapStart = source.indexOf("if (!isDemoRequest) {");
+  const bootstrapEnd = source.indexOf("if (cancelled) return;", bootstrapStart);
+  const bootstrap = source.slice(bootstrapStart, bootstrapEnd);
+  assert.match(bootstrap, /touchlineJsonRequest</);
+  assert.match(bootstrap, /"\/api\/touchline-arena\/state"/);
+  assert.match(bootstrap, /\{ cache: "no-store", timeoutMs: 8_000 \}/);
+  assert.match(source, /setHasLoadedOwnerCoach\(true\)/);
+});
+
 it("bootstraps an authenticated wallet from the authoritative inventory snapshot", async () => {
   const source = await readFile(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const bootstrapStart = source.indexOf('arenaAccountSyncStatus !== "ready"');

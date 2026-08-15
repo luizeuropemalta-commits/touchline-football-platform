@@ -11,7 +11,6 @@ import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntr
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import { TouchlineCoinMark, TouchlineSelectedPlayersMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import TouchlineSquadBuilderStage from "@/components/touchline/market/TouchlineSquadBuilderStage";
-import { createClient } from "@/lib/supabase/client";
 import {
   buildArenaPlayersFromFantasyLineup,
   findApprovedArenaAsset,
@@ -2407,17 +2406,6 @@ function touchlineInvalidJsonPayload<T>(reason: string) {
   } as T;
 }
 
-async function hasTouchlineBrowserSession() {
-  const supabase = createClient();
-  if (!supabase) return false;
-  try {
-    const { data } = await supabase.auth.getSession();
-    return Boolean(data.session?.access_token);
-  } catch {
-    return false;
-  }
-}
-
 async function readTouchlineJsonPayload<T>(response: Response) {
   const text = await response.text();
   if (!text.trim()) {
@@ -4420,21 +4408,23 @@ export default function ArenaClient({
         response: null,
       });
 
-      if (!isDemoRequest && await hasTouchlineBrowserSession()) {
+      if (!isDemoRequest) {
         try {
-          const response = await fetch("/api/touchline-arena/state", { cache: "no-store" });
-          const result = await readTouchlineJsonPayload<{
+          const response = await touchlineJsonRequest<{
             ok?: boolean;
             userId?: string;
             state?: TouchlineArenaRemoteState | null;
-          }>(response);
+          }>(
+            "/api/touchline-arena/state",
+            { cache: "no-store", timeoutMs: 8_000 },
+          );
           syncResolution = resolveArenaAccountSync({
             isDemoRequest: false,
             anonymousPrincipal,
             response: {
               ok: response.ok,
               status: response.status,
-              payload: result,
+              payload: response.payload,
             },
           });
         } catch {
