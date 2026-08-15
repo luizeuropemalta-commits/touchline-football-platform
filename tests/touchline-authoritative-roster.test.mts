@@ -12,6 +12,7 @@ import {
   mapAuthoritativeRosterRows,
   validateLineupInventoryOwnership,
 } from "../lib/touchlineArena/authoritative-roster-server.ts";
+import { parseAuthoritativeRosterResponse } from "../lib/touchlineArena/authoritative-roster-client.ts";
 import {
   squadCardToExactPlayer,
   type ClubOwnerSquadCard,
@@ -125,6 +126,27 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
     touchlinePoints: 12,
     editorialCard: PUBLISHED_EDITORIAL_CARD,
   });
+});
+
+test("the browser accepts the exact published roster contract emitted by the server", () => {
+  const mapped = mapAuthoritativeRosterRows(completeRows(), publishedCards());
+  assert.equal(mapped.ok, true);
+  if (!mapped.ok) return;
+
+  const parsed = parseAuthoritativeRosterResponse({
+    ok: true,
+    state: "authenticated",
+    source: "supabase",
+    activeContractCount: mapped.snapshot.activeContractCount,
+    cards: mapped.snapshot.cards,
+  });
+
+  assert.equal(parsed.ok, true);
+  if (!parsed.ok) return;
+  assert.equal(parsed.cards.length, 1);
+  assert.equal(parsed.cards[0].inventoryId, INVENTORY_ID);
+  assert.equal(parsed.cards[0].editorialCard?.tierKey, "emerald-green");
+  assert.equal(parsed.cards[0].cardPriceAuthority, undefined);
 });
 
 test("rejects a partial database roster instead of hiding an owned card", () => {

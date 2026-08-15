@@ -52,6 +52,19 @@ test("accepts a complete authoritative roster and preserves its inventory identi
   });
 });
 
+test("accepts the published editorial roster contract without legacy active-contract pricing fields", () => {
+  const payload = validPayload();
+  delete (payload.cards[0] as Partial<typeof payload.cards[0]>).cardPriceAuthority;
+  delete (payload.cards[0] as Partial<typeof payload.cards[0]>).cardPriceVersion;
+
+  const result = parseAuthoritativeRosterResponse(payload);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.cards[0].cardPriceAuthority, undefined);
+  assert.equal(result.cards[0].cardPriceVersion, undefined);
+  assert.equal(result.cards[0].editorialCard?.tierKey, "radiant-gold");
+});
+
 test("rejects a partial count, malformed UUID, duplicate contract or non-authoritative state", () => {
   const partial = validPayload();
   partial.activeContractCount = 2;
@@ -83,4 +96,15 @@ test("drops malformed or private editorial fields at the browser boundary", () =
   assert.equal(result.ok, true);
   if (!result.ok) return;
   assert.equal(result.cards[0].editorialCard, null);
+});
+
+test("rejects a roster card with neither a published editorial profile nor frozen contract authority", () => {
+  const payload = validPayload();
+  delete (payload.cards[0] as Partial<typeof payload.cards[0]>).cardPriceAuthority;
+  payload.cards[0].editorialCard = null as never;
+  assert.deepEqual(parseAuthoritativeRosterResponse(payload), { ok: false });
+
+  const forgedAuthority = validPayload();
+  forgedAuthority.cards[0].cardPriceAuthority = "editorial";
+  assert.deepEqual(parseAuthoritativeRosterResponse(forgedAuthority), { ok: false });
 });
