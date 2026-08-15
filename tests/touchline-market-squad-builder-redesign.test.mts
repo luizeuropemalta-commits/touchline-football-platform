@@ -74,6 +74,7 @@ test("the Market keeps account capacity first and guides a field slot directly t
   assert.match(source, /min-height: max-content !important;/);
   assert.match(source, /A Market item is a complete product card[\s\S]*?display: block !important;[\s\S]*?overflow: visible !important;/);
   assert.match(source, /grid-template-areas: "clubs roster"/);
+  assert.match(source, /grid-template-areas:\s*"clubs"\s*"roster";\s*grid-template-columns: minmax\(0, 1fr\)/);
   assert.doesNotMatch(source, /<a className=\{activeArenaPanel === "market"/);
 });
 

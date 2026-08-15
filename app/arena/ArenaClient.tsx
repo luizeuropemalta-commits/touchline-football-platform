@@ -19616,9 +19616,9 @@ export default function ArenaClient({
         @media (min-width: 761px) and (max-width: 1180px) {
           .touchline-game.is-market-standalone .team-builder-board {
             grid-template-areas:
-              "clubs clubs"
-              "roster preview";
-            grid-template-columns: minmax(440px, 1fr) minmax(280px, 340px);
+              "clubs"
+              "roster";
+            grid-template-columns: minmax(0, 1fr);
           }
 
           .touchline-game.is-market-standalone .team-builder-club-grid {
