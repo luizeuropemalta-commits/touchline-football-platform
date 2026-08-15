@@ -2657,3 +2657,21 @@ Preview, production checkpoint, or a dirty worktree.
   flags, payment, provider data and `touchline.com.br` were not changed.
 - **Evidence:**
   `docs/touchline-arena/audit/2026-08-15-REPRESENTATIVE-QA-PACKAGE.md`.
+
+## 2026-08-15 native Safari stale-deployment incident — CLOSED / QA ONLY
+
+- **Symptom:** an already-open native Safari tab became visually blank after the stable QA alias moved to the new Market P0 deployment. No current Arena-state or roster requests appeared in runtime logs during the blank render.
+- **Cause proved:** Safari's open page retained the asset graph from deployment `dpl_AMVH4DELGqeVQ3vdg67SQwEj493u` at commit `1130455`, while Vercel's stable QA alias correctly pointed to deployment `dpl_5GCTMjjJnanBgFjWdrkqukuwrkf6` at commit `486e790fee65a278dfa1d2d23d5642a7312e3da6`.
+- **Server evidence:** the current Market document returned HTTP 200 with `Age: 0`, `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`, and `x-vercel-cache: MISS`. This rules out a current server/CDN stale-document defect.
+- **Recovery and verification:** one Web Inspector cache-bypass reload fetched the current chunk hashes and all expected Market APIs. The authenticated page rendered the deterministic 35-player QA scenario, coach, XI and 20-club catalogue. Cache bypass was then disabled and an ordinary reload also passed with the same current asset graph.
+- **Decision:** no code, Vercel configuration, Supabase data or credential change is required for this incident. It is closed as stale in-memory browser state across deployments, not a product-data loss or a need to copy Production into QA.
+- **Boundary:** Production, `touchline.com.br`, DNS, payment systems, the Production database and the card-publication gate were not changed. The next gate is the responsive Market visual/interaction matrix followed by page-by-page authenticated QA.
+
+## 2026-08-15 Market full-back filters — FIX VALIDATED / QA DEPLOY PENDING
+
+- **Rendered defect:** native Safari on the authenticated QA Market showed Liverpool with 28 cards, but the Right-back filter returned `0 CARDS FOUND` even though the catalogue included Jeremie Frimpong and Conor Bradley. The same broad-position boundary could hide left-backs.
+- **Cause proved:** the persisted provider roster supplies the broad role `Defender`; `market-position-catalogue.ts` refines it through exact provider-player IDs. The approved 19-club catalogue was present, but the separately preserved Liverpool batch was missing four current exact IDs, so the shared fallback classified those players as centre-backs.
+- **Correction:** added only the four exact Liverpool provider IDs to the existing shared catalogue: Frimpong and Bradley as right-backs; Kerkez and Tsimikas as left-backs. Identity, card tier, nominal price, market value, contract, roster and database data were not changed.
+- **Evidence:** official Liverpool player material confirms the football roles; the repository's existing verified Liverpool publication manifest binds each name to its exact provider-player and canonical UUID. The implementation continues to match by provider ID, never by name alone.
+- **Verification:** focused position tests `9/9`; TypeScript passed; targeted ESLint passed; `git diff --check` passed; full Vercel release build passed with ESLint `0` errors and the same `4` pre-existing warnings, tests `949/949`, and Next static generation `133/133`.
+- **Gate:** deploy only to the stable QA branch/alias, then re-observe Liverpool Right-back and Left-back filters in Safari plus cross-club spot checks. Production remains forbidden.

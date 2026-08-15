@@ -1,35 +1,35 @@
 # TouchLine Current State
 
-Verified: 2026-08-14
+Verified: 2026-08-15
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
-Branch: `codex/canonical-checkout-migration-20260814`
-Validated preservation SHA: `acd274dab2cde9bacee28d6f902b5f28f19391e2`
+Active QA worktree: `/private/tmp/touchline-qa-branch-deploy`
+Active branch: `qa`
+Active validated SHA: `486e790fee65a278dfa1d2d23d5642a7312e3da6`
 
-## Production and release
+## QA and release
 
-- Git `origin/main` was verified at the same SHA during the latest card cutover.
-- Current stable Production deployment recorded: `dpl_Bzpu9Wkx3vvi7sVSDvRGBENZQByt`.
-- `TOUCHLINE_CARD_PUBLICATION_GATE`: **disabled** after P0 rollback.
-- Canonical checkout outside iCloud: frozen install PASS, typecheck PASS, ESLint 0 errors (4 warnings), tests 929/929 PASS, Playwright 7/7 PASS, release readiness PASS, diff check PASS, Production build PASS, 131 static pages generated, and clean-worktree proof PASS.
+- Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
+- Current QA deployment: `dpl_5GCTMjjJnanBgFjWdrkqukuwrkf6`, commit `486e790fee65a278dfa1d2d23d5642a7312e3da6`, status READY.
+- Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
+- Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
+- Production, `touchline.com.br`, DNS, payments, Production database and card-publication gate were not changed by the QA mission.
 
-## Database
+## QA database
 
-- Forward migrations through `054_touchline_existing_verified_liverpool_29_atomic_batch.sql` are represented in the repository.
-- Latest applied evidence records 533 owner-approved lifecycle rows plus 29 Liverpool lifecycle rows: **562 published lifecycle cards across 20 clubs**.
-- Recorded integrity failures: 0 incomplete, 0 membership mismatch, 0 duplicate players, 0 invalid nominal prices, 0 tier mismatch/fake zero.
-- Exclusions remain outside the write set: 5 missing-value, 23 provider-only, 20 owner-only review.
+- Isolated QA project: `xgxbwqxjssxxuihuwmgy`.
+- Representative run `bf476289-c6df-47a6-878e-7dc8c40f3f91` contains 20 clubs, 588 canonical players/memberships, 562 published cards, 35 active contracts, coach `455907`, 11 starters, 9 substitutes, 15 outside the matchday squad and 20 reversible QA fixtures.
+- The package is deterministic, reversible and replay-idempotent. Production data and credentials were not copied or changed.
 
-## Active P0/P1 blockers
+## Active P0/P1 gates
 
-- **P0 Production authentication:** login returned `auth_unavailable`. Production environment-name inventory found `SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`, but `NEXT_PUBLIC_SUPABASE_URL` was absent. No environment value was changed.
-- **P1 authenticated product QA:** Market, Arena, ClubOwner, Training Centre, and Quick Sub cannot receive final authenticated Production verification until auth is restored.
-- **P1 native device QA:** native Safari/iOS/Android remains an external observation gate where unavailable.
-- **P1 CI activation:** a read-only GitHub Actions candidate covers every required gate and passes local validation. It is preserved on the migration branch; activation on `main` remains a separate reviewed merge gate.
-- **P1 Sentry Production activation:** organization `touchline-rn`, project `touchline-arena`, official CLI authentication and the privacy-first Next.js instrumentation are now validated. The integration remains fail-closed and inactive in Production because no DSN or Sentry build token was added to Vercel/Production. Activation requires its own reviewed release gate.
+- **Safari stale-deployment incident: CLOSED.** An already-open tab retained assets from deployment `dpl_AMVH4DELGqeVQ3vdg67SQwEj493u` (commit `1130455`) while the stable alias pointed to deployment `dpl_5GCTMjjJnanBgFjWdrkqukuwrkf6` (commit `486e790`). A cache-bypass reload loaded the current asset graph; a following ordinary reload also passed. Server evidence was HTTP 200, `Age: 0`, `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`, and `x-vercel-cache: MISS`.
+- **P1 responsive Market QA:** complete native/automated observation at 1440, 1280, 768 and 390, including keyboard, touch/scroll, zoom modal and selection persistence.
+- **P1 authenticated surface QA:** Arena, ClubOwner, Training Centre, Quick Sub, Live and logout/login persistence still require page-by-page evidence against the representative QA package.
+- **P1 security backlog:** checkout quota race, mutating starter-sync GET/CSRF boundary, tenant-pivot/RLS and SECURITY DEFINER grants remain separately gated findings; none is being silently changed during visual QA.
 
 ## Next executable action
 
-Run a separately authorized Production-auth restoration mission: verify the canonical public Supabase URL without exposing it, add only the missing `NEXT_PUBLIC_SUPABASE_URL` scope if approved, keep the card gate OFF, redeploy the same SHA, validate login and authenticated surfaces, then reassess card-gate cutover. Do not copy a Production service-role credential into Preview.
+Run the Market responsive/interaction matrix against the stable QA deployment, record rendered evidence, then continue page-by-page through Arena, ClubOwner, Training Centre, Quick Sub and Live. Fix only defects proved by that evidence. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 

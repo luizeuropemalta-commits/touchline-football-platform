@@ -11,6 +11,13 @@ test("the 20-club Market catalogue restores broad Defender rows to their real fu
   assert.equal(touchlineMarketPositionBucket(resolveTouchlineMarketCataloguePosition("955", "Defender"), "defender"), "left-back");
 });
 
+test("the current Liverpool catalogue exposes its exact full-backs in the correct filters", () => {
+  assert.equal(touchlineMarketPositionBucket(resolveTouchlineMarketCataloguePosition("8403182", "Defender"), "defender"), "right-back");
+  assert.equal(touchlineMarketPositionBucket(resolveTouchlineMarketCataloguePosition("37316835", "Defender"), "defender"), "right-back");
+  assert.equal(touchlineMarketPositionBucket(resolveTouchlineMarketCataloguePosition("37381778", "Defender"), "defender"), "left-back");
+  assert.equal(touchlineMarketPositionBucket(resolveTouchlineMarketCataloguePosition("84627", "Defender"), "defender"), "left-back");
+});
+
 test("the catalogue never reclassifies an unknown player", () => {
   assert.equal(resolveTouchlineMarketCataloguePosition("333731", "Defender"), "Defender");
 });
