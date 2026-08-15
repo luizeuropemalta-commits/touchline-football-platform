@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -14,10 +15,19 @@ import {
 } from "../scripts/qa/render-touchline-representative-package-sql.mts";
 import { renderTouchlineRepresentativeQaStageFiles } from "../scripts/qa/stage-touchline-representative-package.mts";
 
-const base = new URL("../docs/touchline-arena/market-values/manual-2026-27/owner-approved-transcript-2026-08-09/", import.meta.url);
-const roster = JSON.parse(readFileSync(new URL("roster-audits/2026-08-11T18-31-00Z/canonical-roster-export.json", base), "utf8"));
-const publication = JSON.parse(readFileSync(new URL("roster-audits/2026-08-11T18-31-00Z/owner-approved-card-publication-manifest.json", base), "utf8"));
-const providerSnapshot = JSON.parse(readFileSync(new URL("provider-roster-audits/2026-08-09T19-11-27-889Z/sportmonks-roster-snapshot.json", base), "utf8"));
+// Exact, byte-for-byte canonical source copies live under tests/fixtures because
+// Vercel intentionally excludes the audit-only docs tree before vercel-build.
+const base = new URL("./fixtures/touchline-representative-package-v1/", import.meta.url);
+const rosterSource = readFileSync(new URL("canonical-roster-export.json", base), "utf8");
+const publicationSource = readFileSync(new URL("owner-approved-card-publication-manifest.json", base), "utf8");
+const providerSnapshotSource = readFileSync(new URL("sportmonks-roster-snapshot.json", base), "utf8");
+const roster = JSON.parse(rosterSource);
+const publication = JSON.parse(publicationSource);
+const providerSnapshot = JSON.parse(providerSnapshotSource);
+
+function sha256(source: string) {
+  return createHash("sha256").update(source, "utf8").digest("hex");
+}
 
 function build() {
   return buildTouchlineRepresentativeQaPackage({ projectRef: TOUCHLINE_QA_PROJECT_REF, roster, publication, providerSnapshot });
@@ -28,6 +38,12 @@ test("representative package fails closed for every target except the dedicated 
   for (const target of ["", "production", "vxireiswggllwhbsmdcj", "xgxbwqxjssxxuihuwmgx"]) {
     assert.throws(() => assertTouchlineQaProjectRef(target), /TL_QA_REPRESENTATIVE_PACKAGE_TARGET_FORBIDDEN/);
   }
+});
+
+test("hermetic source fixtures remain exact copies of the approved canonical audit inputs", () => {
+  assert.equal(sha256(rosterSource), "6615e840bb6be18a713222648ced82919f0b2879b360da374137cf220985e2d7");
+  assert.equal(sha256(publicationSource), "1204420aa5e7de9ab4460e56870da3b17d3031b1ab4dc6066a46ef2064187033");
+  assert.equal(sha256(providerSnapshotSource), "b3d4d672eb35e42516ca5cad080eed8e3f4a3b8d82565b3b37dee5d9667ae94d");
 });
 
 test("representative package is deterministic and covers canonical 20-club identity plus 562 cards", () => {
