@@ -3,9 +3,13 @@ import fs from "node:fs";
 import test from "node:test";
 import {
   createTouchLinePasswordRecoveryGrant,
+  createTouchLinePasswordRecoveryIntent,
+  TOUCHLINE_PASSWORD_RECOVERY_INTENT_MAX_AGE_SECONDS,
   TOUCHLINE_PASSWORD_RECOVERY_MAX_AGE_SECONDS,
   touchLinePasswordRecoveryCookieOptions,
+  touchLinePasswordRecoveryIntentCookieOptions,
   verifyTouchLinePasswordRecoveryGrant,
+  verifyTouchLinePasswordRecoveryIntent,
 } from "../lib/server/password-recovery.ts";
 
 const formSource = fs.readFileSync(new URL("../components/auth-form.tsx", import.meta.url), "utf8");
@@ -14,6 +18,7 @@ const resetPageSource = fs.readFileSync(new URL("../app/(auth)/reset-password/pa
 const callbackSource = fs.readFileSync(new URL("../app/auth/callback/route.ts", import.meta.url), "utf8");
 const proxySource = fs.readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 const recoveryRouteSource = fs.readFileSync(new URL("../app/api/auth/recovery/route.ts", import.meta.url), "utf8");
+const recoveryIntentRouteSource = fs.readFileSync(new URL("../app/api/auth/recovery/intent/route.ts", import.meta.url), "utf8");
 
 test("forgot-password email returns through the callback to the dedicated reset page", () => {
   assert.match(formSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale\)/);
@@ -21,16 +26,22 @@ test("forgot-password email returns through the callback to the dedicated reset 
     formSource,
     /resetPasswordForEmail\([\s\S]*buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/,
   );
+  assert.match(formSource, /fetch\("\/api\/auth\/recovery\/intent"[\s\S]*resetPasswordForEmail/);
+  assert.match(recoveryIntentRouteSource, /createTouchLinePasswordRecoveryIntent\(email\)/);
+  assert.match(recoveryIntentRouteSource, /isSameOriginRequest\(request\)/);
 });
 
-test("recovery callback exchanges the code into a session without running onboarding writes", () => {
-  assert.match(callbackSource, /const isPasswordRecovery = redirectType === "recovery"/);
+test("recovery callback requires the signed same-browser intent after exchanging the PKCE code", () => {
   assert.match(callbackSource, /exchangeCodeForSession\(code\)/);
+  assert.match(callbackSource, /verifyTouchLinePasswordRecoveryIntent\(recoveryIntent, data\.user\.email\)/);
   assert.match(callbackSource, /if \(isPasswordRecovery\) \{[\s\S]*createTouchLinePasswordRecoveryGrant\(data\.user\.id\)/);
   assert.match(callbackSource, /TOUCHLINE_PASSWORD_RECOVERY_COOKIE/);
+  assert.doesNotMatch(callbackSource, /redirectType/);
 
   const exchangeIndex = callbackSource.indexOf("exchangeCodeForSession(code)");
-  const recoveryGuardIndex = callbackSource.indexOf('redirectType === "recovery"');
+  const recoveryGuardIndex = callbackSource.indexOf(
+    "verifyTouchLinePasswordRecoveryIntent(recoveryIntent, data.user.email)",
+  );
   assert.ok(exchangeIndex >= 0 && exchangeIndex < recoveryGuardIndex);
 });
 
@@ -78,6 +89,48 @@ test("password recovery grants are signed, user-bound and short-lived", () => {
       path: "/",
       maxAge: TOUCHLINE_PASSWORD_RECOVERY_MAX_AGE_SECONDS,
     });
+  } finally {
+    if (previousSecret === undefined) delete process.env.TOUCHLINE_AUTH_RECOVERY_SECRET;
+    else process.env.TOUCHLINE_AUTH_RECOVERY_SECRET = previousSecret;
+  }
+});
+
+test("password recovery intents are signed, email-bound, normalized and expire", () => {
+  const previousSecret = process.env.TOUCHLINE_AUTH_RECOVERY_SECRET;
+  process.env.TOUCHLINE_AUTH_RECOVERY_SECRET = "test-only-password-recovery-secret";
+  try {
+    const now = 1_800_000_000_000;
+    const intent = createTouchLinePasswordRecoveryIntent(" Owner@TouchLine.Example ", now);
+    assert.equal(
+      verifyTouchLinePasswordRecoveryIntent(intent, "owner@touchline.example", now + 1_000),
+      true,
+    );
+    assert.equal(
+      verifyTouchLinePasswordRecoveryIntent(intent, "other@touchline.example", now + 1_000),
+      false,
+    );
+    assert.equal(
+      verifyTouchLinePasswordRecoveryIntent(`${intent}tampered`, "owner@touchline.example", now + 1_000),
+      false,
+    );
+    assert.equal(
+      verifyTouchLinePasswordRecoveryIntent(
+        intent,
+        "owner@touchline.example",
+        now + TOUCHLINE_PASSWORD_RECOVERY_INTENT_MAX_AGE_SECONDS * 1000,
+      ),
+      false,
+    );
+    assert.deepEqual(
+      touchLinePasswordRecoveryIntentCookieOptions("https://touchline.example/forgot-password"),
+      {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: TOUCHLINE_PASSWORD_RECOVERY_INTENT_MAX_AGE_SECONDS,
+      },
+    );
   } finally {
     if (previousSecret === undefined) delete process.env.TOUCHLINE_AUTH_RECOVERY_SECRET;
     else process.env.TOUCHLINE_AUTH_RECOVERY_SECRET = previousSecret;

@@ -1,17 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ensureTouchlineArenaAccess } from "@/lib/server/touchline-arena-access";
 import { resolveTouchLineAuthCallbackDestination } from "@/lib/server/auth-callback-destination";
 import {
   createTouchLinePasswordRecoveryGrant,
   TOUCHLINE_PASSWORD_RECOVERY_COOKIE,
+  TOUCHLINE_PASSWORD_RECOVERY_INTENT_COOKIE,
   touchLinePasswordRecoveryCookieOptions,
+  touchLinePasswordRecoveryIntentCookieOptions,
+  verifyTouchLinePasswordRecoveryIntent,
 } from "@/lib/server/password-recovery";
 import { normalizeTouchLineAuthReturnTo } from "@/lib/touchlineArena/auth-i18n";
 
-function clearPasswordRecoveryGrant(response: NextResponse, requestUrl: string) {
+function clearPasswordRecoveryState(response: NextResponse, requestUrl: string) {
   response.cookies.set(TOUCHLINE_PASSWORD_RECOVERY_COOKIE, "", {
     ...touchLinePasswordRecoveryCookieOptions(requestUrl),
+    maxAge: 0,
+  });
+  response.cookies.set(TOUCHLINE_PASSWORD_RECOVERY_INTENT_COOKIE, "", {
+    ...touchLinePasswordRecoveryIntentCookieOptions(requestUrl),
+    maxAge: 0,
+  });
+  return response;
+}
+
+function clearPasswordRecoveryIntent(response: NextResponse, requestUrl: string) {
+  response.cookies.set(TOUCHLINE_PASSWORD_RECOVERY_INTENT_COOKIE, "", {
+    ...touchLinePasswordRecoveryIntentCookieOptions(requestUrl),
     maxAge: 0,
   });
   return response;
@@ -28,7 +43,7 @@ async function signOutFailedAuthentication(supabase: NonNullable<Awaited<ReturnT
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const requestedNext = searchParams.get("next");
@@ -37,7 +52,7 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient();
     if (!supabase) {
-      return clearPasswordRecoveryGrant(
+      return clearPasswordRecoveryState(
         NextResponse.json({ error: "Authentication service unavailable." }, { status: 503 }),
         request.url,
       );
@@ -51,17 +66,16 @@ export async function GET(request: Request) {
       const returnTo = normalizeTouchLineAuthReturnTo(`${nextUrl.pathname}${nextUrl.search}`);
       if (!requestsPasswordRecovery && returnTo) failureUrl.searchParams.set("returnTo", returnTo);
       failureUrl.searchParams.set("error", "auth_callback");
-      return clearPasswordRecoveryGrant(NextResponse.redirect(failureUrl), request.url);
+      return clearPasswordRecoveryState(NextResponse.redirect(failureUrl), request.url);
     }
 
-    // Supabase Auth returns the PKCE redirect type at runtime, but AuthTokenResponse
-    // currently omits the field from its public TypeScript shape.
-    const redirectType = (data as typeof data & { redirectType?: string | null }).redirectType;
-    const isPasswordRecovery = redirectType === "recovery";
+    const recoveryIntent = request.cookies.get(TOUCHLINE_PASSWORD_RECOVERY_INTENT_COOKIE)?.value;
+    const isPasswordRecovery = requestsPasswordRecovery
+      && verifyTouchLinePasswordRecoveryIntent(recoveryIntent, data.user.email);
     if (requestsPasswordRecovery && !isPasswordRecovery) {
       const signedOut = await signOutFailedAuthentication(supabase);
       if (!signedOut) {
-        return clearPasswordRecoveryGrant(
+        return clearPasswordRecoveryState(
           NextResponse.json(
             { error: "Invalid recovery session could not be cleared." },
             { status: 503 },
@@ -70,7 +84,7 @@ export async function GET(request: Request) {
         );
       }
       nextUrl.searchParams.set("error", "auth_callback");
-      return clearPasswordRecoveryGrant(NextResponse.redirect(nextUrl), request.url);
+      return clearPasswordRecoveryState(NextResponse.redirect(nextUrl), request.url);
     }
 
     if (isPasswordRecovery) {
@@ -84,10 +98,10 @@ export async function GET(request: Request) {
           createTouchLinePasswordRecoveryGrant(data.user.id),
           touchLinePasswordRecoveryCookieOptions(request.url),
         );
-        return response;
+        return clearPasswordRecoveryIntent(response, request.url);
       } catch {
         const signedOut = await signOutFailedAuthentication(supabase);
-        return clearPasswordRecoveryGrant(
+        return clearPasswordRecoveryState(
           NextResponse.json(
             {
               error: signedOut
@@ -107,7 +121,7 @@ export async function GET(request: Request) {
       const signedOut = await signOutFailedAuthentication(supabase);
       // The server-owned access flag remains absent, so protected routes fail
       // closed even if Supabase cannot clear the incomplete session immediately.
-      return clearPasswordRecoveryGrant(
+      return clearPasswordRecoveryState(
         NextResponse.json(
           {
             error: signedOut
@@ -120,5 +134,5 @@ export async function GET(request: Request) {
       );
     }
   }
-  return clearPasswordRecoveryGrant(NextResponse.redirect(nextUrl), request.url);
+  return clearPasswordRecoveryState(NextResponse.redirect(nextUrl), request.url);
 }

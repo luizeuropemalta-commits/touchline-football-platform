@@ -53,8 +53,9 @@ test("the Arena access endpoint no longer grants automatic TC or provisions lega
 test("email confirmation and OAuth callback finish the same idempotent Arena access", () => {
   assert.match(callbackSource, /exchangeCodeForSession\(code\)/);
   assert.match(callbackSource, /ensureTouchlineArenaAccess\(data\.user\)/);
-  assert.match(callbackSource, /const isPasswordRecovery = redirectType === "recovery"/);
+  assert.match(callbackSource, /verifyTouchLinePasswordRecoveryIntent\(recoveryIntent, data\.user\.email\)/);
   assert.match(callbackSource, /if \(isPasswordRecovery\)/);
+  assert.doesNotMatch(callbackSource, /redirectType/);
   assert.ok(
     callbackSource.indexOf("exchangeCodeForSession(code)") <
       callbackSource.indexOf("ensureTouchlineArenaAccess(data.user)"),

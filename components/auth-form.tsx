@@ -198,10 +198,19 @@ export function AuthForm({
           setRegistrationConfirmationEmail(normalizedEmail);
         }
       } else {
+        const recoveryIntentResponse = await fetch("/api/auth/recovery/intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ email: normalizedEmail }),
+        });
+        if (!recoveryIntentResponse.ok) throw new Error("recovery_intent_unavailable");
         const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
           redirectTo: buildTouchLineAuthCallbackUrl(resetPasswordHref),
         });
-        if (error) throw error;
+        if (error) {
+          await fetch("/api/auth/recovery/intent", { method: "DELETE" }).catch(() => null);
+          throw error;
+        }
         setMessage(copy.resetSent);
         setMessageTone("success");
       }
