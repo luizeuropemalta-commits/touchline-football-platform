@@ -23,7 +23,9 @@ type Props = {
   initialFixtures: TouchlinePublicFixture[];
   initialFixtureId?: string | null;
   initialLocale?: TouchLineLocale | null;
+  initialNow: number;
   initialReadMetadata?: TouchlineLiveReadMetadata | null;
+  initialTimeZone: string;
 };
 
 type FixtureGroup = "live" | "today" | "upcoming" | "finished";
@@ -41,9 +43,14 @@ function fixtureLabel(fixture: TouchlinePublicFixture) {
   return fixture.name || `${fixture.homeTeam?.name ?? "Home"} vs ${fixture.awayTeam?.name ?? "Away"}`;
 }
 
-function fixtureDate(fixture: Pick<TouchlinePublicFixture, "startsAt">, locale: string, options: Intl.DateTimeFormatOptions) {
+function fixtureDate(
+  fixture: Pick<TouchlinePublicFixture, "startsAt">,
+  locale: string,
+  timeZone: string,
+  options: Intl.DateTimeFormatOptions,
+) {
   if (!fixture.startsAt || Number.isNaN(Date.parse(fixture.startsAt))) return "—";
-  return new Intl.DateTimeFormat(locale, options).format(new Date(fixture.startsAt));
+  return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(new Date(fixture.startsAt));
 }
 
 function score(fixture: TouchlinePublicFixture) {
@@ -51,28 +58,44 @@ function score(fixture: TouchlinePublicFixture) {
   return "VS";
 }
 
-function status(fixture: TouchlinePublicFixture, language: keyof typeof copy, metadata?: TouchlineLiveReadMetadata | null) {
+function status(
+  fixture: TouchlinePublicFixture,
+  language: keyof typeof copy,
+  timeZone: string,
+  metadata?: TouchlineLiveReadMetadata | null,
+) {
   const state = touchlineMatchCentreDisplayState(fixture, metadata);
   if (state === "stale") return copy[language].lastVerified;
   if (state === "live") return copy[language].liveNow;
   if (state === "finished") return copy[language].completed;
-  return fixtureDate(fixture, language, { hour: "2-digit", minute: "2-digit", hour12: false });
+  return fixtureDate(fixture, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-function groupFixtures(fixtures: TouchlinePublicFixture[], now: number): Record<FixtureGroup, TouchlinePublicFixture[]> {
-  const today = new Date(now).toDateString();
+function fixtureDayKey(value: string | number, timeZone: string) {
+  const parsed = typeof value === "number" ? new Date(value) : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(parsed);
+}
+
+function groupFixtures(fixtures: TouchlinePublicFixture[], now: number, timeZone: string): Record<FixtureGroup, TouchlinePublicFixture[]> {
+  const today = fixtureDayKey(now, timeZone);
   return fixtures.reduce<Record<FixtureGroup, TouchlinePublicFixture[]>>((groups, fixture) => {
     const state = touchlineFixtureState(fixture);
     if (state === "live") groups.live.push(fixture);
     else if (state === "finished") groups.finished.push(fixture);
-    else if (fixture.startsAt && new Date(fixture.startsAt).toDateString() === today) groups.today.push(fixture);
+    else if (fixture.startsAt && fixtureDayKey(fixture.startsAt, timeZone) === today) groups.today.push(fixture);
     else if (state === "upcoming") groups.upcoming.push(fixture);
     return groups;
   }, { live: [], today: [], upcoming: [], finished: [] });
 }
 
-function Countdown({ startsAt, language }: { startsAt?: string; language: keyof typeof copy }) {
-  const [now, setNow] = useState(() => Date.now());
+function Countdown({ startsAt, language, initialNow }: { startsAt?: string; language: keyof typeof copy; initialNow: number }) {
+  const [now, setNow] = useState(initialNow);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
@@ -92,7 +115,7 @@ function TeamMark({ fixture, side }: { fixture: TouchlinePublicFixture; side: "h
   return <span className={styles.teamMark}>{team?.logoUrl ? <img src={team.logoUrl} alt="" /> : <span>{team?.name?.slice(0, 2).toUpperCase() ?? "TL"}</span>}</span>;
 }
 
-function verificationLabel(metadata: TouchlineLiveReadMetadata, language: keyof typeof copy) {
+function verificationLabel(metadata: TouchlineLiveReadMetadata, language: keyof typeof copy, timeZone: string) {
   if (!metadata.fetchedAt || Number.isNaN(Date.parse(metadata.fetchedAt))) return null;
   return `${copy[language].lastVerifiedAt} · ${new Intl.DateTimeFormat(language, {
     day: "2-digit",
@@ -100,15 +123,23 @@ function verificationLabel(metadata: TouchlineLiveReadMetadata, language: keyof 
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone,
   }).format(new Date(metadata.fetchedAt))}`;
 }
 
-export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId, initialLocale, initialReadMetadata = null }: Props) {
+export default function TouchlineMatchCentre({
+  initialFixtures,
+  initialFixtureId,
+  initialLocale,
+  initialNow,
+  initialReadMetadata = null,
+  initialTimeZone,
+}: Props) {
   const language: keyof typeof copy = initialLocale === "pt-BR" ? "pt-BR" : "en-GB";
   const [fixtures, setFixtures] = useState(initialFixtures);
   const [selectedId, setSelectedId] = useState(initialFixtureId ?? null);
   const [readMetadata, setReadMetadata] = useState<TouchlineLiveReadMetadata | null>(initialReadMetadata);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(initialNow);
   const dictionary = copy[language];
 
   useEffect(() => {
@@ -142,7 +173,7 @@ export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId
   }, []);
 
   const selected = useMemo(() => selectTouchlineMatchCentreFixture(fixtures, selectedId), [fixtures, selectedId]);
-  const groups = useMemo(() => groupFixtures(fixtures, now), [fixtures, now]);
+  const groups = useMemo(() => groupFixtures(fixtures, now, initialTimeZone), [fixtures, initialTimeZone, now]);
   const orderedGroups: Array<{ id: FixtureGroup; label: string }> = [
     { id: "live", label: dictionary.live }, { id: "today", label: dictionary.today }, { id: "upcoming", label: dictionary.upcoming }, { id: "finished", label: dictionary.finished },
   ];
@@ -170,7 +201,7 @@ export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId
       </header>
       <TouchlineGlobalNavigation locale={language} currentRoute="live" surface="public" />
       <p className={styles.selectionAnnouncement} role="status" aria-live="polite" aria-atomic="true">
-        {selected ? `${dictionary.selectedFixture}: ${fixtureLabel(selected)} · ${status(selected, language, readMetadata)}` : dictionary.noFixtures}
+        {selected ? `${dictionary.selectedFixture}: ${fixtureLabel(selected)} · ${status(selected, language, initialTimeZone, readMetadata)}` : dictionary.noFixtures}
       </p>
 
       {readMetadata?.degraded ? <aside className={styles.freshnessNotice} role="status" aria-live="polite" aria-atomic="true" data-state={readMetadata.state}>
@@ -178,7 +209,7 @@ export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId
         <span>
           <strong>{dictionary.liveDataUpdating}</strong>
           <small>{readMetadata.state === "partial-persisted-schedule" ? dictionary.partialScheduleCopy : dictionary.liveDataUpdatingCopy}</small>
-          {verificationLabel(readMetadata, language) ? <em>{verificationLabel(readMetadata, language)}</em> : null}
+          {verificationLabel(readMetadata, language, initialTimeZone) ? <em>{verificationLabel(readMetadata, language, initialTimeZone)}</em> : null}
         </span>
       </aside> : null}
 
@@ -192,7 +223,7 @@ export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId
                 const isSelected = selected?.id === fixture.id;
                 return <button key={fixture.id} type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
                   <span className={styles.fixtureTeams}><TeamMark fixture={fixture} side="home" /><b>{fixture.homeTeam?.name ?? "Home"}</b><TeamMark fixture={fixture} side="away" /><b>{fixture.awayTeam?.name ?? "Away"}</b></span>
-                  <small className={touchlineMatchCentreDisplayState(fixture, readMetadata) === "live" ? styles.liveStatus : ""}>{status(fixture, language, readMetadata)}</small>
+                  <small className={touchlineMatchCentreDisplayState(fixture, readMetadata) === "live" ? styles.liveStatus : ""}>{status(fixture, language, initialTimeZone, readMetadata)}</small>
                 </button>;
               })}
             </section> : null)}
@@ -203,20 +234,20 @@ export default function TouchlineMatchCentre({ initialFixtures, initialFixtureId
         {selected ? <section id="touchline-match-panel" className={styles.matchPanel} aria-label={fixtureLabel(selected)}>
           <div className={styles.matchMeta}><span><Trophy size={14} /> {dictionary.competition}</span><span>{dictionary.matchweek} · {selected.seasonId ?? "—"}</span><span><Clock3 size={14} /> {dictionary.timezone}</span></div>
           <div className={styles.hero} data-state={touchlineMatchCentreDisplayState(selected, readMetadata)}>
-            <span className={styles.statusPill}>{status(selected, language, readMetadata)}</span>
+            <span className={styles.statusPill}>{status(selected, language, initialTimeZone, readMetadata)}</span>
             <div className={styles.heroTeams}>
               <div><TeamMark fixture={selected} side="home" /><strong>{selected.homeTeam?.name ?? "Home"}</strong></div>
               <b className={styles.score}>{score(selected)}</b>
               <div><TeamMark fixture={selected} side="away" /><strong>{selected.awayTeam?.name ?? "Away"}</strong></div>
             </div>
-            <p>{fixtureDate(selected, language, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</p>
-            {touchlineFixtureState(selected) === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} /> : <strong className={styles.countdown}>{touchlineMatchCentreDisplayState(selected, readMetadata) === "stale" ? dictionary.liveDataUpdating : selected.status ?? dictionary.provider}</strong>}
+            <p>{fixtureDate(selected, language, initialTimeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</p>
+            {touchlineFixtureState(selected) === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={initialNow} /> : <strong className={styles.countdown}>{touchlineMatchCentreDisplayState(selected, readMetadata) === "stale" ? dictionary.liveDataUpdating : selected.status ?? dictionary.provider}</strong>}
           </div>
 
           <div className={styles.infoGrid}>
             <article><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.official}</small></article>
             <article><span>{dictionary.detail}</span><strong>{touchlineMatchCentreDisplayState(selected, readMetadata) === "stale" ? dictionary.lastVerified : touchlineFixtureState(selected) === "live" ? dictionary.liveNow : touchlineFixtureState(selected) === "finished" ? dictionary.completed : dictionary.watch}</strong><small>{dictionary.dataPending}</small></article>
-            <article><span>{dictionary.archive}</span><strong>{fixtureLabel(selected)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : dictionary.provider}</small></article>
+            <article><span>{dictionary.archive}</span><strong>{fixtureLabel(selected)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : dictionary.provider}</small></article>
           </div>
 
           <div className={styles.contentGrid}>

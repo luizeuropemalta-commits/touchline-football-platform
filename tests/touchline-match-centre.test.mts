@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   isTouchlineLiveReadMetadata,
+  normalizeTouchlineMatchCentreTimeZone,
   selectTouchlineMatchCentreFixture,
   touchlineFixtureState,
   touchlineMatchCentreDisplayState,
@@ -76,4 +77,23 @@ test("a venue awaiting verification is not labelled as verified", () => {
   );
   assert.match(source, /<strong>\{dictionary\.venuePending\}<\/strong><small>\{dictionary\.official\}<\/small>/);
   assert.doesNotMatch(source, /<strong>\{dictionary\.venuePending\}<\/strong><small>\{dictionary\.provider\}<\/small>/);
+});
+
+test("Match Centre keeps the first server and browser render in one validated time zone", () => {
+  assert.equal(normalizeTouchlineMatchCentreTimeZone("Europe/Malta"), "Europe/Malta");
+  assert.equal(normalizeTouchlineMatchCentreTimeZone("  Europe/London  "), "Europe/London");
+  assert.equal(normalizeTouchlineMatchCentreTimeZone("not/a-time-zone"), "UTC");
+  assert.equal(normalizeTouchlineMatchCentreTimeZone(null), "UTC");
+
+  const componentSource = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const pageSource = readFileSync(new URL("../app/live/page.tsx", import.meta.url), "utf8");
+  assert.match(pageSource, /requestHeaders\.get\("x-vercel-ip-timezone"\)/);
+  assert.match(pageSource, /initialNow=\{initialNow\}/);
+  assert.match(pageSource, /initialTimeZone=\{initialTimeZone\}/);
+  assert.match(componentSource, /useState\(initialNow\)/);
+  assert.doesNotMatch(componentSource, /useState\(\(\) => Date\.now\(\)\)/);
+  assert.match(componentSource, /new Intl\.DateTimeFormat\(locale, \{ \.\.\.options, timeZone \}\)/);
 });

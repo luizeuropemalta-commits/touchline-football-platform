@@ -16,6 +16,24 @@ export type TouchlineLiveReadMetadata = {
   fetchedAt?: string;
 };
 
+export const TOUCHLINE_MATCH_CENTRE_TIME_ZONE_FALLBACK = "UTC";
+
+/**
+ * Vercel supplies an IANA time-zone name for the current request. The value is
+ * normalized on the server and serialized with the first render so SSR and the
+ * browser cannot format the same fixture in different time zones.
+ */
+export function normalizeTouchlineMatchCentreTimeZone(value?: string | null) {
+  const candidate = value?.trim();
+  if (!candidate || candidate.length > 100) return TOUCHLINE_MATCH_CENTRE_TIME_ZONE_FALLBACK;
+  try {
+    new Intl.DateTimeFormat("en-GB", { timeZone: candidate }).format(0);
+    return candidate;
+  } catch {
+    return TOUCHLINE_MATCH_CENTRE_TIME_ZONE_FALLBACK;
+  }
+}
+
 type TouchlineFixtureStateSource = Pick<TouchlineFixture, "startsAt" | "status">;
 type TouchlineFixtureSelectionSource = TouchlineFixtureStateSource & Pick<TouchlineFixture, "id" | "providerId">;
 

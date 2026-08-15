@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import TouchlineMatchCentre from "@/components/touchline/match-centre/TouchlineMatchCentre";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
@@ -8,6 +9,7 @@ import {
   isTouchLineLocaleComplete,
   normalizeTouchLineLocale,
 } from "@/lib/touchlineArena/i18n";
+import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 
 export const metadata: Metadata = {
   title: "Ao vivo | TouchLine England",
@@ -26,6 +28,11 @@ export default async function TouchLineLivePage({
   const initialLocale = requestedLanguage && isTouchLineLocaleComplete(normalizedLanguage)
     ? normalizedLanguage
     : null;
+  const requestHeaders = await headers();
+  const initialTimeZone = normalizeTouchlineMatchCentreTimeZone(
+    requestHeaders.get("x-vercel-ip-timezone"),
+  );
+  const initialNow = Date.now();
 
   // Live is intentionally a matchweek surface. The archive is reached from
   // verified weekly results, never by mixing future rounds into the live rail.
@@ -38,6 +45,8 @@ export default async function TouchLineLivePage({
     initialFixtures={fixtures}
     initialFixtureId={requestedFixture}
     initialLocale={initialLocale}
+    initialNow={initialNow}
+    initialTimeZone={initialTimeZone}
     // The server page starts from the persisted schedule, not from a live
     // snapshot. The client endpoint can replace this only with its own
     // server-calculated freshness metadata.
