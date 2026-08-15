@@ -8100,7 +8100,7 @@ export default function ArenaClient({
 
         {arenaOverlayPanel ? (
           <section ref={actionLayerRef} className="arena-action-layer" aria-label="Arena action panel">
-            <div className={`arena-action-panel arena-action-panel-${arenaOverlayPanel}`}>
+            <div className={`arena-action-panel arena-action-panel-${arenaOverlayPanel}${arenaOverlayPanel === "market" && marketSpotlightPlayer ? " has-market-spotlight" : ""}`}>
               <div className="arena-action-topline">
                 <div>
                   <p>{arenaOverlayPanel === "market" ? t("touchlineMarketTransfer") : t("touchlineArenaOnline")}</p>
@@ -19933,6 +19933,14 @@ export default function ArenaClient({
           inset: 0;
           min-height: 100dvh;
           overflow: hidden;
+        }
+
+        /* backdrop-filter establishes a containing block for fixed descendants
+           in WebKit. Suspend only the Market panel blur while its card zoom is
+           open so the spotlight is anchored to the visual viewport. */
+        .touchline-game.is-market-standalone .arena-action-panel-market.has-market-spotlight {
+          -webkit-backdrop-filter: none;
+          backdrop-filter: none;
         }
 
         @media (min-width: 1181px) {
