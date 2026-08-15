@@ -13,6 +13,7 @@ test("the dynamic substitution route resolves the requested ClubOwner identity b
   assert.match(source, /const clubOwnerUser = user && !isOwnerEmail\(user\.email\) \? user : null;/);
   assert.match(source, /resolveTouchlineClubOwnerPageIdentity\(clubOwnerUser, owner\)/);
   assert.match(source, /if \(!resolveTouchlineClubOwnerPageIdentity\(clubOwnerUser, owner\)\) notFound\(\);/);
+  assert.match(source, /<ClubOwnerSubstitutionRenderer lang=\{lang\} \/>/);
 });
 
 test("the dynamic substitution route does not ignore its requested owner slug", () => {

@@ -18,6 +18,10 @@ const fixtureSource = readFileSync(
   new URL("../app/visual-qa/quick-substitution-readiness/page.tsx", import.meta.url),
   "utf8",
 );
+const substitutionRendererSource = readFileSync(
+  new URL("../components/touchline/club-owner/ClubOwnerSubstitutionRenderer.tsx", import.meta.url),
+  "utf8",
+);
 
 test("Quick Substitution stays loading until both persisted reads have settled", () => {
   assert.deepEqual(
@@ -96,6 +100,11 @@ test("the authenticated self route skips the opaque redirect handoff and both su
   assert.match(proxySource, /pathname === "\/club-owner\/me\/substitution"/);
   assert.match(selfLoadingSource, /ClubOwnerSubstitutionLoading/);
   assert.match(dynamicLoadingSource, /ClubOwnerSubstitutionLoading/);
+});
+
+test("the private substitution route opens Quick Sub inside the Arena instead of a standalone blank surface", () => {
+  assert.match(substitutionRendererSource, /redirect\(`\/arena\?panel=bench&lang=\$\{encodeURIComponent\(lang\)\}`\)/);
+  assert.doesNotMatch(substitutionRendererSource, /standalonePanel="bench"/);
 });
 
 test("the local Quick Sub visual fixture uses the actual in-Arena rail with deterministic demo data", () => {

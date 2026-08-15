@@ -175,7 +175,7 @@ test("all self route pages are server-resolved and the Luiz substitution path ca
   }
   assert.match(legacySubstitutionSource, /PUBLIC_CLUB_OWNER_SLUG/);
   assert.match(legacySubstitutionSource, /resolveTouchlineClubOwnerPageIdentity/);
-  assert.match(legacySubstitutionSource, /<ClubOwnerSubstitutionRenderer\s*\/>/);
+  assert.match(legacySubstitutionSource, /<ClubOwnerSubstitutionRenderer lang=\{lang\}\s*\/>/);
   assert.doesNotMatch(legacySubstitutionSource, /redirectTouchlineClubOwnerSelfRoute/);
 });
 

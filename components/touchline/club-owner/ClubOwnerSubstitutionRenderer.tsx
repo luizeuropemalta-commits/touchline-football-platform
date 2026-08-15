@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-
-import ArenaClient from "@/app/arena/ArenaClient";
+import { redirect } from "next/navigation";
 
 export const CLUB_OWNER_SUBSTITUTION_METADATA: Metadata = {
   title: "Substituições | TouchLine ClubOwner",
-  description: "Área independente para organizar titulares, banco e substituições TouchLine.",
+  description: "Substituição rápida do ClubOwner dentro da TouchLine Arena.",
 };
 
-export default function ClubOwnerSubstitutionRenderer() {
-  return <ArenaClient initialPanel="bench" initialIntroIntent="skip" standalonePanel="bench" />;
+export default function ClubOwnerSubstitutionRenderer({
+  lang,
+}: {
+  lang: "en-GB" | "pt-BR";
+}) {
+  redirect(`/arena?panel=bench&lang=${encodeURIComponent(lang)}`);
+  return null;
 }
