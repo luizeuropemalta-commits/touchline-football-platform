@@ -2613,3 +2613,47 @@ Preview, production checkpoint, or a dirty worktree.
 - **Fresh gates:** frozen install PASS; release readiness PASS; TypeScript PASS; ESLint 0 errors/4 pre-existing warnings; full suite 929/929 PASS; Playwright 7/7 PASS; diff check PASS; Next.js 16.2.11 Production build PASS with 131 static pages.
 - **Authorized cleanup:** three temporary worktrees were removed only after path/status validation. Four unique uncommitted files from one temporary Preview worktree were preserved first as a verified 12 KiB patch at `/Users/luizlopez/Developer/touchline-recovery-20260814/market-p0-functional-preview-20260813.patch`.
 - **Boundary:** no Product behavior, Production deployment, Vercel environment, DNS, Supabase/database/RLS, credential, billing, Stripe or card-publication state was changed by this migration.
+
+## 2026-08-15 representative QA package — ENGINEERING DECISION / IMPLEMENTATION IN PROGRESS
+
+- **Objective:** prepare one deterministic, versioned and reversible representative package in the isolated `TouchLine Development QA` project so authenticated browser QA can exercise the twenty-club Market, published cards, squad construction, Arena and Quick Substitution without using Production data or credentials.
+- **Authority and scope:** every write must first prove the exact QA project ref `xgxbwqxjssxxuihuwmgy`. Real football identities come only from the archived canonical 20-club roster export and its active memberships. Manual values, tier and nominal price come only from the immutable owner-approved 533-row publication manifest. The existing published Liverpool 29 batch is preserved and reconciled, never recreated by name.
+- **Synthetic boundary:** deterministic QA-only identities may be introduced only where a required visual/formation state cannot be proved from canonical football data. They must be visibly marked `QA FIXTURE`, carry the fixture version/run id, remain unpublished and must never be represented as official football facts, market values or commercial cards.
+- **Non-goals:** no Production Supabase/Vercel/DNS/alias/environment/card gate/payment/provider state; no copied Production service role; no invented player value, position or fixture presented as official; no name-only identity write; no broad destructive cleanup.
+- **Implementation contract:** a dry-run must validate repository manifests, project identity, row counts, UUID uniqueness, active memberships, tier/price policy and the current QA before-state before any mutation. Apply must be idempotent and auditable with `touchline_qa_fixture_version` plus `qa_fixture_run_id`. Rollback must remove only rows created by that run and restore any pre-existing QA publication state through the existing protected batch revert path.
+- **Release boundary:** this package is QA infrastructure only. It does not authorize Production promotion. After apply, database invariants, authenticated Market/Arena/ClubOwner/Quick Sub flows, responsive browser matrices and a separate security/release preflight remain required.
+
+### ClubOwner representative scenario contract
+
+- **Roster authority:** the QA owner scenario uses the official atomic Market checkout against 35 already-published canonical cards. It does not insert contracts directly. To avoid a fake credit or payment event, selection is limited to the approved Ruby Red zero-TC tier.
+- **Composition:** 3 goalkeepers, 10 defenders, 11 midfielders and 11 attackers preserve the exact aggregate totals of the 35-player rules. The remote Arena state contains a canonical 4-3-3 (1 goalkeeper, 4 defenders, 3 midfielders and 3 attackers); the authenticated client derives 9 matchday substitutes and 15 outside the matchday squad from the remaining active contracts.
+- **Position boundary:** source evidence provides canonical broad positions and the already-approved full-back catalogue, but not a complete authoritative CDM/ST classification for all 35 selected players. The QA scenario therefore records tactical slots separately and never rewrites or presents an invented official player position. Exact CDM/ST roster-filter proof remains gated on canonical detailed-position authority.
+- **Profile and coach:** the scenario sets only the approved repository avatar URL and the existing QA coach provider id `455907`, while snapshotting the prior avatar and Arena state for a scoped rollback.
+- **Rollback:** rollback uses the official no-refund contract-release command for only the 35 scenario cards, restores the prior avatar/Arena state, and marks the zero-TC QA order reversed. Immutable checkout/release history remains as audit evidence; no wallet grant or destructive identity cleanup is used.
+
+## 2026-08-15 representative QA package — APPLIED TO QA / PRODUCTION UNCHANGED
+
+- **Canonical package applied:** run `bf476289-c6df-47a6-878e-7dc8c40f3f91`
+  on QA project `xgxbwqxjssxxuihuwmgy` contains 20 clubs, 588 canonical
+  players/memberships, 533 owner-approved cards plus 29 preserved Liverpool
+  cards, for 562 published cards across all seven tiers. Expected and observed
+  counts match and replay is idempotent.
+- **ClubOwner scenario applied:** the existing official QA identity has 35
+  zero-TC active contracts, approved avatar, coach `455907`, a 4-3-3 with 11
+  starters, 9 substitutes and 15 outside the matchday squad. QA tactical labels
+  cover GK/CB/RB/LB/CDM/MID/ATT/ST without rewriting canonical football facts.
+- **Live/Arena coverage applied:** 20 reversible QA fixtures cover Scheduled,
+  second half, Finished, Postponed, Cancelled, stale/degraded and partial-score
+  behavior. No unverified venue was created.
+- **Visual/state catalogue applied:** 27 service-role-only rows cover 11 card
+  cases, 2 coach cases, 4 Quick Sub cases and 10 fail-closed UI states. Its
+  rollback was transaction-proven as 27 removed, zero remaining and 27 restored.
+- **Quick Sub verified:** 31/31 focused tests prove exact 11+9 readiness,
+  fixed-slot replacement, outgoing disabled, no re-entry, replay idempotency and
+  no saved-roster mutation. Current substitution history remains browser-session
+  scoped rather than a server-owned cross-device match ledger.
+- **Gates:** representative/card tests 27/27 PASS; coach/card zoom 24/24 PASS;
+  TypeScript PASS; diff check PASS. Production, DNS, Vercel environment, feature
+  flags, payment, provider data and `touchline.com.br` were not changed.
+- **Evidence:**
+  `docs/touchline-arena/audit/2026-08-15-REPRESENTATIVE-QA-PACKAGE.md`.
