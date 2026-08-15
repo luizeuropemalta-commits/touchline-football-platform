@@ -79,8 +79,15 @@ async function runStarterSync(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  return runStarterSync(request);
+export async function GET(_request: NextRequest) {
+  return NextResponse.json(
+    {
+      ok: false,
+      status: "method_not_allowed",
+      error: "Football data synchronization requires POST.",
+    },
+    { status: 405, headers: { Allow: "POST", "Cache-Control": "no-store" } },
+  );
 }
 
 export async function POST(request: NextRequest) {
