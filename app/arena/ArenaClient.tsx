@@ -19914,13 +19914,17 @@ export default function ArenaClient({
         }
 
         .touchline-game.is-market-standalone .team-builder-player-select {
+          display: flex;
           min-width: 0;
           flex: 0 0 auto;
+          flex-direction: column;
+          align-items: stretch;
         }
 
         .touchline-game.is-market-standalone .team-builder-gallery-card {
           display: block;
           flex: 0 0 auto;
+          align-self: center;
           max-width: 100%;
           overflow: hidden;
         }

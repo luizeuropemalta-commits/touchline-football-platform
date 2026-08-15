@@ -86,6 +86,14 @@ test("the Market card gallery stays static while unrelated live data updates", a
   assert.match(source, /<StableMarketPreviewCard[\s\S]*?player=\{marketCard\}[\s\S]*?subscribeToRanking=\{false\}[\s\S]*?enableInteractiveNeon=\{false\}[\s\S]*?allowVisualInventoryPreview/);
   assert.match(source, /<StableMarketPreviewCard[\s\S]*?staticRenderScale=\{0\.56\}/);
   assert.match(source, /--touchline-card-static-scale: \.56/);
+  assert.match(
+    source,
+    /The Market gallery owns a fixed-ratio card canvas[\s\S]*?\.team-builder-player-select \{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;[\s\S]*?align-items: stretch;/,
+  );
+  assert.match(
+    source,
+    /The Market gallery owns a fixed-ratio card canvas[\s\S]*?\.team-builder-gallery-card \{[\s\S]*?align-self: center;[\s\S]*?overflow: hidden;/,
+  );
   assert.match(source, /team-builder-player-list > article\.is-position-locked \{[\s\S]*?overflow: visible;/);
   assert.doesNotMatch(source, /const selectedBuilderPreviewCard = useMemo\(/);
   assert.match(source, /className="team-builder-card-sign"/);
