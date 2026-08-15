@@ -3,15 +3,20 @@
  * marketing, SEO and all production authentication callbacks.  The Vercel
  * hostname remains a deliberately narrow technical diagnostic endpoint.
  *
- * Preview hostnames are intentionally never returned here: a preview must not
- * become the destination embedded in a production confirmation or reset email.
+ * Arbitrary Preview hostnames are intentionally never returned here: a preview
+ * must not become the destination embedded in a production confirmation or
+ * reset email. The single QA branch alias is a separate, explicit environment
+ * with its own Supabase project and may be used only when it is also the exact
+ * configured auth origin.
  */
 export const TOUCHLINE_PUBLIC_ORIGIN = "https://touchline.com.br";
 export const TOUCHLINE_TECHNICAL_ORIGIN = "https://touchline-arena-official.vercel.app";
+export const TOUCHLINE_QA_ORIGIN = "https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app";
 
 export const TOUCHLINE_PUBLIC_HOSTNAME = "touchline.com.br";
 export const TOUCHLINE_PUBLIC_WWW_HOSTNAME = "www.touchline.com.br";
 export const TOUCHLINE_TECHNICAL_HOSTNAME = "touchline-arena-official.vercel.app";
+export const TOUCHLINE_QA_HOSTNAME = "touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app";
 
 const localHostnames = new Set(["localhost", "127.0.0.1", "::1"]);
 const approvedProductionOrigins = new Set([
@@ -43,6 +48,10 @@ export function isTouchLineTechnicalHostname(hostname: string) {
   return hostname.toLowerCase() === TOUCHLINE_TECHNICAL_HOSTNAME;
 }
 
+export function isTouchLineQaHostname(hostname: string) {
+  return hostname.toLowerCase() === TOUCHLINE_QA_HOSTNAME;
+}
+
 /** Only exact, approved production origins may override the default. */
 export function resolveTouchLineConfiguredAuthOrigin(value: string | undefined) {
   const normalized = normalizeOrigin(value);
@@ -68,6 +77,11 @@ export function resolveTouchLineAuthOrigin({
   const normalizedHostname = hostname.toLowerCase();
   if (localHostnames.has(normalizedHostname)) return currentOrigin.replace(/\/+$/, "");
   if (isTouchLineTechnicalHostname(normalizedHostname)) return TOUCHLINE_TECHNICAL_ORIGIN;
+  if (isTouchLineQaHostname(normalizedHostname)) {
+    return normalizeOrigin(configuredOrigin) === TOUCHLINE_QA_ORIGIN
+      ? TOUCHLINE_QA_ORIGIN
+      : TOUCHLINE_PUBLIC_ORIGIN;
+  }
   if (isTouchLinePublicHostname(normalizedHostname) || isTouchLinePublicWwwHostname(normalizedHostname)) {
     return TOUCHLINE_PUBLIC_ORIGIN;
   }
