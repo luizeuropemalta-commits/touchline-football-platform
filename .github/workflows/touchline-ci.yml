@@ -1,0 +1,44 @@
+name: TouchLine CI Candidate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: touchline-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Frozen install
+        run: pnpm install --frozen-lockfile
+      - name: Release readiness
+        run: pnpm run check:release-readiness
+      - name: TypeScript
+        run: pnpm exec tsc --noEmit --incremental false
+      - name: ESLint
+        run: pnpm run lint
+      - name: Full test suite
+        run: pnpm run test
+      - name: Diff and generated-artifact safety
+        run: |
+          git diff --check
+          test -z "$(git status --porcelain)"
+      - name: Production build
+        run: pnpm run build

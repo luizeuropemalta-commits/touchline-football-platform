@@ -1,0 +1,12 @@
+# Project-scoped Codex defaults. These contain no credentials and apply only
+# when this repository is trusted by the local Codex installation.
+model_reasoning_effort = "high"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+# Product work normally needs package/documentation access but should not have
+# unrestricted filesystem or network access by default.
+network_access = false
+exclude_slash_tmp = true
+exclude_tmpdir_env_var = true
