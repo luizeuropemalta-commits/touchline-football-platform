@@ -111,3 +111,13 @@ test("Match Centre lets its mobile grid shrink while keeping only the fixture ra
   assert.match(styles, /\.matchPanel \{[^}]*min-width: 0/);
   assert.match(styles, /\.fixtureScroller \{[^}]*overflow: auto/);
 });
+
+test("Match Centre keeps the live pitch at a real football-field proportion", () => {
+  const styles = readFileSync(
+    new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(styles, /\.hero \{[^}]*box-sizing: border-box[^}]*aspect-ratio: 105 \/ 68/);
+  assert.match(styles, /\.hero \{[^}]*align-content: center/);
+});
