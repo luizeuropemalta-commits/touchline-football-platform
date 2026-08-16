@@ -4,12 +4,12 @@ Verified: 2026-08-16
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
 Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-qa`
 Active branch: `qa`
-Active validated base SHA: `486b48026ac0be3a96a7da518c8cdeb9546a48f8`
+Active validated QA SHA: `72713d7`
 
 ## QA and release
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
-- Current QA deployment: `dpl_5GCTMjjJnanBgFjWdrkqukuwrkf6`, commit `486e790fee65a278dfa1d2d23d5642a7312e3da6`, status READY. A new QA-only candidate is validated locally and awaiting its native branch deployment.
+- Current QA deployment: `dpl_CRrfqxNrtbiGkq7ejVKwV8uhuNB6`, commit `72713d7`, status READY. Its stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
 - Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
 - Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
 - Production, `touchline.com.br`, DNS, payments, Production database and card-publication gate were not changed by the QA mission.
@@ -30,7 +30,7 @@ Active validated base SHA: `486b48026ac0be3a96a7da518c8cdeb9546a48f8`
 
 ## Next executable action
 
-Deploy the validated QA-only Arena candidate, then observe the scheduled-fixture rail plus the in-Arena Quick Sub round trip at desktop and mobile. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+Observe the newly deployed Arena card rendering, scheduled-fixture rail and in-Arena Quick Sub round trip at desktop and mobile. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 
