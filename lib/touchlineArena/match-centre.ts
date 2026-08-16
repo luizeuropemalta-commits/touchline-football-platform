@@ -40,11 +40,14 @@ type TouchlineFixtureSelectionSource = TouchlineFixtureStateSource & Pick<Touchl
 const LIVE_STATUS = /(?:live|in[ -]?play|in progress|1st|2nd|half[ -]?time|extra time|penalt)/i;
 const FINISHED_STATUS = /(?:^ft(?:_|$)|full[ -]?time|finished|after extra time|aet|after penalties|cancelled|canceled|abandoned|awarded|walkover)/i;
 
-export function touchlineFixtureState(fixture: TouchlineFixtureStateSource): TouchlineMatchState {
+export function touchlineFixtureState(fixture: TouchlineFixtureStateSource, now = Date.now()): TouchlineMatchState {
   const status = fixture.status?.trim() ?? "";
-  if (LIVE_STATUS.test(status)) return "live";
+  const startsAt = fixture.startsAt ? Date.parse(fixture.startsAt) : Number.NaN;
+  // A provider/status snapshot cannot make a future kick-off look live. This
+  // keeps representative or delayed records honest until their scheduled time.
+  if (LIVE_STATUS.test(status)) return Number.isFinite(startsAt) && startsAt > now ? "upcoming" : "live";
   if (FINISHED_STATUS.test(status)) return "finished";
-  if (fixture.startsAt && Number.isFinite(Date.parse(fixture.startsAt))) return "upcoming";
+  if (Number.isFinite(startsAt)) return "upcoming";
   return "unknown";
 }
 
@@ -66,23 +69,24 @@ export function isTouchlineLiveReadMetadata(value: unknown): value is TouchlineL
 export function touchlineMatchCentreDisplayState(
   fixture: TouchlineFixtureStateSource,
   metadata?: TouchlineLiveReadMetadata | null,
+  now?: number,
 ): TouchlineMatchCentreDisplayState {
-  const state = touchlineFixtureState(fixture);
+  const state = touchlineFixtureState(fixture, now);
   return metadata?.degraded && state === "live" ? "stale" : state;
 }
 
-export function selectTouchlineMatchCentreFixture<T extends TouchlineFixtureSelectionSource>(fixtures: T[], requestedFixtureId?: string | null): T | null {
+export function selectTouchlineMatchCentreFixture<T extends TouchlineFixtureSelectionSource>(fixtures: T[], requestedFixtureId?: string | null, now = Date.now()): T | null {
   const requested = requestedFixtureId ? fixtures.find((fixture) => fixture.id === requestedFixtureId || fixture.providerId === requestedFixtureId) : null;
   if (requested) return requested;
 
   const byDate = (first: T, second: T) =>
     (Date.parse(first.startsAt ?? "") || Number.POSITIVE_INFINITY) - (Date.parse(second.startsAt ?? "") || Number.POSITIVE_INFINITY);
   const latestFirst = (first: T, second: T) => -byDate(first, second);
-  const live = fixtures.filter((fixture) => touchlineFixtureState(fixture) === "live").sort(byDate)[0];
+  const live = fixtures.filter((fixture) => touchlineFixtureState(fixture, now) === "live").sort(byDate)[0];
   if (live) return live;
-  const upcoming = fixtures.filter((fixture) => touchlineFixtureState(fixture) === "upcoming").sort(byDate)[0];
+  const upcoming = fixtures.filter((fixture) => touchlineFixtureState(fixture, now) === "upcoming").sort(byDate)[0];
   if (upcoming) return upcoming;
-  return fixtures.filter((fixture) => touchlineFixtureState(fixture) === "finished").sort(latestFirst)[0] ?? null;
+  return fixtures.filter((fixture) => touchlineFixtureState(fixture, now) === "finished").sort(latestFirst)[0] ?? null;
 }
 
 export function touchlineMatchCentreHref(fixture: TouchlineFixture, locale?: string) {

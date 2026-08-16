@@ -70,7 +70,7 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(crestTrace, /r="46\.5"/);
   assert.doesNotMatch(crestTrace, /mask|clip-path|filter:|touch-action:\s*none/);
   assert.match(globalCss, /\[data-touchline-card-crest-trace="true"\][\s\S]*?pointer-events: none/);
-  assert.match(globalCss, /\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: touchline-card-perimeter-trace 8s/);
+  assert.match(globalCss, /\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: touchline-card-perimeter-trace 5\.8s/);
   assert.match(globalCss, /\[data-touchline-card-crest="true"\][\s\S]*?--touchline-club-crest-color/);
   assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-run="true"\][\s\S]*?animation: none !important/);
   assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-base="true"\][\s\S]*?opacity: \.72/);

@@ -26,13 +26,15 @@ function fixture(id: string, startsAt: string, status: string): TouchlineFixture
 }
 
 test("Match Centre always prioritizes live, then upcoming, then finished", () => {
+  const liveNow = Date.parse("2026-08-20T15:00:00Z");
   const finished = fixture("10", "2026-08-01T14:00:00Z", "Finished");
   const upcoming = fixture("20", "2026-08-21T14:00:00Z", "Not Started");
   const live = fixture("30", "2026-08-20T14:00:00Z", "2nd Half");
-  assert.equal(selectTouchlineMatchCentreFixture([finished, upcoming, live])?.id, live.id);
-  assert.equal(selectTouchlineMatchCentreFixture([finished, upcoming])?.id, upcoming.id);
-  assert.equal(selectTouchlineMatchCentreFixture([finished])?.id, finished.id);
-  assert.equal(touchlineFixtureState(live), "live");
+  assert.equal(selectTouchlineMatchCentreFixture([finished, upcoming, live], null, liveNow)?.id, live.id);
+  assert.equal(selectTouchlineMatchCentreFixture([finished, upcoming], null, liveNow)?.id, upcoming.id);
+  assert.equal(selectTouchlineMatchCentreFixture([finished], null, liveNow)?.id, finished.id);
+  assert.equal(touchlineFixtureState(live, liveNow), "live");
+  assert.equal(touchlineFixtureState(live, Date.parse("2026-08-19T15:00:00Z")), "upcoming");
 });
 
 test("Match Centre preserves an explicit fixture deep link", () => {
@@ -52,9 +54,9 @@ test("Match Centre never presents a degraded live snapshot as currently live", (
   } as const;
 
   assert.equal(isTouchlineLiveReadMetadata(staleSnapshot), true);
-  assert.equal(touchlineMatchCentreDisplayState(live, staleSnapshot), "stale");
-  assert.equal(touchlineMatchCentreDisplayState(upcoming, staleSnapshot), "upcoming");
-  assert.equal(touchlineMatchCentreDisplayState(live, { ...staleSnapshot, degraded: false }), "live");
+  assert.equal(touchlineMatchCentreDisplayState(live, staleSnapshot, Date.parse("2026-08-20T15:00:00Z")), "stale");
+  assert.equal(touchlineMatchCentreDisplayState(upcoming, staleSnapshot, Date.parse("2026-08-20T15:00:00Z")), "upcoming");
+  assert.equal(touchlineMatchCentreDisplayState(live, { ...staleSnapshot, degraded: false }, Date.parse("2026-08-20T15:00:00Z")), "live");
   assert.equal(isTouchlineLiveReadMetadata({ state: "persisted-live-snapshot", degraded: "true" }), false);
   assert.equal(isTouchlineLiveReadMetadata({ state: "unknown", degraded: true }), false);
 });

@@ -50,7 +50,9 @@ test("ClubHub crest motion is bounded, pointer-safe and static under reduced mot
   assert.match(directoryCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.clubCardTraceRun \{ animation: none; \}/);
   assert.match(directoryCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.clubCard:active \.logoWrap[\s\S]*?transform: none !important/);
   assert.match(cardTraceCss, /\[data-touchline-card-crest-trace="true"\][\s\S]*?pointer-events: none/);
-  assert.match(cardTraceCss, /\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: touchline-card-perimeter-trace 8s/);
+  assert.match(cardTraceCss, /\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: touchline-card-perimeter-trace 5\.8s/);
+  assert.match(cardTraceCss, /z-index: 0;[\s\S]*?inset: -3\.5%/);
+  assert.match(cardTraceCss, /\[data-touchline-card-crest-trace-host="true"\] > img[\s\S]*?z-index: 1/);
   assert.match(cardTraceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: none !important/);
   assert.doesNotMatch(profile, /touch-action:\s*none/);
   assert.doesNotMatch(directoryCss, /touch-action:\s*none/);

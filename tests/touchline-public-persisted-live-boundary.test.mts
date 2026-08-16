@@ -38,7 +38,7 @@ test("Live prefers a fresh snapshot, then a usable weekly schedule, and only mar
   assert.match(liveRoute, /degraded: true/);
   assert.match(matchCentre, /initialReadMetadata/);
   assert.match(matchCentre, /isTouchlineLiveReadMetadata/);
-  assert.match(matchCentre, /touchlineMatchCentreDisplayState\(fixture, readMetadata\) === "live"/);
+  assert.match(matchCentre, /touchlineMatchCentreDisplayState\(fixture, readMetadata, now\) === "live"/);
   assert.match(matchCentre, /dictionary\.liveDataUpdating/);
   assert.match(matchCentre, /dictionary\.lastVerified/);
   assert.doesNotMatch(matchCentre, /createFootballDataProvider|persistLiveScoreSnapshot|writeLiveScoreSnapshot/);

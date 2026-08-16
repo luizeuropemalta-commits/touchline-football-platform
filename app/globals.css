@@ -892,11 +892,13 @@ a, button { outline: none; }
 
 [data-touchline-card-crest-trace="true"] {
   position: absolute;
-  z-index: 2;
-  inset: 2%;
+  /* The travelling perimeter belongs outside/behind the crest artwork. It
+     must never draw across a club symbol, even when the artwork fills its box. */
+  z-index: 0;
+  inset: -3.5%;
   display: block;
-  width: 96%;
-  height: 96%;
+  width: 107%;
+  height: 107%;
   overflow: visible;
   color: var(--touchline-club-crest-color);
   pointer-events: none;
@@ -912,16 +914,21 @@ a, button { outline: none; }
 }
 
 [data-touchline-card-crest-trace-base="true"] {
-  stroke-width: 1.35;
-  opacity: .34;
+  stroke-width: 1.1;
+  opacity: .52;
 }
 
 [data-touchline-card-crest-trace-run="true"] {
-  stroke-width: 3.1;
-  stroke-dasharray: 2 98;
+  stroke-width: 2.2;
+  stroke-dasharray: 4 96;
   stroke-dashoffset: 0;
   opacity: 0;
-  animation: touchline-card-perimeter-trace 8s cubic-bezier(.22,.74,.28,1) infinite;
+  animation: touchline-card-perimeter-trace 5.8s cubic-bezier(.22,.74,.28,1) infinite;
+}
+
+[data-touchline-card-crest-trace-host="true"] > img {
+  position: relative;
+  z-index: 1;
 }
 
 /* A generic legacy pending flag must never desaturate a card that already has
