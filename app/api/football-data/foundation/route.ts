@@ -55,6 +55,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const requestedClubId = request.nextUrl.searchParams.get("clubId");
+    // Sync-run records include operational diagnostics and their raw provider
+    // payloads stay server-only.  This route publishes an explicit sanitized
+    // projection after authenticating the request above.
+    const admin = createAdminClient();
 
     const [{ data: competitions, error: competitionsError }, { data: clubs, error: clubsError }, { data: syncRuns, error: syncError }] =
       await Promise.all([
@@ -66,11 +70,13 @@ export async function GET(request: NextRequest) {
           .from("football_clubs")
           .select("id,provider,provider_team_id,competition_id,name,short_code,logo_url,country,founded,source_updated_at")
           .order("name", { ascending: true }),
-        client
-          .from("football_data_sync_runs")
-          .select("id,provider,sync_type,status,competition_id,club_id,started_at,completed_at,records_created,records_updated,records_skipped,error_message")
-          .order("started_at", { ascending: false })
-          .limit(5),
+        admin
+          ? admin
+              .from("football_data_sync_runs")
+              .select("id,provider,sync_type,status,competition_id,club_id,started_at,completed_at,records_created,records_updated,records_skipped,error_message")
+              .order("started_at", { ascending: false })
+              .limit(5)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
     if (competitionsError) throw new Error(`Could not read competitions: ${competitionsError.message}`);
