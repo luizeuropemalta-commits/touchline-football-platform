@@ -3789,6 +3789,9 @@ export default function ArenaClient({
   const selectedBenchFormationLocked = Boolean(selectedBench && isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, replacementTarget));
   const canSelectedBenchReplaceTarget = Boolean(selectedBench && replacementTarget && canBenchReplaceTarget(selectedBench, replacementTarget));
   const selectedBuilderClub = PREMIER_CLUB_VISUALS.find((club) => club.teamId === selectedBuilderClubKey) ?? PREMIER_CLUB_VISUALS[0];
+  // The Arena's general ClubHub navigation is a discovery action. It must not
+  // silently inherit the builder's initial Manchester City selection.
+  const allClubsHubHref = touchlineClubHubHref(siteLanguage);
   const selectedBuilderClubHubHref = clubHubHref(selectedBuilderClub, siteLanguage);
   const selectedFormation = arenaFormationDefinition(selectedFormationKey);
   const spotlightPlayerCard = spotlightPlayer
@@ -7123,7 +7126,7 @@ export default function ArenaClient({
                     ? (siteLanguage === "pt-BR" ? "Abrir Mercado de Jogadores" : "Open Player Market")
                     : (siteLanguage === "pt-BR" ? "Continuar Montagem do Elenco" : "Continue Squad Building")}
               </a>
-              <a href={selectedBuilderClubHubHref}>{siteLanguage === "pt-BR" ? "Voltar ao ClubHub" : "Return to Club Hub"}</a>
+              <a href={allClubsHubHref}>{siteLanguage === "pt-BR" ? "Ver todos os clubes" : "View all clubs"}</a>
             </div>
           </aside>
         ) : null}
@@ -7359,7 +7362,7 @@ export default function ArenaClient({
                 <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
                   ClubOwner
                 </a>
-                <a href={selectedBuilderClubHubHref}>
+                <a href={allClubsHubHref}>
                   {t("clubHub")}
                 </a>
                 <a href={touchlineArenaPanelHref("bench", siteLanguage)}>
@@ -8154,7 +8157,7 @@ export default function ArenaClient({
                   <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
                     {t("profile")}
                   </a>
-                  <a href={selectedBuilderClubHubHref}>
+                  <a href={allClubsHubHref}>
                     {t("clubHub")}
                   </a>
                   <a href={touchlineArenaPanelHref("bench", siteLanguage)}>
