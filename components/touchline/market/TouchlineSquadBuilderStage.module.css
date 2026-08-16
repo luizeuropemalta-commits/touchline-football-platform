@@ -255,12 +255,12 @@
 .remaining header strong { font-size: 13px; }
 .bench header small,
 .remaining header small { margin-left: auto; color: #aaff3e; font-weight: 900; }
-.benchSlots { display: grid; grid-template-columns: repeat(9, minmax(74px, 1fr)); gap: 7px; overflow-x: auto; padding-bottom: 3px; }
-.benchSlots > span,
-.remaining > div > span {
+.benchSlots { display: grid; grid-template-columns: repeat(9, minmax(88px, 1fr)); gap: 7px; overflow-x: auto; padding-bottom: 3px; }
+.benchSlots > div,
+.remaining > div > div {
   display: grid;
   gap: 4px;
-  min-height: 62px;
+  justify-items: center;
   align-content: center;
   padding: 8px;
   border: 1px solid rgba(255, 255, 255, .08);
@@ -269,12 +269,18 @@
   background: rgba(255, 255, 255, .025);
   text-align: center;
 }
+.benchSlots > div { min-height: 62px; }
+.benchSlots .filledBenchSlot,
+.remaining > div > div { min-height: 184px; }
 .benchSlots .filledBenchSlot { color: #fff; border-color: rgba(170, 255, 62, .25); background: rgba(170, 255, 62, .07); }
+.rosterCard { display: block; width: min(100%, 76px); aspect-ratio: 430 / 691; }
+.rosterCard > * { width: 100%; }
 .benchSlots b,
 .remaining b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
 .benchSlots small,
 .remaining small { color: #91a099; font-size: 7px; text-transform: uppercase; }
-.remaining > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 7px; }
+.remaining > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 7px; }
+.remaining .rosterCard { width: min(100%, 96px); }
 .remaining p { margin: 0; color: #89968f; font-size: 11px; }
 
 @media (max-width: 1050px) {
@@ -298,7 +304,7 @@
   .coachCard > * { width: 68px; }
   .coachBrief { text-align: left; }
   .summary { align-self: stretch; margin: 0; }
-  .benchSlots { grid-template-columns: repeat(9, 78px); }
+  .benchSlots { grid-template-columns: repeat(9, 88px); }
 }
 
 @media (max-height: 480px) and (orientation: landscape) {

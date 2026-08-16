@@ -154,6 +154,11 @@ test("the Market keeps a recoverable contract draft but only the existing checko
 
 test("matchday bench and remaining squad are disjoint views of the same authoritative roster", async () => {
   const source = await readFile(arenaClientPath, "utf8");
+  const stage = await readFile(stagePath, "utf8");
   assert.match(source, /const matchdayBenchIds = useMemo\(\(\) => new Set\(matchdayBenchPlayers\.map/);
   assert.match(source, /benchPlayers\.filter\(\(bench\) => !matchdayBenchIds\.has\(bench\.id\)\)/);
+  assert.match(source, /bench=\{matchdayBenchPlayers\.map\([\s\S]*?card: benchOptionToPreviewCard/);
+  assert.match(source, /remainingSquad=\{reserveVaultPlayers\.map\([\s\S]*?card: benchOptionToPreviewCard/);
+  assert.match(stage, /export type TouchlineSquadBuilderBenchPlayer = \{[\s\S]*?card: TouchlineEliteExactPlayer;/);
+  assert.match(stage, /className=\{styles\.rosterCard\}[\s\S]*?<TouchlineEliteExactCard/);
 });

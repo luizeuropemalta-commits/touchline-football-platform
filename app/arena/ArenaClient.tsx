@@ -8548,8 +8548,18 @@ export default function ArenaClient({
                       role: player.role,
                       card: arenaCardToPlayer(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.name) : undefined),
                     }))}
-                    bench={matchdayBenchPlayers.map((player) => ({ id: player.id, shortName: player.shortName, position: player.position }))}
-                    remainingSquad={reserveVaultPlayers.map((player) => ({ id: player.id, shortName: player.shortName, position: player.position }))}
+                    bench={matchdayBenchPlayers.map((player) => ({
+                      id: player.id,
+                      shortName: player.shortName,
+                      position: player.position,
+                      card: benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.shortName) : undefined),
+                    }))}
+                    remainingSquad={reserveVaultPlayers.map((player) => ({
+                      id: player.id,
+                      shortName: player.shortName,
+                      position: player.position,
+                      card: benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.shortName) : undefined),
+                    }))}
                     contractedCount={authoritativeOwnedSquadCount}
                     selectedRole={marketPositionFilter}
                     onSelectRole={(role) => {

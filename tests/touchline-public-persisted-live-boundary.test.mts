@@ -30,8 +30,11 @@ test("live scores read one durable snapshot or honest partial schedule without i
   );
 });
 
-test("Live preserves server-calculated freshness and visibly downgrades stale live labels", () => {
-  assert.match(liveRoute, /degraded: Date\.now\(\) - liveSnapshot\.storedAt > LIVE_SNAPSHOT_STALE_AFTER_MS/);
+test("Live prefers a fresh snapshot, then a usable weekly schedule, and only marks the final fallback stale", () => {
+  assert.match(liveRoute, /const snapshotIsFresh = Boolean\(/);
+  assert.match(liveRoute, /liveSnapshot\?\.fixtures\.length && snapshotIsFresh/);
+  assert.match(liveRoute, /state: "partial-persisted-schedule"[\s\S]*?degraded: false/);
+  assert.match(liveRoute, /if \(liveSnapshot\?\.fixtures\.length\) \{[\s\S]*?degraded: true/);
   assert.match(liveRoute, /degraded: true/);
   assert.match(matchCentre, /initialReadMetadata/);
   assert.match(matchCentre, /isTouchlineLiveReadMetadata/);

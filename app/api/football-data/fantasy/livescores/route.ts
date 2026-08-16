@@ -43,14 +43,19 @@ export async function GET() {
     liveSnapshot = null;
   }
 
-  // An empty last-known-good Live snapshot must never hide a valid persisted
-  // weekly schedule. It is common before the first kick-off, when the score
-  // feed has been initialised but contains no fixtures yet.
-  if (liveSnapshot?.fixtures.length) {
+  const snapshotIsFresh = Boolean(
+    liveSnapshot?.fixtures.length
+    && Date.now() - liveSnapshot.storedAt <= LIVE_SNAPSHOT_STALE_AFTER_MS,
+  );
+
+  // A fresh last-known-good live snapshot is the only source that may replace
+  // the weekly schedule. A stale snapshot must never make the normal match
+  // centre look degraded when a valid persisted schedule is available.
+  if (liveSnapshot?.fixtures.length && snapshotIsFresh) {
     return response(liveSnapshot.fixtures, {
       state: "persisted-live-snapshot",
       fetchedAt: liveSnapshot.fetchedAt,
-      degraded: Date.now() - liveSnapshot.storedAt > LIVE_SNAPSHOT_STALE_AFTER_MS,
+      degraded: false,
     });
   }
 
@@ -66,6 +71,17 @@ export async function GET() {
       state: "partial-persisted-schedule",
       // Schedule rows do not yet carry a coherent shared run/version. Do not
       // fabricate a request-time freshness timestamp.
+      degraded: false,
+    });
+  }
+
+  // Retain a stale snapshot only when there is no usable schedule at all. The
+  // Match Centre can then state the degradation honestly instead of silently
+  // treating laboratory or last-known-good data as fresh live scoring.
+  if (liveSnapshot?.fixtures.length) {
+    return response(liveSnapshot.fixtures, {
+      state: "persisted-live-snapshot",
+      fetchedAt: liveSnapshot.fetchedAt,
       degraded: true,
     });
   }

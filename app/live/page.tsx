@@ -53,6 +53,6 @@ export default async function TouchLineLivePage({
     // The server page starts from the persisted schedule, not from a live
     // snapshot. The client endpoint can replace this only with its own
     // server-calculated freshness metadata.
-    initialReadMetadata={{ state: "partial-persisted-schedule", degraded: true }}
+    initialReadMetadata={{ state: "partial-persisted-schedule", degraded: false }}
   />;
 }

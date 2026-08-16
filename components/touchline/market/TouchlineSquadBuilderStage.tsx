@@ -23,6 +23,7 @@ export type TouchlineSquadBuilderBenchPlayer = {
   id: string;
   shortName: string;
   position: string;
+  card: TouchlineEliteExactPlayer;
 };
 
 type FormationSlot = {
@@ -245,14 +246,48 @@ export default function TouchlineSquadBuilderStage({
         <div className={styles.benchSlots}>
           {Array.from({ length: TOUCHLINE_SQUAD_RULES.bench }, (_, index) => {
             const player = bench[index];
-            return <span key={player?.id ?? `empty-bench-${index}`} className={player ? styles.filledBenchSlot : ""}><b>{player?.shortName ?? "+"}</b><small>{player?.position ?? (portuguese ? "Vaga" : "Slot")}</small></span>;
+            return (
+              <div key={player?.id ?? `empty-bench-${index}`} className={player ? styles.filledBenchSlot : ""}>
+                {player ? (
+                  <div className={styles.rosterCard} aria-hidden="true">
+                    <TouchlineEliteExactCard
+                      player={player.card}
+                      rankingMode="live"
+                      optimizeForLiveCompact
+                      enableInteractiveNeon={false}
+                      showCardActions={false}
+                      showProfileAction={false}
+                      showSocialMetrics={false}
+                    />
+                  </div>
+                ) : null}
+                <b>{player?.shortName ?? "+"}</b>
+                <small>{player?.position ?? (portuguese ? "Vaga" : "Slot")}</small>
+              </div>
+            );
           })}
         </div>
       </section>
 
       <section className={styles.remaining} aria-label={portuguese ? "Elenco restante" : "Remaining squad"}>
         <header><strong>{portuguese ? "Elenco restante" : "Remaining squad"}</strong><small>{remainingSquad.length}/{TOUCHLINE_SQUAD_RULES.reserveVault}</small></header>
-        <div>{remainingSquad.length ? remainingSquad.map((player) => <span key={player.id}><b>{player.shortName}</b><small>{player.position}</small></span>) : <p>{portuguese ? "Os próximos contratos aparecerão aqui depois de completar o time titular e o banco." : "New contracts appear here after the Starting XI and bench are complete."}</p>}</div>
+        <div>{remainingSquad.length ? remainingSquad.map((player) => (
+          <div key={player.id}>
+            <div className={styles.rosterCard} aria-hidden="true">
+              <TouchlineEliteExactCard
+                player={player.card}
+                rankingMode="live"
+                optimizeForLiveCompact
+                enableInteractiveNeon={false}
+                showCardActions={false}
+                showProfileAction={false}
+                showSocialMetrics={false}
+              />
+            </div>
+            <b>{player.shortName}</b>
+            <small>{player.position}</small>
+          </div>
+        )) : <p>{portuguese ? "Os próximos contratos aparecerão aqui depois de completar o time titular e o banco." : "New contracts appear here after the Starting XI and bench are complete."}</p>}</div>
       </section>
     </section>
   );
