@@ -538,6 +538,11 @@ export default async function TouchLinePlayerCardRankingsPage({
           padding-bottom: 18px;
         }
 
+        .tl-card-rankings-board-head > div > span {
+          display: block;
+          margin-bottom: 6px;
+        }
+
         .tl-card-rankings-list {
           display: grid;
           gap: 10px;
