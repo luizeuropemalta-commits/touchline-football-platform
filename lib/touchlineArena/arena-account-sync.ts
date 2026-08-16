@@ -112,6 +112,15 @@ function rosterCardForPlayer(
   player: ArenaLineupPlayer,
   roster: ClubOwnerSquadCard[],
 ) {
+  const inventoryId = normalizeTouchlineMarketInventoryId(player.card?.inventoryId);
+  if (inventoryId) {
+    const inventoryMatches = roster.filter(
+      (card) => normalizeTouchlineMarketInventoryId(card.inventoryId) === inventoryId,
+    );
+    if (inventoryMatches.length === 1) return inventoryMatches[0];
+    return null;
+  }
+
   const directId = normalizeIdentity(player.id);
   const directMatches = roster.filter((card) => normalizeIdentity(card.id) === directId);
   if (directMatches.length === 1) return directMatches[0];
@@ -131,16 +140,27 @@ export function mergeArenaLineupInventoryFromRoster(
 ) {
   let changed = false;
   const mergedPlayers = players.map((player) => {
-    if (!player.card || normalizeTouchlineMarketInventoryId(player.card.inventoryId)) return player;
+    if (!player.card) return player;
     const rosterCard = rosterCardForPlayer(player, roster);
     const inventoryId = normalizeTouchlineMarketInventoryId(rosterCard?.inventoryId);
-    if (!inventoryId) return player;
+    if (!rosterCard || !inventoryId) return player;
 
     changed = true;
     return {
       ...player,
+      name: rosterCard.name,
+      shortName: rosterCard.shortName,
       card: {
         ...player.card,
+        playerName: rosterCard.name,
+        shirtNumber: rosterCard.shirtNumber,
+        clubName: rosterCard.clubName,
+        position: rosterCard.position,
+        countryCode3: rosterCard.countryCode3,
+        cardTier: rosterCard.cardTier ?? null,
+        cardPriceVersion: rosterCard.cardPriceVersion ?? null,
+        cardPriceAuthority: rosterCard.cardPriceAuthority ?? null,
+        editorialCard: rosterCard.editorialCard ?? null,
         inventoryId,
       },
     };

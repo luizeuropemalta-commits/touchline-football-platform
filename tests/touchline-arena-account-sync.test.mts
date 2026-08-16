@@ -161,6 +161,42 @@ describe("TouchLine Arena legacy inventory reconciliation", () => {
     assert.equal(merged[0].card?.inventoryId, EXISTING_INVENTORY_ID);
   });
 
+  it("hydrates a saved field card from the canonical active-contract presentation", () => {
+    const player = fieldPlayer({
+      card: {
+        ...fieldPlayer().card!,
+        inventoryId: INVENTORY_ID,
+        cardTier: "ruby-red",
+        cardPriceAuthority: null,
+        editorialCard: null,
+      },
+    });
+    const editorialCard = {
+      publicationStatus: "published" as const,
+      tierKey: "diamond-gold" as const,
+      nominalPriceGbp: 15,
+      cardPriceVersion: "editorial-v1",
+    };
+    const players = [player];
+    const merged = mergeArenaLineupInventoryFromRoster(players, [{
+      ...ALISSON_CARD,
+      inventoryId: INVENTORY_ID,
+      cardTier: "diamond-gold",
+      cardPriceVersion: "editorial-v1",
+      cardPriceAuthority: "active-contract",
+      editorialCard,
+    }]);
+
+    assert.notEqual(merged, players);
+    assert.equal(merged[0].x, player.x);
+    assert.equal(merged[0].y, player.y);
+    assert.equal(merged[0].card?.templateUrl, player.card?.templateUrl);
+    assert.equal(merged[0].card?.inventoryId, INVENTORY_ID);
+    assert.equal(merged[0].card?.cardTier, "diamond-gold");
+    assert.equal(merged[0].card?.cardPriceAuthority, "active-contract");
+    assert.deepEqual(merged[0].card?.editorialCard, editorialCard);
+  });
+
   it("does not merge a same-name card from another club or a malformed inventory id", () => {
     const otherClub = [{
       ...ALISSON_CARD,

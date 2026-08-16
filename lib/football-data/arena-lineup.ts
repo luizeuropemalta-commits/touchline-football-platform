@@ -1,5 +1,6 @@
 import type { TouchlinePublicFantasyLineupMember } from "./public-fantasy-fixture";
 import type { TouchlineCardTierKey } from "../touchlineArena/card-rules";
+import type { TouchlinePublicEditorialCardPresentation } from "../touchlineArena/editorial-card-profile";
 
 export type ArenaLineupRole = "forward" | "midfielder" | "defender" | "goalkeeper";
 
@@ -30,6 +31,8 @@ export type ArenaLineupPlayer = {
     cardPriceVersion?: string | null;
     /** Only active server-side contracts may freeze the card classification. */
     cardPriceAuthority?: "active-contract" | null;
+    /** Canonical public presentation published by the editorial card workflow. */
+    editorialCard?: TouchlinePublicEditorialCardPresentation | null;
     inventoryId?: string | null;
     matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards", string | number | null>>;
   };

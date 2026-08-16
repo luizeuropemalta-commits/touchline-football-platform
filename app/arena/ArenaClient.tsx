@@ -7415,7 +7415,14 @@ export default function ArenaClient({
                     const benchId = event.dataTransfer.getData("text/touchline-bench-id") || draggingBenchId;
                     if (benchId) handleBenchDrop(player, benchId);
                   }}
+                  onClickCapture={(event) => {
+                    if (!isQuickSubstitutionOpen) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleFieldPlayerClick(player);
+                  }}
                   onClick={(event) => {
+                    if (isQuickSubstitutionOpen) return;
                     if ((event.target as HTMLElement).closest("a,button")) return;
                     handleFieldPlayerClick(player);
                   }}
