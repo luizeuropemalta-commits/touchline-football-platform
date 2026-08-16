@@ -235,6 +235,15 @@ type BenchOption = {
   status: "ready" | "hot" | "watch" | "risk";
 };
 
+type QuickSubPointerDragState = {
+  pointerId: number;
+  benchId: string;
+  startX: number;
+  startY: number;
+  active: boolean;
+  timerId: number | null;
+};
+
 type ArenaClubSymbol = {
   id: string;
   fixtureId: string;
@@ -3428,6 +3437,8 @@ export default function ArenaClient({
   const pendingCardHydrationClubIdsRef = useRef(new Set<string>());
   const lastCardHydrationSignatureByClubRef = useRef(new Map<string, string>());
   const dragStateRef = useRef<ArenaDragState | null>(null);
+  const quickSubPointerDragRef = useRef<QuickSubPointerDragState | null>(null);
+  const suppressQuickSubClickRef = useRef<string | null>(null);
   const [players, setPlayers] = useState<ArenaPlayer[]>(DEFAULT_ARENA_PLAYERS);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [spotlightPlayerId, setSpotlightPlayerId] = useState<string | null>(null);
@@ -3488,6 +3499,7 @@ export default function ArenaClient({
   const [selectedBenchId, setSelectedBenchId] = useState("");
   const [draggingBenchId, setDraggingBenchId] = useState<string | null>(null);
   const [replacementTargetId, setReplacementTargetId] = useState<string | null>(null);
+  const [isQuickSubstitutionConfirmationOpen, setIsQuickSubstitutionConfirmationOpen] = useState(false);
   const [quickSubstitutionSession, setQuickSubstitutionSession] = useState<TouchlineQuickSubstitutionSessionState | null>(null);
   const [pendingContractReleaseTargetId, setPendingContractReleaseTargetId] = useState<string | null>(null);
   const [isDemoLineup, setIsDemoLineup] = useState(false);
@@ -3592,6 +3604,18 @@ export default function ArenaClient({
     [benchPlayers, matchdayBenchIds],
   );
   const isQuickSubstitutionOpen = activeArenaPanel === "bench";
+  useEffect(() => {
+    if (!isQuickSubstitutionConfirmationOpen) return;
+    function handleQuickSubConfirmationKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setIsQuickSubstitutionConfirmationOpen(false);
+      setSelectedBenchId("");
+      setReplacementTargetId(null);
+      setDraggingBenchId(null);
+    }
+    window.addEventListener("keydown", handleQuickSubConfirmationKeyDown);
+    return () => window.removeEventListener("keydown", handleQuickSubConfirmationKeyDown);
+  }, [isQuickSubstitutionConfirmationOpen]);
   // Keep the large legacy action panel closed during Quick Substitution while
   // preserving the full panel union for the existing overlay's render types.
   const arenaOverlayPanel = activeArenaPanel && activeArenaPanel !== "bench" ? activeArenaPanel : null;
@@ -3972,11 +3996,12 @@ export default function ArenaClient({
   ]);
 
   // Owning a roster is not permission to paint it on an idle Arena. The owner
-  // card layer mounts only for an explicit matchday/fixture journey (or the
-  // isolated demo QA route), so saved cards and the coach can never flash over
-  // the empty field while account and roster state are being reconciled.
+  // card layer mounts only for an explicit matchday/fixture journey, an active
+  // Quick Sub session (or the isolated demo QA route), so saved cards and the
+  // coach can never flash over the empty field while account and roster state
+  // are being reconciled.
   const shouldRenderArenaOwnerLayer = shouldRenderPlayers
-    && (isArenaMatchdayViewActive || isDemoLineup)
+    && (isArenaMatchdayViewActive || isQuickSubstitutionSessionActive || isDemoLineup)
     && standaloneExperience !== "live"
     && !isCoachSelectionRequired;
   const selectedLiveHomeCoachSlot = useMemo(
@@ -6025,10 +6050,11 @@ export default function ArenaClient({
     if (activeArenaPanel === "bench") {
       setReplacementTargetId(player.id);
       setPendingContractReleaseTargetId(null);
-      setSaveStatus(selectedBench
-        ? `${selectedBench.shortName} · ${t("selectedForThisGame")} · ${player.shortName}`
-        : `${player.shortName} · ${t("chooseReserve")}`);
-      setSpotlightPlayerId(player.id);
+      if (selectedBench) {
+        requestQuickSubstitutionConfirmation(selectedBench, player);
+      } else {
+        setSaveStatus(`${player.shortName} · ${t("chooseReserve")}`);
+      }
       return;
     }
     // A contracted player on the pitch always opens the shared, centred card
@@ -6039,13 +6065,36 @@ export default function ArenaClient({
   function prepareBenchReplacement(bench: BenchOption, target?: ArenaPlayer | null) {
     setSelectedBenchId(bench.id);
     if (target) {
-      setReplacementTargetId(target.id);
-      setSelectedPlayerId(target.id);
-      setPendingContractReleaseTargetId(null);
-      setSaveStatus(`${bench.shortName} → ${target.shortName} · ${t("confirmSubstitution")}`);
+      requestQuickSubstitutionConfirmation(bench, target);
+      return;
+    }
+    if (replacementTarget) {
+      requestQuickSubstitutionConfirmation(bench, replacementTarget);
       return;
     }
     setSaveStatus(`${bench.shortName} ${t("selectedFromBench")}`);
+  }
+
+  function requestQuickSubstitutionConfirmation(bench: BenchOption, target: ArenaPlayer) {
+    if (isBenchFormationLocked(bench, quickSubstitutionInteractivePlayers, selectedFormationKey, target) || !canBenchReplaceTarget(bench, target)) {
+      setSaveStatus(`${bench.shortName} ${t("locked")}: ${t("choosePosition")} ${positionGroupLabel(arenaPositionGroup(target.card?.position, target.role), t)}`);
+      return;
+    }
+    setSelectedBenchId(bench.id);
+    setReplacementTargetId(target.id);
+    setSelectedPlayerId(target.id);
+    setPendingContractReleaseTargetId(null);
+    setIsQuickSubstitutionConfirmationOpen(true);
+    setSaveStatus(`${bench.shortName} → ${target.shortName} · ${t("confirmSubstitution")}`);
+  }
+
+  function cancelQuickSubstitutionConfirmation() {
+    setIsQuickSubstitutionConfirmationOpen(false);
+    setSelectedBenchId("");
+    setReplacementTargetId(null);
+    setDraggingBenchId(null);
+    setPendingContractReleaseTargetId(null);
+    setSaveStatus(siteLanguage === "pt-BR" ? "Substituição cancelada. O jogo continua." : "Substitution cancelled. The match continues.");
   }
 
   function handleBenchDrop(target: ArenaPlayer, benchId: string) {
@@ -6057,6 +6106,66 @@ export default function ArenaClient({
       return;
     }
     prepareBenchReplacement(bench, target);
+  }
+
+  function clearQuickSubPointerDrag() {
+    const pointerDrag = quickSubPointerDragRef.current;
+    if (pointerDrag?.timerId !== null && pointerDrag?.timerId !== undefined) window.clearTimeout(pointerDrag.timerId);
+    quickSubPointerDragRef.current = null;
+    setDraggingBenchId(null);
+  }
+
+  function handleQuickSubPointerDown(event: ReactPointerEvent<HTMLButtonElement>, bench: BenchOption) {
+    if (event.pointerType === "mouse") return;
+    clearQuickSubPointerDrag();
+    const dragElement = event.currentTarget;
+    const pointerDrag: QuickSubPointerDragState = {
+      pointerId: event.pointerId,
+      benchId: bench.id,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+      timerId: null,
+    };
+    pointerDrag.timerId = window.setTimeout(() => {
+      const current = quickSubPointerDragRef.current;
+      if (!current || current.pointerId !== pointerDrag.pointerId || current.benchId !== bench.id) return;
+      current.active = true;
+      current.timerId = null;
+      suppressQuickSubClickRef.current = bench.id;
+      setDraggingBenchId(bench.id);
+      if (!dragElement.hasPointerCapture(event.pointerId)) dragElement.setPointerCapture(event.pointerId);
+    }, 260);
+    quickSubPointerDragRef.current = pointerDrag;
+  }
+
+  function handleQuickSubPointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const pointerDrag = quickSubPointerDragRef.current;
+    if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+    if (!pointerDrag.active) {
+      const distance = Math.hypot(event.clientX - pointerDrag.startX, event.clientY - pointerDrag.startY);
+      if (distance > 10) clearQuickSubPointerDrag();
+      return;
+    }
+    event.preventDefault();
+  }
+
+  function handleQuickSubPointerUp(event: ReactPointerEvent<HTMLButtonElement>) {
+    const pointerDrag = quickSubPointerDragRef.current;
+    if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) return;
+    const wasActive = pointerDrag.active;
+    const benchId = pointerDrag.benchId;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    clearQuickSubPointerDrag();
+    if (!wasActive) return;
+    event.preventDefault();
+    const dropTarget = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-substitution-target-id]");
+    const targetId = dropTarget?.dataset.substitutionTargetId;
+    const target = targetId ? quickSubstitutionInteractivePlayers.find((player) => player.id === targetId) : null;
+    if (target) handleBenchDrop(target, benchId);
+    window.setTimeout(() => {
+      if (suppressQuickSubClickRef.current === benchId) suppressQuickSubClickRef.current = null;
+    }, 0);
   }
 
   function moveFieldPlayerFromPointer(player: ArenaPlayer, clientX: number, clientY: number) {
@@ -6493,6 +6602,7 @@ export default function ArenaClient({
 
   function openArenaPanel(panel: ArenaPanelKey) {
     window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, panel));
+    setIsQuickSubstitutionConfirmationOpen(false);
     if (panel === "live") {
       setActiveArenaPanel(null);
       setIsEditorOpen(false);
@@ -6511,6 +6621,9 @@ export default function ArenaClient({
 
   function closeArenaPanel() {
     window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, null));
+    clearQuickSubPointerDrag();
+    setIsQuickSubstitutionConfirmationOpen(false);
+    setSelectedBenchId("");
     updateLiveDockVisibility(false);
     setActiveArenaPanel(null);
     setIsEditorOpen(false);
@@ -6563,6 +6676,7 @@ export default function ArenaClient({
       }
 
       setQuickSubstitutionSession(result.state);
+      setIsQuickSubstitutionConfirmationOpen(false);
       setSelectedBenchId("");
       setReplacementTargetId(null);
       setSelectedPlayerId(replacementTarget.id);
@@ -6591,6 +6705,7 @@ export default function ArenaClient({
     persistArenaRoster(nextPlayers, nextBench);
     setSelectedPlayerId(incomingPlayer.id);
     setReplacementTargetId(incomingPlayer.id);
+    setIsQuickSubstitutionConfirmationOpen(false);
     setPendingContractReleaseTargetId(null);
     setSelectedBenchId(outgoingBench.id);
     setIsDemoLineup(false);
@@ -7260,6 +7375,7 @@ export default function ArenaClient({
                   className={`arena-field-player ${selectedPlayerId === player.id ? "is-selected" : ""}${isQuickSubstitutionOpen && selectedBench && canBenchReplaceTarget(selectedBench, player) && !isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, player) ? " is-substitution-eligible" : ""}${isQuickSubstitutionOpen && replacementTargetId === player.id ? " is-substitution-target" : ""}`}
                   data-camera={arenaLoopCameraProfile(loopCameraIndex).id}
                   data-editing={isEditorOpen}
+                  data-substitution-target-id={isQuickSubstitutionOpen ? player.id : undefined}
                   style={{
                     left: `${fieldPosition.x}%`,
                     top: `${fieldPosition.y}%`,
@@ -7273,6 +7389,17 @@ export default function ArenaClient({
                   onPointerMove={(event) => handleFieldPlayerPointerMove(event, player)}
                   onPointerUp={handleFieldPlayerPointerUp}
                   onPointerCancel={handleFieldPlayerPointerUp}
+                  onDragOver={(event) => {
+                    if (!isQuickSubstitutionOpen || !draggingBenchId) return;
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }}
+                  onDrop={(event) => {
+                    if (!isQuickSubstitutionOpen) return;
+                    event.preventDefault();
+                    const benchId = event.dataTransfer.getData("text/touchline-bench-id") || draggingBenchId;
+                    if (benchId) handleBenchDrop(player, benchId);
+                  }}
                   onClick={(event) => {
                     if ((event.target as HTMLElement).closest("a,button")) return;
                     handleFieldPlayerClick(player);
@@ -7692,6 +7819,77 @@ export default function ArenaClient({
           )}
         </aside> : null}
 
+        {isQuickSubstitutionOpen && isQuickSubstitutionConfirmationOpen && selectedBench && replacementTarget ? (
+          <div
+            className="arena-quick-sub-confirmation"
+            role="presentation"
+            onPointerDown={(event) => {
+              if (event.target === event.currentTarget) cancelQuickSubstitutionConfirmation();
+            }}
+          >
+            <section
+              className="arena-quick-sub-confirmation-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="arena-quick-sub-confirmation-title"
+            >
+              <header>
+                <span>{siteLanguage === "pt-BR" ? "SUBSTITUIÇÃO" : "SUBSTITUTION"}</span>
+                <h2 id="arena-quick-sub-confirmation-title">
+                  {siteLanguage === "pt-BR" ? "Confirmar a troca?" : "Confirm the change?"}
+                </h2>
+                <button type="button" onClick={cancelQuickSubstitutionConfirmation} aria-label={siteLanguage === "pt-BR" ? "Cancelar substituição" : "Cancel substitution"}>
+                  <X aria-hidden="true" />
+                </button>
+              </header>
+              <div className="arena-quick-sub-confirmation-cards">
+                <article className="is-outgoing">
+                  <small>{siteLanguage === "pt-BR" ? "SAI" : "OFF"}</small>
+                  <span aria-hidden="true">
+                    {replacementTarget.card ? (
+                      <TouchlineEliteExactCard
+                        player={arenaCardToPlayer(replacementTarget, isDemoLineup ? touchlineDemoTierForPlayer(replacementTarget.id, replacementTarget.name) : undefined)}
+                        layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
+                        labels={cardLabels}
+                        rankingMode={isDemoLineup ? "preview" : "live"}
+                        showProfileAction={false}
+                        showSocialMetrics={false}
+                        optimizeForLiveCompact
+                      />
+                    ) : null}
+                  </span>
+                  <strong>{replacementTarget.name}</strong>
+                </article>
+                <div className="arena-quick-sub-confirmation-arrow" aria-hidden="true">→</div>
+                <article className="is-incoming">
+                  <small>{siteLanguage === "pt-BR" ? "ENTRA" : "ON"}</small>
+                  <span aria-hidden="true">
+                    <TouchlineEliteExactCard
+                      player={benchOptionToPreviewCard(selectedBench, isDemoLineup ? touchlineDemoTierForPlayer(selectedBench.id, selectedBench.name) : undefined)}
+                      layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
+                      labels={cardLabels}
+                      rankingMode={isDemoLineup ? "preview" : "live"}
+                      showProfileAction={false}
+                      showSocialMetrics={false}
+                    />
+                  </span>
+                  <strong>{selectedBench.name}</strong>
+                </article>
+              </div>
+              <p>{siteLanguage === "pt-BR" ? "O jogador que sair não poderá voltar nesta partida." : "The player leaving the pitch cannot return in this match."}</p>
+              <footer>
+                <button type="button" className="is-cancel" onClick={cancelQuickSubstitutionConfirmation}>
+                  {siteLanguage === "pt-BR" ? "Cancelar" : "Cancel"}
+                </button>
+                <button type="button" className="is-confirm" onClick={confirmBenchSwap}>
+                  <Check aria-hidden="true" />
+                  {siteLanguage === "pt-BR" ? "Confirmar substituição" : "Confirm substitution"}
+                </button>
+              </footer>
+            </section>
+          </div>
+        ) : null}
+
         {standalonePanel !== "live" && isQuickSubstitutionOpen ? (
           <section
             className="arena-quick-sub-rail"
@@ -7739,8 +7937,19 @@ export default function ArenaClient({
                           setDraggingBenchId(bench.id);
                         }}
                         onDragEnd={() => setDraggingBenchId(null)}
+                        onPointerDown={(event) => {
+                          if (isLocked) return;
+                          handleQuickSubPointerDown(event, bench);
+                        }}
+                        onPointerMove={handleQuickSubPointerMove}
+                        onPointerUp={handleQuickSubPointerUp}
+                        onPointerCancel={() => clearQuickSubPointerDrag()}
                         onClick={() => {
                           if (isLocked) return;
+                          if (suppressQuickSubClickRef.current === bench.id) {
+                            suppressQuickSubClickRef.current = null;
+                            return;
+                          }
                           prepareBenchReplacement(bench);
                         }}
                       >
@@ -7799,7 +8008,7 @@ export default function ArenaClient({
                   <button
                     type="button"
                     className="arena-quick-sub-confirm"
-                    onClick={confirmBenchSwap}
+                    onClick={() => requestQuickSubstitutionConfirmation(selectedBench, replacementTarget)}
                     disabled={selectedBenchFormationLocked || !canSelectedBenchReplaceTarget}
                   >
                     <Check aria-hidden="true" />
@@ -10483,6 +10692,8 @@ export default function ArenaClient({
           transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, opacity .16s ease;
         }
 
+        .arena-quick-sub-card { touch-action: pan-y pinch-zoom; }
+
         .arena-quick-sub-card:hover,
         .arena-quick-sub-card:focus-visible,
         .arena-quick-sub-card.is-selected,
@@ -10509,6 +10720,91 @@ export default function ArenaClient({
         .arena-quick-sub-coach > span > article,
         .arena-quick-sub-coach > span > div { width: 100% !important; height: 100% !important; }
         .arena-quick-sub-coach > b { color: #ffe88c; }
+
+        .arena-quick-sub-confirmation {
+          position: fixed;
+          inset: 0;
+          z-index: 300000;
+          display: grid;
+          place-items: center;
+          overflow: auto;
+          overscroll-behavior: contain;
+          background: rgba(0, 8, 7, .76);
+          padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(12px);
+        }
+
+        .arena-quick-sub-confirmation-dialog {
+          width: min(680px, 100%);
+          max-height: calc(100dvh - 32px);
+          overflow: auto;
+          border: 1px solid rgba(181,255,75,.55);
+          border-radius: 24px;
+          background: radial-gradient(circle at 50% 0%, rgba(181,255,75,.13), transparent 44%), rgba(1,16,14,.98);
+          box-shadow: 0 24px 80px rgba(0,0,0,.62), 0 0 36px rgba(181,255,75,.12);
+          padding: 20px;
+          color: #f4ffc9;
+        }
+
+        .arena-quick-sub-confirmation-dialog > header {
+          position: relative;
+          display: grid;
+          gap: 4px;
+          padding-right: 44px;
+        }
+
+        .arena-quick-sub-confirmation-dialog > header > span { color: #b5ff4b; font-size: 11px; font-weight: 1000; letter-spacing: .16em; }
+        .arena-quick-sub-confirmation-dialog > header h2 { margin: 0; font-size: clamp(24px, 4vw, 38px); line-height: 1; }
+        .arena-quick-sub-confirmation-dialog > header button {
+          position: absolute;
+          top: 0;
+          right: 0;
+          display: grid;
+          width: 38px;
+          height: 38px;
+          place-items: center;
+          border: 1px solid rgba(181,255,75,.32);
+          border-radius: 50%;
+          background: rgba(255,255,255,.05);
+          color: #efffc1;
+        }
+
+        .arena-quick-sub-confirmation-cards {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          gap: 18px;
+          align-items: center;
+          margin-top: 20px;
+        }
+
+        .arena-quick-sub-confirmation-cards article { display: grid; min-width: 0; justify-items: center; gap: 8px; }
+        .arena-quick-sub-confirmation-cards article > small { font-size: 11px; font-weight: 1000; letter-spacing: .15em; }
+        .arena-quick-sub-confirmation-cards article.is-outgoing > small { color: #ff8b8b; }
+        .arena-quick-sub-confirmation-cards article.is-incoming > small { color: #b5ff4b; }
+        .arena-quick-sub-confirmation-cards article > span { display: block; width: min(180px, 100%); aspect-ratio: 430 / 691; }
+        .arena-quick-sub-confirmation-cards article > span > div { width: 100% !important; height: 100% !important; }
+        .arena-quick-sub-confirmation-cards article > strong { width: 100%; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+        .arena-quick-sub-confirmation-arrow { color: #b5ff4b; font-size: 32px; font-weight: 1000; }
+        .arena-quick-sub-confirmation-dialog > p { margin: 16px 0; color: rgba(239,255,193,.7); text-align: center; }
+        .arena-quick-sub-confirmation-dialog > footer { display: grid; grid-template-columns: 1fr 1.35fr; gap: 10px; }
+        .arena-quick-sub-confirmation-dialog > footer button {
+          min-height: 48px;
+          border: 1px solid rgba(181,255,75,.34);
+          border-radius: 14px;
+          font-weight: 1000;
+        }
+        .arena-quick-sub-confirmation-dialog > footer .is-cancel { background: rgba(255,255,255,.04); color: #efffc1; }
+        .arena-quick-sub-confirmation-dialog > footer .is-confirm { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #a9ff2e; color: #061007; }
+        .arena-quick-sub-confirmation-dialog > footer .is-confirm svg { width: 18px; }
+
+        @media (max-width: 560px) {
+          .arena-quick-sub-confirmation-dialog { border-radius: 20px; padding: 16px; }
+          .arena-quick-sub-confirmation-cards { gap: 8px; }
+          .arena-quick-sub-confirmation-cards article > span { width: min(130px, 100%); }
+          .arena-quick-sub-confirmation-arrow { font-size: 22px; }
+          .arena-quick-sub-confirmation-dialog > footer { grid-template-columns: 1fr; }
+        }
 
         .arena-quick-sub-out {
           display: flex;

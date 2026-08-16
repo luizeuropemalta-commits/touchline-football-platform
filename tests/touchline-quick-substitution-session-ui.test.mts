@@ -23,6 +23,17 @@ test("Quick Substitution replaces the score rail with nine cards and a central c
   assert.match(arenaSource, /is-substitution-eligible/);
 });
 
+test("an active Quick Sub session mounts the eleven field cards without exposing them in the idle Arena", () => {
+  assert.match(
+    arenaSource,
+    /const shouldRenderArenaOwnerLayer = shouldRenderPlayers[\s\S]*?&& \(isArenaMatchdayViewActive \|\| isQuickSubstitutionSessionActive \|\| isDemoLineup\)/,
+  );
+  assert.match(
+    arenaSource,
+    /shouldRenderArenaOwnerLayer && arenaFieldCardsAreReady[\s\S]*?isQuickSubstitutionSessionActive \? quickSubstitutionInteractivePlayers : players/,
+  );
+});
+
 test("in-Arena Quick Sub opens without reloading the Arena document", () => {
   assert.match(
     arenaSource,
@@ -86,6 +97,34 @@ test("substituted-out players remain visible but outside the active bench", () =
 test("Quick Sub keeps pinch zoom available unless a card is explicitly being edited", () => {
   assert.match(arenaSource, /\.arena-field-player\s*\{[\s\S]*?touch-action:\s*manipulation/);
   assert.match(arenaSource, /\.arena-field-player\[data-editing="true"\]\s*\{[\s\S]*?touch-action:\s*none/);
+});
+
+test("Quick Sub supports desktop drop and a touch-safe long-press drag on the live pitch", () => {
+  const livePitchStart = arenaSource.indexOf('className={`arena-field-player');
+  const livePitchEnd = arenaSource.indexOf('aria-label={`Select ${player.name} card`}', livePitchStart);
+  const livePitch = arenaSource.slice(livePitchStart, livePitchEnd);
+
+  assert.ok(livePitchStart >= 0);
+  assert.ok(livePitchEnd > livePitchStart);
+  assert.match(livePitch, /data-substitution-target-id=\{isQuickSubstitutionOpen \? player\.id : undefined\}/);
+  assert.match(livePitch, /onDragOver=/);
+  assert.match(livePitch, /handleBenchDrop\(player/);
+  assert.match(arenaSource, /handleQuickSubPointerDown/);
+  assert.match(arenaSource, /handleQuickSubPointerMove/);
+  assert.match(arenaSource, /handleQuickSubPointerUp/);
+  assert.match(arenaSource, /document\.elementFromPoint/);
+  assert.match(arenaSource, /\.arena-quick-sub-card\s*\{[\s\S]*?touch-action:\s*pan-y pinch-zoom/);
+});
+
+test("a proposed Quick Sub must pass through a central confirmation and remains cancellable", () => {
+  assert.match(arenaSource, /isQuickSubstitutionConfirmationOpen/);
+  assert.match(arenaSource, /className="arena-quick-sub-confirmation"/);
+  assert.match(arenaSource, /role="dialog"/);
+  assert.match(arenaSource, /aria-modal="true"/);
+  assert.match(arenaSource, /cancelQuickSubstitutionConfirmation/);
+  assert.match(arenaSource, /requestQuickSubstitutionConfirmation/);
+  assert.match(arenaSource, /onClick=\{confirmBenchSwap\}/);
+  assert.match(arenaSource, /setIsQuickSubstitutionConfirmationOpen\(false\)/);
 });
 
 test("Quick Sub keeps the pitch visible and gives tier cards a shape-following neon hover", () => {

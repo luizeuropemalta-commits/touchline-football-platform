@@ -218,7 +218,7 @@ test("Live only warms the current 22 player and two coach card products", () => 
   assert.match(arenaClientSource, /coaches\.querySelectorAll\("\[data-live-coach-card\]"\)\.length !== 2/);
   assert.match(
     arenaClientSource,
-    /shouldRenderPlayers[\s\S]*?isArenaMatchdayViewActive \|\| isDemoLineup[\s\S]*?standaloneExperience !== "live"/,
+    /shouldRenderPlayers[\s\S]*?isArenaMatchdayViewActive \|\| isQuickSubstitutionSessionActive \|\| isDemoLineup[\s\S]*?standaloneExperience !== "live"/,
   );
   assert.match(arenaClientSource, /standalonePanel !== "live" \? \([\s\S]*?<div className="arena-video-stack"/);
   assert.match(arenaClientSource, /optimizeForLiveCompact/);
