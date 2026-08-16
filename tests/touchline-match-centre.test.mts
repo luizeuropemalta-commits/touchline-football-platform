@@ -112,6 +112,28 @@ test("Match Centre lets its mobile grid shrink while keeping only the fixture ra
   assert.match(styles, /\.fixtureScroller \{[^}]*overflow: auto/);
 });
 
+test("Match Centre fixture rail presents each confrontation as a vertical score card", () => {
+  const component = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const styles = readFileSync(
+    new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(component, /league: "TouchLine England League"/);
+  assert.match(component, /className=\{styles\.englandFlag\}/);
+  assert.match(component, /className=\{styles\.fixtureStack\}/);
+  assert.match(component, /className=\{styles\.fixtureTeam\}>\s*<TeamMark fixture=\{fixture\} side="home"/);
+  assert.match(component, /className=\{styles\.fixtureTeam\}>\s*<TeamMark fixture=\{fixture\} side="away"/);
+  assert.match(component, /className=\{styles\.fixtureCentre\}/);
+  assert.match(component, /BellRing/);
+  assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 112px/);
+  assert.match(styles, /\.fixtureCentre \{[^}]*grid-template-columns: minmax\(12px,1fr\) auto auto minmax\(12px,1fr\)/);
+  assert.match(styles, /\.englandFlag \{[^}]*#cf2540/);
+});
+
 test("Match Centre keeps the live pitch at a real football-field proportion", () => {
   const styles = readFileSync(
     new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),

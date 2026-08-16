@@ -30,7 +30,7 @@ Active validated QA SHA: `72713d7`
 
 ## Next executable action
 
-Observe the newly deployed Arena card rendering, scheduled-fixture rail and in-Arena Quick Sub round trip at desktop and mobile. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+Deploy the validated QA-only Live fixture-rail candidate to the `qa` branch alias, then observe its English and Portuguese desktop/mobile render. The rail now identifies the competition as **TouchLine England League** with the England flag and presents each fixture vertically (home, score/time, away). Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 

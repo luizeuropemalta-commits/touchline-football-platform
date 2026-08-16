@@ -4,7 +4,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Clock3, Radio, ShieldCheck, Trophy } from "lucide-react";
+import { BellRing, CalendarDays, Clock3, Radio, ShieldCheck, Trophy } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
@@ -33,10 +33,10 @@ type FixtureGroup = "live" | "today" | "upcoming" | "finished";
 
 const copy = {
   "pt-BR": {
-    title: "Match Centre", live: "AO VIVO", today: "HOJE", upcoming: "PRÓXIMOS", finished: "ARQUIVO", matchweek: "Rodada", competition: "TouchLine England", select: "Confrontos", selectedFixture: "Partida selecionada", noFixtures: "Agenda em atualização", noFixturesCopy: "A programação oficial será exibida assim que a competição publicar fixtures canônicos.", venue: "Estádio", venuePending: "Aguardando confirmação TouchLine do estádio", countdown: "Início em", detail: "Dados da partida", dataPending: "Eventos, escalações e estatísticas aparecem assim que forem verificados pela TouchLine.", recent: "Últimos confrontos", form: "Forma recente", players: "Jogadores em destaque", archive: "Arquivo TouchLine", provider: "TouchLine Verified", timezone: "Horário local", versus: "VS", completed: "ENCERRADO", liveNow: "AO VIVO", next: "PRÓXIMO", official: "TouchLine Data", watch: "Acompanhar partida", liveDataUpdating: "Dados ao vivo em atualização", liveDataUpdatingCopy: "Exibindo o último snapshot verificado; o placar pode estar atrasado.", partialScheduleCopy: "A programação persistida está disponível, mas placares ao vivo aguardam um snapshot verificado.", lastVerified: "ÚLTIMO VERIFICADO", lastVerifiedAt: "Última verificação",
+    title: "Match Centre", live: "AO VIVO", today: "HOJE", upcoming: "PRÓXIMOS", finished: "ARQUIVO", matchweek: "Rodada", competition: "TouchLine England", league: "TouchLine England League", england: "Inglaterra", select: "Confrontos", alertsSoon: "Alertas de partida em breve", selectedFixture: "Partida selecionada", noFixtures: "Agenda em atualização", noFixturesCopy: "A programação oficial será exibida assim que a competição publicar fixtures canônicos.", venue: "Estádio", venuePending: "Aguardando confirmação TouchLine do estádio", countdown: "Início em", detail: "Dados da partida", dataPending: "Eventos, escalações e estatísticas aparecem assim que forem verificados pela TouchLine.", recent: "Últimos confrontos", form: "Forma recente", players: "Jogadores em destaque", archive: "Arquivo TouchLine", provider: "TouchLine Verified", timezone: "Horário local", versus: "VS", completed: "ENCERRADO", liveNow: "AO VIVO", next: "PRÓXIMO", official: "TouchLine Data", watch: "Acompanhar partida", liveDataUpdating: "Dados ao vivo em atualização", liveDataUpdatingCopy: "Exibindo o último snapshot verificado; o placar pode estar atrasado.", partialScheduleCopy: "A programação persistida está disponível, mas placares ao vivo aguardam um snapshot verificado.", lastVerified: "ÚLTIMO VERIFICADO", lastVerifiedAt: "Última verificação",
   },
   "en-GB": {
-    title: "Match Centre", live: "LIVE NOW", today: "TODAY", upcoming: "UPCOMING", finished: "ARCHIVE", matchweek: "Matchweek", competition: "TouchLine England", select: "Fixtures", selectedFixture: "Selected fixture", noFixtures: "Schedule updating", noFixturesCopy: "Official fixtures will appear as soon as the competition publishes the canonical schedule.", venue: "Stadium", venuePending: "Awaiting TouchLine venue verification", countdown: "Kick-off in", detail: "Match data", dataPending: "Events, line-ups and statistics appear as soon as TouchLine verifies them.", recent: "Recent meetings", form: "Recent form", players: "Players to watch", archive: "TouchLine archive", provider: "TouchLine Verified", timezone: "Local time", versus: "VS", completed: "FULL TIME", liveNow: "LIVE", next: "NEXT", official: "TouchLine Data", watch: "Open match", liveDataUpdating: "Live data updating", liveDataUpdatingCopy: "Showing the last verified snapshot; the score may be delayed.", partialScheduleCopy: "The persisted schedule is available, but live scores are awaiting a verified snapshot.", lastVerified: "LAST VERIFIED", lastVerifiedAt: "Last verification",
+    title: "Match Centre", live: "LIVE NOW", today: "TODAY", upcoming: "UPCOMING", finished: "ARCHIVE", matchweek: "Matchweek", competition: "TouchLine England", league: "TouchLine England League", england: "England", select: "Fixtures", alertsSoon: "Match alerts coming soon", selectedFixture: "Selected fixture", noFixtures: "Schedule updating", noFixturesCopy: "Official fixtures will appear as soon as the competition publishes the canonical schedule.", venue: "Stadium", venuePending: "Awaiting TouchLine venue verification", countdown: "Kick-off in", detail: "Match data", dataPending: "Events, line-ups and statistics appear as soon as TouchLine verifies them.", recent: "Recent meetings", form: "Recent form", players: "Players to watch", archive: "TouchLine archive", provider: "TouchLine Verified", timezone: "Local time", versus: "VS", completed: "FULL TIME", liveNow: "LIVE", next: "NEXT", official: "TouchLine Data", watch: "Open match", liveDataUpdating: "Live data updating", liveDataUpdatingCopy: "Showing the last verified snapshot; the score may be delayed.", partialScheduleCopy: "The persisted schedule is available, but live scores are awaiting a verified snapshot.", lastVerified: "LAST VERIFIED", lastVerifiedAt: "Last verification",
   },
 } as const;
 
@@ -219,15 +219,33 @@ export default function TouchlineMatchCentre({
 
       <section className={styles.layout}>
         <aside className={styles.fixtureRail} aria-label={dictionary.select}>
-          <div className={styles.railHeading}><Radio size={16} /><strong>{dictionary.select}</strong><span>{fixtures.length}</span></div>
+          <div className={styles.railHeading}>
+            <span className={styles.englandFlag} aria-label={dictionary.england} role="img" />
+            <span className={styles.railLeague}><small>{dictionary.competition}</small><strong>{dictionary.league}</strong></span>
+            <span className={styles.fixtureCount}><Radio size={14} aria-hidden="true" />{fixtures.length}</span>
+          </div>
           <div className={styles.fixtureScroller}>
             {orderedGroups.map((group) => groups[group.id].length ? <section key={group.id} className={styles.fixtureGroup}>
               <h2>{group.id === "live" && readMetadata?.degraded ? dictionary.lastVerified : group.label}</h2>
               {groups[group.id].map((fixture) => {
                 const isSelected = selected?.id === fixture.id;
                 return <button key={fixture.id} type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
-                  <span className={styles.fixtureTeams}><TeamMark fixture={fixture} side="home" /><b>{fixture.homeTeam?.name ?? "Home"}</b><TeamMark fixture={fixture} side="away" /><b>{fixture.awayTeam?.name ?? "Away"}</b></span>
-                  <small className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{status(fixture, language, initialTimeZone, readMetadata, now)}</small>
+                  <span className={styles.fixtureStack}>
+                    <span className={styles.fixtureTeam}><TeamMark fixture={fixture} side="home" /><b>{fixture.homeTeam?.name ?? "Home"}</b></span>
+                    <span className={styles.fixtureCentre}>
+                      <span aria-hidden="true" />
+                      <strong>{score(fixture)}</strong>
+                      <small className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{status(fixture, language, initialTimeZone, readMetadata, now)}</small>
+                      <span aria-hidden="true" />
+                    </span>
+                    <span className={styles.fixtureTeam}><TeamMark fixture={fixture} side="away" /><b>{fixture.awayTeam?.name ?? "Away"}</b></span>
+                  </span>
+                  <span
+                    className={styles.fixtureAlert}
+                    role="img"
+                    title={dictionary.alertsSoon}
+                    aria-label={dictionary.alertsSoon}
+                  ><BellRing size={13} aria-hidden="true" /></span>
                 </button>;
               })}
             </section> : null)}
