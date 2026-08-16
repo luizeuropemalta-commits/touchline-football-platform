@@ -3,6 +3,7 @@
 ## Authority and scope
 
 - Git is the source of truth. Resolve the current repository root and `HEAD` at runtime.
+- Before starting any mission, classify the task, load the canonical governance, and select every relevant tool. Before closing it, execute the TouchLine Mission Completion Gate in `docs/touchline/project-memory/TOUCHLINE_MISSION_FOOTER.md`. No mission may be declared complete without that gate.
 - Never treat `/Library/Caches`, temporary copies, stale worktrees, generated files, or an old checkpoint as source authority.
 - Run one write-authorized critical mission at a time. Declare objective, scope, non-goals, affected domains, acceptance, rollback, and final evidence.
 - Preserve unrelated user changes. Never use blind `git add -A` in a contaminated worktree.
