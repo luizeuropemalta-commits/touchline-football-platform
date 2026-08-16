@@ -1968,7 +1968,11 @@ function isStoredLiveFixture(value: unknown): value is TouchlineFixture {
   return typeof fixture.id === "string"
     && Boolean(fixture.id.trim())
     && typeof fixture.providerId === "string"
-    && /^[0-9]{1,20}$/.test(fixture.providerId.trim())
+    // Production provider IDs are numeric, while the canonical QA schedule
+    // uses stable representative IDs (for example qa-representative-01).
+    // This is a browser-cache shape check, not provider identity validation:
+    // the server has already selected and published this read-only snapshot.
+    && Boolean(fixture.providerId.trim())
     && isStoredLiveTeam(fixture.homeTeam)
     && isStoredLiveTeam(fixture.awayTeam);
 }
@@ -3555,7 +3559,10 @@ export default function ArenaClient({
         setReplacementTargetId(null);
         return;
       }
-      const panel = parseTouchlineArenaPanel(new URLSearchParams(window.location.search).get("panel"));
+      // A route can provide a deliberate initial panel (the visual QA fixture
+      // uses it for the in-Arena Quick Sub rail). A URL panel still wins, but
+      // an absent query parameter must not immediately erase that initial UI.
+      const panel = parseTouchlineArenaPanel(new URLSearchParams(window.location.search).get("panel")) ?? initialPanel;
       setActiveArenaPanel(panel === "live" ? null : panel);
       setIsEditorOpen(panel === "formation");
       setIsArenaNavOpen(false);
@@ -6559,8 +6566,15 @@ export default function ArenaClient({
       setSelectedBenchId("");
       setReplacementTargetId(null);
       setSelectedPlayerId(replacementTarget.id);
-      setSpotlightPlayerId(replacementTarget.id);
       setPendingContractReleaseTargetId(null);
+      // Return to the live Arena canvas after a confirmed Quick Sub. This is
+      // intentionally state-only: the document is never reloaded, and the
+      // score rail resumes in the same match context.
+      window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, null));
+      setActiveArenaPanel(null);
+      setIsEditorOpen(false);
+      setIsArenaNavOpen(false);
+      updateLiveDockVisibility(false);
       setSaveStatus(siteLanguage === "pt-BR"
         ? `${selectedBench.shortName} entrou; ${replacementTarget.shortName} saiu e não pode voltar.`
         : `${selectedBench.shortName} is on; ${replacementTarget.shortName} is out and cannot return.`);
@@ -7365,7 +7379,13 @@ export default function ArenaClient({
                 <a href={allClubsHubHref}>
                   {t("clubHub")}
                 </a>
-                <a href={touchlineArenaPanelHref("bench", siteLanguage)}>
+                <a
+                  href={touchlineArenaPanelHref("bench", siteLanguage)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openArenaPanel("bench");
+                  }}
+                >
                   {t("quickSubstitution")}
                 </a>
                 {hasEntryVideoFinished ? (
@@ -8160,7 +8180,13 @@ export default function ArenaClient({
                   <a href={allClubsHubHref}>
                     {t("clubHub")}
                   </a>
-                  <a href={touchlineArenaPanelHref("bench", siteLanguage)}>
+                  <a
+                    href={touchlineArenaPanelHref("bench", siteLanguage)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openArenaPanel("bench");
+                    }}
+                  >
                     {t("substitutesBench")}
                   </a>
                   {arenaOverlayPanel !== "market" ? (
@@ -10386,10 +10412,12 @@ export default function ArenaClient({
           gap: 7px;
           border: 1px solid rgba(181,255,75,.42);
           border-radius: 14px;
-          background: linear-gradient(180deg, rgba(2,10,9,.92), rgba(1,5,8,.96));
+          /* Quick Sub sits over the live pitch: preserve enough separation for
+             its actions, but keep the stadium and field legible behind it. */
+          background: linear-gradient(180deg, rgba(2,10,9,.68), rgba(1,5,8,.78));
           padding: 8px;
-          box-shadow: 0 18px 48px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
-          backdrop-filter: blur(16px);
+          box-shadow: 0 18px 48px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+          backdrop-filter: blur(6px);
           pointer-events: auto;
         }
 
@@ -10460,7 +10488,7 @@ export default function ArenaClient({
         .arena-quick-sub-card.is-selected,
         .arena-quick-sub-card.is-substitution-eligible {
           border-color: rgba(181,255,75,.86);
-          box-shadow: 0 0 0 1px rgba(181,255,75,.16), 0 0 20px rgba(181,255,75,.22);
+          box-shadow: 0 0 0 1px rgba(181,255,75,.16);
           outline: 0;
         }
 
@@ -15515,6 +15543,59 @@ export default function ArenaClient({
         .arena-field-player.is-selected:has(.touchline-card-surface[data-card-tier="emerald-green"]) { --selected-card-rgb: 34 197 94; }
         .arena-field-player.is-selected:has(.touchline-card-surface[data-card-tier="clear-diamond"]) { --selected-card-rgb: 224 242 254; }
         .arena-field-player.is-selected:has(.touchline-card-surface[data-card-tier="diamond-gold"]) { --selected-card-rgb: 255 224 138; }
+
+        /* A card glow must follow its real transparent frame rather than paint
+           a rectangular light behind it. The filter follows the artwork alpha
+           and each tier supplies its own living neon colour. */
+        .arena-field-player,
+        .arena-quick-sub-card,
+        .arena-quick-sub-coach {
+          --arena-tier-neon-rgb: 181 255 75;
+        }
+
+        .arena-field-player:has(.touchline-card-surface[data-card-tier="ruby-red"]),
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="ruby-red"]) { --arena-tier-neon-rgb: 239 68 68; }
+        .arena-field-player:has(.touchline-card-surface[data-card-tier="sapphire-blue"]),
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="sapphire-blue"]) { --arena-tier-neon-rgb: 56 189 248; }
+        .arena-field-player:has(.touchline-card-surface[data-card-tier="amethyst-purple"]),
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="amethyst-purple"]) { --arena-tier-neon-rgb: 168 85 247; }
+        .arena-field-player:has(.touchline-card-surface[data-card-tier="radiant-gold"]),
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="radiant-gold"]) { --arena-tier-neon-rgb: 250 204 21; }
+        .arena-field-player:has(.touchline-card-surface[data-card-tier="emerald-green"]),
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="emerald-green"]) { --arena-tier-neon-rgb: 34 197 94; }
+        .arena-field-player:has(.touchline-card-surface[data-card-tier="clear-diamond"]),
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="clear-diamond"]) { --arena-tier-neon-rgb: 224 242 254; }
+        .arena-field-player:has(.touchline-card-surface[data-card-tier="diamond-gold"]),
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="diamond-gold"]) { --arena-tier-neon-rgb: 255 224 138; }
+        .arena-quick-sub-coach { --arena-tier-neon-rgb: 255 215 92; }
+
+        @keyframes arena-tier-card-neon-pulse {
+          from { filter: drop-shadow(0 8px 10px rgb(var(--arena-tier-neon-rgb) / .26)); }
+          to { filter: drop-shadow(0 10px 17px rgb(var(--arena-tier-neon-rgb) / .72)); }
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+          .arena-field-player:not([data-editing="true"]):hover {
+            transform: translate(-50%, -100%) scale(1.035);
+            filter: drop-shadow(0 18px 20px rgba(0,0,0,.44));
+          }
+
+          .arena-field-player:not([data-editing="true"]):hover .arena-field-card,
+          .arena-quick-sub-card:hover .arena-quick-sub-card-art,
+          .arena-quick-sub-coach:hover > span {
+            animation: arena-tier-card-neon-pulse 1.8s ease-in-out infinite alternate;
+            will-change: filter;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .arena-field-player .arena-field-card,
+          .arena-quick-sub-card .arena-quick-sub-card-art,
+          .arena-quick-sub-coach > span {
+            animation: none !important;
+            will-change: auto;
+          }
+        }
 
         .arena-field-player:focus-visible {
           outline: 1px solid rgba(181,255,75,.72);

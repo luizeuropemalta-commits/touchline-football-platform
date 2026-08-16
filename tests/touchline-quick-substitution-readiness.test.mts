@@ -111,6 +111,7 @@ test("the local Quick Sub visual fixture uses the actual in-Arena rail with dete
   assert.match(fixtureSource, /data-quick-substitution-readiness-fixture=\{isSetupScenario \? "setup" : "ready"\}/);
   assert.match(fixtureSource, /initialPanel="bench"/);
   assert.match(fixtureSource, /initialDemoLineup/);
+  assert.match(arenaSource, /parseTouchlineArenaPanel\(new URLSearchParams\(window\.location\.search\)\.get\("panel"\)\) \?\? initialPanel/);
   assert.match(fixtureSource, /initialEmptyLineup/);
   assert.doesNotMatch(fixtureSource, /fetch\(|createClient\(|createAdminClient\(/);
 });

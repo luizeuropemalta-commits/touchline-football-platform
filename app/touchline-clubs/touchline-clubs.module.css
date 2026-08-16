@@ -107,26 +107,46 @@
   outline: none;
 }
 
-.clubCard::after {
+.clubCardTrace {
   position: absolute;
   inset: 0;
   z-index: 2;
-  padding: 1px;
-  border-radius: inherit;
-  background: conic-gradient(from 0deg, transparent 0 64%, var(--club-accent) 72%, #fff 78%, var(--club-secondary) 84%, transparent 92%);
-  content: "";
-  opacity: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
 }
 
-.clubCard:hover::after,
-.clubCard:focus-visible::after,
-.clubCard:active::after {
-  opacity: .95;
-  animation: touchlineClubEdgeTravel .78s linear 1;
+.clubCardTraceBase,
+.clubCardTraceRun {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.clubCardTraceBase {
+  stroke: color-mix(in srgb, var(--club-accent) 42%, rgba(255,255,255,.12));
+  stroke-width: .62;
+  opacity: .72;
+}
+
+.clubCardTraceRun {
+  /* The travelling line is SVG, so it follows the real rounded perimeter —
+     no rectangular glow or conic wedge can ever spill through the card. */
+  stroke: var(--club-accent);
+  stroke-width: 1.05;
+  stroke-dasharray: 12 88;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--club-accent) 78%, transparent));
+  animation: touchlineClubEdgeTravel 7s linear infinite;
+}
+
+.clubCard:hover .clubCardTraceRun,
+.clubCard:focus-visible .clubCardTraceRun,
+.clubCard:active .clubCardTraceRun {
+  stroke: color-mix(in srgb, var(--club-accent) 82%, #fff 18%);
+  stroke-width: 1.3;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--club-accent) 90%, transparent));
+  animation-duration: 2.8s;
 }
 
 .clubIndex {
@@ -138,7 +158,9 @@
 
 .logoWrap {
   --touchline-club-crest-color: var(--club-accent);
-  width: clamp(82px, 9vw, 124px);
+  /* The crest host owns both the symbol and its circular travelling trace.
+     Scale them together, leaving the surrounding card copy and perimeter clear. */
+  width: clamp(106px, 11.7vw, 161px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -212,7 +234,7 @@
   text-transform: uppercase;
 }
 
-@keyframes touchlineClubEdgeTravel { to { transform: rotate(1turn); } }
+@keyframes touchlineClubEdgeTravel { to { stroke-dashoffset: -100; } }
 
 @media (max-width: 1120px) {
   .clubGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -264,7 +286,7 @@
 
   .logoWrap {
     grid-row: 1 / 3;
-    width: 72px;
+    width: 94px;
   }
 
   .open {
@@ -277,9 +299,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .clubCard:hover::after,
-  .clubCard:focus-visible::after,
-  .clubCard:active::after { animation: none; }
+  .clubCardTraceRun { animation: none; }
 
   .clubCard:hover .logoWrap,
   .clubCard:focus-visible .logoWrap,

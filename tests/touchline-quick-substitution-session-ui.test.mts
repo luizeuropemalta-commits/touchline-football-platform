@@ -23,6 +23,25 @@ test("Quick Substitution replaces the score rail with nine cards and a central c
   assert.match(arenaSource, /is-substitution-eligible/);
 });
 
+test("in-Arena Quick Sub opens without reloading the Arena document", () => {
+  assert.match(
+    arenaSource,
+    /href=\{touchlineArenaPanelHref\("bench", siteLanguage\)\}[\s\S]{0,360}?event\.preventDefault\(\);[\s\S]{0,120}?openArenaPanel\("bench"\)/,
+  );
+});
+
+test("a confirmed Quick Sub returns to the score rail without reloading the document", () => {
+  const sessionBranchStart = arenaSource.indexOf("if (isQuickSubstitutionSessionActive && quickSubstitutionSession && quickSubstitutionSessionSource)");
+  const legacySwapStart = arenaSource.indexOf("const incomingPlayer = benchOptionToArenaPlayer", sessionBranchStart);
+  const sessionBranch = arenaSource.slice(sessionBranchStart, legacySwapStart);
+
+  assert.match(sessionBranch, /setQuickSubstitutionSession\(result\.state\)/);
+  assert.match(sessionBranch, /touchlineArenaPanelUrl\(window\.location\.href, null\)/);
+  assert.match(sessionBranch, /setActiveArenaPanel\(null\)/);
+  assert.doesNotMatch(sessionBranch, /setSpotlightPlayerId\(/);
+  assert.doesNotMatch(sessionBranch, /window\.location\.(assign|replace|reload)/);
+});
+
 test("the score rail does not duplicate or animate a single verified fixture", () => {
   assert.match(arenaSource, /visibleClubMatches\.length > 1\s*\? \[\.\.\.visibleClubMatches, \.\.\.visibleClubMatches\]\s*:\s*visibleClubMatches/);
   assert.match(arenaSource, /visibleClubMatches\.length <= 1 \? " is-static" : ""/);
@@ -67,6 +86,18 @@ test("substituted-out players remain visible but outside the active bench", () =
 test("Quick Sub keeps pinch zoom available unless a card is explicitly being edited", () => {
   assert.match(arenaSource, /\.arena-field-player\s*\{[\s\S]*?touch-action:\s*manipulation/);
   assert.match(arenaSource, /\.arena-field-player\[data-editing="true"\]\s*\{[\s\S]*?touch-action:\s*none/);
+});
+
+test("Quick Sub keeps the pitch visible and gives tier cards a shape-following neon hover", () => {
+  assert.match(arenaSource, /background: linear-gradient\(180deg, rgba\(2,10,9,\.68\), rgba\(1,5,8,\.78\)\)/);
+  assert.match(arenaSource, /backdrop-filter: blur\(6px\)/);
+  assert.match(arenaSource, /@keyframes arena-tier-card-neon-pulse/);
+  assert.match(arenaSource, /drop-shadow\(0 10px 17px rgb\(var\(--arena-tier-neon-rgb\) \/ \.72\)\)/);
+  assert.match(arenaSource, /\.arena-quick-sub-card:hover \.arena-quick-sub-card-art/);
+  assert.doesNotMatch(
+    arenaSource.slice(arenaSource.indexOf(".arena-quick-sub-card:hover,"), arenaSource.indexOf(".arena-quick-sub-card.is-locked")),
+    /0 0 20px/,
+  );
 });
 
 test("the historical standalone match screen cannot offer contract release controls", () => {

@@ -17,8 +17,11 @@ function isComplete(fixture: TouchlineFixture) {
 }
 
 function isLive(fixture: TouchlineFixture, now: number) {
-  if (LIVE_STATUS.test(fixture.status ?? "")) return true;
   const startsAt = fixtureStartTime(fixture);
+  // A persisted status can lag behind a rescheduled kickoff. Do not let a
+  // future fixture labelled "LIVE" seize the Arena carousel: the rail must
+  // remain an honest view of the next usable confrontations until kickoff.
+  if (LIVE_STATUS.test(fixture.status ?? "") && startsAt <= now) return true;
   return startsAt <= now && !isComplete(fixture);
 }
 

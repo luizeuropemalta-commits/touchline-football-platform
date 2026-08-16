@@ -46,6 +46,18 @@ test("a live fixture keeps its complete round visible even when it is not the fi
   assert.ok(selected.some((item) => item.status === "LIVE"));
 });
 
+test("a stale live status on a future kickoff cannot hide the upcoming Arena confrontations", () => {
+  const futureStatus = fixture(1, "2026-08-20T20:00:00Z", "2nd Half");
+  const upcoming = fixture(2, "2026-08-20T18:00:00Z");
+
+  const selected = selectArenaFixtureRound(
+    [futureStatus, upcoming],
+    Date.parse("2026-08-16T12:00:00Z"),
+  );
+
+  assert.deepEqual(selected.map((item) => item.id), [upcoming.id, futureStatus.id]);
+});
+
 test("Arena keeps an incomplete canonical round intact instead of borrowing a match from the next round", () => {
   const firstRound = Array.from({ length: 9 }, (_, index) => fixture(index + 1, `2026-08-${String(21 + Math.floor(index / 4)).padStart(2, "0")}T${String(12 + index).padStart(2, "0")}:00:00Z`));
   const nextRound = Array.from({ length: 10 }, (_, index) => fixture(index + 10, `2026-08-${String(28 + Math.floor(index / 4)).padStart(2, "0")}T${String(12 + index).padStart(2, "0")}:00:00Z`));
