@@ -6021,9 +6021,9 @@ export default function ArenaClient({
       setSpotlightPlayerId(player.id);
       return;
     }
-    if (!isEditorOpen) {
-      setSpotlightPlayerId(player.id);
-    }
+    // A contracted player on the pitch always opens the shared, centred card
+    // spotlight. The editor still retains its selected-player state above.
+    setSpotlightPlayerId(player.id);
   }
 
   function prepareBenchReplacement(bench: BenchOption, target?: ArenaPlayer | null) {
@@ -8041,6 +8041,7 @@ export default function ArenaClient({
                   forceNeonActive
                   playerProfileHref={spotlightPlayerProfileHref ?? undefined}
                   imageLoading="eager"
+                  allowVisualInventoryPreview
                 />
                 <div className="arena-player-spotlight-meta">
                   <strong>{spotlightPlayerTierLabel}</strong>
@@ -8331,6 +8332,10 @@ export default function ArenaClient({
                                   rankingMode={isDemoLineup ? "preview" : "live"}
                                   showProfileAction={false}
                                   showSocialMetrics={false}
+                                  /* Field cards are already-owned, frozen
+                                     contract inventory. This opt-in renders
+                                     only their approved visual tier. */
+                                  allowVisualInventoryPreview
                                 />
                               </span>
                               <strong>{player.shortName}</strong>
@@ -8372,7 +8377,7 @@ export default function ArenaClient({
                       >
                         <span className={`bench-status bench-status-${bench.status}`}>{isLocked ? t("locked") : benchStatusLabel(bench.status, t)}</span>
                         <span className="bench-player-card bench-player-card-real" aria-hidden="true">
-                          <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(bench, isDemoLineup ? touchlineDemoTierForPlayer(bench.id, bench.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} showProfileAction={false} showSocialMetrics={false} />
+                          <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(bench, isDemoLineup ? touchlineDemoTierForPlayer(bench.id, bench.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} showProfileAction={false} showSocialMetrics={false} allowVisualInventoryPreview />
                         </span>
                         <span className="bench-card-copy">
                           <strong>{bench.shortName}</strong>
@@ -8399,7 +8404,7 @@ export default function ArenaClient({
                                 : `${player.name} has left the match and cannot re-enter`}
                             >
                               <span className="bench-player-card bench-player-card-real" aria-hidden="true">
-                                <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} showProfileAction={false} showSocialMetrics={false} />
+                                <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} showProfileAction={false} showSocialMetrics={false} allowVisualInventoryPreview />
                               </span>
                               <span>
                                 <strong>{player.shortName}</strong>
@@ -8429,7 +8434,7 @@ export default function ArenaClient({
                         >
                           <span className="bench-vault-lock">{isSlotLocked ? t("locked") : bench.position}</span>
                           <span className="bench-player-card bench-player-card-real bench-player-card-vault" aria-hidden="true">
-                            <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(bench, isDemoLineup ? touchlineDemoTierForPlayer(bench.id, bench.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} showProfileAction={false} showSocialMetrics={false} />
+                            <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(bench, isDemoLineup ? touchlineDemoTierForPlayer(bench.id, bench.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} showProfileAction={false} showSocialMetrics={false} allowVisualInventoryPreview />
                           </span>
                           <span className="bench-vault-copy">
                             <strong>{bench.shortName}</strong>
@@ -8447,7 +8452,7 @@ export default function ArenaClient({
                     <strong>{selectedBench.name}</strong>
                     <p>{isSelectedBenchInMatchday ? t("eligibleBenchInstruction") : t("reserveVaultInstruction")}</p>
                     <div className="bench-selected-card" aria-label={`${selectedBench.name} selected card preview`}>
-                      <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(selectedBench, isDemoLineup ? touchlineDemoTierForPlayer(selectedBench.id, selectedBench.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} />
+                      <TouchlineEliteExactCard className="bench-rendered-card" player={benchOptionToPreviewCard(selectedBench, isDemoLineup ? touchlineDemoTierForPlayer(selectedBench.id, selectedBench.name) : undefined)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} rankingMode={isDemoLineup ? "preview" : "live"} allowVisualInventoryPreview />
                     </div>
                     <div className="bench-swap-preview">
                       <span>{t("in")}</span>

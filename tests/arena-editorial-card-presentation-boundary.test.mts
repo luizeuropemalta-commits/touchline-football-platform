@@ -76,6 +76,25 @@ test("Arena bench and rankings show editorial or frozen terms, never a valuation
   assert.doesNotMatch(arena, /verifiedMarketValueLabel/);
 });
 
+test("contracted Arena field and bench cards render through the central spotlight without valuation fallback", () => {
+  const pitch = sourceBetween(
+    '<TouchlinePitchSurface className="training-center-pitch"',
+    '<div className="bench-group-title">',
+  );
+  const spotlight = sourceBetween(
+    '{spotlightPlayer && spotlightPlayerCard ? (',
+    '{isCoachSpotlightOpen ? (',
+  );
+
+  assert.match(pitch, /player=\{arenaCardToPlayer\(player,/);
+  assert.match(pitch, /allowVisualInventoryPreview/);
+  assert.match(pitch, /onClick=\{\(\) => handleFieldPlayerClick\(player\)\}/);
+  assert.match(spotlight, /<TouchlineEliteExactCard[\s\S]*?allowVisualInventoryPreview/);
+  assert.match(spotlight, /showProfileAction/);
+  assert.match(spotlight, /arena-player-spotlight-close/);
+  assert.doesNotMatch(pitch, /marketValue/);
+});
+
 test("Arena Market gates cart availability and price sorting by the same published-card policy", () => {
   const marketPricing = sourceBetween(
     "function builderPlayerRetailPriceTc",
