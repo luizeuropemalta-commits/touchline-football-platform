@@ -7,6 +7,7 @@ import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, R
 import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEliteExactCardLabels, type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineCoachCard, { touchlineLiveCompactCoachFrameUrl } from "@/components/touchline/cards/TouchlineCoachCard";
+import TouchlineSubstitutionMark from "@/components/touchline/TouchlineSubstitutionMark";
 import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntro";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import { TouchlineCoinMark, TouchlineSelectedPlayersMark } from "@/components/touchline/market/TouchlineMarketMarks";
@@ -1415,6 +1416,11 @@ function countArenaPositionGroups(players: ArenaPlayer[]) {
 }
 
 function isBenchFormationLocked(bench: BenchOption, players: ArenaPlayer[], formationKey: ArenaFormationKey, replacementTarget?: ArenaPlayer | null) {
+  // A full formation must not dim or disable the bench before the outgoing
+  // starter is known. Every substitute can still replace a compatible player;
+  // enforce the positional cap only after that replacement target is selected.
+  if (!replacementTarget) return false;
+
   const group = arenaPositionGroup(bench.position, bench.role);
   const cap = ARENA_FORMATION_POSITION_CAPS[formationKey][group];
   if (!cap) return false;
@@ -3995,13 +4001,11 @@ export default function ArenaClient({
     standaloneExperience,
   ]);
 
-  // Owning a roster is not permission to paint it on an idle Arena. The owner
-  // card layer mounts only for an explicit matchday/fixture journey, an active
-  // Quick Sub session (or the isolated demo QA route), so saved cards and the
-  // coach can never flash over the empty field while account and roster state
-  // are being reconciled.
+  // Once the authoritative roster is ready, the owner's XI remains visible in
+  // the normal Arena as well as during Quick Sub. `shouldRenderPlayers` stays
+  // false while account/roster state is being reconciled, so no stale cards can
+  // flash before the saved formation is restored.
   const shouldRenderArenaOwnerLayer = (shouldRenderPlayers || isQuickSubstitutionSessionActive)
-    && (isArenaMatchdayViewActive || isQuickSubstitutionSessionActive || isDemoLineup)
     && standaloneExperience !== "live"
     && !isCoachSelectionRequired;
   const selectedLiveHomeCoachSlot = useMemo(
@@ -4275,7 +4279,10 @@ export default function ArenaClient({
     cardPrice: siteLanguage === "pt-BR" ? "Preço do card" : "Card price",
     currentClub: siteLanguage === "pt-BR" ? "Clube atual" : "Current Club",
   }), [siteLanguage, t]);
-  const arenaFieldCardSignature = useMemo(() => players
+  const arenaFieldPlayersForRendering = isQuickSubstitutionSessionActive
+    ? quickSubstitutionInteractivePlayers
+    : players;
+  const arenaFieldCardSignature = useMemo(() => arenaFieldPlayersForRendering
     .filter((player) => Boolean(player.card))
     .map((player) => {
       const previewTier = isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.name) : undefined;
@@ -4289,17 +4296,17 @@ export default function ArenaClient({
         previewCard.cardTier,
       ].join(":");
     })
-    .join("|"), [isDemoLineup, players]);
+    .join("|"), [arenaFieldPlayersForRendering, isDemoLineup]);
   const arenaFieldCardsAreReady = !arenaFieldCardSignature || readyArenaFieldCardsSignature === arenaFieldCardSignature;
 
   useEffect(() => {
-    if (!shouldRenderPlayers || !arenaFieldCardSignature) {
+    if ((!shouldRenderPlayers && !isQuickSubstitutionSessionActive) || !arenaFieldCardSignature) {
       return;
     }
     if (readyArenaFieldCardsSignature === arenaFieldCardSignature) return;
 
     let cancelled = false;
-    const assetUrls = players.flatMap((player) => {
+    const assetUrls = arenaFieldPlayersForRendering.flatMap((player) => {
       if (!player.card) return [];
       const previewTier = isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.name) : undefined;
       return arenaFieldCanonicalCardAssetUrls(player, previewTier);
@@ -4312,7 +4319,14 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [arenaFieldCardSignature, isDemoLineup, players, readyArenaFieldCardsSignature, shouldRenderPlayers]);
+  }, [
+    arenaFieldCardSignature,
+    arenaFieldPlayersForRendering,
+    isDemoLineup,
+    isQuickSubstitutionSessionActive,
+    readyArenaFieldCardsSignature,
+    shouldRenderPlayers,
+  ]);
 
   const openLiveSimulationCard = useCallback((playerId: string) => {
     setSelectedLiveCoachSide(null);
@@ -7109,17 +7123,17 @@ export default function ArenaClient({
     setSaveStatus(marketUi.replacementReleased(incomingPlayer.shortName, releasedPlayer.shortName));
   }
 
-  const projectedFieldPlayerPositions = projectArenaPlayersForLoopCamera(players, loopCameraIndex);
+  const projectedFieldPlayerPositions = projectArenaPlayersForLoopCamera(arenaFieldPlayersForRendering, loopCameraIndex);
   const lockedCameraLayout = readLockedFormationLayout(selectedFormationKey, arenaPersistencePrincipal)?.cameras?.[currentCameraId];
-  const lockedCameraPositions = roleLayoutForPlayers(players, lockedCameraLayout, loopCameraIndex);
+  const lockedCameraPositions = roleLayoutForPlayers(arenaFieldPlayersForRendering, lockedCameraLayout, loopCameraIndex);
   const cameraEditPositions = cameraEditSlots[currentCameraEditKey];
   const fieldPlayerPositions = new Map(lockedCameraPositions ?? projectedFieldPlayerPositions);
   const trainingCenterSlots = isQuickSubstitutionSessionActive && quickSubstitutionSessionSource
     ? new Map(quickSubstitutionSessionSource.pitchSlotByPositionSlotId)
-    : trainingCenterPlayerSlots(players);
+    : trainingCenterPlayerSlots(arenaFieldPlayersForRendering);
   if (cameraEditPositions) {
     for (const [playerId, slot] of Object.entries(cameraEditPositions)) {
-      const player = players.find((candidate) => candidate.id === playerId);
+      const player = arenaFieldPlayersForRendering.find((candidate) => candidate.id === playerId);
       if (player) fieldPlayerPositions.set(playerId, constrainArenaDisplaySlot(player, slot, loopCameraIndex));
     }
   }
@@ -7355,13 +7369,14 @@ export default function ArenaClient({
           onClick={() => setSelectedPlayerId(null)}
         />
 
-        {shouldRenderArenaOwnerLayer && arenaFieldCardsAreReady ? (
+        {shouldRenderArenaOwnerLayer ? (
           <section
             className={`field-player-layer ${hasEntryVideoFinished ? "is-entry-ready" : "is-entry-hidden"}`}
+            data-card-assets-ready={arenaFieldCardsAreReady ? "true" : "false"}
             aria-label="Editable field players"
             aria-hidden={!hasEntryVideoFinished}
           >
-            {(isQuickSubstitutionSessionActive ? quickSubstitutionInteractivePlayers : players).map((player) => {
+            {arenaFieldPlayersForRendering.map((player) => {
               const fieldPosition = fieldPlayerPositions.get(player.id) ?? projectArenaPlayerForLoopCamera(player, loopCameraIndex);
               // Every card in the active match uses one camera-aware canonical
               // size. Saved/editor sizes must never create unequal match cards.
@@ -7425,6 +7440,7 @@ export default function ArenaClient({
                         showSocialMetrics={false}
                         forceNeonActive={selectedPlayerId === player.id}
                         optimizeForLiveCompact
+                        allowVisualInventoryPreview={isDemoLineup}
                       />
                     </span>
                   ) : player.asset ? (
@@ -7439,40 +7455,6 @@ export default function ArenaClient({
               );
             })}
           </section>
-        ) : null}
-
-        {shouldRenderArenaOwnerLayer && coachSlot.coach ? (
-          <aside
-            className={`arena-coach-technical-area ${activeArenaPanel && !isQuickSubstitutionOpen ? "is-panel-open" : ""} ${hasEntryVideoFinished ? "is-entry-ready" : "is-entry-hidden"}`}
-            aria-label={t("coachSlot")}
-            aria-hidden={!hasEntryVideoFinished}
-            style={{ "--arena-coach-field-card-height": `${arenaLoopCameraProfile(loopCameraIndex).cardHeightVh}dvh` } as CSSProperties}
-          >
-            <span className="arena-coach-technical-label">{siteLanguage === "pt-BR" ? "Área técnica" : "Technical area"}</span>
-            <button
-              type="button"
-              className="arena-coach-card-button"
-              aria-label={`${t("coach")}: ${coachSlot.coach?.displayName ?? t("verifiedCoachPending")}`}
-              onClick={() => {
-                setSpotlightPlayerId(null);
-                setSelectedPlayerId(null);
-                setIsCoachSpotlightOpen(true);
-              }}
-            >
-              <TouchlineCoachCard
-                coach={coachSlot.coach}
-                slot={coachSlot}
-                clubName={arenaCoachClubName}
-                clubLogoUrl={arenaCoachClubLogoUrl}
-                clubAccent={arenaCoachClubAccent}
-                countryCode3={arenaCoachCountryCode3}
-                formation={selectedFormationKey}
-                locale={siteLanguage}
-                displayMode="compact"
-                optimizeForLiveCompact
-              />
-            </button>
-          </aside>
         ) : null}
 
         <header className="game-hud" aria-label="Arena controls">
@@ -7846,21 +7828,21 @@ export default function ArenaClient({
                 <article className="is-outgoing">
                   <small>{siteLanguage === "pt-BR" ? "SAI" : "OFF"}</small>
                   <span aria-hidden="true">
-                    {replacementTarget.card ? (
-                      <TouchlineEliteExactCard
-                        player={arenaCardToPlayer(replacementTarget, isDemoLineup ? touchlineDemoTierForPlayer(replacementTarget.id, replacementTarget.name) : undefined)}
-                        layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
-                        labels={cardLabels}
-                        rankingMode={isDemoLineup ? "preview" : "live"}
-                        showProfileAction={false}
-                        showSocialMetrics={false}
-                        optimizeForLiveCompact
-                      />
-                    ) : null}
+                    <TouchlineEliteExactCard
+                      player={arenaCardToPlayer(replacementTarget, isDemoLineup ? touchlineDemoTierForPlayer(replacementTarget.id, replacementTarget.name) : undefined)}
+                      layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
+                      labels={cardLabels}
+                      rankingMode={isDemoLineup ? "preview" : "live"}
+                      showProfileAction={false}
+                      showSocialMetrics={false}
+                      enableInteractiveNeon
+                      optimizeForLiveCompact
+                      allowVisualInventoryPreview={isDemoLineup}
+                    />
                   </span>
                   <strong>{replacementTarget.name}</strong>
                 </article>
-                <div className="arena-quick-sub-confirmation-arrow" aria-hidden="true">→</div>
+                <TouchlineSubstitutionMark className="arena-quick-sub-confirmation-arrow" />
                 <article className="is-incoming">
                   <small>{siteLanguage === "pt-BR" ? "ENTRA" : "ON"}</small>
                   <span aria-hidden="true">
@@ -7871,6 +7853,8 @@ export default function ArenaClient({
                       rankingMode={isDemoLineup ? "preview" : "live"}
                       showProfileAction={false}
                       showSocialMetrics={false}
+                      enableInteractiveNeon
+                      allowVisualInventoryPreview={isDemoLineup}
                     />
                   </span>
                   <strong>{selectedBench.name}</strong>
@@ -7962,6 +7946,7 @@ export default function ArenaClient({
                             showProfileAction={false}
                             showSocialMetrics={false}
                             forceNeonActive={selectedBench?.id === bench.id}
+                            allowVisualInventoryPreview={isDemoLineup}
                           />
                         </span>
                         <span>{bench.shortName}</span>
@@ -7985,7 +7970,7 @@ export default function ArenaClient({
                         formation={selectedFormationKey}
                         locale={siteLanguage}
                         displayMode="compact"
-                        enableInteractiveNeon={false}
+                        enableInteractiveNeon
                       />
                     </span>
                     <b>{siteLanguage === "pt-BR" ? "TREINADOR" : "COACH"}</b>
@@ -10623,10 +10608,10 @@ export default function ArenaClient({
           border-radius: 14px;
           /* Quick Sub sits over the live pitch: preserve enough separation for
              its actions, but keep the stadium and field legible behind it. */
-          background: linear-gradient(180deg, rgba(2,10,9,.68), rgba(1,5,8,.78));
+          background: linear-gradient(180deg, rgba(2,10,9,.46), rgba(1,5,8,.58));
           padding: 8px;
           box-shadow: 0 18px 48px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
-          backdrop-filter: blur(6px);
+          backdrop-filter: blur(3px);
           pointer-events: auto;
         }
 
@@ -10729,10 +10714,10 @@ export default function ArenaClient({
           place-items: center;
           overflow: auto;
           overscroll-behavior: contain;
-          background: rgba(0, 8, 7, .76);
+          background: rgba(0, 8, 7, .48);
           padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-          -webkit-backdrop-filter: blur(12px);
-          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(5px);
+          backdrop-filter: blur(5px);
         }
 
         .arena-quick-sub-confirmation-dialog {
@@ -10785,7 +10770,7 @@ export default function ArenaClient({
         .arena-quick-sub-confirmation-cards article > span { display: block; width: min(180px, 100%); aspect-ratio: 430 / 691; }
         .arena-quick-sub-confirmation-cards article > span > div { width: 100% !important; height: 100% !important; }
         .arena-quick-sub-confirmation-cards article > strong { width: 100%; overflow: hidden; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-        .arena-quick-sub-confirmation-arrow { color: #b5ff4b; font-size: 32px; font-weight: 1000; }
+        .arena-quick-sub-confirmation-arrow { width: 54px; height: 54px; }
         .arena-quick-sub-confirmation-dialog > p { margin: 16px 0; color: rgba(239,255,193,.7); text-align: center; }
         .arena-quick-sub-confirmation-dialog > footer { display: grid; grid-template-columns: 1fr 1.35fr; gap: 10px; }
         .arena-quick-sub-confirmation-dialog > footer button {
@@ -10802,7 +10787,7 @@ export default function ArenaClient({
           .arena-quick-sub-confirmation-dialog { border-radius: 20px; padding: 16px; }
           .arena-quick-sub-confirmation-cards { gap: 8px; }
           .arena-quick-sub-confirmation-cards article > span { width: min(130px, 100%); }
-          .arena-quick-sub-confirmation-arrow { font-size: 22px; }
+          .arena-quick-sub-confirmation-arrow { width: 38px; height: 38px; }
           .arena-quick-sub-confirmation-dialog > footer { grid-template-columns: 1fr; }
         }
 
@@ -15798,7 +15783,9 @@ export default function ArenaClient({
           transform: translate(-50%, -100%);
           transform-origin: 50% 100%;
           filter: drop-shadow(0 18px 20px rgba(0,0,0,.44));
-          transition: top .16s ease, left .16s ease, height .16s ease, transform .16s ease, filter .16s ease;
+          /* Camera coordinates must snap atomically. Animating top/left/height
+             lets cards cross each other while the stadium loop changes. */
+          transition: transform .16s ease, filter .16s ease;
         }
 
         /* Keep the approved compact card scale on the tactical pitch, but do
@@ -15845,24 +15832,32 @@ export default function ArenaClient({
            and each tier supplies its own living neon colour. */
         .arena-field-player,
         .arena-quick-sub-card,
-        .arena-quick-sub-coach {
+        .arena-quick-sub-coach,
+        .arena-quick-sub-confirmation-cards article {
           --arena-tier-neon-rgb: 181 255 75;
         }
 
         .arena-field-player:has(.touchline-card-surface[data-card-tier="ruby-red"]),
-        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="ruby-red"]) { --arena-tier-neon-rgb: 239 68 68; }
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="ruby-red"]),
+        .arena-quick-sub-confirmation-cards article:has(.touchline-card-surface[data-card-tier="ruby-red"]) { --arena-tier-neon-rgb: 239 68 68; }
         .arena-field-player:has(.touchline-card-surface[data-card-tier="sapphire-blue"]),
-        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="sapphire-blue"]) { --arena-tier-neon-rgb: 56 189 248; }
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="sapphire-blue"]),
+        .arena-quick-sub-confirmation-cards article:has(.touchline-card-surface[data-card-tier="sapphire-blue"]) { --arena-tier-neon-rgb: 56 189 248; }
         .arena-field-player:has(.touchline-card-surface[data-card-tier="amethyst-purple"]),
-        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="amethyst-purple"]) { --arena-tier-neon-rgb: 168 85 247; }
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="amethyst-purple"]),
+        .arena-quick-sub-confirmation-cards article:has(.touchline-card-surface[data-card-tier="amethyst-purple"]) { --arena-tier-neon-rgb: 168 85 247; }
         .arena-field-player:has(.touchline-card-surface[data-card-tier="radiant-gold"]),
-        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="radiant-gold"]) { --arena-tier-neon-rgb: 250 204 21; }
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="radiant-gold"]),
+        .arena-quick-sub-confirmation-cards article:has(.touchline-card-surface[data-card-tier="radiant-gold"]) { --arena-tier-neon-rgb: 250 204 21; }
         .arena-field-player:has(.touchline-card-surface[data-card-tier="emerald-green"]),
-        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="emerald-green"]) { --arena-tier-neon-rgb: 34 197 94; }
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="emerald-green"]),
+        .arena-quick-sub-confirmation-cards article:has(.touchline-card-surface[data-card-tier="emerald-green"]) { --arena-tier-neon-rgb: 34 197 94; }
         .arena-field-player:has(.touchline-card-surface[data-card-tier="clear-diamond"]),
-        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="clear-diamond"]) { --arena-tier-neon-rgb: 224 242 254; }
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="clear-diamond"]),
+        .arena-quick-sub-confirmation-cards article:has(.touchline-card-surface[data-card-tier="clear-diamond"]) { --arena-tier-neon-rgb: 224 242 254; }
         .arena-field-player:has(.touchline-card-surface[data-card-tier="diamond-gold"]),
-        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="diamond-gold"]) { --arena-tier-neon-rgb: 255 224 138; }
+        .arena-quick-sub-card:has(.touchline-card-surface[data-card-tier="diamond-gold"]),
+        .arena-quick-sub-confirmation-cards article:has(.touchline-card-surface[data-card-tier="diamond-gold"]) { --arena-tier-neon-rgb: 255 224 138; }
         .arena-quick-sub-coach { --arena-tier-neon-rgb: 255 215 92; }
 
         @keyframes arena-tier-card-neon-pulse {
@@ -15878,7 +15873,8 @@ export default function ArenaClient({
 
           .arena-field-player:not([data-editing="true"]):hover .arena-field-card,
           .arena-quick-sub-card:hover .arena-quick-sub-card-art,
-          .arena-quick-sub-coach:hover > span {
+          .arena-quick-sub-coach:hover > span,
+          .arena-quick-sub-confirmation-cards article:hover > span {
             animation: arena-tier-card-neon-pulse 1.8s ease-in-out infinite alternate;
             will-change: filter;
           }
@@ -15887,7 +15883,8 @@ export default function ArenaClient({
         @media (prefers-reduced-motion: reduce) {
           .arena-field-player .arena-field-card,
           .arena-quick-sub-card .arena-quick-sub-card-art,
-          .arena-quick-sub-coach > span {
+          .arena-quick-sub-coach > span,
+          .arena-quick-sub-confirmation-cards article > span {
             animation: none !important;
             will-change: auto;
           }

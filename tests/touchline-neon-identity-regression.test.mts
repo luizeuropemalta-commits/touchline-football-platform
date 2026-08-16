@@ -472,7 +472,8 @@ test("coach uses official coach art with player-card nationality and club identi
   assert.doesNotMatch(coachEditor, /label="Tamanho do escudo"/);
   assert.match(coachEditor, /1\. Nome \+ clube/);
   assert.match(coachEditor, /2\. Dados técnicos/);
-  assert.match(arenaClient, /arena-coach-technical-area/);
+  assert.doesNotMatch(arenaClient, /className=\{`arena-coach-technical-area/);
+  assert.match(arenaClient, /className="arena-quick-sub-coach"/);
   assert.match(arenaClient, /arena-coach-spotlight/);
   assert.match(arenaClient, /<TouchlineCoachCard/);
   assert.doesNotMatch(arenaClient, /arena-club-owner-card/);
@@ -525,8 +526,10 @@ test("Arena compact cards keep one click target, one selected neon and a compact
   assert.match(fieldCardSource, /showSocialMetrics=\{false\}/);
   assert.match(fieldCardSource, /forceNeonActive=\{selectedPlayerId === player\.id\}/);
   assert.match(exactCard, /forceNeonActive \|\| isNeonActive/);
-  assert.match(exactCard, /data-arena-match-points="true"[\s\S]*?top: -16,[\s\S]*?minWidth: 22,[\s\S]*?height: 14,/);
-  assert.match(exactCard, /<span style=\{\{ fontSize: 3\.3,[\s\S]*?<strong[\s\S]*?fontSize: 8,/);
+  assert.match(exactCard, /data-arena-match-points="true"[\s\S]*?top: -16,[\s\S]*?minWidth: 24,[\s\S]*?height: 16,[\s\S]*?padding: "1px 5px"/);
+  assert.match(exactCard, /data-arena-match-points="true"[\s\S]*?<strong[\s\S]*?fontSize: 9,[\s\S]*?fontVariantNumeric: "tabular-nums"/);
+  assert.match(exactCard, /const compactPrimaryLabel = cardLabels\.totalPoints/);
+  assert.match(exactCard, /const compactPrimaryValue = totalPointsText/);
   assert.ok(spotlightStart >= 0);
   assert.match(spotlightSource, /showProfileAction[\s\S]*?forceNeonActive/);
   assert.match(arenaClient, /arena-player-spotlight-meta/);
@@ -544,17 +547,13 @@ test("Arena enlarges match points by twenty percent on desktop only", () => {
   assert.match(arenaClient, /@media \(min-width: 1101px\) \{[\s\S]*?\[data-arena-match-points="true"\][\s\S]*?scale\(1\.2\)/);
 });
 
-test("coach stays beside the fixture rail and out of the formation, while remaining thirty percent larger than a player card", () => {
+test("coach stays centered in the Quick Sub bench and never overlays the formation", () => {
   const arenaClient = source("app/arena/ArenaClient.tsx");
 
-  assert.match(arenaClient, /--arena-coach-field-card-height/);
-  assert.match(arenaClient, /\.arena-coach-technical-area \{[\s\S]*?left: clamp\(72%, calc\(50% \+ 22vw\), 78%\);[\s\S]*?right: auto/);
-  assert.match(arenaClient, /\.arena-coach-technical-area \{[\s\S]*?top: auto;[\s\S]*?bottom: max\(104px, calc\(env\(safe-area-inset-bottom\) \+ 104px\)\);[\s\S]*?translate\(-50%, 0\)/);
-  assert.match(arenaClient, /\.arena-coach-technical-area \{[\s\S]*?width: calc\(var\(--arena-coach-field-card-height, 11\.2dvh\) \* \.867\)/);
-  assert.match(arenaClient, /@media \(max-width: 900px\), \(max-height: 600px\) and \(orientation: landscape\) \{[\s\S]*?\.arena-coach-technical-area \{[\s\S]*?left: clamp\(72%, calc\(50% \+ 22vw\), 78%\);[\s\S]*?top: auto;[\s\S]*?bottom: max\(54px, calc\(env\(safe-area-inset-bottom\) \+ 54px\)\)/);
-  assert.match(arenaClient, /width: calc\(var\(--arena-coach-field-card-height, 11\.2dvh\) \* \.867\)/);
-  assert.match(arenaClient, /\.arena-coach-card-button \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
-  assert.match(arenaClient, /@media \(max-width: 900px\), \(max-height: 600px\) and \(orientation: landscape\) \{[\s\S]*?\.arena-coach-technical-label \{[\s\S]*?display: none/);
+  assert.doesNotMatch(arenaClient, /className=\{`arena-coach-technical-area/);
+  assert.match(arenaClient, /className="arena-quick-sub-coach"/);
+  assert.match(arenaClient, /\.arena-quick-sub-coach \{[\s\S]*?order: 5;[\s\S]*?min-height: 126px/);
+  assert.match(arenaClient, /\.arena-quick-sub-coach > span \{[\s\S]*?height: 102px/);
   assert.match(arenaClient, /\.arena-action-panel-bench \.training-center-coach \{[\s\S]*?grid-column: 3;[\s\S]*?grid-template-columns: 18px minmax\(0, 1fr\);[\s\S]*?justify-self: end/);
   assert.match(arenaClient, /\.arena-action-panel-bench \.training-center-coach-card \{[\s\S]*?width: 18px/);
 });

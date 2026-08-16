@@ -82,7 +82,7 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /const isCoachSelectionRequired = Boolean\([\s\S]*?standaloneExperience === "market"/);
   assert.match(
     arena,
-    /const shouldRenderArenaOwnerLayer = \(shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)[\s\S]*?&& \(isArenaMatchdayViewActive \|\| isQuickSubstitutionSessionActive \|\| isDemoLineup\)[\s\S]*?&& standaloneExperience !== "live"[\s\S]*?&& !isCoachSelectionRequired/,
+    /const shouldRenderArenaOwnerLayer = \(shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)\s*&& standaloneExperience !== "live"\s*&& !isCoachSelectionRequired/,
   );
   assert.match(arena, /setIsArenaMatchdayViewActive\(showPlayers\)/);
   assert.match(

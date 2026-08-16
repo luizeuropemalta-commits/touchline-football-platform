@@ -7,7 +7,6 @@ import { Heart, Share2, ShieldCheck, UserPlus, UserRound } from "lucide-react";
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   touchlineArenaClubTemplateForTierPreview,
-  touchlineCardTierName,
   touchlineCardTierPalette,
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
@@ -872,12 +871,8 @@ export function TouchlineEliteExactCard({
     ? formatTouchlineEditorialCardPrice(editorialCard.cardPrice, runtimeLocale ?? undefined)
     : null;
   const hasPublishedCardProfile = Boolean(editorialCard);
-  const compactPrimaryLabel = hasPublishedCardProfile
-    ? (runtimeLocale === "pt-BR" ? "TIER DO CARD" : "CARD TIER")
-    : cardLabels.totalPoints;
-  const compactPrimaryValue = hasPublishedCardProfile && marketTier
-    ? touchlineCardTierName(marketTier.key, runtimeLocale ?? undefined)
-    : totalPointsText;
+  const compactPrimaryLabel = cardLabels.totalPoints;
+  const compactPrimaryValue = totalPointsText;
   const compactSecondaryLabel = hasPublishedCardProfile
     ? cardLabels.cardPrice
     : (runtimeLocale === "pt-BR" ? "POSIÇÃO" : "POSITION");
@@ -1306,8 +1301,9 @@ export function TouchlineEliteExactCard({
             position: "absolute",
             left: "50%",
             top: -16,
-            minWidth: 22,
-            height: 14,
+            width: "max-content",
+            minWidth: 24,
+            height: 16,
             zIndex: 70,
             transform: "translateX(-50%)",
             pointerEvents: "none",
@@ -1315,9 +1311,8 @@ export function TouchlineEliteExactCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            flexDirection: "column",
             gap: 0,
-            padding: "1px 3px",
+            padding: "1px 5px",
             border: "1px solid rgba(255,255,255,.18)",
             borderRadius: 5,
             background: "linear-gradient(180deg, rgba(18,22,24,.78), rgba(2,5,7,.86))",
@@ -1334,12 +1329,13 @@ export function TouchlineEliteExactCard({
           </span>
           <strong
             style={{
-              minWidth: 11,
+              minWidth: 0,
               color: "rgba(255,255,255,.92)",
-              fontSize: 8,
+              fontSize: 9,
               lineHeight: 1,
               textAlign: "center",
               textShadow: "0 1px 2px rgba(0,0,0,.8)",
+              fontVariantNumeric: "tabular-nums",
             }}
           >
             {matchPointsText}

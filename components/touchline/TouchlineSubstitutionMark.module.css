@@ -1,0 +1,72 @@
+.mark {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  overflow: visible;
+  background: transparent;
+  color: transparent;
+  isolation: isolate;
+}
+
+.mark path {
+  fill: none;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.incoming {
+  stroke: #a9ff2e;
+  filter:
+    drop-shadow(0 0 1px rgb(169 255 46 / .96))
+    drop-shadow(0 0 4px rgb(169 255 46 / .76))
+    drop-shadow(0 0 9px rgb(169 255 46 / .42));
+  animation: touchline-incoming-neon 1.8s ease-in-out infinite alternate;
+}
+
+.outgoing {
+  stroke: #ff4354;
+  filter:
+    drop-shadow(0 0 1px rgb(255 67 84 / .96))
+    drop-shadow(0 0 4px rgb(255 67 84 / .76))
+    drop-shadow(0 0 9px rgb(255 67 84 / .42));
+  animation: touchline-outgoing-neon 1.8s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes touchline-incoming-neon {
+  from {
+    filter:
+      drop-shadow(0 0 1px rgb(169 255 46 / .86))
+      drop-shadow(0 0 3px rgb(169 255 46 / .58))
+      drop-shadow(0 0 7px rgb(169 255 46 / .3));
+  }
+  to {
+    filter:
+      drop-shadow(0 0 2px rgb(169 255 46 / 1))
+      drop-shadow(0 0 6px rgb(169 255 46 / .9))
+      drop-shadow(0 0 12px rgb(169 255 46 / .5));
+  }
+}
+
+@keyframes touchline-outgoing-neon {
+  from {
+    filter:
+      drop-shadow(0 0 1px rgb(255 67 84 / .86))
+      drop-shadow(0 0 3px rgb(255 67 84 / .58))
+      drop-shadow(0 0 7px rgb(255 67 84 / .3));
+  }
+  to {
+    filter:
+      drop-shadow(0 0 2px rgb(255 67 84 / 1))
+      drop-shadow(0 0 6px rgb(255 67 84 / .9))
+      drop-shadow(0 0 12px rgb(255 67 84 / .5));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .incoming,
+  .outgoing {
+    animation: none;
+  }
+}

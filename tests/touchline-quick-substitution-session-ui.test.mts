@@ -3,6 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const arenaSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+const substitutionMarkSource = readFileSync(
+  new URL("../components/touchline/TouchlineSubstitutionMark.tsx", import.meta.url),
+  "utf8",
+);
+const substitutionMarkStyles = readFileSync(
+  new URL("../components/touchline/TouchlineSubstitutionMark.module.css", import.meta.url),
+  "utf8",
+);
 
 test("the in-Arena Quick Sub UI uses the no-reentry session projection", () => {
   assert.match(arenaSource, /createTouchlineQuickSubstitutionSession/);
@@ -23,14 +31,44 @@ test("Quick Substitution replaces the score rail with nine cards and a central c
   assert.match(arenaSource, /is-substitution-eligible/);
 });
 
-test("an active Quick Sub session mounts the eleven field cards without exposing them in the idle Arena", () => {
+test("the authoritative eleven remain mounted in the normal Arena and during Quick Sub", () => {
   assert.match(
     arenaSource,
-    /const shouldRenderArenaOwnerLayer = \(shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)[\s\S]*?&& \(isArenaMatchdayViewActive \|\| isQuickSubstitutionSessionActive \|\| isDemoLineup\)/,
+    /const shouldRenderArenaOwnerLayer = \(shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)\s*&& standaloneExperience !== "live"\s*&& !isCoachSelectionRequired/,
+  );
+  const ownerLayerGuard = arenaSource.slice(
+    arenaSource.indexOf("const shouldRenderArenaOwnerLayer"),
+    arenaSource.indexOf("const selectedLiveHomeCoachSlot"),
+  );
+  assert.doesNotMatch(ownerLayerGuard, /isArenaMatchdayViewActive/);
+  assert.match(
+    arenaSource,
+    /const arenaFieldPlayersForRendering = isQuickSubstitutionSessionActive[\s\S]*?\? quickSubstitutionInteractivePlayers[\s\S]*?: players/,
   );
   assert.match(
     arenaSource,
-    /shouldRenderArenaOwnerLayer && arenaFieldCardsAreReady[\s\S]*?isQuickSubstitutionSessionActive \? quickSubstitutionInteractivePlayers : players/,
+    /if \(\(!shouldRenderPlayers && !isQuickSubstitutionSessionActive\) \|\| !arenaFieldCardSignature\)/,
+  );
+  assert.match(
+    arenaSource,
+    /shouldRenderArenaOwnerLayer \? \([\s\S]*?data-card-assets-ready=\{arenaFieldCardsAreReady \? "true" : "false"\}[\s\S]*?arenaFieldPlayersForRendering\.map/,
+  );
+  assert.doesNotMatch(arenaSource, /transition: top \.16s ease, left \.16s ease, height \.16s ease/);
+  assert.match(arenaSource, /projectArenaPlayersForLoopCamera\(arenaFieldPlayersForRendering,/);
+  assert.match(arenaSource, /roleLayoutForPlayers\(arenaFieldPlayersForRendering,/);
+  assert.match(arenaSource, /trainingCenterPlayerSlots\(arenaFieldPlayersForRendering\)/);
+  assert.match(arenaSource, /arenaFieldPlayersForRendering\.find/);
+});
+
+test("Quick Sub keeps the coach only in the central reserve rail", () => {
+  assert.doesNotMatch(
+    arenaSource,
+    /shouldRenderArenaOwnerLayer && coachSlot\.coach && !isQuickSubstitutionSessionActive/,
+  );
+  assert.match(arenaSource, /arena-quick-sub-coach/);
+  assert.match(
+    arenaSource,
+    /\.arena-quick-sub-coach\s*\{[\s\S]*?order:\s*5/,
   );
 });
 
@@ -125,18 +163,56 @@ test("a proposed Quick Sub must pass through a central confirmation and remains 
   assert.match(arenaSource, /requestQuickSubstitutionConfirmation/);
   assert.match(arenaSource, /onClick=\{confirmBenchSwap\}/);
   assert.match(arenaSource, /setIsQuickSubstitutionConfirmationOpen\(false\)/);
+  assert.match(arenaSource, /<TouchlineSubstitutionMark className="arena-quick-sub-confirmation-arrow" \/>/);
+  assert.match(
+    arenaSource,
+    /article className="is-outgoing"[\s\S]*?<TouchlineEliteExactCard[\s\S]*?enableInteractiveNeon[\s\S]*?article className="is-incoming"[\s\S]*?<TouchlineEliteExactCard[\s\S]*?enableInteractiveNeon/,
+  );
 });
 
 test("Quick Sub keeps the pitch visible and gives tier cards a shape-following neon hover", () => {
-  assert.match(arenaSource, /background: linear-gradient\(180deg, rgba\(2,10,9,\.68\), rgba\(1,5,8,\.78\)\)/);
-  assert.match(arenaSource, /backdrop-filter: blur\(6px\)/);
+  assert.match(
+    arenaSource,
+    /function isBenchFormationLocked[\s\S]*?if \(!replacementTarget\) return false;/,
+    "a complete formation must not dim or lock every substitute before the outgoing starter is selected",
+  );
+  assert.match(arenaSource, /background: linear-gradient\(180deg, rgba\(2,10,9,\.46\), rgba\(1,5,8,\.58\)\)/);
+  assert.match(arenaSource, /backdrop-filter: blur\(3px\)/);
   assert.match(arenaSource, /@keyframes arena-tier-card-neon-pulse/);
   assert.match(arenaSource, /drop-shadow\(0 10px 17px rgb\(var\(--arena-tier-neon-rgb\) \/ \.72\)\)/);
   assert.match(arenaSource, /\.arena-quick-sub-card:hover \.arena-quick-sub-card-art/);
+  assert.match(arenaSource, /\.arena-quick-sub-confirmation\s*\{[\s\S]*?rgba\(0,\s*8,\s*7,\s*\.48\)[\s\S]*?blur\(5px\)/);
+  assert.match(arenaSource, /\.arena-quick-sub-confirmation-cards article:hover > span/);
   assert.doesNotMatch(
     arenaSource.slice(arenaSource.indexOf(".arena-quick-sub-card:hover,"), arenaSource.indexOf(".arena-quick-sub-card.is-locked")),
     /0 0 20px/,
   );
+});
+
+test("demo verification renders both confirmation cards and all reserve card art without weakening live publication", () => {
+  const previewAllowances = arenaSource.match(/allowVisualInventoryPreview=\{isDemoLineup\}/g) ?? [];
+
+  assert.ok(previewAllowances.length >= 4);
+  assert.match(
+    arenaSource,
+    /article className="is-outgoing"[\s\S]*?allowVisualInventoryPreview=\{isDemoLineup\}[\s\S]*?article className="is-incoming"[\s\S]*?allowVisualInventoryPreview=\{isDemoLineup\}/,
+  );
+  assert.match(
+    arenaSource,
+    /className="arena-quick-sub-card-art"[\s\S]*?allowVisualInventoryPreview=\{isDemoLineup\}/,
+  );
+  assert.doesNotMatch(arenaSource, /allowVisualInventoryPreview(?!=\{isDemoLineup\})[\s\S]{0,500}arena-quick-sub-confirmation/);
+});
+
+test("the shared substitution mark stays transparent with independent live green and red neon", () => {
+  assert.match(substitutionMarkSource, /className=\{styles\.incoming\}/);
+  assert.match(substitutionMarkSource, /className=\{styles\.outgoing\}/);
+  assert.match(substitutionMarkStyles, /\.mark\s*\{[\s\S]*?background:\s*transparent/);
+  assert.match(substitutionMarkStyles, /\.incoming\s*\{[\s\S]*?stroke:\s*#a9ff2e[\s\S]*?drop-shadow/);
+  assert.match(substitutionMarkStyles, /\.outgoing\s*\{[\s\S]*?stroke:\s*#ff4354[\s\S]*?drop-shadow/);
+  assert.match(substitutionMarkStyles, /@keyframes touchline-incoming-neon/);
+  assert.match(substitutionMarkStyles, /@keyframes touchline-outgoing-neon/);
+  assert.match(substitutionMarkStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
 test("the historical standalone match screen cannot offer contract release controls", () => {
