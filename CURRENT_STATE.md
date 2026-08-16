@@ -4,12 +4,12 @@ Verified: 2026-08-16
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
 Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-qa`
 Active branch: `qa`
-Active validated QA SHA: pending commit for the provider-metadata server-boundary correction.
+Active validated QA SHA: `ff9fdb6` (`fix(security): restrict provider sync metadata to server`).
 
 ## QA and release
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
-- Current QA deployment: `dpl_CRrfqxNrtbiGkq7ejVKwV8uhuNB6`, commit `72713d7`, status READY. Its stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
+- Current QA deployment: `dpl_Hv1HnSpApbpN9qkYG7Seti6XAXgc`, commit `ff9fdb6`, status READY. Its stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
 - Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
 - Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
 - Production, `touchline.com.br`, DNS, payments, Production database and card-publication gate were not changed by the QA mission.
@@ -36,7 +36,7 @@ Active validated QA SHA: pending commit for the provider-metadata server-boundar
 
 ## Next executable action
 
-Commit and push the reviewed QA-only provider-metadata server-boundary correction, wait for the native QA deployment, then resume the remaining authenticated visual matrix. The Live fixture rail work recorded below has already been completed today and must not be repeated. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+Resume the remaining authenticated visual matrix against deployment `dpl_Hv1HnSpApbpN9qkYG7Seti6XAXgc`. The Live fixture rail work recorded below has already been completed today and must not be repeated. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 

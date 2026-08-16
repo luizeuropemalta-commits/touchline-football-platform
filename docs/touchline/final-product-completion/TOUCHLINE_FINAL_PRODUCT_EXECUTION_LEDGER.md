@@ -2741,3 +2741,10 @@ Preview, production checkpoint, or a dirty worktree.
 - **Application contract:** `/api/football-data/foundation` keeps its explicit safe sync-run column projection, but reads it through the server admin client only after request authentication. When server admin configuration is unavailable it returns no sync-run records rather than falling back to a browser read.
 - **Verification:** focused boundary and sync-safety tests `4/4` PASS; full suite `996/996` PASS; TypeScript PASS; scoped ESLint PASS; `git diff --check` PASS; production build PASS with 133 routes. QA privilege inspection confirmed these two tables are accessible only to `postgres` and `service_role`.
 - **Boundary:** no player, membership, fixture, card, value, contract, user, Auth, Production database, Vercel Production environment, DNS, payment, provider configuration or `touchline.com.br` state changed.
+
+## 2026-08-16 provider metadata server boundary — QA DEPLOYED
+
+- **Source:** commit `ff9fdb6` was pushed only to branch `qa`; native Vercel deployment `dpl_Hv1HnSpApbpN9qkYG7Seti6XAXgc` reached `READY` and now owns the stable QA alias.
+- **Smoke:** the stable alias returned `200` for public Live and ClubHub routes. Unauthenticated Arena returned the expected `307` login redirect. Response headers identify the new deployment token `dpl_Hv1HnSpApbpN9qkYG7Seti6XAXgc`.
+- **Security audit:** the completed standard scan `dfc750c3-8830-4c79-b438-3772af01115f` reported the original authenticated provider-metadata browser-read boundary as one medium finding. Its QA remediation is migration `058`, with applied grant verification recorded above. The scan baseline was commit `084a6d5`; its warning about a changed checkout is expected because the remediation was committed after the audit began.
+- **Boundary:** QA branch and QA database only. Production, credentials, DNS, payments, provider configuration, card-publication state and `touchline.com.br` remain unchanged.
