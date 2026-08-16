@@ -10,7 +10,15 @@ project-quarantine
 # Local package cache and audit deliveries are never runtime inputs. Excluding
 # them keeps Vercel deployments limited to the executable TouchLine product.
 .pnpm-store
-docs
+# Documentation remains excluded from deployments, except for the two small
+# canonical governance inputs required by the release preflight itself.
+docs/*
+!docs/touchline/
+docs/touchline/*
+!docs/touchline/project-memory/
+docs/touchline/project-memory/*
+!docs/touchline/project-memory/TOUCHLINE_MISSION_FOOTER.md
+!docs/touchline/project-memory/TOUCHLINE_CODEX_PROMPT_TEMPLATE.md
 exports
 TOUCHLINE_VISUAL_AUDIT_2026-07-31
 TOUCHLINE_VISUAL_AUDIT_2026-07-31 2
