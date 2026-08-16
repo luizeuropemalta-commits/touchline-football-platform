@@ -128,9 +128,16 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /className=\{styles\.fixtureTeam\}>\s*<TeamMark fixture=\{fixture\} side="home"/);
   assert.match(component, /className=\{styles\.fixtureTeam\}>\s*<TeamMark fixture=\{fixture\} side="away"/);
   assert.match(component, /className=\{styles\.fixtureCentre\}/);
+  assert.match(component, /function fixtureRailStatus\(/);
+  assert.match(component, /function fixtureScorePair\(fixture: TouchlinePublicFixture\) \{\s*if \(Number\.isFinite\(fixture\.homeScore\) && Number\.isFinite\(fixture\.awayScore\)\)/);
+  assert.doesNotMatch(component, /homeScore \?\? 0|awayScore \?\? 0/);
+  assert.match(component, /<time dateTime=\{fixture\.startsAt\}>\{fixtureDate\(fixture, language, initialTimeZone/);
+  assert.match(component, /className=\{styles\.fixtureScore\}/);
   assert.match(component, /BellRing/);
-  assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 112px/);
+  assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 118px/);
   assert.match(styles, /\.fixtureCentre \{[^}]*grid-template-columns: minmax\(12px,1fr\) auto auto minmax\(12px,1fr\)/);
+  assert.match(styles, /\.fixtureScore \{[^}]*top: 12px[^}]*right: 39px/);
+  assert.match(styles, /\.teamMark \{[^}]*background: transparent[^}]*box-shadow: none/);
   assert.match(styles, /\.englandFlag \{[^}]*#cf2540/);
 });
 

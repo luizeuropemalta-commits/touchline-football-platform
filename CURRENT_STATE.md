@@ -30,7 +30,7 @@ Active validated QA SHA: `72713d7`
 
 ## Next executable action
 
-Deploy the validated QA-only Live fixture-rail candidate to the `qa` branch alias, then observe its English and Portuguese desktop/mobile render. The rail now identifies the competition as **TouchLine England League** with the England flag and presents each fixture vertically (home, score/time, away). Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+Deploy the reviewed QA-only Live fixture-rail candidate to the `qa` branch alias, then observe its English and Portuguese desktop/mobile render. The rail now identifies the competition as **TouchLine England League** with the England flag, shows the verified kick-off time, and presents a vertical score column only when both official scores are present. Live fixtures show `LIVE/AO VIVO`, never an invented elapsed minute. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 

@@ -59,6 +59,26 @@ function score(fixture: TouchlinePublicFixture) {
   return "VS";
 }
 
+function fixtureScorePair(fixture: TouchlinePublicFixture) {
+  if (Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore)) {
+    return { home: String(fixture.homeScore), away: String(fixture.awayScore) };
+  }
+  return { home: "—", away: "—" };
+}
+
+function fixtureRailStatus(
+  fixture: TouchlinePublicFixture,
+  language: keyof typeof copy,
+  metadata?: TouchlineLiveReadMetadata | null,
+  now?: number,
+) {
+  const state = touchlineMatchCentreDisplayState(fixture, metadata, now);
+  if (state === "stale") return copy[language].lastVerified;
+  if (state === "live") return copy[language].liveNow;
+  if (state === "finished") return copy[language].completed;
+  return copy[language].next;
+}
+
 function status(
   fixture: TouchlinePublicFixture,
   language: keyof typeof copy,
@@ -229,16 +249,20 @@ export default function TouchlineMatchCentre({
               <h2>{group.id === "live" && readMetadata?.degraded ? dictionary.lastVerified : group.label}</h2>
               {groups[group.id].map((fixture) => {
                 const isSelected = selected?.id === fixture.id;
+                const fixtureScores = fixtureScorePair(fixture);
                 return <button key={fixture.id} type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
                   <span className={styles.fixtureStack}>
                     <span className={styles.fixtureTeam}><TeamMark fixture={fixture} side="home" /><b>{fixture.homeTeam?.name ?? "Home"}</b></span>
                     <span className={styles.fixtureCentre}>
                       <span aria-hidden="true" />
-                      <strong>{score(fixture)}</strong>
-                      <small className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{status(fixture, language, initialTimeZone, readMetadata, now)}</small>
+                      <time dateTime={fixture.startsAt}>{fixtureDate(fixture, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
+                      <small className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{fixtureRailStatus(fixture, language, readMetadata, now)}</small>
                       <span aria-hidden="true" />
                     </span>
                     <span className={styles.fixtureTeam}><TeamMark fixture={fixture} side="away" /><b>{fixture.awayTeam?.name ?? "Away"}</b></span>
+                  </span>
+                  <span className={styles.fixtureScore} aria-label={`${fixtureScores.home} ${dictionary.versus} ${fixtureScores.away}`}>
+                    <strong>{fixtureScores.home}</strong><i aria-hidden="true" /><strong>{fixtureScores.away}</strong>
                   </span>
                   <span
                     className={styles.fixtureAlert}
