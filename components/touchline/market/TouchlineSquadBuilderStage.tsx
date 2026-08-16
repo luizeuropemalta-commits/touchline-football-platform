@@ -196,6 +196,7 @@ export default function TouchlineSquadBuilderStage({
                       showCardActions={false}
                       showProfileAction={false}
                       showSocialMetrics={false}
+                      allowVisualInventoryPreview
                     />
                   </span>
                   <strong>{player.shortName}</strong>
@@ -258,6 +259,7 @@ export default function TouchlineSquadBuilderStage({
                       showCardActions={false}
                       showProfileAction={false}
                       showSocialMetrics={false}
+                      allowVisualInventoryPreview
                     />
                   </div>
                 ) : null}
@@ -282,6 +284,7 @@ export default function TouchlineSquadBuilderStage({
                 showCardActions={false}
                 showProfileAction={false}
                 showSocialMetrics={false}
+                allowVisualInventoryPreview
               />
             </div>
             <b>{player.shortName}</b>

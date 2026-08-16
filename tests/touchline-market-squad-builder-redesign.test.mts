@@ -162,3 +162,15 @@ test("matchday bench and remaining squad are disjoint views of the same authorit
   assert.match(stage, /export type TouchlineSquadBuilderBenchPlayer = \{[\s\S]*?card: TouchlineEliteExactPlayer;/);
   assert.match(stage, /className=\{styles\.rosterCard\}[\s\S]*?<TouchlineEliteExactCard/);
 });
+
+test("owned squad cards remain visibly rendered in the authenticated Market builder", async () => {
+  const stage = await readFile(stagePath, "utf8");
+  const renderedCards = stage.match(/<TouchlineEliteExactCard[\s\S]*?\/>/g) ?? [];
+
+  assert.equal(renderedCards.length, 3);
+  for (const card of renderedCards) {
+    assert.match(card, /allowVisualInventoryPreview/);
+    assert.match(card, /showCardActions=\{false\}/);
+    assert.match(card, /showProfileAction=\{false\}/);
+  }
+});
