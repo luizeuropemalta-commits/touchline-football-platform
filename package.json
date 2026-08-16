@@ -21,7 +21,9 @@
     "verify:release": "tsc --noEmit --incremental false && eslint . && node scripts/run-vercel-release-tests.mjs && node scripts/check-touchline-release-readiness.mjs --check",
     "vercel-build": "pnpm run verify:release && next build --webpack",
     "audit:card-assets": "node scripts/audit-touchline-card-assets.mjs",
-    "audit:player-profiles": "node --experimental-strip-types scripts/audit-touchline-player-profiles.mts"
+    "audit:player-profiles": "node --experimental-strip-types scripts/audit-touchline-player-profiles.mts",
+    "preflight:qa-persona": "node --experimental-strip-types scripts/assert-touchline-qa-persona.mts",
+    "preflight:qa-persona:qa": "TOUCHLINE_QA_BASE_URL=https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app node --env-file=.env.development.local --experimental-strip-types scripts/assert-touchline-qa-persona.mts"
   },
   "dependencies": {
     "@sentry/nextjs": "10.70.0",

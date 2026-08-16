@@ -31,6 +31,7 @@
 - P0/P1 flow: implementation → tests → independent review → clean-worktree proof → release gate.
 - Feature flags default fail-closed. Deploy with the gate OFF, smoke-test, then enable only with explicit authority and smoke-test again. Roll back first on P0.
 - Never alter data values to repair presentation defects.
+- Authenticated QA must use the canonical QA project and the documented canonical owner persona only. Run the QA persona preflight before an authenticated test; do not create, reuse, or silently switch to a technical test identity.
 
 ## UX and documentation
 

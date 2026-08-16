@@ -1,8 +1,8 @@
 # TouchLine Current State
 
-Verified: 2026-08-15
+Verified: 2026-08-16
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
-Active QA worktree: `/private/tmp/touchline-qa-branch-deploy`
+Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-qa`
 Active branch: `qa`
 Active validated SHA: `486e790fee65a278dfa1d2d23d5642a7312e3da6`
 
@@ -19,6 +19,7 @@ Active validated SHA: `486e790fee65a278dfa1d2d23d5642a7312e3da6`
 - Isolated QA project: `xgxbwqxjssxxuihuwmgy`.
 - Representative run `bf476289-c6df-47a6-878e-7dc8c40f3f91` contains 20 clubs, 588 canonical players/memberships, 562 published cards, 35 active contracts, coach `455907`, 11 starters, 9 substitutes, 15 outside the matchday squad and 20 reversible QA fixtures.
 - The package is deterministic, reversible and replay-idempotent. Production data and credentials were not copied or changed.
+- New authenticated QA work must pass the canonical-persona preflight: QA project `xgxbwqxjssxxuihuwmgy`, owner `jl_nenelopes10@hotmail.com`, UUID `072900f3-27fc-41a5-9881-6913a486754e`, and the stable `qa` branch alias. The former technical account is a **HISTORICAL QA ACTOR** only and is blocked from new test selection.
 
 ## Active P0/P1 gates
 

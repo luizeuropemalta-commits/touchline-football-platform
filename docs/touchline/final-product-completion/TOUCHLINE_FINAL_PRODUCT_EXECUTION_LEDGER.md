@@ -2684,3 +2684,11 @@ Preview, production checkpoint, or a dirty worktree.
 - **Regression coverage:** a cross-boundary test now sends the exact output of `mapAuthoritativeRosterRows` into `parseAuthoritativeRosterResponse`; the client-specific tests also cover the published editorial contract, frozen fallback, missing authority and forged authority.
 - **Verification:** focused authoritative-roster tests `24/24`; TypeScript passed; targeted ESLint passed; `git diff --check` passed; full Vercel release build passed with ESLint `0` errors and the same `4` pre-existing warnings, tests `952/952`, and Next static generation `133/133`.
 - **Gate:** deploy only to the stable QA branch/alias, then prove in native Safari that the authenticated builder renders `35/35` contracts, `11/11` starters, `9/9` substitutes and `15/15` remaining cards. Production remains forbidden.
+
+## 2026-08-16 canonical QA persona closure — QA ONLY / HISTORICAL ACTOR RETAINED
+
+- **Decision:** the former technical account remains a **HISTORICAL QA ACTOR**. Its immutable publication provenance is retained; no deletion, reassignment, password reset, Production mutation or database migration is part of this closure.
+- **New fail-closed contract:** every new authenticated QA run must prove the exact QA project `xgxbwqxjssxxuihuwmgy`, the stable `qa` branch alias, canonical owner email `jl_nenelopes10@hotmail.com`, UUID `072900f3-27fc-41a5-9881-6913a486754e`, confirmed Auth email, matching public profile and Arena access.
+- **Prevention:** the executable preflight rejects another project, alias, UUID, email, an unconfirmed account, missing profile or missing Arena access before a new customer-style QA journey begins. Tests retain only a negative regression reference to the historical actor, so it cannot be silently selected again.
+- **Evidence boundary:** no browser credential/session storage, password, recovery token or service-role value is committed or logged. Production, `touchline.com.br`, credentials, card data, contracts and history are unchanged.
+- **Next checkpoint:** run the preflight on the QA project, use only the canonical owner in the visible QA browser, then resume the existing responsive visual audit without reopening already-closed route audits.
