@@ -4000,7 +4000,7 @@ export default function ArenaClient({
   // Quick Sub session (or the isolated demo QA route), so saved cards and the
   // coach can never flash over the empty field while account and roster state
   // are being reconciled.
-  const shouldRenderArenaOwnerLayer = shouldRenderPlayers
+  const shouldRenderArenaOwnerLayer = (shouldRenderPlayers || isQuickSubstitutionSessionActive)
     && (isArenaMatchdayViewActive || isQuickSubstitutionSessionActive || isDemoLineup)
     && standaloneExperience !== "live"
     && !isCoachSelectionRequired;

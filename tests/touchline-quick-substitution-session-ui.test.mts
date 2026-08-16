@@ -26,7 +26,7 @@ test("Quick Substitution replaces the score rail with nine cards and a central c
 test("an active Quick Sub session mounts the eleven field cards without exposing them in the idle Arena", () => {
   assert.match(
     arenaSource,
-    /const shouldRenderArenaOwnerLayer = shouldRenderPlayers[\s\S]*?&& \(isArenaMatchdayViewActive \|\| isQuickSubstitutionSessionActive \|\| isDemoLineup\)/,
+    /const shouldRenderArenaOwnerLayer = \(shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)[\s\S]*?&& \(isArenaMatchdayViewActive \|\| isQuickSubstitutionSessionActive \|\| isDemoLineup\)/,
   );
   assert.match(
     arenaSource,
