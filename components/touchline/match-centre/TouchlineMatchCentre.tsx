@@ -63,7 +63,7 @@ function fixtureScorePair(fixture: TouchlinePublicFixture) {
   if (Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore)) {
     return { home: String(fixture.homeScore), away: String(fixture.awayScore) };
   }
-  return { home: "—", away: "—" };
+  return null;
 }
 
 function fixtureRailStatus(
@@ -76,7 +76,24 @@ function fixtureRailStatus(
   if (state === "stale") return copy[language].lastVerified;
   if (state === "live") return copy[language].liveNow;
   if (state === "finished") return copy[language].completed;
-  return copy[language].next;
+  return null;
+}
+
+/**
+ * The schedule is the full canonical matchweek. A live snapshot may contain
+ * only the fixtures currently carrying an update, so it is an overlay rather
+ * than a replacement for the schedule shown in the fixture rail.
+ */
+function mergeLiveFixtureSnapshot(
+  current: TouchlinePublicFixture[],
+  snapshot: TouchlinePublicFixture[],
+) {
+  const snapshotById = new Map(snapshot.map((fixture) => [fixture.id, fixture]));
+  const currentIds = new Set(current.map((fixture) => fixture.id));
+  return [
+    ...current.map((fixture) => snapshotById.get(fixture.id) ?? fixture),
+    ...snapshot.filter((fixture) => !currentIds.has(fixture.id)),
+  ];
 }
 
 function status(
@@ -183,8 +200,9 @@ export default function TouchlineMatchCentre({
           ...(payload.fetchedAt === undefined ? {} : { fetchedAt: payload.fetchedAt }),
         };
         const metadata = isTouchlineLiveReadMetadata(metadataCandidate) ? metadataCandidate : null;
-        if (payload.ok && Array.isArray(payload.data) && metadata) {
-          setFixtures(payload.data);
+        const liveSnapshot = Array.isArray(payload.data) ? payload.data : null;
+        if (payload.ok && liveSnapshot && metadata) {
+          setFixtures((current) => mergeLiveFixtureSnapshot(current, liveSnapshot));
           setReadMetadata(metadata);
         }
       } catch {
@@ -245,25 +263,28 @@ export default function TouchlineMatchCentre({
             <span className={styles.fixtureCount}><Radio size={14} aria-hidden="true" />{fixtures.length}</span>
           </div>
           <div className={styles.fixtureScroller}>
-            {orderedGroups.map((group) => groups[group.id].length ? <section key={group.id} className={styles.fixtureGroup}>
+            {orderedGroups.map((group) => {
+              const railFixtures = groups[group.id];
+              return railFixtures.length ? <section key={group.id} className={styles.fixtureGroup}>
               <h2>{group.id === "live" && readMetadata?.degraded ? dictionary.lastVerified : group.label}</h2>
-              {groups[group.id].map((fixture) => {
+              {railFixtures.map((fixture) => {
                 const isSelected = selected?.id === fixture.id;
                 const fixtureScores = fixtureScorePair(fixture);
+                const railStatus = fixtureRailStatus(fixture, language, readMetadata, now);
                 return <button key={fixture.id} type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
                   <span className={styles.fixtureStack}>
-                    <span className={styles.fixtureTeam}><TeamMark fixture={fixture} side="home" /><b>{fixture.homeTeam?.name ?? "Home"}</b></span>
                     <span className={styles.fixtureCentre}>
-                      <span aria-hidden="true" />
                       <time dateTime={fixture.startsAt}>{fixtureDate(fixture, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
-                      <small className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{fixtureRailStatus(fixture, language, readMetadata, now)}</small>
-                      <span aria-hidden="true" />
+                      {railStatus ? <small className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{railStatus}</small> : null}
                     </span>
-                    <span className={styles.fixtureTeam}><TeamMark fixture={fixture} side="away" /><b>{fixture.awayTeam?.name ?? "Away"}</b></span>
+                    <span className={styles.fixtureTeams}>
+                      <span className={styles.fixtureTeam}><TeamMark fixture={fixture} side="home" /><b>{fixture.homeTeam?.name ?? "Home"}</b></span>
+                      <span className={styles.fixtureTeam}><TeamMark fixture={fixture} side="away" /><b>{fixture.awayTeam?.name ?? "Away"}</b></span>
+                    </span>
                   </span>
-                  <span className={styles.fixtureScore} aria-label={`${fixtureScores.home} ${dictionary.versus} ${fixtureScores.away}`}>
+                  {fixtureScores ? <span className={styles.fixtureScore} aria-label={`${fixtureScores.home} ${dictionary.versus} ${fixtureScores.away}`}>
                     <strong>{fixtureScores.home}</strong><i aria-hidden="true" /><strong>{fixtureScores.away}</strong>
-                  </span>
+                  </span> : null}
                   <span
                     className={styles.fixtureAlert}
                     role="img"
@@ -272,7 +293,8 @@ export default function TouchlineMatchCentre({
                   ><BellRing size={13} aria-hidden="true" /></span>
                 </button>;
               })}
-            </section> : null)}
+              </section> : null;
+            })}
             {!fixtures.length ? <div className={styles.emptyRail}><CalendarDays size={22} /><strong>{dictionary.noFixtures}</strong></div> : null}
           </div>
         </aside>
