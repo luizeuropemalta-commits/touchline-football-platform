@@ -854,10 +854,17 @@ export function TouchlineEliteExactCard({
   const editorialTier = editorialCard
     ? touchlineArenaTierForKey(editorialCard.tierKey)
     : null;
-  const inventoryPreviewTier = !editorialTier && allowVisualInventoryPreview
+  // An already-signed player is a narrow, frozen exception to public
+  // publication. Its contract recorded the tier at signing time, so Arena can
+  // keep rendering the owned card without consulting valuation data or treating
+  // the player as a newly published commercial card.
+  const contractedTier = !editorialTier && player.cardPriceAuthority === "active-contract"
     ? touchlineArenaTierForKey(player.cardTier)
     : null;
-  const marketTier = editorialTier ?? inventoryPreviewTier;
+  const inventoryPreviewTier = !editorialTier && !contractedTier && allowVisualInventoryPreview
+    ? touchlineArenaTierForKey(player.cardTier)
+    : null;
+  const marketTier = editorialTier ?? contractedTier ?? inventoryPreviewTier;
   // The selected artwork is only used by a published card. An asset cannot
   // turn an unpublished football player into a game card.
   const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl);
@@ -1252,8 +1259,9 @@ export function TouchlineEliteExactCard({
 
   // Real football data is rendered by its profile/roster consumers. Only the
   // authenticated Market receives the explicitly opt-in inventory preview;
-  // all other card surfaces remain fail-closed until publication.
-  if (!editorialCard && !allowVisualInventoryPreview) return null;
+  // a valid frozen contract may also render its already-owned artwork. All
+  // other card surfaces remain fail-closed until publication.
+  if (!editorialCard && !contractedTier && !allowVisualInventoryPreview) return null;
 
   return (
     <div

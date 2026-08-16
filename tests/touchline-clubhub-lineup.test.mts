@@ -188,14 +188,15 @@ test("ClubHub renders only a published card profile without valuation or contrac
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation|activeContractCard: activeContract/);
 });
 
-test("shared player cards require the manual published profile as the sole game-card authority", () => {
+test("shared player cards require a manual published profile, apart from a frozen owned-contract render", () => {
   const source = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
 
   assert.match(source, /const editorialCard = player\.editorialCard \?\? null/);
   assert.match(source, /formatTouchlineEditorialCardPrice/);
-  assert.match(source, /if \(!editorialCard && !allowVisualInventoryPreview\) return null/);
+  assert.match(source, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview\) return null/);
   assert.match(source, /allowVisualInventoryPreview = false/);
-  assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|Market value|Valor de mercado|formatTouchlineContractedCommercialCardPrice|cardPriceAuthority === "active-contract"/);
+  assert.match(source, /player\.cardPriceAuthority === "active-contract"/);
+  assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|Market value|Valor de mercado|formatTouchlineContractedCommercialCardPrice/);
 });
 
 test("unpublished ClubHub players remain in the football roster but are absent from the card grid", () => {

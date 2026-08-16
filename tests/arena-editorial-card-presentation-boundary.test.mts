@@ -6,6 +6,10 @@ const arena = readFileSync(
   new URL("../app/arena/ArenaClient.tsx", import.meta.url),
   "utf8",
 );
+const exactCard = readFileSync(
+  new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url),
+  "utf8",
+);
 
 function sourceBetween(start: string, end: string) {
   const from = arena.indexOf(start);
@@ -93,6 +97,22 @@ test("contracted Arena field and bench cards render through the central spotligh
   assert.match(spotlight, /showProfileAction/);
   assert.match(spotlight, /arena-player-spotlight-close/);
   assert.doesNotMatch(pitch, /marketValue/);
+});
+
+test("the shared exact card renders a frozen contract tier without widening unpublished-card access", () => {
+  const presentation = exactCard.slice(
+    exactCard.indexOf("const editorialCard = player.editorialCard ?? null;"),
+    exactCard.indexOf("const assignedVisualTemplateUrl"),
+  );
+  const renderGate = exactCard.slice(
+    exactCard.indexOf("// Real football data is rendered"),
+    exactCard.indexOf("return (", exactCard.indexOf("// Real football data is rendered")),
+  );
+
+  assert.match(presentation, /player\.cardPriceAuthority === "active-contract"/);
+  assert.match(presentation, /const marketTier = editorialTier \?\? contractedTier \?\? inventoryPreviewTier/);
+  assert.doesNotMatch(presentation, /marketValue|resolveTouchlineVerifiedPlayerEconomy/);
+  assert.match(renderGate, /!editorialCard && !contractedTier && !allowVisualInventoryPreview/);
 });
 
 test("Arena Market gates cart availability and price sorting by the same published-card policy", () => {
