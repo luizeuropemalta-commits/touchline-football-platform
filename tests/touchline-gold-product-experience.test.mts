@@ -42,7 +42,7 @@ test("Arena exposes a persistent non-financial recovery journey for incomplete c
   assert.match(source, /Abrir Mercado de Treinadores/);
   assert.match(source, /Abrir Mercado de Jogadores/);
   assert.match(source, /Continuar Montagem do Elenco/);
-  assert.match(source, /Voltar ao ClubHub/);
+  assert.match(source, /Ver todos os clubes/);
 });
 
 test("compact Arena and Market controls retain effective 44px targets", async () => {
