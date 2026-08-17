@@ -32,6 +32,33 @@ test("Arena public card adapters accept only editorial publication or a frozen c
   assert.doesNotMatch(adapter, /touchlineArenaCompetitionTierForCard/);
 });
 
+test("Arena refreshes every saved card from the current roster and never lets a stale snapshot override publication", () => {
+  const hydration = sourceBetween(
+    "function hydrateArenaPlayerFromSquad",
+    "function benchOptionToArenaPlayer",
+  );
+  const hydrationEffect = sourceBetween(
+    "if (!hasLoadedSavedLineup || !players.some(hasArenaCardForHydration)) return;",
+    "// Every Arena paint reads the persisted schedule.",
+  );
+
+  assert.match(hydration, /squadPresentation\.editorialCard \|\| squadPresentation\.cardPriceAuthority/);
+  assert.match(hydration, /\? squadPresentation\s*:\s*currentPresentation/);
+  assert.match(hydrationEffect, /\.filter\(hasArenaCardForHydration\)/);
+  assert.doesNotMatch(hydrationEffect, /hasMissingCardIdentityData/);
+});
+
+test("Arena renders the Starting XI from the first frame independently of Quick Sub and intro video state", () => {
+  const fieldLayer = sourceBetween(
+    "{shouldRenderArenaOwnerLayer ? (",
+    "{arenaFieldPlayersForRendering.map((player) => {",
+  );
+
+  assert.match(fieldLayer, /className="field-player-layer is-entry-ready"/);
+  assert.match(fieldLayer, /aria-hidden=\{false\}/);
+  assert.doesNotMatch(fieldLayer, /hasEntryVideoFinished/);
+});
+
 test("non-demo Arena card adapters do not derive a public frame, tier, or price from valuation data", () => {
   const compactAdapters = sourceBetween(
     "function arenaCardToPlayer",

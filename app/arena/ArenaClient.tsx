@@ -843,15 +843,8 @@ function hasUsableCountryCode(value?: string | null) {
   return Boolean(value && value.trim() && value.trim().toUpperCase() !== "N/A");
 }
 
-function hasMissingCardIdentityData(player: ArenaPlayer) {
-  if (!player.card) return false;
-
-  return (
-    !normalizeTouchlineMarketInventoryId(player.card.inventoryId) ||
-    !hasUsableCountryCode(player.card.countryCode3) ||
-    !player.card.flagUrl ||
-    !player.card.shirtNumber
-  );
+function hasArenaCardForHydration(player: ArenaPlayer) {
+  return Boolean(player.card);
 }
 
 function clubForArenaPlayer(player: ArenaPlayer) {
@@ -897,12 +890,12 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
   delete card.cardPrice;
   const currentPresentation = resolveArenaPublicCardPresentation(player.card);
   const squadPresentation = resolveArenaPublicCardPresentation(squadPlayer);
-  // Existing owned contracts remain frozen. If there is no such contract on
-  // the saved card, a published editorial profile from the roster may supply
-  // the visual tier and display price.
-  const presentation = currentPresentation.editorialCard || currentPresentation.cardPriceAuthority
-    ? currentPresentation
-    : squadPresentation;
+  // The current roster publication is authoritative for presentation. A
+  // frozen saved contract is only a fail-closed fallback when the current
+  // roster cannot provide a published editorial or active-contract profile.
+  const presentation = squadPresentation.editorialCard || squadPresentation.cardPriceAuthority
+    ? squadPresentation
+    : currentPresentation;
   const clubName = player.card.clubName || squadPlayer.clubName;
   const countryCode3 = hasUsableCountryCode(player.card.countryCode3) ? player.card.countryCode3 : squadPlayer.countryCode3 || null;
   const shirtNumber = normalizeOfficialShirtNumber(player.card.shirtNumber, squadPlayer.shirtNumber);
@@ -4986,32 +4979,32 @@ export default function ArenaClient({
   }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isArenaMatchdayViewActive, isDemoLineup, isQuickSubstitutionOpen, players, selectedFormationKey, t]);
 
   useEffect(() => {
-    if (!hasLoadedSavedLineup || !players.some(hasMissingCardIdentityData)) return;
+    if (!hasLoadedSavedLineup || !players.some(hasArenaCardForHydration)) return;
 
-    const missingCardSignatureByClubId = new Map<string, string[]>();
+    const savedCardSignatureByClubId = new Map<string, string[]>();
     players
-      .filter(hasMissingCardIdentityData)
+      .filter(hasArenaCardForHydration)
       .forEach((player) => {
         const club = clubForArenaPlayer(player);
         if (!club) return;
-        const current = missingCardSignatureByClubId.get(club.teamId) ?? [];
+        const current = savedCardSignatureByClubId.get(club.teamId) ?? [];
         current.push(String(player.id));
-        missingCardSignatureByClubId.set(club.teamId, current);
+        savedCardSignatureByClubId.set(club.teamId, current);
       });
-    const normalizedMissingCardSignatureByClubId = new Map(
-      [...missingCardSignatureByClubId].map(([clubId, playerIds]) => [clubId, playerIds.sort().join(",")] as const),
+    const normalizedSavedCardSignatureByClubId = new Map(
+      [...savedCardSignatureByClubId].map(([clubId, playerIds]) => [clubId, playerIds.sort().join(",")] as const),
     );
 
     const clubsToHydrate = Array.from(
       new Map(
         players
-          .filter(hasMissingCardIdentityData)
+          .filter(hasArenaCardForHydration)
           .map((player) => clubForArenaPlayer(player))
           .filter((club): club is PremierClubVisual => Boolean(club))
           .map((club) => [club.teamId, club] as const),
       ).values(),
     ).filter((club) => {
-      const signature = normalizedMissingCardSignatureByClubId.get(club.teamId);
+      const signature = normalizedSavedCardSignatureByClubId.get(club.teamId);
       return Boolean(signature)
         && !pendingCardHydrationClubIdsRef.current.has(club.teamId)
         && lastCardHydrationSignatureByClubRef.current.get(club.teamId) !== signature;
@@ -5023,7 +5016,7 @@ export default function ArenaClient({
       pendingCardHydrationClubIdsRef.current.add(club.teamId);
       lastCardHydrationSignatureByClubRef.current.set(
         club.teamId,
-        normalizedMissingCardSignatureByClubId.get(club.teamId) ?? "",
+        normalizedSavedCardSignatureByClubId.get(club.teamId) ?? "",
       );
     });
 
@@ -5074,7 +5067,7 @@ export default function ArenaClient({
       setPlayers((currentPlayers) => {
         let changed = false;
         const nextPlayers = currentPlayers.map((player) => {
-          if (!hasMissingCardIdentityData(player)) return player;
+          if (!hasArenaCardForHydration(player)) return player;
 
           const club = clubForArenaPlayer(player);
           if (!club) return player;
@@ -7371,10 +7364,10 @@ export default function ArenaClient({
 
         {shouldRenderArenaOwnerLayer ? (
           <section
-            className={`field-player-layer ${hasEntryVideoFinished ? "is-entry-ready" : "is-entry-hidden"}`}
+            className="field-player-layer is-entry-ready"
             data-card-assets-ready={arenaFieldCardsAreReady ? "true" : "false"}
             aria-label="Editable field players"
-            aria-hidden={!hasEntryVideoFinished}
+            aria-hidden={false}
           >
             {arenaFieldPlayersForRendering.map((player) => {
               const fieldPosition = fieldPlayerPositions.get(player.id) ?? projectArenaPlayerForLoopCamera(player, loopCameraIndex);
