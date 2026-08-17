@@ -119,6 +119,7 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
     AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
     AWS_REGION: "us-east-1",
     AWS_DEFAULT_REGION: "us-east-1",
+    TOUCHLINE_CARD_PUBLICATION_GATE: "enabled",
   })), {
     status: "qa",
     reasons: [],
@@ -188,6 +189,7 @@ test("any recognised production integration key rejects the isolated contract by
     "SUPABASE_SERVICE_ROLE_KEY",
     "SPORTMONKS_API_TOKEN",
     "FOOTBALL_DATA_SYNC_SECRET",
+    "TOUCHLINE_CARD_PUBLICATION_GATE",
     "STRIPE_SECRET_KEY",
     "RESEND_API_KEY",
     "AWS_ACCESS_KEY_ID",
