@@ -17,6 +17,7 @@ import {
   squadCardToExactPlayer,
   type ClubOwnerSquadCard,
 } from "../lib/touchlineArena/demo-data.ts";
+import { TOUCHLINE_CARD_TIER_KEYS } from "../lib/touchlineArena/card-rules.ts";
 
 const USER_ID = "123e4567-e89b-42d3-a456-426614174000";
 const CONTRACT_ID = "123e4567-e89b-42d3-a456-426614174001";
@@ -50,6 +51,7 @@ function authoritativeCard(): ClubOwnerSquadCard {
     cardTier: "emerald-green",
     cardPriceVersion: "2026-07-premier-v1",
     cardPriceAuthority: "active-contract",
+    editorialCard: null,
     inventoryId: INVENTORY_ID,
     touchlinePoints: 12,
   };
@@ -284,12 +286,62 @@ test("Arena persistence rebuilds spoofed card identity, tier, value, points and 
     cardTier: "emerald-green",
     cardPriceVersion: "2026-07-premier-v1",
     cardPriceAuthority: "active-contract",
+    editorialCard: null,
     inventoryId: INVENTORY_ID,
     matchStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
   });
   assert.equal("frameUrl" in (player.card as Record<string, unknown>), false);
   assert.equal("cardPrice" in (player.card as Record<string, unknown>), false);
   assert.equal("tcValue" in (player.card as Record<string, unknown>), false);
+});
+
+test("Arena persistence preserves the canonical published editorial card presentation", () => {
+  const rosterCard = {
+    ...authoritativeCard(),
+    editorialCard: PUBLISHED_EDITORIAL_CARD,
+  };
+  const result = canonicalizeArenaLineupForPersistence([{
+    inventoryId: INVENTORY_ID,
+    x: 68,
+    y: 52,
+    heightVh: 14,
+    card: {
+      inventoryId: INVENTORY_ID,
+      cardTier: "ruby-red",
+      editorialCard: null,
+    },
+  }], [rosterCard]);
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(result.lineup[0]?.card?.editorialCard, PUBLISHED_EDITORIAL_CARD);
+});
+
+test("Arena persistence preserves every canonical published editorial tier", () => {
+  for (const tierKey of TOUCHLINE_CARD_TIER_KEYS) {
+    const editorialCard = {
+      ...PUBLISHED_EDITORIAL_CARD,
+      tierKey,
+    };
+    const result = canonicalizeArenaLineupForPersistence([{
+      inventoryId: INVENTORY_ID,
+      x: 68,
+      y: 52,
+      heightVh: 14,
+      card: {
+        inventoryId: INVENTORY_ID,
+        cardTier: "ruby-red",
+        editorialCard: null,
+      },
+    }], [{
+      ...authoritativeCard(),
+      editorialCard,
+    }]);
+
+    assert.equal(result.ok, true, tierKey);
+    if (!result.ok) continue;
+    assert.deepEqual(result.lineup[0]?.card?.editorialCard, editorialCard, tierKey);
+  }
 });
 
 test("Arena persistence rejects malformed tactical coordinates instead of storing browser payloads", () => {

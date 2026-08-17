@@ -164,6 +164,7 @@ function canonicalArenaPlayer(
       cardTier: rosterCard.cardTier,
       cardPriceVersion: rosterCard.cardPriceVersion,
       cardPriceAuthority: rosterCard.cardPriceAuthority,
+      editorialCard: rosterCard.editorialCard ?? null,
       inventoryId,
       matchStats: {
         goals: 0,
