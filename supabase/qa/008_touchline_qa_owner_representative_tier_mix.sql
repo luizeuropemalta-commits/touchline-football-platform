@@ -607,8 +607,8 @@ begin
   set status = v_run.prior_order ->> 'status',
       item_count = (v_run.prior_order ->> 'item_count')::integer,
       total_tc = (v_run.prior_order ->> 'total_tc')::integer,
-      balance_before_tc = (v_run.prior_order ->> 'balance_before_tc')::integer,
-      balance_after_tc = (v_run.prior_order ->> 'balance_after_tc')::integer,
+      balance_before_tc = (v_run.prior_order ->> 'balance_before_tc')::numeric,
+      balance_after_tc = (v_run.prior_order ->> 'balance_after_tc')::numeric,
       card_ids = array(select jsonb_array_elements_text(v_run.prior_order -> 'card_ids')::uuid),
       price_table_versions = array(select jsonb_array_elements_text(v_run.prior_order -> 'price_table_versions')),
       reversed_at = nullif(v_run.prior_order ->> 'reversed_at', '')::timestamptz
@@ -645,18 +645,17 @@ begin
   for v_item in select value from jsonb_array_elements(v_run.prior_tactical_slots)
   loop
     insert into public.touchline_qa_owner_tactical_slots(
-      run_id, user_id, card_id, player_id, position_group, tactical_position,
-      squad_bucket, bucket_ordinal, assigned_at
+      run_id, user_id, card_id, broad_position, tactical_bucket, slot_index,
+      metadata, created_at
     ) values (
       (v_item ->> 'run_id')::uuid,
       (v_item ->> 'user_id')::uuid,
       (v_item ->> 'card_id')::uuid,
-      (v_item ->> 'player_id')::bigint,
-      v_item ->> 'position_group',
-      v_item ->> 'tactical_position',
-      v_item ->> 'squad_bucket',
-      (v_item ->> 'bucket_ordinal')::integer,
-      (v_item ->> 'assigned_at')::timestamptz
+      v_item ->> 'broad_position',
+      v_item ->> 'tactical_bucket',
+      (v_item ->> 'slot_index')::integer,
+      coalesce(v_item -> 'metadata', '{}'::jsonb),
+      (v_item ->> 'created_at')::timestamptz
     );
   end loop;
 

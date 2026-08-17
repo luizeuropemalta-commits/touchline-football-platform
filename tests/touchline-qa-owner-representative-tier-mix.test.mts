@@ -88,4 +88,9 @@ test("apply and rollback are idempotent and snapshot every mutated QA surface", 
     assert.match(source, new RegExp(snapshot));
   }
   assert.match(source, /touchline_rollback_qa_owner_representative_tier_mix/);
+  assert.doesNotMatch(source, /squad_bucket|bucket_ordinal|assigned_at/);
+  assert.match(source, /broad_position, tactical_bucket, slot_index/);
+  assert.match(source, /metadata, created_at/);
+  assert.match(source, /balance_before_tc = \(v_run\.prior_order ->> 'balance_before_tc'\)::numeric/);
+  assert.match(source, /balance_after_tc = \(v_run\.prior_order ->> 'balance_after_tc'\)::numeric/);
 });

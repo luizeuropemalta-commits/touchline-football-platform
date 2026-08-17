@@ -1,6 +1,6 @@
 # TouchLine Current State
 
-Verified: 2026-08-16
+Verified: 2026-08-17
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
 Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-qa`
 Active branch: `qa`
@@ -10,6 +10,7 @@ Active validated QA SHA: `ff9fdb6` (`fix(security): restrict provider sync metad
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
 - Current QA deployment: `dpl_Hv1HnSpApbpN9qkYG7Seti6XAXgc`, commit `ff9fdb6`, status READY. Its stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
+- The next QA-only candidate repairs the representative-scenario rollback against the canonical tactical-slot schema and numeric order balances. It has not yet been pushed or deployed; Production remains excluded.
 - Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
 - Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
 - Production, `touchline.com.br`, DNS, payments, Production database and card-publication gate were not changed by the QA mission.
@@ -17,8 +18,8 @@ Active validated QA SHA: `ff9fdb6` (`fix(security): restrict provider sync metad
 ## QA database
 
 - Isolated QA project: `xgxbwqxjssxxuihuwmgy`.
-- Representative run `bf476289-c6df-47a6-878e-7dc8c40f3f91` contains 20 clubs, 588 canonical players/memberships, 562 published cards, 35 active contracts, coach `455907`, 11 starters, 9 substitutes, 15 outside the matchday squad and 20 reversible QA fixtures.
-- The package is deterministic, reversible and replay-idempotent. Production data and credentials were not copied or changed.
+- Representative run `bf476289-c6df-47a6-878e-7dc8c40f3f91` contains 20 clubs, 588 canonical players/memberships, 562 published cards, 35 active contracts, coach `455907`, 11 starters, 9 substitutes, 15 outside the matchday squad and 20 reversible QA fixtures. Its active canonical tier distribution is ruby-red `6`, sapphire-blue `4`, amethyst-purple `6`, radiant-gold `6`, emerald-green `6`, clear-diamond `3`, diamond-gold `4`.
+- The package is deterministic, rollback-proven and replay-idempotent. Rollback restored 35 prior cards with an unchanged ledger, and the next apply returned `already_applied`; all 35 active contracts have valid published canonical price/tier metadata. Production data and credentials were not copied or changed.
 - New authenticated QA work must pass the canonical-persona preflight: QA project `xgxbwqxjssxxuihuwmgy`, owner `jl_nenelopes10@hotmail.com`, UUID `072900f3-27fc-41a5-9881-6913a486754e`, and the stable `qa` branch alias. The former technical account is a **HISTORICAL QA ACTOR** only and is blocked from new test selection.
 
 ## Security correction in validation
@@ -36,7 +37,7 @@ Active validated QA SHA: `ff9fdb6` (`fix(security): restrict provider sync metad
 
 ## Next executable action
 
-Resume the remaining authenticated visual matrix against deployment `dpl_Hv1HnSpApbpN9qkYG7Seti6XAXgc`. The Live fixture rail work recorded below has already been completed today and must not be repeated. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+Commit and push only the QA rollback repair, wait for its QA deployment, then run the authenticated visual matrix for the representative seven-tier squad: field 11, Quick Sub bench 9, remaining 15, all seven tier frames/neon/names/clubs/editorial prices at desktop, tablet landscape and phone landscape. Record any 4-3-3 placement defect without correcting it in this block. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 
