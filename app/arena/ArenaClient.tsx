@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction, type SyntheticEvent } from "react";
 import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, RotateCw, Search, UserRound, X } from "lucide-react";
 import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEliteExactCardLabels, type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
@@ -165,6 +165,7 @@ import {
   type TouchlineArenaIntroLaunchMode,
 } from "@/lib/touchlineArena/arena-intro";
 import {
+  arena433VideoLoopIndexForPlayback,
   arenaVideoViewportForDimensions,
   resolveArena433VideoSlots,
   type Arena433VideoLoopId,
@@ -708,12 +709,6 @@ const ARENA_LOOP_CAMERA_PROFILES: ArenaLoopCameraProfile[] = [
       forward: { min: 44, max: 88 },
     },
   },
-];
-
-const ARENA_LOOP_CAMERA_TIMELINE = [
-  { until: 0.48, cameraIndex: 0 },
-  { until: 0.74, cameraIndex: 1 },
-  { until: 1, cameraIndex: 2 },
 ];
 
 const TEAM_BUILDER_SLOTS = arenaSlotsForFormation(DEFAULT_ARENA_FORMATION_KEY);
@@ -2793,11 +2788,6 @@ function arenaLoopCameraProfile(cameraIndex: number) {
   return ARENA_LOOP_CAMERA_PROFILES[cameraIndex] ?? ARENA_LOOP_CAMERA_PROFILES[0];
 }
 
-function arenaLoopCameraIndexForProgress(progress: number) {
-  const safeProgress = Math.min(1, Math.max(0, progress));
-  return ARENA_LOOP_CAMERA_TIMELINE.find((entry) => safeProgress < entry.until)?.cameraIndex ?? ARENA_LOOP_CAMERA_PROFILES.length - 1;
-}
-
 function projectArenaPlayerForLoopCamera(player: ArenaPlayer, cameraIndex: number) {
   const profile = arenaLoopCameraProfile(cameraIndex);
   const baseLineX = ARENA_ROLE_LINE_X[player.role];
@@ -3437,6 +3427,8 @@ export default function ArenaClient({
   const liveCoachCardsRef = useRef<HTMLDivElement | null>(null);
   const firstVideoRef = useRef<HTMLVideoElement | null>(null);
   const secondVideoRef = useRef<HTMLVideoElement | null>(null);
+  const loopCameraFrameRequestRef = useRef<number | null>(null);
+  const loopCameraFrameVideoRef = useRef<HTMLVideoElement | null>(null);
   const loopRevealTimerRef = useRef<number | null>(null);
   const accountLineupSaveTimerRef = useRef<number | null>(null);
   const pendingCardHydrationClubIdsRef = useRef(new Set<string>());
@@ -5883,27 +5875,8 @@ export default function ArenaClient({
     void loopVideo.play().catch(() => undefined);
   }, [activeVideoIndex, isArenaVideoPaused]);
 
-  useEffect(() => {
-    const loopVideo = secondVideoRef.current;
-    if (!loopVideo) return;
-
-    function syncLoopCamera() {
-      if (!loopVideo) return;
-      const duration = Number.isFinite(loopVideo.duration) && loopVideo.duration > 0 ? loopVideo.duration : 21;
-      const nextCameraIndex = arenaLoopCameraIndexForProgress(loopVideo.currentTime / duration);
-      setLoopCameraIndex((currentIndex) => (currentIndex === nextCameraIndex ? currentIndex : nextCameraIndex));
-    }
-
-    syncLoopCamera();
-    loopVideo.addEventListener("loadedmetadata", syncLoopCamera);
-    loopVideo.addEventListener("timeupdate", syncLoopCamera);
-    loopVideo.addEventListener("seeked", syncLoopCamera);
-
-    return () => {
-      loopVideo.removeEventListener("loadedmetadata", syncLoopCamera);
-      loopVideo.removeEventListener("timeupdate", syncLoopCamera);
-      loopVideo.removeEventListener("seeked", syncLoopCamera);
-    };
+  useEffect(() => () => {
+    cancelLoopCameraFrameSync();
   }, []);
 
   useEffect(() => {
@@ -6280,6 +6253,7 @@ export default function ArenaClient({
 
     firstVideoRef.current?.pause();
     loopVideo.currentTime = 0;
+    syncLoopCameraFromVideo(loopVideo);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
 
     const finishLoopReveal = (paused: boolean) => {
@@ -6302,7 +6276,47 @@ export default function ArenaClient({
     setIsEntrySkipAvailable(false);
   }
 
-  function handleCardLoopPlaying() {
+  function syncLoopCameraFromVideo(loopVideo: HTMLVideoElement | null) {
+    if (!loopVideo) return;
+    const nextCameraIndex = arena433VideoLoopIndexForPlayback(loopVideo.currentTime, loopVideo.duration);
+    setLoopCameraIndex((currentIndex) => (currentIndex === nextCameraIndex ? currentIndex : nextCameraIndex));
+  }
+
+  function cancelLoopCameraFrameSync() {
+    const loopVideo = loopCameraFrameVideoRef.current;
+    const requestId = loopCameraFrameRequestRef.current;
+    if (loopVideo && requestId !== null && "cancelVideoFrameCallback" in loopVideo) {
+      loopVideo.cancelVideoFrameCallback(requestId);
+    }
+    loopCameraFrameRequestRef.current = null;
+    loopCameraFrameVideoRef.current = null;
+  }
+
+  function startLoopCameraFrameSync(loopVideo: HTMLVideoElement) {
+    syncLoopCameraFromVideo(loopVideo);
+    cancelLoopCameraFrameSync();
+    if (loopVideo.paused || loopVideo.ended || !("requestVideoFrameCallback" in loopVideo)) return;
+
+    loopCameraFrameVideoRef.current = loopVideo;
+    const syncOnVideoFrame = () => {
+      if (loopCameraFrameVideoRef.current !== loopVideo) return;
+      syncLoopCameraFromVideo(loopVideo);
+      if (loopVideo.paused || loopVideo.ended) {
+        loopCameraFrameRequestRef.current = null;
+        loopCameraFrameVideoRef.current = null;
+        return;
+      }
+      loopCameraFrameRequestRef.current = loopVideo.requestVideoFrameCallback(syncOnVideoFrame);
+    };
+    loopCameraFrameRequestRef.current = loopVideo.requestVideoFrameCallback(syncOnVideoFrame);
+  }
+
+  function handleCardLoopTimelineEvent(event: SyntheticEvent<HTMLVideoElement>) {
+    syncLoopCameraFromVideo(event.currentTarget);
+  }
+
+  function handleCardLoopPlaying(event: SyntheticEvent<HTMLVideoElement>) {
+    startLoopCameraFrameSync(event.currentTarget);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
     loopRevealTimerRef.current = null;
     setIsArenaVideoPaused(false);
@@ -7248,8 +7262,13 @@ export default function ArenaClient({
               playsInline
               loop
               preload="metadata"
+              onLoadedMetadata={handleCardLoopTimelineEvent}
+              onTimeUpdate={handleCardLoopTimelineEvent}
+              onSeeking={handleCardLoopTimelineEvent}
+              onSeeked={handleCardLoopTimelineEvent}
               onPlaying={handleCardLoopPlaying}
               onPause={() => {
+                cancelLoopCameraFrameSync();
                 if (activeVideoIndex === 1) setIsArenaVideoPaused(true);
               }}
             />

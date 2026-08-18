@@ -3,8 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   ARENA_433_VIDEO_COORDINATES,
+  ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES,
   ARENA_433_VIDEO_LOOP_IDS,
   ARENA_VIDEO_VIEWPORTS,
+  arena433VideoLoopIdForPlayback,
+  arena433VideoLoopIndexForPlayback,
   arenaVideoViewportForDimensions,
   resolveArena433VideoSlots,
 } from "../lib/touchlineArena/arena-formation-video-layout.ts";
@@ -58,9 +61,33 @@ test("real landscape dimensions select their explicit video viewport profile", (
   assert.equal(arenaVideoViewportForDimensions(844, 390), "phone-landscape");
 });
 
+test("the media clock enters each canonical camera profile at its exact boundary", () => {
+  const duration = 21;
+  const [wide, lower, side] = ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES;
+
+  assert.equal(arena433VideoLoopIdForPlayback(0, duration), "wide-touchline");
+  assert.equal(arena433VideoLoopIdForPlayback((wide.until * duration) - 0.001, duration), "wide-touchline");
+  assert.equal(arena433VideoLoopIdForPlayback(wide.until * duration, duration), "lower-stand");
+  assert.equal(arena433VideoLoopIdForPlayback((lower.until * duration) - 0.001, duration), "lower-stand");
+  assert.equal(arena433VideoLoopIdForPlayback(lower.until * duration, duration), "side-sweep");
+  assert.equal(arena433VideoLoopIdForPlayback((side.until * duration) - 0.001, duration), "side-sweep");
+});
+
+test("manual seeks and a media-loop wrap resolve a fresh profile instead of retaining the preceding one", () => {
+  const duration = 21;
+  assert.equal(arena433VideoLoopIndexForPlayback(15.75, duration), 2);
+  assert.equal(arena433VideoLoopIndexForPlayback(10.08, duration), 1);
+  assert.equal(arena433VideoLoopIndexForPlayback(duration, duration), 0);
+  assert.equal(arena433VideoLoopIdForPlayback((duration * 2) + 0.01, duration), "wide-touchline");
+});
+
 test("Arena renders the protected 4-3-3 from the video layout instead of a saved camera drag", () => {
   assert.match(arenaSource, /resolveArena433VideoSlots\([\s\S]*?arenaFieldPlayersForRendering[\s\S]*?arenaVideoViewport/);
   assert.match(arenaSource, /const fieldPlayerPositions = new Map\(canonical433VideoPositions \?\? lockedCameraPositions \?\? projectedFieldPlayerPositions\)/);
   assert.match(arenaSource, /if \(cameraEditPositions && !canonical433VideoPositions\)/);
   assert.match(arenaSource, /const baseHeight = fieldPosition\.heightVh \?\? arenaLoopCameraProfile\(loopCameraIndex\)\.cardHeightVh/);
+  assert.match(arenaSource, /onLoadedMetadata=\{handleCardLoopTimelineEvent\}/);
+  assert.match(arenaSource, /onSeeking=\{handleCardLoopTimelineEvent\}/);
+  assert.match(arenaSource, /onSeeked=\{handleCardLoopTimelineEvent\}/);
+  assert.match(arenaSource, /requestVideoFrameCallback/);
 });

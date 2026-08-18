@@ -10,6 +10,17 @@ export const ARENA_433_VIDEO_LOOP_IDS = [
   "side-sweep",
 ] as const;
 
+// This single media loop contains the three camera passes in this order.
+// Keeping its boundaries with the canonical formation profiles prevents a
+// clock value from selecting a profile unknown to the rendered coordinates.
+export const ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES = [
+  { until: 0.48, loopId: "wide-touchline" },
+  { until: 0.74, loopId: "lower-stand" },
+  { until: 1, loopId: "side-sweep" },
+] as const;
+
+export const ARENA_433_VIDEO_LOOP_FALLBACK_DURATION_SECONDS = 21;
+
 export const ARENA_VIDEO_VIEWPORTS = [
   "desktop",
   "tablet-landscape",
@@ -25,6 +36,34 @@ export type ArenaVideoSlot = {
   y: number;
   heightVh: number;
 };
+
+/**
+ * Resolves the camera pass directly from the media clock. A modulo operation
+ * makes the browser's loop reset an explicit return to wide-touchline, rather
+ * than preserving side-sweep state while frame zero is already visible.
+ */
+export function arena433VideoLoopIndexForPlayback(
+  currentTime: number | null | undefined,
+  duration: number | null | undefined,
+) {
+  const safeDuration = typeof duration === "number" && Number.isFinite(duration) && duration > 0
+    ? duration
+    : ARENA_433_VIDEO_LOOP_FALLBACK_DURATION_SECONDS;
+  const safeCurrentTime = typeof currentTime === "number" && Number.isFinite(currentTime) ? currentTime : 0;
+  const remainder = safeCurrentTime % safeDuration;
+  const loopedTime = remainder < 0 ? remainder + safeDuration : remainder;
+  const progress = loopedTime / safeDuration;
+
+  return ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES.findIndex((boundary) => progress < boundary.until);
+}
+
+export function arena433VideoLoopIdForPlayback(
+  currentTime: number | null | undefined,
+  duration: number | null | undefined,
+): Arena433VideoLoopId {
+  const loopIndex = arena433VideoLoopIndexForPlayback(currentTime, duration);
+  return ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES[loopIndex]?.loopId ?? "wide-touchline";
+}
 
 type Arena433VideoLayout = Record<ArenaVideoRole, ArenaVideoSlot[]>;
 
