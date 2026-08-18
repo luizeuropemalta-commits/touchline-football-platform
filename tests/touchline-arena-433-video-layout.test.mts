@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import {
   ARENA_433_VIDEO_COORDINATES,
   ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES,
   ARENA_433_VIDEO_LOOP_IDS,
   ARENA_VIDEO_VIEWPORTS,
-  arena433VideoLoopFirstPlayableTime,
   arena433VideoLoopIdForPlayback,
   arena433VideoLoopIndexForPlayback,
   arena433VideoLoopStartTime,
@@ -15,6 +14,7 @@ import {
   isArenaQaManualLayoutCameraId,
   resolveArena433VideoSlots,
 } from "../lib/touchlineArena/arena-formation-video-layout.ts";
+import { TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA } from "../lib/touchlineArena/arena-intro.ts";
 
 const arenaSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 
@@ -106,19 +106,17 @@ test("manual seeks and a media-loop wrap resolve a fresh profile instead of reta
   assert.equal(arena433VideoLoopIdForPlayback((duration * 2) + 0.01, duration), "wide-touchline");
 });
 
-test("the human QA editor has a separate, viewport-specific camera key and starts each selected camera at its local zero", () => {
+test("the human QA editor has a separate, viewport-specific camera key and each camera is an independent 0:00 asset", () => {
   const duration = 21;
   assert.equal(arenaQaManualLayoutCameraId("wide-touchline", "desktop"), "qa-manual-wide-touchline-desktop");
   assert.equal(isArenaQaManualLayoutCameraId("qa-manual-side-sweep-phone-landscape"), true);
   assert.equal(isArenaQaManualLayoutCameraId("qa-manual-wide-touchline-desktop-extra"), false);
-  assert.equal(arena433VideoLoopStartTime("wide-touchline", duration), 0);
+  assert.equal(Object.keys(TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA).join(","), ARENA_433_VIDEO_LOOP_IDS.join(","));
+  for (const videoPath of Object.values(TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA)) {
+    assert.ok(existsSync(new URL(`../public${videoPath}`, import.meta.url)));
+  }
+  // The public continuous-loop resolver stays available outside the QA editor.
   assert.equal(arena433VideoLoopStartTime("lower-stand", duration), 10.08);
-  assert.equal(arena433VideoLoopStartTime("side-sweep", duration), 15.54);
-  assert.equal(arena433VideoLoopFirstPlayableTime("wide-touchline", duration), 0);
-  assert.equal(arena433VideoLoopFirstPlayableTime("lower-stand", duration), 10.13);
-  assert.equal(arena433VideoLoopFirstPlayableTime("side-sweep", duration), 15.59);
-  assert.equal(arena433VideoLoopIdForPlayback(arena433VideoLoopFirstPlayableTime("lower-stand", duration), duration), "lower-stand");
-  assert.equal(arena433VideoLoopIdForPlayback(arena433VideoLoopFirstPlayableTime("side-sweep", duration), duration), "side-sweep");
 });
 
 test("Arena accepts a user-approved QA layout only in the specific QA editor pathway", () => {
@@ -129,9 +127,9 @@ test("Arena accepts a user-approved QA layout only in the specific QA editor pat
   assert.match(arenaSource, /Save Arena QA standard/);
   assert.match(arenaSource, /Pause camera/);
   assert.match(arenaSource, /handleFieldPlayerKeyDown/);
-  assert.match(arenaSource, /arena433VideoLoopFirstPlayableTime/);
-  assert.match(arenaSource, /pendingQaCameraSelectionRef/);
-  assert.match(arenaSource, /applyPendingQaArenaCamera/);
+  assert.match(arenaSource, /TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA\[currentCameraId\]/);
+  assert.match(arenaSource, /A camera button changes the actual media source/);
+  assert.match(arenaSource, /if \(isQaVisualEditor\) \{[\s\S]*?event\.currentTarget\.pause\(\);[\s\S]*?return;/);
   assert.match(arenaSource, /const baseHeight = fieldPosition\.heightVh \?\? arenaLoopCameraProfile\(loopCameraIndex\)\.cardHeightVh/);
   assert.match(arenaSource, /onLoadedMetadata=\{handleCardLoopTimelineEvent\}/);
   assert.match(arenaSource, /onSeeking=\{handleCardLoopTimelineEvent\}/);

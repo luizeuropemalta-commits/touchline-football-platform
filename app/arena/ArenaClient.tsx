@@ -164,6 +164,7 @@ import {
   TOUCHLINE_ARENA_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_INTRO_STORAGE_KEY,
   TOUCHLINE_ARENA_LOOP_VIDEO,
+  TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA,
   TOUCHLINE_ARENA_SKIP_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_VIDEO_POSTER,
   parseTouchlineArenaIntroIntent,
@@ -173,7 +174,6 @@ import {
 } from "@/lib/touchlineArena/arena-intro";
 import {
   ARENA_433_VIDEO_LOOP_IDS,
-  arena433VideoLoopFirstPlayableTime,
   arena433VideoLoopIndexForPlayback,
   arenaQaManualLayoutCameraId,
   arenaVideoViewportForDimensions,
@@ -3447,7 +3447,6 @@ export default function ArenaClient({
   const liveCoachCardsRef = useRef<HTMLDivElement | null>(null);
   const firstVideoRef = useRef<HTMLVideoElement | null>(null);
   const secondVideoRef = useRef<HTMLVideoElement | null>(null);
-  const pendingQaCameraSelectionRef = useRef<Arena433VideoLoopId | null>(null);
   const loopCameraFrameRequestRef = useRef<number | null>(null);
   const loopCameraFrameVideoRef = useRef<HTMLVideoElement | null>(null);
   const loopRevealTimerRef = useRef<number | null>(null);
@@ -6418,36 +6417,16 @@ export default function ArenaClient({
 
   function previewQaArenaCamera(loopId: Arena433VideoLoopId) {
     if (!isQaVisualEditor) return;
-    const loopVideo = secondVideoRef.current;
     const index = ARENA_433_VIDEO_LOOP_IDS.indexOf(loopId);
     if (index < 0) return;
-    // Keep the requested camera until its media metadata and seek complete.
-    // A fresh editor can receive the click before Safari has loaded duration.
-    pendingQaCameraSelectionRef.current = loopId;
+    // A camera button changes the actual media source, rather than seeking a
+    // single continuous video. This keeps Camera 1/2/3 independent at 0:00.
+    secondVideoRef.current?.pause();
     setIsArenaVideoPaused(true);
     setHasEntryVideoFinished(true);
     setActiveVideoIndex(1);
     setLoopCameraIndex(index);
-    if (loopVideo) {
-      applyPendingQaArenaCamera(loopVideo);
-    }
     setSaveStatus(`Arena QA Camera ${index + 1} · 0:00 · stopped`);
-  }
-
-  function applyPendingQaArenaCamera(loopVideo: HTMLVideoElement) {
-    const loopId = pendingQaCameraSelectionRef.current;
-    if (!loopId || !Number.isFinite(loopVideo.duration) || loopVideo.duration <= 0) return false;
-    const index = ARENA_433_VIDEO_LOOP_IDS.indexOf(loopId);
-    if (index < 0) return false;
-    const startTime = arena433VideoLoopFirstPlayableTime(loopId, loopVideo.duration);
-    loopVideo.pause();
-    setLoopCameraIndex(index);
-    if (Math.abs(loopVideo.currentTime - startTime) < 0.03) {
-      pendingQaCameraSelectionRef.current = null;
-      return true;
-    }
-    loopVideo.currentTime = startTime;
-    return true;
   }
 
   function pauseQaArenaCamera() {
@@ -6465,7 +6444,7 @@ export default function ArenaClient({
 
     firstVideoRef.current?.pause();
     loopVideo.currentTime = 0;
-    syncLoopCameraFromVideo(loopVideo);
+    if (!isQaVisualEditor) syncLoopCameraFromVideo(loopVideo);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
 
     const finishLoopReveal = (paused: boolean) => {
@@ -6524,24 +6503,20 @@ export default function ArenaClient({
   }
 
   function handleCardLoopTimelineEvent(event: SyntheticEvent<HTMLVideoElement>) {
-    const requestedCamera = pendingQaCameraSelectionRef.current;
-    if (requestedCamera) {
-      const requestedIndex = ARENA_433_VIDEO_LOOP_IDS.indexOf(requestedCamera);
-      if (requestedIndex >= 0) setLoopCameraIndex(requestedIndex);
-      if (event.type === "loadedmetadata") {
-        applyPendingQaArenaCamera(event.currentTarget);
-        return;
-      }
-      const requestedStart = arena433VideoLoopFirstPlayableTime(requestedCamera, event.currentTarget.duration);
-      if (event.type === "seeked" || Math.abs(event.currentTarget.currentTime - requestedStart) < 0.03) {
-        pendingQaCameraSelectionRef.current = null;
-      }
+    if (isQaVisualEditor) {
+      // Source selection owns the editor camera. Do not let media time from a
+      // prior source overwrite its layout profile while Safari loads it.
+      event.currentTarget.pause();
       return;
     }
     syncLoopCameraFromVideo(event.currentTarget);
   }
 
   function handleCardLoopPlaying(event: SyntheticEvent<HTMLVideoElement>) {
+    if (isQaVisualEditor) {
+      event.currentTarget.pause();
+      return;
+    }
     startLoopCameraFrameSync(event.currentTarget);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
     loopRevealTimerRef.current = null;
@@ -7493,7 +7468,9 @@ export default function ArenaClient({
             <video
               className={`arena-video arena-video-b ${activeVideoIndex === 1 ? "is-visible" : ""}`}
               ref={secondVideoRef}
-              src={isArenaIntroViewportReady ? TOUCHLINE_ARENA_LOOP_VIDEO : undefined}
+              src={isArenaIntroViewportReady
+                ? (isQaVisualEditor ? TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA[currentCameraId] : TOUCHLINE_ARENA_LOOP_VIDEO)
+                : undefined}
               poster={TOUCHLINE_ARENA_VIDEO_POSTER}
               muted
               playsInline
