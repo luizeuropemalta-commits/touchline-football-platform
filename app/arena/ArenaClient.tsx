@@ -7405,12 +7405,7 @@ export default function ArenaClient({
     ? savedLayout?.cameras?.[currentQaManualCameraId]
     : null;
   const lockedCameraLayout = qaManualCameraLayout ?? savedLayout?.cameras?.[currentCameraId];
-  const lockedCameraPositions = roleLayoutForPlayers(
-    arenaFieldPlayersForRendering,
-    lockedCameraLayout,
-    loopCameraIndex,
-    isQaVisualEditor,
-  );
+  const lockedCameraPositions = roleLayoutForPlayers(arenaFieldPlayersForRendering, lockedCameraLayout, loopCameraIndex, isQaVisualEditor);
   const cameraEditPositions = cameraEditSlots[currentCameraEditKey];
   // 4-3-3 remains a protected match presentation everywhere except for the
   // deliberate per-camera/per-viewport QA standard saved by its owner.
