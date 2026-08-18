@@ -4,13 +4,13 @@ Verified: 2026-08-18
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
 Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-qa`
 Active branch: `qa`
-Active validated QA SHA: `db13db1` (`fix(arena): keep camera sweeps on pitch`).
+Active validated QA SHA: `7474e2e` (`fix(arena): fit quick sub rail at 1280`).
 
 ## QA and release
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
-- Current QA deployment: `dpl_8nV6qEsQ1oTcUkw7yT3z4MBM7o6f`, commit `db13db1`, status READY. Its stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
-- The representative seven-tier QA scenario is deployed and visually verified. The next completed QA-only change establishes a protected 4-3-3 video coordinate source for the Arena's three camera loops; Production remains excluded.
+- Current QA deployment: `dpl_AZaGsRg3QfQgt8pGegpF4EWsBwvC`, commit `7474e2e`, status READY. Its stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
+- The representative seven-tier QA scenario, protected 4-3-3 video coordinate source and Quick Sub premium responsive HUD are deployed and visually verified. Production remains excluded.
 - Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
 - Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
 - Production, `touchline.com.br`, DNS, payments, Production database and card-publication gate were not changed by the QA mission.
@@ -33,11 +33,12 @@ Active validated QA SHA: `db13db1` (`fix(arena): keep camera sweeps on pitch`).
 - **Safari stale-deployment incident: CLOSED.** An already-open tab retained assets from deployment `dpl_AMVH4DELGqeVQ3vdg67SQwEj493u` (commit `1130455`) while the stable alias pointed to deployment `dpl_5GCTMjjJnanBgFjWdrkqukuwrkf6` (commit `486e790`). A cache-bypass reload loaded the current asset graph; a following ordinary reload also passed. Server evidence was HTTP 200, `Age: 0`, `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`, and `x-vercel-cache: MISS`.
 - **P1 responsive Market QA:** complete native/automated observation at 1440, 1280, 768 and 390, including keyboard, touch/scroll, zoom modal and selection persistence.
 - **P1 authenticated Arena 4-3-3 video QA:** complete for desktop, tablet landscape and phone landscape in native Safari. The three camera loops retain the 1/4/3/3 formation on the pitch; anonymous Chromium, WebKit and Firefox smoke tests returned HTTP 200 with no console errors. Browser engines do not carry the native authenticated QA session.
+- **P1 authenticated Arena Quick Sub HUD:** complete in native Safari at 1440×900, 1280×720, 1024×768 and 844×390. The rail keeps all 11 field controls visible and one intact `4 + coach + 5` bench row; client-side close restores the score rail without a document reload. A live 1280×720 observation caught and corrected the clipped tenth tile before final QA deployment. Chromium, WebKit and Firefox reached the expected login boundary with no console/page error or overflow; their anonymous sessions do not substitute for Safari owner evidence.
 - **P1 security backlog:** checkout quota race, mutating starter-sync GET/CSRF boundary, tenant-pivot/RLS and SECURITY DEFINER grants remain separately gated findings; none is being silently changed during visual QA.
 
 ## Next executable action
 
-Keep the QA 4-3-3 coordinate table as the sole source for `formation + loop + viewport`. Any later Arena formation work must preserve the verified 1/4/3/3 presentation and repeat the native Safari plus browser-engine matrix. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+Block 3 is closed. Do not begin Live work from this checkpoint. Any later Arena change must preserve the verified 4-3-3 `formation + loop + viewport` source and the Quick Sub `4 + coach + 5` responsive rail, then repeat native Safari plus browser-engine QA. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 
