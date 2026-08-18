@@ -163,7 +163,7 @@ import {
   TOUCHLINE_ARENA_ENTRY_VIDEO,
   TOUCHLINE_ARENA_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_INTRO_STORAGE_KEY,
-  TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA,
+  TOUCHLINE_ARENA_LOOP_VIDEO,
   TOUCHLINE_ARENA_SKIP_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_VIDEO_POSTER,
   parseTouchlineArenaIntroIntent,
@@ -172,7 +172,7 @@ import {
   type TouchlineArenaIntroLaunchMode,
 } from "@/lib/touchlineArena/arena-intro";
 import {
-  ARENA_433_VIDEO_LOOP_IDS,
+  arena433VideoLoopIndexForPlayback,
   arenaQaManualLayoutCameraId,
   arenaVideoViewportForDimensions,
   isArenaQaManualLayoutCameraId,
@@ -556,6 +556,13 @@ const ARENA_FORMATIONS: ArenaFormationDefinition[] = [
   { key: "5-3-2", label: "5-3-2", defenders: 5, midfielders: 3, forwards: 2 },
   { key: "5-4-1", label: "5-4-1", defenders: 5, midfielders: 4, forwards: 1 },
 ];
+const QA_EDITABLE_FORMATION_KEYS = new Set<ArenaFormationKey>([
+  "4-3-3",
+  "4-4-2",
+  "4-5-1",
+  "3-4-3",
+  "3-5-2",
+]);
 // Product rules live in docs/touchline-arena/rules. Update those docs before changing Arena economy, squad, navigation, or substitution behavior.
 const ARENA_FORMATION_POSITION_RULES: Record<ArenaFormationKey, string> = {
   "4-3-3": "1 GK, 2 CB, 2 FB, 3 MID, 2 WING, 1 ST",
@@ -2756,10 +2763,24 @@ function constrainArenaDisplaySlot(
   };
 }
 
+function constrainArenaQaFreeSlot(slot: Pick<ArenaPlayer, "x" | "y" | "heightVh">) {
+  return {
+    // Preserve a small edge gutter so a full card can remain visible, but do
+    // not apply role- or camera-specific tactical limits in the QA editor.
+    x: Math.min(98, Math.max(2, Math.round(slot.x * 10) / 10)),
+    y: Math.min(96, Math.max(6, Math.round(slot.y * 10) / 10)),
+    heightVh: Math.min(
+      ARENA_CARD_MAX_HEIGHT_VH,
+      Math.max(ARENA_CARD_MIN_HEIGHT_VH, slot.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH),
+    ),
+  };
+}
+
 function roleLayoutForPlayers(
   players: ArenaPlayer[],
   layout: ArenaFormationRoleLayout | null | undefined,
   cameraIndex: number,
+  allowQaFreePositioning = false,
 ) {
   if (!layout) return null;
   const roleCounts: Record<ArenaPlayer["role"], number> = {
@@ -2773,7 +2794,9 @@ function roleLayoutForPlayers(
     players.flatMap((player) => {
       const roleIndex = roleCounts[player.role]++;
       const slot = layout[player.role]?.[roleIndex];
-      return slot ? [[player.id, constrainArenaDisplaySlot(player, slot, cameraIndex)] as const] : [];
+      return slot ? [[player.id, allowQaFreePositioning
+        ? constrainArenaQaFreeSlot(slot)
+        : constrainArenaDisplaySlot(player, slot, cameraIndex)] as const] : [];
     }),
   );
 }
@@ -2854,20 +2877,23 @@ function normalizeArenaPlayersForFormation(
   formationKey: ArenaFormationKey,
   principal?: ArenaPersistencePrincipal | null,
 ) {
-  const roleTotals = players.reduce<Record<ArenaPlayer["role"], number>>(
-    (totals, player) => {
-      totals[player.role] += 1;
-      return totals;
-    },
-    { goalkeeper: 0, defender: 0, midfielder: 0, forward: 0 },
+  const formation = arenaFormationDefinition(formationKey);
+  const slots = arenaSlotsForFormation(formationKey, principal);
+  // A formation switch must change the actual rendered shape, not only its
+  // label. Keep the same cards, prioritise the real goalkeeper, then assign
+  // the remaining cards to the target tactical lines in their stable order.
+  const goalkeeper = players.find((player) => player.role === "goalkeeper") ?? players[0];
+  const outfieldPlayers = players.filter((player) => player.id !== goalkeeper?.id);
+  const tacticalRoles: ArenaPlayer["role"][] = [
+    "goalkeeper",
+    ...Array.from({ length: formation.defenders }, () => "defender" as const),
+    ...Array.from({ length: formation.midfielders }, () => "midfielder" as const),
+    ...Array.from({ length: formation.forwards }, () => "forward" as const),
+  ];
+  const playersInFormationOrder = goalkeeper ? [goalkeeper, ...outfieldPlayers] : outfieldPlayers;
+  const tacticalRoleByPlayerId = new Map(
+    playersInFormationOrder.map((player, index) => [player.id, tacticalRoles[index] ?? player.role] as const),
   );
-  const lockedLayout = readLockedFormationLayout(formationKey, principal);
-  const slots: Record<ArenaPlayer["role"], Array<Pick<ArenaPlayer, "x" | "y" | "heightVh">>> = {
-    goalkeeper: lockedLayout?.goalkeeper?.length ? lockedLayout.goalkeeper : [{ x: ARENA_ROLE_LINE_X.goalkeeper, y: 52, heightVh: ARENA_CARD_COMPACT_HEIGHT_VH }],
-    defender: lockedLayout?.defender?.length ? lockedLayout.defender : buildArenaLineSlots(Math.min(roleTotals.defender, maxArenaPlayersForRole("defender", formationKey)), ARENA_ROLE_LINE_X.defender, "defender"),
-    midfielder: lockedLayout?.midfielder?.length ? lockedLayout.midfielder : buildArenaLineSlots(Math.min(roleTotals.midfielder, maxArenaPlayersForRole("midfielder", formationKey)), ARENA_ROLE_LINE_X.midfielder, "midfielder"),
-    forward: lockedLayout?.forward?.length ? lockedLayout.forward : buildArenaLineSlots(Math.min(roleTotals.forward, maxArenaPlayersForRole("forward", formationKey)), ARENA_ROLE_LINE_X.forward, "forward"),
-  };
   const roleCounts: Record<ArenaPlayer["role"], number> = {
     goalkeeper: 0,
     defender: 0,
@@ -2876,11 +2902,13 @@ function normalizeArenaPlayersForFormation(
   };
 
   return players.map((player, index) => {
-    const slotIndex = roleCounts[player.role]++;
-    const slot = slots[player.role][slotIndex] ?? TEAM_BUILDER_SLOTS[player.role][slotIndex] ?? TEAM_BUILDER_GENERIC_SLOTS[index] ?? TEAM_BUILDER_GENERIC_SLOTS.at(-1)!;
-    const position = clampArenaPlayerPosition(player, { x: slot.x, y: slot.y });
+    const role = tacticalRoleByPlayerId.get(player.id) ?? player.role;
+    const slotIndex = roleCounts[role]++;
+    const slot = slots[role][slotIndex] ?? TEAM_BUILDER_SLOTS[role][slotIndex] ?? TEAM_BUILDER_GENERIC_SLOTS[index] ?? TEAM_BUILDER_GENERIC_SLOTS.at(-1)!;
+    const position = clampArenaPlayerPosition({ role }, { x: slot.x, y: slot.y });
     return {
       ...player,
+      role,
       ...position,
       heightVh: ARENA_CARD_COMPACT_HEIGHT_VH,
     };
@@ -5912,7 +5940,7 @@ export default function ArenaClient({
     if (!loopVideo || !loopVideo.paused) return;
 
     void loopVideo.play().catch(() => undefined);
-  }, [activeVideoIndex, isArenaVideoPaused, loopCameraIndex]);
+  }, [activeVideoIndex, isArenaVideoPaused]);
 
   useEffect(() => () => {
     cancelLoopCameraFrameSync();
@@ -5954,9 +5982,7 @@ export default function ArenaClient({
   function writeQaVisualDraft(playerId: string, patch: Partial<ArenaFieldSlot>) {
     const existing = fieldPlayerPositions.get(playerId);
     if (!existing) return;
-    const player = arenaFieldPlayersForRendering.find((candidate) => candidate.id === playerId);
-    if (!player) return;
-    const nextSlot = constrainArenaDisplaySlot(player, { ...existing, ...patch }, loopCameraIndex);
+    const nextSlot = constrainArenaQaFreeSlot({ ...existing, ...patch });
     setCameraEditSlots((currentSlots) => ({
       ...currentSlots,
       [currentCameraEditKey]: {
@@ -5979,7 +6005,7 @@ export default function ArenaClient({
       ] as const),
     );
     const lockedPlayers = players.map(lockArenaPlayerSize);
-    writeLockedFormationLayout("4-3-3", currentQaManualCameraId, lockedPlayers, slots, arenaPersistencePrincipal);
+    writeLockedFormationLayout(selectedFormationKey, currentQaManualCameraId, lockedPlayers, slots, arenaPersistencePrincipal);
     setSaveStatus(`Saving Arena QA standard · ${currentCameraId} · ${arenaVideoViewport}`);
 
     try {
@@ -5987,11 +6013,11 @@ export default function ArenaClient({
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          formation: "4-3-3",
+          formation: selectedFormationKey,
           lineup: lockedPlayers,
           savedFormationLayouts: Object.fromEntries(
             Object.entries(readLockedFormationLayouts(arenaPersistencePrincipal))
-              .filter(([key]) => key === "4-3-3" || key === "4-4-2"),
+              .filter(([key]) => QA_EDITABLE_FORMATION_KEYS.has(key as ArenaFormationKey)),
           ),
         }),
       });
@@ -6059,10 +6085,11 @@ export default function ArenaClient({
   }
 
   function changeFormation(formationKey: ArenaFormationKey) {
-    if (!isFinalizedArenaFormation(formationKey)) {
+    if (!isQaVisualEditor && !isFinalizedArenaFormation(formationKey)) {
       setSaveStatus(`${formationKey} · ${t("comingSoon")}`);
       return;
     }
+    if (isQaVisualEditor && !QA_EDITABLE_FORMATION_KEYS.has(formationKey)) return;
     setSelectedFormationKey(formationKey);
     setPlayers((currentPlayers) => normalizeArenaPlayersForFormation(
       currentPlayers,
@@ -6413,21 +6440,6 @@ export default function ArenaClient({
     handleFieldPlayerClick(player);
   }
 
-  function previewQaArenaCamera(loopId: Arena433VideoLoopId) {
-    if (!isQaVisualEditor) return;
-    const index = ARENA_433_VIDEO_LOOP_IDS.indexOf(loopId);
-    if (index < 0) return;
-    // A camera button changes the actual media source, rather than seeking a
-    // single continuous video. Start that source normally; the editor user
-    // chooses when to pause it for a tactical adjustment.
-    secondVideoRef.current?.pause();
-    setIsArenaVideoPaused(false);
-    setHasEntryVideoFinished(true);
-    setActiveVideoIndex(1);
-    setLoopCameraIndex(index);
-    setSaveStatus(`Arena QA Camera ${index + 1} · playing · pause when ready`);
-  }
-
   function pauseQaArenaCamera() {
     if (!isQaVisualEditor) return;
     secondVideoRef.current?.pause();
@@ -6437,20 +6449,13 @@ export default function ArenaClient({
     setSaveStatus(`Arena QA camera paused · ${currentCameraId}`);
   }
 
-  function advanceArenaLoopCamera() {
-    // The Arena background is three individual videos. When one ends, select
-    // the next source and its matching formation profile; never infer a
-    // camera from a timestamp inside a continuous master video.
-    setLoopCameraIndex((currentIndex) => (currentIndex + 1) % ARENA_433_VIDEO_LOOP_IDS.length);
-    setIsArenaVideoPaused(false);
-  }
-
   function startCardLoopVideo() {
     const loopVideo = secondVideoRef.current;
     if (!loopVideo) return;
 
     firstVideoRef.current?.pause();
     loopVideo.currentTime = 0;
+    syncLoopCameraFromVideo(loopVideo);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
 
     const finishLoopReveal = (paused: boolean) => {
@@ -6483,13 +6488,37 @@ export default function ArenaClient({
     loopCameraFrameVideoRef.current = null;
   }
 
-  function handleCardLoopTimelineEvent(event: SyntheticEvent<HTMLVideoElement>) {
-    if (event.type === "canplay" && activeVideoIndex === 1 && !isArenaVideoPaused) {
-      void event.currentTarget.play().catch(() => setIsArenaVideoPaused(true));
-    }
+  function syncLoopCameraFromVideo(loopVideo: HTMLVideoElement | null) {
+    if (!loopVideo) return;
+    const nextCameraIndex = arena433VideoLoopIndexForPlayback(loopVideo.currentTime, loopVideo.duration);
+    setLoopCameraIndex((currentIndex) => (currentIndex === nextCameraIndex ? currentIndex : nextCameraIndex));
   }
 
-  function handleCardLoopPlaying() {
+  function startLoopCameraFrameSync(loopVideo: HTMLVideoElement) {
+    syncLoopCameraFromVideo(loopVideo);
+    cancelLoopCameraFrameSync();
+    if (loopVideo.paused || loopVideo.ended || !("requestVideoFrameCallback" in loopVideo)) return;
+
+    loopCameraFrameVideoRef.current = loopVideo;
+    const syncOnVideoFrame = () => {
+      if (loopCameraFrameVideoRef.current !== loopVideo) return;
+      syncLoopCameraFromVideo(loopVideo);
+      if (loopVideo.paused || loopVideo.ended) {
+        loopCameraFrameRequestRef.current = null;
+        loopCameraFrameVideoRef.current = null;
+        return;
+      }
+      loopCameraFrameRequestRef.current = loopVideo.requestVideoFrameCallback(syncOnVideoFrame);
+    };
+    loopCameraFrameRequestRef.current = loopVideo.requestVideoFrameCallback(syncOnVideoFrame);
+  }
+
+  function handleCardLoopTimelineEvent(event: SyntheticEvent<HTMLVideoElement>) {
+    syncLoopCameraFromVideo(event.currentTarget);
+  }
+
+  function handleCardLoopPlaying(event: SyntheticEvent<HTMLVideoElement>) {
+    startLoopCameraFrameSync(event.currentTarget);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
     loopRevealTimerRef.current = null;
     setIsArenaVideoPaused(false);
@@ -7372,11 +7401,16 @@ export default function ArenaClient({
   // canonical fallback: it is only read on the exact QA host and is keyed by
   // this video pass + viewport. Production and other Arena surfaces cannot
   // observe or write it.
-  const qaManualCameraLayout = isStableQaArenaHost && selectedFormationKey === "4-3-3"
+  const qaManualCameraLayout = isStableQaArenaHost && QA_EDITABLE_FORMATION_KEYS.has(selectedFormationKey)
     ? savedLayout?.cameras?.[currentQaManualCameraId]
     : null;
   const lockedCameraLayout = qaManualCameraLayout ?? savedLayout?.cameras?.[currentCameraId];
-  const lockedCameraPositions = roleLayoutForPlayers(arenaFieldPlayersForRendering, lockedCameraLayout, loopCameraIndex);
+  const lockedCameraPositions = roleLayoutForPlayers(
+    arenaFieldPlayersForRendering,
+    lockedCameraLayout,
+    loopCameraIndex,
+    isQaVisualEditor,
+  );
   const cameraEditPositions = cameraEditSlots[currentCameraEditKey];
   // 4-3-3 remains a protected match presentation everywhere except for the
   // deliberate per-camera/per-viewport QA standard saved by its owner.
@@ -7387,7 +7421,10 @@ export default function ArenaClient({
   if (cameraEditPositions && (!canonical433VideoPositions || isQaVisualEditor)) {
     for (const [playerId, slot] of Object.entries(cameraEditPositions)) {
       const player = arenaFieldPlayersForRendering.find((candidate) => candidate.id === playerId);
-      if (player) fieldPlayerPositions.set(playerId, constrainArenaDisplaySlot(player, slot, loopCameraIndex));
+      if (player) fieldPlayerPositions.set(
+        playerId,
+        isQaVisualEditor ? constrainArenaQaFreeSlot(slot) : constrainArenaDisplaySlot(player, slot, loopCameraIndex),
+      );
     }
   }
   const selectedEditorSlot = selectedPlayer
@@ -7441,15 +7478,18 @@ export default function ArenaClient({
               className={`arena-video arena-video-b ${activeVideoIndex === 1 ? "is-visible" : ""}`}
               ref={secondVideoRef}
               src={isArenaIntroViewportReady
-                ? TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA[currentCameraId]
+                ? TOUCHLINE_ARENA_LOOP_VIDEO
                 : undefined}
               poster={TOUCHLINE_ARENA_VIDEO_POSTER}
               muted
               playsInline
+              loop
               preload="metadata"
               onLoadedMetadata={handleCardLoopTimelineEvent}
               onCanPlay={handleCardLoopTimelineEvent}
-              onEnded={advanceArenaLoopCamera}
+              onTimeUpdate={handleCardLoopTimelineEvent}
+              onSeeking={handleCardLoopTimelineEvent}
+              onSeeked={handleCardLoopTimelineEvent}
               onPlaying={handleCardLoopPlaying}
               onPause={() => {
                 cancelLoopCameraFrameSync();
@@ -9628,16 +9668,15 @@ export default function ArenaClient({
                 </div>
 
                 {isQaVisualEditor ? (
-                  <div className="formation-presets" aria-label="Choose Arena camera">
-                    {ARENA_433_VIDEO_LOOP_IDS.map((loopId, index) => (
+                  <div className="formation-presets" aria-label="Arena video controls">
+                    {[...QA_EDITABLE_FORMATION_KEYS].map((formationKey) => (
                       <button
-                        key={loopId}
+                        key={formationKey}
                         type="button"
-                        className={loopId === currentCameraId ? "is-active" : ""}
-                        onClick={() => previewQaArenaCamera(loopId)}
+                        className={formationKey === selectedFormationKey ? "is-active" : ""}
+                        onClick={() => changeFormation(formationKey)}
                       >
-                        <strong>Camera {index + 1}</strong>
-                        <small>{loopId} · 0:00</small>
+                        <strong>{formationKey}</strong>
                       </button>
                     ))}
                     <button type="button" onClick={pauseQaArenaCamera}>Pause camera</button>
@@ -9673,8 +9712,8 @@ export default function ArenaClient({
                     <span>{t("xPosition")}</span>
                     <input
                       type="range"
-                      min={5}
-                      max={95}
+                      min={2}
+                      max={98}
                       value={selectedEditorSlot?.x ?? selectedPlayer.x}
                       disabled={isSelectedFormationFinalized && !isQaVisualEditor}
                       onChange={(event) => updateSelectedPlayerPosition("x", Number(event.target.value))}
@@ -9685,8 +9724,8 @@ export default function ArenaClient({
                     <span>{t("yPosition")}</span>
                     <input
                       type="range"
-                      min={5}
-                      max={95}
+                      min={6}
+                      max={96}
                       value={selectedEditorSlot?.y ?? selectedPlayer.y}
                       disabled={isSelectedFormationFinalized && !isQaVisualEditor}
                       onChange={(event) => updateSelectedPlayerPosition("y", Number(event.target.value))}

@@ -14,8 +14,8 @@ export const ARENA_433_VIDEO_LOOP_IDS = [
 // Keeping its boundaries with the canonical formation profiles prevents a
 // clock value from selecting a profile unknown to the rendered coordinates.
 export const ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES = [
-  { until: 0.48, loopId: "wide-touchline" },
-  { until: 0.74, loopId: "lower-stand" },
+  { until: 10 / 21.025, loopId: "wide-touchline" },
+  { until: 14.7 / 21.025, loopId: "lower-stand" },
   { until: 1, loopId: "side-sweep" },
 ] as const;
 
