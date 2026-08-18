@@ -164,6 +164,12 @@ import {
   type TouchlineArenaIntroIntent,
   type TouchlineArenaIntroLaunchMode,
 } from "@/lib/touchlineArena/arena-intro";
+import {
+  arenaVideoViewportForDimensions,
+  resolveArena433VideoSlots,
+  type Arena433VideoLoopId,
+  type ArenaVideoViewport,
+} from "@/lib/touchlineArena/arena-formation-video-layout";
 import formationLockSeed from "@/data/touchline-arena-formation-locks.json";
 
 const PUBLIC_DATA_SOURCE_LABEL = "TouchLine England";
@@ -595,7 +601,7 @@ type ArenaFormationLockEntry = ArenaFormationRoleLayout & {
 };
 type ArenaFormationLockedLayout = Partial<Record<ArenaFormationKey, ArenaFormationLockEntry>>;
 type ArenaLoopCameraProfile = {
-  id: string;
+  id: Arena433VideoLoopId;
   roleLineX: Record<ArenaPlayer["role"], number>;
   roleIndexXOffsets?: Partial<Record<ArenaPlayer["role"], number[]>>;
   roleIndexYOffsets?: Partial<Record<ArenaPlayer["role"], number[]>>;
@@ -3461,6 +3467,11 @@ export default function ArenaClient({
   const [isArenaMatchdayViewActive, setIsArenaMatchdayViewActive] = useState(false);
   const [readyArenaFieldCardsSignature, setReadyArenaFieldCardsSignature] = useState("");
   const [loopCameraIndex, setLoopCameraIndex] = useState(0);
+  const [arenaVideoViewport, setArenaVideoViewport] = useState<ArenaVideoViewport>(() => (
+    typeof window === "undefined"
+      ? "desktop"
+      : arenaVideoViewportForDimensions(window.innerWidth, window.innerHeight)
+  ));
   const [isArenaNavOpen, setIsArenaNavOpen] = useState(false);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
   const [isArenaNativeFullscreen, setIsArenaNativeFullscreen] = useState(false);
@@ -5889,6 +5900,24 @@ export default function ArenaClient({
     };
   }, []);
 
+  useEffect(() => {
+    const syncArenaVideoViewport = () => {
+      setArenaVideoViewport(arenaVideoViewportForDimensions(window.innerWidth, window.innerHeight));
+    };
+    const visualViewport = window.visualViewport;
+
+    syncArenaVideoViewport();
+    window.addEventListener("resize", syncArenaVideoViewport);
+    window.addEventListener("orientationchange", syncArenaVideoViewport);
+    visualViewport?.addEventListener("resize", syncArenaVideoViewport);
+
+    return () => {
+      window.removeEventListener("resize", syncArenaVideoViewport);
+      window.removeEventListener("orientationchange", syncArenaVideoViewport);
+      visualViewport?.removeEventListener("resize", syncArenaVideoViewport);
+    };
+  }, []);
+
   function handleManualSave() {
     if (isDemoLineup) {
       setSaveStatus(t("demoLineupNotSaved"));
@@ -7116,15 +7145,24 @@ export default function ArenaClient({
     setSaveStatus(marketUi.replacementReleased(incomingPlayer.shortName, releasedPlayer.shortName));
   }
 
+  const canonical433VideoPositions = selectedFormationKey === "4-3-3"
+    ? resolveArena433VideoSlots(
+      arenaFieldPlayersForRendering,
+      arenaLoopCameraProfile(loopCameraIndex).id,
+      arenaVideoViewport,
+    )
+    : null;
   const projectedFieldPlayerPositions = projectArenaPlayersForLoopCamera(arenaFieldPlayersForRendering, loopCameraIndex);
   const lockedCameraLayout = readLockedFormationLayout(selectedFormationKey, arenaPersistencePrincipal)?.cameras?.[currentCameraId];
   const lockedCameraPositions = roleLayoutForPlayers(arenaFieldPlayersForRendering, lockedCameraLayout, loopCameraIndex);
   const cameraEditPositions = cameraEditSlots[currentCameraEditKey];
-  const fieldPlayerPositions = new Map(lockedCameraPositions ?? projectedFieldPlayerPositions);
+  // 4-3-3 is a protected match presentation. Its video position must come
+  // only from formation + loop + viewport, never a persisted camera drag.
+  const fieldPlayerPositions = new Map(canonical433VideoPositions ?? lockedCameraPositions ?? projectedFieldPlayerPositions);
   const trainingCenterSlots = isQuickSubstitutionSessionActive && quickSubstitutionSessionSource
     ? new Map(quickSubstitutionSessionSource.pitchSlotByPositionSlotId)
     : trainingCenterPlayerSlots(arenaFieldPlayersForRendering);
-  if (cameraEditPositions) {
+  if (cameraEditPositions && !canonical433VideoPositions) {
     for (const [playerId, slot] of Object.entries(cameraEditPositions)) {
       const player = arenaFieldPlayersForRendering.find((candidate) => candidate.id === playerId);
       if (player) fieldPlayerPositions.set(playerId, constrainArenaDisplaySlot(player, slot, loopCameraIndex));
@@ -7371,9 +7409,9 @@ export default function ArenaClient({
           >
             {arenaFieldPlayersForRendering.map((player) => {
               const fieldPosition = fieldPlayerPositions.get(player.id) ?? projectArenaPlayerForLoopCamera(player, loopCameraIndex);
-              // Every card in the active match uses one camera-aware canonical
-              // size. Saved/editor sizes must never create unequal match cards.
-              const baseHeight = arenaLoopCameraProfile(loopCameraIndex).cardHeightVh;
+              // The canonical video layout owns the size with its coordinate.
+              // Saved/editor sizes never control the protected 4-3-3 match.
+              const baseHeight = fieldPosition.heightVh ?? arenaLoopCameraProfile(loopCameraIndex).cardHeightVh;
 
               return (
                 <div
