@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction, type SyntheticEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction, type SyntheticEvent } from "react";
 import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, RotateCw, Search, UserRound, X } from "lucide-react";
 import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEliteExactCardLabels, type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
@@ -167,7 +167,7 @@ import {
 import {
   ARENA_433_VIDEO_LOOP_IDS,
   arena433VideoLoopIndexForPlayback,
-  arena433VideoLoopPreviewTime,
+  arena433VideoLoopStartTime,
   arenaQaManualLayoutCameraId,
   arenaVideoViewportForDimensions,
   isArenaQaManualLayoutCameraId,
@@ -6364,6 +6364,50 @@ export default function ArenaClient({
       : `${selectedFormationKey} · ${t("ready")} · ${t("lockFormation")}`);
   }
 
+  function handleFieldPlayerKeyDown(event: ReactKeyboardEvent<HTMLDivElement>, player: ArenaPlayer) {
+    if (event.target !== event.currentTarget) return;
+
+    if (isQaVisualEditor && isEditorOpen) {
+      const keyboardMove = {
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+      } as const;
+      const movement = keyboardMove[event.key as keyof typeof keyboardMove];
+      if (movement) {
+        event.preventDefault();
+        const slot = fieldPlayerPositions.get(player.id);
+        if (!slot) return;
+        const step = event.shiftKey ? 3 : 1;
+        setSelectedPlayerId(player.id);
+        writeQaVisualDraft(player.id, { x: slot.x + (movement[0] * step), y: slot.y + (movement[1] * step) });
+        setSaveStatus(`Arena QA keyboard move · ${player.shortName}`);
+        return;
+      }
+
+      if (event.key === "+" || event.key === "=") {
+        event.preventDefault();
+        setSelectedPlayerId(player.id);
+        writeQaVisualDraft(player.id, { heightVh: (fieldPlayerPositions.get(player.id)?.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH) + 0.5 });
+        setSaveStatus(`Arena QA card size · ${player.shortName}`);
+        return;
+      }
+
+      if (event.key === "-" || event.key === "_") {
+        event.preventDefault();
+        setSelectedPlayerId(player.id);
+        writeQaVisualDraft(player.id, { heightVh: (fieldPlayerPositions.get(player.id)?.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH) - 0.5 });
+        setSaveStatus(`Arena QA card size · ${player.shortName}`);
+        return;
+      }
+    }
+
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    handleFieldPlayerClick(player);
+  }
+
   function previewQaArenaCamera(loopId: Arena433VideoLoopId) {
     if (!isQaVisualEditor) return;
     const loopVideo = secondVideoRef.current;
@@ -6371,13 +6415,22 @@ export default function ArenaClient({
     if (index < 0) return;
     if (loopVideo) {
       loopVideo.pause();
-      loopVideo.currentTime = arena433VideoLoopPreviewTime(loopId, loopVideo.duration);
+      loopVideo.currentTime = arena433VideoLoopStartTime(loopId, loopVideo.duration);
     }
     setIsArenaVideoPaused(true);
     setHasEntryVideoFinished(true);
     setActiveVideoIndex(1);
     setLoopCameraIndex(index);
-    setSaveStatus(`Arena QA camera preview · ${loopId}`);
+    setSaveStatus(`Arena QA Camera ${index + 1} · 0:00 · stopped`);
+  }
+
+  function pauseQaArenaCamera() {
+    if (!isQaVisualEditor) return;
+    secondVideoRef.current?.pause();
+    setIsArenaVideoPaused(true);
+    setHasEntryVideoFinished(true);
+    setActiveVideoIndex(1);
+    setSaveStatus(`Arena QA camera paused · ${currentCameraId}`);
   }
 
   function startCardLoopVideo() {
@@ -7647,11 +7700,7 @@ export default function ArenaClient({
                     if ((event.target as HTMLElement).closest("a,button")) return;
                     handleFieldPlayerClick(player);
                   }}
-                  onKeyDown={(event) => {
-                    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
-                    event.preventDefault();
-                    handleFieldPlayerClick(player);
-                  }}
+                  onKeyDown={(event) => handleFieldPlayerKeyDown(event, player)}
                   aria-label={`Select ${player.name} card`}
                   aria-pressed={selectedPlayerId === player.id}
                 >
@@ -9593,16 +9642,18 @@ export default function ArenaClient({
 
                 {isQaVisualEditor ? (
                   <div className="formation-presets" aria-label="Choose Arena camera">
-                    {ARENA_433_VIDEO_LOOP_IDS.map((loopId) => (
+                    {ARENA_433_VIDEO_LOOP_IDS.map((loopId, index) => (
                       <button
                         key={loopId}
                         type="button"
                         className={loopId === currentCameraId ? "is-active" : ""}
                         onClick={() => previewQaArenaCamera(loopId)}
                       >
-                        <strong>{loopId}</strong>
+                        <strong>Camera {index + 1}</strong>
+                        <small>{loopId} · 0:00</small>
                       </button>
                     ))}
+                    <button type="button" onClick={pauseQaArenaCamera}>Pause camera</button>
                   </div>
                 ) : (
                 <div className="formation-presets" aria-label="Choose formation">
@@ -9668,6 +9719,10 @@ export default function ArenaClient({
                     />
                     <strong>{selectedEditorSlot?.heightVh ?? selectedPlayer.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH}</strong>
                   </label>
+                  {isQaVisualEditor ? <div className="formation-nudge-controls" aria-label="Card size controls">
+                    <button type="button" onClick={() => updateSelectedPlayerSize((selectedEditorSlot?.heightVh ?? selectedPlayer.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH) - 0.5)}>Smaller card</button>
+                    <button type="button" onClick={() => updateSelectedPlayerSize((selectedEditorSlot?.heightVh ?? selectedPlayer.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH) + 0.5)}>Larger card</button>
+                  </div> : null}
                   <div className="formation-nudge-controls" aria-label="Fine tune card position">
                     <button type="button" disabled={isSelectedFormationFinalized && !isQaVisualEditor} onClick={() => nudgeSelectedPlayer(0, -1)}>{t("up")}</button>
                     <button type="button" disabled={isSelectedFormationFinalized && !isQaVisualEditor} onClick={() => nudgeSelectedPlayer(-1, 0)}>{t("left")}</button>

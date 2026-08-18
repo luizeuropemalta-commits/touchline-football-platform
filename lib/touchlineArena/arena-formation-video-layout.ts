@@ -49,8 +49,12 @@ export function isArenaQaManualLayoutCameraId(value: string) {
   ));
 }
 
-/** Returns a stable frame in the middle of a camera pass for human QA editing. */
-export function arena433VideoLoopPreviewTime(
+/**
+ * Returns the first frame of a camera pass. The QA editor deliberately stops
+ * here so "Camera 2" means 0:00 of that camera, rather than a guessed frame
+ * in the middle of its pass.
+ */
+export function arena433VideoLoopStartTime(
   loopId: Arena433VideoLoopId,
   duration: number | null | undefined,
 ) {
@@ -59,8 +63,7 @@ export function arena433VideoLoopPreviewTime(
     : ARENA_433_VIDEO_LOOP_FALLBACK_DURATION_SECONDS;
   const index = ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES.findIndex((boundary) => boundary.loopId === loopId);
   const start = index <= 0 ? 0 : ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES[index - 1]!.until;
-  const end = ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES[index]?.until ?? 1;
-  return ((start + end) / 2) * safeDuration;
+  return start * safeDuration;
 }
 
 export type ArenaVideoSlot = {
