@@ -467,6 +467,34 @@ test("Arena formation layouts accept only known numeric tactical slots", () => {
     ok: false,
     error: "TL_ARENA_FORMATION_LAYOUT_INVALID",
   });
+
+  assert.deepEqual(sanitizeArenaFormationLayoutsForPersistence({
+    "4-3-3": {
+      cameras: {
+        "qa-manual-lower-stand-tablet-landscape": {
+          goalkeeper: [{ x: 12.5, y: 78, heightVh: 12 }],
+        },
+      },
+    },
+  }), {
+    ok: true,
+    layouts: {
+      "4-3-3": {
+        cameras: {
+          "qa-manual-lower-stand-tablet-landscape": {
+            goalkeeper: [{ x: 12.5, y: 78, heightVh: 12 }],
+          },
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(sanitizeArenaFormationLayoutsForPersistence({
+    "4-3-3": { cameras: { "qa-manual-lower-stand-portrait": { goalkeeper: [] } } },
+  }), {
+    ok: false,
+    error: "TL_ARENA_FORMATION_LAYOUT_INVALID",
+  });
 });
 
 test("Arena formation sanitizer preserves the current official 4-3-3 and 4-4-2 layouts", () => {

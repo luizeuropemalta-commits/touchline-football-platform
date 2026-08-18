@@ -1,9 +1,11 @@
 import ArenaClient from "./ArenaClient";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { parseTouchlineArenaPanel } from "@/lib/touchlineArena/arena-navigation";
 import { parseTouchlineArenaIntroIntent } from "@/lib/touchlineArena/arena-intro";
 import { touchlineClubOwnerProfileHref, touchlineClubOwnerSubstitutionHref } from "@/lib/touchlineArena/club-owner-routes";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
 
 export default async function ArenaPage({
   searchParams,
@@ -16,13 +18,19 @@ export default async function ArenaPage({
     intro?: string | string[];
     skipIntro?: string | string[];
     lang?: string | string[];
+    qaEditor?: string | string[];
   }>;
 }) {
   const params = await searchParams;
   const firstValue = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
   const initialPanel = parseTouchlineArenaPanel(params.panel);
+  // This route is intentionally reachable only on the exact stable QA host.
+  // The client applies a second authenticated-persona check before edits/save.
+  const requestHost = (await headers()).get("host")?.split(":")[0]?.toLowerCase();
+  const initialQaVisualEditor = firstValue(params.qaEditor) === "1"
+    && requestHost === TOUCHLINE_QA_HOSTNAME;
 
-  if (initialPanel && initialPanel !== "bench") {
+  if (initialPanel && initialPanel !== "bench" && !initialQaVisualEditor) {
     const marketParams = new URLSearchParams();
     const lang = firstValue(params.lang);
     const contractPlayer = firstValue(params.contractPlayer);
@@ -53,6 +61,7 @@ export default async function ArenaPage({
         intro: firstValue(params.intro),
         skipIntro: firstValue(params.skipIntro),
       })}
+      initialQaVisualEditor={initialQaVisualEditor}
     />
   );
 }

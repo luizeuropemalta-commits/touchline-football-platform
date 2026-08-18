@@ -165,12 +165,18 @@ import {
   type TouchlineArenaIntroLaunchMode,
 } from "@/lib/touchlineArena/arena-intro";
 import {
+  ARENA_433_VIDEO_LOOP_IDS,
   arena433VideoLoopIndexForPlayback,
+  arena433VideoLoopPreviewTime,
+  arenaQaManualLayoutCameraId,
   arenaVideoViewportForDimensions,
+  isArenaQaManualLayoutCameraId,
   resolveArena433VideoSlots,
   type Arena433VideoLoopId,
   type ArenaVideoViewport,
 } from "@/lib/touchlineArena/arena-formation-video-layout";
+import { TOUCHLINE_QA_CANONICAL_USER_ID } from "@/lib/touchlineArena/qa-canonical-persona";
+import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
 import formationLockSeed from "@/data/touchline-arena-formation-locks.json";
 
 const PUBLIC_DATA_SOURCE_LABEL = "TouchLine England";
@@ -2386,13 +2392,17 @@ function readLockedFormationLayouts(principal?: ArenaPersistencePrincipal | null
           return [formationKey, layout];
         }
 
-        // The first Arena build persisted a separate absolute camera layout
-        // for the protected 4-3-3 / 4-4-2 formations. Those coordinates were
-        // tied to one viewport and can make official cards overlap on WebKit.
-        // The canonical formation remains saved; only the obsolete camera
-        // projection is discarded so every viewport uses the tested profile.
-        const { cameras: _obsoleteCameraLayouts, ...canonicalLayout } = layout as ArenaFormationLockEntry;
-        return [formationKey, canonicalLayout];
+        // The first Arena build persisted absolute camera layouts for protected
+        // formations. They remain retired. The sole exception is an explicit
+        // user-approved QA manual profile, which is namespaced by camera and
+        // viewport and may only be written by the QA visual editor.
+        const { cameras, ...canonicalLayout } = layout as ArenaFormationLockEntry;
+        const approvedQaCameras = Object.fromEntries(
+          Object.entries(cameras ?? {}).filter(([cameraId]) => isArenaQaManualLayoutCameraId(cameraId)),
+        );
+        return [formationKey, Object.keys(approvedQaCameras).length
+          ? { ...canonicalLayout, cameras: approvedQaCameras }
+          : canonicalLayout];
       }),
     ) as ArenaFormationLockedLayout;
 
@@ -3353,6 +3363,8 @@ type ArenaClientProps = {
   initialDemoLineup?: boolean;
   /** Local-only visual QA can exercise the empty matchday state without storage. */
   initialEmptyLineup?: boolean;
+  /** Server-proven, stable-QA-only entry point for the visual calibration tool. */
+  initialQaVisualEditor?: boolean;
 };
 
 type ArenaDragState = {
@@ -3412,6 +3424,7 @@ export default function ArenaClient({
   standalonePanel,
   initialDemoLineup = false,
   initialEmptyLineup = false,
+  initialQaVisualEditor = false,
 }: ArenaClientProps) {
   const standaloneExperience = standaloneMarket ? "market" : standalonePanel ?? null;
   const initialBuilderClubKey = TEAM_BUILDER_CLUBS.some((club) => club.teamId === initialContractClubId)
@@ -3440,7 +3453,7 @@ export default function ArenaClient({
   const [players, setPlayers] = useState<ArenaPlayer[]>(DEFAULT_ARENA_PLAYERS);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [spotlightPlayerId, setSpotlightPlayerId] = useState<string | null>(null);
-  const [isEditorOpen, setIsEditorOpen] = useState(initialPanel === "formation");
+  const [isEditorOpen, setIsEditorOpen] = useState(initialPanel === "formation" || initialQaVisualEditor);
   const initialIntroWasSkipped = Boolean(standaloneExperience) || initialIntroIntent === "skip";
   const [activeVideoIndex, setActiveVideoIndex] = useState(initialIntroWasSkipped ? 1 : 0);
   const [hasEntryVideoFinished, setHasEntryVideoFinished] = useState(initialIntroWasSkipped);
@@ -3584,7 +3597,7 @@ export default function ArenaClient({
       // an absent query parameter must not immediately erase that initial UI.
       const panel = parseTouchlineArenaPanel(new URLSearchParams(window.location.search).get("panel")) ?? initialPanel;
       setActiveArenaPanel(panel === "live" ? null : panel);
-      setIsEditorOpen(panel === "formation");
+      setIsEditorOpen(initialQaVisualEditor || panel === "formation");
       setIsArenaNavOpen(false);
       if (panel !== "bench") setReplacementTargetId(null);
     };
@@ -3592,7 +3605,7 @@ export default function ArenaClient({
     syncArenaPanelFromUrl();
     window.addEventListener("popstate", syncArenaPanelFromUrl);
     return () => window.removeEventListener("popstate", syncArenaPanelFromUrl);
-  }, [initialPanel, standaloneExperience]);
+  }, [initialPanel, initialQaVisualEditor, standaloneExperience]);
   const initialContractHandledRef = useRef(false);
   const [selectedFormationKey, setSelectedFormationKey] = useState<ArenaFormationKey>(DEFAULT_ARENA_FORMATION_KEY);
   const [rumourSignals, setRumourSignals] = useState<TouchLineArenaRumourSignal[]>([]);
@@ -3604,6 +3617,16 @@ export default function ArenaClient({
   const [favoriteRumourIds, setFavoriteRumourIds] = useState<string[]>([]);
   const [lockedFormationKeys, setLockedFormationKeys] = useState<ArenaFormationKey[]>([]);
   const [cameraEditSlots, setCameraEditSlots] = useState<Record<string, Record<string, ArenaFieldSlot>>>({});
+
+  // The editor itself is additionally restricted to the canonical QA account.
+  // A saved QA layout can be rendered by that account on later visits, but no
+  // arbitrary production or preview session can enter edit mode through a URL.
+  const isStableQaArenaHost = typeof window !== "undefined"
+    && window.location.hostname.toLowerCase() === TOUCHLINE_QA_HOSTNAME;
+  const isQaVisualEditor = initialQaVisualEditor
+    && isStableQaArenaHost
+    && arenaPersistencePrincipal?.kind === "authenticated"
+    && arenaPersistencePrincipal.userId === TOUCHLINE_QA_CANONICAL_USER_ID;
 
   const matchdayBenchPlayers = useMemo(() => buildMatchdayBench(benchPlayers), [benchPlayers]);
   const matchdayBenchIds = useMemo(() => new Set(matchdayBenchPlayers.map((bench) => bench.id)), [matchdayBenchPlayers]);
@@ -3864,7 +3887,11 @@ export default function ArenaClient({
     : null;
   const isSelectedFormationFinalized = isFinalizedArenaFormation(selectedFormationKey);
   const currentCameraId = arenaLoopCameraProfile(loopCameraIndex).id;
-  const currentCameraEditKey = `${selectedFormationKey}:${currentCameraId}`;
+  const currentQaManualCameraId = arenaQaManualLayoutCameraId(
+    currentCameraId as Arena433VideoLoopId,
+    arenaVideoViewport,
+  );
+  const currentCameraEditKey = `${selectedFormationKey}:${isQaVisualEditor ? currentQaManualCameraId : currentCameraId}`;
   const premierLiveFixtures = liveFixtures.filter(isPremierFixture);
   // Arena surfaces one coherent canonical fixture round, while Match Centre
   // remains the place for the full schedule. This prevents mixed rounds from
@@ -4610,6 +4637,13 @@ export default function ArenaClient({
         writeBrowserStorage("localStorage", lineupStorageKey, savedLineup ?? "[]");
       }
 
+      // The manual QA tool calibrates the already-approved 4-3-3 only. It
+      // cannot silently repurpose a saved 4-4-2 or any future formation.
+      if (initialQaVisualEditor) {
+        effectiveFormationKey = "4-3-3";
+        setSelectedFormationKey(effectiveFormationKey);
+      }
+
       if (!savedLineup) {
         setPlayers([]);
         setShouldRenderPlayers(false);
@@ -4644,7 +4678,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [initialDemoLineup, initialEmptyLineup, initialLocale]);
+  }, [initialDemoLineup, initialEmptyLineup, initialLocale, initialQaVisualEditor]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4759,7 +4793,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, players]);
+  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, initialQaVisualEditor, players]);
 
   useEffect(() => {
     let cancelled = false;
@@ -5912,6 +5946,63 @@ export default function ArenaClient({
     setSaveStatus(t("saved"));
   }
 
+  function writeQaVisualDraft(playerId: string, patch: Partial<ArenaFieldSlot>) {
+    const existing = fieldPlayerPositions.get(playerId);
+    if (!existing) return;
+    const player = arenaFieldPlayersForRendering.find((candidate) => candidate.id === playerId);
+    if (!player) return;
+    const nextSlot = constrainArenaDisplaySlot(player, { ...existing, ...patch }, loopCameraIndex);
+    setCameraEditSlots((currentSlots) => ({
+      ...currentSlots,
+      [currentCameraEditKey]: {
+        ...(currentSlots[currentCameraEditKey] ?? {}),
+        [playerId]: nextSlot,
+      },
+    }));
+  }
+
+  async function saveQaVisualArenaStandard() {
+    if (!isQaVisualEditor || !arenaPersistencePrincipal || !canPersistArenaAccountState(arenaPersistencePrincipal, arenaAccountSyncStatus)) {
+      setSaveStatus("QA visual editor requires the canonical QA account");
+      return;
+    }
+
+    const slots = new Map(
+      arenaFieldPlayersForRendering.map((player) => [
+        player.id,
+        fieldPlayerPositions.get(player.id) ?? projectArenaPlayerForLoopCamera(player, loopCameraIndex),
+      ] as const),
+    );
+    const lockedPlayers = players.map(lockArenaPlayerSize);
+    writeLockedFormationLayout("4-3-3", currentQaManualCameraId, lockedPlayers, slots, arenaPersistencePrincipal);
+    setSaveStatus(`Saving Arena QA standard · ${currentCameraId} · ${arenaVideoViewport}`);
+
+    try {
+      const response = await fetch("/api/touchline-arena/state", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          formation: "4-3-3",
+          lineup: lockedPlayers,
+          savedFormationLayouts: Object.fromEntries(
+            Object.entries(readLockedFormationLayouts(arenaPersistencePrincipal))
+              .filter(([key]) => key === "4-3-3" || key === "4-4-2"),
+          ),
+        }),
+      });
+      const payload = await response.json().catch(() => null) as { ok?: boolean } | null;
+      if (!response.ok || payload?.ok !== true) throw new Error("QA state save rejected");
+      setCameraEditSlots((current) => {
+        const next = { ...current };
+        delete next[currentCameraEditKey];
+        return next;
+      });
+      setSaveStatus(`Arena QA standard saved · ${currentCameraId} · ${arenaVideoViewport}`);
+    } catch {
+      setSaveStatus("Arena QA standard was not saved — try again");
+    }
+  }
+
   async function handleSaveFormationLock() {
     if (isFinalizedArenaFormation(selectedFormationKey)) {
       setSaveStatus(`${selectedFormationKey} · ${t("formationFinalized")}`);
@@ -5978,6 +6069,11 @@ export default function ArenaClient({
 
   function updateSelectedPlayerPosition(axis: "x" | "y", value: number) {
     if (!selectedPlayer) return;
+    if (isQaVisualEditor) {
+      writeQaVisualDraft(selectedPlayer.id, { [axis]: value });
+      setSaveStatus(`Arena QA draft · ${selectedPlayer.shortName}`);
+      return;
+    }
     if (isFinalizedArenaFormation(selectedFormationKey)) {
       setSaveStatus(`${selectedFormationKey} · ${t("protectedAsSaved")}`);
       return;
@@ -5998,6 +6094,12 @@ export default function ArenaClient({
 
   function updateSelectedPlayerSize(value: number) {
     if (!selectedPlayer) return;
+    if (isQaVisualEditor) {
+      const heightVh = Math.min(ARENA_CARD_MAX_HEIGHT_VH, Math.max(ARENA_CARD_MIN_HEIGHT_VH, Math.round(value * 10) / 10));
+      writeQaVisualDraft(selectedPlayer.id, { heightVh });
+      setSaveStatus(`Arena QA card size · ${selectedPlayer.shortName}`);
+      return;
+    }
     if (isFinalizedArenaFormation(selectedFormationKey)) {
       setSaveStatus(`${selectedFormationKey} · ${t("protectedAsSaved")}`);
       return;
@@ -6012,6 +6114,13 @@ export default function ArenaClient({
 
   function nudgeSelectedPlayer(dx: number, dy: number) {
     if (!selectedPlayer) return;
+    if (isQaVisualEditor) {
+      const slot = fieldPlayerPositions.get(selectedPlayer.id);
+      if (!slot) return;
+      writeQaVisualDraft(selectedPlayer.id, { x: slot.x + dx, y: slot.y + dy });
+      setSaveStatus(`Arena QA draft · ${selectedPlayer.shortName}`);
+      return;
+    }
     if (isFinalizedArenaFormation(selectedFormationKey)) {
       setSaveStatus(`${selectedFormationKey} · ${t("protectedAsSaved")}`);
       return;
@@ -6184,7 +6293,7 @@ export default function ArenaClient({
   }
 
   function moveFieldPlayerFromPointer(player: ArenaPlayer, clientX: number, clientY: number) {
-    if (isFinalizedArenaFormation(selectedFormationKey)) {
+    if (isFinalizedArenaFormation(selectedFormationKey) && !isQaVisualEditor) {
       setSaveStatus(`${selectedFormationKey} · ${t("protectedAsSaved")}`);
       return;
     }
@@ -6196,6 +6305,12 @@ export default function ArenaClient({
       y: Math.min(96, Math.max(6, Math.round(((clientY - stageRect.top) / stageRect.height) * 1000) / 10)),
       heightVh: fieldPlayerPositions.get(player.id)?.heightVh ?? player.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH,
     };
+    if (isQaVisualEditor) {
+      writeQaVisualDraft(player.id, displaySlot);
+      setSaveStatus(`Arena QA draft · ${player.shortName}`);
+      return;
+    }
+
     const position = clientPointToArenaPosition(player, clientX, clientY, stageRect, loopCameraIndex);
 
     setCameraEditSlots((currentSlots) => ({
@@ -6221,7 +6336,7 @@ export default function ArenaClient({
         : `${player.shortName} · ${t("chooseReserve")}`);
     }
     if (!isEditorOpen) return;
-    if (isFinalizedArenaFormation(selectedFormationKey)) {
+    if (isFinalizedArenaFormation(selectedFormationKey) && !isQaVisualEditor) {
       setSaveStatus(`${selectedFormationKey} · ${t("protectedAsSaved")}`);
       return;
     }
@@ -6244,7 +6359,25 @@ export default function ArenaClient({
     if (!dragState || dragState.pointerId !== event.pointerId) return;
     dragStateRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    setSaveStatus(`${selectedFormationKey} · ${t("ready")} · ${t("lockFormation")}`);
+    setSaveStatus(isQaVisualEditor
+      ? `Arena QA draft ready · ${currentCameraId} · save when approved`
+      : `${selectedFormationKey} · ${t("ready")} · ${t("lockFormation")}`);
+  }
+
+  function previewQaArenaCamera(loopId: Arena433VideoLoopId) {
+    if (!isQaVisualEditor) return;
+    const loopVideo = secondVideoRef.current;
+    const index = ARENA_433_VIDEO_LOOP_IDS.indexOf(loopId);
+    if (index < 0) return;
+    if (loopVideo) {
+      loopVideo.pause();
+      loopVideo.currentTime = arena433VideoLoopPreviewTime(loopId, loopVideo.duration);
+    }
+    setIsArenaVideoPaused(true);
+    setHasEntryVideoFinished(true);
+    setActiveVideoIndex(1);
+    setLoopCameraIndex(index);
+    setSaveStatus(`Arena QA camera preview · ${loopId}`);
   }
 
   function startCardLoopVideo() {
@@ -7194,21 +7327,32 @@ export default function ArenaClient({
     )
     : null;
   const projectedFieldPlayerPositions = projectArenaPlayersForLoopCamera(arenaFieldPlayersForRendering, loopCameraIndex);
-  const lockedCameraLayout = readLockedFormationLayout(selectedFormationKey, arenaPersistencePrincipal)?.cameras?.[currentCameraId];
+  const savedLayout = readLockedFormationLayout(selectedFormationKey, arenaPersistencePrincipal);
+  // A user-approved QA layout is intentionally more specific than the
+  // canonical fallback: it is only read on the exact QA host and is keyed by
+  // this video pass + viewport. Production and other Arena surfaces cannot
+  // observe or write it.
+  const qaManualCameraLayout = isStableQaArenaHost && selectedFormationKey === "4-3-3"
+    ? savedLayout?.cameras?.[currentQaManualCameraId]
+    : null;
+  const lockedCameraLayout = qaManualCameraLayout ?? savedLayout?.cameras?.[currentCameraId];
   const lockedCameraPositions = roleLayoutForPlayers(arenaFieldPlayersForRendering, lockedCameraLayout, loopCameraIndex);
   const cameraEditPositions = cameraEditSlots[currentCameraEditKey];
-  // 4-3-3 is a protected match presentation. Its video position must come
-  // only from formation + loop + viewport, never a persisted camera drag.
-  const fieldPlayerPositions = new Map(canonical433VideoPositions ?? lockedCameraPositions ?? projectedFieldPlayerPositions);
+  // 4-3-3 remains a protected match presentation everywhere except for the
+  // deliberate per-camera/per-viewport QA standard saved by its owner.
+  const fieldPlayerPositions = new Map(lockedCameraPositions ?? canonical433VideoPositions ?? projectedFieldPlayerPositions);
   const trainingCenterSlots = isQuickSubstitutionSessionActive && quickSubstitutionSessionSource
     ? new Map(quickSubstitutionSessionSource.pitchSlotByPositionSlotId)
     : trainingCenterPlayerSlots(arenaFieldPlayersForRendering);
-  if (cameraEditPositions && !canonical433VideoPositions) {
+  if (cameraEditPositions && (!canonical433VideoPositions || isQaVisualEditor)) {
     for (const [playerId, slot] of Object.entries(cameraEditPositions)) {
       const player = arenaFieldPlayersForRendering.find((candidate) => candidate.id === playerId);
       if (player) fieldPlayerPositions.set(playerId, constrainArenaDisplaySlot(player, slot, loopCameraIndex));
     }
   }
+  const selectedEditorSlot = selectedPlayer
+    ? fieldPlayerPositions.get(selectedPlayer.id) ?? selectedPlayer
+    : null;
 
   return (
     <main
@@ -9443,10 +9587,24 @@ export default function ArenaClient({
             {selectedPlayer ? (
               <>
                 <div className="editor-heading">
-                  <span>{t("formation")} {selectedFormation.label}</span>
+                  <span>{isQaVisualEditor ? `Arena QA standard · ${currentCameraId} · ${arenaVideoViewport}` : `${t("formation")} ${selectedFormation.label}`}</span>
                   <strong>{selectedPlayer.shortName}</strong>
                 </div>
 
+                {isQaVisualEditor ? (
+                  <div className="formation-presets" aria-label="Choose Arena camera">
+                    {ARENA_433_VIDEO_LOOP_IDS.map((loopId) => (
+                      <button
+                        key={loopId}
+                        type="button"
+                        className={loopId === currentCameraId ? "is-active" : ""}
+                        onClick={() => previewQaArenaCamera(loopId)}
+                      >
+                        <strong>{loopId}</strong>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
                 <div className="formation-presets" aria-label="Choose formation">
                   {ARENA_FORMATIONS.map((formation) => {
                     const isAvailable = isFinalizedArenaFormation(formation.key);
@@ -9465,11 +9623,12 @@ export default function ArenaClient({
                     );
                   })}
                 </div>
+                )}
 
-                <div className="formation-lock-note">
+                {!isQaVisualEditor ? <div className="formation-lock-note">
                   <span>{isSelectedFormationFinalized ? t("formationFinalized") : lockedFormationKeys.includes(selectedFormationKey) ? t("formationLocked") : t("formationDraft")}</span>
                   <strong>{isSelectedFormationFinalized ? t("protectedAsSaved") : lockedFormationKeys.includes(selectedFormationKey) ? t("shapeSaved") : t("dragAdjustLock")}</strong>
-                </div>
+                </div> : null}
 
                 <div className="formation-position-controls" aria-label="Selected card position controls">
                   <label>
@@ -9478,11 +9637,11 @@ export default function ArenaClient({
                       type="range"
                       min={5}
                       max={95}
-                      value={selectedPlayer.x}
-                      disabled={isSelectedFormationFinalized}
+                      value={selectedEditorSlot?.x ?? selectedPlayer.x}
+                      disabled={isSelectedFormationFinalized && !isQaVisualEditor}
                       onChange={(event) => updateSelectedPlayerPosition("x", Number(event.target.value))}
                     />
-                    <strong>{selectedPlayer.x}</strong>
+                    <strong>{selectedEditorSlot?.x ?? selectedPlayer.x}</strong>
                   </label>
                   <label>
                     <span>{t("yPosition")}</span>
@@ -9490,11 +9649,11 @@ export default function ArenaClient({
                       type="range"
                       min={5}
                       max={95}
-                      value={selectedPlayer.y}
-                      disabled={isSelectedFormationFinalized}
+                      value={selectedEditorSlot?.y ?? selectedPlayer.y}
+                      disabled={isSelectedFormationFinalized && !isQaVisualEditor}
                       onChange={(event) => updateSelectedPlayerPosition("y", Number(event.target.value))}
                     />
-                    <strong>{selectedPlayer.y}</strong>
+                    <strong>{selectedEditorSlot?.y ?? selectedPlayer.y}</strong>
                   </label>
                   <label>
                     <span>{t("cardSize")}</span>
@@ -9503,17 +9662,17 @@ export default function ArenaClient({
                       min={ARENA_CARD_MIN_HEIGHT_VH}
                       max={ARENA_CARD_MAX_HEIGHT_VH}
                       step="0.5"
-                      value={selectedPlayer.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH}
-                      disabled={isSelectedFormationFinalized}
+                      value={selectedEditorSlot?.heightVh ?? selectedPlayer.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH}
+                      disabled={isSelectedFormationFinalized && !isQaVisualEditor}
                       onChange={(event) => updateSelectedPlayerSize(Number(event.target.value))}
                     />
-                    <strong>{selectedPlayer.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH}</strong>
+                    <strong>{selectedEditorSlot?.heightVh ?? selectedPlayer.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH}</strong>
                   </label>
                   <div className="formation-nudge-controls" aria-label="Fine tune card position">
-                    <button type="button" disabled={isSelectedFormationFinalized} onClick={() => nudgeSelectedPlayer(0, -1)}>{t("up")}</button>
-                    <button type="button" disabled={isSelectedFormationFinalized} onClick={() => nudgeSelectedPlayer(-1, 0)}>{t("left")}</button>
-                    <button type="button" disabled={isSelectedFormationFinalized} onClick={() => nudgeSelectedPlayer(1, 0)}>{t("right")}</button>
-                    <button type="button" disabled={isSelectedFormationFinalized} onClick={() => nudgeSelectedPlayer(0, 1)}>{t("down")}</button>
+                    <button type="button" disabled={isSelectedFormationFinalized && !isQaVisualEditor} onClick={() => nudgeSelectedPlayer(0, -1)}>{t("up")}</button>
+                    <button type="button" disabled={isSelectedFormationFinalized && !isQaVisualEditor} onClick={() => nudgeSelectedPlayer(-1, 0)}>{t("left")}</button>
+                    <button type="button" disabled={isSelectedFormationFinalized && !isQaVisualEditor} onClick={() => nudgeSelectedPlayer(1, 0)}>{t("right")}</button>
+                    <button type="button" disabled={isSelectedFormationFinalized && !isQaVisualEditor} onClick={() => nudgeSelectedPlayer(0, 1)}>{t("down")}</button>
                   </div>
                 </div>
 
@@ -9537,6 +9696,9 @@ export default function ArenaClient({
             )}
 
             <div className="editor-actions">
+              {isQaVisualEditor ? <button type="button" onClick={() => void saveQaVisualArenaStandard()}>
+                Save Arena QA standard
+              </button> : <>
               <button type="button" disabled={isSelectedFormationFinalized} onClick={() => void handleSaveFormationLock()}>
                 {t("lockFormation")} {selectedFormationKey}
               </button>
@@ -9546,8 +9708,9 @@ export default function ArenaClient({
               <button type="button" onClick={handleManualSave}>
                 {t("saveLineup")}
               </button>
+              </>}
               <span>{saveStatus === "Auto saved" ? t("autoSaved") : saveStatus === "Card data updated" ? t("cardDataUpdated") : saveStatus}</span>
-              <span>{fixtureStatus === "Local data" ? t("localData") : fixtureStatus}</span>
+              {!isQaVisualEditor ? <span>{fixtureStatus === "Local data" ? t("localData") : fixtureStatus}</span> : null}
             </div>
           </section>
         ) : null}

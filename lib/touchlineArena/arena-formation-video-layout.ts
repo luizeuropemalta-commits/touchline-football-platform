@@ -31,6 +31,38 @@ export type Arena433VideoLoopId = (typeof ARENA_433_VIDEO_LOOP_IDS)[number];
 export type ArenaVideoViewport = (typeof ARENA_VIDEO_VIEWPORTS)[number];
 export type ArenaVideoRole = "goalkeeper" | "defender" | "midfielder" | "forward";
 
+/**
+ * A manually approved QA layout is scoped to the actual filmed camera and
+ * viewport. It must never be confused with the legacy per-camera layouts,
+ * which were deliberately retired for the protected formations.
+ */
+export function arenaQaManualLayoutCameraId(
+  loopId: Arena433VideoLoopId,
+  viewport: ArenaVideoViewport,
+) {
+  return `qa-manual-${loopId}-${viewport}`;
+}
+
+export function isArenaQaManualLayoutCameraId(value: string) {
+  return ARENA_433_VIDEO_LOOP_IDS.some((loopId) => (
+    ARENA_VIDEO_VIEWPORTS.some((viewport) => value === arenaQaManualLayoutCameraId(loopId, viewport))
+  ));
+}
+
+/** Returns a stable frame in the middle of a camera pass for human QA editing. */
+export function arena433VideoLoopPreviewTime(
+  loopId: Arena433VideoLoopId,
+  duration: number | null | undefined,
+) {
+  const safeDuration = typeof duration === "number" && Number.isFinite(duration) && duration > 0
+    ? duration
+    : ARENA_433_VIDEO_LOOP_FALLBACK_DURATION_SECONDS;
+  const index = ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES.findIndex((boundary) => boundary.loopId === loopId);
+  const start = index <= 0 ? 0 : ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES[index - 1]!.until;
+  const end = ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES[index]?.until ?? 1;
+  return ((start + end) / 2) * safeDuration;
+}
+
 export type ArenaVideoSlot = {
   /** Visual landmark on the filmed pitch that the card is anchored to. */
   landmark: string;

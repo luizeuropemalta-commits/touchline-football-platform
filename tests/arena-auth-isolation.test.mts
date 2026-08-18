@@ -161,6 +161,6 @@ test("the standalone Market Transfer cannot lose its active panel during URL syn
   assert.match(marketPageSource, /initialPanel="market"/);
   assert.match(arenaClientSource, /const standaloneExperience = standaloneMarket \? "market" : standalonePanel \?\? null/);
   assert.match(arenaClientSource, /if \(standaloneExperience\) \{[\s\S]*setActiveArenaPanel\(standaloneExperience === "live" \? null : standaloneExperience\)/);
-  assert.match(arenaClientSource, /\[initialPanel, standaloneExperience\]/);
+  assert.match(arenaClientSource, /\[initialPanel, initialQaVisualEditor, standaloneExperience\]/);
   assert.match(arenaClientSource, /const isArenaFunctionalReady = Boolean\(standaloneExperience\) \|\| \(/);
 });

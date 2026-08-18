@@ -45,6 +45,7 @@ const ARENA_ROLE_SET = new Set<string>(ARENA_ROLES);
 const ARENA_FORMATION_KEYS = ["4-3-3", "4-4-2"] as const;
 const ARENA_FORMATION_KEY_SET = new Set<string>(ARENA_FORMATION_KEYS);
 const ARENA_CAMERA_IDS = new Set(["wide-touchline", "lower-stand", "side-sweep"]);
+const ARENA_QA_MANUAL_CAMERA_ID_PATTERN = /^qa-manual-(wide-touchline|lower-stand|side-sweep)-(desktop|tablet-landscape|phone-landscape)$/;
 const ARENA_CARD_COMPACT_HEIGHT_VH = 14;
 const ARENA_CARD_MIN_HEIGHT_VH = 8;
 const ARENA_CARD_MAX_HEIGHT_VH = 20;
@@ -338,7 +339,7 @@ function sanitizeFormationLayout(
     if (!cameras) return null;
     const sanitizedCameras: Record<string, unknown> = {};
     for (const [cameraId, cameraLayout] of Object.entries(cameras)) {
-      if (!ARENA_CAMERA_IDS.has(cameraId)) return null;
+      if (!ARENA_CAMERA_IDS.has(cameraId) && !ARENA_QA_MANUAL_CAMERA_ID_PATTERN.test(cameraId)) return null;
       const sanitizedCamera = sanitizeRoleLayout(cameraLayout);
       if (!sanitizedCamera) return null;
       sanitizedCameras[cameraId] = sanitizedCamera;

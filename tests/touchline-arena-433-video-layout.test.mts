@@ -8,7 +8,10 @@ import {
   ARENA_VIDEO_VIEWPORTS,
   arena433VideoLoopIdForPlayback,
   arena433VideoLoopIndexForPlayback,
+  arena433VideoLoopPreviewTime,
+  arenaQaManualLayoutCameraId,
   arenaVideoViewportForDimensions,
+  isArenaQaManualLayoutCameraId,
   resolveArena433VideoSlots,
 } from "../lib/touchlineArena/arena-formation-video-layout.ts";
 
@@ -102,10 +105,22 @@ test("manual seeks and a media-loop wrap resolve a fresh profile instead of reta
   assert.equal(arena433VideoLoopIdForPlayback((duration * 2) + 0.01, duration), "wide-touchline");
 });
 
-test("Arena renders the protected 4-3-3 from the video layout instead of a saved camera drag", () => {
+test("the human QA editor has a separate, viewport-specific camera key and stable preview frame", () => {
+  const duration = 21;
+  assert.equal(arenaQaManualLayoutCameraId("wide-touchline", "desktop"), "qa-manual-wide-touchline-desktop");
+  assert.equal(isArenaQaManualLayoutCameraId("qa-manual-side-sweep-phone-landscape"), true);
+  assert.equal(isArenaQaManualLayoutCameraId("qa-manual-wide-touchline-desktop-extra"), false);
+  assert.equal(arena433VideoLoopPreviewTime("wide-touchline", duration), 5.04);
+  assert.equal(arena433VideoLoopPreviewTime("lower-stand", duration), 12.81);
+  assert.equal(arena433VideoLoopPreviewTime("side-sweep", duration), 18.27);
+});
+
+test("Arena accepts a user-approved QA layout only in the specific QA editor pathway", () => {
   assert.match(arenaSource, /resolveArena433VideoSlots\([\s\S]*?arenaFieldPlayersForRendering[\s\S]*?arenaVideoViewport/);
-  assert.match(arenaSource, /const fieldPlayerPositions = new Map\(canonical433VideoPositions \?\? lockedCameraPositions \?\? projectedFieldPlayerPositions\)/);
-  assert.match(arenaSource, /if \(cameraEditPositions && !canonical433VideoPositions\)/);
+  assert.match(arenaSource, /const qaManualCameraLayout = isStableQaArenaHost && selectedFormationKey === "4-3-3"/);
+  assert.match(arenaSource, /const fieldPlayerPositions = new Map\(lockedCameraPositions \?\? canonical433VideoPositions \?\? projectedFieldPlayerPositions\)/);
+  assert.match(arenaSource, /if \(cameraEditPositions && \(!canonical433VideoPositions \|\| isQaVisualEditor\)\)/);
+  assert.match(arenaSource, /Save Arena QA standard/);
   assert.match(arenaSource, /const baseHeight = fieldPosition\.heightVh \?\? arenaLoopCameraProfile\(loopCameraIndex\)\.cardHeightVh/);
   assert.match(arenaSource, /onLoadedMetadata=\{handleCardLoopTimelineEvent\}/);
   assert.match(arenaSource, /onSeeking=\{handleCardLoopTimelineEvent\}/);
