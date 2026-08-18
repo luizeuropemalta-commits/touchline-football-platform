@@ -51,6 +51,7 @@ test("each camera anchors 4-3-3 cards to filmed field landmarks instead of verti
       }
 
       assert.equal(layout.goalkeeper[0]?.landmark, "left-goal-mouth");
+      assert.equal(layout.goalkeeper[0]?.x, 12.5, `${loopId} ${viewport} goalkeeper remains centred in the goal mouth`);
       assert.ok(layout.goalkeeper[0]!.x < layout.defender[0]!.x, `${loopId} ${viewport} goalkeeper is behind defence`);
       assert.ok(layout.defender[0]!.x < layout.midfielder[0]!.x, `${loopId} ${viewport} defence is behind midfield`);
       assert.ok(layout.midfielder[0]!.x < layout.forward[0]!.x, `${loopId} ${viewport} midfield is behind attack`);

@@ -139,7 +139,7 @@ export const ARENA_433_VIDEO_COORDINATES: Record<
   },
   "lower-stand": {
     desktop: {
-      goalkeeper: [{ landmark: "left-goal-mouth", x: 15, y: 78, heightVh: 6.9 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 78, heightVh: 6.9 }],
       defender: [
         { landmark: "far-defensive-third", x: 26, y: 68, heightVh: 6.5 },
         { landmark: "left-penalty-area", x: 31.5, y: 74, heightVh: 6.8 },
@@ -158,7 +158,7 @@ export const ARENA_433_VIDEO_COORDINATES: Record<
       ],
     },
     "tablet-landscape": {
-      goalkeeper: [{ landmark: "left-goal-mouth", x: 15, y: 79, heightVh: 7.3 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 79, heightVh: 7.3 }],
       defender: [
         { landmark: "far-defensive-third", x: 26, y: 69, heightVh: 6.9 },
         { landmark: "left-penalty-area", x: 31.5, y: 75, heightVh: 7.2 },
@@ -177,7 +177,7 @@ export const ARENA_433_VIDEO_COORDINATES: Record<
       ],
     },
     "phone-landscape": {
-      goalkeeper: [{ landmark: "left-goal-mouth", x: 15, y: 80, heightVh: 8.6 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 80, heightVh: 8.6 }],
       defender: [
         { landmark: "far-defensive-third", x: 26, y: 69, heightVh: 8.1 },
         { landmark: "left-penalty-area", x: 31.5, y: 75, heightVh: 8.4 },
@@ -198,7 +198,7 @@ export const ARENA_433_VIDEO_COORDINATES: Record<
   },
   "side-sweep": {
     desktop: {
-      goalkeeper: [{ landmark: "left-goal-mouth", x: 17, y: 78, heightVh: 6.7 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 78, heightVh: 6.7 }],
       defender: [
         { landmark: "far-defensive-third", x: 28, y: 68, heightVh: 6.3 },
         { landmark: "left-penalty-area", x: 34.5, y: 74, heightVh: 6.6 },
@@ -217,7 +217,7 @@ export const ARENA_433_VIDEO_COORDINATES: Record<
       ],
     },
     "tablet-landscape": {
-      goalkeeper: [{ landmark: "left-goal-mouth", x: 17, y: 79, heightVh: 7.1 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 79, heightVh: 7.1 }],
       defender: [
         { landmark: "far-defensive-third", x: 28, y: 69, heightVh: 6.7 },
         { landmark: "left-penalty-area", x: 34.5, y: 75, heightVh: 7 },
@@ -236,7 +236,7 @@ export const ARENA_433_VIDEO_COORDINATES: Record<
       ],
     },
     "phone-landscape": {
-      goalkeeper: [{ landmark: "left-goal-mouth", x: 17, y: 80, heightVh: 8.4 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 80, heightVh: 8.4 }],
       defender: [
         { landmark: "far-defensive-third", x: 28, y: 69, heightVh: 7.9 },
         { landmark: "left-penalty-area", x: 34.5, y: 75, heightVh: 8.2 },
