@@ -29,11 +29,31 @@ test("the cinematic 4-3-3 has one canonical source for every loop and landscape 
         const slots = layout[role as keyof typeof expectedRoleCounts];
         assert.equal(slots.length, count, `${loopId} ${viewport} ${role}`);
         for (const slot of slots) {
+          assert.ok(slot.landmark.length > 0);
           assert.ok(slot.x >= 0 && slot.x <= 100);
           assert.ok(slot.y >= 0 && slot.y <= 100);
           assert.ok(slot.heightVh > 0);
         }
       }
+    }
+  }
+});
+
+test("each camera anchors 4-3-3 cards to filmed field landmarks instead of vertical lineup columns", () => {
+  for (const loopId of ARENA_433_VIDEO_LOOP_IDS) {
+    for (const viewport of ARENA_VIDEO_VIEWPORTS) {
+      const layout = ARENA_433_VIDEO_COORDINATES[loopId][viewport];
+      const fieldLines = [layout.defender, layout.midfielder, layout.forward];
+
+      for (const line of fieldLines) {
+        assert.ok(new Set(line.map((slot) => slot.x)).size > 1, `${loopId} ${viewport} has a lineup column`);
+        assert.ok(new Set(line.map((slot) => slot.heightVh)).size > 1, `${loopId} ${viewport} has no depth scale`);
+      }
+
+      assert.equal(layout.goalkeeper[0]?.landmark, "left-goal-mouth");
+      assert.ok(layout.goalkeeper[0]!.x < layout.defender[0]!.x, `${loopId} ${viewport} goalkeeper is behind defence`);
+      assert.ok(layout.defender[0]!.x < layout.midfielder[0]!.x, `${loopId} ${viewport} defence is behind midfield`);
+      assert.ok(layout.midfielder[0]!.x < layout.forward[0]!.x, `${loopId} ${viewport} midfield is behind attack`);
     }
   }
 });

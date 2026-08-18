@@ -32,6 +32,8 @@ export type ArenaVideoViewport = (typeof ARENA_VIDEO_VIEWPORTS)[number];
 export type ArenaVideoRole = "goalkeeper" | "defender" | "midfielder" | "forward";
 
 export type ArenaVideoSlot = {
+  /** Visual landmark on the filmed pitch that the card is anchored to. */
+  landmark: string;
   x: number;
   y: number;
   heightVh: number;
@@ -68,69 +70,189 @@ export function arena433VideoLoopIdForPlayback(
 type Arena433VideoLayout = Record<ArenaVideoRole, ArenaVideoSlot[]>;
 
 // Every value is a bottom-centred card anchor expressed as a percentage of the
-// Arena stage. The rows remain 1 / 4 / 3 / 3 in every real landscape viewport.
+// Arena stage. These are filmed-pitch landmarks (goal mouth, penalty area,
+// midfield stripe and attacking third), not an abstract lineup grid.  A nearer
+// landmark receives a modestly larger card so the formation follows the camera
+// perspective while remaining 1 / 4 / 3 / 3 in every landscape viewport.
 export const ARENA_433_VIDEO_COORDINATES: Record<
   Arena433VideoLoopId,
   Record<ArenaVideoViewport, Arena433VideoLayout>
 > = {
   "wide-touchline": {
     desktop: {
-      goalkeeper: [{ x: 15, y: 77, heightVh: 7.4 }],
-      defender: [{ x: 30, y: 64, heightVh: 7.4 }, { x: 30, y: 71, heightVh: 7.4 }, { x: 30, y: 78, heightVh: 7.4 }, { x: 30, y: 85, heightVh: 7.4 }],
-      midfielder: [{ x: 48, y: 67, heightVh: 7.4 }, { x: 48, y: 76, heightVh: 7.4 }, { x: 48, y: 85, heightVh: 7.4 }],
-      forward: [{ x: 67, y: 67, heightVh: 7.4 }, { x: 67, y: 76, heightVh: 7.4 }, { x: 67, y: 85, heightVh: 7.4 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 78, heightVh: 8.4 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 25.5, y: 65, heightVh: 7.8 },
+        { landmark: "left-penalty-area", x: 27.5, y: 71, heightVh: 8.1 },
+        { landmark: "near-defensive-third", x: 27.8, y: 78, heightVh: 8.5 },
+        { landmark: "near-touchline-defensive-third", x: 25.8, y: 85, heightVh: 8.9 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 43.5, y: 67, heightVh: 8 },
+        { landmark: "centre-circle", x: 46, y: 76, heightVh: 8.5 },
+        { landmark: "near-midfield-stripe", x: 44, y: 85, heightVh: 9 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 61, y: 67, heightVh: 8 },
+        { landmark: "central-attacking-third", x: 64.5, y: 76, heightVh: 8.5 },
+        { landmark: "near-attacking-third", x: 66, y: 85, heightVh: 9 },
+      ],
     },
     "tablet-landscape": {
-      goalkeeper: [{ x: 15, y: 78, heightVh: 7.8 }],
-      defender: [{ x: 30, y: 65, heightVh: 7.8 }, { x: 30, y: 72, heightVh: 7.8 }, { x: 30, y: 79, heightVh: 7.8 }, { x: 30, y: 86, heightVh: 7.8 }],
-      midfielder: [{ x: 48, y: 68, heightVh: 7.8 }, { x: 48, y: 77, heightVh: 7.8 }, { x: 48, y: 86, heightVh: 7.8 }],
-      forward: [{ x: 67, y: 68, heightVh: 7.8 }, { x: 67, y: 77, heightVh: 7.8 }, { x: 67, y: 86, heightVh: 7.8 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 79, heightVh: 8.8 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 25.5, y: 66, heightVh: 8.1 },
+        { landmark: "left-penalty-area", x: 27.5, y: 72, heightVh: 8.5 },
+        { landmark: "near-defensive-third", x: 27.8, y: 79, heightVh: 8.9 },
+        { landmark: "near-touchline-defensive-third", x: 25.8, y: 86, heightVh: 9.3 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 43.5, y: 68, heightVh: 8.4 },
+        { landmark: "centre-circle", x: 46, y: 77, heightVh: 8.9 },
+        { landmark: "near-midfield-stripe", x: 44, y: 86, heightVh: 9.4 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 61, y: 68, heightVh: 8.4 },
+        { landmark: "central-attacking-third", x: 64.5, y: 77, heightVh: 8.9 },
+        { landmark: "near-attacking-third", x: 66, y: 86, heightVh: 9.4 },
+      ],
     },
     "phone-landscape": {
-      goalkeeper: [{ x: 15, y: 79, heightVh: 9.2 }],
-      defender: [{ x: 30, y: 66, heightVh: 9.2 }, { x: 30, y: 73, heightVh: 9.2 }, { x: 30, y: 80, heightVh: 9.2 }, { x: 30, y: 87, heightVh: 9.2 }],
-      midfielder: [{ x: 48, y: 69, heightVh: 9.2 }, { x: 48, y: 78, heightVh: 9.2 }, { x: 48, y: 87, heightVh: 9.2 }],
-      forward: [{ x: 67, y: 69, heightVh: 9.2 }, { x: 67, y: 78, heightVh: 9.2 }, { x: 67, y: 87, heightVh: 9.2 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 12.5, y: 80, heightVh: 9.8 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 25.5, y: 67, heightVh: 9 },
+        { landmark: "left-penalty-area", x: 27.5, y: 73, heightVh: 9.4 },
+        { landmark: "near-defensive-third", x: 27.8, y: 80, heightVh: 9.8 },
+        { landmark: "near-touchline-defensive-third", x: 25.8, y: 87, heightVh: 10.2 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 43.5, y: 69, heightVh: 9.3 },
+        { landmark: "centre-circle", x: 46, y: 78, heightVh: 9.8 },
+        { landmark: "near-midfield-stripe", x: 44, y: 87, heightVh: 10.3 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 61, y: 69, heightVh: 9.3 },
+        { landmark: "central-attacking-third", x: 64.5, y: 78, heightVh: 9.8 },
+        { landmark: "near-attacking-third", x: 66, y: 87, heightVh: 10.3 },
+      ],
     },
   },
   "lower-stand": {
     desktop: {
-      goalkeeper: [{ x: 18, y: 77, heightVh: 6 }],
-      defender: [{ x: 35, y: 68, heightVh: 6 }, { x: 35, y: 74, heightVh: 6 }, { x: 35, y: 80, heightVh: 6 }, { x: 35, y: 86, heightVh: 6 }],
-      midfielder: [{ x: 53, y: 70, heightVh: 6 }, { x: 53, y: 78, heightVh: 6 }, { x: 53, y: 86, heightVh: 6 }],
-      forward: [{ x: 71, y: 70, heightVh: 6 }, { x: 71, y: 78, heightVh: 6 }, { x: 71, y: 86, heightVh: 6 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 15, y: 78, heightVh: 6.9 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 29.5, y: 68, heightVh: 6.5 },
+        { landmark: "left-penalty-area", x: 31.5, y: 74, heightVh: 6.8 },
+        { landmark: "near-defensive-third", x: 32, y: 80, heightVh: 7.1 },
+        { landmark: "near-touchline-defensive-third", x: 30.5, y: 86, heightVh: 7.4 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 47.5, y: 70, heightVh: 6.7 },
+        { landmark: "centre-circle", x: 50, y: 78, heightVh: 7.1 },
+        { landmark: "near-midfield-stripe", x: 48, y: 86, heightVh: 7.5 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 65, y: 70, heightVh: 6.7 },
+        { landmark: "central-attacking-third", x: 68.5, y: 78, heightVh: 7.1 },
+        { landmark: "near-attacking-third", x: 70, y: 86, heightVh: 7.5 },
+      ],
     },
     "tablet-landscape": {
-      goalkeeper: [{ x: 18, y: 78, heightVh: 6.4 }],
-      defender: [{ x: 35, y: 69, heightVh: 6.4 }, { x: 35, y: 75, heightVh: 6.4 }, { x: 35, y: 81, heightVh: 6.4 }, { x: 35, y: 87, heightVh: 6.4 }],
-      midfielder: [{ x: 53, y: 71, heightVh: 6.4 }, { x: 53, y: 79, heightVh: 6.4 }, { x: 53, y: 87, heightVh: 6.4 }],
-      forward: [{ x: 71, y: 71, heightVh: 6.4 }, { x: 71, y: 79, heightVh: 6.4 }, { x: 71, y: 87, heightVh: 6.4 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 15, y: 79, heightVh: 7.3 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 29.5, y: 69, heightVh: 6.9 },
+        { landmark: "left-penalty-area", x: 31.5, y: 75, heightVh: 7.2 },
+        { landmark: "near-defensive-third", x: 32, y: 81, heightVh: 7.5 },
+        { landmark: "near-touchline-defensive-third", x: 30.5, y: 87, heightVh: 7.8 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 47.5, y: 71, heightVh: 7.1 },
+        { landmark: "centre-circle", x: 50, y: 79, heightVh: 7.5 },
+        { landmark: "near-midfield-stripe", x: 48, y: 87, heightVh: 7.9 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 65, y: 71, heightVh: 7.1 },
+        { landmark: "central-attacking-third", x: 68.5, y: 79, heightVh: 7.5 },
+        { landmark: "near-attacking-third", x: 70, y: 87, heightVh: 7.9 },
+      ],
     },
     "phone-landscape": {
-      goalkeeper: [{ x: 18, y: 79, heightVh: 7.8 }],
-      defender: [{ x: 35, y: 69, heightVh: 7.8 }, { x: 35, y: 75, heightVh: 7.8 }, { x: 35, y: 81, heightVh: 7.8 }, { x: 35, y: 87, heightVh: 7.8 }],
-      midfielder: [{ x: 53, y: 71, heightVh: 7.8 }, { x: 53, y: 79, heightVh: 7.8 }, { x: 53, y: 87, heightVh: 7.8 }],
-      forward: [{ x: 71, y: 71, heightVh: 7.8 }, { x: 71, y: 79, heightVh: 7.8 }, { x: 71, y: 87, heightVh: 7.8 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 15, y: 80, heightVh: 8.6 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 29.5, y: 69, heightVh: 8.1 },
+        { landmark: "left-penalty-area", x: 31.5, y: 75, heightVh: 8.4 },
+        { landmark: "near-defensive-third", x: 32, y: 81, heightVh: 8.7 },
+        { landmark: "near-touchline-defensive-third", x: 30.5, y: 87, heightVh: 9 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 47.5, y: 71, heightVh: 8.3 },
+        { landmark: "centre-circle", x: 50, y: 79, heightVh: 8.7 },
+        { landmark: "near-midfield-stripe", x: 48, y: 87, heightVh: 9.1 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 65, y: 71, heightVh: 8.3 },
+        { landmark: "central-attacking-third", x: 68.5, y: 79, heightVh: 8.7 },
+        { landmark: "near-attacking-third", x: 70, y: 87, heightVh: 9.1 },
+      ],
     },
   },
   "side-sweep": {
     desktop: {
-      goalkeeper: [{ x: 20, y: 77, heightVh: 5.8 }],
-      defender: [{ x: 38, y: 68, heightVh: 5.8 }, { x: 38, y: 74, heightVh: 5.8 }, { x: 38, y: 80, heightVh: 5.8 }, { x: 38, y: 86, heightVh: 5.8 }],
-      midfielder: [{ x: 56, y: 70, heightVh: 5.8 }, { x: 56, y: 78, heightVh: 5.8 }, { x: 56, y: 86, heightVh: 5.8 }],
-      forward: [{ x: 74, y: 70, heightVh: 5.8 }, { x: 74, y: 78, heightVh: 5.8 }, { x: 74, y: 86, heightVh: 5.8 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 17, y: 78, heightVh: 6.7 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 32.5, y: 68, heightVh: 6.3 },
+        { landmark: "left-penalty-area", x: 34.5, y: 74, heightVh: 6.6 },
+        { landmark: "near-defensive-third", x: 35, y: 80, heightVh: 6.9 },
+        { landmark: "near-touchline-defensive-third", x: 33.5, y: 86, heightVh: 7.2 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 50.5, y: 70, heightVh: 6.5 },
+        { landmark: "centre-circle", x: 53, y: 78, heightVh: 6.9 },
+        { landmark: "near-midfield-stripe", x: 51, y: 86, heightVh: 7.3 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 68, y: 70, heightVh: 6.5 },
+        { landmark: "central-attacking-third", x: 71.5, y: 78, heightVh: 6.9 },
+        { landmark: "near-attacking-third", x: 73, y: 86, heightVh: 7.3 },
+      ],
     },
     "tablet-landscape": {
-      goalkeeper: [{ x: 20, y: 78, heightVh: 6.2 }],
-      defender: [{ x: 38, y: 69, heightVh: 6.2 }, { x: 38, y: 75, heightVh: 6.2 }, { x: 38, y: 81, heightVh: 6.2 }, { x: 38, y: 87, heightVh: 6.2 }],
-      midfielder: [{ x: 56, y: 71, heightVh: 6.2 }, { x: 56, y: 79, heightVh: 6.2 }, { x: 56, y: 87, heightVh: 6.2 }],
-      forward: [{ x: 74, y: 71, heightVh: 6.2 }, { x: 74, y: 79, heightVh: 6.2 }, { x: 74, y: 87, heightVh: 6.2 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 17, y: 79, heightVh: 7.1 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 32.5, y: 69, heightVh: 6.7 },
+        { landmark: "left-penalty-area", x: 34.5, y: 75, heightVh: 7 },
+        { landmark: "near-defensive-third", x: 35, y: 81, heightVh: 7.3 },
+        { landmark: "near-touchline-defensive-third", x: 33.5, y: 87, heightVh: 7.6 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 50.5, y: 71, heightVh: 6.9 },
+        { landmark: "centre-circle", x: 53, y: 79, heightVh: 7.3 },
+        { landmark: "near-midfield-stripe", x: 51, y: 87, heightVh: 7.7 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 68, y: 71, heightVh: 6.9 },
+        { landmark: "central-attacking-third", x: 71.5, y: 79, heightVh: 7.3 },
+        { landmark: "near-attacking-third", x: 73, y: 87, heightVh: 7.7 },
+      ],
     },
     "phone-landscape": {
-      goalkeeper: [{ x: 20, y: 79, heightVh: 7.6 }],
-      defender: [{ x: 38, y: 69, heightVh: 7.6 }, { x: 38, y: 75, heightVh: 7.6 }, { x: 38, y: 81, heightVh: 7.6 }, { x: 38, y: 87, heightVh: 7.6 }],
-      midfielder: [{ x: 56, y: 71, heightVh: 7.6 }, { x: 56, y: 79, heightVh: 7.6 }, { x: 56, y: 87, heightVh: 7.6 }],
-      forward: [{ x: 74, y: 71, heightVh: 7.6 }, { x: 74, y: 79, heightVh: 7.6 }, { x: 74, y: 87, heightVh: 7.6 }],
+      goalkeeper: [{ landmark: "left-goal-mouth", x: 17, y: 80, heightVh: 8.4 }],
+      defender: [
+        { landmark: "far-defensive-third", x: 32.5, y: 69, heightVh: 7.9 },
+        { landmark: "left-penalty-area", x: 34.5, y: 75, heightVh: 8.2 },
+        { landmark: "near-defensive-third", x: 35, y: 81, heightVh: 8.5 },
+        { landmark: "near-touchline-defensive-third", x: 33.5, y: 87, heightVh: 8.8 },
+      ],
+      midfielder: [
+        { landmark: "far-midfield-stripe", x: 50.5, y: 71, heightVh: 8.1 },
+        { landmark: "centre-circle", x: 53, y: 79, heightVh: 8.5 },
+        { landmark: "near-midfield-stripe", x: 51, y: 87, heightVh: 8.9 },
+      ],
+      forward: [
+        { landmark: "far-attacking-third", x: 68, y: 71, heightVh: 8.1 },
+        { landmark: "central-attacking-third", x: 71.5, y: 79, heightVh: 8.5 },
+        { landmark: "near-attacking-third", x: 73, y: 87, heightVh: 8.9 },
+      ],
     },
   },
 };
