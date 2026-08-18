@@ -10955,7 +10955,10 @@ export default function ArenaClient({
         /* The reserve rail is one horizontal 4 + coach + 5 decision surface in
            landscape. It stays low enough to leave the pitch readable, while
            every reserve keeps a real name and a touch-sized target. */
-        @media (max-width: 1180px) and (orientation: landscape) {
+        /* 1280×720 is a real desktop landscape target.  Keep the full
+           4 + coach + 5 rail inside the safe frame before the artwork can
+           claim more width than its ten grid columns. */
+        @media (max-width: 1366px) and (orientation: landscape) {
           .arena-quick-sub-rail {
             left: max(8px, env(safe-area-inset-left));
             right: max(8px, env(safe-area-inset-right));

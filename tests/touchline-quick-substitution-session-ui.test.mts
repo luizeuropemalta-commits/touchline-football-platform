@@ -89,6 +89,7 @@ test("Quick Sub enters and exits as a low-motion-safe HUD without replacing the 
   assert.match(arenaSource, /arena-quick-sub-rail-exit/);
   assert.match(arenaSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?arena-quick-sub-rail\.is-closing \{ animation: none/);
   assert.match(arenaSource, /@media \(max-width: 900px\) and \(max-height: 520px\) and \(orientation: landscape\)[\s\S]*?arena-quick-sub-card > span:last-child \{ display: block; font-size: 7px; \}/);
+  assert.match(arenaSource, /@media \(max-width: 1366px\) and \(orientation: landscape\)[\s\S]*?arena-quick-sub-card \{ min-height: 88px/);
 });
 
 test("a confirmed Quick Sub returns to the score rail without reloading the document", () => {
