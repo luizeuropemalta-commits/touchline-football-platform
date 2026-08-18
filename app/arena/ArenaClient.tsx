@@ -163,7 +163,6 @@ import {
   TOUCHLINE_ARENA_ENTRY_VIDEO,
   TOUCHLINE_ARENA_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_INTRO_STORAGE_KEY,
-  TOUCHLINE_ARENA_LOOP_VIDEO,
   TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA,
   TOUCHLINE_ARENA_SKIP_INTRO_QUERY_PARAM,
   TOUCHLINE_ARENA_VIDEO_POSTER,
@@ -174,7 +173,6 @@ import {
 } from "@/lib/touchlineArena/arena-intro";
 import {
   ARENA_433_VIDEO_LOOP_IDS,
-  arena433VideoLoopIndexForPlayback,
   arenaQaManualLayoutCameraId,
   arenaVideoViewportForDimensions,
   isArenaQaManualLayoutCameraId,
@@ -5914,7 +5912,7 @@ export default function ArenaClient({
     if (!loopVideo || !loopVideo.paused) return;
 
     void loopVideo.play().catch(() => undefined);
-  }, [activeVideoIndex, isArenaVideoPaused]);
+  }, [activeVideoIndex, isArenaVideoPaused, loopCameraIndex]);
 
   useEffect(() => () => {
     cancelLoopCameraFrameSync();
@@ -6438,13 +6436,26 @@ export default function ArenaClient({
     setSaveStatus(`Arena QA camera paused · ${currentCameraId}`);
   }
 
+  function advanceArenaLoopCamera() {
+    if (isQaVisualEditor) {
+      secondVideoRef.current?.pause();
+      setIsArenaVideoPaused(true);
+      return;
+    }
+
+    // The Arena background is three individual videos. When one ends, select
+    // the next source and its matching formation profile; never infer a
+    // camera from a timestamp inside a continuous master video.
+    setLoopCameraIndex((currentIndex) => (currentIndex + 1) % ARENA_433_VIDEO_LOOP_IDS.length);
+    setIsArenaVideoPaused(false);
+  }
+
   function startCardLoopVideo() {
     const loopVideo = secondVideoRef.current;
     if (!loopVideo) return;
 
     firstVideoRef.current?.pause();
     loopVideo.currentTime = 0;
-    if (!isQaVisualEditor) syncLoopCameraFromVideo(loopVideo);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
 
     const finishLoopReveal = (paused: boolean) => {
@@ -6467,12 +6478,6 @@ export default function ArenaClient({
     setIsEntrySkipAvailable(false);
   }
 
-  function syncLoopCameraFromVideo(loopVideo: HTMLVideoElement | null) {
-    if (!loopVideo) return;
-    const nextCameraIndex = arena433VideoLoopIndexForPlayback(loopVideo.currentTime, loopVideo.duration);
-    setLoopCameraIndex((currentIndex) => (currentIndex === nextCameraIndex ? currentIndex : nextCameraIndex));
-  }
-
   function cancelLoopCameraFrameSync() {
     const loopVideo = loopCameraFrameVideoRef.current;
     const requestId = loopCameraFrameRequestRef.current;
@@ -6483,25 +6488,6 @@ export default function ArenaClient({
     loopCameraFrameVideoRef.current = null;
   }
 
-  function startLoopCameraFrameSync(loopVideo: HTMLVideoElement) {
-    syncLoopCameraFromVideo(loopVideo);
-    cancelLoopCameraFrameSync();
-    if (loopVideo.paused || loopVideo.ended || !("requestVideoFrameCallback" in loopVideo)) return;
-
-    loopCameraFrameVideoRef.current = loopVideo;
-    const syncOnVideoFrame = () => {
-      if (loopCameraFrameVideoRef.current !== loopVideo) return;
-      syncLoopCameraFromVideo(loopVideo);
-      if (loopVideo.paused || loopVideo.ended) {
-        loopCameraFrameRequestRef.current = null;
-        loopCameraFrameVideoRef.current = null;
-        return;
-      }
-      loopCameraFrameRequestRef.current = loopVideo.requestVideoFrameCallback(syncOnVideoFrame);
-    };
-    loopCameraFrameRequestRef.current = loopVideo.requestVideoFrameCallback(syncOnVideoFrame);
-  }
-
   function handleCardLoopTimelineEvent(event: SyntheticEvent<HTMLVideoElement>) {
     if (isQaVisualEditor) {
       // Source selection owns the editor camera. Do not let media time from a
@@ -6509,7 +6495,9 @@ export default function ArenaClient({
       event.currentTarget.pause();
       return;
     }
-    syncLoopCameraFromVideo(event.currentTarget);
+    if (event.type === "canplay" && activeVideoIndex === 1 && !isArenaVideoPaused) {
+      void event.currentTarget.play().catch(() => setIsArenaVideoPaused(true));
+    }
   }
 
   function handleCardLoopPlaying(event: SyntheticEvent<HTMLVideoElement>) {
@@ -6517,7 +6505,6 @@ export default function ArenaClient({
       event.currentTarget.pause();
       return;
     }
-    startLoopCameraFrameSync(event.currentTarget);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
     loopRevealTimerRef.current = null;
     setIsArenaVideoPaused(false);
@@ -7469,18 +7456,15 @@ export default function ArenaClient({
               className={`arena-video arena-video-b ${activeVideoIndex === 1 ? "is-visible" : ""}`}
               ref={secondVideoRef}
               src={isArenaIntroViewportReady
-                ? (isQaVisualEditor ? TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA[currentCameraId] : TOUCHLINE_ARENA_LOOP_VIDEO)
+                ? TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA[currentCameraId]
                 : undefined}
               poster={TOUCHLINE_ARENA_VIDEO_POSTER}
               muted
               playsInline
-              loop
               preload="metadata"
               onLoadedMetadata={handleCardLoopTimelineEvent}
               onCanPlay={handleCardLoopTimelineEvent}
-              onTimeUpdate={handleCardLoopTimelineEvent}
-              onSeeking={handleCardLoopTimelineEvent}
-              onSeeked={handleCardLoopTimelineEvent}
+              onEnded={advanceArenaLoopCamera}
               onPlaying={handleCardLoopPlaying}
               onPause={() => {
                 cancelLoopCameraFrameSync();

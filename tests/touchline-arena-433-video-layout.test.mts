@@ -86,7 +86,7 @@ test("real landscape dimensions select their explicit video viewport profile", (
   assert.equal(arenaVideoViewportForDimensions(844, 390), "phone-landscape");
 });
 
-test("the media clock enters each canonical camera profile at its exact boundary", () => {
+test("the archived continuous-video resolver retains canonical boundaries outside the Arena source sequencer", () => {
   const duration = 21;
   const [wide, lower, side] = ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES;
 
@@ -98,7 +98,7 @@ test("the media clock enters each canonical camera profile at its exact boundary
   assert.equal(arena433VideoLoopIdForPlayback((side.until * duration) - 0.001, duration), "side-sweep");
 });
 
-test("manual seeks and a media-loop wrap resolve a fresh profile instead of retaining the preceding one", () => {
+test("the archived continuous-video resolver handles manual seeks and a wrap", () => {
   const duration = 21;
   assert.equal(arena433VideoLoopIndexForPlayback(15.75, duration), 2);
   assert.equal(arena433VideoLoopIndexForPlayback(10.08, duration), 1);
@@ -129,10 +129,12 @@ test("Arena accepts a user-approved QA layout only in the specific QA editor pat
   assert.match(arenaSource, /handleFieldPlayerKeyDown/);
   assert.match(arenaSource, /TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA\[currentCameraId\]/);
   assert.match(arenaSource, /A camera button changes the actual media source/);
+  assert.match(arenaSource, /The Arena background is three individual videos/);
+  assert.match(arenaSource, /setLoopCameraIndex\(\(currentIndex\) => \(currentIndex \+ 1\) % ARENA_433_VIDEO_LOOP_IDS\.length\)/);
+  assert.match(arenaSource, /onEnded=\{advanceArenaLoopCamera\}/);
+  assert.doesNotMatch(arenaSource, /\n\s+loop\n\s+preload="metadata"/);
   assert.match(arenaSource, /if \(isQaVisualEditor\) \{[\s\S]*?event\.currentTarget\.pause\(\);[\s\S]*?return;/);
   assert.match(arenaSource, /const baseHeight = fieldPosition\.heightVh \?\? arenaLoopCameraProfile\(loopCameraIndex\)\.cardHeightVh/);
   assert.match(arenaSource, /onLoadedMetadata=\{handleCardLoopTimelineEvent\}/);
-  assert.match(arenaSource, /onSeeking=\{handleCardLoopTimelineEvent\}/);
-  assert.match(arenaSource, /onSeeked=\{handleCardLoopTimelineEvent\}/);
-  assert.match(arenaSource, /requestVideoFrameCallback/);
+  assert.match(arenaSource, /onCanPlay=\{handleCardLoopTimelineEvent\}/);
 });
