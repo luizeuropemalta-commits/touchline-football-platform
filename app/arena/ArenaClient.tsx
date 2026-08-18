@@ -6418,13 +6418,14 @@ export default function ArenaClient({
     const index = ARENA_433_VIDEO_LOOP_IDS.indexOf(loopId);
     if (index < 0) return;
     // A camera button changes the actual media source, rather than seeking a
-    // single continuous video. This keeps Camera 1/2/3 independent at 0:00.
+    // single continuous video. Start that source normally; the editor user
+    // chooses when to pause it for a tactical adjustment.
     secondVideoRef.current?.pause();
-    setIsArenaVideoPaused(true);
+    setIsArenaVideoPaused(false);
     setHasEntryVideoFinished(true);
     setActiveVideoIndex(1);
     setLoopCameraIndex(index);
-    setSaveStatus(`Arena QA Camera ${index + 1} · 0:00 · stopped`);
+    setSaveStatus(`Arena QA Camera ${index + 1} · playing · pause when ready`);
   }
 
   function pauseQaArenaCamera() {
@@ -6437,12 +6438,6 @@ export default function ArenaClient({
   }
 
   function advanceArenaLoopCamera() {
-    if (isQaVisualEditor) {
-      secondVideoRef.current?.pause();
-      setIsArenaVideoPaused(true);
-      return;
-    }
-
     // The Arena background is three individual videos. When one ends, select
     // the next source and its matching formation profile; never infer a
     // camera from a timestamp inside a continuous master video.
@@ -6489,22 +6484,12 @@ export default function ArenaClient({
   }
 
   function handleCardLoopTimelineEvent(event: SyntheticEvent<HTMLVideoElement>) {
-    if (isQaVisualEditor) {
-      // Source selection owns the editor camera. Do not let media time from a
-      // prior source overwrite its layout profile while Safari loads it.
-      event.currentTarget.pause();
-      return;
-    }
     if (event.type === "canplay" && activeVideoIndex === 1 && !isArenaVideoPaused) {
       void event.currentTarget.play().catch(() => setIsArenaVideoPaused(true));
     }
   }
 
-  function handleCardLoopPlaying(event: SyntheticEvent<HTMLVideoElement>) {
-    if (isQaVisualEditor) {
-      event.currentTarget.pause();
-      return;
-    }
+  function handleCardLoopPlaying() {
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
     loopRevealTimerRef.current = null;
     setIsArenaVideoPaused(false);

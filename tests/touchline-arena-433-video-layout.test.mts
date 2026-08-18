@@ -129,11 +129,13 @@ test("Arena accepts a user-approved QA layout only in the specific QA editor pat
   assert.match(arenaSource, /handleFieldPlayerKeyDown/);
   assert.match(arenaSource, /TOUCHLINE_ARENA_LOOP_VIDEO_BY_CAMERA\[currentCameraId\]/);
   assert.match(arenaSource, /A camera button changes the actual media source/);
+  assert.match(arenaSource, /chooses when to pause it for a tactical adjustment/);
+  assert.match(arenaSource, /Arena QA Camera \$\{index \+ 1\} · playing · pause when ready/);
   assert.match(arenaSource, /The Arena background is three individual videos/);
   assert.match(arenaSource, /setLoopCameraIndex\(\(currentIndex\) => \(currentIndex \+ 1\) % ARENA_433_VIDEO_LOOP_IDS\.length\)/);
   assert.match(arenaSource, /onEnded=\{advanceArenaLoopCamera\}/);
   assert.doesNotMatch(arenaSource, /\n\s+loop\n\s+preload="metadata"/);
-  assert.match(arenaSource, /if \(isQaVisualEditor\) \{[\s\S]*?event\.currentTarget\.pause\(\);[\s\S]*?return;/);
+  assert.doesNotMatch(arenaSource, /function handleCardLoopTimelineEvent[\s\S]*?isQaVisualEditor[\s\S]*?event\.currentTarget\.pause\(\)/);
   assert.match(arenaSource, /const baseHeight = fieldPosition\.heightVh \?\? arenaLoopCameraProfile\(loopCameraIndex\)\.cardHeightVh/);
   assert.match(arenaSource, /onLoadedMetadata=\{handleCardLoopTimelineEvent\}/);
   assert.match(arenaSource, /onCanPlay=\{handleCardLoopTimelineEvent\}/);
