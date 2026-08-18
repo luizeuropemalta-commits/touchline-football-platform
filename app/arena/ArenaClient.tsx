@@ -3443,6 +3443,7 @@ export default function ArenaClient({
   const lastCardHydrationSignatureByClubRef = useRef(new Map<string, string>());
   const dragStateRef = useRef<ArenaDragState | null>(null);
   const quickSubPointerDragRef = useRef<QuickSubPointerDragState | null>(null);
+  const quickSubCloseTimerRef = useRef<number | null>(null);
   const suppressQuickSubClickRef = useRef<string | null>(null);
   const [players, setPlayers] = useState<ArenaPlayer[]>(DEFAULT_ARENA_PLAYERS);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -3509,6 +3510,7 @@ export default function ArenaClient({
   const [selectedBenchId, setSelectedBenchId] = useState("");
   const [draggingBenchId, setDraggingBenchId] = useState<string | null>(null);
   const [replacementTargetId, setReplacementTargetId] = useState<string | null>(null);
+  const [isQuickSubRailClosing, setIsQuickSubRailClosing] = useState(false);
   const [isQuickSubstitutionConfirmationOpen, setIsQuickSubstitutionConfirmationOpen] = useState(false);
   const [quickSubstitutionSession, setQuickSubstitutionSession] = useState<TouchlineQuickSubstitutionSessionState | null>(null);
   const [pendingContractReleaseTargetId, setPendingContractReleaseTargetId] = useState<string | null>(null);
@@ -3543,6 +3545,10 @@ export default function ArenaClient({
   const [isMarketCheckoutConfirmationOpen, setIsMarketCheckoutConfirmationOpen] = useState(false);
   const [pendingMarketReplacementPlayerId, setPendingMarketReplacementPlayerId] = useState<string | null>(null);
   const [isContractReleasePending, setIsContractReleasePending] = useState(false);
+
+  useEffect(() => () => {
+    if (quickSubCloseTimerRef.current !== null) window.clearTimeout(quickSubCloseTimerRef.current);
+  }, []);
   const [marketInventoryRevision, setMarketInventoryRevision] = useState(0);
   const marketCheckoutAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
   const marketContractReleaseAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
@@ -6637,6 +6643,11 @@ export default function ArenaClient({
   }
 
   function openArenaPanel(panel: ArenaPanelKey) {
+    if (quickSubCloseTimerRef.current !== null) {
+      window.clearTimeout(quickSubCloseTimerRef.current);
+      quickSubCloseTimerRef.current = null;
+    }
+    setIsQuickSubRailClosing(false);
     window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, panel));
     setIsQuickSubstitutionConfirmationOpen(false);
     if (panel === "live") {
@@ -6659,6 +6670,22 @@ export default function ArenaClient({
     window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, null));
     clearQuickSubPointerDrag();
     setIsQuickSubstitutionConfirmationOpen(false);
+
+    if (activeArenaPanel === "bench") {
+      setIsQuickSubRailClosing(true);
+      if (quickSubCloseTimerRef.current !== null) window.clearTimeout(quickSubCloseTimerRef.current);
+      quickSubCloseTimerRef.current = window.setTimeout(() => {
+        quickSubCloseTimerRef.current = null;
+        setSelectedBenchId("");
+        updateLiveDockVisibility(false);
+        setActiveArenaPanel(null);
+        setReplacementTargetId(null);
+        setIsArenaNavOpen(false);
+        setIsQuickSubRailClosing(false);
+      }, 180);
+      return;
+    }
+
     setSelectedBenchId("");
     updateLiveDockVisibility(false);
     setActiveArenaPanel(null);
@@ -7914,7 +7941,7 @@ export default function ArenaClient({
 
         {standalonePanel !== "live" && isQuickSubstitutionOpen ? (
           <section
-            className="arena-quick-sub-rail"
+            className={`arena-quick-sub-rail${isQuickSubRailClosing ? " is-closing" : ""}`}
             aria-label={siteLanguage === "pt-BR" ? "Substituição rápida" : "Quick substitution"}
             data-quick-substitution-rail="true"
           >
@@ -8112,6 +8139,7 @@ export default function ArenaClient({
                   className="club-symbol-match-centre"
                   href={`/live?fixture=${encodeURIComponent(effectiveSelectedLiveFixtureId)}&lang=${encodeURIComponent(siteLanguage)}`}
                   data-testid="arena-open-match-centre"
+                  aria-label={siteLanguage === "pt-BR" ? "Abrir Match Centre" : "Open Match Centre"}
                 >
                   <span>{siteLanguage === "pt-BR" ? "Abrir Match Centre" : "Open Match Centre"}</span>
                   <b>→</b>
@@ -10639,7 +10667,7 @@ export default function ArenaClient({
           z-index: 142;
           left: max(18px, env(safe-area-inset-left));
           right: max(18px, env(safe-area-inset-right));
-          bottom: max(14px, env(safe-area-inset-bottom));
+          bottom: max(8px, env(safe-area-inset-bottom));
           display: grid;
           gap: 7px;
           border: 1px solid rgba(181,255,75,.42);
@@ -10647,10 +10675,26 @@ export default function ArenaClient({
           /* Quick Sub sits over the live pitch: preserve enough separation for
              its actions, but keep the stadium and field legible behind it. */
           background: linear-gradient(180deg, rgba(2,10,9,.46), rgba(1,5,8,.58));
-          padding: 8px;
+          padding: 7px 8px;
           box-shadow: 0 18px 48px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
           backdrop-filter: blur(3px);
           pointer-events: auto;
+          animation: arena-quick-sub-rail-enter .22s cubic-bezier(.2,.82,.24,1) both;
+        }
+
+        .arena-quick-sub-rail.is-closing {
+          pointer-events: none;
+          animation: arena-quick-sub-rail-exit .18s ease-in both;
+        }
+
+        @keyframes arena-quick-sub-rail-enter {
+          from { opacity: 0; transform: translate3d(0, calc(100% + 12px), 0); }
+          to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+
+        @keyframes arena-quick-sub-rail-exit {
+          from { opacity: 1; transform: translate3d(0, 0, 0); }
+          to { opacity: 0; transform: translate3d(0, calc(100% + 12px), 0); }
         }
 
         .arena-quick-sub-rail-head {
@@ -10664,7 +10708,7 @@ export default function ArenaClient({
         .arena-quick-sub-rail-head > span,
         .arena-quick-sub-coach > b {
           color: #b5ff4b;
-          font-size: 6px;
+          font-size: 8px;
           font-weight: 1000;
           letter-spacing: .12em;
         }
@@ -10673,15 +10717,15 @@ export default function ArenaClient({
           min-width: 0;
           overflow: hidden;
           color: rgba(255,255,255,.78);
-          font-size: 8px;
+          font-size: 10px;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
 
         .arena-quick-sub-rail-head > button {
           display: grid;
-          width: 25px;
-          height: 25px;
+          width: 36px;
+          height: 36px;
           place-items: center;
           border: 1px solid rgba(181,255,75,.3);
           border-radius: 8px;
@@ -10689,12 +10733,12 @@ export default function ArenaClient({
           color: #efffc1;
         }
 
-        .arena-quick-sub-rail-head > button svg { width: 13px; height: 13px; }
+        .arena-quick-sub-rail-head > button svg { width: 16px; height: 16px; }
 
         .arena-quick-sub-rail-cards {
           display: grid;
           grid-template-columns: repeat(10, minmax(0, 1fr));
-          gap: 7px;
+          gap: 6px;
           align-items: end;
         }
 
@@ -10703,14 +10747,14 @@ export default function ArenaClient({
           position: relative;
           display: grid;
           min-width: 0;
-          min-height: 92px;
+          min-height: 104px;
           align-items: end;
           justify-items: center;
           overflow: hidden;
           border: 1px solid rgba(181,255,75,.28);
           border-radius: 10px;
           background: radial-gradient(circle at 50% 4%, rgba(181,255,75,.11), transparent 58%), rgba(0,0,0,.42);
-          padding: 4px 3px;
+          padding: 5px 4px;
           color: #f4ffc9;
           transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, opacity .16s ease;
         }
@@ -10728,18 +10772,18 @@ export default function ArenaClient({
 
         .arena-quick-sub-card.is-locked { opacity: .35; filter: grayscale(.65); }
         .arena-quick-sub-card:nth-of-type(n + 5) { order: 6; }
-        .arena-quick-sub-card-art { display: block; height: 72px; aspect-ratio: 430 / 691; overflow: visible; }
+        .arena-quick-sub-card-art { display: block; height: 80px; aspect-ratio: 430 / 691; overflow: visible; }
         .arena-quick-sub-card-art > div { width: 100% !important; height: 100% !important; }
-        .arena-quick-sub-card > span:last-child { width: 100%; overflow: hidden; font-size: 6px; font-weight: 1000; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+        .arena-quick-sub-card > span:last-child { width: 100%; overflow: hidden; font-size: 9px; font-weight: 1000; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
 
         .arena-quick-sub-coach {
           order: 5;
-          min-height: 126px;
+          min-height: 136px;
           border-color: rgba(255,215,92,.52);
           background: radial-gradient(circle at 50% 2%, rgba(255,215,92,.14), transparent 58%), rgba(0,0,0,.46);
         }
 
-        .arena-quick-sub-coach > span { display: block; height: 102px; aspect-ratio: 430 / 691; overflow: visible; }
+        .arena-quick-sub-coach > span { display: block; height: 108px; aspect-ratio: 430 / 691; overflow: visible; }
         .arena-quick-sub-coach > span > article,
         .arena-quick-sub-coach > span > div { width: 100% !important; height: 100% !important; }
         .arena-quick-sub-coach > b { color: #ffe88c; }
@@ -10906,6 +10950,77 @@ export default function ArenaClient({
           .arena-quick-sub-out small { width: 100%; text-align: center; }
           .arena-quick-sub-rail-head > strong { font-size: 6px; }
           .arena-quick-sub-readiness { min-height: 62px; flex-wrap: wrap; gap: 6px; }
+        }
+
+        /* The reserve rail is one horizontal 4 + coach + 5 decision surface in
+           landscape. It stays low enough to leave the pitch readable, while
+           every reserve keeps a real name and a touch-sized target. */
+        @media (max-width: 1180px) and (orientation: landscape) {
+          .arena-quick-sub-rail {
+            left: max(8px, env(safe-area-inset-left));
+            right: max(8px, env(safe-area-inset-right));
+            gap: 5px;
+            border-radius: 12px;
+            padding: 5px 6px;
+          }
+
+          .arena-quick-sub-rail-head { gap: 7px; }
+          .arena-quick-sub-rail-head > span,
+          .arena-quick-sub-coach > b { font-size: 7px; }
+          .arena-quick-sub-rail-head > strong { font-size: 9px; }
+          .arena-quick-sub-rail-head > button { width: 40px; height: 40px; }
+          .arena-quick-sub-rail-cards { gap: 5px; }
+          .arena-quick-sub-card { min-height: 88px; padding: 3px; }
+          .arena-quick-sub-card-art { height: 66px; }
+          .arena-quick-sub-card > span:last-child { font-size: 8px; }
+          .arena-quick-sub-coach { min-height: 104px; }
+          .arena-quick-sub-coach > span { height: 82px; }
+
+          .club-symbol-carousel {
+            bottom: max(4px, calc(env(safe-area-inset-bottom) + 4px));
+          }
+
+          .club-symbol-open {
+            grid-template-columns: auto 44px minmax(0, 1fr) 44px 44px;
+            padding-block: 4px;
+          }
+
+          .club-symbol-match-centre {
+            width: 44px;
+            min-width: 44px;
+            padding: 0;
+          }
+
+          .club-symbol-match-centre > span {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+          }
+        }
+
+        @media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
+          .arena-quick-sub-rail { gap: 3px; padding: 4px 5px; }
+          .arena-quick-sub-rail-head { min-height: 30px; gap: 5px; }
+          .arena-quick-sub-rail-head > span,
+          .arena-quick-sub-coach > b { font-size: 6.5px; }
+          .arena-quick-sub-rail-head > strong { font-size: 8px; }
+          .arena-quick-sub-rail-head > button { width: 36px; height: 36px; }
+          .arena-quick-sub-rail-cards { gap: 3px; }
+          .arena-quick-sub-card { min-height: 72px; border-radius: 8px; padding: 2px; }
+          .arena-quick-sub-card-art { height: 55px; }
+          .arena-quick-sub-card > span:last-child { display: block; font-size: 7px; }
+          .arena-quick-sub-coach { min-height: 84px; border-radius: 8px; }
+          .arena-quick-sub-coach > span { height: 64px; }
+          .arena-quick-sub-coach > b { display: block; font-size: 6px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .arena-quick-sub-rail,
+          .arena-quick-sub-rail.is-closing { animation: none; }
         }
 
         @media (max-width: 900px), (max-height: 600px) and (orientation: landscape) {
@@ -20194,6 +20309,57 @@ export default function ArenaClient({
           .arena-quick-dock.is-collapsed .arena-quick-toggle {
             min-width: 44px;
             min-height: 44px;
+          }
+
+          /* This is deliberately last: earlier compact HUD rules used a
+             second row for Match Centre, which obscured too much of the
+             pitch on a short landscape phone. */
+          .club-symbol-open {
+            grid-template-columns: auto 44px minmax(0, 1fr) 44px 44px;
+            padding-block: 4px;
+          }
+
+          .club-symbol-match-centre {
+            grid-column: auto;
+            justify-self: stretch;
+            width: 44px;
+            min-width: 44px;
+            padding: 0;
+          }
+
+          .club-symbol-match-centre > span {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
+          }
+        }
+
+        @media (min-width: 901px) and (max-width: 1180px) and (orientation: landscape) {
+          .club-symbol-open {
+            grid-template-columns: auto 44px minmax(0, 1fr) 44px 44px;
+            padding-block: 4px;
+          }
+
+          .club-symbol-match-centre {
+            grid-column: auto;
+            justify-self: stretch;
+            width: 44px;
+            min-width: 44px;
+            padding: 0;
+          }
+
+          .club-symbol-match-centre > span {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            white-space: nowrap;
           }
         }
 

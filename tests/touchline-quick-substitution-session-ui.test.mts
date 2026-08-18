@@ -29,6 +29,9 @@ test("Quick Substitution replaces the score rail with nine cards and a central c
   assert.match(arenaSource, /club-symbol-carousel-empty/);
   assert.match(arenaSource, /arena-score-rail-empty/);
   assert.match(arenaSource, /is-substitution-eligible/);
+  assert.match(arenaSource, /className=\{`arena-quick-sub-rail\$\{isQuickSubRailClosing \? " is-closing" : ""\}`\}/);
+  assert.match(arenaSource, /grid-template-columns:\s*auto 44px minmax\(0, 1fr\) 44px 44px/);
+  assert.match(arenaSource, /club-symbol-match-centre > span\s*\{[\s\S]*?clip: rect\(0 0 0 0\)/);
 });
 
 test("the authoritative eleven remain mounted in the normal Arena and during Quick Sub", () => {
@@ -77,6 +80,15 @@ test("in-Arena Quick Sub opens without reloading the Arena document", () => {
     arenaSource,
     /href=\{touchlineArenaPanelHref\("bench", siteLanguage\)\}[\s\S]{0,360}?event\.preventDefault\(\);[\s\S]{0,120}?openArenaPanel\("bench"\)/,
   );
+});
+
+test("Quick Sub enters and exits as a low-motion-safe HUD without replacing the Arena document", () => {
+  assert.match(arenaSource, /quickSubCloseTimerRef/);
+  assert.match(arenaSource, /setIsQuickSubRailClosing\(true\)/);
+  assert.match(arenaSource, /arena-quick-sub-rail-enter/);
+  assert.match(arenaSource, /arena-quick-sub-rail-exit/);
+  assert.match(arenaSource, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?arena-quick-sub-rail\.is-closing \{ animation: none/);
+  assert.match(arenaSource, /@media \(max-width: 900px\) and \(max-height: 520px\) and \(orientation: landscape\)[\s\S]*?arena-quick-sub-card > span:last-child \{ display: block; font-size: 7px; \}/);
 });
 
 test("a confirmed Quick Sub returns to the score rail without reloading the document", () => {

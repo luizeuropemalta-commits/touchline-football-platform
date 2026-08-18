@@ -552,8 +552,8 @@ test("coach stays centered in the Quick Sub bench and never overlays the formati
 
   assert.doesNotMatch(arenaClient, /className=\{`arena-coach-technical-area/);
   assert.match(arenaClient, /className="arena-quick-sub-coach"/);
-  assert.match(arenaClient, /\.arena-quick-sub-coach \{[\s\S]*?order: 5;[\s\S]*?min-height: 126px/);
-  assert.match(arenaClient, /\.arena-quick-sub-coach > span \{[\s\S]*?height: 102px/);
+  assert.match(arenaClient, /\.arena-quick-sub-coach \{[\s\S]*?order: 5;[\s\S]*?min-height: 136px/);
+  assert.match(arenaClient, /\.arena-quick-sub-coach > span \{[\s\S]*?height: 108px/);
   assert.match(arenaClient, /\.arena-action-panel-bench \.training-center-coach \{[\s\S]*?grid-column: 3;[\s\S]*?grid-template-columns: 18px minmax\(0, 1fr\);[\s\S]*?justify-self: end/);
   assert.match(arenaClient, /\.arena-action-panel-bench \.training-center-coach-card \{[\s\S]*?width: 18px/);
 });
