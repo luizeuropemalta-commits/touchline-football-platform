@@ -3440,6 +3440,7 @@ export default function ArenaClient({
   const liveCoachCardsRef = useRef<HTMLDivElement | null>(null);
   const firstVideoRef = useRef<HTMLVideoElement | null>(null);
   const secondVideoRef = useRef<HTMLVideoElement | null>(null);
+  const pendingQaCameraSelectionRef = useRef<Arena433VideoLoopId | null>(null);
   const loopCameraFrameRequestRef = useRef<number | null>(null);
   const loopCameraFrameVideoRef = useRef<HTMLVideoElement | null>(null);
   const loopRevealTimerRef = useRef<number | null>(null);
@@ -6413,15 +6414,33 @@ export default function ArenaClient({
     const loopVideo = secondVideoRef.current;
     const index = ARENA_433_VIDEO_LOOP_IDS.indexOf(loopId);
     if (index < 0) return;
-    if (loopVideo) {
-      loopVideo.pause();
-      loopVideo.currentTime = arena433VideoLoopStartTime(loopId, loopVideo.duration);
-    }
+    // Keep the requested camera until its media metadata and seek complete.
+    // A fresh editor can receive the click before Safari has loaded duration.
+    pendingQaCameraSelectionRef.current = loopId;
     setIsArenaVideoPaused(true);
     setHasEntryVideoFinished(true);
     setActiveVideoIndex(1);
     setLoopCameraIndex(index);
+    if (loopVideo) {
+      applyPendingQaArenaCamera(loopVideo);
+    }
     setSaveStatus(`Arena QA Camera ${index + 1} · 0:00 · stopped`);
+  }
+
+  function applyPendingQaArenaCamera(loopVideo: HTMLVideoElement) {
+    const loopId = pendingQaCameraSelectionRef.current;
+    if (!loopId || !Number.isFinite(loopVideo.duration) || loopVideo.duration <= 0) return false;
+    const index = ARENA_433_VIDEO_LOOP_IDS.indexOf(loopId);
+    if (index < 0) return false;
+    const startTime = arena433VideoLoopStartTime(loopId, loopVideo.duration);
+    loopVideo.pause();
+    setLoopCameraIndex(index);
+    if (Math.abs(loopVideo.currentTime - startTime) < 0.03) {
+      pendingQaCameraSelectionRef.current = null;
+      return true;
+    }
+    loopVideo.currentTime = startTime;
+    return true;
   }
 
   function pauseQaArenaCamera() {
@@ -6498,6 +6517,20 @@ export default function ArenaClient({
   }
 
   function handleCardLoopTimelineEvent(event: SyntheticEvent<HTMLVideoElement>) {
+    const requestedCamera = pendingQaCameraSelectionRef.current;
+    if (requestedCamera) {
+      const requestedIndex = ARENA_433_VIDEO_LOOP_IDS.indexOf(requestedCamera);
+      if (requestedIndex >= 0) setLoopCameraIndex(requestedIndex);
+      if (event.type === "loadedmetadata") {
+        applyPendingQaArenaCamera(event.currentTarget);
+        return;
+      }
+      const requestedStart = arena433VideoLoopStartTime(requestedCamera, event.currentTarget.duration);
+      if (event.type === "seeked" || Math.abs(event.currentTarget.currentTime - requestedStart) < 0.03) {
+        pendingQaCameraSelectionRef.current = null;
+      }
+      return;
+    }
     syncLoopCameraFromVideo(event.currentTarget);
   }
 
@@ -7460,6 +7493,7 @@ export default function ArenaClient({
               loop
               preload="metadata"
               onLoadedMetadata={handleCardLoopTimelineEvent}
+              onCanPlay={handleCardLoopTimelineEvent}
               onTimeUpdate={handleCardLoopTimelineEvent}
               onSeeking={handleCardLoopTimelineEvent}
               onSeeked={handleCardLoopTimelineEvent}

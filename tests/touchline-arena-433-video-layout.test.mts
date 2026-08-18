@@ -124,6 +124,8 @@ test("Arena accepts a user-approved QA layout only in the specific QA editor pat
   assert.match(arenaSource, /Pause camera/);
   assert.match(arenaSource, /handleFieldPlayerKeyDown/);
   assert.match(arenaSource, /arena433VideoLoopStartTime/);
+  assert.match(arenaSource, /pendingQaCameraSelectionRef/);
+  assert.match(arenaSource, /applyPendingQaArenaCamera/);
   assert.match(arenaSource, /const baseHeight = fieldPosition\.heightVh \?\? arenaLoopCameraProfile\(loopCameraIndex\)\.cardHeightVh/);
   assert.match(arenaSource, /onLoadedMetadata=\{handleCardLoopTimelineEvent\}/);
   assert.match(arenaSource, /onSeeking=\{handleCardLoopTimelineEvent\}/);
