@@ -20,6 +20,7 @@ export const ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES = [
 ] as const;
 
 export const ARENA_433_VIDEO_LOOP_FALLBACK_DURATION_SECONDS = 21;
+const ARENA_433_VIDEO_LOOP_SEEK_EPSILON_SECONDS = 0.05;
 
 export const ARENA_VIDEO_VIEWPORTS = [
   "desktop",
@@ -64,6 +65,23 @@ export function arena433VideoLoopStartTime(
   const index = ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES.findIndex((boundary) => boundary.loopId === loopId);
   const start = index <= 0 ? 0 : ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES[index - 1]!.until;
   return start * safeDuration;
+}
+
+/**
+ * Returns the first safe decodable frame inside a non-initial camera pass.
+ * A media seek placed exactly on a fractional boundary may be rounded down by
+ * Safari and therefore resolve to the preceding camera. Fifty milliseconds is
+ * still camera-local 0:00 to a human, while being unambiguously inside it.
+ */
+export function arena433VideoLoopFirstPlayableTime(
+  loopId: Arena433VideoLoopId,
+  duration: number | null | undefined,
+) {
+  const safeDuration = typeof duration === "number" && Number.isFinite(duration) && duration > 0
+    ? duration
+    : ARENA_433_VIDEO_LOOP_FALLBACK_DURATION_SECONDS;
+  const startTime = arena433VideoLoopStartTime(loopId, safeDuration);
+  return startTime === 0 ? 0 : Math.min(startTime + ARENA_433_VIDEO_LOOP_SEEK_EPSILON_SECONDS, safeDuration - 0.01);
 }
 
 export type ArenaVideoSlot = {

@@ -173,8 +173,8 @@ import {
 } from "@/lib/touchlineArena/arena-intro";
 import {
   ARENA_433_VIDEO_LOOP_IDS,
+  arena433VideoLoopFirstPlayableTime,
   arena433VideoLoopIndexForPlayback,
-  arena433VideoLoopStartTime,
   arenaQaManualLayoutCameraId,
   arenaVideoViewportForDimensions,
   isArenaQaManualLayoutCameraId,
@@ -6439,7 +6439,7 @@ export default function ArenaClient({
     if (!loopId || !Number.isFinite(loopVideo.duration) || loopVideo.duration <= 0) return false;
     const index = ARENA_433_VIDEO_LOOP_IDS.indexOf(loopId);
     if (index < 0) return false;
-    const startTime = arena433VideoLoopStartTime(loopId, loopVideo.duration);
+    const startTime = arena433VideoLoopFirstPlayableTime(loopId, loopVideo.duration);
     loopVideo.pause();
     setLoopCameraIndex(index);
     if (Math.abs(loopVideo.currentTime - startTime) < 0.03) {
@@ -6532,7 +6532,7 @@ export default function ArenaClient({
         applyPendingQaArenaCamera(event.currentTarget);
         return;
       }
-      const requestedStart = arena433VideoLoopStartTime(requestedCamera, event.currentTarget.duration);
+      const requestedStart = arena433VideoLoopFirstPlayableTime(requestedCamera, event.currentTarget.duration);
       if (event.type === "seeked" || Math.abs(event.currentTarget.currentTime - requestedStart) < 0.03) {
         pendingQaCameraSelectionRef.current = null;
       }

@@ -6,6 +6,7 @@ import {
   ARENA_433_VIDEO_LOOP_CAMERA_BOUNDARIES,
   ARENA_433_VIDEO_LOOP_IDS,
   ARENA_VIDEO_VIEWPORTS,
+  arena433VideoLoopFirstPlayableTime,
   arena433VideoLoopIdForPlayback,
   arena433VideoLoopIndexForPlayback,
   arena433VideoLoopStartTime,
@@ -113,6 +114,11 @@ test("the human QA editor has a separate, viewport-specific camera key and start
   assert.equal(arena433VideoLoopStartTime("wide-touchline", duration), 0);
   assert.equal(arena433VideoLoopStartTime("lower-stand", duration), 10.08);
   assert.equal(arena433VideoLoopStartTime("side-sweep", duration), 15.54);
+  assert.equal(arena433VideoLoopFirstPlayableTime("wide-touchline", duration), 0);
+  assert.equal(arena433VideoLoopFirstPlayableTime("lower-stand", duration), 10.13);
+  assert.equal(arena433VideoLoopFirstPlayableTime("side-sweep", duration), 15.59);
+  assert.equal(arena433VideoLoopIdForPlayback(arena433VideoLoopFirstPlayableTime("lower-stand", duration), duration), "lower-stand");
+  assert.equal(arena433VideoLoopIdForPlayback(arena433VideoLoopFirstPlayableTime("side-sweep", duration), duration), "side-sweep");
 });
 
 test("Arena accepts a user-approved QA layout only in the specific QA editor pathway", () => {
@@ -123,7 +129,7 @@ test("Arena accepts a user-approved QA layout only in the specific QA editor pat
   assert.match(arenaSource, /Save Arena QA standard/);
   assert.match(arenaSource, /Pause camera/);
   assert.match(arenaSource, /handleFieldPlayerKeyDown/);
-  assert.match(arenaSource, /arena433VideoLoopStartTime/);
+  assert.match(arenaSource, /arena433VideoLoopFirstPlayableTime/);
   assert.match(arenaSource, /pendingQaCameraSelectionRef/);
   assert.match(arenaSource, /applyPendingQaArenaCamera/);
   assert.match(arenaSource, /const baseHeight = fieldPosition\.heightVh \?\? arenaLoopCameraProfile\(loopCameraIndex\)\.cardHeightVh/);
