@@ -84,6 +84,10 @@ const allowedQaPlatformRuntimeEnvironmentKeys = new Set<string>([
   "AWS_EXECUTION_ENV",
   "AWS_REGION",
   "AWS_DEFAULT_REGION",
+  // Vercel's build image injects this uv bootstrap metadata. It is neither an
+  // application endpoint nor a credential, but its generic `_URL` suffix must
+  // not make a correctly-isolated QA build fail before Next.js starts.
+  "UV_PYTHON_DOWNLOADS_JSON_URL",
 ]);
 
 function isPresent(value: string | undefined): value is string {

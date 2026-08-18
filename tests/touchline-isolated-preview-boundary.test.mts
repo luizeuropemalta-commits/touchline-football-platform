@@ -119,6 +119,7 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
     AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
     AWS_REGION: "us-east-1",
     AWS_DEFAULT_REGION: "us-east-1",
+    UV_PYTHON_DOWNLOADS_JSON_URL: "https://example.invalid/uv.json",
     TOUCHLINE_CARD_PUBLICATION_GATE: "enabled",
   })), {
     status: "qa",
