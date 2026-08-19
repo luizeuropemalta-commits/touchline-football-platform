@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
+import { FootballDataSyncControls } from "@/components/admin-football-data-sync-controls";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { getConfiguredFootballDataProviderName } from "@/lib/football-data/provider-factory";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -259,6 +260,7 @@ export default async function FootballDataAdminPage({
                 Football Search
               </Link>
             </div>
+            <FootballDataSyncControls />
           </div>
 
           <div className="rounded-3xl border border-cyan-300/15 bg-black/20 p-5">
