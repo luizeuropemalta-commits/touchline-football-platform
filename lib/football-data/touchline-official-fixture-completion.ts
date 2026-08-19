@@ -48,11 +48,6 @@ const OWNER_VERIFIED_OPENING_FIXTURE: TouchlineFixture = {
   },
 };
 
-function fixtureTeamIds(fixture: TouchlineFixture) {
-  return [fixture.homeTeam?.providerId, fixture.awayTeam?.providerId]
-    .filter((teamId): teamId is string => Boolean(teamId));
-}
-
 /**
  * Completes only the owner-verified gap in the opening round. It never
  * replaces source data, changes a score, or adds a second match for a club.

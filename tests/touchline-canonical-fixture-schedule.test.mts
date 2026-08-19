@@ -29,3 +29,11 @@ test("Sportmonks fixture mapping prefers its UTC timestamp over an ambiguous loc
   assert.match(provider, /raw\.starting_at_timestamp/);
   assert.match(provider, /startsAt: sportmonksFixtureStartAt\(raw\)/);
 });
+
+test("the public Live boundary accepts only numeric Sportmonks fixture identifiers", async () => {
+  const store = await readFile(new URL("../lib/football-data/fixture-schedule-store.ts", import.meta.url), "utf8");
+
+  assert.match(store, /export function isOfficialSportmonksFixtureId/);
+  assert.match(store, /\^\[1-9\]\\d\{0,19\}\$/);
+  assert.match(store, /provider !== "sportmonks" \|\| !isOfficialSportmonksFixtureId\(providerId\)/);
+});

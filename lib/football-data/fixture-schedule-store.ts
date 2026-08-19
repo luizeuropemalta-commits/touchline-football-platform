@@ -46,6 +46,17 @@ function asTimestamp(value: unknown) {
   return text && Number.isFinite(Date.parse(text)) ? text : null;
 }
 
+/**
+ * The normalized fixture table is shared with QA fixtures used by visual
+ * scenarios. A public football surface may only expose a fixture that has a
+ * real Sportmonks primary key; descriptive QA identifiers must never cross
+ * this provider boundary.
+ */
+export function isOfficialSportmonksFixtureId(value: unknown): value is string {
+  const providerId = asString(value);
+  return Boolean(providerId && /^[1-9]\d{0,19}$/.test(providerId));
+}
+
 function withoutRawTeam(team: TouchlineTeam): TouchlineTeam {
   return {
     ...team,
@@ -81,7 +92,7 @@ function fixtureTeamFromClub(row: DatabaseRecord | undefined, provider: Football
 function fixtureFromRow(row: FixtureRow, clubsById: Map<string, DatabaseRecord>): TouchlineFixture | null {
   const provider = asString(row.provider);
   const providerId = asString(row.provider_fixture_id);
-  if (provider !== "sportmonks" || !providerId) return null;
+  if (provider !== "sportmonks" || !isOfficialSportmonksFixtureId(providerId)) return null;
   const homeClub = clubsById.get(asString(row.home_club_id) ?? "");
   const awayClub = clubsById.get(asString(row.away_club_id) ?? "");
   const homeTeam = fixtureTeamFromClub(homeClub, provider);

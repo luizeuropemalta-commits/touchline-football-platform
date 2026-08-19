@@ -22,8 +22,8 @@ test("live scores read one durable snapshot or honest partial schedule without i
   assert.match(liveRoute, /partial-persisted-schedule/);
   assert.match(liveRoute, /persisted-live-data-unavailable/);
   assert.match(liveRoute, /liveSnapshot\?\.fixtures\.length/);
-  assert.match(liveRoute, /completeTouchlineOfficialFixtureSchedule/);
-  assert.match(liveRoute, /selectArenaFixtureRound\(completeTouchlineOfficialFixtureSchedule\(schedule\)\)/);
+  assert.match(liveRoute, /selectArenaFixtureRound\(schedule\)/);
+  assert.doesNotMatch(liveRoute, /completeTouchlineOfficialFixtureSchedule/);
   assert.doesNotMatch(
     liveRoute,
     /createFootballDataProvider|persistLiveScoreSnapshot|writeLiveScoreSnapshot|readLiveScoreSnapshot|mergeTouchlineLiveFixtureDeltas|new Date\(/,
@@ -46,7 +46,7 @@ test("Live prefers a fresh snapshot, then a usable weekly schedule, and only mar
 
 test("schedule endpoint is a read-only partial projection and POST is fail-closed", () => {
   assert.match(scheduleRoute, /readPublicCompetitionFixtures/);
-  assert.match(scheduleRoute, /completeTouchlineOfficialFixtureSchedule/);
+  assert.doesNotMatch(scheduleRoute, /completeTouchlineOfficialFixtureSchedule/);
   assert.match(scheduleRoute, /partial-persisted-schedule/);
   assert.match(scheduleRoute, /capturedAt: null/);
   assert.match(scheduleRoute, /export async function POST\(\)[\s\S]*?status: 405/);

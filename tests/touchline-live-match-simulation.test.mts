@@ -36,7 +36,7 @@ const globalCssSource = readFileSync(
 );
 const stableLivePlayerCardCalls = arenaClientSource.match(/<StableLivePlayerCard\b[^>]*\/>/g) ?? [];
 
-test("Live builds both elevens only from the clubs selected for the fixture", () => {
+test("Live renders an XI only when each club has eleven verified Sportmonks starters", () => {
   assert.match(arenaClientSource, /\/api\/football-data\/premier-squad\?\$\{params\.toString\(\)\}/);
   assert.match(
     arenaClientSource,
@@ -44,7 +44,7 @@ test("Live builds both elevens only from the clubs selected for the fixture", ()
   );
   assert.match(
     arenaClientSource,
-    /function buildLiveSimulationCardProducts\([\s\S]*?buildLiveSimulationEleven\(awaySquad, awayClub, \[\], homePlayerIds\)/,
+    /function buildLiveSimulationCardProducts\([\s\S]*?buildVerifiedLiveLineup\(awaySquad, awayClub, homePlayerIds\)/,
   );
   assert.match(arenaClientSource, /fixtureStarterPlayersForClub\(fixtureLineups, homeSquad, lineupHomeClub\)/);
   assert.match(arenaClientSource, /fixtureStarterPlayersForClub\(fixtureLineups, awaySquad, lineupAwayClub\)/);
@@ -56,7 +56,10 @@ test("Live builds both elevens only from the clubs selected for the fixture", ()
     arenaClientSource,
     /feedHomeTeamId !== lineupHomeClub\.teamId \|\| feedAwayTeamId !== lineupAwayClub\.teamId/,
   );
-  assert.match(arenaClientSource, /Simulação dos 22 cards dos clubes em movimento/);
+  assert.match(arenaClientSource, /function buildVerifiedLiveLineup\([\s\S]*?if \(starters\.length !== 11\) return \[\]/);
+  assert.match(arenaClientSource, /if \(home\.length !== 11 \|\| away\.length !== 11\) \{[\s\S]*?status: "unavailable"/);
+  assert.match(arenaClientSource, /Escalações aguardando confirmação oficial/);
+  assert.doesNotMatch(arenaClientSource, /source: "live-club-preview"/);
   assert.doesNotMatch(arenaClientSource, /selectedLiveHomeCards/);
   assert.doesNotMatch(arenaClientSource, /selectedLiveAwayCards/);
 });
@@ -85,34 +88,22 @@ test("Live mini cards open one shared central zoom and can return to the pitch",
   assert.match(arenaClientSource, /-webkit-backdrop-filter: blur\(12px\) saturate\(\.76\)/);
 });
 
-test("Live always synchronizes both official coach cards with the selected fixture", () => {
-  assert.match(arenaClientSource, /touchlineLiveCoachForTeam\(selectedLiveHomeClub\?\.teamId\)/);
-  assert.match(arenaClientSource, /touchlineLiveCoachForTeam\(selectedLiveAwayClub\?\.teamId\)/);
-  assert.match(arenaClientSource, /data-live-coach-card="home"/);
-  assert.match(arenaClientSource, /data-live-coach-card="away"/);
-  assert.match(arenaClientSource, /displayMode="compact"/);
-  assert.match(arenaClientSource, /setSelectedLiveCoachSide\("home"\)/);
-  assert.match(arenaClientSource, /setSelectedLiveCoachSide\("away"\)/);
-  assert.match(arenaClientSource, /setSelectedLiveCoachSide\(null\)/);
-  assert.match(arenaClientSource, /className="arena-coach-spotlight arena-live-card-spotlight arena-live-coach-spotlight"/);
-  assert.match(arenaClientSource, /className="arena-live-coach-spotlight-card"[\s\S]*?forceNeonActive/);
-  assert.match(arenaClientSource, /\.arena-live-coach-card-art \{[\s\S]*?width: clamp\(35px, 3\.9vw, 55px\) !important;/);
-  assert.match(arenaClientSource, /@media \(max-width: 900px\) \{[\s\S]*?\.arena-live-coach-card-art \{[\s\S]*?width: clamp\(30px, 7\.4vw, 42px\) !important;/);
+test("Live does not publish a locally curated coaching card as official match data", () => {
+  assert.doesNotMatch(arenaClientSource, /data-live-coach-card=/);
+  assert.match(arenaClientSource, /DADOS OFICIAIS/);
+  assert.match(arenaClientSource, /OFFICIAL DATA/);
 });
 
-test("Live opens immediately, prioritizes saved squads and reveals complete cards atomically", () => {
+test("Live clears a previous XI and reveals complete verified cards atomically", () => {
   assert.match(arenaClientSource, /const defaultFixtureId = fixtures\[0\]\.id/);
-  assert.match(arenaClientSource, /readStoredLiveSquad\(homeClub\)/);
-  assert.match(arenaClientSource, /readStoredLiveSquad\(awayClub\)/);
-  assert.match(arenaClientSource, /function buildLiveClubPreviewEleven\(/);
   assert.match(arenaClientSource, /function normalizeLiveClubSquad\(/);
   assert.match(arenaClientSource, /loadedLiveSquadFixtureRef\.current !== squadRequestId/);
   assert.match(
     arenaClientSource,
     /const squadRequestId = `\$\{squadFixtureSignature\}:\$\{liveSquadRequestSequenceRef\.current \+= 1\}`/,
   );
-  assert.match(arenaClientSource, /source: "live-club-preview"/);
-  assert.match(arenaClientSource, /home: immediateHome, away: immediateAway, status: "ready"/);
+  assert.match(arenaClientSource, /home: \[\], away: \[\], status: "loading"/);
+  assert.match(arenaClientSource, /async function applyVerifiedLineupSnapshot/);
   assert.doesNotMatch(arenaClientSource, /params\.set\("preferSnapshot", "1"\)/);
   assert.match(premierSquadRouteSource, /readPersistedSquadSnapshot\(teamId\)/);
   assert.doesNotMatch(premierSquadRouteSource, /createFootballDataProvider|persistSquadSnapshot|preferSnapshot/);
@@ -166,7 +157,7 @@ test("Live opens immediately, prioritizes saved squads and reveals complete card
   assert.match(arenaClientSource, /await preloadLiveProductImages\(\[/);
   assert.match(arenaClientSource, /setLiveMatchSquads\(\{[\s\S]*?setReadyLiveCardProductsSignature\(targetProductSignature\);[\s\S]*?setSelectedLiveFixtureId\(fixtureId\)/);
   assert.match(arenaClientSource, /isLiveLineupVisuallyReady \? "is-lineup-ready" : "is-lineup-loading"/);
-  assert.match(arenaClientSource, /Preparando transmissão…/);
+  assert.match(arenaClientSource, /Verificando escalações oficiais…/);
   assert.match(
     arenaClientSource,
     /\.arena-live-moving-card\.is-card-ready \.arena-live-compact-card-product > \.touchline-card-surface \{[\s\S]*?opacity: 1;/,
@@ -213,9 +204,9 @@ test("Live never invents a real score and excludes known non-league fixtures", (
   assert.match(arenaClientSource, /fixtureBoardClock\(selectedLiveFixture, siteLanguage\)/);
 });
 
-test("Live only warms the current 22 player and two coach card products", () => {
+test("Live warms only the current verified 22 player card products", () => {
   assert.match(arenaClientSource, /simulation\.querySelectorAll\("\[data-live-player-id\]"\)\.length !== 22/);
-  assert.match(arenaClientSource, /coaches\.querySelectorAll\("\[data-live-coach-card\]"\)\.length !== 2/);
+  assert.doesNotMatch(arenaClientSource, /coaches\.querySelectorAll\("\[data-live-coach-card\]"\)/);
   assert.match(
     arenaClientSource,
     /const shouldRenderArenaOwnerLayer = \(shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)\s*&& standaloneExperience !== "live"\s*&& !isCoachSelectionRequired/,
@@ -250,15 +241,13 @@ test("Live keeps no-store by default and bounds persisted read requests", () => 
   assert.match(arenaClientSource, /cache: "no-store",[\s\S]*?timeoutMs: ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS/);
 });
 
-test("Live aborts obsolete fixture work and deduplicates completed squad refreshes", () => {
+test("Live aborts obsolete fixture work and never falls back to a club squad", () => {
   assert.match(arenaClientSource, /signal: requestController\.signal/);
   assert.match(arenaClientSource, /requestController\.abort\(\)/);
   assert.match(arenaClientSource, /window\.setTimeout\(\(\) => \{[\s\S]*?ARENA_LIVE_SQUAD_REQUEST_SETTLE_MS/);
   assert.match(arenaClientSource, /window\.clearTimeout\(squadRequestTimer\)/);
-  assert.match(arenaClientSource, /liveSquadRefreshAtRef\.current\.get\(squadFixtureSignature\)/);
-  assert.match(arenaClientSource, /Date\.now\(\) - lastProviderRefreshAt > ARENA_LIVE_SQUAD_REFRESH_DEDUP_MS/);
-  assert.match(arenaClientSource, /if \(!hasCompleteStoredSquads\) \{[\s\S]*?loadClubSquad\(homeClub\)/);
-  assert.match(arenaClientSource, /liveSquadRefreshAtRef\.current\.set\(squadFixtureSignature, Date\.now\(\)\)/);
+  assert.match(arenaClientSource, /Promise\.all\(\[loadClubSquad\(homeClub\), loadClubSquad\(awayClub\), loadFixtureLineups\(\)\]\)/);
+  assert.doesNotMatch(arenaClientSource, /readStoredLiveSquad|buildLiveClubPreviewEleven|live-club-preview/);
 });
 
 test("Live restores the saved fixture before choosing the first fallback", () => {

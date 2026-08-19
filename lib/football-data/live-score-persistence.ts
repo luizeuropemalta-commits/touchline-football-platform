@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isOfficialSportmonksFixtureId } from "@/lib/football-data/fixture-schedule-store";
 import type { TouchlineFixture } from "@/lib/football-data/types";
 
 const SNAPSHOT_KEY = "touchline-england-live";
@@ -13,9 +14,11 @@ function isFixture(value: unknown): value is TouchlineFixture {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const fixture = value as Partial<TouchlineFixture>;
   return typeof fixture.id === "string"
-    && typeof fixture.providerId === "string"
-    && typeof fixture.provider === "string"
-    && Boolean(fixture.source && typeof fixture.source === "object");
+    && fixture.provider === "sportmonks"
+    && isOfficialSportmonksFixtureId(fixture.providerId)
+    && Boolean(fixture.source && typeof fixture.source === "object")
+    && fixture.source?.provider === "sportmonks"
+    && fixture.source?.providerId === fixture.providerId;
 }
 
 function parseSnapshot(value: unknown): PersistedLiveScoreSnapshot | null {

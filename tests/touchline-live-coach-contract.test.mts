@@ -51,26 +51,10 @@ test("registers one unique verified coach snapshot for every TouchLine England c
   }
 });
 
-test("binds the home and away coach cards to the selected fixture clubs and isolates coach zoom", () => {
+test("does not publish a locally curated coach card as official Live match data", () => {
   const arenaClient = source("app/arena/ArenaClient.tsx");
 
-  assert.match(
-    arenaClient,
-    /touchlineLiveCoachForTeam\(selectedLiveHomeClub\?\.teamId\)/,
-  );
-  assert.match(
-    arenaClient,
-    /touchlineLiveCoachForTeam\(selectedLiveAwayClub\?\.teamId\)/,
-  );
-  assert.match(arenaClient, /data-live-coach-card="home"[\s\S]*?setSelectedLiveCoachSide\("home"\)/);
-  assert.match(arenaClient, /data-live-coach-card="away"[\s\S]*?setSelectedLiveCoachSide\("away"\)/);
-  assert.match(arenaClient, /selectedLiveCoachData\.side === "home"/);
-  assert.match(
-    arenaClient,
-    /data-coach-spotlight=\{isCoachSpotlightOpen \|\| selectedLiveCoachData \? "open" : "closed"\}/,
-  );
-  assert.match(
-    arenaClient,
-    /\.arena-stage\[data-coach-spotlight="open"\] \.field-player-layer,[\s\S]*?visibility: hidden;[\s\S]*?pointer-events: none/,
-  );
+  assert.doesNotMatch(arenaClient, /data-live-coach-card=/);
+  assert.match(arenaClient, /DADOS OFICIAIS/);
+  assert.match(arenaClient, /OFFICIAL DATA/);
 });

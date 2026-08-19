@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { readPersistedLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
 import { toPublicTouchlineFixtures } from "@/lib/football-data/public-fixture";
-import { completeTouchlineOfficialFixtureSchedule } from "@/lib/football-data/touchline-official-fixture-completion";
 import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
 
 const LIVE_SNAPSHOT_STALE_AFTER_MS = 5 * 60 * 1_000;
@@ -65,7 +64,7 @@ export async function GET() {
   } catch {
     schedule = [];
   }
-  const weeklySchedule = selectArenaFixtureRound(completeTouchlineOfficialFixtureSchedule(schedule));
+  const weeklySchedule = selectArenaFixtureRound(schedule);
   if (weeklySchedule.length) {
     return response(weeklySchedule, {
       state: "partial-persisted-schedule",

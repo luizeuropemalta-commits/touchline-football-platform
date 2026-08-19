@@ -13,7 +13,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProper
 import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, RotateCw, Search, UserRound, X } from "lucide-react";
 import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEliteExactCardLabels, type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
-import TouchlineCoachCard, { touchlineLiveCompactCoachFrameUrl } from "@/components/touchline/cards/TouchlineCoachCard";
+import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlineSubstitutionMark from "@/components/touchline/TouchlineSubstitutionMark";
 import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntro";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
@@ -114,7 +114,6 @@ import {
 } from "@/lib/touchlineArena/live-coaches";
 import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
 import {
-  buildTouchlineLiveEleven,
   normalizeTouchlineLiveSquad,
   touchlineLivePlayerIdentity,
 } from "@/lib/touchlineArena/live-lineups";
@@ -188,10 +187,7 @@ const PUBLIC_DATA_SOURCE_LABEL = "TouchLine England";
 const ARENA_LIVE_DOCK_VISIBILITY_STORAGE_KEY = "touchline:arena:live-dock-visible:v1";
 const ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY = "touchline:arena:live-dock-fixture:v1";
 const ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY = "touchline:arena:live-fixtures:v1";
-const ARENA_LIVE_SQUAD_STORAGE_PREFIX = "touchline:arena:live-squad:v2";
 const ARENA_LIVE_FIXTURE_CACHE_MAX_AGE_MS = 1000 * 60 * 5;
-const ARENA_LIVE_SQUAD_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
-const ARENA_LIVE_SQUAD_REFRESH_DEDUP_MS = 1000 * 60 * 5;
 const ARENA_LIVE_SQUAD_REQUEST_SETTLE_MS = 180;
 // The score rail is part of the normal Arena entry. Safari can take longer
 // than a sub-second to hydrate the persisted schedule after a cold load.
@@ -383,19 +379,6 @@ type LiveSimulationCardProduct = {
   side: "home" | "away";
   slotIndex: number;
   readinessId: string;
-};
-
-type LiveProductCoachSignature = {
-  teamId: string;
-  cardTier: TouchlineCardTierKey;
-  coachId: string;
-  countryCode3: string;
-};
-
-type StoredLiveSquad = {
-  teamId: string;
-  savedAt: number;
-  players: TeamBuilderSquadPlayer[];
 };
 
 type StoredLiveFixtureSnapshot = {
@@ -1828,57 +1811,6 @@ function roleSortWeight(role: ArenaPlayer["role"]) {
   return 3;
 }
 
-function buildLiveClubPreviewEleven(club: PremierClubVisual): TeamBuilderSquadPlayer[] {
-  const slots: Array<{ role: ArenaPlayer["role"]; position: string; shirtNumber: number }> = [
-    { role: "goalkeeper", position: "GK", shirtNumber: 1 },
-    { role: "defender", position: "RB", shirtNumber: 2 },
-    { role: "defender", position: "CB", shirtNumber: 4 },
-    { role: "defender", position: "CB", shirtNumber: 5 },
-    { role: "defender", position: "LB", shirtNumber: 3 },
-    { role: "midfielder", position: "DM", shirtNumber: 6 },
-    { role: "midfielder", position: "CM", shirtNumber: 8 },
-    { role: "midfielder", position: "AM", shirtNumber: 10 },
-    { role: "forward", position: "RW", shirtNumber: 7 },
-    { role: "forward", position: "ST", shirtNumber: 9 },
-    { role: "forward", position: "LW", shirtNumber: 11 },
-  ];
-
-  return slots.map((slot, index) => ({
-    id: `live-preview-${club.teamId}-${index + 1}`,
-    providerId: null,
-    clubTeamId: club.teamId,
-    name: `${club.shortCode} ${slot.position} ${slot.shirtNumber}`,
-    shortName: `${club.shortCode} ${slot.position} ${slot.shirtNumber}`,
-    role: slot.role,
-    position: slot.position,
-    shirtNumber: slot.shirtNumber,
-    clubName: club.name,
-    clubShortCode: club.shortCode,
-    clubLogoUrl: club.logoUrl ?? null,
-    marketValue: null,
-    marketValueSource: "unavailable",
-    countryCode3: null,
-    flagUrl: null,
-    nationality: null,
-    source: "live-club-preview",
-  }));
-}
-
-function buildLiveSimulationEleven(
-  squad: TeamBuilderSquadPlayer[],
-  club: PremierClubVisual,
-  primary: TeamBuilderSquadPlayer[] = [],
-  forbiddenPlayerIds: ReadonlySet<string> = new Set<string>(),
-) {
-  return buildTouchlineLiveEleven({
-    club,
-    fallback: buildLiveClubPreviewEleven(club),
-    forbiddenPlayerIds,
-    primary,
-    squad,
-  });
-}
-
 function normalizeLiveClubSquad(
   players: TeamBuilderSquadPlayer[],
   club: PremierClubVisual,
@@ -1899,17 +1831,21 @@ function fixtureStarterPlayersForClub(
     }),
   );
 
+  const seen = new Set<string>();
   return lineups
     .filter((lineup) => lineup.isStarter === true && String(lineup.teamId ?? "").trim() === club.teamId)
-    .map((lineup, index): TeamBuilderSquadPlayer => {
+    .flatMap((lineup): TeamBuilderSquadPlayer[] => {
       const providerId = String(lineup.playerId ?? "").trim();
+      const playerName = String(lineup.playerName ?? "").trim();
+      if (!providerId || !playerName || seen.has(providerId)) return [];
+      seen.add(providerId);
       const squadPlayer = providerId ? squadByProviderId.get(providerId) : null;
-      const name = squadPlayer?.name || lineup.playerName || `${club.shortCode} Player ${index + 1}`;
+      const name = squadPlayer?.name || playerName;
       const position = lineup.position ?? squadPlayer?.position ?? null;
-      return {
+      return [{
         ...(squadPlayer ?? {}),
-        id: squadPlayer?.id || (providerId ? `sportmonks:${providerId}` : `${lineup.id}-${index + 1}`),
-        providerId: squadPlayer?.providerId || providerId || null,
+        id: squadPlayer?.id || `sportmonks:${providerId}`,
+        providerId: squadPlayer?.providerId || providerId,
         clubTeamId: club.teamId,
         name,
         shortName: squadPlayer?.shortName || name.split(/\s+/).at(-1) || name,
@@ -1927,55 +1863,29 @@ function fixtureStarterPlayersForClub(
         flagUrl: squadPlayer?.flagUrl ?? null,
         nationality: squadPlayer?.nationality ?? null,
         source: "sportmonks_fixture_lineup",
-      };
+      }];
     });
 }
 
-function readStoredLiveSquad(club: PremierClubVisual) {
-  if (typeof window === "undefined") return [] as TeamBuilderSquadPlayer[];
-  try {
-    const raw = readBrowserStorage("localStorage", `${ARENA_LIVE_SQUAD_STORAGE_PREFIX}:${club.teamId}`);
-    if (!raw) return [];
-    const stored = JSON.parse(raw) as Partial<StoredLiveSquad>;
+function buildVerifiedLiveLineup(
+  starters: TeamBuilderSquadPlayer[],
+  club: PremierClubVisual,
+  forbiddenPlayerIds: ReadonlySet<string> = new Set<string>(),
+) {
+  if (starters.length !== 11) return [] as TeamBuilderSquadPlayer[];
+  const selected: TeamBuilderSquadPlayer[] = [];
+  const selectedIds = new Set<string>();
+  for (const player of starters) {
+    const identity = touchlineLivePlayerIdentity(player);
     if (
-      stored.teamId !== club.teamId
-      || !Number.isFinite(stored.savedAt)
-      || Date.now() - Number(stored.savedAt) > ARENA_LIVE_SQUAD_CACHE_MAX_AGE_MS
-      || !Array.isArray(stored.players)
-    ) {
-      return [];
-    }
-    const isCoherent = stored.players.every((player): player is TeamBuilderSquadPlayer => Boolean(
-      player
-      && typeof player === "object"
-      && typeof player.id === "string"
-      && typeof player.name === "string"
-      && typeof player.clubName === "string",
-    ));
-    if (!isCoherent) {
-      removeBrowserStorage("localStorage", `${ARENA_LIVE_SQUAD_STORAGE_PREFIX}:${club.teamId}`);
-      return [];
-    }
-    const normalizedPlayers = normalizeLiveClubSquad(stored.players, club, stored.teamId);
-    if (normalizedPlayers.length !== stored.players.length) {
-      removeBrowserStorage("localStorage", `${ARENA_LIVE_SQUAD_STORAGE_PREFIX}:${club.teamId}`);
-      return [];
-    }
-    return normalizedPlayers;
-  } catch {
-    return [];
+      String(player.clubTeamId ?? "").trim() !== club.teamId
+      || forbiddenPlayerIds.has(identity)
+      || selectedIds.has(identity)
+    ) return [] as TeamBuilderSquadPlayer[];
+    selectedIds.add(identity);
+    selected.push(player);
   }
-}
-
-function writeStoredLiveSquad(club: PremierClubVisual, players: TeamBuilderSquadPlayer[]) {
-  if (typeof window === "undefined" || players.length < 11) return;
-  const normalizedPlayers = normalizeLiveClubSquad(players, club, club.teamId);
-  if (normalizedPlayers.length < 11) return;
-  writeBrowserStorage(
-    "localStorage",
-    `${ARENA_LIVE_SQUAD_STORAGE_PREFIX}:${club.teamId}`,
-    JSON.stringify({ teamId: club.teamId, savedAt: Date.now(), players: normalizedPlayers } satisfies StoredLiveSquad),
-  );
+  return selected;
 }
 
 function isStoredLiveTeam(value: unknown) {
@@ -1995,11 +1905,12 @@ function isStoredLiveFixture(value: unknown): value is TouchlineFixture {
   return typeof fixture.id === "string"
     && Boolean(fixture.id.trim())
     && typeof fixture.providerId === "string"
-    // Production provider IDs are numeric, while the canonical QA schedule
-    // uses stable representative IDs (for example qa-representative-01).
-    // This is a browser-cache shape check, not provider identity validation:
-    // the server has already selected and published this read-only snapshot.
-    && Boolean(fixture.providerId.trim())
+    // A browser cache is untrusted input. Do not let an old QA representative
+    // snapshot restore fictional fixtures after the server boundary rejects it.
+    && /^[1-9]\d{0,19}$/.test(fixture.providerId.trim())
+    && fixture.provider === "sportmonks"
+    && fixture.source?.provider === "sportmonks"
+    && fixture.source.providerId === fixture.providerId
     && isStoredLiveTeam(fixture.homeTeam)
     && isStoredLiveTeam(fixture.awayTeam);
 }
@@ -2089,7 +2000,6 @@ function LiveAtomicCardShell({
   );
 }
 
-const StableLiveCoachCard = memo(TouchlineCoachCard);
 const StableLivePlayerCard = memo(TouchlineEliteExactCard);
 const StableMarketPreviewCard = memo(TouchlineEliteExactCard);
 
@@ -2252,9 +2162,11 @@ function buildLiveSimulationCardProducts({
   homeClub: PremierClubVisual;
   awayClub: PremierClubVisual;
 }): LiveSimulationCardProduct[] {
-  const homeEleven = buildLiveSimulationEleven(homeSquad, homeClub);
+  if (homeSquad.length !== 11 || awaySquad.length !== 11) return [];
+  const homeEleven = buildVerifiedLiveLineup(homeSquad, homeClub);
   const homePlayerIds = new Set(homeEleven.map(touchlineLivePlayerIdentity));
-  const awayEleven = buildLiveSimulationEleven(awaySquad, awayClub, [], homePlayerIds);
+  const awayEleven = buildVerifiedLiveLineup(awaySquad, awayClub, homePlayerIds);
+  if (homeEleven.length !== 11 || awayEleven.length !== 11) return [];
 
   return [
     ...homeEleven.map((player, slotIndex) => ({
@@ -2275,20 +2187,14 @@ function buildLiveSimulationCardProducts({
 function buildLiveProductSignature({
   locale,
   cards,
-  homeCoach,
-  awayCoach,
 }: {
   locale: TouchLineLocale;
   cards: LiveSimulationCardProduct[];
-  homeCoach: LiveProductCoachSignature;
-  awayCoach: LiveProductCoachSignature;
 }) {
   if (cards.length !== 22) return "";
   return [
     locale,
     ...cards.map(({ readinessId }) => readinessId),
-    `home-coach:${homeCoach.teamId}:${homeCoach.cardTier}:${homeCoach.coachId}:${homeCoach.countryCode3}`,
-    `away-coach:${awayCoach.teamId}:${awayCoach.cardTier}:${awayCoach.coachId}:${awayCoach.countryCode3}`,
   ].join("|");
 }
 
@@ -3470,7 +3376,6 @@ export default function ArenaClient({
   const benchListShellRef = useRef<HTMLDivElement | null>(null);
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const liveSimulationRef = useRef<HTMLDivElement | null>(null);
-  const liveCoachCardsRef = useRef<HTMLDivElement | null>(null);
   const firstVideoRef = useRef<HTMLVideoElement | null>(null);
   const secondVideoRef = useRef<HTMLVideoElement | null>(null);
   const loopCameraFrameRequestRef = useRef<number | null>(null);
@@ -3533,9 +3438,7 @@ export default function ArenaClient({
   const [selectedLiveCoachSide, setSelectedLiveCoachSide] = useState<"home" | "away" | null>(null);
   const [readyLiveCardProductsSignature, setReadyLiveCardProductsSignature] = useState("");
   const loadedLiveSquadFixtureRef = useRef<string | null>(null);
-  const liveFixtureSelectionSequenceRef = useRef(0);
   const liveSquadRequestSequenceRef = useRef(0);
-  const liveSquadRefreshAtRef = useRef(new Map<string, number>());
   const carouselTouchStartXRef = useRef<number | null>(null);
   const [benchPlayers, setBenchPlayers] = useState<BenchOption[]>([]);
   const [ownerCoachProviderId, setOwnerCoachProviderId] = useState<string | null>(null);
@@ -4138,40 +4041,23 @@ export default function ArenaClient({
       liveSimulationCards.length !== 22
       || !selectedLiveHomeClub
       || !selectedLiveAwayClub
-      || !selectedLiveHomeCoachSlot
-      || !selectedLiveAwayCoachSlot
     ) return "";
 
     return buildLiveProductSignature({
       locale: siteLanguage,
       cards: liveSimulationCards,
-      homeCoach: {
-        teamId: selectedLiveHomeClub.teamId,
-        cardTier: selectedLiveHomeCoachSlot.cardTier,
-        coachId: String(selectedLiveHomeCoachIdentity?.coach.id ?? "pending"),
-        countryCode3: selectedLiveHomeCoachIdentity?.countryCode3 ?? "N/A",
-      },
-      awayCoach: {
-        teamId: selectedLiveAwayClub.teamId,
-        cardTier: selectedLiveAwayCoachSlot.cardTier,
-        coachId: String(selectedLiveAwayCoachIdentity?.coach.id ?? "pending"),
-        countryCode3: selectedLiveAwayCoachIdentity?.countryCode3 ?? "N/A",
-      },
     });
   }, [
     liveSimulationCards,
     selectedLiveAwayClub,
-    selectedLiveAwayCoachIdentity,
-    selectedLiveAwayCoachSlot,
     selectedLiveHomeClub,
-    selectedLiveHomeCoachIdentity,
-    selectedLiveHomeCoachSlot,
     siteLanguage,
   ]);
   const isLiveLineupVisuallyReady = Boolean(
     liveCardProductsSignature
     && readyLiveCardProductsSignature === liveCardProductsSignature,
   );
+  const isLiveLineupPending = liveMatchSquads?.status === "loading";
   const selectedLiveSimulationCard = liveSimulationCards.find(
     ({ player }) => stableBuilderPlayerId(player) === selectedLiveSimulationCardId,
   )?.player ?? null;
@@ -4398,10 +4284,8 @@ export default function ArenaClient({
   useEffect(() => {
     if (!liveCardProductsSignature) return;
     const simulation = liveSimulationRef.current;
-    const coaches = liveCoachCardsRef.current;
-    if (!simulation || !coaches) return;
+    if (!simulation) return;
     if (simulation.querySelectorAll("[data-live-player-id]").length !== 22) return;
-    if (coaches.querySelectorAll("[data-live-coach-card]").length !== 2) return;
 
     let cancelled = false;
     let firstRevealFrame = 0;
@@ -4409,7 +4293,6 @@ export default function ArenaClient({
     const listenerCleanups: Array<() => void> = [];
     const htmlImages = [
       ...simulation.querySelectorAll<HTMLImageElement>("img[data-live-card-asset]"),
-      ...coaches.querySelectorAll<HTMLImageElement>("img[data-live-card-asset]"),
     ];
 
     const settledAssets = Promise.allSettled([
@@ -5336,22 +5219,11 @@ export default function ArenaClient({
 
     let cancelled = false;
     const requestController = new AbortController();
-    const cachedHome = readStoredLiveSquad(homeClub);
-    const cachedAway = readStoredLiveSquad(awayClub);
-    const hasCompleteStoredSquads = cachedHome.length >= 11 && cachedAway.length >= 11;
-    const lastProviderRefreshAt = liveSquadRefreshAtRef.current.get(squadFixtureSignature) ?? 0;
-    const shouldRefreshSquads = !hasCompleteStoredSquads
-      || Date.now() - lastProviderRefreshAt > ARENA_LIVE_SQUAD_REFRESH_DEDUP_MS;
-    const immediateHomeSquad = hasCompleteStoredSquads ? cachedHome : buildLiveClubPreviewEleven(homeClub);
-    const immediateAwaySquad = hasCompleteStoredSquads ? cachedAway : buildLiveClubPreviewEleven(awayClub);
-    const immediateHome = buildLiveSimulationEleven(immediateHomeSquad, homeClub);
-    const immediateHomeIds = new Set(immediateHome.map(touchlineLivePlayerIdentity));
-    const immediateAway = buildLiveSimulationEleven(immediateAwaySquad, awayClub, [], immediateHomeIds);
     queueMicrotask(() => {
       if (cancelled) return;
-      setLiveMatchSquads((current) => current?.fixtureId === fixture.id && current.status === "ready"
-        ? current
-        : { fixtureId: fixture.id, home: immediateHome, away: immediateAway, status: "ready" });
+      setLiveMatchSquads({ fixtureId: fixture.id, home: [], away: [], status: "loading" });
+      setReadyLiveCardProductsSignature("");
+      setSelectedLiveSimulationCardId(null);
     });
 
     async function loadClubSquad(club: PremierClubVisual) {
@@ -5395,27 +5267,26 @@ export default function ArenaClient({
       }
     }
 
-    let appliedSquadPriority = 0;
-    async function applyCompleteSquadSnapshot(
+    async function applyVerifiedLineupSnapshot(
       homeSquad: TeamBuilderSquadPlayer[],
       awaySquad: TeamBuilderSquadPlayer[],
       fixtureLineups: TouchlinePublicFantasyLineupMember[],
-      priority: number,
     ) {
       if (
         cancelled
         || loadedLiveSquadFixtureRef.current !== squadRequestId
-        || priority < appliedSquadPriority
       ) return;
-      appliedSquadPriority = priority;
-      writeStoredLiveSquad(lineupHomeClub, homeSquad);
-      writeStoredLiveSquad(lineupAwayClub, awaySquad);
 
       const homeStarters = fixtureStarterPlayersForClub(fixtureLineups, homeSquad, lineupHomeClub);
       const awayStarters = fixtureStarterPlayersForClub(fixtureLineups, awaySquad, lineupAwayClub);
-      const home = buildLiveSimulationEleven(homeSquad, lineupHomeClub, homeStarters);
+      const home = buildVerifiedLiveLineup(homeStarters, lineupHomeClub);
       const homePlayerIds = new Set(home.map(touchlineLivePlayerIdentity));
-      const away = buildLiveSimulationEleven(awaySquad, lineupAwayClub, awayStarters, homePlayerIds);
+      const away = buildVerifiedLiveLineup(awayStarters, lineupAwayClub, homePlayerIds);
+      if (home.length !== 11 || away.length !== 11) {
+        setLiveMatchSquads({ fixtureId: lineupFixture.id, home: [], away: [], status: "unavailable" });
+        setReadyLiveCardProductsSignature("");
+        return;
+      }
       const targetCards = buildLiveSimulationCardProducts({
         fixtureId: lineupFixture.id,
         homeSquad: home,
@@ -5423,42 +5294,17 @@ export default function ArenaClient({
         homeClub: lineupHomeClub,
         awayClub: lineupAwayClub,
       });
-      const targetHomeCoachIdentity = touchlineLiveCoachForTeam(lineupHomeClub.teamId);
-      const targetAwayCoachIdentity = touchlineLiveCoachForTeam(lineupAwayClub.teamId);
-      const targetHomeCoachSlot = createTouchlineArenaCoachSlot(
-        targetHomeCoachIdentity?.coach ?? null,
-        TEAM_BUILDER_CLUB_RANK[lineupHomeClub.shortCode] ?? null,
-      );
-      const targetAwayCoachSlot = createTouchlineArenaCoachSlot(
-        targetAwayCoachIdentity?.coach ?? null,
-        TEAM_BUILDER_CLUB_RANK[lineupAwayClub.shortCode] ?? null,
-      );
       const targetProductSignature = buildLiveProductSignature({
         locale: siteLanguage,
         cards: targetCards,
-        homeCoach: {
-          teamId: lineupHomeClub.teamId,
-          cardTier: targetHomeCoachSlot.cardTier,
-          coachId: String(targetHomeCoachIdentity?.coach.id ?? "pending"),
-          countryCode3: targetHomeCoachIdentity?.countryCode3 ?? "N/A",
-        },
-        awayCoach: {
-          teamId: lineupAwayClub.teamId,
-          cardTier: targetAwayCoachSlot.cardTier,
-          coachId: String(targetAwayCoachIdentity?.coach.id ?? "pending"),
-          countryCode3: targetAwayCoachIdentity?.countryCode3 ?? "N/A",
-        },
       });
 
       await preloadLiveProductImages([
         ...targetCards.flatMap(({ player }) => liveCanonicalPlayerAssetUrls(player)),
-        touchlineLiveCompactCoachFrameUrl(targetHomeCoachSlot.cardTier),
-        touchlineLiveCompactCoachFrameUrl(targetAwayCoachSlot.cardTier),
       ], 700);
       if (
         cancelled
         || loadedLiveSquadFixtureRef.current !== squadRequestId
-        || priority !== appliedSquadPriority
       ) return;
 
       // Persisted snapshot reads replace the complete XI and its ready
@@ -5470,31 +5316,15 @@ export default function ArenaClient({
 
     const squadRequestTimer = window.setTimeout(() => {
       if (cancelled) return;
-
-      if (!hasCompleteStoredSquads) {
-        void Promise.all([loadClubSquad(homeClub), loadClubSquad(awayClub)])
-          .then(([homeSquad, awaySquad]) => {
-            void applyCompleteSquadSnapshot(homeSquad, awaySquad, [], 1);
-          })
-          .catch(() => {
-            // A snapshot miss keeps the complete local preview XI.
-          });
-      }
-
-      if (shouldRefreshSquads) {
-        void Promise.all([loadClubSquad(homeClub), loadClubSquad(awayClub), loadFixtureLineups()])
-          .then(([homeSquad, awaySquad, fixtureLineups]) => {
-            if (cancelled || loadedLiveSquadFixtureRef.current !== squadRequestId) return;
-            void applyCompleteSquadSnapshot(homeSquad, awaySquad, fixtureLineups, 2);
-            liveSquadRefreshAtRef.current.set(squadFixtureSignature, Date.now());
-          })
-          .catch(() => {
-            if (cancelled || loadedLiveSquadFixtureRef.current !== squadRequestId) return;
-            if (!hasCompleteStoredSquads) {
-              setLiveMatchSquads({ fixtureId: fixture.id, home: immediateHome, away: immediateAway, status: "ready" });
-            }
-          });
-      }
+      void Promise.all([loadClubSquad(homeClub), loadClubSquad(awayClub), loadFixtureLineups()])
+        .then(([homeSquad, awaySquad, fixtureLineups]) => {
+          void applyVerifiedLineupSnapshot(homeSquad, awaySquad, fixtureLineups);
+        })
+        .catch(() => {
+          if (cancelled || loadedLiveSquadFixtureRef.current !== squadRequestId) return;
+          setLiveMatchSquads({ fixtureId: fixture.id, home: [], away: [], status: "unavailable" });
+          setReadyLiveCardProductsSignature("");
+        });
     }, ARENA_LIVE_SQUAD_REQUEST_SETTLE_MS);
 
     return () => {
@@ -6788,18 +6618,14 @@ export default function ArenaClient({
     selectCarouselFixture(visibleLiveFixtures[nextIndex].id);
   }
 
-  async function selectLiveFixture(fixtureId: string) {
-    const selectionSequence = liveFixtureSelectionSequenceRef.current += 1;
+  function selectLiveFixture(fixtureId: string) {
     if (fixtureId === effectiveSelectedLiveFixtureId) {
       setPendingLiveFixtureId(null);
       return;
     }
 
     const targetFixture = visibleLiveFixtures.find((fixture) => fixture.id === fixtureId) ?? null;
-    const targetHomeClub = targetFixture ? getPremierClubVisualForFixtureSide(targetFixture, "home") : null;
-    const targetAwayClub = targetFixture ? getPremierClubVisualForFixtureSide(targetFixture, "away") : null;
-
-    if (!targetFixture || !targetHomeClub || !targetAwayClub) {
+    if (!targetFixture) {
       loadedLiveSquadFixtureRef.current = null;
       setSelectedLiveSimulationCardId(null);
       setSelectedLiveCoachSide(null);
@@ -6810,66 +6636,13 @@ export default function ArenaClient({
     }
 
     setPendingLiveFixtureId(fixtureId);
-    const cachedHome = readStoredLiveSquad(targetHomeClub);
-    const cachedAway = readStoredLiveSquad(targetAwayClub);
-    const targetHomeSquad = cachedHome.length >= 11 ? cachedHome : buildLiveClubPreviewEleven(targetHomeClub);
-    const targetAwaySquad = cachedAway.length >= 11 ? cachedAway : buildLiveClubPreviewEleven(targetAwayClub);
-    const targetCards = buildLiveSimulationCardProducts({
-      fixtureId: targetFixture.id,
-      homeSquad: targetHomeSquad,
-      awaySquad: targetAwaySquad,
-      homeClub: targetHomeClub,
-      awayClub: targetAwayClub,
-    });
-    const targetHomeCoachIdentity = touchlineLiveCoachForTeam(targetHomeClub.teamId);
-    const targetAwayCoachIdentity = touchlineLiveCoachForTeam(targetAwayClub.teamId);
-    const targetHomeCoachSlot = createTouchlineArenaCoachSlot(
-      targetHomeCoachIdentity?.coach ?? null,
-      TEAM_BUILDER_CLUB_RANK[targetHomeClub.shortCode] ?? null,
-    );
-    const targetAwayCoachSlot = createTouchlineArenaCoachSlot(
-      targetAwayCoachIdentity?.coach ?? null,
-      TEAM_BUILDER_CLUB_RANK[targetAwayClub.shortCode] ?? null,
-    );
-    const targetProductSignature = buildLiveProductSignature({
-      locale: siteLanguage,
-      cards: targetCards,
-      homeCoach: {
-        teamId: targetHomeClub.teamId,
-        cardTier: targetHomeCoachSlot.cardTier,
-        coachId: String(targetHomeCoachIdentity?.coach.id ?? "pending"),
-        countryCode3: targetHomeCoachIdentity?.countryCode3 ?? "N/A",
-      },
-      awayCoach: {
-        teamId: targetAwayClub.teamId,
-        cardTier: targetAwayCoachSlot.cardTier,
-        coachId: String(targetAwayCoachIdentity?.coach.id ?? "pending"),
-        countryCode3: targetAwayCoachIdentity?.countryCode3 ?? "N/A",
-      },
-    });
-
-    await preloadLiveProductImages([
-      ...targetCards.flatMap(({ player }) => liveCanonicalPlayerAssetUrls(player)),
-      touchlineLiveCompactCoachFrameUrl(targetHomeCoachSlot.cardTier),
-      touchlineLiveCompactCoachFrameUrl(targetAwayCoachSlot.cardTier),
-      liveOptimizedClubLogoUrl(targetHomeClub.logoUrl) ?? targetHomeClub.logoUrl,
-      liveOptimizedClubLogoUrl(targetAwayClub.logoUrl) ?? targetAwayClub.logoUrl,
-    ]);
-    if (selectionSequence !== liveFixtureSelectionSequenceRef.current) return;
-
-    // Commit fixture, squads and readiness in one React batch. The previous XI
-    // remains fully visible while the tiny frame assets warm up, so Safari never
-    // paints an empty field or exposes card internals during a match switch.
+    // A new fixture must never inherit the previous fixture's cards. The
+    // effect below commits an XI only after both official line-ups are present.
     loadedLiveSquadFixtureRef.current = null;
     setSelectedLiveSimulationCardId(null);
     setSelectedLiveCoachSide(null);
-    setLiveMatchSquads({
-      fixtureId: targetFixture.id,
-      home: targetCards.filter(({ side }) => side === "home").map(({ player }) => player),
-      away: targetCards.filter(({ side }) => side === "away").map(({ player }) => player),
-      status: "ready",
-    });
-    setReadyLiveCardProductsSignature(targetProductSignature);
+    setLiveMatchSquads({ fixtureId: targetFixture.id, home: [], away: [], status: "loading" });
+    setReadyLiveCardProductsSignature("");
     setSelectedLiveFixtureId(fixtureId);
     setPendingLiveFixtureId(null);
     writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, fixtureId);
@@ -7949,7 +7722,7 @@ export default function ArenaClient({
               {selectedLiveFixture ? (
                 <section
                   className="arena-live-match-center"
-                  aria-busy={!isLiveLineupVisuallyReady}
+                  aria-busy={isLiveLineupPending}
                   aria-label={siteLanguage === "pt-BR" ? "Central da partida" : "Match centre"}
                   data-live-products-ready={isLiveLineupVisuallyReady ? "true" : "false"}
                 >
@@ -7975,8 +7748,8 @@ export default function ArenaClient({
                       <div
                         ref={liveSimulationRef}
                         className={`arena-live-card-simulation ${isLiveLineupVisuallyReady ? "is-lineup-ready" : "is-lineup-loading"}`}
-                        aria-busy={!isLiveLineupVisuallyReady}
-                        aria-label={siteLanguage === "pt-BR" ? "Simulação dos 22 cards dos clubes em movimento" : "Moving simulation of both clubs' 22 cards"}
+                        aria-busy={isLiveLineupPending}
+                        aria-label={siteLanguage === "pt-BR" ? "Escalações oficiais verificadas" : "Verified official line-ups"}
                       >
                         {liveSimulationCards.map(({ player, readinessId, side, slotIndex }) => (
                           <LiveSimulationPlayerCard
@@ -7992,95 +7765,20 @@ export default function ArenaClient({
                           />
                         ))}
                         {!isLiveLineupVisuallyReady ? (
-                          <span className="arena-live-lineup-status">{siteLanguage === "pt-BR" ? "Preparando transmissão…" : "Preparing broadcast…"}</span>
+                          <span className="arena-live-lineup-status">
+                            {isLiveLineupPending
+                              ? (siteLanguage === "pt-BR" ? "Verificando escalações oficiais…" : "Verifying official line-ups…")
+                              : (siteLanguage === "pt-BR" ? "Escalações aguardando confirmação oficial" : "Line-ups awaiting official confirmation")}
+                          </span>
                         ) : null}
                       </div>
                       <span className="arena-live-ball" aria-hidden="true" />
                     </TouchlinePitchSurface>
                     <div
-                      ref={liveCoachCardsRef}
                       className="arena-live-technical-area"
-                      aria-label={siteLanguage === "pt-BR" ? "Áreas técnicas dos treinadores" : "Coaches technical areas"}
+                      aria-label={siteLanguage === "pt-BR" ? "Estado das escalações" : "Line-up status"}
                     >
-                      {selectedLiveHomeClub && selectedLiveHomeCoachSlot ? (
-                        <div
-                          className="arena-live-coach-card is-home"
-                          data-live-coach-card="home"
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`${siteLanguage === "pt-BR" ? "Ampliar card do treinador" : "Open coach card for"} ${selectedLiveHomeCoachIdentity?.coach.displayName ?? selectedLiveHomeClub.name}`}
-                          onClick={() => {
-                            setSelectedLiveSimulationCardId(null);
-                            setSelectedLiveCoachSide("home");
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key !== "Enter" && event.key !== " ") return;
-                            event.preventDefault();
-                            setSelectedLiveSimulationCardId(null);
-                            setSelectedLiveCoachSide("home");
-                          }}
-                        >
-                          <StableLiveCoachCard
-                            className="arena-live-coach-card-art"
-                            coach={selectedLiveHomeCoachIdentity?.coach ?? null}
-                            slot={selectedLiveHomeCoachSlot}
-                            clubName={selectedLiveHomeClub.name}
-                            clubLogoUrl={liveOptimizedClubLogoUrl(selectedLiveHomeClub.logoUrl) ?? selectedLiveHomeClub.logoUrl}
-                            clubAccent={selectedLiveHomeClub.accent}
-                            countryCode3={selectedLiveHomeCoachIdentity?.countryCode3 ?? "N/A"}
-                            locale={siteLanguage}
-                            displayMode="compact"
-                            layoutOverride={TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT}
-                            optimizeForLiveCompact
-                            enableInteractiveNeon={false}
-                          />
-                          <span className="arena-live-coach-copy">
-                            <span>{siteLanguage === "pt-BR" ? "Treinador da casa" : "Home coach"}</span>
-                            <strong>{selectedLiveHomeCoachIdentity?.coach.displayName ?? (siteLanguage === "pt-BR" ? "Aguardando treinador" : "Awaiting coach")}</strong>
-                            <small>{selectedLiveHomeClub.name}</small>
-                          </span>
-                        </div>
-                      ) : null}
-                      <b>{siteLanguage === "pt-BR" ? "ÁREA TÉCNICA" : "TECHNICAL AREA"}</b>
-                      {selectedLiveAwayClub && selectedLiveAwayCoachSlot ? (
-                        <div
-                          className="arena-live-coach-card is-away"
-                          data-live-coach-card="away"
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`${siteLanguage === "pt-BR" ? "Ampliar card do treinador" : "Open coach card for"} ${selectedLiveAwayCoachIdentity?.coach.displayName ?? selectedLiveAwayClub.name}`}
-                          onClick={() => {
-                            setSelectedLiveSimulationCardId(null);
-                            setSelectedLiveCoachSide("away");
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key !== "Enter" && event.key !== " ") return;
-                            event.preventDefault();
-                            setSelectedLiveSimulationCardId(null);
-                            setSelectedLiveCoachSide("away");
-                          }}
-                        >
-                          <StableLiveCoachCard
-                            className="arena-live-coach-card-art"
-                            coach={selectedLiveAwayCoachIdentity?.coach ?? null}
-                            slot={selectedLiveAwayCoachSlot}
-                            clubName={selectedLiveAwayClub.name}
-                            clubLogoUrl={liveOptimizedClubLogoUrl(selectedLiveAwayClub.logoUrl) ?? selectedLiveAwayClub.logoUrl}
-                            clubAccent={selectedLiveAwayClub.accent}
-                            countryCode3={selectedLiveAwayCoachIdentity?.countryCode3 ?? "N/A"}
-                            locale={siteLanguage}
-                            displayMode="compact"
-                            layoutOverride={TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT}
-                            optimizeForLiveCompact
-                            enableInteractiveNeon={false}
-                          />
-                          <span className="arena-live-coach-copy">
-                            <span>{siteLanguage === "pt-BR" ? "Treinador visitante" : "Away coach"}</span>
-                            <strong>{selectedLiveAwayCoachIdentity?.coach.displayName ?? (siteLanguage === "pt-BR" ? "Aguardando treinador" : "Awaiting coach")}</strong>
-                            <small>{selectedLiveAwayClub.name}</small>
-                          </span>
-                        </div>
-                      ) : null}
+                      <b>{siteLanguage === "pt-BR" ? "DADOS OFICIAIS" : "OFFICIAL DATA"}</b>
                     </div>
                     <a
                       className="arena-live-pitch-credit"

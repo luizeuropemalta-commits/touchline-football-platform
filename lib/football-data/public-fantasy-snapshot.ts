@@ -1,4 +1,5 @@
 import { sanitizeFantasyFixtureFeedForClient } from "@/lib/football-data/fantasy-sanitize";
+import { isOfficialSportmonksFixtureId } from "@/lib/football-data/fixture-schedule-store";
 import type {
   FootballDataProviderName,
   TouchlineFantasyFixtureFeed,
@@ -34,7 +35,7 @@ function isProviderName(value: unknown): value is FootballDataProviderName {
 }
 
 function isStoredFixture(value: unknown): value is TouchlineFixture {
-  if (!isRecord(value) || typeof value.id !== "string" || typeof value.providerId !== "string") return false;
+  if (!isRecord(value) || typeof value.id !== "string" || !isOfficialSportmonksFixtureId(value.providerId)) return false;
   if (!isProviderName(value.provider) || !isRecord(value.source)) return false;
   return isProviderName(value.source.provider) && typeof value.source.providerId === "string";
 }

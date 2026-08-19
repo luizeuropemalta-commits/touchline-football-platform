@@ -41,13 +41,14 @@ test("the normal Arena retries the read-only Live snapshot when schedule hydrati
   assert.match(loader, /catch \{[\s\S]*?await refreshLiveFixtures\(\)/);
 });
 
-test("the Arena accepts a canonical server-published QA fixture snapshot without requiring numeric fixture IDs", () => {
+test("the Arena rejects cached QA representative fixtures and requires a Sportmonks identifier", () => {
   const validatorStart = arenaSource.indexOf("function isStoredLiveFixture");
   const validatorEnd = arenaSource.indexOf("\nfunction readStoredLiveFixtureSnapshot", validatorStart);
   const validator = arenaSource.slice(validatorStart, validatorEnd);
 
   assert.ok(validatorStart >= 0);
   assert.ok(validatorEnd > validatorStart);
-  assert.match(validator, /Boolean\(fixture\.providerId\.trim\(\)\)/);
-  assert.doesNotMatch(validator, /\^\[0-9\]\{1,20\}\$/);
+  assert.match(validator, /\^\[1-9\]\\d\{0,19\}\$/);
+  assert.match(validator, /fixture\.provider === "sportmonks"/);
+  assert.match(validator, /fixture\.source\.providerId === fixture\.providerId/);
 });
