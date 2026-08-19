@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { syncSportmonksProviderCapabilities } from "@/lib/football-data/capability-sync";
 import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-schedule-sync";
 import { syncSportmonksStarterFoundation } from "@/lib/football-data/starter-sync";
+import { syncQaCountryData } from "@/lib/football-data/qa-country-sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
@@ -71,11 +73,13 @@ async function runFootballDataSync(request: NextRequest) {
         })
       : scope === "foundation"
         ? await syncSportmonksStarterFoundation(admin, { competitionId, clubId })
+        : scope === "qa_country_sync"
+          ? await syncQaCountryData(admin, request.nextUrl.searchParams.get("runId") ?? randomUUID())
         : null;
 
     if (!result) {
       return NextResponse.json(
-        { ok: false, status: "invalid_scope", error: "Use scope=capabilities, foundation or fixture_schedule." },
+        { ok: false, status: "invalid_scope", error: "Use scope=capabilities, foundation, fixture_schedule or qa_country_sync." },
         { status: 400, headers: { "Cache-Control": "no-store" } },
       );
     }
@@ -88,6 +92,8 @@ async function runFootballDataSync(request: NextRequest) {
         ? "Sportmonks account entitlements were recorded behind the protected provider boundary."
         : scope === "fixture_schedule"
         ? "Sportmonks schedule data was normalized before the Live read model can publish it."
+        : scope === "qa_country_sync"
+          ? "QA-only country data was reconciled from the complete provider scope after a reversible 588-player backup."
         : "TouchLine Data feeds the normalized TouchLine database. Frontend modules should read from /api/football-data/foundation.",
     });
   } catch (error) {
