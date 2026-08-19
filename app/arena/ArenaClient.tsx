@@ -6440,13 +6440,30 @@ export default function ArenaClient({
     handleFieldPlayerClick(player);
   }
 
-  function pauseQaArenaCamera() {
+  async function toggleQaArenaCameraPlayback() {
     if (!isQaVisualEditor) return;
-    secondVideoRef.current?.pause();
-    setIsArenaVideoPaused(true);
+    const loopVideo = secondVideoRef.current;
+    if (!loopVideo) return;
+
+    if (!loopVideo.paused && !isArenaVideoPaused) {
+      loopVideo.pause();
+      setIsArenaVideoPaused(true);
+      setHasEntryVideoFinished(true);
+      setActiveVideoIndex(1);
+      setSaveStatus(`Arena QA camera paused · ${currentCameraId}`);
+      return;
+    }
+
     setHasEntryVideoFinished(true);
     setActiveVideoIndex(1);
-    setSaveStatus(`Arena QA camera paused · ${currentCameraId}`);
+    setIsArenaVideoPaused(false);
+    try {
+      await loopVideo.play();
+      setSaveStatus(`Arena QA camera playing · ${currentCameraId}`);
+    } catch {
+      setIsArenaVideoPaused(true);
+      setSaveStatus("Arena QA camera could not resume — try again");
+    }
   }
 
   function startCardLoopVideo() {
@@ -9674,7 +9691,9 @@ export default function ArenaClient({
                         <strong>{formationKey}</strong>
                       </button>
                     ))}
-                    <button type="button" onClick={pauseQaArenaCamera}>Pause camera</button>
+                    <button type="button" onClick={() => void toggleQaArenaCameraPlayback()}>
+                      {isArenaVideoPaused ? "Resume camera" : "Pause camera"}
+                    </button>
                   </div>
                 ) : (
                 <div className="formation-presets" aria-label="Choose formation">

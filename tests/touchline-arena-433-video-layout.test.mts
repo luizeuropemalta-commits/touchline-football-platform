@@ -121,6 +121,8 @@ test("Arena accepts a user-approved QA layout only in the specific QA editor pat
   assert.match(arenaSource, /if \(cameraEditPositions && \(!canonical433VideoPositions \|\| isQaVisualEditor\)\)/);
   assert.match(arenaSource, /Save Arena QA standard/);
   assert.match(arenaSource, /Pause camera/);
+  assert.match(arenaSource, /Resume camera/);
+  assert.match(arenaSource, /async function toggleQaArenaCameraPlayback\(\)/);
   assert.match(arenaSource, /"4-5-1"/);
   assert.match(arenaSource, /"3-4-3"/);
   assert.match(arenaSource, /"3-5-2"/);
