@@ -12,6 +12,7 @@ import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import {
   isTouchlineLiveReadMetadata,
+  mergeTouchlineLiveFixtures,
   selectTouchlineMatchCentreFixture,
   touchlineMatchCentreDisplayState,
   touchlineFixtureState,
@@ -77,23 +78,6 @@ function fixtureRailStatus(
   if (state === "live") return copy[language].liveNow;
   if (state === "finished") return copy[language].completed;
   return null;
-}
-
-/**
- * The schedule is the full canonical matchweek. A live snapshot may contain
- * only the fixtures currently carrying an update, so it is an overlay rather
- * than a replacement for the schedule shown in the fixture rail.
- */
-function mergeLiveFixtureSnapshot(
-  current: TouchlinePublicFixture[],
-  snapshot: TouchlinePublicFixture[],
-) {
-  const snapshotById = new Map(snapshot.map((fixture) => [fixture.id, fixture]));
-  const currentIds = new Set(current.map((fixture) => fixture.id));
-  return [
-    ...current.map((fixture) => snapshotById.get(fixture.id) ?? fixture),
-    ...snapshot.filter((fixture) => !currentIds.has(fixture.id)),
-  ];
 }
 
 function status(
@@ -202,7 +186,7 @@ export default function TouchlineMatchCentre({
         const metadata = isTouchlineLiveReadMetadata(metadataCandidate) ? metadataCandidate : null;
         const liveSnapshot = Array.isArray(payload.data) ? payload.data : null;
         if (payload.ok && liveSnapshot && metadata) {
-          setFixtures((current) => mergeLiveFixtureSnapshot(current, liveSnapshot));
+          setFixtures((current) => mergeTouchlineLiveFixtures(current, liveSnapshot));
           setReadMetadata(metadata);
         }
       } catch {

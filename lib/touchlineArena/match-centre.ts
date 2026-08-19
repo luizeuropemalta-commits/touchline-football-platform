@@ -1,3 +1,4 @@
+import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import type { TouchlineFixture } from "@/lib/football-data/types";
 
 export type TouchlineMatchState = "live" | "upcoming" | "finished" | "unknown";
@@ -59,6 +60,27 @@ export function isTouchlineLiveReadMetadata(value: unknown): value is TouchlineL
     && typeof candidate.degraded === "boolean"
     && (candidate.fetchedAt === undefined || typeof candidate.fetchedAt === "string")
   );
+}
+
+/**
+ * Browser fixture payloads use the provider fixture ID as their stable public
+ * identity. SSR can retain an internal prefixed ID, so Live must merge on the
+ * shared provider ID rather than rendering that same fixture twice.
+ */
+export function touchlinePublicFixtureIdentity(fixture: Pick<TouchlinePublicFixture, "id" | "providerId">) {
+  return fixture.providerId.trim() || fixture.id.trim();
+}
+
+export function mergeTouchlineLiveFixtures(
+  current: TouchlinePublicFixture[],
+  snapshot: TouchlinePublicFixture[],
+) {
+  const snapshotByIdentity = new Map(snapshot.map((fixture) => [touchlinePublicFixtureIdentity(fixture), fixture]));
+  const currentIdentities = new Set(current.map(touchlinePublicFixtureIdentity));
+  return [
+    ...current.map((fixture) => snapshotByIdentity.get(touchlinePublicFixtureIdentity(fixture)) ?? fixture),
+    ...snapshot.filter((fixture) => !currentIdentities.has(touchlinePublicFixtureIdentity(fixture))),
+  ];
 }
 
 /**

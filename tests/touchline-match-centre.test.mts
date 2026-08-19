@@ -4,12 +4,14 @@ import test from "node:test";
 
 import {
   isTouchlineLiveReadMetadata,
+  mergeTouchlineLiveFixtures,
   normalizeTouchlineMatchCentreTimeZone,
   selectTouchlineMatchCentreFixture,
   touchlineFixtureState,
   touchlineMatchCentreDisplayState,
   touchlineMatchCentreHref,
 } from "../lib/touchlineArena/match-centre.ts";
+import type { TouchlinePublicFixture } from "../lib/football-data/public-fixture.ts";
 import type { TouchlineFixture } from "../lib/football-data/types.ts";
 
 function fixture(id: string, startsAt: string, status: string): TouchlineFixture {
@@ -42,6 +44,25 @@ test("Match Centre preserves an explicit fixture deep link", () => {
   const target = fixture("20", "2026-08-22T14:00:00Z", "Not Started");
   assert.equal(selectTouchlineMatchCentreFixture([first, target], target.id)?.id, target.id);
   assert.equal(touchlineMatchCentreHref(target, "pt-BR"), "/live?fixture=sportmonks%3A20&lang=pt-BR");
+});
+
+test("Match Centre overlays a live snapshot by provider fixture ID without duplicating the matchweek", () => {
+  const renderedFromServer: TouchlinePublicFixture = {
+    id: "sportmonks:19722203",
+    providerId: "19722203",
+    name: "Arsenal vs Coventry City",
+  };
+  const browserSnapshot: TouchlinePublicFixture = {
+    id: "19722203",
+    providerId: "19722203",
+    name: "Arsenal vs Coventry City",
+    status: "Not Started",
+  };
+
+  const merged = mergeTouchlineLiveFixtures([renderedFromServer], [browserSnapshot]);
+
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0], browserSnapshot);
 });
 
 test("Match Centre never presents a degraded live snapshot as currently live", () => {
@@ -134,7 +155,7 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /function fixtureScorePair\(fixture: TouchlinePublicFixture\) \{\s*if \(Number\.isFinite\(fixture\.homeScore\) && Number\.isFinite\(fixture\.awayScore\)\)/);
   assert.match(component, /return null;/);
   assert.match(component, /const liveSnapshot = Array\.isArray\(payload\.data\) \? payload\.data : null;/);
-  assert.match(component, /setFixtures\(\(current\) => mergeLiveFixtureSnapshot\(current, liveSnapshot\)\)/);
+  assert.match(component, /setFixtures\(\(current\) => mergeTouchlineLiveFixtures\(current, liveSnapshot\)\)/);
   assert.doesNotMatch(component, /return copy\[language\]\.next;/);
   assert.doesNotMatch(component, /homeScore \?\? 0|awayScore \?\? 0/);
   assert.match(component, /<time dateTime=\{fixture\.startsAt\}>\{fixtureDate\(fixture, language, initialTimeZone/);
