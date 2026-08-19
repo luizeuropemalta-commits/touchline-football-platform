@@ -6,6 +6,7 @@ import { syncSportmonksProviderCapabilities } from "@/lib/football-data/capabili
 import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-schedule-sync";
 import { syncSportmonksStarterFoundation } from "@/lib/football-data/starter-sync";
 import { syncQaCountryData } from "@/lib/football-data/qa-country-sync";
+import { syncQaTwentyClubRosters } from "@/lib/football-data/qa-twenty-club-roster-sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
@@ -75,11 +76,13 @@ async function runFootballDataSync(request: NextRequest) {
         ? await syncSportmonksStarterFoundation(admin, { competitionId, clubId })
         : scope === "qa_country_sync"
           ? await syncQaCountryData(admin, request.nextUrl.searchParams.get("runId") ?? randomUUID())
-        : null;
+          : scope === "qa_twenty_club_roster_sync"
+            ? await syncQaTwentyClubRosters(admin, request.nextUrl.searchParams.get("runId") ?? randomUUID())
+          : null;
 
     if (!result) {
       return NextResponse.json(
-        { ok: false, status: "invalid_scope", error: "Use scope=capabilities, foundation, fixture_schedule or qa_country_sync." },
+        { ok: false, status: "invalid_scope", error: "Use scope=capabilities, foundation, fixture_schedule, qa_country_sync or qa_twenty_club_roster_sync." },
         { status: 400, headers: { "Cache-Control": "no-store" } },
       );
     }
@@ -94,6 +97,8 @@ async function runFootballDataSync(request: NextRequest) {
         ? "Sportmonks schedule data was normalized before the Live read model can publish it."
         : scope === "qa_country_sync"
           ? "QA-only country data was reconciled from the complete provider scope after a reversible 588-player backup."
+        : scope === "qa_twenty_club_roster_sync"
+          ? "QA-only current rosters were reconciled across all twenty clubs after a reversible provider snapshot; players and card history were not deleted."
         : "TouchLine Data feeds the normalized TouchLine database. Frontend modules should read from /api/football-data/foundation.",
     });
   } catch (error) {

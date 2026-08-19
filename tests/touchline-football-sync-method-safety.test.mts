@@ -34,6 +34,7 @@ test("football-data synchronization remains available only through POST", () => 
   assert.match(routeSource, /scope === "foundation"[\s\S]*?syncSportmonksStarterFoundation/);
   assert.match(routeSource, /scope === "capabilities"[\s\S]*?syncSportmonksProviderCapabilities/);
   assert.match(routeSource, /scope === "qa_country_sync"[\s\S]*?syncQaCountryData/);
+  assert.match(routeSource, /scope === "qa_twenty_club_roster_sync"[\s\S]*?syncQaTwentyClubRosters/);
   assert.match(routeSource, /randomUUID\(\)/);
   assert.match(routeSource, /Owner session or football data sync secret required/);
 });
@@ -43,6 +44,12 @@ test("QA country reconciliation is an explicit owner POST control", () => {
   assert.match(controlSource, /runId:\s*crypto\.randomUUID\(\)/);
   assert.match(controlSource, /method:\s*"POST"/);
   assert.match(controlSource, /Reconcile QA country data/);
+});
+
+test("QA twenty-club roster reconciliation is an explicit owner POST control", () => {
+  assert.match(controlSource, /scope:\s*"qa_twenty_club_roster_sync"/);
+  assert.match(controlSource, /runId:\s*crypto\.randomUUID\(\)/);
+  assert.match(controlSource, /Reconcile 20 QA squads/);
 });
 
 test("twenty-club provider diagnostic remains owner-only and read-only", () => {

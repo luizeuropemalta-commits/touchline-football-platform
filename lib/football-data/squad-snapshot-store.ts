@@ -31,6 +31,7 @@ export type SquadSnapshotPlayerInput = {
   providerId: string;
   name: string;
   nationality?: string | null;
+  countryId?: string | null;
   position?: string | null;
   shirtNumber?: number | null;
   marketValue?: number | null;
@@ -257,7 +258,11 @@ export async function persistSquadSnapshot(
     current_club_id: clubId,
     name: player.name,
     display_name: player.name,
-    nationality: player.nationality ?? null,
+    // Provider omissions must never erase an already confirmed identity value.
+    // The corresponding public UI will present a pending state when no value
+    // has ever been provided; it must not receive an invented replacement.
+    ...(player.nationality ? { nationality: player.nationality } : {}),
+    ...(player.countryId ? { country_id: player.countryId } : {}),
     position: player.position ?? null,
     ...(player.marketValue
       ? { market_value: player.marketValue, market_value_currency: "EUR" }
