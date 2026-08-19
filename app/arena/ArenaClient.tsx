@@ -7375,12 +7375,22 @@ export default function ArenaClient({
           </section>
         ) : isCoachSelectionRequired ? (
           <section className={`arena-coach-first-gate${coachOfferStatus !== "ready" ? " is-offer-pending" : ""}`} aria-label={siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"} data-testid="arena-coach-first-gate">
-            <div className="arena-coach-first-copy">
-              <span>{siteLanguage === "pt-BR" ? "MERCADO · PASSO 1 DE 10" : "MARKET · STEP 1 OF 10"}</span>
-              <h1>{siteLanguage === "pt-BR" ? "Escolha seu treinador" : "Choose your coach"}</h1>
-              <p>{siteLanguage === "pt-BR" ? "Comece pelo treinador e confirme a formação. Depois complete, em ordem: goleiros, zagueiros, lateral direito, lateral esquerdo, volantes, meias, atacantes e centroavantes." : "Start with the coach and confirm the formation. Then complete, in order: goalkeepers, centre-backs, right-backs, left-backs, defensive midfielders, midfielders, attackers and centre-forwards."}</p>
-              {coachSelectionError ? <p className="arena-coach-selection-error" role="alert">{coachSelectionError}</p> : null}
-            </div>
+            <header className="arena-coach-market-header">
+              <div className="arena-coach-first-copy">
+                <span>{siteLanguage === "pt-BR" ? "TOUCHLINE MARKET · PASSO 1 DE 10" : "TOUCHLINE MARKET · STEP 1 OF 10"}</span>
+                <h1>
+                  <i>{siteLanguage === "pt-BR" ? "Escolha" : "Choose"}</i>
+                  {siteLanguage === "pt-BR" ? " seu treinador" : " your coach"}
+                </h1>
+                <p>{siteLanguage === "pt-BR" ? "Defina a mente tática do seu clube. Cada treinador entra com a sua identidade, tier e preço canônicos antes de você montar o elenco." : "Set the tactical mind of your club. Every coach enters with their own canonical identity, tier and price before you build the squad."}</p>
+                {coachSelectionError ? <p className="arena-coach-selection-error" role="alert">{coachSelectionError}</p> : null}
+              </div>
+              <div className="arena-coach-market-proof" aria-label={siteLanguage === "pt-BR" ? "Mercado oficial de treinadores" : "Official coach market"}>
+                <strong>{TOUCHLINE_LIVE_COACHES.length}</strong>
+                <span>{siteLanguage === "pt-BR" ? "treinadores oficiais" : "official coaches"}</span>
+                <small>{siteLanguage === "pt-BR" ? "Tier, frame e preço canônicos" : "Canonical tier, frame and price"}</small>
+              </div>
+            </header>
             <div className="arena-coach-choice-rail" role="list">
               {coachOfferStatus !== "ready" ? (
                 <div className="arena-coach-offer-status" role="status">
@@ -7406,6 +7416,7 @@ export default function ArenaClient({
                   null,
                   offer.tierKey,
                 );
+                const tierPalette = touchlineCardTierPalette(offer.tierKey);
                 return (
                   <button
                     key={coach.providerId}
@@ -7414,8 +7425,17 @@ export default function ArenaClient({
                     role="listitem"
                     disabled={isCoachSaving}
                     onClick={() => void selectOfficialArenaCoach(coach.providerId)}
-                    aria-label={`${siteLanguage === "pt-BR" ? "Selecionar" : "Select"} ${coach.displayName}`}
+                    aria-label={`${siteLanguage === "pt-BR" ? "Selecionar" : "Select"} ${coach.displayName}, ${offer.tierName}, ${offer.displayPrice}`}
+                    data-tier={offer.tierKey}
+                    style={{
+                      "--coach-offer-accent": tierPalette.accent,
+                      "--coach-offer-secondary": tierPalette.secondary,
+                    } as CSSProperties}
                   >
+                    <span className="arena-coach-choice-topline" aria-hidden="true">
+                      <b>{offer.tierName}</b>
+                      <i>{offer.displayPrice}</i>
+                    </span>
                     <span className="arena-coach-choice-card" aria-hidden="true">
                       <TouchlineCoachCard
                         coach={coach}
@@ -7430,14 +7450,14 @@ export default function ArenaClient({
                         optimizeForLiveCompact
                       />
                     </span>
-                    <strong>{coach.displayName}</strong>
-                    <small>{club?.name ?? "TouchLine England"}</small>
-                    <span className="arena-coach-choice-offer" aria-label={`${offer.tierName} ${offer.displayPrice}`}>
-                      <b>{offer.tierName}</b>
-                      <b>{offer.displayPrice}</b>
+                    <span className="arena-coach-choice-copy">
+                      <strong>{coach.displayName}</strong>
+                      <small>{club?.name ?? "TouchLine England"}</small>
                     </span>
-                    <small className="arena-coach-choice-reason">{coachClassificationLabel(offer.classificationReason, siteLanguage)}</small>
-                    <em>{siteLanguage === "pt-BR" ? "Selecionar treinador" : "Select coach"}</em>
+                    <span className="arena-coach-choice-footer">
+                      <small>{coachClassificationLabel(offer.classificationReason, siteLanguage)}</small>
+                      <em>{siteLanguage === "pt-BR" ? "Selecionar treinador" : "Select coach"}</em>
+                    </span>
                   </button>
                 );
               })}
@@ -11426,21 +11446,69 @@ export default function ArenaClient({
           inset: max(72px, calc(env(safe-area-inset-top) + 64px)) max(5vw, env(safe-area-inset-right)) max(58px, calc(env(safe-area-inset-bottom) + 44px)) max(5vw, env(safe-area-inset-left));
           display: grid;
           grid-template-rows: auto minmax(0, 1fr);
-          gap: clamp(12px, 2vh, 24px);
-          border: 1px solid rgba(181,255,75,.25);
-          border-radius: clamp(18px, 2vw, 30px);
-          padding: clamp(16px, 2vw, 30px);
-          background: linear-gradient(125deg, rgba(1,11,10,.94), rgba(3,22,18,.84));
-          box-shadow: 0 30px 90px rgba(0,0,0,.58), inset 0 1px rgba(255,255,255,.06);
+          gap: clamp(14px, 2.3vh, 28px);
+          isolation: isolate;
+          border: 1px solid rgba(181,255,75,.36);
+          border-radius: clamp(22px, 2vw, 34px);
+          padding: clamp(18px, 2.2vw, 34px);
+          background:
+            radial-gradient(circle at 92% 7%, rgba(33,237,220,.13), transparent 25%),
+            radial-gradient(circle at 8% 100%, rgba(181,255,75,.16), transparent 34%),
+            linear-gradient(128deg, rgba(1,11,10,.95), rgba(3,25,20,.86) 54%, rgba(1,10,12,.94));
+          box-shadow: 0 34px 110px rgba(0,0,0,.62), inset 0 1px rgba(255,255,255,.08), inset 0 0 0 1px rgba(120,255,44,.05);
           backdrop-filter: blur(22px);
           overflow: hidden;
         }
 
-        .arena-coach-first-copy { display: grid; gap: 5px; max-width: 720px; }
-        .arena-coach-first-copy span { color: #b5ff4b; font-size: 9px; font-weight: 950; letter-spacing: .14em; }
-        .arena-coach-first-copy h1 { margin: 0; color: #f4ffd8; font-size: clamp(24px, 3.4vw, 46px); line-height: .98; letter-spacing: -.045em; }
-        .arena-coach-first-copy p { margin: 2px 0 0; color: rgba(239,255,210,.66); font-size: 12px; line-height: 1.42; }
+        .arena-coach-first-gate::before,
+        .arena-coach-first-gate::after {
+          position: absolute;
+          z-index: -1;
+          content: "";
+          pointer-events: none;
+        }
+
+        .arena-coach-first-gate::before {
+          inset: 0;
+          opacity: .54;
+          background-image: linear-gradient(105deg, transparent 0 48%, rgba(181,255,75,.1) 48.1% 48.25%, transparent 48.4% 100%);
+          background-size: 78px 100%;
+          mask-image: linear-gradient(90deg, #000, transparent 72%);
+        }
+
+        .arena-coach-first-gate::after {
+          width: min(46vw, 680px);
+          aspect-ratio: 1;
+          top: -62%;
+          right: -10%;
+          border: 1px solid rgba(181,255,75,.22);
+          border-radius: 50%;
+          box-shadow: 0 0 0 30px rgba(181,255,75,.035), 0 0 0 76px rgba(42,218,205,.025);
+        }
+
+        .arena-coach-market-header { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+        .arena-coach-first-copy { display: grid; gap: 7px; max-width: 800px; }
+        .arena-coach-first-copy > span { color: #b5ff4b; font-size: 9px; font-weight: 950; letter-spacing: .16em; }
+        .arena-coach-first-copy h1 { margin: 0; color: #f4ffd8; font-size: clamp(33px, 4.6vw, 64px); font-weight: 800; line-height: .9; letter-spacing: -.07em; }
+        .arena-coach-first-copy h1 i { color: #b5ff4b; font-family: inherit; font-style: italic; font-weight: 600; }
+        .arena-coach-first-copy p { max-width: 690px; margin: 4px 0 0; color: rgba(239,255,210,.72); font-size: clamp(11px, 1vw, 14px); line-height: 1.45; }
         .arena-coach-first-copy .arena-coach-selection-error { color: #ffd6c7; font-weight: 800; }
+
+        .arena-coach-market-proof {
+          display: grid;
+          min-width: 154px;
+          gap: 1px;
+          border: 1px solid rgba(181,255,75,.28);
+          border-radius: 16px;
+          padding: 12px 14px;
+          color: #f5ffd8;
+          background: rgba(1,10,10,.5);
+          box-shadow: inset 0 1px rgba(255,255,255,.06);
+        }
+
+        .arena-coach-market-proof strong { color: #b5ff4b; font-size: 24px; line-height: 1; }
+        .arena-coach-market-proof span { font-size: 8px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+        .arena-coach-market-proof small { margin-top: 4px; color: rgba(239,255,210,.52); font-size: 8px; }
 
         .arena-coach-first-gate.is-bootstrap-pending {
           grid-template-rows: auto auto;
@@ -11488,70 +11556,86 @@ export default function ArenaClient({
 
         .arena-coach-choice-rail {
           display: grid;
-          grid-auto-flow: column;
-          grid-auto-columns: clamp(128px, 13vw, 170px);
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr));
           align-items: start;
-          gap: 11px;
+          align-content: start;
+          gap: clamp(10px, 1.1vw, 16px);
           min-height: 0;
-          overflow-x: auto;
-          overflow-y: hidden;
-          padding: 4px 2px 14px;
+          overflow: auto;
+          padding: 4px 2px 18px;
           scrollbar-color: rgba(181,255,75,.55) transparent;
         }
 
         .arena-coach-choice {
           display: grid;
-          gap: 5px;
-          border: 1px solid rgba(255,255,255,.1);
-          border-radius: 14px;
-          padding: 8px;
+          grid-template-rows: auto minmax(0, 1fr) auto auto;
+          gap: 7px;
+          min-width: 0;
+          border: 1px solid color-mix(in srgb, var(--coach-offer-accent) 45%, rgba(255,255,255,.12));
+          border-radius: 18px;
+          padding: 9px;
           color: #f5ffd8;
-          background: rgba(255,255,255,.035);
+          background:
+            linear-gradient(145deg, color-mix(in srgb, var(--coach-offer-secondary) 16%, transparent), rgba(1,13,13,.76) 58%),
+            rgba(255,255,255,.035);
+          box-shadow: inset 0 1px rgba(255,255,255,.09), 0 14px 32px rgba(0,0,0,.22);
           text-align: left;
           cursor: pointer;
-          transition: transform .16s ease, border-color .16s ease, background .16s ease;
+          transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
         }
 
         .arena-coach-choice:hover,
         .arena-coach-choice:focus-visible {
-          border-color: rgba(181,255,75,.7);
-          background: rgba(181,255,75,.1);
+          border-color: var(--coach-offer-accent);
+          background: linear-gradient(145deg, color-mix(in srgb, var(--coach-offer-accent) 20%, transparent), rgba(1,16,15,.88));
+          box-shadow: 0 18px 42px color-mix(in srgb, var(--coach-offer-accent) 20%, transparent), inset 0 1px rgba(255,255,255,.12);
           outline: 0;
-          transform: translateY(-3px);
+          transform: translateY(-5px);
         }
 
         .arena-coach-choice:disabled { cursor: wait; opacity: .64; }
-        .arena-coach-choice-card { display: block; overflow: hidden; border-radius: 10px; aspect-ratio: .75; background: rgba(0,0,0,.28); }
+        .arena-coach-choice-topline { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+        .arena-coach-choice-topline b { overflow: hidden; color: var(--coach-offer-accent); font-size: 8px; font-weight: 950; letter-spacing: .08em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+        .arena-coach-choice-topline i { flex: 0 0 auto; color: #fff4b1; font-size: 13px; font-style: normal; font-weight: 950; }
+        .arena-coach-choice-card { display: block; overflow: hidden; border: 1px solid color-mix(in srgb, var(--coach-offer-accent) 24%, transparent); border-radius: 13px; aspect-ratio: .75; background: rgba(0,0,0,.34); box-shadow: inset 0 0 30px rgba(0,0,0,.4); }
         .arena-coach-choice-card > * { width: 100%; height: 100%; }
-        .arena-coach-choice strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-        .arena-coach-choice small { overflow: hidden; color: rgba(255,255,255,.55); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+        .arena-coach-choice-copy { display: grid; min-width: 0; gap: 2px; }
+        .arena-coach-choice strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+        .arena-coach-choice small { overflow: hidden; color: rgba(255,255,255,.58); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
         .arena-coach-offer-status { display: grid; align-self: center; gap: 9px; max-width: 340px; color: rgba(239,255,210,.7); font-size: 11px; line-height: 1.45; }
         .arena-coach-offer-status p { margin: 0; }
         .arena-coach-login-link { display: inline-flex; width: fit-content; align-items: center; min-height: 44px; border: 1px solid rgba(181,255,75,.58); border-radius: 999px; padding: 0 15px; color: #e4ffc1; background: rgba(101,176,15,.14); font-size: 10px; font-weight: 950; text-decoration: none; }
         .arena-coach-login-link:hover, .arena-coach-login-link:focus-visible { border-color: #c5ff6d; background: rgba(181,255,75,.24); color: #fff; outline: none; }
-        .arena-coach-choice-offer { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; color: #c8ff77; font-size: 7px; font-weight: 950; letter-spacing: .035em; }
-        .arena-coach-choice-offer b:last-child { color: #fff4b1; font-size: 10px; }
-        .arena-coach-choice-reason { color: rgba(239,255,210,.72) !important; font-size: 7px !important; }
-        .arena-coach-choice em { color: #b5ff4b; font-size: 7px; font-style: normal; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+        .arena-coach-choice-footer { display: grid; gap: 4px; padding-top: 7px; border-top: 1px solid color-mix(in srgb, var(--coach-offer-accent) 22%, transparent); }
+        .arena-coach-choice-footer small { color: rgba(239,255,210,.72); font-size: 7px; }
+        .arena-coach-choice-footer em { color: var(--coach-offer-accent); font-size: 8px; font-style: normal; font-weight: 950; letter-spacing: .09em; text-transform: uppercase; }
 
         @media (max-width: 760px) {
           .arena-intro-actions { top: max(12px, calc(env(safe-area-inset-top) + 6px)); right: max(10px, env(safe-area-inset-right)); }
           .arena-intro-actions .arena-intro-replay-toggle,
           .arena-intro-actions .arena-entry-skip-toggle { min-height: 44px; gap: 6px; padding: 0 12px; font-size: 8px; }
           .arena-coach-first-gate { inset: max(54px, calc(env(safe-area-inset-top) + 46px)) 10px max(10px, calc(env(safe-area-inset-bottom) + 6px)); padding: 13px; }
+          .arena-coach-market-header { align-items: start; }
+          .arena-coach-market-proof { display: none; }
+          .arena-coach-first-copy h1 { font-size: clamp(27px, 8vw, 40px); }
           .arena-coach-first-copy p { font-size: 10px; }
-          .arena-coach-choice-rail { grid-auto-columns: 108px; gap: 7px; }
-          .arena-coach-choice { border-radius: 10px; padding: 5px; }
-          .arena-coach-choice strong { font-size: 8px; }
+          .arena-coach-choice-rail { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: 124px; gap: 8px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; }
+          .arena-coach-choice { border-radius: 12px; padding: 6px; scroll-snap-align: start; }
+          .arena-coach-choice-topline b { font-size: 5px; }
+          .arena-coach-choice-topline i { font-size: 9px; }
+          .arena-coach-choice-card { border-radius: 9px; }
+          .arena-coach-choice strong { font-size: 9px; }
           .arena-coach-choice small { font-size: 6px; }
-          .arena-coach-choice-offer { font-size: 5px; }
-          .arena-coach-choice-offer b:last-child { font-size: 8px; }
-          .arena-coach-choice-reason { font-size: 5px !important; }
-          .arena-coach-choice em { font-size: 5px; }
+          .arena-coach-choice-footer { gap: 3px; padding-top: 5px; }
+          .arena-coach-choice-footer small { font-size: 5px; }
+          .arena-coach-choice-footer em { font-size: 6px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .arena-coach-bootstrap-pulse i { animation: none; }
+          .arena-coach-choice { transition: none; }
+          .arena-coach-choice:hover,
+          .arena-coach-choice:focus-visible { transform: none; }
         }
 
         .club-symbol-carousel {

@@ -103,7 +103,7 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /coachOfferStatus === "idle"[\s\S]*?Entre na sua conta para carregar as ofertas oficiais dos treinadores/);
   assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?\/market-transfer\?lang=/);
   assert.match(arena, /className="arena-coach-login-link" href=\{coachFirstLoginHref\}/);
-  assert.match(arena, /MERCADO · PASSO 1 DE 10/);
+  assert.match(arena, /TOUCHLINE MARKET · PASSO 1 DE 10/);
   assert.match(arena, /<TouchlineSquadBuilderStage/);
   assert.match(arena, /data-testid="arena-coach-bootstrap"/);
   assert.match(arena, /params\.get\("onboarding"\) !== "market"/);
@@ -127,6 +127,13 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(selectCoach, /confirmMarketFormation[\s\S]*?setMarketPositionBucketFilter\("goalkeeper"\)/);
   assert.match(arena, /coachOffersByProviderId/);
   assert.match(arena, /offer\.displayPrice/);
+  assert.match(arena, /className="arena-coach-market-header"/);
+  assert.match(arena, /data-tier=\{offer\.tierKey\}/);
+  assert.match(arena, /"--coach-offer-accent": tierPalette\.accent/);
+  assert.match(arena, /"--coach-offer-secondary": tierPalette\.secondary/);
+  assert.match(arena, /arena-coach-choice-topline/);
+  assert.match(arena, /arena-coach-choice-footer/);
+  assert.match(arena, /grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 176px\), 1fr\)\)/);
   assert.match(arena, /selectArenaFixtureRound\(premierLiveFixtures\)/);
   assert.match(arena, /function isFixtureFinished\(fixture: TouchlineFixture\)/);
   assert.match(arena, /isFixtureFinished\(fixture\)[\s\S]*?\? "FT"/);
