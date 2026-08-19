@@ -9,6 +9,11 @@ type SyncResponse = {
   fixturesStored?: number;
   resourceCount?: number;
   enrichmentCount?: number;
+  providerPlayers?: number;
+  canonicalPlayers?: number;
+  nationalityProvided?: number;
+  countryIdsProvided?: number;
+  recordsUpdated?: number;
   errors?: string[];
   error?: string;
 };
@@ -79,6 +84,35 @@ export function FootballDataSyncControls() {
     }
   }
 
+  async function reconcileQaCountryData() {
+    setState("syncing");
+    setMessage("Validating all 20 Sportmonks squads before the QA-only country-data reconcile…");
+
+    try {
+      const params = new URLSearchParams({
+        scope: "qa_country_sync",
+        runId: crypto.randomUUID(),
+      });
+      const response = await fetch(`/api/football-data/sync-starter?${params.toString()}`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      const result = await response.json() as SyncResponse;
+      if (!response.ok || !result.ok) {
+        const detail = result.errors?.filter(Boolean).join(" ") || result.error || "The QA country-data reconcile failed.";
+        throw new Error(detail);
+      }
+
+      setState("success");
+      setMessage(`${result.recordsUpdated ?? 0} canonical players updated from ${result.providerPlayers ?? 0} verified provider players. Refreshing the control room…`);
+      window.setTimeout(() => window.location.reload(), 1_200);
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "The QA country-data reconcile failed.");
+    }
+  }
+
   return (
     <section className="mt-6 rounded-3xl border border-[#a3ff12]/20 bg-[#a3ff12]/[.045] p-5">
       <p className="text-[9px] font-black text-[#c6ff62]">QA owner action · official fixture source</p>
@@ -102,6 +136,14 @@ export function FootballDataSyncControls() {
           className="rounded-2xl bg-[#a3ff12] px-4 py-3 text-[10px] font-black text-black transition hover:bg-[#c6ff62] disabled:cursor-wait disabled:opacity-60"
         >
           {state === "syncing" ? "Synchronizing official fixtures…" : "Sync official fixtures"}
+        </button>
+        <button
+          type="button"
+          onClick={reconcileQaCountryData}
+          disabled={state === "syncing"}
+          className="rounded-2xl border border-amber-300/35 bg-amber-300/[.08] px-4 py-3 text-[10px] font-black text-amber-100 transition hover:bg-amber-300/[.14] disabled:cursor-wait disabled:opacity-60"
+        >
+          {state === "syncing" ? "Reconciling QA country data…" : "Reconcile QA country data"}
         </button>
         {message ? (
           <p className={state === "error" ? "text-xs font-bold text-rose-200" : "text-xs font-bold text-slate-300"} role="status">

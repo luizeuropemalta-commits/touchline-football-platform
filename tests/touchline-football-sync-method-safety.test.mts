@@ -6,6 +6,10 @@ const routeSource = fs.readFileSync(
   new URL("../app/api/football-data/sync-starter/route.ts", import.meta.url),
   "utf8",
 );
+const controlSource = fs.readFileSync(
+  new URL("../components/admin-football-data-sync-controls.tsx", import.meta.url),
+  "utf8",
+);
 
 test("football-data synchronization rejects state-changing GET requests", () => {
   const getHandler = routeSource.match(
@@ -28,4 +32,11 @@ test("football-data synchronization remains available only through POST", () => 
   assert.match(routeSource, /scope === "qa_country_sync"[\s\S]*?syncQaCountryData/);
   assert.match(routeSource, /randomUUID\(\)/);
   assert.match(routeSource, /Owner session or football data sync secret required/);
+});
+
+test("QA country reconciliation is an explicit owner POST control", () => {
+  assert.match(controlSource, /scope:\s*"qa_country_sync"/);
+  assert.match(controlSource, /runId:\s*crypto\.randomUUID\(\)/);
+  assert.match(controlSource, /method:\s*"POST"/);
+  assert.match(controlSource, /Reconcile QA country data/);
 });
