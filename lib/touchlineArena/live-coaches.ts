@@ -2,6 +2,7 @@ import type { TouchlineCoach } from "../football-data/types";
 import {
   classifyTouchlineCoach,
   type TouchlineCoachClassification,
+  type TouchlineCoachClassificationInput,
 } from "./coach-classification.ts";
 
 export const TOUCHLINE_LIVE_COACHES_FETCHED_AT = "2026-07-27T00:00:00.000Z";
@@ -47,6 +48,38 @@ const TOUCHLINE_LIVE_COACH_SEEDS: readonly TouchlineLiveCoachSeed[] = [
   { teamId: "3", name: "Régis Le Bris", coachId: "529482", nationality: "France", countryId: "17", countryCode3: "FRA" },
   { teamId: "6", name: "Roberto De Zerbi", coachId: "127889", nationality: "Italy", countryId: "251", countryCode3: "ITA" },
 ] as const;
+
+/**
+ * Immutable opening-tier evidence for 2026/27.
+ *
+ * The completed 2025/26 Premier League table and manager register were
+ * captured from the League's official publications. A position is supplied
+ * only when that coach completed the season with that club. A current club is
+ * never substituted for a new coach's previous record.
+ *
+ * Sources:
+ * - https://www.premierleague.com/en/tables/premier-league/2025-26
+ * - https://www.premierleague.com/en/managers
+ * - https://www.premierleague.com/en/news/4673099/the-202627-premier-league-season-officially-starts
+ */
+const TOUCHLINE_COACH_2025_26_EVIDENCE: Readonly<
+  Record<string, Omit<TouchlineCoachClassificationInput, "coachProviderId">>
+> = Object.freeze({
+  // Managers who completed the last Premier League season with this club.
+  "307": { sourceLeagueId: "premier-league", sourceLeagueName: "Premier League", sourceClub: "Arsenal FC", sourceSeasonId: "2025-26", finalPosition: 1 },
+  "455907": { sourceLeagueId: "premier-league", sourceLeagueName: "Premier League", sourceClub: "Aston Villa", sourceSeasonId: "2025-26", finalPosition: 4 },
+  "255": { sourceLeagueId: "premier-league", sourceLeagueName: "Premier League", sourceClub: "Brentford", sourceSeasonId: "2025-26", finalPosition: 9 },
+  "37679": { sourceLeagueId: "premier-league", sourceLeagueName: "Premier League", sourceClub: "Brighton & Hove Albion", sourceSeasonId: "2025-26", finalPosition: 8 },
+  "455355": { sourceLeagueId: "premier-league", sourceLeagueName: "Premier League", sourceClub: "Everton", sourceSeasonId: "2025-26", finalPosition: 13 },
+  "460535": { sourceLeagueId: "premier-league", sourceLeagueName: "Premier League", sourceClub: "Leeds United", sourceSeasonId: "2025-26", finalPosition: 14 },
+  "523911": { sourceLeagueId: "premier-league", sourceLeagueName: "Premier League", sourceClub: "Newcastle United", sourceSeasonId: "2025-26", finalPosition: 12 },
+  "529482": { sourceLeagueId: "premier-league", sourceLeagueName: "Premier League", sourceClub: "Sunderland", sourceSeasonId: "2025-26", finalPosition: 7 },
+
+  // The 2025/26 Championship promotion route is itself the documented
+  // fallback rule. It never borrows a Premier League table position.
+  "95": { sourceLeagueId: "championship", sourceLeagueName: "EFL Championship", sourceClub: "Coventry City", sourceSeasonId: "2025-26", promotionType: "champions" },
+  "74546": { sourceLeagueId: "championship", sourceLeagueName: "EFL Championship", sourceClub: "Hull City", sourceSeasonId: "2025-26", promotionType: "playoff-winners" },
+});
 
 function createLiveCoachSnapshot(seed: TouchlineLiveCoachSeed): TouchlineLiveCoachSnapshot {
   const raw = Object.freeze({
@@ -109,7 +142,10 @@ export const TOUCHLINE_LIVE_COACH_CLASSIFICATIONS: Readonly<Record<string, Touch
   Object.fromEntries(
     TOUCHLINE_LIVE_COACHES.map(({ coach }) => [
       coach.providerId,
-      classifyTouchlineCoach({ coachProviderId: coach.providerId }),
+      classifyTouchlineCoach({
+        coachProviderId: coach.providerId,
+        ...TOUCHLINE_COACH_2025_26_EVIDENCE[coach.providerId],
+      }),
     ]),
   ),
 );

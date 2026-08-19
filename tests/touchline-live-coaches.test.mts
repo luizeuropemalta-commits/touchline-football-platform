@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  TOUCHLINE_LIVE_COACH_CLASSIFICATIONS,
   TOUCHLINE_LIVE_COACHES_BY_TEAM,
   TOUCHLINE_LIVE_COACHES,
   TOUCHLINE_LIVE_COACHES_FETCHED_AT,
@@ -84,6 +85,40 @@ test("exposes the same canonical coach identities for secure ClubOwner selection
   assert.equal(touchlineLiveCoachForProviderId("307")?.coach.name, "Mikel Arteta");
   assert.equal(touchlineLiveCoachForProviderId(" demo-enzo-maresca "), null);
   assert.equal(touchlineLiveCoachForProviderId("unknown"), null);
+});
+
+test("uses the audited 2025/26 season evidence instead of colouring every coach Sapphire Blue", () => {
+  const expectedTiers = {
+    "307": "diamond-gold", // Mikel Arteta — Arsenal, 1st
+    "455907": "clear-diamond", // Unai Emery — Aston Villa, 4th
+    "255": "radiant-gold", // Keith Andrews — Brentford, 9th
+    "37679": "emerald-green", // Fabian Hürzeler — Brighton, 8th
+    "455355": "amethyst-purple", // David Moyes — Everton, 13th
+    "460535": "amethyst-purple", // Daniel Farke — Leeds, 14th
+    "523911": "radiant-gold", // Eddie Howe — Newcastle, 12th
+    "529482": "emerald-green", // Régis Le Bris — Sunderland, 7th
+  } as const;
+
+  for (const [providerId, tierKey] of Object.entries(expectedTiers)) {
+    const classification = TOUCHLINE_LIVE_COACH_CLASSIFICATIONS[providerId];
+    assert.equal(classification?.tierKey, tierKey, providerId);
+    assert.equal(classification?.classificationSource, "last-complete-season", providerId);
+    assert.equal(classification?.sourceSeasonId, "2025-26", providerId);
+  }
+
+  // Coventry and Hull reached this league through 2025/26 promotion, so they
+  // remain the approved paid Sapphire tier rather than being ranked from an
+  // unrelated Premier League club.
+  assert.equal(TOUCHLINE_LIVE_COACH_CLASSIFICATIONS["95"]?.classificationReason, "promoted");
+  assert.equal(TOUCHLINE_LIVE_COACH_CLASSIFICATIONS["74546"]?.classificationReason, "promoted");
+
+  // Coaches appointed after the final table are intentionally pending; their
+  // current club cannot be used to manufacture historical reputation.
+  assert.equal(TOUCHLINE_LIVE_COACH_CLASSIFICATIONS["511"]?.classificationReason, "classification-pending");
+  assert.equal(TOUCHLINE_LIVE_COACH_CLASSIFICATIONS["19960388"]?.classificationReason, "classification-pending");
+
+  const tierKeys = new Set(Object.values(TOUCHLINE_LIVE_COACH_CLASSIFICATIONS).map(({ tierKey }) => tierKey));
+  assert.ok(tierKeys.size > 1, "coach catalogue must not collapse to one blue tier");
 });
 
 test("every selectable TouchLine England club always has its own coach", () => {
