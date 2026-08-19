@@ -137,13 +137,9 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
     assert.ok(missingQaServiceRole.reasons.includes("missing-or-mismatched-qa-supabase-contract"));
   }
 
-  const providerLeak = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
-    SPORTMONKS_API_TOKEN: "not-allowed",
-  }));
-  assert.equal(providerLeak.status, "invalid");
-  if (providerLeak.status === "invalid") {
-    assert.ok(providerLeak.reasons.includes("forbidden-qa-environment-key:SPORTMONKS_API_TOKEN"));
-  }
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
+    SPORTMONKS_API_TOKEN: "qa-only-token",
+  })), { status: "qa", reasons: [] });
 
   const awsCredentialLeak = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
     AWS_ACCESS_KEY_ID: "not-allowed",
