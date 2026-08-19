@@ -69,6 +69,7 @@ type PremierSquadPlayer = {
   cardPriceVersion?: string | null;
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   countryCode3?: string | null;
+  nationality?: string | null;
 };
 
 type ClubMatchPreview = {
@@ -172,7 +173,7 @@ async function loadClubSquadCards(club: NonNullable<ReturnType<typeof findTouchL
       clubLogoUrl: club.logoUrl ?? "",
     });
     const result = await fetchTouchlineInternalJson<
-      | { ok: true; players: PremierSquadPlayer[]; status?: string; cached?: boolean; fetchedAt?: string }
+      | { ok: true; players: PremierSquadPlayer[]; rosterPlayers?: PremierSquadPlayer[]; status?: string; cached?: boolean; fetchedAt?: string }
       | { ok: false; error?: string; status?: string }
     >(`/api/football-data/premier-squad?${params.toString()}`);
 
@@ -180,7 +181,7 @@ async function loadClubSquadCards(club: NonNullable<ReturnType<typeof findTouchL
     const payload = result.data;
 
     return {
-      cards: payload.players.map((player) => squadApiPlayerToCard(player, club.name)),
+      cards: (payload.rosterPlayers ?? payload.players).map((player) => squadApiPlayerToCard(player, club.name)),
       status: payload.status ?? `${payload.players.length} TouchLine cards`,
       source: payload.cached ? touchLineT(locale, "dataCache") : touchLineT(locale, "liveData"),
       state: "ready" as const,

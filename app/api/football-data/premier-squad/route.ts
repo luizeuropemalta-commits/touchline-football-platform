@@ -326,6 +326,10 @@ function squadPayload(
       name: metadata.clubName,
       shortCode: metadata.clubShortCode,
     },
+    // Football identity is distinct from the eligibility to print a game card.
+    // Consumers that show a squad/line-up must retain every real player and
+    // disclose pending data rather than making the player disappear.
+    rosterPlayers: sortedPlayers,
     players,
     pendingPlayers,
     dataQuality: {

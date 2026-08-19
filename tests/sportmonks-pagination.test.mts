@@ -79,6 +79,39 @@ test("the non-paginated squad endpoint preserves more than 25 members", async ()
   });
 });
 
+test("the extended squad relation preserves provider nationality and country for canonical persistence", async () => {
+  await withMockedProvider((async (input) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.pathname.endsWith("/extended")) {
+      return jsonResponse({
+        data: [{
+          id: 9001,
+          player_id: 101,
+          player: { id: 101, display_name: "Provider Player" },
+          nationality: { id: 56, name: "England" },
+          nationality_id: 56,
+        }],
+      });
+    }
+    return jsonResponse({
+      data: [{
+        id: 5001,
+        player_id: 101,
+        jersey_number: 7,
+        player: { id: 101, display_name: "Provider Player" },
+        position: { id: 25, name: "Midfielder" },
+      }],
+    });
+  }) as typeof fetch, async (provider) => {
+    const result = await provider.getSquad("9");
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.data.length, 1);
+    assert.equal(result.data[0]?.player.nationality, "England");
+    assert.equal(result.data[0]?.player.countryId, "56");
+  });
+});
+
 test("player search follows has_more until the requested limit exceeds the first 25 results", async () => {
   const requestedPages: number[] = [];
 

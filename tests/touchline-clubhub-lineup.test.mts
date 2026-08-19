@@ -178,14 +178,33 @@ test("ClubHub fail-closes the named technical bench for incomplete or mismatched
   }
 });
 
-test("ClubHub renders only a published card profile without valuation or contract fallback", () => {
+test("ClubHub retains all eleven football slots even when a card publication is pending", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /lineup\.players\.filter\(\(\{ card \}\) => Boolean\(card\.editorialCard\)\)/);
+  assert.match(source, /lineup\.players\.length \? lineup\.players\.map/);
+  assert.match(source, /if \(!card\.editorialCard\)/);
+  assert.match(source, /CARD PENDING REVIEW/);
+  assert.match(source, /DATA PENDING/);
+  assert.doesNotMatch(source, /lineup\.players\.filter\(\(\{ card \}\) => Boolean\(card\.editorialCard\)\)/);
   assert.match(source, /editorialCard: card\.editorialCard/);
   assert.match(source, /activeContractCard: null/);
   assert.match(source, /buildTouchlinePlayerCardZoomDetails/);
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation|activeContractCard: activeContract/);
+});
+
+test("ClubHub calls an unconfirmed eleven a Squad Preview, never an expected line-up", () => {
+  const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /Squad Preview/);
+  assert.doesNotMatch(source, /Predicted line-up/);
+});
+
+test("the persisted-squad API preserves every canonical roster player for Club Hub", () => {
+  const source = readFileSync(new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /rosterPlayers: sortedPlayers/);
+  assert.match(page, /payload\.rosterPlayers \?\? payload\.players/);
 });
 
 test("shared player cards require a manual published profile, apart from a frozen owned-contract render", () => {

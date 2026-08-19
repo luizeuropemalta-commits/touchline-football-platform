@@ -176,6 +176,33 @@
   transition: transform .18s ease, filter .18s ease;
 }
 
+.pendingCard {
+  width: 100%;
+  min-height: 118px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255, 215, 92, .68);
+  border-radius: 11px;
+  background:
+    linear-gradient(150deg, rgba(255, 215, 92, .17), transparent 54%),
+    linear-gradient(180deg, rgba(4, 13, 14, .96), rgba(1, 6, 7, .94));
+  box-shadow: 0 8px 20px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,255,255,.06);
+  color: #fff4bd;
+  text-align: center;
+}
+
+.pendingCard span {
+  color: #ffe18a;
+  font-size: 6px;
+  font-weight: 1000;
+  letter-spacing: .09em;
+}
+
+.pendingCard strong { font-size: 25px; line-height: 1; }
+.pendingCard small { color: rgba(255,255,255,.64); font-size: 7px; font-weight: 900; }
+
 .player:hover .card,
 .player:focus-within .card {
   transform: translateY(-5px) scale(1.055);
@@ -199,6 +226,8 @@
     width: 58px;
     --touchline-card-static-scale: .1348837209;
   }
+
+  .pendingCard { min-height: 86px; }
 }
 
 @media (min-width: 981px) and (max-width: 1199px) {

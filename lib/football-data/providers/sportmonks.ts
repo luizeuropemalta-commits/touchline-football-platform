@@ -479,8 +479,16 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const extendedPlayersById = new Map<string, SportmonksEntity>();
     if (extendedRequest.configured && extendedRequest.value.ok) {
       for (const item of extendedRequest.value.data?.data ?? []) {
-        const id = asString(item.id);
-        if (id) extendedPlayersById.set(id, item);
+        // The documented extended endpoint may return either a player object
+        // or a squad-member object containing `player_id`/`player`. Index the
+        // canonical player identity in both shapes; indexing only `item.id`
+        // silently dropped nationality when that id was the squad-member id.
+        const nestedPlayer = this.relationEntity(item, "player") ?? (item.player as SportmonksEntity | undefined);
+        const extendedPlayer: SportmonksEntity = nestedPlayer
+          ? this.mergePlayerRaw(nestedPlayer, item) ?? nestedPlayer
+          : item;
+        const playerId = asString(nestedPlayer?.id) ?? asString(item.player_id) ?? asString(item.id);
+        if (playerId) extendedPlayersById.set(playerId, extendedPlayer);
       }
     }
 
@@ -866,11 +874,24 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   private mergePlayerRaw(primary?: SportmonksEntity, extended?: SportmonksEntity) {
     if (!primary) return extended;
     if (!extended) return primary;
+    const primaryNationality = this.relationEntity(primary, "nationality");
+    const primaryCountry = this.relationEntity(primary, "country");
     return {
       ...extended,
       ...primary,
-      country: primary.country ?? extended.country,
-      nationality: primary.nationality ?? extended.nationality,
+      // Prefer the primary relation only when it carries a usable country
+      // name. A sparse primary squad row commonly contains an empty relation
+      // that would otherwise mask the extended endpoint's canonical data.
+      country: asString(primaryCountry?.name) ? primary.country : extended.country ?? primary.country,
+      nationality: asString(primaryNationality?.name) ? primary.nationality : extended.nationality ?? primary.nationality,
+      country_id: asString(primary.country_id)
+        ?? asString(primary.nationality_id)
+        ?? asString(extended.country_id)
+        ?? asString(extended.nationality_id),
+      nationality_id: asString(primary.nationality_id)
+        ?? asString(primary.country_id)
+        ?? asString(extended.nationality_id)
+        ?? asString(extended.country_id),
       position: primary.position ?? extended.position,
       detailedPosition: primary.detailedPosition ?? extended.detailedPosition,
       market_value: primary.market_value ?? extended.market_value,
