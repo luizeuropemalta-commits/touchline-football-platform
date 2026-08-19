@@ -24,5 +24,6 @@ test("football-data synchronization remains available only through POST", () => 
   );
   assert.match(routeSource, /scope === "fixture_schedule"[\s\S]*?syncSportmonksFixtureSchedule/);
   assert.match(routeSource, /scope === "foundation"[\s\S]*?syncSportmonksStarterFoundation/);
+  assert.match(routeSource, /scope === "capabilities"[\s\S]*?syncSportmonksProviderCapabilities/);
   assert.match(routeSource, /Owner session or football data sync secret required/);
 });

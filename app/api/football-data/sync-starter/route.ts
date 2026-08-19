@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
+import { syncSportmonksProviderCapabilities } from "@/lib/football-data/capability-sync";
 import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-schedule-sync";
 import { syncSportmonksStarterFoundation } from "@/lib/football-data/starter-sync";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -60,7 +61,9 @@ async function runFootballDataSync(request: NextRequest) {
   const scope = request.nextUrl.searchParams.get("scope") ?? "foundation";
 
   try {
-    const result = scope === "fixture_schedule"
+    const result = scope === "capabilities"
+      ? await syncSportmonksProviderCapabilities()
+      : scope === "fixture_schedule"
       ? await syncSportmonksFixtureSchedule(admin, {
           competitionId,
           fromDate: request.nextUrl.searchParams.get("fromDate") ?? undefined,
@@ -72,7 +75,7 @@ async function runFootballDataSync(request: NextRequest) {
 
     if (!result) {
       return NextResponse.json(
-        { ok: false, status: "invalid_scope", error: "Use scope=foundation or scope=fixture_schedule." },
+        { ok: false, status: "invalid_scope", error: "Use scope=capabilities, foundation or fixture_schedule." },
         { status: 400, headers: { "Cache-Control": "no-store" } },
       );
     }
@@ -81,7 +84,9 @@ async function runFootballDataSync(request: NextRequest) {
       ...result,
       mode: auth.mode,
       syncedAt: new Date().toISOString(),
-      note: scope === "fixture_schedule"
+      note: scope === "capabilities"
+        ? "Sportmonks account entitlements were recorded behind the protected provider boundary."
+        : scope === "fixture_schedule"
         ? "Sportmonks schedule data was normalized before the Live read model can publish it."
         : "TouchLine Data feeds the normalized TouchLine database. Frontend modules should read from /api/football-data/foundation.",
     });
