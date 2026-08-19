@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { registerHooks } from "node:module";
 import test from "node:test";
 
@@ -13,6 +14,7 @@ registerHooks({
 
 const { buildQaTwentyClubRosterSyncPlan } = await import("../lib/football-data/qa-twenty-club-roster-sync.ts");
 const { TOUCHLINE_ENGLAND_CLUBS } = await import("../lib/touchlineArena/demo-data.ts");
+const rosterSyncSource = readFileSync(new URL("../lib/football-data/qa-twenty-club-roster-sync.ts", import.meta.url), "utf8");
 
 function completeProviderScope() {
   return TOUCHLINE_ENGLAND_CLUBS.map((club, clubIndex) => ({
@@ -49,4 +51,12 @@ test("the global QA roster preflight fails closed for a duplicate or partial pro
   assert.equal(plan.ok, false);
   assert.ok(plan.errors.includes("provider-club-scope-incomplete"));
   assert.ok(plan.errors.some((error) => error.startsWith("provider-player-duplicate-or-missing:")));
+});
+
+test("a current provider-backed roster is a no-write reconciliation", () => {
+  const noWriteGate = rosterSyncSource.match(/async function isCurrentQaTwentyClubRoster[\s\S]*?return true;[\s\S]*?\n}/)?.[0] ?? "";
+  assert.match(noWriteGate, /nationality/);
+  assert.match(noWriteGate, /country_id/);
+  assert.match(noWriteGate, /jersey_number/);
+  assert.match(rosterSyncSource, /if \(await isCurrentQaTwentyClubRoster\(admin, squads\)\)[\s\S]*?status: "already-current"/);
 });

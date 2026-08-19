@@ -130,6 +130,86 @@ function playerInput(member: TouchlineSquadMember): SquadSnapshotPlayerInput {
   };
 }
 
+type CurrentMembershipRow = Readonly<{
+  player_id: string;
+  jersey_number: number | null;
+  position: string | null;
+}>;
+
+type CurrentPlayerRow = Readonly<{
+  id: string;
+  provider_player_id: string;
+  current_club_id: string | null;
+  display_name: string | null;
+  name: string | null;
+  nationality: string | null;
+  country_id: string | null;
+  position: string | null;
+}>;
+
+/**
+ * A repeat must never turn a completed reconciliation into another full write
+ * merely because an owner pressed the control twice. This compares every
+ * provider-backed identity, club, country/nationality, position and supplied
+ * shirt value before the backup/write boundary. Missing provider shirt values
+ * deliberately preserve the known canonical shirt number.
+ */
+async function isCurrentQaTwentyClubRoster(admin: AdminClient, squads: readonly ProviderSquad[]) {
+  const teamIds = squads.map((squad) => squad.teamId);
+  const { data: clubs, error: clubsError } = await admin
+    .from("football_clubs")
+    .select("id,provider_team_id")
+    .eq("provider", PROVIDER)
+    .in("provider_team_id", teamIds);
+  if (clubsError || !clubs || clubs.length !== squads.length) return false;
+
+  const clubByTeamId = new Map(
+    (clubs as Array<{ id: string; provider_team_id: string }>).map((club) => [text(club.provider_team_id), club.id]),
+  );
+
+  for (const squad of squads) {
+    const clubId = clubByTeamId.get(squad.teamId);
+    if (!clubId) return false;
+    const { data: membershipRows, error: membershipsError } = await admin
+      .from("football_squad_members")
+      .select("player_id,jersey_number,position")
+      .eq("provider", PROVIDER)
+      .eq("club_id", clubId)
+      .eq("status", "active");
+    const memberships = (membershipRows ?? []) as CurrentMembershipRow[];
+    if (membershipsError || memberships.length !== squad.members.length) return false;
+
+    const playerIds = memberships.map((membership) => text(membership.player_id)).filter(Boolean);
+    if (playerIds.length !== memberships.length || new Set(playerIds).size !== memberships.length) return false;
+    const { data: playerRows, error: playersError } = await admin
+      .from("football_players")
+      .select("id,provider_player_id,current_club_id,display_name,name,nationality,country_id,position")
+      .in("id", playerIds);
+    const players = (playerRows ?? []) as CurrentPlayerRow[];
+    if (playersError || players.length !== memberships.length) return false;
+
+    const playerById = new Map(players.map((player) => [text(player.id), player]));
+    const currentByProviderId = new Map(memberships.map((membership) => {
+      const player = playerById.get(text(membership.player_id));
+      return [text(player?.provider_player_id), { membership, player }] as const;
+    }));
+    if (currentByProviderId.size !== squad.members.length || currentByProviderId.has("")) return false;
+
+    for (const member of squad.members) {
+      const expected = playerInput(member);
+      const current = currentByProviderId.get(text(expected.providerId));
+      if (!current?.player || text(current.player.current_club_id) !== clubId) return false;
+      if ((text(current.player.display_name) || text(current.player.name)) !== text(expected.name)) return false;
+      if (text(current.player.nationality) !== text(expected.nationality)) return false;
+      if (text(current.player.country_id) !== text(expected.countryId)) return false;
+      if (text(current.membership.position) !== text(expected.position)) return false;
+      if (expected.shirtNumber !== null && current.membership.jersey_number !== expected.shirtNumber) return false;
+    }
+  }
+
+  return true;
+}
+
 async function verifyAppliedRoster(admin: AdminClient, squads: readonly ProviderSquad[]) {
   const teamIds = squads.map((squad) => squad.teamId);
   const { data: clubs, error: clubsError } = await admin
@@ -168,6 +248,18 @@ export async function syncQaTwentyClubRosters(admin: AdminClient, runId: string)
   const squads = await readProviderSquads();
   const plan = buildQaTwentyClubRosterSyncPlan(squads);
   if (!plan.ok) throw new Error(`QA twenty-club roster preflight failed: ${plan.errors.join(",")}`);
+
+  if (await isCurrentQaTwentyClubRoster(admin, squads)) {
+    return Object.freeze({
+      status: "already-current" as const,
+      runId,
+      clubs: squads.length,
+      providerPlayers: plan.providerPlayers,
+      nationalityProvided: plan.nationalityProvided,
+      countryIdsProvided: plan.countryIdsProvided,
+      shirtNumbersProvided: plan.shirtNumbersProvided,
+    });
+  }
 
   const { data: backup, error: backupError } = await admin.rpc("touchline_capture_qa_twenty_club_roster_backup", {
     p_project_ref: QA_PROJECT_REF,
