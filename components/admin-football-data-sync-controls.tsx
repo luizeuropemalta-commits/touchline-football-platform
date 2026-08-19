@@ -65,7 +65,7 @@ export function FootballDataSyncControls() {
           disabled={state === "syncing"}
           className="rounded-2xl bg-[#a3ff12] px-4 py-3 text-[10px] font-black text-black transition hover:bg-[#c6ff62] disabled:cursor-wait disabled:opacity-60"
         >
-          {state === "syncing" ? "Synchronizing official fixtures…" : "Sync 10 official fixtures"}
+          {state === "syncing" ? "Synchronizing official fixtures…" : "Sync official fixtures"}
         </button>
         {message ? (
           <p className={state === "error" ? "text-xs font-bold text-rose-200" : "text-xs font-bold text-slate-300"} role="status">

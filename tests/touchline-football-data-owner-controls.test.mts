@@ -14,4 +14,5 @@ test("owner sync control is bounded to the verified opening-round schedule", asy
   assert.match(source, /method: "POST"/);
   assert.match(source, /credentials: "same-origin"/);
   assert.match(source, /no fixture is deleted/i);
+  assert.doesNotMatch(source, /Sync 10 official fixtures/);
 });

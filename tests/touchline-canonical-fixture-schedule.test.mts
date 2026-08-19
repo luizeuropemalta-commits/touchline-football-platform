@@ -37,3 +37,16 @@ test("the public Live boundary accepts only numeric Sportmonks fixture identifie
   assert.match(store, /\^\[1-9\]\\d\{0,19\}\$/);
   assert.match(store, /provider !== "sportmonks" \|\| !isOfficialSportmonksFixtureId\(providerId\)/);
 });
+
+test("legacy representative fixtures are backed up before removal from the canonical schedule", async () => {
+  const migration = await readFile(new URL("../supabase/migrations/20260819111335_quarantine_legacy_fixture_records.sql", import.meta.url), "utf8");
+  const backupIndex = migration.indexOf("insert into public.football_fixture_legacy_quarantine");
+  const removalIndex = migration.indexOf("delete from public.football_fixtures");
+
+  assert.match(migration, /fixture_row jsonb not null/);
+  assert.match(migration, /provider_fixture_id like 'qa-representative-%'/);
+  assert.ok(backupIndex >= 0);
+  assert.ok(removalIndex > backupIndex);
+  assert.match(migration, /Rollback:/);
+  assert.match(migration, /revoke all privileges on table public\.football_fixture_legacy_quarantine from public, anon, authenticated/);
+});
