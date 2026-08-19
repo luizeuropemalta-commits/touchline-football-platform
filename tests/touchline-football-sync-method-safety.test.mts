@@ -10,6 +10,10 @@ const controlSource = fs.readFileSync(
   new URL("../components/admin-football-data-sync-controls.tsx", import.meta.url),
   "utf8",
 );
+const diagnosticSource = fs.readFileSync(
+  new URL("../app/api/football-data/provider-diagnostic/route.ts", import.meta.url),
+  "utf8",
+);
 
 test("football-data synchronization rejects state-changing GET requests", () => {
   const getHandler = routeSource.match(
@@ -39,4 +43,11 @@ test("QA country reconciliation is an explicit owner POST control", () => {
   assert.match(controlSource, /runId:\s*crypto\.randomUUID\(\)/);
   assert.match(controlSource, /method:\s*"POST"/);
   assert.match(controlSource, /Reconcile QA country data/);
+});
+
+test("twenty-club provider diagnostic remains owner-only and read-only", () => {
+  assert.match(diagnosticSource, /if \(!await authorizeOwner\(\)\)/);
+  assert.match(diagnosticSource, /scope === "twenty"/);
+  assert.match(diagnosticSource, /sportmonks-live-read-only/);
+  assert.doesNotMatch(diagnosticSource, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 });

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
+import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +21,90 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+const PROVIDER = "sportmonks";
+const MAX_DIAGNOSTIC_IDS_PER_CLUB = 24;
+
+type ClubRow = Readonly<{ id: string; provider_team_id: string }>;
+type MembershipRow = Readonly<{ club_id: string; player_id: string }>;
+type PlayerRow = Readonly<{ id: string; provider_player_id: string }>;
+
+async function twentyClubReadOnlyDiagnostic() {
+  const admin = createAdminClient();
+  if (!admin) throw new Error("QA canonical player data is unavailable.");
+  const teamIds = TOUCHLINE_ENGLAND_CLUBS.map((club) => club.teamId);
+  const { data: clubs, error: clubsError } = await admin
+    .from("football_clubs")
+    .select("id,provider_team_id")
+    .eq("provider", PROVIDER)
+    .in("provider_team_id", teamIds);
+  if (clubsError || !clubs) throw new Error("QA club scope could not be read.");
+
+  const clubRows = clubs as ClubRow[];
+  const clubIds = clubRows.map((club) => club.id);
+  const { data: memberships, error: membershipsError } = await admin
+    .from("football_squad_members")
+    .select("club_id,player_id")
+    .eq("provider", PROVIDER)
+    .eq("status", "active")
+    .in("club_id", clubIds);
+  if (membershipsError || !memberships) throw new Error("QA active memberships could not be read.");
+
+  const membershipRows = memberships as MembershipRow[];
+  const playerIds = membershipRows.map((membership) => membership.player_id);
+  const { data: players, error: playersError } = await admin
+    .from("football_players")
+    .select("id,provider_player_id")
+    .eq("provider", PROVIDER)
+    .in("id", playerIds);
+  if (playersError || !players) throw new Error("QA canonical players could not be read.");
+
+  const playerById = new Map((players as PlayerRow[]).map((player) => [player.id, player.provider_player_id] as const));
+  const canonicalByTeamId = new Map<string, Set<string>>();
+  for (const club of clubRows) canonicalByTeamId.set(club.provider_team_id, new Set<string>());
+  for (const membership of membershipRows) {
+    const club = clubRows.find((candidate) => candidate.id === membership.club_id);
+    const providerPlayerId = playerById.get(membership.player_id);
+    if (club && providerPlayerId) canonicalByTeamId.get(club.provider_team_id)?.add(providerPlayerId);
+  }
+
+  const provider = createFootballDataProvider("sportmonks");
+  const clubDiagnostics: Array<Record<string, unknown>> = [];
+  let providerPlayers = 0;
+  let canonicalPlayers = 0;
+  for (const club of TOUCHLINE_ENGLAND_CLUBS) {
+    const squad = await provider.getSquad(club.teamId);
+    if (!squad.ok) throw new Error(`Sportmonks squad ${club.teamId} failed: ${squad.error.code}`);
+    const providerIds = new Set(squad.data.map((member) => text(member.player.providerId)).filter(Boolean));
+    const canonicalIds = canonicalByTeamId.get(club.teamId) ?? new Set<string>();
+    const providerOnly = [...providerIds].filter((id) => !canonicalIds.has(id));
+    const canonicalOnly = [...canonicalIds].filter((id) => !providerIds.has(id));
+    providerPlayers += providerIds.size;
+    canonicalPlayers += canonicalIds.size;
+    clubDiagnostics.push({
+      teamId: club.teamId,
+      club: club.name,
+      providerPlayers: providerIds.size,
+      canonicalPlayers: canonicalIds.size,
+      providerOnly: providerOnly.length,
+      canonicalOnly: canonicalOnly.length,
+      providerOnlyIds: providerOnly.slice(0, MAX_DIAGNOSTIC_IDS_PER_CLUB),
+      canonicalOnlyIds: canonicalOnly.slice(0, MAX_DIAGNOSTIC_IDS_PER_CLUB),
+    });
+  }
+
+  return {
+    scope: "twenty-club-read-only",
+    clubs: clubDiagnostics,
+    totals: {
+      clubs: clubDiagnostics.length,
+      providerPlayers,
+      canonicalPlayers,
+      providerOnly: clubDiagnostics.reduce((total, club) => total + Number(club.providerOnly), 0),
+      canonicalOnly: clubDiagnostics.reduce((total, club) => total + Number(club.canonicalOnly), 0),
+    },
+  };
+}
+
 /**
  * QA owner-only, read-only evidence endpoint. It deliberately returns only
  * coverage counts and a few non-sensitive sample fields; provider tokens and
@@ -27,6 +113,22 @@ function text(value: unknown) {
 export async function GET(request: NextRequest) {
   if (!await authorizeOwner()) {
     return NextResponse.json({ ok: false, error: "Owner session required." }, { status: 401 });
+  }
+
+  const scope = text(request.nextUrl.searchParams.get("scope"));
+  if (scope === "twenty") {
+    try {
+      return NextResponse.json({
+        ok: true,
+        source: "sportmonks-live-read-only",
+        diagnostic: await twentyClubReadOnlyDiagnostic(),
+      }, { headers: { "Cache-Control": "no-store" } });
+    } catch (error) {
+      return NextResponse.json({
+        ok: false,
+        error: error instanceof Error ? error.message : "QA roster diagnostic failed.",
+      }, { status: 502, headers: { "Cache-Control": "no-store" } });
+    }
   }
 
   const teamId = text(request.nextUrl.searchParams.get("teamId"));
