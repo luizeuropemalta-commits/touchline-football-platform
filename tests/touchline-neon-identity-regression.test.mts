@@ -409,7 +409,7 @@ test("ClubHub owns one fixture-scoped line-up surface without cross-product dist
   assert.doesNotMatch(lineupComponent, /TouchLine Arena/);
   assert.doesNotMatch(lineupComponent, /ClubOwners/);
   assert.doesNotMatch(lineupComponent, /Player Feeds/);
-  assert.match(lineupComponent, /Provável escalação/);
+  assert.match(lineupComponent, /Prévia do elenco/);
 });
 
 test("coach uses official coach art with player-card nationality and club identity", () => {

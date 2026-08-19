@@ -72,6 +72,7 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "GET /api/football-data/foundation": { auth: "OWNER_OR_VALIDATION_SECRET", role: "OWNER_OR_SERVER_JOB", data: "NORMALIZED_FOOTBALL_FOUNDATION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/football-data/player-season-statistics/sync": { auth: "OWNER_OR_SYNC_SECRET", role: "OWNER_OR_SERVER_JOB", data: "PROVIDER_TO_NORMALIZED_STATS", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/football-data/premier-squad": { auth: "PUBLIC", role: "ANY", data: "CANONICAL_SQUAD_AND_EDITORIAL_CARD_READ", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /api/football-data/provider-diagnostic": { auth: "OWNER_SESSION", role: "OWNER_ADMIN", data: "LIVE_PROVIDER_COUNTS_AND_ENTITLEMENT_PROOF", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/football-data/sync-starter": { auth: "DISABLED", role: "NONE", data: "POST_ONLY", browser: "HTTP_405_CONTRACT", status: "METHOD_DISABLED" },
   "POST /api/football-data/sync-starter": { auth: "OWNER_OR_SYNC_SECRET", role: "OWNER_OR_SERVER_JOB", data: "PROVIDER_TO_NORMALIZED_FOOTBALL_DATA", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/football-data/validate": { auth: "OWNER_OR_VALIDATION_SECRET", role: "OWNER_OR_SERVER_JOB", data: "FOOTBALL_DATA_VALIDATION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
