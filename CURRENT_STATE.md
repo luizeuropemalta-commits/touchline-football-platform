@@ -1,15 +1,15 @@
 # TouchLine Current State
 
-Verified: 2026-08-18
+Verified: 2026-08-20
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
-Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-qa`
-Active branch: `qa`
-Active validated QA SHA: `7474e2e` (`fix(arena): fit quick sub rail at 1280`).
+Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-sportmonks-round`
+Active source branch: `codex/sportmonks-round-arena-rail` (pushed only to `qa`)
+Active validated QA SHA: `3b55b1d` (`fix(tables): count every active card contract`).
 
 ## QA and release
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
-- Current QA deployment: `dpl_AZaGsRg3QfQgt8pGegpF4EWsBwvC`, commit `7474e2e`, status READY. Its stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
+- Validated product deployment: `dpl_BkE3fN2JdQdyD4Kx1CmWGnVxHHWc`, product commit `3b55b1d`, status READY. The stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`; later checkpoint-only documentation commits do not change this product tree.
 - The representative seven-tier QA scenario, protected 4-3-3 video coordinate source and Quick Sub premium responsive HUD are deployed and visually verified. Production remains excluded.
 - Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
 - Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
@@ -30,6 +30,10 @@ Active validated QA SHA: `7474e2e` (`fix(arena): fit quick sub rail at 1280`).
 
 ## Active P0/P1 gates
 
+- **Tables / My Club 404: CLOSED.** The global navigation now distinguishes an authenticated ClubOwner from the platform administrator before exposing `/club-owner/me`. The canonical self route remains session-owned and redirects the QA ClubOwner to `/club-owner/luiz-lopes`; authenticated RSC requests return `200`, anonymous requests return the expected login redirect, and no `404` is reproducible.
+- **Authenticated Tables summary: GREEN.** Native Safari on the stable QA alias shows `1` ClubOwner, `35` tracked active contracts and `£171` of currently publicable editorial card value. Two tracked contracts (Anthony Patterson and Rio Cardines) are intentionally excluded from the effective value because their publication memberships are inactive; no provider, sync or database mutation was made in this mission. Preseason ranking order remains neutral until an audited published round exists.
+- **Browser and runtime evidence:** Chromium passed desktop/tablet/phone-landscape; WebKit and Firefox passed desktop/phone-landscape with no `/club-owner/me` 404 or horizontal overflow. Native Safari Web Inspector showed no 404 after a clean reload. Vercel Observability reported no runtime errors for `/touchline-tables` or `/club-owner/me` in the observed hour.
+
 - **Safari stale-deployment incident: CLOSED.** An already-open tab retained assets from deployment `dpl_AMVH4DELGqeVQ3vdg67SQwEj493u` (commit `1130455`) while the stable alias pointed to deployment `dpl_5GCTMjjJnanBgFjWdrkqukuwrkf6` (commit `486e790`). A cache-bypass reload loaded the current asset graph; a following ordinary reload also passed. Server evidence was HTTP 200, `Age: 0`, `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`, and `x-vercel-cache: MISS`.
 - **P1 responsive Market QA:** complete native/automated observation at 1440, 1280, 768 and 390, including keyboard, touch/scroll, zoom modal and selection persistence.
 - **P1 authenticated Arena 4-3-3 video QA:** complete for desktop, tablet landscape and phone landscape in native Safari. The three camera loops retain the 1/4/3/3 formation on the pitch; anonymous Chromium, WebKit and Firefox smoke tests returned HTTP 200 with no console errors. Browser engines do not carry the native authenticated QA session.
@@ -38,7 +42,7 @@ Active validated QA SHA: `7474e2e` (`fix(arena): fit quick sub rail at 1280`).
 
 ## Next executable action
 
-Block 3 is closed. Do not begin Live work from this checkpoint. Any later Arena change must preserve the verified 4-3-3 `formation + loop + viewport` source and the Quick Sub `4 + coach + 5` responsive rail, then repeat native Safari plus browser-engine QA. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+The Tables / My Club repair is closed on QA. Do not reopen Sportmonks authentication, fixture sync or Matchweek work from this checkpoint. Any later Arena change must preserve the verified 4-3-3 `formation + loop + viewport` source and the Quick Sub `4 + coach + 5` responsive rail, then repeat native Safari plus browser-engine QA. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 
