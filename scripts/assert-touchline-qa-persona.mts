@@ -2,11 +2,12 @@ import { createClient } from "@supabase/supabase-js";
 
 import {
   TOUCHLINE_QA_CANONICAL_ALIAS,
-  TOUCHLINE_QA_CANONICAL_EMAIL,
   TOUCHLINE_QA_CANONICAL_USER_ID,
   TOUCHLINE_QA_PROJECT_REF,
+  assertTouchlineQaSupabaseOrigin,
   assertTouchlineQaCanonicalPersona,
 } from "../lib/touchlineArena/qa-canonical-persona.ts";
+import { hasTouchLineArenaAccess } from "../lib/touchlineArena/auth-access.ts";
 
 function requiredEnvironment(
   name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY" | "TOUCHLINE_QA_BASE_URL",
@@ -16,22 +17,18 @@ function requiredEnvironment(
   return value;
 }
 
-function projectRefFromUrl(url: string) {
-  return new URL(url).hostname.split(".")[0] ?? "";
-}
-
 async function main() {
   const url = requiredEnvironment("SUPABASE_URL");
-  const serviceRoleKey = requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY");
   const qaAlias = requiredEnvironment("TOUCHLINE_QA_BASE_URL");
 
-  if (projectRefFromUrl(url) !== TOUCHLINE_QA_PROJECT_REF) {
-    throw new Error("QA persona preflight refuses a non-QA Supabase project.");
-  }
+  assertTouchlineQaSupabaseOrigin(url);
 
   if (new URL(qaAlias).origin !== TOUCHLINE_QA_CANONICAL_ALIAS) {
     throw new Error("QA persona preflight refuses a non-canonical QA alias.");
   }
+
+  // Resolve the privileged credential only after both target origins pass.
+  const serviceRoleKey = requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY");
 
   const admin = createClient(url, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -53,16 +50,16 @@ async function main() {
   }
 
   assertTouchlineQaCanonicalPersona({
-    projectRef: projectRefFromUrl(url),
+    projectRef: TOUCHLINE_QA_PROJECT_REF,
     qaAlias,
     userId: authResult.user.id,
     email: authResult.user.email ?? "",
     emailConfirmed: Boolean(authResult.user.email_confirmed_at),
     profilePresent: profile?.id === TOUCHLINE_QA_CANONICAL_USER_ID,
-    arenaAccessGranted: authResult.user.app_metadata?.touchline_arena_access === true,
+    arenaAccessGranted: hasTouchLineArenaAccess(authResult.user),
   });
 
-  console.log("QA persona preflight passed for " + TOUCHLINE_QA_CANONICAL_EMAIL + ".");
+  console.log("QA persona preflight passed.");
 }
 
 main().catch((error: unknown) => {

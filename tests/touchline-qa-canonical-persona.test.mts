@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import {
@@ -8,6 +9,7 @@ import {
   TOUCHLINE_QA_PROJECT_REF,
   TouchlineQaPersonaPreflightError,
   assertTouchlineQaCanonicalPersona,
+  assertTouchlineQaSupabaseOrigin,
 } from "../lib/touchlineArena/qa-canonical-persona.ts";
 
 const canonicalEvidence = {
@@ -20,8 +22,47 @@ const canonicalEvidence = {
   arenaAccessGranted: true,
 };
 
+const executablePreflight = fs.readFileSync(
+  new URL("../scripts/assert-touchline-qa-persona.mts", import.meta.url),
+  "utf8",
+);
+
 test("the canonical QA owner and stable qa alias are the only accepted authenticated QA target", () => {
   assert.doesNotThrow(() => assertTouchlineQaCanonicalPersona(canonicalEvidence));
+  assert.match(executablePreflight, /hasTouchLineArenaAccess\(authResult\.user\)/);
+  assert.doesNotMatch(executablePreflight, /app_metadata\?\.touchline_arena_access\s*===/);
+  assert.doesNotMatch(executablePreflight, /TOUCHLINE_QA_CANONICAL_EMAIL/);
+  assert.match(executablePreflight, /assertTouchlineQaSupabaseOrigin\(url\)/);
+  assert.ok(
+    executablePreflight.indexOf("assertTouchlineQaSupabaseOrigin(url)") <
+      executablePreflight.indexOf('requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY")'),
+  );
+});
+
+test("the QA preflight accepts only the exact canonical Supabase origin", () => {
+  assert.doesNotThrow(() =>
+    assertTouchlineQaSupabaseOrigin(`https://${TOUCHLINE_QA_PROJECT_REF}.supabase.co`),
+  );
+  assert.doesNotThrow(() =>
+    assertTouchlineQaSupabaseOrigin(`https://${TOUCHLINE_QA_PROJECT_REF}.supabase.co/`),
+  );
+
+  for (const value of [
+    `https://${TOUCHLINE_QA_PROJECT_REF}.attacker.example`,
+    `http://${TOUCHLINE_QA_PROJECT_REF}.supabase.co`,
+    `https://${TOUCHLINE_QA_PROJECT_REF}.supabase.co:444`,
+    `https://user:secret@${TOUCHLINE_QA_PROJECT_REF}.supabase.co`,
+    `https://${TOUCHLINE_QA_PROJECT_REF}.supabase.co/rest/v1`,
+    `https://${TOUCHLINE_QA_PROJECT_REF}.supabase.co?redirect=attacker`,
+    ` https://${TOUCHLINE_QA_PROJECT_REF}.supabase.co`,
+  ]) {
+    assert.throws(
+      () => assertTouchlineQaSupabaseOrigin(value),
+      (error: unknown) =>
+        error instanceof TouchlineQaPersonaPreflightError &&
+        error.code === "qa_supabase_origin_required",
+    );
+  }
 });
 
 test("the QA persona preflight rejects Production, the historical actor, and incomplete identity evidence", () => {
