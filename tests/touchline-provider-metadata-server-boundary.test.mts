@@ -19,8 +19,11 @@ test("provider mapping and raw sync metadata are closed to browser roles", () =>
   assert.doesNotMatch(migration, /create policy[\s\S]*authenticated[\s\S]*football_(?:provider_mappings|data_sync_runs)/i);
 });
 
-test("foundation exposes only a server-side sanitized sync-run projection", () => {
-  assert.match(foundationRoute, /const admin = createAdminClient\(\)/);
-  assert.match(foundationRoute, /admin\s*\?\s*admin[\s\S]*?\.from\("football_data_sync_runs"\)/);
-  assert.match(foundationRoute, /recentSyncRuns: publicFoundationRecord\(syncRuns \?\? \[\]\)/);
+test("foundation keeps provider metadata behind an owner/server allowlist", () => {
+  assert.match(foundationRoute, /isOwnerEmail\(user\?\.email\)/);
+  assert.match(foundationRoute, /return \{ client: admin, mode: "owner_session" \}/);
+  assert.match(foundationRoute, /\.from\("football_data_sync_runs"\)/);
+  assert.match(foundationRoute, /recentSyncRuns: \(syncRuns \?\? \[\]\)\.map\(\(row\) => syncRunDto/);
+  assert.doesNotMatch(foundationRoute, /publicFoundationRecord/);
+  assert.doesNotMatch(foundationRoute, /source_payload|error_message|provider_player_id|market_value_currency|contract_until/);
 });
