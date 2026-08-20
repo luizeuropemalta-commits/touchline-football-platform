@@ -4,12 +4,12 @@ Verified: 2026-08-20
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
 Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-sportmonks-round`
 Active source branch: `codex/sportmonks-round-arena-rail` (pushed only to `qa`)
-Active validated QA SHA: `738d7db` (`fix(qa): validate exact persona preflight origin`).
+Active validated QA product SHA: `232185ac7998775f717dbc13bdc287aa80e51cd5` (`fix(market): align canonical account metrics`).
 
 ## QA and release
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
-- Validated product deployment: `dpl_FNur7zPzJeWFyqvwpr8FmBxmxPH3`, product commit `738d7db`, status READY. The stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app` and was confirmed on this exact product SHA before the final Safari proof.
+- Validated product deployment: `dpl_BcyshAWNsYUM3gFUiuG7U16WBeA8`, product commit `232185ac7998775f717dbc13bdc287aa80e51cd5`, status READY. The stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app` and was confirmed on this exact product SHA before the final Safari proof.
 - The representative seven-tier QA scenario, protected 4-3-3 video coordinate source and Quick Sub premium responsive HUD are deployed and visually verified. Production remains excluded.
 - Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
 - Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
@@ -33,6 +33,7 @@ Active validated QA SHA: `738d7db` (`fix(qa): validate exact persona preflight o
 - **Tables / My Club 404: CLOSED.** The global navigation now distinguishes an authenticated ClubOwner from the platform administrator before exposing `/club-owner/me`. The canonical self route remains session-owned and redirects the QA ClubOwner to `/club-owner/luiz-lopes`; authenticated RSC requests return `200`, anonymous requests return the expected login redirect, and no `404` is reproducible.
 - **Authenticated Tables summary: GREEN.** Native Safari on the stable QA alias shows `1` ClubOwner, `35` tracked active contracts and `£171` of currently publicable editorial card value. Two tracked contracts (Anthony Patterson and Rio Cardines) are intentionally excluded from the effective value because their publication memberships are inactive; no provider, sync or database mutation was made in this mission. Preseason ranking order remains neutral until an audited published round exists.
 - **Analytics clean navigation: CLOSED.** After clearing native Safari Console and Network, an authenticated reload of Tables and forward navigation through canonical My Club (`/club-owner/luiz-lopes`) to Arena produced only successful `POST /api/touchline-analytics` requests. Safari Console recorded zero new `403` and zero new `404`; deployment-scoped Vercel logs recorded no `4xx` after the clean-run timestamp and only analytics `200` responses in the Tables, My Club and Arena observation windows.
+- **Market account metrics / Club Construction header: GREEN.** The authenticated Market header now uses the same server-owned public editorial-price authority as Tables and shows `TouchLine Credits 0`, `Squad card value £171`, `Active contracts 35/35` and `Clubs represented 14`. `Contract Slots` and the decorative non-action `Enter Arena` step are absent; the real `Back to Arena` link remains. Native Safari passed 1440x900, 1280x720, 1024x768 and 844x390 with a clean Console/Network reload. Chromium, WebKit and Firefox passed the expected anonymous login boundary at desktop, tablet-landscape and phone-landscape with no console/page error or horizontal overflow.
 - **Browser and runtime evidence:** Chromium passed desktop/tablet/phone-landscape; WebKit and Firefox passed desktop/phone-landscape with no `/club-owner/me` 404 or horizontal overflow. Native Safari Web Inspector showed no 404 after a clean reload. Vercel Observability reported no runtime errors for `/touchline-tables` or `/club-owner/me` in the observed hour.
 
 - **Safari stale-deployment incident: CLOSED.** An already-open tab retained assets from deployment `dpl_AMVH4DELGqeVQ3vdg67SQwEj493u` (commit `1130455`) while the stable alias pointed to deployment `dpl_5GCTMjjJnanBgFjWdrkqukuwrkf6` (commit `486e790`). A cache-bypass reload loaded the current asset graph; a following ordinary reload also passed. Server evidence was HTTP 200, `Age: 0`, `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`, and `x-vercel-cache: MISS`.
@@ -43,7 +44,7 @@ Active validated QA SHA: `738d7db` (`fix(qa): validate exact persona preflight o
 
 ## Next executable action
 
-The Tables / My Club repair is closed on QA. Do not reopen Sportmonks authentication, fixture sync or Matchweek work from this checkpoint. Any later Arena change must preserve the verified 4-3-3 `formation + loop + viewport` source and the Quick Sub `4 + coach + 5` responsive rail, then repeat native Safari plus browser-engine QA. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+Block 1 of the premium Market / Club Construction programme is closed on QA. The next executable action is Block 2 only: formation switching inside Club Construction, without page jumps, invalid positional coercion or loss of the persisted 35-card owner state. Do not reopen Sportmonks authentication, fixture sync, Matchweek, Tables/My Club or analytics without new regression evidence. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 
