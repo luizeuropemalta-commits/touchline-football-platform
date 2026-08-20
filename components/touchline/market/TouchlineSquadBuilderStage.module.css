@@ -47,7 +47,7 @@
 
 .progress {
   display: grid;
-  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  grid-template-columns: repeat(6, minmax(110px, 1fr));
   gap: 8px;
   margin: 0;
   padding: 4px 0 8px;
@@ -292,7 +292,7 @@
   .hero { align-items: start; }
   .hero h1 { font-size: 30px; }
   .hero p { max-width: 280px; }
-  .progress { grid-template-columns: repeat(7, 132px); margin-inline: -13px; padding-inline: 13px; }
+  .progress { grid-template-columns: repeat(6, 132px); margin-inline: -13px; padding-inline: 13px; }
   .formationStep { grid-template-columns: 1fr; }
   .formationStep > div:last-child { width: 100%; }
   .formationStep button { flex: 1; min-width: 0; }
@@ -311,7 +311,7 @@
   .shell { gap: 10px; padding: 10px; }
   .hero h1 { font-size: 28px; }
   .hero p { display: none; }
-  .progress { grid-template-columns: repeat(7, 124px); padding-bottom: 3px; }
+  .progress { grid-template-columns: repeat(6, 124px); padding-bottom: 3px; }
   .formationStep { grid-template-columns: minmax(0, 1fr) auto; padding: 10px; }
   .formationStep > div:first-child small { display: none; }
   .progress li { min-height: 44px; }

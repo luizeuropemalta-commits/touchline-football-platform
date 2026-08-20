@@ -358,7 +358,7 @@ test("Market Transfer uses football selection language and official TouchLine mo
   const translations = source("lib/touchlineArena/i18n.ts");
   const marketMarks = source("components/touchline/market/TouchlineMarketMarks.tsx");
 
-  assert.match(arenaClient, /marketUi\.squadTcValue/);
+  assert.match(arenaClient, /marketUi\.squadValue/);
   assert.match(arenaClient, /TouchlineCoinMark/);
   assert.match(arenaClient, /TouchlineSelectedPlayersMark/);
   assert.match(arenaClient, /className="team-builder-gallery-card"/);

@@ -125,7 +125,6 @@ export default function TouchlineSquadBuilderStage({
     { key: "bench", label: portuguese ? "Banco" : "Bench", complete: journey.benchComplete },
     { key: "full-squad", label: portuguese ? "Elenco completo" : "Full squad", complete: journey.fullSquadComplete },
     { key: "review", label: portuguese ? "Revisar clube" : "Review club", complete: false },
-    { key: "arena", label: portuguese ? "Entrar na Arena" : "Enter Arena", complete: false },
   ] as const;
   const currentStepIndex = Math.max(0, steps.findIndex((step) => step.key === journey.currentStep));
 

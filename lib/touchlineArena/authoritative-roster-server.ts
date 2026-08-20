@@ -27,6 +27,7 @@ export type AuthoritativeRosterSnapshot = {
   source: "supabase";
   ownedContractCount: number;
   activeContractCount: number;
+  representedClubCount: number;
   inventoryIds: string[];
   cards: ClubOwnerSquadCard[];
 };
@@ -158,6 +159,7 @@ export function mapAuthoritativeRosterRows(
 
   const cards: ClubOwnerSquadCard[] = [];
   const inventoryIds: string[] = [];
+  const representedClubIds = new Set<string>();
 
   for (const contract of rows.contracts) {
     if (asString(contract.status) !== "active") {
@@ -172,7 +174,9 @@ export function mapAuthoritativeRosterRows(
       return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
     }
 
-    const clubId = asUuid(inventory.club_id) ?? asUuid(player.current_club_id);
+    const inventoryClubId = asUuid(inventory.club_id);
+    const clubId = inventoryClubId ?? asUuid(player.current_club_id);
+    if (inventoryClubId) representedClubIds.add(inventoryClubId);
     const club = clubId ? clubsById.get(clubId) : null;
     const squadMember = preferredSquadMember(rows.squadMembers, playerId, clubId);
     const name = asString(player.display_name)
@@ -226,6 +230,7 @@ export function mapAuthoritativeRosterRows(
       source: "supabase",
       ownedContractCount: rows.contracts.length,
       activeContractCount: cards.length,
+      representedClubCount: representedClubIds.size,
       inventoryIds,
       cards,
     },
@@ -272,6 +277,7 @@ export async function readAuthoritativeTouchlineRoster(
         source: "supabase",
         ownedContractCount: 0,
         activeContractCount: 0,
+        representedClubCount: 0,
         inventoryIds: [],
         cards: [],
       },

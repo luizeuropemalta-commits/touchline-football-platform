@@ -9,6 +9,7 @@ import {
 
 const arenaClientPath = new URL("../app/arena/ArenaClient.tsx", import.meta.url);
 const stagePath = new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url);
+const marketI18nPath = new URL("../lib/touchlineArena/market-i18n.ts", import.meta.url);
 
 test("canonical TouchLine England squad rules remain in one server-independent read model", () => {
   assert.deepEqual(TOUCHLINE_SQUAD_RULES, {
@@ -47,7 +48,34 @@ test("the Market owns one premium squad-building stage with distinct player grou
   assert.match(source, /className=\{styles\.coachBrief\}/);
   assert.doesNotMatch(source, /Complete the Starting XI/);
   assert.doesNotMatch(source, /Confirm club and enter Arena/);
+  assert.doesNotMatch(source, /key: "arena"/);
+  assert.doesNotMatch(source, /Enter Arena/);
   assert.doesNotMatch(source, /Organizar elenco/);
+});
+
+test("the account header exposes four canonical metrics without fake capacity or TC labels", async () => {
+  const [source, marketI18n] = await Promise.all([
+    readFile(arenaClientPath, "utf8"),
+    readFile(marketI18nPath, "utf8"),
+  ]);
+  const headerStart = source.indexOf('className="team-builder-bank"');
+  const headerEnd = source.indexOf("</div>", headerStart);
+  const header = source.slice(headerStart, headerEnd);
+
+  assert.match(header, /marketUi\.touchlineCredits/);
+  assert.match(header, /marketUi\.squadValue/);
+  assert.match(header, /marketUi\.activeContracts/);
+  assert.match(header, /marketUi\.clubsRepresented/);
+  assert.match(header, /representedClubCount/);
+  assert.match(header, /marketHeaderCredits \?\? "—"/);
+  assert.match(source, /isAuthenticatedMarketAccount \? null : clubOwnerSquadTcValue/);
+  assert.doesNotMatch(header, /marketUi\.contractSlots/);
+  assert.doesNotMatch(header, /marketPlayerCount/);
+  assert.doesNotMatch(header, /<em>TC<\/em>/);
+  assert.match(marketI18n, /touchlineCredits: "TouchLine Credits"/);
+  assert.match(marketI18n, /squadValue: "Squad card value"/);
+  assert.match(marketI18n, /clubsRepresented: "Clubs represented"/);
+  assert.doesNotMatch(marketI18n, /Signing balance|Contract slots|Club players/);
 });
 
 test("the Market keeps account capacity first and guides a field slot directly to player selection", async () => {

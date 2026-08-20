@@ -17,6 +17,8 @@ function validSnapshot() {
     walletBalanceTc: 60,
     activeContractCount: 32,
     openContractSlots: 3,
+    squadValueGbp: 171,
+    representedClubCount: 7,
     cards: [{
       inventoryId: INVENTORY_ID,
       playerId: PLAYER_ID,
@@ -42,6 +44,8 @@ test("parses one authoritative market inventory snapshot", () => {
   assert.ok(snapshot);
   assert.equal(snapshot.walletBalanceTc, 60);
   assert.equal(snapshot.openContractSlots, 3);
+  assert.equal(snapshot.squadValueGbp, 171);
+  assert.equal(snapshot.representedClubCount, 7);
   assert.equal(snapshot.cards[0].priceTc, 0);
   assert.equal(snapshot.cards[0].marketValueEur, 5_000_000);
   assert.equal(snapshot.cards[0].marketValueChangeEur, 1_000_000);
@@ -127,4 +131,18 @@ test("rejects roster totals that do not equal 35", () => {
   const payload = validSnapshot();
   payload.openContractSlots = 2;
   assert.equal(parseTouchlineMarketInventorySnapshot(payload), null);
+});
+
+test("rejects a missing, fractional or impossible account summary", () => {
+  const missingValue = validSnapshot();
+  delete (missingValue as Partial<typeof missingValue>).squadValueGbp;
+  assert.equal(parseTouchlineMarketInventorySnapshot(missingValue), null);
+
+  const fractionalValue = validSnapshot();
+  fractionalValue.squadValueGbp = 171.5;
+  assert.equal(parseTouchlineMarketInventorySnapshot(fractionalValue), null);
+
+  const impossibleClubCount = validSnapshot();
+  impossibleClubCount.representedClubCount = 33;
+  assert.equal(parseTouchlineMarketInventorySnapshot(impossibleClubCount), null);
 });

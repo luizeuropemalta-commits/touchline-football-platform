@@ -4050,16 +4050,28 @@ export default function ArenaClient({
   const playerCardRankings = [...clubOwnerRoster].sort(rankClubOwnerCards);
   const topPlayerCardRankings = playerCardRankings.slice(0, 8);
   const clubOwnerStandings = buildDemoClubOwnerStandings(clubOwnerRoster).slice(0, 5);
-  const rosterCardValue = clubOwnerSquadTcValue(clubOwnerRoster);
-  const rosterCardValueDisplay = formatTouchlineCommercialCardTotal({
-    numericPrice: rosterCardValue,
-    competition: "england",
-  });
+  const isAuthenticatedMarketAccount = arenaPersistencePrincipal?.kind === "authenticated";
+  const rosterCardValue = marketInventorySnapshot?.squadValueGbp
+    ?? (isAuthenticatedMarketAccount ? null : clubOwnerSquadTcValue(clubOwnerRoster));
+  const rosterCardValueDisplay = rosterCardValue === null
+    ? "—"
+    : formatTouchlineCommercialCardTotal({
+        numericPrice: rosterCardValue,
+        competition: "england",
+      });
   const rosterPointsTotal = clubOwnerRoster.reduce((sum, card) => sum + card.touchlinePoints, 0);
   const isBuilderSquadCurrent = builderSquadClubKey === selectedBuilderClub.teamId;
   const currentBuilderSquad = isBuilderSquadCurrent ? builderSquad : [];
   const sortedBuilderSquad = [...currentBuilderSquad].sort((a, b) => roleSortWeight(a.role) - roleSortWeight(b.role) || a.name.localeCompare(b.name));
   const authoritativeOwnedSquadCount = marketInventorySnapshot?.activeContractCount ?? ownedSquadCount;
+  const marketHeaderActiveContractCount = marketInventorySnapshot?.activeContractCount
+    ?? (isAuthenticatedMarketAccount ? null : ownedSquadCount);
+  const representedClubCount = marketInventorySnapshot?.representedClubCount
+    ?? (isAuthenticatedMarketAccount
+      ? null
+      : new Set(clubOwnerRoster.map((card) => card.clubName.trim()).filter(Boolean)).size);
+  const marketHeaderCredits = marketInventorySnapshot?.walletBalanceTc
+    ?? (isAuthenticatedMarketAccount ? null : marketWalletBalanceTc);
   const pendingMarketReplacementPlayer = pendingMarketReplacementPlayerId
     ? sortedBuilderSquad.find((player) => stableBuilderPlayerId(player) === pendingMarketReplacementPlayerId) ?? null
     : null;
@@ -4148,7 +4160,6 @@ export default function ArenaClient({
     || marketInventoryMode === "unavailable";
   const isMarketDataRefreshing = marketInventoryMode === "checking";
   const currentLocale = TOUCHLINE_SUPPORTED_LOCALES.find((locale) => locale.code === siteLanguage) ?? TOUCHLINE_SUPPORTED_LOCALES[0];
-  const marketPlayerCount = sortedBuilderSquad.length;
   const openContractSlots = marketInventorySnapshot?.openContractSlots
     ?? Math.max(0, TOUCHLINE_SQUAD_RULES.contracted - ownedSquadCount);
   const isContractRosterFull = openContractSlots === 0;
@@ -6936,6 +6947,7 @@ export default function ArenaClient({
               }
             : player
         )));
+        setMarketInventoryRevision((revision) => revision + 1);
         marketCheckoutAttemptRef.current = null;
       } catch {
         setSaveStatus(marketUi.connectionUnavailable);
@@ -8345,24 +8357,20 @@ export default function ArenaClient({
               {arenaOverlayPanel === "market" ? (
                 <div className="team-builder-bank" aria-label={t("touchlineMarketTransfer")}>
                   <span>
-                    <small>{marketUi.signingBalance}</small>
-                    <strong className="touchline-tc-balance"><TouchlineCoinMark size={24} /><b>{marketWalletBalanceTc}</b><em>TC</em></strong>
+                    <small>{marketUi.touchlineCredits}</small>
+                    <strong className="touchline-tc-balance"><TouchlineCoinMark size={24} /><b>{marketHeaderCredits ?? "—"}</b></strong>
                   </span>
                   <span>
-                    <small>{marketUi.squadTcValue}</small>
+                    <small>{marketUi.squadValue}</small>
                     <strong className="touchline-card-value"><b>{rosterCardValueDisplay}</b></strong>
                   </span>
                   <span>
                     <small>{marketUi.activeContracts}</small>
-                    <strong>{authoritativeOwnedSquadCount}/{TOUCHLINE_SQUAD_RULES.contracted}</strong>
+                    <strong>{marketHeaderActiveContractCount ?? "—"}/{TOUCHLINE_SQUAD_RULES.contracted}</strong>
                   </span>
                   <span>
-                    <small>{marketUi.contractSlots}</small>
-                    <strong>{openContractSlots}</strong>
-                  </span>
-                  <span>
-                    <small>{marketUi.clubPlayers}</small>
-                    <strong>{marketPlayerCount}</strong>
+                    <small>{marketUi.clubsRepresented}</small>
+                    <strong>{representedClubCount ?? "—"}</strong>
                   </span>
                 </div>
               ) : null}
@@ -15293,7 +15301,7 @@ export default function ArenaClient({
 
         .team-builder-bank {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 8px;
         }
 
@@ -15322,11 +15330,18 @@ export default function ArenaClient({
         .team-builder-roster-head span,
         .team-builder-player-list small {
           font-size: 8px;
-          font-weight: 1000;                    color: rgba(122,231,255,.78);
+          font-weight: 1000;
+          color: rgba(122,231,255,.78);
+        }
+
+        .team-builder-bank small {
+          color: #b5ff4b;
+          font-size: 11px;
+          letter-spacing: .045em;
         }
 
         .team-builder-bank strong {
-          font-size: 18px;
+          font-size: 21px;
           line-height: 1;
           font-weight: 1000;
         }
@@ -15346,13 +15361,6 @@ export default function ArenaClient({
 
         .touchline-tc-balance b {
           font: inherit;
-        }
-
-        .touchline-tc-balance em {
-          color: #ffd75c;
-          font-size: .52em;
-          font-style: normal;
-          letter-spacing: .08em;
         }
 
         .team-builder-cart-dock {
@@ -19206,10 +19214,6 @@ export default function ArenaClient({
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
-          .arena-action-panel-market .team-builder-bank > span:last-child {
-            grid-column: 1 / -1;
-          }
-
           .arena-action-panel-market .team-builder-bank small {
             font-size: 10px;
           }
@@ -20233,7 +20237,7 @@ export default function ArenaClient({
           .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank {
             top: -1px;
             grid-auto-flow: row;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             margin-top: 6px;
             padding: 5px;
             overflow: hidden;
@@ -20242,11 +20246,6 @@ export default function ArenaClient({
           .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span {
             min-height: 62px;
             padding: 8px;
-          }
-
-          .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span:nth-child(2),
-          .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span:nth-child(5) {
-            display: none;
           }
 
           .touchline-game.is-market-standalone .team-builder-board {

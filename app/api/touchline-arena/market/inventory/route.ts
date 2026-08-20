@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { readAuthoritativeTouchlineRoster } from "@/lib/touchlineArena/authoritative-roster-server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { resolveCompetitionCardOffer } from "@/lib/touchlineArena/competition-card-offer";
 import { parseTouchlineMarketInventorySnapshot } from "@/lib/touchlineArena/market-inventory";
+import { resolveTouchlineOwnerCommercialSummary } from "@/lib/touchlineArena/owner-commercial-summary";
+import { TOUCHLINE_SQUAD_RULES } from "@/lib/touchlineArena/squad-rules";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +23,11 @@ const DATABASE_ERROR_STATUS: Record<string, number> = {
 
 function databaseErrorCode(message: string) {
   return Object.keys(DATABASE_ERROR_STATUS).find((code) => message.includes(code)) ?? null;
+}
+
+function nonNegativeInteger(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
 export async function GET(request: NextRequest) {
@@ -39,10 +47,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "TL_MARKET_INVALID_TEAM_ID" }, { status: 400 });
   }
 
-  const { data, error } = await admin.rpc("get_touchline_market_inventory", {
-    requested_user_id: user.id,
-    requested_provider_team_id: teamId,
-  });
+  const [inventoryResponse, rosterResult] = await Promise.all([
+    admin.rpc("get_touchline_market_inventory", {
+      requested_user_id: user.id,
+      requested_provider_team_id: teamId,
+    }),
+    readAuthoritativeTouchlineRoster(admin, user.id),
+  ]);
+  const { data, error } = inventoryResponse;
   if (error) {
     const code = databaseErrorCode(error.message);
     return NextResponse.json(
@@ -51,7 +63,35 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const snapshot = parseTouchlineMarketInventorySnapshot(data);
+  if (!rosterResult.ok) {
+    return NextResponse.json({ error: rosterResult.error }, { status: 503 });
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return NextResponse.json({ error: "TL_MARKET_INVENTORY_INVALID" }, { status: 500 });
+  }
+
+  const commercialSummary = resolveTouchlineOwnerCommercialSummary({
+    ownedContractCount: rosterResult.snapshot.ownedContractCount,
+    rosterCards: rosterResult.snapshot.cards,
+  });
+  const inventoryRecord = data as Record<string, unknown>;
+  const inventoryContractCount = nonNegativeInteger(inventoryRecord.activeContractCount);
+  const inventoryOpenSlots = nonNegativeInteger(inventoryRecord.openContractSlots);
+  if (
+    inventoryContractCount !== commercialSummary.cardsTracked
+    || inventoryOpenSlots !== Math.max(
+      0,
+      TOUCHLINE_SQUAD_RULES.contracted - commercialSummary.cardsTracked,
+    )
+  ) {
+    return NextResponse.json({ error: "TL_MARKET_ACCOUNT_SUMMARY_MISMATCH" }, { status: 409 });
+  }
+
+  const snapshot = parseTouchlineMarketInventorySnapshot({
+    ...inventoryRecord,
+    squadValueGbp: commercialSummary.squadValueGbp,
+    representedClubCount: rosterResult.snapshot.representedClubCount,
+  });
   if (!snapshot) {
     return NextResponse.json({ error: "TL_MARKET_INVENTORY_INVALID" }, { status: 500 });
   }

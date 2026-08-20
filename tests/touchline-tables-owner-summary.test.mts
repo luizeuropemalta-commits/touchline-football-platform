@@ -1,8 +1,20 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import { resolveTouchlineOwnerCommercialSummary } from "../lib/touchlineArena/owner-commercial-summary.ts";
 import { resolveTouchlineTablesOwnerSummary } from "../lib/touchlineArena/tables-owner-summary.ts";
 import type { ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
+
+const rankingsCopySource = readFileSync(
+  new URL("../lib/touchlineArena/rankings-i18n.ts", import.meta.url),
+  "utf8",
+);
+
+test("Tables and Market use the same canonical squad card value label", () => {
+  assert.match(rankingsCopySource, /totalValue: "Squad card value"/);
+  assert.match(rankingsCopySource, /totalValue: "Valor dos cards do elenco"/);
+});
 
 function publishedCard(id: string, amountMinor: number): ClubOwnerSquadCard {
   return {
@@ -33,6 +45,16 @@ test("Tables uses the authenticated ClubOwner's published roster for its summary
     clubOwners: 1,
     cardsTracked: 2,
     nominalValueGbp: 16,
+  });
+});
+
+test("Market and Tables share the same canonical commercial projection", () => {
+  assert.deepEqual(resolveTouchlineOwnerCommercialSummary({
+    ownedContractCount: 35,
+    rosterCards: [publishedCard("one", 17_100)],
+  }), {
+    cardsTracked: 35,
+    squadValueGbp: 171,
   });
 });
 

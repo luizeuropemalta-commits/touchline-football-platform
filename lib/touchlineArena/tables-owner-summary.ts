@@ -1,4 +1,5 @@
 import type { ClubOwnerSquadCard } from "./demo-data.ts";
+import { resolveTouchlineOwnerCommercialSummary } from "./owner-commercial-summary.ts";
 
 export type TouchlineTablesOwnerSummary = Readonly<{
   clubOwners: number;
@@ -24,33 +25,11 @@ export function resolveTouchlineTablesOwnerSummary(input: Readonly<{
   rosterCards: readonly ClubOwnerSquadCard[];
 }>): TouchlineTablesOwnerSummary {
   if (!input.isAuthenticatedClubOwner) return EMPTY_SUMMARY;
-  if (
-    !Number.isSafeInteger(input.ownedContractCount)
-    || input.ownedContractCount < input.rosterCards.length
-  ) {
-    throw new Error("TouchLine tracked-card count must cover the published roster");
-  }
-
-  let totalAmountMinor = 0;
-  for (const card of input.rosterCards) {
-    const price = card.editorialCard?.cardPrice;
-    if (!price) continue;
-    if (price.currency !== "GBP") {
-      throw new Error("TouchLine England card summary requires GBP publications");
-    }
-    if (price.amountMinor % 100 !== 0) {
-      throw new Error("TouchLine nominal card values must use whole pounds");
-    }
-    totalAmountMinor += price.amountMinor;
-  }
-
-  if (!Number.isSafeInteger(totalAmountMinor)) {
-    throw new Error("TouchLine nominal card total exceeds the safe integer range");
-  }
+  const commercialSummary = resolveTouchlineOwnerCommercialSummary(input);
 
   return Object.freeze({
     clubOwners: 1,
-    cardsTracked: input.ownedContractCount,
-    nominalValueGbp: totalAmountMinor / 100,
+    cardsTracked: commercialSummary.cardsTracked,
+    nominalValueGbp: commercialSummary.squadValueGbp,
   });
 }
