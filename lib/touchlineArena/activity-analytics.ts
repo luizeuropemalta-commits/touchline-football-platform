@@ -21,7 +21,8 @@ export function touchlineActivityArea(pathname: string, panel?: string | null): 
   if (pathname.startsWith("/touchline-clubs")) return "club";
   if (pathname.startsWith("/touchline-players")) return "player";
   if (pathname.startsWith("/touchline-player-card-rankings") || pathname.startsWith("/touchline-tables")) return "ranking";
-  if (pathname.startsWith("/admin") || pathname.startsWith("/football-search")) return "admin";
+  if (pathname.startsWith("/admin")) return "admin";
+  if (pathname.startsWith("/football-search")) return "other";
   if (pathname.startsWith("/notifications")) return "other";
   return null;
 }

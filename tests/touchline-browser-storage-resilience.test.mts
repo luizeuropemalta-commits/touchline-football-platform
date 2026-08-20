@@ -88,7 +88,7 @@ test("locale, analytics and Arena bootstrap use resilient browser boundaries", (
   assert.match(localeSyncSource, /writeBrowserStorage\("localStorage"/);
   assert.match(localeSyncSource, /requestedLocale === null \? initialLocale : requestedLocale/);
   assert.doesNotMatch(localeSyncSource, /readBrowserStorage\("localStorage"/);
-  assert.match(activityTrackerSource, /getOrCreateBrowserSessionId/);
+  assert.match(activityTrackerSource, /getOrCreateIdentityBoundBrowserSessionId/);
   assert.match(activityTrackerSource, /void start\(\)\.catch/);
   assert.match(arenaSource, /queueResilientAsyncTask\(async \(\) =>/);
   assert.match(arenaSource, /const randomKey = createResilientBrowserId\(\)/);
