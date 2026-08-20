@@ -101,6 +101,12 @@ import {
   type TouchlineMarketPositionBucket,
 } from "@/lib/touchlineArena/position-eligibility";
 import {
+  isTouchlineFormationCandidateEligible,
+  reconcileTouchlineFormationStarters,
+  touchlineFormationCapacities,
+  type TouchlineFormationRole,
+} from "@/lib/touchlineArena/formation-transition";
+import {
   normalizeTouchlineCountryCode3,
   touchlineCountryFlagUrl,
 } from "@/lib/touchlineArena/country-flags";
@@ -1030,8 +1036,36 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? null,
-    countryCode3: card?.countryCode3 || "ENG",
+    countryCode3: card?.countryCode3 || "N/A",
     impact: replacedBench.impact,
+    status: "ready",
+  };
+}
+
+function arenaPlayerToFormationReserve(player: ArenaPlayer): BenchOption {
+  const card = player.card;
+  const presentation = resolveArenaPublicCardPresentation(card ?? {});
+  return {
+    id: `bench-${player.id.replace(/^(?:field-|bench-)+/i, "")}`,
+    name: card?.playerName || player.name,
+    shortName: player.shortName,
+    role: player.role,
+    club: card?.clubName || "TouchLine XI",
+    position: card?.position || roleLabel(player.role),
+    shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
+    marketValue: "",
+    marketValueSource: "unavailable",
+    marketValueState: card?.marketValueState ?? "unavailable",
+    classificationState: card?.classificationState ?? "unavailable",
+    cardTier: presentation.cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
+    inventoryId: card?.inventoryId ?? null,
+    countryCode3: card?.countryCode3 || "N/A",
+    impact: "+ squad depth",
     status: "ready",
   };
 }
@@ -2757,23 +2791,10 @@ function normalizeArenaPlayersForFormation(
   formationKey: ArenaFormationKey,
   principal?: ArenaPersistencePrincipal | null,
 ) {
-  const formation = arenaFormationDefinition(formationKey);
   const slots = arenaSlotsForFormation(formationKey, principal);
-  // A formation switch must change the actual rendered shape, not only its
-  // label. Keep the same cards, prioritise the real goalkeeper, then assign
-  // the remaining cards to the target tactical lines in their stable order.
-  const goalkeeper = players.find((player) => player.role === "goalkeeper") ?? players[0];
-  const outfieldPlayers = players.filter((player) => player.id !== goalkeeper?.id);
-  const tacticalRoles: ArenaPlayer["role"][] = [
-    "goalkeeper",
-    ...Array.from({ length: formation.defenders }, () => "defender" as const),
-    ...Array.from({ length: formation.midfielders }, () => "midfielder" as const),
-    ...Array.from({ length: formation.forwards }, () => "forward" as const),
-  ];
-  const playersInFormationOrder = goalkeeper ? [goalkeeper, ...outfieldPlayers] : outfieldPlayers;
-  const tacticalRoleByPlayerId = new Map(
-    playersInFormationOrder.map((player, index) => [player.id, tacticalRoles[index] ?? player.role] as const),
-  );
+  // Normalization owns coordinates only. Canonical roles come from the
+  // authoritative roster/card position and must never be rewritten merely to
+  // make a different formation appear full.
   const roleCounts: Record<ArenaPlayer["role"], number> = {
     goalkeeper: 0,
     defender: 0,
@@ -2782,13 +2803,11 @@ function normalizeArenaPlayersForFormation(
   };
 
   return players.map((player, index) => {
-    const role = tacticalRoleByPlayerId.get(player.id) ?? player.role;
-    const slotIndex = roleCounts[role]++;
-    const slot = slots[role][slotIndex] ?? TEAM_BUILDER_SLOTS[role][slotIndex] ?? TEAM_BUILDER_GENERIC_SLOTS[index] ?? TEAM_BUILDER_GENERIC_SLOTS.at(-1)!;
-    const position = clampArenaPlayerPosition({ role }, { x: slot.x, y: slot.y });
+    const slotIndex = roleCounts[player.role]++;
+    const slot = slots[player.role][slotIndex] ?? TEAM_BUILDER_SLOTS[player.role][slotIndex] ?? TEAM_BUILDER_GENERIC_SLOTS[index] ?? TEAM_BUILDER_GENERIC_SLOTS.at(-1)!;
+    const position = clampArenaPlayerPosition(player, { x: slot.x, y: slot.y });
     return {
       ...player,
-      role,
       ...position,
       heightVh: ARENA_CARD_COMPACT_HEIGHT_VH,
     };
@@ -3450,6 +3469,7 @@ export default function ArenaClient({
   const [marketPositionBucketFilter, setMarketPositionBucketFilter] = useState<TouchlineMarketPositionBucketFilter>("all");
   const [marketNeedsOnly, setMarketNeedsOnly] = useState(false);
   const [marketFormationConfirmed, setMarketFormationConfirmed] = useState(false);
+  const [marketFormationFeedback, setMarketFormationFeedback] = useState<string | null>(null);
   const [marketSortMode, setMarketSortMode] = useState<TouchlineMarketSortMode>("recommended");
   const [marketCartPlayers, setMarketCartPlayers] = useState<TeamBuilderSquadPlayer[]>([]);
   const [marketSpotlightPlayerId, setMarketSpotlightPlayerId] = useState<string | null>(null);
@@ -6488,7 +6508,40 @@ export default function ArenaClient({
       setSaveStatus(siteLanguage === "pt-BR" ? "Escolha o treinador antes da formação." : "Choose the coach before formation.");
       return;
     }
-    changeFormation(formationKey);
+    const capacities = touchlineFormationCapacities(formationKey);
+    if (!capacities) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Formação inválida." : "Invalid formation.");
+      return;
+    }
+    const reconciliation = reconcileTouchlineFormationStarters(players, capacities);
+    const nextPlayers = normalizeArenaPlayersForFormation(
+      reconciliation.starters,
+      formationKey,
+      arenaPersistencePrincipal,
+    );
+    const existingReserveInventoryIds = new Set(
+      benchPlayers
+        .map((bench) => normalizeTouchlineMarketInventoryId(bench.inventoryId))
+        .filter((inventoryId): inventoryId is string => Boolean(inventoryId)),
+    );
+    const existingReserveIds = new Set(benchPlayers.map((bench) => bench.id));
+    const movedToReserves = reconciliation.overflow
+      .map(arenaPlayerToFormationReserve)
+      .filter((reserve) => {
+        const inventoryId = normalizeTouchlineMarketInventoryId(reserve.inventoryId);
+        if (inventoryId && existingReserveInventoryIds.has(inventoryId)) return false;
+        if (!inventoryId && existingReserveIds.has(reserve.id)) return false;
+        if (inventoryId) existingReserveInventoryIds.add(inventoryId);
+        existingReserveIds.add(reserve.id);
+        return true;
+      });
+    const nextBench = [...benchPlayers, ...movedToReserves];
+
+    setSelectedFormationKey(formationKey);
+    setPlayers(nextPlayers);
+    setBenchPlayers(nextBench);
+    saveLineup(nextPlayers, formationKey, arenaPersistencePrincipal);
+    persistArenaRoster(nextPlayers, nextBench);
     writeBrowserStorage(
       "localStorage",
       arenaStorageKey(arenaPersistencePrincipal, ARENA_PERSISTENCE_RESOURCES.marketFormation),
@@ -6496,15 +6549,98 @@ export default function ArenaClient({
     );
     setMarketFormationConfirmed(true);
     setMarketPositionFilter("all");
-    setMarketPositionBucketFilter("goalkeeper");
+    setMarketPositionBucketFilter("all");
     setMarketNeedsOnly(false);
-    setSaveStatus(siteLanguage === "pt-BR"
-      ? `${formationKey} confirmada · comece pelos goleiros`
-      : `${formationKey} confirmed · start with goalkeepers`);
-    window.requestAnimationFrame(() => {
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      marketSelectionRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-    });
+    const vacancyCount = reconciliation.vacancies.reduce((total, vacancy) => total + vacancy.count, 0);
+    const vacancyLabel = reconciliation.vacancies.map((vacancy) => {
+      const role = vacancy.role === "goalkeeper"
+        ? siteLanguage === "pt-BR" ? "goleiro" : "goalkeeper"
+        : vacancy.role === "defender"
+          ? siteLanguage === "pt-BR" ? "defensor" : "defender"
+          : vacancy.role === "midfielder"
+            ? siteLanguage === "pt-BR" ? "meio-campista" : "midfielder"
+            : siteLanguage === "pt-BR" ? "atacante" : "forward";
+      return `${vacancy.count} ${role}${vacancy.count === 1 ? "" : "s"}`;
+    }).join(" · ");
+    const moveLabel = movedToReserves.length
+      ? siteLanguage === "pt-BR"
+        ? `${movedToReserves.length} atleta${movedToReserves.length === 1 ? "" : "s"} movido${movedToReserves.length === 1 ? "" : "s"} com segurança para reservas.`
+        : `${movedToReserves.length} player${movedToReserves.length === 1 ? "" : "s"} safely moved to the reserves.`
+      : null;
+    const feedback = vacancyCount
+      ? siteLanguage === "pt-BR"
+        ? `${vacancyLabel} necessário${vacancyCount === 1 ? "" : "s"}. ${moveLabel ?? "Complete a formação para continuar."}`
+        : `${vacancyLabel} required. ${moveLabel ?? "Complete the formation to continue."}`
+      : moveLabel ?? (siteLanguage === "pt-BR" ? "Formação completa e salva." : "Formation complete and saved.");
+    setMarketFormationFeedback(feedback);
+    setSaveStatus(`${formationKey} · ${feedback}`);
+  }
+
+  function assignMarketFormationPlayer(selection: {
+    role: TouchlineFormationRole;
+    targetPlayerId: string | null;
+    candidateId: string;
+  }) {
+    if (!arenaPersistencePrincipal || !marketFormationConfirmed) return;
+    const candidate = benchPlayers.find((bench) => bench.id === selection.candidateId);
+    if (!candidate || !isTouchlineFormationCandidateEligible(
+      { position: candidate.position, role: candidate.role },
+      selection.role,
+    )) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Atleta incompatível com esta posição." : "Player is not eligible for this position.");
+      return;
+    }
+
+    const capacities = touchlineFormationCapacities(selectedFormationKey);
+    if (!capacities) return;
+    const target = selection.targetPlayerId
+      ? players.find((player) => player.id === selection.targetPlayerId) ?? null
+      : null;
+    if (target && target.role !== selection.role) return;
+    if (!target && players.filter((player) => player.role === selection.role).length >= capacities[selection.role]) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Esta linha da formação já está completa." : "This formation line is already complete.");
+      return;
+    }
+
+    const targetSlot: ArenaPlayer = target ?? {
+      id: `vacant-${selection.role}-${candidate.id}`,
+      name: candidate.name,
+      shortName: candidate.shortName,
+      role: selection.role,
+      x: 50,
+      y: 50,
+      heightVh: ARENA_CARD_COMPACT_HEIGHT_VH,
+    };
+    const incoming = benchOptionToArenaPlayer(candidate, targetSlot);
+    const nextPlayers = normalizeArenaPlayersForFormation(
+      target
+        ? players.map((player) => player.id === target.id ? incoming : player)
+        : [...players, incoming],
+      selectedFormationKey,
+      arenaPersistencePrincipal,
+    );
+    const nextBench = target
+      ? benchPlayers.map((bench) => bench.id === candidate.id ? arenaPlayerToBenchOption(target, candidate) : bench)
+      : benchPlayers.filter((bench) => bench.id !== candidate.id);
+
+    setPlayers(nextPlayers);
+    setBenchPlayers(nextBench);
+    saveLineup(nextPlayers, selectedFormationKey, arenaPersistencePrincipal);
+    persistArenaRoster(nextPlayers, nextBench);
+    setSelectedPlayerId(incoming.id);
+    setSelectedBenchId(nextBench[0]?.id ?? "");
+    setIsDemoLineup(false);
+    setShouldRenderPlayers(true);
+    const remainingVacancies = Math.max(0, TOUCHLINE_SQUAD_RULES.starters - nextPlayers.length);
+    const feedback = remainingVacancies
+      ? siteLanguage === "pt-BR"
+        ? `${candidate.shortName} adicionado. ${remainingVacancies} ${remainingVacancies === 1 ? "posição ainda necessária" : "posições ainda necessárias"}.`
+        : `${candidate.shortName} added. ${remainingVacancies} position${remainingVacancies === 1 ? "" : "s"} still required.`
+      : siteLanguage === "pt-BR"
+        ? `${candidate.shortName} adicionado. Formação completa e salva.`
+        : `${candidate.shortName} added. Formation complete and saved.`;
+    setMarketFormationFeedback(feedback);
+    setSaveStatus(feedback);
   }
 
   async function toggleArenaFullscreen() {
@@ -8794,29 +8930,20 @@ export default function ArenaClient({
                     bench={matchdayBenchPlayers.map((player) => ({
                       id: player.id,
                       shortName: player.shortName,
+                      role: player.role,
                       position: player.position,
                       card: benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.shortName) : undefined),
                     }))}
                     remainingSquad={reserveVaultPlayers.map((player) => ({
                       id: player.id,
                       shortName: player.shortName,
+                      role: player.role,
                       position: player.position,
                       card: benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.shortName) : undefined),
                     }))}
                     contractedCount={authoritativeOwnedSquadCount}
-                    selectedRole={marketPositionFilter}
-                    onSelectRole={(role) => {
-                      setMarketPositionFilter(role);
-                      setMarketPositionBucketFilter("all");
-                      setMarketNeedsOnly(false);
-                      window.requestAnimationFrame(() => {
-                        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-                        marketSelectionRef.current?.scrollIntoView({
-                          behavior: reduceMotion ? "auto" : "smooth",
-                          block: "start",
-                        });
-                      });
-                    }}
+                    formationFeedback={marketFormationFeedback}
+                    onAssignPlayer={assignMarketFormationPlayer}
                   />
 
                   <div className={`team-builder-cart-dock ${marketCartPlayers.length ? "has-items" : "is-empty"}`} aria-label={t("marketCart")}>

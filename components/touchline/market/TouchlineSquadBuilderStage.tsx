@@ -1,10 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Check } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Check, X } from "lucide-react";
 
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
+import {
+  isTouchlineFormationCandidateEligible,
+  touchlineFormationCapacities,
+} from "@/lib/touchlineArena/formation-transition";
 import { TOUCHLINE_SQUAD_RULES, resolveTouchlineSquadJourney } from "@/lib/touchlineArena/squad-rules";
 
 import styles from "./TouchlineSquadBuilderStage.module.css";
@@ -22,6 +26,7 @@ export type TouchlineSquadBuilderStarter = {
 export type TouchlineSquadBuilderBenchPlayer = {
   id: string;
   shortName: string;
+  role: TouchlineSquadBuilderRole;
   position: string;
   card: TouchlineEliteExactPlayer;
 };
@@ -47,8 +52,12 @@ type Props = {
   bench: TouchlineSquadBuilderBenchPlayer[];
   remainingSquad: TouchlineSquadBuilderBenchPlayer[];
   contractedCount: number;
-  selectedRole: "all" | TouchlineSquadBuilderRole;
-  onSelectRole: (role: TouchlineSquadBuilderRole) => void;
+  formationFeedback?: string | null;
+  onAssignPlayer: (selection: {
+    role: TouchlineSquadBuilderRole;
+    targetPlayerId: string | null;
+    candidateId: string;
+  }) => void;
 };
 
 function evenlySpacedY(count: number, index: number) {
@@ -57,20 +66,17 @@ function evenlySpacedY(count: number, index: number) {
 }
 
 function formationSlots(formation: string): FormationSlot[] {
-  const formationLines = formation
-    .split("-")
-    .map((value) => Number.parseInt(value, 10))
-    .filter(Number.isFinite);
-  const defenders = formationLines[0] ?? 4;
-  const forwards = formationLines.at(-1) ?? 3;
-  const midfielders = formationLines.length > 2
-    ? formationLines.slice(1, -1).reduce((total, value) => total + value, 0)
-    : 3;
+  const capacities = touchlineFormationCapacities(formation) ?? {
+    goalkeeper: 1,
+    defender: 4,
+    midfielder: 3,
+    forward: 3,
+  };
   const lines: Array<{ role: TouchlineSquadBuilderRole; count: number; x: number }> = [
     { role: "goalkeeper", count: 1, x: 9 },
-    { role: "defender", count: defenders, x: 34 },
-    { role: "midfielder", count: midfielders, x: 61 },
-    { role: "forward", count: forwards, x: 88 },
+    { role: "defender", count: capacities.defender, x: 34 },
+    { role: "midfielder", count: capacities.midfielder, x: 61 },
+    { role: "forward", count: capacities.forward, x: 88 },
   ];
 
   return lines.flatMap(({ role, count, x }) => Array.from({ length: count }, (_, roleIndex) => ({
@@ -89,6 +95,18 @@ function roleLabel(role: TouchlineSquadBuilderRole, portuguese: boolean) {
   return portuguese ? "Atacante" : "Forward";
 }
 
+function vacancyLabel(role: TouchlineSquadBuilderRole, count: number, portuguese: boolean) {
+  if (!portuguese) return `${count} ${roleLabel(role, false).toLowerCase()}${count === 1 ? "" : "s"} required`;
+  const label = role === "goalkeeper"
+    ? count === 1 ? "goleiro" : "goleiros"
+    : role === "defender"
+      ? count === 1 ? "defensor" : "defensores"
+      : role === "midfielder"
+        ? count === 1 ? "meio-campista" : "meio-campistas"
+        : count === 1 ? "atacante" : "atacantes";
+  return `${count} ${label} ${count === 1 ? "necessário" : "necessários"}`;
+}
+
 export default function TouchlineSquadBuilderStage({
   locale,
   formation,
@@ -102,15 +120,49 @@ export default function TouchlineSquadBuilderStage({
   bench,
   remainingSquad,
   contractedCount,
-  selectedRole,
-  onSelectRole,
+  formationFeedback,
+  onAssignPlayer,
 }: Props) {
   const portuguese = locale === "pt-BR";
   const slots = formationSlots(formation);
+  const [activeSlot, setActiveSlot] = useState<{
+    id: string;
+    role: TouchlineSquadBuilderRole;
+    targetPlayerId: string | null;
+  } | null>(null);
   const startersByRole = new Map<TouchlineSquadBuilderRole, TouchlineSquadBuilderStarter[]>();
   for (const role of ["goalkeeper", "defender", "midfielder", "forward"] as const) {
     startersByRole.set(role, starters.filter((player) => player.role === role));
   }
+  const squadCandidates = useMemo(
+    () => [...bench, ...remainingSquad],
+    [bench, remainingSquad],
+  );
+  const eligibleCandidates = useMemo(() => (
+    activeSlot
+      ? squadCandidates.filter((player) => isTouchlineFormationCandidateEligible(
+          { position: player.position, role: player.role },
+          activeSlot.role,
+        ))
+      : []
+  ), [activeSlot, squadCandidates]);
+  const vacancyCounts = slots.reduce<Partial<Record<TouchlineSquadBuilderRole, number>>>((counts, slot) => {
+    const player = startersByRole.get(slot.role)?.[slot.roleIndex];
+    if (!player) counts[slot.role] = (counts[slot.role] ?? 0) + 1;
+    return counts;
+  }, {});
+  const vacancies = (Object.entries(vacancyCounts) as Array<[TouchlineSquadBuilderRole, number]>).filter(([, count]) => count > 0);
+  const vacancyTotal = vacancies.reduce((total, [, count]) => total + count, 0);
+  const vacancySummary = vacancies.map(([role, count]) => vacancyLabel(role, count, portuguese)).join(" · ");
+
+  useEffect(() => {
+    if (!activeSlot) return;
+    function closePicker(event: KeyboardEvent) {
+      if (event.key === "Escape") setActiveSlot(null);
+    }
+    window.addEventListener("keydown", closePicker);
+    return () => window.removeEventListener("keydown", closePicker);
+  }, [activeSlot]);
   const journey = resolveTouchlineSquadJourney({
     hasCoach: Boolean(coachName),
     hasFormation: formationConfirmed,
@@ -160,7 +212,10 @@ export default function TouchlineSquadBuilderStage({
               key={option}
               type="button"
               className={journey.formationComplete && formation === option ? styles.activeFormation : ""}
-              onClick={() => onSelectFormation(option)}
+              onClick={() => {
+                setActiveSlot(null);
+                onSelectFormation(option);
+              }}
               aria-pressed={journey.formationComplete && formation === option}
               disabled={!journey.coachComplete}
             >
@@ -174,6 +229,10 @@ export default function TouchlineSquadBuilderStage({
       <div className={styles.workspace}>
         <div className={styles.pitchColumn}>
           <TouchlinePitchSurface className={styles.pitch} ariaLabel={portuguese ? `Time titular ${formation}` : `${formation} Starting XI`}>
+            <div className={`${styles.formationStatus} ${vacancyTotal ? styles.incompleteFormation : styles.readyFormation}`} role="status" aria-live="polite">
+              <strong>{vacancyTotal ? vacancySummary : (portuguese ? "Formação completa" : "Formation complete")}</strong>
+              {formationFeedback ? <span>{formationFeedback}</span> : null}
+            </div>
             {slots.map((slot) => {
               const player = startersByRole.get(slot.role)?.[slot.roleIndex];
               return player ? (
@@ -182,9 +241,10 @@ export default function TouchlineSquadBuilderStage({
                   type="button"
                   className={styles.playerSlot}
                   style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-                  onClick={() => onSelectRole(slot.role)}
+                  onClick={() => setActiveSlot({ id: slot.id, role: slot.role, targetPlayerId: player.id })}
                   disabled={!journey.formationComplete}
                   aria-label={`${player.name} · ${roleLabel(slot.role, portuguese)}`}
+                  aria-haspopup="dialog"
                 >
                   <span aria-hidden="true">
                     <TouchlineEliteExactCard
@@ -204,18 +264,69 @@ export default function TouchlineSquadBuilderStage({
                 <button
                   key={slot.id}
                   type="button"
-                  className={`${styles.emptySlot} ${selectedRole === slot.role ? styles.selected : ""}`}
+                  className={`${styles.emptySlot} ${activeSlot?.id === slot.id ? styles.selected : ""}`}
                   style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-                  onClick={() => onSelectRole(slot.role)}
+                  onClick={() => setActiveSlot({ id: slot.id, role: slot.role, targetPlayerId: null })}
                   disabled={!journey.formationComplete}
                   aria-label={`${portuguese ? "Adicionar" : "Add"} ${roleLabel(slot.role, portuguese)}`}
-                  aria-pressed={selectedRole === slot.role}
+                  aria-pressed={activeSlot?.id === slot.id}
+                  aria-haspopup="dialog"
                 >
                   <b>+</b>
                   <span>{roleLabel(slot.role, portuguese)}</span>
                 </button>
               );
             })}
+            {activeSlot ? (
+              <section className={styles.slotPicker} role="dialog" aria-modal="false" aria-labelledby="formation-slot-picker-title">
+                <header>
+                  <div>
+                    <span>{portuguese ? "SELEÇÃO NO CAMPO" : "ON-PITCH SELECTION"}</span>
+                    <strong id="formation-slot-picker-title">
+                      {activeSlot.targetPlayerId
+                        ? (portuguese ? `Substituir ${roleLabel(activeSlot.role, portuguese)}` : `Replace ${roleLabel(activeSlot.role, portuguese)}`)
+                        : (portuguese ? `${roleLabel(activeSlot.role, portuguese)} necessário` : `${roleLabel(activeSlot.role, portuguese)} required`)}
+                    </strong>
+                  </div>
+                  <button type="button" onClick={() => setActiveSlot(null)} aria-label={portuguese ? "Fechar seleção" : "Close selection"} autoFocus>
+                    <X aria-hidden="true" />
+                  </button>
+                </header>
+                <p>{portuguese ? "Somente atletas elegíveis para esta posição." : "Only players eligible for this position."}</p>
+                <div className={styles.slotPickerCandidates}>
+                  {eligibleCandidates.length ? eligibleCandidates.map((candidate) => (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      onClick={() => {
+                        onAssignPlayer({
+                          role: activeSlot.role,
+                          targetPlayerId: activeSlot.targetPlayerId,
+                          candidateId: candidate.id,
+                        });
+                        setActiveSlot(null);
+                      }}
+                    >
+                      <span className={styles.slotPickerCard} aria-hidden="true">
+                        <TouchlineEliteExactCard
+                          player={candidate.card}
+                          rankingMode="live"
+                          optimizeForLiveCompact
+                          enableInteractiveNeon={false}
+                          showCardActions={false}
+                          showProfileAction={false}
+                          showSocialMetrics={false}
+                          allowVisualInventoryPreview
+                        />
+                      </span>
+                      <span><b>{candidate.shortName}</b><small>{candidate.position}</small></span>
+                    </button>
+                  )) : (
+                    <p>{portuguese ? "Nenhum atleta elegível disponível no elenco." : "No eligible squad player is available."}</p>
+                  )}
+                </div>
+              </section>
+            ) : null}
           </TouchlinePitchSurface>
 
           <aside className={styles.technicalArea} aria-label={portuguese ? "Área técnica e preparação do elenco" : "Technical area and squad preparation"}>
@@ -271,7 +382,16 @@ export default function TouchlineSquadBuilderStage({
       </section>
 
       <section className={styles.remaining} aria-label={portuguese ? "Elenco restante" : "Remaining squad"}>
-        <header><strong>{portuguese ? "Elenco restante" : "Remaining squad"}</strong><small>{remainingSquad.length}/{TOUCHLINE_SQUAD_RULES.reserveVault}</small></header>
+        <header>
+          <strong>{portuguese ? "Elenco restante" : "Remaining squad"}</strong>
+          <small>
+            {starters.length === TOUCHLINE_SQUAD_RULES.starters
+              ? `${remainingSquad.length}/${TOUCHLINE_SQUAD_RULES.reserveVault}`
+              : portuguese
+                ? `${remainingSquad.length} · aguardando ${TOUCHLINE_SQUAD_RULES.starters - starters.length}`
+                : `${remainingSquad.length} · ${TOUCHLINE_SQUAD_RULES.starters - starters.length} awaiting placement`}
+          </small>
+        </header>
         <div>{remainingSquad.length ? remainingSquad.map((player) => (
           <div key={player.id}>
             <div className={styles.rosterCard} aria-hidden="true">

@@ -126,7 +126,8 @@ test("Arena accepts a user-approved QA layout only in the specific QA editor pat
   assert.match(arenaSource, /"4-5-1"/);
   assert.match(arenaSource, /"3-4-3"/);
   assert.match(arenaSource, /"3-5-2"/);
-  assert.match(arenaSource, /const tacticalRoles: ArenaPlayer\["role"\]\[\] = \[/);
+  assert.match(arenaSource, /Normalization owns coordinates only/);
+  assert.doesNotMatch(arenaSource, /const tacticalRoles: ArenaPlayer\["role"\]\[\] = \[/);
   assert.match(arenaSource, /constrainArenaQaFreeSlot/);
   assert.match(arenaSource, /handleFieldPlayerKeyDown/);
   assert.match(arenaSource, /src=\{isArenaIntroViewportReady\s*\? TOUCHLINE_ARENA_LOOP_VIDEO/);

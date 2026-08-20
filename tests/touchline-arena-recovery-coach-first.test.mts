@@ -124,7 +124,8 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
     "authenticated ClubOwner coach selection must be accepted by the server before local cache is written",
   );
   assert.match(selectCoach, /standaloneExperience === "market"[\s\S]*?setMarketFormationConfirmed\(false\)/);
-  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?setMarketPositionBucketFilter\("goalkeeper"\)/);
+  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?reconcileTouchlineFormationStarters/);
+  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?setMarketPositionBucketFilter\("all"\)/);
   assert.match(arena, /coachOffersByProviderId/);
   assert.match(arena, /offer\.displayPrice/);
   assert.match(arena, /className="arena-coach-market-header"/);
