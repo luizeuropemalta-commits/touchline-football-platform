@@ -110,6 +110,7 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
   if (!result.ok) return;
 
   assert.equal(result.snapshot.activeContractCount, 1);
+  assert.equal(result.snapshot.ownedContractCount, 1);
   assert.deepEqual(result.snapshot.inventoryIds, [INVENTORY_ID]);
   assert.deepEqual(result.snapshot.cards[0], {
     id: PLAYER_ID,
@@ -184,6 +185,16 @@ test("uses only the published editorial card instead of legacy inventory tiers o
   assert.equal(staleTableResult.ok, true);
   if (!staleTableResult.ok) return;
   assert.equal(staleTableResult.snapshot.cards[0]?.editorialCard?.cardPrice.amountMinor, 4_900);
+});
+
+test("preserves the active ownership count when publication policy hides a game card", () => {
+  const result = mapAuthoritativeRosterRows(completeRows(), new Map());
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.equal(result.snapshot.ownedContractCount, 1);
+  assert.equal(result.snapshot.activeContractCount, 0);
+  assert.deepEqual(result.snapshot.cards, []);
 });
 
 test("keeps a published card independent from a retired inventory price-table identifier", () => {

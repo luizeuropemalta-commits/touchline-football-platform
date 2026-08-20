@@ -62,6 +62,9 @@ export default async function TouchLineTablesPage({
   const isAuthenticatedClubOwner = Boolean(user && !isOwnerEmail(user.email));
   const ownerSummary = resolveTouchlineTablesOwnerSummary({
     isAuthenticatedClubOwner,
+    ownedContractCount: authoritativeRoster?.ok
+      ? authoritativeRoster.snapshot.ownedContractCount
+      : 0,
     rosterCards,
   });
   // No fabricated owner or player leaderboard may be presented as a published

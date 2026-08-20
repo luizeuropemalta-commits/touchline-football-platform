@@ -20,6 +20,7 @@ function authenticatedRoster() {
     ok: true as const,
     snapshot: {
       source: "supabase" as const,
+      ownedContractCount: 1,
       activeContractCount: 1,
       inventoryIds: [INVENTORY_ID],
       cards: [{

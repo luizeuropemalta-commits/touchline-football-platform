@@ -27,6 +27,7 @@ function publishedCard(id: string, amountMinor: number): ClubOwnerSquadCard {
 test("Tables uses the authenticated ClubOwner's published roster for its summary", () => {
   assert.deepEqual(resolveTouchlineTablesOwnerSummary({
     isAuthenticatedClubOwner: true,
+    ownedContractCount: 2,
     rosterCards: [publishedCard("one", 100), publishedCard("two", 1_500)],
   }), {
     clubOwners: 1,
@@ -39,6 +40,7 @@ test("Tables never turns an admin or signed-out roster into a ClubOwner summary"
   const rosterCards = [publishedCard("one", 100)];
   assert.deepEqual(resolveTouchlineTablesOwnerSummary({
     isAuthenticatedClubOwner: false,
+    ownedContractCount: 1,
     rosterCards,
   }), {
     clubOwners: 0,
@@ -55,10 +57,30 @@ test("Tables rejects a non-GBP or fractional nominal value instead of inventing 
   };
   assert.throws(() => resolveTouchlineTablesOwnerSummary({
     isAuthenticatedClubOwner: true,
+    ownedContractCount: 1,
     rosterCards: [wrongCurrency],
   }), /GBP/);
   assert.throws(() => resolveTouchlineTablesOwnerSummary({
     isAuthenticatedClubOwner: true,
+    ownedContractCount: 1,
     rosterCards: [publishedCard("two", 150)],
   }), /whole pounds/);
+});
+
+test("Tables counts every active contract while valuing only current public cards", () => {
+  assert.deepEqual(resolveTouchlineTablesOwnerSummary({
+    isAuthenticatedClubOwner: true,
+    ownedContractCount: 35,
+    rosterCards: [publishedCard("one", 17_100)],
+  }), {
+    clubOwners: 1,
+    cardsTracked: 35,
+    nominalValueGbp: 171,
+  });
+
+  assert.throws(() => resolveTouchlineTablesOwnerSummary({
+    isAuthenticatedClubOwner: true,
+    ownedContractCount: 0,
+    rosterCards: [publishedCard("one", 100)],
+  }), /tracked-card count/);
 });

@@ -25,6 +25,7 @@ export type AuthoritativeRosterRows = {
 
 export type AuthoritativeRosterSnapshot = {
   source: "supabase";
+  ownedContractCount: number;
   activeContractCount: number;
   inventoryIds: string[];
   cards: ClubOwnerSquadCard[];
@@ -223,6 +224,7 @@ export function mapAuthoritativeRosterRows(
     ok: true,
     snapshot: {
       source: "supabase",
+      ownedContractCount: rows.contracts.length,
       activeContractCount: cards.length,
       inventoryIds,
       cards,
@@ -268,6 +270,7 @@ export async function readAuthoritativeTouchlineRoster(
       ok: true,
       snapshot: {
         source: "supabase",
+        ownedContractCount: 0,
         activeContractCount: 0,
         inventoryIds: [],
         cards: [],

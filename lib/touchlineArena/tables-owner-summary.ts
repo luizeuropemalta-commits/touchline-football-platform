@@ -20,9 +20,16 @@ const EMPTY_SUMMARY: TouchlineTablesOwnerSummary = Object.freeze({
  */
 export function resolveTouchlineTablesOwnerSummary(input: Readonly<{
   isAuthenticatedClubOwner: boolean;
+  ownedContractCount: number;
   rosterCards: readonly ClubOwnerSquadCard[];
 }>): TouchlineTablesOwnerSummary {
   if (!input.isAuthenticatedClubOwner) return EMPTY_SUMMARY;
+  if (
+    !Number.isSafeInteger(input.ownedContractCount)
+    || input.ownedContractCount < input.rosterCards.length
+  ) {
+    throw new Error("TouchLine tracked-card count must cover the published roster");
+  }
 
   let totalAmountMinor = 0;
   for (const card of input.rosterCards) {
@@ -43,7 +50,7 @@ export function resolveTouchlineTablesOwnerSummary(input: Readonly<{
 
   return Object.freeze({
     clubOwners: 1,
-    cardsTracked: input.rosterCards.length,
+    cardsTracked: input.ownedContractCount,
     nominalValueGbp: totalAmountMinor / 100,
   });
 }
