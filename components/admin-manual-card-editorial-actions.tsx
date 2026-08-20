@@ -17,22 +17,19 @@ function manualCopy(locale: ManualEditorialLocale) {
   const pt = locale === "pt-BR";
   return {
     oneAtATime: pt ? "Um jogador de cada vez" : "One player at a time",
-    title: pt ? "Valor de mercado manual → publicar card" : "Manual market value → publish card",
+    title: pt ? "Valor de mercado manual → Card Engine" : "Manual market value → Card Engine",
     intro: pt
-      ? "O valor e a evidência interna permanecem protegidos. A TouchLine calcula tier, borda, neon e preço nominal. Somente PUBLICADO chega às superfícies de cards."
-      : "The value and internal evidence stay protected. TouchLine calculates tier, border, neon and nominal price. Only PUBLISHED reaches game-card surfaces.",
+      ? "O valor e a evidência interna permanecem protegidos. Quando todos os campos reais do card estiverem completos, a TouchLine calcula tier, borda, neon, preço nominal e publica automaticamente."
+      : "The value and internal evidence stay protected. Once every real card field is complete, TouchLine automatically calculates tier, border, neon, nominal price and publication.",
     findPlayer: pt ? "Encontrar jogador canônico" : "Find canonical player",
     searchPlaceholder: pt ? "Nome ou clube" : "Name or club",
     selected: pt ? "Selecionado" : "Selected",
     value: pt ? "Valor manual em EUR" : "Manual EUR value",
     season: pt ? "Temporada" : "Season",
-    action: pt ? "Ação de publicação" : "Publication action",
-    saveForReview: pt ? "Salvar para revisão" : "Save for review",
-    previewReady: pt ? "Pronto para prévia" : "Preview ready",
-    publish: pt ? "Publicar card" : "Publish card",
+    save: pt ? "Salvar no Card Engine" : "Save to Card Engine",
     note: pt ? "Nota interna (nunca pública)" : "Internal note (never public)",
     source: pt ? "Fonte / evidência interna (nunca pública)" : "Internal source / evidence (never public)",
-    choose: pt ? "Escolha o jogador existente, informe o valor manual e depois revise ou publique." : "Choose the existing player, enter the manual value, then preview or publish.",
+    choose: pt ? "Escolha o jogador existente e informe o valor manual. A publicação será derivada automaticamente apenas quando houver dados suficientes." : "Choose the existing player and enter the manual value. Publication is derived automatically only when enough real data exists.",
     invalid: pt ? "Selecione um jogador e informe um valor inteiro em EUR maior ou igual a zero." : "Select a player and enter a whole non-negative EUR value.",
     saving: pt ? "Salvando o valor manual canônico e o estado de publicação protegido…" : "Saving the canonical manual value and protected publication state…",
     savingShort: pt ? "Salvando" : "Saving",
@@ -64,7 +61,6 @@ export function ManualCardEditorialEditor({ players, locale = "en-GB", initialPl
   const [playerId, setPlayerId] = useState(() => players.some((player) => player.id === initialPlayerId) ? initialPlayerId ?? "" : "");
   const [marketValueEur, setMarketValueEur] = useState("");
   const [effectiveSeason, setEffectiveSeason] = useState("2026-27");
-  const [publicationState, setPublicationState] = useState<"ready_for_review" | "ready_to_publish" | "published">("ready_for_review");
   const [internalNote, setInternalNote] = useState("");
   const [internalSource, setInternalSource] = useState("");
   const [status, setStatus] = useState<string>(copy.choose);
@@ -93,14 +89,15 @@ export function ManualCardEditorialEditor({ players, locale = "en-GB", initialPl
           playerId,
           marketValueEur: parsedValue,
           effectiveSeason,
-          publicationState,
           internalNote,
           internalSource,
         }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Editorial save failed.");
-      setStatus(`${payload.publicationStatus}: ${payload.calculatedTier} / £${payload.nominalPriceGbp}. ${locale === "pt-BR" ? "Recarregue para revisar o registro protegido." : "Reload to review the protected record."}`);
+      setStatus(payload.cardReview?.state === "COMPLETE"
+        ? `${payload.publicationStatus}: ${payload.calculatedTier} / £${payload.nominalPriceGbp}. ${locale === "pt-BR" ? "Card completo e publicado automaticamente." : "Card complete and published automatically."}`
+        : `${payload.cardReview?.missingFields?.length ?? 0} ${locale === "pt-BR" ? "campo(s) ainda requer(em) revisão; o card continua em grayscale." : "field(s) still require review; the card stays grayscale."}`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Editorial save failed.");
     } finally {
@@ -127,14 +124,13 @@ export function ManualCardEditorialEditor({ players, locale = "en-GB", initialPl
         ))}
       </div>
       {selectedPlayer ? <p className="text-[10px] font-bold text-[#caff6d]">{copy.selected}: {selectedPlayer.name} · {selectedPlayer.clubName}</p> : null}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.value}<input inputMode="numeric" value={marketValueEur} onChange={(event) => setMarketValueEur(event.target.value.replace(/[^0-9]/g, ""))} placeholder="42000000" className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
         <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.season}<input value={effectiveSeason} onChange={(event) => setEffectiveSeason(event.target.value)} className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
-        <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.action}<select value={publicationState} onChange={(event) => setPublicationState(event.target.value as typeof publicationState)} className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none"><option value="ready_for_review">{copy.saveForReview}</option><option value="ready_to_publish">{copy.previewReady}</option><option value="published">{copy.publish}</option></select></label>
       </div>
       <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.note}<textarea value={internalNote} onChange={(event) => setInternalNote(event.target.value)} rows={2} className="rounded-xl border border-white/[.08] bg-black/30 p-3 text-xs text-white outline-none" /></label>
       <label className="grid gap-2 text-[10px] font-black text-slate-300">{copy.source}<input value={internalSource} onChange={(event) => setInternalSource(event.target.value)} className="h-10 rounded-xl border border-white/[.08] bg-black/30 px-3 text-xs text-white outline-none" /></label>
-      <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={save} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#a3ff12] px-4 text-[10px] font-black text-black disabled:opacity-50"><Save size={14} />{busy ? copy.savingShort : publicationState === "published" ? copy.publish : publicationState === "ready_to_publish" ? copy.preparing : copy.saveForReview}</button><p aria-live="polite" className="text-[10px] font-bold text-slate-500">{status}</p></div>
+      <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={save} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#a3ff12] px-4 text-[10px] font-black text-black disabled:opacity-50"><Save size={14} />{busy ? copy.savingShort : copy.save}</button><p aria-live="polite" className="text-[10px] font-bold text-slate-500">{status}</p></div>
     </section>
   );
 }

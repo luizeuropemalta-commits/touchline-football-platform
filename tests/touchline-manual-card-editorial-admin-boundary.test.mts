@@ -52,7 +52,7 @@ test("the owner page is a protected one-player editor and clearly reports an una
   assert.match(page, /Card publication control/);
   assert.match(page, /Card publication control/);
   assert.match(page, /051_touchline_manual_card_editorial_profiles\.sql/);
-  assert.match(page, /provider_player_id,display_name,name,position,source_updated_at/);
+  assert.match(page, /provider_player_id,display_name,name,position,nationality,country_id,source_updated_at/);
   assert.match(page, /playerId=\$\{encodeURIComponent\(alert\.playerId\)\}/);
   assert.match(page, /Detected/);
   assert.match(actions, /initialPlayerId/);
@@ -62,7 +62,7 @@ test("the protected editorial workflow preserves the explicit EN/PT locale bound
   assert.match(page, /locale=\{locale\}/);
   assert.match(page, /Controle de publicação de cards/);
   assert.match(actions, /type ManualEditorialLocale = "en-GB" \| "pt-BR"/);
-  assert.match(actions, /Valor de mercado manual → publicar card/);
+  assert.match(actions, /Valor de mercado manual → Card Engine/);
   assert.match(actions, /Validar até 50 linhas/);
   assert.match(actions, /Histórico imutável/);
   assert.match(actions, /never public/);
