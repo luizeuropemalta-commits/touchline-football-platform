@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { persistCompetitionFixtureSchedule } from "@/lib/football-data/fixture-schedule-store";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
-import type { TouchlineFixture } from "@/lib/football-data/types";
+import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 
 const DEFAULT_COMPETITION_ID = "8";
 const DEFAULT_TIMEZONE = "Europe/London";
@@ -20,6 +20,13 @@ export type FixtureScheduleSyncResult = {
   daysChecked: number;
   errors: string[];
   syncRunId?: string;
+};
+
+type FixtureScheduleSyncDependencies = {
+  /** Test seam; production always creates the approved Sportmonks provider. */
+  provider?: FootballDataProvider;
+  /** Test seam; production always persists through the canonical schedule store. */
+  persistSchedule?: typeof persistCompetitionFixtureSchedule;
 };
 
 function isoDate(value: Date) {
@@ -85,6 +92,7 @@ async function completeRun(admin: SupabaseClient, result: FixtureScheduleSyncRes
 export async function syncSportmonksFixtureSchedule(
   admin: SupabaseClient,
   options: { competitionId?: string; fromDate?: string; throughDate?: string } = {},
+  dependencies: FixtureScheduleSyncDependencies = {},
 ): Promise<FixtureScheduleSyncResult> {
   const today = normalizeDay(options.fromDate, new Date());
   const requestedThrough = normalizeDay(options.throughDate, new Date(today.getTime() + 35 * 86_400_000));
@@ -105,13 +113,13 @@ export async function syncSportmonksFixtureSchedule(
 
   try {
     result.syncRunId = await createRun(admin, result);
-    if (!process.env.SPORTMONKS_API_TOKEN) {
+    if (!dependencies.provider && !process.env.SPORTMONKS_API_TOKEN) {
       result.status = "not_configured";
       result.errors.push("SPORTMONKS_API_TOKEN is not configured.");
       return result;
     }
 
-    const provider = createFootballDataProvider("sportmonks");
+    const provider = dependencies.provider ?? createFootballDataProvider("sportmonks");
     const competitionResponse = await provider.getCompetitionById(result.competitionProviderId);
     if (!competitionResponse.ok || !competitionResponse.data) {
       result.status = competitionResponse.ok ? "error" : competitionResponse.error.code === "not_configured" ? "not_configured" : "error";
@@ -119,18 +127,23 @@ export async function syncSportmonksFixtureSchedule(
       return result;
     }
 
+    result.daysChecked = Math.floor((through.getTime() - today.getTime()) / 86_400_000) + 1;
+    const fixtureResponse = await provider.getFixturesBetween({
+      fromDate: result.fromDate,
+      throughDate: result.throughDate,
+      competitionId: result.competitionProviderId,
+      timezone: DEFAULT_TIMEZONE,
+    });
+    if (!fixtureResponse.ok) {
+      result.errors.push(`${result.fromDate}..${result.throughDate}: ${fixtureResponse.error.message}`);
+      return result;
+    }
+
+    // Keep a defensive identity/competition check after provider scoping, but
+    // do not page a global response before reaching this point.
     const fixtures = new Map<string, TouchlineFixture>();
-    for (let cursor = new Date(today); cursor <= through; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-      result.daysChecked += 1;
-      const day = isoDate(cursor);
-      const dayResponse = await provider.getFixturesByDate({ date: day, timezone: DEFAULT_TIMEZONE });
-      if (!dayResponse.ok) {
-        result.errors.push(`${day}: ${dayResponse.error.message}`);
-        continue;
-      }
-      for (const fixture of dayResponse.data) {
-        if (fixture.competitionId === result.competitionProviderId) fixtures.set(fixtureKey(fixture), fixture);
-      }
+    for (const fixture of fixtureResponse.data) {
+      if (fixture.competitionId === result.competitionProviderId) fixtures.set(fixtureKey(fixture), fixture);
     }
 
     const fixtureList = [...fixtures.values()];
@@ -142,7 +155,7 @@ export async function syncSportmonksFixtureSchedule(
       result.errors.push(`Season ${seasonIds[index]}: ${seasonResult.ok ? "not found" : seasonResult.error.message}`);
       return [];
     });
-    const persisted = await persistCompetitionFixtureSchedule(admin, {
+    const persisted = await (dependencies.persistSchedule ?? persistCompetitionFixtureSchedule)(admin, {
       competition: competitionResponse.data,
       seasons,
       fixtures: fixtureList,
