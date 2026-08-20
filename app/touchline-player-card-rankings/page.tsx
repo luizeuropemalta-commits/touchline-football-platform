@@ -30,6 +30,8 @@ import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editoria
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
+import { isOwnerEmail } from "@/lib/admin/owner";
+import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 
 export const metadata = {
   title: "TouchLine Player Cards Ranking",
@@ -147,7 +149,10 @@ export default async function TouchLinePlayerCardRankingsPage({
       <TouchlineGlobalNavigation
         locale={locale}
         currentRoute="rankings"
-        surface={user ? "authenticated" : "public"}
+        surface={resolveTouchlineGlobalNavigationSurface({
+          isAuthenticated: Boolean(user),
+          isAdmin: Boolean(user && isOwnerEmail(user.email)),
+        })}
         className="tl-card-rankings-global-navigation"
       />
 

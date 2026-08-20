@@ -65,6 +65,8 @@ import {
 } from "@/components/touchline/social/TouchlineSocial";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isOwnerEmail } from "@/lib/admin/owner";
+import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import styles from "./player-profile.module.css";
 
 export const dynamic = "force-dynamic";
@@ -555,7 +557,10 @@ export default async function TouchLinePlayerProfilePage({
     loadTouchLineActiveRanking(),
     currentUserPromise,
   ]);
-  const navigationSurface = currentUser ? "authenticated" : "public";
+  const navigationSurface = resolveTouchlineGlobalNavigationSurface({
+    isAuthenticated: Boolean(currentUser),
+    isAdmin: Boolean(currentUser && isOwnerEmail(currentUser.email)),
+  });
   const publicProjection = officialLookup.providerPlayerId
     ? publicProjectionBatch.projections.find((projection) => projection.providerPlayerId === officialLookup.providerPlayerId)
     : undefined;

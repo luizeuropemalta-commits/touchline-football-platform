@@ -41,6 +41,20 @@ export type TouchlineGlobalNavigationItem = Readonly<{
 }>;
 
 /**
+ * A valid login and a ClubOwner identity are different capabilities. Admins
+ * are authenticated but must never receive the self-scoped My Club link,
+ * because the `/club-owner/me` boundary deliberately rejects administrator
+ * identities.
+ */
+export function resolveTouchlineGlobalNavigationSurface(input: Readonly<{
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+}>): TouchlineGlobalNavigationSurface {
+  if (!input.isAuthenticated) return "public";
+  return input.isAdmin ? "auth" : "authenticated";
+}
+
+/**
  * Keep generic destinations independent from a page's contextual club. A
  * signed-in surface may add the server-resolved `/me` route, but never a
  * profile slug from a URL, demo seed, or another owner.

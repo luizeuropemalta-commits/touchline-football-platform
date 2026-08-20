@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   isTouchlineGlobalNavigationCurrent,
   resolveTouchlineGlobalNavigationItems,
+  resolveTouchlineGlobalNavigationSurface,
   touchlineGlobalNavigationArenaHref,
 } from "../lib/touchlineArena/global-navigation.ts";
 
@@ -33,6 +34,16 @@ test("authenticated navigation may add only the server-resolved My Club boundary
   assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "market", "rankings", "myClub"]);
   assert.equal(items.at(-1)?.href, "/club-owner/me?lang=en-GB");
   assert.doesNotMatch(JSON.stringify(items), /luiz-lopez|manchester-united|manchester-city/i);
+});
+
+test("global navigation exposes My Club only to an authenticated ClubOwner", () => {
+  assert.equal(resolveTouchlineGlobalNavigationSurface({ isAuthenticated: false, isAdmin: false }), "public");
+  assert.equal(resolveTouchlineGlobalNavigationSurface({ isAuthenticated: true, isAdmin: true }), "auth");
+  assert.equal(resolveTouchlineGlobalNavigationSurface({ isAuthenticated: true, isAdmin: false }), "authenticated");
+  assert.doesNotMatch(
+    JSON.stringify(resolveTouchlineGlobalNavigationItems("en-GB", "auth")),
+    /club-owner\/me/,
+  );
 });
 
 test("global navigation exposes an honest current state only for its exact general route", () => {
@@ -65,7 +76,7 @@ test("Club Profile, Live and 404 use the shared public navigation without duplic
   assert.match(navigationStyles, /@media \(max-width: 620px\)[\s\S]*?\.more \{ display: block/);
   assert.match(player, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="playerProfile"[\s\S]*?surface=\{navigationSurface\}/);
   assert.match(tables, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="rankings"[\s\S]*?surface=\{navigationSurface\}/);
-  assert.match(rankings, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="rankings"[\s\S]*?surface=\{user \? "authenticated" : "public"\}/);
+  assert.match(rankings, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="rankings"[\s\S]*?surface=\{resolveTouchlineGlobalNavigationSurface\(/);
   assert.doesNotMatch(player, /TouchlineProfileQuickNav/);
   assert.doesNotMatch(tables, /TouchlineProfileQuickNav/);
   assert.doesNotMatch(rankings, /TouchlineProfileQuickNav/);
