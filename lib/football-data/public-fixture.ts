@@ -21,6 +21,8 @@ export type TouchlinePublicFixture = {
   status?: string;
   competitionId?: string;
   seasonId?: string;
+  roundId?: string;
+  roundName?: string;
   homeTeam?: TouchlinePublicTeam;
   awayTeam?: TouchlinePublicTeam;
   homeScore?: number;
@@ -50,6 +52,8 @@ export function toPublicTouchlineFixture(fixture: TouchlineFixture): TouchlinePu
     status: fixture.status,
     competitionId: fixture.competitionId,
     seasonId: fixture.seasonId,
+    roundId: fixture.roundId,
+    roundName: fixture.roundName,
     homeTeam: toPublicTeam(fixture.homeTeam),
     awayTeam: toPublicTeam(fixture.awayTeam),
     homeScore: fixture.homeScore,

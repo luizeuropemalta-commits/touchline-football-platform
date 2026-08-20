@@ -131,6 +131,8 @@ export type TouchlineFixture = {
   status?: string;
   competitionId?: string;
   seasonId?: string;
+  roundId?: string;
+  roundName?: string;
   homeTeam?: TouchlineTeam;
   awayTeam?: TouchlineTeam;
   homeScore?: number;

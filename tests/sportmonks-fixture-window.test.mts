@@ -37,6 +37,8 @@ function rawFixture(id: string, index: number) {
     id: Number(id),
     league_id: 8,
     season_id: 28083,
+    round_id: 339001,
+    round: { id: 339001, league_id: 8, season_id: 28083, name: "1" },
     starting_at_timestamp: 1_787_000_000 + index,
     state: { name: "Not Started" },
     participants: [
@@ -86,11 +88,12 @@ test("Sportmonks fixture window scopes league 8 before collecting every page and
     assert.equal(result.data.length, 10);
     assert.ok(result.data.some((fixture) => fixture.providerId === "19722198"));
     assert.ok(result.data.every((fixture) => fixture.provider === "sportmonks" && fixture.competitionId === "8"));
+    assert.ok(result.data.every((fixture) => fixture.roundId === "339001" && fixture.roundName === "1"));
 
     const windowRequests = requests.filter((url) => url.pathname.includes("/fixtures/between/2026-08-21/2026-08-24"));
     assert.deepEqual(windowRequests.map((url) => Number(url.searchParams.get("page"))), [1, 2]);
     assert.ok(windowRequests.every((url) => url.searchParams.get("filters") === "fixtureLeagues:8"));
-    assert.ok(windowRequests.every((url) => url.searchParams.get("include") === "participants;scores;league;season;state"));
+    assert.ok(windowRequests.every((url) => url.searchParams.get("include") === "participants;scores;league;season;round;state"));
     assert.ok(windowRequests.every((url) => url.searchParams.get("timezone") === "Europe/London"));
   } finally {
     globalThis.fetch = originalFetch;
@@ -109,6 +112,8 @@ test("fixture schedule sync persists all ten provider fixtures without any manua
     provider: "sportmonks",
     competitionId: "8",
     seasonId: "28083",
+    roundId: "339001",
+    roundName: "1",
     startsAt: `2026-08-${String(21 + Math.floor(index / 4)).padStart(2, "0")}T12:00:00.000Z`,
     status: "Not Started",
     homeTeam: { id: `sportmonks:${1_000 + index * 2}`, providerId: String(1_000 + index * 2), provider: "sportmonks", name: index === 5 ? "Brentford FC" : `Home ${index}`, source: { provider: "sportmonks", providerId: String(1_000 + index * 2) } },

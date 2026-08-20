@@ -190,11 +190,11 @@ test("Live never invents a real score and excludes known non-league fixtures", (
   assert.doesNotMatch(arenaClientSource, /isFallbackLiveFixture|FALLBACK_LIVE_FIXTURES|"SIMULAÇÃO" : "DEMO"/);
   assert.match(
     arenaClientSource,
-    /function fixtureBoardScore\(fixture: TouchlineFixture\) \{[\s\S]*?return "VS"/,
+    /function fixtureBoardScore\(fixture: TouchlinePublicFixture\) \{[\s\S]*?return "VS"/,
   );
   assert.match(
     arenaClientSource,
-    /function fixtureBoardClock\(fixture: TouchlineFixture, locale: TouchLineLocale\) \{[\s\S]*?const status = String\(fixture\.status \?\? ""\)\.trim\(\);/,
+    /function fixtureBoardClock\(fixture: TouchlinePublicFixture, locale: TouchLineLocale\) \{[\s\S]*?const status = String\(fixture\.status \?\? ""\)\.trim\(\);/,
   );
   assert.match(
     arenaClientSource,

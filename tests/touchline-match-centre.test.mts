@@ -102,6 +102,17 @@ test("a venue awaiting verification is not labelled as verified", () => {
   assert.doesNotMatch(source, /<strong>\{dictionary\.venuePending\}<\/strong><small>\{dictionary\.provider\}<\/small>/);
 });
 
+test("Match Centre uses the provider round instead of mislabelling a season as matchweek", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /selected\.roundName/);
+  assert.match(source, /dictionary\.roundPending/);
+  assert.doesNotMatch(source, /selected\.seasonId \?\? "—"/);
+  assert.doesNotMatch(source, /Matchweek 1|Rodada 1/);
+});
+
 test("Match Centre keeps the first server and browser render in one validated time zone", () => {
   assert.equal(normalizeTouchlineMatchCentreTimeZone("Europe/Malta"), "Europe/Malta");
   assert.equal(normalizeTouchlineMatchCentreTimeZone("  Europe/London  "), "Europe/London");

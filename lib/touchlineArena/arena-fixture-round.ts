@@ -1,22 +1,33 @@
-import type { TouchlineFixture } from "../football-data/types";
+type FixtureRoundTeam = Readonly<{
+  id?: string;
+  providerId?: string;
+}>;
+
+type FixtureRoundCandidate = Readonly<{
+  id: string;
+  startsAt?: string;
+  status?: string;
+  homeTeam?: FixtureRoundTeam;
+  awayTeam?: FixtureRoundTeam;
+}>;
 
 const LIVE_STATUS = /\b(live|inplay|in play|1st half|2nd half|half time|ht|extra time|penalties)\b/i;
 const FINISHED_STATUS = /\b(finished|ft|after extra time|aet|penalties finished|cancelled|postponed)\b/i;
 
-function fixtureStartTime(fixture: TouchlineFixture) {
+function fixtureStartTime(fixture: FixtureRoundCandidate) {
   const value = fixture.startsAt ? Date.parse(fixture.startsAt) : Number.NaN;
   return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
 }
 
-function teamKey(team: TouchlineFixture["homeTeam"] | undefined) {
+function teamKey(team: FixtureRoundTeam | undefined) {
   return String(team?.providerId ?? team?.id ?? "").trim();
 }
 
-function isComplete(fixture: TouchlineFixture) {
+function isComplete(fixture: FixtureRoundCandidate) {
   return FINISHED_STATUS.test(fixture.status ?? "");
 }
 
-function isLive(fixture: TouchlineFixture, now: number) {
+function isLive(fixture: FixtureRoundCandidate, now: number) {
   const startsAt = fixtureStartTime(fixture);
   // A persisted status can lag behind a rescheduled kickoff. Do not let a
   // future fixture labelled "LIVE" seize the Arena carousel: the rail must
@@ -25,15 +36,15 @@ function isLive(fixture: TouchlineFixture, now: number) {
   return startsAt <= now && !isComplete(fixture);
 }
 
-function isUsable(fixture: TouchlineFixture) {
+function isUsable(fixture: FixtureRoundCandidate) {
   const home = teamKey(fixture.homeTeam);
   const away = teamKey(fixture.awayTeam);
   return Boolean(home && away && home !== away && Number.isFinite(fixtureStartTime(fixture)));
 }
 
-function contiguousRoundFrom(fixtures: readonly TouchlineFixture[], start: number) {
+function contiguousRoundFrom<T extends FixtureRoundCandidate>(fixtures: readonly T[], start: number) {
   const teams = new Set<string>();
-  const round: TouchlineFixture[] = [];
+  const round: T[] = [];
   for (let index = start; index < fixtures.length && round.length < 10; index += 1) {
     const fixture = fixtures[index];
     if (!isUsable(fixture)) continue;
@@ -54,20 +65,20 @@ function contiguousRoundFrom(fixtures: readonly TouchlineFixture[], start: numbe
  * eligible canonical fixture. This keeps the Arena carousel a schedule view,
  * not a second live-scoring feed.
  */
-export function selectArenaFixtureRound(
-  fixtures: readonly TouchlineFixture[],
+export function selectArenaFixtureRound<T extends FixtureRoundCandidate>(
+  fixtures: readonly T[],
   now = Date.now(),
 ) {
   const ordered = fixtures
     .filter(isUsable)
     .slice()
     .sort((first, second) => fixtureStartTime(first) - fixtureStartTime(second));
-  if (!ordered.length) return [] as TouchlineFixture[];
+  if (!ordered.length) return [] as T[];
 
   const anchorIndex = ordered.findIndex((fixture) => isLive(fixture, now));
   const nextIndex = ordered.findIndex((fixture) => !isComplete(fixture) && fixtureStartTime(fixture) >= now - 4 * 60 * 60 * 1_000);
   const targetIndex = anchorIndex >= 0 ? anchorIndex : nextIndex;
-  if (targetIndex < 0) return [] as TouchlineFixture[];
+  if (targetIndex < 0) return [] as T[];
 
   let best = contiguousRoundFrom(ordered, targetIndex);
   if (anchorIndex >= 0) {

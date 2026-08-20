@@ -45,6 +45,7 @@ type TouchLineTablesClientProps = {
   cardClubOwnerRank: TouchLineClubOwnerStanding[];
   cardPlayerRank: ClubOwnerSquadCard[];
   copy: RankingsCopy;
+  currentProviderRoundName: string | null;
   locale: TouchLineLocale;
   navigationSurface: TouchlineGlobalNavigationSurface;
   rankMode: string;
@@ -125,6 +126,7 @@ export default function TouchLineTablesClient({
   cardClubOwnerRank,
   cardPlayerRank,
   copy,
+  currentProviderRoundName,
   locale,
   navigationSurface,
   rankMode,
@@ -175,7 +177,9 @@ export default function TouchLineTablesClient({
         />
         <span className={styles.status}>
           <ShieldCheck aria-hidden="true" size={18} />
-          {isPortuguese ? "Competição TouchLine" : "TouchLine competition"}
+          {currentProviderRoundName
+            ? `${isPortuguese ? "Rodada" : "Matchweek"} ${currentProviderRoundName}`
+            : isPortuguese ? "Rodada aguardando provider" : "Matchweek awaiting provider"}
         </span>
       </header>
 

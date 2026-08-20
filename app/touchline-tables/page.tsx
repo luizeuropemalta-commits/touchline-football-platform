@@ -9,6 +9,8 @@ import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import { formatTouchlineCommercialCardTotal } from "@/lib/touchlineArena/commercial-card-pricing";
 import type { TouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
+import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
 import TouchLineTablesClient from "./touchline-tables-client";
 
 export const metadata = { title: "TouchLine Tables" };
@@ -46,7 +48,15 @@ export default async function TouchLineTablesPage({
     console.error("[TouchLine] Tables roster unavailable", rosterResolution.error);
   }
   const rosterCards = rosterResolution.cards;
-  const publishedTopEleven = await loadTouchLinePublishedTopEleven();
+  const [publishedTopEleven, publicFixtures] = await Promise.all([
+    loadTouchLinePublishedTopEleven(),
+    readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
+  ]);
+  const selectedProviderRound = selectArenaFixtureRound(publicFixtures);
+  const providerRoundNames = [...new Set(selectedProviderRound
+    .map((fixture) => fixture.roundName?.trim())
+    .filter((name): name is string => Boolean(name)))];
+  const currentProviderRoundName = providerRoundNames.length === 1 ? providerRoundNames[0] : null;
   // No fabricated owner or player leaderboard may be presented as a published
   // competition ranking. These remain empty until the audited ranking snapshot
   // is loaded through the server-owned publication path.
@@ -61,6 +71,7 @@ export default async function TouchLineTablesPage({
       cardClubOwnerRank={cardClubOwnerRank}
       cardPlayerRank={cardPlayerRank}
       copy={copy}
+      currentProviderRoundName={currentProviderRoundName}
       locale={locale}
       rankMode={copy.marketMode}
       publishedTopEleven={publishedTopEleven}

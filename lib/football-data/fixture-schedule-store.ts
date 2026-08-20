@@ -20,6 +20,9 @@ type FixtureAdminClient = SupabaseClient;
 type FixtureRow = {
   provider?: unknown;
   provider_fixture_id?: unknown;
+  competition_id?: unknown;
+  season_id?: unknown;
+  round_id?: unknown;
   starts_at?: unknown;
   status?: unknown;
   home_score?: unknown;
@@ -89,7 +92,13 @@ function fixtureTeamFromClub(row: DatabaseRecord | undefined, provider: Football
   };
 }
 
-function fixtureFromRow(row: FixtureRow, clubsById: Map<string, DatabaseRecord>): TouchlineFixture | null {
+function fixtureFromRow(
+  row: FixtureRow,
+  clubsById: Map<string, DatabaseRecord>,
+  seasonsById: Map<string, DatabaseRecord>,
+  roundsById: Map<string, DatabaseRecord>,
+  competitionProviderId: string,
+): TouchlineFixture | null {
   const provider = asString(row.provider);
   const providerId = asString(row.provider_fixture_id);
   if (provider !== "sportmonks" || !isOfficialSportmonksFixtureId(providerId)) return null;
@@ -98,6 +107,8 @@ function fixtureFromRow(row: FixtureRow, clubsById: Map<string, DatabaseRecord>)
   const homeTeam = fixtureTeamFromClub(homeClub, provider);
   const awayTeam = fixtureTeamFromClub(awayClub, provider);
   if (!homeTeam || !awayTeam) return null;
+  const season = seasonsById.get(asString(row.season_id) ?? "");
+  const round = roundsById.get(asString(row.round_id) ?? "");
   return {
     id: `${provider}:${providerId}`,
     providerId,
@@ -105,6 +116,10 @@ function fixtureFromRow(row: FixtureRow, clubsById: Map<string, DatabaseRecord>)
     name: `${homeTeam.name} vs ${awayTeam.name}`,
     startsAt: asTimestamp(row.starts_at) ?? undefined,
     status: asString(row.status) ?? undefined,
+    competitionId: competitionProviderId,
+    seasonId: asString(season?.provider_season_id) ?? undefined,
+    roundId: asString(round?.provider_round_id) ?? undefined,
+    roundName: asString(round?.name) ?? undefined,
     homeTeam,
     awayTeam,
     homeScore: asNullableInteger(row.home_score) ?? undefined,
@@ -146,7 +161,7 @@ export async function readPublicCompetitionFixtures(options: {
 
   let fixtureQuery = admin
     .from("football_fixtures")
-    .select("provider,provider_fixture_id,starts_at,status,home_score,away_score,home_club_id,away_club_id,source_updated_at")
+    .select("provider,provider_fixture_id,competition_id,season_id,round_id,starts_at,status,home_score,away_score,home_club_id,away_club_id,source_updated_at")
     .eq("provider", provider)
     .eq("competition_id", competition.id)
     .order("starts_at", { ascending: true })
@@ -160,17 +175,45 @@ export async function readPublicCompetitionFixtures(options: {
     .filter((id): id is string => Boolean(id)))];
   if (!clubIds.length) return [] as TouchlineFixture[];
 
-  const { data: clubs, error: clubsError } = await admin
-    .from("football_clubs")
-    .select("id,provider_team_id,name,short_code,logo_url,country,country_id,founded,venue_id,source_updated_at")
-    .in("id", clubIds);
-  if (clubsError || !Array.isArray(clubs)) return [] as TouchlineFixture[];
+  const seasonIds = [...new Set((fixtureRows as FixtureRow[])
+    .map((row) => asString(row.season_id))
+    .filter((id): id is string => Boolean(id)))];
+  const roundIds = [...new Set((fixtureRows as FixtureRow[])
+    .map((row) => asString(row.round_id))
+    .filter((id): id is string => Boolean(id)))];
+
+  const [{ data: clubs, error: clubsError }, seasonsResult, roundsResult] = await Promise.all([
+    admin
+      .from("football_clubs")
+      .select("id,provider_team_id,name,short_code,logo_url,country,country_id,founded,venue_id,source_updated_at")
+      .in("id", clubIds),
+    seasonIds.length
+      ? admin.from("football_seasons").select("id,provider_season_id").in("id", seasonIds)
+      : Promise.resolve({ data: [], error: null }),
+    roundIds.length
+      ? admin.from("football_rounds").select("id,provider_round_id,name").in("id", roundIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (
+    clubsError
+    || seasonsResult.error
+    || roundsResult.error
+    || !Array.isArray(clubs)
+    || !Array.isArray(seasonsResult.data)
+    || !Array.isArray(roundsResult.data)
+  ) return [] as TouchlineFixture[];
 
   const clubsById = new Map((clubs as DatabaseRecord[])
     .map((club) => [asString(club.id), club] as const)
     .filter((entry): entry is [string, DatabaseRecord] => Boolean(entry[0])));
+  const seasonsById = new Map((seasonsResult.data as DatabaseRecord[])
+    .map((season) => [asString(season.id), season] as const)
+    .filter((entry): entry is [string, DatabaseRecord] => Boolean(entry[0])));
+  const roundsById = new Map((roundsResult.data as DatabaseRecord[])
+    .map((round) => [asString(round.id), round] as const)
+    .filter((entry): entry is [string, DatabaseRecord] => Boolean(entry[0])));
   return (fixtureRows as FixtureRow[])
-    .map((row) => fixtureFromRow(row, clubsById))
+    .map((row) => fixtureFromRow(row, clubsById, seasonsById, roundsById, competitionProviderId))
     .filter((fixture): fixture is TouchlineFixture => Boolean(fixture));
 }
 
@@ -256,6 +299,47 @@ export async function persistCompetitionFixtureSchedule(
   }
   const seasonsByProviderId = new Map((persistedSeasons as DatabaseRecord[] ?? []).map((season) => [asString(season.provider_season_id), asString(season.id)]));
   const clubsByProviderId = new Map((persistedClubs as DatabaseRecord[] ?? []).map((club) => [asString(club.provider_team_id), asString(club.id)]));
+  const requestedRoundProviderIds = new Set<string>();
+  const roundsByProviderIdInput = new Map<string, DatabaseRecord>();
+  for (const fixture of fixtures) {
+    const roundProviderId = asString(fixture.roundId);
+    const seasonId = fixture.seasonId ? seasonsByProviderId.get(fixture.seasonId) : null;
+    if (!roundProviderId || !seasonId) continue;
+    requestedRoundProviderIds.add(roundProviderId);
+    const roundName = asString(fixture.roundName);
+    // A partial provider response may keep round_id but omit its included
+    // relation. Reuse an existing verified row in that case; never erase its
+    // name with null and never invent a matchweek label.
+    if (!roundName) continue;
+    roundsByProviderIdInput.set(roundProviderId, {
+      provider: fixture.provider,
+      provider_round_id: roundProviderId,
+      competition_id: persistedCompetition.id,
+      season_id: seasonId,
+      name: roundName,
+      source_updated_at: timestamp,
+      updated_at: timestamp,
+    });
+  }
+  if (roundsByProviderIdInput.size) {
+    const { error } = await admin.from("football_rounds").upsert(
+      [...roundsByProviderIdInput.values()],
+      { onConflict: "provider,provider_round_id" },
+    );
+    if (error) return { stored: false as const, reason: error.message, fixturesStored: 0 };
+  }
+  const { data: persistedRounds, error: roundsError } = requestedRoundProviderIds.size
+    ? await admin
+      .from("football_rounds")
+      .select("id,provider_round_id")
+      .eq("provider", competition.provider)
+      .in("provider_round_id", [...requestedRoundProviderIds])
+    : { data: [], error: null };
+  if (roundsError) {
+    return { stored: false as const, reason: roundsError.message, fixturesStored: 0 };
+  }
+  const roundsByProviderId = new Map((persistedRounds as DatabaseRecord[] ?? [])
+    .map((round) => [asString(round.provider_round_id), asString(round.id)]));
   const rows = fixtures.flatMap((fixture) => {
     const homeClubId = clubsByProviderId.get(fixture.homeTeam?.providerId ?? "");
     const awayClubId = clubsByProviderId.get(fixture.awayTeam?.providerId ?? "");
@@ -265,6 +349,7 @@ export async function persistCompetitionFixtureSchedule(
       provider_fixture_id: fixture.providerId,
       competition_id: persistedCompetition.id,
       season_id: fixture.seasonId ? seasonsByProviderId.get(fixture.seasonId) ?? null : null,
+      round_id: fixture.roundId ? roundsByProviderId.get(fixture.roundId) ?? null : null,
       home_club_id: homeClubId,
       away_club_id: awayClubId,
       starts_at: fixture.startsAt,

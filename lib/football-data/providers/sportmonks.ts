@@ -356,7 +356,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getFixtureById(id: string): Promise<FootballDataResult<TouchlineFixture | null>> {
     const request = await this.request<SportmonksEntity>(`/fixtures/${id}`, {
-      include: "participants;scores;league;season;state",
+      include: "participants;scores;league;season;round;state",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture | null>();
     const { value, cached } = request;
@@ -366,7 +366,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getFixturesByDate(params: FixturesByDateParams): Promise<FootballDataResult<TouchlineFixture[]>> {
     const request = await this.paginatedRequest<SportmonksEntity>(`/fixtures/date/${params.date}`, {
-      include: "participants;scores;league;season;state",
+      include: "participants;scores;league;season;round;state",
       timezone: params.timezone,
     }, {
       bucket: "live",
@@ -388,7 +388,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         // with a client-side competition filter: that would make a fixture
         // disappear whenever a busy day exceeds a global page cap.
         filters: `fixtureLeagues:${params.competitionId}`,
-        include: "participants;scores;league;season;state",
+        include: "participants;scores;league;season;round;state",
         timezone: params.timezone,
       },
       {
@@ -406,7 +406,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>> {
     const request = await this.request<SportmonksEntity[]>(SPORTMONKS_INPLAY_LIVESCORES_PATH, {
-      include: "participants;scores;league;season;state",
+      include: "participants;scores;league;season;round;state",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
@@ -416,7 +416,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>> {
     const request = await this.request<SportmonksEntity[]>(SPORTMONKS_LATEST_LIVESCORES_PATH, {
-      include: "participants;scores;league;season;state",
+      include: "participants;scores;league;season;round;state",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
@@ -631,7 +631,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   async getFixtureFantasyFeed(fixtureId: string): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>> {
     if (!fixtureId.trim()) return resultError(this.name, "invalid_request", "fixtureId is required for fantasy fixture feed.");
     const request = await this.request<SportmonksEntity>(`/fixtures/${encodeURIComponent(fixtureId)}`, {
-      include: "participants;scores;league;season;state;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;events.type;events.player;events.relatedPlayer",
+      include: "participants;scores;league;season;round;state;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;events.type;events.player;events.relatedPlayer",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFantasyFixtureFeed | null>();
     const { value, cached } = request;
@@ -841,6 +841,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const home = participants.find((team) => asString(team.meta && (team.meta as SportmonksEntity).location) === "home") ?? participants[0];
     const away = participants.find((team) => asString(team.meta && (team.meta as SportmonksEntity).location) === "away") ?? participants[1];
     const scores = Array.isArray(raw.scores) ? raw.scores as SportmonksEntity[] : [];
+    const round = this.relationEntity(raw, "round");
     return {
       id: providerId(this.name, id),
       providerId: id,
@@ -850,6 +851,8 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       status: asString((raw.state as SportmonksEntity | undefined)?.name) ?? asString(raw.state_id),
       competitionId: asString(raw.league_id),
       seasonId: asString(raw.season_id),
+      roundId: asString(raw.round_id) ?? asString(round?.id),
+      roundName: asString(round?.name),
       homeTeam: this.mapTeam(home) ?? undefined,
       awayTeam: this.mapTeam(away) ?? undefined,
       homeScore: this.extractScore(scores, "home"),

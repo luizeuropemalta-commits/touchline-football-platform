@@ -26,7 +26,8 @@ import {
   normalizeOfficialShirtNumber,
   type ArenaLineupPlayer,
 } from "@/lib/football-data/arena-lineup";
-import type { TouchlineFixture } from "@/lib/football-data/types";
+import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
+import { parseTouchlinePublicFixtures } from "@/lib/football-data/public-fixture-client";
 import type {
   TouchlinePublicFantasyFixtureFeed,
   TouchlinePublicFantasyLineupMember,
@@ -186,7 +187,7 @@ import formationLockSeed from "@/data/touchline-arena-formation-locks.json";
 const PUBLIC_DATA_SOURCE_LABEL = "TouchLine England";
 const ARENA_LIVE_DOCK_VISIBILITY_STORAGE_KEY = "touchline:arena:live-dock-visible:v1";
 const ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY = "touchline:arena:live-dock-fixture:v1";
-const ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY = "touchline:arena:live-fixtures:v1";
+const ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY = "touchline:arena:live-fixtures:v2";
 const ARENA_LIVE_FIXTURE_CACHE_MAX_AGE_MS = 1000 * 60 * 5;
 const ARENA_LIVE_SQUAD_REQUEST_SETTLE_MS = 180;
 // The score rail is part of the normal Arena entry. Safari can take longer
@@ -382,10 +383,10 @@ type LiveSimulationCardProduct = {
 };
 
 type StoredLiveFixtureSnapshot = {
-  version: 1;
+  version: 2;
   savedAt: number;
   fetchedAt: string;
-  fixtures: TouchlineFixture[];
+  fixtures: TouchlinePublicFixture[];
 };
 
 type TouchlineMarketCheckoutResult = {
@@ -1520,11 +1521,11 @@ function formatFixtureTime(startsAt?: string) {
   }).format(date);
 }
 
-function fixtureHasScore(fixture: TouchlineFixture) {
+function fixtureHasScore(fixture: TouchlinePublicFixture) {
   return Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore);
 }
 
-function formatFixtureScore(fixture: TouchlineFixture) {
+function formatFixtureScore(fixture: TouchlinePublicFixture) {
   if (fixtureHasScore(fixture)) return `${fixture.homeScore}-${fixture.awayScore}`;
   return "VS";
 }
@@ -1533,22 +1534,22 @@ function displayFixtureStatus(status: string, nextLabel: string) {
   return status.toLowerCase() === "next" ? nextLabel : status;
 }
 
-function isFixtureActuallyLive(fixture: TouchlineFixture) {
+function isFixtureActuallyLive(fixture: TouchlinePublicFixture) {
   const status = normalizeTextKey(fixture.status ?? "");
   return /(?:live|in play|inplay|1st half|2nd half|half time|extra time|penalt)/.test(status);
 }
 
-function isFixtureFinished(fixture: TouchlineFixture) {
+function isFixtureFinished(fixture: TouchlinePublicFixture) {
   const status = normalizeTextKey(fixture.status ?? "");
   return /(?:finished|full time|ft|after extra time|aet|penalties finished|cancelled|postponed)/.test(status);
 }
 
-function fixtureBoardScore(fixture: TouchlineFixture) {
+function fixtureBoardScore(fixture: TouchlinePublicFixture) {
   if (fixtureHasScore(fixture)) return formatFixtureScore(fixture).replace("-", " — ");
   return "VS";
 }
 
-function fixtureBoardClock(fixture: TouchlineFixture, locale: TouchLineLocale) {
+function fixtureBoardClock(fixture: TouchlinePublicFixture, locale: TouchLineLocale) {
   const status = String(fixture.status ?? "").trim();
   if (status && !/^next$/i.test(status)) return status;
   const time = formatFixtureTime(fixture.startsAt);
@@ -1556,7 +1557,7 @@ function fixtureBoardClock(fixture: TouchlineFixture, locale: TouchLineLocale) {
   return locale === "pt-BR" ? "Horário pendente" : "Kick-off pending";
 }
 
-function fixtureLabel(fixture: TouchlineFixture) {
+function fixtureLabel(fixture: TouchlinePublicFixture) {
   return fixture.name || [fixture.homeTeam?.name, fixture.awayTeam?.name].filter(Boolean).join(" vs ") || `Fixture ${fixture.providerId}`;
 }
 
@@ -1621,7 +1622,7 @@ function liveOptimizedClubLogoUrl(logoUrl?: string | null) {
 }
 
 function getPremierClubVisualForFixtureSide(
-  fixture: TouchlineFixture,
+  fixture: TouchlinePublicFixture,
   side: "home" | "away",
 ) {
   const team = side === "home" ? fixture.homeTeam : fixture.awayTeam;
@@ -1648,7 +1649,7 @@ function clubShortCode(name?: string, shortCode?: string) {
   return (words[0] ?? "FC").replace(/[^a-z0-9]/gi, "").slice(0, 3).toUpperCase() || "FC";
 }
 
-function fixtureClubSources(fixture: TouchlineFixture): FixtureClubSource[] {
+function fixtureClubSources(fixture: TouchlinePublicFixture): FixtureClubSource[] {
   const parsedNames = parseFixtureClubNames(fixture.name);
   const clubs: Array<FixtureClubSource | undefined> = [
     fixture.homeTeam ?? (parsedNames[0] ? { name: parsedNames[0] } : undefined),
@@ -1657,7 +1658,7 @@ function fixtureClubSources(fixture: TouchlineFixture): FixtureClubSource[] {
   return clubs.filter((club): club is FixtureClubSource => Boolean(club?.name));
 }
 
-function fixtureClubSourceToSymbol(fixture: TouchlineFixture, club: FixtureClubSource, index: number): ArenaClubSymbol {
+function fixtureClubSourceToSymbol(fixture: TouchlinePublicFixture, club: FixtureClubSource, index: number): ArenaClubSymbol {
   const name = club.name ?? `Club ${index + 1}`;
   const visual = PREMIER_CLUB_VISUALS.find((candidate) => candidate.teamId === String(club.providerId ?? ""))
     ?? getPremierClubVisual(name, club.shortCode);
@@ -1674,7 +1675,7 @@ function fixtureClubSourceToSymbol(fixture: TouchlineFixture, club: FixtureClubS
   };
 }
 
-function buildFixtureClubMatches(fixtures: TouchlineFixture[]): ArenaClubMatch[] {
+function buildFixtureClubMatches(fixtures: TouchlinePublicFixture[]): ArenaClubMatch[] {
   return fixtures
     .map((fixture) => {
       const [homeSource, awaySource] = fixtureClubSources(fixture);
@@ -1707,7 +1708,7 @@ function buildFixtureClubMatches(fixtures: TouchlineFixture[]): ArenaClubMatch[]
     .filter((match): match is ArenaClubMatch => Boolean(match));
 }
 
-function isPremierFixture(fixture: TouchlineFixture) {
+function isPremierFixture(fixture: TouchlinePublicFixture) {
   const [home, away] = fixtureClubSources(fixture);
   if (!home || !away) return false;
   const homeClub = getPremierClubVisualForFixtureSide(fixture, "home");
@@ -1888,59 +1889,32 @@ function buildVerifiedLiveLineup(
   return selected;
 }
 
-function isStoredLiveTeam(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const team = value as NonNullable<TouchlineFixture["homeTeam"]>;
-  return typeof team.id === "string"
-    && Boolean(team.id.trim())
-    && typeof team.providerId === "string"
-    && /^[0-9]{1,20}$/.test(team.providerId.trim())
-    && typeof team.name === "string"
-    && Boolean(team.name.trim());
-}
-
-function isStoredLiveFixture(value: unknown): value is TouchlineFixture {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const fixture = value as Partial<TouchlineFixture>;
-  return typeof fixture.id === "string"
-    && Boolean(fixture.id.trim())
-    && typeof fixture.providerId === "string"
-    // A browser cache is untrusted input. Do not let an old QA representative
-    // snapshot restore fictional fixtures after the server boundary rejects it.
-    && /^[1-9]\d{0,19}$/.test(fixture.providerId.trim())
-    && fixture.provider === "sportmonks"
-    && fixture.source?.provider === "sportmonks"
-    && fixture.source.providerId === fixture.providerId
-    && isStoredLiveTeam(fixture.homeTeam)
-    && isStoredLiveTeam(fixture.awayTeam);
-}
-
 function readStoredLiveFixtureSnapshot() {
   if (typeof window === "undefined") return null;
   try {
     const raw = readBrowserStorage("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY);
     if (!raw) return null;
     const stored = JSON.parse(raw) as Partial<StoredLiveFixtureSnapshot>;
-    const isCoherent = stored.version === 1
+    const parsedFixtures = parseTouchlinePublicFixtures(stored.fixtures);
+    const isCoherent = stored.version === 2
       && Number.isFinite(stored.savedAt)
       && Date.now() - Number(stored.savedAt) <= ARENA_LIVE_FIXTURE_CACHE_MAX_AGE_MS
       && typeof stored.fetchedAt === "string"
       && Number.isFinite(Date.parse(stored.fetchedAt))
-      && Array.isArray(stored.fixtures)
-      && stored.fixtures.every(isStoredLiveFixture);
+      && parsedFixtures !== null;
     if (!isCoherent) {
       removeBrowserStorage("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY);
       return null;
     }
-    return stored as StoredLiveFixtureSnapshot;
+    return { ...stored, fixtures: parsedFixtures } as StoredLiveFixtureSnapshot;
   } catch {
     removeBrowserStorage("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY);
     return null;
   }
 }
 
-function writeStoredLiveFixtureSnapshot(fixtures: TouchlineFixture[], fetchedAt?: string) {
-  if (typeof window === "undefined" || !fixtures.every(isStoredLiveFixture)) return;
+function writeStoredLiveFixtureSnapshot(fixtures: TouchlinePublicFixture[], fetchedAt?: string) {
+  if (typeof window === "undefined" || !parseTouchlinePublicFixtures(fixtures)) return;
   if (!fetchedAt || !Number.isFinite(Date.parse(fetchedAt))) return;
   const now = Date.now();
   const savedAt = Math.min(now, Date.parse(fetchedAt));
@@ -1948,7 +1922,7 @@ function writeStoredLiveFixtureSnapshot(fixtures: TouchlineFixture[], fetchedAt?
     "localStorage",
     ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY,
     JSON.stringify({
-      version: 1,
+      version: 2,
       savedAt,
       fetchedAt,
       fixtures,
@@ -3456,7 +3430,7 @@ export default function ArenaClient({
   const [quickSubstitutionSession, setQuickSubstitutionSession] = useState<TouchlineQuickSubstitutionSessionState | null>(null);
   const [pendingContractReleaseTargetId, setPendingContractReleaseTargetId] = useState<string | null>(null);
   const [isDemoLineup, setIsDemoLineup] = useState(false);
-  const [liveFixtures, setLiveFixtures] = useState<TouchlineFixture[]>([]);
+  const [liveFixtures, setLiveFixtures] = useState<TouchlinePublicFixture[]>([]);
   const [, setLiveFeedStatus] = useState(`${PUBLIC_DATA_SOURCE_LABEL} live`);
   const [saveStatus, setSaveStatus] = useState("Auto saved");
   const [fixtureStatus, setFixtureStatus] = useState("Local data");
@@ -5076,21 +5050,18 @@ export default function ArenaClient({
     }
 
     function applyPersistedSchedule(payload: {
-      data: TouchlineFixture[];
+      data: TouchlinePublicFixture[];
       cached?: boolean;
       degraded?: boolean;
       fetchedAt?: string;
     }) {
-      if (
-        cancelled
-        || !Array.isArray(payload.data)
-        || !payload.data.every(isStoredLiveFixture)
-      ) return false;
+      const parsedFixtures = parseTouchlinePublicFixtures(payload.data);
+      if (cancelled || !parsedFixtures) return false;
       hasPersistedSchedule = true;
-      writeStoredLiveFixtureSnapshot(payload.data, payload.fetchedAt);
-      setLiveFixtures(payload.data);
+      writeStoredLiveFixtureSnapshot(parsedFixtures, payload.fetchedAt);
+      setLiveFixtures(parsedFixtures);
       setLiveFeedStatus(
-        payload.data.some(isPremierFixture)
+        parsedFixtures.some(isPremierFixture)
           ? "England cache"
           : "TouchLine England",
       );
@@ -5098,17 +5069,18 @@ export default function ArenaClient({
     }
 
     function applyPersistedLiveSnapshot(payload: {
-      data: TouchlineFixture[];
+      data: TouchlinePublicFixture[];
       cached?: boolean;
       degraded?: boolean;
       fetchedAt?: string;
     }) {
-      if (cancelled || !payload.data.length || !payload.data.every(isStoredLiveFixture)) return false;
+      const parsedFixtures = parseTouchlinePublicFixtures(payload.data);
+      if (cancelled || !parsedFixtures?.length) return false;
       // The endpoint emits one durable server snapshot. Do not merge it with
       // browser state: a future canonical-round projection must be selected
       // server-side rather than recomputed from visitor-specific inputs.
-      writeStoredLiveFixtureSnapshot(payload.data, payload.fetchedAt);
-      setLiveFixtures(payload.data);
+      writeStoredLiveFixtureSnapshot(parsedFixtures, payload.fetchedAt);
+      setLiveFixtures(parsedFixtures);
       setLiveFeedStatus(payload.cached || payload.degraded ? "England cache" : "England live");
       return true;
     }
@@ -5116,7 +5088,7 @@ export default function ArenaClient({
     async function loadPersistedSchedule() {
       try {
         const { ok, payload } = await touchlineJsonRequest<
-          | { ok: true; data: TouchlineFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
+          | { ok: true; data: TouchlinePublicFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
           | { ok: false; error?: string; code?: string }
         >("/api/football-data/fixture-schedule", {
           timeoutMs: ARENA_LIVE_SCHEDULE_REQUEST_TIMEOUT_MS,
@@ -5139,7 +5111,7 @@ export default function ArenaClient({
     async function refreshLiveFixtures() {
       try {
         const { ok, payload } = await touchlineJsonRequest<
-          | { ok: true; data: TouchlineFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
+          | { ok: true; data: TouchlinePublicFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
           | { ok: false; error?: string; code?: string }
         >("/api/football-data/fantasy/livescores", {
           timeoutMs: ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS,
