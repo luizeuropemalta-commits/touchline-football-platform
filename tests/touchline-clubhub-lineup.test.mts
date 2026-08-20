@@ -182,9 +182,8 @@ test("ClubHub retains all eleven football slots even when a card publication is 
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 
   assert.match(source, /lineup\.players\.length \? lineup\.players\.map/);
-  assert.match(source, /if \(!card\.editorialCard\)/);
-  assert.match(source, /CARD PENDING REVIEW/);
-  assert.match(source, /DATA PENDING/);
+  assert.match(source, /evaluateTouchlineCardCompleteness/);
+  assert.doesNotMatch(source, /CARD PENDING REVIEW|DATA PENDING/);
   assert.doesNotMatch(source, /lineup\.players\.filter\(\(\{ card \}\) => Boolean\(card\.editorialCard\)\)/);
   assert.match(source, /editorialCard: card\.editorialCard/);
   assert.match(source, /activeContractCard: null/);
@@ -212,19 +211,21 @@ test("shared player cards require a manual published profile, apart from a froze
 
   assert.match(source, /const editorialCard = player\.editorialCard \?\? null/);
   assert.match(source, /formatTouchlineEditorialCardPrice/);
-  assert.match(source, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview\) return null/);
+  assert.match(source, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
   assert.match(source, /allowVisualInventoryPreview = false/);
   assert.match(source, /player\.cardPriceAuthority === "active-contract"/);
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|Market value|Valor de mercado|formatTouchlineContractedCommercialCardPrice/);
 });
 
-test("unpublished ClubHub players remain in the football roster but are absent from the card grid", () => {
+test("incomplete ClubHub players remain in the shared premium card grid", () => {
   const grid = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
 
-  assert.match(grid, /const publishedCards = useMemo\(\(\) => cards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/);
+  assert.match(grid, /const visibleCards = useMemo\(\(\) => cards\.slice\(0, visibleCount\)/);
+  assert.match(grid, /evaluateTouchlineCardCompleteness/);
+  assert.match(grid, /squadCardToExactPlayer\(\{ \.\.\.card, cardReview \}\)/);
   assert.match(grid, /const tierKey = card\.editorialCard\?\.tierKey \?\? null/);
   assert.match(grid, /contractHref=\{undefined\}/);
-  assert.match(grid, /publishedCards\.length/);
+  assert.match(grid, /cards\.length/);
   assert.doesNotMatch(grid, /marketValueState: card\.marketValueState|classificationState: card\.classificationState/);
   assert.doesNotMatch(grid, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation|cardPriceAuthority|formatTouchlineContractedCommercialCardPrice/);
 });

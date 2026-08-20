@@ -26,7 +26,7 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.doesNotMatch(exactCard, /formatTouchlineContractedCommercialCardPrice/);
   assert.match(exactCard, /<span>\{compactSecondaryLabel\}<\/span>/);
   assert.match(exactCard, /data-card-tier=\{marketTier\?\.key \?\? "neutral"\}/);
-  assert.match(exactCard, /data-card-editorial-state=\{editorialCard \? "published" : "unpublished"\}/);
+  assert.match(exactCard, /data-card-editorial-state=\{reviewRequired \? "review_required" : editorialCard \? "published" : "unpublished"\}/);
   assert.doesNotMatch(exactCard, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation/);
   assert.doesNotMatch(exactCard, /TC Value/);
   assert.match(globalCss, /\.touchline-card-surface\[data-card-motion="true"\]/);

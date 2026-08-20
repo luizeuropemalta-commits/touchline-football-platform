@@ -173,7 +173,8 @@ test("the public squad adapter keeps valuation data out of the publication path"
   );
 
   assert.doesNotMatch(route, /rawMarketValueEur/);
-  assert.match(route, /includeMarketValues: !publicationGateEnabled/);
+  assert.match(route, /includeMarketValues: true/);
+  assert.match(route, /The value\s+\/\/ itself remains private/);
   assert.match(route, /marketValueEur: null/);
   assert.match(route, /editorialCard,/);
 });

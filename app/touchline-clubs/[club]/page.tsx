@@ -25,6 +25,7 @@ import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-sched
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import type { TouchlinePublicEditorialCardPresentation } from "@/lib/touchlineArena/editorial-card-profile";
+import type { TouchlineCardReviewPresentation } from "@/lib/touchlineArena/card-review-state";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import {
   resolveTouchlineClubMatchPreviewTeam,
@@ -68,6 +69,7 @@ type PremierSquadPlayer = {
   cardTier?: ClubOwnerSquadCard["cardTier"];
   cardPriceVersion?: string | null;
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
+  cardReview?: TouchlineCardReviewPresentation;
   countryCode3?: string | null;
   nationality?: string | null;
 };
@@ -119,6 +121,7 @@ function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): Clu
     cardTier: player.cardTier,
     cardPriceVersion: player.cardPriceVersion || undefined,
     editorialCard: player.editorialCard ?? null,
+    cardReview: player.cardReview,
     touchlinePoints: 0,
   };
 }
