@@ -4,12 +4,12 @@ Verified: 2026-08-20
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
 Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-sportmonks-round`
 Active source branch: `codex/sportmonks-round-arena-rail` (pushed only to `qa`)
-Active validated QA SHA: `3b55b1d` (`fix(tables): count every active card contract`).
+Active validated QA SHA: `738d7db` (`fix(qa): validate exact persona preflight origin`).
 
 ## QA and release
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
-- Validated product deployment: `dpl_BkE3fN2JdQdyD4Kx1CmWGnVxHHWc`, product commit `3b55b1d`, status READY. The stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`; later checkpoint-only documentation commits do not change this product tree.
+- Validated product deployment: `dpl_FNur7zPzJeWFyqvwpr8FmBxmxPH3`, product commit `738d7db`, status READY. The stable QA alias is `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app` and was confirmed on this exact product SHA before the final Safari proof.
 - The representative seven-tier QA scenario, protected 4-3-3 video coordinate source and Quick Sub premium responsive HUD are deployed and visually verified. Production remains excluded.
 - Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
 - Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
@@ -32,6 +32,7 @@ Active validated QA SHA: `3b55b1d` (`fix(tables): count every active card contra
 
 - **Tables / My Club 404: CLOSED.** The global navigation now distinguishes an authenticated ClubOwner from the platform administrator before exposing `/club-owner/me`. The canonical self route remains session-owned and redirects the QA ClubOwner to `/club-owner/luiz-lopes`; authenticated RSC requests return `200`, anonymous requests return the expected login redirect, and no `404` is reproducible.
 - **Authenticated Tables summary: GREEN.** Native Safari on the stable QA alias shows `1` ClubOwner, `35` tracked active contracts and `£171` of currently publicable editorial card value. Two tracked contracts (Anthony Patterson and Rio Cardines) are intentionally excluded from the effective value because their publication memberships are inactive; no provider, sync or database mutation was made in this mission. Preseason ranking order remains neutral until an audited published round exists.
+- **Analytics clean navigation: CLOSED.** After clearing native Safari Console and Network, an authenticated reload of Tables and forward navigation through canonical My Club (`/club-owner/luiz-lopes`) to Arena produced only successful `POST /api/touchline-analytics` requests. Safari Console recorded zero new `403` and zero new `404`; deployment-scoped Vercel logs recorded no `4xx` after the clean-run timestamp and only analytics `200` responses in the Tables, My Club and Arena observation windows.
 - **Browser and runtime evidence:** Chromium passed desktop/tablet/phone-landscape; WebKit and Firefox passed desktop/phone-landscape with no `/club-owner/me` 404 or horizontal overflow. Native Safari Web Inspector showed no 404 after a clean reload. Vercel Observability reported no runtime errors for `/touchline-tables` or `/club-owner/me` in the observed hour.
 
 - **Safari stale-deployment incident: CLOSED.** An already-open tab retained assets from deployment `dpl_AMVH4DELGqeVQ3vdg67SQwEj493u` (commit `1130455`) while the stable alias pointed to deployment `dpl_5GCTMjjJnanBgFjWdrkqukuwrkf6` (commit `486e790`). A cache-bypass reload loaded the current asset graph; a following ordinary reload also passed. Server evidence was HTTP 200, `Age: 0`, `Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate`, and `x-vercel-cache: MISS`.
