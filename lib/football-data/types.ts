@@ -305,6 +305,18 @@ export type FixturesByDateParams = {
   timezone?: string;
 };
 
+/**
+ * A provider-scoped fixture window. `competitionId` is deliberately part of
+ * the request contract so callers never have to paginate the whole football
+ * calendar and filter a competition only after the response has been capped.
+ */
+export type FixturesBetweenParams = {
+  fromDate: string;
+  throughDate: string;
+  competitionId: string;
+  timezone?: string;
+};
+
 export type StandingsParams = {
   seasonId?: string;
   competitionId?: string;
@@ -332,6 +344,7 @@ export interface FootballDataProvider {
   getSeasonById(id: string): Promise<FootballDataResult<TouchlineSeason | null>>;
   getFixtureById(id: string): Promise<FootballDataResult<TouchlineFixture | null>>;
   getFixturesByDate(params: FixturesByDateParams): Promise<FootballDataResult<TouchlineFixture[]>>;
+  getFixturesBetween(params: FixturesBetweenParams): Promise<FootballDataResult<TouchlineFixture[]>>;
   getLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
   getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
   getStandings(params: StandingsParams): Promise<FootballDataResult<TouchlineStandingRow[]>>;

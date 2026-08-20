@@ -25,6 +25,7 @@ import {
   sortSportmonksTransfersNewestFirst,
 } from "@/lib/football-data/sportmonks-transfers";
 import type {
+  FixturesBetweenParams,
   FixturesByDateParams,
   FootballDataCacheBucket,
   FootballDataProvider,
@@ -376,6 +377,30 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
     if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks fixtures by date failed.");
+    return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
+  }
+
+  async getFixturesBetween(params: FixturesBetweenParams): Promise<FootballDataResult<TouchlineFixture[]>> {
+    const request = await this.paginatedRequest<SportmonksEntity>(
+      `/fixtures/between/${encodeURIComponent(params.fromDate)}/${encodeURIComponent(params.throughDate)}`,
+      {
+        // Sportmonks applies this scope before pagination. Do not replace it
+        // with a client-side competition filter: that would make a fixture
+        // disappear whenever a busy day exceeds a global page cap.
+        filters: `fixtureLeagues:${params.competitionId}`,
+        include: "participants;scores;league;season;state",
+        timezone: params.timezone,
+      },
+      {
+        bucket: "live",
+        perPage: SPORTMONKS_MAX_PAGE_SIZE,
+        maxPages: SPORTMONKS_ABSOLUTE_MAX_PAGES,
+        maxItems: SPORTMONKS_ABSOLUTE_MAX_ITEMS,
+      },
+    );
+    if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
+    const { value, cached } = request;
+    if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks fixture window lookup failed.");
     return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
   }
 
