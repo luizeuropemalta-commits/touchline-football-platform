@@ -1,0 +1,83 @@
+.shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
+  align-items: center;
+  gap: clamp(22px, 4vw, 64px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--club-accent, #b5ff4b) 42%, rgba(255, 255, 255, .15));
+  border-radius: 14px 14px 0 0;
+  padding: clamp(24px, 4vw, 48px);
+  background:
+    radial-gradient(circle at 88% 50%, color-mix(in srgb, var(--club-accent, #b5ff4b) 22%, transparent), transparent 31%),
+    linear-gradient(135deg, rgba(3, 17, 12, .98), rgba(2, 8, 9, .98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 28px 70px rgba(0, 0, 0, .28);
+}
+
+.shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, color-mix(in srgb, var(--club-accent, #b5ff4b) 10%, transparent), transparent 48%);
+}
+
+.copy,
+.card { position: relative; z-index: 1; min-width: 0; }
+
+.copy > span {
+  color: color-mix(in srgb, var(--club-accent, #b5ff4b) 62%, #dfffad);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .15em;
+}
+
+.copy h2 {
+  margin: 8px 0 10px;
+  color: #f8fff3;
+  font-size: clamp(30px, 4.5vw, 58px);
+  line-height: .95;
+}
+
+.copy strong {
+  display: block;
+  color: #fff;
+  font-size: clamp(18px, 2vw, 28px);
+}
+
+.copy p {
+  max-width: 650px;
+  margin: 12px 0 0;
+  color: rgba(236, 247, 239, .66);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.card {
+  width: min(100%, 238px);
+  justify-self: center;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
+    padding: 20px;
+  }
+
+  .copy h2 { font-size: clamp(25px, 6vw, 40px); }
+  .copy p { font-size: 12px; }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr) 150px;
+    gap: 18px;
+    padding: 16px 20px;
+  }
+
+  .copy h2 { margin-block: 5px; font-size: 26px; }
+  .copy strong { font-size: 17px; }
+  .copy p { margin-top: 7px; font-size: 10px; line-height: 1.35; }
+  .card { width: 145px; }
+}

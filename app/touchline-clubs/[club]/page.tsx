@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import ClubTrophyCarousel from "@/components/touchline/ClubTrophyCarousel";
 import ClubHubMatchdayTechnicalArea from "@/components/touchline/ClubHubMatchdayTechnicalArea";
+import ClubHubCanonicalCoachPanel from "@/components/touchline/ClubHubCanonicalCoachPanel";
 import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup";
 import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
@@ -425,6 +426,15 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           locale={locale}
           labels={cardLabels}
           canEditCardEngine={canEditCardEngine}
+        />
+
+        <ClubHubCanonicalCoachPanel
+          teamId={club.teamId}
+          clubName={club.name}
+          clubLogoUrl={club.logoUrl}
+          clubAccent={club.accent}
+          locale={locale}
+          userId={user?.id ?? null}
         />
 
         <ClubHubMatchdayTechnicalArea

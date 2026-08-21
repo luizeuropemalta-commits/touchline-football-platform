@@ -14,6 +14,7 @@ import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, R
 import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEliteExactCardLabels, type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
+import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
 import TouchlineSubstitutionMark from "@/components/touchline/TouchlineSubstitutionMark";
 import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntro";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
@@ -8553,23 +8554,7 @@ export default function ArenaClient({
               <div className="arena-owner-coach-contract" aria-label={siteLanguage === "pt-BR" ? "Contrato TouchLine do treinador" : "TouchLine coach contract"}>
                 <span>{siteLanguage === "pt-BR" ? "TOUCHLINE GAME · CONTRATO ATUAL" : "TOUCHLINE GAME · CURRENT CONTRACT"}</span>
                 <h3>{coachSlot.coach?.displayName ?? t("verifiedCoachPending")}</h3>
-                <div className="arena-owner-coach-records">
-                  <article aria-label="Home record">
-                    <small>{siteLanguage === "pt-BR" ? "CASA" : "HOME"}</small>
-                    <strong>{activeCoachContract ? `${activeCoachContract.home.wins}-${activeCoachContract.home.draws}-${activeCoachContract.home.losses}` : "0-0-0"}</strong>
-                    <em>{activeCoachContract?.home.touchlinePoints ?? 0} TL PTS</em>
-                  </article>
-                  <article aria-label="Away record">
-                    <small>{siteLanguage === "pt-BR" ? "FORA" : "AWAY"}</small>
-                    <strong>{activeCoachContract ? `${activeCoachContract.away.wins}-${activeCoachContract.away.draws}-${activeCoachContract.away.losses}` : "0-0-0"}</strong>
-                    <em>{activeCoachContract?.away.touchlinePoints ?? 0} TL PTS</em>
-                  </article>
-                  <article>
-                    <small>{siteLanguage === "pt-BR" ? "TOTAL" : "TOTAL"}</small>
-                    <strong>{activeCoachContract?.totalTouchlinePoints ?? 0}</strong>
-                    <em>TL PTS</em>
-                  </article>
-                </div>
+                <TouchlineCoachPerformance contract={activeCoachContract} locale={siteLanguage} />
                 {activeCoachContract?.currentFixture ? (
                   <p>
                     <b>{activeCoachContract.currentFixture.context === "home"

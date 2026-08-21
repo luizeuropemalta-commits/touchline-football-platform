@@ -29,6 +29,22 @@ const coachProfile = await readFile(
   new URL("../app/touchline-coaches/[coach]/page.tsx", import.meta.url),
   "utf8",
 );
+const coachPerformance = await readFile(
+  new URL("../components/touchline/cards/TouchlineCoachPerformance.tsx", import.meta.url),
+  "utf8",
+);
+const coachZoom = await readFile(
+  new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url),
+  "utf8",
+);
+const clubCoachPanel = await readFile(
+  new URL("../components/touchline/ClubHubCanonicalCoachPanel.tsx", import.meta.url),
+  "utf8",
+);
+const clubProfile = await readFile(
+  new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url),
+  "utf8",
+);
 const fixtureStore = await readFile(
   new URL("../lib/football-data/fixture-schedule-store.ts", import.meta.url),
   "utf8",
@@ -201,13 +217,39 @@ test("Arena exposes current contract, cancellation confirmation, and preserved h
   assert.match(arena, /Confirm cancellation/);
   assert.match(arena, /historical contract\(s\) preserved/i);
   assert.match(arena, /contractHistory/);
+  assert.match(arena, /TouchlineCoachPerformance contract=\{activeCoachContract\}/);
 });
 
 test("coach profile separates real football history from TouchLine game data", () => {
   assert.match(coachProfile, /Real football history/i);
   assert.match(coachProfile, /TouchLine game data/i);
-  assert.match(coachProfile, /Home · W-D-L/i);
-  assert.match(coachProfile, /Away · W-D-L/i);
+  assert.match(coachProfile, /TouchlineCoachPerformance contract=\{displayedContract\}/);
+  assert.match(coachProfile, /showHistory/);
+});
+
+test("coach zoom renders premium icon-led Home, Away and total TouchLine Points before profile navigation", () => {
+  assert.match(coachZoom, /TouchlineCoachPerformance contract=\{contract\}/);
+  assert.match(coachZoom, /data-coach-profile-action="true"/);
+  assert.match(coachPerformance, /PlaneTakeoff/);
+  assert.match(coachPerformance, /House/);
+  assert.match(coachPerformance, /Trophy/);
+  assert.match(coachPerformance, /ShieldCheck/);
+  assert.match(coachPerformance, /record\?\.wins/);
+  assert.match(coachPerformance, /record\?\.draws/);
+  assert.match(coachPerformance, /record\?\.losses/);
+  assert.match(coachPerformance, /record\?\.touchlinePoints/);
+  assert.match(coachPerformance, /contract\?\.totalTouchlinePoints/);
+  assert.match(coachPerformance, /Discipline data pending/);
+  assert.match(coachPerformance, /record\?\.wins \?\? "—"/);
+  assert.match(coachPerformance, /No points have been invented/);
+});
+
+test("Club Hub always shows the canonical club coach card without claiming an unverified matchday coach", () => {
+  assert.match(clubProfile, /<ClubHubCanonicalCoachPanel/);
+  assert.match(clubProfile, /teamId=\{club\.teamId\}/);
+  assert.match(clubCoachPanel, /touchlineLiveCoachForTeam\(teamId\)/);
+  assert.match(clubCoachPanel, /TouchlineCoachCardZoom/);
+  assert.match(clubCoachPanel, /Open the card to review Home, Away, W-D-L and all TouchLine Points/);
 });
 
 test("TouchLine authority is preserved independently of provider refreshes", async () => {

@@ -34,6 +34,7 @@ type TouchlineCardZoomProps = {
   tierAccent?: string;
   tierLabel?: string;
   details?: TouchlineCardZoomDetails;
+  detailsContent?: ReactNode;
 };
 
 export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineCardZoomDetails }) {
@@ -86,6 +87,7 @@ export default function TouchlineCardZoom({
   tierAccent,
   tierLabel,
   details,
+  detailsContent,
 }: TouchlineCardZoomProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -162,7 +164,7 @@ export default function TouchlineCardZoom({
       {isOpen ? createPortal(
         <div {...dialogProps} className={styles.backdrop} onClick={() => setIsOpen(false)}>
           <div
-            className={`${styles.panel} ${details ? styles.panelWithDetails : ""}`}
+            className={`${styles.panel} ${details || detailsContent ? styles.panelWithDetails : ""}`}
             style={{ "--touchline-card-zoom-accent": tierAccent } as CSSProperties}
             onClick={(event) => {
               event.stopPropagation();
@@ -189,7 +191,7 @@ export default function TouchlineCardZoom({
                 </a>
               ) : null}
             </div>
-            {details ? <TouchlineCardZoomDetailsPanel details={details} /> : null}
+            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} /> : null}
           </div>
         </div>,
         document.body,

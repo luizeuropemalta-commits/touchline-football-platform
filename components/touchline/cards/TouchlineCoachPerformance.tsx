@@ -1,0 +1,127 @@
+import { CalendarClock, House, PlaneTakeoff, ShieldCheck, Trophy } from "lucide-react";
+
+import type { TouchlineCoachContractSnapshot, TouchlineCoachRecord } from "@/lib/touchlineArena/coach-scoring";
+
+import styles from "./TouchlineCoachPerformance.module.css";
+
+type TouchlineCoachPerformanceProps = {
+  contract: TouchlineCoachContractSnapshot | null;
+  locale?: string;
+  showHistory?: boolean;
+};
+
+function formatDate(value: string | null, locale: string) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.valueOf())) return "—";
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(parsed);
+}
+
+function RecordPanel({
+  context,
+  record,
+  portuguese,
+}: {
+  context: "home" | "away";
+  record: TouchlineCoachRecord | null;
+  portuguese: boolean;
+}) {
+  const home = context === "home";
+  const label = home ? (portuguese ? "Casa" : "Home") : (portuguese ? "Fora" : "Away");
+  const Icon = home ? House : PlaneTakeoff;
+  return (
+    <article className={styles.record} data-context={context} aria-label={label}>
+      <header className={styles.contextHeading}>
+        <span className={styles.contextIcon}><Icon aria-hidden="true" size={20} /></span>
+        <div><span>{portuguese ? "Desempenho" : "Performance"}</span><strong>{label}</strong></div>
+      </header>
+      <dl className={styles.recordStats}>
+        <div><dt aria-label={portuguese ? "Vitórias" : "Wins"}>W</dt><dd>{record?.wins ?? "—"}</dd></div>
+        <div><dt aria-label={portuguese ? "Empates" : "Draws"}>D</dt><dd>{record?.draws ?? "—"}</dd></div>
+        <div><dt aria-label={portuguese ? "Derrotas" : "Losses"}>L</dt><dd>{record?.losses ?? "—"}</dd></div>
+        <div className={styles.points}><dt aria-label="TouchLine Points">TP</dt><dd>{record?.touchlinePoints ?? "—"}</dd></div>
+      </dl>
+    </article>
+  );
+}
+
+export default function TouchlineCoachPerformance({
+  contract,
+  locale = "en-GB",
+  showHistory = false,
+}: TouchlineCoachPerformanceProps) {
+  const portuguese = locale === "pt-BR";
+  const home: TouchlineCoachRecord | null = contract?.home ?? null;
+  const away: TouchlineCoachRecord | null = contract?.away ?? null;
+  const total = contract?.totalTouchlinePoints ?? null;
+  const status = contract
+    ? (contract.status === "active" ? (portuguese ? "Contrato ativo" : "Active contract") : (portuguese ? "Contrato encerrado" : "Ended contract"))
+    : (portuguese ? "Sem contrato TouchLine" : "No TouchLine contract");
+
+  return (
+    <section className={styles.panel} aria-label={portuguese ? "Pontuação TouchLine do treinador" : "Coach TouchLine Points"}>
+      <header className={styles.header}>
+        <div className={styles.title}>
+          <span className={styles.titleIcon}><ShieldCheck aria-hidden="true" size={22} /></span>
+          <div><span>TOUCHLINE GAME</span><strong>TouchLine Points</strong></div>
+        </div>
+        <span className={styles.status} data-contract-status={contract?.status ?? "none"}>{status}</span>
+      </header>
+
+      <div className={styles.records}>
+        <RecordPanel context="home" record={home} portuguese={portuguese} />
+        <RecordPanel context="away" record={away} portuguese={portuguese} />
+      </div>
+
+      <div className={styles.total}>
+        <span className={styles.totalIcon}><Trophy aria-hidden="true" size={21} /></span>
+        <div className={styles.totalCopy}>
+          <span>{portuguese ? "Pontuação total" : "Total score"}</span>
+          <strong>Total TouchLine Points</strong>
+        </div>
+        <b className={styles.totalValue}>{total ?? "—"}<small>TL PTS</small></b>
+      </div>
+
+      <div className={styles.discipline} aria-label={portuguese ? "Cartões do treinador" : "Coach cards"}>
+        <span className={styles.cardMarks} aria-hidden="true"><i /><i /></span>
+        <div>
+          <span>{portuguese ? "CARTÕES" : "CARDS"}</span>
+          <strong>{portuguese ? "Dados disciplinares pendentes" : "Discipline data pending"}</strong>
+        </div>
+      </div>
+
+      {contract ? (
+        <dl className={styles.contractMeta}>
+          <div><dt>{portuguese ? "Início do contrato" : "Contract start"}</dt><dd>{formatDate(contract.startedAt, locale)}</dd></div>
+          <div><dt>{portuguese ? "Fim do contrato" : "Contract end"}</dt><dd>{contract.endedAt ? formatDate(contract.endedAt, locale) : (portuguese ? "Em vigor" : "Active")}</dd></div>
+        </dl>
+      ) : (
+        <p className={styles.empty}>{portuguese ? "Este treinador não possui contrato TouchLine com a conta autenticada. Nenhum ponto foi inventado." : "This coach has no TouchLine contract with the authenticated account. No points have been invented."}</p>
+      )}
+
+      {showHistory && contract ? (
+        <section className={styles.history} aria-label={portuguese ? "Histórico por partida" : "Fixture history"}>
+          <header className={styles.historyTitle}>
+            <span className={styles.historyIcon}><CalendarClock aria-hidden="true" size={18} /></span>
+            <div><span>{portuguese ? "Histórico verificado" : "Verified history"}</span><strong>{portuguese ? "Partidas do contrato" : "Contract fixtures"}</strong></div>
+          </header>
+          {contract.fixtureHistory.length ? (
+            <ol className={styles.historyList}>
+              {contract.fixtureHistory.map((fixture) => {
+                const Icon = fixture.context === "home" ? House : PlaneTakeoff;
+                const context = fixture.context === "home" ? (portuguese ? "Casa" : "Home") : (portuguese ? "Fora" : "Away");
+                return (
+                  <li key={`${fixture.fixtureId}-${fixture.context}`}>
+                    <Icon aria-hidden="true" size={18} />
+                    <span><strong>{context} · {fixture.homeScore}–{fixture.awayScore}</strong><small>{formatDate(fixture.startsAt, locale)} · {fixture.settlementStatus === "final" ? (portuguese ? "Final" : "Final") : (portuguese ? "Provisório" : "Provisional")}</small></span>
+                    <b>+{fixture.touchlinePoints} TP</b>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : <p className={styles.empty}>{portuguese ? "Nenhuma partida elegível foi concluída durante este contrato." : "No eligible fixture has been completed during this contract."}</p>}
+        </section>
+      ) : null}
+    </section>
+  );
+}
