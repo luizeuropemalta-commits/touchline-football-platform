@@ -148,3 +148,19 @@ test("reuses the shared editorial zoom builder in ClubHub, ClubOwner and player 
     assert.match(source, /buildTouchlinePlayerCardZoomDetails/);
   }
 });
+
+test("phone landscape keeps the complete expanded card inside the short viewport", () => {
+  const zoomCss = readFileSync(
+    new URL("../components/touchline/cards/TouchlineCardZoom.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    zoomCss,
+    /@media \(orientation: landscape\) and \(max-height: 420px\)[\s\S]*?--touchline-card-static-scale: \.5;/,
+  );
+  assert.match(
+    zoomCss,
+    /\.panelWithDetails \.expandedMeta \{[\s\S]*?display: none;/,
+  );
+});
