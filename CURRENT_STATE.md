@@ -4,7 +4,7 @@ Verified: 2026-08-21
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
 Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-sportmonks-round`
 Active source branch: `codex/sportmonks-round-arena-rail` (pushed only to `qa`)
-Active validated QA product SHA: `f47925be5bdff97be0671114ee72762cc6c825f8` (`feat(qa): add premium coach card insights`).
+Active QA source SHA: `848ebf1` (`fix(football-data): request nested squad positions`). The latest change is an owner-only, read-only position-audit boundary; it does not write player, squad, card or contract data.
 
 ## QA and release
 
@@ -14,6 +14,7 @@ Active validated QA product SHA: `f47925be5bdff97be0671114ee72762cc6c825f8` (`fe
 - Market P0 patch removed a redundant client auth precheck and bounds the Arena-state request to 8 seconds. Full Vercel release build passed: TypeScript, ESLint with 0 errors/4 pre-existing warnings, 948/948 tests, and 133/133 generated pages.
 - Native Safari Market now passes a cache-bypass reload and a subsequent ordinary reload. The page renders the authenticated 35-player QA scenario and current card catalogue.
 - Production, `touchline.com.br`, DNS, payments, Production database and card-publication gate were not changed by the QA mission.
+- Position-audit deployment `dpl_B5Zqu9oGmUJorrc72qtZUEkAVM8a` is READY and owns the stable `qa` alias. It requests Sportmonks nested player `position`/`detailedPosition` relations and exposes only sanitized owner-only evidence.
 
 ## QA database
 
@@ -29,6 +30,8 @@ Active validated QA product SHA: `f47925be5bdff97be0671114ee72762cc6c825f8` (`fe
 - Focused boundary tests `4/4`, full suite `996/996`, TypeScript, scoped ESLint and production build (133 routes) passed. The QA database privilege query confirmed only `postgres` and `service_role` retain access.
 
 ## Active P0/P1 gates
+
+- **20-club exact-position audit: CLOSED / CORRECTION BLOCKED FROM STARTING BY SCOPE.** The live Sportmonks QA read inspected all `581` current provider roster memberships across the canonical 20 clubs. `578` carry an official detailed position and `3` remain provider-data pending. Every club has at least one official RB, LB and defensive midfielder. The current TouchLine Market projection disagrees with the official detailed bucket for `200/578` classified athletes: `65` centre-forwards collapse into generic attacker, `43` defensive midfielders collapse into generic midfield, `41` wingers are forced to RB, `37` wingers are forced to LB, and `14` other detailed-position mismatches remain. The current QA database has `580` active canonical memberships, but `0` persisted detailed position IDs; the live provider has three new provider-only players and the canonical snapshot has two stale-only memberships. Estêvão (`37701999`) is officially `Right Wing` (`detailed_position_id=156`) but is forced to `RB` by the manual Market ID catalogue. No player data was changed. The safe correction must preserve exact TouchLine categories, persist provider detail, remove manual full-back guessing, retain explicit `PENDING` for the three unresolved athletes and prove idempotent QA reconciliation before any write.
 
 - **Tables / My Club 404: CLOSED.** The global navigation now distinguishes an authenticated ClubOwner from the platform administrator before exposing `/club-owner/me`. The canonical self route remains session-owned and redirects the QA ClubOwner to `/club-owner/luiz-lopes`; authenticated RSC requests return `200`, anonymous requests return the expected login redirect, and no `404` is reproducible.
 - **Authenticated Tables summary: GREEN.** Native Safari on the stable QA alias shows `1` ClubOwner, `35` tracked active contracts and `£171` of currently publicable editorial card value. Two tracked contracts (Anthony Patterson and Rio Cardines) are intentionally excluded from the effective value because their publication memberships are inactive; no provider, sync or database mutation was made in this mission. Preseason ranking order remains neutral until an audited published round exists.
@@ -48,7 +51,7 @@ Active validated QA product SHA: `f47925be5bdff97be0671114ee72762cc6c825f8` (`fe
 
 ## Next executable action
 
-Blocks 1 through 4 of the premium Market / Club Construction programme are closed on QA. The next executable action remains the unfinished Block 4B lifecycle gate: complete the canonical coach-contract cancellation/replacement proof around the already deployed premium coach-card and versioned Home/Away points surfaces. Do not reopen Sportmonks authentication, fixture sync, Matchweek, Tables/My Club or analytics without new regression evidence. Production remains forbidden until the complete release manifest and explicit promotion gate pass.
+The owner paused all other programme blocks for the global 20-club position audit. That audit is now evidenced and no player data was changed. The next executable action requires explicit continuation of the global correction boundary: back up QA, persist official `detailed_position_id`, make TouchLine approved overrides authoritative, remove the incorrect manual RB/LB ID catalogue, reconcile all 20 squads, and validate the exact GK/CB/RB/LB/DM/MID/ATT/ST purchase flow. Do not resume Block 4B or later visual blocks until this higher-priority position boundary is closed. Production remains forbidden.
 
 Queued canonical Block 7 requirement (owner-approved 2026-08-21): every one of the 20 Club Hub Squad Preview/timeline pitches must reuse the exact canonical formation-slot coordinates approved in Market Transfer for the same `formation + viewport`. Do not introduce club-specific offsets, do not reposition one club at a time, and do not alter the already approved Market Transfer coordinates while wiring the shared source.
 
