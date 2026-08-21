@@ -612,11 +612,26 @@ export default async function TouchLinePlayerProfilePage({
   exactPlayer.marketValueState = "unavailable";
   exactPlayer.cardTier = editorialCard?.tierKey ?? null;
   exactPlayer.classificationState = "unavailable";
-  const competition = resolveTouchlineCardCompetition({
+  const rankingCompetition = resolveTouchlineCardCompetition({
     state: activeRanking,
     playerId: card.id,
     providerPlayerId: canonicalProviderPlayerId,
   });
+  const competition = {
+    ...rankingCompetition,
+    touchlinePoints: playerStatistics.currentSeason.summary.touchlinePoints
+      ?? rankingCompetition.touchlinePoints,
+  };
+  exactPlayer.fantasyPoints = competition.touchlinePoints;
+  exactPlayer.matchFantasyPoints = playerStatistics.currentOrSelectedFixture?.touchlinePoints ?? null;
+  exactPlayer.seasonStats = {
+    goals: playerStatistics.currentSeason.summary.goals,
+    assists: playerStatistics.currentSeason.summary.assists,
+    cards: playerStatistics.currentSeason.summary.yellowCards === null
+      || playerStatistics.currentSeason.summary.redCards === null
+      ? null
+      : playerStatistics.currentSeason.summary.yellowCards + playerStatistics.currentSeason.summary.redCards,
+  };
   const requestedPreviewTier = Array.isArray(query.previewTier) ? query.previewTier[0] : query.previewTier;
   // Preview tiers are available only for an explicit local-development demo.
   // A public numeric provider ID never accepts a visual tier from a

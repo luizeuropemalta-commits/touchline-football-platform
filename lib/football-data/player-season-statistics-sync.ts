@@ -1,11 +1,14 @@
 import type { TouchlineFantasyLineupMember } from "./types.ts";
 import type { TouchLinePlayerSeasonStatistics } from "../touchlineArena/player-season-statistics.ts";
 import { emptyTouchLinePlayerSeasonStatistics } from "../touchlineArena/player-season-statistics.ts";
+import { touchLinePlayerFixturePoints } from "./player-fixture-scoring.ts";
+import type { TouchlineFantasyEvent } from "./types.ts";
 
 type EligibleFixture = {
   fixtureId: string;
   lineups: TouchlineFantasyLineupMember[] | null;
   latestSyncAt?: string | null;
+  events?: TouchlineFantasyEvent[] | null;
 };
 
 function numericStatistic(member: TouchlineFantasyLineupMember, codes: string[]) {
@@ -71,6 +74,14 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
     .filter((value): value is string => Boolean(value && Number.isFinite(Date.parse(value))))
     .sort()
     .at(-1) ?? null;
+  const fixturePointValues = synchronizedFixtures.map((fixture) => (
+    Array.isArray(fixture.events)
+      ? touchLinePlayerFixturePoints(input.providerPlayerId, fixture.events).points
+      : null
+  ));
+  const touchlinePoints = fixturePointValues.every((value) => value !== null)
+    ? fixturePointValues.reduce((total, value) => total + (value ?? 0), 0)
+    : null;
   const complete = fixtures.length > 0 && allLineupsAvailable && expectedFixtureIds.length === aggregatedFixtureIds.length;
   const positionStatistics = Object.fromEntries(
     [...new Set(playerEntries.flatMap((member) => member.statistics.map((statistic) => String(statistic.code ?? "").trim().toLowerCase()).filter(Boolean)))]
@@ -97,6 +108,7 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
       rating: averageOnlyWhenKnown(playerEntries, ["rating"]),
       yellowCards: sumOnlyWhenKnown(playerEntries, ["yellow-cards", "yellowcards"]),
       redCards: sumOnlyWhenKnown(playerEntries, ["red-cards", "redcards"]),
+      touchlinePoints,
     },
     positionStatistics,
     latestSyncAt,

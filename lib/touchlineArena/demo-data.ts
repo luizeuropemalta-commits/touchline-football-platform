@@ -54,6 +54,12 @@ export type ClubOwnerSquadCard = {
   cardReview?: TouchlineCardReviewPresentation;
   inventoryId?: string | null;
   touchlinePoints: number;
+  /** Latest reconciled fixture points; null means no verified fixture fact. */
+  matchTouchlinePoints?: number | null;
+  /** Verified cumulative football statistics used by the shared card. */
+  seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
+  /** Latest reconciled fixture statistics used by the Arena overlay. */
+  matchStats?: TouchlineEliteExactPlayer["matchStats"];
 };
 
 export type TouchLineClubOwnerStanding = {
@@ -374,5 +380,8 @@ export function squadCardToExactPlayer(
     // null in that state, so this asset cannot imply a commercial tier.
     cardTemplateUrl: touchlineArenaClubTemplateForCard(card.clubName, null, cardTier) || null,
     fantasyPoints: card.touchlinePoints,
+    matchFantasyPoints: card.matchTouchlinePoints,
+    seasonStats: card.seasonStats,
+    matchStats: card.matchStats,
   };
 }

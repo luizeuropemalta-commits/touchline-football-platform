@@ -10,6 +10,7 @@ export type TouchLinePlayerSeasonSummary = {
   rating: number | null;
   yellowCards: number | null;
   redCards: number | null;
+  touchlinePoints: number | null;
 };
 
 export type TouchLinePlayerSeasonStatistics = {
@@ -38,6 +39,7 @@ export type TouchLinePlayerFixtureStatistics = {
   appearanceStatus: "started" | "substitute" | "unused" | "absent" | "unavailable";
   minutes: number | null;
   rating: number | null;
+  touchlinePoints: number | null;
   statistics: Record<string, number | string>;
   latestSyncAt: string | null;
 };
@@ -62,6 +64,7 @@ export const TOUCHLINE_PLAYER_SEASON_SUMMARY_KEYS = [
   "rating",
   "yellowCards",
   "redCards",
+  "touchlinePoints",
 ] as const satisfies readonly (keyof TouchLinePlayerSeasonSummary)[];
 
 function finiteNumber(value: unknown) {
@@ -109,6 +112,7 @@ export function emptyTouchLinePlayerSeasonStatistics(input: Partial<Pick<
       rating: null,
       yellowCards: null,
       redCards: null,
+      touchlinePoints: null,
     },
     positionStatistics: {},
     latestSyncAt: null,

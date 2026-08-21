@@ -23,6 +23,8 @@ export type ArenaLineupPlayer = {
     countryCode3?: string | null;
     flagUrl?: string | null;
     fantasyPoints?: string | number | null;
+    /** Points earned in the latest reconciled fixture, separate from the season total. */
+    matchFantasyPoints?: string | number | null;
     marketValue?: string | null;
     marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
     /** Server-owned public value state. Never infer it from a display string. */
@@ -36,6 +38,8 @@ export type ArenaLineupPlayer = {
     /** Canonical public presentation published by the editorial card workflow. */
     editorialCard?: TouchlinePublicEditorialCardPresentation | null;
     inventoryId?: string | null;
+    /** Cumulative verified season statistics used by the shared card renderer. */
+    seasonStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards", string | number | null>>;
     matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards", string | number | null>>;
   };
   x: number;

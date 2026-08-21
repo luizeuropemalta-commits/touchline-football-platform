@@ -4,6 +4,7 @@ import { persistFantasyFixtureFeed } from "@/lib/football-data/fantasy-store";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { persistLiveFixtureStates, mergeCanonicalLiveFixture } from "@/lib/football-data/live-fixture-store";
 import { persistLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
+import { syncTouchLinePlayerSeasonStatistics } from "@/lib/football-data/player-season-statistics-store";
 import { decideLiveSyncCadence } from "@/lib/football-data/live-sync-cadence";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
@@ -29,6 +30,8 @@ export type LiveSyncResult = {
   updated: number;
   snapshotFixtures: number;
   fantasyFeedsStored: number;
+  playerFixtureRowsWritten: number;
+  coachPointsReconciled: number;
   errors: string[];
   syncRunId?: string;
   skippedReason?: string;
@@ -73,6 +76,8 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
       updated: result.updated,
       snapshotFixtures: result.snapshotFixtures,
       fantasyFeedsStored: result.fantasyFeedsStored,
+      playerFixtureRowsWritten: result.playerFixtureRowsWritten,
+      coachPointsReconciled: result.coachPointsReconciled,
       skippedReason: result.skippedReason ?? null,
     },
   }).eq("id", result.syncRunId);
@@ -114,6 +119,8 @@ export async function syncSportmonksLiveState(
     updated: 0,
     snapshotFixtures: 0,
     fantasyFeedsStored: 0,
+    playerFixtureRowsWritten: 0,
+    coachPointsReconciled: 0,
     errors: [],
   };
 
@@ -173,6 +180,21 @@ export async function syncSportmonksLiveState(
     );
     result.updated = persistence.updated;
     result.errors.push(...persistence.errors);
+
+    // The canonical fixture write is the distribution boundary. Reconcile
+    // both player and coach game data immediately so a finished match cannot
+    // remain visible in Live while cards, profiles and tables still show the
+    // previous score.
+    const playerReconciliation = await syncTouchLinePlayerSeasonStatistics(admin);
+    result.playerFixtureRowsWritten = playerReconciliation.fixtureRowsWritten;
+    result.errors.push(...playerReconciliation.errors.map((error) => `player-points:${error}`));
+    const { data: coachReconciliation, error: coachReconciliationError } = await admin
+      .rpc("touchline_reconcile_coach_fixture_points", { p_fixture_id: null });
+    if (coachReconciliationError) {
+      result.errors.push(`coach-points:${coachReconciliationError.code ?? "unknown"}`);
+    } else {
+      result.coachPointsReconciled = Number((coachReconciliation as { reconciled?: unknown } | null)?.reconciled ?? 0);
+    }
 
     const incomingById = new Map(canonicalIncoming.map((fixture) => [fixture.providerId, fixture]));
     const snapshot = schedule.map((fixture) => {

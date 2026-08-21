@@ -1016,7 +1016,10 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       const type = this.relationEntity(detail, "type") ?? (detail.type as SportmonksEntity | undefined);
       const typeId = asString(detail.type_id) ?? asString(type?.id);
       if (!typeId) return [];
-      const value = parseSportmonksStatisticValue(detail.value);
+      // Sportmonks v3 line-up details carry the measured value in
+      // `detail.data.value`. Older/alternate payloads may still expose
+      // `detail.value`, so retain that as a compatibility fallback.
+      const value = parseSportmonksStatisticValue(detail.data ?? detail.value);
 
       return [{
         typeId,
@@ -1082,10 +1085,15 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         playerId: asString(item.player_id) ?? asString(player?.id),
         playerName: asString(player?.display_name) ?? asString(player?.name) ?? asString(item.player_name),
         relatedPlayerId: asString(item.related_player_id) ?? asString(relatedPlayer?.id),
-        relatedPlayerName: asString(relatedPlayer?.display_name) ?? asString(relatedPlayer?.name),
+        relatedPlayerName: asString(item.related_player_name) ?? asString(relatedPlayer?.display_name) ?? asString(relatedPlayer?.name),
         type,
         minute: asNumber(item.minute),
         extraMinute: asNumber(item.extra_minute),
+        sortOrder: asNumber(item.sort_order),
+        result: asString(item.result),
+        info: asString(item.info),
+        addition: asString(item.addition),
+        status: item.cancelled === true || item.rescinded === true ? "rescinded" : "recorded",
         fantasyPoints: estimateFantasyEventPoints(type),
         raw: item,
       };

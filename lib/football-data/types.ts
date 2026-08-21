@@ -272,6 +272,11 @@ export type TouchlineFantasyEvent = {
   type?: string;
   minute?: number;
   extraMinute?: number;
+  sortOrder?: number;
+  result?: string;
+  info?: string;
+  addition?: string;
+  status?: "recorded" | "rescinded";
   fantasyPoints?: number;
   raw?: unknown;
 };
