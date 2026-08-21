@@ -361,7 +361,23 @@ export async function persistCompetitionFixtureSchedule(
   });
   if (!rows.length) return { stored: true as const, fixturesStored: 0 };
   const { error: fixturesError } = await admin.from("football_fixtures").upsert(rows, { onConflict: "provider,provider_fixture_id" });
-  return fixturesError
-    ? { stored: false as const, reason: fixturesError.message, fixturesStored: 0 }
-    : { stored: true as const, fixturesStored: rows.length };
+  if (fixturesError) return { stored: false as const, reason: fixturesError.message, fixturesStored: 0 };
+
+  // Fixture scores are provider facts. The derived TouchLine coach result is
+  // reconciled only after the canonical fixture write succeeds; final rows are
+  // protected as immutable by the database command.
+  const { data: coachReconciliation, error: coachReconciliationError } = await admin
+    .rpc("touchline_reconcile_coach_fixture_points", { p_fixture_id: null });
+  if (coachReconciliationError) {
+    return {
+      stored: false as const,
+      reason: `coach-points-reconciliation-failed:${coachReconciliationError.code ?? "unknown"}`,
+      fixturesStored: rows.length,
+    };
+  }
+  return {
+    stored: true as const,
+    fixturesStored: rows.length,
+    coachPointsReconciled: Number((coachReconciliation as { reconciled?: unknown } | null)?.reconciled ?? 0),
+  };
 }
