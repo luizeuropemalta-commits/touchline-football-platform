@@ -33,6 +33,7 @@ type CanonicalMembership = {
 };
 type CanonicalClub = {
   id: string;
+  name: string;
   competition_id: string;
   provider: string;
   source_updated_at: string | null;
@@ -65,6 +66,8 @@ type ReviewProviderRow = {
   nationality: string | null;
   country_id: string | null;
   position: string | null;
+  market_value: number | null;
+  market_value_currency: string | null;
 };
 type ReviewCommandResult = {
   card_state: "COMPLETE" | "REVIEW_REQUIRED";
@@ -191,7 +194,7 @@ async function canonicalPlayerReady(admin: NonNullable<ReturnType<typeof createA
 
   const { data: club, error: clubError } = await admin
     .from("football_clubs")
-    .select("id,competition_id,provider,source_updated_at,logo_url")
+    .select("id,name,competition_id,provider,source_updated_at,logo_url")
     .eq("id", player.current_club_id)
     .maybeSingle<CanonicalClub>();
   if (
@@ -363,7 +366,7 @@ export async function POST(request: NextRequest) {
   }
 
   const [{ data: provider, error: providerError }, { data: membership }, { data: club }, overrides] = await Promise.all([
-    context.admin.from("football_players").select("display_name,name,nationality,position").eq("id", playerId).maybeSingle<Pick<ReviewProviderRow, "display_name" | "name" | "nationality" | "position">>(),
+    context.admin.from("football_players").select("display_name,name,nationality,position,market_value,market_value_currency").eq("id", playerId).maybeSingle<Pick<ReviewProviderRow, "display_name" | "name" | "nationality" | "position" | "market_value" | "market_value_currency">>(),
     context.admin.from("football_squad_members").select("jersey_number,position").eq("id", canonical.membership.id).maybeSingle<{ jersey_number: number | null; position: string | null }>(),
     context.admin.from("football_clubs").select("logo_url").eq("id", canonical.club.id).maybeSingle<{ logo_url: string | null }>(),
     loadTouchlineCardEditorialOverrides([playerId], context.admin),
@@ -412,6 +415,50 @@ export async function POST(request: NextRequest) {
     policyVersion: existing.policy_version,
   } : null);
   if (!decision) return NextResponse.json({ error: "The editorial card classification could not be prepared." }, { status: 400 });
+
+  // Preview is deliberately computed through the exact same canonical chain
+  // and classification rule as the commit path, but exits before the atomic
+  // database command. The owner must inspect this payload and explicitly press
+  // Done before any valuation or publication history is written.
+  if (request.nextUrl.searchParams.get("action") === "preview") {
+    const providerMarketValue = typeof provider.market_value === "number"
+      && Number.isSafeInteger(provider.market_value)
+      && provider.market_value >= 0
+      ? provider.market_value
+      : null;
+    const providerMarketValueCurrency = provider.market_value_currency?.trim().toUpperCase() || null;
+    const providerConflict = providerMarketValue !== null
+      && providerMarketValueCurrency !== null
+      && (providerMarketValueCurrency !== "EUR" || providerMarketValue !== marketValueEur)
+      ? {
+        providerMarketValue,
+        providerMarketValueCurrency,
+        touchlineMarketValueEur: marketValueEur,
+        resolution: "TOUCHLINE_AUTHORITY" as const,
+      }
+      : null;
+    return NextResponse.json({
+      ok: true,
+      previewOnly: true,
+      authority: "TouchLine",
+      providerConflict,
+      player: {
+        canonicalPlayerId: playerId,
+        displayName: override?.displayName ?? provider.display_name ?? provider.name ?? "Canonical player",
+        clubName: canonical.club.name,
+        clubLogoUrl: canonical.club.logo_url,
+        shirtNumber: override?.shirtNumber ?? membership.jersey_number,
+        countryCode3: override?.countryCode3 ?? touchlineCountryCode3FromName(provider.nationality),
+        position: override?.position ?? membership.position ?? provider.position,
+      },
+      marketValueEur,
+      effectiveSeason,
+      publicationStatus: publicationState,
+      calculatedTier: decision.classification.tierKey,
+      nominalPriceGbp: decision.classification.nominalPrice,
+      cardReview,
+    });
+  }
 
   const { data: commandResult, error: commandError } = await atomicPublicationRpc(context.admin)
     .rpc("touchline_apply_manual_card_publication", {

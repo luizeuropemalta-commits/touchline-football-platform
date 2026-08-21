@@ -76,6 +76,24 @@ test("bulk preview remains read-only and validates the selected canonical club b
   assert.doesNotMatch(route, /bulk-preview[\s\S]{0,1200}\.upsert\(/);
 });
 
+test("single-card market value requires a read-only visual preview before Done commits", () => {
+  assert.match(route, /action"\) === "preview"/);
+  assert.match(route, /previewOnly: true/);
+  assert.match(route, /authority: "TouchLine"/);
+  assert.match(route, /resolution: "TOUCHLINE_AUTHORITY"/);
+  assert.match(route, /providerMarketValue !== marketValueEur/);
+  assert.doesNotMatch(route, /previewOnly: true,[\s\S]{0,500}sportmonksPlayerId/);
+  assert.match(route, /exits before the atomic/);
+  assert.match(actions, /\/api\/admin\/manual-card-editorial\?action=preview/);
+  assert.match(actions, /role="dialog"/);
+  assert.match(actions, /Preview card/);
+  assert.match(actions, /SAVE & REVALIDATE/);
+  assert.match(actions, /PROVIDER CONFLICT/);
+  assert.match(actions, /TouchLine remains authoritative; the provider value was not applied/);
+  assert.match(actions, /onClick=\{save\}/);
+  assert.doesNotMatch(actions, /onClick=\{save\}[\s\S]{0,180}Save to Card Engine/);
+});
+
 test("revert is delegated to the same protected atomic migration boundary", () => {
   assert.match(route, /export async function PATCH/);
   assert.match(route, /action !== "revert"/);
