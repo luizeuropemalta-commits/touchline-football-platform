@@ -113,6 +113,7 @@ import {
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { createTouchlineArenaCoachSlot, TOUCHLINE_DEMO_COACH } from "@/lib/touchlineArena/coach-card";
 import { TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT } from "@/lib/touchlineArena/coach-card-layout";
+import type { TouchlineCoachContractSnapshot } from "@/lib/touchlineArena/coach-scoring";
 import type { TouchlineCompetitionCardOffer } from "@/lib/touchlineArena/competition-card-offer";
 import {
   TOUCHLINE_LIVE_COACHES,
@@ -3460,6 +3461,9 @@ export default function ArenaClient({
   const [ownerCoachProviderId, setOwnerCoachProviderId] = useState<string | null>(null);
   const [hasLoadedOwnerCoach, setHasLoadedOwnerCoach] = useState(false);
   const [isCoachSaving, setIsCoachSaving] = useState(false);
+  const [activeCoachContract, setActiveCoachContract] = useState<TouchlineCoachContractSnapshot | null>(null);
+  const [coachContractHistory, setCoachContractHistory] = useState<TouchlineCoachContractSnapshot[]>([]);
+  const [isCoachEndConfirmationOpen, setIsCoachEndConfirmationOpen] = useState(false);
   const [coachSelectionError, setCoachSelectionError] = useState<string | null>(null);
   const [coachOffersByProviderId, setCoachOffersByProviderId] = useState<Record<string, TouchlineCompetitionCardOffer>>({});
   const [coachOfferStatus, setCoachOfferStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -3891,14 +3895,24 @@ export default function ArenaClient({
   const ownerCoachOffer = activeArenaCoachIdentity?.coach
     ? coachOffersByProviderId[activeArenaCoachIdentity.coach.providerId] ?? null
     : null;
-  const coachSlot = useMemo(
-    () => createTouchlineArenaCoachSlot(
+  const coachSlot = useMemo(() => {
+    const slot = createTouchlineArenaCoachSlot(
       activeArenaCoachIdentity?.coach ?? null,
       null,
       ownerCoachOffer?.tierKey ?? "sapphire-blue",
-    ),
-    [activeArenaCoachIdentity?.coach, ownerCoachOffer?.tierKey],
-  );
+    );
+    if (!activeCoachContract || !slot.coach) return slot;
+    return {
+      ...slot,
+      touchlinePoints: activeCoachContract.totalTouchlinePoints,
+      status: "audited" as const,
+      scoreEvidence: {
+        provider: "sportmonks" as const,
+        providerEventIds: activeCoachContract.fixtureHistory.map((fixture) => fixture.fixtureId),
+        scoringVersion: activeCoachContract.scoringVersion,
+      },
+    };
+  }, [activeArenaCoachIdentity?.coach, activeCoachContract, ownerCoachOffer?.tierKey]);
   const arenaCoachClubName = ownerCoachClub?.name ?? "TouchLine England";
   const arenaCoachClubLogoUrl = ownerCoachClub?.logoUrl;
   const arenaCoachClubAccent = ownerCoachClub?.accent ?? "#b5ff4b";
@@ -4763,6 +4777,8 @@ export default function ArenaClient({
         const payload = await readTouchlineJsonPayload<{
           ok?: boolean;
           offers?: TouchlineCompetitionCardOffer[];
+          activeContract?: TouchlineCoachContractSnapshot | null;
+          contractHistory?: TouchlineCoachContractSnapshot[];
         }>(response);
         if (cancelled || !response.ok || !payload?.ok || !Array.isArray(payload.offers)) {
           if (!cancelled) setCoachOfferStatus("error");
@@ -4775,6 +4791,11 @@ export default function ArenaClient({
         ) as Record<string, TouchlineCompetitionCardOffer>;
         if (!cancelled) {
           setCoachOffersByProviderId(offers);
+          setActiveCoachContract(payload.activeContract ?? null);
+          setCoachContractHistory(Array.isArray(payload.contractHistory) ? payload.contractHistory : []);
+          if (payload.activeContract?.coachProviderId) {
+            setOwnerCoachProviderId(payload.activeContract.coachProviderId);
+          }
           setCoachOfferStatus("ready");
         }
       })
@@ -6483,7 +6504,10 @@ export default function ArenaClient({
         const response = await fetch("/api/touchline-arena/coach", {
           method: "PUT",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ coachProviderId: coach.coach.providerId }),
+          body: JSON.stringify({
+            coachProviderId: coach.coach.providerId,
+            idempotencyKey: `coach-hire-${createResilientBrowserId()}`,
+          }),
         });
         if (!response.ok) {
           const message = siteLanguage === "pt-BR"
@@ -6493,6 +6517,10 @@ export default function ArenaClient({
           setSaveStatus(message);
           return;
         }
+        const payload = await readTouchlineJsonPayload<{
+          activeContract?: TouchlineCoachContractSnapshot | null;
+        }>(response);
+        setActiveCoachContract(payload?.activeContract ?? null);
       } catch {
         const message = siteLanguage === "pt-BR"
           ? "Não foi possível salvar o treinador na sua conta. Tente novamente."
@@ -6525,6 +6553,43 @@ export default function ArenaClient({
       setMarketNeedsOnly(false);
     }
     setSaveStatus(siteLanguage === "pt-BR" ? "Treinador oficial selecionado" : "Official coach selected");
+  }
+
+  async function endOfficialArenaCoachContract() {
+    if (!arenaPersistencePrincipal || arenaPersistencePrincipal.kind !== "authenticated" || isCoachSaving) return;
+    setIsCoachSaving(true);
+    setCoachSelectionError(null);
+    try {
+      const response = await fetch("/api/touchline-arena/coach", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          reason: "ClubOwner requested coach replacement",
+          idempotencyKey: `coach-end-${createResilientBrowserId()}`,
+        }),
+      });
+      const payload = await readTouchlineJsonPayload<{
+        ok?: boolean;
+        contractHistory?: TouchlineCoachContractSnapshot[];
+      }>(response);
+      if (!response.ok || !payload?.ok) throw new Error("TL_COACH_END_FAILED");
+      const coachStorageKey = arenaStorageKey(arenaPersistencePrincipal, ARENA_PERSISTENCE_RESOURCES.coach);
+      removeBrowserStorage("localStorage", coachStorageKey);
+      setCoachContractHistory(Array.isArray(payload.contractHistory) ? payload.contractHistory : coachContractHistory);
+      setActiveCoachContract(null);
+      setOwnerCoachProviderId(null);
+      setIsCoachEndConfirmationOpen(false);
+      setIsCoachSpotlightOpen(false);
+      setSaveStatus(siteLanguage === "pt-BR" ? "Contrato do treinador encerrado" : "Coach contract ended");
+    } catch {
+      const message = siteLanguage === "pt-BR"
+        ? "Não foi possível encerrar este contrato. Nenhum dado foi alterado."
+        : "We could not end this contract. No data was changed.";
+      setCoachSelectionError(message);
+      setSaveStatus(message);
+    } finally {
+      setIsCoachSaving(false);
+    }
   }
 
   function confirmMarketFormation(formationKey: ArenaFormationKey) {
@@ -8149,6 +8214,7 @@ export default function ArenaClient({
                         locale={siteLanguage}
                         displayMode="compact"
                         enableInteractiveNeon
+                        fixtureContext={activeCoachContract?.currentFixture?.context ?? null}
                       />
                     </span>
                     <b>{siteLanguage === "pt-BR" ? "TREINADOR" : "COACH"}</b>
@@ -8465,7 +8531,7 @@ export default function ArenaClient({
               aria-hidden="true"
               onClick={() => setIsCoachSpotlightOpen(false)}
             />
-            <div className="arena-coach-spotlight-panel">
+            <div className="arena-coach-spotlight-panel arena-owner-coach-contract-panel">
               <button type="button" className="arena-player-spotlight-close" aria-label={t("closePreview")} onClick={() => setIsCoachSpotlightOpen(false)}>
                 <X aria-hidden="true" size={18} />
               </button>
@@ -8482,7 +8548,58 @@ export default function ArenaClient({
                 frameLoading="eager"
                 frameDecoding="sync"
                 frameFetchPriority="high"
+                fixtureContext={activeCoachContract?.currentFixture?.context ?? null}
               />
+              <div className="arena-owner-coach-contract" aria-label={siteLanguage === "pt-BR" ? "Contrato TouchLine do treinador" : "TouchLine coach contract"}>
+                <span>{siteLanguage === "pt-BR" ? "TOUCHLINE GAME · CONTRATO ATUAL" : "TOUCHLINE GAME · CURRENT CONTRACT"}</span>
+                <h3>{coachSlot.coach?.displayName ?? t("verifiedCoachPending")}</h3>
+                <div className="arena-owner-coach-records">
+                  <article aria-label="Home record">
+                    <small>{siteLanguage === "pt-BR" ? "CASA" : "HOME"}</small>
+                    <strong>{activeCoachContract ? `${activeCoachContract.home.wins}-${activeCoachContract.home.draws}-${activeCoachContract.home.losses}` : "0-0-0"}</strong>
+                    <em>{activeCoachContract?.home.touchlinePoints ?? 0} TL PTS</em>
+                  </article>
+                  <article aria-label="Away record">
+                    <small>{siteLanguage === "pt-BR" ? "FORA" : "AWAY"}</small>
+                    <strong>{activeCoachContract ? `${activeCoachContract.away.wins}-${activeCoachContract.away.draws}-${activeCoachContract.away.losses}` : "0-0-0"}</strong>
+                    <em>{activeCoachContract?.away.touchlinePoints ?? 0} TL PTS</em>
+                  </article>
+                  <article>
+                    <small>{siteLanguage === "pt-BR" ? "TOTAL" : "TOTAL"}</small>
+                    <strong>{activeCoachContract?.totalTouchlinePoints ?? 0}</strong>
+                    <em>TL PTS</em>
+                  </article>
+                </div>
+                {activeCoachContract?.currentFixture ? (
+                  <p>
+                    <b>{activeCoachContract.currentFixture.context === "home"
+                      ? (siteLanguage === "pt-BR" ? "Próximo jogo em casa" : "Next home fixture")
+                      : (siteLanguage === "pt-BR" ? "Próximo jogo fora" : "Next away fixture")}</b>
+                    <span>{activeCoachContract.currentFixture.startsAt
+                      ? new Intl.DateTimeFormat(siteLanguage, { dateStyle: "medium", timeStyle: "short" }).format(new Date(activeCoachContract.currentFixture.startsAt))
+                      : (siteLanguage === "pt-BR" ? "Horário pendente" : "Time pending")}</span>
+                  </p>
+                ) : <p>{siteLanguage === "pt-BR" ? "Próximo jogo verificado pendente." : "Next verified fixture pending."}</p>}
+                <div className="arena-owner-coach-contract-actions">
+                  {coachSlot.coach ? <a href={`/touchline-coaches/${encodeURIComponent(coachSlot.coach.providerId)}?lang=${encodeURIComponent(siteLanguage)}`}>{siteLanguage === "pt-BR" ? "Ver perfil" : "View profile"}</a> : null}
+                  {activeCoachContract ? (
+                    <button type="button" onClick={() => setIsCoachEndConfirmationOpen(true)} disabled={isCoachSaving}>
+                      {siteLanguage === "pt-BR" ? "Cancelar contrato" : "Cancel contract"}
+                    </button>
+                  ) : null}
+                </div>
+                {coachContractHistory.length ? <small className="arena-owner-coach-history-count">{siteLanguage === "pt-BR" ? `${coachContractHistory.length} contrato(s) histórico(s) preservado(s)` : `${coachContractHistory.length} historical contract(s) preserved`}</small> : null}
+                {isCoachEndConfirmationOpen ? (
+                  <div className="arena-owner-coach-confirm" role="alertdialog" aria-modal="true" aria-label={siteLanguage === "pt-BR" ? "Confirmar cancelamento" : "Confirm cancellation"}>
+                    <strong>{siteLanguage === "pt-BR" ? "Encerrar este contrato?" : "End this contract?"}</strong>
+                    <p>{siteLanguage === "pt-BR" ? "Os pontos e o histórico permanecem. O treinador não receberá pontos futuros." : "Points and history remain. This coach will receive no future points."}</p>
+                    <div>
+                      <button type="button" onClick={() => setIsCoachEndConfirmationOpen(false)} disabled={isCoachSaving}>{siteLanguage === "pt-BR" ? "Voltar" : "Go back"}</button>
+                      <button type="button" onClick={() => void endOfficialArenaCoachContract()} disabled={isCoachSaving}>{isCoachSaving ? (siteLanguage === "pt-BR" ? "Salvando…" : "Saving…") : (siteLanguage === "pt-BR" ? "Confirmar cancelamento" : "Confirm cancellation")}</button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </section>
         ) : null}
@@ -8688,6 +8805,7 @@ export default function ArenaClient({
                               countryCode3={arenaCoachCountryCode3}
                               formation={selectedFormationKey}
                               locale={siteLanguage}
+                              fixtureContext={activeCoachContract?.currentFixture?.context ?? null}
                             />
                           </span>
                           <span>
@@ -8942,6 +9060,7 @@ export default function ArenaClient({
                         displayMode="compact"
                         optimizeForLiveCompact
                         enableInteractiveNeon={false}
+                        fixtureContext={activeCoachContract?.currentFixture?.context ?? null}
                       />
                     ) : null}
                     starters={players.map((player) => ({
@@ -16380,6 +16499,54 @@ export default function ArenaClient({
           z-index: 2;
           width: min(390px, calc(100vw - 32px), calc(66dvh * .6667));
           pointer-events: auto;
+        }
+
+        .arena-owner-coach-contract-panel {
+          width: min(840px, calc(100vw - 32px));
+          max-height: min(760px, calc(100dvh - 28px));
+          display: grid;
+          grid-template-columns: minmax(250px, 390px) minmax(300px, 1fr);
+          align-items: center;
+          gap: clamp(14px, 3vw, 30px);
+          overflow: auto;
+          border: 1px solid rgba(181,255,75,.24);
+          border-radius: 26px;
+          padding: clamp(14px, 2.4vw, 28px);
+          background: linear-gradient(145deg, rgba(2,16,13,.98), rgba(3,9,12,.98));
+          box-shadow: 0 28px 90px rgba(0,0,0,.62), 0 0 42px rgba(181,255,75,.08);
+        }
+
+        .arena-owner-coach-contract { display: grid; gap: 12px; color: #efffd5; }
+        .arena-owner-coach-contract > span { color: #b5ff4b; font-size: 9px; font-weight: 950; letter-spacing: .13em; }
+        .arena-owner-coach-contract h3 { margin: 0; font-size: clamp(24px, 3vw, 38px); line-height: .94; letter-spacing: -.05em; }
+        .arena-owner-coach-records { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+        .arena-owner-coach-records article { display: grid; gap: 3px; border: 1px solid rgba(181,255,75,.18); border-radius: 13px; padding: 10px; background: rgba(181,255,75,.055); }
+        .arena-owner-coach-records small { color: rgba(239,255,213,.58); font-size: 8px; font-weight: 900; letter-spacing: .1em; }
+        .arena-owner-coach-records strong { font-size: 19px; }
+        .arena-owner-coach-records em { color: #b5ff4b; font-size: 9px; font-style: normal; font-weight: 900; }
+        .arena-owner-coach-contract > p { display: grid; gap: 3px; margin: 0; border-left: 2px solid #b5ff4b; padding-left: 10px; color: rgba(239,255,213,.62); font-size: 11px; }
+        .arena-owner-coach-contract > p b { color: #efffd5; font-size: 12px; }
+        .arena-owner-coach-contract-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .arena-owner-coach-contract-actions a,
+        .arena-owner-coach-contract-actions button,
+        .arena-owner-coach-confirm button { min-height: 42px; border: 1px solid rgba(181,255,75,.32); border-radius: 999px; padding: 0 14px; color: #efffd5; background: rgba(181,255,75,.08); font: inherit; font-size: 10px; font-weight: 900; text-decoration: none; cursor: pointer; }
+        .arena-owner-coach-contract-actions a { display: inline-flex; align-items: center; }
+        .arena-owner-coach-contract-actions button { border-color: rgba(255,151,115,.36); color: #ffd9c9; background: rgba(132,37,18,.16); }
+        .arena-owner-coach-contract-actions :is(a,button):focus-visible,
+        .arena-owner-coach-confirm button:focus-visible { outline: 2px solid #b5ff4b; outline-offset: 2px; }
+        .arena-owner-coach-history-count { color: rgba(239,255,213,.56); font-size: 9px; }
+        .arena-owner-coach-confirm { display: grid; gap: 9px; border: 1px solid rgba(255,151,115,.34); border-radius: 16px; padding: 13px; background: rgba(42,8,5,.72); }
+        .arena-owner-coach-confirm > p { margin: 0; color: rgba(255,239,230,.7); font-size: 10px; line-height: 1.45; }
+        .arena-owner-coach-confirm > div { display: flex; flex-wrap: wrap; gap: 7px; }
+
+        @media (max-width: 720px), (max-height: 520px) {
+          .arena-owner-coach-contract-panel { grid-template-columns: minmax(150px, .72fr) minmax(250px, 1.28fr); align-items: start; gap: 12px; border-radius: 18px; padding: 12px; }
+          .arena-owner-coach-contract h3 { font-size: 22px; }
+          .arena-owner-coach-records article { padding: 7px; }
+          .arena-owner-coach-records strong { font-size: 15px; }
+          .arena-owner-coach-contract-actions a,
+          .arena-owner-coach-contract-actions button,
+          .arena-owner-coach-confirm button { min-height: 36px; padding: 0 11px; font-size: 8px; }
         }
 
         .arena-stage[data-coach-spotlight="open"] .field-player-layer,

@@ -16,7 +16,7 @@ function row(route: string) {
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 56);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 54);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 55);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -44,6 +44,7 @@ test("distinguishes read methods, disabled ingestion, local editors, user writes
   assert.equal(row("POST /api/football-data/fixture-schedule").status, "METHOD_DISABLED");
   assert.equal(row("POST /api/touchline-arena/formation-locks").auth, "LOCAL_EDITOR");
   assert.equal(row("POST /api/touchline-arena/market/checkout").auth, "AUTHENTICATED");
+  assert.equal(row("DELETE /api/touchline-arena/coach").auth, "AUTHENTICATED_SAME_ORIGIN");
   assert.equal(row("POST /api/stripe/webhook").auth, "WEBHOOK_SIGNATURE");
   assert.equal(row("POST /api/admin/cards").auth, "ADMIN");
 });

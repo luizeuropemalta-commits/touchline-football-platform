@@ -151,7 +151,11 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   );
   assert.doesNotMatch(fixtureEffect, /function applyLiveFixtureUpdates/);
   assert.match(coachRoute, /touchlineLiveCoachForProviderId\(coachProviderId\)/);
-  assert.match(coachRoute, /TL_ARENA_COACH_SCHEMA_UNAVAILABLE/);
+  assert.match(coachRoute, /TL_COACH_CONTRACT_SCHEMA_UNAVAILABLE/);
+  assert.match(coachRoute, /touchline_hire_coach_contract/);
+  assert.match(coachRoute, /touchline_end_coach_contract/);
+  assert.match(coachRoute, /isSameOriginMutation/);
+  assert.match(coachRoute, /p_idempotency_key: idempotencyKey/);
   assert.match(stateRoute, /coach_provider_id/);
   assert.match(stateRoute, /error\?\.code === "42703"/);
 });

@@ -12,6 +12,9 @@ import {
   TOUCHLINE_LIVE_COACHES,
 } from "@/lib/touchlineArena/live-coaches";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { readTouchlineCoachContracts } from "@/lib/touchlineArena/coach-contracts-server";
 
 const TOUCHLINE_ENGLAND_SEASON = "2026-27";
 
@@ -87,6 +90,22 @@ export default async function TouchlineCoachProfilePage({
     classification,
   });
   const slot = createTouchlineArenaCoachSlot(entry.coach, null, offer.tierKey);
+  const [supabase, admin] = await Promise.all([createClient(), Promise.resolve(createAdminClient())]);
+  const userResult = supabase ? await supabase.auth.getUser() : null;
+  const user = userResult?.data.user ?? null;
+  const ownerContracts = user && admin ? await readTouchlineCoachContracts(admin, user.id).catch(() => []) : [];
+  const coachContracts = ownerContracts.filter((contract) => contract.coachProviderId === entry.coach.providerId);
+  const currentContract = coachContracts.find((contract) => contract.status === "active") ?? null;
+  const scoredSlot = currentContract ? {
+    ...slot,
+    touchlinePoints: currentContract.totalTouchlinePoints,
+    status: "audited" as const,
+    scoreEvidence: {
+      provider: "sportmonks" as const,
+      providerEventIds: currentContract.fixtureHistory.map((fixture) => fixture.fixtureId),
+      scoringVersion: currentContract.scoringVersion,
+    },
+  } : slot;
   const profileLocale = `?lang=${encodeURIComponent(locale)}`;
   const historyAvailable = Boolean(
     classification.sourceClub
@@ -115,7 +134,7 @@ export default async function TouchlineCoachProfilePage({
         </div>
         <div className="coach-profile-card"><TouchlineCoachCard
           coach={entry.coach}
-          slot={slot}
+          slot={scoredSlot}
           clubName={club.name}
           clubLogoUrl={club.logoUrl}
           clubAccent={club.accent}
@@ -123,19 +142,25 @@ export default async function TouchlineCoachProfilePage({
           locale={locale}
           forceNeonActive
           enableInteractiveNeon={false}
+          fixtureContext={currentContract?.currentFixture?.context ?? null}
         /></div>
       </section>
       <section className="coach-profile-grid">
         <article>
           <span>{pt ? "TOUCHLINE GAME" : "TOUCHLINE GAME"}</span>
-          <h2>{pt ? "Classificação e oferta" : "Classification and offer"}</h2>
+          <h2>{pt ? "Contrato e pontuação" : "Contract and scoring"}</h2>
           <dl>
             <div><dt>{pt ? "Tier" : "Tier"}</dt><dd>{touchlineCardTierName(offer.tierKey, locale)}</dd></div>
             <div><dt>{pt ? "Preço oficial" : "Official price"}</dt><dd>{offer.displayPrice}</dd></div>
-            <div><dt>{pt ? "Motivo" : "Reason"}</dt><dd>{coachReason(classification.classificationReason, pt)}</dd></div>
+            <div><dt>{pt ? "Pontos TouchLine" : "TouchLine Points"}</dt><dd>{currentContract?.totalTouchlinePoints ?? 0}</dd></div>
+            <div><dt>{pt ? "Contrato atual" : "Current contract"}</dt><dd>{currentContract ? (pt ? "ATIVO" : "ACTIVE") : (pt ? "NENHUM" : "NONE")}</dd></div>
+            <div><dt>{pt ? "Casa · V-E-D" : "Home · W-D-L"}</dt><dd>{currentContract ? `${currentContract.home.wins}-${currentContract.home.draws}-${currentContract.home.losses} · ${currentContract.home.touchlinePoints} PTS` : "0-0-0 · 0 PTS"}</dd></div>
+            <div><dt>{pt ? "Fora · V-E-D" : "Away · W-D-L"}</dt><dd>{currentContract ? `${currentContract.away.wins}-${currentContract.away.draws}-${currentContract.away.losses} · ${currentContract.away.touchlinePoints} PTS` : "0-0-0 · 0 PTS"}</dd></div>
+            <div><dt>{pt ? "Histórico de contratos" : "Contract history"}</dt><dd>{coachContracts.filter((contract) => contract.status === "ended").length}</dd></div>
             <div><dt>{pt ? "Temporada" : "Season"}</dt><dd>{offer.seasonId}</dd></div>
           </dl>
-          <p>{pt ? "O tier fica fixo durante a temporada e só é revisto no próximo reset sazonal." : "The tier stays fixed through the season and is reviewed only at the next seasonal reset."}</p>
+          <p>{pt ? "Dados de jogo TouchLine: contrato, pontos e histórico pertencem à conta autenticada. Nenhum resultado real de futebol é alterado." : "TouchLine game data: contract, points and history belong to the authenticated account. No real-football result is changed."}</p>
+          <p>{pt ? `Classificação: ${coachReason(classification.classificationReason, pt)}. O tier fica fixo durante a temporada.` : `Classification: ${coachReason(classification.classificationReason, pt)}. The tier stays fixed through the season.`}</p>
         </article>
         <article>
           <span>{pt ? "HISTÓRICO REAL" : "REAL FOOTBALL HISTORY"}</span>
