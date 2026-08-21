@@ -123,7 +123,7 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.match(zoomCss, /\.expandedMeta \{/);
   assert.doesNotMatch(zoom, /className=\{styles\.tierLabel\}/);
   assert.doesNotMatch(zoomCss, /\.tierLabel \{/);
-  assert.match(zoom, /\{tierLabel \? <strong>\{tierLabel\}<\/strong> : null\}/);
+  assert.match(zoom, /\{!details && tierLabel \? <strong>\{tierLabel\}<\/strong> : null\}/);
   assert.doesNotMatch(zoomUsages, /Comprar|Buy card/);
   assert.doesNotMatch(zoomUsages, /Sign player/);
   assert.match(zoomUsages, /contractLabel=\{locale === "pt-BR" \? "Contratar"/);
