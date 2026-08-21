@@ -1,12 +1,17 @@
 # TouchLine Current State
 
-## Active incident — QA Live real-time P0
+## QA Live real-time P0 — GREEN / CLOSED
 
 - Work is isolated in `/Users/luizlopez/Developer/touchline-qa-p0-live-20260821` on `codex/qa-p0-live-realtime-20260821`; the dirty Card Engine Block 4A worktree and backup `9fb94339-d9ce-4925-9d3c-59ef9b0cfe0e` remain untouched.
 - Root cause is the missing server-side recurring ingestion path: public Live/Arena readers were polling persisted state, but no QA scheduler refreshed provider state after kickoff.
 - The candidate now implements a protected QA-only Sportmonks writer, adaptive cadence, canonical fixture reconciliation, coherent public snapshots and shared Live/Arena/Club Hub minute/period/status projection.
-- QA DDL is applied only to project `xgxbwqxjssxxuihuwmgy`. The Vercel bearer exists only in Preview branch `qa`; the scheduler is not yet configured and no automatic writer is active.
-- Latest local evidence: `1145/1145` tests, TypeScript PASS, ESLint `0` errors (`5` pre-existing warnings), build PASS (`134` routes), diff-check PASS. A final committed security diff scan, QA deploy, scheduler configuration, live database/API proof, browsers, Observability and release preflight remain open.
+- QA DDL is applied only to project `xgxbwqxjssxxuihuwmgy`. The Vercel bearer exists only in Preview branch `qa`; Vault + pg_cron job `1` calls the protected route every minute and repeated executions return HTTP `200`.
+- Product commit `c15ad638a31349050d6aa85148809f4ac6d485d7` is pushed only to `qa`. Deployment `dpl_5oZFyoKBthxjCzrXCnaRUqTPpAJh` is READY and owns the stable QA alias.
+- Canonical QA proof: exactly `10` unique fixtures; Sportmonks fixture `19722203` is persisted as Arsenal FC `3–0` Coventry City, `Full Time`, minute `94:41`, with `14` provider events. Schedule and fantasy-live public DTOs each return the same ten unique IDs and the same final state.
+- Automated scheduler proof: `/api/football-data/live-sync` returned `200` every minute from `20:49` through `21:12` UTC on the exact deployment, with no `5xx`; repeated runs kept ten unique fixtures and produced no duplicate.
+- Verification: focused `12/12`, full `1145/1145`, TypeScript PASS, ESLint `0` errors (`5` pre-existing warnings), build PASS (`134` routes), diff-check PASS, exact-commit Security Diff Scan zero findings, and release preflight `1117/1117` PASS.
+- Native authenticated Safari proved Live `3–0 / Full Time / Matchweek 1 / 10 fixtures` and Club Hub table propagation. Chromium desktop/tablet/phone-landscape, Playwright WebKit and Firefox rendered the same result with clean console/network; human screenshot review passed.
+- Vercel Observability recorded `24` successful scheduler requests in the scoped window, no `5xx` and no runtime-error cluster for the three Live endpoints. The isolated 401/405 entries are the intentional negative authorization/method probes.
 - Production, `touchline.com.br`, Production Vercel configuration and Production Supabase remain untouched.
 
 Verified: 2026-08-21
@@ -60,7 +65,7 @@ Active QA source SHA: `848ebf1` (`fix(football-data): request nested squad posit
 
 ## Next executable action
 
-The owner paused all other programme blocks for the global 20-club position audit. That audit is now evidenced and no player data was changed. The next executable action requires explicit continuation of the global correction boundary: back up QA, persist official `detailed_position_id`, make TouchLine approved overrides authoritative, remove the incorrect manual RB/LB ID catalogue, reconcile all 20 squads, and validate the exact GK/CB/RB/LB/DM/MID/ATT/ST purchase flow. Do not resume Block 4B or later visual blocks until this higher-priority position boundary is closed. Production remains forbidden.
+The Live P0 is closed in QA. Resume the preserved Card Engine Block 4A worktree from its pending Security Diff Scan, using backup `9fb94339-d9ce-4925-9d3c-59ef9b0cfe0e`; do not recreate, reset, clean or overwrite that work. Block 4B and later visual blocks remain gated. The already-proven global 20-club exact-position correction remains queued after the currently authorized Block 4A gate. Production remains forbidden.
 
 Queued canonical Block 7 requirement (owner-approved 2026-08-21): every one of the 20 Club Hub Squad Preview/timeline pitches must reuse the exact canonical formation-slot coordinates approved in Market Transfer for the same `formation + viewport`. Do not introduce club-specific offsets, do not reposition one club at a time, and do not alter the already approved Market Transfer coordinates while wiring the shared source.
 

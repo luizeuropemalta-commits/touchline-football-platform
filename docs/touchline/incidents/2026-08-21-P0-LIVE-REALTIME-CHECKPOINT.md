@@ -59,7 +59,18 @@ After the Live P0 is proven green in QA, return to the original Block 4A worktre
 - Added adaptive cadence, Sportmonks in-play/latest plus exact-fixture reconciliation, existing-fixture-only canonical writes, status-regression guards, coherent snapshot persistence and explicit degraded reads.
 - Added provider-backed minute, period, score/event freshness fields to the canonical fixture and allowlisted public DTO; Live, Arena and Club Hub consume the same persisted authority.
 - Added QA-only forward and rollback SQL outside the Production migration directory. The forward SQL is bound to QA project `xgxbwqxjssxxuihuwmgy`, the stable QA alias, service-role execution, Vault and a one-minute pg_cron wake-up.
-- The forward DDL was applied only to QA. The scheduler has not been configured yet; no automatic writer is active at this checkpoint.
+- The forward DDL was applied only to QA. Vault + pg_cron job `1` is configured for a one-minute wake-up and repeated `net._http_response` / Vercel records prove HTTP `200` execution.
 - Vercel `TOUCHLINE_LIVE_SYNC_SECRET` was added only to Preview branch `qa` and is never logged or returned.
 - Local gates after the runtime guard: focused boundary tests `12/12`, full suite `1145/1145`, TypeScript PASS, ESLint `0` errors with `5` pre-existing warnings, production build PASS with `134` generated routes, and `git diff --check` PASS.
-- Codex Security diff scan `3ba25935-4e15-4999-904f-2de1a20fdf56` reviewed the frozen pre-guard snapshot and completed with zero reportable findings. A final scan of the exact committed candidate remains mandatory before QA deployment.
+- Codex Security diff scan `3ba25935-4e15-4999-904f-2de1a20fdf56` reviewed the frozen pre-guard snapshot and completed with zero reportable findings. Exact-commit scan `2e77b724-126b-4276-836a-63d87b346c08` reviewed commit `c15ad638a31349050d6aa85148809f4ac6d485d7` and also returned zero reportable findings.
+
+## Final QA proof
+
+- Commit `c15ad638a31349050d6aa85148809f4ac6d485d7` was pushed only to `qa`. Deployment `dpl_5oZFyoKBthxjCzrXCnaRUqTPpAJh` is READY and owns the stable QA alias.
+- The canonical database contains exactly ten unique official fixtures. Fixture `19722203` is Arsenal FC `3–0` Coventry City, `Full Time`, minute `94:41`, with `14` provider events and its provider round persisted.
+- `/api/football-data/fixture-schedule` and `/api/football-data/fantasy/livescores` each return HTTP `200`, ten unique IDs and the same final target state.
+- The protected sync route rejects `GET` with `405`, rejects an unauthenticated `POST` with `401`, and accepts the scheduler bearer with `200`. Repeated scheduler runs remain idempotent and never create an unknown/duplicate fixture.
+- Native authenticated Safari rendered ten fixtures, Matchweek 1 and Arsenal `3–0` Coventry at Full Time; Club Hub reflected the verified table result. Chromium desktop/tablet/phone-landscape, WebKit and Firefox rendered the same result with clean console/network.
+- Vercel Observability recorded 24 successful sync requests in the scoped deployment window, zero `5xx`, and no runtime error for the Live endpoint set.
+- Release preflight passed governance, TypeScript, lint with zero errors/five pre-existing warnings and `1117/1117` release tests.
+- P0 status: GREEN / CLOSED. Production was not touched. Resume the preserved Block 4A worktree from Security Diff Scan.
