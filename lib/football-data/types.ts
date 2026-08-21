@@ -340,7 +340,6 @@ export interface FootballDataProvider {
 
   searchPlayers(params: SearchPlayersParams): Promise<FootballDataResult<TouchlinePlayer[]>>;
   getPlayerById(id: string): Promise<FootballDataResult<TouchlinePlayer | null>>;
-  getPlayersByIds(ids: readonly string[]): Promise<FootballDataResult<TouchlinePlayer[]>>;
   getTeamById(id: string): Promise<FootballDataResult<TouchlineTeam | null>>;
   getCoachById(id: string): Promise<FootballDataResult<TouchlineCoach | null>>;
   getCompetitionById(id: string): Promise<FootballDataResult<TouchlineCompetition | null>>;

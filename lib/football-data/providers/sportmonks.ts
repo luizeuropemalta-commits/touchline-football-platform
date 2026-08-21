@@ -315,36 +315,6 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     return resultOk(this.name, this.mapPlayer(value.data?.data) ?? null, value.data, cached, value.fetchedAt);
   }
 
-  async getPlayersByIds(ids: readonly string[]): Promise<FootballDataResult<TouchlinePlayer[]>> {
-    const normalizedIds = [...new Set(ids.map((id) => id.trim()).filter((id) => /^\d{1,20}$/.test(id)))];
-    if (!normalizedIds.length) return resultOk(this.name, []);
-
-    const players: TouchlinePlayer[] = [];
-    const rawResponses: unknown[] = [];
-    let allCached = true;
-    let fetchedAt: string | undefined;
-
-    for (let offset = 0; offset < normalizedIds.length; offset += SPORTMONKS_MAX_PAGE_SIZE) {
-      const batch = normalizedIds.slice(offset, offset + SPORTMONKS_MAX_PAGE_SIZE);
-      const request = await this.request<SportmonksEntity[]>("/players", {
-        include: "position;detailedPosition",
-        filters: `playerIds:${batch.join(",")}`,
-        per_page: SPORTMONKS_MAX_PAGE_SIZE,
-      }, "daily", "interactive");
-      if (!request.configured) return this.notConfigured<TouchlinePlayer[]>();
-      const { value, cached } = request;
-      if (!value.ok) return this.providerFailure<TouchlinePlayer[]>(value, "Sportmonks player position audit failed.");
-      players.push(...(value.data?.data ?? [])
-        .map((item) => this.mapPlayer(item))
-        .filter((player): player is TouchlinePlayer => Boolean(player)));
-      rawResponses.push(value.data);
-      allCached = allCached && cached;
-      fetchedAt = fetchedAt ? earliestFetchedAt(fetchedAt, value.fetchedAt) : value.fetchedAt;
-    }
-
-    return resultOk(this.name, players, rawResponses, allCached, fetchedAt);
-  }
-
   async getTeamById(id: string): Promise<FootballDataResult<TouchlineTeam | null>> {
     const request = await this.request<SportmonksEntity>(`/teams/${id}`, {
       include: "country;venue",
@@ -521,7 +491,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   async getSquad(teamId: string): Promise<FootballDataResult<TouchlineSquadMember[]>> {
     const [request, extendedRequest] = await Promise.all([
       this.request<SportmonksEntity[]>(`/squads/teams/${teamId}`, {
-        include: "player;position;detailedPosition",
+        include: "player;player.position;player.detailedPosition;position;detailedPosition",
       }, "daily", "interactive"),
       this.request<SportmonksEntity[]>(`/squads/teams/${teamId}/extended`, {
         include: "country;nationality;position;detailedPosition",
@@ -952,6 +922,8 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         ?? asString(extended.country_id),
       position: primary.position ?? extended.position,
       detailedPosition: primary.detailedPosition ?? extended.detailedPosition,
+      position_id: asString(primary.position_id) ?? asString(extended.position_id),
+      detailed_position_id: asString(primary.detailed_position_id) ?? asString(extended.detailed_position_id),
       market_value: primary.market_value ?? extended.market_value,
       market_value_eur: primary.market_value_eur ?? extended.market_value_eur,
       marketValue: primary.marketValue ?? extended.marketValue,

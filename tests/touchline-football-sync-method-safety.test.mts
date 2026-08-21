@@ -66,7 +66,6 @@ test("twenty-club provider diagnostic remains owner-only and read-only", () => {
   assert.match(diagnosticSource, /squadDetailedPositionId/);
   assert.match(diagnosticSource, /playerDetailedPositionId/);
   assert.match(diagnosticSource, /providerDetailedPosition/);
-  assert.match(diagnosticSource, /getPlayersByIds/);
   assert.match(diagnosticSource, /providerPlayerDetailedPositionId/);
   assert.match(diagnosticSource, /hardcodedConflicts/);
   assert.match(diagnosticSource, /loadTouchlineCardEditorialOverrides/);

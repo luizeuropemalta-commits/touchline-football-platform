@@ -129,15 +129,8 @@ async function twentyClubPositionReadOnlyDiagnostic() {
   for (const club of TOUCHLINE_ENGLAND_CLUBS) {
     const squad = await provider.getSquad(club.teamId);
     if (!squad.ok) throw new Error(`Sportmonks squad ${club.teamId} failed: ${squad.error.code}`);
-    const detailedPlayers = await provider.getPlayersByIds(squad.data.map((member) => member.player.providerId));
-    if (!detailedPlayers.ok) {
-      throw new Error(`Sportmonks player details ${club.teamId} failed: ${detailedPlayers.error.code}`);
-    }
-    const detailedPlayerById = new Map(detailedPlayers.data.map((player) => [player.providerId, player] as const));
     const players = squad.data.map((member) => {
       const evidence = safePositionEvidence(member);
-      const detailedPlayer = detailedPlayerById.get(member.player.providerId);
-      const detailedPlayerRaw = record(detailedPlayer?.source.raw);
       const canonicalPlayer = playerByProviderId.get(member.player.providerId);
       const membership = canonicalPlayer ? membershipByPlayerId.get(canonicalPlayer.id) : undefined;
       const editorialPosition = canonicalPlayer
@@ -145,11 +138,10 @@ async function twentyClubPositionReadOnlyDiagnostic() {
         : null;
       const effectivePosition = editorialPosition ?? membership?.position ?? canonicalPlayer?.position ?? null;
       const marketPosition = resolveTouchlineMarketCataloguePosition(member.player.providerId, effectivePosition);
-      const detailedPositionId = identifier(detailedPlayerRaw.detailed_position_id)
-        ?? evidence.squadDetailedPositionId
+      const detailedPositionId = evidence.squadDetailedPositionId
         ?? evidence.playerDetailedPositionId;
       const providerDetailedPosition = detailedPositionId
-        ? SPORTMONKS_DETAILED_POSITIONS.get(detailedPositionId) ?? detailedPlayer?.position ?? null
+        ? SPORTMONKS_DETAILED_POSITIONS.get(detailedPositionId) ?? member.player.position ?? null
         : null;
       const marketBucket = touchlineMarketPositionBucket(marketPosition, rosterRole(effectivePosition));
       const hardcodedConflict = (marketPosition === "RB" || marketPosition === "LB")
@@ -159,7 +151,7 @@ async function twentyClubPositionReadOnlyDiagnostic() {
 
       return {
         ...evidence,
-        providerPlayerPositionId: identifier(detailedPlayerRaw.position_id),
+        providerPlayerPositionId: evidence.playerPositionId,
         providerPlayerDetailedPositionId: detailedPositionId,
         providerDetailedPosition,
         canonicalPlayerId: canonicalPlayer?.id ?? null,

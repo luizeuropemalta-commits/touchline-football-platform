@@ -16,36 +16,43 @@ registerHooks({
 
 const { SportmonksFootballProvider } = await import("../lib/football-data/providers/sportmonks.ts");
 
-test("Sportmonks bulk player audit requests and returns detailed positions without exposing a token", async () => {
+test("Sportmonks squad audit requests nested player detailed positions without exposing a token", async () => {
   clearFootballDataCache();
   const originalFetch = globalThis.fetch;
   const originalToken = process.env.SPORTMONKS_API_TOKEN;
-  let observedUrl: URL | null = null;
+  const observedUrls: URL[] = [];
 
   process.env.SPORTMONKS_API_TOKEN = "position-audit-token";
   globalThis.fetch = (async (input) => {
-    observedUrl = new URL(String(input));
+    const observedUrl = new URL(String(input));
+    observedUrls.push(observedUrl);
+    if (observedUrl.pathname.endsWith("/extended")) {
+      return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
     return new Response(JSON.stringify({
       data: [{
-        id: 37701999,
-        display_name: "Estêvão",
-        position_id: 27,
-        detailed_position_id: 156,
-        position: { id: 27, name: "Attacker" },
-        detailedPosition: { id: 156, name: "Right Wing" },
+        player: {
+          id: 37701999,
+          display_name: "Estêvão",
+          position_id: 27,
+          detailed_position_id: 156,
+          position: { id: 27, name: "Attacker" },
+          detailedPosition: { id: 156, name: "Right Wing" },
+        },
       }],
     }), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
 
   try {
-    const result = await new SportmonksFootballProvider().getPlayersByIds(["37701999"]);
+    const result = await new SportmonksFootballProvider().getSquad("18");
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    assert.equal(result.data[0]?.position, "Right Wing");
-    assert.equal((result.data[0]?.source.raw as Record<string, unknown>).detailed_position_id, 156);
-    assert.equal(observedUrl?.searchParams.get("filters"), "playerIds:37701999");
-    assert.equal(observedUrl?.searchParams.get("include"), "position;detailedPosition");
-    assert.equal(observedUrl?.searchParams.get("api_token"), "position-audit-token");
+    assert.equal(result.data[0]?.player.position, "Right Wing");
+    const rawPlayer = (result.data[0]?.raw as Record<string, unknown>).player as Record<string, unknown>;
+    assert.equal(rawPlayer.detailed_position_id, 156);
+    const squadUrl = observedUrls.find((url) => !url.pathname.endsWith("/extended"));
+    assert.match(squadUrl?.searchParams.get("include") ?? "", /player\.detailedPosition/);
+    assert.ok(observedUrls.every((url) => url.searchParams.get("api_token") === "position-audit-token"));
   } finally {
     globalThis.fetch = originalFetch;
     if (originalToken === undefined) delete process.env.SPORTMONKS_API_TOKEN;
