@@ -123,3 +123,13 @@ test("Club Hub uses the shared premium review card rather than a generic pending
   assert.match(card, /filter: reviewRequired \? "grayscale\(1\)/);
   assert.match(card, /Card review required/);
 });
+
+test("provider position conflicts are routed to Card Engine while TouchLine remains authoritative", () => {
+  const page = readFileSync(new URL("../app/(app)/admin/manual-card-editorial/page.tsx", import.meta.url), "utf8");
+  const inbox = readFileSync(new URL("../components/card-engine-inbox.tsx", import.meta.url), "utf8");
+  assert.match(page, /touchlineMarketPositionBucket\(override\.position\)/);
+  assert.match(page, /resolution: "TOUCHLINE_AUTHORITY"/);
+  assert.match(page, /cardReview\.state === "REVIEW_REQUIRED" \|\| positionConflict/);
+  assert.match(inbox, /POSITION CONFLICT/);
+  assert.match(inbox, /approved TouchLine override remains final authority/);
+});

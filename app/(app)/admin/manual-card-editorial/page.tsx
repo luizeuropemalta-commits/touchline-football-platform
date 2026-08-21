@@ -15,6 +15,7 @@ import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-rev
 import { loadTouchlineCardEditorialOverrides } from "@/lib/touchlineArena/card-editorial-overrides";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
+import { touchlineMarketPositionBucket } from "@/lib/touchlineArena/position-eligibility";
 
 export const dynamic = "force-dynamic";
 
@@ -144,12 +145,20 @@ export default async function ManualCardEditorialPage({
       position: override?.position ?? provider.position,
     };
     const marketValue = marketValueByPlayerId.get(player.id);
+    const positionConflict = override?.position && provider.position
+      && touchlineMarketPositionBucket(override.position) !== touchlineMarketPositionBucket(provider.position)
+      ? {
+        providerPosition: provider.position,
+        touchlinePosition: override.position,
+        resolution: "TOUCHLINE_AUTHORITY" as const,
+      }
+      : null;
     const cardReview = evaluateTouchlineCardCompleteness({
       ...effective,
       hasVerifiedMarketValue: marketValue?.status === "verified" && marketValue.confidence === "verified",
       hasClubAsset: Boolean(findTouchLineClub(clubName(player))?.logoUrl),
     });
-    return cardReview.state === "REVIEW_REQUIRED" ? [{
+    return cardReview.state === "REVIEW_REQUIRED" || positionConflict ? [{
       playerId: player.id,
       playerName: effective.displayName ?? "Canonical player",
       clubName: clubName(player),
@@ -157,6 +166,7 @@ export default async function ManualCardEditorialPage({
       override: { displayName: override?.displayName ?? null, shirtNumber: override?.shirtNumber ?? null, countryCode3: override?.countryCode3 ?? null, position: override?.position ?? null },
       effective,
       cardReview,
+      positionConflict,
     }] : [];
   });
   const newPlayerAlerts = migrationPending || !premierCompetitionId ? [] : findTouchlineNewPlayerCardAlerts({
