@@ -405,9 +405,10 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
   }
 
-  async getLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>> {
+  async getLiveScores(params: { competitionId?: string } = {}): Promise<FootballDataResult<TouchlineFixture[]>> {
     const request = await this.request<SportmonksEntity[]>(SPORTMONKS_INPLAY_LIVESCORES_PATH, {
-      include: "participants;scores;league;season;round;state",
+      include: "participants;scores;league;season;round;state;periods",
+      ...(params.competitionId ? { filters: `fixtureLeagues:${params.competitionId}` } : {}),
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
@@ -417,7 +418,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>> {
     const request = await this.request<SportmonksEntity[]>(SPORTMONKS_LATEST_LIVESCORES_PATH, {
-      include: "participants;scores;league;season;round;state",
+      include: "participants;scores;league;season;round;state;periods",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
@@ -645,7 +646,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   async getFixtureFantasyFeed(fixtureId: string): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>> {
     if (!fixtureId.trim()) return resultError(this.name, "invalid_request", "fixtureId is required for fantasy fixture feed.");
     const request = await this.request<SportmonksEntity>(`/fixtures/${encodeURIComponent(fixtureId)}`, {
-      include: "participants;scores;league;season;round;state;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;events.type;events.player;events.relatedPlayer",
+      include: "participants;scores;league;season;round;state;periods;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;events.type;events.player;events.relatedPlayer",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFantasyFixtureFeed | null>();
     const { value, cached } = request;
@@ -867,6 +868,11 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const away = participants.find((team) => asString(team.meta && (team.meta as SportmonksEntity).location) === "away") ?? participants[1];
     const scores = Array.isArray(raw.scores) ? raw.scores as SportmonksEntity[] : [];
     const round = this.relationEntity(raw, "round");
+    const periods = this.relationArray(raw, "periods");
+    const currentPeriod = periods.find((period) => period.ticking === true)
+      ?? [...periods].reverse().find((period) => asNumber(period.minutes) !== undefined || asString(period.description));
+    const events = this.relationArray(raw, "events");
+    const providerUpdatedAt = asString(raw.last_processed_at) ?? asString(raw.updated_at);
     return {
       id: providerId(this.name, id),
       providerId: id,
@@ -882,6 +888,12 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       awayTeam: this.mapTeam(away) ?? undefined,
       homeScore: this.extractScore(scores, "home"),
       awayScore: this.extractScore(scores, "away"),
+      providerStateId: asString(raw.state_id) ?? asString((raw.state as SportmonksEntity | undefined)?.id),
+      liveMinute: asNumber(currentPeriod?.minutes),
+      liveSecond: asNumber(currentPeriod?.seconds),
+      livePeriod: asString(currentPeriod?.description) ?? asString(currentPeriod?.type_id),
+      eventsCount: events.length || undefined,
+      providerUpdatedAt: providerUpdatedAt && Number.isFinite(Date.parse(providerUpdatedAt)) ? providerUpdatedAt : undefined,
       source: { provider: this.name, providerId: id, raw },
     };
   }

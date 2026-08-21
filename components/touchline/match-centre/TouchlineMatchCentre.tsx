@@ -75,7 +75,9 @@ function fixtureRailStatus(
 ) {
   const state = touchlineMatchCentreDisplayState(fixture, metadata, now);
   if (state === "stale") return copy[language].lastVerified;
-  if (state === "live") return copy[language].liveNow;
+  if (state === "live") return fixture.liveMinute !== undefined
+    ? `${fixture.liveMinute}′ · ${copy[language].liveNow}`
+    : copy[language].liveNow;
   if (state === "finished") return copy[language].completed;
   return null;
 }
@@ -89,7 +91,9 @@ function status(
 ) {
   const state = touchlineMatchCentreDisplayState(fixture, metadata, now);
   if (state === "stale") return copy[language].lastVerified;
-  if (state === "live") return copy[language].liveNow;
+  if (state === "live") return fixture.liveMinute !== undefined
+    ? `${fixture.liveMinute}′ · ${fixture.livePeriod ?? copy[language].liveNow}`
+    : copy[language].liveNow;
   if (state === "finished") return copy[language].completed;
   return fixtureDate(fixture, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false });
 }

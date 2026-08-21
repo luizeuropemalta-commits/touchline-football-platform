@@ -27,6 +27,12 @@ export type TouchlinePublicFixture = {
   awayTeam?: TouchlinePublicTeam;
   homeScore?: number;
   awayScore?: number;
+  providerStateId?: string;
+  liveMinute?: number;
+  liveSecond?: number;
+  livePeriod?: string;
+  eventsCount?: number;
+  providerUpdatedAt?: string;
   verifiedAt?: string;
 };
 
@@ -58,6 +64,12 @@ export function toPublicTouchlineFixture(fixture: TouchlineFixture): TouchlinePu
     awayTeam: toPublicTeam(fixture.awayTeam),
     homeScore: fixture.homeScore,
     awayScore: fixture.awayScore,
+    providerStateId: fixture.providerStateId,
+    liveMinute: fixture.liveMinute,
+    liveSecond: fixture.liveSecond,
+    livePeriod: fixture.livePeriod,
+    eventsCount: fixture.eventsCount,
+    providerUpdatedAt: fixture.providerUpdatedAt,
     verifiedAt: fixture.source.lastSyncedAt,
   };
 }

@@ -17,6 +17,16 @@ function optionalScore(value: unknown) {
     || (typeof value === "number" && Number.isInteger(value) && value >= 0);
 }
 
+function optionalNonNegativeInteger(value: unknown) {
+  return value === undefined
+    || (typeof value === "number" && Number.isInteger(value) && value >= 0);
+}
+
+function optionalTimestamp(value: unknown) {
+  return value === undefined
+    || (typeof value === "string" && Number.isFinite(Date.parse(value)));
+}
+
 export function isTouchlinePublicTeam(value: unknown): value is TouchlinePublicTeam {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const team = value as Partial<TouchlinePublicTeam> & Record<string, unknown>;
@@ -53,8 +63,13 @@ export function isTouchlinePublicFixture(value: unknown): value is TouchlinePubl
     && fixture.homeTeam.providerId !== fixture.awayTeam.providerId
     && optionalScore(fixture.homeScore)
     && optionalScore(fixture.awayScore)
-    && (fixture.verifiedAt === undefined
-      || (typeof fixture.verifiedAt === "string" && Number.isFinite(Date.parse(fixture.verifiedAt))))
+    && optionalText(fixture.providerStateId, 40)
+    && optionalNonNegativeInteger(fixture.liveMinute)
+    && optionalNonNegativeInteger(fixture.liveSecond)
+    && optionalText(fixture.livePeriod, 80)
+    && optionalNonNegativeInteger(fixture.eventsCount)
+    && optionalTimestamp(fixture.providerUpdatedAt)
+    && optionalTimestamp(fixture.verifiedAt)
     && !("provider" in fixture)
     && !("source" in fixture);
 }

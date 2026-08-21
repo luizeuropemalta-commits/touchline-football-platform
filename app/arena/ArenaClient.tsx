@@ -1598,6 +1598,9 @@ function fixtureBoardScore(fixture: TouchlinePublicFixture) {
 }
 
 function fixtureBoardClock(fixture: TouchlinePublicFixture, locale: TouchLineLocale) {
+  if (isFixtureActuallyLive(fixture) && fixture.liveMinute !== undefined) {
+    return `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${fixture.livePeriod}` : ""}`;
+  }
   const status = String(fixture.status ?? "").trim();
   if (status && !/^next$/i.test(status)) return status;
   const time = formatFixtureTime(fixture.startsAt);

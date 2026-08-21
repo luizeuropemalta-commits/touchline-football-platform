@@ -1,5 +1,14 @@
 # TouchLine Current State
 
+## Active incident — QA Live real-time P0
+
+- Work is isolated in `/Users/luizlopez/Developer/touchline-qa-p0-live-20260821` on `codex/qa-p0-live-realtime-20260821`; the dirty Card Engine Block 4A worktree and backup `9fb94339-d9ce-4925-9d3c-59ef9b0cfe0e` remain untouched.
+- Root cause is the missing server-side recurring ingestion path: public Live/Arena readers were polling persisted state, but no QA scheduler refreshed provider state after kickoff.
+- The candidate now implements a protected QA-only Sportmonks writer, adaptive cadence, canonical fixture reconciliation, coherent public snapshots and shared Live/Arena/Club Hub minute/period/status projection.
+- QA DDL is applied only to project `xgxbwqxjssxxuihuwmgy`. The Vercel bearer exists only in Preview branch `qa`; the scheduler is not yet configured and no automatic writer is active.
+- Latest local evidence: `1145/1145` tests, TypeScript PASS, ESLint `0` errors (`5` pre-existing warnings), build PASS (`134` routes), diff-check PASS. A final committed security diff scan, QA deploy, scheduler configuration, live database/API proof, browsers, Observability and release preflight remain open.
+- Production, `touchline.com.br`, Production Vercel configuration and Production Supabase remain untouched.
+
 Verified: 2026-08-21
 Canonical repository: `/Users/luizlopez/Developer/touchline-football-platform`
 Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-sportmonks-round`

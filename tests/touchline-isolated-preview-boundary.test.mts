@@ -116,6 +116,12 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
     reasons: [],
   });
   assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
+    TOUCHLINE_LIVE_SYNC_SECRET: "scheduler-secret-kept-server-side",
+  })), {
+    status: "qa",
+    reasons: [],
+  });
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
     AWS_EXECUTION_ENV: "AWS_Lambda_nodejs22.x",
     AWS_REGION: "us-east-1",
     AWS_DEFAULT_REGION: "us-east-1",

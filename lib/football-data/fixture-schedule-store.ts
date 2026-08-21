@@ -30,6 +30,12 @@ type FixtureRow = {
   home_club_id?: unknown;
   away_club_id?: unknown;
   source_updated_at?: unknown;
+  provider_state_id?: unknown;
+  live_minute?: unknown;
+  live_second?: unknown;
+  live_period?: unknown;
+  events_count?: unknown;
+  provider_updated_at?: unknown;
 };
 
 function asString(value: unknown) {
@@ -124,6 +130,12 @@ function fixtureFromRow(
     awayTeam,
     homeScore: asNullableInteger(row.home_score) ?? undefined,
     awayScore: asNullableInteger(row.away_score) ?? undefined,
+    providerStateId: asString(row.provider_state_id) ?? undefined,
+    liveMinute: asNullableInteger(row.live_minute) ?? undefined,
+    liveSecond: asNullableInteger(row.live_second) ?? undefined,
+    livePeriod: asString(row.live_period) ?? undefined,
+    eventsCount: asNullableInteger(row.events_count) ?? undefined,
+    providerUpdatedAt: asTimestamp(row.provider_updated_at) ?? undefined,
     source: {
       provider,
       providerId,
@@ -161,7 +173,7 @@ export async function readPublicCompetitionFixtures(options: {
 
   let fixtureQuery = admin
     .from("football_fixtures")
-    .select("provider,provider_fixture_id,competition_id,season_id,round_id,starts_at,status,home_score,away_score,home_club_id,away_club_id,source_updated_at")
+    .select("provider,provider_fixture_id,competition_id,season_id,round_id,starts_at,status,home_score,away_score,home_club_id,away_club_id,source_updated_at,provider_state_id,live_minute,live_second,live_period,events_count,provider_updated_at")
     .eq("provider", provider)
     .eq("competition_id", competition.id)
     .order("starts_at", { ascending: true })

@@ -52,3 +52,14 @@ Captured original-worktree manifest:
 ## Resume rule
 
 After the Live P0 is proven green in QA, return to the original Block 4A worktree and continue from Security Diff Scan. Do not recreate the position migration, do not replace the backup identifier and do not start Block 5 before Blocks 4A and 4B are green.
+
+## P0 implementation candidate
+
+- Added a protected server-only live-sync command with a constant-time bearer check and an explicit functional-QA runtime/project assertion.
+- Added adaptive cadence, Sportmonks in-play/latest plus exact-fixture reconciliation, existing-fixture-only canonical writes, status-regression guards, coherent snapshot persistence and explicit degraded reads.
+- Added provider-backed minute, period, score/event freshness fields to the canonical fixture and allowlisted public DTO; Live, Arena and Club Hub consume the same persisted authority.
+- Added QA-only forward and rollback SQL outside the Production migration directory. The forward SQL is bound to QA project `xgxbwqxjssxxuihuwmgy`, the stable QA alias, service-role execution, Vault and a one-minute pg_cron wake-up.
+- The forward DDL was applied only to QA. The scheduler has not been configured yet; no automatic writer is active at this checkpoint.
+- Vercel `TOUCHLINE_LIVE_SYNC_SECRET` was added only to Preview branch `qa` and is never logged or returned.
+- Local gates after the runtime guard: focused boundary tests `12/12`, full suite `1145/1145`, TypeScript PASS, ESLint `0` errors with `5` pre-existing warnings, production build PASS with `134` generated routes, and `git diff --check` PASS.
+- Codex Security diff scan `3ba25935-4e15-4999-904f-2de1a20fdf56` reviewed the frozen pre-guard snapshot and completed with zero reportable findings. A final scan of the exact committed candidate remains mandatory before QA deployment.

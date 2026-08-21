@@ -7,9 +7,12 @@ import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup"
 import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
+import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
+import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
+import { toPublicTouchlineFixture } from "@/lib/football-data/public-fixture";
 import {
   TOUCHLINE_ENGLAND_CLUBS,
   findTouchLineClub,
@@ -92,6 +95,7 @@ type ClubMatchSnapshot = {
   formation: string | null;
   /** No persisted matchday-coach DTO exists yet. Never infer a coach by club. */
   coach: null;
+  publicFixture: TouchlinePublicFixture | null;
 };
 
 async function loadClubTrophyAssets(club: NonNullable<ReturnType<typeof findTouchLineClub>>) {
@@ -262,6 +266,7 @@ async function loadClubMatchSnapshot(
     lineups: [] as TouchlineFantasyLineupMember[],
     formation: null as string | null,
     coach: null,
+    publicFixture: null,
   };
 
   try {
@@ -292,6 +297,7 @@ async function loadClubMatchSnapshot(
       lineups: persistedFeed?.lineups ?? [],
       formation,
       coach: null,
+      publicFixture: toPublicTouchlineFixture(fixture),
     };
   } catch {
     return empty;
@@ -401,7 +407,10 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                     ) : null}
                     <strong>{matchPreview.home.shortCode}</strong>
                   </div>
-                  <b>VS</b>
+                  <ClubHubLiveFixtureScore
+                    fixtureId={matchSnapshot.fixtureId}
+                    initialFixture={matchSnapshot.publicFixture}
+                  />
                   <div className={!matchPreview.away.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
                     {matchPreview.away.logoUrl && matchPreview.away.accent ? (
                       <ClubHubCrestTrace

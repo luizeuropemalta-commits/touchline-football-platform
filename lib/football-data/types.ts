@@ -143,6 +143,12 @@ export type TouchlineFixture = {
   awayTeam?: TouchlineTeam;
   homeScore?: number;
   awayScore?: number;
+  providerStateId?: string;
+  liveMinute?: number;
+  liveSecond?: number;
+  livePeriod?: string;
+  eventsCount?: number;
+  providerUpdatedAt?: string;
   source: FootballDataSourceRef;
 };
 
@@ -357,7 +363,7 @@ export interface FootballDataProvider {
   getFixtureById(id: string): Promise<FootballDataResult<TouchlineFixture | null>>;
   getFixturesByDate(params: FixturesByDateParams): Promise<FootballDataResult<TouchlineFixture[]>>;
   getFixturesBetween(params: FixturesBetweenParams): Promise<FootballDataResult<TouchlineFixture[]>>;
-  getLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
+  getLiveScores(params?: { competitionId?: string }): Promise<FootballDataResult<TouchlineFixture[]>>;
   getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
   getStandings(params: StandingsParams): Promise<FootballDataResult<TouchlineStandingRow[]>>;
   getTransfers(params: TransfersParams): Promise<FootballDataResult<TouchlineTransfer[]>>;

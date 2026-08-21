@@ -69,6 +69,8 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "GET /api/football-data/fantasy/livescores": { auth: "PUBLIC", role: "ANY", data: "PERSISTED_LIVE_SNAPSHOT", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/football-data/fixture-schedule": { auth: "PUBLIC", role: "ANY", data: "PERSISTED_FIXTURE_SCHEDULE", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/football-data/fixture-schedule": { auth: "DISABLED", role: "NONE", data: "NO_BROWSER_INGESTION", browser: "HTTP_405_CONTRACT", status: "METHOD_DISABLED" },
+  "GET /api/football-data/live-sync": { auth: "DISABLED", role: "NONE", data: "POST_ONLY", browser: "HTTP_405_CONTRACT", status: "METHOD_DISABLED" },
+  "POST /api/football-data/live-sync": { auth: "QA_SCHEDULER_SECRET", role: "SERVER_JOB", data: "PROVIDER_TO_CANONICAL_LIVE_STATE", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/football-data/foundation": { auth: "OWNER_OR_VALIDATION_SECRET", role: "OWNER_OR_SERVER_JOB", data: "OWNER_DIAGNOSTIC_ALLOWLIST", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/football-data/player-season-statistics/sync": { auth: "OWNER_OR_SYNC_SECRET", role: "OWNER_OR_SERVER_JOB", data: "PROVIDER_TO_NORMALIZED_STATS", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/football-data/premier-squad": { auth: "PUBLIC", role: "ANY", data: "CANONICAL_SQUAD_AND_EDITORIAL_CARD_READ", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },

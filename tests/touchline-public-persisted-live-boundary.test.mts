@@ -30,10 +30,10 @@ test("live scores read one durable snapshot or honest partial schedule without i
   );
 });
 
-test("Live prefers a fresh snapshot, then a usable weekly schedule, and only marks the final fallback stale", () => {
+test("Live prefers a fresh snapshot and marks every non-live fallback degraded", () => {
   assert.match(liveRoute, /const snapshotIsFresh = Boolean\(/);
   assert.match(liveRoute, /liveSnapshot\?\.fixtures\.length && snapshotIsFresh/);
-  assert.match(liveRoute, /state: "partial-persisted-schedule"[\s\S]*?degraded: false/);
+  assert.match(liveRoute, /state: "partial-persisted-schedule"[\s\S]*?degraded: true/);
   assert.match(liveRoute, /if \(liveSnapshot\?\.fixtures\.length\) \{[\s\S]*?degraded: true/);
   assert.match(liveRoute, /degraded: true/);
   assert.match(matchCentre, /initialReadMetadata/);
