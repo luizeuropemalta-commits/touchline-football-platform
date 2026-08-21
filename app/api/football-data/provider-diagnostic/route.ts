@@ -6,7 +6,10 @@ import type { TouchlineSquadMember } from "@/lib/football-data/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
+import { loadTouchlineCardEditorialOverrides } from "@/lib/touchlineArena/card-editorial-overrides";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
+import { resolveTouchlineMarketCataloguePosition } from "@/lib/touchlineArena/market-position-catalogue";
+import { touchlineMarketPositionBucket, type TouchlineRosterRole } from "@/lib/touchlineArena/position-eligibility";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,8 +29,30 @@ const PROVIDER = "sportmonks";
 const MAX_DIAGNOSTIC_IDS_PER_CLUB = 24;
 
 type ClubRow = Readonly<{ id: string; provider_team_id: string }>;
-type MembershipRow = Readonly<{ club_id: string; player_id: string }>;
-type PlayerRow = Readonly<{ id: string; provider_player_id: string }>;
+type MembershipRow = Readonly<{ club_id: string; player_id: string; position?: string | null }>;
+type PlayerRow = Readonly<{
+  id: string;
+  provider_player_id: string;
+  display_name?: string | null;
+  position?: string | null;
+  position_id?: string | null;
+}>;
+
+const SPORTMONKS_DETAILED_POSITIONS = new Map<string, string>([
+  ["24", "Goalkeeper"],
+  ["148", "Centre Back"],
+  ["149", "Defensive Midfield"],
+  ["150", "Attacking Midfield"],
+  ["151", "Centre Forward"],
+  ["152", "Left Wing"],
+  ["153", "Central Midfield"],
+  ["154", "Right Back"],
+  ["155", "Left Back"],
+  ["156", "Right Wing"],
+  ["157", "Left Midfield"],
+  ["158", "Right Midfield"],
+  ["163", "Secondary Striker"],
+]);
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -38,6 +63,15 @@ function record(value: unknown): Record<string, unknown> {
 function identifier(value: unknown) {
   const normalized = text(value);
   return /^\d{1,20}$/.test(normalized) ? normalized : null;
+}
+
+function rosterRole(position: string | null | undefined): TouchlineRosterRole | null {
+  const normalized = text(position).toLowerCase();
+  if (normalized === "goalkeeper") return "goalkeeper";
+  if (normalized === "defender") return "defender";
+  if (normalized === "midfielder") return "midfielder";
+  if (normalized === "attacker") return "forward";
+  return null;
 }
 
 function safePositionEvidence(member: TouchlineSquadMember) {
@@ -58,16 +92,84 @@ function safePositionEvidence(member: TouchlineSquadMember) {
 }
 
 async function twentyClubPositionReadOnlyDiagnostic() {
+  const admin = createAdminClient();
+  if (!admin) throw new Error("QA canonical player data is unavailable.");
   const provider = createFootballDataProvider("sportmonks");
+  const teamIds = TOUCHLINE_ENGLAND_CLUBS.map((club) => club.teamId);
+  const { data: canonicalClubs, error: clubsError } = await admin
+    .from("football_clubs")
+    .select("id,provider_team_id")
+    .eq("provider", PROVIDER)
+    .in("provider_team_id", teamIds);
+  if (clubsError || !canonicalClubs) throw new Error("QA position clubs could not be read.");
+  const canonicalClubRows = canonicalClubs as ClubRow[];
+  const { data: canonicalMemberships, error: membershipsError } = await admin
+    .from("football_squad_members")
+    .select("club_id,player_id,position")
+    .eq("provider", PROVIDER)
+    .eq("status", "active")
+    .in("club_id", canonicalClubRows.map((club) => club.id));
+  if (membershipsError || !canonicalMemberships) throw new Error("QA position memberships could not be read.");
+  const membershipRows = canonicalMemberships as MembershipRow[];
+  const playerIds = membershipRows.map((membership) => membership.player_id);
+  const { data: canonicalPlayers, error: playersError } = await admin
+    .from("football_players")
+    .select("id,provider_player_id,display_name,position,position_id")
+    .eq("provider", PROVIDER)
+    .in("id", playerIds);
+  if (playersError || !canonicalPlayers) throw new Error("QA position players could not be read.");
+  const playerRows = canonicalPlayers as PlayerRow[];
+  const playerByProviderId = new Map(playerRows.map((player) => [player.provider_player_id, player] as const));
+  const membershipByPlayerId = new Map(membershipRows.map((membership) => [membership.player_id, membership] as const));
+  const editorialOverrides = await loadTouchlineCardEditorialOverrides(playerIds, admin);
   const clubs: Array<Record<string, unknown>> = [];
+  let hardcodedConflicts = 0;
+  let providerDetailedPositions = 0;
 
   for (const club of TOUCHLINE_ENGLAND_CLUBS) {
     const squad = await provider.getSquad(club.teamId);
     if (!squad.ok) throw new Error(`Sportmonks squad ${club.teamId} failed: ${squad.error.code}`);
+    const players = squad.data.map((member) => {
+      const evidence = safePositionEvidence(member);
+      const canonicalPlayer = playerByProviderId.get(member.player.providerId);
+      const membership = canonicalPlayer ? membershipByPlayerId.get(canonicalPlayer.id) : undefined;
+      const editorialPosition = canonicalPlayer
+        ? editorialOverrides.get(canonicalPlayer.id.toLowerCase())?.position ?? null
+        : null;
+      const effectivePosition = editorialPosition ?? membership?.position ?? canonicalPlayer?.position ?? null;
+      const marketPosition = resolveTouchlineMarketCataloguePosition(member.player.providerId, effectivePosition);
+      const detailedPositionId = evidence.squadDetailedPositionId ?? evidence.playerDetailedPositionId;
+      const providerDetailedPosition = detailedPositionId
+        ? SPORTMONKS_DETAILED_POSITIONS.get(detailedPositionId) ?? null
+        : null;
+      const marketBucket = touchlineMarketPositionBucket(marketPosition, rosterRole(effectivePosition));
+      const hardcodedConflict = (marketPosition === "RB" || marketPosition === "LB")
+        && rosterRole(evidence.squadPosition ?? evidence.playerPosition) !== "defender";
+      if (hardcodedConflict) hardcodedConflicts += 1;
+      if (providerDetailedPosition) providerDetailedPositions += 1;
+
+      return {
+        ...evidence,
+        providerDetailedPosition,
+        canonicalPlayerId: canonicalPlayer?.id ?? null,
+        canonicalPosition: canonicalPlayer?.position ?? null,
+        canonicalPositionId: canonicalPlayer?.position_id ?? null,
+        membershipPosition: membership?.position ?? null,
+        editorialPosition,
+        marketPosition,
+        marketBucket,
+        hardcodedConflict,
+      };
+    });
     clubs.push({
       teamId: club.teamId,
       club: club.name,
-      players: squad.data.map(safePositionEvidence),
+      players,
+      marketBuckets: Object.fromEntries([...new Set(players.map((player) => player.marketBucket))]
+        .sort()
+        .map((bucket) => [bucket, players.filter((player) => player.marketBucket === bucket).length])),
+      hardcodedConflicts: players.filter((player) => player.hardcodedConflict).length,
+      providerDetailedPositions: players.filter((player) => player.providerDetailedPosition).length,
     });
   }
 
@@ -77,6 +179,8 @@ async function twentyClubPositionReadOnlyDiagnostic() {
     totals: {
       clubs: clubs.length,
       players: clubs.reduce((total, club) => total + (Array.isArray(club.players) ? club.players.length : 0), 0),
+      providerDetailedPositions,
+      hardcodedConflicts,
     },
   };
 }
