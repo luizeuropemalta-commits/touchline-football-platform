@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import type { TouchlineSquadMember } from "@/lib/football-data/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
@@ -27,6 +28,58 @@ const MAX_DIAGNOSTIC_IDS_PER_CLUB = 24;
 type ClubRow = Readonly<{ id: string; provider_team_id: string }>;
 type MembershipRow = Readonly<{ club_id: string; player_id: string }>;
 type PlayerRow = Readonly<{ id: string; provider_player_id: string }>;
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function identifier(value: unknown) {
+  const normalized = text(value);
+  return /^\d{1,20}$/.test(normalized) ? normalized : null;
+}
+
+function safePositionEvidence(member: TouchlineSquadMember) {
+  const rawMember = record(member.raw);
+  const rawPlayer = record(rawMember.player);
+
+  return {
+    providerPlayerId: member.player.providerId,
+    name: member.player.displayName,
+    jerseyNumber: member.jerseyNumber ?? null,
+    squadPosition: member.position ?? null,
+    playerPosition: member.player.position ?? null,
+    squadPositionId: identifier(rawMember.position_id),
+    squadDetailedPositionId: identifier(rawMember.detailed_position_id),
+    playerPositionId: identifier(rawPlayer.position_id) ?? identifier(member.player.positionId),
+    playerDetailedPositionId: identifier(rawPlayer.detailed_position_id),
+  };
+}
+
+async function twentyClubPositionReadOnlyDiagnostic() {
+  const provider = createFootballDataProvider("sportmonks");
+  const clubs: Array<Record<string, unknown>> = [];
+
+  for (const club of TOUCHLINE_ENGLAND_CLUBS) {
+    const squad = await provider.getSquad(club.teamId);
+    if (!squad.ok) throw new Error(`Sportmonks squad ${club.teamId} failed: ${squad.error.code}`);
+    clubs.push({
+      teamId: club.teamId,
+      club: club.name,
+      players: squad.data.map(safePositionEvidence),
+    });
+  }
+
+  return {
+    scope: "twenty-club-position-read-only",
+    clubs,
+    totals: {
+      clubs: clubs.length,
+      players: clubs.reduce((total, club) => total + (Array.isArray(club.players) ? club.players.length : 0), 0),
+    },
+  };
+}
 
 async function twentyClubReadOnlyDiagnostic() {
   const admin = createAdminClient();
@@ -127,6 +180,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         ok: false,
         error: error instanceof Error ? error.message : "QA roster diagnostic failed.",
+      }, { status: 502, headers: { "Cache-Control": "no-store" } });
+    }
+  }
+
+  if (scope === "positions") {
+    try {
+      return NextResponse.json({
+        ok: true,
+        source: "sportmonks-live-read-only",
+        diagnostic: await twentyClubPositionReadOnlyDiagnostic(),
+      }, { headers: { "Cache-Control": "no-store" } });
+    } catch (error) {
+      return NextResponse.json({
+        ok: false,
+        error: error instanceof Error ? error.message : "QA position diagnostic failed.",
       }, { status: 502, headers: { "Cache-Control": "no-store" } });
     }
   }

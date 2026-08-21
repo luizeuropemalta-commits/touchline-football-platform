@@ -61,5 +61,9 @@ test("twenty-club provider diagnostic remains owner-only and read-only", () => {
   assert.match(diagnosticSource, /if \(!await authorizeOwner\(\)\)/);
   assert.match(diagnosticSource, /scope === "twenty"/);
   assert.match(diagnosticSource, /sportmonks-live-read-only/);
+  assert.match(diagnosticSource, /scope === "positions"/);
+  assert.match(diagnosticSource, /safePositionEvidence/);
+  assert.match(diagnosticSource, /squadDetailedPositionId/);
+  assert.match(diagnosticSource, /playerDetailedPositionId/);
   assert.doesNotMatch(diagnosticSource, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 });
