@@ -5419,12 +5419,12 @@ export default function ArenaClient({
     });
 
     const squadRequest = touchlineJsonRequest<
-      | { ok: true; players: TeamBuilderSquadPlayer[]; status?: string }
+      | { ok: true; players: TeamBuilderSquadPlayer[]; rosterPlayers?: TeamBuilderSquadPlayer[]; status?: string }
       | { ok: false; error?: string; status?: string }
     >(`/api/football-data/premier-squad?${params.toString()}`)
       .then(({ ok, payload }) => {
         const squadPayload = payload as
-          | { ok: true; players: TeamBuilderSquadPlayer[]; status?: string }
+          | { ok: true; players: TeamBuilderSquadPlayer[]; rosterPlayers?: TeamBuilderSquadPlayer[]; status?: string }
           | { ok: false; error?: string; status?: string };
 
         if (!ok || squadPayload.ok === false) {
@@ -5443,6 +5443,7 @@ export default function ArenaClient({
 
     Promise.all([squadRequest, inventoryRequest])
       .then(([payload, inventoryResponse]) => {
+        const rosterPlayers = payload.rosterPlayers ?? payload.players;
         const inventorySnapshot = inventoryResponse?.ok
           ? parseTouchlineMarketInventorySnapshot(inventoryResponse.payload)
           : null;
@@ -5461,9 +5462,9 @@ export default function ArenaClient({
         setMarketInventorySnapshot(inventorySnapshot);
         setMarketInventoryMode(inventoryMode);
         if (inventorySnapshot) setMarketWalletBalanceTc(inventorySnapshot.walletBalanceTc);
-        setBuilderSquad(connectBuilderSquadToMarketInventory(payload.players, inventorySnapshot));
+        setBuilderSquad(connectBuilderSquadToMarketInventory(rosterPlayers, inventorySnapshot));
         setBuilderSquadClubKey(builderClub.teamId);
-        setBuilderLoadState({ status: "ready", playerCount: payload.players.length });
+        setBuilderLoadState({ status: "ready", playerCount: rosterPlayers.length });
       })
       .catch((error: Error) => {
         if (cancelled) return;

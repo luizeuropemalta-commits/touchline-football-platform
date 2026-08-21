@@ -206,6 +206,15 @@ test("the persisted-squad API preserves every canonical roster player for Club H
   assert.match(page, /payload\.rosterPlayers \?\? payload\.players/);
 });
 
+test("Market preserves every real roster player when card data is pending", () => {
+  const source = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /rosterPlayers\?: TeamBuilderSquadPlayer\[\]/);
+  assert.match(source, /const rosterPlayers = payload\.rosterPlayers \?\? payload\.players/);
+  assert.match(source, /connectBuilderSquadToMarketInventory\(rosterPlayers, inventorySnapshot\)/);
+  assert.match(source, /playerCount: rosterPlayers\.length/);
+});
+
 test("shared player cards require a manual published profile, apart from a frozen owned-contract render", () => {
   const source = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
 
