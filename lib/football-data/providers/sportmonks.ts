@@ -14,6 +14,7 @@ import {
 } from "@/lib/football-data/http";
 import { parseSportmonksStatisticValue } from "@/lib/football-data/sportmonks-statistics";
 import { mapSportmonksFixtureBallCoordinates } from "@/lib/football-data/sportmonks-ball-coordinates";
+import { sportmonksDetailedPositionName } from "@/lib/football-data/sportmonks-position-taxonomy";
 import {
   SPORTMONKS_INPLAY_LIVESCORES_PATH,
   SPORTMONKS_LATEST_LIVESCORES_PATH,
@@ -530,8 +531,11 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       const playerDetailedPosition = player.detailedPosition;
       const broadPosition = asString(positionRaw?.name) ?? playerBroadPosition;
       const broadPositionId = asString(item.position_id) ?? asString(positionRaw?.id) ?? player.broadPositionId;
-      const detailedPosition = asString(detailedPositionRaw?.name) ?? playerDetailedPosition;
       const detailedPositionId = asString(item.detailed_position_id) ?? asString(detailedPositionRaw?.id) ?? player.detailedPositionId;
+      const detailedPosition = asString(detailedPositionRaw?.name)
+        ?? playerDetailedPosition
+        ?? sportmonksDetailedPositionName(detailedPositionId)
+        ?? undefined;
       return [{
         player,
         jerseyNumber: asNumber(item.jersey_number),
@@ -730,6 +734,9 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const detailedPosition =
       this.relationEntity(raw, "detailedPosition") ??
       (raw.detailedPosition as SportmonksEntity | undefined);
+    const detailedPositionId = asString(raw.detailed_position_id) ?? asString(detailedPosition?.id);
+    const detailedPositionName = asString(detailedPosition?.name)
+      ?? sportmonksDetailedPositionName(detailedPositionId);
     const teams = this.relationArray(raw, "teams");
     const currentTeam = teams[0];
 
@@ -748,13 +755,13 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       countryId: asString(raw.country_id) ?? asString(raw.nationality_id),
       broadPosition: asString(broadPosition?.name),
       broadPositionId: asString(raw.position_id) ?? asString(broadPosition?.id),
-      detailedPosition: asString(detailedPosition?.name),
-      detailedPositionId: asString(raw.detailed_position_id) ?? asString(detailedPosition?.id),
+      detailedPosition: detailedPositionName ?? undefined,
+      detailedPositionId: detailedPositionId ?? undefined,
       // An exact position is intentionally absent when the provider supplies
       // only the broad role. TouchLine keeps that athlete visible as pending;
       // it never guesses a quota-bearing position from the parent role.
-      position: asString(detailedPosition?.name),
-      positionId: asString(raw.detailed_position_id) ?? asString(detailedPosition?.id),
+      position: detailedPositionName ?? undefined,
+      positionId: detailedPositionId ?? undefined,
       height: asString(raw.height),
       weight: asString(raw.weight),
       preferredFoot:

@@ -66,3 +66,42 @@ test("Sportmonks squad audit requests nested player detailed positions without e
     clearFootballDataCache();
   }
 });
+
+test("Sportmonks squad maps a stable detailed position id when the optional relation name is absent", async () => {
+  clearFootballDataCache();
+  const originalFetch = globalThis.fetch;
+  const originalToken = process.env.SPORTMONKS_API_TOKEN;
+
+  process.env.SPORTMONKS_API_TOKEN = "position-taxonomy-token";
+  globalThis.fetch = (async (input) => {
+    const observedUrl = new URL(String(input));
+    if (observedUrl.pathname.endsWith("/extended")) {
+      return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({
+      data: [{
+        player: {
+          id: 37701999,
+          display_name: "Estêvão",
+          position_id: 27,
+          detailed_position_id: 156,
+        },
+      }],
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+
+  try {
+    const result = await new SportmonksFootballProvider().getSquad("18");
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.data[0]?.player.detailedPosition, "Right Wing");
+    assert.equal(result.data[0]?.player.detailedPositionId, "156");
+    assert.equal(result.data[0]?.position, "Right Wing");
+    assert.equal(result.data[0]?.detailedPosition, "Right Wing");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalToken === undefined) delete process.env.SPORTMONKS_API_TOKEN;
+    else process.env.SPORTMONKS_API_TOKEN = originalToken;
+    clearFootballDataCache();
+  }
+});

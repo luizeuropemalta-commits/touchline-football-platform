@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import { sportmonksDetailedPositionName } from "@/lib/football-data/sportmonks-position-taxonomy";
 import type { TouchlineSquadMember } from "@/lib/football-data/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -37,22 +38,6 @@ type PlayerRow = Readonly<{
   position?: string | null;
   position_id?: string | null;
 }>;
-
-const SPORTMONKS_DETAILED_POSITIONS = new Map<string, string>([
-  ["24", "Goalkeeper"],
-  ["148", "Centre Back"],
-  ["149", "Defensive Midfield"],
-  ["150", "Attacking Midfield"],
-  ["151", "Centre Forward"],
-  ["152", "Left Wing"],
-  ["153", "Central Midfield"],
-  ["154", "Right Back"],
-  ["155", "Left Back"],
-  ["156", "Right Wing"],
-  ["157", "Left Midfield"],
-  ["158", "Right Midfield"],
-  ["163", "Secondary Striker"],
-]);
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -141,7 +126,7 @@ async function twentyClubPositionReadOnlyDiagnostic() {
       const detailedPositionId = evidence.squadDetailedPositionId
         ?? evidence.playerDetailedPositionId;
       const providerDetailedPosition = detailedPositionId
-        ? SPORTMONKS_DETAILED_POSITIONS.get(detailedPositionId) ?? member.player.position ?? null
+        ? sportmonksDetailedPositionName(detailedPositionId) ?? member.player.position ?? null
         : null;
       const marketBucket = touchlineMarketPositionBucket(marketPosition, rosterRole(effectivePosition));
       const hardcodedConflict = (marketPosition === "RB" || marketPosition === "LB")
