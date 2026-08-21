@@ -113,6 +113,7 @@ export default function ClubHubOfficialLineup({
                     position: card.position,
                     nationality: card.countryCode3,
                     editorialCard: card.editorialCard,
+                    cardReview,
                     activeContractCard: null,
                     touchlinePoints: card.touchlinePoints,
                     profileHref,

@@ -137,6 +137,7 @@ export default async function TouchLinePlayerCardRankingsPage({
         position: card.position,
         nationality: card.countryCode3,
         editorialCard: card.editorialCard,
+        cardReview: card.cardReview,
         activeContractCard: null,
         touchlinePoints: card.touchlinePoints,
         profileHref,

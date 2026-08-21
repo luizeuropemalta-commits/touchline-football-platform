@@ -121,6 +121,40 @@ test("an unpublished player keeps only real identity fields with no valuation pl
   assert.doesNotMatch(JSON.stringify(details), /market value|market range|economic|pending|updating/i);
 });
 
+test("an incomplete real player exposes pending card price and each missing field", () => {
+  const details = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Incomplete goalkeeper",
+    position: "Goalkeeper",
+    nationality: "NIR",
+    touchlinePoints: 0,
+    cardReview: {
+      state: "REVIEW_REQUIRED",
+      missingFields: ["market_value", "shirt_number"],
+    },
+  });
+
+  assert.deepEqual(details.fields, [
+    { label: "Card status", value: "Review pending", accent: true },
+    { label: "Card price", value: "Pending", accent: true },
+    { label: "Missing field", value: "Market Value", accent: false },
+    { label: "Missing field", value: "Shirt number", accent: false },
+    { label: "Position", value: "Goalkeeper", accent: false },
+    { label: "Nationality", value: "NIR", accent: false },
+    { label: "TouchLine points", value: "0", accent: false },
+  ]);
+});
+
+test("the shared card never substitutes a football position for pending card price", () => {
+  const cardSource = readFileSync(
+    new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(cardSource, /hasPublishedCardProfile \|\| reviewRequired[\s\S]*?cardLabels\.cardPrice/);
+  assert.match(cardSource, /reviewRequired[\s\S]*?"PENDING"[\s\S]*?: player\.position/);
+});
+
 test("the zoom receives only the public editorial projection, never internal notes or sources", () => {
   const editorialCard = resolveTouchlinePublicEditorialCardPresentation(publishedEditorialRecord());
   assert.ok(editorialCard);

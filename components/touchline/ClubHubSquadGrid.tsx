@@ -108,6 +108,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   position: card.position,
                   nationality: card.countryCode3,
                   editorialCard: card.editorialCard,
+                  cardReview,
                   activeContractCard: null,
                   touchlinePoints: card.touchlinePoints,
                   profileHref,

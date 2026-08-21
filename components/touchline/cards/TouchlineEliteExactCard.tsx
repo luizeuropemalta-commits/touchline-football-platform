@@ -879,12 +879,14 @@ export function TouchlineEliteExactCard({
   const hasPublishedCardProfile = Boolean(editorialCard);
   const compactPrimaryLabel = cardLabels.totalPoints;
   const compactPrimaryValue = totalPointsText;
-  const compactSecondaryLabel = hasPublishedCardProfile
+  const compactSecondaryLabel = hasPublishedCardProfile || reviewRequired
     ? cardLabels.cardPrice
     : (runtimeLocale === "pt-BR" ? "POSIÇÃO" : "POSITION");
   const compactSecondaryValue = hasPublishedCardProfile
     ? cardPriceText ?? ""
-    : player.position;
+    : reviewRequired
+      ? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
+      : player.position;
   const preseasonMissingValue = liveCompetition.phase === "preseason" ? "0" : "—";
   const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
     ? preseasonMissingValue

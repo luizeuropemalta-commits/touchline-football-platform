@@ -3215,6 +3215,7 @@ function arenaPlayerZoomDetails(
     cardPriceAuthority: player.cardPriceAuthority,
     cardPriceVersion: player.cardPriceVersion,
     editorialCard: player.editorialCard,
+    cardReview: player.cardReview,
     touchlinePoints: player.fantasyPoints,
     profileHref,
     cardEngineHref: canEditCardEngine

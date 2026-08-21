@@ -8,6 +8,10 @@ import {
   formatTouchlineEditorialCardPrice,
   type TouchlinePublicEditorialCardPresentation,
 } from "./editorial-card-profile.ts";
+import {
+  touchlineCardReviewFieldLabel,
+  type TouchlineCardReviewPresentation,
+} from "./card-review-state.ts";
 
 type TouchlineCardZoomExtraField = Readonly<{
   label: string;
@@ -40,6 +44,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   position?: string | null;
   nationality?: string | null;
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
+  cardReview?: TouchlineCardReviewPresentation | null;
   activeContractCard?: TouchlineActiveContractCardPresentation | null;
   /** @deprecated Retained temporarily for call-site compatibility; ignored. */
   marketValue?: string | number | null;
@@ -78,6 +83,23 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         cardPrice: input.activeContractCard.cardPrice,
       }
       : null;
+  const reviewRequired = input.cardReview?.state === "REVIEW_REQUIRED";
+  const reviewFields = reviewRequired
+    ? [
+      field(
+        isPortuguese ? "Status do card" : "Card status",
+        isPortuguese ? "Revisão pendente" : "Review pending",
+        true,
+      ),
+      ...(!publicCard
+        ? [field(isPortuguese ? "Preço do card" : "Card price", isPortuguese ? "Pendente" : "Pending", true)]
+        : []),
+      ...(input.cardReview?.missingFields ?? []).map((missingField) => field(
+        isPortuguese ? "Campo pendente" : "Missing field",
+        touchlineCardReviewFieldLabel(missingField, input.locale),
+      )),
+    ]
+    : [];
   const editorialFields = publicCard
     ? [
       field(
@@ -93,6 +115,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
     ]
     : [];
   const baseFields = [
+    ...reviewFields,
     ...editorialFields,
     field(isPortuguese ? "Posição" : "Position", input.position),
     field(isPortuguese ? "Nacionalidade" : "Nationality", input.nationality),

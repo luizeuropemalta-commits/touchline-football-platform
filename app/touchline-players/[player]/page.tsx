@@ -699,6 +699,7 @@ export default async function TouchLinePlayerProfilePage({
         position: displayPosition,
         nationality: displayNationality,
         editorialCard,
+        cardReview: exactPlayer.cardReview,
         touchlinePoints: competition.touchlinePoints,
         profileHref,
         cardEngineHref: currentUser && isOwnerEmail(currentUser.email)

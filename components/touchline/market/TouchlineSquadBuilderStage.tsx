@@ -96,6 +96,7 @@ function SquadPlayerCardZoom({
         position: card.position || card.role,
         nationality: card.nationality || card.countryCode3,
         editorialCard: card.editorialCard,
+        cardReview: card.cardReview,
         touchlinePoints: card.fantasyPoints,
         profileHref,
         cardEngineHref,
