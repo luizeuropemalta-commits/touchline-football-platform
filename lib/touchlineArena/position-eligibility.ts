@@ -77,11 +77,15 @@ function normalizePositionText(value?: string | null) {
 export function touchlineMarketPositionBucket(position?: string | null, role?: TouchlineRosterRole | null): TouchlineMarketPositionBucket {
   const value = normalizePositionText(position);
 
+  // A broad role may keep an athlete visually grouped in a roster, but only
+  // a verified detailed position (or approved TouchLine override) may consume
+  // one of the exact 35-player Market quotas.
+  if (!value) return "outfield";
   if (role === "goalkeeper" || /\b(gk|keeper|goalkeeper|goleiro)\b/.test(value)) return "goalkeeper";
   if (/\b(cb|centre back|center back|central defender|zagueiro)\b/.test(value)) return "centre-back";
   if (/\b(rb|rwb|right back|right wing back|lateral direito|ld)\b/.test(value)) return "right-back";
   if (/\b(lb|lwb|left back|left wing back|lateral esquerdo|le)\b/.test(value)) return "left-back";
-  if (/\b(cdm|dm|defensive midfielder|holding midfielder|defensive mid|volante|trinco|pivo)\b/.test(value)) return "defensive-midfield";
+  if (/\b(cdm|dm|defensive midfielder|defensive midfield|holding midfielder|defensive mid|volante|trinco|pivo)\b/.test(value)) return "defensive-midfield";
   if (/\b(st|cf|striker|centre forward|center forward|centroavante|atacante central|number 9)\b/.test(value)) return "centre-forward";
   if (/\b(lw|rw|winger|left wing|right wing|secondary striker|second striker|ss|ponta|segundo atacante|atacante)\b/.test(value)) return "attacker";
   if (/\b(cm|cam|am|lm|rm|central midfielder|attacking midfielder|advanced midfielder|left midfielder|right midfielder|wide midfielder|box to box|midfielder|meia central|meia ofensivo|meia atacante|meio campo|meio campista|meia)\b/.test(value)) return "midfield";

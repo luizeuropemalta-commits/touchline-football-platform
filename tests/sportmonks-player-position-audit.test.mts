@@ -48,6 +48,12 @@ test("Sportmonks squad audit requests nested player detailed positions without e
     assert.equal(result.ok, true);
     if (!result.ok) return;
     assert.equal(result.data[0]?.player.position, "Right Wing");
+    assert.equal(result.data[0]?.player.broadPosition, "Attacker");
+    assert.equal(result.data[0]?.player.broadPositionId, "27");
+    assert.equal(result.data[0]?.player.detailedPosition, "Right Wing");
+    assert.equal(result.data[0]?.player.detailedPositionId, "156");
+    assert.equal(result.data[0]?.broadPosition, "Attacker");
+    assert.equal(result.data[0]?.detailedPosition, "Right Wing");
     const rawPlayer = (result.data[0]?.raw as Record<string, unknown>).player as Record<string, unknown>;
     assert.equal(rawPlayer.detailed_position_id, 156);
     const squadUrl = observedUrls.find((url) => !url.pathname.endsWith("/extended"));

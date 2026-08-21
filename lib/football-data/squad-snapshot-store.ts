@@ -13,6 +13,10 @@ export type PersistedSquadPlayer = {
   name: string;
   displayName: string;
   nationality: string | null;
+  broadPosition: string | null;
+  broadPositionId: string | null;
+  detailedPosition: string | null;
+  detailedPositionId: string | null;
   position: string | null;
   jerseyNumber: number | null;
   marketValue: number | null;
@@ -32,7 +36,12 @@ export type SquadSnapshotPlayerInput = {
   name: string;
   nationality?: string | null;
   countryId?: string | null;
+  broadPosition?: string | null;
+  broadPositionId?: string | null;
+  detailedPosition?: string | null;
+  detailedPositionId?: string | null;
   position?: string | null;
+  positionId?: string | null;
   shirtNumber?: number | null;
   marketValue?: number | null;
 };
@@ -117,7 +126,7 @@ export async function readPersistedSquadSnapshot(
 
   let membersQuery = admin
     .from("football_squad_members")
-    .select("player_id,jersey_number,position,source_updated_at")
+    .select("player_id,jersey_number,position,position_id,provider_position,provider_position_id,detailed_position,detailed_position_id,source_updated_at")
     .eq("provider", PROVIDER)
     .eq("club_id", club.id)
     .eq("status", "active");
@@ -140,7 +149,7 @@ export async function readPersistedSquadSnapshot(
   const { data: playerRows, error: playersError } = await admin
     .from("football_players")
     .select(
-      "id,provider_player_id,current_club_id,name,display_name,nationality,position,market_value,market_value_currency,source_updated_at",
+      "id,provider_player_id,current_club_id,name,display_name,nationality,position,position_id,provider_position,provider_position_id,detailed_position,detailed_position_id,market_value,market_value_currency,source_updated_at",
     )
     .in("id", playerIds);
 
@@ -178,6 +187,10 @@ export async function readPersistedSquadSnapshot(
         name,
         displayName: asString(player?.display_name) ?? name,
         nationality: asString(player?.nationality),
+        broadPosition: asString(member.provider_position) ?? asString(player?.provider_position),
+        broadPositionId: asString(member.provider_position_id) ?? asString(player?.provider_position_id),
+        detailedPosition: asString(member.detailed_position) ?? asString(player?.detailed_position),
+        detailedPositionId: asString(member.detailed_position_id) ?? asString(player?.detailed_position_id),
         position: asString(member.position) ?? asString(player?.position),
         jerseyNumber: asNullableNumber(member.jersey_number),
         marketValue: asNullableNumber(player?.market_value),
@@ -263,7 +276,12 @@ export async function persistSquadSnapshot(
     // has ever been provided; it must not receive an invented replacement.
     ...(player.nationality ? { nationality: player.nationality } : {}),
     ...(player.countryId ? { country_id: player.countryId } : {}),
+    provider_position: player.broadPosition ?? null,
+    provider_position_id: player.broadPositionId ?? null,
+    detailed_position: player.detailedPosition ?? null,
+    detailed_position_id: player.detailedPositionId ?? null,
     position: player.position ?? null,
+    position_id: player.positionId ?? null,
     ...(player.marketValue
       ? { market_value: player.marketValue, market_value_currency: "EUR" }
       : {}),
@@ -303,7 +321,7 @@ export async function persistSquadSnapshot(
 
   const existingMemberResult = await snapshotAdmin
     .from("football_squad_members")
-    .select("player_id,jersey_number,position,status,source_updated_at,competition_id")
+    .select("player_id,jersey_number,position,position_id,provider_position,provider_position_id,detailed_position,detailed_position_id,status,source_updated_at,competition_id")
     .eq("provider", PROVIDER)
     .eq("club_id", clubId);
   if (existingMemberResult.error) {
@@ -330,7 +348,12 @@ export async function persistSquadSnapshot(
       club_id: clubId,
       player_id: playerId,
       jersey_number: player.shirtNumber ?? existingNumbers.get(playerId) ?? null,
+      provider_position: player.broadPosition ?? null,
+      provider_position_id: player.broadPositionId ?? null,
+      detailed_position: player.detailedPosition ?? null,
+      detailed_position_id: player.detailedPositionId ?? null,
       position: player.position ?? null,
+      position_id: player.positionId ?? null,
       competition_id: competitionId,
       status: "active",
       source_updated_at: capturedAt,
@@ -349,7 +372,12 @@ export async function persistSquadSnapshot(
           .from("football_squad_members")
           .update({
             jersey_number: asNullableNumber(member.jersey_number),
+            provider_position: asString(member.provider_position),
+            provider_position_id: asString(member.provider_position_id),
+            detailed_position: asString(member.detailed_position),
+            detailed_position_id: asString(member.detailed_position_id),
             position: asString(member.position),
+            position_id: asString(member.position_id),
             competition_id: asString(member.competition_id),
             status: asString(member.status) ?? "unknown",
             source_updated_at: asString(member.source_updated_at) ?? EMPTY_SQUAD_SNAPSHOT_REVISION,
@@ -394,7 +422,12 @@ export async function persistSquadSnapshot(
       .from("football_squad_members")
       .update({
         jersey_number: member.jersey_number,
+        provider_position: member.provider_position,
+        provider_position_id: member.provider_position_id,
+        detailed_position: member.detailed_position,
+        detailed_position_id: member.detailed_position_id,
         position: member.position,
+        position_id: member.position_id,
         competition_id: member.competition_id,
         status: "active",
         source_updated_at: capturedAt,

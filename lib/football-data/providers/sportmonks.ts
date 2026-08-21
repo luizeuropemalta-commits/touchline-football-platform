@@ -526,13 +526,23 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       if (!player) return [];
       const positionRaw = this.relationEntity(item, "position") ?? (item.position as SportmonksEntity | undefined);
       const detailedPositionRaw = this.relationEntity(item, "detailedPosition") ?? (item.detailedPosition as SportmonksEntity | undefined);
+      const playerBroadPosition = player.broadPosition;
+      const playerDetailedPosition = player.detailedPosition;
+      const broadPosition = asString(positionRaw?.name) ?? playerBroadPosition;
+      const broadPositionId = asString(item.position_id) ?? asString(positionRaw?.id) ?? player.broadPositionId;
+      const detailedPosition = asString(detailedPositionRaw?.name) ?? playerDetailedPosition;
+      const detailedPositionId = asString(item.detailed_position_id) ?? asString(detailedPositionRaw?.id) ?? player.detailedPositionId;
       return [{
         player,
         jerseyNumber: asNumber(item.jersey_number),
         // Squad construction needs the provider's exact position (RB, LB,
         // centre-back, defensive midfield, etc.). The broad parent position
         // remains available in raw data, but must not erase this detail.
-        position: asString(detailedPositionRaw?.name) ?? asString(positionRaw?.name),
+        broadPosition,
+        broadPositionId,
+        detailedPosition,
+        detailedPositionId,
+        position: detailedPosition,
         raw: { ...item, player: mergedPlayerRaw },
       }];
     });
@@ -714,11 +724,12 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const name = (asString(raw.display_name) ?? asString(raw.name) ?? [asString(raw.firstname), asString(raw.lastname)].filter(Boolean).join(" ")) || `Player ${id}`;
     const country = this.relationEntity(raw, "nationality") ?? (raw.nationality as SportmonksEntity | undefined);
     const fallbackCountry = this.relationEntity(raw, "country") ?? (raw.country as SportmonksEntity | undefined);
-    const position =
-      this.relationEntity(raw, "detailedPosition") ??
+    const broadPosition =
       this.relationEntity(raw, "position") ??
-      (raw.detailedPosition as SportmonksEntity | undefined) ??
       (raw.position as SportmonksEntity | undefined);
+    const detailedPosition =
+      this.relationEntity(raw, "detailedPosition") ??
+      (raw.detailedPosition as SportmonksEntity | undefined);
     const teams = this.relationArray(raw, "teams");
     const currentTeam = teams[0];
 
@@ -735,8 +746,15 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       age: asNumber(raw.age),
       nationality: asString(country?.name) ?? asString(fallbackCountry?.name),
       countryId: asString(raw.country_id) ?? asString(raw.nationality_id),
-      position: asString(position?.name),
-      positionId: asString(raw.position_id),
+      broadPosition: asString(broadPosition?.name),
+      broadPositionId: asString(raw.position_id) ?? asString(broadPosition?.id),
+      detailedPosition: asString(detailedPosition?.name),
+      detailedPositionId: asString(raw.detailed_position_id) ?? asString(detailedPosition?.id),
+      // An exact position is intentionally absent when the provider supplies
+      // only the broad role. TouchLine keeps that athlete visible as pending;
+      // it never guesses a quota-bearing position from the parent role.
+      position: asString(detailedPosition?.name),
+      positionId: asString(raw.detailed_position_id) ?? asString(detailedPosition?.id),
       height: asString(raw.height),
       weight: asString(raw.weight),
       preferredFoot:

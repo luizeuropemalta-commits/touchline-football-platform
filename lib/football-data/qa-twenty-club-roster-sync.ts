@@ -26,6 +26,8 @@ export type QaTwentyClubRosterSyncPlan = Readonly<{
   nationalityProvided: number;
   countryIdsProvided: number;
   shirtNumbersProvided: number;
+  detailedPositionsProvided: number;
+  detailedPositionsPending: number;
 }>;
 
 export type QaTwentyClubRosterSyncResult = Readonly<{
@@ -36,6 +38,8 @@ export type QaTwentyClubRosterSyncResult = Readonly<{
   nationalityProvided: number;
   countryIdsProvided: number;
   shirtNumbersProvided: number;
+  detailedPositionsProvided: number;
+  detailedPositionsPending: number;
 }>;
 
 function text(value: unknown) {
@@ -71,6 +75,8 @@ export function buildQaTwentyClubRosterSyncPlan(squads: readonly ProviderSquad[]
   let nationalityProvided = 0;
   let countryIdsProvided = 0;
   let shirtNumbersProvided = 0;
+  let detailedPositionsProvided = 0;
+  let detailedPositionsPending = 0;
   for (const squad of squads) {
     if (!expectedTeamIds.has(squad.teamId) || squad.members.length < MIN_COMPLETE_SQUAD_SIZE) {
       errors.push(`provider-squad-incomplete:${squad.teamId}`);
@@ -87,6 +93,8 @@ export function buildQaTwentyClubRosterSyncPlan(squads: readonly ProviderSquad[]
       if (text(member.player.nationality)) nationalityProvided += 1;
       if (text(member.player.countryId)) countryIdsProvided += 1;
       if (Number.isInteger(member.jerseyNumber) && (member.jerseyNumber ?? 0) > 0) shirtNumbersProvided += 1;
+      if (text(member.detailedPosition) && text(member.detailedPositionId)) detailedPositionsProvided += 1;
+      else detailedPositionsPending += 1;
     }
   }
   if (providerIds.size < TOUCHLINE_ENGLAND_CLUBS.length * MIN_COMPLETE_SQUAD_SIZE) {
@@ -100,6 +108,8 @@ export function buildQaTwentyClubRosterSyncPlan(squads: readonly ProviderSquad[]
     nationalityProvided,
     countryIdsProvided,
     shirtNumbersProvided,
+    detailedPositionsProvided,
+    detailedPositionsPending,
   });
 }
 
@@ -122,7 +132,12 @@ function playerInput(member: TouchlineSquadMember): SquadSnapshotPlayerInput {
     name: member.player.displayName || member.player.name,
     nationality: text(member.player.nationality) || null,
     countryId: text(member.player.countryId) || null,
-    position: text(member.position) || text(member.player.position) || null,
+    broadPosition: text(member.broadPosition) || text(member.player.broadPosition) || null,
+    broadPositionId: text(member.broadPositionId) || text(member.player.broadPositionId) || null,
+    detailedPosition: text(member.detailedPosition) || text(member.player.detailedPosition) || null,
+    detailedPositionId: text(member.detailedPositionId) || text(member.player.detailedPositionId) || null,
+    position: text(member.detailedPosition) || text(member.player.detailedPosition) || null,
+    positionId: text(member.detailedPositionId) || text(member.player.detailedPositionId) || null,
     shirtNumber: Number.isInteger(member.jerseyNumber) && (member.jerseyNumber ?? 0) > 0
       ? member.jerseyNumber
       : null,
@@ -134,6 +149,11 @@ type CurrentMembershipRow = Readonly<{
   player_id: string;
   jersey_number: number | null;
   position: string | null;
+  position_id: string | null;
+  provider_position: string | null;
+  provider_position_id: string | null;
+  detailed_position: string | null;
+  detailed_position_id: string | null;
 }>;
 
 type CurrentPlayerRow = Readonly<{
@@ -145,6 +165,11 @@ type CurrentPlayerRow = Readonly<{
   nationality: string | null;
   country_id: string | null;
   position: string | null;
+  position_id: string | null;
+  provider_position: string | null;
+  provider_position_id: string | null;
+  detailed_position: string | null;
+  detailed_position_id: string | null;
 }>;
 
 /**
@@ -172,7 +197,7 @@ async function isCurrentQaTwentyClubRoster(admin: AdminClient, squads: readonly 
     if (!clubId) return false;
     const { data: membershipRows, error: membershipsError } = await admin
       .from("football_squad_members")
-      .select("player_id,jersey_number,position")
+      .select("player_id,jersey_number,position,position_id,provider_position,provider_position_id,detailed_position,detailed_position_id")
       .eq("provider", PROVIDER)
       .eq("club_id", clubId)
       .eq("status", "active");
@@ -183,7 +208,7 @@ async function isCurrentQaTwentyClubRoster(admin: AdminClient, squads: readonly 
     if (playerIds.length !== memberships.length || new Set(playerIds).size !== memberships.length) return false;
     const { data: playerRows, error: playersError } = await admin
       .from("football_players")
-      .select("id,provider_player_id,current_club_id,display_name,name,nationality,country_id,position")
+      .select("id,provider_player_id,current_club_id,display_name,name,nationality,country_id,position,position_id,provider_position,provider_position_id,detailed_position,detailed_position_id")
       .in("id", playerIds);
     const players = (playerRows ?? []) as CurrentPlayerRow[];
     if (playersError || players.length !== memberships.length) return false;
@@ -202,7 +227,18 @@ async function isCurrentQaTwentyClubRoster(admin: AdminClient, squads: readonly 
       if ((text(current.player.display_name) || text(current.player.name)) !== text(expected.name)) return false;
       if (text(current.player.nationality) !== text(expected.nationality)) return false;
       if (text(current.player.country_id) !== text(expected.countryId)) return false;
+      if (text(current.player.provider_position) !== text(expected.broadPosition)) return false;
+      if (text(current.player.provider_position_id) !== text(expected.broadPositionId)) return false;
+      if (text(current.player.detailed_position) !== text(expected.detailedPosition)) return false;
+      if (text(current.player.detailed_position_id) !== text(expected.detailedPositionId)) return false;
+      if (text(current.player.position) !== text(expected.position)) return false;
+      if (text(current.player.position_id) !== text(expected.positionId)) return false;
+      if (text(current.membership.provider_position) !== text(expected.broadPosition)) return false;
+      if (text(current.membership.provider_position_id) !== text(expected.broadPositionId)) return false;
+      if (text(current.membership.detailed_position) !== text(expected.detailedPosition)) return false;
+      if (text(current.membership.detailed_position_id) !== text(expected.detailedPositionId)) return false;
       if (text(current.membership.position) !== text(expected.position)) return false;
+      if (text(current.membership.position_id) !== text(expected.positionId)) return false;
       if (expected.shirtNumber !== null && current.membership.jersey_number !== expected.shirtNumber) return false;
     }
   }
@@ -233,6 +269,9 @@ async function verifyAppliedRoster(admin: AdminClient, squads: readonly Provider
       throw new Error(`QA roster verification failed for club ${squad.teamId}.`);
     }
   }
+  if (!(await isCurrentQaTwentyClubRoster(admin, squads))) {
+    throw new Error("QA roster verification found a position or identity mismatch after persistence.");
+  }
 }
 
 /**
@@ -258,6 +297,8 @@ export async function syncQaTwentyClubRosters(admin: AdminClient, runId: string)
       nationalityProvided: plan.nationalityProvided,
       countryIdsProvided: plan.countryIdsProvided,
       shirtNumbersProvided: plan.shirtNumbersProvided,
+      detailedPositionsProvided: plan.detailedPositionsProvided,
+      detailedPositionsPending: plan.detailedPositionsPending,
     });
   }
 
@@ -290,6 +331,8 @@ export async function syncQaTwentyClubRosters(admin: AdminClient, runId: string)
         nationality_provided: plan.nationalityProvided,
         country_ids_provided: plan.countryIdsProvided,
         shirt_numbers_provided: plan.shirtNumbersProvided,
+        detailed_positions_provided: plan.detailedPositionsProvided,
+        detailed_positions_pending: plan.detailedPositionsPending,
       },
     });
     if (markError) throw new Error("QA twenty-club roster sync could not be marked applied.");
@@ -309,5 +352,7 @@ export async function syncQaTwentyClubRosters(admin: AdminClient, runId: string)
     nationalityProvided: plan.nationalityProvided,
     countryIdsProvided: plan.countryIdsProvided,
     shirtNumbersProvided: plan.shirtNumbersProvided,
+    detailedPositionsProvided: plan.detailedPositionsProvided,
+    detailedPositionsPending: plan.detailedPositionsPending,
   });
 }

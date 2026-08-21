@@ -57,6 +57,12 @@ export type TouchlinePlayer = {
   age?: number;
   nationality?: string;
   countryId?: string;
+  /** Provider broad parent role (Goalkeeper, Defender, Midfielder, Attacker). */
+  broadPosition?: string;
+  broadPositionId?: string;
+  /** Provider-authored exact role used by TouchLine position quotas. */
+  detailedPosition?: string;
+  detailedPositionId?: string;
   position?: string;
   positionId?: string;
   height?: string;
@@ -172,6 +178,10 @@ export type TouchlineStandingRow = {
 export type TouchlineSquadMember = {
   player: TouchlinePlayer;
   jerseyNumber?: number;
+  broadPosition?: string;
+  broadPositionId?: string;
+  detailedPosition?: string;
+  detailedPositionId?: string;
   position?: string;
   raw?: unknown;
 };
