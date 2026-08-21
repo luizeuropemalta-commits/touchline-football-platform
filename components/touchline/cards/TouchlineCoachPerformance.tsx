@@ -1,4 +1,4 @@
-import { CalendarClock, House, PlaneTakeoff, ShieldCheck, Trophy } from "lucide-react";
+import { BadgeCheck, CalendarClock, History, House, PlaneTakeoff, ShieldCheck, Trophy } from "lucide-react";
 
 import type { TouchlineCoachContractSnapshot, TouchlineCoachRecord } from "@/lib/touchlineArena/coach-scoring";
 
@@ -6,6 +6,7 @@ import styles from "./TouchlineCoachPerformance.module.css";
 
 type TouchlineCoachPerformanceProps = {
   contract: TouchlineCoachContractSnapshot | null;
+  contractHistory?: readonly TouchlineCoachContractSnapshot[];
   locale?: string;
   showHistory?: boolean;
 };
@@ -47,6 +48,7 @@ function RecordPanel({
 
 export default function TouchlineCoachPerformance({
   contract,
+  contractHistory = [],
   locale = "en-GB",
   showHistory = false,
 }: TouchlineCoachPerformanceProps) {
@@ -54,6 +56,9 @@ export default function TouchlineCoachPerformance({
   const home: TouchlineCoachRecord | null = contract?.home ?? null;
   const away: TouchlineCoachRecord | null = contract?.away ?? null;
   const total = contract?.totalTouchlinePoints ?? null;
+  const lifecycle = contractHistory.length
+    ? [...contractHistory].sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt))
+    : contract ? [contract] : [];
   const status = contract
     ? (contract.status === "active" ? (portuguese ? "Contrato ativo" : "Active contract") : (portuguese ? "Contrato encerrado" : "Ended contract"))
     : (portuguese ? "Sem contrato TouchLine" : "No TouchLine contract");
@@ -120,6 +125,34 @@ export default function TouchlineCoachPerformance({
               })}
             </ol>
           ) : <p className={styles.empty}>{portuguese ? "Nenhuma partida elegível foi concluída durante este contrato." : "No eligible fixture has been completed during this contract."}</p>}
+        </section>
+      ) : null}
+
+      {showHistory && lifecycle.length ? (
+        <section className={styles.lifecycle} data-coach-contract-history="true" aria-label={portuguese ? "Histórico de contratos" : "Contract history"}>
+          <header className={styles.historyTitle}>
+            <span className={styles.historyIcon}><History aria-hidden="true" size={18} /></span>
+            <div><span>{portuguese ? "LIFECYCLE PRESERVADO" : "PRESERVED LIFECYCLE"}</span><strong>{portuguese ? "Histórico de contratos" : "Contract history"}</strong></div>
+          </header>
+          <ol className={styles.lifecycleList}>
+            {lifecycle.map((item) => (
+              <li key={item.id} data-contract-status={item.status}>
+                <span className={styles.lifecycleStatus}><BadgeCheck aria-hidden="true" size={18} /></span>
+                <span className={styles.lifecycleCopy}>
+                  <strong>{item.status === "active"
+                    ? (portuguese ? "Contrato ativo" : "Active contract")
+                    : (portuguese ? "Contrato encerrado" : "Ended contract")}</strong>
+                  <small>{formatDate(item.startedAt, locale)} — {item.endedAt ? formatDate(item.endedAt, locale) : (portuguese ? "Em vigor" : "Active")}</small>
+                  {item.endReason ? <small>{portuguese ? "Motivo preservado" : "Preserved reason"}: {item.endReason}</small> : null}
+                </span>
+                <span className={styles.lifecyclePoints}>
+                  <b>{item.totalTouchlinePoints}</b>
+                  <small>TL PTS</small>
+                  <em>{portuguese ? "Casa" : "Home"} {item.home.touchlinePoints} · {portuguese ? "Fora" : "Away"} {item.away.touchlinePoints}</em>
+                </span>
+              </li>
+            ))}
+          </ol>
         </section>
       ) : null}
     </section>

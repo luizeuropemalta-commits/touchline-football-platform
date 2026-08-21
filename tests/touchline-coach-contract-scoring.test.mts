@@ -213,8 +213,8 @@ test("the compact coach card renders exactly the verified Home or Away context",
 
 test("Arena exposes current contract, cancellation confirmation, and preserved history", () => {
   assert.match(arena, /Current contract/i);
-  assert.match(arena, /Cancel contract/);
-  assert.match(arena, /Confirm cancellation/);
+  assert.match(arena, /Release coach/);
+  assert.match(arena, /Confirm release/);
   assert.match(arena, /historical contract\(s\) preserved/i);
   assert.match(arena, /contractHistory/);
   assert.match(arena, /TouchlineCoachPerformance contract=\{activeCoachContract\}/);
@@ -223,8 +223,13 @@ test("Arena exposes current contract, cancellation confirmation, and preserved h
 test("coach profile separates real football history from TouchLine game data", () => {
   assert.match(coachProfile, /Real football history/i);
   assert.match(coachProfile, /TouchLine game data/i);
-  assert.match(coachProfile, /TouchlineCoachPerformance contract=\{displayedContract\}/);
+  assert.match(coachProfile, /TouchlineCoachPerformance contract=\{displayedContract\} contractHistory=\{coachContracts\}/);
   assert.match(coachProfile, /showHistory/);
+  assert.match(coachPerformance, /data-coach-contract-history="true"/);
+  assert.match(coachPerformance, /PRESERVED LIFECYCLE/);
+  assert.match(coachPerformance, /item\.totalTouchlinePoints/);
+  assert.match(coachPerformance, /item\.home\.touchlinePoints/);
+  assert.match(coachPerformance, /item\.away\.touchlinePoints/);
 });
 
 test("coach zoom renders premium icon-led Home, Away and total TouchLine Points before profile navigation", () => {

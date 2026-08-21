@@ -6581,7 +6581,7 @@ export default function ArenaClient({
       setOwnerCoachProviderId(null);
       setIsCoachEndConfirmationOpen(false);
       setIsCoachSpotlightOpen(false);
-      setSaveStatus(siteLanguage === "pt-BR" ? "Contrato do treinador encerrado" : "Coach contract ended");
+      setSaveStatus(siteLanguage === "pt-BR" ? "Treinador liberado; histórico preservado" : "Coach released; history preserved");
     } catch {
       const message = siteLanguage === "pt-BR"
         ? "Não foi possível encerrar este contrato. Nenhum dado foi alterado."
@@ -8569,18 +8569,18 @@ export default function ArenaClient({
                   {coachSlot.coach ? <a href={`/touchline-coaches/${encodeURIComponent(coachSlot.coach.providerId)}?lang=${encodeURIComponent(siteLanguage)}`}>{siteLanguage === "pt-BR" ? "Ver perfil" : "View profile"}</a> : null}
                   {activeCoachContract ? (
                     <button type="button" onClick={() => setIsCoachEndConfirmationOpen(true)} disabled={isCoachSaving}>
-                      {siteLanguage === "pt-BR" ? "Cancelar contrato" : "Cancel contract"}
+                      {siteLanguage === "pt-BR" ? "Liberar treinador" : "Release coach"}
                     </button>
                   ) : null}
                 </div>
                 {coachContractHistory.length ? <small className="arena-owner-coach-history-count">{siteLanguage === "pt-BR" ? `${coachContractHistory.length} contrato(s) histórico(s) preservado(s)` : `${coachContractHistory.length} historical contract(s) preserved`}</small> : null}
                 {isCoachEndConfirmationOpen ? (
-                  <div className="arena-owner-coach-confirm" role="alertdialog" aria-modal="true" aria-label={siteLanguage === "pt-BR" ? "Confirmar cancelamento" : "Confirm cancellation"}>
-                    <strong>{siteLanguage === "pt-BR" ? "Encerrar este contrato?" : "End this contract?"}</strong>
+                  <div className="arena-owner-coach-confirm" role="alertdialog" aria-modal="true" aria-label={siteLanguage === "pt-BR" ? "Confirmar liberação" : "Confirm release"}>
+                    <strong>{siteLanguage === "pt-BR" ? "Liberar este treinador?" : "Release this coach?"}</strong>
                     <p>{siteLanguage === "pt-BR" ? "Os pontos e o histórico permanecem. O treinador não receberá pontos futuros." : "Points and history remain. This coach will receive no future points."}</p>
                     <div>
                       <button type="button" onClick={() => setIsCoachEndConfirmationOpen(false)} disabled={isCoachSaving}>{siteLanguage === "pt-BR" ? "Voltar" : "Go back"}</button>
-                      <button type="button" onClick={() => void endOfficialArenaCoachContract()} disabled={isCoachSaving}>{isCoachSaving ? (siteLanguage === "pt-BR" ? "Salvando…" : "Saving…") : (siteLanguage === "pt-BR" ? "Confirmar cancelamento" : "Confirm cancellation")}</button>
+                      <button type="button" onClick={() => void endOfficialArenaCoachContract()} disabled={isCoachSaving}>{isCoachSaving ? (siteLanguage === "pt-BR" ? "Salvando…" : "Saving…") : (siteLanguage === "pt-BR" ? "Confirmar liberação" : "Confirm release")}</button>
                     </div>
                   </div>
                 ) : null}

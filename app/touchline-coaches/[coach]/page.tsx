@@ -158,7 +158,7 @@ export default async function TouchlineCoachProfilePage({
             <div><ShieldCheck aria-hidden="true" /><span><small>{pt ? "Temporada" : "Season"}</small><strong>{offer.seasonId}</strong></span></div>
             <div><BadgeCheck aria-hidden="true" /><span><small>{pt ? "Contratos preservados" : "Preserved contracts"}</small><strong>{coachContracts.length}</strong></span></div>
           </div>
-          <TouchlineCoachPerformance contract={displayedContract} locale={locale} showHistory />
+          <TouchlineCoachPerformance contract={displayedContract} contractHistory={coachContracts} locale={locale} showHistory />
           <p>{pt ? "Dados de jogo TouchLine: contrato, pontos e histórico pertencem à conta autenticada. Nenhum resultado real de futebol é alterado." : "TouchLine game data: contract, points and history belong to the authenticated account. No real-football result is changed."}</p>
           <p>{pt ? `Classificação: ${coachReason(classification.classificationReason, pt)}. O tier fica fixo durante a temporada.` : `Classification: ${coachReason(classification.classificationReason, pt)}. The tier stays fixed through the season.`}</p>
         </article>
