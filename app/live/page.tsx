@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 
 import TouchlineMatchCentre from "@/components/touchline/match-centre/TouchlineMatchCentre";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
-import { completeTouchlineOfficialFixtureSchedule } from "@/lib/football-data/touchline-official-fixture-completion";
 import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
 import {
   isTouchLineLocaleComplete,
@@ -30,9 +29,7 @@ export default async function TouchLineLivePage({
   // Live is intentionally a matchweek surface. The archive is reached from
   // verified weekly results, never by mixing future rounds into the live rail.
   const fixtures = selectArenaFixtureRound(
-    completeTouchlineOfficialFixtureSchedule(
-      await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
-    ),
+    await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
   );
   return <TouchlineMatchCentre
     initialFixtures={fixtures}

@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { toPublicTouchlineFixtures } from "@/lib/football-data/public-fixture";
-import { completeTouchlineOfficialFixtureSchedule } from "@/lib/football-data/touchline-official-fixture-completion";
 
 export async function GET() {
   let fixtures = [] as Awaited<ReturnType<typeof readPublicCompetitionFixtures>>;
   try {
-    fixtures = completeTouchlineOfficialFixtureSchedule(await readPublicCompetitionFixtures());
+    fixtures = await readPublicCompetitionFixtures();
   } catch {
     fixtures = [];
   }
