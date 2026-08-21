@@ -172,7 +172,6 @@
   z-index: 5;
   transform: translate(-50%, -50%);
 }
-.playerSlot:disabled,
 .emptySlot:disabled { cursor: not-allowed; opacity: .46; }
 
 .playerSlot {
@@ -187,8 +186,8 @@
   cursor: pointer;
 }
 
-.playerSlot > span { display: block; width: 58px; aspect-ratio: 430 / 691; }
-.playerSlot > span > * { width: 100%; }
+.playerCardZoom { display: block; width: 58px; aspect-ratio: 430 / 691; }
+.playerCardZoom > * { width: 100%; }
 .playerSlot strong {
   max-width: 82px;
   overflow: hidden;
@@ -200,6 +199,24 @@
   font-size: 8px;
   text-transform: uppercase;
 }
+
+.changePlayer {
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(170, 255, 62, .46);
+  border-radius: 999px;
+  color: #eaffd0;
+  background: rgba(2, 12, 7, .92);
+  font: inherit;
+  font-size: 7px;
+  font-weight: 950;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.changePlayer:hover,
+.changePlayer:focus-visible { border-color: #aaff3e; outline: 2px solid rgba(170, 255, 62, .28); }
+.changePlayer:disabled { cursor: not-allowed; opacity: .46; }
 
 .emptySlot {
   display: grid;

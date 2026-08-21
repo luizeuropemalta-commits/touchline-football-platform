@@ -6,7 +6,7 @@ import { useRef, useState, type CSSProperties } from "react";
 import {
   ChevronRight,
   ExternalLink,
-  Share2,
+  PencilLine,
   ShieldCheck,
   Trophy,
   UserRound,
@@ -35,6 +35,7 @@ import {
   type TouchLineClubOwnerStanding,
 } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published-top-eleven";
 import type { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import styles from "./touchline-tables.module.css";
@@ -42,6 +43,7 @@ import styles from "./touchline-tables.module.css";
 type RankingsCopy = ReturnType<typeof getTouchLineRankingsCopy>;
 
 type TouchLineTablesClientProps = {
+  canEditCardEngine: boolean;
   cardClubOwnerRank: TouchLineClubOwnerStanding[];
   cardPlayerRank: ClubOwnerSquadCard[];
   copy: RankingsCopy;
@@ -124,6 +126,7 @@ function CompactPlayerCard({
 }
 
 export default function TouchLineTablesClient({
+  canEditCardEngine,
   cardClubOwnerRank,
   cardPlayerRank,
   copy,
@@ -158,6 +161,9 @@ export default function TouchLineTablesClient({
         playerId: zoomedCard.id,
         playerName: zoomedCard.name,
       })
+    : null;
+  const zoomedCardEngineHref = zoomedCard && canEditCardEngine
+    ? touchlineCardEnginePlayerHref(zoomedCard.canonicalPlayerId, locale)
     : null;
 
   const { dialogProps: zoomDialogProps } = useTouchlineDialog<HTMLDivElement>({
@@ -369,14 +375,16 @@ export default function TouchLineTablesClient({
                 )
               ) : null}
               <div className={styles.zoomActions}>
-                <button type="button">
-                  <Share2 aria-hidden="true" size={17} />
-                  {isPortuguese ? "Compartilhar" : "Share"}
-                </button>
                 <Link href={touchlinePlayerProfileHref(squadCardToExactPlayer(zoomedCard), locale)}>
                   <UserRound aria-hidden="true" size={17} />
                   {isPortuguese ? "Perfil" : "Profile"}
                 </Link>
+                {zoomedCardEngineHref ? (
+                  <Link className={styles.zoomCardEngineAction} href={zoomedCardEngineHref}>
+                    <PencilLine aria-hidden="true" size={17} />
+                    {isPortuguese ? "Editar no Card Engine" : "Edit in Card Engine"}
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

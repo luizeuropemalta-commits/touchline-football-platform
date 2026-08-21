@@ -187,6 +187,7 @@ import {
   type ArenaVideoViewport,
 } from "@/lib/touchlineArena/arena-formation-video-layout";
 import { TOUCHLINE_QA_CANONICAL_USER_ID } from "@/lib/touchlineArena/qa-canonical-persona";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
 import formationLockSeed from "@/data/touchline-arena-formation-locks.json";
 
@@ -237,6 +238,7 @@ export type ArenaPanelKey = TouchlineArenaPanelKey;
 
 type BenchOption = {
   id: string;
+  canonicalPlayerId?: string | null;
   name: string;
   shortName: string;
   role: ArenaPlayer["role"];
@@ -307,6 +309,7 @@ type PremierClubVisual = {
 
 type TeamBuilderSquadPlayer = {
   id: string;
+  canonicalPlayerId?: string | null;
   providerId?: string | null;
   clubTeamId?: string | null;
   name: string;
@@ -916,6 +919,7 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
     role: player.role || squadPlayer.role,
     card: {
       ...card,
+      canonicalPlayerId: player.card.canonicalPlayerId ?? squadPlayer.canonicalPlayerId ?? null,
       templateUrl: arenaPublishedCardTemplateUrl(clubName, presentation.cardTier),
       playerName: player.card.playerName || squadPlayer.name,
       shirtNumber,
@@ -953,6 +957,7 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
     y: target.y,
     heightVh: target.heightVh,
     card: {
+      canonicalPlayerId: bench.canonicalPlayerId ?? null,
       templateUrl: arenaPublishedCardTemplateUrl(bench.club, presentation.cardTier),
       playerName: bench.name,
       shirtNumber: bench.shirtNumber,
@@ -1019,6 +1024,7 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
   const presentation = resolveArenaPublicCardPresentation(card ?? {});
   return {
     id: `bench-${player.id.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`,
+    canonicalPlayerId: card?.canonicalPlayerId ?? null,
     name: card?.playerName || player.name,
     shortName: player.shortName,
     role: player.role,
@@ -1047,6 +1053,7 @@ function arenaPlayerToFormationReserve(player: ArenaPlayer): BenchOption {
   const presentation = resolveArenaPublicCardPresentation(card ?? {});
   return {
     id: `bench-${player.id.replace(/^(?:field-|bench-)+/i, "")}`,
+    canonicalPlayerId: card?.canonicalPlayerId ?? null,
     name: card?.playerName || player.name,
     shortName: player.shortName,
     role: player.role,
@@ -1074,6 +1081,7 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
   const presentation = resolveArenaPublicCardPresentation(player);
   return {
     id: builderPlayerSquadContractId(player),
+    canonicalPlayerId: player.canonicalPlayerId ?? null,
     name: player.name,
     shortName: player.shortName,
     role: player.role,
@@ -1110,6 +1118,7 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
   return canonicalClubOwnerRosterCard({
     ...(defaultCard ?? {}),
     id: defaultCard?.id ?? player.id,
+    canonicalPlayerId: card?.canonicalPlayerId ?? defaultCard?.canonicalPlayerId ?? null,
     name,
     shortName: player.shortName || name.split(/\s+/).at(-1) || name,
     role: player.role,
@@ -1138,6 +1147,7 @@ function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
   return canonicalClubOwnerRosterCard({
     ...(defaultCard ?? {}),
     id: defaultCard?.id ?? bench.id,
+    canonicalPlayerId: bench.canonicalPlayerId ?? defaultCard?.canonicalPlayerId ?? null,
     name: bench.name,
     shortName: bench.shortName,
     role: bench.role,
@@ -1167,6 +1177,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
   if (defaultBenchOption) {
     return {
       ...defaultBenchOption,
+      canonicalPlayerId: card.canonicalPlayerId ?? (/^[0-9a-f-]{36}$/i.test(card.id) ? card.id : null),
       name: card.name,
       shortName: card.shortName,
       role: card.role as ArenaPlayer["role"],
@@ -1188,6 +1199,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
 
   return {
     id: `bench-${card.id}`,
+    canonicalPlayerId: card.canonicalPlayerId ?? (/^[0-9a-f-]{36}$/i.test(card.id) ? card.id : null),
     name: card.name,
     shortName: card.shortName,
     role: card.role as ArenaPlayer["role"],
@@ -2945,6 +2957,7 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
 
   return {
     sportmonksPlayerId: player.id,
+    canonicalPlayerId: player.card?.canonicalPlayerId ?? null,
     overall: card?.shirtNumber || "--",
     shirtNumber: card?.shirtNumber || "",
     role: card?.position || player.role,
@@ -3011,6 +3024,7 @@ function benchOptionToPreviewCard(bench: BenchOption, previewTier?: TouchlineCar
 
   return {
     sportmonksPlayerId: bench.id,
+    canonicalPlayerId: bench.canonicalPlayerId ?? null,
     overall: bench.shirtNumber ?? "--",
     shirtNumber: bench.shirtNumber,
     role: bench.position,
@@ -3140,6 +3154,7 @@ function builderPlayerToPreviewCard(
 
   return {
     sportmonksPlayerId: player.providerId || player.id,
+    canonicalPlayerId: player.canonicalPlayerId ?? null,
     overall: shirtNumber ?? "--",
     shirtNumber,
     role: player.position || roleLabel(player.role),
@@ -3184,6 +3199,7 @@ function arenaPlayerZoomDetails(
   player: TouchlineEliteExactPlayer,
   locale: TouchLineLocale,
   profileHref?: string | null,
+  canEditCardEngine = false,
 ): TouchlineCardZoomDetails {
   return buildTouchlinePlayerCardZoomDetails({
     locale,
@@ -3201,6 +3217,9 @@ function arenaPlayerZoomDetails(
     editorialCard: player.editorialCard,
     touchlinePoints: player.fantasyPoints,
     profileHref,
+    cardEngineHref: canEditCardEngine
+      ? touchlineCardEnginePlayerHref(player.canonicalPlayerId, locale)
+      : null,
   });
 }
 
@@ -3297,6 +3316,8 @@ type ArenaClientProps = {
   initialEmptyLineup?: boolean;
   /** Server-proven, stable-QA-only entry point for the visual calibration tool. */
   initialQaVisualEditor?: boolean;
+  /** Server-proven owner capability. Protected routes still enforce authority. */
+  canEditCardEngine?: boolean;
 };
 
 type ArenaDragState = {
@@ -3357,6 +3378,7 @@ export default function ArenaClient({
   initialDemoLineup = false,
   initialEmptyLineup = false,
   initialQaVisualEditor = false,
+  canEditCardEngine = false,
 }: ArenaClientProps) {
   const standaloneExperience = standaloneMarket ? "market" : standalonePanel ?? null;
   const initialBuilderClubKey = TEAM_BUILDER_CLUBS.some((club) => club.teamId === initialContractClubId)
@@ -3810,7 +3832,7 @@ export default function ArenaClient({
       })
     : null;
   const spotlightPlayerZoomDetails = spotlightPlayerCard
-    ? arenaPlayerZoomDetails(spotlightPlayerCard, siteLanguage, spotlightPlayerProfileHref)
+    ? arenaPlayerZoomDetails(spotlightPlayerCard, siteLanguage, spotlightPlayerProfileHref, canEditCardEngine)
     : null;
   const replacementTargetProfileHref = replacementTarget
     ? touchlinePlayerProfileHref(arenaCardToPlayer(replacementTarget), siteLanguage)
@@ -4062,7 +4084,7 @@ export default function ArenaClient({
     ? touchlinePlayerProfileHref(selectedLiveSimulationPreviewCard, siteLanguage)
     : null;
   const selectedLiveSimulationZoomDetails = selectedLiveSimulationPreviewCard
-    ? arenaPlayerZoomDetails(selectedLiveSimulationPreviewCard, siteLanguage, selectedLiveSimulationProfileHref)
+    ? arenaPlayerZoomDetails(selectedLiveSimulationPreviewCard, siteLanguage, selectedLiveSimulationProfileHref, canEditCardEngine)
     : null;
   const clubMatchLoop = visibleClubMatches.length > 1
     ? [...visibleClubMatches, ...visibleClubMatches]
@@ -4173,6 +4195,7 @@ export default function ArenaClient({
           shirtNumber: marketSpotlightPlayer?.shirtNumber,
           countryCode3: marketSpotlightPlayer?.countryCode3,
         }, siteLanguage, { previewTier: marketSpotlightCard.cardTier }),
+        canEditCardEngine,
       )
     : null;
   const requiresAuthoritativeMarketInventory = marketInventoryMode === "checking"
@@ -8943,6 +8966,7 @@ export default function ArenaClient({
                     }))}
                     contractedCount={authoritativeOwnedSquadCount}
                     formationFeedback={marketFormationFeedback}
+                    canEditCardEngine={canEditCardEngine}
                     onAssignPlayer={assignMarketFormationPlayer}
                   />
 

@@ -67,6 +67,7 @@ import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigatio
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import styles from "./player-profile.module.css";
 
 export const dynamic = "force-dynamic";
@@ -600,6 +601,7 @@ export default async function TouchLinePlayerProfilePage({
   });
   if (canonicalProviderPlayerId) exactPlayer.sportmonksPlayerId = canonicalProviderPlayerId;
   const canonicalPlayerId = canonicalIdentity ? publicProjection?.identity.value?.playerId : null;
+  exactPlayer.canonicalPlayerId = canonicalPlayerId;
   const publishedCards = canonicalPlayerId
     ? await loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
     : new Map();
@@ -699,6 +701,9 @@ export default async function TouchLinePlayerProfilePage({
         editorialCard,
         touchlinePoints: competition.touchlinePoints,
         profileHref,
+        cardEngineHref: currentUser && isOwnerEmail(currentUser.email)
+          ? touchlineCardEnginePlayerHref(canonicalPlayerId, locale)
+          : null,
         eyebrow: isPortuguese ? "Perfil oficial do atleta" : "Official player profile",
         extraFields: [
           { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },

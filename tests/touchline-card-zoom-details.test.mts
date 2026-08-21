@@ -72,6 +72,31 @@ test("renders the same published editorial profile with English labels", () => {
   assert.equal(details.profileLabel, "View full profile");
 });
 
+test("carries optional profile, history and owner-only Card Engine actions without inventing routes", () => {
+  const details = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Test player",
+    profileHref: "/touchline-players/test-player?lang=en-GB",
+    historyHref: "/touchline-history/test-player?lang=en-GB",
+    cardEngineHref: `/admin/manual-card-editorial?playerId=${PLAYER_ID}#manual-card-editor`,
+  });
+
+  assert.equal(details.profileHref, "/touchline-players/test-player?lang=en-GB");
+  assert.equal(details.historyHref, "/touchline-history/test-player?lang=en-GB");
+  assert.equal(
+    details.cardEngineHref,
+    `/admin/manual-card-editorial?playerId=${PLAYER_ID}#manual-card-editor`,
+  );
+  assert.equal(details.cardEngineLabel, "EDIT IN CARD ENGINE");
+
+  const publicDetails = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Public player",
+  });
+  assert.equal(publicDetails.historyHref, undefined);
+  assert.equal(publicDetails.cardEngineHref, undefined);
+});
+
 test("an unpublished player keeps only real identity fields with no valuation placeholder", () => {
   const details = buildTouchlinePlayerCardZoomDetails({
     locale: "en-GB",

@@ -57,6 +57,8 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   cardPriceVersion?: string | null;
   touchlinePoints?: string | number | null;
   profileHref?: string | null;
+  historyHref?: string | null;
+  cardEngineHref?: string | null;
   eyebrow?: string;
   extraFields?: readonly TouchlineCardZoomExtraField[];
 }>): TouchlineCardZoomDetails {
@@ -107,5 +109,9 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
     fields: baseFields,
     profileHref: input.profileHref ?? undefined,
     profileLabel: isPortuguese ? "Ver perfil completo" : "View full profile",
+    historyHref: input.historyHref ?? undefined,
+    historyLabel: isPortuguese ? "Ver histórico TouchLine" : "View TouchLine history",
+    cardEngineHref: input.cardEngineHref ?? undefined,
+    cardEngineLabel: isPortuguese ? "EDITAR NO CARD ENGINE" : "EDIT IN CARD ENGINE",
   };
 }

@@ -194,19 +194,21 @@ test("matchday bench and remaining squad are disjoint views of the same authorit
   assert.match(source, /bench=\{matchdayBenchPlayers\.map\([\s\S]*?card: benchOptionToPreviewCard/);
   assert.match(source, /remainingSquad=\{reserveVaultPlayers\.map\([\s\S]*?card: benchOptionToPreviewCard/);
   assert.match(stage, /export type TouchlineSquadBuilderBenchPlayer = \{[\s\S]*?card: TouchlineEliteExactPlayer;/);
-  assert.match(stage, /className=\{styles\.rosterCard\}[\s\S]*?<TouchlineEliteExactCard/);
+  assert.match(stage, /className=\{styles\.rosterCard\}[\s\S]*?<SquadPlayerCardZoom/);
 });
 
 test("owned squad cards remain visibly rendered in the authenticated Market builder", async () => {
   const stage = await readFile(stagePath, "utf8");
   const renderedCards = stage.match(/<TouchlineEliteExactCard[\s\S]*?\/>/g) ?? [];
+  const sharedZoomUsages = stage.match(/<SquadPlayerCardZoom/g) ?? [];
 
-  assert.equal(renderedCards.length, 4);
-  for (const card of renderedCards) {
-    assert.match(card, /allowVisualInventoryPreview/);
-    assert.match(card, /showCardActions=\{false\}/);
-    assert.match(card, /showProfileAction=\{false\}/);
-  }
+  assert.equal(sharedZoomUsages.length, 3);
+  assert.equal(renderedCards.length, 3);
+  assert.match(stage, /function SquadPlayerCardZoom/);
+  assert.match(stage, /allowVisualInventoryPreview/);
+  assert.match(stage, /showCardActions=\{false\}/);
+  assert.match(stage, /showProfileAction=\{false\}/);
+  assert.match(stage, /expandedContent=/);
 });
 
 test("formation vacancies and replacements stay inside the pitch with eligible-only controls", async () => {

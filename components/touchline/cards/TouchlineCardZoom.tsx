@@ -17,6 +17,10 @@ export type TouchlineCardZoomDetails = {
   }>;
   profileHref?: string;
   profileLabel?: string;
+  historyHref?: string;
+  historyLabel?: string;
+  cardEngineHref?: string;
+  cardEngineLabel?: string;
 };
 
 type TouchlineCardZoomProps = {
@@ -48,10 +52,24 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
           </div>
         ))}
       </dl>
-      {details.profileHref ? (
-        <a className={styles.profileAction} href={details.profileHref}>
-          {details.profileLabel ?? "View profile"}
-        </a>
+      {(details.profileHref || details.historyHref || details.cardEngineHref) ? (
+        <nav className={styles.detailActions} aria-label={details.title}>
+          {details.profileHref ? (
+            <a className={styles.profileAction} href={details.profileHref}>
+              {details.profileLabel ?? "View profile"}
+            </a>
+          ) : null}
+          {details.historyHref ? (
+            <a className={styles.historyAction} href={details.historyHref}>
+              {details.historyLabel ?? "View TouchLine history"}
+            </a>
+          ) : null}
+          {details.cardEngineHref ? (
+            <a className={styles.cardEngineAction} href={details.cardEngineHref}>
+              {details.cardEngineLabel ?? "Edit in Card Engine"}
+            </a>
+          ) : null}
+        </nav>
       ) : null}
     </aside>
   );

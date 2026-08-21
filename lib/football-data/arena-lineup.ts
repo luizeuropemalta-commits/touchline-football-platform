@@ -11,6 +11,8 @@ export type ArenaLineupPlayer = {
   role: ArenaLineupRole;
   asset?: string;
   card?: {
+    /** Canonical TouchLine UUID; provider ids must never substitute for it. */
+    canonicalPlayerId?: string | null;
     templateUrl: string;
     frameUrl?: string | null;
     playerName: string;

@@ -224,7 +224,14 @@
   line-height: 1.2;
 }
 
-.profileAction {
+.detailActions {
+  display: grid;
+  gap: 8px;
+}
+
+.profileAction,
+.historyAction,
+.cardEngineAction {
   display: grid;
   min-height: 44px;
   place-items: center;
@@ -235,6 +242,28 @@
   font-size: 13px;
   font-weight: 950;
   text-decoration: none;
+}
+
+.historyAction {
+  border-color: rgba(158, 255, 45, .45);
+  color: #eaffd0;
+  background: rgba(158, 255, 45, .08);
+}
+
+.cardEngineAction {
+  border-color: rgba(255, 208, 88, .7);
+  color: #1a1000;
+  background: linear-gradient(135deg, #ffd058, #f5a623);
+}
+
+.profileAction:hover,
+.profileAction:focus-visible,
+.historyAction:hover,
+.historyAction:focus-visible,
+.cardEngineAction:hover,
+.cardEngineAction:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 @media (max-width: 720px) {

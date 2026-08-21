@@ -4,7 +4,13 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, X } from "lucide-react";
 
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
+import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
+import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
+import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
+import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
+import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 import {
   isTouchlineFormationCandidateEligible,
   touchlineFormationCapacities,
@@ -53,12 +59,70 @@ type Props = {
   remainingSquad: TouchlineSquadBuilderBenchPlayer[];
   contractedCount: number;
   formationFeedback?: string | null;
+  canEditCardEngine?: boolean;
   onAssignPlayer: (selection: {
     role: TouchlineSquadBuilderRole;
     targetPlayerId: string | null;
     candidateId: string;
   }) => void;
 };
+
+function SquadPlayerCardZoom({
+  card,
+  locale,
+  canEditCardEngine,
+}: Readonly<{
+  card: TouchlineEliteExactPlayer;
+  locale: string;
+  canEditCardEngine: boolean;
+}>) {
+  const portuguese = locale === "pt-BR";
+  const profileHref = touchlinePlayerProfileHref(card, locale, { previewTier: card.cardTier });
+  const tierKey = card.editorialCard?.tierKey ?? card.cardTier ?? null;
+  const tierAccent = tierKey ? touchlineCardTierPalette(tierKey).accent : TOUCHLINE_NEUTRAL_CARD_ACCENT;
+  const cardEngineHref = canEditCardEngine
+    ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+    : null;
+
+  return (
+    <TouchlineCardZoom
+      ariaLabel={`${portuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}
+      tierAccent={tierAccent}
+      tierLabel={tierKey ? touchlineCardTierName(tierKey, locale) : undefined}
+      details={buildTouchlinePlayerCardZoomDetails({
+        locale,
+        name: card.name,
+        clubName: card.clubName,
+        position: card.position || card.role,
+        nationality: card.nationality || card.countryCode3,
+        editorialCard: card.editorialCard,
+        touchlinePoints: card.fantasyPoints,
+        profileHref,
+        cardEngineHref,
+      })}
+      expandedContent={(
+        <TouchlineEliteExactCard
+          player={card}
+          rankingMode="live"
+          forceNeonActive
+          imageLoading="eager"
+          playerProfileHref={profileHref}
+        />
+      )}
+    >
+      <TouchlineEliteExactCard
+        player={card}
+        rankingMode="live"
+        optimizeForLiveCompact
+        enableInteractiveNeon={false}
+        showCardActions={false}
+        showProfileAction={false}
+        showSocialMetrics={false}
+        allowVisualInventoryPreview
+      />
+    </TouchlineCardZoom>
+  );
+}
 
 function evenlySpacedY(count: number, index: number) {
   if (count <= 1) return 50;
@@ -121,6 +185,7 @@ export default function TouchlineSquadBuilderStage({
   remainingSquad,
   contractedCount,
   formationFeedback,
+  canEditCardEngine = false,
   onAssignPlayer,
 }: Props) {
   const portuguese = locale === "pt-BR";
@@ -236,30 +301,26 @@ export default function TouchlineSquadBuilderStage({
             {slots.map((slot) => {
               const player = startersByRole.get(slot.role)?.[slot.roleIndex];
               return player ? (
-                <button
+                <article
                   key={slot.id}
-                  type="button"
                   className={styles.playerSlot}
                   style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-                  onClick={() => setActiveSlot({ id: slot.id, role: slot.role, targetPlayerId: player.id })}
-                  disabled={!journey.formationComplete}
-                  aria-label={`${player.name} · ${roleLabel(slot.role, portuguese)}`}
-                  aria-haspopup="dialog"
                 >
-                  <span aria-hidden="true">
-                    <TouchlineEliteExactCard
-                      player={player.card}
-                      rankingMode="live"
-                      optimizeForLiveCompact
-                      enableInteractiveNeon={false}
-                      showCardActions={false}
-                      showProfileAction={false}
-                      showSocialMetrics={false}
-                      allowVisualInventoryPreview
-                    />
+                  <span className={styles.playerCardZoom}>
+                    <SquadPlayerCardZoom card={player.card} locale={locale} canEditCardEngine={canEditCardEngine} />
                   </span>
                   <strong>{player.shortName}</strong>
-                </button>
+                  <button
+                    type="button"
+                    className={styles.changePlayer}
+                    onClick={() => setActiveSlot({ id: slot.id, role: slot.role, targetPlayerId: player.id })}
+                    disabled={!journey.formationComplete}
+                    aria-label={`${portuguese ? "Alterar" : "Change"} ${player.name} · ${roleLabel(slot.role, portuguese)}`}
+                    aria-haspopup="dialog"
+                  >
+                    {portuguese ? "Alterar" : "Change"}
+                  </button>
+                </article>
               ) : (
                 <button
                   key={slot.id}
@@ -360,17 +421,8 @@ export default function TouchlineSquadBuilderStage({
             return (
               <div key={player?.id ?? `empty-bench-${index}`} className={player ? styles.filledBenchSlot : ""}>
                 {player ? (
-                  <div className={styles.rosterCard} aria-hidden="true">
-                    <TouchlineEliteExactCard
-                      player={player.card}
-                      rankingMode="live"
-                      optimizeForLiveCompact
-                      enableInteractiveNeon={false}
-                      showCardActions={false}
-                      showProfileAction={false}
-                      showSocialMetrics={false}
-                      allowVisualInventoryPreview
-                    />
+                  <div className={styles.rosterCard}>
+                    <SquadPlayerCardZoom card={player.card} locale={locale} canEditCardEngine={canEditCardEngine} />
                   </div>
                 ) : null}
                 <b>{player?.shortName ?? "+"}</b>
@@ -394,17 +446,8 @@ export default function TouchlineSquadBuilderStage({
         </header>
         <div>{remainingSquad.length ? remainingSquad.map((player) => (
           <div key={player.id}>
-            <div className={styles.rosterCard} aria-hidden="true">
-              <TouchlineEliteExactCard
-                player={player.card}
-                rankingMode="live"
-                optimizeForLiveCompact
-                enableInteractiveNeon={false}
-                showCardActions={false}
-                showProfileAction={false}
-                showSocialMetrics={false}
-                allowVisualInventoryPreview
-              />
+            <div className={styles.rosterCard}>
+              <SquadPlayerCardZoom card={player.card} locale={locale} canEditCardEngine={canEditCardEngine} />
             </div>
             <b>{player.shortName}</b>
             <small>{player.position}</small>

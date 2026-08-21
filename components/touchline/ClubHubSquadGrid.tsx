@@ -19,6 +19,7 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 
 const INITIAL_CARD_COUNT = 8;
 const CARD_BATCH_SIZE = 8;
@@ -44,6 +45,7 @@ type ClubHubSquadGridProps = {
     currentClub: string;
   };
   openProfileLabel: string;
+  canEditCardEngine?: boolean;
 };
 
 /**
@@ -52,7 +54,7 @@ type ClubHubSquadGridProps = {
  * them. This preserves the canonical card component without hydrating 25–30
  * heavy products during the first mobile render.
  */
-export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel }: ClubHubSquadGridProps) {
+export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel, canEditCardEngine = false }: ClubHubSquadGridProps) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_CARD_COUNT);
   // The footballer remains present on every Club Hub surface. Published
   // profiles render in colour; incomplete editorial inputs use the same
@@ -109,6 +111,9 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   activeContractCard: null,
                   touchlinePoints: card.touchlinePoints,
                   profileHref,
+                  cardEngineHref: canEditCardEngine
+                    ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+                    : null,
                 })}
                 expandedContent={(
                   <TouchlineEliteExactCard

@@ -167,6 +167,8 @@ const FIELD_LABELS_PT_BR: Partial<Record<EditableBlock, string>> = {
 
 export type TouchlineEliteExactPlayer = {
   sportmonksPlayerId: string;
+  /** Canonical TouchLine UUID used only for protected exact-record actions. */
+  canonicalPlayerId?: string | null;
   overall: string | number;
   shirtNumber?: string | number | null;
   role: string;

@@ -6,6 +6,8 @@ import { parseTouchlineArenaIntroIntent } from "@/lib/touchlineArena/arena-intro
 import { touchlineClubOwnerProfileHref, touchlineClubOwnerSubstitutionHref } from "@/lib/touchlineArena/club-owner-routes";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
+import { createClient } from "@/lib/supabase/server";
+import { isOwnerEmail } from "@/lib/admin/owner";
 
 export default async function ArenaPage({
   searchParams,
@@ -29,7 +31,6 @@ export default async function ArenaPage({
   const requestHost = (await headers()).get("host")?.split(":")[0]?.toLowerCase();
   const initialQaVisualEditor = firstValue(params.qaEditor) === "1"
     && requestHost === TOUCHLINE_QA_HOSTNAME;
-
   if (initialPanel && initialPanel !== "bench" && !initialQaVisualEditor) {
     const marketParams = new URLSearchParams();
     const lang = firstValue(params.lang);
@@ -50,6 +51,9 @@ export default async function ArenaPage({
     redirect(touchlineClubOwnerProfileHref(lang));
   }
 
+  const supabase = await createClient();
+  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+
   return (
     <ArenaClient
       initialPanel={initialPanel}
@@ -62,6 +66,7 @@ export default async function ArenaPage({
         skipIntro: firstValue(params.skipIntro),
       })}
       initialQaVisualEditor={initialQaVisualEditor}
+      canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
     />
   );
 }

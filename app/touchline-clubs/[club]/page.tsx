@@ -39,6 +39,8 @@ import {
 import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
 import { getTouchlineClubTrophyAssets } from "@/lib/touchlineArena/club-trophy-manifest";
 import { fetchTouchlineInternalJson } from "@/lib/server/safe-internal-fetch";
+import { createClient } from "@/lib/supabase/server";
+import { isOwnerEmail } from "@/lib/admin/owner";
 
 export const dynamic = "force-dynamic";
 
@@ -299,6 +301,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const { club: clubParam } = await params;
   const { lang } = await searchParams;
   const locale = normalizeTouchLineLocale(lang);
+  const supabase = await createClient();
+  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
   const t = (key: Parameters<typeof touchLineT>[1]) => touchLineT(locale, key);
   const localeQuery = `lang=${encodeURIComponent(locale)}`;
   const cardLabels = {
@@ -419,6 +424,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           lineup={clubLineup}
           locale={locale}
           labels={cardLabels}
+          canEditCardEngine={canEditCardEngine}
         />
 
         <ClubHubMatchdayTechnicalArea
@@ -463,6 +469,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               locale={locale}
               labels={cardLabels}
               openProfileLabel={t("openSelectedPlayerProfile")}
+              canEditCardEngine={canEditCardEngine}
             />
           ) : (
             <div className="club-hub-empty" role={squadUnavailable ? "status" : undefined}>

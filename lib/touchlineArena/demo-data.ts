@@ -340,6 +340,7 @@ export function squadCardToExactPlayer(
 
   return {
     sportmonksPlayerId: card.id,
+    canonicalPlayerId: card.canonicalPlayerId ?? (/^[0-9a-f-]{36}$/i.test(card.id) ? card.id : null),
     formationPlayerId: card.id,
     overall: card.shirtNumber ?? "--",
     shirtNumber: card.shirtNumber,

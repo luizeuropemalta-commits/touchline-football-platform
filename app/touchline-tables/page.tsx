@@ -77,6 +77,7 @@ export default async function TouchLineTablesPage({
 
   return (
     <TouchLineTablesClient
+      canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
       cardClubOwnerRank={cardClubOwnerRank}
       cardPlayerRank={cardPlayerRank}
       copy={copy}

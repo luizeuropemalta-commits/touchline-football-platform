@@ -11,6 +11,7 @@ import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-z
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 
 import styles from "./ClubHubOfficialLineup.module.css";
 
@@ -26,6 +27,7 @@ type ClubHubOfficialLineupProps = {
     totalPoints: string;
     cardPrice: string;
   };
+  canEditCardEngine?: boolean;
 };
 
 export default function ClubHubOfficialLineup({
@@ -34,6 +36,7 @@ export default function ClubHubOfficialLineup({
   locale,
   staticVisualQa = false,
   labels,
+  canEditCardEngine = false,
 }: ClubHubOfficialLineupProps) {
   const isPortuguese = locale === "pt-BR";
   const confirmed = lineup.status === "confirmed";
@@ -113,6 +116,9 @@ export default function ClubHubOfficialLineup({
                     activeContractCard: null,
                     touchlinePoints: card.touchlinePoints,
                     profileHref,
+                    cardEngineHref: canEditCardEngine
+                      ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+                      : null,
                   })}
                   expandedContent={(
                     <TouchlineEliteExactCard
