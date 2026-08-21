@@ -175,9 +175,9 @@ export default function TouchlineCardZoom({
             </button>
             <div className={styles.cardColumn}>
               <div className={styles.expandedCard} data-card-zoom="expanded">{expandedContent ?? children}</div>
-              {(tierLabel || contractTermLabel) ? (
+              {(contractTermLabel || (!details && tierLabel)) ? (
                 <div className={styles.expandedMeta}>
-                  {tierLabel ? <strong>{tierLabel}</strong> : null}
+                  {!details && tierLabel ? <strong>{tierLabel}</strong> : null}
                   {contractTermLabel ? <span>{contractTermLabel}</span> : null}
                 </div>
               ) : null}

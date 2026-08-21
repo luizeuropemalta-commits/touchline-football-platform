@@ -164,3 +164,13 @@ test("phone landscape keeps the complete expanded card inside the short viewport
     /\.panelWithDetails \.expandedMeta \{[\s\S]*?display: none;/,
   );
 });
+
+test("a detailed zoom does not repeat the tier in a detached metadata strip", () => {
+  const zoomSource = readFileSync(
+    new URL("../components/touchline/cards/TouchlineCardZoom.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(zoomSource, /contractTermLabel \|\| \(!details && tierLabel\)/);
+  assert.match(zoomSource, /!details && tierLabel \? <strong>/);
+});
