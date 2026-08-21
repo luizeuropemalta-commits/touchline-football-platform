@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
+import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-schedule-sync";
 import { syncSportmonksStarterFoundation } from "@/lib/football-data/starter-sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -36,7 +37,7 @@ async function authorize(request: NextRequest): Promise<SyncAuthResult> {
   return { ok: false, reason: "Owner session or football data sync secret required." };
 }
 
-async function runStarterSync(request: NextRequest) {
+async function runFootballDataSync(request: NextRequest) {
   const auth = await authorize(request);
   if (!auth.ok) {
     return NextResponse.json({ ok: false, status: "unauthorized", error: auth.reason }, { status: 401 });
@@ -56,15 +57,33 @@ async function runStarterSync(request: NextRequest) {
 
   const competitionId = request.nextUrl.searchParams.get("competitionId") ?? undefined;
   const clubId = request.nextUrl.searchParams.get("clubId") ?? undefined;
+  const scope = request.nextUrl.searchParams.get("scope") ?? "foundation";
 
   try {
-    const result = await syncSportmonksStarterFoundation(admin, { competitionId, clubId });
+    const result = scope === "fixture_schedule"
+      ? await syncSportmonksFixtureSchedule(admin, {
+          competitionId,
+          fromDate: request.nextUrl.searchParams.get("fromDate") ?? undefined,
+          throughDate: request.nextUrl.searchParams.get("throughDate") ?? undefined,
+        })
+      : scope === "foundation"
+        ? await syncSportmonksStarterFoundation(admin, { competitionId, clubId })
+        : null;
+
+    if (!result) {
+      return NextResponse.json(
+        { ok: false, status: "invalid_scope", error: "Use scope=foundation or scope=fixture_schedule." },
+        { status: 400, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     return NextResponse.json({
       ...result,
       mode: auth.mode,
       syncedAt: new Date().toISOString(),
-      note: "TouchLine Data feeds the normalized TouchLine database. Frontend modules should read from /api/football-data/foundation.",
+      note: scope === "fixture_schedule"
+        ? "Sportmonks schedule data was normalized before the Live read model can publish it."
+        : "TouchLine Data feeds the normalized TouchLine database. Frontend modules should read from /api/football-data/foundation.",
     });
   } catch (error) {
     return NextResponse.json(
@@ -79,10 +98,17 @@ async function runStarterSync(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  return runStarterSync(request);
+export async function GET(_request: NextRequest) {
+  return NextResponse.json(
+    {
+      ok: false,
+      status: "method_not_allowed",
+      error: "Football data synchronization requires POST.",
+    },
+    { status: 405, headers: { Allow: "POST", "Cache-Control": "no-store" } },
+  );
 }
 
 export async function POST(request: NextRequest) {
-  return runStarterSync(request);
+  return runFootballDataSync(request);
 }
