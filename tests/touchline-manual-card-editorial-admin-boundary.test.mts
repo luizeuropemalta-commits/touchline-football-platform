@@ -94,6 +94,12 @@ test("single-card market value requires a read-only visual preview before Done c
   assert.doesNotMatch(actions, /onClick=\{save\}[\s\S]{0,180}Save to Card Engine/);
 });
 
+test("the protected preview never coerces an empty manual value to zero", () => {
+  assert.match(actions, /if \(!marketValueEur\.trim\(\)\)/);
+  assert.match(actions, /setStatus\(copy\.invalid\)/);
+  assert.match(actions, /const parsedValue = Number\(marketValueEur\)/);
+});
+
 test("revert is delegated to the same protected atomic migration boundary", () => {
   assert.match(route, /export async function PATCH/);
   assert.match(route, /action !== "revert"/);

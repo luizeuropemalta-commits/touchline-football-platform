@@ -121,6 +121,10 @@ export function ManualCardEditorialEditor({ players, locale = "en-GB", initialPl
   }
 
   function validatedValue() {
+    if (!marketValueEur.trim()) {
+      setStatus(copy.invalid);
+      return null;
+    }
     const parsedValue = Number(marketValueEur);
     if (!playerId || !Number.isSafeInteger(parsedValue) || parsedValue < 0) {
       setStatus(copy.invalid);
