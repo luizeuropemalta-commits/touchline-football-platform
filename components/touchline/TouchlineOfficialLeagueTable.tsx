@@ -51,7 +51,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
   "en-GB": {
     eyebrow: "TouchLine England",
     title: "Official League Table",
-    description: "TouchLine Verified final results define the standings. Live matches show their score and highlighted clubs without changing points until full time.",
+    description: "The one official table combines TouchLine Verified final results with the latest persisted live scores. Live rows and positions are provisional until full time.",
     caption: "TouchLine England official league table",
     position: "Pos",
     club: "Club",
@@ -68,7 +68,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     finalResults: "verified final results",
     pendingTitle: "Initial table — all 20 clubs are level.",
     pendingDescription: "Every club is shown with neutral statistics. Positions begin after the first verified final result; no league leader or position is invented.",
-    partialTitle: "Verified results are available; official tie-break positions are still being confirmed.",
+    partialTitle: "Verified results or live provisional scores are available; official tie-break positions are still being confirmed.",
     partialDescription: "Statistics are shown without invented positions until the canonical ordering is complete.",
     unavailableTitle: "Official standings are temporarily unavailable.",
     unavailableDescription: "No league position is shown until TouchLine can verify the canonical result set again.",
@@ -78,7 +78,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
   "pt-BR": {
     eyebrow: "TouchLine England",
     title: "Tabela Oficial da Liga",
-    description: "Resultados finais verificados definem a classificação. Partidas ao vivo exibem placar e destaque sem alterar pontos até o resultado final.",
+    description: "A única tabela oficial combina resultados finais verificados com os últimos placares ao vivo persistidos. Linhas e posições ao vivo são provisórias até o fim.",
     caption: "Tabela oficial da liga TouchLine England",
     position: "Pos",
     club: "Clube",
@@ -95,7 +95,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     finalResults: "resultados finais verificados",
     pendingTitle: "Tabela inicial — os 20 clubes estão empatados.",
     pendingDescription: "Todos os clubes aparecem com estatísticas neutras. As posições começam após o primeiro resultado final verificado; nenhuma liderança ou posição é inventada.",
-    partialTitle: "Há resultados verificados; as posições de desempate oficial ainda estão sendo confirmadas.",
+    partialTitle: "Há resultados verificados ou placares ao vivo provisórios; as posições de desempate oficial ainda estão sendo confirmadas.",
     partialDescription: "As estatísticas aparecem sem posições inventadas até a ordenação canônica ser concluída.",
     unavailableTitle: "A tabela oficial está temporariamente indisponível.",
     unavailableDescription: "Nenhuma posição é exibida até a TouchLine verificar novamente o conjunto canônico de resultados.",
@@ -131,7 +131,7 @@ export default function TouchlineOfficialLeagueTable({
 
   useEffect(() => {
     if (!hasLiveFixture) return;
-    const interval = window.setInterval(() => router.refresh(), 30_000);
+    const interval = window.setInterval(() => router.refresh(), 10_000);
     return () => window.clearInterval(interval);
   }, [hasLiveFixture, router]);
 

@@ -32,6 +32,7 @@ export type OfficialStandings<T> = Readonly<{
 }>;
 
 const FINAL_STATUS = /^(?:ft|finished|full[ -]?time|after extra time|aet|after penalties)$/i;
+const LIVE_STATUS = /^(?:live|in play|inplay|1st half|2nd half|half time|ht|extra time|penalties)$/i;
 
 function isScore(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
@@ -49,6 +50,11 @@ function playedResult(goalsFor: number, goalsAgainst: number): "W" | "D" | "L" {
 export function buildOfficialStandings<T>(input: {
   teams: readonly OfficialStandingsTeam<T>[];
   fixtures: readonly TouchlineFixture[];
+  /**
+   * The canonical display table may include a persisted live score as one
+   * provisional match. Final-only callers retain the default behavior.
+   */
+  includeLive?: boolean;
 }): OfficialStandings<T> {
   const teamsByProviderId = new Map(input.teams.map((team) => [team.providerTeamId, team]));
   const rows = new Map(input.teams.map((team) => [team.providerTeamId, {
@@ -68,7 +74,10 @@ export function buildOfficialStandings<T>(input: {
   const completedFixtureIds = new Set<string>();
 
   for (const fixture of input.fixtures) {
-    if (!FINAL_STATUS.test(fixture.status?.trim() ?? "")
+    const status = fixture.status?.trim() ?? "";
+    const isFinal = FINAL_STATUS.test(status);
+    const isLive = Boolean(input.includeLive && LIVE_STATUS.test(status));
+    if ((!isFinal && !isLive)
       || !isScore(fixture.homeScore) || !isScore(fixture.awayScore)) continue;
     const providerFixtureId = fixture.providerId.trim();
     if (!providerFixtureId) continue;
@@ -97,7 +106,7 @@ export function buildOfficialStandings<T>(input: {
       else row.lost += 1;
     }
     completedFixtureIds.add(providerFixtureId);
-    completedFixtures += 1;
+    if (isFinal) completedFixtures += 1;
   }
 
   const rankedRows = [...rows.values()]

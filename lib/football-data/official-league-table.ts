@@ -46,6 +46,8 @@ export type TouchlineOfficialLeagueTableCoverage = Readonly<{
   mappedClubs: number;
   fixturesInSeason: number;
   completedFixtures: number;
+  /** Persisted current scores included provisionally in this same table. */
+  liveFixtures: number;
   duplicateFixtures: number;
 }>;
 
@@ -67,7 +69,7 @@ export type TouchlineOfficialLeagueTableRow = Readonly<{
   goalDifference: number;
   points: number;
   form: readonly ("W" | "D" | "L")[];
-  /** A persisted in-progress fixture. It informs the row but never alters standings totals before final. */
+  /** A persisted in-progress fixture included provisionally in this same table. */
   liveFixture: Readonly<{
     providerFixtureId: string;
     scoreFor: number | null;
@@ -122,6 +124,7 @@ function emptyTable(
       mappedClubs: input.teams.length,
       fixturesInSeason: 0,
       completedFixtures: 0,
+      liveFixtures: 0,
       duplicateFixtures: 0,
       ...coverage,
     },
@@ -166,6 +169,14 @@ function fixtureForStandings(
 function isLiveFixture(fixture: TouchlineOfficialLeagueTableFixture) {
   const status = fixture.status?.trim().toLowerCase().replace(/[_-]+/g, " ") ?? "";
   return /^(?:live|in play|inplay|1st half|2nd half|half time|ht|extra time|penalties)$/.test(status);
+}
+
+function hasVerifiedLiveScore(fixture: TouchlineOfficialLeagueTableFixture) {
+  return isLiveFixture(fixture)
+    && Number.isInteger(fixture.homeScore)
+    && Number(fixture.homeScore) >= 0
+    && Number.isInteger(fixture.awayScore)
+    && Number(fixture.awayScore) >= 0;
 }
 
 function liveFixtureForClub(
@@ -290,15 +301,20 @@ export function resolveTouchlineOfficialLeagueTable(input: ResolveInput): Touchl
   const standingsFixtures = fixturesInSeason
     .map((fixture) => fixtureForStandings(fixture, teamsByClubId))
     .filter((fixture): fixture is TouchlineFixture => Boolean(fixture));
+  // One canonical projection: completed results plus the most recent
+  // persisted live scores. The shared standings engine applies exactly the
+  // same W/D/L, GD and official ordering rules to both states.
   const standings = buildOfficialStandings({
     teams: input.teams.map((team) => ({ providerTeamId: team.providerTeamId, name: team.name, value: team })),
     fixtures: standingsFixtures,
+    includeLive: true,
   });
   const coverage: TouchlineOfficialLeagueTableCoverage = {
     expectedClubs,
     mappedClubs: input.teams.length,
     fixturesInSeason: fixturesInSeason.length,
     completedFixtures: standings.completedFixtures,
+    liveFixtures: fixturesInSeason.filter(hasVerifiedLiveScore).length,
     duplicateFixtures: standings.duplicateFixtures,
   };
   const asOf = maxTimestamp([
@@ -306,7 +322,7 @@ export function resolveTouchlineOfficialLeagueTable(input: ResolveInput): Touchl
     ...input.teams.map((team) => team.sourceUpdatedAt),
     ...fixturesInSeason.map((fixture) => fixture.sourceUpdatedAt),
   ]);
-  if (!standings.completedFixtures) {
+  if (!standings.completedFixtures && !coverage.liveFixtures) {
     return {
       ...emptyTable(input, "pending_no_final", "no-verified-final", coverage),
       asOf,

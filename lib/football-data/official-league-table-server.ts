@@ -230,9 +230,10 @@ export async function loadTouchlineOfficialLeagueTable(
         : unavailableTable("supabase-admin-unavailable");
     },
     ["touchline-official-league-table-v1", TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID, scope.season.id],
-    // Live row annotations use persisted fixture state. The standings totals
-    // remain final-only, while the active score can refresh during a match.
-    { revalidate: 30, tags: [tableCacheTag(scope.season.id)] },
+    // The single table includes persisted live score facts provisionally.
+    // Ten seconds bounds normal browser polling without requiring a manual
+    // reload; a degraded provider leaves the last persisted fixture state.
+    { revalidate: 10, tags: [tableCacheTag(scope.season.id)] },
   );
   return cached();
 }

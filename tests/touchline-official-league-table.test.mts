@@ -72,7 +72,7 @@ test("official league table scopes fixtures to its canonical current season", ()
   )));
 });
 
-test("scheduled, live, cancelled and scoreless fixtures retain the neutral initial table", () => {
+test("the one official table applies a verified live draw provisionally", () => {
   const result = resolveTouchlineOfficialLeagueTable({
     season,
     teams: teams(),
@@ -84,10 +84,16 @@ test("scheduled, live, cancelled and scoreless fixtures retain the neutral initi
     ],
   });
 
-  assert.equal(result.state, "pending_no_final");
+  assert.equal(result.state, "partial");
   assert.equal(result.coverage.completedFixtures, 0);
+  assert.equal(result.coverage.liveFixtures, 1);
   assert.equal(result.rows.length, 20);
-  assert.ok(result.rows.every((row) => row.position === null && row.points === 0 && row.goalDifference === 0));
+  assert.deepEqual(result.rows.find((row) => row.team.providerTeamId === "3"), {
+    position: null,
+    team: { providerTeamId: "3", name: "Club 3", shortCode: "C3", slug: "club-3", logoUrl: null },
+    played: 1, won: 1, drawn: 0, lost: 0, goalsFor: 1, goalsAgainst: 0, goalDifference: 1, points: 3, form: ["W"],
+    liveFixture: { providerFixtureId: "live", scoreFor: 1, scoreAgainst: 0 },
+  });
   assert.deepEqual(result.rows.find((row) => row.team.providerTeamId === "3")?.liveFixture, {
     providerFixtureId: "live",
     scoreFor: 1,
@@ -98,6 +104,61 @@ test("scheduled, live, cancelled and scoreless fixtures retain the neutral initi
     scoreFor: 0,
     scoreAgainst: 1,
   });
+});
+
+test("live score changes, multiple fixtures and full time share one idempotent standings projection", () => {
+  const base = [
+    fixture({ providerFixtureId: "city-final", homeClubId: "club-1", awayClubId: "club-4", homeScore: 1, awayScore: 0 }),
+    fixture({ providerFixtureId: "hull-final", homeClubId: "club-2", awayClubId: "club-4", homeScore: 1, awayScore: 0 }),
+    fixture({ providerFixtureId: "sunderland-final", homeClubId: "club-3", awayClubId: "club-4", homeScore: 1, awayScore: 0 }),
+  ];
+  const stateA = resolveTouchlineOfficialLeagueTable({
+    season, teams: teams(4), expectedClubCount: 4,
+    fixtures: [
+      ...base,
+      fixture({ providerFixtureId: "city-hull", status: "LIVE", homeClubId: "club-1", awayClubId: "club-2", homeScore: 0, awayScore: 0 }),
+      fixture({ providerFixtureId: "sunderland-live", status: "LIVE", homeClubId: "club-3", awayClubId: "club-4", homeScore: 0, awayScore: 0 }),
+    ],
+  });
+  assert.equal(stateA.coverage.liveFixtures, 2);
+  assert.equal(stateA.rows.find((row) => row.team.providerTeamId === "1")?.points, 4);
+  assert.equal(stateA.rows.find((row) => row.team.providerTeamId === "2")?.points, 4);
+  assert.equal(stateA.rows.find((row) => row.team.providerTeamId === "3")?.points, 4);
+
+  const stateB = resolveTouchlineOfficialLeagueTable({
+    season, teams: teams(4), expectedClubCount: 4,
+    fixtures: [
+      ...base,
+      fixture({ providerFixtureId: "city-hull", status: "LIVE", homeClubId: "club-1", awayClubId: "club-2", homeScore: 2, awayScore: 0 }),
+      fixture({ providerFixtureId: "sunderland-live", status: "LIVE", homeClubId: "club-3", awayClubId: "club-4", homeScore: 0, awayScore: 0 }),
+    ],
+  });
+  assert.equal(stateB.state, "ready");
+  assert.deepEqual(stateB.rows.slice(0, 3).map((row) => [row.team.providerTeamId, row.position, row.points, row.goalDifference]), [
+    ["1", 1, 6, 3], ["3", 2, 4, 1], ["2", 3, 3, -1],
+  ]);
+
+  const stateC = resolveTouchlineOfficialLeagueTable({
+    season, teams: teams(4), expectedClubCount: 4,
+    fixtures: [
+      ...base,
+      fixture({ providerFixtureId: "city-hull", status: "LIVE", homeClubId: "club-1", awayClubId: "club-2", homeScore: 0, awayScore: 1 }),
+      fixture({ providerFixtureId: "sunderland-live", status: "LIVE", homeClubId: "club-3", awayClubId: "club-4", homeScore: 0, awayScore: 0 }),
+    ],
+  });
+  assert.deepEqual(stateC.rows.slice(0, 3).map((row) => [row.team.providerTeamId, row.points]), [["2", 6], ["3", 4], ["1", 3]]);
+
+  const finalState = resolveTouchlineOfficialLeagueTable({
+    season, teams: teams(4), expectedClubCount: 4,
+    fixtures: [
+      ...base,
+      fixture({ providerFixtureId: "city-hull", status: "Finished", homeClubId: "club-1", awayClubId: "club-2", homeScore: 0, awayScore: 1 }),
+      fixture({ providerFixtureId: "sunderland-live", status: "Finished", homeClubId: "club-3", awayClubId: "club-4", homeScore: 0, awayScore: 0 }),
+    ],
+  });
+  assert.equal(finalState.coverage.liveFixtures, 0);
+  assert.equal(finalState.coverage.completedFixtures, 5);
+  assert.deepEqual(finalState.rows.map((row) => [row.team.providerTeamId, row.points]), stateC.rows.map((row) => [row.team.providerTeamId, row.points]));
 });
 
 test("official league table deduplicates a provider fixture before totals are calculated", () => {
@@ -194,6 +255,7 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /Tabela inicial — os 20 clubes estão empatados\./);
   assert.match(component, /row\.position \?\? "—"/);
   assert.match(component, /data-live=/);
+  assert.match(component, /latest persisted live scores/);
   assert.match(component, /router\.refresh\(\)/);
   assert.match(component, /dictionary\.live/);
   assert.match(component, /table\.rows\.map/);
