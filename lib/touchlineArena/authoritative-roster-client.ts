@@ -77,6 +77,11 @@ export function parseAuthoritativeRosterResponse(
     const points = typeof card?.touchlinePoints === "number" && Number.isFinite(card.touchlinePoints)
       ? card.touchlinePoints
       : null;
+    const seasonPoints = card?.seasonTouchlinePoints === null || card?.seasonTouchlinePoints === undefined
+      ? null
+      : typeof card.seasonTouchlinePoints === "number" && Number.isFinite(card.seasonTouchlinePoints)
+        ? card.seasonTouchlinePoints
+        : Number.NaN;
     const matchPoints = card?.matchTouchlinePoints === null || card?.matchTouchlinePoints === undefined
       ? null
       : typeof card.matchTouchlinePoints === "number" && Number.isFinite(card.matchTouchlinePoints)
@@ -102,6 +107,7 @@ export function parseAuthoritativeRosterResponse(
       || (!editorialCard && !priceAuthority)
       || !touchlineArenaTierForKey(tier)
       || points === null
+      || Number.isNaN(seasonPoints)
       || Number.isNaN(matchPoints)
     ) return { ok: false };
 
@@ -124,6 +130,7 @@ export function parseAuthoritativeRosterResponse(
       canonicalPlayerId: id,
       editorialCard,
       touchlinePoints: points,
+      seasonTouchlinePoints: seasonPoints,
       matchTouchlinePoints: matchPoints,
       ...(seasonStats ? { seasonStats } : {}),
       ...(matchStats ? { matchStats } : {}),

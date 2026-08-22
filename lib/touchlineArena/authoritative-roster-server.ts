@@ -96,18 +96,21 @@ function touchlinePointsFor(
   const summary = asRecord(seasonStatistic?.summary_payload);
   const contractMetadata = asRecord(contract.metadata);
   const inventoryMetadata = asRecord(inventory.metadata);
-  const candidates = [
+  // Current player-season statistics are authoritative. Existing immutable
+  // contract/inventory score snapshots remain a legacy verified fallback for
+  // cards whose historical season row has not been rebuilt yet; no candidate
+  // exists means unavailable rather than an invented zero.
+  for (const candidate of [
     summary?.touchlinePoints,
     contractMetadata?.touchlinePoints,
     contractMetadata?.touchline_points,
     inventoryMetadata?.touchlinePoints,
     inventoryMetadata?.touchline_points,
-  ];
-  for (const candidate of candidates) {
+  ]) {
     const points = asFiniteNumber(candidate);
     if (points !== null) return points;
   }
-  return 0;
+  return null;
 }
 
 function verifiedSeasonStats(row?: DatabaseRecord | null) {
@@ -247,6 +250,7 @@ export function mapAuthoritativeRosterRows(
 
     const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId));
     const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId));
+    const seasonTouchlinePoints = touchlinePointsFor(contract, inventory, seasonStatisticByPlayerId.get(playerId));
     cards.push({
       id: playerId,
       canonicalPlayerId: playerId,
@@ -265,7 +269,10 @@ export function mapAuthoritativeRosterRows(
       marketValueSource: "unavailable",
       cardTier: editorialCard.tierKey,
       inventoryId,
-      touchlinePoints: touchlinePointsFor(contract, inventory, seasonStatisticByPlayerId.get(playerId)),
+      // Compatibility field for legacy roster ordering only. Card presentation
+      // consumes the explicit null-aware season projection below.
+      touchlinePoints: seasonTouchlinePoints ?? 0,
+      seasonTouchlinePoints,
       matchTouchlinePoints: asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.touchline_points),
       ...(seasonStats ? { seasonStats } : {}),
       ...(matchStats ? { matchStats } : {}),

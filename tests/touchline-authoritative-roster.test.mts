@@ -54,6 +54,7 @@ function authoritativeCard(): ClubOwnerSquadCard {
     editorialCard: null,
     inventoryId: INVENTORY_ID,
     touchlinePoints: 12,
+    seasonTouchlinePoints: 12,
   };
 }
 
@@ -128,6 +129,7 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
     cardTier: "emerald-green",
     inventoryId: INVENTORY_ID,
     touchlinePoints: 12,
+    seasonTouchlinePoints: 12,
     matchTouchlinePoints: null,
     editorialCard: PUBLISHED_EDITORIAL_CARD,
   });
