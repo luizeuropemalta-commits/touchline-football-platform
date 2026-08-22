@@ -10,6 +10,7 @@ import {
 import {
   parseMarketValueEurOrNull,
   resolveTouchlineVerifiedPlayerEconomy,
+  touchlineCardTierName,
 } from "../lib/touchlineArena/card-rules.ts";
 
 const productionEconomicSurfaces = [
@@ -63,6 +64,21 @@ test("the central configuration has seven contiguous, non-overlapping bands", ()
     assert.notEqual(previous.maxMarketValue, null);
     assert.equal(current.minMarketValue, (previous.maxMarketValue ?? -1) + 1);
   }
+
+  for (const tier of PLAYER_MARKET_TIERS) {
+    assert.equal(tier.borderName, touchlineCardTierName(tier.id, "en"));
+  }
+});
+
+test("admin dates use the selected locale and British English has no host-locale fallback", () => {
+  const adminHistorySource = readFileSync(new URL("../components/admin-manual-card-editorial-actions.tsx", import.meta.url), "utf8");
+  const footballDataSource = readFileSync(new URL("../app/(app)/admin/football-data/page.tsx", import.meta.url), "utf8");
+
+  assert.match(adminHistorySource, /toLocaleString\(locale\)/);
+  assert.doesNotMatch(adminHistorySource, /toLocaleString\(\)/);
+  assert.match(footballDataSource, /function formatDate\(value: string \| null \| undefined, locale: "en-GB" \| "pt-BR"\)/);
+  assert.match(footballDataSource, /Intl\.DateTimeFormat\(locale,/);
+  assert.equal((footballDataSource.match(/formatDate\([^\n]+, locale\)/g) ?? []).length, 4);
 });
 
 test("keeps missing, non-finite and negative values unavailable while accepting real zero", () => {

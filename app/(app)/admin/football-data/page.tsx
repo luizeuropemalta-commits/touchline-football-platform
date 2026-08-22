@@ -80,11 +80,11 @@ type SyncRunRow = {
   error_message: string | null;
 };
 
-function formatDate(value?: string | null) {
+function formatDate(value: string | null | undefined, locale: "en-GB" | "pt-BR") {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(date);
+  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
 function initials(name: string) {
@@ -233,7 +233,7 @@ export default async function FootballDataAdminPage({
     },
     {
       label: "Updated",
-      value: latestSync ? formatDate(latestSync.completed_at ?? latestSync.started_at) : "—",
+      value: latestSync ? formatDate(latestSync.completed_at ?? latestSync.started_at, locale) : "—",
       tone: "text-white",
     },
   ];
@@ -349,7 +349,7 @@ export default async function FootballDataAdminPage({
                 </div>
                 <div className="rounded-2xl border border-white/[.06] bg-black/20 p-4">
                   <p className="text-[8px] font-black text-slate-500">Last normalized</p>
-                  <p className="mt-1 font-black text-[#a3ff12]">{formatDate(selectedClub.source_updated_at)}</p>
+                  <p className="mt-1 font-black text-[#a3ff12]">{formatDate(selectedClub.source_updated_at, locale)}</p>
                 </div>
               </div>
             </div>
@@ -427,7 +427,7 @@ export default async function FootballDataAdminPage({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black  text-white">{competition.name}</p>
                   <p className="mt-1 text-[9px] font-bold text-slate-500">
-                    {competition.country ?? "Country open"} · {competition.provider} #{competition.provider_competition_id} · normalized {formatDate(competition.source_updated_at)}
+                    {competition.country ?? "Country open"} · {competition.provider} #{competition.provider_competition_id} · normalized {formatDate(competition.source_updated_at, locale)}
                   </p>
                 </div>
                 <CheckCircle2 aria-label="Normalized record readable" className="shrink-0 text-[#a3ff12]" size={18} />
@@ -456,7 +456,7 @@ export default async function FootballDataAdminPage({
                   <div>
                     <p className={`text-sm font-black  ${statusTone(run.status)}`}>{run.status}</p>
                     <p className="mt-1 text-[9px] font-bold text-slate-500">
-                      {run.provider} · {run.sync_type} · {formatDate(run.started_at)}
+                      {run.provider} · {run.sync_type} · {formatDate(run.started_at, locale)}
                     </p>
                   </div>
                   <span className="rounded-xl border border-cyan-300/15 bg-cyan-300/[.06] px-2 py-1 text-[9px] font-black text-cyan-200">

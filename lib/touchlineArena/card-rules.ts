@@ -4,38 +4,24 @@ import {
   resolvePlayerMarketTier,
 } from "./player-market-tiers.ts";
 import { resolveTouchlineCardClassification, type TouchlineCardClassification } from "./card-engine.ts";
+import {
+  TOUCHLINE_CARD_TIER_KEYS,
+  TOUCHLINE_CARD_TIER_NAMES,
+  touchlineCardTierName as canonicalTouchlineCardTierName,
+  type TouchlineCardTierKey,
+} from "./card-tier-names.ts";
 
-export const TOUCHLINE_CARD_TIER_KEYS = [
-  "ruby-red",
-  "sapphire-blue",
-  "amethyst-purple",
-  "radiant-gold",
-  "emerald-green",
-  "clear-diamond",
-  "diamond-gold",
-] as const;
-
-export type TouchlineCardTierKey = (typeof TOUCHLINE_CARD_TIER_KEYS)[number];
-
-export const TOUCHLINE_CARD_TIER_NAMES: Record<
-  TouchlineCardTierKey,
-  { en: string; pt: string }
-> = {
-  "ruby-red": { en: "Ruby Red", pt: "Rubi Vermelho" },
-  "sapphire-blue": { en: "Sapphire Blue", pt: "Safira Azul" },
-  "amethyst-purple": { en: "Amethyst Purple", pt: "Ametista Roxa" },
-  "radiant-gold": { en: "Radiant Gold", pt: "Ouro Radiante" },
-  "emerald-green": { en: "Emerald Green", pt: "Esmeralda Verde" },
-  "clear-diamond": { en: "Clear Diamond", pt: "Diamante Cristalino" },
-  "diamond-gold": { en: "Diamond Gold", pt: "Diamante Dourado" },
+export {
+  TOUCHLINE_CARD_TIER_KEYS,
+  TOUCHLINE_CARD_TIER_NAMES,
+  type TouchlineCardTierKey,
 };
 
 export function touchlineCardTierName(
   tier?: TouchlineCardTierKey | null,
   locale: "pt-BR" | "en" | string = "en",
 ) {
-  const names = TOUCHLINE_CARD_TIER_NAMES[tier ?? TOUCHLINE_CARD_STARTING_TIER_KEY];
-  return locale === "pt-BR" ? names.pt : names.en;
+  return canonicalTouchlineCardTierName(tier ?? TOUCHLINE_CARD_STARTING_TIER_KEY, locale);
 }
 
 /** Canonical visual colors shared by every TouchLine card surface. */

@@ -1,4 +1,7 @@
-import type { TouchlineCardTierKey } from "./card-rules";
+import {
+  touchlineCardTierName,
+  type TouchlineCardTierKey,
+} from "./card-tier-names.ts";
 
 /**
  * Approved initial Premier League economy for TouchLine player cards.
@@ -29,7 +32,7 @@ export type PlayerMarketTierConfig = Readonly<{
 export const PLAYER_MARKET_TIERS = [
   {
     id: "ruby-red",
-    borderName: "Ruby Red",
+    borderName: touchlineCardTierName("ruby-red"),
     minMarketValue: 0,
     maxMarketValue: 5_999_999,
     touchCreditPrice: 0,
@@ -37,7 +40,7 @@ export const PLAYER_MARKET_TIERS = [
   },
   {
     id: "sapphire-blue",
-    borderName: "Sapphire Blue",
+    borderName: touchlineCardTierName("sapphire-blue"),
     minMarketValue: 6_000_000,
     maxMarketValue: 9_999_999,
     touchCreditPrice: 1,
@@ -45,7 +48,7 @@ export const PLAYER_MARKET_TIERS = [
   },
   {
     id: "amethyst-purple",
-    borderName: "Amethyst Purple",
+    borderName: touchlineCardTierName("amethyst-purple"),
     minMarketValue: 10_000_000,
     maxMarketValue: 19_999_999,
     touchCreditPrice: 2,
@@ -53,7 +56,7 @@ export const PLAYER_MARKET_TIERS = [
   },
   {
     id: "radiant-gold",
-    borderName: "Radiant Gold",
+    borderName: touchlineCardTierName("radiant-gold"),
     minMarketValue: 20_000_000,
     maxMarketValue: 34_999_999,
     touchCreditPrice: 4,
@@ -61,7 +64,7 @@ export const PLAYER_MARKET_TIERS = [
   },
   {
     id: "emerald-green",
-    borderName: "Emerald Green",
+    borderName: touchlineCardTierName("emerald-green"),
     minMarketValue: 35_000_000,
     maxMarketValue: 49_999_999,
     touchCreditPrice: 7,
@@ -69,7 +72,7 @@ export const PLAYER_MARKET_TIERS = [
   },
   {
     id: "clear-diamond",
-    borderName: "Clear Diamond",
+    borderName: touchlineCardTierName("clear-diamond"),
     minMarketValue: 50_000_000,
     maxMarketValue: 69_999_999,
     touchCreditPrice: 10,
@@ -77,7 +80,7 @@ export const PLAYER_MARKET_TIERS = [
   },
   {
     id: "diamond-gold",
-    borderName: "Diamond Gold",
+    borderName: touchlineCardTierName("diamond-gold"),
     minMarketValue: 70_000_000,
     maxMarketValue: null,
     touchCreditPrice: 15,
