@@ -54,6 +54,7 @@ const PAGE_POLICIES: Record<string, Partial<RoutePolicy>> = {
 };
 
 const API_POLICIES: Record<string, RoutePolicy> = {
+  "GET /favicon.ico": { auth: "PUBLIC", role: "ANY", data: "STATIC_FAVICON_REDIRECT", browser: "HTTP_REDIRECT_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /login/submit": { auth: "PUBLIC", role: "ANY", data: "SUPABASE_AUTH", browser: "HTTP_REDIRECT_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/auth/login": { auth: "PUBLIC", role: "ANY", data: "SUPABASE_AUTH", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/auth/login/submit": { auth: "PUBLIC", role: "ANY", data: "SUPABASE_AUTH", browser: "HTTP_REDIRECT_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
