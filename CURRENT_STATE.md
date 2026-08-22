@@ -36,6 +36,13 @@ Active QA source SHA: `848ebf1` (`fix(football-data): request nested squad posit
 - Fresh `pnpm audit --prod --json` and full `pnpm audit --json` both report zero vulnerabilities. The final Security Diff Scan `c518e1b3-2d4f-4655-a0be-3e62e6607ea8` and independent diff review report zero findings.
 - Fresh gates passed: full test suite `1155/1155`, TypeScript, ESLint with zero errors and five existing warnings, 134-route build, and `git diff --check`. Commit `bbd122793ee0799058e0dc701c3872931b31bfc1` is pushed only to `qa`; Git-native Preview deployment `dpl_9RGPTeRTcQGGExkHGf7ynFZN3UcE` is `READY` and owns the stable QA alias. Remote smoke returned `200` for Live, Arsenal Club Hub, standings and rankings; anonymous Arena completed at the expected login boundary. Production remains forbidden.
 
+## QA Arena saved-formation role recovery — DEPLOYED / SAFARI VERIFIED
+
+- **Cause:** the Arena rehydration parser did not recognize the official long-form positions `Left Back`, `Right Back`, `Left Wing` and `Right Wing`. On a normal saved-state reload it therefore treated those cards as midfielders, leaving visible defensive vacancies despite a persisted 11-player 4-3-3.
+- **Correction:** commit `f9d5ebcb1afa818563e4d7883b585dbf1afb4735` adds those exact position labels to the existing role classifier and regression coverage. It changes no football fact, card, contract, coach, formation key, layout, editorial value or database schema.
+- **QA proof:** Preview deployment `dpl_5ATYVM16Nw9NUtx3LeuHMBL5sCCc` is `READY` on the stable `qa` alias. Native Safari loaded the canonical QA Arena without selecting a player or changing formation and rendered all eleven saved cards. The resulting canonical QA state is `4-3-3`, `11` lineup cards, composition `1/4/3/3`, coach `455907`, and preserved layout keys `4-3-3` and `4-4-2`.
+- **Verification:** focused tests `16/16`, full suite `1156/1156`, TypeScript, release-readiness, lint (`0` errors; five pre-existing warnings), diff-check and a local 134-route production build passed. The attempted app-backed Security Diff Scan preflight was `ready`; its scanner did not create a scan because it rejected its own uncommitted-patch selection as stale, so no zero-finding scan is claimed for this two-file patch. Production remains untouched.
+
 ## QA and release
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
