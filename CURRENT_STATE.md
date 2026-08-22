@@ -97,3 +97,15 @@ Canonical programme addendum registered on 2026-08-21: in Block 3, preserve both
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 
 For detailed immutable evidence, use `CURRENT_EXECUTION_LEDGER.md`.
+
+## 2026-08-22 Block 4A — Card Engine QA deployment / authenticated Safari blocked
+
+- **Current QA source:** merge commit `522c99e96d5f01479130e46811495ded6182339d`, pushed only to `origin/qa`. It preserves the closed P0B chain and adds the bounded Card Engine editorial-batch surface; no Production branch, environment, database, DNS, payment, credential or `touchline.com.br` action occurred.
+- **Deployment:** Git-native QA Preview `dpl_5sm1NgngbhabhzWUkrx3FoZLNyjs` is `READY`, identifies branch `qa` and SHA `522c99e`, and owns the stable QA alias. The remote build completed successfully; the only noted build-time warning is the pre-existing absent Sentry source-map release token, which was not changed.
+- **Data and rollback:** post-deployment read-only QA evidence remains `581` active Sportmonks memberships across `20` clubs, `580` detailed positions and `35` active contracts. The Card Engine audit history remains two created batches, one approval, one publication and one `batch_reverted` event. No data write occurred in this validation.
+- **Verification:** clean-worktree frozen install; release-readiness; TypeScript; ESLint with `0` errors/five existing warnings; focused combined contracts `12/12`; full suite `1161/1161`; `pnpm audit` `0/0/0/0/0`; diff check; and a 135-page build passed. Chromium, Playwright WebKit and Firefox each rendered public Live, Tables and player profile at 390×844, 768×1024 and 1280×720 with HTTP 200, content, no horizontal overflow and no error overlay. Anonymous Arena and `/admin/card-engine` reached their intended login boundaries. QA runtime observability reports no error cluster in the observed window.
+- **SAFARI AUTHENTICATED: BLOCKED / EXTERNAL — sessão atual não é a persona QA canônica e a automação não pode validá-la sem alterar login/sessão.** Do not switch user, delete cookies, request credentials, restart the session or mark this gate PASS. This blocks the authenticated Card Engine/Arena/cards/profiles proof only; all safe unauthenticated and data-read gates above were completed.
+
+## Next executable action
+
+Do not begin Block 4B while Block 4A is not GREEN. When an already-authenticated canonical QA-owner Safari session becomes available without any login/session manipulation, run only the pending authenticated Card Engine/Arena/cards/profiles checks against the stable QA alias, record the result, then resume the programme in order. Production remains forbidden.
