@@ -7,7 +7,7 @@ import { isOwnerEmail } from "@/lib/admin/owner";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
+import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref, type TouchLineAuthLocale } from "@/lib/touchlineArena/auth-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +26,8 @@ type InvoiceRow = {
   number: string | null;
 };
 
-const money = (cents: number, currency = "EUR") => new Intl.NumberFormat("en", { style: "currency", currency: currency.toUpperCase() }).format((cents || 0) / 100);
-const date = (value?: string | null) => value ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(value)) : "-";
+const money = (cents: number, locale: TouchLineAuthLocale, currency = "EUR") => new Intl.NumberFormat(locale, { style: "currency", currency: currency.toUpperCase() }).format((cents || 0) / 100);
+const date = (value: string | null | undefined, locale: TouchLineAuthLocale) => value ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value)) : "-";
 
 function statusCount(rows: InvoiceRow[], status: string) {
   return rows.filter((row) => row.status === status).length;
@@ -126,13 +126,13 @@ export default async function AdminFinancePage({
               {(balance?.available ?? []).slice(0, 3).map((item) => (
                 <div key={`available-${item.currency}`} className="flex justify-between border-b border-white/[.06] pb-3">
                   <span className="text-[10px] font-bold text-slate-500">Available {item.currency}</span>
-                  <span className="text-xs font-black  text-white">{money(item.amount, item.currency)}</span>
+                  <span className="text-xs font-black  text-white">{money(item.amount, locale, item.currency)}</span>
                 </div>
               ))}
               {(balance?.pending ?? []).slice(0, 3).map((item) => (
                 <div key={`pending-${item.currency}`} className="flex justify-between border-b border-white/[.06] pb-3">
                   <span className="text-[10px] font-bold text-slate-500">Pending {item.currency}</span>
-                  <span className="text-xs font-black  text-white">{money(item.amount, item.currency)}</span>
+                  <span className="text-xs font-black  text-white">{money(item.amount, locale, item.currency)}</span>
                 </div>
               ))}
               {!balance ? <p className="text-[10px] leading-5 text-slate-500">Stripe balance appears here when the server key is configured and reachable.</p> : null}
@@ -142,10 +142,10 @@ export default async function AdminFinancePage({
       </GamePanel>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <StatTile icon={CircleDollarSign} label="Gross" value={money(grossRevenue, currency)} delta="paid invoices" accent="gold" />
-        <StatTile icon={Banknote} label="Net" value={money(netRevenue, currency)} delta="minus fetched fees" accent="lime" />
-        <StatTile icon={WalletCards} label="Fees" value={money(stripeFees, currency)} delta="provider txs" accent="rose" />
-        <StatTile icon={Receipt} label="Pending" value={String(statusCount(invoiceRows, "open"))} delta={money(due, currency)} accent="cyan" />
+        <StatTile icon={CircleDollarSign} label="Gross" value={money(grossRevenue, locale, currency)} delta="paid invoices" accent="gold" />
+        <StatTile icon={Banknote} label="Net" value={money(netRevenue, locale, currency)} delta="minus fetched fees" accent="lime" />
+        <StatTile icon={WalletCards} label="Fees" value={money(stripeFees, locale, currency)} delta="provider txs" accent="rose" />
+        <StatTile icon={Receipt} label="Pending" value={String(statusCount(invoiceRows, "open"))} delta={money(due, locale, currency)} accent="cyan" />
         <StatTile icon={TriangleAlert} label="Refused" value={String(statusCount(invoiceRows, "uncollectible"))} delta="invoice status" accent="rose" />
         <StatTile icon={ShieldCheck} label="Webhooks" value={String(webhookEvents?.length ?? 0)} delta="recent events" accent="cyan" />
       </div>
@@ -177,10 +177,10 @@ export default async function AdminFinancePage({
               <div key={tx.id} className="grid gap-2 p-5 md:grid-cols-[1fr_auto_auto] md:items-center">
                 <div>
                   <p className="text-sm font-black  italic text-white">{tx.description || tx.type}</p>
-                  <p className="mt-1 text-[9px] font-bold text-slate-600">{tx.id.slice(0, 10)}... / {date(new Date(tx.created * 1000).toISOString())}</p>
+                  <p className="mt-1 text-[9px] font-bold text-slate-600">{tx.id.slice(0, 10)}... / {date(new Date(tx.created * 1000).toISOString(), locale)}</p>
                 </div>
-                <span className="text-xs font-black  text-white">{money(tx.amount, tx.currency)}</span>
-                <span className="text-xs font-black  text-rose-200">{money(tx.fee, tx.currency)}</span>
+                <span className="text-xs font-black  text-white">{money(tx.amount, locale, tx.currency)}</span>
+                <span className="text-xs font-black  text-rose-200">{money(tx.fee, locale, tx.currency)}</span>
               </div>
             ))}
             {!balanceTransactions?.data.length ? (
@@ -188,10 +188,10 @@ export default async function AdminFinancePage({
                 <div key={invoice.id} className="grid gap-2 p-5 md:grid-cols-[1fr_auto_auto] md:items-center">
                   <div>
                     <p className="text-sm font-black  italic text-white">{invoice.number ?? "Invoice"}</p>
-                    <p className="mt-1 text-[9px] font-bold text-slate-600">{invoice.status ?? "unknown"} / {date(invoice.created_at)}</p>
+                    <p className="mt-1 text-[9px] font-bold text-slate-600">{invoice.status ?? "unknown"} / {date(invoice.created_at, locale)}</p>
                   </div>
-                  <span className="text-xs font-black  text-white">{money(invoice.total, invoice.currency)}</span>
-                  <span className="text-xs font-black  text-cyan-200">{money(invoice.amount_paid, invoice.currency)}</span>
+                  <span className="text-xs font-black  text-white">{money(invoice.total, locale, invoice.currency)}</span>
+                  <span className="text-xs font-black  text-cyan-200">{money(invoice.amount_paid, locale, invoice.currency)}</span>
                 </div>
               ))
             ) : null}

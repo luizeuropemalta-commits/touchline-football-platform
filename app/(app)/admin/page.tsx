@@ -23,7 +23,7 @@ import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
+import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref, type TouchLineAuthLocale } from "@/lib/touchlineArena/auth-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -141,16 +141,16 @@ function countText(result: CountResult) {
   return result.error ? "—" : String(result.value);
 }
 
-function dateLabel(value?: string | null) {
+function dateLabel(value: string | null | undefined, locale: TouchLineAuthLocale) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-function money(cents: number, currency = "EUR") {
+function money(cents: number, locale: TouchLineAuthLocale, currency = "EUR") {
   try {
-    return new Intl.NumberFormat("en-GB", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency.toUpperCase(),
     }).format(cents / 100);
@@ -581,7 +581,7 @@ export default async function AdminOwnerPanel({
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 truncate text-[9px] text-slate-600">{authUser.email ?? "Email unavailable"} · joined {dateLabel(authUser.created_at)}</p>
+                    <p className="mt-1 truncate text-[9px] text-slate-600">{authUser.email ?? "Email unavailable"} · joined {dateLabel(authUser.created_at, locale)}</p>
                   </div>
                   <span className={`w-fit rounded-lg border px-2 py-1 text-[8px] font-black ${grant ? "border-[#a3ff12]/20 bg-[#a3ff12]/[.07] text-[#caff6d]" : "border-white/[.08] text-slate-600"}`}>
                     {grant ? `Legacy grant #${grant.slot_number}` : "No legacy grant"}
@@ -655,7 +655,7 @@ export default async function AdminOwnerPanel({
                     {run.status}
                   </span>
                 </div>
-                <p className="mt-1 text-[8px] text-slate-600">{run.records_created} created · {run.records_updated} updated · {dateLabel(run.completed_at ?? run.started_at)}</p>
+                <p className="mt-1 text-[8px] text-slate-600">{run.records_created} created · {run.records_updated} updated · {dateLabel(run.completed_at ?? run.started_at, locale)}</p>
               </div>
             ))}
             {!syncRuns.data.length ? (
@@ -722,7 +722,7 @@ export default async function AdminOwnerPanel({
           <div className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[.05] p-4">
             <p className="text-[8px] font-black text-amber-200">Recent ledger sample</p>
             <p className="mt-2 text-2xl font-black text-white">
-              {ledger.error ? "—" : money(ledgerNetCents, ledger.data[0]?.currency ?? "EUR")}
+              {ledger.error ? "—" : money(ledgerNetCents, locale, ledger.data[0]?.currency ?? "EUR")}
             </p>
             <p className="mt-1 text-[8px] leading-4 text-slate-600">
               {ledger.error

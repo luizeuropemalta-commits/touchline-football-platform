@@ -70,7 +70,7 @@ test("the central configuration has seven contiguous, non-overlapping bands", ()
   }
 });
 
-test("admin dates use the selected locale and British English has no host-locale fallback", () => {
+test("admin dates and values use the selected locale and British English has no host-locale fallback", () => {
   const adminHistorySource = readFileSync(new URL("../components/admin-manual-card-editorial-actions.tsx", import.meta.url), "utf8");
   const footballDataSource = readFileSync(new URL("../app/(app)/admin/football-data/page.tsx", import.meta.url), "utf8");
 
@@ -79,6 +79,17 @@ test("admin dates use the selected locale and British English has no host-locale
   assert.match(footballDataSource, /function formatDate\(value: string \| null \| undefined, locale: "en-GB" \| "pt-BR"\)/);
   assert.match(footballDataSource, /Intl\.DateTimeFormat\(locale,/);
   assert.equal((footballDataSource.match(/formatDate\([^\n]+, locale\)/g) ?? []).length, 4);
+
+  for (const path of [
+    "../app/(app)/admin/page.tsx",
+    "../app/(app)/admin/finance/page.tsx",
+    "../app/(app)/admin/promotions/page.tsx",
+    "../app/(app)/admin/market-values/page.tsx",
+  ]) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8");
+    assert.match(source, /Intl\.(DateTimeFormat|NumberFormat)\(locale,/);
+    assert.doesNotMatch(source, /Intl\.(DateTimeFormat|NumberFormat)\("en(?:-GB)?",/);
+  }
 });
 
 test("keeps missing, non-finite and negative values unavailable while accepting real zero", () => {

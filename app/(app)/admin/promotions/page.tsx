@@ -7,7 +7,7 @@ import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
+import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref, type TouchLineAuthLocale } from "@/lib/touchlineArena/auth-i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +32,11 @@ type LedgerRow = {
   created_at: string;
 };
 
-const touchlineCredits = (subunits: number) => `${new Intl.NumberFormat("en", {
+const touchlineCredits = (subunits: number, locale: TouchLineAuthLocale) => `${new Intl.NumberFormat(locale, {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 }).format((subunits || 0) / 100)} TC`;
-const date = (value?: string | null) => value ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(value)) : "-";
+const date = (value: string | null | undefined, locale: TouchLineAuthLocale) => value ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value)) : "-";
 
 export default async function AdminPromotionsPage({
   searchParams,
@@ -107,7 +107,7 @@ export default async function AdminPromotionsPage({
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatTile icon={BadgePercent} label="Promotions" value={String(promotionRows.length)} delta={`${activePromotions} active`} accent="cyan" />
-        <StatTile icon={WalletCards} label="Ledger Total" value={touchlineCredits(creditTotal)} delta="recent rows" accent="lime" />
+        <StatTile icon={WalletCards} label="Ledger Total" value={touchlineCredits(creditTotal, locale)} delta="recent rows" accent="lime" />
         <StatTile icon={Gift} label="Credits" value={String(ledgerRows.filter((entry) => entry.amount_cents > 0).length)} delta="grants/rewards" accent="gold" />
         <StatTile icon={ShieldCheck} label="Idempotency" value="On" delta="unique keys" accent="rose" />
       </div>
@@ -131,7 +131,7 @@ export default async function AdminPromotionsPage({
             {promotionRows.map((promotion) => (
               <div key={promotion.id} className="p-5">
                 <p className="text-sm font-black  italic text-white">{promotion.name}</p>
-                <p className="mt-1 text-[9px] font-bold text-slate-600">{promotion.status} / {date(promotion.starts_at)} - {date(promotion.ends_at)}</p>
+                <p className="mt-1 text-[9px] font-bold text-slate-600">{promotion.status} / {date(promotion.starts_at, locale)} - {date(promotion.ends_at, locale)}</p>
                 {promotion.description ? <p className="mt-2 text-[10px] leading-5 text-slate-500">{promotion.description}</p> : null}
                 <PromotionStatusActions promotionId={promotion.id} />
               </div>
@@ -156,8 +156,8 @@ export default async function AdminPromotionsPage({
                 <p className="text-sm font-black  italic text-white">{entry.reason}</p>
                 <p className="mt-1 text-[9px] font-bold text-slate-600">{entry.user_id} / {entry.entry_type} / {entry.idempotency_key}</p>
               </div>
-              <span className="text-xs font-black  text-white">{date(entry.created_at)}</span>
-              <span className={entry.amount_cents >= 0 ? "text-xs font-black  text-[#a3ff12]" : "text-xs font-black  text-rose-200"}>{touchlineCredits(entry.amount_cents)}</span>
+              <span className="text-xs font-black  text-white">{date(entry.created_at, locale)}</span>
+              <span className={entry.amount_cents >= 0 ? "text-xs font-black  text-[#a3ff12]" : "text-xs font-black  text-rose-200"}>{touchlineCredits(entry.amount_cents, locale)}</span>
             </div>
           ))}
           {!ledgerRows.length ? <div className="p-8 text-center text-xs text-slate-500">No credit ledger entries yet.</div> : null}
