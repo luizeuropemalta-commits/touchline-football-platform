@@ -65,6 +65,7 @@ const TOUCHLINE_ENGLAND_TROPHY =
 const CLUB_OWNER_TOUCHLINE_NEON = "#a3ff12";
 const CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS = 8_000;
 type ClubOwnerWalletEntry = { amount_cents: number | null };
+type ClubOwnerAvatarProfile = { avatar_url?: unknown };
 
 const trophyGallery = [
   {
@@ -163,11 +164,16 @@ export default async function ClubOwnerProfileRenderer({
   const clubOwnerUser = user && !isOwnerEmail(user.email) ? user : null;
   let storedAvatarUrl: string | null = null;
   if (clubOwnerUser && supabase) {
-    const { data: storedProfile } = await supabase
-      .from("users")
-      .select("avatar_url")
-      .eq("id", clubOwnerUser.id)
-      .maybeSingle();
+    const { data: storedProfile } = await resolveServerReadWithin<{ data: ClubOwnerAvatarProfile | null }>(
+      supabase
+        .from("users")
+        .select("avatar_url")
+        .eq("id", clubOwnerUser.id)
+        .maybeSingle()
+        .then(({ data }) => ({ data: data as ClubOwnerAvatarProfile | null })),
+      { data: null },
+      CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
+    );
     storedAvatarUrl = typeof storedProfile?.avatar_url === "string"
       ? storedProfile.avatar_url
       : null;

@@ -113,3 +113,15 @@ test("all three account-aware server pages gate cookies behind the public branch
     assert.doesNotMatch(source, /fallback:\s*user\s*\?/);
   }
 });
+
+test("the authenticated profile bounds its private avatar lookup before identity rendering", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /const \{ data: storedProfile \} = await resolveServerReadWithin(?:<[^>]+>)?\([\s\S]*?\.from\("users"\)[\s\S]*?\.maybeSingle\(\)[\s\S]*?\{ data: null \},[\s\S]*?CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS/,
+  );
+});
