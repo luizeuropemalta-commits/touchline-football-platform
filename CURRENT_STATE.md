@@ -27,7 +27,14 @@ Active QA source SHA: `848ebf1` (`fix(football-data): request nested squad posit
 - The public Live route renders the settled fixture and never requests the owner-protected fixture-detail endpoint for an anonymous visitor. Chromium (390 and 1280), Playwright WebKit and Firefox passed Live, Club Hub, standings and cards with HTTP `200`, no console error and no horizontal overflow; anonymous Arena correctly resolves to login.
 - The QA-wide 20-club reconciliation is already applied in run `c93c92ea-99dd-481c-a447-953b3dceccfe`: `20` clubs, `581` provider players, `580` detailed positions and one explicit provider-data pending position. No current Card Engine position override exists, so there is no editorial conflict to route; approved TouchLine editorial overrides remain the final authority when present.
 - Focused P0B tests `10/10`, full suite `1155/1155`, TypeScript, build and diff check passed; lint reported zero errors and five pre-existing warnings. Two Security Diff Scans and independent review reported zero findings.
-- Native Safari/authenticated surface follow-up is **BLOCKED / EXTERNAL**: Safari is running but the local UI controller times out before exposing the accessibility tree. No session, cookie, credential, account or persisted user state was read or altered. Production remains untouched.
+- Safari follow-up (**SUPERSEDES** the earlier local-controller timeout observation): native Safari is reachable and rendered the public Arsenal Club Hub plus the existing-session Arena surface on the stable QA alias. The available session is not the documented canonical QA owner: `/club-owner/me` resolved to the safe-navigation unavailable state. No login, cookie, credential, account selection or persisted user state was read or altered. Canonical-owner Arena/cards/profiles validation in native Safari remains **BLOCKED / EXTERNAL** until an already-authenticated canonical QA owner session is available without changing credentials. Production remains untouched.
+
+## QA dependency-security remediation — READY FOR QA DEPLOY
+
+- The requested `xlsx@0.18.5` High remediation required no package change: `xlsx` is absent from the workspace manifests, lockfile and resolved dependency tree.
+- The fresh audit exposed actual transitive advisories instead: `brace-expansion` in the `^1.1.0` and `^5.0.0` ranges, `js-yaml@^4.0.0`, and `nanoid@^3.0.0`. Workspace overrides now select the compatible patch releases `1.1.18`, `5.0.9`, `4.3.1`, and `3.3.18`; no direct application dependency or API changed.
+- Fresh `pnpm audit --prod --json` and full `pnpm audit --json` both report zero vulnerabilities. The final Security Diff Scan `c518e1b3-2d4f-4655-a0be-3e62e6607ea8` and independent diff review report zero findings.
+- Fresh gates passed: full test suite `1155/1155`, TypeScript, ESLint with zero errors and five existing warnings, 134-route build, and `git diff --check`. The candidate is pending the QA-only Git deployment and remote smoke; Production remains forbidden.
 
 ## QA and release
 
