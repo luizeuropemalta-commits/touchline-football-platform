@@ -1,5 +1,6 @@
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import type { TouchlineFixture } from "@/lib/football-data/types";
+import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 
 export type TouchlineMatchState = "live" | "upcoming" | "finished" | "unknown";
 export type TouchlineMatchCentreDisplayState = TouchlineMatchState | "stale";
@@ -40,6 +41,19 @@ type TouchlineFixtureSelectionSource = TouchlineFixtureStateSource & Pick<Touchl
 
 const LIVE_STATUS = /(?:live|in[ -]?play|in progress|1st|2nd|half[ -]?time|extra time|penalt)/i;
 const FINISHED_STATUS = /(?:^ft(?:_|$)|full[ -]?time|finished|after extra time|aet|after penalties|cancelled|canceled|abandoned|awarded|walkover)/i;
+
+const FIXTURE_STATUS_LABELS: Partial<Record<TouchLineLocale, Record<string, string>>> = {
+  "en-GB": { "1st half": "1st Half", "first half": "1st Half", "2nd half": "2nd Half", "second half": "2nd Half", "half time": "Half-time", halftime: "Half-time", "full time": "Full Time", finished: "Full Time", ft: "Full Time", live: "LIVE", "in play": "LIVE", inplay: "LIVE", next: "Next", "not started": "Not started" },
+  "pt-BR": { "1st half": "1º tempo", "first half": "1º tempo", "2nd half": "2º tempo", "second half": "2º tempo", "half time": "Intervalo", halftime: "Intervalo", "full time": "Encerrado", finished: "Encerrado", ft: "Encerrado", live: "AO VIVO", "in play": "AO VIVO", inplay: "AO VIVO", next: "Próximo", "not started": "Não iniciado" },
+};
+
+/** Provider status values are facts; render the known shared vocabulary in the selected locale. */
+export function touchlineFixtureStatusLabel(value: string | null | undefined, locale: TouchLineLocale) {
+  const status = value?.trim() ?? "";
+  if (!status) return "";
+  const key = status.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  return FIXTURE_STATUS_LABELS[locale]?.[key] ?? status;
+}
 
 export function touchlineFixtureState(fixture: TouchlineFixtureStateSource, now = Date.now()): TouchlineMatchState {
   const status = fixture.status?.trim() ?? "";

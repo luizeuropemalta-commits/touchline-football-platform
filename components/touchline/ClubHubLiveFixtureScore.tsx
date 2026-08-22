@@ -4,23 +4,27 @@ import { useEffect, useState } from "react";
 
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import { parseTouchlinePublicFixtures } from "@/lib/football-data/public-fixture-client";
+import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { touchlineFixtureStatusLabel } from "@/lib/touchlineArena/match-centre";
 
 type Props = {
   fixtureId: string | null;
   initialFixture: TouchlinePublicFixture | null;
+  locale: TouchLineLocale;
 };
 
-function presentation(fixture: TouchlinePublicFixture | null) {
+function presentation(fixture: TouchlinePublicFixture | null, locale: TouchLineLocale) {
   if (!fixture) return "VS";
   const hasScore = Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore);
   const score = hasScore ? `${fixture.homeScore} — ${fixture.awayScore}` : "VS";
+  const rawStatus = fixture.status?.trim() ?? "";
   const status = fixture.liveMinute !== undefined
-    ? `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${fixture.livePeriod}` : ""}`
-    : fixture.status;
-  return status && status.toLowerCase() !== "not started" ? `${score} · ${status}` : score;
+    ? `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${touchlineFixtureStatusLabel(fixture.livePeriod, locale)}` : ""}`
+    : touchlineFixtureStatusLabel(rawStatus, locale);
+  return status && rawStatus.toLowerCase() !== "not started" ? `${score} · ${status}` : score;
 }
 /** Club Hub consumes the same durable live DTO as Arena and Live. */
-export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture }: Props) {
+export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture, locale }: Props) {
   const [fixture, setFixture] = useState(initialFixture);
 
   useEffect(() => {
@@ -46,5 +50,5 @@ export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture }: P
     };
   }, [fixtureId]);
 
-  return <b aria-live="polite">{presentation(fixture)}</b>;
+  return <b aria-live="polite">{presentation(fixture, locale)}</b>;
 }

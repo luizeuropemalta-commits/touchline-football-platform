@@ -24,9 +24,10 @@ test("the premium Arena score rail never promotes a kickoff date above the Live 
 });
 
 test("the rail preserves the localized Next label and identifies the two teams", () => {
-  assert.match(arenaSource, /function displayFixtureStatus\(status: string, nextLabel: string\)[\s\S]*?status\.toLowerCase\(\) === "next" \? nextLabel : status/);
+  assert.match(arenaSource, /function displayFixtureStatus\(status: string, nextLabel: string, locale: TouchLineLocale\)[\s\S]*?touchlineFixtureStatusLabel\(status, locale\)/);
   assert.match(arenaSource, /<strong>\{match\.home\.shortCode\} vs \{match\.away\.shortCode\}<\/strong>/);
-  assert.match(arenaSource, /<small>\{displayFixtureStatus\(match\.status, t\("nextMatchShort"\)\)\}<\/small>/);
+  assert.match(arenaSource, /<small>\{displayFixtureStatus\(match\.status, t\("nextMatchShort"\), siteLanguage\)\}<\/small>/);
+  assert.match(arenaSource, /siteLanguage === "pt-BR" \? "Abrir central da partida" : "Open Match Centre"/);
 });
 
 test("the normal Arena retries the read-only Live snapshot when schedule hydration is delayed", () => {

@@ -86,6 +86,7 @@ import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
 import { getTouchLineMarketCopy } from "@/lib/touchlineArena/market-i18n";
 import { TOUCHLINE_SQUAD_RULES } from "@/lib/touchlineArena/squad-rules";
 import { resolveTouchlineQuickSubstitutionReadiness } from "@/lib/touchlineArena/quick-substitution-readiness";
+import { touchlineFixtureStatusLabel } from "@/lib/touchlineArena/match-centre";
 import {
   applyTouchlineQuickSubstitutionSession,
   createTouchlineQuickSubstitutionSession,
@@ -1600,11 +1601,11 @@ function saveLineup(
   );
 }
 
-function formatFixtureTime(startsAt?: string) {
+function formatFixtureTime(startsAt: string | undefined, locale: TouchLineLocale) {
   if (!startsAt) return "Next";
   const date = new Date(startsAt.replace(" ", "T"));
   if (Number.isNaN(date.getTime())) return "Next";
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -1620,8 +1621,9 @@ function formatFixtureScore(fixture: TouchlinePublicFixture) {
   return "VS";
 }
 
-function displayFixtureStatus(status: string, nextLabel: string) {
-  return status.toLowerCase() === "next" ? nextLabel : status;
+function displayFixtureStatus(status: string, nextLabel: string, locale: TouchLineLocale) {
+  const label = touchlineFixtureStatusLabel(status, locale);
+  return label.toLowerCase() === "next" || label.toLowerCase() === "próximo" ? nextLabel : label;
 }
 
 function isFixtureActuallyLive(fixture: TouchlinePublicFixture) {
@@ -1641,11 +1643,11 @@ function fixtureBoardScore(fixture: TouchlinePublicFixture) {
 
 function fixtureBoardClock(fixture: TouchlinePublicFixture, locale: TouchLineLocale) {
   if (isFixtureActuallyLive(fixture) && fixture.liveMinute !== undefined) {
-    return `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${fixture.livePeriod}` : ""}`;
+    return `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${touchlineFixtureStatusLabel(fixture.livePeriod, locale)}` : ""}`;
   }
   const status = String(fixture.status ?? "").trim();
-  if (status && !/^next$/i.test(status)) return status;
-  const time = formatFixtureTime(fixture.startsAt);
+  if (status && !/^next$/i.test(status)) return touchlineFixtureStatusLabel(status, locale);
+  const time = formatFixtureTime(fixture.startsAt, locale);
   if (time !== "Next") return time;
   return locale === "pt-BR" ? "Horário pendente" : "Kick-off pending";
 }
@@ -7748,7 +7750,7 @@ export default function ArenaClient({
           <section
             className="field-player-layer is-entry-ready"
             data-card-assets-ready={arenaFieldCardsAreReady ? "true" : "false"}
-            aria-label="Editable field players"
+            aria-label={siteLanguage === "pt-BR" ? "Jogadores de linha editáveis" : "Editable field players"}
             aria-hidden={false}
           >
             {arenaFieldPlayersForRendering.map((player) => {
@@ -7802,7 +7804,7 @@ export default function ArenaClient({
                     handleFieldPlayerClick(player);
                   }}
                   onKeyDown={(event) => handleFieldPlayerKeyDown(event, player)}
-                  aria-label={`Select ${player.name} card`}
+                  aria-label={siteLanguage === "pt-BR" ? `Selecionar card de ${player.name}` : `Select ${player.name} card`}
                   aria-pressed={selectedPlayerId === player.id}
                 >
                   <span className="player-ground-shadow" />
@@ -7964,8 +7966,8 @@ export default function ArenaClient({
                 {visibleLiveFixtures.map((fixture) => {
                   const match = buildFixtureClubMatches([fixture])[0];
                   const fixtureState = fixtureHasScore(fixture)
-                    ? displayFixtureStatus(fixture.status || t("live"), t("nextMatchShort"))
-                    : displayFixtureStatus(formatFixtureScore(fixture), t("nextMatchShort"));
+                    ? displayFixtureStatus(fixture.status || t("live"), t("nextMatchShort"), siteLanguage)
+                    : displayFixtureStatus(formatFixtureScore(fixture), t("nextMatchShort"), siteLanguage);
                   return (
                     <button
                       key={fixture.id}
@@ -8311,8 +8313,8 @@ export default function ArenaClient({
           <section className="club-symbol-carousel" aria-label="TouchLine England" data-testid="arena-club-symbol-carousel">
             <div className="club-symbol-open">
               <a className="club-symbol-kicker" href={`/live?lang=${encodeURIComponent(siteLanguage)}`}>
-                <strong>England</strong>
-                <small>League</small>
+                <strong>{siteLanguage === "pt-BR" ? "Inglaterra" : "England"}</strong>
+                <small>{siteLanguage === "pt-BR" ? "Liga" : "League"}</small>
               </a>
               <button
                 type="button"
@@ -8359,7 +8361,7 @@ export default function ArenaClient({
                       </span>
                       <span className="club-symbol-copy">
                         <strong>{match.home.shortCode} vs {match.away.shortCode}</strong>
-                        <small>{displayFixtureStatus(match.status, t("nextMatchShort"))}</small>
+                        <small>{displayFixtureStatus(match.status, t("nextMatchShort"), siteLanguage)}</small>
                       </span>
                     </a>
                   ))}
@@ -8378,9 +8380,9 @@ export default function ArenaClient({
                   className="club-symbol-match-centre"
                   href={`/live?fixture=${encodeURIComponent(effectiveSelectedLiveFixtureId)}&lang=${encodeURIComponent(siteLanguage)}`}
                   data-testid="arena-open-match-centre"
-                  aria-label={siteLanguage === "pt-BR" ? "Abrir Match Centre" : "Open Match Centre"}
+                  aria-label={siteLanguage === "pt-BR" ? "Abrir central da partida" : "Open Match Centre"}
                 >
-                  <span>{siteLanguage === "pt-BR" ? "Abrir Match Centre" : "Open Match Centre"}</span>
+                  <span>{siteLanguage === "pt-BR" ? "Abrir central da partida" : "Open Match Centre"}</span>
                   <b>→</b>
                 </a>
               ) : null}
@@ -8390,8 +8392,8 @@ export default function ArenaClient({
           <section className="club-symbol-carousel club-symbol-carousel-empty" aria-label={siteLanguage === "pt-BR" ? "Placares da rodada" : "Round scores"} data-testid="arena-score-rail-empty">
             <div className="club-symbol-open club-symbol-open-empty">
               <span className="club-symbol-kicker" aria-hidden="true">
-                <strong>England</strong>
-                <small>League</small>
+                <strong>{siteLanguage === "pt-BR" ? "Inglaterra" : "England"}</strong>
+                <small>{siteLanguage === "pt-BR" ? "Liga" : "League"}</small>
               </span>
               <strong>{siteLanguage === "pt-BR" ? "PLACARES PREMIUM" : "PREMIUM SCORES"}</strong>
               <span>{siteLanguage === "pt-BR" ? "Aguardando placares verificados da rodada" : "Awaiting verified round scores"}</span>

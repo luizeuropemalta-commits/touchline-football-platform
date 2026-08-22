@@ -410,6 +410,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                   <ClubHubLiveFixtureScore
                     fixtureId={matchSnapshot.fixtureId}
                     initialFixture={matchSnapshot.publicFixture}
+                    locale={locale}
                   />
                   <div className={!matchPreview.away.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
                     {matchPreview.away.logoUrl && matchPreview.away.accent ? (

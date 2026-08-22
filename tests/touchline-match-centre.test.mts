@@ -8,6 +8,7 @@ import {
   normalizeTouchlineMatchCentreTimeZone,
   selectTouchlineMatchCentreFixture,
   touchlineFixtureState,
+  touchlineFixtureStatusLabel,
   touchlineMatchCentreDisplayState,
   touchlineMatchCentreHref,
 } from "../lib/touchlineArena/match-centre.ts";
@@ -44,6 +45,22 @@ test("Match Centre preserves an explicit fixture deep link", () => {
   const target = fixture("20", "2026-08-22T14:00:00Z", "Not Started");
   assert.equal(selectTouchlineMatchCentreFixture([first, target], target.id)?.id, target.id);
   assert.equal(touchlineMatchCentreHref(target, "pt-BR"), "/live?fixture=sportmonks%3A20&lang=pt-BR");
+});
+
+test("fixture status labels are rendered in the selected locale without changing the provider fact", () => {
+  assert.equal(touchlineFixtureStatusLabel("2nd Half", "en-GB"), "2nd Half");
+  assert.equal(touchlineFixtureStatusLabel("2nd Half", "pt-BR"), "2º tempo");
+  assert.equal(touchlineFixtureStatusLabel("Full Time", "pt-BR"), "Encerrado");
+  assert.equal(touchlineFixtureStatusLabel("Provider-specific status", "pt-BR"), "Provider-specific status");
+});
+
+test("Club Hub suppresses a pre-match provider status before localizing its presentation", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/ClubHubLiveFixtureScore.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /const rawStatus = fixture\.status\?\.trim\(\) \?\? ""/);
+  assert.match(source, /rawStatus\.toLowerCase\(\) !== "not started"/);
 });
 
 test("Match Centre overlays a live snapshot by provider fixture ID without duplicating the matchweek", () => {
