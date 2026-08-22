@@ -92,7 +92,13 @@ type CardFieldLayout = { x: number; y: number; scale: number };
 type CardLayout = Record<EditableBlock, CardFieldLayout>;
 type RemovalMarker = { x: number; y: number };
 type DragState = { key: EditableBlock; startX: number; startY: number; originX: number; originY: number };
-type MatchStatId = "goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards";
+/**
+ * Compact-card icon contract: GOL=goals, AST=assists, DEF=defensive actions
+ * (not currently provider-backed), CS=clean sheets, and the paired card
+ * icon=yellow/red cards. Additional allowlisted facts serve overlay/profile
+ * detail without assigning a false meaning to an existing icon.
+ */
+type MatchStatId = "goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances";
 type MasterLockState = "checking" | "unlocked" | "locked" | "readonly" | "error";
 
 const DEFAULT_CARD_LAYOUT = masterCardLayout.layout as CardLayout;

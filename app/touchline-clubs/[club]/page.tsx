@@ -261,6 +261,28 @@ function localizedFixtureStatus(value: string, locale: TouchLineLocale) {
   return value;
 }
 
+/**
+ * The match preview may point at the next scheduled fixture, but card scoring
+ * must keep the current live fixture (or the most recent settled one) so a
+ * final match's verified facts do not disappear before the next kickoff.
+ */
+function selectPublicClubScoringFixture(
+  fixtures: TouchlineFixture[],
+  belongsToClub: (fixture: TouchlineFixture) => boolean,
+) {
+  const statusRank = (fixture: TouchlineFixture) => {
+    const status = fixture.status?.trim() ?? "";
+    if (/(?:live|in[ -]?play|1st|2nd|half[ -]?time|extra time|penalties)/i.test(status)) return 0;
+    if (/(?:^ft(?:_|$)|full[ -]?time|finished|after extra time|aet|after penalties)/i.test(status)) return 1;
+    return 2;
+  };
+  return fixtures
+    .filter(belongsToClub)
+    .map((fixture) => ({ fixture, rank: statusRank(fixture), startsAt: Date.parse(fixture.startsAt ?? "") || 0 }))
+    .filter((entry) => entry.rank < 2)
+    .sort((left, right) => left.rank - right.rank || right.startsAt - left.startsAt)[0]?.fixture;
+}
+
 async function loadClubMatchSnapshot(
   club: NonNullable<ReturnType<typeof findTouchLineClub>>,
   locale: TouchLineLocale,
@@ -285,29 +307,30 @@ async function loadClubMatchSnapshot(
       [...persistedFixtures, ...scheduledFixtures],
       (candidate) => fixtureHasClub(candidate, club),
     );
-    if (!fixture) return empty;
-
-    const persistedFeed = persistedFeeds.find((feed) => feed.fixture.providerId === fixture.providerId);
+    const scoringFixture = selectPublicClubScoringFixture(persistedFixtures, (candidate) => fixtureHasClub(candidate, club));
+    const previewFixture = fixture ?? scoringFixture;
+    if (!previewFixture) return empty;
+    const persistedFeed = persistedFeeds.find((feed) => feed.fixture.providerId === scoringFixture?.providerId);
     const publicFeed = persistedFeed ? toPublicFantasyFixtureFeed(persistedFeed) : null;
-    const matchDetail = publicFeed && fixture.providerId
-      ? await readPublicFantasyFixtureMatchDetail(fixture.providerId, publicFeed)
+    const matchDetail = publicFeed && scoringFixture?.providerId
+      ? await readPublicFantasyFixtureMatchDetail(scoringFixture.providerId, publicFeed)
       : null;
     const formation = persistedFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
     return {
       preview: {
-        home: resolveTouchlineClubMatchPreviewTeam(fixture.homeTeam, club, locale),
-        away: resolveTouchlineClubMatchPreviewTeam(fixture.awayTeam, club, locale),
-        status: fixture.status ?? "TouchLine England",
-        startsAt: fixture.startsAt
-          ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(fixture.startsAt))
+        home: resolveTouchlineClubMatchPreviewTeam(previewFixture.homeTeam, club, locale),
+        away: resolveTouchlineClubMatchPreviewTeam(previewFixture.awayTeam, club, locale),
+        status: previewFixture.status ?? "TouchLine England",
+        startsAt: previewFixture.startsAt
+          ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(previewFixture.startsAt))
           : touchLineT(locale, "kickoffPending"),
         source: touchLineT(locale, "dataCache"),
       },
-      fixtureId: fixture.providerId ?? null,
+      fixtureId: scoringFixture?.providerId ?? null,
       lineups: persistedFeed?.lineups ?? [],
       formation,
       coach: null,
-      publicFixture: toPublicTouchlineFixture(fixture),
+      publicFixture: toPublicTouchlineFixture(previewFixture),
       playerStatistics: matchDetail?.playerStatistics ?? [],
     };
   } catch {

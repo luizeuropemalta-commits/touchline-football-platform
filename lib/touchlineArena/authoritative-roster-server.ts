@@ -116,11 +116,24 @@ function touchlinePointsFor(
 function verifiedSeasonStats(row?: DatabaseRecord | null) {
   const summary = asRecord(row?.summary_payload);
   if (!summary) return undefined;
-  const yellow = asFiniteNumber(summary.yellowCards);
-  const red = asFiniteNumber(summary.redCards);
+  const positionStatistics = asRecord(row?.position_statistics_payload);
+  const value = (...keys: string[]) => {
+    for (const key of keys) {
+      const numeric = asFiniteNumber(summary[key]) ?? asFiniteNumber(positionStatistics?.[key]);
+      if (numeric !== null) return numeric;
+    }
+    return null;
+  };
+  const yellow = value("yellowCards", "yellow-cards", "yellowcards");
+  const red = value("redCards", "red-cards", "redcards");
   const entries = [
-    ["goals", asFiniteNumber(summary.goals)],
-    ["assists", asFiniteNumber(summary.assists)],
+    ["goals", value("goals")],
+    ["assists", value("assists")],
+    ["cleanSheets", value("cleanSheets", "clean-sheets", "cleansheets")],
+    ["saves", value("saves")],
+    ["goalsConceded", value("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded")],
+    ["yellowCards", yellow],
+    ["redCards", red],
     ["cards", yellow === null || red === null ? null : yellow + red],
   ].filter((entry): entry is [string, number] => typeof entry[1] === "number");
   return entries.length ? Object.fromEntries(entries) : undefined;
@@ -142,6 +155,10 @@ function verifiedMatchStats(row?: DatabaseRecord | null) {
     ["goals", value("goals")],
     ["assists", value("assists")],
     ["cleanSheets", value("clean-sheets", "cleansheets")],
+    ["saves", value("saves")],
+    ["goalsConceded", value("goalkeeper-goals-conceded", "goals-conceded")],
+    ["yellowCards", yellow],
+    ["redCards", red],
     ["cards", yellow === null || red === null ? null : yellow + red],
   ].filter((entry): entry is [string, number] => typeof entry[1] === "number");
   return entries.length ? Object.fromEntries(entries) : undefined;
@@ -430,7 +447,7 @@ export async function readAuthoritativeTouchlineRoster(
   const [seasonStatisticsResponse, fixtureStatisticsResponse] = await Promise.all([
     currentSeasonId
       ? admin.from("football_player_season_statistics")
-        .select("football_player_id,summary_payload,source_synced_at")
+        .select("football_player_id,summary_payload,position_statistics_payload,source_synced_at")
         .eq("season_id", currentSeasonId)
         .in("football_player_id", playerIds)
       : Promise.resolve({ data: [], error: null }),

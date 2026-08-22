@@ -4,6 +4,15 @@ import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 export type TouchlinePublicSeasonPlayerPoints = Readonly<{
   canonicalPlayerId: string;
   touchlinePoints: number | null;
+  statistics: Readonly<{
+    goals?: number;
+    assists?: number;
+    yellowCards?: number;
+    redCards?: number;
+    cleanSheets?: number;
+    saves?: number;
+    goalsConceded?: number;
+  }>;
 }>;
 
 /**
@@ -21,11 +30,13 @@ export function applyTouchlineMatchdayPoints(
   return cards.map((card) => {
     const statistic = byProviderPlayerId.get(String(card.id));
     if (!statistic) return card;
-    const { goals, assists, yellowCards, redCards, cleanSheets } = statistic.statistics;
+    const { goals, assists, yellowCards, redCards, cleanSheets, saves, goalsConceded } = statistic.statistics;
     const matchStats = {
       ...(goals === undefined ? {} : { goals }),
       ...(assists === undefined ? {} : { assists }),
       ...(cleanSheets === undefined ? {} : { cleanSheets }),
+      ...(saves === undefined ? {} : { saves }),
+      ...(goalsConceded === undefined ? {} : { goalsConceded }),
       ...(yellowCards === undefined ? {} : { yellowCards }),
       ...(redCards === undefined ? {} : { redCards }),
       ...(yellowCards === undefined || redCards === undefined ? {} : { cards: yellowCards + redCards }),
@@ -58,6 +69,7 @@ export function applyTouchlineSeasonPoints(
     return {
       ...card,
       seasonTouchlinePoints: statistic?.touchlinePoints ?? null,
+      ...(statistic && Object.keys(statistic.statistics).length ? { seasonStats: statistic.statistics } : {}),
     };
   });
 }

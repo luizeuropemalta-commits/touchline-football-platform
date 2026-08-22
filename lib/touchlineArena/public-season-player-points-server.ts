@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { TouchlinePublicSeasonPlayerPoints } from "./matchday-player-points";
 
-type Row = Readonly<{ football_player_id?: unknown; summary_payload?: unknown }>;
+type Row = Readonly<{ football_player_id?: unknown; summary_payload?: unknown; position_statistics_payload?: unknown }>;
 const TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID = "8";
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -48,7 +48,7 @@ export async function readPublicSeasonPlayerPoints(
   if (seasonsError || seasonIds.length !== 1) return [];
   const { data, error } = await admin
     .from("football_player_season_statistics")
-    .select("football_player_id,summary_payload")
+    .select("football_player_id,summary_payload,position_statistics_payload")
     .eq("competition_id", competitionId)
     .eq("season_id", seasonIds[0])
     .in("football_player_id", ids);
@@ -56,7 +56,26 @@ export async function readPublicSeasonPlayerPoints(
   return (data as Row[]).flatMap((row) => {
     const canonicalPlayerId = String(row.football_player_id ?? "").trim();
     const summary = record(row.summary_payload);
+    const positionStatistics = record(row.position_statistics_payload);
+    const statistic = (...keys: string[]) => {
+      for (const key of keys) {
+        const value = finiteNumber(summary?.[key]) ?? finiteNumber(positionStatistics?.[key]);
+        if (value !== null) return value;
+      }
+      return undefined;
+    };
     const touchlinePoints = finiteNumber(summary?.touchlinePoints);
-    return canonicalPlayerId ? [{ canonicalPlayerId, touchlinePoints }] : [];
+    const yellowCards = statistic("yellowCards", "yellow-cards", "yellowcards");
+    const redCards = statistic("redCards", "red-cards", "redcards");
+    const statistics = {
+      ...(statistic("goals") === undefined ? {} : { goals: statistic("goals")! }),
+      ...(statistic("assists") === undefined ? {} : { assists: statistic("assists")! }),
+      ...(yellowCards === undefined ? {} : { yellowCards }),
+      ...(redCards === undefined ? {} : { redCards }),
+      ...(statistic("cleanSheets", "clean-sheets", "cleansheets") === undefined ? {} : { cleanSheets: statistic("cleanSheets", "clean-sheets", "cleansheets")! }),
+      ...(statistic("saves") === undefined ? {} : { saves: statistic("saves")! }),
+      ...(statistic("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded") === undefined ? {} : { goalsConceded: statistic("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded")! }),
+    };
+    return canonicalPlayerId ? [{ canonicalPlayerId, touchlinePoints, statistics }] : [];
   });
 }

@@ -39,8 +39,8 @@ export type ArenaLineupPlayer = {
     editorialCard?: TouchlinePublicEditorialCardPresentation | null;
     inventoryId?: string | null;
     /** Cumulative verified season statistics used by the shared card renderer. */
-    seasonStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards", string | number | null>>;
-    matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards", string | number | null>>;
+    seasonStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances", string | number | null>>;
+    matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances", string | number | null>>;
   };
   x: number;
   y: number;

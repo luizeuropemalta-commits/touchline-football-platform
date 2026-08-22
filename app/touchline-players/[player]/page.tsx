@@ -632,10 +632,32 @@ export default async function TouchLinePlayerProfilePage({
   exactPlayer.seasonStats = {
     goals: playerStatistics.currentSeason.summary.goals,
     assists: playerStatistics.currentSeason.summary.assists,
+    yellowCards: playerStatistics.currentSeason.summary.yellowCards,
+    redCards: playerStatistics.currentSeason.summary.redCards,
     cards: playerStatistics.currentSeason.summary.yellowCards === null
       || playerStatistics.currentSeason.summary.redCards === null
       ? null
       : playerStatistics.currentSeason.summary.yellowCards + playerStatistics.currentSeason.summary.redCards,
+  };
+  const selectedFixtureStatistics = playerStatistics.currentOrSelectedFixture?.statistics ?? {};
+  const selectedStatistic = (...keys: string[]) => {
+    for (const key of keys) {
+      const value = selectedFixtureStatistics[key];
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+    }
+    return undefined;
+  };
+  const selectedYellowCards = selectedStatistic("yellow-cards", "yellowcards");
+  const selectedRedCards = selectedStatistic("red-cards", "redcards");
+  exactPlayer.matchStats = {
+    ...(selectedStatistic("goals") === undefined ? {} : { goals: selectedStatistic("goals")! }),
+    ...(selectedStatistic("assists") === undefined ? {} : { assists: selectedStatistic("assists")! }),
+    ...(selectedStatistic("clean-sheets", "cleansheets") === undefined ? {} : { cleanSheets: selectedStatistic("clean-sheets", "cleansheets")! }),
+    ...(selectedStatistic("saves") === undefined ? {} : { saves: selectedStatistic("saves")! }),
+    ...(selectedStatistic("goalkeeper-goals-conceded", "goals-conceded") === undefined ? {} : { goalsConceded: selectedStatistic("goalkeeper-goals-conceded", "goals-conceded")! }),
+    ...(selectedYellowCards === undefined ? {} : { yellowCards: selectedYellowCards }),
+    ...(selectedRedCards === undefined ? {} : { redCards: selectedRedCards }),
+    ...(selectedYellowCards === undefined || selectedRedCards === undefined ? {} : { cards: selectedYellowCards + selectedRedCards }),
   };
   const requestedPreviewTier = Array.isArray(query.previewTier) ? query.previewTier[0] : query.previewTier;
   // Preview tiers are available only for an explicit local-development demo.
