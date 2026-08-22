@@ -41,7 +41,7 @@ function assertOrderedTimeline(timeline: TouchlineArenaIntroTimeline) {
 }
 
 test("official Arena intro keeps the current TouchLine identity and existing media assets", () => {
-  const globalLoading = source("app/loading.tsx");
+  const introComponent = source("components/touchline/arena/TouchlineArenaIntro.tsx");
 
   assert.equal(TOUCHLINE_ARENA_OFFICIAL_LOGO, "/touchlineArena/brand/tl-shield-lime.svg");
   assert.equal(TOUCHLINE_ARENA_ENTRY_VIDEO, "/touchlineArena/arena/touchline-arena-entry-20260716.mp4");
@@ -61,8 +61,8 @@ test("official Arena intro keeps the current TouchLine identity and existing med
     assert.equal(publicAssetExists(asset), true, asset);
   }
 
-  assert.match(globalLoading, /import \{ TOUCHLINE_ARENA_OFFICIAL_LOGO \} from "@\/lib\/touchlineArena\/arena-intro"/);
-  assert.match(globalLoading, /<Image[\s\S]*?src=\{TOUCHLINE_ARENA_OFFICIAL_LOGO\}/);
+  assert.match(introComponent, /import \{[\s\S]*?TOUCHLINE_ARENA_OFFICIAL_LOGO/);
+  assert.match(introComponent, /<Image[\s\S]*?src=\{TOUCHLINE_ARENA_OFFICIAL_LOGO\}/);
 });
 
 test("intro intent gives first registration priority and accepts only the explicit skip contract", () => {
