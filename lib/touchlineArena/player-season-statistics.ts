@@ -60,6 +60,24 @@ export type TouchLinePlayerStatisticsReadModel = {
   currentOrSelectedFixture: TouchLinePlayerFixtureStatistics | null;
 };
 
+/**
+ * A player profile keeps the latest verified match projection after full time.
+ * A future fixture has no player fact yet and must not erase the prior final
+ * points, statistics or event-backed scoring explanation.
+ */
+export function selectTouchLineCurrentOrLastVerifiedFixture(
+  fixtures: readonly TouchLinePlayerFixtureStatistics[],
+  selectedFixtureId?: string | null,
+) {
+  const selected = String(selectedFixtureId ?? "").trim();
+  if (selected) return fixtures.find((fixture) => fixture.fixtureId === selected) ?? null;
+  return fixtures.find((fixture) => (
+    fixture.touchlinePoints !== null
+    || fixture.pointContributions.length > 0
+    || Object.keys(fixture.statistics).length > 0
+  )) ?? null;
+}
+
 export const TOUCHLINE_PLAYER_SEASON_SUMMARY_KEYS = [
   "appearances",
   "starts",

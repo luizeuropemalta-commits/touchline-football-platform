@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   emptyTouchLinePlayerSeasonStatistics,
   normalizeTouchLinePlayerSeasonStatistics,
+  selectTouchLineCurrentOrLastVerifiedFixture,
   type TouchLinePlayerFixtureStatistics,
   type TouchLinePlayerSeasonStatistics,
   type TouchLinePlayerStatisticsReadModel,
@@ -245,7 +246,10 @@ export async function loadTouchLinePlayerStatisticsReadModel(input: {
   const allFixtures = fixtureRows
     .map(fixtureStatisticFromRow)
     .sort((first, second) => Date.parse(second.fixtureStartsAt ?? "") - Date.parse(first.fixtureStartsAt ?? ""));
-  const selectedFixtureStatistic = allFixtures.find((fixture) => fixture.fixtureId === currentFixture?.provider_fixture_id) ?? null;
+  const selectedFixtureStatistic = selectTouchLineCurrentOrLastVerifiedFixture(
+    allFixtures,
+    input.selectedFixtureId,
+  );
   const currentOrSelectedFixture = selectedFixtureStatistic ?? (currentFixture ? {
     fixtureId: currentFixture.provider_fixture_id,
     fixtureName: null,

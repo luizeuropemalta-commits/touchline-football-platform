@@ -5,6 +5,7 @@ import test from "node:test";
 import { buildTouchLinePlayerSeasonAggregate } from "../lib/football-data/player-season-statistics-sync.ts";
 import {
   normalizeTouchLinePlayerSeasonStatistics,
+  selectTouchLineCurrentOrLastVerifiedFixture,
   touchLinePlayerSeasonCoverageMessage,
 } from "../lib/touchlineArena/player-season-statistics.ts";
 import type { TouchlineFantasyLineupMember } from "../lib/football-data/types.ts";
@@ -85,6 +86,27 @@ test("a legacy row claiming complete is downgraded if its fixture identity sets 
 
   assert.equal(normalized.coverageStatus, "partial");
   assert.equal(touchLinePlayerSeasonCoverageMessage(normalized), "Partial data — 3 of 4 eligible fixtures synchronised");
+});
+
+test("a scheduled next fixture cannot erase the last verified final match points", () => {
+  const fixture = (id: string, points: number | null, statistics: Record<string, number | string>) => ({
+    fixtureId: id,
+    fixtureName: null,
+    fixtureStartsAt: id === "next" ? "2026-08-28T19:00:00.000Z" : "2026-08-21T19:00:00.000Z",
+    fixtureStatus: id === "next" ? "Not Started" : "Full Time",
+    appearanceStatus: "started" as const,
+    minutes: 90,
+    rating: null,
+    touchlinePoints: points,
+    pointContributions: id === "final" ? [{ role: "primary" as const, eventType: "Goal", minute: 67, points: 6 }] : [],
+    statistics,
+    latestSyncAt: "2026-08-22T10:00:00.000Z",
+  });
+  const final = fixture("final", 6, { goals: 1, assists: 0 });
+  const next = fixture("next", null, {});
+
+  assert.equal(selectTouchLineCurrentOrLastVerifiedFixture([next, final]), final);
+  assert.equal(selectTouchLineCurrentOrLastVerifiedFixture([next, final], "next"), next);
 });
 
 test("migration 048 makes player statistics server-only and coverage-aware", async () => {
