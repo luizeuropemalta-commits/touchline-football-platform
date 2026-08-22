@@ -41,6 +41,7 @@ export type AuthoritativeRosterErrorCode =
   | "TL_ROSTER_PLAYERS_UNAVAILABLE"
   | "TL_ROSTER_CLUBS_UNAVAILABLE"
   | "TL_ROSTER_SQUAD_UNAVAILABLE"
+  | "TL_ROSTER_READ_TIMEOUT"
   | "TL_ROSTER_DATA_INCOMPLETE";
 
 export type AuthoritativeRosterReadResult =

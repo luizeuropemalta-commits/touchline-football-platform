@@ -12,8 +12,13 @@ import {
   readAuthoritativeTouchlineRoster,
   validateLineupInventoryOwnership,
 } from "@/lib/touchlineArena/authoritative-roster-server";
+import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 
 const FORMATIONS = new Set(["3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1"]);
+// The initial authenticated state establishes the browser's namespaced owner
+// cache. A slow editorial roster reconstruction must not hold the whole Arena
+// in its blank loading state; the separate roster endpoint still reconciles it.
+const ARENA_STATE_ROSTER_READ_TIMEOUT_MS = 4_000;
 
 async function authenticatedUser() {
   const supabase = await createClient();
@@ -60,7 +65,11 @@ export async function GET() {
     );
   }
 
-  const roster = await readAuthoritativeTouchlineRoster(admin, user.id);
+  const roster = await resolveServerReadWithin(
+    readAuthoritativeTouchlineRoster(admin, user.id),
+    { ok: false as const, error: "TL_ROSTER_READ_TIMEOUT" as const },
+    ARENA_STATE_ROSTER_READ_TIMEOUT_MS,
+  );
   if (!roster.ok) return rosterReadFailure(roster.error, user.id);
 
   const state = {

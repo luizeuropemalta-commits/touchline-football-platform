@@ -630,4 +630,5 @@ test("Arena state GET reconstructs stored lineup from active contracts and never
   assert.match(route, /saved_formation_layouts:\s*reconcileStoredArenaFormationLayouts\(/);
   assert.match(route, /Cache-Control["']:\s*["']private, no-store/);
   assert.match(route, /rosterReadFailure\(roster\.error, user\.id\)/);
+  assert.match(route, /resolveServerReadWithin\([\s\S]*?readAuthoritativeTouchlineRoster\(admin, user\.id\)[\s\S]*?TL_ROSTER_READ_TIMEOUT[\s\S]*?ARENA_STATE_ROSTER_READ_TIMEOUT_MS/);
 });
