@@ -90,9 +90,11 @@ test("locale, analytics and Arena bootstrap use resilient browser boundaries", (
   assert.doesNotMatch(localeSyncSource, /readBrowserStorage\("localStorage"/);
   assert.match(activityTrackerSource, /getOrCreateIdentityBoundBrowserSessionId/);
   assert.match(activityTrackerSource, /void start\(\)\.catch/);
+  assert.match(activityTrackerSource, /readBrowserStorage\("sessionStorage"/);
+  assert.match(activityTrackerSource, /writeBrowserStorage\(\s*"sessionStorage"/);
   assert.match(arenaSource, /queueResilientAsyncTask\(async \(\) =>/);
   assert.match(arenaSource, /const randomKey = createResilientBrowserId\(\)/);
   assert.doesNotMatch(localeSyncSource, /window\.localStorage|window\.sessionStorage/);
-  assert.doesNotMatch(activityTrackerSource, /\bsessionStorage\b|\bcrypto\.randomUUID\b/);
+  assert.doesNotMatch(activityTrackerSource, /window\.localStorage|window\.sessionStorage|\bcrypto\.randomUUID\b/);
   assert.doesNotMatch(arenaSource, /window\.localStorage|window\.sessionStorage|\bcrypto\.randomUUID\b/);
 });

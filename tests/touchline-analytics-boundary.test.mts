@@ -165,6 +165,8 @@ test("analytics route keeps auth, RBAC, origin and forged-session boundaries ser
   assert.doesNotMatch(trackerSource, /userId\s*:/);
   assert.doesNotMatch(trackerSource, /activeSeconds|device:/);
   assert.match(trackerSource, /credentials:\s*"same-origin"/);
+  assert.match(trackerSource, /TOUCHLINE_ANALYTICS_NEXT_SEND_STORAGE_KEY/);
+  assert.match(trackerSource, /canSendTouchlineAnalyticsObservation/);
 });
 
 test("analytics database command is atomic, service-only and principal-bounded", () => {
