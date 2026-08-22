@@ -63,6 +63,25 @@ test("the authoritative eleven remain mounted in the normal Arena and during Qui
   assert.match(arenaSource, /arenaFieldPlayersForRendering\.find/);
 });
 
+test("essential Arena card layers remain visible when Safari does not advance an entry animation", () => {
+  const fieldLayerRule = arenaSource.match(
+    /\.field-player-layer\.is-entry-ready,[\s\S]*?\.arena-coach-technical-area\.is-entry-ready\s*\{([\s\S]*?)\}/,
+  )?.[1];
+  const spotlightRule = arenaSource.match(
+    /\n        \.arena-player-spotlight-panel \{([\s\S]*?)\}/,
+  )?.[1];
+
+  assert.ok(fieldLayerRule);
+  assert.match(fieldLayerRule, /opacity:\s*1/);
+  assert.match(fieldLayerRule, /visibility:\s*visible/);
+  assert.match(fieldLayerRule, /animation:\s*arena-card-layer-reveal/);
+  assert.doesNotMatch(fieldLayerRule, /\bboth\b/);
+
+  assert.ok(spotlightRule);
+  assert.match(spotlightRule, /animation:\s*arenaSpotlightIn/);
+  assert.doesNotMatch(spotlightRule, /\bboth\b/);
+});
+
 test("Quick Sub keeps the coach only in the central reserve rail", () => {
   assert.doesNotMatch(
     arenaSource,

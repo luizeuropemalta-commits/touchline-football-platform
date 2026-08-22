@@ -16347,7 +16347,7 @@ export default function ArenaClient({
         .arena-coach-technical-area.is-entry-ready {
           opacity: 1;
           visibility: visible;
-          animation: arena-card-layer-reveal .42s cubic-bezier(.22, 1, .36, 1) both;
+          animation: arena-card-layer-reveal .42s cubic-bezier(.22, 1, .36, 1);
         }
 
         @keyframes arena-card-layer-reveal {
@@ -16743,7 +16743,7 @@ export default function ArenaClient({
           gap: 8px;
           pointer-events: auto;
           filter: drop-shadow(0 30px 54px rgba(0,0,0,.62)) drop-shadow(0 0 28px rgba(181,255,75,.18));
-          animation: arenaSpotlightIn .18s ease-out both;
+          animation: arenaSpotlightIn .18s ease-out;
         }
 
         .arena-player-spotlight-panel-with-details {
