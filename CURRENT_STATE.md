@@ -1,5 +1,11 @@
 # TouchLine Current State
 
+## QA native Safari identity correction and route-transition observation — READ-ONLY / FOLLOW-UP OPEN
+
+- **Identity correction:** the earlier statement that the available Safari session was not the canonical QA persona is superseded. With the user-confirmed already-open session, `/club-owner/me?lang=en-GB` safely resolved to `/club-owner/luiz-lopez?lang=en-GB`, the documented canonical QA ClubOwner route. No credential, cookie, user selection, session value, formation, card or profile data was read or changed.
+- **Observation:** after that same native Safari tab navigated to the profile, it remained on the global Next loading boundary (`app/loading.tsx`) for more than 15 seconds. Preview logs recorded successful `200` responses for both routes and no runtime-error cluster. Fresh equivalent profile loads in Chromium, WebKit and Firefox returned `200`, rendered the Luiz Lopez heading, had no global loader, no page error and no horizontal overflow. This is an observed Safari in-tab route-transition symptom, not a failed login, absent profile, or evidence that the saved Arena formation changed.
+- **Preservation:** browser Back returned Safari to the original Arena URL, which still showed the global loader. No reload, account change, cookie action, editor action, card selection, formation change or write was attempted. The user may recover the visible tab manually; automation must not restart the session. The authenticated Arena/cards/profiles gate is **NOT PASS** and remains pending a safe native-Safari recovery path.
+
 ## QA Live real-time P0 — GREEN / CLOSED
 
 - Work is isolated in `/Users/luizlopez/Developer/touchline-qa-p0-live-20260821` on `codex/qa-p0-live-realtime-20260821`; the dirty Card Engine Block 4A worktree and backup `9fb94339-d9ce-4925-9d3c-59ef9b0cfe0e` remain untouched.
