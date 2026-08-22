@@ -63,6 +63,14 @@ test("Club Hub suppresses a pre-match provider status before localizing its pres
   assert.match(source, /rawStatus\.toLowerCase\(\) !== "not started"/);
 });
 
+test("Club Hub presents full time instead of a stale live minute or period", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/ClubHubLiveFixtureScore.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /touchlineFixtureState\(fixture\) === "finished"[\s\S]*?touchlineFixtureStatusLabel\(rawStatus, locale\)[\s\S]*?: fixture\.liveMinute !== undefined/);
+});
+
 test("Match Centre overlays a live snapshot by provider fixture ID without duplicating the matchweek", () => {
   const renderedFromServer: TouchlinePublicFixture = {
     id: "sportmonks:19722203",

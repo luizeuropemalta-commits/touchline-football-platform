@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import { parseTouchlinePublicFixtures } from "@/lib/football-data/public-fixture-client";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
-import { touchlineFixtureStatusLabel } from "@/lib/touchlineArena/match-centre";
+import { touchlineFixtureState, touchlineFixtureStatusLabel } from "@/lib/touchlineArena/match-centre";
 
 type Props = {
   fixtureId: string | null;
@@ -18,7 +18,9 @@ function presentation(fixture: TouchlinePublicFixture | null, locale: TouchLineL
   const hasScore = Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore);
   const score = hasScore ? `${fixture.homeScore} — ${fixture.awayScore}` : "VS";
   const rawStatus = fixture.status?.trim() ?? "";
-  const status = fixture.liveMinute !== undefined
+  const status = touchlineFixtureState(fixture) === "finished"
+    ? touchlineFixtureStatusLabel(rawStatus, locale)
+    : fixture.liveMinute !== undefined
     ? `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${touchlineFixtureStatusLabel(fixture.livePeriod, locale)}` : ""}`
     : touchlineFixtureStatusLabel(rawStatus, locale);
   return status && rawStatus.toLowerCase() !== "not started" ? `${score} · ${status}` : score;
