@@ -34,6 +34,14 @@ export default async function ArenaPage({
   // This route is intentionally reachable only on the exact stable QA host.
   // The client applies a second authenticated-persona check before edits/save.
   const requestHost = (await headers()).get("host")?.split(":")[0]?.toLowerCase();
+  const traceQaArenaSsr = (stage: string, details: Record<string, boolean> = {}) => {
+    if (requestHost !== TOUCHLINE_QA_HOSTNAME) return;
+    console.info("[touchline-qa-arena-ssr]", {
+      stage,
+      ...details,
+    });
+  };
+  traceQaArenaSsr("request-context-ready");
   const initialQaVisualEditor = firstValue(params.qaEditor) === "1"
     && requestHost === TOUCHLINE_QA_HOSTNAME;
   if (initialPanel && initialPanel !== "bench" && !initialQaVisualEditor) {
@@ -57,6 +65,7 @@ export default async function ArenaPage({
   }
 
   const supabase = await createClient();
+  traceQaArenaSsr("auth-read-start", { supabaseConfigured: Boolean(supabase) });
   const user = supabase
     ? await resolveServerReadWithin(
       supabase.auth.getUser().then(({ data }) => data.user),
@@ -64,6 +73,8 @@ export default async function ArenaPage({
       ARENA_SERVER_AUTH_READ_TIMEOUT_MS,
     )
     : null;
+  traceQaArenaSsr("auth-read-settled", { authenticated: Boolean(user) });
+  traceQaArenaSsr("render-arena-client");
 
   return (
     <ArenaClient
