@@ -50,13 +50,15 @@ export default async function TouchLineLivePage({
   const initiallySelected = selectTouchlineMatchCentreFixture(fixtures, requestedFixture, initialNow);
   const supabase = await createClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
-  const initialMatchDetail = hasTouchLineArenaAccess(user) && initiallySelected
+  const canReadMatchDetail = hasTouchLineArenaAccess(user);
+  const initialMatchDetail = canReadMatchDetail && initiallySelected
     ? await readPublicFantasyFixtureMatchDetail(initiallySelected.providerId)
     : null;
   return <TouchlineMatchCentre
     initialFixtures={fixtures}
     initialFixtureId={initiallySelected?.id ?? requestedFixture}
     initialMatchDetail={initialMatchDetail}
+    canReadMatchDetail={canReadMatchDetail}
     initialLocale={initialLocale}
     initialNow={initialNow}
     initialTimeZone={initialTimeZone}

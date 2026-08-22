@@ -149,7 +149,8 @@ test("Live consumes the persisted allowlisted match detail instead of a static p
   ]);
   assert.match(page, /readPublicFantasyFixtureMatchDetail/);
   assert.match(page, /supabase\.auth\.getUser\(\)/);
-  assert.match(page, /hasTouchLineArenaAccess\(user\) && initiallySelected/);
+  assert.match(page, /const canReadMatchDetail = hasTouchLineArenaAccess\(user\)/);
+  assert.match(component, /if \(!canReadMatchDetail\) return/);
   assert.match(component, /touchline-verified-match-data/);
   assert.match(component, /matchDetail\.events\.map/);
   assert.match(component, /contribution\.role === "assist"/);

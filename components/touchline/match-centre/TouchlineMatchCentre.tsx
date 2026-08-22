@@ -32,6 +32,7 @@ type Props = {
   initialFixtures: TouchlinePublicFixture[];
   initialFixtureId?: string | null;
   initialMatchDetail?: TouchlinePublicFantasyFixtureMatchDetail | null;
+  canReadMatchDetail?: boolean;
   initialLocale?: TouchLineLocale | null;
   initialNow: number;
   initialReadMetadata?: TouchlineLiveReadMetadata | null;
@@ -235,6 +236,7 @@ export default function TouchlineMatchCentre({
   initialFixtures,
   initialFixtureId,
   initialMatchDetail = null,
+  canReadMatchDetail = false,
   initialLocale,
   initialNow,
   initialReadMetadata = null,
@@ -254,6 +256,7 @@ export default function TouchlineMatchCentre({
   }, []);
 
   useEffect(() => {
+    if (!canReadMatchDetail) return;
     const selected = selectTouchlineMatchCentreFixture(fixtures, selectedId, now);
     const fixtureId = selected?.providerId;
     if (!fixtureId || matchDetail?.fixture.id === fixtureId) return;
@@ -275,7 +278,7 @@ export default function TouchlineMatchCentre({
     }
     void loadDetail();
     return () => controller.abort();
-  }, [fixtures, matchDetail?.fixture.id, now, selectedId]);
+  }, [canReadMatchDetail, fixtures, matchDetail?.fixture.id, now, selectedId]);
 
   useEffect(() => {
     const controller = new AbortController();
