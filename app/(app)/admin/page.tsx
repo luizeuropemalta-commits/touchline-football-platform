@@ -480,6 +480,7 @@ export default async function AdminOwnerPanel({
     { href: "/admin/promotions", label: "Promotions", detail: "Campaigns and credit ledger", icon: Gift },
     { href: "/admin/football-data", label: "Football Data", detail: "Normalized football foundation", icon: Database },
     { href: "/admin/market-values", label: "Market Values", detail: "Verified values and review queue", icon: ShieldCheck },
+    { href: "/admin/card-engine", label: "Card Engine", detail: "Protected editorial review and publish", icon: Sparkles },
     { href: "/admin/finance", label: "Finance Control", detail: "Protected financial overview", icon: CircleDollarSign },
   ];
 
