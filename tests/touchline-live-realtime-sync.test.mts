@@ -66,6 +66,7 @@ test("the writer is server-only, constant-time authenticated and provider-scoped
   assert.match(sync, /process\.env\.VERCEL_ENV !== "preview"/);
   assert.match(sync, /TOUCHLINE_QA_SUPABASE_PROJECT_REF !== QA_PROJECT_REF/);
   assert.doesNotMatch(route, /createClient|owner_session|isOwnerEmail/);
+  assert.match(route, /export const maxDuration = 300/);
 });
 
 test("QA scheduler stores the bearer in Vault and cannot target Production", () => {

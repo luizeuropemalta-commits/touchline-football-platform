@@ -5,7 +5,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { syncSportmonksLiveState } from "@/lib/football-data/live-sync";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export const maxDuration = 60;
+// A cold QA run can include the first persisted V2 historical reconciliation
+// in addition to the live provider write. Keep the function inside Vercel's
+// documented App Router duration contract instead of letting that idempotent
+// backfill terminate at the former 60-second boundary.
+export const maxDuration = 300;
 
 function authorized(request: NextRequest) {
   const secret = process.env.TOUCHLINE_LIVE_SYNC_SECRET?.trim();
