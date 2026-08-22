@@ -113,13 +113,13 @@ export function inferArenaRole(position?: string): ArenaLineupRole {
 
   if (includesAny(normalized, ["goalkeeper", "keeper", "goleiro"]) || tokens.includes("gk") || compact === "goalie") return "goalkeeper";
   if (
-    includesAny(normalized, ["defender", "centre back", "center back", "full back", "wing back", "zagueiro", "lateral"]) ||
+    includesAny(normalized, ["defender", "centre back", "center back", "full back", "wing back", "left back", "right back", "zagueiro", "lateral"]) ||
     ["cb", "lb", "rb", "lcb", "rcb", "lwb", "rwb", "df"].some((term) => tokens.includes(term) || compact === term)
   ) {
     return "defender";
   }
   if (
-    includesAny(normalized, ["forward", "attacker", "striker", "winger", "ponta", "atacante", "centroavante"]) ||
+    includesAny(normalized, ["forward", "attacker", "striker", "winger", "left wing", "right wing", "ponta", "atacante", "centroavante"]) ||
     ["st", "cf", "fw", "att", "lw", "rw", "lf", "rf"].some((term) => tokens.includes(term) || compact === term)
   ) {
     return "forward";
