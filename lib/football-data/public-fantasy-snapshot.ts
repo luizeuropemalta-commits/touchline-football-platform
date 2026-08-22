@@ -26,6 +26,11 @@ export type PersistedFantasyFixtureFeedSnapshot = Readonly<{
   capturedAt: string;
 }>;
 
+export type PersistedFantasyFixtureFeedReadResult =
+  | Readonly<{ status: "available"; snapshot: PersistedFantasyFixtureFeedSnapshot }>
+  | Readonly<{ status: "pending" }>
+  | Readonly<{ status: "unavailable" }>;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -107,14 +112,14 @@ export async function readPublicFantasyFixtureSnapshots(options: {
  * model: callers must still map it through an explicit public DTO before
  * serialising it to a browser.
  */
-export async function readPersistedFantasyFixtureFeed(
+export async function readPersistedFantasyFixtureFeedResult(
   fixtureId: string,
-): Promise<PersistedFantasyFixtureFeedSnapshot | null> {
+): Promise<PersistedFantasyFixtureFeedReadResult> {
   const normalizedFixtureId = fixtureId.trim();
-  if (!/^[0-9]{1,20}$/.test(normalizedFixtureId)) return null;
+  if (!/^[0-9]{1,20}$/.test(normalizedFixtureId)) return { status: "pending" };
 
   const supabase = createAdminClient();
-  if (!supabase) return null;
+  if (!supabase) return { status: "unavailable" };
 
   const { data, error } = await supabase
     .from("football_fantasy_fixture_feeds")
@@ -123,12 +128,25 @@ export async function readPersistedFantasyFixtureFeed(
     .eq("provider_fixture_id", normalizedFixtureId)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) return { status: "unavailable" };
+  // The schedule intentionally exists before Sportmonks publishes line-ups
+  // and detailed match facts. A missing row is an expected pre-match state,
+  // not an operational failure.
+  if (!data) return { status: "pending" };
   const row = data as PersistedFantasyFixtureRow;
   const capturedAt = persistedTimestamp(row.last_synced_at);
-  if (!capturedAt || String(row.provider_fixture_id ?? "").trim() !== normalizedFixtureId) return null;
+  if (!capturedAt || String(row.provider_fixture_id ?? "").trim() !== normalizedFixtureId) {
+    return { status: "unavailable" };
+  }
   const feed = normalizePersistedRow(row);
-  if (!feed) return null;
+  if (!feed) return { status: "unavailable" };
 
-  return { feed, capturedAt };
+  return { status: "available", snapshot: { feed, capturedAt } };
+}
+
+export async function readPersistedFantasyFixtureFeed(
+  fixtureId: string,
+): Promise<PersistedFantasyFixtureFeedSnapshot | null> {
+  const result = await readPersistedFantasyFixtureFeedResult(fixtureId);
+  return result.status === "available" ? result.snapshot : null;
 }

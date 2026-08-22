@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { toPublicFantasyFixtureFeed } from "@/lib/football-data/public-fantasy-fixture";
-import { readPersistedFantasyFixtureFeed } from "@/lib/football-data/public-fantasy-snapshot";
+import { readPersistedFantasyFixtureFeedResult } from "@/lib/football-data/public-fantasy-snapshot";
 import { readPublicFantasyFixtureMatchDetail } from "@/lib/football-data/public-fixture-match-detail-server";
 import { requireAuthenticatedOrLocalTouchlineEditor } from "@/lib/touchlineArena/api-access";
 
@@ -27,8 +27,21 @@ export async function GET(request: NextRequest) {
 
   let data;
   try {
-    const snapshot = await readPersistedFantasyFixtureFeed(fixtureId);
-    const publicFeed = snapshot ? toPublicFantasyFixtureFeed(snapshot.feed) : null;
+    const result = await readPersistedFantasyFixtureFeedResult(fixtureId);
+    if (result.status === "pending") {
+      return NextResponse.json(
+        {
+          ok: false,
+          data: null,
+          error: "Verified match detail is not available yet.",
+          status: "canonical-fixture-feed-pending",
+        },
+        { status: 200, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+    const publicFeed = result.status === "available"
+      ? toPublicFantasyFixtureFeed(result.snapshot.feed)
+      : null;
     data = publicFeed
       ? await readPublicFantasyFixtureMatchDetail(fixtureId, publicFeed)
       : null;

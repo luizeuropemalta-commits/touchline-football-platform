@@ -20,8 +20,9 @@ test("fixture GET authenticates before reading a persisted fixture and never rea
   assert.match(getHandler, /requireAuthenticatedOrLocalTouchlineEditor\(request\)/);
   assert.ok(
     getHandler.indexOf("requireAuthenticatedOrLocalTouchlineEditor(request)") <
-      getHandler.indexOf("readPersistedFantasyFixtureFeed(fixtureId)"),
+      getHandler.indexOf("readPersistedFantasyFixtureFeedResult(fixtureId)"),
   );
+  assert.match(getHandler, /canonical-fixture-feed-pending/);
   assert.match(getHandler, /canonical-fixture-feed-unavailable/);
   assert.match(getHandler, /toPublicFantasyFixtureFeed/);
   assert.doesNotMatch(getHandler, /createFootballDataProvider|persistFantasyFixtureFeed|getFixtureFantasyFeed/);

@@ -44,5 +44,7 @@ test("the public fixture reader fails closed when its canonical feed is unavaila
 
   assert.match(fixtureRoute, /canonical-fixture-feed-unavailable/);
   assert.match(fixtureRoute, /No coherent persisted fixture feed is available/);
+  assert.match(fixtureRoute, /canonical-fixture-feed-pending/);
+  assert.match(fixtureRoute, /Verified match detail is not available yet/);
   assert.doesNotMatch(fixtureRoute, /createFootballDataProvider|persistFantasyFixtureFeed|publicFootballDataFailure/);
 });

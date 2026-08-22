@@ -16,15 +16,20 @@ const arenaSource = readFileSync(
 );
 
 test("the fixture endpoint is a persisted-only public reader", () => {
-  assert.match(routeSource, /readPersistedFantasyFixtureFeed\(fixtureId\)/);
+  assert.match(routeSource, /readPersistedFantasyFixtureFeedResult\(fixtureId\)/);
   assert.match(routeSource, /toPublicFantasyFixtureFeed/);
+  assert.match(routeSource, /canonical-fixture-feed-pending/);
+  assert.match(routeSource, /status: 200/);
   assert.match(routeSource, /canonical-fixture-feed-unavailable/);
   assert.doesNotMatch(routeSource, /createFootballDataProvider|persistFantasyFixtureFeed|getFixtureFantasyFeed|publicFootballDataFailure/);
   assert.match(routeSource, /export async function POST\(\)[\s\S]*?status: 405/);
 });
 
 test("the exact fixture snapshot reader does not fetch or write", () => {
+  assert.match(snapshotSource, /export async function readPersistedFantasyFixtureFeedResult/);
   assert.match(snapshotSource, /export async function readPersistedFantasyFixtureFeed/);
+  assert.match(snapshotSource, /if \(!data\) return \{ status: "pending" \}/);
+  assert.match(snapshotSource, /if \(error\) return \{ status: "unavailable" \}/);
   assert.doesNotMatch(snapshotSource, /createFootballDataProvider|persistFantasyFixtureFeed|\.upsert\(/);
 });
 
