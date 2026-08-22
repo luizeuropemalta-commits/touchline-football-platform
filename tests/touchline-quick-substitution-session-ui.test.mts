@@ -152,7 +152,7 @@ test("Quick Sub keeps pinch zoom available unless a card is explicitly being edi
 
 test("Quick Sub supports desktop drop and a touch-safe long-press drag on the live pitch", () => {
   const livePitchStart = arenaSource.indexOf('className={`arena-field-player');
-  const livePitchEnd = arenaSource.indexOf('aria-label={`Select ${player.name} card`}', livePitchStart);
+  const livePitchEnd = arenaSource.indexOf('aria-label={siteLanguage === "pt-BR"', livePitchStart);
   const livePitch = arenaSource.slice(livePitchStart, livePitchEnd);
 
   assert.ok(livePitchStart >= 0);
