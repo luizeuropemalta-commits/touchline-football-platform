@@ -90,6 +90,13 @@ test("ClubHub confirms and distributes only a complete provider Starting XI for 
   assert.equal(lineup.formation, "4-2-3-1");
   assert.equal(lineup.players.length, 11);
   assert.ok(lineup.players.every(({ card }) => card.clubName === city.name));
+  assert.deepEqual(
+    lineup.players.reduce<Record<number, number>>((counts, player) => {
+      counts[player.x] = (counts[player.x] ?? 0) + 1;
+      return counts;
+    }, {}),
+    { 9: 1, 34: 4, 61: 5, 88: 1 },
+  );
 });
 
 test("ClubHub confirms the technical area only for an exact fixture, club, XI, coach, and nine-person bench", () => {

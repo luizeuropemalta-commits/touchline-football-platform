@@ -1,7 +1,7 @@
 import type { TouchlineFantasyLineupMember } from "../football-data/types.ts";
 import { inferArenaRole, normalizeOfficialShirtNumber } from "../football-data/arena-lineup.ts";
 import { type ClubOwnerSquadCard, type TouchLineClubVisual } from "./demo-data.ts";
-import { TOUCHLINE_STANDARD_433_SLOTS } from "./pitch-layout.ts";
+import { touchlineCanonicalFormationSlots, TOUCHLINE_STANDARD_433_SLOTS, type TouchlineFormationPitchSlot } from "./pitch-layout.ts";
 
 export type TouchLineClubLineupStatus = "confirmed" | "preview";
 
@@ -87,9 +87,9 @@ function previewStartingEleven(squadCards: ClubOwnerSquadCard[]) {
   return chosen;
 }
 
-function arrangeCards(cards: ClubOwnerSquadCard[]) {
+function arrangeCards(cards: ClubOwnerSquadCard[], slots: readonly TouchlineFormationPitchSlot[]) {
   const remaining = [...cards];
-  return FORMATION_433_SLOTS.flatMap((slot) => {
+  return slots.flatMap((slot) => {
     const roleIndex = remaining.findIndex((card) => inferArenaRole(card.role || card.position) === slot.role);
     const selectedIndex = roleIndex >= 0 ? roleIndex : 0;
     const [card] = remaining.splice(selectedIndex, 1);
@@ -132,14 +132,17 @@ export function buildTouchLineClubMatchdayPresentation(input: {
     ? officialStarters.map((member) => strictCardForOfficialMember(member, input.squadCards))
     : [];
   const hasConfirmedStartingEleven = confirmedStarterCards.length === 11 && confirmedStarterCards.every(Boolean);
+  const formation = hasConfirmedStartingEleven && input.formation?.trim()
+    ? input.formation.trim()
+    : "4-3-3";
   const cards = hasConfirmedStartingEleven
     ? confirmedStarterCards as ClubOwnerSquadCard[]
     : previewStartingEleven(input.squadCards);
 
   const lineup: TouchLineClubLineup = {
     status: hasConfirmedStartingEleven ? "confirmed" : "preview",
-    formation: hasConfirmedStartingEleven && input.formation?.trim() ? input.formation.trim() : "4-3-3",
-    players: arrangeCards(cards),
+    formation,
+    players: arrangeCards(cards, touchlineCanonicalFormationSlots(formation)),
   };
 
   const officialBench = strictMembers.filter((member) => member.isSubstitute);

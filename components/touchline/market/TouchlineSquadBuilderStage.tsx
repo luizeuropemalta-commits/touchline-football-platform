@@ -13,9 +13,9 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 import {
   isTouchlineFormationCandidateEligible,
-  touchlineFormationCapacities,
 } from "@/lib/touchlineArena/formation-transition";
 import { TOUCHLINE_SQUAD_RULES, resolveTouchlineSquadJourney } from "@/lib/touchlineArena/squad-rules";
+import { touchlineCanonicalFormationSlots } from "@/lib/touchlineArena/pitch-layout";
 
 import styles from "./TouchlineSquadBuilderStage.module.css";
 
@@ -37,13 +37,7 @@ export type TouchlineSquadBuilderBenchPlayer = {
   card: TouchlineEliteExactPlayer;
 };
 
-type FormationSlot = {
-  id: string;
-  role: TouchlineSquadBuilderRole;
-  roleIndex: number;
-  x: number;
-  y: number;
-};
+type FormationSlot = ReturnType<typeof touchlineCanonicalFormationSlots>[number] & { id: string };
 
 type Props = {
   locale: string;
@@ -125,32 +119,11 @@ function SquadPlayerCardZoom({
   );
 }
 
-function evenlySpacedY(count: number, index: number) {
-  if (count <= 1) return 50;
-  return 14 + ((72 / (count - 1)) * index);
-}
-
 function formationSlots(formation: string): FormationSlot[] {
-  const capacities = touchlineFormationCapacities(formation) ?? {
-    goalkeeper: 1,
-    defender: 4,
-    midfielder: 3,
-    forward: 3,
-  };
-  const lines: Array<{ role: TouchlineSquadBuilderRole; count: number; x: number }> = [
-    { role: "goalkeeper", count: 1, x: 9 },
-    { role: "defender", count: capacities.defender, x: 34 },
-    { role: "midfielder", count: capacities.midfielder, x: 61 },
-    { role: "forward", count: capacities.forward, x: 88 },
-  ];
-
-  return lines.flatMap(({ role, count, x }) => Array.from({ length: count }, (_, roleIndex) => ({
-    id: `${role}-${roleIndex}`,
-    role,
-    roleIndex,
-    x,
-    y: evenlySpacedY(count, roleIndex),
-  })));
+  return touchlineCanonicalFormationSlots(formation).map((slot) => ({
+    ...slot,
+    id: `${slot.role}-${slot.roleIndex}`,
+  }));
 }
 
 function roleLabel(role: TouchlineSquadBuilderRole, portuguese: boolean) {

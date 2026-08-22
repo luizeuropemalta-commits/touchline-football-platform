@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { TOUCHLINE_CLUB_OWNER_XI_SLOTS, TOUCHLINE_STANDARD_433_SLOTS } from "../lib/touchlineArena/pitch-layout.ts";
+import { TOUCHLINE_CLUB_OWNER_XI_SLOTS, TOUCHLINE_STANDARD_433_SLOTS, touchlineCanonicalFormationSlots } from "../lib/touchlineArena/pitch-layout.ts";
 
 const clubOwnerRenderer = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
 const clubHubLineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
@@ -10,20 +10,34 @@ const clubLineupBuilder = readFileSync(new URL("../lib/touchlineArena/club-lineu
 const clubHubLineupCss = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 const clubHubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 
-test("ClubOwner and ClubHub use the same canonical horizontal 4-3-3 surface", () => {
+test("ClubHub and Market use the same canonical formation geometry", () => {
   assert.equal(TOUCHLINE_CLUB_OWNER_XI_SLOTS.length, 11);
   assert.equal(TOUCHLINE_STANDARD_433_SLOTS.length, 11);
   assert.deepEqual(TOUCHLINE_CLUB_OWNER_XI_SLOTS[0], { x: 8, y: 50 });
-  assert.deepEqual(TOUCHLINE_STANDARD_433_SLOTS.at(-1), { role: "goalkeeper", x: 8, y: 50 });
+  assert.deepEqual(TOUCHLINE_STANDARD_433_SLOTS.at(-1), { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 });
   assert.deepEqual(TOUCHLINE_STANDARD_433_SLOTS.slice(0, 3).map(({ x, y }) => ({ x, y })), [
-    { x: 82, y: 20 }, { x: 82, y: 50 }, { x: 82, y: 80 },
+    { x: 88, y: 14 }, { x: 88, y: 50 }, { x: 88, y: 86 },
+  ]);
+  assert.deepEqual(touchlineCanonicalFormationSlots("4-4-2"), [
+    { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 },
+    { role: "defender", roleIndex: 0, x: 34, y: 14 },
+    { role: "defender", roleIndex: 1, x: 34, y: 38 },
+    { role: "defender", roleIndex: 2, x: 34, y: 62 },
+    { role: "defender", roleIndex: 3, x: 34, y: 86 },
+    { role: "midfielder", roleIndex: 0, x: 61, y: 14 },
+    { role: "midfielder", roleIndex: 1, x: 61, y: 38 },
+    { role: "midfielder", roleIndex: 2, x: 61, y: 62 },
+    { role: "midfielder", roleIndex: 3, x: 61, y: 86 },
+    { role: "forward", roleIndex: 0, x: 88, y: 14 },
+    { role: "forward", roleIndex: 1, x: 88, y: 86 },
   ]);
 });
 
 test("field art is a shared component rather than separate page drawings", () => {
   assert.match(clubOwnerRenderer, /TouchlinePitchSurface/);
   assert.match(clubHubLineup, /TouchlinePitchSurface/);
-  assert.match(clubLineupBuilder, /TOUCHLINE_STANDARD_433_SLOTS/);
+  assert.match(clubLineupBuilder, /touchlineCanonicalFormationSlots\(formation\)/);
+  assert.match(readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8"), /touchlineCanonicalFormationSlots\(formation\)/);
   assert.doesNotMatch(clubOwnerRenderer, /CLUB_OWNER_PROFILE_PITCH_SLOTS/);
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });
