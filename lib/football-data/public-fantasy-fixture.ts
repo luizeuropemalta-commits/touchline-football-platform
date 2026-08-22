@@ -87,6 +87,26 @@ export type TouchlinePublicFantasyEvent = Readonly<{
   fantasyPoints?: number;
 }>;
 
+export type TouchlinePublicPlayerPointContribution = Readonly<{
+  providerEventId: string;
+  role: "primary" | "assist";
+  eventType: string;
+  minute: number | null;
+  points: number;
+}>;
+
+export type TouchlinePublicFixturePlayerStatistics = Readonly<{
+  playerId: string;
+  playerName: string;
+  teamId?: string;
+  appearanceStatus: "started" | "substitute" | "unused" | "absent" | "unavailable";
+  minutes: number | null;
+  rating: number | null;
+  touchlinePoints: number | null;
+  settlementStatus: "provisional" | "final" | "unavailable";
+  contributions: TouchlinePublicPlayerPointContribution[];
+}>;
+
 export type TouchlinePublicFantasyFixtureFeed = Readonly<{
   fixture: TouchlinePublicFantasyFixture;
   lineups: TouchlinePublicFantasyLineupMember[];
@@ -94,6 +114,11 @@ export type TouchlinePublicFantasyFixtureFeed = Readonly<{
   sidelined: TouchlinePublicFantasySidelinedPlayer[];
   events: TouchlinePublicFantasyEvent[];
   capturedAt: string;
+}>;
+
+export type TouchlinePublicFantasyFixtureMatchDetail = TouchlinePublicFantasyFixtureFeed & Readonly<{
+  playerStatistics: TouchlinePublicFixturePlayerStatistics[];
+  lineupAvailableAt: string | null;
 }>;
 
 function nonEmptyString(value: unknown) {

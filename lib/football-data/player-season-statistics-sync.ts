@@ -1,7 +1,10 @@
 import type { TouchlineFantasyLineupMember } from "./types.ts";
 import type { TouchLinePlayerSeasonStatistics } from "../touchlineArena/player-season-statistics.ts";
 import { emptyTouchLinePlayerSeasonStatistics } from "../touchlineArena/player-season-statistics.ts";
-import { touchLinePlayerFixturePoints } from "./player-fixture-scoring.ts";
+import {
+  touchLinePlayerFixtureEventStatistics,
+  touchLinePlayerFixturePoints,
+} from "./player-fixture-scoring.ts";
 import type { TouchlineFantasyEvent } from "./types.ts";
 
 type EligibleFixture = {
@@ -35,6 +38,17 @@ function averageOnlyWhenKnown(members: TouchlineFantasyLineupMember[], codes: st
   if (!values.every((value) => value !== null)) return null;
   const total = values.reduce((sum, value) => sum + (value ?? 0), 0);
   return Math.round((total / values.length) * 100) / 100;
+}
+
+function eventStatisticOnlyWhenKnown(
+  fixtures: readonly EligibleFixture[],
+  providerPlayerId: string,
+  key: "goals" | "assists" | "yellowCards" | "redCards",
+) {
+  if (!fixtures.length || fixtures.some((fixture) => !Array.isArray(fixture.events))) return null;
+  return fixtures.reduce((total, fixture) => (
+    total + touchLinePlayerFixtureEventStatistics(providerPlayerId, fixture.events ?? [])[key]
+  ), 0);
 }
 
 /**
@@ -103,11 +117,15 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
       starts,
       substituteAppearances,
       minutes,
-      goals: sumOnlyWhenKnown(playerEntries, ["goals"]),
-      assists: sumOnlyWhenKnown(playerEntries, ["assists"]),
+      goals: eventStatisticOnlyWhenKnown(synchronizedFixtures, input.providerPlayerId, "goals")
+        ?? sumOnlyWhenKnown(playerEntries, ["goals"]),
+      assists: eventStatisticOnlyWhenKnown(synchronizedFixtures, input.providerPlayerId, "assists")
+        ?? sumOnlyWhenKnown(playerEntries, ["assists"]),
       rating: averageOnlyWhenKnown(playerEntries, ["rating"]),
-      yellowCards: sumOnlyWhenKnown(playerEntries, ["yellow-cards", "yellowcards"]),
-      redCards: sumOnlyWhenKnown(playerEntries, ["red-cards", "redcards"]),
+      yellowCards: eventStatisticOnlyWhenKnown(synchronizedFixtures, input.providerPlayerId, "yellowCards")
+        ?? sumOnlyWhenKnown(playerEntries, ["yellow-cards", "yellowcards"]),
+      redCards: eventStatisticOnlyWhenKnown(synchronizedFixtures, input.providerPlayerId, "redCards")
+        ?? sumOnlyWhenKnown(playerEntries, ["red-cards", "redcards"]),
       touchlinePoints,
     },
     positionStatistics,

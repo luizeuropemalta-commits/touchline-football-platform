@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { toPublicFantasyFixtureFeed } from "@/lib/football-data/public-fantasy-fixture";
 import { readPersistedFantasyFixtureFeed } from "@/lib/football-data/public-fantasy-snapshot";
+import { readPublicFantasyFixtureMatchDetail } from "@/lib/football-data/public-fixture-match-detail-server";
 import { requireAuthenticatedOrLocalTouchlineEditor } from "@/lib/touchlineArena/api-access";
 
 const FIXTURE_ID_PATTERN = /^[0-9]{1,20}$/;
@@ -24,14 +25,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  let snapshot;
+  let data;
   try {
-    snapshot = await readPersistedFantasyFixtureFeed(fixtureId);
+    const snapshot = await readPersistedFantasyFixtureFeed(fixtureId);
+    const publicFeed = snapshot ? toPublicFantasyFixtureFeed(snapshot.feed) : null;
+    data = publicFeed
+      ? await readPublicFantasyFixtureMatchDetail(fixtureId, publicFeed)
+      : null;
   } catch {
-    snapshot = null;
+    data = null;
   }
-  const data = snapshot ? toPublicFantasyFixtureFeed(snapshot.feed) : null;
-  if (!snapshot || !data) {
+  if (!data) {
     return NextResponse.json(
       {
         ok: false,
@@ -45,7 +49,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     data,
-    capturedAt: snapshot.capturedAt,
+    capturedAt: data.capturedAt,
     state: "persisted-snapshot",
   }, {
     headers: { "Cache-Control": "private, no-store" },

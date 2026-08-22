@@ -1,7 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isTouchLineSettledFixtureStatus } from "@/lib/football-data/fixture-settlement";
 import { buildTouchLinePlayerSeasonAggregate } from "@/lib/football-data/player-season-statistics-sync";
-import { touchLinePlayerFixturePoints } from "@/lib/football-data/player-fixture-scoring";
+import {
+  touchLinePlayerFixtureEventStatistics,
+  touchLinePlayerFixturePoints,
+} from "@/lib/football-data/player-fixture-scoring";
 import type { TouchlineFantasyEvent, TouchlineFantasyLineupMember } from "@/lib/football-data/types";
 
 type MembershipRow = {
@@ -32,10 +36,6 @@ type FeedRow = {
   created_at: string | null;
   last_synced_at: string | null;
 };
-
-function isFinishedStatus(value: string | null) {
-  return /^(?:finished|ft|after extra time|after penalties)$/i.test(String(value ?? "").trim());
-}
 
 function lineupMembers(value: unknown): TouchlineFantasyLineupMember[] | null {
   if (!Array.isArray(value)) return null;
@@ -238,7 +238,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
     }
     const eligibleFixtures = (fixtures as FixtureRow[]).filter((fixture) =>
       fixture.season_id === membership.season_id
-      && isFinishedStatus(fixture.status)
+      && isTouchLineSettledFixtureStatus(fixture.status)
       && (fixture.home_club_id === membership.club_id || fixture.away_club_id === membership.club_id),
     );
     const aggregate = buildTouchLinePlayerSeasonAggregate({
@@ -295,7 +295,10 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
       const pointResult = verifiedEvents
         ? touchLinePlayerFixturePoints(providerPlayerId, verifiedEvents)
         : null;
-      const settlementStatus = isFinishedStatus(fixture.status) ? "final" : "provisional";
+      const eventStatistics = verifiedEvents
+        ? touchLinePlayerFixtureEventStatistics(providerPlayerId, verifiedEvents)
+        : null;
+      const settlementStatus = isTouchLineSettledFixtureStatus(fixture.status) ? "final" : "provisional";
       const { error: fixtureError } = await admin
         .from("football_player_fixture_statistics")
         .upsert({
@@ -307,7 +310,13 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
           appearance_status: feed ? appearanceStatus(member) : "unavailable",
           minutes_played: statistics["minutes-played"] ?? statistics.minutes ?? null,
           rating: statistics.rating ?? null,
-          statistics_payload: statistics,
+          statistics_payload: eventStatistics ? {
+            goals: eventStatistics.goals,
+            assists: eventStatistics.assists,
+            "yellow-cards": eventStatistics.yellowCards,
+            "red-cards": eventStatistics.redCards,
+            ...statistics,
+          } : statistics,
           touchline_points: pointResult?.points ?? null,
           touchline_points_breakdown: pointResult?.contributions ?? [],
           scoring_version: pointResult?.scoringVersion ?? null,
