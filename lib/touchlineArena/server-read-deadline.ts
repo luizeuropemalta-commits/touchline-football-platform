@@ -1,7 +1,7 @@
 /**
- * A private server page must not keep the App Router's global loading boundary
- * open indefinitely when an upstream read stalls. Callers still choose a
- * fail-closed fallback and never receive partial data from this helper.
+ * A server page must not keep the App Router's global loading boundary open
+ * indefinitely when an upstream read stalls. Callers choose a fail-closed
+ * fallback and never receive partial data from this helper.
  */
 export function resolveServerReadWithin<T>(
   read: PromiseLike<T>,

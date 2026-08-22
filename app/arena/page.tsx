@@ -6,8 +6,13 @@ import { parseTouchlineArenaIntroIntent } from "@/lib/touchlineArena/arena-intro
 import { touchlineClubOwnerProfileHref, touchlineClubOwnerSubstitutionHref } from "@/lib/touchlineArena/club-owner-routes";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
+import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
+
+// This read only controls the protected Card Engine affordance. It must not
+// leave the App Router's global loading boundary open if Supabase auth stalls.
+const ARENA_SERVER_AUTH_READ_TIMEOUT_MS = 8_000;
 
 export default async function ArenaPage({
   searchParams,
@@ -52,7 +57,13 @@ export default async function ArenaPage({
   }
 
   const supabase = await createClient();
-  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const user = supabase
+    ? await resolveServerReadWithin(
+      supabase.auth.getUser().then(({ data }) => data.user),
+      null,
+      ARENA_SERVER_AUTH_READ_TIMEOUT_MS,
+    )
+    : null;
 
   return (
     <ArenaClient
