@@ -3,6 +3,7 @@ import type { TouchlineFixture } from "./types.ts";
 
 export const TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID = "8";
 export const TOUCHLINE_ENGLAND_EXPECTED_CLUB_COUNT = 20;
+const LIVE_FIXTURE_STALE_MS = 3 * 60 * 1000;
 
 export type TouchlineOfficialLeagueTableState =
   | "ready"
@@ -74,6 +75,8 @@ export type TouchlineOfficialLeagueTableRow = Readonly<{
     providerFixtureId: string;
     scoreFor: number | null;
     scoreAgainst: number | null;
+    /** The last persisted score is retained, but its source age is explicit. */
+    stale: boolean;
   }> | null;
 }>;
 
@@ -94,6 +97,8 @@ type ResolveInput = Readonly<{
   fixtures: readonly TouchlineOfficialLeagueTableFixture[];
   sourceState?: "ready" | "unavailable";
   expectedClubCount?: number;
+  /** Deterministic clock injection for the pure live-state projection. */
+  now?: number;
 }>;
 
 function maxTimestamp(values: readonly (string | null | undefined)[]) {
@@ -182,6 +187,7 @@ function hasVerifiedLiveScore(fixture: TouchlineOfficialLeagueTableFixture) {
 function liveFixtureForClub(
   clubId: string,
   fixtures: readonly TouchlineOfficialLeagueTableFixture[],
+  now: number,
 ) {
   const liveFixtures = fixtures.filter((fixture) => isLiveFixture(fixture)
     && (fixture.homeClubId === clubId || fixture.awayClubId === clubId));
@@ -191,10 +197,12 @@ function liveFixtureForClub(
   if (liveFixtures.length !== 1) return null;
   const fixture = liveFixtures[0];
   const home = fixture.homeClubId === clubId;
+  const sourceUpdatedAt = fixture.sourceUpdatedAt ? Date.parse(fixture.sourceUpdatedAt) : Number.NaN;
   return {
     providerFixtureId: fixture.providerFixtureId,
     scoreFor: home ? fixture.homeScore : fixture.awayScore,
     scoreAgainst: home ? fixture.awayScore : fixture.homeScore,
+    stale: !Number.isFinite(sourceUpdatedAt) || now - sourceUpdatedAt > LIVE_FIXTURE_STALE_MS,
   };
 }
 
@@ -202,6 +210,7 @@ function tableRows(
   standingsRows: readonly OfficialStandingsRow<TouchlineOfficialLeagueTableTeam>[],
   positionsVerified: boolean,
   fixtures: readonly TouchlineOfficialLeagueTableFixture[],
+  now: number,
 ): readonly TouchlineOfficialLeagueTableRow[] {
   return standingsRows.flatMap((row, index) => {
     const team = row.team;
@@ -224,7 +233,7 @@ function tableRows(
       goalDifference: row.goalDifference,
       points: row.points,
       form: row.form,
-      liveFixture: liveFixtureForClub(team.clubId, fixtures),
+      liveFixture: liveFixtureForClub(team.clubId, fixtures, now),
     }];
   });
 }
@@ -238,6 +247,7 @@ function tableRows(
 function preSeasonRows(
   teams: readonly TouchlineOfficialLeagueTableTeam[],
   fixtures: readonly TouchlineOfficialLeagueTableFixture[],
+  now: number,
 ): readonly TouchlineOfficialLeagueTableRow[] {
   return teams.flatMap((team) => team.slug ? [{
     position: null,
@@ -257,7 +267,7 @@ function preSeasonRows(
     goalDifference: 0,
     points: 0,
     form: [],
-    liveFixture: liveFixtureForClub(team.clubId, fixtures),
+    liveFixture: liveFixtureForClub(team.clubId, fixtures, now),
   }] : []);
 }
 
@@ -267,6 +277,7 @@ function preSeasonRows(
  * A query failure is deliberately distinct from a pre-season with no finals.
  */
 export function resolveTouchlineOfficialLeagueTable(input: ResolveInput): TouchlineOfficialLeagueTable {
+  const now = Number.isFinite(input.now) ? Number(input.now) : Date.now();
   const expectedClubs = input.expectedClubCount ?? TOUCHLINE_ENGLAND_EXPECTED_CLUB_COUNT;
   if (input.sourceState === "unavailable") return emptyTable(input, "unavailable", "source-unavailable");
   if (!input.season?.id || !input.season.providerSeasonId || !input.season.name) {
@@ -326,7 +337,7 @@ export function resolveTouchlineOfficialLeagueTable(input: ResolveInput): Touchl
     return {
       ...emptyTable(input, "pending_no_final", "no-verified-final", coverage),
       asOf,
-      rows: preSeasonRows(input.teams, fixturesInSeason),
+      rows: preSeasonRows(input.teams, fixturesInSeason, now),
     };
   }
 
@@ -338,7 +349,7 @@ export function resolveTouchlineOfficialLeagueTable(input: ResolveInput): Touchl
     season: input.season,
     asOf,
     coverage,
-    rows: tableRows(standings.rows, !hasProvisionalOrdering, fixturesInSeason),
+    rows: tableRows(standings.rows, !hasProvisionalOrdering, fixturesInSeason, now),
     reason: standings.hasUnresolvedTieBreaks
       ? "official-tiebreak-pending"
       : standings.duplicateFixtures > 0

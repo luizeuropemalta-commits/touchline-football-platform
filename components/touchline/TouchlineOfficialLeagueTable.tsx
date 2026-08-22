@@ -34,6 +34,7 @@ type TableCopy = Readonly<{
   points: string;
   form: string;
   live: string;
+  stale: string;
   scoreUnavailable: string;
   currentClub: string;
   finalResults: string;
@@ -63,6 +64,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     points: "Pts",
     form: "Form",
     live: "LIVE",
+    stale: "STALE",
     scoreUnavailable: "score unavailable",
     currentClub: "Current club",
     finalResults: "verified final results",
@@ -90,6 +92,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     points: "Pts",
     form: "Forma",
     live: "AO VIVO",
+    stale: "DESATUALIZADO",
     scoreUnavailable: "placar indisponível",
     currentClub: "Clube atual",
     finalResults: "resultados finais verificados",
@@ -193,11 +196,15 @@ export default function TouchlineOfficialLeagueTable({
                   const liveScore = row.liveFixture && row.liveFixture.scoreFor !== null && row.liveFixture.scoreAgainst !== null
                     ? `${row.liveFixture.scoreFor}–${row.liveFixture.scoreAgainst}`
                     : dictionary.scoreUnavailable;
+                  const liveLabel = row.liveFixture?.stale
+                    ? `${dictionary.live} · ${dictionary.stale}`
+                    : dictionary.live;
                   return (
                     <tr
                       key={row.team.providerTeamId}
                       data-current={isCurrent || undefined}
                       data-live={row.liveFixture ? "true" : undefined}
+                      data-live-stale={row.liveFixture?.stale || undefined}
                     >
                       <td>{row.position ?? "—"}</td>
                       <th scope="row">
@@ -205,7 +212,7 @@ export default function TouchlineOfficialLeagueTable({
                           {row.team.logoUrl ? <img src={row.team.logoUrl} alt="" /> : null}
                           <span>{row.team.name}</span>
                           {isCurrent ? <span className={styles.srOnly}>{dictionary.currentClub}</span> : null}
-                          {row.liveFixture ? <span className={styles.liveScore} aria-label={`${dictionary.live}: ${liveScore}`}>{dictionary.live} · {liveScore}</span> : null}
+                          {row.liveFixture ? <span className={styles.liveScore} aria-label={`${liveLabel}: ${liveScore}`}>{liveLabel} · {liveScore}</span> : null}
                         </Link>
                       </th>
                       <td>{row.played}</td>

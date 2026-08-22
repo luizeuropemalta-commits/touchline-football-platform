@@ -180,6 +180,10 @@
   box-shadow: inset 3px 0 0 #ff6d6d;
 }
 
+.tableWrap tbody tr[data-live][data-live-stale] {
+  box-shadow: inset 3px 0 0 #e6ba62;
+}
+
 .tableWrap tbody tr[data-current][data-live] {
   background: linear-gradient(90deg, color-mix(in srgb, var(--club-accent, #b5ff4b) 18%, rgba(255, 83, 83, .22)), transparent 76%);
 }

@@ -92,17 +92,19 @@ test("the one official table applies a verified live draw provisionally", () => 
     position: null,
     team: { providerTeamId: "3", name: "Club 3", shortCode: "C3", slug: "club-3", logoUrl: null },
     played: 1, won: 1, drawn: 0, lost: 0, goalsFor: 1, goalsAgainst: 0, goalDifference: 1, points: 3, form: ["W"],
-    liveFixture: { providerFixtureId: "live", scoreFor: 1, scoreAgainst: 0 },
+    liveFixture: { providerFixtureId: "live", scoreFor: 1, scoreAgainst: 0, stale: true },
   });
   assert.deepEqual(result.rows.find((row) => row.team.providerTeamId === "3")?.liveFixture, {
     providerFixtureId: "live",
     scoreFor: 1,
     scoreAgainst: 0,
+    stale: true,
   });
   assert.deepEqual(result.rows.find((row) => row.team.providerTeamId === "4")?.liveFixture, {
     providerFixtureId: "live",
     scoreFor: 0,
     scoreAgainst: 1,
+    stale: true,
   });
 });
 
@@ -255,6 +257,7 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /Tabela inicial — os 20 clubes estão empatados\./);
   assert.match(component, /row\.position \?\? "—"/);
   assert.match(component, /data-live=/);
+  assert.match(component, /data-live-stale=/);
   assert.match(component, /latest persisted live scores/);
   assert.match(component, /router\.refresh\(\)/);
   assert.match(component, /dictionary\.live/);
