@@ -34,7 +34,10 @@ import {
 import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import { normalizeTouchLineLocale, touchLineT } from "@/lib/touchlineArena/i18n";
 import { touchlineArenaContractHref, touchlineArenaPanelHref } from "@/lib/touchlineArena/arena-navigation";
-import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
+import {
+  resolveTouchlineCardCompetition,
+  TOUCHLINE_PRESEASON_RANKING_STATE,
+} from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
@@ -55,10 +58,13 @@ import {
   TouchlineSocialProfileHeader,
   type TouchlineSocialPost,
 } from "@/components/touchline/social/TouchlineSocial";
+import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 
 const TOUCHLINE_ENGLAND_TROPHY =
   "/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png";
 const CLUB_OWNER_TOUCHLINE_NEON = "#a3ff12";
+const CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS = 8_000;
+type ClubOwnerWalletEntry = { amount_cents: number | null };
 
 const trophyGallery = [
   {
@@ -169,16 +175,37 @@ export default async function ClubOwnerProfileRenderer({
   const ownerIdentity = resolveTouchlineClubOwnerPageIdentity(clubOwnerUser, ownerSlug, storedAvatarUrl);
   if (!ownerIdentity) notFound();
   const activeClubOwnerUser = ownerIdentity.isAuthenticatedClubOwner && clubOwnerUser ? clubOwnerUser : null;
-  const activeRanking = await loadTouchLineActiveRanking();
   const showPrivateClubControl = ownerIdentity.isAuthenticatedClubOwner;
-  let authoritativeRoster: Awaited<ReturnType<typeof readAuthoritativeTouchlineRoster>> | null = null;
+  const activeRankingRead = resolveServerReadWithin(
+    loadTouchLineActiveRanking(),
+    TOUCHLINE_PRESEASON_RANKING_STATE,
+    CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
+  );
+  let authoritativeRosterRead: Promise<Awaited<ReturnType<typeof readAuthoritativeTouchlineRoster>> | null> = Promise.resolve(null);
   if (activeClubOwnerUser && admin) {
-    try {
-      authoritativeRoster = await readAuthoritativeTouchlineRoster(admin, activeClubOwnerUser.id);
-    } catch {
-      authoritativeRoster = null;
-    }
+    authoritativeRosterRead = resolveServerReadWithin(
+      readAuthoritativeTouchlineRoster(admin, activeClubOwnerUser.id),
+      null,
+      CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
+    );
   }
+  const walletEntriesRead = activeClubOwnerUser && admin
+    ? resolveServerReadWithin<{ data: ClubOwnerWalletEntry[] | null }>(
+      admin
+        .from("clubowner_credit_ledger")
+        .select("amount_cents")
+        .eq("user_id", activeClubOwnerUser.id)
+        .eq("currency", "TC")
+        .then(({ data }) => ({ data: data as ClubOwnerWalletEntry[] | null })),
+      { data: null },
+      CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
+    )
+    : Promise.resolve({ data: null });
+  const [activeRanking, authoritativeRoster, walletEntriesResponse] = await Promise.all([
+    activeRankingRead,
+    authoritativeRosterRead,
+    walletEntriesRead,
+  ]);
   const publicRosterCookieValue = activeClubOwnerUser
     ? null
     : (await cookies()).get(arenaPersistenceKeys(
@@ -222,13 +249,7 @@ export default async function ClubOwnerProfileRenderer({
     0,
   );
   const squadPointsTotal = sortedClubOwnerSquadCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
-  const { data: walletEntries } = activeClubOwnerUser && admin
-    ? await admin
-        .from("clubowner_credit_ledger")
-        .select("amount_cents")
-        .eq("user_id", activeClubOwnerUser.id)
-        .eq("currency", "TC")
-    : { data: null };
+  const walletEntries = walletEntriesResponse.data;
   const walletBalanceTc = activeClubOwnerUser
     ? Math.max(0, Math.floor((walletEntries ?? []).reduce(
         (total, entry) => total + Number(entry.amount_cents ?? 0),
@@ -507,6 +528,18 @@ export default async function ClubOwnerProfileRenderer({
                   <span><strong>{clubCopy.protectedStrategy}</strong><small>{clubCopy.hiddenFromFeed}</small></span>
                 </div>
               </header>
+
+              {rosterResolution.state === "unavailable" ? (
+                <p
+                  role="status"
+                  className="club-owner-roster-availability"
+                  style={{ margin: "16px 0 0", padding: "12px 14px", border: "1px solid rgba(181,255,75,.32)", borderRadius: 12, color: "#dfffc2", background: "rgba(21,47,20,.62)", lineHeight: 1.5 }}
+                >
+                  {isPortuguese
+                    ? "O elenco autoritativo está demorando mais que o esperado. Nenhuma escalação, contrato ou card foi alterado."
+                    : "The authoritative squad is taking longer than expected. No line-up, contract or card has been changed."}
+                </p>
+              ) : null}
 
               <nav className="club-owner-control-nav" aria-label={clubCopy.clubDirection}>
                 <a href="#club-owner-finance"><Landmark aria-hidden="true" /><span>{clubCopy.finance}<small>{clubCopy.balanceAndBudget}</small></span></a>
