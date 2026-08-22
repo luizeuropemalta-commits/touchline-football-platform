@@ -3,7 +3,6 @@ import type { TouchLinePlayerSeasonStatistics } from "../touchlineArena/player-s
 import { emptyTouchLinePlayerSeasonStatistics } from "../touchlineArena/player-season-statistics.ts";
 import {
   touchLinePlayerFixtureEventStatistics,
-  touchLinePlayerFixturePoints,
 } from "./player-fixture-scoring.ts";
 import type { TouchlineFantasyEvent } from "./types.ts";
 
@@ -12,6 +11,9 @@ type EligibleFixture = {
   lineups: TouchlineFantasyLineupMember[] | null;
   latestSyncAt?: string | null;
   events?: TouchlineFantasyEvent[] | null;
+  touchlinePoints?: number | null;
+  scoringStatistics?: Readonly<Record<string, number>> | null;
+  scoringComplete?: boolean;
 };
 
 function numericStatistic(member: TouchlineFantasyLineupMember, codes: string[]) {
@@ -88,22 +90,33 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
     .filter((value): value is string => Boolean(value && Number.isFinite(Date.parse(value))))
     .sort()
     .at(-1) ?? null;
-  const fixturePointValues = synchronizedFixtures.map((fixture) => (
-    Array.isArray(fixture.events)
-      ? touchLinePlayerFixturePoints(input.providerPlayerId, fixture.events).points
-      : null
-  ));
+  // The season projection consumes persisted/per-fixture engine results. It
+  // never invokes a second scoring implementation or reinterprets facts.
+  const fixturePointValues = synchronizedFixtures.map((fixture) => fixture.touchlinePoints ?? null);
   const touchlinePoints = fixturePointValues.every((value) => value !== null)
     ? fixturePointValues.reduce((total, value) => total + (value ?? 0), 0)
     : null;
-  const complete = fixtures.length > 0 && allLineupsAvailable && expectedFixtureIds.length === aggregatedFixtureIds.length;
-  const positionStatistics = Object.fromEntries(
+  const complete = fixtures.length > 0
+    && allLineupsAvailable
+    && expectedFixtureIds.length === aggregatedFixtureIds.length
+    && synchronizedFixtures.every((fixture) => fixture.scoringComplete === true);
+  const providerPositionStatistics = Object.fromEntries(
     [...new Set(playerEntries.flatMap((member) => member.statistics.map((statistic) => String(statistic.code ?? "").trim().toLowerCase()).filter(Boolean)))]
       .flatMap((code) => {
         const value = sumOnlyWhenKnown(playerEntries, [code]);
         return value === null ? [] : [[code, value] as const];
       }),
   );
+  const scoringStatistics = Object.fromEntries(
+    [...new Set(synchronizedFixtures.flatMap((fixture) => Object.keys(fixture.scoringStatistics ?? {})))]
+      .flatMap((code) => {
+        const values = synchronizedFixtures.map((fixture) => fixture.scoringStatistics?.[code]);
+        return values.every((value): value is number => typeof value === "number" && Number.isFinite(value))
+          ? [[code, values.reduce((total, value) => total + value, 0)] as const]
+          : [];
+      }),
+  );
+  const positionStatistics = { ...providerPositionStatistics, ...scoringStatistics };
 
   return {
     coverageStatus: complete ? "complete" : fixtures.length ? "partial" : "unavailable",

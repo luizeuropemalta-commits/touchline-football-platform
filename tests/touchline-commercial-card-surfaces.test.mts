@@ -75,13 +75,16 @@ test("player-card rankings expose published card terms only", () => {
   const tablesPage = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
   const tablesClient = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
   const rankingsCopy = readFileSync(new URL("../lib/touchlineArena/rankings-i18n.ts", import.meta.url), "utf8");
+  const rankedCatalog = readFileSync(new URL("../lib/touchlineArena/ranked-card-catalog-server.ts", import.meta.url), "utf8");
 
   assert.match(tablesPage, /formatTouchlineCommercialCardTotal\(\{\s*numericPrice: ownerSummary\.nominalValueGbp,\s*competition: "england"/);
   assert.match(tablesPage, /resolveTouchlineTablesOwnerSummary\(\{/);
   assert.match(tablesClient, /formatTouchlineCommercialCardTotal\(\{\s*numericPrice: owner\.squadValueTc,\s*competition: "england"/);
   const playerRankings = readFileSync(new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url), "utf8");
   assert.match(playerRankings, /formatTouchlineEditorialCardPrice/);
-  assert.match(playerRankings, /rosterResolution\.cards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/);
+  assert.match(playerRankings, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.match(rankedCatalog, /loadTouchlinePublishedCardPresentations/);
+  assert.match(rankedCatalog, /if \(!player \|\| !editorialCard\) return \[\]/);
   assert.match(playerRankings, /buildTouchlinePlayerCardZoomDetails/);
   assert.match(playerRankings, /editorialCard: card\.editorialCard/);
   assert.match(playerRankings, /activeContractCard: null/);

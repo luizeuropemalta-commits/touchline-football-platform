@@ -80,8 +80,12 @@ const POSITION_ALIASES: Array<[TouchlinePositionRankingGroup, RegExp]> = [
   ["midfielder", /^(dm|cdm|cm|am|cam|lm|rm|mid|midfield|midfielder)$/i],
 ];
 
+function finiteNumber(value?: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 function finiteNonNegative(value?: number | null) {
-  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
+  return Math.max(0, finiteNumber(value));
 }
 
 function stablePlayerKey(player: TouchlineRankingPlayerInput) {
@@ -108,7 +112,7 @@ export function compareTouchlineRankingPlayers(
   first: TouchlineRankingPlayerInput,
   second: TouchlineRankingPlayerInput,
 ) {
-  const pointDifference = finiteNonNegative(second.touchlinePoints) - finiteNonNegative(first.touchlinePoints);
+  const pointDifference = finiteNumber(second.touchlinePoints) - finiteNumber(first.touchlinePoints);
   if (pointDifference) return pointDifference;
 
   const minuteDifference = finiteNonNegative(second.minutesPlayed) - finiteNonNegative(first.minutesPlayed);
@@ -162,8 +166,8 @@ export function buildTouchlinePositionRankings(
 
         return {
           ...player,
-          touchlinePoints: finiteNonNegative(player.touchlinePoints),
-          roundPoints: finiteNonNegative(player.roundPoints),
+          touchlinePoints: finiteNumber(player.touchlinePoints),
+          roundPoints: finiteNumber(player.roundPoints),
           minutesPlayed: finiteNonNegative(player.minutesPlayed),
           appearances: finiteNonNegative(player.appearances),
           positionGroup: group,

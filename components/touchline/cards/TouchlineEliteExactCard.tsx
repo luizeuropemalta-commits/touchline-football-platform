@@ -98,7 +98,7 @@ type DragState = { key: EditableBlock; startX: number; startY: number; originX: 
  * icon=yellow/red cards. Additional allowlisted facts serve overlay/profile
  * detail without assigning a false meaning to an existing icon.
  */
-type MatchStatId = "goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances";
+type MatchStatId = "goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances" | "shotsOnTarget" | "shotsOffTarget" | "defensiveActionsTotal" | "penaltySaves" | "penaltiesMissed" | "ownGoals";
 type MasterLockState = "checking" | "unlocked" | "locked" | "readonly" | "error";
 
 const DEFAULT_CARD_LAYOUT = masterCardLayout.layout as CardLayout;
@@ -223,10 +223,15 @@ export type TouchlineEliteExactPlayer = {
   matchStats?: Partial<Record<MatchStatId, string | number | null>>;
   /** Allowlisted, event-backed explanation for current/last match points. */
   matchPointContributions?: readonly Readonly<{
-    role: "primary" | "assist";
+    role: "primary" | "assist" | "fact";
+    ruleCode?: string;
     eventType: string;
     minute: number | null;
+    quantity?: number;
+    unitPoints?: number;
     points: number;
+    factValue?: number;
+    detail?: string;
   }>[];
   formationPlayerId?: string;
 };

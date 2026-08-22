@@ -39,8 +39,19 @@ export type ArenaLineupPlayer = {
     editorialCard?: TouchlinePublicEditorialCardPresentation | null;
     inventoryId?: string | null;
     /** Cumulative verified season statistics used by the shared card renderer. */
-    seasonStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances", string | number | null>>;
-    matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances", string | number | null>>;
+    seasonStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances" | "shotsOnTarget" | "shotsOffTarget" | "defensiveActionsTotal" | "penaltySaves" | "penaltiesMissed" | "ownGoals", string | number | null>>;
+    matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances" | "shotsOnTarget" | "shotsOffTarget" | "defensiveActionsTotal" | "penaltySaves" | "penaltiesMissed" | "ownGoals", string | number | null>>;
+    matchPointContributions?: readonly Readonly<{
+      role: "primary" | "assist" | "fact";
+      eventType: string;
+      minute: number | null;
+      points: number;
+      ruleCode?: string;
+      quantity?: number;
+      unitPoints?: number;
+      factValue?: number;
+      detail?: string;
+    }>[];
   };
   x: number;
   y: number;

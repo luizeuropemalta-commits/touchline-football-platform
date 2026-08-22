@@ -4,7 +4,10 @@ import { readAuthoritativeTouchlineRoster } from "@/lib/touchlineArena/authorita
 import { resolveTouchlineServerPageRoster } from "@/lib/touchlineArena/server-page-roster";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { loadTouchLinePublishedTopEleven } from "@/lib/touchlineArena/card-ranking-server";
+import { loadTouchLineActiveRanking, loadTouchLinePublishedTopEleven } from "@/lib/touchlineArena/card-ranking-server";
+import { loadTouchLineRankedCardCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
+import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
+import { compareTouchLineRankedCards } from "@/lib/touchlineArena/ranked-card-catalog";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import { formatTouchlineCommercialCardTotal } from "@/lib/touchlineArena/commercial-card-pricing";
@@ -50,9 +53,12 @@ export default async function TouchLineTablesPage({
     console.error("[TouchLine] Tables roster unavailable", rosterResolution.error);
   }
   const rosterCards = rosterResolution.cards;
-  const [publishedTopEleven, publicFixtures] = await Promise.all([
+  const activeRanking = await loadTouchLineActiveRanking();
+  const [publishedTopEleven, publicFixtures, rankedCards, coachRanking] = await Promise.all([
     loadTouchLinePublishedTopEleven(),
     readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
+    loadTouchLineRankedCardCatalog(activeRanking),
+    loadTouchLineCoachRanking(),
   ]);
   const selectedProviderRound = selectArenaFixtureRound(publicFixtures);
   const providerRoundNames = [...new Set(selectedProviderRound
@@ -72,7 +78,7 @@ export default async function TouchLineTablesPage({
   // is loaded through the server-owned publication path.
   const cardClubOwnerRank: never[] = [];
   const touchLineEnglandTable: never[] = [];
-  const cardPlayerRank: never[] = [];
+  const cardPlayerRank = [...rankedCards].sort(compareTouchLineRankedCards);
   const copy = getTouchLineRankingsCopy(locale);
 
   return (
@@ -80,6 +86,7 @@ export default async function TouchLineTablesPage({
       canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
       cardClubOwnerRank={cardClubOwnerRank}
       cardPlayerRank={cardPlayerRank}
+      coachRanking={coachRanking}
       copy={copy}
       currentProviderRoundName={currentProviderRoundName}
       locale={locale}
@@ -89,7 +96,7 @@ export default async function TouchLineTablesPage({
         isAuthenticated: Boolean(user),
         isAdmin: Boolean(user && isOwnerEmail(user.email)),
       })}
-      rosterCards={rosterCards}
+      rosterCards={rankedCards}
       totalCards={ownerSummary.cardsTracked}
       totalClubOwners={ownerSummary.clubOwners}
       totalOwnerValue={formatTouchlineCommercialCardTotal({

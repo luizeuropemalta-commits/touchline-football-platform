@@ -89,10 +89,15 @@ export type TouchlinePublicFantasyEvent = Readonly<{
 
 export type TouchlinePublicPlayerPointContribution = Readonly<{
   providerEventId: string;
-  role: "primary" | "assist";
+  role: "primary" | "assist" | "fact";
+  ruleCode?: string;
   eventType: string;
   minute: number | null;
+  quantity?: number;
+  unitPoints?: number;
   points: number;
+  factValue?: number;
+  detail?: string;
 }>;
 
 /**
@@ -107,6 +112,18 @@ export type TouchlinePublicFixtureCardStatistics = Readonly<{
   cleanSheets?: number;
   saves?: number;
   goalsConceded?: number;
+  shotsOnTarget?: number;
+  shotsOffTarget?: number;
+  defensiveActionsTotal?: number;
+  defense?: number;
+  penaltySaves?: number;
+  penaltiesMissed?: number;
+  ownGoals?: number;
+  tacklesWon?: number;
+  interceptions?: number;
+  clearances?: number;
+  blockedShots?: number;
+  aerialsWon?: number;
 }>;
 
 export type TouchlinePublicFixturePlayerStatistics = Readonly<{

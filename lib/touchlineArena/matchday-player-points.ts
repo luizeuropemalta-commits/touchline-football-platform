@@ -12,6 +12,13 @@ export type TouchlinePublicSeasonPlayerPoints = Readonly<{
     cleanSheets?: number;
     saves?: number;
     goalsConceded?: number;
+    shotsOnTarget?: number;
+    shotsOffTarget?: number;
+    defensiveActionsTotal?: number;
+    defense?: number;
+    penaltySaves?: number;
+    penaltiesMissed?: number;
+    ownGoals?: number;
   }>;
 }>;
 
@@ -30,7 +37,7 @@ export function applyTouchlineMatchdayPoints(
   return cards.map((card) => {
     const statistic = byProviderPlayerId.get(String(card.id));
     if (!statistic) return card;
-    const { goals, assists, yellowCards, redCards, cleanSheets, saves, goalsConceded } = statistic.statistics;
+    const { goals, assists, yellowCards, redCards, cleanSheets, saves, goalsConceded, shotsOnTarget, shotsOffTarget, defensiveActionsTotal, defense, penaltySaves, penaltiesMissed, ownGoals } = statistic.statistics;
     const matchStats = {
       ...(goals === undefined ? {} : { goals }),
       ...(assists === undefined ? {} : { assists }),
@@ -39,6 +46,13 @@ export function applyTouchlineMatchdayPoints(
       ...(goalsConceded === undefined ? {} : { goalsConceded }),
       ...(yellowCards === undefined ? {} : { yellowCards }),
       ...(redCards === undefined ? {} : { redCards }),
+      ...(shotsOnTarget === undefined ? {} : { shotsOnTarget }),
+      ...(shotsOffTarget === undefined ? {} : { shotsOffTarget }),
+      ...(defensiveActionsTotal === undefined ? {} : { defensiveActionsTotal }),
+      ...(defense === undefined ? {} : { defense }),
+      ...(penaltySaves === undefined ? {} : { penaltySaves }),
+      ...(penaltiesMissed === undefined ? {} : { penaltiesMissed }),
+      ...(ownGoals === undefined ? {} : { ownGoals }),
       ...(yellowCards === undefined || redCards === undefined ? {} : { cards: yellowCards + redCards }),
     };
     return {
@@ -54,6 +68,11 @@ export function applyTouchlineMatchdayPoints(
             eventType: contribution.eventType,
             minute: contribution.minute,
             points: contribution.points,
+            ...(contribution.ruleCode === undefined ? {} : { ruleCode: contribution.ruleCode }),
+            ...(contribution.quantity === undefined ? {} : { quantity: contribution.quantity }),
+            ...(contribution.unitPoints === undefined ? {} : { unitPoints: contribution.unitPoints }),
+            ...(contribution.factValue === undefined ? {} : { factValue: contribution.factValue }),
+            ...(contribution.detail === undefined ? {} : { detail: contribution.detail }),
           })),
         }
         : {}),

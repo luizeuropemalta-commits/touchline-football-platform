@@ -18,6 +18,8 @@ export type TouchlineSportmonksRankingPlayer = TouchlineRankingPlayerInput & {
 
 export type TouchlineRankingDraft = {
   seasonId: string;
+  scoringVersion: "player_scoring_v1" | "player_scoring_v2";
+  fixtureIds: readonly string[];
   receivedAt: string;
   expectedPlayerCount: number;
   priceTableVersion: string;
@@ -41,6 +43,8 @@ export type TouchlineAuditedRankingSnapshot = TouchlineRankingSnapshot & {
   status: "audited";
   source: "sportmonks-audited";
   seasonId: string;
+  scoringVersion: "player_scoring_v1" | "player_scoring_v2";
+  fixtureIds: readonly string[];
   auditedAt: string;
   priceTableVersion: string;
   checksum: string;
@@ -79,6 +83,8 @@ export function touchlineRankingSnapshotChecksum(input: {
   seasonId: string;
   priceTableVersion: string;
   snapshot: TouchlineRankingSnapshot;
+  scoringVersion?: "player_scoring_v1" | "player_scoring_v2";
+  fixtureIds?: readonly string[];
 }) {
   const canonicalRows = [...input.snapshot.players]
     .sort((first, second) => first.playerId.localeCompare(second.playerId, "en"))
@@ -99,6 +105,8 @@ export function touchlineRankingSnapshotChecksum(input: {
     snapshotId: input.snapshot.snapshotId,
     roundId: input.snapshot.roundId,
     seasonId: input.seasonId,
+    scoringVersion: input.scoringVersion ?? "player_scoring_v1",
+    fixtureIds: [...(input.fixtureIds ?? [])].sort(),
     generatedAt: input.snapshot.generatedAt,
     priceTableVersion: input.priceTableVersion,
     rows: canonicalRows,
@@ -112,10 +120,14 @@ export function buildSportmonksRankingDraft(input: {
   receivedAt: string;
   expectedPlayerCount: number;
   priceTableVersion?: string;
+  scoringVersion?: "player_scoring_v1" | "player_scoring_v2";
+  fixtureIds?: readonly string[];
   players: readonly TouchlineSportmonksRankingPlayer[];
 }): TouchlineRankingDraft {
   return {
     seasonId: input.seasonId,
+    scoringVersion: input.scoringVersion ?? "player_scoring_v1",
+    fixtureIds: [...new Set(input.fixtureIds ?? input.players.flatMap((player) => player.sourceFixtureIds))].sort(),
     receivedAt: input.receivedAt,
     expectedPlayerCount: input.expectedPlayerCount,
     priceTableVersion: input.priceTableVersion ?? TOUCHLINE_CARD_PRICE_TABLE_VERSION,
@@ -150,11 +162,11 @@ export function auditTouchlineRankingDraft(
     if (!row.sourceFixtureIds.length) {
       issues.push({ code: "source-fixture-missing", message: "Player row has no source fixture trace.", playerId: row.playerId });
     }
-    if (!Number.isFinite(row.touchlinePoints) || row.touchlinePoints < 0) {
-      issues.push({ code: "points-invalid", message: "TouchLine points must be finite and non-negative.", playerId: row.playerId });
+    if (!Number.isFinite(row.touchlinePoints)) {
+      issues.push({ code: "points-invalid", message: "TouchLine points must be finite.", playerId: row.playerId });
     }
-    if (row.roundPoints !== null && row.roundPoints !== undefined && (!Number.isFinite(row.roundPoints) || row.roundPoints < 0)) {
-      issues.push({ code: "round-points-invalid", message: "Round points must be finite and non-negative.", playerId: row.playerId });
+    if (row.roundPoints !== null && row.roundPoints !== undefined && !Number.isFinite(row.roundPoints)) {
+      issues.push({ code: "round-points-invalid", message: "Round points must be finite.", playerId: row.playerId });
     }
     for (const [key, value] of [["minutes", row.minutesPlayed], ["appearances", row.appearances]] as const) {
       if (value === null || value === undefined || !Number.isInteger(value) || value < 0) {
@@ -201,13 +213,15 @@ export function auditTouchlineRankingDraft(
   ];
   const passed = issues.length === 0;
   const checksum = passed
-    ? touchlineRankingSnapshotChecksum({ seasonId: draft.seasonId, priceTableVersion: draft.priceTableVersion, snapshot: draft.snapshot })
+    ? touchlineRankingSnapshotChecksum({ seasonId: draft.seasonId, priceTableVersion: draft.priceTableVersion, snapshot: draft.snapshot, scoringVersion: draft.scoringVersion, fixtureIds: draft.fixtureIds })
     : undefined;
   const snapshot = passed && checksum ? {
     ...draft.snapshot,
     status: "audited" as const,
     source: "sportmonks-audited" as const,
     seasonId: draft.seasonId,
+    scoringVersion: draft.scoringVersion,
+    fixtureIds: draft.fixtureIds,
     auditedAt,
     priceTableVersion: draft.priceTableVersion,
     checksum,

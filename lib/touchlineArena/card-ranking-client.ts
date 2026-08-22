@@ -11,6 +11,7 @@ const ACTIVE_RANKING_URL = "/api/touchline-arena/card-ranking/active";
 
 let currentState: TouchlineActiveRankingState = TOUCHLINE_PRESEASON_RANKING_STATE;
 let activeRequest: Promise<void> | null = null;
+let refreshTimer: number | null = null;
 const listeners = new Set<() => void>();
 const subscribeWithoutUpdates = () => () => undefined;
 const getActiveRankingSnapshot = () => currentState;
@@ -23,7 +24,9 @@ function emitChange() {
 function loadActiveRanking() {
   if (activeRequest || typeof window === "undefined") return;
 
-  activeRequest = fetch(ACTIVE_RANKING_URL, { cache: "no-store" })
+  const controller = new AbortController();
+  const deadline = window.setTimeout(() => controller.abort(), 8_000);
+  activeRequest = fetch(ACTIVE_RANKING_URL, { cache: "no-store", signal: controller.signal })
     .then(async (response) => {
       if (!response.ok) return;
       const nextState = parseTouchlineActiveRankingState(await response.json());
@@ -31,13 +34,26 @@ function loadActiveRanking() {
       currentState = nextState;
       emitChange();
     })
-    .catch(() => undefined);
+    .catch(() => undefined)
+    .finally(() => {
+      window.clearTimeout(deadline);
+      activeRequest = null;
+    });
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
   loadActiveRanking();
-  return () => listeners.delete(listener);
+  if (listeners.size === 1 && typeof window !== "undefined") {
+    refreshTimer = window.setInterval(loadActiveRanking, 45_000);
+  }
+  return () => {
+    listeners.delete(listener);
+    if (!listeners.size && refreshTimer !== null) {
+      window.clearInterval(refreshTimer);
+      refreshTimer = null;
+    }
+  };
 }
 
 export function useTouchlineActiveRanking(subscribeToUpdates = true) {

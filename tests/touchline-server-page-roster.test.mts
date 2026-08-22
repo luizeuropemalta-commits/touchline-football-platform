@@ -94,11 +94,10 @@ test("public pages retain the isolated demo cookie and demo fallback", () => {
   assert.equal(fallback.cards.length, CLUB_OWNER_SQUAD_CARDS.length);
 });
 
-test("all three account-aware server pages gate cookies behind the public branch", () => {
+test("account-aware server pages gate cookies behind the public branch", () => {
   const pagePaths = [
     "../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
     "../app/touchline-tables/page.tsx",
-    "../app/touchline-player-card-rankings/page.tsx",
   ];
 
   for (const pagePath of pagePaths) {
@@ -112,6 +111,18 @@ test("all three account-aware server pages gate cookies behind the public branch
     assert.doesNotMatch(source, /kind:\s*["']authenticated["']/);
     assert.doesNotMatch(source, /fallback:\s*user\s*\?/);
   }
+});
+
+test("the league-wide player ranking never reads a private roster or demo cookie", () => {
+  const source = readFileSync(
+    new URL("../app/touchline-player-card-rankings/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.doesNotMatch(source, /readAuthoritativeTouchlineRoster/);
+  assert.doesNotMatch(source, /resolveTouchlineServerPageRoster/);
+  assert.doesNotMatch(source, /publicRosterCookieValue|cookies\(\)/);
 });
 
 test("the authenticated profile bounds its private avatar lookup before identity rendering", () => {

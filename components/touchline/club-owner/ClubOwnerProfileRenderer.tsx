@@ -50,7 +50,11 @@ import {
 import {
   resolveTouchlineClubOwnerPageIdentity,
 } from "@/lib/touchlineArena/club-owner-page-identity";
-import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
+import {
+  buildTouchlineMatchScoringBreakdownFields,
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "@/lib/touchlineArena/card-zoom-details";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail } from "@/lib/admin/owner";
@@ -142,7 +146,16 @@ function clubOwnerCardZoomDetails(
     editorialCard: card.editorialCard,
     cardReview: card.cardReview,
     activeContractCard: null,
-    touchlinePoints: card.touchlinePoints,
+    touchlinePoints: card.seasonTouchlinePoints ?? card.touchlinePoints,
+    extraFields: [
+      {
+        label: locale === "pt-BR" ? "Pontos da partida" : "Match points",
+        value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
+        accent: true,
+      },
+      ...buildTouchlineVerifiedMatchFactFields(card.matchStats, locale),
+      ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
+    ],
     profileHref,
     cardEngineHref: canEditCardEngine
       ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)

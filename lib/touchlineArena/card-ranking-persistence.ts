@@ -8,6 +8,8 @@ export type TouchlineRankingPersistenceRecord = {
   snapshotId: string;
   leagueKey: string;
   seasonId: string;
+  scoringVersion: "player_scoring_v1" | "player_scoring_v2";
+  fixtureIds: readonly string[];
   roundId: string;
   source: "sportmonks-audited";
   status: "audited";
@@ -49,6 +51,8 @@ export function buildTouchlineRankingPersistenceRecord(input: {
     snapshotId: input.audit.snapshot.snapshotId,
     leagueKey: input.leagueKey,
     seasonId: input.audit.snapshot.seasonId,
+    scoringVersion: input.audit.snapshot.scoringVersion,
+    fixtureIds: input.audit.snapshot.fixtureIds,
     roundId: input.audit.snapshot.roundId,
     source: "sportmonks-audited",
     status: "audited",

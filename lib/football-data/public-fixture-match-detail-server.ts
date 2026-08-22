@@ -54,8 +54,13 @@ function pointContributions(value: unknown): TouchlinePublicPlayerPointContribut
     const role = candidate?.role;
     const points = finiteNumber(candidate?.points);
     const minute = finiteNumber(candidate?.minute);
-    if (!providerEventId || !eventType || points === null || (role !== "primary" && role !== "assist")) return [];
-    return [{ providerEventId, eventType, role, points, minute }];
+    if (!providerEventId || !eventType || points === null || (role !== "primary" && role !== "assist" && role !== "fact")) return [];
+    const ruleCode = String(candidate?.ruleCode ?? "").trim() || undefined;
+    const quantity = finiteNumber(candidate?.quantity) ?? undefined;
+    const unitPoints = finiteNumber(candidate?.unitPoints) ?? undefined;
+    const factValue = finiteNumber(candidate?.factValue) ?? undefined;
+    const detail = String(candidate?.detail ?? "").trim() || undefined;
+    return [{ providerEventId, eventType, role, points, minute, ruleCode, quantity, unitPoints, factValue, detail }];
   });
 }
 
@@ -76,6 +81,18 @@ function cardStatistics(value: unknown) {
   const cleanSheets = pick("clean-sheets", "cleansheets");
   const saves = pick("saves");
   const goalsConceded = pick("goalkeeper-goals-conceded", "goals-conceded");
+  const shotsOnTarget = pick("shots-on-target");
+  const shotsOffTarget = pick("shots-off-target");
+  const defensiveActionsTotal = pick("defensive-actions-total");
+  const defense = pick("def-score");
+  const penaltySaves = pick("penalty-saves");
+  const penaltiesMissed = pick("penalties-missed");
+  const ownGoals = pick("own-goals");
+  const tacklesWon = pick("tackles-won", "def-tackles-won");
+  const interceptions = pick("interceptions", "def-interceptions");
+  const clearances = pick("clearances", "def-clearances");
+  const blockedShots = pick("blocked-shots", "shots-blocked", "def-blocked-shots");
+  const aerialsWon = pick("aerials-won", "aeriels-won", "def-aerials-won");
   return {
     ...(goals === undefined ? {} : { goals }),
     ...(assists === undefined ? {} : { assists }),
@@ -84,6 +101,18 @@ function cardStatistics(value: unknown) {
     ...(cleanSheets === undefined ? {} : { cleanSheets }),
     ...(saves === undefined ? {} : { saves }),
     ...(goalsConceded === undefined ? {} : { goalsConceded }),
+    ...(shotsOnTarget === undefined ? {} : { shotsOnTarget }),
+    ...(shotsOffTarget === undefined ? {} : { shotsOffTarget }),
+    ...(defensiveActionsTotal === undefined ? {} : { defensiveActionsTotal }),
+    ...(defense === undefined ? {} : { defense }),
+    ...(penaltySaves === undefined ? {} : { penaltySaves }),
+    ...(penaltiesMissed === undefined ? {} : { penaltiesMissed }),
+    ...(ownGoals === undefined ? {} : { ownGoals }),
+    ...(tacklesWon === undefined ? {} : { tacklesWon }),
+    ...(interceptions === undefined ? {} : { interceptions }),
+    ...(clearances === undefined ? {} : { clearances }),
+    ...(blockedShots === undefined ? {} : { blockedShots }),
+    ...(aerialsWon === undefined ? {} : { aerialsWon }),
   };
 }
 

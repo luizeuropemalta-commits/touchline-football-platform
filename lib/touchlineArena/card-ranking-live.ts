@@ -32,6 +32,9 @@ export type TouchlineActiveRankingState = {
   roundId: string | null;
   publishedAt: string | null;
   priceTableVersion: string;
+  scoringVersion: "player_scoring_v1" | "player_scoring_v2" | null;
+  seasonId: string | null;
+  fixtureIds: readonly string[];
   players: readonly TouchlineActiveRankingPlayer[];
 };
 
@@ -54,6 +57,9 @@ export const TOUCHLINE_PRESEASON_RANKING_STATE: TouchlineActiveRankingState = Ob
   roundId: null,
   publishedAt: null,
   priceTableVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+  scoringVersion: null,
+  seasonId: null,
+  fixtureIds: Object.freeze([]),
   players: Object.freeze([]),
 });
 
@@ -81,11 +87,9 @@ function isRankingPlayer(value: unknown): value is TouchlineActiveRankingPlayer 
       && POSITION_GROUPS.has(player.positionGroup as TouchlinePositionRankingGroup)
       && typeof player.touchlinePoints === "number"
       && Number.isFinite(player.touchlinePoints)
-      && player.touchlinePoints >= 0
       && (player.roundPoints === undefined || (
         typeof player.roundPoints === "number"
         && Number.isFinite(player.roundPoints)
-        && player.roundPoints >= 0
       ))
   );
 }
@@ -103,6 +107,10 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     || !candidate.publishedAt
     || !Number.isFinite(Date.parse(candidate.publishedAt))
     || candidate.priceTableVersion !== TOUCHLINE_CARD_PRICE_TABLE_VERSION
+    || (candidate.scoringVersion !== "player_scoring_v1" && candidate.scoringVersion !== "player_scoring_v2")
+    || !normalizePlayerId(candidate.seasonId)
+    || !Array.isArray(candidate.fixtureIds)
+    || candidate.fixtureIds.some((fixtureId) => !normalizePlayerId(fixtureId))
     || !Array.isArray(candidate.players)
     || candidate.players.length === 0
     || !candidate.players.every(isRankingPlayer)
@@ -146,6 +154,9 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     roundId: candidate.roundId!,
     publishedAt: candidate.publishedAt,
     priceTableVersion: candidate.priceTableVersion,
+    scoringVersion: candidate.scoringVersion,
+    seasonId: candidate.seasonId!,
+    fixtureIds: [...new Set(candidate.fixtureIds)],
     players: candidate.players,
   };
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -17,6 +18,7 @@ import { TOUCHLINE_CARD_PRICE_TABLE_VERSION, touchlineArenaTierForKey } from "..
 
 const POSITION_GROUP_SIZES = [64, 110, 90, 120, 100, 100] as const;
 const POSITION_CODES = ["GK", "CB", "RB", "CM", "RW", "ST"] as const;
+const clientSource = await readFile(new URL("../lib/touchlineArena/card-ranking-client.ts", import.meta.url), "utf8");
 
 function buildFullLeaguePlayers(): TouchlineRankingPlayerInput[] {
   let providerPlayerId = 10_000;
@@ -54,6 +56,9 @@ function activeState(): TouchlineActiveRankingState {
     roundId: snapshot.roundId,
     publishedAt: "2026-08-15T18:05:00.000Z",
     priceTableVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
+    scoringVersion: "player_scoring_v2",
+    seasonId: "season-1",
+    fixtureIds: ["fixture-1"],
     players: snapshot.players,
   };
 }
@@ -70,6 +75,28 @@ test("simulates 584 synthetic ranking records without duplicates or missing posi
   for (const player of state.players) {
     assert.equal(player.priceTc, touchlineArenaTierForKey(player.tierKey)?.retailPriceTc);
   }
+});
+
+test("the shared live ranking client refreshes without F5 and releases its timer", () => {
+  assert.match(clientSource, /window\.setTimeout\(\(\) => controller\.abort\(\), 8_000\)/);
+  assert.match(clientSource, /signal: controller\.signal/);
+  assert.match(clientSource, /\.finally\(\(\) => \{[\s\S]*window\.clearTimeout\(deadline\);[\s\S]*activeRequest = null;/);
+  assert.match(clientSource, /window\.setInterval\(loadActiveRanking, 45_000\)/);
+  assert.match(clientSource, /if \(!listeners\.size && refreshTimer !== null\)[\s\S]*window\.clearInterval\(refreshTimer\)/);
+});
+
+test("a real negative score remains negative in ranking instead of becoming a false zero", () => {
+  const players = buildFullLeaguePlayers();
+  players[0] = { ...players[0], touchlinePoints: -1 };
+  const snapshot = buildTouchlineRankingSnapshot({
+    snapshotId: "negative-score-v2",
+    roundId: "round-01",
+    status: "published",
+    generatedAt: "2026-08-15T18:00:00.000Z",
+    source: "sportmonks-audited",
+    players,
+  });
+  assert.equal(snapshot.players.find((player) => player.playerId === players[0].playerId)?.touchlinePoints, -1);
 });
 
 test("every card resolves its tier and TC price from the same published snapshot", () => {

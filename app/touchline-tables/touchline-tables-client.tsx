@@ -37,6 +37,7 @@ import {
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published-top-eleven";
+import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
 import type { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import styles from "./touchline-tables.module.css";
 
@@ -46,6 +47,7 @@ type TouchLineTablesClientProps = {
   canEditCardEngine: boolean;
   cardClubOwnerRank: TouchLineClubOwnerStanding[];
   cardPlayerRank: ClubOwnerSquadCard[];
+  coachRanking: TouchLineCoachRankingState;
   copy: RankingsCopy;
   currentProviderRoundName: string | null;
   locale: TouchLineLocale;
@@ -129,6 +131,7 @@ export default function TouchLineTablesClient({
   canEditCardEngine,
   cardClubOwnerRank,
   cardPlayerRank,
+  coachRanking,
   copy,
   currentProviderRoundName,
   locale,
@@ -323,6 +326,26 @@ export default function TouchLineTablesClient({
                 <Link href={touchlinePlayerProfileHref(squadCardToExactPlayer(card), locale)} aria-label={`${isPortuguese ? "Abrir perfil de" : "Open profile for"} ${card.name}`}>
                   <ExternalLink aria-hidden="true" />
                 </Link>
+              </li>
+            ))}
+          </ol> : <RankingPending copy={copy} />}
+        </section>
+
+        <section className={styles.rankSection} id="coach-rankings">
+          <div className={styles.sectionHeading}>
+            <div>
+              <p>{isPortuguese ? "Ranking de treinadores" : "Coach ranking"}</p>
+              <h2>{isPortuguese ? "Melhores treinadores TouchLine" : "Top TouchLine coaches"}</h2>
+            </div>
+            <span>{isPortuguese ? "Pontos V2, vitórias e vitórias fora de casa definem a ordem." : "V2 points, wins and away wins define the order."}</span>
+          </div>
+          {coachRanking.phase === "ranked" && coachRanking.rows.length ? <ol className={styles.tableList} data-coach-scoring-version={coachRanking.scoringVersion ?? undefined}>
+            {coachRanking.rows.map((coach) => (
+              <li key={coach.coachProviderId}>
+                <b>{String(coach.rank).padStart(2, "0")}</b>
+                <div className={styles.ownerAvatar}><span aria-hidden="true">{coach.coachName.slice(0, 2)}</span></div>
+                <div className={styles.rowIdentity}><strong>{coach.coachName}</strong><span>{coach.clubName} · {coach.wins}W {coach.draws}D {coach.losses}L</span></div>
+                <div className={styles.pointsValue}><strong>{coach.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
               </li>
             ))}
           </ol> : <RankingPending copy={copy} />}

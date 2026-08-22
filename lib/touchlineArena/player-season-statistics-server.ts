@@ -70,7 +70,7 @@ function pointContributions(value: unknown): TouchLinePlayerFixtureStatistics["p
   return value.flatMap((candidate) => {
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return [];
     const contribution = candidate as Record<string, unknown>;
-    const role = contribution.role === "primary" || contribution.role === "assist" ? contribution.role : null;
+    const role = contribution.role === "primary" || contribution.role === "assist" || contribution.role === "fact" ? contribution.role : null;
     const eventType = typeof contribution.eventType === "string" && contribution.eventType.trim()
       ? contribution.eventType.trim()
       : null;
@@ -80,7 +80,12 @@ function pointContributions(value: unknown): TouchLinePlayerFixtureStatistics["p
     const minute = typeof contribution.minute === "number" && Number.isFinite(contribution.minute)
       ? contribution.minute
       : null;
-    return role && eventType && points !== null ? [{ role, eventType, minute, points }] : [];
+    const ruleCode = typeof contribution.ruleCode === "string" && contribution.ruleCode.trim() ? contribution.ruleCode.trim() : undefined;
+    const quantity = typeof contribution.quantity === "number" && Number.isFinite(contribution.quantity) ? contribution.quantity : undefined;
+    const unitPoints = typeof contribution.unitPoints === "number" && Number.isFinite(contribution.unitPoints) ? contribution.unitPoints : undefined;
+    const factValue = typeof contribution.factValue === "number" && Number.isFinite(contribution.factValue) ? contribution.factValue : undefined;
+    const detail = typeof contribution.detail === "string" && contribution.detail.trim() ? contribution.detail.trim() : undefined;
+    return role && eventType && points !== null ? [{ role, eventType, minute, points, ruleCode, quantity, unitPoints, factValue, detail }] : [];
   });
 }
 

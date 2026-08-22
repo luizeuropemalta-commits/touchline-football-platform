@@ -75,6 +75,7 @@ export async function readPublicSeasonPlayerPoints(
       ...(statistic("cleanSheets", "clean-sheets", "cleansheets") === undefined ? {} : { cleanSheets: statistic("cleanSheets", "clean-sheets", "cleansheets")! }),
       ...(statistic("saves") === undefined ? {} : { saves: statistic("saves")! }),
       ...(statistic("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded") === undefined ? {} : { goalsConceded: statistic("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded")! }),
+      ...(statistic("def-score") === undefined ? {} : { defense: statistic("def-score")! }),
     };
     return canonicalPlayerId ? [{ canonicalPlayerId, touchlinePoints, statistics }] : [];
   });

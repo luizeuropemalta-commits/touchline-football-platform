@@ -645,12 +645,14 @@ export default async function TouchLinePlayerProfilePage({
   const seasonCleanSheets = statisticNumber(seasonPositionStatistics, "clean-sheets", "cleansheets");
   const seasonSaves = statisticNumber(seasonPositionStatistics, "saves");
   const seasonGoalsConceded = statisticNumber(seasonPositionStatistics, "goalkeeper-goals-conceded", "goals-conceded");
+  const seasonDefense = statisticNumber(seasonPositionStatistics, "def-score");
   exactPlayer.seasonStats = {
     goals: playerStatistics.currentSeason.summary.goals,
     assists: playerStatistics.currentSeason.summary.assists,
     ...(seasonCleanSheets === undefined ? {} : { cleanSheets: seasonCleanSheets }),
     ...(seasonSaves === undefined ? {} : { saves: seasonSaves }),
     ...(seasonGoalsConceded === undefined ? {} : { goalsConceded: seasonGoalsConceded }),
+    ...(seasonDefense === undefined ? {} : { defense: seasonDefense }),
     yellowCards: playerStatistics.currentSeason.summary.yellowCards,
     redCards: playerStatistics.currentSeason.summary.redCards,
     cards: playerStatistics.currentSeason.summary.yellowCards === null
@@ -668,6 +670,13 @@ export default async function TouchLinePlayerProfilePage({
     ...(selectedStatistic("clean-sheets", "cleansheets") === undefined ? {} : { cleanSheets: selectedStatistic("clean-sheets", "cleansheets")! }),
     ...(selectedStatistic("saves") === undefined ? {} : { saves: selectedStatistic("saves")! }),
     ...(selectedStatistic("goalkeeper-goals-conceded", "goals-conceded") === undefined ? {} : { goalsConceded: selectedStatistic("goalkeeper-goals-conceded", "goals-conceded")! }),
+    ...(selectedStatistic("def-score") === undefined ? {} : { defense: selectedStatistic("def-score")! }),
+    ...(selectedStatistic("shots-on-target") === undefined ? {} : { shotsOnTarget: selectedStatistic("shots-on-target")! }),
+    ...(selectedStatistic("shots-off-target") === undefined ? {} : { shotsOffTarget: selectedStatistic("shots-off-target")! }),
+    ...(selectedStatistic("defensive-actions-total") === undefined ? {} : { defensiveActionsTotal: selectedStatistic("defensive-actions-total")! }),
+    ...(selectedStatistic("penalty-saves") === undefined ? {} : { penaltySaves: selectedStatistic("penalty-saves")! }),
+    ...(selectedStatistic("penalties-missed") === undefined ? {} : { penaltiesMissed: selectedStatistic("penalties-missed")! }),
+    ...(selectedStatistic("own-goals") === undefined ? {} : { ownGoals: selectedStatistic("own-goals")! }),
     ...(selectedYellowCards === undefined ? {} : { yellowCards: selectedYellowCards }),
     ...(selectedRedCards === undefined ? {} : { redCards: selectedRedCards }),
     ...(selectedYellowCards === undefined || selectedRedCards === undefined ? {} : { cards: selectedYellowCards + selectedRedCards }),

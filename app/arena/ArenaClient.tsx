@@ -265,6 +265,7 @@ type BenchOption = {
   matchFantasyPoints?: string | number | null;
   seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
   matchStats?: TouchlineEliteExactPlayer["matchStats"];
+  matchPointContributions?: TouchlineEliteExactPlayer["matchPointContributions"];
   countryCode3: string;
   impact: string;
   status: "ready" | "hot" | "watch" | "risk";
@@ -955,6 +956,7 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
       inventoryId: player.card.inventoryId ?? squadPlayer.inventoryId ?? null,
       seasonStats: squadPlayer.seasonStats ?? player.card.seasonStats,
       matchStats: squadPlayer.matchStats ?? player.card.matchStats,
+      matchPointContributions: squadPlayer.matchPointContributions ?? player.card.matchPointContributions,
     },
   };
 }
@@ -1063,6 +1065,7 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
     matchFantasyPoints: card?.matchFantasyPoints ?? null,
     seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
+    matchPointContributions: card?.matchPointContributions,
     countryCode3: card?.countryCode3 || "N/A",
     impact: replacedBench.impact,
     status: "ready",
@@ -1128,6 +1131,7 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
     matchFantasyPoints: player.matchFantasyPoints ?? null,
     seasonStats: player.seasonStats,
     matchStats: player.matchStats,
+    matchPointContributions: player.matchPointContributions,
     countryCode3: player.countryCode3 || "N/A",
     impact: "+ squad depth",
     status: "ready",
@@ -1137,6 +1141,12 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
 function defaultClubOwnerCardByName(name: string) {
   const normalizedName = normalizeTextKey(name);
   return CLUB_OWNER_SQUAD_CARDS.find((card) => normalizeTextKey(card.name) === normalizedName);
+}
+
+function touchlineFinitePointsOrFallback(value: unknown, fallback: number) {
+  if (value === null || value === undefined || value === "") return fallback;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
 }
 
 function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
@@ -1166,12 +1176,13 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? defaultCard?.inventoryId ?? null,
-    touchlinePoints: Number.parseFloat(String(card?.fantasyPoints ?? "")) || defaultCard?.touchlinePoints || 0,
+    touchlinePoints: touchlineFinitePointsOrFallback(card?.fantasyPoints, defaultCard?.touchlinePoints ?? 0),
     matchTouchlinePoints: card?.matchFantasyPoints === null || card?.matchFantasyPoints === undefined || card.matchFantasyPoints === ""
       ? null
       : Number.isFinite(Number(card.matchFantasyPoints)) ? Number(card.matchFantasyPoints) : null,
     seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
+    matchPointContributions: card?.matchPointContributions,
   });
 }
 
@@ -1200,12 +1211,13 @@ function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: bench.inventoryId ?? defaultCard?.inventoryId ?? null,
-    touchlinePoints: Number.isFinite(Number(bench.touchlinePoints)) ? Number(bench.touchlinePoints) : defaultCard?.touchlinePoints || 0,
+    touchlinePoints: touchlineFinitePointsOrFallback(bench.touchlinePoints, defaultCard?.touchlinePoints ?? 0),
     matchTouchlinePoints: bench.matchFantasyPoints === null || bench.matchFantasyPoints === undefined || bench.matchFantasyPoints === ""
       ? null
       : Number.isFinite(Number(bench.matchFantasyPoints)) ? Number(bench.matchFantasyPoints) : null,
     seasonStats: bench.seasonStats,
     matchStats: bench.matchStats,
+    matchPointContributions: bench.matchPointContributions,
   });
 }
 
@@ -1237,6 +1249,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
       matchFantasyPoints: card.matchTouchlinePoints,
       seasonStats: card.seasonStats,
       matchStats: card.matchStats,
+      matchPointContributions: card.matchPointContributions,
     };
   }
 
@@ -1263,6 +1276,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
     matchFantasyPoints: card.matchTouchlinePoints,
     seasonStats: card.seasonStats,
     matchStats: card.matchStats,
+    matchPointContributions: card.matchPointContributions,
     impact: "+ squad depth",
     status: "ready",
   };
@@ -2847,8 +2861,19 @@ function projectArenaPlayersForLoopCamera(players: ArenaPlayer[], cameraIndex: n
 }
 
 function lockArenaPlayerSize(player: ArenaPlayer) {
+  const card = player.card ? {
+    ...player.card,
+    // Scoring is a server-owned read model. Persist identity/layout only so a
+    // saved Arena lineup can never become a stale points cache.
+    fantasyPoints: undefined,
+    matchFantasyPoints: undefined,
+    seasonStats: undefined,
+    matchStats: undefined,
+    matchPointContributions: undefined,
+  } : undefined;
   return {
     ...player,
+    card,
     heightVh: Math.min(ARENA_CARD_MAX_HEIGHT_VH, Math.max(ARENA_CARD_MIN_HEIGHT_VH, player.heightVh ?? ARENA_CARD_COMPACT_HEIGHT_VH)),
   };
 }
@@ -4825,6 +4850,51 @@ export default function ArenaClient({
       cancelled = true;
     };
   }, [arenaAccountSyncStatus, arenaPersistencePrincipal, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, initialQaVisualEditor, players]);
+
+  useEffect(() => {
+    if (
+      !hasLoadedClubOwnerRoster
+      || arenaRosterSyncStatus !== "ready"
+      || arenaPersistencePrincipal?.kind !== "authenticated"
+    ) return;
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function refreshAuthoritativeScoring() {
+      try {
+        const response = await fetch("/api/touchline-arena/roster", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const payload: unknown = await response.json();
+        const roster = response.ok ? parseAuthoritativeRosterResponse(payload) : { ok: false as const };
+        if (cancelled || !roster.ok) return;
+
+        setPlayers((current) => reconcileArenaLineupWithAuthoritativeRoster(current, roster.cards));
+        setBenchPlayers((current) => current.map((bench) => {
+          const inventoryId = normalizeTouchlineMarketInventoryId(bench.inventoryId);
+          const canonical = roster.cards.find((card) => (
+            inventoryId && normalizeTouchlineMarketInventoryId(card.inventoryId) === inventoryId
+          ));
+          if (!canonical) return bench;
+          const refreshed = clubOwnerCardToBenchOption(canonical);
+          return { ...refreshed, id: bench.id, impact: bench.impact, status: bench.status };
+        }));
+        writeBrowserClubOwnerRoster(roster.cards, { principal: arenaPersistencePrincipal });
+      } catch {
+        // Keep the last verified server projection. A transient read failure
+        // must not clear match points, cards or the saved formation.
+      }
+    }
+
+    const timer = window.setInterval(() => void refreshAuthoritativeScoring(), 45_000);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      window.clearInterval(timer);
+    };
+  }, [arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster]);
 
   useEffect(() => {
     let cancelled = false;

@@ -69,7 +69,7 @@ export async function readTouchlineCoachContracts(
   const [{ data: points, error: pointsError }, { data: clubs, error: clubsError }] = await Promise.all([
     admin
       .from("touchline_coach_fixture_points")
-      .select("contract_id,fixture_id,fixture_context,outcome,home_score,away_score,touchline_points,settlement_status")
+      .select("contract_id,fixture_id,fixture_context,outcome,home_score,away_score,touchline_points,settlement_status,scoring_version")
       .in("contract_id", contractIds),
     admin.from("football_clubs").select("id,provider_team_id").in("id", clubIds),
   ]);
@@ -90,7 +90,10 @@ export async function readTouchlineCoachContracts(
   return Promise.all(contractRows.map(async (contract) => {
     const contractId = text(contract.id) ?? "";
     const clubId = text(contract.club_id) ?? "";
-    const contractPoints = pointRows.filter((row) => text(row.contract_id) === contractId);
+    const scoringVersion = text(contract.scoring_version) === "coach_scoring_v1"
+      ? "coach_scoring_v1" as const
+      : TOUCHLINE_COACH_SCORING_VERSION;
+    const contractPoints = pointRows.filter((row) => text(row.contract_id) === contractId && text(row.scoring_version) === scoringVersion);
     const home = recordFor(contractPoints, "home");
     const away = recordFor(contractPoints, "away");
     const contractStart = text(contract.started_at);
@@ -145,7 +148,7 @@ export async function readTouchlineCoachContracts(
       startedAt: text(contract.started_at) ?? new Date(0).toISOString(),
       endedAt: text(contract.ended_at),
       endReason: text(contract.end_reason),
-      scoringVersion: TOUCHLINE_COACH_SCORING_VERSION,
+      scoringVersion,
       home,
       away,
       totalTouchlinePoints: home.touchlinePoints + away.touchlinePoints,

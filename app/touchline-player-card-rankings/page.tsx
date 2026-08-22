@@ -1,24 +1,18 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { cookies } from "next/headers";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   findTouchLineClub,
-  rankClubOwnerCards,
   squadCardToExactPlayer,
 } from "@/lib/touchlineArena/demo-data";
-import {
-  arenaPersistenceKeys,
-} from "@/lib/touchlineArena/arena-persistence-namespace";
-import { readAuthoritativeTouchlineRoster } from "@/lib/touchlineArena/authoritative-roster-server";
-import { resolveTouchlineServerPageRoster } from "@/lib/touchlineArena/server-page-roster";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
+import { loadTouchLineRankedCardCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
+import { compareTouchLineRankedCards } from "@/lib/touchlineArena/ranked-card-catalog";
 import { normalizeTouchLineLocale, touchLineT } from "@/lib/touchlineArena/i18n";
 import { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import { touchlineArenaContractHref, touchlineArenaPanelHref } from "@/lib/touchlineArena/arena-navigation";
@@ -27,7 +21,11 @@ import {
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
 import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
-import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
+import {
+  buildTouchlineMatchScoringBreakdownFields,
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "@/lib/touchlineArena/card-zoom-details";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 import { isOwnerEmail } from "@/lib/admin/owner";
@@ -44,35 +42,11 @@ export default async function TouchLinePlayerCardRankingsPage({
   searchParams: Promise<{ lang?: string }>;
 }) {
   const supabase = await createClient();
-  const admin = createAdminClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
-  let authoritativeRoster: Awaited<ReturnType<typeof readAuthoritativeTouchlineRoster>> | null = null;
-  if (user && admin) {
-    try {
-      authoritativeRoster = await readAuthoritativeTouchlineRoster(admin, user.id);
-    } catch {
-      authoritativeRoster = null;
-    }
-  }
-  const publicRosterCookieValue = user
-    ? null
-    : (await cookies()).get(arenaPersistenceKeys(
-        { kind: "demo", demoId: "public-card-rankings" },
-        "club-owner-roster",
-      ).cookieName)?.value;
-  const rosterResolution = resolveTouchlineServerPageRoster({
-    authenticatedUserId: user?.id,
-    authoritativeRoster,
-    publicCookieValue: publicRosterCookieValue,
-  });
-  if (rosterResolution.state === "unavailable") {
-    console.error("[TouchLine] Player-card ranking roster unavailable", rosterResolution.error);
-  }
-  // Rankings are a game-card surface. The shared publication policy has
-  // already attached the public projection; never rank a contract or roster
-  // record that has not been explicitly published as a card.
-  const rosterCards = rosterResolution.cards.filter((card) => Boolean(card.editorialCard));
   const activeRanking = await loadTouchLineActiveRanking();
+  // This is the league-wide published-card ranking, never the signed-in
+  // customer's private roster. Every surface receives the same V2 snapshot.
+  const rosterCards = await loadTouchLineRankedCardCatalog(activeRanking);
   const competitionByCardId = new Map(rosterCards.map((card) => [
     card.id,
     resolveTouchlineCardCompetition({ state: activeRanking, playerId: card.id }),
@@ -85,7 +59,7 @@ export default async function TouchLinePlayerCardRankingsPage({
         touchlinePoints: competition.touchlinePoints,
       };
     })
-    .sort(rankClubOwnerCards);
+    .sort(compareTouchLineRankedCards);
   const topCards = rankedCards.slice(0, 3);
   const locale = normalizeTouchLineLocale((await searchParams).lang);
   const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
@@ -140,6 +114,15 @@ export default async function TouchLinePlayerCardRankingsPage({
         cardReview: card.cardReview,
         activeContractCard: null,
         touchlinePoints: card.touchlinePoints,
+        extraFields: [
+          {
+            label: locale === "pt-BR" ? "Pontos da partida" : "Match points",
+            value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
+            accent: true,
+          },
+          ...buildTouchlineVerifiedMatchFactFields(card.matchStats, locale),
+          ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
+        ],
         profileHref,
         cardEngineHref: canEditCardEngine
           ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)

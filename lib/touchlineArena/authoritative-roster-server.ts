@@ -132,6 +132,13 @@ function verifiedSeasonStats(row?: DatabaseRecord | null) {
     ["cleanSheets", value("cleanSheets", "clean-sheets", "cleansheets")],
     ["saves", value("saves")],
     ["goalsConceded", value("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded")],
+    ["defense", value("def-score")],
+    ["shotsOnTarget", value("shots-on-target")],
+    ["shotsOffTarget", value("shots-off-target")],
+    ["defensiveActionsTotal", value("defensive-actions-total")],
+    ["penaltySaves", value("penalty-saves")],
+    ["penaltiesMissed", value("penalties-missed")],
+    ["ownGoals", value("own-goals")],
     ["yellowCards", yellow],
     ["redCards", red],
     ["cards", yellow === null || red === null ? null : yellow + red],
@@ -157,11 +164,40 @@ function verifiedMatchStats(row?: DatabaseRecord | null) {
     ["cleanSheets", value("clean-sheets", "cleansheets")],
     ["saves", value("saves")],
     ["goalsConceded", value("goalkeeper-goals-conceded", "goals-conceded")],
+    ["defense", value("def-score")],
+    ["shotsOnTarget", value("shots-on-target")],
+    ["shotsOffTarget", value("shots-off-target")],
+    ["defensiveActionsTotal", value("defensive-actions-total")],
+    ["penaltySaves", value("penalty-saves")],
+    ["penaltiesMissed", value("penalties-missed")],
+    ["ownGoals", value("own-goals")],
     ["yellowCards", yellow],
     ["redCards", red],
     ["cards", yellow === null || red === null ? null : yellow + red],
   ].filter((entry): entry is [string, number] => typeof entry[1] === "number");
   return entries.length ? Object.fromEntries(entries) : undefined;
+}
+
+function verifiedPointContributions(row?: DatabaseRecord | null): NonNullable<ClubOwnerSquadCard["matchPointContributions"]> {
+  if (!Array.isArray(row?.touchline_points_breakdown)) return [];
+  return row.touchline_points_breakdown.flatMap((value) => {
+    const item = asRecord(value);
+    const role = item?.role === "primary" || item?.role === "assist" || item?.role === "fact" ? item.role : null;
+    const eventType = asString(item?.eventType);
+    const points = asFiniteNumber(item?.points);
+    if (!role || !eventType || points === null) return [];
+    return [{
+      role,
+      eventType,
+      minute: asFiniteNumber(item?.minute),
+      points,
+      ...(asString(item?.ruleCode) ? { ruleCode: asString(item?.ruleCode)! } : {}),
+      ...(asFiniteNumber(item?.quantity) === null ? {} : { quantity: asFiniteNumber(item?.quantity)! }),
+      ...(asFiniteNumber(item?.unitPoints) === null ? {} : { unitPoints: asFiniteNumber(item?.unitPoints)! }),
+      ...(asFiniteNumber(item?.factValue) === null ? {} : { factValue: asFiniteNumber(item?.factValue)! }),
+      ...(asString(item?.detail) ? { detail: asString(item?.detail)! } : {}),
+    }];
+  });
 }
 
 function preferredSquadMember(
@@ -268,6 +304,7 @@ export function mapAuthoritativeRosterRows(
     const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId));
     const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId));
     const seasonTouchlinePoints = touchlinePointsFor(contract, inventory, seasonStatisticByPlayerId.get(playerId));
+    const matchPointContributions = verifiedPointContributions(fixtureStatisticByPlayerId.get(playerId));
     cards.push({
       id: playerId,
       canonicalPlayerId: playerId,
@@ -293,6 +330,7 @@ export function mapAuthoritativeRosterRows(
       matchTouchlinePoints: asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.touchline_points),
       ...(seasonStats ? { seasonStats } : {}),
       ...(matchStats ? { matchStats } : {}),
+      ...(matchPointContributions.length ? { matchPointContributions } : {}),
       editorialCard,
     });
     inventoryIds.push(inventoryId);
@@ -449,12 +487,17 @@ export async function readAuthoritativeTouchlineRoster(
       ? admin.from("football_player_season_statistics")
         .select("football_player_id,summary_payload,position_statistics_payload,source_synced_at")
         .eq("season_id", currentSeasonId)
+        .eq("scoring_version", "player_scoring_v2")
         .in("football_player_id", playerIds)
       : Promise.resolve({ data: [], error: null }),
-    admin.from("football_player_fixture_statistics")
-      .select("football_player_id,touchline_points,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
-      .in("football_player_id", playerIds)
-      .order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
+    currentSeasonId
+      ? admin.from("football_player_fixture_statistics")
+        .select("football_player_id,touchline_points,touchline_points_breakdown,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
+        .eq("season_id", currentSeasonId)
+        .eq("scoring_version", "player_scoring_v2")
+        .in("football_player_id", playerIds)
+        .order("starts_at", { referencedTable: "football_fixtures", ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (seasonStatisticsResponse.error || fixtureStatisticsResponse.error) {
     return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };

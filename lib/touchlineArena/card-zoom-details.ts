@@ -20,7 +20,9 @@ export type TouchlineCardZoomExtraField = Readonly<{
 }>;
 
 type TouchlineVerifiedMatchStats = Readonly<Partial<Record<
-  "goals" | "assists" | "cleanSheets" | "saves" | "goalsConceded" | "yellowCards" | "redCards",
+  "goals" | "assists" | "cleanSheets" | "saves" | "goalsConceded" | "yellowCards" | "redCards"
+  | "shotsOnTarget" | "shotsOffTarget" | "defensiveActionsTotal" | "defense"
+  | "penaltySaves" | "penaltiesMissed" | "ownGoals",
   string | number | null
 >>>;
 
@@ -44,6 +46,13 @@ export function buildTouchlineVerifiedMatchFactFields(
     ["goalsConceded", "Goals conceded", "Gols sofridos"],
     ["yellowCards", "Yellow cards", "Cartões amarelos"],
     ["redCards", "Red cards", "Cartões vermelhos"],
+    ["shotsOnTarget", "Shots on target", "Chutes no gol"],
+    ["shotsOffTarget", "Shots off target", "Chutes para fora"],
+    ["defensiveActionsTotal", "Defensive actions (DAT)", "Ações defensivas (DAT)"],
+    ["defense", "DEF score", "Pontuação DEF"],
+    ["penaltySaves", "Penalty saves", "Pênaltis defendidos"],
+    ["penaltiesMissed", "Penalties missed", "Pênaltis perdidos"],
+    ["ownGoals", "Own goals", "Gols contra"],
   ];
 
   return facts.flatMap(([key, englishLabel, portugueseLabel]) => {
@@ -59,10 +68,15 @@ export function buildTouchlineVerifiedMatchFactFields(
  */
 export function buildTouchlineMatchScoringBreakdownFields(
   contributions: readonly Readonly<{
-    role: "primary" | "assist";
+    role: "primary" | "assist" | "fact";
+    ruleCode?: string;
     eventType: string;
     minute: number | null;
+    quantity?: number;
+    unitPoints?: number;
     points: number;
+    factValue?: number;
+    detail?: string;
   }>[] | null | undefined,
   locale: string,
 ): TouchlineCardZoomExtraField[] {
@@ -74,9 +88,14 @@ export function buildTouchlineMatchScoringBreakdownFields(
       : contribution.eventType;
     const minute = contribution.minute === null ? "" : ` ${contribution.minute}′`;
     const signedPoints = `${contribution.points > 0 ? "+" : ""}${contribution.points}`;
+    const equation = contribution.quantity !== undefined && contribution.unitPoints !== undefined
+      ? `${contribution.quantity} × ${contribution.unitPoints > 0 ? "+" : ""}${contribution.unitPoints} = ${signedPoints}`
+      : signedPoints;
+    const verifiedFact = contribution.detail
+      ?? (contribution.factValue === undefined ? null : String(contribution.factValue));
     return {
       label: pt ? "Pontuação da partida" : "Match scoring",
-      value: `${eventType}${minute} · ${signedPoints}`,
+      value: `${eventType}${minute}${verifiedFact ? ` · ${verifiedFact}` : ""} · ${equation}`,
       accent: true,
     };
   });

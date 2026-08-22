@@ -8,9 +8,12 @@ const copy = readFileSync(new URL("../lib/touchlineArena/rankings-i18n.ts", impo
 
 test("TouchLine Tables never present demo data as an official competition ranking", () => {
   assert.doesNotMatch(page, /rankClubOwnerCards|buildDemoClubOwnerStandings|buildTouchlineRankingSnapshot/);
+  assert.match(page, /loadTouchLineActiveRanking\(\)/);
+  assert.match(page, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.match(page, /compareTouchLineRankedCards/);
   assert.match(page, /const cardClubOwnerRank: never\[\] = \[\]/);
   assert.match(page, /const touchLineEnglandTable: never\[\] = \[\]/);
-  assert.match(page, /const cardPlayerRank: never\[\] = \[\]/);
+  assert.match(page, /const cardPlayerRank = \[\.\.\.rankedCards\]\.sort\(compareTouchLineRankedCards\)/);
   assert.match(client, /function RankingPending/);
   assert.match(client, /cardClubOwnerRank\.length \?/);
   assert.match(client, /touchLineEnglandTable\.length \?/);

@@ -6,7 +6,11 @@ import { Check, X } from "lucide-react";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
-import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
+import {
+  buildTouchlineMatchScoringBreakdownFields,
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "@/lib/touchlineArena/card-zoom-details";
 import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
@@ -92,6 +96,15 @@ function SquadPlayerCardZoom({
         editorialCard: card.editorialCard,
         cardReview: card.cardReview,
         touchlinePoints: card.fantasyPoints,
+        extraFields: [
+          {
+            label: portuguese ? "Pontos da partida" : "Match points",
+            value: card.matchFantasyPoints == null ? "—" : String(card.matchFantasyPoints),
+            accent: true,
+          },
+          ...buildTouchlineVerifiedMatchFactFields(card.matchStats, locale),
+          ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
+        ],
         profileHref,
         cardEngineHref,
       })}

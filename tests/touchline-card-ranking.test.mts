@@ -169,7 +169,13 @@ test("audits and atomically publishes a complete SportMonks ranking snapshot", (
   assert.equal(touchlineRankingSnapshotCanGoLive(published), true);
   assert.equal(
     published.checksum,
-    touchlineRankingSnapshotChecksum({ seasonId: published.seasonId, priceTableVersion: published.priceTableVersion, snapshot: draft.snapshot }),
+    touchlineRankingSnapshotChecksum({
+      seasonId: published.seasonId,
+      priceTableVersion: published.priceTableVersion,
+      snapshot: draft.snapshot,
+      scoringVersion: published.scoringVersion,
+      fixtureIds: published.fixtureIds,
+    }),
   );
 });
 

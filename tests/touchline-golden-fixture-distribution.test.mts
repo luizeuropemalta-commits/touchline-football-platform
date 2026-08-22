@@ -36,15 +36,25 @@ const GOLDEN_EVENTS: TouchlineFantasyEvent[] = [
 ];
 
 test("the 14 golden-fixture events yield only the verified scoring contributions", () => {
+  const score = (providerPlayerId: string, positionGroup: string, statistics: Record<string, number>, rating: number, teamGoalsConceded: number, minutesPlayed = 90) => touchLinePlayerFixturePoints({
+    providerPlayerId,
+    positionGroup,
+    appearanceStatus: "started",
+    minutesPlayed,
+    rating,
+    statistics,
+    events: GOLDEN_EVENTS,
+    teamGoalsConceded,
+  }).points;
   assert.equal(GOLDEN_EVENTS.length, 14);
-  assert.equal(touchLinePlayerFixturePoints("32612", GOLDEN_EVENTS).points, 6);
-  assert.equal(touchLinePlayerFixturePoints("23278684", GOLDEN_EVENTS).points, 3);
-  assert.equal(touchLinePlayerFixturePoints("16827155", GOLDEN_EVENTS).points, 6);
-  assert.equal(touchLinePlayerFixturePoints("26823", GOLDEN_EVENTS).points, 6);
-  assert.equal(touchLinePlayerFixturePoints("3259", GOLDEN_EVENTS).points, 3);
-  assert.equal(touchLinePlayerFixturePoints("97811", GOLDEN_EVENTS).points, -1);
-  assert.equal(touchLinePlayerFixturePoints("37762150", GOLDEN_EVENTS).points, -1);
-  assert.equal(touchLinePlayerFixturePoints("537721", GOLDEN_EVENTS).points, 0);
+  assert.equal(score("32612", "Attacker", { "shots-on-target": 1 }, 7.39, 0), 6);
+  assert.equal(score("23278684", "Defender", {}, 7.1, 0, 81), 5);
+  assert.equal(score("16827155", "Attacker", { "shots-on-target": 1 }, 7.71, 0, 68), 6);
+  assert.equal(score("26823", "Midfielder", { "shots-on-target": 1 }, 8.08, 0, 76), 8);
+  assert.equal(score("3259", "Defender", {}, 7.74, 0), 5);
+  assert.equal(score("97811", "Defender", {}, 6.68, 0), 1);
+  assert.equal(score("37762150", "Midfielder", {}, 6.06, 3, 62), -1);
+  assert.equal(score("537721", "Midfielder", {}, 6.77, 3, 28), 0);
 });
 
 test("Full Time is a settled result and event facts drive the verified player totals", () => {
@@ -55,25 +65,35 @@ test("Full Time is a settled result and event facts drive the verified player to
     assists: 0,
     yellowCards: 0,
     redCards: 0,
+    ownGoals: 0,
+    penaltySaves: 0,
+    penaltiesMissed: 0,
   });
   assert.deepEqual(touchLinePlayerFixtureEventStatistics("23278684", GOLDEN_EVENTS), {
     goals: 0,
     assists: 1,
     yellowCards: 0,
     redCards: 0,
+    ownGoals: 0,
+    penaltySaves: 0,
+    penaltiesMissed: 0,
   });
   assert.equal(touchLinePlayerFixtureEventStatistics("97811", GOLDEN_EVENTS).yellowCards, 1);
 });
 
 test("provider event identity makes repeated reconciliation idempotent", () => {
   const duplicatedFeed = [...GOLDEN_EVENTS, ...GOLDEN_EVENTS];
-  assert.equal(touchLinePlayerFixturePoints("32612", duplicatedFeed).points, 6);
-  assert.equal(touchLinePlayerFixturePoints("23278684", duplicatedFeed).points, 3);
+  const input = { positionGroup: "Attacker", appearanceStatus: "started" as const, minutesPlayed: 90, rating: 7.39, statistics: { "shots-on-target": 1 }, teamGoalsConceded: 0 };
+  assert.equal(touchLinePlayerFixturePoints({ ...input, providerPlayerId: "32612", events: duplicatedFeed }).points, 6);
+  assert.deepEqual(
+    touchLinePlayerFixturePoints({ ...input, providerPlayerId: "32612", events: duplicatedFeed }),
+    touchLinePlayerFixturePoints({ ...input, providerPlayerId: "32612", events: GOLDEN_EVENTS }),
+  );
 });
 
 test("rescinded provider events never score", () => {
   const rescinded = event({ providerId: "rescinded-goal", minute: 90, type: "Goal", playerId: "32612", status: "rescinded" });
-  assert.equal(touchLinePlayerFixturePoints("32612", [...GOLDEN_EVENTS, rescinded]).points, 6);
+  assert.equal(touchLinePlayerFixturePoints({ providerPlayerId: "32612", positionGroup: "Attacker", appearanceStatus: "started", minutesPlayed: 90, rating: 7.39, statistics: { "shots-on-target": 1 }, events: [...GOLDEN_EVENTS, rescinded], teamGoalsConceded: 0 }).points, 6);
 });
 
 test("season points remain unavailable until the event feed is known", () => {
@@ -96,7 +116,7 @@ test("season points remain unavailable until the event feed is known", () => {
   const reconciled = buildTouchLinePlayerSeasonAggregate({
     providerPlayerId: "32612",
     season: { seasonId: "2026-27", seasonName: "2026/27", competitionId: "8", competitionName: "Premier League", clubId: "19", clubName: "Arsenal" },
-    eligibleFixtures: [{ fixtureId: "19722203", lineups: [lineup], events: GOLDEN_EVENTS }],
+    eligibleFixtures: [{ fixtureId: "19722203", lineups: [lineup], events: GOLDEN_EVENTS, touchlinePoints: 6, scoringStatistics: { goals: 1, assists: 0 }, scoringComplete: false }],
   });
   assert.equal(unavailable.summary.touchlinePoints, null);
   assert.equal(reconciled.summary.touchlinePoints, 6);
@@ -107,11 +127,12 @@ test("season points remain unavailable until the event feed is known", () => {
 
 test("fixture persistence keeps points unavailable when provider events are absent", async () => {
   const source = await readFile(new URL("../lib/football-data/player-season-statistics-store.ts", import.meta.url), "utf8");
-  assert.match(source, /const verifiedEvents = fantasyEvents\(feed\?\.events_payload\)/);
-  assert.match(source, /touchline_points: pointResult\?\.points \?\? null/);
-  assert.match(source, /scoring_version: pointResult\?\.scoringVersion \?\? null/);
+  assert.match(source, /events = feed \? fantasyEvents\(feed\.events_payload\) : null/);
+  assert.match(source, /touchline_points: pointResult\.points/);
+  assert.match(source, /scoring_version: pointResult\.scoringVersion/);
+  assert.match(source, /scoring_coverage_status: pointResult\.coverageStatus/);
   assert.match(source, /isTouchLineSettledFixtureStatus\(fixture\.status\)/);
-  assert.match(source, /"yellow-cards": eventStatistics\.yellowCards/);
+  assert.match(source, /statistics_payload: \{ \.\.\.statistics, \.\.\.pointResult\.statistics \}/);
 });
 
 test("the QA distribution migration is idempotent and browser roles cannot read or write canonical facts", async () => {

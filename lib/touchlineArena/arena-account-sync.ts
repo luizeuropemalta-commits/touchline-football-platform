@@ -162,6 +162,11 @@ export function mergeArenaLineupInventoryFromRoster(
         cardPriceAuthority: rosterCard.cardPriceAuthority ?? null,
         editorialCard: rosterCard.editorialCard ?? null,
         inventoryId,
+        fantasyPoints: rosterCard.seasonTouchlinePoints ?? rosterCard.touchlinePoints,
+        matchFantasyPoints: rosterCard.matchTouchlinePoints ?? null,
+        seasonStats: rosterCard.seasonStats,
+        matchStats: rosterCard.matchStats,
+        matchPointContributions: rosterCard.matchPointContributions,
       },
     };
   });

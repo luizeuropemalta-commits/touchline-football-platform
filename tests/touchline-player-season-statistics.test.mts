@@ -43,8 +43,8 @@ test("a complete season aggregate requires every eligible fixture exactly once",
     providerPlayerId: "154421",
     season: { seasonId: "previous", seasonName: "2025/26", competitionId: "england", competitionName: "TouchLine England", clubId: "city", clubName: "Manchester City" },
     eligibleFixtures: [
-      { fixtureId: "f-1", lineups: [lineup({ fixtureId: "f-1", starter: true, minutes: 90, goals: 1, assists: 1, rating: 8 })], latestSyncAt: "2026-05-01T10:00:00.000Z" },
-      { fixtureId: "f-2", lineups: [lineup({ fixtureId: "f-2", starter: false, minutes: 30, goals: 0, assists: 0, rating: 7 })], latestSyncAt: "2026-05-08T10:00:00.000Z" },
+      { fixtureId: "f-1", lineups: [lineup({ fixtureId: "f-1", starter: true, minutes: 90, goals: 1, assists: 1, rating: 8 })], latestSyncAt: "2026-05-01T10:00:00.000Z", touchlinePoints: 5, scoringComplete: true },
+      { fixtureId: "f-2", lineups: [lineup({ fixtureId: "f-2", starter: false, minutes: 30, goals: 0, assists: 0, rating: 7 })], latestSyncAt: "2026-05-08T10:00:00.000Z", touchlinePoints: 1, scoringComplete: true },
     ],
   });
 
