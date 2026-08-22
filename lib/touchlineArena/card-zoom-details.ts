@@ -13,11 +13,45 @@ import {
   type TouchlineCardReviewPresentation,
 } from "./card-review-state.ts";
 
-type TouchlineCardZoomExtraField = Readonly<{
+export type TouchlineCardZoomExtraField = Readonly<{
   label: string;
   value: string | null | undefined;
   accent?: boolean;
 }>;
+
+type TouchlineVerifiedMatchStats = Readonly<Partial<Record<
+  "goals" | "assists" | "cleanSheets" | "saves" | "goalsConceded" | "yellowCards" | "redCards",
+  string | number | null
+>>>;
+
+/**
+ * Builds the match-fact portion of a card overlay from the existing
+ * allowlisted projection. This deliberately does not infer a statistic from
+ * TouchLine points: absent keys stay absent, explicit zero stays visible and
+ * an explicit null remains unavailable.
+ */
+export function buildTouchlineVerifiedMatchFactFields(
+  statistics: TouchlineVerifiedMatchStats | null | undefined,
+  locale: string,
+): TouchlineCardZoomExtraField[] {
+  if (!statistics) return [];
+  const pt = locale === "pt-BR";
+  const facts: readonly [keyof TouchlineVerifiedMatchStats, string, string][] = [
+    ["goals", "Goals", "Gols"],
+    ["assists", "Assists", "Assistências"],
+    ["cleanSheets", "Clean sheets", "Jogos sem sofrer gols"],
+    ["saves", "Saves", "Defesas"],
+    ["goalsConceded", "Goals conceded", "Gols sofridos"],
+    ["yellowCards", "Yellow cards", "Cartões amarelos"],
+    ["redCards", "Red cards", "Cartões vermelhos"],
+  ];
+
+  return facts.flatMap(([key, englishLabel, portugueseLabel]) => {
+    if (!(key in statistics)) return [];
+    const value = statistics[key];
+    return [{ label: pt ? portugueseLabel : englishLabel, value: value == null ? "—" : String(value) }];
+  });
+}
 
 /**
  * Existing contracted cards retain their previously agreed stored terms.

@@ -52,7 +52,10 @@ import {
 } from "@/lib/touchlineArena/public-card-presentation";
 import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
 import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
-import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
+import {
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "@/lib/touchlineArena/card-zoom-details";
 import {
   normalizeTouchlineCountryCode3,
   touchlineCountryCode3FromName,
@@ -629,9 +632,23 @@ export default async function TouchLinePlayerProfilePage({
     : String(competition.touchlinePoints);
   exactPlayer.fantasyPoints = competition.touchlinePoints;
   exactPlayer.matchFantasyPoints = playerStatistics.currentOrSelectedFixture?.touchlinePoints ?? null;
+  const statisticNumber = (statistics: Record<string, string | number>, ...keys: string[]) => {
+    for (const key of keys) {
+      const value = statistics[key];
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+    }
+    return undefined;
+  };
+  const seasonPositionStatistics = playerStatistics.currentSeason.positionStatistics;
+  const seasonCleanSheets = statisticNumber(seasonPositionStatistics, "clean-sheets", "cleansheets");
+  const seasonSaves = statisticNumber(seasonPositionStatistics, "saves");
+  const seasonGoalsConceded = statisticNumber(seasonPositionStatistics, "goalkeeper-goals-conceded", "goals-conceded");
   exactPlayer.seasonStats = {
     goals: playerStatistics.currentSeason.summary.goals,
     assists: playerStatistics.currentSeason.summary.assists,
+    ...(seasonCleanSheets === undefined ? {} : { cleanSheets: seasonCleanSheets }),
+    ...(seasonSaves === undefined ? {} : { saves: seasonSaves }),
+    ...(seasonGoalsConceded === undefined ? {} : { goalsConceded: seasonGoalsConceded }),
     yellowCards: playerStatistics.currentSeason.summary.yellowCards,
     redCards: playerStatistics.currentSeason.summary.redCards,
     cards: playerStatistics.currentSeason.summary.yellowCards === null
@@ -640,13 +657,7 @@ export default async function TouchLinePlayerProfilePage({
       : playerStatistics.currentSeason.summary.yellowCards + playerStatistics.currentSeason.summary.redCards,
   };
   const selectedFixtureStatistics = playerStatistics.currentOrSelectedFixture?.statistics ?? {};
-  const selectedStatistic = (...keys: string[]) => {
-    for (const key of keys) {
-      const value = selectedFixtureStatistics[key];
-      if (typeof value === "number" && Number.isFinite(value)) return value;
-    }
-    return undefined;
-  };
+  const selectedStatistic = (...keys: string[]) => statisticNumber(selectedFixtureStatistics, ...keys);
   const selectedYellowCards = selectedStatistic("yellow-cards", "yellowcards");
   const selectedRedCards = selectedStatistic("red-cards", "redcards");
   exactPlayer.matchStats = {
@@ -754,6 +765,7 @@ export default async function TouchLinePlayerProfilePage({
             value: exactPlayer.matchFantasyPoints === null ? text.unavailable : String(exactPlayer.matchFantasyPoints),
             accent: true,
           },
+          ...buildTouchlineVerifiedMatchFactFields(exactPlayer.matchStats, locale),
           { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },
           { label: isPortuguese ? "Idade" : "Age", value: official.player?.age === undefined ? null : String(official.player.age) },
         ],

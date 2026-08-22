@@ -72,6 +72,7 @@ test("Club Hub receives only allowlisted canonical match and season projections"
   const seasonReader = readFileSync(new URL("../lib/touchlineArena/public-season-player-points-server.ts", import.meta.url), "utf8");
   const authoritativeRoster = readFileSync(new URL("../lib/touchlineArena/authoritative-roster-server.ts", import.meta.url), "utf8");
   const authoritativeArena = readFileSync(new URL("../lib/touchlineArena/authoritative-arena-state.ts", import.meta.url), "utf8");
+  const playerProfile = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
   const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const grid = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
   const exactCard = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
@@ -81,6 +82,8 @@ test("Club Hub receives only allowlisted canonical match and season projections"
   assert.match(page, /applyTouchlineSeasonPoints/);
   assert.match(page, /applyTouchlineMatchdayPoints/);
   assert.match(page, /selectPublicClubScoringFixture/);
+  assert.match(playerProfile, /seasonCleanSheets/);
+  assert.match(playerProfile, /seasonSaves/);
   assert.match(detailReader, /statistics_payload/);
   assert.match(detailReader, /function cardStatistics/);
   assert.match(seasonReader, /select\("football_player_id,summary_payload,position_statistics_payload"\)/);
@@ -89,8 +92,8 @@ test("Club Hub receives only allowlisted canonical match and season projections"
   assert.doesNotMatch(seasonReader, /\.from\("(?:touchline_card_contracts|touchline_wallet|profiles)"\)/);
   assert.match(lineup, /showMatchPoints/);
   assert.match(grid, /showMatchPoints/);
-  assert.match(lineup, /Current match points/);
-  assert.match(grid, /Current match points/);
+  assert.match(lineup, /buildTouchlineVerifiedMatchFactFields/);
+  assert.match(grid, /buildTouchlineVerifiedMatchFactFields/);
   assert.match(exactCard, /player\.fantasyPoints === undefined/);
   assert.match(exactCard, /const preseasonMissingValue = "—"/);
   assert.match(authoritativeRoster, /seasonTouchlinePoints/);

@@ -7,7 +7,10 @@ import type { TouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
-import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
+import {
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "@/lib/touchlineArena/card-zoom-details";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
@@ -120,10 +123,11 @@ export default function ClubHubOfficialLineup({
                       : card.seasonTouchlinePoints,
                     extraFields: [
                       {
-                        label: isPortuguese ? "Pontos da partida atual" : "Current match points",
+                        label: isPortuguese ? "Pontos da partida" : "Match points",
                         value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
                         accent: true,
                       },
+                      ...buildTouchlineVerifiedMatchFactFields(card.matchStats, locale),
                     ],
                     profileHref,
                     cardEngineHref: canEditCardEngine

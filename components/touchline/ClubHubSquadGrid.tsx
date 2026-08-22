@@ -14,7 +14,10 @@ import {
   touchlineCardTierName,
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
-import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
+import {
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "@/lib/touchlineArena/card-zoom-details";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
@@ -115,10 +118,11 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                     : card.seasonTouchlinePoints,
                   extraFields: [
                     {
-                      label: pt ? "Pontos da partida atual" : "Current match points",
+                      label: pt ? "Pontos da partida" : "Match points",
                       value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
                       accent: true,
                     },
+                    ...buildTouchlineVerifiedMatchFactFields(card.matchStats, locale),
                   ],
                   profileHref,
                   cardEngineHref: canEditCardEngine

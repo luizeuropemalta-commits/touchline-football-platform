@@ -2,10 +2,32 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { buildTouchlinePlayerCardZoomDetails } from "../lib/touchlineArena/card-zoom-details.ts";
+import {
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "../lib/touchlineArena/card-zoom-details.ts";
 import { resolveTouchlinePublicEditorialCardPresentation } from "../lib/touchlineArena/editorial-card-profile.ts";
 
 const PLAYER_ID = "d9428888-122b-11e1-b85c-61cd3cbb3210";
+
+test("keeps confirmed match zero distinct from unavailable statistic facts", () => {
+  assert.deepEqual(
+    buildTouchlineVerifiedMatchFactFields({ goals: 1, assists: 0, yellowCards: null, saves: 3 }, "en-GB"),
+    [
+      { label: "Goals", value: "1" },
+      { label: "Assists", value: "0" },
+      { label: "Saves", value: "3" },
+      { label: "Yellow cards", value: "—" },
+    ],
+  );
+  assert.deepEqual(
+    buildTouchlineVerifiedMatchFactFields({ cleanSheets: 0, redCards: 1 }, "pt-BR"),
+    [
+      { label: "Jogos sem sofrer gols", value: "0" },
+      { label: "Cartões vermelhos", value: "1" },
+    ],
+  );
+});
 
 function publishedEditorialRecord(overrides: Record<string, unknown> = {}) {
   return {
