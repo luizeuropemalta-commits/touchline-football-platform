@@ -62,6 +62,8 @@ export type ClubOwnerSquadCard = {
   seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
   /** Latest reconciled fixture statistics used by the Arena overlay. */
   matchStats?: TouchlineEliteExactPlayer["matchStats"];
+  /** Event-backed explanation for the displayed match points. */
+  matchPointContributions?: TouchlineEliteExactPlayer["matchPointContributions"];
 };
 
 export type TouchLineClubOwnerStanding = {
@@ -387,5 +389,6 @@ export function squadCardToExactPlayer(
     matchFantasyPoints: card.matchTouchlinePoints,
     seasonStats: card.seasonStats,
     matchStats: card.matchStats,
+    matchPointContributions: card.matchPointContributions,
   };
 }

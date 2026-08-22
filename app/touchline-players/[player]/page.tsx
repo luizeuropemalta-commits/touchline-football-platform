@@ -54,6 +54,7 @@ import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/ca
 import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import {
   buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
 import {
@@ -632,6 +633,7 @@ export default async function TouchLinePlayerProfilePage({
     : String(competition.touchlinePoints);
   exactPlayer.fantasyPoints = competition.touchlinePoints;
   exactPlayer.matchFantasyPoints = playerStatistics.currentOrSelectedFixture?.touchlinePoints ?? null;
+  exactPlayer.matchPointContributions = playerStatistics.currentOrSelectedFixture?.pointContributions ?? [];
   const statisticNumber = (statistics: Record<string, string | number>, ...keys: string[]) => {
     for (const key of keys) {
       const value = statistics[key];
@@ -766,6 +768,7 @@ export default async function TouchLinePlayerProfilePage({
             accent: true,
           },
           ...buildTouchlineVerifiedMatchFactFields(exactPlayer.matchStats, locale),
+          ...buildTouchlineMatchScoringBreakdownFields(exactPlayer.matchPointContributions, locale),
           { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },
           { label: isPortuguese ? "Idade" : "Age", value: official.player?.age === undefined ? null : String(official.player.age) },
         ],

@@ -221,6 +221,13 @@ export type TouchlineEliteExactPlayer = {
   seasonStats?: Partial<Record<MatchStatId, string | number | null>>;
   /** @deprecated Use seasonStats. Kept temporarily for legacy Arena payloads. */
   matchStats?: Partial<Record<MatchStatId, string | number | null>>;
+  /** Allowlisted, event-backed explanation for current/last match points. */
+  matchPointContributions?: readonly Readonly<{
+    role: "primary" | "assist";
+    eventType: string;
+    minute: number | null;
+    points: number;
+  }>[];
   formationPlayerId?: string;
 };
 

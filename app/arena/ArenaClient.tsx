@@ -144,6 +144,7 @@ import { TOUCHLINE_SHIRT_DIGIT_ASSETS } from "@/lib/touchlineArena/shirt-number-
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
 import {
   buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
 import {
@@ -364,6 +365,8 @@ type TeamBuilderSquadPlayer = {
   seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
   /** Current-fixture statistics when supplied by the live provider. */
   matchStats?: TouchlineEliteExactPlayer["matchStats"];
+  /** Event-backed explanation for the current-fixture score. */
+  matchPointContributions?: TouchlineEliteExactPlayer["matchPointContributions"];
 };
 
 function parseStoredMarketDraftIds(value: string | null) {
@@ -3247,6 +3250,7 @@ function builderPlayerToPreviewCard(
     matchFantasyPoints: player.matchFantasyPoints,
     seasonStats: player.seasonStats,
     matchStats: player.matchStats,
+    matchPointContributions: player.matchPointContributions,
   };
 }
 
@@ -3284,6 +3288,7 @@ function arenaPlayerZoomDetails(
       { label: locale === "pt-BR" ? "Assistências na temporada" : "Season assists", value: player.seasonStats?.assists == null ? "—" : String(player.seasonStats.assists) },
       { label: locale === "pt-BR" ? "Cartões na temporada" : "Season cards", value: player.seasonStats?.cards == null ? "—" : String(player.seasonStats.cards) },
       ...buildTouchlineVerifiedMatchFactFields(player.matchStats, locale),
+      ...buildTouchlineMatchScoringBreakdownFields(player.matchPointContributions, locale),
     ],
     profileHref,
     cardEngineHref: canEditCardEngine

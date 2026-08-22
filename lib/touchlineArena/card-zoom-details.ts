@@ -54,6 +54,35 @@ export function buildTouchlineVerifiedMatchFactFields(
 }
 
 /**
+ * The scoring explanation comes from the persisted, versioned contribution
+ * ledger. It is never reverse-engineered from the total shown on the card.
+ */
+export function buildTouchlineMatchScoringBreakdownFields(
+  contributions: readonly Readonly<{
+    role: "primary" | "assist";
+    eventType: string;
+    minute: number | null;
+    points: number;
+  }>[] | null | undefined,
+  locale: string,
+): TouchlineCardZoomExtraField[] {
+  if (!contributions?.length) return [];
+  const pt = locale === "pt-BR";
+  return contributions.map((contribution) => {
+    const eventType = contribution.role === "assist"
+      ? (pt ? "Assistência" : "Assist")
+      : contribution.eventType;
+    const minute = contribution.minute === null ? "" : ` ${contribution.minute}′`;
+    const signedPoints = `${contribution.points > 0 ? "+" : ""}${contribution.points}`;
+    return {
+      label: pt ? "Pontuação da partida" : "Match scoring",
+      value: `${eventType}${minute} · ${signedPoints}`,
+      accent: true,
+    };
+  });
+}
+
+/**
  * Existing contracted cards retain their previously agreed stored terms.
  * This is deliberately separate from the editorial profile: it is a display
  * exception for an active contract, never a valuation-derived offer.

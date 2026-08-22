@@ -16,6 +16,7 @@ import {
 } from "@/lib/touchlineArena/card-rules";
 import {
   buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
@@ -123,6 +124,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                       accent: true,
                     },
                     ...buildTouchlineVerifiedMatchFactFields(card.matchStats, locale),
+                    ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
                   ],
                   profileHref,
                   cardEngineHref: canEditCardEngine

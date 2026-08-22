@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "../lib/touchlineArena/card-zoom-details.ts";
 import { resolveTouchlinePublicEditorialCardPresentation } from "../lib/touchlineArena/editorial-card-profile.ts";
@@ -25,6 +26,19 @@ test("keeps confirmed match zero distinct from unavailable statistic facts", () 
     [
       { label: "Jogos sem sofrer gols", value: "0" },
       { label: "Cartões vermelhos", value: "1" },
+    ],
+  );
+});
+
+test("renders only event-backed scoring contributions instead of guessing from match points", () => {
+  assert.deepEqual(
+    buildTouchlineMatchScoringBreakdownFields([
+      { role: "primary", eventType: "Goal", minute: 67, points: 6 },
+      { role: "assist", eventType: "Goal", minute: 77, points: 3 },
+    ], "en-GB"),
+    [
+      { label: "Match scoring", value: "Goal 67′ · +6", accent: true },
+      { label: "Match scoring", value: "Assist 77′ · +3", accent: true },
     ],
   );
 });

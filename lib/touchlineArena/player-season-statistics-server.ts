@@ -42,6 +42,7 @@ type FixtureStatisticRow = {
   minutes_played: number | null;
   rating: number | null;
   touchline_points: number | null;
+  touchline_points_breakdown: unknown;
   statistics_payload: unknown;
   source_synced_at: string | null;
   football_fixtures?: {
@@ -61,6 +62,25 @@ function record(value: unknown): Record<string, number | string> {
     else if (typeof nested === "string" && nested.trim()) entries.push([key, nested]);
   }
   return Object.fromEntries(entries);
+}
+
+function pointContributions(value: unknown): TouchLinePlayerFixtureStatistics["pointContributions"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((candidate) => {
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return [];
+    const contribution = candidate as Record<string, unknown>;
+    const role = contribution.role === "primary" || contribution.role === "assist" ? contribution.role : null;
+    const eventType = typeof contribution.eventType === "string" && contribution.eventType.trim()
+      ? contribution.eventType.trim()
+      : null;
+    const points = typeof contribution.points === "number" && Number.isFinite(contribution.points)
+      ? contribution.points
+      : null;
+    const minute = typeof contribution.minute === "number" && Number.isFinite(contribution.minute)
+      ? contribution.minute
+      : null;
+    return role && eventType && points !== null ? [{ role, eventType, minute, points }] : [];
+  });
 }
 
 function emptyReadModel(providerPlayerId: string | null): TouchLinePlayerStatisticsReadModel {
@@ -86,6 +106,7 @@ function fixtureStatisticFromRow(row: FixtureStatisticRow): TouchLinePlayerFixtu
     minutes: row.minutes_played,
     rating: row.rating === null ? null : Number(row.rating),
     touchlinePoints: row.touchline_points === null ? null : Number(row.touchline_points),
+    pointContributions: pointContributions(row.touchline_points_breakdown),
     statistics: record(row.statistics_payload),
     latestSyncAt: row.source_synced_at,
   };
@@ -168,7 +189,7 @@ async function readSeasonRows(admin: SupabaseClient, playerId: string, competiti
 async function readFixtureRows(admin: SupabaseClient, input: { playerId: string; competitionId: string; selectedFixtureId?: string | null }) {
   let query = admin
     .from("football_player_fixture_statistics")
-    .select("fixture_id,appearance_status,minutes_played,rating,touchline_points,statistics_payload,source_synced_at,football_fixtures!inner(provider_fixture_id,starts_at,status,competition_id,home_club_id,away_club_id)")
+    .select("fixture_id,appearance_status,minutes_played,rating,touchline_points,touchline_points_breakdown,statistics_payload,source_synced_at,football_fixtures!inner(provider_fixture_id,starts_at,status,competition_id,home_club_id,away_club_id)")
     .eq("football_player_id", input.playerId)
     .eq("football_fixtures.competition_id", input.competitionId)
     .limit(input.selectedFixtureId ? 1 : 120);
@@ -234,6 +255,7 @@ export async function loadTouchLinePlayerStatisticsReadModel(input: {
     minutes: null,
     rating: null,
     touchlinePoints: null,
+    pointContributions: [],
     statistics: {},
     latestSyncAt: null,
   } satisfies TouchLinePlayerFixtureStatistics : null);

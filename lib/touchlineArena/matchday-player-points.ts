@@ -47,6 +47,16 @@ export function applyTouchlineMatchdayPoints(
       // zero remains zero and final fixture cards retain it after full time.
       matchTouchlinePoints: statistic.touchlinePoints,
       ...(Object.keys(matchStats).length ? { matchStats } : {}),
+      ...(statistic.contributions.length
+        ? {
+          matchPointContributions: statistic.contributions.map((contribution) => ({
+            role: contribution.role,
+            eventType: contribution.eventType,
+            minute: contribution.minute,
+            points: contribution.points,
+          })),
+        }
+        : {}),
     };
   });
 }

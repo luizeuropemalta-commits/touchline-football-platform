@@ -9,6 +9,7 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import {
   buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
@@ -128,6 +129,7 @@ export default function ClubHubOfficialLineup({
                         accent: true,
                       },
                       ...buildTouchlineVerifiedMatchFactFields(card.matchStats, locale),
+                      ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
                     ],
                     profileHref,
                     cardEngineHref: canEditCardEngine

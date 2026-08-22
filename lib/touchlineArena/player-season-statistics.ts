@@ -40,6 +40,12 @@ export type TouchLinePlayerFixtureStatistics = {
   minutes: number | null;
   rating: number | null;
   touchlinePoints: number | null;
+  pointContributions: Array<{
+    role: "primary" | "assist";
+    eventType: string;
+    minute: number | null;
+    points: number;
+  }>;
   statistics: Record<string, number | string>;
   latestSyncAt: string | null;
 };
