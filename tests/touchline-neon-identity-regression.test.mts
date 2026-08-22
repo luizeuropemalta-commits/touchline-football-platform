@@ -26,7 +26,7 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.doesNotMatch(exactCard, /formatTouchlineContractedCommercialCardPrice/);
   assert.match(exactCard, /<span>\{compactSecondaryLabel\}<\/span>/);
   assert.match(exactCard, /data-card-tier=\{marketTier\?\.key \?\? "neutral"\}/);
-  assert.match(exactCard, /data-card-editorial-state=\{editorialCard \? "published" : "unpublished"\}/);
+  assert.match(exactCard, /data-card-editorial-state=\{reviewRequired \? "review_required" : editorialCard \? "published" : "unpublished"\}/);
   assert.doesNotMatch(exactCard, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation/);
   assert.doesNotMatch(exactCard, /TC Value/);
   assert.match(globalCss, /\.touchline-card-surface\[data-card-motion="true"\]/);
@@ -123,7 +123,7 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.match(zoomCss, /\.expandedMeta \{/);
   assert.doesNotMatch(zoom, /className=\{styles\.tierLabel\}/);
   assert.doesNotMatch(zoomCss, /\.tierLabel \{/);
-  assert.match(zoom, /\{tierLabel \? <strong>\{tierLabel\}<\/strong> : null\}/);
+  assert.match(zoom, /\{!details && tierLabel \? <strong>\{tierLabel\}<\/strong> : null\}/);
   assert.doesNotMatch(zoomUsages, /Comprar|Buy card/);
   assert.doesNotMatch(zoomUsages, /Sign player/);
   assert.match(zoomUsages, /contractLabel=\{locale === "pt-BR" \? "Contratar"/);
@@ -358,7 +358,7 @@ test("Market Transfer uses football selection language and official TouchLine mo
   const translations = source("lib/touchlineArena/i18n.ts");
   const marketMarks = source("components/touchline/market/TouchlineMarketMarks.tsx");
 
-  assert.match(arenaClient, /marketUi\.squadTcValue/);
+  assert.match(arenaClient, /marketUi\.squadValue/);
   assert.match(arenaClient, /TouchlineCoinMark/);
   assert.match(arenaClient, /TouchlineSelectedPlayersMark/);
   assert.match(arenaClient, /className="team-builder-gallery-card"/);

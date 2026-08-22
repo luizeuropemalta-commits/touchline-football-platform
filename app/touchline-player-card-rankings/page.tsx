@@ -30,6 +30,9 @@ import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editoria
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
+import { isOwnerEmail } from "@/lib/admin/owner";
+import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 
 export const metadata = {
   title: "TouchLine Player Cards Ranking",
@@ -85,6 +88,7 @@ export default async function TouchLinePlayerCardRankingsPage({
     .sort(rankClubOwnerCards);
   const topCards = rankedCards.slice(0, 3);
   const locale = normalizeTouchLineLocale((await searchParams).lang);
+  const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
   const totalPoints = rankedCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
   const copy = getTouchLineRankingsCopy(locale);
   const localeQuery = `lang=${encodeURIComponent(locale)}`;
@@ -133,9 +137,13 @@ export default async function TouchLinePlayerCardRankingsPage({
         position: card.position,
         nationality: card.countryCode3,
         editorialCard: card.editorialCard,
+        cardReview: card.cardReview,
         activeContractCard: null,
         touchlinePoints: card.touchlinePoints,
         profileHref,
+        cardEngineHref: canEditCardEngine
+          ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+          : null,
       }),
       activeContractPrice: undefined,
       displayPrice: presentation.displayPrice,
@@ -147,7 +155,10 @@ export default async function TouchLinePlayerCardRankingsPage({
       <TouchlineGlobalNavigation
         locale={locale}
         currentRoute="rankings"
-        surface={user ? "authenticated" : "public"}
+        surface={resolveTouchlineGlobalNavigationSurface({
+          isAuthenticated: Boolean(user),
+          isAdmin: Boolean(user && isOwnerEmail(user.email)),
+        })}
         className="tl-card-rankings-global-navigation"
       />
 

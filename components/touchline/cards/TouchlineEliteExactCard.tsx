@@ -25,6 +25,7 @@ import {
   type TouchlinePublicEditorialCardPresentation,
 } from "@/lib/touchlineArena/editorial-card-profile";
 import masterCardLayout from "@/public/touchlineArena/card-layouts/master-shirt-back-layout.json";
+import type { TouchlineCardReviewPresentation } from "@/lib/touchlineArena/card-review-state";
 
 const CARD_W = 430;
 const CARD_H = 691;
@@ -166,6 +167,8 @@ const FIELD_LABELS_PT_BR: Partial<Record<EditableBlock, string>> = {
 
 export type TouchlineEliteExactPlayer = {
   sportmonksPlayerId: string;
+  /** Canonical TouchLine UUID used only for protected exact-record actions. */
+  canonicalPlayerId?: string | null;
   overall: string | number;
   shirtNumber?: string | number | null;
   role: string;
@@ -188,6 +191,8 @@ export type TouchlineEliteExactPlayer = {
   cardPriceAuthority?: "active-contract";
   /** Explicit public-safe editorial tier/price; no valuation is carried here. */
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
+  /** A real player may render an intentional neutral card while editorial data is incomplete. */
+  cardReview?: TouchlineCardReviewPresentation;
   updatedAt: string;
   age: string | number;
   height: string;
@@ -850,6 +855,7 @@ export function TouchlineEliteExactCard({
   // a visual-only inventory preview below; it never turns that preview into a
   // public publication or commercial authority.
   const editorialCard = player.editorialCard ?? null;
+  const reviewRequired = player.cardReview?.state === "REVIEW_REQUIRED";
   const editorialTier = editorialCard
     ? touchlineArenaTierForKey(editorialCard.tierKey)
     : null;
@@ -873,19 +879,23 @@ export function TouchlineEliteExactCard({
   const hasPublishedCardProfile = Boolean(editorialCard);
   const compactPrimaryLabel = cardLabels.totalPoints;
   const compactPrimaryValue = totalPointsText;
-  const compactSecondaryLabel = hasPublishedCardProfile
+  const compactSecondaryLabel = hasPublishedCardProfile || reviewRequired
     ? cardLabels.cardPrice
     : (runtimeLocale === "pt-BR" ? "POSIÇÃO" : "POSITION");
   const compactSecondaryValue = hasPublishedCardProfile
     ? cardPriceText ?? ""
-    : player.position;
+    : reviewRequired
+      ? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
+      : player.position;
   const preseasonMissingValue = liveCompetition.phase === "preseason" ? "0" : "—";
   const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
     ? preseasonMissingValue
     : touchlineCardMetricText(player.matchFantasyPoints);
   const totalPointsSize = valueDisplaySize(compactPrimaryValue);
   const cardPriceSize = valueDisplaySize(compactSecondaryValue);
-  const cardTemplateUrl = marketTier
+  const cardTemplateUrl = reviewRequired
+    ? null
+    : marketTier
     ? touchlineArenaClubTemplateForTierPreview(player.clubName, marketTier.key) || assignedVisualTemplateUrl
     : assignedVisualTemplateUrl;
   const versionedCardTemplateUrl = cardTemplateUrl
@@ -1256,14 +1266,14 @@ export function TouchlineEliteExactCard({
   // authenticated Market receives the explicitly opt-in inventory preview;
   // a valid frozen contract may also render its already-owned artwork. All
   // other card surfaces remain fail-closed until publication.
-  if (!editorialCard && !contractedTier && !allowVisualInventoryPreview) return null;
+  if (!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired) return null;
 
   return (
     <div
       ref={shellRef}
       className={["touchline-card-surface", className].filter(Boolean).join(" ")}
       data-card-tier={marketTier?.key ?? "neutral"}
-      data-card-editorial-state={editorialCard ? "published" : "unpublished"}
+      data-card-editorial-state={reviewRequired ? "review_required" : editorialCard ? "published" : "unpublished"}
       data-card-motion={isEditable ? "false" : "true"}
       data-card-neon="permanent-tier-art"
       data-neon-active={forceNeonActive || isNeonActive ? "true" : "false"}
@@ -1293,6 +1303,21 @@ export function TouchlineEliteExactCard({
       } as React.CSSProperties}
     >
       <TouchlineCardPerimeterTrace />
+      {reviewRequired ? (
+        <div
+          aria-label={runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required"}
+          style={{
+            position: "absolute", left: "50%", top: -13, zIndex: 92,
+            transform: "translateX(-50%)", whiteSpace: "nowrap", borderRadius: 999,
+            border: "1px solid rgba(226,232,240,.45)", background: "rgba(15,23,42,.92)",
+            boxShadow: "0 8px 20px rgba(0,0,0,.38)", color: "#e2e8f0",
+            padding: "4px 8px", fontSize: 8, lineHeight: 1, fontWeight: 950,
+            letterSpacing: ".08em", textTransform: "uppercase",
+          }}
+        >
+          {runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required"}
+        </div>
+      ) : null}
       {showMatchPoints ? (
         <div
           aria-label={`${runtimeLocale === "pt-BR" ? "Pontos da partida" : "Match points"}: ${matchPointsText}`}
@@ -1377,6 +1402,7 @@ export function TouchlineEliteExactCard({
           WebkitTextSizeAdjust: "none",
           textSizeAdjust: "none",
           isolation: "isolate",
+          filter: reviewRequired ? "grayscale(1) contrast(1.06)" : undefined,
           fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           textTransform: "uppercase",
         }}

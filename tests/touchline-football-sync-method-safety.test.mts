@@ -52,9 +52,22 @@ test("QA twenty-club roster reconciliation is an explicit owner POST control", (
   assert.match(controlSource, /Reconcile 20 QA squads/);
 });
 
+test("successful QA roster reconciliation has an explicit ok response contract", () => {
+  const successResponse = routeSource.match(/return NextResponse\.json\(\{[\s\S]*?mode: auth\.mode,/)?.[0] ?? "";
+  assert.match(successResponse, /ok:\s*true/);
+});
+
 test("twenty-club provider diagnostic remains owner-only and read-only", () => {
   assert.match(diagnosticSource, /if \(!await authorizeOwner\(\)\)/);
   assert.match(diagnosticSource, /scope === "twenty"/);
   assert.match(diagnosticSource, /sportmonks-live-read-only/);
+  assert.match(diagnosticSource, /scope === "positions"/);
+  assert.match(diagnosticSource, /safePositionEvidence/);
+  assert.match(diagnosticSource, /squadDetailedPositionId/);
+  assert.match(diagnosticSource, /playerDetailedPositionId/);
+  assert.match(diagnosticSource, /providerDetailedPosition/);
+  assert.match(diagnosticSource, /providerPlayerDetailedPositionId/);
+  assert.match(diagnosticSource, /hardcodedConflicts/);
+  assert.match(diagnosticSource, /loadTouchlineCardEditorialOverrides/);
   assert.doesNotMatch(diagnosticSource, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 });

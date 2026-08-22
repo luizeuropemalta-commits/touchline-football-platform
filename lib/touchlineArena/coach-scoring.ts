@@ -1,122 +1,82 @@
-export const TOUCHLINE_COACH_SCORING_VERSION = "coach-points-v1" as const;
+export const TOUCHLINE_COACH_SCORING_VERSION = "coach_scoring_v1" as const;
 
-export type TouchlineCoachVenue = "home" | "away";
-export type TouchlineCoachResult = "win" | "draw" | "loss";
-export type TouchlineCoachRankingPeriod = "round" | "month" | "season";
+export const TOUCHLINE_COACH_SCORING = Object.freeze({
+  version: TOUCHLINE_COACH_SCORING_VERSION,
+  home: Object.freeze({ win: 3, draw: 1, loss: 0 }),
+  away: Object.freeze({ win: 4, draw: 2, loss: 0 }),
+});
 
-export type TouchlineCoachScoringWeights = {
-  homeWin: number;
-  awayWin: number;
-  homeDraw: number;
-  awayDraw: number;
-  homeLoss: number;
-  awayLoss: number;
-  yellowCard: number;
-  redCard: number;
-};
+export type TouchlineCoachFixtureContext = "home" | "away";
+export type TouchlineCoachFixtureOutcome = "win" | "draw" | "loss";
 
-export type TouchlineCoachScoringDraft = {
-  [Key in keyof TouchlineCoachScoringWeights]: TouchlineCoachScoringWeights[Key] | null;
-};
+export type TouchlineCoachRecord = Readonly<{
+  wins: number;
+  draws: number;
+  losses: number;
+  touchlinePoints: number;
+}>;
 
-/** Official values explicitly approved by the owner. */
-export const TOUCHLINE_COACH_SCORING_DRAFT: Readonly<TouchlineCoachScoringDraft> = {
-  homeWin: 3,
-  awayWin: 4,
-  homeDraw: 1,
-  awayDraw: 2,
-  homeLoss: -4,
-  awayLoss: -3,
-  yellowCard: -1,
-  redCard: -3,
-};
+export type TouchlineCoachContractSnapshot = Readonly<{
+  id: string;
+  coachProviderId: string;
+  clubProviderId: string;
+  status: "active" | "ended";
+  startedAt: string;
+  endedAt: string | null;
+  endReason: string | null;
+  scoringVersion: typeof TOUCHLINE_COACH_SCORING_VERSION;
+  home: TouchlineCoachRecord;
+  away: TouchlineCoachRecord;
+  totalTouchlinePoints: number;
+  currentFixture: Readonly<{
+    fixtureId: string;
+    context: TouchlineCoachFixtureContext;
+    status: string | null;
+    startsAt: string | null;
+    provisionalPoints: number | null;
+  }> | null;
+  fixtureHistory: readonly Readonly<{
+    fixtureId: string;
+    context: TouchlineCoachFixtureContext;
+    outcome: TouchlineCoachFixtureOutcome;
+    homeScore: number;
+    awayScore: number;
+    touchlinePoints: number;
+    settlementStatus: "provisional" | "final";
+    startsAt: string | null;
+  }>[];
+}>;
 
-export const TOUCHLINE_COACH_SCORING_WEIGHTS: Readonly<TouchlineCoachScoringWeights> = {
-  homeWin: 3,
-  awayWin: 4,
-  homeDraw: 1,
-  awayDraw: 2,
-  homeLoss: -4,
-  awayLoss: -3,
-  yellowCard: -1,
-  redCard: -3,
-};
-
-export function touchlineCoachScoringDraftIsComplete(
-  draft: TouchlineCoachScoringDraft,
-): draft is TouchlineCoachScoringWeights {
-  return Object.values(draft).every((value) => typeof value === "number" && Number.isFinite(value));
+export function touchlineCoachOutcome(
+  context: TouchlineCoachFixtureContext,
+  homeScore: number,
+  awayScore: number,
+): TouchlineCoachFixtureOutcome {
+  if (homeScore === awayScore) return "draw";
+  const homeWon = homeScore > awayScore;
+  return context === "home"
+    ? (homeWon ? "win" : "loss")
+    : (homeWon ? "loss" : "win");
 }
 
-export type TouchlineCoachMatchScoringInput = {
-  fixtureId: string;
-  coachProviderId: string;
-  venue: TouchlineCoachVenue;
-  result: TouchlineCoachResult;
-  yellowCards: number;
-  redCards: number;
-};
-
-export type TouchlineCoachMatchScore = {
-  fixtureId: string;
-  coachProviderId: string;
-  resultPoints: number;
-  disciplinePoints: number;
-  totalPoints: number;
-};
-
-/**
- * Protects the approved TouchLine business rules. Numeric weights remain external
- * until the owner approves them; an invalid formula can never be activated.
- */
-export function touchlineCoachScoringWeightsAreValid(weights: TouchlineCoachScoringWeights) {
-  return Number.isFinite(weights.homeWin)
-    && Number.isFinite(weights.awayWin)
-    && Number.isFinite(weights.homeDraw)
-    && Number.isFinite(weights.awayDraw)
-    && Number.isFinite(weights.homeLoss)
-    && Number.isFinite(weights.awayLoss)
-    && Number.isFinite(weights.yellowCard)
-    && Number.isFinite(weights.redCard)
-    && weights.awayWin > weights.homeWin
-    && weights.homeWin > weights.awayDraw
-    && weights.awayDraw > weights.homeDraw
-    && weights.homeDraw > weights.awayLoss
-    && weights.awayLoss > weights.homeLoss
-    && weights.homeLoss < 0
-    && weights.yellowCard < 0
-    && weights.redCard < weights.yellowCard;
+export function touchlineCoachPoints(
+  context: TouchlineCoachFixtureContext,
+  outcome: TouchlineCoachFixtureOutcome,
+) {
+  return TOUCHLINE_COACH_SCORING[context][outcome];
 }
 
-export function calculateTouchlineCoachMatchScore(
-  input: TouchlineCoachMatchScoringInput,
-  weights: TouchlineCoachScoringWeights,
-): TouchlineCoachMatchScore {
-  if (!touchlineCoachScoringWeightsAreValid(weights)) {
-    throw new Error("TouchLine coach scoring weights are not approved or violate the official rules.");
-  }
-  if (!input.fixtureId.trim() || !input.coachProviderId.trim()) {
-    throw new Error("Verified fixture and coach identities are required.");
-  }
-  if (!Number.isInteger(input.yellowCards) || input.yellowCards < 0 || !Number.isInteger(input.redCards) || input.redCards < 0) {
-    throw new Error("Coach discipline totals must be non-negative integers.");
-  }
+export function touchlineCoachContractCoversFixture(
+  contract: Pick<TouchlineCoachContractSnapshot, "startedAt" | "endedAt">,
+  fixtureStartsAt: string,
+) {
+  const fixtureTime = Date.parse(fixtureStartsAt);
+  const startedAt = Date.parse(contract.startedAt);
+  const endedAt = contract.endedAt ? Date.parse(contract.endedAt) : null;
+  if (![fixtureTime, startedAt].every(Number.isFinite)) return false;
+  return fixtureTime >= startedAt && (endedAt === null || fixtureTime < endedAt);
+}
 
-  const resultKey = `${input.venue}${input.result[0].toUpperCase()}${input.result.slice(1)}` as
-    | "homeWin"
-    | "awayWin"
-    | "homeDraw"
-    | "awayDraw"
-    | "homeLoss"
-    | "awayLoss";
-  const resultPoints = weights[resultKey];
-  const disciplinePoints = input.yellowCards * weights.yellowCard + input.redCards * weights.redCard;
-
-  return {
-    fixtureId: input.fixtureId,
-    coachProviderId: input.coachProviderId,
-    resultPoints,
-    disciplinePoints,
-    totalPoints: resultPoints + disciplinePoints,
-  };
+export function emptyTouchlineCoachRecord(): TouchlineCoachRecord {
+  return { wins: 0, draws: 0, losses: 0, touchlinePoints: 0 };
 }

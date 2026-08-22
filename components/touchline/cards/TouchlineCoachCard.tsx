@@ -8,6 +8,7 @@ import type { TouchlineCoach } from "@/lib/football-data/types";
 import { touchlineCoachCardArtForTier, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { touchlineArenaTierForKey, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
+import type { TouchlineCoachFixtureContext } from "@/lib/touchlineArena/coach-scoring";
 import {
   TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT,
   TOUCHLINE_COACH_CARD_EDITOR_SAFE_AREA,
@@ -63,9 +64,10 @@ type TouchlineCoachCardProps = {
   frameLoading?: "eager" | "lazy";
   frameDecoding?: "sync" | "async" | "auto";
   frameFetchPriority?: "high" | "low" | "auto";
+  fixtureContext?: TouchlineCoachFixtureContext | null;
 };
 
-function CoachStatIcon({ type }: { type: "result" | "travel" | "discipline" | "points" }) {
+function CoachStatIcon({ type }: { type: "result" | "home" | "travel" | "discipline" | "points" }) {
   if (type === "discipline") {
     return <span className={styles.cardPair} aria-hidden="true"><i /><i /></span>;
   }
@@ -73,6 +75,7 @@ function CoachStatIcon({ type }: { type: "result" | "travel" | "discipline" | "p
     <svg className={styles.statIcon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       {type === "result" ? <><circle cx="12" cy="12" r="8.5" /><path d="m8.5 9 3.5-2.4L15.5 9l-1.3 4.1H9.8L8.5 9Zm1.3 4.1-2.6 2.2m7-2.2 2.6 2.2M12 6.6V3.5" /></> : null}
       {type === "travel" ? <><path d="M3.5 13.5 20 5.8l-4.2 14.7-3.9-5.7-6.4 2.6 3-4.2-5-.3Z" /><path d="m11.9 14.8 3.9-3.8" /></> : null}
+      {type === "home" ? <><path d="M3 20V9l9-6 9 6v11" /><path d="M7 20v-7h10v7M9.5 13v-3h5v3" /></> : null}
       {type === "points" ? <><path d="M7 3h10v4c0 3.2-2.1 5.6-5 5.6S7 10.2 7 7V3Z" /><path d="M7 5H4v2c0 2 1.3 3.4 3.6 3.8M17 5h3v2c0 2-1.3 3.4-3.6 3.8M12 13v4m-4 3h8m-6-3h4" /></> : null}
     </svg>
   );
@@ -98,6 +101,7 @@ export default function TouchlineCoachCard({
   frameLoading,
   frameDecoding,
   frameFetchPriority,
+  fixtureContext = null,
 }: TouchlineCoachCardProps) {
   const [storedLayout, setStoredLayout] = useState<TouchlineCoachCardLayout>(TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT);
   const [isNeonActive, setIsNeonActive] = useState(false);
@@ -404,7 +408,12 @@ export default function TouchlineCoachCard({
 
         <div className={styles.stats} {...editableLayerProps("stats", "Informações técnicas")}>
           <span className={styles.stat}>
-            <span className={styles.matchContext} aria-label={isPortuguese ? "Fora de casa" : "Away match"}><CoachStatIcon type="travel" /> {isPortuguese ? "Fora" : "Away"}</span>
+            {fixtureContext === "home" ? (
+              <span className={styles.matchContext} aria-label="Home fixture"><CoachStatIcon type="home" /> {isPortuguese ? "Casa" : "Home"}</span>
+            ) : null}
+            {fixtureContext === "away" ? (
+              <span className={styles.matchContext} aria-label="Away fixture"><CoachStatIcon type="travel" /> {isPortuguese ? "Fora" : "Away"}</span>
+            ) : null}
             <CoachStatIcon type="result" />
             <small>{isPortuguese ? "Resultado" : "Result"}</small>
             <strong>—</strong>

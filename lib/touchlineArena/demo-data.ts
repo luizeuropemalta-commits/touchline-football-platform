@@ -10,6 +10,7 @@ import {
 import { resolveTouchlineContractedCommercialCardPrice } from "./commercial-card-pricing.ts";
 import { touchlineClubOwnerBasePath } from "./club-owner-routes.ts";
 import type { TouchlinePublicEditorialCardPresentation } from "./editorial-card-profile.ts";
+import type { TouchlineCardReviewPresentation } from "./card-review-state.ts";
 
 export { TOUCHLINE_CARD_STUDIO_LAYOUT_KEY };
 
@@ -49,8 +50,16 @@ export type ClubOwnerSquadCard = {
   cardPriceAuthority?: "active-contract";
   /** Public-safe manual card profile. Internal editorial fields never enter this DTO. */
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
+  /** Non-commercial completeness result. REVIEW_REQUIRED never invents a tier or price. */
+  cardReview?: TouchlineCardReviewPresentation;
   inventoryId?: string | null;
   touchlinePoints: number;
+  /** Latest reconciled fixture points; null means no verified fixture fact. */
+  matchTouchlinePoints?: number | null;
+  /** Verified cumulative football statistics used by the shared card. */
+  seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
+  /** Latest reconciled fixture statistics used by the Arena overlay. */
+  matchStats?: TouchlineEliteExactPlayer["matchStats"];
 };
 
 export type TouchLineClubOwnerStanding = {
@@ -337,6 +346,7 @@ export function squadCardToExactPlayer(
 
   return {
     sportmonksPlayerId: card.id,
+    canonicalPlayerId: card.canonicalPlayerId ?? (/^[0-9a-f-]{36}$/i.test(card.id) ? card.id : null),
     formationPlayerId: card.id,
     overall: card.shirtNumber ?? "--",
     shirtNumber: card.shirtNumber,
@@ -364,10 +374,14 @@ export function squadCardToExactPlayer(
     contract: "ClubOwner contract",
     nationality: card.countryCode3,
     editorialCard,
+    cardReview: card.cardReview,
     // Keep the pre-existing club artwork as a presentation fallback while an
     // editorial profile is still unpublished. `cardTier` and price remain
     // null in that state, so this asset cannot imply a commercial tier.
     cardTemplateUrl: touchlineArenaClubTemplateForCard(card.clubName, null, cardTier) || null,
     fantasyPoints: card.touchlinePoints,
+    matchFantasyPoints: card.matchTouchlinePoints,
+    seasonStats: card.seasonStats,
+    matchStats: card.matchStats,
   };
 }

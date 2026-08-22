@@ -34,6 +34,8 @@ export type TouchlineMarketInventorySnapshot = {
   walletBalanceTc: number;
   activeContractCount: number;
   openContractSlots: number;
+  squadValueGbp: number;
+  representedClubCount: number;
   checkoutPolicy: TouchlineLaunchTestCheckoutPolicy | null;
   cards: TouchlineMarketInventoryCard[];
 };
@@ -153,12 +155,17 @@ export function parseTouchlineMarketInventorySnapshot(value: unknown): Touchline
   const walletBalanceTc = nonNegativeNumber(snapshot.walletBalanceTc);
   const activeContractCount = nonNegativeInteger(snapshot.activeContractCount);
   const openContractSlots = nonNegativeInteger(snapshot.openContractSlots);
+  const squadValueGbp = nonNegativeInteger(snapshot.squadValueGbp);
+  const representedClubCount = nonNegativeInteger(snapshot.representedClubCount);
   const checkoutPolicy = parseTouchlineLaunchTestCheckoutPolicy(snapshot.checkoutPolicy);
   if (
     !TEAM_ID_PATTERN.test(providerTeamId)
     || walletBalanceTc === null
     || activeContractCount === null
     || openContractSlots === null
+    || squadValueGbp === null
+    || representedClubCount === null
+    || representedClubCount > activeContractCount
     || activeContractCount + openContractSlots !== 35
     || !Array.isArray(snapshot.cards)
   ) return null;
@@ -177,6 +184,8 @@ export function parseTouchlineMarketInventorySnapshot(value: unknown): Touchline
     walletBalanceTc,
     activeContractCount,
     openContractSlots,
+    squadValueGbp,
+    representedClubCount,
     checkoutPolicy,
     cards: parsedCards,
   };

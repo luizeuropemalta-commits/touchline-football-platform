@@ -110,6 +110,8 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
   if (!result.ok) return;
 
   assert.equal(result.snapshot.activeContractCount, 1);
+  assert.equal(result.snapshot.ownedContractCount, 1);
+  assert.equal(result.snapshot.representedClubCount, 1);
   assert.deepEqual(result.snapshot.inventoryIds, [INVENTORY_ID]);
   assert.deepEqual(result.snapshot.cards[0], {
     id: PLAYER_ID,
@@ -126,8 +128,37 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
     cardTier: "emerald-green",
     inventoryId: INVENTORY_ID,
     touchlinePoints: 12,
+    matchTouchlinePoints: null,
     editorialCard: PUBLISHED_EDITORIAL_CARD,
   });
+});
+
+test("counts represented clubs from active-contract inventory club IDs only", () => {
+  const rows = completeRows();
+  rows.contracts.push({
+    ...rows.contracts[0],
+    id: "123e4567-e89b-42d3-a456-426614174007",
+    card_id: OTHER_INVENTORY_ID,
+  });
+  rows.inventories.push({
+    ...rows.inventories[0],
+    id: OTHER_INVENTORY_ID,
+    player_id: "123e4567-e89b-42d3-a456-426614174008",
+    club_id: null,
+  });
+  rows.players.push({
+    ...rows.players[0],
+    id: "123e4567-e89b-42d3-a456-426614174008",
+    current_club_id: "123e4567-e89b-42d3-a456-426614174009",
+  });
+  const result = mapAuthoritativeRosterRows(rows, new Map([
+    ...publishedCards(),
+    ["123e4567-e89b-42d3-a456-426614174008", PUBLISHED_EDITORIAL_CARD],
+  ]));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.snapshot.ownedContractCount, 2);
+  assert.equal(result.snapshot.representedClubCount, 1);
 });
 
 test("the browser accepts the exact published roster contract emitted by the server", () => {
@@ -184,6 +215,16 @@ test("uses only the published editorial card instead of legacy inventory tiers o
   assert.equal(staleTableResult.ok, true);
   if (!staleTableResult.ok) return;
   assert.equal(staleTableResult.snapshot.cards[0]?.editorialCard?.cardPrice.amountMinor, 4_900);
+});
+
+test("preserves the active ownership count when publication policy hides a game card", () => {
+  const result = mapAuthoritativeRosterRows(completeRows(), new Map());
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.equal(result.snapshot.ownedContractCount, 1);
+  assert.equal(result.snapshot.activeContractCount, 0);
+  assert.deepEqual(result.snapshot.cards, []);
 });
 
 test("keeps a published card independent from a retired inventory price-table identifier", () => {
@@ -281,6 +322,7 @@ test("Arena persistence rebuilds spoofed card identity, tier, value, points and 
     countryCode3: "NOR",
     flagUrl: null,
     fantasyPoints: 12,
+    matchFantasyPoints: null,
     marketValue: "",
     marketValueSource: "unavailable",
     cardTier: "emerald-green",
@@ -288,7 +330,6 @@ test("Arena persistence rebuilds spoofed card identity, tier, value, points and 
     cardPriceAuthority: "active-contract",
     editorialCard: null,
     inventoryId: INVENTORY_ID,
-    matchStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
   });
   assert.equal("frameUrl" in (player.card as Record<string, unknown>), false);
   assert.equal("cardPrice" in (player.card as Record<string, unknown>), false);
@@ -412,13 +453,7 @@ test("Arena GET reconciliation drops foreign, released, duplicate and incomplete
   assert.equal(result.length, 1);
   assert.equal(result[0].name, "Erling Haaland");
   assert.equal(result[0].card?.cardTier, "emerald-green");
-  assert.deepEqual(result[0].card?.matchStats, {
-    goals: 0,
-    assists: 0,
-    defense: 0,
-    cleanSheets: 0,
-    cards: 0,
-  });
+  assert.equal(result[0].card?.matchStats, undefined);
   assert.deepEqual({ x: result[0].x, y: result[0].y, heightVh: result[0].heightVh }, {
     x: 68,
     y: 52,

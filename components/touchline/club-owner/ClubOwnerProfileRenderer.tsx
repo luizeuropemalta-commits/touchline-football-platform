@@ -37,6 +37,7 @@ import { touchlineArenaContractHref, touchlineArenaPanelHref } from "@/lib/touch
 import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import { TOUCHLINE_CLUB_OWNER_XI_SLOTS } from "@/lib/touchlineArena/pitch-layout";
 import {
   partitionClubOwnerRoster,
@@ -115,7 +116,11 @@ function publicCardProfileTier(card: ClubOwnerSquadCard) {
   return touchlineArenaTierForKey(card.editorialCard?.tierKey)?.key ?? null;
 }
 
-function clubOwnerCardZoomDetails(card: ClubOwnerSquadCard, locale: string) {
+function clubOwnerCardZoomDetails(
+  card: ClubOwnerSquadCard,
+  locale: string,
+  canEditCardEngine: boolean,
+) {
   const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
   const profileHref = touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier });
   return buildTouchlinePlayerCardZoomDetails({
@@ -125,9 +130,13 @@ function clubOwnerCardZoomDetails(card: ClubOwnerSquadCard, locale: string) {
     position: card.position,
     nationality: card.countryCode3,
     editorialCard: card.editorialCard,
+    cardReview: card.cardReview,
     activeContractCard: null,
     touchlinePoints: card.touchlinePoints,
     profileHref,
+    cardEngineHref: canEditCardEngine
+      ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+      : null,
   });
 }
 
@@ -144,6 +153,7 @@ export default async function ClubOwnerProfileRenderer({
   const supabase = await createClient();
   const admin = createAdminClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
   const clubOwnerUser = user && !isOwnerEmail(user.email) ? user : null;
   let storedAvatarUrl: string | null = null;
   if (clubOwnerUser && supabase) {
@@ -316,7 +326,7 @@ export default async function ClubOwnerProfileRenderer({
           contractTermLabel={card.cardPriceAuthority === "active-contract" ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
           tierAccent={touchlineCardTierPalette(tierKey).accent}
           tierLabel={tierKey ? touchlineCardTierName(tierKey, locale) : undefined}
-          details={clubOwnerCardZoomDetails(card, locale)}
+          details={clubOwnerCardZoomDetails(card, locale, canEditCardEngine)}
           expandedContent={(
             <TouchlineEliteExactCard
               player={player}
@@ -403,7 +413,7 @@ export default async function ClubOwnerProfileRenderer({
                     contractTermLabel={bestPlayerCard.cardPriceAuthority === "active-contract" ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
                     tierAccent={touchlineCardTierPalette(bestPlayerCard.cardTier).accent}
                     tierLabel={touchlineCardTierName(bestPlayerCard.cardTier, locale)}
-                    details={clubOwnerCardZoomDetails(bestPlayerCard, locale)}
+                    details={clubOwnerCardZoomDetails(bestPlayerCard, locale, canEditCardEngine)}
                     expandedContent={(
                       <TouchlineEliteExactCard
                         className="club-owner-best-player-rendered"
@@ -699,7 +709,7 @@ export default async function ClubOwnerProfileRenderer({
                         contractTermLabel={card.cardPriceAuthority === "active-contract" ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
                         tierAccent={touchlineCardTierPalette(card.cardTier).accent}
                         tierLabel={touchlineCardTierName(card.cardTier, locale)}
-                        details={clubOwnerCardZoomDetails(card, locale)}
+                        details={clubOwnerCardZoomDetails(card, locale, canEditCardEngine)}
                         expandedContent={(
                           <TouchlineEliteExactCard
                             className="club-owner-profile-rendered-card"

@@ -3,12 +3,18 @@ import { headers } from "next/headers";
 
 import TouchlineMatchCentre from "@/components/touchline/match-centre/TouchlineMatchCentre";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
+import { readPublicFantasyFixtureMatchDetail } from "@/lib/football-data/public-fixture-match-detail-server";
+import { createClient } from "@/lib/supabase/server";
 import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
+import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import {
   isTouchLineLocaleComplete,
   normalizeTouchLineLocale,
 } from "@/lib/touchlineArena/i18n";
-import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
+import {
+  normalizeTouchlineMatchCentreTimeZone,
+  selectTouchlineMatchCentreFixture,
+} from "@/lib/touchlineArena/match-centre";
 
 export const metadata: Metadata = {
   title: "Ao vivo | TouchLine England",
@@ -41,9 +47,18 @@ export default async function TouchLineLivePage({
   const fixtures = selectArenaFixtureRound(
     await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
   );
+  const initiallySelected = selectTouchlineMatchCentreFixture(fixtures, requestedFixture, initialNow);
+  const supabase = await createClient();
+  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const canReadMatchDetail = hasTouchLineArenaAccess(user);
+  const initialMatchDetail = canReadMatchDetail && initiallySelected
+    ? await readPublicFantasyFixtureMatchDetail(initiallySelected.providerId)
+    : null;
   return <TouchlineMatchCentre
     initialFixtures={fixtures}
-    initialFixtureId={requestedFixture}
+    initialFixtureId={initiallySelected?.id ?? requestedFixture}
+    initialMatchDetail={initialMatchDetail}
+    canReadMatchDetail={canReadMatchDetail}
     initialLocale={initialLocale}
     initialNow={initialNow}
     initialTimeZone={initialTimeZone}

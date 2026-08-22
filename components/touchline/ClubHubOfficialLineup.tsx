@@ -9,6 +9,9 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
+import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
+import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 
 import styles from "./ClubHubOfficialLineup.module.css";
 
@@ -24,6 +27,7 @@ type ClubHubOfficialLineupProps = {
     totalPoints: string;
     cardPrice: string;
   };
+  canEditCardEngine?: boolean;
 };
 
 export default function ClubHubOfficialLineup({
@@ -32,6 +36,7 @@ export default function ClubHubOfficialLineup({
   locale,
   staticVisualQa = false,
   labels,
+  canEditCardEngine = false,
 }: ClubHubOfficialLineupProps) {
   const isPortuguese = locale === "pt-BR";
   const confirmed = lineup.status === "confirmed";
@@ -63,25 +68,15 @@ export default function ClubHubOfficialLineup({
       <div className={styles.pitchViewport}>
         <TouchlinePitchSurface className={styles.pitch} ariaLabel={`${clubName} ${isPortuguese ? "campo de escalação" : "line-up pitch"}`}>
           {lineup.players.length ? lineup.players.map(({ card, x, y }) => {
-            const dataPending = !card.shirtNumber || card.countryCode3 === "N/A";
-            if (!card.editorialCard) {
-              return (
-                <article
-                  key={card.id}
-                  className={`${styles.player} ${styles.pendingPlayer}`}
-                  data-lineup-edge={x <= 12 ? "left" : x >= 88 ? "right" : undefined}
-                  style={{ "--lineup-x": `${x}%`, "--lineup-y": `${y}%` } as CSSProperties}
-                >
-                  <span className={styles.playerName}>{card.name}</span>
-                  <div className={styles.pendingCard} aria-label={`${card.name} ${dataPending ? "data pending" : "card pending review"}`}>
-                    <span>{dataPending ? (isPortuguese ? "DADOS PENDENTES" : "DATA PENDING") : (isPortuguese ? "CARD EM REVISÃO" : "CARD PENDING REVIEW")}</span>
-                    <strong>{card.shirtNumber ? `#${card.shirtNumber}` : "—"}</strong>
-                    <small>{card.position || "—"}</small>
-                  </div>
-                </article>
-              );
-            }
-            const exactPlayer = squadCardToExactPlayer(card, { useSuppliedTier: true });
+            const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
+              displayName: card.name,
+              shirtNumber: card.shirtNumber,
+              countryCode3: card.countryCode3,
+              position: card.position,
+              hasVerifiedMarketValue: Boolean(card.editorialCard),
+              hasClubAsset: Boolean(findTouchLineClub(card.clubName)?.logoUrl),
+            });
+            const exactPlayer = squadCardToExactPlayer({ ...card, cardReview }, { useSuppliedTier: true });
             const tierKey = card.editorialCard?.tierKey ?? null;
             const profileHref = touchlinePlayerProfileHref({
                 sportmonksPlayerId: card.id,
@@ -118,9 +113,13 @@ export default function ClubHubOfficialLineup({
                     position: card.position,
                     nationality: card.countryCode3,
                     editorialCard: card.editorialCard,
+                    cardReview,
                     activeContractCard: null,
                     touchlinePoints: card.touchlinePoints,
                     profileHref,
+                    cardEngineHref: canEditCardEngine
+                      ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+                      : null,
                   })}
                   expandedContent={(
                     <TouchlineEliteExactCard

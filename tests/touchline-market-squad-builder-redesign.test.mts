@@ -9,6 +9,7 @@ import {
 
 const arenaClientPath = new URL("../app/arena/ArenaClient.tsx", import.meta.url);
 const stagePath = new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url);
+const marketI18nPath = new URL("../lib/touchlineArena/market-i18n.ts", import.meta.url);
 
 test("canonical TouchLine England squad rules remain in one server-independent read model", () => {
   assert.deepEqual(TOUCHLINE_SQUAD_RULES, {
@@ -37,7 +38,7 @@ test("the Market owns one premium squad-building stage with distinct player grou
   const source = await readFile(stagePath, "utf8");
   assert.match(source, /Monte seu time TouchLine/);
   assert.match(source, /TouchlinePitchSurface/);
-  assert.match(source, /formationLines\.slice\(1, -1\)\.reduce/);
+  assert.match(source, /touchlineFormationCapacities\(formation\)/);
   assert.match(source, /Banco da partida/);
   assert.match(source, /Elenco restante/);
   assert.match(source, /Array\.from\(\{ length: TOUCHLINE_SQUAD_RULES\.bench \}/);
@@ -47,7 +48,34 @@ test("the Market owns one premium squad-building stage with distinct player grou
   assert.match(source, /className=\{styles\.coachBrief\}/);
   assert.doesNotMatch(source, /Complete the Starting XI/);
   assert.doesNotMatch(source, /Confirm club and enter Arena/);
+  assert.doesNotMatch(source, /key: "arena"/);
+  assert.doesNotMatch(source, /Enter Arena/);
   assert.doesNotMatch(source, /Organizar elenco/);
+});
+
+test("the account header exposes four canonical metrics without fake capacity or TC labels", async () => {
+  const [source, marketI18n] = await Promise.all([
+    readFile(arenaClientPath, "utf8"),
+    readFile(marketI18nPath, "utf8"),
+  ]);
+  const headerStart = source.indexOf('className="team-builder-bank"');
+  const headerEnd = source.indexOf("</div>", headerStart);
+  const header = source.slice(headerStart, headerEnd);
+
+  assert.match(header, /marketUi\.touchlineCredits/);
+  assert.match(header, /marketUi\.squadValue/);
+  assert.match(header, /marketUi\.activeContracts/);
+  assert.match(header, /marketUi\.clubsRepresented/);
+  assert.match(header, /representedClubCount/);
+  assert.match(header, /marketHeaderCredits \?\? "—"/);
+  assert.match(source, /isAuthenticatedMarketAccount \? null : clubOwnerSquadTcValue/);
+  assert.doesNotMatch(header, /marketUi\.contractSlots/);
+  assert.doesNotMatch(header, /marketPlayerCount/);
+  assert.doesNotMatch(header, /<em>TC<\/em>/);
+  assert.match(marketI18n, /touchlineCredits: "TouchLine Credits"/);
+  assert.match(marketI18n, /squadValue: "Squad card value"/);
+  assert.match(marketI18n, /clubsRepresented: "Clubs represented"/);
+  assert.doesNotMatch(marketI18n, /Signing balance|Contract slots|Club players/);
 });
 
 test("the Market keeps account capacity first and guides a field slot directly to player selection", async () => {
@@ -59,7 +87,13 @@ test("the Market keeps account capacity first and guides a field slot directly t
   assert.ok(bankIndex > 0);
   assert.ok(stageIndex > bankIndex);
   assert.ok(boardIndex > stageIndex);
-  assert.match(source, /marketSelectionRef\.current\?\.scrollIntoView/);
+  const formationHandler = source.slice(
+    source.indexOf("function confirmMarketFormation"),
+    source.indexOf("async function toggleArenaFullscreen"),
+  );
+  assert.doesNotMatch(formationHandler, /scrollIntoView|marketSelectionRef/);
+  assert.match(formationHandler, /reconcileTouchlineFormationStarters/);
+  assert.match(formationHandler, /persistArenaRoster\(nextPlayers, nextBench\)/);
   assert.match(source, /Pair its\s+selection with the athlete gallery/);
   assert.match(source, /shouldReduceMotion \? "auto" : "smooth"/);
   assert.match(source, /scroll-margin-top: 94px/);
@@ -135,7 +169,7 @@ test("coach remains a dedicated entity outside every player slot", async () => {
   assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 212px; min-height: 330px;/);
   assert.match(styles, /\.technicalArea \{[\s\S]*?width: 250px;/);
   assert.match(coachCardStyles, /width: clamp\(9px, 16cqw, 28px\)/);
-  assert.match(styles, /\.pitch \{\n  min-height: 548px;/);
+  assert.match(styles, /\.pitch \{[\s\S]*?min-height: 548px;/);
   assert.match(source, /coachProfileHref/);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);
   assert.doesNotMatch(source, /role:\s*["']coach["']/);
@@ -160,17 +194,43 @@ test("matchday bench and remaining squad are disjoint views of the same authorit
   assert.match(source, /bench=\{matchdayBenchPlayers\.map\([\s\S]*?card: benchOptionToPreviewCard/);
   assert.match(source, /remainingSquad=\{reserveVaultPlayers\.map\([\s\S]*?card: benchOptionToPreviewCard/);
   assert.match(stage, /export type TouchlineSquadBuilderBenchPlayer = \{[\s\S]*?card: TouchlineEliteExactPlayer;/);
-  assert.match(stage, /className=\{styles\.rosterCard\}[\s\S]*?<TouchlineEliteExactCard/);
+  assert.match(stage, /className=\{styles\.rosterCard\}[\s\S]*?<SquadPlayerCardZoom/);
 });
 
 test("owned squad cards remain visibly rendered in the authenticated Market builder", async () => {
   const stage = await readFile(stagePath, "utf8");
   const renderedCards = stage.match(/<TouchlineEliteExactCard[\s\S]*?\/>/g) ?? [];
+  const sharedZoomUsages = stage.match(/<SquadPlayerCardZoom/g) ?? [];
 
+  assert.equal(sharedZoomUsages.length, 3);
   assert.equal(renderedCards.length, 3);
-  for (const card of renderedCards) {
-    assert.match(card, /allowVisualInventoryPreview/);
-    assert.match(card, /showCardActions=\{false\}/);
-    assert.match(card, /showProfileAction=\{false\}/);
-  }
+  assert.match(stage, /function SquadPlayerCardZoom/);
+  assert.match(stage, /allowVisualInventoryPreview/);
+  assert.match(stage, /showCardActions=\{false\}/);
+  assert.match(stage, /showProfileAction=\{false\}/);
+  assert.match(stage, /expandedContent=/);
+});
+
+test("formation vacancies and replacements stay inside the pitch with eligible-only controls", async () => {
+  const [arena, stage, styles] = await Promise.all([
+    readFile(arenaClientPath, "utf8"),
+    readFile(stagePath, "utf8"),
+    readFile(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8"),
+  ]);
+  const normalize = arena.slice(
+    arena.indexOf("function normalizeArenaPlayersForFormation"),
+    arena.indexOf("type DemoArenaPlayerSeed"),
+  );
+
+  assert.doesNotMatch(normalize, /tacticalRoleByPlayerId|tacticalRoles/);
+  assert.match(normalize, /roleCounts\[player\.role\]/);
+  assert.match(arena, /function arenaPlayerToFormationReserve/);
+  assert.match(arena, /function assignMarketFormationPlayer/);
+  assert.match(arena, /isTouchlineFormationCandidateEligible/);
+  assert.match(stage, /role="dialog" aria-modal="false"/);
+  assert.match(stage, /Only players eligible for this position/);
+  assert.match(stage, /onAssignPlayer\(\{/);
+  assert.match(stage, /window\.addEventListener\("keydown", closePicker\)/);
+  assert.match(styles, /\.slotPicker \{/);
+  assert.match(styles, /\.formationStatus \{/);
 });

@@ -17,6 +17,10 @@ export type TouchlineCardZoomDetails = {
   }>;
   profileHref?: string;
   profileLabel?: string;
+  historyHref?: string;
+  historyLabel?: string;
+  cardEngineHref?: string;
+  cardEngineLabel?: string;
 };
 
 type TouchlineCardZoomProps = {
@@ -30,6 +34,7 @@ type TouchlineCardZoomProps = {
   tierAccent?: string;
   tierLabel?: string;
   details?: TouchlineCardZoomDetails;
+  detailsContent?: ReactNode;
 };
 
 export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineCardZoomDetails }) {
@@ -48,10 +53,24 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
           </div>
         ))}
       </dl>
-      {details.profileHref ? (
-        <a className={styles.profileAction} href={details.profileHref}>
-          {details.profileLabel ?? "View profile"}
-        </a>
+      {(details.profileHref || details.historyHref || details.cardEngineHref) ? (
+        <nav className={styles.detailActions} aria-label={details.title}>
+          {details.profileHref ? (
+            <a className={styles.profileAction} href={details.profileHref}>
+              {details.profileLabel ?? "View profile"}
+            </a>
+          ) : null}
+          {details.historyHref ? (
+            <a className={styles.historyAction} href={details.historyHref}>
+              {details.historyLabel ?? "View TouchLine history"}
+            </a>
+          ) : null}
+          {details.cardEngineHref ? (
+            <a className={styles.cardEngineAction} href={details.cardEngineHref}>
+              {details.cardEngineLabel ?? "Edit in Card Engine"}
+            </a>
+          ) : null}
+        </nav>
       ) : null}
     </aside>
   );
@@ -68,6 +87,7 @@ export default function TouchlineCardZoom({
   tierAccent,
   tierLabel,
   details,
+  detailsContent,
 }: TouchlineCardZoomProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -144,7 +164,7 @@ export default function TouchlineCardZoom({
       {isOpen ? createPortal(
         <div {...dialogProps} className={styles.backdrop} onClick={() => setIsOpen(false)}>
           <div
-            className={`${styles.panel} ${details ? styles.panelWithDetails : ""}`}
+            className={`${styles.panel} ${details || detailsContent ? styles.panelWithDetails : ""}`}
             style={{ "--touchline-card-zoom-accent": tierAccent } as CSSProperties}
             onClick={(event) => {
               event.stopPropagation();
@@ -157,9 +177,9 @@ export default function TouchlineCardZoom({
             </button>
             <div className={styles.cardColumn}>
               <div className={styles.expandedCard} data-card-zoom="expanded">{expandedContent ?? children}</div>
-              {(tierLabel || contractTermLabel) ? (
+              {(contractTermLabel || (!details && tierLabel)) ? (
                 <div className={styles.expandedMeta}>
-                  {tierLabel ? <strong>{tierLabel}</strong> : null}
+                  {!details && tierLabel ? <strong>{tierLabel}</strong> : null}
                   {contractTermLabel ? <span>{contractTermLabel}</span> : null}
                 </div>
               ) : null}
@@ -171,7 +191,7 @@ export default function TouchlineCardZoom({
                 </a>
               ) : null}
             </div>
-            {details ? <TouchlineCardZoomDetailsPanel details={details} /> : null}
+            {detailsContent ? <aside className={styles.details}>{detailsContent}</aside> : details ? <TouchlineCardZoomDetailsPanel details={details} /> : null}
           </div>
         </div>,
         document.body,

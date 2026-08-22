@@ -11,11 +11,10 @@ import {
   previewTouchlineManualMarketValueBulk,
   type TouchlineManualMarketValueBulkCandidate,
 } from "@/lib/touchlineArena/manual-market-value-bulk";
+import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
+import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
+import { loadTouchlineCardEditorialOverrides } from "@/lib/touchlineArena/card-editorial-overrides";
 
-const PUBLICATION_STATES = new Set([
-  "detected", "market_value_required", "ready_for_review", "ready_to_publish",
-  "published", "inactive_in_competition", "archived",
-]);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type CanonicalPlayer = {
@@ -34,9 +33,11 @@ type CanonicalMembership = {
 };
 type CanonicalClub = {
   id: string;
+  name: string;
   competition_id: string;
   provider: string;
   source_updated_at: string | null;
+  logo_url: string | null;
 };
 type CanonicalCompetition = {
   id: string;
@@ -58,6 +59,33 @@ type AtomicPublicationRpc = {
   }>;
 };
 
+type ReviewProviderRow = {
+  id: string;
+  display_name: string | null;
+  name: string | null;
+  nationality: string | null;
+  country_id: string | null;
+  position: string | null;
+  market_value: number | null;
+  market_value_currency: string | null;
+};
+type ReviewCommandResult = {
+  card_state: "COMPLETE" | "REVIEW_REQUIRED";
+  missing_fields: string[];
+  publication_id: string | null;
+  publication_status: string | null;
+  calculated_tier: string | null;
+  nominal_price_gbp: number | null;
+  overrides_changed: boolean;
+  publication_synced: boolean;
+};
+type ReviewCommandRpc = {
+  rpc: (name: "touchline_apply_card_editorial_review", args: Record<string, unknown>) => Promise<{
+    data: ReviewCommandResult[] | null;
+    error: { message: string } | null;
+  }>;
+};
+
 function text(value: unknown, max = 2_000) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
@@ -70,8 +98,46 @@ function validTimestamp(value: string | null | undefined) {
   return typeof value === "string" && Number.isFinite(Date.parse(value));
 }
 
+function nullableText(value: unknown, max = 200) {
+  if (value === null || value === undefined || value === "") return null;
+  const normalized = text(value, max);
+  return normalized || null;
+}
+
+function validCountryCode(value: string | null) {
+  return value === null || /^[A-Z]{3}$/.test(value);
+}
+
+function reviewFieldValues(value: unknown) {
+  const fields = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+  if (!fields) return null;
+  const unexpected = Object.keys(fields).filter((key) => !["displayName", "shirtNumber", "countryCode3", "position"].includes(key));
+  if (unexpected.length) return null;
+  const displayName = Object.hasOwn(fields, "displayName") ? nullableText(fields.displayName) : undefined;
+  const position = Object.hasOwn(fields, "position") ? nullableText(fields.position, 80) : undefined;
+  const countryCode3 = Object.hasOwn(fields, "countryCode3")
+    ? nullableText(fields.countryCode3, 3)?.toUpperCase() ?? null
+    : undefined;
+  const shirtNumber = Object.hasOwn(fields, "shirtNumber")
+    ? fields.shirtNumber === null || fields.shirtNumber === "" ? null : Number(fields.shirtNumber)
+    : undefined;
+  if (
+    (displayName !== undefined && displayName !== null && !displayName)
+    || (position !== undefined && position !== null && !position)
+    || (countryCode3 !== undefined && !validCountryCode(countryCode3))
+    || (shirtNumber !== undefined && shirtNumber !== null && (!Number.isInteger(shirtNumber) || shirtNumber < 1 || shirtNumber > 999))
+  ) return null;
+  return { displayName, shirtNumber, countryCode3, position };
+}
+
 function atomicPublicationRpc(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
   return admin as unknown as AtomicPublicationRpc;
+}
+
+function reviewCommandRpc(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
+  return admin as unknown as ReviewCommandRpc;
 }
 
 function canonicalAge(dateOfBirth: string | null, fallbackAge: number | null) {
@@ -128,7 +194,7 @@ async function canonicalPlayerReady(admin: NonNullable<ReturnType<typeof createA
 
   const { data: club, error: clubError } = await admin
     .from("football_clubs")
-    .select("id,competition_id,provider,source_updated_at")
+    .select("id,name,competition_id,provider,source_updated_at,logo_url")
     .eq("id", player.current_club_id)
     .maybeSingle<CanonicalClub>();
   if (
@@ -217,8 +283,63 @@ async function previewBulk(request: NextRequest) {
   }) });
 }
 
+/** Saves protected editorial overrides and, once input completeness is real,
+ * derives the canonical publication inside the same database transaction. */
+async function saveReviewOverrides(request: NextRequest) {
+  const context = await ownerContext();
+  if ("error" in context) return context.error;
+  const body = await request.json().catch(() => null) as Record<string, unknown> | null;
+  const playerId = text(body?.playerId, 64).toLowerCase();
+  const requested = reviewFieldValues(body?.fields);
+  if (!validUuid(playerId) || !requested || !Object.values(requested).some((value) => value !== undefined)) {
+    return NextResponse.json({ error: "A canonical player and one valid editorial field are required." }, { status: 400 });
+  }
+  const canonical = await canonicalPlayerReady(context.admin, playerId);
+  if (!canonical) return NextResponse.json({ error: "The player is not uniquely bound to an active canonical Premier League membership." }, { status: 409 });
+
+  const { data: provider, error: providerError } = await context.admin
+    .from("football_players")
+    .select("id,display_name,name,nationality,country_id,position")
+    .eq("id", playerId)
+    .maybeSingle<ReviewProviderRow>();
+  if (providerError || !provider) return NextResponse.json({ error: providerError?.message ?? "Canonical provider data is unavailable." }, { status: 500 });
+
+  const providerCountryCode3 = touchlineCountryCode3FromName(provider.nationality);
+  const fields = Object.fromEntries(Object.entries({
+    displayName: requested.displayName,
+    shirtNumber: requested.shirtNumber,
+    countryCode3: requested.countryCode3,
+    position: requested.position,
+  }).filter(([, value]) => value !== undefined));
+  const { data: commandResult, error: commandError } = await reviewCommandRpc(context.admin)
+    .rpc("touchline_apply_card_editorial_review", {
+      p_player_id: playerId,
+      p_field_overrides: fields,
+      p_provider_country_code3: providerCountryCode3,
+      p_has_club_asset: Boolean(canonical.club.logo_url?.trim()),
+      p_actor_id: context.user.id,
+    });
+  if (commandError || !commandResult?.[0]) {
+    const migrationMissing = /function|schema cache|does not exist|Could not find/i.test(commandError?.message ?? "");
+    return NextResponse.json({ error: migrationMissing ? "The Card Engine auto-publication migration is not applied yet." : commandError?.message ?? "The Card Engine command returned no result." }, { status: migrationMissing ? 503 : 500 });
+  }
+  const result = commandResult[0];
+  return NextResponse.json({
+    ok: true,
+    cardReview: { state: result.card_state, missingFields: result.missing_fields },
+    effective: null,
+    changedFields: result.overrides_changed,
+    publication: result.publication_id ? {
+      id: result.publication_id, status: result.publication_status,
+      tier: result.calculated_tier, nominalPriceGbp: result.nominal_price_gbp,
+      synchronized: result.publication_synced,
+    } : null,
+  });
+}
+
 export async function POST(request: NextRequest) {
   if (request.nextUrl.searchParams.get("action") === "bulk-preview") return previewBulk(request);
+  if (request.nextUrl.searchParams.get("action") === "save-review") return saveReviewOverrides(request);
   const context = await ownerContext();
   if ("error" in context) return context.error;
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
@@ -227,24 +348,45 @@ export async function POST(request: NextRequest) {
   const playerId = text(body.playerId, 64).toLowerCase();
   const effectiveSeason = text(body.effectiveSeason, 32);
   const marketValueEur = body.marketValueEur;
-  const publicationState = text(body.publicationState, 32);
   const lastReviewedAt = text(body.lastReviewedAt, 64) || new Date().toISOString();
   const internalNote = text(body.internalNote, 4_000) || undefined;
   const internalSource = text(body.internalSource, 2_000) || undefined;
   if (
     !validUuid(playerId)
-    || !PUBLICATION_STATES.has(publicationState)
     || typeof marketValueEur !== "number"
     || !Number.isSafeInteger(marketValueEur)
     || marketValueEur < 0
   ) {
-    return NextResponse.json({ error: "A canonical player, whole EUR value and publication state are required." }, { status: 400 });
+    return NextResponse.json({ error: "A canonical player and whole EUR value are required." }, { status: 400 });
   }
 
   const canonical = await canonicalPlayerReady(context.admin, playerId);
   if (!canonical) {
     return NextResponse.json({ error: "The player is not uniquely bound to an active canonical Premier League membership." }, { status: 409 });
   }
+
+  const [{ data: provider, error: providerError }, { data: membership }, { data: club }, overrides] = await Promise.all([
+    context.admin.from("football_players").select("display_name,name,nationality,position,market_value,market_value_currency").eq("id", playerId).maybeSingle<Pick<ReviewProviderRow, "display_name" | "name" | "nationality" | "position" | "market_value" | "market_value_currency">>(),
+    context.admin.from("football_squad_members").select("jersey_number,position").eq("id", canonical.membership.id).maybeSingle<{ jersey_number: number | null; position: string | null }>(),
+    context.admin.from("football_clubs").select("logo_url").eq("id", canonical.club.id).maybeSingle<{ logo_url: string | null }>(),
+    loadTouchlineCardEditorialOverrides([playerId], context.admin),
+  ]);
+  if (providerError || !provider || !membership) {
+    return NextResponse.json({ error: providerError?.message ?? "Canonical provider data is unavailable." }, { status: 500 });
+  }
+  const override = overrides.get(playerId);
+  const cardReview = evaluateTouchlineCardCompleteness({
+    displayName: override?.displayName ?? provider.display_name ?? provider.name,
+    shirtNumber: override?.shirtNumber ?? membership.jersey_number,
+    countryCode3: override?.countryCode3 ?? touchlineCountryCode3FromName(provider.nationality),
+    position: override?.position ?? membership.position ?? provider.position,
+    hasVerifiedMarketValue: true,
+    hasClubAsset: Boolean(club?.logo_url?.trim()),
+  });
+  // A publication is an output, never a user-selected review step. Incomplete
+  // inputs retain the protected market-value record only; final completeness
+  // publishes automatically through the atomic command below.
+  const publicationState = cardReview.state === "COMPLETE" ? "published" : "market_value_required";
 
   const { data: existing, error: existingError } = await context.admin
     .from("touchline_card_publications")
@@ -273,6 +415,50 @@ export async function POST(request: NextRequest) {
     policyVersion: existing.policy_version,
   } : null);
   if (!decision) return NextResponse.json({ error: "The editorial card classification could not be prepared." }, { status: 400 });
+
+  // Preview is deliberately computed through the exact same canonical chain
+  // and classification rule as the commit path, but exits before the atomic
+  // database command. The owner must inspect this payload and explicitly press
+  // Done before any valuation or publication history is written.
+  if (request.nextUrl.searchParams.get("action") === "preview") {
+    const providerMarketValue = typeof provider.market_value === "number"
+      && Number.isSafeInteger(provider.market_value)
+      && provider.market_value >= 0
+      ? provider.market_value
+      : null;
+    const providerMarketValueCurrency = provider.market_value_currency?.trim().toUpperCase() || null;
+    const providerConflict = providerMarketValue !== null
+      && providerMarketValueCurrency !== null
+      && (providerMarketValueCurrency !== "EUR" || providerMarketValue !== marketValueEur)
+      ? {
+        providerMarketValue,
+        providerMarketValueCurrency,
+        touchlineMarketValueEur: marketValueEur,
+        resolution: "TOUCHLINE_AUTHORITY" as const,
+      }
+      : null;
+    return NextResponse.json({
+      ok: true,
+      previewOnly: true,
+      authority: "TouchLine",
+      providerConflict,
+      player: {
+        canonicalPlayerId: playerId,
+        displayName: override?.displayName ?? provider.display_name ?? provider.name ?? "Canonical player",
+        clubName: canonical.club.name,
+        clubLogoUrl: canonical.club.logo_url,
+        shirtNumber: override?.shirtNumber ?? membership.jersey_number,
+        countryCode3: override?.countryCode3 ?? touchlineCountryCode3FromName(provider.nationality),
+        position: override?.position ?? membership.position ?? provider.position,
+      },
+      marketValueEur,
+      effectiveSeason,
+      publicationStatus: publicationState,
+      calculatedTier: decision.classification.tierKey,
+      nominalPriceGbp: decision.classification.nominalPrice,
+      cardReview,
+    });
+  }
 
   const { data: commandResult, error: commandError } = await atomicPublicationRpc(context.admin)
     .rpc("touchline_apply_manual_card_publication", {
@@ -305,6 +491,7 @@ export async function POST(request: NextRequest) {
     publicationStatus: publication.publication_status,
     calculatedTier: publication.calculated_tier,
     nominalPriceGbp: publication.nominal_price_gbp,
+    cardReview,
     publishedPresentation: publicationState === "published" ? decision.editorialCard : null,
   });
 }

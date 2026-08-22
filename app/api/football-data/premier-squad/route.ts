@@ -28,6 +28,8 @@ import {
 } from "@/lib/touchlineArena/country-flags";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import { resolveTouchlineMarketCataloguePosition } from "@/lib/touchlineArena/market-position-catalogue";
+import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
+import { loadTouchlineCardEditorialOverrides } from "@/lib/touchlineArena/card-editorial-overrides";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,6 +86,14 @@ function mapPersistedSquadPlayer(
     cardPriceVersion: null,
     canonicalPlayerId: null as string | null,
     editorialCard: null as TouchlinePublicEditorialCardPresentation | null,
+    cardReview: evaluateTouchlineCardCompleteness({
+      displayName: player.displayName || player.name,
+      shirtNumber: officialShirtNumber.shirtNumber,
+      countryCode3: countryCode,
+      position: player.position,
+      hasVerifiedMarketValue: false,
+      hasClubAsset: Boolean(clubLogoUrl),
+    }),
     countryCode3: countryCode,
     flagUrl,
     nationality: player.nationality,
@@ -116,6 +126,7 @@ type PublicSquadPlayer = Omit<
   authoritativeMarketValueSource: "verified-cache" | null;
   canonicalPlayerId: string;
   editorialCard: TouchlinePublicEditorialCardPresentation | null;
+  cardReview: ReturnType<typeof evaluateTouchlineCardCompleteness>;
   source: "touchline_database" | "touchline_editorial" | "touchline_legacy_verified";
   publicProjectionState: "ready" | "partial";
 }>;
@@ -188,7 +199,9 @@ async function projectSquadForPublic(
   const batch = await loadTouchlinePublicPlayerProjections({
     providerPlayerIds: candidates.map((candidate) => candidate.providerId),
     context: { expectedClubProviderTeamId },
-    includeMarketValues: !publicationGateEnabled,
+    // Value status is required to explain a REVIEW_REQUIRED card. The value
+    // itself remains private and is never included in this public response.
+    includeMarketValues: true,
   });
   if (batch.status === "error") return { state: "error", players: [], omitted: [] };
 
@@ -200,6 +213,11 @@ async function projectSquadForPublic(
         : []),
     })
     : new Map<string, TouchlinePublicEditorialCardPresentation>();
+  const editorialOverrides = await loadTouchlineCardEditorialOverrides(
+    batch.projections.flatMap((projection) => projection.identity.status === "verified" && projection.identity.value
+      ? [projection.identity.value.playerId]
+      : []),
+  );
   const players: PublicSquadPlayer[] = [];
   const omitted: PendingPublicSquadPlayer[] = [];
 
@@ -216,24 +234,29 @@ async function projectSquadForPublic(
     const editorialCard = publicationGateEnabled
       ? publishedCards.get(identity.playerId) ?? null
       : legacyVerifiedCardPresentation(projection);
+    const override = editorialOverrides.get(identity.playerId.toLowerCase());
+    const effectiveName = override?.displayName ?? identity.displayName;
+    const effectiveShirtNumber = override?.shirtNumber ?? membership.jerseyNumber;
+    const effectivePosition = override?.position ?? membership.position;
+    const effectiveCountryCode3 = countryCode3(identity.nationality, override?.countryCode3 ?? identity.countryCode3);
     const publicCandidate = candidate;
     players.push({
       ...publicCandidate,
       id: projection.providerPlayerId,
       providerId: projection.providerPlayerId,
-      name: identity.displayName,
-      shortName: makeArenaShortName(identity.displayName),
-      role: inferArenaRole(membership.position ?? undefined),
-      position: resolveTouchlineMarketCataloguePosition(projection.providerPlayerId, membership.position),
-      shirtNumber: membership.jerseyNumber,
+      name: effectiveName,
+      shortName: makeArenaShortName(effectiveName),
+      role: inferArenaRole(effectivePosition ?? undefined),
+      position: resolveTouchlineMarketCataloguePosition(projection.providerPlayerId, effectivePosition),
+      shirtNumber: effectiveShirtNumber,
       shirtNumberSource: "verified-cache",
       shirtNumberVerifiedAt: null,
       shirtNumberSourceUrl: null,
-      cardEligibility: membership.jerseyNumber ? "eligible" : "awaiting-shirt-number",
+      cardEligibility: effectiveShirtNumber ? "eligible" : "awaiting-shirt-number",
       clubTeamId: club.providerTeamId,
       clubName: club.name,
-      countryCode3: identity.countryCode3 ?? "N/A",
-      flagUrl: touchlineCountryFlagUrl(identity.countryCode3 ?? "N/A"),
+      countryCode3: effectiveCountryCode3,
+      flagUrl: touchlineCountryFlagUrl(effectiveCountryCode3),
       nationality: identity.nationality,
       marketValue: null,
       marketValueSource: "unavailable",
@@ -246,6 +269,14 @@ async function projectSquadForPublic(
       authoritativeMarketValueSource: null,
       canonicalPlayerId: identity.playerId,
       editorialCard,
+      cardReview: evaluateTouchlineCardCompleteness({
+        displayName: effectiveName,
+        shirtNumber: effectiveShirtNumber,
+        countryCode3: effectiveCountryCode3,
+        position: effectivePosition,
+        hasVerifiedMarketValue: projection.marketValue.status === "verified",
+        hasClubAsset: Boolean(TOUCHLINE_ENGLAND_CLUBS.find((knownClub) => knownClub.teamId === club.providerTeamId)?.logoUrl),
+      }),
       source: publicationGateEnabled ? "touchline_editorial" : "touchline_legacy_verified",
       publicProjectionState: projection.readState === "partial" ? "partial" : "ready",
     });

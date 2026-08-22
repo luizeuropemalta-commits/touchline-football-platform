@@ -72,6 +72,9 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   // Functional QA is the only Preview contract allowed to call Sportmonks.
   // Isolated previews remain provider-free via the separate allowlist above.
   "SPORTMONKS_API_TOKEN",
+  // Supabase QA Vault sends this bearer only to the protected server route.
+  // It must remain branch-scoped to Preview/qa.
+  "TOUCHLINE_LIVE_SYNC_SECRET",
 ] as const;
 
 const allowedApplicationEnvironmentKeys = new Set<string>(

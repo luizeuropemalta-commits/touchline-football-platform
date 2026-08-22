@@ -41,6 +41,7 @@ type FixtureStatisticRow = {
   appearance_status: TouchLinePlayerFixtureStatistics["appearanceStatus"];
   minutes_played: number | null;
   rating: number | null;
+  touchline_points: number | null;
   statistics_payload: unknown;
   source_synced_at: string | null;
   football_fixtures?: {
@@ -84,6 +85,7 @@ function fixtureStatisticFromRow(row: FixtureStatisticRow): TouchLinePlayerFixtu
     appearanceStatus: row.appearance_status,
     minutes: row.minutes_played,
     rating: row.rating === null ? null : Number(row.rating),
+    touchlinePoints: row.touchline_points === null ? null : Number(row.touchline_points),
     statistics: record(row.statistics_payload),
     latestSyncAt: row.source_synced_at,
   };
@@ -166,7 +168,7 @@ async function readSeasonRows(admin: SupabaseClient, playerId: string, competiti
 async function readFixtureRows(admin: SupabaseClient, input: { playerId: string; competitionId: string; selectedFixtureId?: string | null }) {
   let query = admin
     .from("football_player_fixture_statistics")
-    .select("fixture_id,appearance_status,minutes_played,rating,statistics_payload,source_synced_at,football_fixtures!inner(provider_fixture_id,starts_at,status,competition_id,home_club_id,away_club_id)")
+    .select("fixture_id,appearance_status,minutes_played,rating,touchline_points,statistics_payload,source_synced_at,football_fixtures!inner(provider_fixture_id,starts_at,status,competition_id,home_club_id,away_club_id)")
     .eq("football_player_id", input.playerId)
     .eq("football_fixtures.competition_id", input.competitionId)
     .limit(input.selectedFixtureId ? 1 : 120);
@@ -231,6 +233,7 @@ export async function loadTouchLinePlayerStatisticsReadModel(input: {
     appearanceStatus: "unavailable" as const,
     minutes: null,
     rating: null,
+    touchlinePoints: null,
     statistics: {},
     latestSyncAt: null,
   } satisfies TouchLinePlayerFixtureStatistics : null);

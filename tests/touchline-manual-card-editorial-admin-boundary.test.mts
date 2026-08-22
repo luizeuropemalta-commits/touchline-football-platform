@@ -52,7 +52,7 @@ test("the owner page is a protected one-player editor and clearly reports an una
   assert.match(page, /Card publication control/);
   assert.match(page, /Card publication control/);
   assert.match(page, /051_touchline_manual_card_editorial_profiles\.sql/);
-  assert.match(page, /provider_player_id,display_name,name,position,source_updated_at/);
+  assert.match(page, /provider_player_id,display_name,name,position,nationality,country_id,source_updated_at/);
   assert.match(page, /playerId=\$\{encodeURIComponent\(alert\.playerId\)\}/);
   assert.match(page, /Detected/);
   assert.match(actions, /initialPlayerId/);
@@ -62,7 +62,7 @@ test("the protected editorial workflow preserves the explicit EN/PT locale bound
   assert.match(page, /locale=\{locale\}/);
   assert.match(page, /Controle de publicação de cards/);
   assert.match(actions, /type ManualEditorialLocale = "en-GB" \| "pt-BR"/);
-  assert.match(actions, /Valor de mercado manual → publicar card/);
+  assert.match(actions, /Valor de mercado manual → Card Engine/);
   assert.match(actions, /Validar até 50 linhas/);
   assert.match(actions, /Histórico imutável/);
   assert.match(actions, /never public/);
@@ -74,6 +74,30 @@ test("bulk preview remains read-only and validates the selected canonical club b
   assert.match(route, /previewTouchlineManualMarketValueBulk/);
   assert.match(route, /Selected club is outside the canonical Premier League scope/);
   assert.doesNotMatch(route, /bulk-preview[\s\S]{0,1200}\.upsert\(/);
+});
+
+test("single-card market value requires a read-only visual preview before Done commits", () => {
+  assert.match(route, /action"\) === "preview"/);
+  assert.match(route, /previewOnly: true/);
+  assert.match(route, /authority: "TouchLine"/);
+  assert.match(route, /resolution: "TOUCHLINE_AUTHORITY"/);
+  assert.match(route, /providerMarketValue !== marketValueEur/);
+  assert.doesNotMatch(route, /previewOnly: true,[\s\S]{0,500}sportmonksPlayerId/);
+  assert.match(route, /exits before the atomic/);
+  assert.match(actions, /\/api\/admin\/manual-card-editorial\?action=preview/);
+  assert.match(actions, /role="dialog"/);
+  assert.match(actions, /Preview card/);
+  assert.match(actions, /SAVE & REVALIDATE/);
+  assert.match(actions, /PROVIDER CONFLICT/);
+  assert.match(actions, /TouchLine remains authoritative; the provider value was not applied/);
+  assert.match(actions, /onClick=\{save\}/);
+  assert.doesNotMatch(actions, /onClick=\{save\}[\s\S]{0,180}Save to Card Engine/);
+});
+
+test("the protected preview never coerces an empty manual value to zero", () => {
+  assert.match(actions, /if \(!marketValueEur\.trim\(\)\)/);
+  assert.match(actions, /setStatus\(copy\.invalid\)/);
+  assert.match(actions, /const parsedValue = Number\(marketValueEur\)/);
 });
 
 test("revert is delegated to the same protected atomic migration boundary", () => {

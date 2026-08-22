@@ -124,7 +124,8 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
     "authenticated ClubOwner coach selection must be accepted by the server before local cache is written",
   );
   assert.match(selectCoach, /standaloneExperience === "market"[\s\S]*?setMarketFormationConfirmed\(false\)/);
-  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?setMarketPositionBucketFilter\("goalkeeper"\)/);
+  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?reconcileTouchlineFormationStarters/);
+  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?setMarketPositionBucketFilter\("all"\)/);
   assert.match(arena, /coachOffersByProviderId/);
   assert.match(arena, /offer\.displayPrice/);
   assert.match(arena, /className="arena-coach-market-header"/);
@@ -135,7 +136,7 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /arena-coach-choice-footer/);
   assert.match(arena, /grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 176px\), 1fr\)\)/);
   assert.match(arena, /selectArenaFixtureRound\(premierLiveFixtures\)/);
-  assert.match(arena, /function isFixtureFinished\(fixture: TouchlineFixture\)/);
+  assert.match(arena, /function isFixtureFinished\(fixture: TouchlinePublicFixture\)/);
   assert.match(arena, /isFixtureFinished\(fixture\)[\s\S]*?\? "FT"/);
   assert.match(arena, /const shouldPollPersistedLiveSnapshot = isLiveDockOpen \|\| standalonePanel === "live"/);
   const fixtureEffect = arena.slice(
@@ -146,11 +147,15 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(fixtureEffect, /"\/api\/football-data\/fixture-schedule"/);
   assert.match(
     fixtureEffect,
-    /function applyPersistedLiveSnapshot[\s\S]*?one durable server snapshot[\s\S]*?server-side rather than recomputed[\s\S]*?setLiveFixtures\(payload\.data\)/,
+    /function applyPersistedLiveSnapshot[\s\S]*?one durable server snapshot[\s\S]*?server-side rather than recomputed[\s\S]*?setLiveFixtures\(parsedFixtures\)/,
   );
   assert.doesNotMatch(fixtureEffect, /function applyLiveFixtureUpdates/);
   assert.match(coachRoute, /touchlineLiveCoachForProviderId\(coachProviderId\)/);
-  assert.match(coachRoute, /TL_ARENA_COACH_SCHEMA_UNAVAILABLE/);
+  assert.match(coachRoute, /TL_COACH_CONTRACT_SCHEMA_UNAVAILABLE/);
+  assert.match(coachRoute, /touchline_hire_coach_contract/);
+  assert.match(coachRoute, /touchline_end_coach_contract/);
+  assert.match(coachRoute, /isSameOriginMutation/);
+  assert.match(coachRoute, /p_idempotency_key: idempotencyKey/);
   assert.match(stateRoute, /coach_provider_id/);
   assert.match(stateRoute, /error\?\.code === "42703"/);
 });

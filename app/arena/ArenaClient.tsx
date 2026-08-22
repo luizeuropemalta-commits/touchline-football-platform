@@ -14,6 +14,7 @@ import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, R
 import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEliteExactCardLabels, type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
+import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
 import TouchlineSubstitutionMark from "@/components/touchline/TouchlineSubstitutionMark";
 import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntro";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
@@ -26,7 +27,8 @@ import {
   normalizeOfficialShirtNumber,
   type ArenaLineupPlayer,
 } from "@/lib/football-data/arena-lineup";
-import type { TouchlineFixture } from "@/lib/football-data/types";
+import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
+import { parseTouchlinePublicFixtures } from "@/lib/football-data/public-fixture-client";
 import type {
   TouchlinePublicFantasyFixtureFeed,
   TouchlinePublicFantasyLineupMember,
@@ -100,12 +102,19 @@ import {
   type TouchlineMarketPositionBucket,
 } from "@/lib/touchlineArena/position-eligibility";
 import {
+  isTouchlineFormationCandidateEligible,
+  reconcileTouchlineFormationStarters,
+  touchlineFormationCapacities,
+  type TouchlineFormationRole,
+} from "@/lib/touchlineArena/formation-transition";
+import {
   normalizeTouchlineCountryCode3,
   touchlineCountryFlagUrl,
 } from "@/lib/touchlineArena/country-flags";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { createTouchlineArenaCoachSlot, TOUCHLINE_DEMO_COACH } from "@/lib/touchlineArena/coach-card";
 import { TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT } from "@/lib/touchlineArena/coach-card-layout";
+import type { TouchlineCoachContractSnapshot } from "@/lib/touchlineArena/coach-scoring";
 import type { TouchlineCompetitionCardOffer } from "@/lib/touchlineArena/competition-card-offer";
 import {
   TOUCHLINE_LIVE_COACHES,
@@ -180,13 +189,14 @@ import {
   type ArenaVideoViewport,
 } from "@/lib/touchlineArena/arena-formation-video-layout";
 import { TOUCHLINE_QA_CANONICAL_USER_ID } from "@/lib/touchlineArena/qa-canonical-persona";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
 import formationLockSeed from "@/data/touchline-arena-formation-locks.json";
 
 const PUBLIC_DATA_SOURCE_LABEL = "TouchLine England";
 const ARENA_LIVE_DOCK_VISIBILITY_STORAGE_KEY = "touchline:arena:live-dock-visible:v1";
 const ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY = "touchline:arena:live-dock-fixture:v1";
-const ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY = "touchline:arena:live-fixtures:v1";
+const ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY = "touchline:arena:live-fixtures:v2";
 const ARENA_LIVE_FIXTURE_CACHE_MAX_AGE_MS = 1000 * 60 * 5;
 const ARENA_LIVE_SQUAD_REQUEST_SETTLE_MS = 180;
 // The score rail is part of the normal Arena entry. Safari can take longer
@@ -230,6 +240,7 @@ export type ArenaPanelKey = TouchlineArenaPanelKey;
 
 type BenchOption = {
   id: string;
+  canonicalPlayerId?: string | null;
   name: string;
   shortName: string;
   role: ArenaPlayer["role"];
@@ -245,6 +256,10 @@ type BenchOption = {
   cardPriceAuthority?: "active-contract" | null;
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   inventoryId?: string | null;
+  touchlinePoints?: string | number | null;
+  matchFantasyPoints?: string | number | null;
+  seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
+  matchStats?: TouchlineEliteExactPlayer["matchStats"];
   countryCode3: string;
   impact: string;
   status: "ready" | "hot" | "watch" | "risk";
@@ -300,6 +315,7 @@ type PremierClubVisual = {
 
 type TeamBuilderSquadPlayer = {
   id: string;
+  canonicalPlayerId?: string | null;
   providerId?: string | null;
   clubTeamId?: string | null;
   name: string;
@@ -382,10 +398,10 @@ type LiveSimulationCardProduct = {
 };
 
 type StoredLiveFixtureSnapshot = {
-  version: 1;
+  version: 2;
   savedAt: number;
   fetchedAt: string;
-  fixtures: TouchlineFixture[];
+  fixtures: TouchlinePublicFixture[];
 };
 
 type TouchlineMarketCheckoutResult = {
@@ -909,6 +925,7 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
     role: player.role || squadPlayer.role,
     card: {
       ...card,
+      canonicalPlayerId: player.card.canonicalPlayerId ?? squadPlayer.canonicalPlayerId ?? null,
       templateUrl: arenaPublishedCardTemplateUrl(clubName, presentation.cardTier),
       playerName: player.card.playerName || squadPlayer.name,
       shirtNumber,
@@ -916,7 +933,8 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
       position: player.card.position || squadPlayer.position || roleLabel(squadPlayer.role),
       countryCode3,
       flagUrl: player.card.flagUrl || squadPlayer.flagUrl || null,
-      fantasyPoints: player.card.fantasyPoints ?? "0.0",
+      fantasyPoints: squadPlayer.touchlinePoints ?? player.card.fantasyPoints ?? null,
+      matchFantasyPoints: squadPlayer.matchFantasyPoints ?? player.card.matchFantasyPoints ?? null,
       marketValue: "",
       marketValueSource: "unavailable" as const,
       marketValueState: squadPlayer.marketValueState ?? player.card.marketValueState,
@@ -928,7 +946,8 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
       cardPriceAuthority: presentation.cardPriceAuthority,
       editorialCard: presentation.editorialCard,
       inventoryId: player.card.inventoryId ?? squadPlayer.inventoryId ?? null,
-      matchStats: player.card.matchStats ?? { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
+      seasonStats: squadPlayer.seasonStats ?? player.card.seasonStats,
+      matchStats: squadPlayer.matchStats ?? player.card.matchStats,
     },
   };
 }
@@ -946,6 +965,7 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
     y: target.y,
     heightVh: target.heightVh,
     card: {
+      canonicalPlayerId: bench.canonicalPlayerId ?? null,
       templateUrl: arenaPublishedCardTemplateUrl(bench.club, presentation.cardTier),
       playerName: bench.name,
       shirtNumber: bench.shirtNumber,
@@ -953,7 +973,8 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
       position: bench.position,
       countryCode3: bench.countryCode3,
       flagUrl: null,
-      fantasyPoints: "0.0",
+      fantasyPoints: bench.touchlinePoints ?? null,
+      matchFantasyPoints: bench.matchFantasyPoints ?? null,
       marketValue: "",
       marketValueSource: "unavailable",
       marketValueState: bench.marketValueState,
@@ -965,7 +986,8 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
       cardPriceAuthority: presentation.cardPriceAuthority,
       editorialCard: presentation.editorialCard,
       inventoryId: bench.inventoryId ?? null,
-      matchStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, cards: 0 },
+      seasonStats: bench.seasonStats,
+      matchStats: bench.matchStats,
     },
   };
 }
@@ -1012,6 +1034,7 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
   const presentation = resolveArenaPublicCardPresentation(card ?? {});
   return {
     id: `bench-${player.id.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`,
+    canonicalPlayerId: card?.canonicalPlayerId ?? null,
     name: card?.playerName || player.name,
     shortName: player.shortName,
     role: player.role,
@@ -1029,8 +1052,45 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? null,
-    countryCode3: card?.countryCode3 || "ENG",
+    touchlinePoints: card?.fantasyPoints ?? null,
+    matchFantasyPoints: card?.matchFantasyPoints ?? null,
+    seasonStats: card?.seasonStats,
+    matchStats: card?.matchStats,
+    countryCode3: card?.countryCode3 || "N/A",
     impact: replacedBench.impact,
+    status: "ready",
+  };
+}
+
+function arenaPlayerToFormationReserve(player: ArenaPlayer): BenchOption {
+  const card = player.card;
+  const presentation = resolveArenaPublicCardPresentation(card ?? {});
+  return {
+    id: `bench-${player.id.replace(/^(?:field-|bench-)+/i, "")}`,
+    canonicalPlayerId: card?.canonicalPlayerId ?? null,
+    name: card?.playerName || player.name,
+    shortName: player.shortName,
+    role: player.role,
+    club: card?.clubName || "TouchLine XI",
+    position: card?.position || roleLabel(player.role),
+    shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
+    marketValue: "",
+    marketValueSource: "unavailable",
+    marketValueState: card?.marketValueState ?? "unavailable",
+    classificationState: card?.classificationState ?? "unavailable",
+    cardTier: presentation.cardTier,
+    cardPriceVersion: presentation.cardPriceAuthority
+      ? presentation.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION
+      : null,
+    cardPriceAuthority: presentation.cardPriceAuthority,
+    editorialCard: presentation.editorialCard,
+    inventoryId: card?.inventoryId ?? null,
+    touchlinePoints: card?.fantasyPoints ?? null,
+    matchFantasyPoints: card?.matchFantasyPoints ?? null,
+    seasonStats: card?.seasonStats,
+    matchStats: card?.matchStats,
+    countryCode3: card?.countryCode3 || "N/A",
+    impact: "+ squad depth",
     status: "ready",
   };
 }
@@ -1039,6 +1099,7 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
   const presentation = resolveArenaPublicCardPresentation(player);
   return {
     id: builderPlayerSquadContractId(player),
+    canonicalPlayerId: player.canonicalPlayerId ?? null,
     name: player.name,
     shortName: player.shortName,
     role: player.role,
@@ -1056,6 +1117,10 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: player.inventoryId ?? null,
+    touchlinePoints: player.touchlinePoints ?? null,
+    matchFantasyPoints: player.matchFantasyPoints ?? null,
+    seasonStats: player.seasonStats,
+    matchStats: player.matchStats,
     countryCode3: player.countryCode3 || "N/A",
     impact: "+ squad depth",
     status: "ready",
@@ -1075,6 +1140,7 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
   return canonicalClubOwnerRosterCard({
     ...(defaultCard ?? {}),
     id: defaultCard?.id ?? player.id,
+    canonicalPlayerId: card?.canonicalPlayerId ?? defaultCard?.canonicalPlayerId ?? null,
     name,
     shortName: player.shortName || name.split(/\s+/).at(-1) || name,
     role: player.role,
@@ -1094,6 +1160,11 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? defaultCard?.inventoryId ?? null,
     touchlinePoints: Number.parseFloat(String(card?.fantasyPoints ?? "")) || defaultCard?.touchlinePoints || 0,
+    matchTouchlinePoints: card?.matchFantasyPoints === null || card?.matchFantasyPoints === undefined || card.matchFantasyPoints === ""
+      ? null
+      : Number.isFinite(Number(card.matchFantasyPoints)) ? Number(card.matchFantasyPoints) : null,
+    seasonStats: card?.seasonStats,
+    matchStats: card?.matchStats,
   });
 }
 
@@ -1103,6 +1174,7 @@ function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
   return canonicalClubOwnerRosterCard({
     ...(defaultCard ?? {}),
     id: defaultCard?.id ?? bench.id,
+    canonicalPlayerId: bench.canonicalPlayerId ?? defaultCard?.canonicalPlayerId ?? null,
     name: bench.name,
     shortName: bench.shortName,
     role: bench.role,
@@ -1121,7 +1193,12 @@ function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: bench.inventoryId ?? defaultCard?.inventoryId ?? null,
-    touchlinePoints: defaultCard?.touchlinePoints || 0,
+    touchlinePoints: Number.isFinite(Number(bench.touchlinePoints)) ? Number(bench.touchlinePoints) : defaultCard?.touchlinePoints || 0,
+    matchTouchlinePoints: bench.matchFantasyPoints === null || bench.matchFantasyPoints === undefined || bench.matchFantasyPoints === ""
+      ? null
+      : Number.isFinite(Number(bench.matchFantasyPoints)) ? Number(bench.matchFantasyPoints) : null,
+    seasonStats: bench.seasonStats,
+    matchStats: bench.matchStats,
   });
 }
 
@@ -1132,6 +1209,7 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
   if (defaultBenchOption) {
     return {
       ...defaultBenchOption,
+      canonicalPlayerId: card.canonicalPlayerId ?? (/^[0-9a-f-]{36}$/i.test(card.id) ? card.id : null),
       name: card.name,
       shortName: card.shortName,
       role: card.role as ArenaPlayer["role"],
@@ -1148,11 +1226,16 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
       editorialCard: card.editorialCard ?? null,
       inventoryId: card.inventoryId ?? null,
       countryCode3: card.countryCode3,
+      touchlinePoints: card.touchlinePoints,
+      matchFantasyPoints: card.matchTouchlinePoints,
+      seasonStats: card.seasonStats,
+      matchStats: card.matchStats,
     };
   }
 
   return {
     id: `bench-${card.id}`,
+    canonicalPlayerId: card.canonicalPlayerId ?? (/^[0-9a-f-]{36}$/i.test(card.id) ? card.id : null),
     name: card.name,
     shortName: card.shortName,
     role: card.role as ArenaPlayer["role"],
@@ -1169,6 +1252,10 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
     editorialCard: card.editorialCard ?? null,
     inventoryId: card.inventoryId ?? null,
     countryCode3: card.countryCode3,
+    touchlinePoints: card.touchlinePoints,
+    matchFantasyPoints: card.matchTouchlinePoints,
+    seasonStats: card.seasonStats,
+    matchStats: card.matchStats,
     impact: "+ squad depth",
     status: "ready",
   };
@@ -1363,6 +1450,10 @@ function arenaPlayerToSubstitutedOutOption(player: ArenaPlayer): BenchOption {
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? null,
+    touchlinePoints: card?.fantasyPoints ?? null,
+    matchFantasyPoints: card?.matchFantasyPoints ?? null,
+    seasonStats: card?.seasonStats,
+    matchStats: card?.matchStats,
     countryCode3: card?.countryCode3 || "N/A",
     impact: "substituted-out",
     status: "risk",
@@ -1520,11 +1611,11 @@ function formatFixtureTime(startsAt?: string) {
   }).format(date);
 }
 
-function fixtureHasScore(fixture: TouchlineFixture) {
+function fixtureHasScore(fixture: TouchlinePublicFixture) {
   return Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore);
 }
 
-function formatFixtureScore(fixture: TouchlineFixture) {
+function formatFixtureScore(fixture: TouchlinePublicFixture) {
   if (fixtureHasScore(fixture)) return `${fixture.homeScore}-${fixture.awayScore}`;
   return "VS";
 }
@@ -1533,22 +1624,25 @@ function displayFixtureStatus(status: string, nextLabel: string) {
   return status.toLowerCase() === "next" ? nextLabel : status;
 }
 
-function isFixtureActuallyLive(fixture: TouchlineFixture) {
+function isFixtureActuallyLive(fixture: TouchlinePublicFixture) {
   const status = normalizeTextKey(fixture.status ?? "");
   return /(?:live|in play|inplay|1st half|2nd half|half time|extra time|penalt)/.test(status);
 }
 
-function isFixtureFinished(fixture: TouchlineFixture) {
+function isFixtureFinished(fixture: TouchlinePublicFixture) {
   const status = normalizeTextKey(fixture.status ?? "");
   return /(?:finished|full time|ft|after extra time|aet|penalties finished|cancelled|postponed)/.test(status);
 }
 
-function fixtureBoardScore(fixture: TouchlineFixture) {
+function fixtureBoardScore(fixture: TouchlinePublicFixture) {
   if (fixtureHasScore(fixture)) return formatFixtureScore(fixture).replace("-", " — ");
   return "VS";
 }
 
-function fixtureBoardClock(fixture: TouchlineFixture, locale: TouchLineLocale) {
+function fixtureBoardClock(fixture: TouchlinePublicFixture, locale: TouchLineLocale) {
+  if (isFixtureActuallyLive(fixture) && fixture.liveMinute !== undefined) {
+    return `${fixture.liveMinute}′${fixture.livePeriod ? ` · ${fixture.livePeriod}` : ""}`;
+  }
   const status = String(fixture.status ?? "").trim();
   if (status && !/^next$/i.test(status)) return status;
   const time = formatFixtureTime(fixture.startsAt);
@@ -1556,7 +1650,7 @@ function fixtureBoardClock(fixture: TouchlineFixture, locale: TouchLineLocale) {
   return locale === "pt-BR" ? "Horário pendente" : "Kick-off pending";
 }
 
-function fixtureLabel(fixture: TouchlineFixture) {
+function fixtureLabel(fixture: TouchlinePublicFixture) {
   return fixture.name || [fixture.homeTeam?.name, fixture.awayTeam?.name].filter(Boolean).join(" vs ") || `Fixture ${fixture.providerId}`;
 }
 
@@ -1621,7 +1715,7 @@ function liveOptimizedClubLogoUrl(logoUrl?: string | null) {
 }
 
 function getPremierClubVisualForFixtureSide(
-  fixture: TouchlineFixture,
+  fixture: TouchlinePublicFixture,
   side: "home" | "away",
 ) {
   const team = side === "home" ? fixture.homeTeam : fixture.awayTeam;
@@ -1648,7 +1742,7 @@ function clubShortCode(name?: string, shortCode?: string) {
   return (words[0] ?? "FC").replace(/[^a-z0-9]/gi, "").slice(0, 3).toUpperCase() || "FC";
 }
 
-function fixtureClubSources(fixture: TouchlineFixture): FixtureClubSource[] {
+function fixtureClubSources(fixture: TouchlinePublicFixture): FixtureClubSource[] {
   const parsedNames = parseFixtureClubNames(fixture.name);
   const clubs: Array<FixtureClubSource | undefined> = [
     fixture.homeTeam ?? (parsedNames[0] ? { name: parsedNames[0] } : undefined),
@@ -1657,7 +1751,7 @@ function fixtureClubSources(fixture: TouchlineFixture): FixtureClubSource[] {
   return clubs.filter((club): club is FixtureClubSource => Boolean(club?.name));
 }
 
-function fixtureClubSourceToSymbol(fixture: TouchlineFixture, club: FixtureClubSource, index: number): ArenaClubSymbol {
+function fixtureClubSourceToSymbol(fixture: TouchlinePublicFixture, club: FixtureClubSource, index: number): ArenaClubSymbol {
   const name = club.name ?? `Club ${index + 1}`;
   const visual = PREMIER_CLUB_VISUALS.find((candidate) => candidate.teamId === String(club.providerId ?? ""))
     ?? getPremierClubVisual(name, club.shortCode);
@@ -1674,7 +1768,7 @@ function fixtureClubSourceToSymbol(fixture: TouchlineFixture, club: FixtureClubS
   };
 }
 
-function buildFixtureClubMatches(fixtures: TouchlineFixture[]): ArenaClubMatch[] {
+function buildFixtureClubMatches(fixtures: TouchlinePublicFixture[]): ArenaClubMatch[] {
   return fixtures
     .map((fixture) => {
       const [homeSource, awaySource] = fixtureClubSources(fixture);
@@ -1707,7 +1801,7 @@ function buildFixtureClubMatches(fixtures: TouchlineFixture[]): ArenaClubMatch[]
     .filter((match): match is ArenaClubMatch => Boolean(match));
 }
 
-function isPremierFixture(fixture: TouchlineFixture) {
+function isPremierFixture(fixture: TouchlinePublicFixture) {
   const [home, away] = fixtureClubSources(fixture);
   if (!home || !away) return false;
   const homeClub = getPremierClubVisualForFixtureSide(fixture, "home");
@@ -1888,59 +1982,32 @@ function buildVerifiedLiveLineup(
   return selected;
 }
 
-function isStoredLiveTeam(value: unknown) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const team = value as NonNullable<TouchlineFixture["homeTeam"]>;
-  return typeof team.id === "string"
-    && Boolean(team.id.trim())
-    && typeof team.providerId === "string"
-    && /^[0-9]{1,20}$/.test(team.providerId.trim())
-    && typeof team.name === "string"
-    && Boolean(team.name.trim());
-}
-
-function isStoredLiveFixture(value: unknown): value is TouchlineFixture {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const fixture = value as Partial<TouchlineFixture>;
-  return typeof fixture.id === "string"
-    && Boolean(fixture.id.trim())
-    && typeof fixture.providerId === "string"
-    // A browser cache is untrusted input. Do not let an old QA representative
-    // snapshot restore fictional fixtures after the server boundary rejects it.
-    && /^[1-9]\d{0,19}$/.test(fixture.providerId.trim())
-    && fixture.provider === "sportmonks"
-    && fixture.source?.provider === "sportmonks"
-    && fixture.source.providerId === fixture.providerId
-    && isStoredLiveTeam(fixture.homeTeam)
-    && isStoredLiveTeam(fixture.awayTeam);
-}
-
 function readStoredLiveFixtureSnapshot() {
   if (typeof window === "undefined") return null;
   try {
     const raw = readBrowserStorage("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY);
     if (!raw) return null;
     const stored = JSON.parse(raw) as Partial<StoredLiveFixtureSnapshot>;
-    const isCoherent = stored.version === 1
+    const parsedFixtures = parseTouchlinePublicFixtures(stored.fixtures);
+    const isCoherent = stored.version === 2
       && Number.isFinite(stored.savedAt)
       && Date.now() - Number(stored.savedAt) <= ARENA_LIVE_FIXTURE_CACHE_MAX_AGE_MS
       && typeof stored.fetchedAt === "string"
       && Number.isFinite(Date.parse(stored.fetchedAt))
-      && Array.isArray(stored.fixtures)
-      && stored.fixtures.every(isStoredLiveFixture);
+      && parsedFixtures !== null;
     if (!isCoherent) {
       removeBrowserStorage("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY);
       return null;
     }
-    return stored as StoredLiveFixtureSnapshot;
+    return { ...stored, fixtures: parsedFixtures } as StoredLiveFixtureSnapshot;
   } catch {
     removeBrowserStorage("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY);
     return null;
   }
 }
 
-function writeStoredLiveFixtureSnapshot(fixtures: TouchlineFixture[], fetchedAt?: string) {
-  if (typeof window === "undefined" || !fixtures.every(isStoredLiveFixture)) return;
+function writeStoredLiveFixtureSnapshot(fixtures: TouchlinePublicFixture[], fetchedAt?: string) {
+  if (typeof window === "undefined" || !parseTouchlinePublicFixtures(fixtures)) return;
   if (!fetchedAt || !Number.isFinite(Date.parse(fetchedAt))) return;
   const now = Date.now();
   const savedAt = Math.min(now, Date.parse(fetchedAt));
@@ -1948,7 +2015,7 @@ function writeStoredLiveFixtureSnapshot(fixtures: TouchlineFixture[], fetchedAt?
     "localStorage",
     ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY,
     JSON.stringify({
-      version: 1,
+      version: 2,
       savedAt,
       fetchedAt,
       fixtures,
@@ -2783,23 +2850,10 @@ function normalizeArenaPlayersForFormation(
   formationKey: ArenaFormationKey,
   principal?: ArenaPersistencePrincipal | null,
 ) {
-  const formation = arenaFormationDefinition(formationKey);
   const slots = arenaSlotsForFormation(formationKey, principal);
-  // A formation switch must change the actual rendered shape, not only its
-  // label. Keep the same cards, prioritise the real goalkeeper, then assign
-  // the remaining cards to the target tactical lines in their stable order.
-  const goalkeeper = players.find((player) => player.role === "goalkeeper") ?? players[0];
-  const outfieldPlayers = players.filter((player) => player.id !== goalkeeper?.id);
-  const tacticalRoles: ArenaPlayer["role"][] = [
-    "goalkeeper",
-    ...Array.from({ length: formation.defenders }, () => "defender" as const),
-    ...Array.from({ length: formation.midfielders }, () => "midfielder" as const),
-    ...Array.from({ length: formation.forwards }, () => "forward" as const),
-  ];
-  const playersInFormationOrder = goalkeeper ? [goalkeeper, ...outfieldPlayers] : outfieldPlayers;
-  const tacticalRoleByPlayerId = new Map(
-    playersInFormationOrder.map((player, index) => [player.id, tacticalRoles[index] ?? player.role] as const),
-  );
+  // Normalization owns coordinates only. Canonical roles come from the
+  // authoritative roster/card position and must never be rewritten merely to
+  // make a different formation appear full.
   const roleCounts: Record<ArenaPlayer["role"], number> = {
     goalkeeper: 0,
     defender: 0,
@@ -2808,13 +2862,11 @@ function normalizeArenaPlayersForFormation(
   };
 
   return players.map((player, index) => {
-    const role = tacticalRoleByPlayerId.get(player.id) ?? player.role;
-    const slotIndex = roleCounts[role]++;
-    const slot = slots[role][slotIndex] ?? TEAM_BUILDER_SLOTS[role][slotIndex] ?? TEAM_BUILDER_GENERIC_SLOTS[index] ?? TEAM_BUILDER_GENERIC_SLOTS.at(-1)!;
-    const position = clampArenaPlayerPosition({ role }, { x: slot.x, y: slot.y });
+    const slotIndex = roleCounts[player.role]++;
+    const slot = slots[player.role][slotIndex] ?? TEAM_BUILDER_SLOTS[player.role][slotIndex] ?? TEAM_BUILDER_GENERIC_SLOTS[index] ?? TEAM_BUILDER_GENERIC_SLOTS.at(-1)!;
+    const position = clampArenaPlayerPosition(player, { x: slot.x, y: slot.y });
     return {
       ...player,
-      role,
       ...position,
       heightVh: ARENA_CARD_COMPACT_HEIGHT_VH,
     };
@@ -2952,6 +3004,7 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
 
   return {
     sportmonksPlayerId: player.id,
+    canonicalPlayerId: player.card?.canonicalPlayerId ?? null,
     overall: card?.shirtNumber || "--",
     shirtNumber: card?.shirtNumber || "",
     role: card?.position || player.role,
@@ -2986,7 +3039,8 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
     frameUrl: "",
     cardTemplateUrl: arenaPublishedCardTemplateUrl(card?.clubName || "", cardTier) || null,
     fantasyPoints: card?.fantasyPoints ?? "0.0",
-    matchFantasyPoints: card?.fantasyPoints ?? "0.0",
+    matchFantasyPoints: card?.matchFantasyPoints ?? null,
+    seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
   };
 }
@@ -3018,6 +3072,7 @@ function benchOptionToPreviewCard(bench: BenchOption, previewTier?: TouchlineCar
 
   return {
     sportmonksPlayerId: bench.id,
+    canonicalPlayerId: bench.canonicalPlayerId ?? null,
     overall: bench.shirtNumber ?? "--",
     shirtNumber: bench.shirtNumber,
     role: bench.position,
@@ -3147,6 +3202,7 @@ function builderPlayerToPreviewCard(
 
   return {
     sportmonksPlayerId: player.providerId || player.id,
+    canonicalPlayerId: player.canonicalPlayerId ?? null,
     overall: shirtNumber ?? "--",
     shirtNumber,
     role: player.position || roleLabel(player.role),
@@ -3191,6 +3247,7 @@ function arenaPlayerZoomDetails(
   player: TouchlineEliteExactPlayer,
   locale: TouchLineLocale,
   profileHref?: string | null,
+  canEditCardEngine = false,
 ): TouchlineCardZoomDetails {
   return buildTouchlinePlayerCardZoomDetails({
     locale,
@@ -3206,8 +3263,24 @@ function arenaPlayerZoomDetails(
     cardPriceAuthority: player.cardPriceAuthority,
     cardPriceVersion: player.cardPriceVersion,
     editorialCard: player.editorialCard,
+    cardReview: player.cardReview,
     touchlinePoints: player.fantasyPoints,
+    extraFields: [
+      {
+        label: locale === "pt-BR" ? "Pontos da partida atual" : "Current match points",
+        value: player.matchFantasyPoints === null || player.matchFantasyPoints === undefined
+          ? "—"
+          : String(player.matchFantasyPoints),
+        accent: true,
+      },
+      { label: locale === "pt-BR" ? "Gols na temporada" : "Season goals", value: player.seasonStats?.goals == null ? "—" : String(player.seasonStats.goals) },
+      { label: locale === "pt-BR" ? "Assistências na temporada" : "Season assists", value: player.seasonStats?.assists == null ? "—" : String(player.seasonStats.assists) },
+      { label: locale === "pt-BR" ? "Cartões na temporada" : "Season cards", value: player.seasonStats?.cards == null ? "—" : String(player.seasonStats.cards) },
+    ],
     profileHref,
+    cardEngineHref: canEditCardEngine
+      ? touchlineCardEnginePlayerHref(player.canonicalPlayerId, locale)
+      : null,
   });
 }
 
@@ -3304,6 +3377,8 @@ type ArenaClientProps = {
   initialEmptyLineup?: boolean;
   /** Server-proven, stable-QA-only entry point for the visual calibration tool. */
   initialQaVisualEditor?: boolean;
+  /** Server-proven owner capability. Protected routes still enforce authority. */
+  canEditCardEngine?: boolean;
 };
 
 type ArenaDragState = {
@@ -3364,6 +3439,7 @@ export default function ArenaClient({
   initialDemoLineup = false,
   initialEmptyLineup = false,
   initialQaVisualEditor = false,
+  canEditCardEngine = false,
 }: ArenaClientProps) {
   const standaloneExperience = standaloneMarket ? "market" : standalonePanel ?? null;
   const initialBuilderClubKey = TEAM_BUILDER_CLUBS.some((club) => club.teamId === initialContractClubId)
@@ -3444,6 +3520,9 @@ export default function ArenaClient({
   const [ownerCoachProviderId, setOwnerCoachProviderId] = useState<string | null>(null);
   const [hasLoadedOwnerCoach, setHasLoadedOwnerCoach] = useState(false);
   const [isCoachSaving, setIsCoachSaving] = useState(false);
+  const [activeCoachContract, setActiveCoachContract] = useState<TouchlineCoachContractSnapshot | null>(null);
+  const [coachContractHistory, setCoachContractHistory] = useState<TouchlineCoachContractSnapshot[]>([]);
+  const [isCoachEndConfirmationOpen, setIsCoachEndConfirmationOpen] = useState(false);
   const [coachSelectionError, setCoachSelectionError] = useState<string | null>(null);
   const [coachOffersByProviderId, setCoachOffersByProviderId] = useState<Record<string, TouchlineCompetitionCardOffer>>({});
   const [coachOfferStatus, setCoachOfferStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -3456,7 +3535,7 @@ export default function ArenaClient({
   const [quickSubstitutionSession, setQuickSubstitutionSession] = useState<TouchlineQuickSubstitutionSessionState | null>(null);
   const [pendingContractReleaseTargetId, setPendingContractReleaseTargetId] = useState<string | null>(null);
   const [isDemoLineup, setIsDemoLineup] = useState(false);
-  const [liveFixtures, setLiveFixtures] = useState<TouchlineFixture[]>([]);
+  const [liveFixtures, setLiveFixtures] = useState<TouchlinePublicFixture[]>([]);
   const [, setLiveFeedStatus] = useState(`${PUBLIC_DATA_SOURCE_LABEL} live`);
   const [saveStatus, setSaveStatus] = useState("Auto saved");
   const [fixtureStatus, setFixtureStatus] = useState("Local data");
@@ -3476,6 +3555,7 @@ export default function ArenaClient({
   const [marketPositionBucketFilter, setMarketPositionBucketFilter] = useState<TouchlineMarketPositionBucketFilter>("all");
   const [marketNeedsOnly, setMarketNeedsOnly] = useState(false);
   const [marketFormationConfirmed, setMarketFormationConfirmed] = useState(false);
+  const [marketFormationFeedback, setMarketFormationFeedback] = useState<string | null>(null);
   const [marketSortMode, setMarketSortMode] = useState<TouchlineMarketSortMode>("recommended");
   const [marketCartPlayers, setMarketCartPlayers] = useState<TeamBuilderSquadPlayer[]>([]);
   const [marketSpotlightPlayerId, setMarketSpotlightPlayerId] = useState<string | null>(null);
@@ -3816,7 +3896,7 @@ export default function ArenaClient({
       })
     : null;
   const spotlightPlayerZoomDetails = spotlightPlayerCard
-    ? arenaPlayerZoomDetails(spotlightPlayerCard, siteLanguage, spotlightPlayerProfileHref)
+    ? arenaPlayerZoomDetails(spotlightPlayerCard, siteLanguage, spotlightPlayerProfileHref, canEditCardEngine)
     : null;
   const replacementTargetProfileHref = replacementTarget
     ? touchlinePlayerProfileHref(arenaCardToPlayer(replacementTarget), siteLanguage)
@@ -3874,14 +3954,24 @@ export default function ArenaClient({
   const ownerCoachOffer = activeArenaCoachIdentity?.coach
     ? coachOffersByProviderId[activeArenaCoachIdentity.coach.providerId] ?? null
     : null;
-  const coachSlot = useMemo(
-    () => createTouchlineArenaCoachSlot(
+  const coachSlot = useMemo(() => {
+    const slot = createTouchlineArenaCoachSlot(
       activeArenaCoachIdentity?.coach ?? null,
       null,
       ownerCoachOffer?.tierKey ?? "sapphire-blue",
-    ),
-    [activeArenaCoachIdentity?.coach, ownerCoachOffer?.tierKey],
-  );
+    );
+    if (!activeCoachContract || !slot.coach) return slot;
+    return {
+      ...slot,
+      touchlinePoints: activeCoachContract.totalTouchlinePoints,
+      status: "audited" as const,
+      scoreEvidence: {
+        provider: "sportmonks" as const,
+        providerEventIds: activeCoachContract.fixtureHistory.map((fixture) => fixture.fixtureId),
+        scoringVersion: activeCoachContract.scoringVersion,
+      },
+    };
+  }, [activeArenaCoachIdentity?.coach, activeCoachContract, ownerCoachOffer?.tierKey]);
   const arenaCoachClubName = ownerCoachClub?.name ?? "TouchLine England";
   const arenaCoachClubLogoUrl = ownerCoachClub?.logoUrl;
   const arenaCoachClubAccent = ownerCoachClub?.accent ?? "#b5ff4b";
@@ -4068,7 +4158,7 @@ export default function ArenaClient({
     ? touchlinePlayerProfileHref(selectedLiveSimulationPreviewCard, siteLanguage)
     : null;
   const selectedLiveSimulationZoomDetails = selectedLiveSimulationPreviewCard
-    ? arenaPlayerZoomDetails(selectedLiveSimulationPreviewCard, siteLanguage, selectedLiveSimulationProfileHref)
+    ? arenaPlayerZoomDetails(selectedLiveSimulationPreviewCard, siteLanguage, selectedLiveSimulationProfileHref, canEditCardEngine)
     : null;
   const clubMatchLoop = visibleClubMatches.length > 1
     ? [...visibleClubMatches, ...visibleClubMatches]
@@ -4076,16 +4166,28 @@ export default function ArenaClient({
   const playerCardRankings = [...clubOwnerRoster].sort(rankClubOwnerCards);
   const topPlayerCardRankings = playerCardRankings.slice(0, 8);
   const clubOwnerStandings = buildDemoClubOwnerStandings(clubOwnerRoster).slice(0, 5);
-  const rosterCardValue = clubOwnerSquadTcValue(clubOwnerRoster);
-  const rosterCardValueDisplay = formatTouchlineCommercialCardTotal({
-    numericPrice: rosterCardValue,
-    competition: "england",
-  });
+  const isAuthenticatedMarketAccount = arenaPersistencePrincipal?.kind === "authenticated";
+  const rosterCardValue = marketInventorySnapshot?.squadValueGbp
+    ?? (isAuthenticatedMarketAccount ? null : clubOwnerSquadTcValue(clubOwnerRoster));
+  const rosterCardValueDisplay = rosterCardValue === null
+    ? "—"
+    : formatTouchlineCommercialCardTotal({
+        numericPrice: rosterCardValue,
+        competition: "england",
+      });
   const rosterPointsTotal = clubOwnerRoster.reduce((sum, card) => sum + card.touchlinePoints, 0);
   const isBuilderSquadCurrent = builderSquadClubKey === selectedBuilderClub.teamId;
   const currentBuilderSquad = isBuilderSquadCurrent ? builderSquad : [];
   const sortedBuilderSquad = [...currentBuilderSquad].sort((a, b) => roleSortWeight(a.role) - roleSortWeight(b.role) || a.name.localeCompare(b.name));
   const authoritativeOwnedSquadCount = marketInventorySnapshot?.activeContractCount ?? ownedSquadCount;
+  const marketHeaderActiveContractCount = marketInventorySnapshot?.activeContractCount
+    ?? (isAuthenticatedMarketAccount ? null : ownedSquadCount);
+  const representedClubCount = marketInventorySnapshot?.representedClubCount
+    ?? (isAuthenticatedMarketAccount
+      ? null
+      : new Set(clubOwnerRoster.map((card) => card.clubName.trim()).filter(Boolean)).size);
+  const marketHeaderCredits = marketInventorySnapshot?.walletBalanceTc
+    ?? (isAuthenticatedMarketAccount ? null : marketWalletBalanceTc);
   const pendingMarketReplacementPlayer = pendingMarketReplacementPlayerId
     ? sortedBuilderSquad.find((player) => stableBuilderPlayerId(player) === pendingMarketReplacementPlayerId) ?? null
     : null;
@@ -4167,6 +4269,7 @@ export default function ArenaClient({
           shirtNumber: marketSpotlightPlayer?.shirtNumber,
           countryCode3: marketSpotlightPlayer?.countryCode3,
         }, siteLanguage, { previewTier: marketSpotlightCard.cardTier }),
+        canEditCardEngine,
       )
     : null;
   const requiresAuthoritativeMarketInventory = marketInventoryMode === "checking"
@@ -4174,7 +4277,6 @@ export default function ArenaClient({
     || marketInventoryMode === "unavailable";
   const isMarketDataRefreshing = marketInventoryMode === "checking";
   const currentLocale = TOUCHLINE_SUPPORTED_LOCALES.find((locale) => locale.code === siteLanguage) ?? TOUCHLINE_SUPPORTED_LOCALES[0];
-  const marketPlayerCount = sortedBuilderSquad.length;
   const openContractSlots = marketInventorySnapshot?.openContractSlots
     ?? Math.max(0, TOUCHLINE_SQUAD_RULES.contracted - ownedSquadCount);
   const isContractRosterFull = openContractSlots === 0;
@@ -4734,6 +4836,8 @@ export default function ArenaClient({
         const payload = await readTouchlineJsonPayload<{
           ok?: boolean;
           offers?: TouchlineCompetitionCardOffer[];
+          activeContract?: TouchlineCoachContractSnapshot | null;
+          contractHistory?: TouchlineCoachContractSnapshot[];
         }>(response);
         if (cancelled || !response.ok || !payload?.ok || !Array.isArray(payload.offers)) {
           if (!cancelled) setCoachOfferStatus("error");
@@ -4746,6 +4850,11 @@ export default function ArenaClient({
         ) as Record<string, TouchlineCompetitionCardOffer>;
         if (!cancelled) {
           setCoachOffersByProviderId(offers);
+          setActiveCoachContract(payload.activeContract ?? null);
+          setCoachContractHistory(Array.isArray(payload.contractHistory) ? payload.contractHistory : []);
+          if (payload.activeContract?.coachProviderId) {
+            setOwnerCoachProviderId(payload.activeContract.coachProviderId);
+          }
           setCoachOfferStatus("ready");
         }
       })
@@ -5076,21 +5185,18 @@ export default function ArenaClient({
     }
 
     function applyPersistedSchedule(payload: {
-      data: TouchlineFixture[];
+      data: TouchlinePublicFixture[];
       cached?: boolean;
       degraded?: boolean;
       fetchedAt?: string;
     }) {
-      if (
-        cancelled
-        || !Array.isArray(payload.data)
-        || !payload.data.every(isStoredLiveFixture)
-      ) return false;
+      const parsedFixtures = parseTouchlinePublicFixtures(payload.data);
+      if (cancelled || !parsedFixtures) return false;
       hasPersistedSchedule = true;
-      writeStoredLiveFixtureSnapshot(payload.data, payload.fetchedAt);
-      setLiveFixtures(payload.data);
+      writeStoredLiveFixtureSnapshot(parsedFixtures, payload.fetchedAt);
+      setLiveFixtures(parsedFixtures);
       setLiveFeedStatus(
-        payload.data.some(isPremierFixture)
+        parsedFixtures.some(isPremierFixture)
           ? "England cache"
           : "TouchLine England",
       );
@@ -5098,17 +5204,18 @@ export default function ArenaClient({
     }
 
     function applyPersistedLiveSnapshot(payload: {
-      data: TouchlineFixture[];
+      data: TouchlinePublicFixture[];
       cached?: boolean;
       degraded?: boolean;
       fetchedAt?: string;
     }) {
-      if (cancelled || !payload.data.length || !payload.data.every(isStoredLiveFixture)) return false;
+      const parsedFixtures = parseTouchlinePublicFixtures(payload.data);
+      if (cancelled || !parsedFixtures?.length) return false;
       // The endpoint emits one durable server snapshot. Do not merge it with
       // browser state: a future canonical-round projection must be selected
       // server-side rather than recomputed from visitor-specific inputs.
-      writeStoredLiveFixtureSnapshot(payload.data, payload.fetchedAt);
-      setLiveFixtures(payload.data);
+      writeStoredLiveFixtureSnapshot(parsedFixtures, payload.fetchedAt);
+      setLiveFixtures(parsedFixtures);
       setLiveFeedStatus(payload.cached || payload.degraded ? "England cache" : "England live");
       return true;
     }
@@ -5116,7 +5223,7 @@ export default function ArenaClient({
     async function loadPersistedSchedule() {
       try {
         const { ok, payload } = await touchlineJsonRequest<
-          | { ok: true; data: TouchlineFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
+          | { ok: true; data: TouchlinePublicFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
           | { ok: false; error?: string; code?: string }
         >("/api/football-data/fixture-schedule", {
           timeoutMs: ARENA_LIVE_SCHEDULE_REQUEST_TIMEOUT_MS,
@@ -5139,7 +5246,7 @@ export default function ArenaClient({
     async function refreshLiveFixtures() {
       try {
         const { ok, payload } = await touchlineJsonRequest<
-          | { ok: true; data: TouchlineFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
+          | { ok: true; data: TouchlinePublicFixture[]; cached?: boolean; degraded?: boolean; fetchedAt?: string }
           | { ok: false; error?: string; code?: string }
         >("/api/football-data/fantasy/livescores", {
           timeoutMs: ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS,
@@ -5370,12 +5477,12 @@ export default function ArenaClient({
     });
 
     const squadRequest = touchlineJsonRequest<
-      | { ok: true; players: TeamBuilderSquadPlayer[]; status?: string }
+      | { ok: true; players: TeamBuilderSquadPlayer[]; rosterPlayers?: TeamBuilderSquadPlayer[]; status?: string }
       | { ok: false; error?: string; status?: string }
     >(`/api/football-data/premier-squad?${params.toString()}`)
       .then(({ ok, payload }) => {
         const squadPayload = payload as
-          | { ok: true; players: TeamBuilderSquadPlayer[]; status?: string }
+          | { ok: true; players: TeamBuilderSquadPlayer[]; rosterPlayers?: TeamBuilderSquadPlayer[]; status?: string }
           | { ok: false; error?: string; status?: string };
 
         if (!ok || squadPayload.ok === false) {
@@ -5394,6 +5501,7 @@ export default function ArenaClient({
 
     Promise.all([squadRequest, inventoryRequest])
       .then(([payload, inventoryResponse]) => {
+        const rosterPlayers = payload.rosterPlayers ?? payload.players;
         const inventorySnapshot = inventoryResponse?.ok
           ? parseTouchlineMarketInventorySnapshot(inventoryResponse.payload)
           : null;
@@ -5412,9 +5520,9 @@ export default function ArenaClient({
         setMarketInventorySnapshot(inventorySnapshot);
         setMarketInventoryMode(inventoryMode);
         if (inventorySnapshot) setMarketWalletBalanceTc(inventorySnapshot.walletBalanceTc);
-        setBuilderSquad(connectBuilderSquadToMarketInventory(payload.players, inventorySnapshot));
+        setBuilderSquad(connectBuilderSquadToMarketInventory(rosterPlayers, inventorySnapshot));
         setBuilderSquadClubKey(builderClub.teamId);
-        setBuilderLoadState({ status: "ready", playerCount: payload.players.length });
+        setBuilderLoadState({ status: "ready", playerCount: rosterPlayers.length });
       })
       .catch((error: Error) => {
         if (cancelled) return;
@@ -6456,7 +6564,10 @@ export default function ArenaClient({
         const response = await fetch("/api/touchline-arena/coach", {
           method: "PUT",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ coachProviderId: coach.coach.providerId }),
+          body: JSON.stringify({
+            coachProviderId: coach.coach.providerId,
+            idempotencyKey: `coach-hire-${createResilientBrowserId()}`,
+          }),
         });
         if (!response.ok) {
           const message = siteLanguage === "pt-BR"
@@ -6466,6 +6577,10 @@ export default function ArenaClient({
           setSaveStatus(message);
           return;
         }
+        const payload = await readTouchlineJsonPayload<{
+          activeContract?: TouchlineCoachContractSnapshot | null;
+        }>(response);
+        setActiveCoachContract(payload?.activeContract ?? null);
       } catch {
         const message = siteLanguage === "pt-BR"
           ? "Não foi possível salvar o treinador na sua conta. Tente novamente."
@@ -6500,12 +6615,82 @@ export default function ArenaClient({
     setSaveStatus(siteLanguage === "pt-BR" ? "Treinador oficial selecionado" : "Official coach selected");
   }
 
+  async function endOfficialArenaCoachContract() {
+    if (!arenaPersistencePrincipal || arenaPersistencePrincipal.kind !== "authenticated" || isCoachSaving) return;
+    setIsCoachSaving(true);
+    setCoachSelectionError(null);
+    try {
+      const response = await fetch("/api/touchline-arena/coach", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          reason: "ClubOwner requested coach replacement",
+          idempotencyKey: `coach-end-${createResilientBrowserId()}`,
+        }),
+      });
+      const payload = await readTouchlineJsonPayload<{
+        ok?: boolean;
+        contractHistory?: TouchlineCoachContractSnapshot[];
+      }>(response);
+      if (!response.ok || !payload?.ok) throw new Error("TL_COACH_END_FAILED");
+      const coachStorageKey = arenaStorageKey(arenaPersistencePrincipal, ARENA_PERSISTENCE_RESOURCES.coach);
+      removeBrowserStorage("localStorage", coachStorageKey);
+      setCoachContractHistory(Array.isArray(payload.contractHistory) ? payload.contractHistory : coachContractHistory);
+      setActiveCoachContract(null);
+      setOwnerCoachProviderId(null);
+      setIsCoachEndConfirmationOpen(false);
+      setIsCoachSpotlightOpen(false);
+      setSaveStatus(siteLanguage === "pt-BR" ? "Treinador liberado; histórico preservado" : "Coach released; history preserved");
+    } catch {
+      const message = siteLanguage === "pt-BR"
+        ? "Não foi possível encerrar este contrato. Nenhum dado foi alterado."
+        : "We could not end this contract. No data was changed.";
+      setCoachSelectionError(message);
+      setSaveStatus(message);
+    } finally {
+      setIsCoachSaving(false);
+    }
+  }
+
   function confirmMarketFormation(formationKey: ArenaFormationKey) {
     if (!ownerCoachProviderId || !arenaPersistencePrincipal) {
       setSaveStatus(siteLanguage === "pt-BR" ? "Escolha o treinador antes da formação." : "Choose the coach before formation.");
       return;
     }
-    changeFormation(formationKey);
+    const capacities = touchlineFormationCapacities(formationKey);
+    if (!capacities) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Formação inválida." : "Invalid formation.");
+      return;
+    }
+    const reconciliation = reconcileTouchlineFormationStarters(players, capacities);
+    const nextPlayers = normalizeArenaPlayersForFormation(
+      reconciliation.starters,
+      formationKey,
+      arenaPersistencePrincipal,
+    );
+    const existingReserveInventoryIds = new Set(
+      benchPlayers
+        .map((bench) => normalizeTouchlineMarketInventoryId(bench.inventoryId))
+        .filter((inventoryId): inventoryId is string => Boolean(inventoryId)),
+    );
+    const existingReserveIds = new Set(benchPlayers.map((bench) => bench.id));
+    const movedToReserves = reconciliation.overflow
+      .map(arenaPlayerToFormationReserve)
+      .filter((reserve) => {
+        const inventoryId = normalizeTouchlineMarketInventoryId(reserve.inventoryId);
+        if (inventoryId && existingReserveInventoryIds.has(inventoryId)) return false;
+        if (!inventoryId && existingReserveIds.has(reserve.id)) return false;
+        if (inventoryId) existingReserveInventoryIds.add(inventoryId);
+        existingReserveIds.add(reserve.id);
+        return true;
+      });
+    const nextBench = [...benchPlayers, ...movedToReserves];
+
+    setSelectedFormationKey(formationKey);
+    setPlayers(nextPlayers);
+    setBenchPlayers(nextBench);
+    saveLineup(nextPlayers, formationKey, arenaPersistencePrincipal);
+    persistArenaRoster(nextPlayers, nextBench);
     writeBrowserStorage(
       "localStorage",
       arenaStorageKey(arenaPersistencePrincipal, ARENA_PERSISTENCE_RESOURCES.marketFormation),
@@ -6513,15 +6698,98 @@ export default function ArenaClient({
     );
     setMarketFormationConfirmed(true);
     setMarketPositionFilter("all");
-    setMarketPositionBucketFilter("goalkeeper");
+    setMarketPositionBucketFilter("all");
     setMarketNeedsOnly(false);
-    setSaveStatus(siteLanguage === "pt-BR"
-      ? `${formationKey} confirmada · comece pelos goleiros`
-      : `${formationKey} confirmed · start with goalkeepers`);
-    window.requestAnimationFrame(() => {
-      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      marketSelectionRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-    });
+    const vacancyCount = reconciliation.vacancies.reduce((total, vacancy) => total + vacancy.count, 0);
+    const vacancyLabel = reconciliation.vacancies.map((vacancy) => {
+      const role = vacancy.role === "goalkeeper"
+        ? siteLanguage === "pt-BR" ? "goleiro" : "goalkeeper"
+        : vacancy.role === "defender"
+          ? siteLanguage === "pt-BR" ? "defensor" : "defender"
+          : vacancy.role === "midfielder"
+            ? siteLanguage === "pt-BR" ? "meio-campista" : "midfielder"
+            : siteLanguage === "pt-BR" ? "atacante" : "forward";
+      return `${vacancy.count} ${role}${vacancy.count === 1 ? "" : "s"}`;
+    }).join(" · ");
+    const moveLabel = movedToReserves.length
+      ? siteLanguage === "pt-BR"
+        ? `${movedToReserves.length} atleta${movedToReserves.length === 1 ? "" : "s"} movido${movedToReserves.length === 1 ? "" : "s"} com segurança para reservas.`
+        : `${movedToReserves.length} player${movedToReserves.length === 1 ? "" : "s"} safely moved to the reserves.`
+      : null;
+    const feedback = vacancyCount
+      ? siteLanguage === "pt-BR"
+        ? `${vacancyLabel} necessário${vacancyCount === 1 ? "" : "s"}. ${moveLabel ?? "Complete a formação para continuar."}`
+        : `${vacancyLabel} required. ${moveLabel ?? "Complete the formation to continue."}`
+      : moveLabel ?? (siteLanguage === "pt-BR" ? "Formação completa e salva." : "Formation complete and saved.");
+    setMarketFormationFeedback(feedback);
+    setSaveStatus(`${formationKey} · ${feedback}`);
+  }
+
+  function assignMarketFormationPlayer(selection: {
+    role: TouchlineFormationRole;
+    targetPlayerId: string | null;
+    candidateId: string;
+  }) {
+    if (!arenaPersistencePrincipal || !marketFormationConfirmed) return;
+    const candidate = benchPlayers.find((bench) => bench.id === selection.candidateId);
+    if (!candidate || !isTouchlineFormationCandidateEligible(
+      { position: candidate.position, role: candidate.role },
+      selection.role,
+    )) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Atleta incompatível com esta posição." : "Player is not eligible for this position.");
+      return;
+    }
+
+    const capacities = touchlineFormationCapacities(selectedFormationKey);
+    if (!capacities) return;
+    const target = selection.targetPlayerId
+      ? players.find((player) => player.id === selection.targetPlayerId) ?? null
+      : null;
+    if (target && target.role !== selection.role) return;
+    if (!target && players.filter((player) => player.role === selection.role).length >= capacities[selection.role]) {
+      setSaveStatus(siteLanguage === "pt-BR" ? "Esta linha da formação já está completa." : "This formation line is already complete.");
+      return;
+    }
+
+    const targetSlot: ArenaPlayer = target ?? {
+      id: `vacant-${selection.role}-${candidate.id}`,
+      name: candidate.name,
+      shortName: candidate.shortName,
+      role: selection.role,
+      x: 50,
+      y: 50,
+      heightVh: ARENA_CARD_COMPACT_HEIGHT_VH,
+    };
+    const incoming = benchOptionToArenaPlayer(candidate, targetSlot);
+    const nextPlayers = normalizeArenaPlayersForFormation(
+      target
+        ? players.map((player) => player.id === target.id ? incoming : player)
+        : [...players, incoming],
+      selectedFormationKey,
+      arenaPersistencePrincipal,
+    );
+    const nextBench = target
+      ? benchPlayers.map((bench) => bench.id === candidate.id ? arenaPlayerToBenchOption(target, candidate) : bench)
+      : benchPlayers.filter((bench) => bench.id !== candidate.id);
+
+    setPlayers(nextPlayers);
+    setBenchPlayers(nextBench);
+    saveLineup(nextPlayers, selectedFormationKey, arenaPersistencePrincipal);
+    persistArenaRoster(nextPlayers, nextBench);
+    setSelectedPlayerId(incoming.id);
+    setSelectedBenchId(nextBench[0]?.id ?? "");
+    setIsDemoLineup(false);
+    setShouldRenderPlayers(true);
+    const remainingVacancies = Math.max(0, TOUCHLINE_SQUAD_RULES.starters - nextPlayers.length);
+    const feedback = remainingVacancies
+      ? siteLanguage === "pt-BR"
+        ? `${candidate.shortName} adicionado. ${remainingVacancies} ${remainingVacancies === 1 ? "posição ainda necessária" : "posições ainda necessárias"}.`
+        : `${candidate.shortName} added. ${remainingVacancies} position${remainingVacancies === 1 ? "" : "s"} still required.`
+      : siteLanguage === "pt-BR"
+        ? `${candidate.shortName} adicionado. Formação completa e salva.`
+        : `${candidate.shortName} added. Formation complete and saved.`;
+    setMarketFormationFeedback(feedback);
+    setSaveStatus(feedback);
   }
 
   async function toggleArenaFullscreen() {
@@ -6964,6 +7232,7 @@ export default function ArenaClient({
               }
             : player
         )));
+        setMarketInventoryRevision((revision) => revision + 1);
         marketCheckoutAttemptRef.current = null;
       } catch {
         setSaveStatus(marketUi.connectionUnavailable);
@@ -8005,6 +8274,7 @@ export default function ArenaClient({
                         locale={siteLanguage}
                         displayMode="compact"
                         enableInteractiveNeon
+                        fixtureContext={activeCoachContract?.currentFixture?.context ?? null}
                       />
                     </span>
                     <b>{siteLanguage === "pt-BR" ? "TREINADOR" : "COACH"}</b>
@@ -8321,7 +8591,7 @@ export default function ArenaClient({
               aria-hidden="true"
               onClick={() => setIsCoachSpotlightOpen(false)}
             />
-            <div className="arena-coach-spotlight-panel">
+            <div className="arena-coach-spotlight-panel arena-owner-coach-contract-panel">
               <button type="button" className="arena-player-spotlight-close" aria-label={t("closePreview")} onClick={() => setIsCoachSpotlightOpen(false)}>
                 <X aria-hidden="true" size={18} />
               </button>
@@ -8338,7 +8608,42 @@ export default function ArenaClient({
                 frameLoading="eager"
                 frameDecoding="sync"
                 frameFetchPriority="high"
+                fixtureContext={activeCoachContract?.currentFixture?.context ?? null}
               />
+              <div className="arena-owner-coach-contract" aria-label={siteLanguage === "pt-BR" ? "Contrato TouchLine do treinador" : "TouchLine coach contract"}>
+                <span>{siteLanguage === "pt-BR" ? "TOUCHLINE GAME · CONTRATO ATUAL" : "TOUCHLINE GAME · CURRENT CONTRACT"}</span>
+                <h3>{coachSlot.coach?.displayName ?? t("verifiedCoachPending")}</h3>
+                <TouchlineCoachPerformance contract={activeCoachContract} locale={siteLanguage} />
+                {activeCoachContract?.currentFixture ? (
+                  <p>
+                    <b>{activeCoachContract.currentFixture.context === "home"
+                      ? (siteLanguage === "pt-BR" ? "Próximo jogo em casa" : "Next home fixture")
+                      : (siteLanguage === "pt-BR" ? "Próximo jogo fora" : "Next away fixture")}</b>
+                    <span>{activeCoachContract.currentFixture.startsAt
+                      ? new Intl.DateTimeFormat(siteLanguage, { dateStyle: "medium", timeStyle: "short" }).format(new Date(activeCoachContract.currentFixture.startsAt))
+                      : (siteLanguage === "pt-BR" ? "Horário pendente" : "Time pending")}</span>
+                  </p>
+                ) : <p>{siteLanguage === "pt-BR" ? "Próximo jogo verificado pendente." : "Next verified fixture pending."}</p>}
+                <div className="arena-owner-coach-contract-actions">
+                  {coachSlot.coach ? <a href={`/touchline-coaches/${encodeURIComponent(coachSlot.coach.providerId)}?lang=${encodeURIComponent(siteLanguage)}`}>{siteLanguage === "pt-BR" ? "Ver perfil" : "View profile"}</a> : null}
+                  {activeCoachContract ? (
+                    <button type="button" onClick={() => setIsCoachEndConfirmationOpen(true)} disabled={isCoachSaving}>
+                      {siteLanguage === "pt-BR" ? "Liberar treinador" : "Release coach"}
+                    </button>
+                  ) : null}
+                </div>
+                {coachContractHistory.length ? <small className="arena-owner-coach-history-count">{siteLanguage === "pt-BR" ? `${coachContractHistory.length} contrato(s) histórico(s) preservado(s)` : `${coachContractHistory.length} historical contract(s) preserved`}</small> : null}
+                {isCoachEndConfirmationOpen ? (
+                  <div className="arena-owner-coach-confirm" role="alertdialog" aria-modal="true" aria-label={siteLanguage === "pt-BR" ? "Confirmar liberação" : "Confirm release"}>
+                    <strong>{siteLanguage === "pt-BR" ? "Liberar este treinador?" : "Release this coach?"}</strong>
+                    <p>{siteLanguage === "pt-BR" ? "Os pontos e o histórico permanecem. O treinador não receberá pontos futuros." : "Points and history remain. This coach will receive no future points."}</p>
+                    <div>
+                      <button type="button" onClick={() => setIsCoachEndConfirmationOpen(false)} disabled={isCoachSaving}>{siteLanguage === "pt-BR" ? "Voltar" : "Go back"}</button>
+                      <button type="button" onClick={() => void endOfficialArenaCoachContract()} disabled={isCoachSaving}>{isCoachSaving ? (siteLanguage === "pt-BR" ? "Salvando…" : "Saving…") : (siteLanguage === "pt-BR" ? "Confirmar liberação" : "Confirm release")}</button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </section>
         ) : null}
@@ -8373,24 +8678,20 @@ export default function ArenaClient({
               {arenaOverlayPanel === "market" ? (
                 <div className="team-builder-bank" aria-label={t("touchlineMarketTransfer")}>
                   <span>
-                    <small>{marketUi.signingBalance}</small>
-                    <strong className="touchline-tc-balance"><TouchlineCoinMark size={24} /><b>{marketWalletBalanceTc}</b><em>TC</em></strong>
+                    <small>{marketUi.touchlineCredits}</small>
+                    <strong className="touchline-tc-balance"><TouchlineCoinMark size={24} /><b>{marketHeaderCredits ?? "—"}</b></strong>
                   </span>
                   <span>
-                    <small>{marketUi.squadTcValue}</small>
+                    <small>{marketUi.squadValue}</small>
                     <strong className="touchline-card-value"><b>{rosterCardValueDisplay}</b></strong>
                   </span>
                   <span>
                     <small>{marketUi.activeContracts}</small>
-                    <strong>{authoritativeOwnedSquadCount}/{TOUCHLINE_SQUAD_RULES.contracted}</strong>
+                    <strong>{marketHeaderActiveContractCount ?? "—"}/{TOUCHLINE_SQUAD_RULES.contracted}</strong>
                   </span>
                   <span>
-                    <small>{marketUi.contractSlots}</small>
-                    <strong>{openContractSlots}</strong>
-                  </span>
-                  <span>
-                    <small>{marketUi.clubPlayers}</small>
-                    <strong>{marketPlayerCount}</strong>
+                    <small>{marketUi.clubsRepresented}</small>
+                    <strong>{representedClubCount ?? "—"}</strong>
                   </span>
                 </div>
               ) : null}
@@ -8548,6 +8849,7 @@ export default function ArenaClient({
                               countryCode3={arenaCoachCountryCode3}
                               formation={selectedFormationKey}
                               locale={siteLanguage}
+                              fixtureContext={activeCoachContract?.currentFixture?.context ?? null}
                             />
                           </span>
                           <span>
@@ -8802,6 +9104,7 @@ export default function ArenaClient({
                         displayMode="compact"
                         optimizeForLiveCompact
                         enableInteractiveNeon={false}
+                        fixtureContext={activeCoachContract?.currentFixture?.context ?? null}
                       />
                     ) : null}
                     starters={players.map((player) => ({
@@ -8814,29 +9117,21 @@ export default function ArenaClient({
                     bench={matchdayBenchPlayers.map((player) => ({
                       id: player.id,
                       shortName: player.shortName,
+                      role: player.role,
                       position: player.position,
                       card: benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.shortName) : undefined),
                     }))}
                     remainingSquad={reserveVaultPlayers.map((player) => ({
                       id: player.id,
                       shortName: player.shortName,
+                      role: player.role,
                       position: player.position,
                       card: benchOptionToPreviewCard(player, isDemoLineup ? touchlineDemoTierForPlayer(player.id, player.shortName) : undefined),
                     }))}
                     contractedCount={authoritativeOwnedSquadCount}
-                    selectedRole={marketPositionFilter}
-                    onSelectRole={(role) => {
-                      setMarketPositionFilter(role);
-                      setMarketPositionBucketFilter("all");
-                      setMarketNeedsOnly(false);
-                      window.requestAnimationFrame(() => {
-                        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-                        marketSelectionRef.current?.scrollIntoView({
-                          behavior: reduceMotion ? "auto" : "smooth",
-                          block: "start",
-                        });
-                      });
-                    }}
+                    formationFeedback={marketFormationFeedback}
+                    canEditCardEngine={canEditCardEngine}
+                    onAssignPlayer={assignMarketFormationPlayer}
                   />
 
                   <div className={`team-builder-cart-dock ${marketCartPlayers.length ? "has-items" : "is-empty"}`} aria-label={t("marketCart")}>
@@ -15321,7 +15616,7 @@ export default function ArenaClient({
 
         .team-builder-bank {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 8px;
         }
 
@@ -15350,11 +15645,18 @@ export default function ArenaClient({
         .team-builder-roster-head span,
         .team-builder-player-list small {
           font-size: 8px;
-          font-weight: 1000;                    color: rgba(122,231,255,.78);
+          font-weight: 1000;
+          color: rgba(122,231,255,.78);
+        }
+
+        .team-builder-bank small {
+          color: #b5ff4b;
+          font-size: 11px;
+          letter-spacing: .045em;
         }
 
         .team-builder-bank strong {
-          font-size: 18px;
+          font-size: 21px;
           line-height: 1;
           font-weight: 1000;
         }
@@ -15374,13 +15676,6 @@ export default function ArenaClient({
 
         .touchline-tc-balance b {
           font: inherit;
-        }
-
-        .touchline-tc-balance em {
-          color: #ffd75c;
-          font-size: .52em;
-          font-style: normal;
-          letter-spacing: .08em;
         }
 
         .team-builder-cart-dock {
@@ -16248,6 +16543,54 @@ export default function ArenaClient({
           z-index: 2;
           width: min(390px, calc(100vw - 32px), calc(66dvh * .6667));
           pointer-events: auto;
+        }
+
+        .arena-owner-coach-contract-panel {
+          width: min(840px, calc(100vw - 32px));
+          max-height: min(760px, calc(100dvh - 28px));
+          display: grid;
+          grid-template-columns: minmax(250px, 390px) minmax(300px, 1fr);
+          align-items: center;
+          gap: clamp(14px, 3vw, 30px);
+          overflow: auto;
+          border: 1px solid rgba(181,255,75,.24);
+          border-radius: 26px;
+          padding: clamp(14px, 2.4vw, 28px);
+          background: linear-gradient(145deg, rgba(2,16,13,.98), rgba(3,9,12,.98));
+          box-shadow: 0 28px 90px rgba(0,0,0,.62), 0 0 42px rgba(181,255,75,.08);
+        }
+
+        .arena-owner-coach-contract { display: grid; gap: 12px; color: #efffd5; }
+        .arena-owner-coach-contract > span { color: #b5ff4b; font-size: 9px; font-weight: 950; letter-spacing: .13em; }
+        .arena-owner-coach-contract h3 { margin: 0; font-size: clamp(24px, 3vw, 38px); line-height: .94; letter-spacing: -.05em; }
+        .arena-owner-coach-records { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+        .arena-owner-coach-records article { display: grid; gap: 3px; border: 1px solid rgba(181,255,75,.18); border-radius: 13px; padding: 10px; background: rgba(181,255,75,.055); }
+        .arena-owner-coach-records small { color: rgba(239,255,213,.58); font-size: 8px; font-weight: 900; letter-spacing: .1em; }
+        .arena-owner-coach-records strong { font-size: 19px; }
+        .arena-owner-coach-records em { color: #b5ff4b; font-size: 9px; font-style: normal; font-weight: 900; }
+        .arena-owner-coach-contract > p { display: grid; gap: 3px; margin: 0; border-left: 2px solid #b5ff4b; padding-left: 10px; color: rgba(239,255,213,.62); font-size: 11px; }
+        .arena-owner-coach-contract > p b { color: #efffd5; font-size: 12px; }
+        .arena-owner-coach-contract-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .arena-owner-coach-contract-actions a,
+        .arena-owner-coach-contract-actions button,
+        .arena-owner-coach-confirm button { min-height: 42px; border: 1px solid rgba(181,255,75,.32); border-radius: 999px; padding: 0 14px; color: #efffd5; background: rgba(181,255,75,.08); font: inherit; font-size: 10px; font-weight: 900; text-decoration: none; cursor: pointer; }
+        .arena-owner-coach-contract-actions a { display: inline-flex; align-items: center; }
+        .arena-owner-coach-contract-actions button { border-color: rgba(255,151,115,.36); color: #ffd9c9; background: rgba(132,37,18,.16); }
+        .arena-owner-coach-contract-actions :is(a,button):focus-visible,
+        .arena-owner-coach-confirm button:focus-visible { outline: 2px solid #b5ff4b; outline-offset: 2px; }
+        .arena-owner-coach-history-count { color: rgba(239,255,213,.56); font-size: 9px; }
+        .arena-owner-coach-confirm { display: grid; gap: 9px; border: 1px solid rgba(255,151,115,.34); border-radius: 16px; padding: 13px; background: rgba(42,8,5,.72); }
+        .arena-owner-coach-confirm > p { margin: 0; color: rgba(255,239,230,.7); font-size: 10px; line-height: 1.45; }
+        .arena-owner-coach-confirm > div { display: flex; flex-wrap: wrap; gap: 7px; }
+
+        @media (max-width: 720px), (max-height: 520px) {
+          .arena-owner-coach-contract-panel { grid-template-columns: minmax(150px, .72fr) minmax(250px, 1.28fr); align-items: start; gap: 12px; border-radius: 18px; padding: 12px; }
+          .arena-owner-coach-contract h3 { font-size: 22px; }
+          .arena-owner-coach-records article { padding: 7px; }
+          .arena-owner-coach-records strong { font-size: 15px; }
+          .arena-owner-coach-contract-actions a,
+          .arena-owner-coach-contract-actions button,
+          .arena-owner-coach-confirm button { min-height: 36px; padding: 0 11px; font-size: 8px; }
         }
 
         .arena-stage[data-coach-spotlight="open"] .field-player-layer,
@@ -19234,10 +19577,6 @@ export default function ArenaClient({
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
 
-          .arena-action-panel-market .team-builder-bank > span:last-child {
-            grid-column: 1 / -1;
-          }
-
           .arena-action-panel-market .team-builder-bank small {
             font-size: 10px;
           }
@@ -20261,7 +20600,7 @@ export default function ArenaClient({
           .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank {
             top: -1px;
             grid-auto-flow: row;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             margin-top: 6px;
             padding: 5px;
             overflow: hidden;
@@ -20270,11 +20609,6 @@ export default function ArenaClient({
           .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span {
             min-height: 62px;
             padding: 8px;
-          }
-
-          .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span:nth-child(2),
-          .touchline-game.is-market-standalone .arena-action-panel-market > .team-builder-bank > span:nth-child(5) {
-            display: none;
           }
 
           .touchline-game.is-market-standalone .team-builder-board {

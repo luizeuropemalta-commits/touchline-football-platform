@@ -14,6 +14,7 @@ import {
 } from "@/lib/football-data/http";
 import { parseSportmonksStatisticValue } from "@/lib/football-data/sportmonks-statistics";
 import { mapSportmonksFixtureBallCoordinates } from "@/lib/football-data/sportmonks-ball-coordinates";
+import { sportmonksDetailedPositionName } from "@/lib/football-data/sportmonks-position-taxonomy";
 import {
   SPORTMONKS_INPLAY_LIVESCORES_PATH,
   SPORTMONKS_LATEST_LIVESCORES_PATH,
@@ -25,6 +26,7 @@ import {
   sortSportmonksTransfersNewestFirst,
 } from "@/lib/football-data/sportmonks-transfers";
 import type {
+  FixturesBetweenParams,
   FixturesByDateParams,
   FootballDataCacheBucket,
   FootballDataProvider,
@@ -306,7 +308,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getPlayerById(id: string): Promise<FootballDataResult<TouchlinePlayer | null>> {
     const request = await this.request<SportmonksEntity>(`/players/${id}`, {
-      include: "country;nationality;position;teams;metadata",
+      include: "country;nationality;position;detailedPosition;teams;metadata",
     });
     if (!request.configured) return this.notConfigured<TouchlinePlayer | null>();
     const { value, cached } = request;
@@ -355,7 +357,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getFixtureById(id: string): Promise<FootballDataResult<TouchlineFixture | null>> {
     const request = await this.request<SportmonksEntity>(`/fixtures/${id}`, {
-      include: "participants;scores;league;season;state",
+      include: "participants;scores;league;season;round;state",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture | null>();
     const { value, cached } = request;
@@ -365,7 +367,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getFixturesByDate(params: FixturesByDateParams): Promise<FootballDataResult<TouchlineFixture[]>> {
     const request = await this.paginatedRequest<SportmonksEntity>(`/fixtures/date/${params.date}`, {
-      include: "participants;scores;league;season;state",
+      include: "participants;scores;league;season;round;state",
       timezone: params.timezone,
     }, {
       bucket: "live",
@@ -379,9 +381,34 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
   }
 
-  async getLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>> {
+  async getFixturesBetween(params: FixturesBetweenParams): Promise<FootballDataResult<TouchlineFixture[]>> {
+    const request = await this.paginatedRequest<SportmonksEntity>(
+      `/fixtures/between/${encodeURIComponent(params.fromDate)}/${encodeURIComponent(params.throughDate)}`,
+      {
+        // Sportmonks applies this scope before pagination. Do not replace it
+        // with a client-side competition filter: that would make a fixture
+        // disappear whenever a busy day exceeds a global page cap.
+        filters: `fixtureLeagues:${params.competitionId}`,
+        include: "participants;scores;league;season;round;state",
+        timezone: params.timezone,
+      },
+      {
+        bucket: "live",
+        perPage: SPORTMONKS_MAX_PAGE_SIZE,
+        maxPages: SPORTMONKS_ABSOLUTE_MAX_PAGES,
+        maxItems: SPORTMONKS_ABSOLUTE_MAX_ITEMS,
+      },
+    );
+    if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
+    const { value, cached } = request;
+    if (!value.ok) return this.providerFailure<TouchlineFixture[]>(value, "Sportmonks fixture window lookup failed.");
+    return resultOk(this.name, (value.data?.data ?? []).map((item) => this.mapFixture(item)).filter(Boolean) as TouchlineFixture[], value.data, cached, value.fetchedAt);
+  }
+
+  async getLiveScores(params: { competitionId?: string } = {}): Promise<FootballDataResult<TouchlineFixture[]>> {
     const request = await this.request<SportmonksEntity[]>(SPORTMONKS_INPLAY_LIVESCORES_PATH, {
-      include: "participants;scores;league;season;state",
+      include: "participants;scores;league;season;round;state;periods",
+      ...(params.competitionId ? { filters: `fixtureLeagues:${params.competitionId}` } : {}),
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
@@ -391,7 +418,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   async getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>> {
     const request = await this.request<SportmonksEntity[]>(SPORTMONKS_LATEST_LIVESCORES_PATH, {
-      include: "participants;scores;league;season;state",
+      include: "participants;scores;league;season;round;state;periods",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFixture[]>();
     const { value, cached } = request;
@@ -466,7 +493,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   async getSquad(teamId: string): Promise<FootballDataResult<TouchlineSquadMember[]>> {
     const [request, extendedRequest] = await Promise.all([
       this.request<SportmonksEntity[]>(`/squads/teams/${teamId}`, {
-        include: "player;position;detailedPosition",
+        include: "player;player.position;player.detailedPosition;position;detailedPosition",
       }, "daily", "interactive"),
       this.request<SportmonksEntity[]>(`/squads/teams/${teamId}/extended`, {
         include: "country;nationality;position;detailedPosition",
@@ -501,13 +528,26 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       if (!player) return [];
       const positionRaw = this.relationEntity(item, "position") ?? (item.position as SportmonksEntity | undefined);
       const detailedPositionRaw = this.relationEntity(item, "detailedPosition") ?? (item.detailedPosition as SportmonksEntity | undefined);
+      const playerBroadPosition = player.broadPosition;
+      const playerDetailedPosition = player.detailedPosition;
+      const broadPosition = asString(positionRaw?.name) ?? playerBroadPosition;
+      const broadPositionId = asString(item.position_id) ?? asString(positionRaw?.id) ?? player.broadPositionId;
+      const detailedPositionId = asString(item.detailed_position_id) ?? asString(detailedPositionRaw?.id) ?? player.detailedPositionId;
+      const detailedPosition = asString(detailedPositionRaw?.name)
+        ?? playerDetailedPosition
+        ?? sportmonksDetailedPositionName(detailedPositionId)
+        ?? undefined;
       return [{
         player,
         jerseyNumber: asNumber(item.jersey_number),
         // Squad construction needs the provider's exact position (RB, LB,
         // centre-back, defensive midfield, etc.). The broad parent position
         // remains available in raw data, but must not erase this detail.
-        position: asString(detailedPositionRaw?.name) ?? asString(positionRaw?.name),
+        broadPosition,
+        broadPositionId,
+        detailedPosition,
+        detailedPositionId,
+        position: detailedPosition,
         raw: { ...item, player: mergedPlayerRaw },
       }];
     });
@@ -606,7 +646,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   async getFixtureFantasyFeed(fixtureId: string): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>> {
     if (!fixtureId.trim()) return resultError(this.name, "invalid_request", "fixtureId is required for fantasy fixture feed.");
     const request = await this.request<SportmonksEntity>(`/fixtures/${encodeURIComponent(fixtureId)}`, {
-      include: "participants;scores;league;season;state;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;events.type;events.player;events.relatedPlayer",
+      include: "participants;scores;league;season;round;state;periods;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;events.type;events.player;events.relatedPlayer",
     }, "live");
     if (!request.configured) return this.notConfigured<TouchlineFantasyFixtureFeed | null>();
     const { value, cached } = request;
@@ -689,11 +729,15 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const name = (asString(raw.display_name) ?? asString(raw.name) ?? [asString(raw.firstname), asString(raw.lastname)].filter(Boolean).join(" ")) || `Player ${id}`;
     const country = this.relationEntity(raw, "nationality") ?? (raw.nationality as SportmonksEntity | undefined);
     const fallbackCountry = this.relationEntity(raw, "country") ?? (raw.country as SportmonksEntity | undefined);
-    const position =
-      this.relationEntity(raw, "detailedPosition") ??
+    const broadPosition =
       this.relationEntity(raw, "position") ??
-      (raw.detailedPosition as SportmonksEntity | undefined) ??
       (raw.position as SportmonksEntity | undefined);
+    const detailedPosition =
+      this.relationEntity(raw, "detailedPosition") ??
+      (raw.detailedPosition as SportmonksEntity | undefined);
+    const detailedPositionId = asString(raw.detailed_position_id) ?? asString(detailedPosition?.id);
+    const detailedPositionName = asString(detailedPosition?.name)
+      ?? sportmonksDetailedPositionName(detailedPositionId);
     const teams = this.relationArray(raw, "teams");
     const currentTeam = teams[0];
 
@@ -710,8 +754,15 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       age: asNumber(raw.age),
       nationality: asString(country?.name) ?? asString(fallbackCountry?.name),
       countryId: asString(raw.country_id) ?? asString(raw.nationality_id),
-      position: asString(position?.name),
-      positionId: asString(raw.position_id),
+      broadPosition: asString(broadPosition?.name),
+      broadPositionId: asString(raw.position_id) ?? asString(broadPosition?.id),
+      detailedPosition: detailedPositionName ?? undefined,
+      detailedPositionId: detailedPositionId ?? undefined,
+      // An exact position is intentionally absent when the provider supplies
+      // only the broad role. TouchLine keeps that athlete visible as pending;
+      // it never guesses a quota-bearing position from the parent role.
+      position: detailedPositionName ?? undefined,
+      positionId: detailedPositionId ?? undefined,
       height: asString(raw.height),
       weight: asString(raw.weight),
       preferredFoot:
@@ -816,6 +867,12 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     const home = participants.find((team) => asString(team.meta && (team.meta as SportmonksEntity).location) === "home") ?? participants[0];
     const away = participants.find((team) => asString(team.meta && (team.meta as SportmonksEntity).location) === "away") ?? participants[1];
     const scores = Array.isArray(raw.scores) ? raw.scores as SportmonksEntity[] : [];
+    const round = this.relationEntity(raw, "round");
+    const periods = this.relationArray(raw, "periods");
+    const currentPeriod = periods.find((period) => period.ticking === true)
+      ?? [...periods].reverse().find((period) => asNumber(period.minutes) !== undefined || asString(period.description));
+    const events = this.relationArray(raw, "events");
+    const providerUpdatedAt = asString(raw.last_processed_at) ?? asString(raw.updated_at);
     return {
       id: providerId(this.name, id),
       providerId: id,
@@ -825,10 +882,18 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       status: asString((raw.state as SportmonksEntity | undefined)?.name) ?? asString(raw.state_id),
       competitionId: asString(raw.league_id),
       seasonId: asString(raw.season_id),
+      roundId: asString(raw.round_id) ?? asString(round?.id),
+      roundName: asString(round?.name),
       homeTeam: this.mapTeam(home) ?? undefined,
       awayTeam: this.mapTeam(away) ?? undefined,
       homeScore: this.extractScore(scores, "home"),
       awayScore: this.extractScore(scores, "away"),
+      providerStateId: asString(raw.state_id) ?? asString((raw.state as SportmonksEntity | undefined)?.id),
+      liveMinute: asNumber(currentPeriod?.minutes),
+      liveSecond: asNumber(currentPeriod?.seconds),
+      livePeriod: asString(currentPeriod?.description) ?? asString(currentPeriod?.type_id),
+      eventsCount: events.length || undefined,
+      providerUpdatedAt: providerUpdatedAt && Number.isFinite(Date.parse(providerUpdatedAt)) ? providerUpdatedAt : undefined,
       source: { provider: this.name, providerId: id, raw },
     };
   }
@@ -894,6 +959,8 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         ?? asString(extended.country_id),
       position: primary.position ?? extended.position,
       detailedPosition: primary.detailedPosition ?? extended.detailedPosition,
+      position_id: asString(primary.position_id) ?? asString(extended.position_id),
+      detailed_position_id: asString(primary.detailed_position_id) ?? asString(extended.detailed_position_id),
       market_value: primary.market_value ?? extended.market_value,
       market_value_eur: primary.market_value_eur ?? extended.market_value_eur,
       marketValue: primary.marketValue ?? extended.marketValue,
@@ -949,7 +1016,10 @@ export class SportmonksFootballProvider implements FootballDataProvider {
       const type = this.relationEntity(detail, "type") ?? (detail.type as SportmonksEntity | undefined);
       const typeId = asString(detail.type_id) ?? asString(type?.id);
       if (!typeId) return [];
-      const value = parseSportmonksStatisticValue(detail.value);
+      // Sportmonks v3 line-up details carry the measured value in
+      // `detail.data.value`. Older/alternate payloads may still expose
+      // `detail.value`, so retain that as a compatibility fallback.
+      const value = parseSportmonksStatisticValue(detail.data ?? detail.value);
 
       return [{
         typeId,
@@ -1015,10 +1085,15 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         playerId: asString(item.player_id) ?? asString(player?.id),
         playerName: asString(player?.display_name) ?? asString(player?.name) ?? asString(item.player_name),
         relatedPlayerId: asString(item.related_player_id) ?? asString(relatedPlayer?.id),
-        relatedPlayerName: asString(relatedPlayer?.display_name) ?? asString(relatedPlayer?.name),
+        relatedPlayerName: asString(item.related_player_name) ?? asString(relatedPlayer?.display_name) ?? asString(relatedPlayer?.name),
         type,
         minute: asNumber(item.minute),
         extraMinute: asNumber(item.extra_minute),
+        sortOrder: asNumber(item.sort_order),
+        result: asString(item.result),
+        info: asString(item.info),
+        addition: asString(item.addition),
+        status: item.cancelled === true || item.rescinded === true ? "rescinded" : "recorded",
         fantasyPoints: estimateFantasyEventPoints(type),
         raw: item,
       };

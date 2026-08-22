@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { parseTouchlinePublicFixtures } from "../lib/football-data/public-fixture-client.ts";
 
 const arenaSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+const publicParserSource = readFileSync(new URL("../lib/football-data/public-fixture-client.ts", import.meta.url), "utf8");
 
 function sourceFunction(name: string) {
   const start = arenaSource.indexOf(`function ${name}`);
@@ -41,14 +43,28 @@ test("the normal Arena retries the read-only Live snapshot when schedule hydrati
   assert.match(loader, /catch \{[\s\S]*?await refreshLiveFixtures\(\)/);
 });
 
-test("the Arena rejects cached QA representative fixtures and requires a Sportmonks identifier", () => {
-  const validatorStart = arenaSource.indexOf("function isStoredLiveFixture");
-  const validatorEnd = arenaSource.indexOf("\nfunction readStoredLiveFixtureSnapshot", validatorStart);
-  const validator = arenaSource.slice(validatorStart, validatorEnd);
+test("the Arena accepts only the allowlisted public fixture DTO and rejects stale internal snapshots", () => {
+  const fixtures = Array.from({ length: 10 }, (_, index) => ({
+    id: String(19_722_194 + index),
+    providerId: String(19_722_194 + index),
+    competitionId: "8",
+    seasonId: "28083",
+    roundId: "339001",
+    roundName: "1",
+    startsAt: `2026-08-${String(21 + Math.floor(index / 4)).padStart(2, "0")}T12:00:00.000Z`,
+    status: "Not Started",
+    homeTeam: { id: String(1_000 + index * 2), providerId: String(1_000 + index * 2), name: `Home ${index}` },
+    awayTeam: { id: String(1_001 + index * 2), providerId: String(1_001 + index * 2), name: `Away ${index}` },
+    verifiedAt: "2026-08-20T10:00:00.000Z",
+  }));
 
-  assert.ok(validatorStart >= 0);
-  assert.ok(validatorEnd > validatorStart);
-  assert.match(validator, /\^\[1-9\]\\d\{0,19\}\$/);
-  assert.match(validator, /fixture\.provider === "sportmonks"/);
-  assert.match(validator, /fixture\.source\.providerId === fixture\.providerId/);
+  assert.equal(parseTouchlinePublicFixtures(fixtures)?.length, 10);
+  assert.equal(parseTouchlinePublicFixtures([{ ...fixtures[0], provider: "sportmonks" }]), null);
+  assert.equal(parseTouchlinePublicFixtures([{ ...fixtures[0], id: "qa-fixture-1", providerId: "qa-fixture-1" }]), null);
+  assert.match(publicParserSource, /const PROVIDER_ID = \/\^\[1-9\]\\d\{0,19\}\$\//);
+  assert.match(publicParserSource, /fixture\.id === fixture\.providerId/);
+  assert.match(publicParserSource, /!\("provider" in fixture\)/);
+  assert.match(arenaSource, /parseTouchlinePublicFixtures\(payload\.data\)/);
+  assert.match(arenaSource, /touchline:arena:live-fixtures:v2/);
+  assert.match(arenaSource, /stored\.version === 2/);
 });

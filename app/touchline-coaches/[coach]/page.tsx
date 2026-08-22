@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
+import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
+import { BadgeCheck, Gem, ShieldCheck, WalletCards } from "lucide-react";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import { resolveCompetitionCardOffer } from "@/lib/touchlineArena/competition-card-offer";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
@@ -12,6 +14,9 @@ import {
   TOUCHLINE_LIVE_COACHES,
 } from "@/lib/touchlineArena/live-coaches";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { readTouchlineCoachContracts } from "@/lib/touchlineArena/coach-contracts-server";
 
 const TOUCHLINE_ENGLAND_SEASON = "2026-27";
 
@@ -87,6 +92,23 @@ export default async function TouchlineCoachProfilePage({
     classification,
   });
   const slot = createTouchlineArenaCoachSlot(entry.coach, null, offer.tierKey);
+  const [supabase, admin] = await Promise.all([createClient(), Promise.resolve(createAdminClient())]);
+  const userResult = supabase ? await supabase.auth.getUser() : null;
+  const user = userResult?.data.user ?? null;
+  const ownerContracts = user && admin ? await readTouchlineCoachContracts(admin, user.id).catch(() => []) : [];
+  const coachContracts = ownerContracts.filter((contract) => contract.coachProviderId === entry.coach.providerId);
+  const currentContract = coachContracts.find((contract) => contract.status === "active") ?? null;
+  const displayedContract = currentContract ?? coachContracts[0] ?? null;
+  const scoredSlot = currentContract ? {
+    ...slot,
+    touchlinePoints: currentContract.totalTouchlinePoints,
+    status: "audited" as const,
+    scoreEvidence: {
+      provider: "sportmonks" as const,
+      providerEventIds: currentContract.fixtureHistory.map((fixture) => fixture.fixtureId),
+      scoringVersion: currentContract.scoringVersion,
+    },
+  } : slot;
   const profileLocale = `?lang=${encodeURIComponent(locale)}`;
   const historyAvailable = Boolean(
     classification.sourceClub
@@ -115,7 +137,7 @@ export default async function TouchlineCoachProfilePage({
         </div>
         <div className="coach-profile-card"><TouchlineCoachCard
           coach={entry.coach}
-          slot={slot}
+          slot={scoredSlot}
           clubName={club.name}
           clubLogoUrl={club.logoUrl}
           clubAccent={club.accent}
@@ -123,19 +145,22 @@ export default async function TouchlineCoachProfilePage({
           locale={locale}
           forceNeonActive
           enableInteractiveNeon={false}
+          fixtureContext={currentContract?.currentFixture?.context ?? null}
         /></div>
       </section>
       <section className="coach-profile-grid">
-        <article>
+        <article className="coach-profile-game-card">
           <span>{pt ? "TOUCHLINE GAME" : "TOUCHLINE GAME"}</span>
-          <h2>{pt ? "Classificação e oferta" : "Classification and offer"}</h2>
-          <dl>
-            <div><dt>{pt ? "Tier" : "Tier"}</dt><dd>{touchlineCardTierName(offer.tierKey, locale)}</dd></div>
-            <div><dt>{pt ? "Preço oficial" : "Official price"}</dt><dd>{offer.displayPrice}</dd></div>
-            <div><dt>{pt ? "Motivo" : "Reason"}</dt><dd>{coachReason(classification.classificationReason, pt)}</dd></div>
-            <div><dt>{pt ? "Temporada" : "Season"}</dt><dd>{offer.seasonId}</dd></div>
-          </dl>
-          <p>{pt ? "O tier fica fixo durante a temporada e só é revisto no próximo reset sazonal." : "The tier stays fixed through the season and is reviewed only at the next seasonal reset."}</p>
+          <h2>{pt ? "Contrato e pontuação" : "Contract and scoring"}</h2>
+          <div className="coach-profile-offer-grid">
+            <div><Gem aria-hidden="true" /><span><small>Tier</small><strong>{touchlineCardTierName(offer.tierKey, locale)}</strong></span></div>
+            <div><WalletCards aria-hidden="true" /><span><small>{pt ? "Preço oficial" : "Official price"}</small><strong>{offer.displayPrice}</strong></span></div>
+            <div><ShieldCheck aria-hidden="true" /><span><small>{pt ? "Temporada" : "Season"}</small><strong>{offer.seasonId}</strong></span></div>
+            <div><BadgeCheck aria-hidden="true" /><span><small>{pt ? "Contratos preservados" : "Preserved contracts"}</small><strong>{coachContracts.length}</strong></span></div>
+          </div>
+          <TouchlineCoachPerformance contract={displayedContract} contractHistory={coachContracts} locale={locale} showHistory />
+          <p>{pt ? "Dados de jogo TouchLine: contrato, pontos e histórico pertencem à conta autenticada. Nenhum resultado real de futebol é alterado." : "TouchLine game data: contract, points and history belong to the authenticated account. No real-football result is changed."}</p>
+          <p>{pt ? `Classificação: ${coachReason(classification.classificationReason, pt)}. O tier fica fixo durante a temporada.` : `Classification: ${coachReason(classification.classificationReason, pt)}. The tier stays fixed through the season.`}</p>
         </article>
         <article>
           <span>{pt ? "HISTÓRICO REAL" : "REAL FOOTBALL HISTORY"}</span>
@@ -161,12 +186,19 @@ export default async function TouchlineCoachProfilePage({
         .coach-profile-copy dl,.coach-profile-grid dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:30px 0 0; }
         .coach-profile-grid { margin-top:clamp(30px,6vw,72px); align-items:stretch; }
         .coach-profile-grid article { border:1px solid rgba(181,255,75,.18); border-radius:24px; padding:clamp(20px,3vw,34px); background:rgba(3,15,12,.72); }
+        .coach-profile-game-card { display:grid; align-content:start; gap:18px; }
         .coach-profile-grid h2 { margin:8px 0 4px; font-size:clamp(23px,3vw,36px); letter-spacing:-.04em; }
         .coach-profile-grid p { color:rgba(239,255,213,.7); font-size:14px; line-height:1.55; }
         .coach-profile-grid dl { grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:20px; }
         .coach-profile-page dt { color:rgba(239,255,213,.56); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
         .coach-profile-page dd { margin:5px 0 0; font-size:14px; font-weight:800; }
         .coach-profile-card { width:min(100%,410px); justify-self:center; }
+        .coach-profile-offer-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+        .coach-profile-offer-grid > div { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:10px; border:1px solid rgba(181,255,75,.13); border-radius:14px; padding:12px; background:rgba(0,0,0,.2); }
+        .coach-profile-offer-grid svg { width:21px; height:21px; color:#b5ff4b; }
+        .coach-profile-offer-grid span,.coach-profile-offer-grid small,.coach-profile-offer-grid strong { display:block; }
+        .coach-profile-offer-grid small { color:rgba(239,255,213,.55); font-size:9px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+        .coach-profile-offer-grid strong { margin-top:3px; color:white; font-size:13px; }
         @media (max-width:760px) { .coach-profile-hero,.coach-profile-grid { grid-template-columns:1fr; } .coach-profile-card { order:-1; width:min(100%,330px); } .coach-profile-copy dl { grid-template-columns:1fr; } }
       `}</style>
     </main>

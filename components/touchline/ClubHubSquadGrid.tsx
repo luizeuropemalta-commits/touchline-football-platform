@@ -6,6 +6,7 @@ import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
+  findTouchLineClub,
   squadCardToExactPlayer,
   type ClubOwnerSquadCard,
 } from "@/lib/touchlineArena/demo-data";
@@ -17,6 +18,8 @@ import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-z
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
+import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 
 const INITIAL_CARD_COUNT = 8;
 const CARD_BATCH_SIZE = 8;
@@ -42,6 +45,7 @@ type ClubHubSquadGridProps = {
     currentClub: string;
   };
   openProfileLabel: string;
+  canEditCardEngine?: boolean;
 };
 
 /**
@@ -50,21 +54,28 @@ type ClubHubSquadGridProps = {
  * them. This preserves the canonical card component without hydrating 25–30
  * heavy products during the first mobile render.
  */
-export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel }: ClubHubSquadGridProps) {
+export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel, canEditCardEngine = false }: ClubHubSquadGridProps) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_CARD_COUNT);
-  // This grid is a TouchLine game-card surface. Real football players remain
-  // available to the ClubHub elsewhere, but only explicit PUBLISHED cards are
-  // mounted here; no grey/pending/fallback card is created for the rest.
-  const publishedCards = useMemo(() => cards.filter((card) => Boolean(card.editorialCard)), [cards]);
-  const visibleCards = useMemo(() => publishedCards.slice(0, visibleCount), [publishedCards, visibleCount]);
-  const hasMore = visibleCards.length < publishedCards.length;
+  // The footballer remains present on every Club Hub surface. Published
+  // profiles render in colour; incomplete editorial inputs use the same
+  // premium grayscale card instead of silently removing the real player.
+  const visibleCards = useMemo(() => cards.slice(0, visibleCount), [cards, visibleCount]);
+  const hasMore = visibleCards.length < cards.length;
   const pt = locale === "pt-BR";
 
   return (
     <>
       <div className="club-hub-card-grid" aria-live="polite">
         {visibleCards.map((card, index) => {
-          const exactPlayer = squadCardToExactPlayer(card);
+          const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
+            displayName: card.name,
+            shirtNumber: card.shirtNumber,
+            countryCode3: card.countryCode3,
+            position: card.position,
+            hasVerifiedMarketValue: Boolean(card.editorialCard),
+            hasClubAsset: Boolean(findTouchLineClub(card.clubName)?.logoUrl),
+          });
+          const exactPlayer = squadCardToExactPlayer({ ...card, cardReview });
           const tierKey = card.editorialCard?.tierKey ?? null;
           const tierAccent = tierKey
             ? touchlineCardTierPalette(tierKey).accent
@@ -97,9 +108,13 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   position: card.position,
                   nationality: card.countryCode3,
                   editorialCard: card.editorialCard,
+                  cardReview,
                   activeContractCard: null,
                   touchlinePoints: card.touchlinePoints,
                   profileHref,
+                  cardEngineHref: canEditCardEngine
+                    ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+                    : null,
                 })}
                 expandedContent={(
                   <TouchlineEliteExactCard
@@ -137,10 +152,10 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
       </div>
 
       <div className="club-hub-progressive-controls">
-        <span>{pt ? `${visibleCards.length} de ${publishedCards.length} jogadores exibidos` : `${visibleCards.length} of ${publishedCards.length} players shown`}</span>
+        <span>{pt ? `${visibleCards.length} de ${cards.length} jogadores exibidos` : `${visibleCards.length} of ${cards.length} players shown`}</span>
         {hasMore ? (
-          <button type="button" onClick={() => setVisibleCount((current) => Math.min(publishedCards.length, current + CARD_BATCH_SIZE))}>
-            {pt ? `Ver mais ${Math.min(CARD_BATCH_SIZE, publishedCards.length - visibleCards.length)}` : `View ${Math.min(CARD_BATCH_SIZE, publishedCards.length - visibleCards.length)} more`}
+          <button type="button" onClick={() => setVisibleCount((current) => Math.min(cards.length, current + CARD_BATCH_SIZE))}>
+            {pt ? `Ver mais ${Math.min(CARD_BATCH_SIZE, cards.length - visibleCards.length)}` : `View ${Math.min(CARD_BATCH_SIZE, cards.length - visibleCards.length)} more`}
           </button>
         ) : null}
       </div>

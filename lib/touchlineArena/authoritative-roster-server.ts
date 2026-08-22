@@ -21,11 +21,15 @@ export type AuthoritativeRosterRows = {
   players: DatabaseRecord[];
   clubs: DatabaseRecord[];
   squadMembers: DatabaseRecord[];
+  playerSeasonStatistics?: DatabaseRecord[];
+  playerFixtureStatistics?: DatabaseRecord[];
 };
 
 export type AuthoritativeRosterSnapshot = {
   source: "supabase";
+  ownedContractCount: number;
   activeContractCount: number;
+  representedClubCount: number;
   inventoryIds: string[];
   cards: ClubOwnerSquadCard[];
 };
@@ -86,10 +90,13 @@ function countryCodeForPlayer(player: DatabaseRecord) {
 function touchlinePointsFor(
   contract: DatabaseRecord,
   inventory: DatabaseRecord,
+  seasonStatistic?: DatabaseRecord | null,
 ) {
+  const summary = asRecord(seasonStatistic?.summary_payload);
   const contractMetadata = asRecord(contract.metadata);
   const inventoryMetadata = asRecord(inventory.metadata);
   const candidates = [
+    summary?.touchlinePoints,
     contractMetadata?.touchlinePoints,
     contractMetadata?.touchline_points,
     inventoryMetadata?.touchlinePoints,
@@ -100,6 +107,40 @@ function touchlinePointsFor(
     if (points !== null) return points;
   }
   return 0;
+}
+
+function verifiedSeasonStats(row?: DatabaseRecord | null) {
+  const summary = asRecord(row?.summary_payload);
+  if (!summary) return undefined;
+  const yellow = asFiniteNumber(summary.yellowCards);
+  const red = asFiniteNumber(summary.redCards);
+  const entries = [
+    ["goals", asFiniteNumber(summary.goals)],
+    ["assists", asFiniteNumber(summary.assists)],
+    ["cards", yellow === null || red === null ? null : yellow + red],
+  ].filter((entry): entry is [string, number] => typeof entry[1] === "number");
+  return entries.length ? Object.fromEntries(entries) : undefined;
+}
+
+function verifiedMatchStats(row?: DatabaseRecord | null) {
+  const statistics = asRecord(row?.statistics_payload);
+  if (!statistics) return undefined;
+  const value = (...keys: string[]) => {
+    for (const key of keys) {
+      const numeric = asFiniteNumber(statistics[key]);
+      if (numeric !== null) return numeric;
+    }
+    return null;
+  };
+  const yellow = value("yellow-cards", "yellowcards");
+  const red = value("red-cards", "redcards");
+  const entries = [
+    ["goals", value("goals")],
+    ["assists", value("assists")],
+    ["cleanSheets", value("clean-sheets", "cleansheets")],
+    ["cards", yellow === null || red === null ? null : yellow + red],
+  ].filter((entry): entry is [string, number] => typeof entry[1] === "number");
+  return entries.length ? Object.fromEntries(entries) : undefined;
 }
 
 function preferredSquadMember(
@@ -157,6 +198,16 @@ export function mapAuthoritativeRosterRows(
 
   const cards: ClubOwnerSquadCard[] = [];
   const inventoryIds: string[] = [];
+  const representedClubIds = new Set<string>();
+  const seasonStatisticByPlayerId = new Map((rows.playerSeasonStatistics ?? []).flatMap((row) => {
+    const playerId = asUuid(row.football_player_id);
+    return playerId ? [[playerId, row] as const] : [];
+  }));
+  const fixtureStatisticByPlayerId = new Map<string, DatabaseRecord>();
+  for (const row of rows.playerFixtureStatistics ?? []) {
+    const playerId = asUuid(row.football_player_id);
+    if (playerId && !fixtureStatisticByPlayerId.has(playerId)) fixtureStatisticByPlayerId.set(playerId, row);
+  }
 
   for (const contract of rows.contracts) {
     if (asString(contract.status) !== "active") {
@@ -171,7 +222,9 @@ export function mapAuthoritativeRosterRows(
       return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
     }
 
-    const clubId = asUuid(inventory.club_id) ?? asUuid(player.current_club_id);
+    const inventoryClubId = asUuid(inventory.club_id);
+    const clubId = inventoryClubId ?? asUuid(player.current_club_id);
+    if (inventoryClubId) representedClubIds.add(inventoryClubId);
     const club = clubId ? clubsById.get(clubId) : null;
     const squadMember = preferredSquadMember(rows.squadMembers, playerId, clubId);
     const name = asString(player.display_name)
@@ -191,6 +244,8 @@ export function mapAuthoritativeRosterRows(
     // Arena, squad selection or other game consumers.
     if (!editorialCard) continue;
 
+    const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId));
+    const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId));
     cards.push({
       id: playerId,
       canonicalPlayerId: playerId,
@@ -209,7 +264,10 @@ export function mapAuthoritativeRosterRows(
       marketValueSource: "unavailable",
       cardTier: editorialCard.tierKey,
       inventoryId,
-      touchlinePoints: touchlinePointsFor(contract, inventory),
+      touchlinePoints: touchlinePointsFor(contract, inventory, seasonStatisticByPlayerId.get(playerId)),
+      matchTouchlinePoints: asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.touchline_points),
+      ...(seasonStats ? { seasonStats } : {}),
+      ...(matchStats ? { matchStats } : {}),
       editorialCard,
     });
     inventoryIds.push(inventoryId);
@@ -223,7 +281,9 @@ export function mapAuthoritativeRosterRows(
     ok: true,
     snapshot: {
       source: "supabase",
+      ownedContractCount: rows.contracts.length,
       activeContractCount: cards.length,
+      representedClubCount: representedClubIds.size,
       inventoryIds,
       cards,
     },
@@ -268,7 +328,9 @@ export async function readAuthoritativeTouchlineRoster(
       ok: true,
       snapshot: {
         source: "supabase",
+        ownedContractCount: 0,
         activeContractCount: 0,
+        representedClubCount: 0,
         inventoryIds: [],
         cards: [],
       },
@@ -322,7 +384,7 @@ export async function readAuthoritativeTouchlineRoster(
     ...players.map((player) => asUuid(player.current_club_id)),
   ].filter((id): id is string => Boolean(id)))];
 
-  const [clubsResponse, squadResponse] = await Promise.all([
+  const [clubsResponse, squadResponse, currentSeasonResponse] = await Promise.all([
     clubIds.length
       ? admin
         .from("football_clubs")
@@ -335,6 +397,13 @@ export async function readAuthoritativeTouchlineRoster(
       .in("player_id", playerIds)
       .eq("status", "active")
       .order("source_updated_at", { ascending: false }),
+    admin
+      .from("football_seasons")
+      .select("id,football_competitions!inner(provider_competition_id)")
+      .eq("provider", "sportmonks")
+      .eq("is_current", true)
+      .eq("football_competitions.provider_competition_id", "8")
+      .maybeSingle(),
   ]);
   if (clubsResponse.error) {
     return { ok: false, error: "TL_ROSTER_CLUBS_UNAVAILABLE" };
@@ -349,6 +418,23 @@ export async function readAuthoritativeTouchlineRoster(
     return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
   }
 
+  const currentSeasonId = asUuid(currentSeasonResponse.data?.id);
+  const [seasonStatisticsResponse, fixtureStatisticsResponse] = await Promise.all([
+    currentSeasonId
+      ? admin.from("football_player_season_statistics")
+        .select("football_player_id,summary_payload,source_synced_at")
+        .eq("season_id", currentSeasonId)
+        .in("football_player_id", playerIds)
+      : Promise.resolve({ data: [], error: null }),
+    admin.from("football_player_fixture_statistics")
+      .select("football_player_id,touchline_points,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
+      .in("football_player_id", playerIds)
+      .order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
+  ]);
+  if (seasonStatisticsResponse.error || fixtureStatisticsResponse.error) {
+    return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
+  }
+
   const { loadTouchlinePublishedCardPresentations } = await import("./card-publication-read-model.ts");
   const publishedCards = await loadTouchlinePublishedCardPresentations({
     playerIds,
@@ -360,6 +446,8 @@ export async function readAuthoritativeTouchlineRoster(
     players,
     clubs,
     squadMembers,
+    playerSeasonStatistics: dataRows(seasonStatisticsResponse.data) ?? [],
+    playerFixtureStatistics: dataRows(fixtureStatisticsResponse.data) ?? [],
   }, publishedCards);
 }
 

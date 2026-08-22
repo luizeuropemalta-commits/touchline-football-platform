@@ -47,7 +47,7 @@
 
 .progress {
   display: grid;
-  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  grid-template-columns: repeat(6, minmax(110px, 1fr));
   gap: 8px;
   margin: 0;
   padding: 4px 0 8px;
@@ -133,6 +133,7 @@
 }
 
 .pitch {
+  position: relative;
   min-height: 548px;
   border: 1px solid rgba(201, 255, 182, .24);
   border-radius: 20px;
@@ -140,13 +141,37 @@
   box-shadow: inset 0 0 70px rgba(0, 0, 0, .28), 0 18px 42px rgba(0, 0, 0, .28);
 }
 
+.formationStatus {
+  position: absolute;
+  z-index: 8;
+  top: 12px;
+  left: 50%;
+  display: grid;
+  gap: 2px;
+  max-width: min(72%, 560px);
+  padding: 8px 14px;
+  border: 1px solid rgba(170, 255, 62, .32);
+  border-radius: 999px;
+  transform: translateX(-50%);
+  color: #efffe6;
+  background: rgba(2, 12, 7, .9);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+  text-align: center;
+  pointer-events: none;
+}
+
+.formationStatus strong { font-size: 10px; letter-spacing: .03em; }
+.formationStatus span { color: #b8c7bd; font-size: 9px; }
+.formationStatus.incompleteFormation { border-color: rgba(255, 195, 73, .72); }
+.formationStatus.incompleteFormation strong { color: #ffd86f; }
+.formationStatus.readyFormation strong { color: #baff76; }
+
 .playerSlot,
 .emptySlot {
   position: absolute;
   z-index: 5;
   transform: translate(-50%, -50%);
 }
-.playerSlot:disabled,
 .emptySlot:disabled { cursor: not-allowed; opacity: .46; }
 
 .playerSlot {
@@ -161,8 +186,8 @@
   cursor: pointer;
 }
 
-.playerSlot > span { display: block; width: 58px; aspect-ratio: 430 / 691; }
-.playerSlot > span > * { width: 100%; }
+.playerCardZoom { display: block; width: 58px; aspect-ratio: 430 / 691; }
+.playerCardZoom > * { width: 100%; }
 .playerSlot strong {
   max-width: 82px;
   overflow: hidden;
@@ -174,6 +199,24 @@
   font-size: 8px;
   text-transform: uppercase;
 }
+
+.changePlayer {
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(170, 255, 62, .46);
+  border-radius: 999px;
+  color: #eaffd0;
+  background: rgba(2, 12, 7, .92);
+  font: inherit;
+  font-size: 7px;
+  font-weight: 950;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.changePlayer:hover,
+.changePlayer:focus-visible { border-color: #aaff3e; outline: 2px solid rgba(170, 255, 62, .28); }
+.changePlayer:disabled { cursor: not-allowed; opacity: .46; }
 
 .emptySlot {
   display: grid;
@@ -194,6 +237,89 @@
 .emptySlot span { font-size: 7px; font-weight: 900; text-transform: uppercase; }
 .emptySlot.selected,
 .emptySlot:focus-visible { border-color: #aaff3e; outline: 2px solid rgba(170, 255, 62, .28); background: rgba(170, 255, 62, .14); }
+
+.slotPicker {
+  position: absolute;
+  z-index: 20;
+  inset: 58px 7% 26px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(170, 255, 62, .56);
+  border-radius: 18px;
+  color: #f5fff1;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(170, 255, 62, .12), transparent 42%),
+    rgba(2, 12, 8, .97);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .68), inset 0 1px rgba(255, 255, 255, .06);
+  backdrop-filter: blur(12px);
+}
+
+.slotPicker > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slotPicker > header > div { display: grid; gap: 3px; }
+.slotPicker > header span { color: #aaff3e; font-size: 8px; font-weight: 950; letter-spacing: .15em; }
+.slotPicker > header strong { font-size: 17px; }
+.slotPicker > header > button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 50%;
+  color: #efffe8;
+  background: rgba(255, 255, 255, .05);
+  cursor: pointer;
+}
+.slotPicker > header > button:hover,
+.slotPicker > header > button:focus-visible { border-color: #aaff3e; outline: 2px solid rgba(170, 255, 62, .24); }
+.slotPicker > header svg { width: 17px; }
+.slotPicker > p { margin: 0; color: #a9b8af; font-size: 10px; }
+
+.slotPickerCandidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+  overflow: auto;
+  padding: 2px;
+  scrollbar-color: rgba(170, 255, 62, .45) transparent;
+}
+
+.slotPickerCandidates > button {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-height: 76px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, .11);
+  border-radius: 12px;
+  color: #f4fff0;
+  background: rgba(255, 255, 255, .035);
+  text-align: left;
+  cursor: pointer;
+}
+
+.slotPickerCandidates > button:hover,
+.slotPickerCandidates > button:focus-visible {
+  border-color: #aaff3e;
+  outline: 2px solid rgba(170, 255, 62, .22);
+  background: rgba(170, 255, 62, .09);
+}
+
+.slotPickerCandidates > button > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.slotPickerCandidates b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.slotPickerCandidates small { color: #9eaca3; font-size: 8px; text-transform: uppercase; }
+.slotPickerCandidates > p { margin: auto; color: #c1cec5; font-size: 11px; text-align: center; }
+.slotPickerCard { display: block; width: 42px; aspect-ratio: 430 / 691; overflow: hidden; }
+.slotPickerCard > * { width: 100%; }
 
 .technicalArea {
   position: absolute;
@@ -292,12 +418,17 @@
   .hero { align-items: start; }
   .hero h1 { font-size: 30px; }
   .hero p { max-width: 280px; }
-  .progress { grid-template-columns: repeat(7, 132px); margin-inline: -13px; padding-inline: 13px; }
+  .progress { grid-template-columns: repeat(6, 132px); margin-inline: -13px; padding-inline: 13px; }
   .formationStep { grid-template-columns: 1fr; }
   .formationStep > div:last-child { width: 100%; }
   .formationStep button { flex: 1; min-width: 0; }
   .pitchColumn { padding-right: 0; padding-bottom: 172px; }
   .pitch { min-height: 330px; }
+  .formationStatus { top: 8px; max-width: 84%; padding: 6px 10px; }
+  .formationStatus span { display: none; }
+  .slotPicker { inset: 42px 4% 14px; padding: 11px; }
+  .slotPicker > header strong { font-size: 14px; }
+  .slotPickerCandidates { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
   .technicalArea { inset: auto 0 0 0; grid-template-columns: 72px minmax(0, 1fr) minmax(150px, 1fr); grid-template-rows: auto 1fr; width: auto; height: 154px; align-items: center; justify-items: stretch; padding: 12px; }
   .technicalArea > span { grid-column: 1 / -1; }
   .coachCard { width: 70px; min-height: 104px; }
@@ -311,13 +442,17 @@
   .shell { gap: 10px; padding: 10px; }
   .hero h1 { font-size: 28px; }
   .hero p { display: none; }
-  .progress { grid-template-columns: repeat(7, 124px); padding-bottom: 3px; }
+  .progress { grid-template-columns: repeat(6, 124px); padding-bottom: 3px; }
   .formationStep { grid-template-columns: minmax(0, 1fr) auto; padding: 10px; }
   .formationStep > div:first-child small { display: none; }
   .progress li { min-height: 44px; }
   .workspace { grid-template-columns: 1fr; }
   .pitchColumn { padding-right: 132px; padding-bottom: 0; }
   .pitch { min-height: 330px; }
+  .slotPicker { inset: 40px 3% 10px; grid-template-rows: auto minmax(0, 1fr); gap: 7px; padding: 9px; }
+  .slotPicker > p { display: none; }
+  .slotPickerCandidates { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+  .slotPickerCandidates > button { min-height: 66px; }
   .technicalArea { inset: 0 0 0 auto; grid-template: auto auto auto 1fr / 1fr; width: 118px; height: auto; padding: 10px; }
   .coachCard { width: 88px; min-height: 142px; }
   .coachCard > * { width: 84px; }

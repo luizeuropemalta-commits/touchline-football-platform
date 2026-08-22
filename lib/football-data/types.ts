@@ -57,6 +57,12 @@ export type TouchlinePlayer = {
   age?: number;
   nationality?: string;
   countryId?: string;
+  /** Provider broad parent role (Goalkeeper, Defender, Midfielder, Attacker). */
+  broadPosition?: string;
+  broadPositionId?: string;
+  /** Provider-authored exact role used by TouchLine position quotas. */
+  detailedPosition?: string;
+  detailedPositionId?: string;
   position?: string;
   positionId?: string;
   height?: string;
@@ -131,10 +137,18 @@ export type TouchlineFixture = {
   status?: string;
   competitionId?: string;
   seasonId?: string;
+  roundId?: string;
+  roundName?: string;
   homeTeam?: TouchlineTeam;
   awayTeam?: TouchlineTeam;
   homeScore?: number;
   awayScore?: number;
+  providerStateId?: string;
+  liveMinute?: number;
+  liveSecond?: number;
+  livePeriod?: string;
+  eventsCount?: number;
+  providerUpdatedAt?: string;
   source: FootballDataSourceRef;
 };
 
@@ -170,6 +184,10 @@ export type TouchlineStandingRow = {
 export type TouchlineSquadMember = {
   player: TouchlinePlayer;
   jerseyNumber?: number;
+  broadPosition?: string;
+  broadPositionId?: string;
+  detailedPosition?: string;
+  detailedPositionId?: string;
   position?: string;
   raw?: unknown;
 };
@@ -254,6 +272,11 @@ export type TouchlineFantasyEvent = {
   type?: string;
   minute?: number;
   extraMinute?: number;
+  sortOrder?: number;
+  result?: string;
+  info?: string;
+  addition?: string;
+  status?: "recorded" | "rescinded";
   fantasyPoints?: number;
   raw?: unknown;
 };
@@ -305,6 +328,18 @@ export type FixturesByDateParams = {
   timezone?: string;
 };
 
+/**
+ * A provider-scoped fixture window. `competitionId` is deliberately part of
+ * the request contract so callers never have to paginate the whole football
+ * calendar and filter a competition only after the response has been capped.
+ */
+export type FixturesBetweenParams = {
+  fromDate: string;
+  throughDate: string;
+  competitionId: string;
+  timezone?: string;
+};
+
 export type StandingsParams = {
   seasonId?: string;
   competitionId?: string;
@@ -332,7 +367,8 @@ export interface FootballDataProvider {
   getSeasonById(id: string): Promise<FootballDataResult<TouchlineSeason | null>>;
   getFixtureById(id: string): Promise<FootballDataResult<TouchlineFixture | null>>;
   getFixturesByDate(params: FixturesByDateParams): Promise<FootballDataResult<TouchlineFixture[]>>;
-  getLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
+  getFixturesBetween(params: FixturesBetweenParams): Promise<FootballDataResult<TouchlineFixture[]>>;
+  getLiveScores(params?: { competitionId?: string }): Promise<FootballDataResult<TouchlineFixture[]>>;
   getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
   getStandings(params: StandingsParams): Promise<FootballDataResult<TouchlineStandingRow[]>>;
   getTransfers(params: TransfersParams): Promise<FootballDataResult<TouchlineTransfer[]>>;

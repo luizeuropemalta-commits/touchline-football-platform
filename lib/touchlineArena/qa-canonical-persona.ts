@@ -6,6 +6,8 @@
  * before starting an authenticated QA journey.
  */
 export const TOUCHLINE_QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
+export const TOUCHLINE_QA_SUPABASE_ORIGIN =
+  `https://${TOUCHLINE_QA_PROJECT_REF}.supabase.co`;
 export const TOUCHLINE_QA_CANONICAL_EMAIL = "jl_nenelopes10@hotmail.com";
 export const TOUCHLINE_QA_CANONICAL_USER_ID = "072900f3-27fc-41a5-9881-6913a486754e";
 export const TOUCHLINE_QA_CANONICAL_ALIAS =
@@ -23,6 +25,7 @@ export type TouchlineQaPersonaEvidence = Readonly<{
 
 export type TouchlineQaPersonaFailure =
   | "qa_project_required"
+  | "qa_supabase_origin_required"
   | "qa_alias_required"
   | "canonical_qa_user_required"
   | "canonical_qa_email_required"
@@ -49,6 +52,33 @@ function origin(value: string) {
     return new URL(value).origin.toLowerCase();
   } catch {
     return "";
+  }
+}
+
+/**
+ * Protects server-only QA credentials from being sent to a lookalike origin.
+ * The base URL must be the exact canonical HTTPS origin, with no credentials,
+ * alternate port, path, query, fragment, or surrounding whitespace.
+ */
+export function assertTouchlineQaSupabaseOrigin(value: string) {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new TouchlineQaPersonaPreflightError("qa_supabase_origin_required");
+  }
+
+  if (
+    value !== value.trim() ||
+    parsed.origin !== TOUCHLINE_QA_SUPABASE_ORIGIN ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.pathname !== "/" ||
+    parsed.search !== "" ||
+    parsed.hash !== ""
+  ) {
+    throw new TouchlineQaPersonaPreflightError("qa_supabase_origin_required");
   }
 }
 

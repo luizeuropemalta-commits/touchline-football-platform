@@ -65,6 +65,9 @@ import {
 } from "@/components/touchline/social/TouchlineSocial";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isOwnerEmail } from "@/lib/admin/owner";
+import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import styles from "./player-profile.module.css";
 
 export const dynamic = "force-dynamic";
@@ -555,7 +558,10 @@ export default async function TouchLinePlayerProfilePage({
     loadTouchLineActiveRanking(),
     currentUserPromise,
   ]);
-  const navigationSurface = currentUser ? "authenticated" : "public";
+  const navigationSurface = resolveTouchlineGlobalNavigationSurface({
+    isAuthenticated: Boolean(currentUser),
+    isAdmin: Boolean(currentUser && isOwnerEmail(currentUser.email)),
+  });
   const publicProjection = officialLookup.providerPlayerId
     ? publicProjectionBatch.projections.find((projection) => projection.providerPlayerId === officialLookup.providerPlayerId)
     : undefined;
@@ -595,6 +601,7 @@ export default async function TouchLinePlayerProfilePage({
   });
   if (canonicalProviderPlayerId) exactPlayer.sportmonksPlayerId = canonicalProviderPlayerId;
   const canonicalPlayerId = canonicalIdentity ? publicProjection?.identity.value?.playerId : null;
+  exactPlayer.canonicalPlayerId = canonicalPlayerId;
   const publishedCards = canonicalPlayerId
     ? await loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
     : new Map();
@@ -605,11 +612,26 @@ export default async function TouchLinePlayerProfilePage({
   exactPlayer.marketValueState = "unavailable";
   exactPlayer.cardTier = editorialCard?.tierKey ?? null;
   exactPlayer.classificationState = "unavailable";
-  const competition = resolveTouchlineCardCompetition({
+  const rankingCompetition = resolveTouchlineCardCompetition({
     state: activeRanking,
     playerId: card.id,
     providerPlayerId: canonicalProviderPlayerId,
   });
+  const competition = {
+    ...rankingCompetition,
+    touchlinePoints: playerStatistics.currentSeason.summary.touchlinePoints
+      ?? rankingCompetition.touchlinePoints,
+  };
+  exactPlayer.fantasyPoints = competition.touchlinePoints;
+  exactPlayer.matchFantasyPoints = playerStatistics.currentOrSelectedFixture?.touchlinePoints ?? null;
+  exactPlayer.seasonStats = {
+    goals: playerStatistics.currentSeason.summary.goals,
+    assists: playerStatistics.currentSeason.summary.assists,
+    cards: playerStatistics.currentSeason.summary.yellowCards === null
+      || playerStatistics.currentSeason.summary.redCards === null
+      ? null
+      : playerStatistics.currentSeason.summary.yellowCards + playerStatistics.currentSeason.summary.redCards,
+  };
   const requestedPreviewTier = Array.isArray(query.previewTier) ? query.previewTier[0] : query.previewTier;
   // Preview tiers are available only for an explicit local-development demo.
   // A public numeric provider ID never accepts a visual tier from a
@@ -692,8 +714,12 @@ export default async function TouchLinePlayerProfilePage({
         position: displayPosition,
         nationality: displayNationality,
         editorialCard,
+        cardReview: exactPlayer.cardReview,
         touchlinePoints: competition.touchlinePoints,
         profileHref,
+        cardEngineHref: currentUser && isOwnerEmail(currentUser.email)
+          ? touchlineCardEnginePlayerHref(canonicalPlayerId, locale)
+          : null,
         eyebrow: isPortuguese ? "Perfil oficial do atleta" : "Official player profile",
         extraFields: [
           { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },

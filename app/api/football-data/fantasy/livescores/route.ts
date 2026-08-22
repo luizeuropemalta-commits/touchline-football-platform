@@ -48,8 +48,8 @@ export async function GET() {
   );
 
   // A fresh last-known-good live snapshot is the only source that may replace
-  // the weekly schedule. A stale snapshot must never make the normal match
-  // centre look degraded when a valid persisted schedule is available.
+  // the weekly schedule. A persisted schedule remains usable when the live
+  // writer is stale, but the response must state that degradation honestly.
   if (liveSnapshot?.fixtures.length && snapshotIsFresh) {
     return response(liveSnapshot.fixtures, {
       state: "persisted-live-snapshot",
@@ -70,7 +70,7 @@ export async function GET() {
       state: "partial-persisted-schedule",
       // Schedule rows do not yet carry a coherent shared run/version. Do not
       // fabricate a request-time freshness timestamp.
-      degraded: false,
+      degraded: true,
     });
   }
 

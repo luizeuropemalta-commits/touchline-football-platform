@@ -77,6 +77,13 @@ export function parseAuthoritativeRosterResponse(
     const points = typeof card?.touchlinePoints === "number" && Number.isFinite(card.touchlinePoints)
       ? card.touchlinePoints
       : null;
+    const matchPoints = card?.matchTouchlinePoints === null || card?.matchTouchlinePoints === undefined
+      ? null
+      : typeof card.matchTouchlinePoints === "number" && Number.isFinite(card.matchTouchlinePoints)
+        ? card.matchTouchlinePoints
+        : Number.NaN;
+    const seasonStats = record(card?.seasonStats);
+    const matchStats = record(card?.matchStats);
     const editorialCard = parseTouchlinePublicEditorialCardPresentation(card?.editorialCard);
 
     if (
@@ -95,6 +102,7 @@ export function parseAuthoritativeRosterResponse(
       || (!editorialCard && !priceAuthority)
       || !touchlineArenaTierForKey(tier)
       || points === null
+      || Number.isNaN(matchPoints)
     ) return { ok: false };
 
     inventoryIds.add(inventoryId);
@@ -116,6 +124,9 @@ export function parseAuthoritativeRosterResponse(
       canonicalPlayerId: id,
       editorialCard,
       touchlinePoints: points,
+      matchTouchlinePoints: matchPoints,
+      ...(seasonStats ? { seasonStats } : {}),
+      ...(matchStats ? { matchStats } : {}),
     });
   }
 

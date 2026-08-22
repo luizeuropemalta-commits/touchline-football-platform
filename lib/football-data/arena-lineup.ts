@@ -11,6 +11,8 @@ export type ArenaLineupPlayer = {
   role: ArenaLineupRole;
   asset?: string;
   card?: {
+    /** Canonical TouchLine UUID; provider ids must never substitute for it. */
+    canonicalPlayerId?: string | null;
     templateUrl: string;
     frameUrl?: string | null;
     playerName: string;
@@ -21,6 +23,8 @@ export type ArenaLineupPlayer = {
     countryCode3?: string | null;
     flagUrl?: string | null;
     fantasyPoints?: string | number | null;
+    /** Points earned in the latest reconciled fixture, separate from the season total. */
+    matchFantasyPoints?: string | number | null;
     marketValue?: string | null;
     marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
     /** Server-owned public value state. Never infer it from a display string. */
@@ -34,6 +38,8 @@ export type ArenaLineupPlayer = {
     /** Canonical public presentation published by the editorial card workflow. */
     editorialCard?: TouchlinePublicEditorialCardPresentation | null;
     inventoryId?: string | null;
+    /** Cumulative verified season statistics used by the shared card renderer. */
+    seasonStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards", string | number | null>>;
     matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards", string | number | null>>;
   };
   x: number;
@@ -107,13 +113,13 @@ export function inferArenaRole(position?: string): ArenaLineupRole {
 
   if (includesAny(normalized, ["goalkeeper", "keeper", "goleiro"]) || tokens.includes("gk") || compact === "goalie") return "goalkeeper";
   if (
-    includesAny(normalized, ["defender", "centre back", "center back", "full back", "wing back", "zagueiro", "lateral"]) ||
+    includesAny(normalized, ["defender", "centre back", "center back", "full back", "wing back", "left back", "right back", "zagueiro", "lateral"]) ||
     ["cb", "lb", "rb", "lcb", "rcb", "lwb", "rwb", "df"].some((term) => tokens.includes(term) || compact === term)
   ) {
     return "defender";
   }
   if (
-    includesAny(normalized, ["forward", "attacker", "striker", "winger", "ponta", "atacante", "centroavante"]) ||
+    includesAny(normalized, ["forward", "attacker", "striker", "winger", "left wing", "right wing", "ponta", "atacante", "centroavante"]) ||
     ["st", "cf", "fw", "att", "lw", "rw", "lf", "rf"].some((term) => tokens.includes(term) || compact === term)
   ) {
     return "forward";

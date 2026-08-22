@@ -6,7 +6,7 @@ import { useRef, useState, type CSSProperties } from "react";
 import {
   ChevronRight,
   ExternalLink,
-  Share2,
+  PencilLine,
   ShieldCheck,
   Trophy,
   UserRound,
@@ -35,6 +35,7 @@ import {
   type TouchLineClubOwnerStanding,
 } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published-top-eleven";
 import type { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import styles from "./touchline-tables.module.css";
@@ -42,15 +43,18 @@ import styles from "./touchline-tables.module.css";
 type RankingsCopy = ReturnType<typeof getTouchLineRankingsCopy>;
 
 type TouchLineTablesClientProps = {
+  canEditCardEngine: boolean;
   cardClubOwnerRank: TouchLineClubOwnerStanding[];
   cardPlayerRank: ClubOwnerSquadCard[];
   copy: RankingsCopy;
+  currentProviderRoundName: string | null;
   locale: TouchLineLocale;
   navigationSurface: TouchlineGlobalNavigationSurface;
   rankMode: string;
   publishedTopEleven: TouchlinePublishedTopEleven | null;
   rosterCards: ClubOwnerSquadCard[];
   totalCards: number;
+  totalClubOwners: number;
   totalOwnerValue: string;
   touchLineEnglandTable: TouchLineClubOwnerStanding[];
 };
@@ -122,15 +126,18 @@ function CompactPlayerCard({
 }
 
 export default function TouchLineTablesClient({
+  canEditCardEngine,
   cardClubOwnerRank,
   cardPlayerRank,
   copy,
+  currentProviderRoundName,
   locale,
   navigationSurface,
   rankMode,
   publishedTopEleven,
   rosterCards,
   totalCards,
+  totalClubOwners,
   totalOwnerValue,
   touchLineEnglandTable,
 }: TouchLineTablesClientProps) {
@@ -155,6 +162,9 @@ export default function TouchLineTablesClient({
         playerName: zoomedCard.name,
       })
     : null;
+  const zoomedCardEngineHref = zoomedCard && canEditCardEngine
+    ? touchlineCardEnginePlayerHref(zoomedCard.canonicalPlayerId, locale)
+    : null;
 
   const { dialogProps: zoomDialogProps } = useTouchlineDialog<HTMLDivElement>({
     open: Boolean(zoomedCard),
@@ -175,7 +185,9 @@ export default function TouchLineTablesClient({
         />
         <span className={styles.status}>
           <ShieldCheck aria-hidden="true" size={18} />
-          {isPortuguese ? "Competição TouchLine" : "TouchLine competition"}
+          {currentProviderRoundName
+            ? `${isPortuguese ? "Rodada" : "Matchweek"} ${currentProviderRoundName}`
+            : isPortuguese ? "Rodada aguardando provider" : "Matchweek awaiting provider"}
         </span>
       </header>
 
@@ -186,7 +198,7 @@ export default function TouchLineTablesClient({
           <span>{copy.tablesDescription}</span>
         </div>
         <dl className={styles.summary}>
-          <div><dt>{copy.clubOwners}</dt><dd>{cardClubOwnerRank.length}</dd></div>
+          <div><dt>{copy.clubOwners}</dt><dd>{totalClubOwners}</dd></div>
           <div><dt>{copy.cardsTracked}</dt><dd>{totalCards}</dd></div>
           <div><dt>{copy.rankMode}</dt><dd>{rankMode}</dd></div>
           <div><dt>{copy.totalValue}</dt><dd>{totalOwnerValue}</dd></div>
@@ -363,14 +375,16 @@ export default function TouchLineTablesClient({
                 )
               ) : null}
               <div className={styles.zoomActions}>
-                <button type="button">
-                  <Share2 aria-hidden="true" size={17} />
-                  {isPortuguese ? "Compartilhar" : "Share"}
-                </button>
                 <Link href={touchlinePlayerProfileHref(squadCardToExactPlayer(zoomedCard), locale)}>
                   <UserRound aria-hidden="true" size={17} />
                   {isPortuguese ? "Perfil" : "Profile"}
                 </Link>
+                {zoomedCardEngineHref ? (
+                  <Link className={styles.zoomCardEngineAction} href={zoomedCardEngineHref}>
+                    <PencilLine aria-hidden="true" size={17} />
+                    {isPortuguese ? "Editar no Card Engine" : "Edit in Card Engine"}
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

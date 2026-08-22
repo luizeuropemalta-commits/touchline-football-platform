@@ -89,6 +89,11 @@ async function runFootballDataSync(request: NextRequest) {
 
     return NextResponse.json({
       ...result,
+      // Every successful scope shares one explicit response contract. In
+      // particular, the QA roster reconciler returns a status field rather
+      // than an `ok` field, so the owner control must never present a
+      // committed QA run as a client-side failure.
+      ok: true,
       mode: auth.mode,
       syncedAt: new Date().toISOString(),
       note: scope === "capabilities"
@@ -99,7 +104,7 @@ async function runFootballDataSync(request: NextRequest) {
           ? "QA-only country data was reconciled from the complete provider scope after a reversible 588-player backup."
         : scope === "qa_twenty_club_roster_sync"
           ? "QA-only current rosters were reconciled across all twenty clubs after a reversible provider snapshot; players and card history were not deleted."
-        : "TouchLine Data feeds the normalized TouchLine database. Frontend modules should read from /api/football-data/foundation.",
+        : "TouchLine Data feeds the normalized TouchLine database. Public modules read only dedicated TouchLine allowlisted DTOs.",
     });
   } catch (error) {
     return NextResponse.json(

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { BadgeCheck, ClipboardCheck, FileLock2, Layers3 } from "lucide-react";
 
 import { ManualCardEditorialBulkPreview, ManualCardEditorialEditor, ManualCardEditorialHistory } from "@/components/admin-manual-card-editorial-actions";
+import { CardEngineInbox, type CardEngineInboxRow } from "@/components/card-engine-inbox";
 import { GamePanel, LivePill, StatTile } from "@/components/arena-admin-ui";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,6 +11,11 @@ import { createClient } from "@/lib/supabase/server";
 import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
 import { findTouchlineNewPlayerCardAlerts } from "@/lib/touchlineArena/new-player-card-alerts";
 import { hasTouchlineCardPublicationRevertSnapshot } from "@/lib/touchlineArena/card-publication-revert";
+import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
+import { loadTouchlineCardEditorialOverrides } from "@/lib/touchlineArena/card-editorial-overrides";
+import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
+import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
+import { touchlineMarketPositionBucket } from "@/lib/touchlineArena/position-eligibility";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +26,8 @@ type EditorialPlayerRow = {
   display_name: string | null;
   name: string | null;
   position: string | null;
+  nationality: string | null;
+  country_id: string | null;
   source_updated_at: string | null;
   football_clubs: { name: string | null } | { name: string | null }[] | null;
 };
@@ -29,6 +37,8 @@ type EditorialMembershipRow = {
   player_id: string;
   club_id: string;
   competition_id: string;
+  jersey_number: number | null;
+  position: string | null;
 };
 type EditorialPublicationRow = {
   player_id: string;
@@ -64,7 +74,7 @@ export default async function ManualCardEditorialPage({
 
   const { data: players, error: playerError } = await admin
     .from("football_players")
-    .select("id,current_club_id,provider_player_id,display_name,name,position,source_updated_at,football_clubs:current_club_id(name)")
+    .select("id,current_club_id,provider_player_id,display_name,name,position,nationality,country_id,source_updated_at,football_clubs:current_club_id(name)")
     .not("current_club_id", "is", null)
     .order("display_name", { ascending: true })
     .limit(750)
@@ -102,7 +112,7 @@ export default async function ManualCardEditorialPage({
   const { data: activeMembershipRows } = !migrationPending && canonicalPlayerIds.length
     ? await admin
       .from("football_squad_members")
-      .select("player_id,club_id,competition_id")
+      .select("player_id,club_id,competition_id,jersey_number,position")
       .eq("provider", "sportmonks")
       .eq("status", "active")
       .in("player_id", canonicalPlayerIds)
@@ -113,6 +123,52 @@ export default async function ManualCardEditorialPage({
     membershipsByPlayerId.set(membership.player_id, [...(membershipsByPlayerId.get(membership.player_id) ?? []), membership]);
   }
   const publicationsByPlayerId = new Map(publicationRows.map((profile) => [profile.player_id, profile.publication_status]));
+  const { data: marketValueRows } = !migrationPending && canonicalPlayerIds.length
+    ? await admin.from("football_player_market_values").select("player_id,status,confidence").in("player_id", canonicalPlayerIds)
+    : { data: [] as Array<{ player_id: string; status: string; confidence: string }> };
+  const marketValueByPlayerId = new Map((marketValueRows ?? []).map((row) => [row.player_id, row]));
+  const editorialOverrides = await loadTouchlineCardEditorialOverrides(canonicalPlayerIds, admin);
+  const cardEngineRows: CardEngineInboxRow[] = canonicalPlayers.flatMap((player) => {
+    const membership = (membershipsByPlayerId.get(player.id) ?? []).find((entry) => entry.club_id === player.current_club_id) ?? null;
+    if (!membership) return [];
+    const override = editorialOverrides.get(player.id.toLowerCase());
+    const provider = {
+      displayName: player.display_name?.trim() || player.name?.trim() || null,
+      shirtNumber: membership.jersey_number,
+      countryCode3: touchlineCountryCode3FromName(player.nationality) ?? null,
+      position: membership.position || player.position,
+    };
+    const effective = {
+      displayName: override?.displayName ?? provider.displayName,
+      shirtNumber: override?.shirtNumber ?? provider.shirtNumber,
+      countryCode3: override?.countryCode3 ?? provider.countryCode3,
+      position: override?.position ?? provider.position,
+    };
+    const marketValue = marketValueByPlayerId.get(player.id);
+    const positionConflict = override?.position && provider.position
+      && touchlineMarketPositionBucket(override.position) !== touchlineMarketPositionBucket(provider.position)
+      ? {
+        providerPosition: provider.position,
+        touchlinePosition: override.position,
+        resolution: "TOUCHLINE_AUTHORITY" as const,
+      }
+      : null;
+    const cardReview = evaluateTouchlineCardCompleteness({
+      ...effective,
+      hasVerifiedMarketValue: marketValue?.status === "verified" && marketValue.confidence === "verified",
+      hasClubAsset: Boolean(findTouchLineClub(clubName(player))?.logoUrl),
+    });
+    return cardReview.state === "REVIEW_REQUIRED" || positionConflict ? [{
+      playerId: player.id,
+      playerName: effective.displayName ?? "Canonical player",
+      clubName: clubName(player),
+      provider,
+      override: { displayName: override?.displayName ?? null, shirtNumber: override?.shirtNumber ?? null, countryCode3: override?.countryCode3 ?? null, position: override?.position ?? null },
+      effective,
+      cardReview,
+      positionConflict,
+    }] : [];
+  });
   const newPlayerAlerts = migrationPending || !premierCompetitionId ? [] : findTouchlineNewPlayerCardAlerts({
     competitionId: premierCompetitionId,
     candidates: canonicalPlayers.map((player) => ({
@@ -157,7 +213,7 @@ export default async function ManualCardEditorialPage({
       <StatTile icon={ClipboardCheck} label={locale === "pt-BR" ? "Prontos para revisão" : "Ready to review"} value={String(review)} delta={locale === "pt-BR" ? "ocultos nas superfícies de jogo" : "hidden from game surfaces"} accent="gold" />
       <StatTile icon={FileLock2} label={locale === "pt-BR" ? "Valor necessário" : "Value required"} value={String(newPlayerAlerts.length)} delta={locale === "pt-BR" ? "novos jogadores canônicos" : "new canonical players"} accent="rose" />
     </div>
-    {migrationPending ? <GamePanel className="p-6"><LivePill>{locale === "pt-BR" ? "Migração pendente" : "Migration pending"}</LivePill><h2 className="mt-4 text-2xl font-black italic text-white">{locale === "pt-BR" ? "Candidata local pronta; armazenamento remoto intencionalmente intocado" : "Local candidate ready; remote store intentionally untouched"}</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">{locale === "pt-BR" ? <>Aplique <code>supabase/migrations/051_touchline_manual_card_editorial_profiles.sql</code> somente após revisão separada do esquema e autorização explícita do banco. Até lá, esta página não pode salvar um registro.</> : <>Apply <code>supabase/migrations/051_touchline_manual_card_editorial_profiles.sql</code> only after its separate schema review and explicit database authorization. Until then this page cannot save a record.</>}</p></GamePanel> : <>{newPlayerAlerts.length ? <GamePanel className="border-[#ffb4b4]/25 bg-[#ffb4b4]/[.035] p-6"><LivePill>{locale === "pt-BR" ? "Alertas de novos jogadores" : "New player alerts"}</LivePill><h2 className="mt-4 text-2xl font-black italic text-white">{locale === "pt-BR" ? "NOVO JOGADOR · VALOR DE MERCADO NECESSÁRIO" : "NEW PLAYER · MARKET VALUE REQUIRED"}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{locale === "pt-BR" ? "Estes jogadores canônicos da Premier League têm uma membership Sportmonks ativa, mas nenhuma publicação de card revisada. Eles permanecem apenas no futebol real até o proprietário informar um valor manual em EUR e publicar explicitamente o card." : "These canonical Premier League players have one active Sportmonks membership but no reviewed game-card publication. They remain football-only until the owner enters a manual EUR value and explicitly publishes a card."}</p><div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{newPlayerAlerts.slice(0, 48).map((alert) => <Link key={alert.playerId} href={`${touchLineAuthHref(`/admin/manual-card-editorial?playerId=${encodeURIComponent(alert.playerId)}`, locale)}#manual-card-editor`} className="rounded-2xl border border-white/[.08] bg-black/20 px-4 py-3 hover:border-[#ffb4b4]/45"><p className="text-[9px] font-black text-[#ffb4b4]">{locale === "pt-BR" ? "NOVO JOGADOR · VALOR DE MERCADO NECESSÁRIO" : alert.label}</p><p className="mt-1 text-sm font-black text-white">{alert.playerName}</p><p className="mt-1 text-[10px] font-bold text-slate-500">{alert.clubName}{alert.position ? ` · ${alert.position}` : ""}</p><p className="mt-1 text-[9px] font-bold text-slate-600">{locale === "pt-BR" ? "Detectado" : "Detected"}: {alert.detectedAt ? new Date(alert.detectedAt).toLocaleDateString(locale) : "—"}</p></Link>)}</div>{newPlayerAlerts.length > 48 ? <p className="mt-4 text-[10px] font-bold text-slate-500">{locale === "pt-BR" ? "Mostrando os primeiros 48 alertas protegidos. Use a busca abaixo para abrir qualquer jogador canônico." : "Showing the first 48 protected alerts. Use the editor search below to open any canonical player."}</p> : null}</GamePanel> : null}<div id="manual-card-editor"><ManualCardEditorialEditor players={playerOptions} locale={locale} initialPlayerId={playerOptions.some((player) => player.id === requestedPlayerId) ? requestedPlayerId : undefined} /></div><ManualCardEditorialHistory entries={historyEntries} locale={locale} /></>}
+    {migrationPending ? <GamePanel className="p-6"><LivePill>{locale === "pt-BR" ? "Migração pendente" : "Migration pending"}</LivePill><h2 className="mt-4 text-2xl font-black italic text-white">{locale === "pt-BR" ? "Candidata local pronta; armazenamento remoto intencionalmente intocado" : "Local candidate ready; remote store intentionally untouched"}</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">{locale === "pt-BR" ? <>Aplique <code>supabase/migrations/051_touchline_manual_card_editorial_profiles.sql</code> somente após revisão separada do esquema e autorização explícita do banco. Até lá, esta página não pode salvar um registro.</> : <>Apply <code>supabase/migrations/051_touchline_manual_card_editorial_profiles.sql</code> only after its separate schema review and explicit database authorization. Until then this page cannot save a record.</>}</p></GamePanel> : <><CardEngineInbox rows={cardEngineRows} locale={locale} />{newPlayerAlerts.length ? <GamePanel className="border-[#ffb4b4]/25 bg-[#ffb4b4]/[.035] p-6"><LivePill>{locale === "pt-BR" ? "Alertas de novos jogadores" : "New player alerts"}</LivePill><h2 className="mt-4 text-2xl font-black italic text-white">{locale === "pt-BR" ? "NOVO JOGADOR · VALOR DE MERCADO NECESSÁRIO" : "NEW PLAYER · MARKET VALUE REQUIRED"}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">{locale === "pt-BR" ? "Estes jogadores canônicos da Premier League têm uma membership Sportmonks ativa, mas nenhum valor de mercado editorial aprovado. Eles permanecem visíveis no Club Hub em grayscale até que os dados reais estejam completos; o Card Engine publica automaticamente quando não houver blocker real." : "These canonical Premier League players have one active Sportmonks membership but no approved editorial market value. They remain visible in the Club Hub in grayscale until real inputs are complete; Card Engine publishes automatically when no real blocker remains."}</p><div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{newPlayerAlerts.slice(0, 48).map((alert) => <Link key={alert.playerId} href={`${touchLineAuthHref(`/admin/manual-card-editorial?playerId=${encodeURIComponent(alert.playerId)}`, locale)}#manual-card-editor`} className="rounded-2xl border border-white/[.08] bg-black/20 px-4 py-3 hover:border-[#ffb4b4]/45"><p className="text-[9px] font-black text-[#ffb4b4]">{locale === "pt-BR" ? "NOVO JOGADOR · VALOR DE MERCADO NECESSÁRIO" : alert.label}</p><p className="mt-1 text-sm font-black text-white">{alert.playerName}</p><p className="mt-1 text-[10px] font-bold text-slate-500">{alert.clubName}{alert.position ? ` · ${alert.position}` : ""}</p><p className="mt-1 text-[9px] font-bold text-slate-600">{locale === "pt-BR" ? "Detectado" : "Detected"}: {alert.detectedAt ? new Date(alert.detectedAt).toLocaleDateString(locale) : "—"}</p></Link>)}</div>{newPlayerAlerts.length > 48 ? <p className="mt-4 text-[10px] font-bold text-slate-500">{locale === "pt-BR" ? "Mostrando os primeiros 48 alertas protegidos. Use a busca abaixo para abrir qualquer jogador canônico." : "Showing the first 48 protected alerts. Use the editor search below to open any canonical player."}</p> : null}</GamePanel> : null}<div id="manual-card-editor"><ManualCardEditorialEditor players={playerOptions} locale={locale} initialPlayerId={playerOptions.some((player) => player.id === requestedPlayerId) ? requestedPlayerId : undefined} /></div><ManualCardEditorialHistory entries={historyEntries} locale={locale} /></>}
     <ManualCardEditorialBulkPreview clubs={clubOptions} locale={locale} />
   </div>;
 }

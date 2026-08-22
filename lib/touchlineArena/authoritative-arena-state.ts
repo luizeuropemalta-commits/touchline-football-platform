@@ -154,6 +154,7 @@ function canonicalArenaPlayer(
       countryCode3: rosterCard.countryCode3,
       flagUrl: null,
       fantasyPoints: rosterCard.touchlinePoints,
+      matchFantasyPoints: rosterCard.matchTouchlinePoints ?? null,
       marketValue: rosterCard.marketValue,
       marketValueSource: rosterCard.marketValueSource ?? "unavailable",
       ...(rosterCard.marketValueState != null
@@ -167,13 +168,8 @@ function canonicalArenaPlayer(
       cardPriceAuthority: rosterCard.cardPriceAuthority,
       editorialCard: rosterCard.editorialCard ?? null,
       inventoryId,
-      matchStats: {
-        goals: 0,
-        assists: 0,
-        defense: 0,
-        cleanSheets: 0,
-        cards: 0,
-      },
+      ...(rosterCard.seasonStats ? { seasonStats: rosterCard.seasonStats } : {}),
+      ...(rosterCard.matchStats ? { matchStats: rosterCard.matchStats } : {}),
     },
   };
 }

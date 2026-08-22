@@ -72,6 +72,31 @@ test("renders the same published editorial profile with English labels", () => {
   assert.equal(details.profileLabel, "View full profile");
 });
 
+test("carries optional profile, history and owner-only Card Engine actions without inventing routes", () => {
+  const details = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Test player",
+    profileHref: "/touchline-players/test-player?lang=en-GB",
+    historyHref: "/touchline-history/test-player?lang=en-GB",
+    cardEngineHref: `/admin/manual-card-editorial?playerId=${PLAYER_ID}#manual-card-editor`,
+  });
+
+  assert.equal(details.profileHref, "/touchline-players/test-player?lang=en-GB");
+  assert.equal(details.historyHref, "/touchline-history/test-player?lang=en-GB");
+  assert.equal(
+    details.cardEngineHref,
+    `/admin/manual-card-editorial?playerId=${PLAYER_ID}#manual-card-editor`,
+  );
+  assert.equal(details.cardEngineLabel, "EDIT IN CARD ENGINE");
+
+  const publicDetails = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Public player",
+  });
+  assert.equal(publicDetails.historyHref, undefined);
+  assert.equal(publicDetails.cardEngineHref, undefined);
+});
+
 test("an unpublished player keeps only real identity fields with no valuation placeholder", () => {
   const details = buildTouchlinePlayerCardZoomDetails({
     locale: "en-GB",
@@ -94,6 +119,40 @@ test("an unpublished player keeps only real identity fields with no valuation pl
     { label: "TouchLine points", value: "0", accent: false },
   ]);
   assert.doesNotMatch(JSON.stringify(details), /market value|market range|economic|pending|updating/i);
+});
+
+test("an incomplete real player exposes pending card price and each missing field", () => {
+  const details = buildTouchlinePlayerCardZoomDetails({
+    locale: "en-GB",
+    name: "Incomplete goalkeeper",
+    position: "Goalkeeper",
+    nationality: "NIR",
+    touchlinePoints: 0,
+    cardReview: {
+      state: "REVIEW_REQUIRED",
+      missingFields: ["market_value", "shirt_number"],
+    },
+  });
+
+  assert.deepEqual(details.fields, [
+    { label: "Card status", value: "Review pending", accent: true },
+    { label: "Card price", value: "Pending", accent: true },
+    { label: "Missing field", value: "Market Value", accent: false },
+    { label: "Missing field", value: "Shirt number", accent: false },
+    { label: "Position", value: "Goalkeeper", accent: false },
+    { label: "Nationality", value: "NIR", accent: false },
+    { label: "TouchLine points", value: "0", accent: false },
+  ]);
+});
+
+test("the shared card never substitutes a football position for pending card price", () => {
+  const cardSource = readFileSync(
+    new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(cardSource, /hasPublishedCardProfile \|\| reviewRequired[\s\S]*?cardLabels\.cardPrice/);
+  assert.match(cardSource, /reviewRequired[\s\S]*?"PENDING"[\s\S]*?: player\.position/);
 });
 
 test("the zoom receives only the public editorial projection, never internal notes or sources", () => {
@@ -122,4 +181,30 @@ test("reuses the shared editorial zoom builder in ClubHub, ClubOwner and player 
   for (const source of sources) {
     assert.match(source, /buildTouchlinePlayerCardZoomDetails/);
   }
+});
+
+test("phone landscape keeps the complete expanded card inside the short viewport", () => {
+  const zoomCss = readFileSync(
+    new URL("../components/touchline/cards/TouchlineCardZoom.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    zoomCss,
+    /@media \(orientation: landscape\) and \(max-height: 420px\)[\s\S]*?--touchline-card-static-scale: \.5;/,
+  );
+  assert.match(
+    zoomCss,
+    /\.panelWithDetails \.expandedMeta \{[\s\S]*?display: none;/,
+  );
+});
+
+test("a detailed zoom does not repeat the tier in a detached metadata strip", () => {
+  const zoomSource = readFileSync(
+    new URL("../components/touchline/cards/TouchlineCardZoom.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(zoomSource, /contractTermLabel \|\| \(!details && tierLabel\)/);
+  assert.match(zoomSource, /!details && tierLabel \? <strong>/);
 });

@@ -2,13 +2,17 @@ import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import ClubTrophyCarousel from "@/components/touchline/ClubTrophyCarousel";
 import ClubHubMatchdayTechnicalArea from "@/components/touchline/ClubHubMatchdayTechnicalArea";
+import ClubHubCanonicalCoachPanel from "@/components/touchline/ClubHubCanonicalCoachPanel";
 import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup";
 import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
+import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
+import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
+import { toPublicTouchlineFixture } from "@/lib/football-data/public-fixture";
 import {
   TOUCHLINE_ENGLAND_CLUBS,
   findTouchLineClub,
@@ -25,6 +29,7 @@ import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-sched
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import type { TouchlinePublicEditorialCardPresentation } from "@/lib/touchlineArena/editorial-card-profile";
+import type { TouchlineCardReviewPresentation } from "@/lib/touchlineArena/card-review-state";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import {
   resolveTouchlineClubMatchPreviewTeam,
@@ -38,6 +43,8 @@ import {
 import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
 import { getTouchlineClubTrophyAssets } from "@/lib/touchlineArena/club-trophy-manifest";
 import { fetchTouchlineInternalJson } from "@/lib/server/safe-internal-fetch";
+import { createClient } from "@/lib/supabase/server";
+import { isOwnerEmail } from "@/lib/admin/owner";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +75,7 @@ type PremierSquadPlayer = {
   cardTier?: ClubOwnerSquadCard["cardTier"];
   cardPriceVersion?: string | null;
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
+  cardReview?: TouchlineCardReviewPresentation;
   countryCode3?: string | null;
   nationality?: string | null;
 };
@@ -87,6 +95,7 @@ type ClubMatchSnapshot = {
   formation: string | null;
   /** No persisted matchday-coach DTO exists yet. Never infer a coach by club. */
   coach: null;
+  publicFixture: TouchlinePublicFixture | null;
 };
 
 async function loadClubTrophyAssets(club: NonNullable<ReturnType<typeof findTouchLineClub>>) {
@@ -119,6 +128,7 @@ function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): Clu
     cardTier: player.cardTier,
     cardPriceVersion: player.cardPriceVersion || undefined,
     editorialCard: player.editorialCard ?? null,
+    cardReview: player.cardReview,
     touchlinePoints: 0,
   };
 }
@@ -256,6 +266,7 @@ async function loadClubMatchSnapshot(
     lineups: [] as TouchlineFantasyLineupMember[],
     formation: null as string | null,
     coach: null,
+    publicFixture: null,
   };
 
   try {
@@ -286,6 +297,7 @@ async function loadClubMatchSnapshot(
       lineups: persistedFeed?.lineups ?? [],
       formation,
       coach: null,
+      publicFixture: toPublicTouchlineFixture(fixture),
     };
   } catch {
     return empty;
@@ -296,6 +308,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const { club: clubParam } = await params;
   const { lang } = await searchParams;
   const locale = normalizeTouchLineLocale(lang);
+  const supabase = await createClient();
+  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
   const t = (key: Parameters<typeof touchLineT>[1]) => touchLineT(locale, key);
   const localeQuery = `lang=${encodeURIComponent(locale)}`;
   const cardLabels = {
@@ -392,7 +407,10 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                     ) : null}
                     <strong>{matchPreview.home.shortCode}</strong>
                   </div>
-                  <b>VS</b>
+                  <ClubHubLiveFixtureScore
+                    fixtureId={matchSnapshot.fixtureId}
+                    initialFixture={matchSnapshot.publicFixture}
+                  />
                   <div className={!matchPreview.away.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
                     {matchPreview.away.logoUrl && matchPreview.away.accent ? (
                       <ClubHubCrestTrace
@@ -416,6 +434,16 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           lineup={clubLineup}
           locale={locale}
           labels={cardLabels}
+          canEditCardEngine={canEditCardEngine}
+        />
+
+        <ClubHubCanonicalCoachPanel
+          teamId={club.teamId}
+          clubName={club.name}
+          clubLogoUrl={club.logoUrl}
+          clubAccent={club.accent}
+          locale={locale}
+          userId={user?.id ?? null}
         />
 
         <ClubHubMatchdayTechnicalArea
@@ -460,6 +488,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               locale={locale}
               labels={cardLabels}
               openProfileLabel={t("openSelectedPlayerProfile")}
+              canEditCardEngine={canEditCardEngine}
             />
           ) : (
             <div className="club-hub-empty" role={squadUnavailable ? "status" : undefined}>

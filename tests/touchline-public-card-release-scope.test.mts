@@ -71,8 +71,8 @@ test("the shared exact card accepts an editorial profile and exposes no Market V
   assert.match(card, /editorialCard\?: TouchlinePublicEditorialCardPresentation \| null/);
   assert.match(card, /const editorialCard = player\.editorialCard \?\? null/);
   assert.match(card, /formatTouchlineEditorialCardPrice\(editorialCard\.cardPrice, runtimeLocale \?\? undefined\)/);
-  assert.match(card, /data-card-editorial-state=\{editorialCard \? "published" : "unpublished"\}/);
-  assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview\) return null/);
+  assert.match(card, /data-card-editorial-state=\{reviewRequired \? "review_required" : editorialCard \? "published" : "unpublished"\}/);
+  assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
 
   assert.doesNotMatch(card, /resolveTouchlineVerifiedPlayerEconomy/);
   assert.doesNotMatch(card, /resolveTouchlinePublicCardPresentation/);
@@ -80,9 +80,9 @@ test("the shared exact card accepts an editorial profile and exposes no Market V
   assert.doesNotMatch(card, /["']VALOR DE MERCADO["']/);
 });
 
-test("an unpublished football player cannot become a game card through artwork or a legacy price", () => {
-  assert.match(card, /const cardTemplateUrl = marketTier[\s\S]{0,180}: assignedVisualTemplateUrl;/);
-  assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview\) return null/);
+test("an unpublished football player cannot become a commercial card through artwork or a legacy price", () => {
+  assert.match(card, /const cardTemplateUrl = reviewRequired[\s\S]{0,240}: assignedVisualTemplateUrl;/);
+  assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
   assert.match(card, /allowVisualInventoryPreview = false/);
   assert.match(card, /player\.cardPriceAuthority === "active-contract"/);
   assert.doesNotMatch(card, /formatTouchlineContractedCommercialCardPrice/);
@@ -99,7 +99,7 @@ test("an unpublished football player cannot become a game card through artwork o
 test("ClubHub has an explicit safe cutover: existing verified cards stay available until the publication gate is enabled", () => {
   assert.match(squadRoute, /isTouchlineCardPublicationGateEnabled/);
   assert.match(squadRoute, /const publicationGateEnabled = isTouchlineCardPublicationGateEnabled\(\)/);
-  assert.match(squadRoute, /includeMarketValues:\s*!publicationGateEnabled/);
+  assert.match(squadRoute, /includeMarketValues:\s*true/);
   assert.match(squadRoute, /loadTouchlinePublishedCardPresentations/);
   assert.match(squadRoute, /legacyVerifiedCardPresentation/);
   assert.match(squadRoute, /currency: "GBP"/);
