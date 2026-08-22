@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { chromium, webkit } from "../node_modules/.pnpm/playwright@1.62.0/node_modules/playwright/index.mjs";
+import { chromium, firefox, webkit } from "@playwright/test";
 
 const baseUrl = String(process.env.TOUCHLINE_AUDIT_BASE_URL || "http://127.0.0.1:3137").replace(/\/$/, "");
 const outputDirectory = path.resolve(process.env.TOUCHLINE_AUDIT_OUTPUT || "docs/touchline-arena/audit/2026-08-05/gold-product-experience/evidence/market-journey");
@@ -93,6 +93,7 @@ await mkdir(outputDirectory, { recursive: true });
 const results = [
   ...(requestedBrowsers.size && !requestedBrowsers.has("chromium") ? [] : await run("chromium", chromium)),
   ...(requestedBrowsers.size && !requestedBrowsers.has("webkit") ? [] : await run("webkit", webkit)),
+  ...(requestedBrowsers.size && !requestedBrowsers.has("firefox") ? [] : await run("firefox", firefox)),
 ];
 const report = {
   generatedAt: new Date().toISOString(),

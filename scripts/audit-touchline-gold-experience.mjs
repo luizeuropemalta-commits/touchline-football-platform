@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { chromium, webkit } from "../node_modules/.pnpm/playwright@1.62.0/node_modules/playwright/index.mjs";
+import { chromium, firefox, webkit } from "@playwright/test";
 
 const baseUrl = String(process.env.TOUCHLINE_AUDIT_BASE_URL || "http://127.0.0.1:3137").replace(/\/$/, "");
 const outputDirectory = path.resolve(process.env.TOUCHLINE_AUDIT_OUTPUT || "docs/touchline-arena/audit/2026-08-05/gold-product-experience/evidence");
@@ -10,6 +10,7 @@ const allViewports = [
   { id: "mobile-landscape", width: 844, height: 390 },
   { id: "tablet", width: 768, height: 1024 },
   { id: "tablet-landscape", width: 1024, height: 768 },
+  { id: "desktop-720", width: 1280, height: 720 },
   { id: "desktop", width: 1440, height: 900 },
   { id: "large-desktop", width: 1920, height: 1080 },
 ];
@@ -155,7 +156,7 @@ async function runBrowser(browserName, browserType) {
         let inspection = null;
         try { inspection = await inspectStablePage(page); } catch (error) { navigationError ||= error instanceof Error ? error.message : String(error); }
 
-        if (screenshotRoutes.has(route.id) && ["mobile-portrait", "mobile-landscape", "tablet", "tablet-landscape", "desktop", "large-desktop"].includes(viewport.id)) {
+        if (screenshotRoutes.has(route.id) && ["mobile-portrait", "mobile-landscape", "tablet", "tablet-landscape", "desktop-720", "desktop", "large-desktop"].includes(viewport.id)) {
           const screenshotPath = path.join(outputDirectory, `${safeFileName(browserName)}-${route.id}-${viewport.id}.jpg`);
           await page.screenshot({ path: screenshotPath, type: "jpeg", quality: 58, fullPage: false, timeout: 20_000 }).catch(() => {});
         }
@@ -188,7 +189,8 @@ await mkdir(outputDirectory, { recursive: true });
 const startedAt = new Date().toISOString();
 const chromiumResults = requestedBrowsers.size && !requestedBrowsers.has("chromium") ? [] : await runBrowser("chromium", chromium);
 const webkitResults = requestedBrowsers.size && !requestedBrowsers.has("webkit") ? [] : await runBrowser("webkit", webkit);
-const results = [...chromiumResults, ...webkitResults];
+const firefoxResults = requestedBrowsers.size && !requestedBrowsers.has("firefox") ? [] : await runBrowser("firefox", firefox);
+const results = [...chromiumResults, ...webkitResults, ...firefoxResults];
 const summary = {
   baseUrl,
   startedAt,

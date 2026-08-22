@@ -67,3 +67,16 @@ test("the shared card localizes its league-statistics label", async () => {
   const source = await read("components/touchline/cards/TouchlineEliteExactCard.tsx");
   assert.match(source, /runtimeLocale === "pt-BR" \? "Estatísticas da TouchLine England League"/);
 });
+
+test("browser audit tooling follows the installed Playwright API and includes Firefox", async () => {
+  const [goldAudit, marketAudit] = await Promise.all([
+    read("scripts/audit-touchline-gold-experience.mjs"),
+    read("scripts/audit-touchline-market-journey.mjs"),
+  ]);
+  for (const source of [goldAudit, marketAudit]) {
+    assert.match(source, /from "@playwright\/test"/);
+    assert.match(source, /firefox/);
+    assert.doesNotMatch(source, /node_modules\/\.pnpm\/playwright@/);
+  }
+  assert.match(goldAudit, /id: "desktop-720", width: 1280, height: 720/);
+});
