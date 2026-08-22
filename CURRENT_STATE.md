@@ -20,6 +20,15 @@ Active QA worktree: `/Users/luizlopez/Developer/touchline-football-platform-spor
 Active source branch: `codex/sportmonks-round-arena-rail` (pushed only to `qa`)
 Active QA source SHA: `848ebf1` (`fix(football-data): request nested squad positions`). The latest change is an owner-only, read-only position-audit boundary; it does not write player, squad, card or contract data.
 
+## QA P0B golden fixture — DEPLOYED / QA GREEN WITH NATIVE-AUTH FOLLOW-UP BLOCKED
+
+- Product commits `70f6105` and `cdcd2c2` are pushed only to `qa`; Preview deployment `dpl_9k2KhTfVwof4ikYFmfqmveuyecyv` is `READY` and owns the stable QA alias.
+- The settled official fixture `19722203` is canonical in QA as Arsenal FC `3–0` Coventry City, `Full Time`, minute `94:41`, with `14` canonical events and `40/40` final player-fixture statistics. Two protected QA sync requests completed successfully and produced no duplicate fixture state.
+- The public Live route renders the settled fixture and never requests the owner-protected fixture-detail endpoint for an anonymous visitor. Chromium (390 and 1280), Playwright WebKit and Firefox passed Live, Club Hub, standings and cards with HTTP `200`, no console error and no horizontal overflow; anonymous Arena correctly resolves to login.
+- The QA-wide 20-club reconciliation is already applied in run `c93c92ea-99dd-481c-a447-953b3dceccfe`: `20` clubs, `581` provider players, `580` detailed positions and one explicit provider-data pending position. No current Card Engine position override exists, so there is no editorial conflict to route; approved TouchLine editorial overrides remain the final authority when present.
+- Focused P0B tests `10/10`, full suite `1155/1155`, TypeScript, build and diff check passed; lint reported zero errors and five pre-existing warnings. Two Security Diff Scans and independent review reported zero findings.
+- Native Safari/authenticated surface follow-up is **BLOCKED / EXTERNAL**: Safari is running but the local UI controller times out before exposing the accessibility tree. No session, cookie, credential, account or persisted user state was read or altered. Production remains untouched.
+
 ## QA and release
 
 - Stable QA URL: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
