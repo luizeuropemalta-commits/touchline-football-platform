@@ -70,6 +70,7 @@ test("Club Hub receives only allowlisted canonical match and season projections"
   const detailReader = readFileSync(new URL("../lib/football-data/public-fixture-match-detail-server.ts", import.meta.url), "utf8");
   const seasonReader = readFileSync(new URL("../lib/touchlineArena/public-season-player-points-server.ts", import.meta.url), "utf8");
   const authoritativeRoster = readFileSync(new URL("../lib/touchlineArena/authoritative-roster-server.ts", import.meta.url), "utf8");
+  const authoritativeArena = readFileSync(new URL("../lib/touchlineArena/authoritative-arena-state.ts", import.meta.url), "utf8");
   const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const grid = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
   const exactCard = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
@@ -93,4 +94,5 @@ test("Club Hub receives only allowlisted canonical match and season projections"
   assert.match(authoritativeRoster, /seasonTouchlinePoints/);
   assert.match(authoritativeRoster, /summary\?\.touchlinePoints/);
   assert.match(authoritativeRoster, /return null;/);
+  assert.match(authoritativeArena, /rosterCard\.seasonTouchlinePoints/);
 });

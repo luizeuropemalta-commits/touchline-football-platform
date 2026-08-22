@@ -3040,7 +3040,9 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
     sourcePhotoUrl: "",
     frameUrl: "",
     cardTemplateUrl: arenaPublishedCardTemplateUrl(card?.clubName || "", cardTier) || null,
-    fantasyPoints: card?.fantasyPoints ?? "0.0",
+    // A null season value is an explicit unavailable canonical fact, not a
+    // numeric zero. Demo-only cards still provide their own literal value.
+    fantasyPoints: card?.fantasyPoints === undefined ? null : card.fantasyPoints,
     matchFantasyPoints: card?.matchFantasyPoints ?? null,
     seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
