@@ -43,7 +43,9 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import { TOUCHLINE_CLUB_OWNER_XI_SLOTS } from "@/lib/touchlineArena/pitch-layout";
 import {
+  orderClubOwnerBenchCards,
   partitionClubOwnerRoster,
+  selectSavedArenaStartingXi,
 } from "@/lib/touchlineArena/club-owner-roster";
 import {
   resolveTouchlineClubOwnerPageIdentity,
@@ -66,6 +68,7 @@ const CLUB_OWNER_TOUCHLINE_NEON = "#a3ff12";
 const CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS = 8_000;
 type ClubOwnerWalletEntry = { amount_cents: number | null };
 type ClubOwnerAvatarProfile = { avatar_url?: unknown };
+type ClubOwnerArenaState = { lineup?: unknown };
 
 const trophyGallery = [
   {
@@ -207,10 +210,23 @@ export default async function ClubOwnerProfileRenderer({
       CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
     )
     : Promise.resolve({ data: null });
-  const [activeRanking, authoritativeRoster, walletEntriesResponse] = await Promise.all([
+  const arenaStateRead = activeClubOwnerUser && admin
+    ? resolveServerReadWithin<{ data: ClubOwnerArenaState | null }>(
+      admin
+        .from("touchline_user_arena_state")
+        .select("lineup")
+        .eq("user_id", activeClubOwnerUser.id)
+        .maybeSingle()
+        .then(({ data }) => ({ data: data as ClubOwnerArenaState | null })),
+      { data: null },
+      CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
+    )
+    : Promise.resolve({ data: null });
+  const [activeRanking, authoritativeRoster, walletEntriesResponse, arenaStateResponse] = await Promise.all([
     activeRankingRead,
     authoritativeRosterRead,
     walletEntriesRead,
+    arenaStateRead,
   ]);
   const publicRosterCookieValue = activeClubOwnerUser
     ? null
@@ -246,10 +262,17 @@ export default async function ClubOwnerProfileRenderer({
   ))[0] ?? null;
   const bestPlayerPalette = touchlineCardTierPalette(bestPlayerCard?.cardTier);
   const startingShowcaseCards = publishedClubOwnerSquadCards.slice(0, 6);
-  const {
-    startingXiCards,
-    allBenchCards,
-  } = partitionClubOwnerRoster(publishedClubOwnerSquadCards);
+  const rosterSections = partitionClubOwnerRoster(sortedClubOwnerSquadCards);
+  const savedStartingXiCards = activeClubOwnerUser
+    ? selectSavedArenaStartingXi(rosterCards, arenaStateResponse.data?.lineup)
+    : null;
+  const startingXiCards = savedStartingXiCards ?? rosterSections.startingXiCards;
+  const savedStartingXiIds = new Set(savedStartingXiCards?.map((selected) => selected.id));
+  const allBenchCards = savedStartingXiCards
+    ? orderClubOwnerBenchCards(
+      rosterSections.allCards.filter((card) => !savedStartingXiIds.has(card.id)),
+    )
+    : rosterSections.allBenchCards;
   const squadCardValue = sortedClubOwnerSquadCards.reduce(
     (sum, card) => sum + (activeContractCardNumericPrice(card) ?? 0),
     0,

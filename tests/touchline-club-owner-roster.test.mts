@@ -12,6 +12,7 @@ import {
   partitionClubOwnerRoster,
   parseClubOwnerRoster,
   serializeClubOwnerRoster,
+  selectSavedArenaStartingXi,
   uniqueClubOwnerRosterCards,
   writeBrowserClubOwnerRoster,
 } from "../lib/touchlineArena/club-owner-roster.ts";
@@ -153,6 +154,38 @@ describe("TouchLine ClubOwner roster accounting", () => {
       [...sections.startingXiCards, ...sections.allBenchCards].map((card) => card.id).sort(),
       CLUB_OWNER_SQUAD_CARDS.map((card) => card.id).sort(),
     );
+  });
+
+  it("keeps the private profile XI in the exact saved Arena order instead of ranking order", () => {
+    const cards = CLUB_OWNER_SQUAD_CARDS.slice(0, 11).map((card, index) => ({
+      ...card,
+      id: `card-${index}`,
+      name: `Profile test player ${index}`,
+      shortName: `Test ${index}`,
+      clubName: "Profile Test FC",
+      inventoryId: `inventory-${index}`,
+    }));
+    const savedLineup = [10, 4, 0, 8, 2, 9, 1, 7, 3, 6, 5].map((index) => ({
+      card: { inventoryId: `inventory-${index}` },
+    }));
+
+    const selected = selectSavedArenaStartingXi(cards, savedLineup);
+
+    assert.deepEqual(selected?.map((card) => card.id), [
+      "card-10", "card-4", "card-0", "card-8", "card-2", "card-9", "card-1", "card-7", "card-3", "card-6", "card-5",
+    ]);
+  });
+
+  it("refuses an incomplete, duplicated or foreign saved Arena XI", () => {
+    const cards = CLUB_OWNER_SQUAD_CARDS.slice(0, 11).map((card, index) => ({
+      ...card,
+      inventoryId: `inventory-${index}`,
+    }));
+    const validEntry = (index: number) => ({ inventoryId: `inventory-${index}` });
+
+    assert.equal(selectSavedArenaStartingXi(cards, Array.from({ length: 10 }, (_, index) => validEntry(index))), null);
+    assert.equal(selectSavedArenaStartingXi(cards, Array.from({ length: 11 }, () => validEntry(0))), null);
+    assert.equal(selectSavedArenaStartingXi(cards, Array.from({ length: 11 }, (_, index) => index === 10 ? { inventoryId: "foreign" } : validEntry(index))), null);
   });
 
   it("discards a legacy local value that has no provenance", () => {

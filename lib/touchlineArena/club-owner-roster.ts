@@ -298,6 +298,54 @@ export function orderClubOwnerBenchCards(cards: ClubOwnerSquadCard[]) {
   return orderTouchlineBenchByPosition(uniqueClubOwnerRosterCards(cards));
 }
 
+/**
+ * Resolves the private ClubOwner profile's Starting XI from the saved Arena
+ * selection. The profile must not substitute ranking order for a selection the
+ * owner has already saved in the Arena.
+ *
+ * This is deliberately fail-closed: an incomplete, foreign or duplicate saved
+ * lineup has no trustworthy XI projection and therefore returns null. Callers
+ * may then use their explicit non-selection presentation, but must never map a
+ * player by name.
+ */
+export function selectSavedArenaStartingXi(
+  cards: ClubOwnerSquadCard[],
+  savedLineup: unknown,
+) {
+  if (!Array.isArray(savedLineup) || savedLineup.length !== TOUCHLINE_ROSTER_PRESENTATION_LIMITS.startingXi) {
+    return null;
+  }
+
+  const cardsByInventoryId = new Map(
+    uniqueClubOwnerRosterCards(cards).flatMap((card) => {
+      const inventoryId = typeof card.inventoryId === "string" ? card.inventoryId.trim() : "";
+      return inventoryId ? [[inventoryId, card] as const] : [];
+    }),
+  );
+  const selectedCards: ClubOwnerSquadCard[] = [];
+  const selectedInventoryIds = new Set<string>();
+
+  for (const entry of savedLineup) {
+    const record = entry && typeof entry === "object" && !Array.isArray(entry)
+      ? entry as Record<string, unknown>
+      : null;
+    const card = record?.card && typeof record.card === "object" && !Array.isArray(record.card)
+      ? record.card as Record<string, unknown>
+      : null;
+    const inventoryId = typeof record?.inventoryId === "string"
+      ? record.inventoryId.trim()
+      : typeof card?.inventoryId === "string"
+        ? card.inventoryId.trim()
+        : "";
+    const rosterCard = cardsByInventoryId.get(inventoryId);
+    if (!rosterCard || selectedInventoryIds.has(inventoryId)) return null;
+    selectedInventoryIds.add(inventoryId);
+    selectedCards.push(rosterCard);
+  }
+
+  return selectedCards;
+}
+
 export function partitionClubOwnerRoster(cards: ClubOwnerSquadCard[]): TouchlineClubOwnerRosterSections {
   const allCards = uniqueClubOwnerRosterCards(cards);
   const startingXiCards = allCards.slice(0, TOUCHLINE_ROSTER_PRESENTATION_LIMITS.startingXi);

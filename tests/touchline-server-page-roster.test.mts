@@ -125,3 +125,16 @@ test("the authenticated profile bounds its private avatar lookup before identity
     /const \{ data: storedProfile \} = await resolveServerReadWithin(?:<[^>]+>)?\([\s\S]*?\.from\("users"\)[\s\S]*?\.maybeSingle\(\)[\s\S]*?\{ data: null \},[\s\S]*?CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS/,
   );
 });
+
+test("the authenticated profile reads the saved Arena XI only for the server-derived owner", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /const arenaStateRead = activeClubOwnerUser && admin[\s\S]*?\.from\("touchline_user_arena_state"\)[\s\S]*?\.select\("lineup"\)[\s\S]*?\.eq\("user_id", activeClubOwnerUser\.id\)[\s\S]*?\{ data: null \},[\s\S]*?CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS/,
+  );
+  assert.match(source, /selectSavedArenaStartingXi\(rosterCards, arenaStateResponse\.data\?\.lineup\)/);
+});
