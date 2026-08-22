@@ -128,8 +128,8 @@ test("Live clears a previous XI and reveals complete verified cards atomically",
   assert.doesNotMatch(globalCssSource, /\[data-card-live-scale-mode=[^\]]+\] \[data-live-card-compact-detail="true"\][\s\S]*?display: none !important/);
   assert.doesNotMatch(eliteCardSource, /touchlineCardForegroundFrameUrl/);
   assert.match(eliteCardSource, /touchlineCardMetricText/);
-  assert.match(eliteCardSource, /const totalPointsText = touchlineCardMetricText\(liveCompetition\.touchlinePoints\)/);
-  assert.match(eliteCardSource, /liveCompetition\.phase === "preseason" \? "0" : "—"/);
+  assert.match(eliteCardSource, /player\.fantasyPoints === undefined[\s\S]*?liveCompetition\.touchlinePoints/);
+  assert.match(eliteCardSource, /const preseasonMissingValue = "—"/);
   assert.match(eliteCardSource, /return text \|\| "—"/);
   const liveBuilder = arenaClientSource.match(/function builderPlayerToPreviewCard\([\s\S]*?\n\}/)?.[0] ?? "";
   assert.ok(liveBuilder, "Live player card builder must exist");

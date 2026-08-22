@@ -25,12 +25,16 @@ import {
   type PersistedSquadPlayer,
 } from "@/lib/football-data/squad-snapshot-store";
 import { readPublicFantasyFixtureSnapshots } from "@/lib/football-data/public-fantasy-snapshot";
+import { readPublicFantasyFixtureMatchDetail } from "@/lib/football-data/public-fixture-match-detail-server";
+import { toPublicFantasyFixtureFeed, type TouchlinePublicFixturePlayerStatistics } from "@/lib/football-data/public-fantasy-fixture";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
 import type { TouchlinePublicEditorialCardPresentation } from "@/lib/touchlineArena/editorial-card-profile";
 import type { TouchlineCardReviewPresentation } from "@/lib/touchlineArena/card-review-state";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
+import { applyTouchlineMatchdayPoints, applyTouchlineSeasonPoints } from "@/lib/touchlineArena/matchday-player-points";
+import { readPublicSeasonPlayerPoints } from "@/lib/touchlineArena/public-season-player-points-server";
 import {
   resolveTouchlineClubMatchPreviewTeam,
   type TouchlineClubMatchPreviewTeam,
@@ -96,6 +100,7 @@ type ClubMatchSnapshot = {
   /** No persisted matchday-coach DTO exists yet. Never infer a coach by club. */
   coach: null;
   publicFixture: TouchlinePublicFixture | null;
+  playerStatistics: TouchlinePublicFixturePlayerStatistics[];
 };
 
 async function loadClubTrophyAssets(club: NonNullable<ReturnType<typeof findTouchLineClub>>) {
@@ -267,6 +272,7 @@ async function loadClubMatchSnapshot(
     formation: null as string | null,
     coach: null,
     publicFixture: null,
+    playerStatistics: [],
   };
 
   try {
@@ -282,6 +288,10 @@ async function loadClubMatchSnapshot(
     if (!fixture) return empty;
 
     const persistedFeed = persistedFeeds.find((feed) => feed.fixture.providerId === fixture.providerId);
+    const publicFeed = persistedFeed ? toPublicFantasyFixtureFeed(persistedFeed) : null;
+    const matchDetail = publicFeed && fixture.providerId
+      ? await readPublicFantasyFixtureMatchDetail(fixture.providerId, publicFeed)
+      : null;
     const formation = persistedFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
     return {
       preview: {
@@ -298,6 +308,7 @@ async function loadClubMatchSnapshot(
       formation,
       coach: null,
       publicFixture: toPublicTouchlineFixture(fixture),
+      playerStatistics: matchDetail?.playerStatistics ?? [],
     };
   } catch {
     return empty;
@@ -330,7 +341,13 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
     loadTouchlineOfficialLeagueTable(),
   ]);
   const matchPreview = matchSnapshot.preview;
-  const clubCards = squadLoad.cards.sort(rankClubOwnerCards);
+  const seasonPoints = await readPublicSeasonPlayerPoints(
+    squadLoad.cards.flatMap((card) => card.canonicalPlayerId ? [card.canonicalPlayerId] : []),
+  );
+  const clubCards = applyTouchlineMatchdayPoints(
+    applyTouchlineSeasonPoints(squadLoad.cards, seasonPoints),
+    matchSnapshot.playerStatistics,
+  ).sort(rankClubOwnerCards);
   const squadUnavailable = squadLoad.state === "unavailable";
   const squadRecoveryCopy = locale === "pt-BR"
     ? { title: "Não foi possível carregar o elenco agora.", action: "Tentar novamente" }

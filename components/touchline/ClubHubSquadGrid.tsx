@@ -110,7 +110,16 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   editorialCard: card.editorialCard,
                   cardReview,
                   activeContractCard: null,
-                  touchlinePoints: card.touchlinePoints,
+                  touchlinePoints: card.seasonTouchlinePoints === undefined
+                    ? card.touchlinePoints
+                    : card.seasonTouchlinePoints,
+                  extraFields: [
+                    {
+                      label: pt ? "Pontos da partida atual" : "Current match points",
+                      value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
+                      accent: true,
+                    },
+                  ],
                   profileHref,
                   cardEngineHref: canEditCardEngine
                     ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
@@ -137,7 +146,8 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                   playerProfileHref={profileHref}
                   showProfileAction={false}
-                  showSocialMetrics={false}
+                    showSocialMetrics={false}
+                    showMatchPoints
                 />
               </TouchlineCardZoom>
               <div className="club-hub-card-meta">

@@ -95,6 +95,20 @@ export type TouchlinePublicPlayerPointContribution = Readonly<{
   points: number;
 }>;
 
+/**
+ * Small, explicit allowlist of verified match statistics a card can display.
+ * A missing field stays absent: it must never become a fabricated zero.
+ */
+export type TouchlinePublicFixtureCardStatistics = Readonly<{
+  goals?: number;
+  assists?: number;
+  yellowCards?: number;
+  redCards?: number;
+  cleanSheets?: number;
+  saves?: number;
+  goalsConceded?: number;
+}>;
+
 export type TouchlinePublicFixturePlayerStatistics = Readonly<{
   playerId: string;
   playerName: string;
@@ -105,6 +119,7 @@ export type TouchlinePublicFixturePlayerStatistics = Readonly<{
   touchlinePoints: number | null;
   settlementStatus: "provisional" | "final" | "unavailable";
   contributions: TouchlinePublicPlayerPointContribution[];
+  statistics: TouchlinePublicFixtureCardStatistics;
 }>;
 
 export type TouchlinePublicFantasyFixtureFeed = Readonly<{

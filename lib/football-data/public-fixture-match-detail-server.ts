@@ -19,6 +19,7 @@ type FixtureStatisticRow = {
   rating?: unknown;
   touchline_points?: unknown;
   touchline_points_breakdown?: unknown;
+  statistics_payload?: unknown;
   settlement_status?: unknown;
   football_players?: { provider_player_id?: unknown } | Array<{ provider_player_id?: unknown }> | null;
 };
@@ -58,6 +59,34 @@ function pointContributions(value: unknown): TouchlinePublicPlayerPointContribut
   });
 }
 
+function cardStatistics(value: unknown) {
+  const source = record(value);
+  if (!source) return {};
+  const pick = (...keys: string[]) => {
+    for (const key of keys) {
+      const number = finiteNumber(source[key]);
+      if (number !== null) return number;
+    }
+    return undefined;
+  };
+  const goals = pick("goals");
+  const assists = pick("assists");
+  const yellowCards = pick("yellow-cards", "yellowcards");
+  const redCards = pick("red-cards", "redcards");
+  const cleanSheets = pick("clean-sheets", "cleansheets");
+  const saves = pick("saves");
+  const goalsConceded = pick("goalkeeper-goals-conceded", "goals-conceded");
+  return {
+    ...(goals === undefined ? {} : { goals }),
+    ...(assists === undefined ? {} : { assists }),
+    ...(yellowCards === undefined ? {} : { yellowCards }),
+    ...(redCards === undefined ? {} : { redCards }),
+    ...(cleanSheets === undefined ? {} : { cleanSheets }),
+    ...(saves === undefined ? {} : { saves }),
+    ...(goalsConceded === undefined ? {} : { goalsConceded }),
+  };
+}
+
 async function readFixtureStatistics(
   admin: SupabaseClient,
   fixtureId: string,
@@ -74,7 +103,7 @@ async function readFixtureStatistics(
 
   const { data, error } = await admin
     .from("football_player_fixture_statistics")
-    .select("appearance_status,minutes_played,rating,touchline_points,touchline_points_breakdown,settlement_status,football_players!inner(provider_player_id)")
+    .select("appearance_status,minutes_played,rating,touchline_points,touchline_points_breakdown,statistics_payload,settlement_status,football_players!inner(provider_player_id)")
     .eq("fixture_id", canonicalFixtureId);
   if (error || !Array.isArray(data)) return [] as TouchlinePublicFixturePlayerStatistics[];
 
@@ -98,6 +127,7 @@ async function readFixtureStatistics(
         ? settlementStatus as TouchlinePublicFixturePlayerStatistics["settlementStatus"]
         : "unavailable",
       contributions: pointContributions(row.touchline_points_breakdown),
+      statistics: cardStatistics(row.statistics_payload),
     }];
   }).sort((first, second) => {
     const rank = { started: 0, substitute: 1, unused: 2, absent: 3, unavailable: 4 } as const;

@@ -54,6 +54,8 @@ export type ClubOwnerSquadCard = {
   cardReview?: TouchlineCardReviewPresentation;
   inventoryId?: string | null;
   touchlinePoints: number;
+  /** A public server projection. Null explicitly means the season total is unavailable. */
+  seasonTouchlinePoints?: number | null;
   /** Latest reconciled fixture points; null means no verified fixture fact. */
   matchTouchlinePoints?: number | null;
   /** Verified cumulative football statistics used by the shared card. */
@@ -379,7 +381,9 @@ export function squadCardToExactPlayer(
     // editorial profile is still unpublished. `cardTier` and price remain
     // null in that state, so this asset cannot imply a commercial tier.
     cardTemplateUrl: touchlineArenaClubTemplateForCard(card.clubName, null, cardTier) || null,
-    fantasyPoints: card.touchlinePoints,
+    fantasyPoints: card.seasonTouchlinePoints === undefined
+      ? card.touchlinePoints
+      : card.seasonTouchlinePoints,
     matchFantasyPoints: card.matchTouchlinePoints,
     seasonStats: card.seasonStats,
     matchStats: card.matchStats,

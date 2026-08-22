@@ -175,6 +175,15 @@
   background: linear-gradient(90deg, color-mix(in srgb, var(--club-accent, #b5ff4b) 18%, transparent), transparent 76%);
 }
 
+.tableWrap tbody tr[data-live] {
+  background: linear-gradient(90deg, rgba(255, 83, 83, .2), rgba(255, 83, 83, .05) 58%, transparent);
+  box-shadow: inset 3px 0 0 #ff6d6d;
+}
+
+.tableWrap tbody tr[data-current][data-live] {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--club-accent, #b5ff4b) 18%, rgba(255, 83, 83, .22)), transparent 76%);
+}
+
 .tableWrap tbody tr[data-current] td:first-child,
 .tableWrap .points {
   color: #e3ffae;
@@ -216,6 +225,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tableWrap tbody th .liveScore {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid rgba(255, 124, 124, .64);
+  border-radius: 999px;
+  padding: 3px 6px;
+  color: #ffd1d1;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: .06em;
 }
 
 .form { color: rgba(223, 255, 155, .82) !important; font-weight: 850; }

@@ -136,6 +136,7 @@ const copy = {
     currentSeason: "Current season",
     lastFiveMatches: "Last five matches",
     currentFixture: "Current or selected fixture",
+    currentMatchPoints: "Current match points",
     unavailable: "Unavailable",
     appearances: "Appearances",
     starts: "Starts",
@@ -203,6 +204,7 @@ const copy = {
     currentSeason: "Temporada atual",
     lastFiveMatches: "Últimas cinco partidas",
     currentFixture: "Fixture atual ou selecionada",
+    currentMatchPoints: "Pontos da partida atual",
     unavailable: "Indisponível",
     appearances: "Jogos",
     starts: "Titularidades",
@@ -510,7 +512,7 @@ function FixtureStatisticsPanel({ model, text }: { model: TouchLinePlayerStatist
       <article className={styles.officialGroup}>
         <h3>{text.currentFixture}</h3>
         {current ? (
-          <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small></div></div>
+          <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small>{text.currentMatchPoints}: {current.touchlinePoints === null ? text.unavailable : String(current.touchlinePoints)}</small></div></div>
         ) : <p className={styles.unavailableFixture}>{text.unavailable}</p>}
       </article>
     </div>
@@ -620,8 +622,11 @@ export default async function TouchLinePlayerProfilePage({
   const competition = {
     ...rankingCompetition,
     touchlinePoints: playerStatistics.currentSeason.summary.touchlinePoints
-      ?? rankingCompetition.touchlinePoints,
+      ?? (rankingCompetition.ranked ? rankingCompetition.touchlinePoints : null),
   };
+  const cumulativePointsText = competition.touchlinePoints === null
+    ? text.unavailable
+    : String(competition.touchlinePoints);
   exactPlayer.fantasyPoints = competition.touchlinePoints;
   exactPlayer.matchFantasyPoints = playerStatistics.currentOrSelectedFixture?.touchlinePoints ?? null;
   exactPlayer.seasonStats = {
@@ -722,6 +727,11 @@ export default async function TouchLinePlayerProfilePage({
           : null,
         eyebrow: isPortuguese ? "Perfil oficial do atleta" : "Official player profile",
         extraFields: [
+          {
+            label: text.currentMatchPoints,
+            value: exactPlayer.matchFantasyPoints === null ? text.unavailable : String(exactPlayer.matchFantasyPoints),
+            accent: true,
+          },
           { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },
           { label: isPortuguese ? "Idade" : "Age", value: official.player?.age === undefined ? null : String(official.player.age) },
         ],
@@ -748,6 +758,7 @@ export default async function TouchLinePlayerProfilePage({
         staticRenderScale={178 / 430}
         showProfileAction={false}
         showSocialMetrics={false}
+        showMatchPoints
       />
     </TouchlineCardZoom>
   ) : undefined;
@@ -763,11 +774,11 @@ export default async function TouchLinePlayerProfilePage({
         : "Tier and price appear only when the editorial team publishes this card.",
       meta: "TouchLine",
       accent,
-      badge: tierDisplayName ?? `${competition.touchlinePoints} ${isPortuguese ? "pontos acumulados" : "cumulative points"}`,
+      badge: tierDisplayName ?? `${cumulativePointsText} ${isPortuguese ? "pontos acumulados" : "cumulative points"}`,
       visual: socialCardVisual(`${isPortuguese ? "Ampliar card atual de" : "Open current card for"} ${card.name}`),
       visualTheme: "market",
       metrics: [
-        { label: isPortuguese ? "Pontos" : "Points", value: String(competition.touchlinePoints) },
+        { label: isPortuguese ? "Pontos" : "Points", value: cumulativePointsText },
         ...(tierDisplayName ? [{ label: isPortuguese ? "Tier do card" : "Card tier", value: tierDisplayName }] : []),
         ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
       ],
@@ -1029,7 +1040,7 @@ export default async function TouchLinePlayerProfilePage({
           highlights={[
             ...(tierDisplayName ? [{ label: isPortuguese ? "Tier do card" : "Card tier", value: tierDisplayName }] : []),
             ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
-            { label: isPortuguese ? "Pontos acumulados" : "Cumulative points", value: String(competition.touchlinePoints) },
+            { label: isPortuguese ? "Pontos acumulados" : "Cumulative points", value: cumulativePointsText },
             { label: isPortuguese ? "Posição" : "Position", value: displayPosition || "—" },
           ]}
           defaultActionHref={hasActiveContractOffer ? marketHref : undefined}
@@ -1078,7 +1089,7 @@ export default async function TouchLinePlayerProfilePage({
           <div className={styles.metrics}>
             <div>
               <small>{text.points}</small>
-              <strong>{competition.touchlinePoints.toLocaleString(locale)}</strong>
+              <strong>{competition.touchlinePoints === null ? text.unavailable : competition.touchlinePoints.toLocaleString(locale)}</strong>
             </div>
             <div>
               <small>{text.rank}</small>

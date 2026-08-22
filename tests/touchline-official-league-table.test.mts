@@ -88,6 +88,16 @@ test("scheduled, live, cancelled and scoreless fixtures retain the neutral initi
   assert.equal(result.coverage.completedFixtures, 0);
   assert.equal(result.rows.length, 20);
   assert.ok(result.rows.every((row) => row.position === null && row.points === 0 && row.goalDifference === 0));
+  assert.deepEqual(result.rows.find((row) => row.team.providerTeamId === "3")?.liveFixture, {
+    providerFixtureId: "live",
+    scoreFor: 1,
+    scoreAgainst: 0,
+  });
+  assert.deepEqual(result.rows.find((row) => row.team.providerTeamId === "4")?.liveFixture, {
+    providerFixtureId: "live",
+    scoreFor: 0,
+    scoreAgainst: 1,
+  });
 });
 
 test("official league table deduplicates a provider fixture before totals are calculated", () => {
@@ -183,6 +193,9 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /Initial table — all 20 clubs are level\./);
   assert.match(component, /Tabela inicial — os 20 clubes estão empatados\./);
   assert.match(component, /row\.position \?\? "—"/);
+  assert.match(component, /data-live=/);
+  assert.match(component, /router\.refresh\(\)/);
+  assert.match(component, /dictionary\.live/);
   assert.match(component, /table\.rows\.map/);
   assert.doesNotMatch(component, /from ["'][^"']*(?:card|market|wallet|supabase)/i);
   assert.doesNotMatch(component, /\bfetch\(/);

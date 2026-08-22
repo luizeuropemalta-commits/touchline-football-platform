@@ -848,7 +848,14 @@ export function TouchlineEliteExactCard({
     playerId: player.formationPlayerId,
     providerPlayerId: player.sportmonksPlayerId,
   });
-  const totalPointsText = touchlineCardMetricText(liveCompetition.touchlinePoints);
+  // A card may carry a server-owned season projection. Prefer that explicit
+  // canonical fact to a separately published ranking snapshot; absent facts
+  // render as unavailable instead of becoming a synthetic zero.
+  const totalPointsText = player.fantasyPoints === undefined
+    ? touchlineCardMetricText(liveCompetition.touchlinePoints)
+    : player.fantasyPoints === null || player.fantasyPoints === ""
+      ? "—"
+      : touchlineCardMetricText(player.fantasyPoints);
   const cardLabels = { ...localizedCardLabels(runtimeLocale), ...labels };
   // A game card exists only after the server-owned publication policy has
   // attached a published presentation. The authenticated Market can opt into
@@ -887,7 +894,7 @@ export function TouchlineEliteExactCard({
     : reviewRequired
       ? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
       : player.position;
-  const preseasonMissingValue = liveCompetition.phase === "preseason" ? "0" : "—";
+  const preseasonMissingValue = "—";
   const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
     ? preseasonMissingValue
     : touchlineCardMetricText(player.matchFantasyPoints);

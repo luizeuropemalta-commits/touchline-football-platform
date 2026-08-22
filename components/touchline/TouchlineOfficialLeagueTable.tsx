@@ -1,5 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
+"use client";
+
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import type { TouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table";
 
@@ -29,6 +33,8 @@ type TableCopy = Readonly<{
   difference: string;
   points: string;
   form: string;
+  live: string;
+  scoreUnavailable: string;
   currentClub: string;
   finalResults: string;
   pendingTitle: string;
@@ -45,7 +51,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
   "en-GB": {
     eyebrow: "TouchLine England",
     title: "Official League Table",
-    description: "TouchLine Verified final results only. Scheduled and live matches never change this table.",
+    description: "TouchLine Verified final results define the standings. Live matches show their score and highlighted clubs without changing points until full time.",
     caption: "TouchLine England official league table",
     position: "Pos",
     club: "Club",
@@ -56,6 +62,8 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     difference: "GD",
     points: "Pts",
     form: "Form",
+    live: "LIVE",
+    scoreUnavailable: "score unavailable",
     currentClub: "Current club",
     finalResults: "verified final results",
     pendingTitle: "Initial table — all 20 clubs are level.",
@@ -70,7 +78,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
   "pt-BR": {
     eyebrow: "TouchLine England",
     title: "Tabela Oficial da Liga",
-    description: "Somente resultados finais verificados pela TouchLine. Partidas agendadas e ao vivo nunca alteram esta tabela.",
+    description: "Resultados finais verificados definem a classificação. Partidas ao vivo exibem placar e destaque sem alterar pontos até o resultado final.",
     caption: "Tabela oficial da liga TouchLine England",
     position: "Pos",
     club: "Clube",
@@ -81,6 +89,8 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     difference: "SG",
     points: "Pts",
     form: "Forma",
+    live: "AO VIVO",
+    scoreUnavailable: "placar indisponível",
     currentClub: "Clube atual",
     finalResults: "resultados finais verificados",
     pendingTitle: "Tabela inicial — os 20 clubes estão empatados.",
@@ -116,6 +126,14 @@ export default function TouchlineOfficialLeagueTable({
   const dictionary = copy[effectiveLocale];
   const status = statusCopy(table.state, dictionary);
   const localeQuery = encodeURIComponent(locale);
+  const router = useRouter();
+  const hasLiveFixture = table.rows.some((row) => Boolean(row.liveFixture));
+
+  useEffect(() => {
+    if (!hasLiveFixture) return;
+    const interval = window.setInterval(() => router.refresh(), 30_000);
+    return () => window.clearInterval(interval);
+  }, [hasLiveFixture, router]);
 
   return (
     <section
@@ -172,14 +190,22 @@ export default function TouchlineOfficialLeagueTable({
               <tbody>
                 {table.rows.map((row) => {
                   const isCurrent = row.team.providerTeamId === currentTeamId;
+                  const liveScore = row.liveFixture && row.liveFixture.scoreFor !== null && row.liveFixture.scoreAgainst !== null
+                    ? `${row.liveFixture.scoreFor}–${row.liveFixture.scoreAgainst}`
+                    : dictionary.scoreUnavailable;
                   return (
-                    <tr key={row.team.providerTeamId} data-current={isCurrent || undefined}>
+                    <tr
+                      key={row.team.providerTeamId}
+                      data-current={isCurrent || undefined}
+                      data-live={row.liveFixture ? "true" : undefined}
+                    >
                       <td>{row.position ?? "—"}</td>
                       <th scope="row">
                         <Link href={`/touchline-clubs/${row.team.slug}?lang=${localeQuery}`} aria-current={isCurrent ? "page" : undefined}>
                           {row.team.logoUrl ? <img src={row.team.logoUrl} alt="" /> : null}
                           <span>{row.team.name}</span>
                           {isCurrent ? <span className={styles.srOnly}>{dictionary.currentClub}</span> : null}
+                          {row.liveFixture ? <span className={styles.liveScore} aria-label={`${dictionary.live}: ${liveScore}`}>{dictionary.live} · {liveScore}</span> : null}
                         </Link>
                       </th>
                       <td>{row.played}</td>

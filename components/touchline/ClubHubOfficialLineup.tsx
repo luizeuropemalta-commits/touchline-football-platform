@@ -115,7 +115,16 @@ export default function ClubHubOfficialLineup({
                     editorialCard: card.editorialCard,
                     cardReview,
                     activeContractCard: null,
-                    touchlinePoints: card.touchlinePoints,
+                    touchlinePoints: card.seasonTouchlinePoints === undefined
+                      ? card.touchlinePoints
+                      : card.seasonTouchlinePoints,
+                    extraFields: [
+                      {
+                        label: isPortuguese ? "Pontos da partida atual" : "Current match points",
+                        value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
+                        accent: true,
+                      },
+                    ],
                     profileHref,
                     cardEngineHref: canEditCardEngine
                       ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
@@ -147,6 +156,7 @@ export default function ClubHubOfficialLineup({
                     rankingMode={staticVisualQa ? "preview" : "live"}
                     showProfileAction={false}
                     showSocialMetrics={false}
+                    showMatchPoints
                   />
                 </TouchlineCardZoom>
               </article>
