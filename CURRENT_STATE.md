@@ -34,7 +34,7 @@ Active QA source SHA: `848ebf1` (`fix(football-data): request nested squad posit
 - The requested `xlsx@0.18.5` High remediation required no package change: `xlsx` is absent from the workspace manifests, lockfile and resolved dependency tree.
 - The fresh audit exposed actual transitive advisories instead: `brace-expansion` in the `^1.1.0` and `^5.0.0` ranges, `js-yaml@^4.0.0`, and `nanoid@^3.0.0`. Workspace overrides now select the compatible patch releases `1.1.18`, `5.0.9`, `4.3.1`, and `3.3.18`; no direct application dependency or API changed.
 - Fresh `pnpm audit --prod --json` and full `pnpm audit --json` both report zero vulnerabilities. The final Security Diff Scan `c518e1b3-2d4f-4655-a0be-3e62e6607ea8` and independent diff review report zero findings.
-- Fresh gates passed: full test suite `1155/1155`, TypeScript, ESLint with zero errors and five existing warnings, 134-route build, and `git diff --check`. The candidate is pending the QA-only Git deployment and remote smoke; Production remains forbidden.
+- Fresh gates passed: full test suite `1155/1155`, TypeScript, ESLint with zero errors and five existing warnings, 134-route build, and `git diff --check`. Commit `bbd122793ee0799058e0dc701c3872931b31bfc1` is pushed only to `qa`; Git-native Preview deployment `dpl_9RGPTeRTcQGGExkHGf7ynFZN3UcE` is `READY` and owns the stable QA alias. Remote smoke returned `200` for Live, Arsenal Club Hub, standings and rankings; anonymous Arena completed at the expected login boundary. Production remains forbidden.
 
 ## QA and release
 
