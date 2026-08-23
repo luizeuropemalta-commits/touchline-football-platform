@@ -13,6 +13,9 @@ const rankingNullSafetyMigration = await readFile(new URL("../supabase/qa/024_to
 const rankingFixtureSetMigration = await readFile(new URL("../supabase/qa/025_touchline_qa_ranking_fixture_set_integrity.sql", import.meta.url), "utf8");
 const rankingFixtureCanonicalizationMigration = await readFile(new URL("../supabase/qa/026_touchline_qa_ranking_fixture_id_canonicalization.sql", import.meta.url), "utf8");
 const rankingFixtureAsciiMigration = await readFile(new URL("../supabase/qa/027_touchline_qa_ranking_fixture_id_ascii_contract.sql", import.meta.url), "utf8");
+const coachCanonicalOutcomesMigration = await readFile(new URL("../supabase/qa/028_touchline_qa_coach_scoring_v2_canonical_outcomes.sql", import.meta.url), "utf8");
+const coachProvisionalBackfillMigration = await readFile(new URL("../supabase/qa/029_touchline_qa_coach_scoring_v2_provisional_backfill.sql", import.meta.url), "utf8");
+const coachRankingBackfillPublishMigration = await readFile(new URL("../supabase/qa/030_touchline_qa_coach_ranking_provisional_backfill_publish.sql", import.meta.url), "utf8");
 
 test("V2 migration is pinned to QA and preserves versioned V1 history", () => {
   assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
@@ -35,6 +38,33 @@ test("V2 coach reconciliation applies every approved home and away result", () =
   assert.match(migration, /full time/i);
   assert.match(migration, /fixture\.starts_at >= contract\.started_at/i);
   assert.match(migration, /fixture\.starts_at < contract\.ended_at/i);
+});
+
+test("canonical coach outcomes remove negative loss scoring while preserving final immutability", () => {
+  assert.match(coachCanonicalOutcomesMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
+  assert.match(coachCanonicalOutcomesMigration, /v_context = 'home' and v_outcome = 'win' then 3/i);
+  assert.match(coachCanonicalOutcomesMigration, /v_context = 'home' and v_outcome = 'draw' then 1/i);
+  assert.match(coachCanonicalOutcomesMigration, /v_context = 'home' then 0/i);
+  assert.match(coachCanonicalOutcomesMigration, /v_outcome = 'win' then 4/i);
+  assert.match(coachCanonicalOutcomesMigration, /v_outcome = 'draw' then 2/i);
+  assert.match(coachCanonicalOutcomesMigration, /else 0/i);
+  assert.match(coachCanonicalOutcomesMigration, /settlement_status <> 'final'/i);
+});
+
+test("canonical coach backfill touches only mutable V2 settlements", () => {
+  assert.match(coachProvisionalBackfillMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
+  assert.match(coachProvisionalBackfillMigration, /points\.scoring_version = 'coach_scoring_v2'/i);
+  assert.match(coachProvisionalBackfillMigration, /points\.settlement_status = 'provisional'/i);
+  assert.match(coachProvisionalBackfillMigration, /public\.touchline_is_scoreable_fixture_status\(fixture\.status\)/i);
+  assert.doesNotMatch(coachProvisionalBackfillMigration, /delete\s+from/i);
+});
+
+test("canonical coach backfill publishes a replacement active ranking snapshot", () => {
+  assert.match(coachRankingBackfillPublishMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
+  assert.match(coachRankingBackfillPublishMigration, /touchline_coach_ranking_snapshots/i);
+  assert.match(coachRankingBackfillPublishMigration, /touchline_coach_ranking_active_snapshots/i);
+  assert.match(coachRankingBackfillPublishMigration, /on conflict \(league_key\) do update/i);
+  assert.match(coachRankingBackfillPublishMigration, /coach_scoring_v2/i);
 });
 
 test("V2 ranking snapshots are server-only, versioned and season scoped", () => {
