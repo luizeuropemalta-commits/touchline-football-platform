@@ -279,6 +279,14 @@ export default async function ClubOwnerProfileRenderer({
   const bestPlayerPalette = touchlineCardTierPalette(bestPlayerCard?.cardTier);
   const startingShowcaseCards = publishedClubOwnerSquadCards.slice(0, 6);
   const rosterSections = partitionClubOwnerRoster(sortedClubOwnerSquadCards);
+  const ownedContractCount = activeClubOwnerUser
+    ? authoritativeRoster?.ok
+      ? authoritativeRoster.snapshot.ownedContractCount
+      : null
+    : sortedClubOwnerSquadCards.length;
+  const openContractSlotCount = ownedContractCount === null
+    ? null
+    : Math.max(0, 35 - ownedContractCount);
   const savedStartingXiCards = activeClubOwnerUser
     ? selectSavedArenaStartingXi(rosterCards, arenaStateResponse.data?.lineup)
     : null;
@@ -301,7 +309,9 @@ export default async function ClubOwnerProfileRenderer({
         0,
       ) / 100))
     : 60;
-  const occupiedContractPercent = Math.round((sortedClubOwnerSquadCards.length / 35) * 100);
+  const occupiedContractPercent = ownedContractCount === null
+    ? null
+    : Math.round((ownedContractCount / 35) * 100);
   const locale = normalizeTouchLineLocale(params.lang);
   const benchPositionGroups = ([
     { role: "goalkeeper", label: locale === "pt-BR" ? "Guarda-redes" : "Goalkeepers" },
@@ -614,23 +624,23 @@ export default async function ClubOwnerProfileRenderer({
                   <div className="club-owner-finance-hero">
                     <div>
                       <span>{clubCopy.totalResources}</span>
-                      <strong>{sortedClubOwnerSquadCards.length}/35</strong>
+                      <strong>{ownedContractCount ?? "—"}/35</strong>
                       <small>{clubCopy.availableAndSquad}</small>
                     </div>
-                    <div className="club-owner-budget-ring" style={{ "--budget-used": `${occupiedContractPercent * 3.6}deg` } as CSSProperties}>
-                      <span><strong>{occupiedContractPercent}%</strong><small>{clubCopy.invested}</small></span>
+                    <div className="club-owner-budget-ring" style={{ "--budget-used": `${(occupiedContractPercent ?? 0) * 3.6}deg` } as CSSProperties}>
+                      <span><strong>{occupiedContractPercent === null ? "—" : `${occupiedContractPercent}%`}</strong><small>{clubCopy.invested}</small></span>
                     </div>
                   </div>
 
                   <div className="club-owner-ledger">
                     <div><span>{clubCopy.spendableBalance}</span><strong>{walletBalanceTc} TC</strong><small>{clubCopy.marketAvailable}</small></div>
                     <div><span>{clubCopy.cardAssets}</span><strong>{formatTouchlineCommercialCardTotal({ numericPrice: squadCardValue, competition: "england" })}</strong><small>{clubCopy.updatedValue}</small></div>
-                    <div><span>{clubCopy.contractSlots}</span><strong>{Math.max(0, 35 - sortedClubOwnerSquadCards.length)}</strong><small>{clubCopy.limit35}</small></div>
+                    <div><span>{clubCopy.contractSlots}</span><strong>{openContractSlotCount ?? "—"}</strong><small>{clubCopy.limit35}</small></div>
                     <div><span>{clubCopy.pendingCommitments}</span><strong>0</strong><small>{clubCopy.noOpenPurchase}</small></div>
                   </div>
 
-                  <div className="club-owner-budget-bar" aria-label={`${occupiedContractPercent}% ${clubCopy.budgetInvested}`}>
-                    <span style={{ width: `${occupiedContractPercent}%` }} />
+                  <div className="club-owner-budget-bar" aria-label={`${occupiedContractPercent ?? "—"}% ${clubCopy.budgetInvested}`}>
+                    <span style={{ width: `${occupiedContractPercent ?? 0}%` }} />
                   </div>
                   <footer><span>{clubCopy.accounting}</span><small>{clubCopy.ledgerFootnote}</small></footer>
                 </article>
@@ -659,10 +669,10 @@ export default async function ClubOwnerProfileRenderer({
                       <strong>{clubCopy.squadControl}</strong>
                     </div>
                   </div>
-                  <div className="club-owner-contract-progress"><span style={{ width: `${Math.min(100, (sortedClubOwnerSquadCards.length / 35) * 100)}%` }} /></div>
+                  <div className="club-owner-contract-progress"><span style={{ width: `${Math.min(100, occupiedContractPercent ?? 0)}%` }} /></div>
                   <div className="club-owner-contract-numbers">
-                    <div><strong>{sortedClubOwnerSquadCards.length}</strong><span>{clubCopy.active}</span></div>
-                    <div><strong>{Math.max(0, 35 - sortedClubOwnerSquadCards.length)}</strong><span>{clubCopy.slots}</span></div>
+                    <div><strong>{ownedContractCount ?? "—"}</strong><span>{clubCopy.active}</span></div>
+                    <div><strong>{openContractSlotCount ?? "—"}</strong><span>{clubCopy.slots}</span></div>
                     <div><strong>0</strong><span>{clubCopy.pending}</span></div>
                   </div>
                   <a href={touchlineArenaPanelHref("market", locale)}>{clubCopy.manageMarket} <ArrowRight aria-hidden="true" /></a>
