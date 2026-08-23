@@ -21,7 +21,6 @@ export default function ClubHubMatchdayTechnicalArea({
 }: ClubHubMatchdayTechnicalAreaProps) {
   const portuguese = locale === "pt-BR";
   const confirmed = technical.state === "confirmed"
-    && technical.coach !== null
     && technical.bench.length > 0;
   const benchSize = confirmed ? technical.bench.length : 0;
   const awaitingLabel = portuguese
@@ -49,8 +48,10 @@ export default function ClubHubMatchdayTechnicalArea({
       <div className={styles.content}>
         <section className={styles.coach} aria-label={coachLabel}>
           <span className={styles.label}>{coachLabel}</span>
-          {confirmed ? (
-            <strong>{technical.coach?.name}</strong>
+          {confirmed && technical.coach ? (
+            <strong>{technical.coach.name}</strong>
+          ) : confirmed ? (
+            <p>{portuguese ? "Treinador indisponível no feed oficial" : "Coach unavailable from the official feed"}</p>
           ) : (
             <p>{awaitingLabel}</p>
           )}

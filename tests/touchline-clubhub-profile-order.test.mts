@@ -42,7 +42,7 @@ test("ClubHub partitions the displayed XI, official bench, and plain outside-mat
   assert.doesNotMatch(outsideRoster, /marketValue|cardTier|cardPrice|touchlinePoints|ranking|href=|fetch\(/i);
 });
 
-test("technical area only reveals a coach and the complete provider-published bench", () => {
+test("technical area reveals the complete provider-published bench without inventing a coach", () => {
   assert.match(lineup, /officialBench\.length > 0/);
   assert.match(lineup, /confirmedBenchCards\.length === officialBench\.length/);
   assert.match(lineup, /new Set\(benchIds\)\.size === benchIds\.length/);
@@ -50,6 +50,7 @@ test("technical area only reveals a coach and the complete provider-published be
   assert.match(lineup, /state: hasConfirmedTechnicalTeamSheet \? "confirmed" : "awaiting_official_team_sheet"/);
   assert.match(technical, /const benchSize = confirmed \? technical\.bench\.length : 0/);
   assert.match(technical, /technical\.state === "confirmed"/);
+  assert.match(technical, /Coach unavailable from the official feed/);
   assert.match(technical, /Awaiting official matchday sheet/);
   assert.doesNotMatch(technical, /TOUCHLINE_LIVE_COACHES|buildMatchdayBench|create(?:Admin)?Client|supabase|fetch\(|sportmonks|marketValue|contract/i);
 });

@@ -119,7 +119,8 @@ export function buildTouchLineClubLineup(input: {
 /**
  * Pure ClubHub read model. A public matchday is confirmed only after the
  * selected fixture supplies one exact 11-player XI and the complete technical
- * team sheet (coach plus the provider's unique substitutes). It never infers a coach,
+ * team sheet (the provider's unique substitutes, plus a coach when supplied).
+ * It never infers a coach,
  * bench member, fixture or player identity.
  */
 export function buildTouchLineClubMatchdayPresentation(input: {
@@ -177,7 +178,6 @@ export function buildTouchLineClubMatchdayPresentation(input: {
     ? input.officialCoach
     : null;
   const hasConfirmedTechnicalTeamSheet = hasConfirmedStartingEleven
-    && coach !== null
     && officialBench.length > 0
     && confirmedBenchCards.length === officialBench.length
     && confirmedBenchCards.every(Boolean);

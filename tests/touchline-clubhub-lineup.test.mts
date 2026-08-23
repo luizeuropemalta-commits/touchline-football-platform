@@ -100,7 +100,7 @@ test("ClubHub confirms and distributes only a complete provider Starting XI for 
   );
 });
 
-test("ClubHub confirms the technical area only for an exact fixture, club, XI, coach, and provider bench", () => {
+test("ClubHub confirms the technical area only for an exact fixture, club, XI, and provider bench", () => {
   const presentation = buildTouchLineClubMatchdayPresentation({
     club: city,
     squadCards,
@@ -140,13 +140,22 @@ test("ClubHub accepts the provider's complete bench size without assuming nine s
   assert.equal(presentation.technical.bench.length, 7);
 });
 
+test("ClubHub preserves an official bench when the provider has not supplied a coach", () => {
+  const presentation = buildTouchLineClubMatchdayPresentation({
+    club: city,
+    squadCards,
+    officialLineup: [...officialStarters, ...officialBench],
+    fixtureId: "fixture-1",
+    officialCoach: null,
+  });
+
+  assert.equal(presentation.technical.state, "confirmed");
+  assert.equal(presentation.technical.coach, null);
+  assert.equal(presentation.technical.bench.length, 9);
+});
+
 test("ClubHub fail-closes the named technical bench for incomplete or mismatched official sheets", () => {
   const incompleteCases = [
-    {
-      label: "missing coach",
-      officialLineup: [...officialStarters, ...officialBench],
-      officialCoach: null,
-    },
     {
       label: "no official substitutes",
       officialLineup: [...officialStarters],
