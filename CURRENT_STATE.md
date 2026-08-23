@@ -1,5 +1,12 @@
 # TouchLine Current State
 
+## QA Score Engine V3 Ranking — GREEN / PUBLISHED
+
+- The active QA ranking snapshot is `player-v3:1e83121b-b778-459b-b9a0-7cf1eaff5729:2beb347d`: `player_scoring_v3`, `complete_for_scoring`, 312 ranked players, 284 total TouchLine Points, published at `2026-08-23T20:49:39.841Z`.
+- Seven final, low-minute substitute appearances have a persisted official Sportmonks lineup record but no Sportmonks rating: Fabian Schär (19722195, 1'), Ben Gannon-Doak (19722196, 1'), Alejandro Garnacho and Malick Yalcouyé (19722197, 4'), Destiny Udogie (19722198, 4'), Arnaud Kalimuendo (19722199, 1') and Carlos Alcaraz (19722201, 1'). They are provider omissions, never zero-point substitutions and never V2 fallbacks; their ranking coverage is explicitly `complete_for_scoring`.
+- QA commit `25c9a6f` keeps `/touchline-player-card-rankings` dynamically rendered, because snapshot publication is independent of a web deployment. Native Safari CUSTOMER then rendered the V3 live order, all 312 cards and its Top 20. Jack Hinshelwood proved the cross-surface contract: Sportmonks rating `8.94` → V3 match points `7`; Card, Zoom, Profile and Ranking all show season total `7`.
+- QA-only checks passed: focused 36/36, TypeScript and scoped ESLint. Deployment `dpl_2j87vJBUbaPT3wsaME64HbQaEy7N` is READY on the stable `qa` alias. Production remains untouched.
+
 ## QA native Safari canonical-owner profile — BLOCKED / EXTERNAL, CHECKPOINT PRESERVED
 
 - **Identity and scope:** the user-confirmed already-open Safari session remains the canonical QA ClubOwner persona. No credential, cookie, account selection, session value, Arena selection, formation, card, contract, profile or database data was read or changed.
