@@ -92,3 +92,22 @@ test("active scoring facts remain blocking when a participant lacks provider con
     }), "blocking_partial", fact);
   }
 });
+
+test("a provider-confirmed participant without a Sportmonks rating is excluded, never assigned zero", () => {
+  assert.equal(classifyTouchLinePlayerRankingCoverage({
+    fixtureFinal: true,
+    points: null,
+    scoringCoverageStatus: "unavailable",
+    missingFacts: ["sportmonks-rating"],
+    appearanceStatus: "substitute",
+    providerRatingAbsentFromFinalLineup: true,
+  }), "complete_for_scoring");
+
+  assert.equal(classifyTouchLinePlayerRankingCoverage({
+    fixtureFinal: true,
+    points: null,
+    scoringCoverageStatus: "unavailable",
+    missingFacts: ["sportmonks-rating"],
+    appearanceStatus: "substitute",
+  }), "unavailable");
+});

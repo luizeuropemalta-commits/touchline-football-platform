@@ -89,6 +89,26 @@ test("an exact final fixture set can be complete for scoring while details remai
   assert.equal(touchLinePlayerSeasonCoverageMessage(aggregate), "Complete for scoring — unavailable provider details remain unavailable");
 });
 
+test("a provider-omitted rating never turns an official appearance into zero points", () => {
+  const aggregate = buildTouchLinePlayerSeasonAggregate({
+    providerPlayerId: "154421",
+    season: { seasonId: "current", seasonName: "2026/27", competitionId: "england", competitionName: "TouchLine England", clubId: "city", clubName: "Manchester City" },
+    eligibleFixtures: [
+      {
+        fixtureId: "f-1",
+        lineups: [lineup({ fixtureId: "f-1", starter: false, minutes: 4 })],
+        touchlinePoints: null,
+        scoringIncluded: false,
+        providerRatingAbsentFromFinalLineup: true,
+        rankingCoverageStatus: "complete_for_scoring",
+      },
+    ],
+  });
+
+  assert.equal(aggregate.coverageStatus, "complete_for_scoring");
+  assert.equal(aggregate.summary.touchlinePoints, null);
+});
+
 test("a legacy row claiming complete is downgraded if its fixture identity sets disagree", () => {
   const normalized = normalizeTouchLinePlayerSeasonStatistics({
     coverageStatus: "complete",

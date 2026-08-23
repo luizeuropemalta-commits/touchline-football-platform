@@ -134,6 +134,15 @@ async function rebuildTouchLinePlayerRanking(
     return Boolean(id && publishedCards.has(id));
   });
   const aggregateByPlayerId = new Map(aggregates.flatMap((row) => text(row.football_player_id) ? [[text(row.football_player_id)!, row] as const] : []));
+  // A provider-confirmed appearance without a Sportmonks rating has no V3
+  // points. It remains visible on the player surface as unavailable, but may
+  // not receive a fabricated zero or a ranking position. Other published
+  // players still need complete final fixture coverage below.
+  const rankingEligiblePlayerRows = eligiblePlayerRows.filter((player) => {
+    const aggregate = aggregateByPlayerId.get(text(player.id) ?? "");
+    return number(object(aggregate?.summary_payload).touchlinePoints) !== null;
+  });
+  if (!rankingEligiblePlayerRows.length) return failure("ranking-has-no-published-settlements", { seasonId });
   const fixtureRows = rows(fixturePointData);
   const settlementByPlayerFixture = new Map(fixtureRows.flatMap((row) => {
     const playerId = text(row.football_player_id);
@@ -141,7 +150,7 @@ async function rebuildTouchLinePlayerRanking(
     return playerId && fixtureId ? [[`${playerId}:${fixtureId}`, row] as const] : [];
   }));
   const settledFixtureIds = new Set(fixtures.map((fixture) => text(fixture.id)).filter((id): id is string => Boolean(id)));
-  if (eligiblePlayerRows.some((player) => {
+  if (rankingEligiblePlayerRows.some((player) => {
     const playerId = text(player.id) ?? "";
     const aggregate = aggregateByPlayerId.get(text(player.id) ?? "");
     if (!aggregate || !isTouchLinePlayerRankingAggregateComplete({
@@ -158,7 +167,7 @@ async function rebuildTouchLinePlayerRanking(
       });
     });
   })) return failure("ranking-source-incomplete", { seasonId });
-  const clubIds = [...new Set(eligiblePlayerRows.map((row) => text(row.current_club_id)).filter((id): id is string => Boolean(id)))];
+  const clubIds = [...new Set(rankingEligiblePlayerRows.map((row) => text(row.current_club_id)).filter((id): id is string => Boolean(id)))];
   const { data: clubData, error: clubError } = clubIds.length
     ? await admin.from("football_clubs").select("id,name").in("id", clubIds)
     : { data: [], error: null };
@@ -190,7 +199,7 @@ async function rebuildTouchLinePlayerRanking(
   }
 
   const clubById = new Map(rows(clubData).flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
-  const rankingPlayers = eligiblePlayerRows.flatMap((player) => {
+  const rankingPlayers = rankingEligiblePlayerRows.flatMap((player) => {
     const playerId = text(player.id);
     const aggregate = playerId ? aggregateByPlayerId.get(playerId) : null;
     const summary = object(aggregate?.summary_payload);
@@ -225,7 +234,7 @@ async function rebuildTouchLinePlayerRanking(
 
   const fixtureIds = [...new Set(rankingPlayers.flatMap((player) => player.sourceFixtureIds))].sort();
   const expectedFixtureIds = [...fixtureIds];
-  const coverageStatus = eligiblePlayerRows.every((player) => (
+  const coverageStatus = rankingEligiblePlayerRows.every((player) => (
     aggregateByPlayerId.get(text(player.id) ?? "")?.coverage_status === "complete"
   )) ? "complete" as const : "complete_for_scoring" as const;
   const totalScorePoints = rankingPlayers.reduce((total, player) => total + player.touchlinePoints, 0);

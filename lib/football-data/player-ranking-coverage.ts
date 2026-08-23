@@ -37,12 +37,25 @@ export function classifyTouchLinePlayerRankingCoverage(input: {
   scoringCoverageStatus: "complete" | "partial" | "unavailable";
   missingFacts: readonly string[];
   appearanceStatus: "started" | "substitute" | "unused" | "absent" | "unavailable";
+  /** The final Sportmonks lineup identifies a real participant, but its
+   * authoritative statistics array contains no rating fact. This is distinct
+   * from an ingestion, identity, or settlement failure. */
+  providerRatingAbsentFromFinalLineup?: boolean;
 }): TouchLinePlayerRankingCoverageStatus {
   const nonParticipant = input.appearanceStatus === "unused" || input.appearanceStatus === "absent";
   // A final official team sheet proves this player did not receive a rating
   // because they did not play. This is neither a fabricated zero nor a
   // missing scoring fact for the player's season accumulation.
   if (input.fixtureFinal && nonParticipant) return "complete_for_scoring";
+  // A provider-confirmed substitute can legitimately have no Sportmonks
+  // rating. It is excluded from the player's V3 score accumulation (rather
+  // than assigned zero), while the final fixture remains safe for the ranking
+  // population. Any unknown/mapped-away participant stays unavailable below.
+  if (
+    input.fixtureFinal
+    && input.providerRatingAbsentFromFinalLineup === true
+    && (input.appearanceStatus === "started" || input.appearanceStatus === "substitute")
+  ) return "complete_for_scoring";
   if (input.points === null || !Number.isFinite(input.points) || input.scoringCoverageStatus === "unavailable") {
     return "unavailable";
   }

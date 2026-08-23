@@ -19,6 +19,9 @@ type EligibleFixture = {
   /** False for an official non-participant: no rating is expected and it is
    * excluded from the season score rather than converted to zero. */
   scoringIncluded?: boolean;
+  /** A final, mapped Sportmonks lineup has a genuine appearance but no rating.
+   * This makes its V3 result unavailable; it must never become zero. */
+  providerRatingAbsentFromFinalLineup?: boolean;
   scoringStatistics?: Readonly<Record<string, number>> | null;
   scoringComplete?: boolean;
   rankingCoverageStatus?: TouchLinePlayerRankingCoverageStatus;
@@ -102,7 +105,12 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
   // never invokes a second scoring implementation or reinterprets facts.
   const scoredFixtures = synchronizedFixtures.filter((fixture) => fixture.scoringIncluded !== false);
   const fixturePointValues = scoredFixtures.map((fixture) => fixture.touchlinePoints ?? null);
-  const touchlinePoints = fixturePointValues.every((value) => value !== null)
+  const hasProviderRatingAbsentFromFinalLineup = synchronizedFixtures.some((fixture) => (
+    fixture.providerRatingAbsentFromFinalLineup === true
+  ));
+  const touchlinePoints = hasProviderRatingAbsentFromFinalLineup
+    ? null
+    : fixturePointValues.every((value) => value !== null)
     ? fixturePointValues.reduce((total, value) => total + (value ?? 0), 0)
     : null;
   const fixtureSetComplete = fixtures.length > 0

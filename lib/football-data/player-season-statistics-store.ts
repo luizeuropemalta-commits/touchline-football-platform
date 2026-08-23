@@ -293,12 +293,19 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
       const isParticipant = (resolvedAppearanceStatus === "started" || resolvedAppearanceStatus === "substitute")
         && typeof minutesPlayed === "number" && minutesPlayed > 0;
       const v3PointResult = touchLinePlayerFixtureScoreV3(isParticipant ? rating : null);
+      // `member` is the mapped raw Sportmonks lineup row. Therefore this flag
+      // can only represent an authoritative omission in a final provider
+      // payload; a missing/mis-mapped member never reaches this branch.
+      const providerRatingAbsentFromFinalLineup = Boolean(member)
+        && isParticipant
+        && rating === null;
       const rankingCoverageStatus = classifyTouchLinePlayerRankingCoverage({
         fixtureFinal: settlementStatus === "final",
         points: v3PointResult.points,
         scoringCoverageStatus: v3PointResult.coverageStatus,
         missingFacts: v3PointResult.missingFacts,
         appearanceStatus: resolvedAppearanceStatus,
+        providerRatingAbsentFromFinalLineup,
       });
       return {
         fixture,
@@ -311,6 +318,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         pointResult,
         v3PointResult,
         isParticipant,
+        providerRatingAbsentFromFinalLineup,
         settlementStatus,
         rankingCoverageStatus,
       };
@@ -325,15 +333,16 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         clubId: membership.club_id,
         clubName: membership.football_clubs?.name ?? null,
       },
-      eligibleFixtures: fixtureSettlements.map(({ fixture, feed, lineups, v3PointResult, isParticipant, rankingCoverageStatus }) => {
+      eligibleFixtures: fixtureSettlements.map(({ fixture, feed, lineups, v3PointResult, isParticipant, providerRatingAbsentFromFinalLineup, rankingCoverageStatus }) => {
         return {
           fixtureId: fixture.id,
           lineups,
           events: feed ? fantasyEvents(feed.events_payload) : null,
           latestSyncAt: feed?.last_synced_at ?? null,
           touchlinePoints: v3PointResult.points,
-          scoringIncluded: isParticipant,
+          scoringIncluded: isParticipant && !providerRatingAbsentFromFinalLineup,
           scoringComplete: v3PointResult.coverageStatus === "complete",
+          providerRatingAbsentFromFinalLineup,
           rankingCoverageStatus,
         };
       }),
