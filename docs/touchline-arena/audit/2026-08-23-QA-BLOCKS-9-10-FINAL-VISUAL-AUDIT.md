@@ -4,8 +4,8 @@
 
 - Environment: QA Preview only.
 - Stable QA alias: `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`.
-- Runtime SHA under test: `2e4fb07216593e64fd3da1d46287a10e761f06cb`.
-- Deployment: `dpl_HNKZrjAPqtfVCqq3cQaUbRgset21` (`READY`).
+- Runtime SHA under test: `a27081eefdcb25a8db44ba0dbbf3c9f7924f456c`.
+- Deployment: `dpl_6f2KDnM59fbyvBZi6M9DZbbhG7KH` (`READY`, Preview).
 - Production: **NOT TOUCHED**.
 - Existing user changes in `CURRENT_STATE.md`, the canonical persona audit, the final-product ledger, and `tsconfig.tsbuildinfo` were preserved and not staged.
 
@@ -14,7 +14,7 @@
 - Blocks 5–8: previously GREEN; not reopened without a demonstrated regression.
 - Block 9: GREEN. The single official table renders 20 clubs, canonical shared sports ranks (`1=`, `1=`, `3=`), tied accessibility, P/W/D/L/GF/GA/GD/PTS, live-state support, and no second table.
 - Block 10 automated and rendered gates: GREEN in Chromium, WebKit, and Firefox across desktop, tablet, phone landscape, and the wider responsive matrix.
-- Native Safari gate after the final formation geometry change: `BLOCKED / EXTERNAL — the Mac is locked and Computer Use cannot unlock it`. No login, logout, session switch, cookie/storage change, or credential operation was attempted.
+- Native Safari CUSTOMER and ADMIN gates: GREEN. The normal CUSTOMER window remained authenticated as `jl_nenelopes10@hotmail.com`; the Private ADMIN window remained authenticated as `admin@touchline.com.br`. Neither session was logged out, switched, cleared, or otherwise modified.
 - Ranking player/card: `BLOCKED / EXTERNAL DATA COVERAGE — 164 published cards still lack the complete official provider facts required for a publishable snapshot`. No partial snapshot was published and missing facts were not converted to zero.
 
 ## Findings repaired
@@ -23,20 +23,21 @@
 2. The Club Hub player-card ranking link was 42px high. Repaired to 44px in the same commit.
 3. A persisted `4-2-3-1` label was rendered as a collapsed `1+4+5+1` geometry because midfield tactical sub-lines were aggregated. Repaired in `709a122c2cc412fe9027ea763c12ded879bef6e4` with canonical columns `1+4+2+3+1`.
 4. Outer cards at `y=86%` extended beyond the painted pitch. Repaired in `2e4fb07216593e64fd3da1d46287a10e761f06cb` by the shared Club Hub/Market safe span `20%–80%`.
+5. The authenticated ClubOwner profile displayed `33/35` capacity because it counted only renderable/published player cards, while Market correctly used all 35 authoritative active contracts. Repaired in `a27081eefdcb25a8db44ba0dbbf3c9f7924f456c`: private capacity now uses `ownedContractCount`; playable roster remains 33 (`11` XI + `22` bench); failed/expired authoritative reads render unavailable instead of demo or partial data.
 
 ## Verification evidence
 
 ### Code and release
 
-- Focused geometry/Club Hub tests: 16/16 PASS after the final repair.
-- Complete suite: 1244/1244 PASS.
+- Focused affected tests: 27/27 PASS after the final repair.
+- Complete suite: 1245/1245 PASS.
 - TypeScript: PASS.
 - ESLint: 0 errors; 5 unchanged legacy warnings.
 - Production build: PASS, 136 pages.
 - `git diff --check`: PASS.
 - Mission governance: PASS.
 - TouchLine release-readiness local check: READY (not Production approval).
-- Security diff scan: N/A for the final pure geometry/test delta; no API, auth, RBAC, persistence, DTO, secret, or mutation surface changed.
+- Security diff scan for `3b06c44..a27081e`: complete coverage, 0 findings. Authenticated capacity remains scoped to the server-derived ClubOwner identity; timeout/error remains fail-closed; no private roster/wallet fallback or new mutation surface was introduced.
 
 ### Rendered formation proof
 
@@ -74,21 +75,37 @@
 - Player/card ranking remained fail-closed; coach ranking remained available and correct.
 - Artifact: `outputs/final-regression-2e4fb07/p0c-public-proof.json`.
 
+### Native Safari CUSTOMER
+
+- Arena: PASS, no global loader or white screen; the same 11 saved card triggers rendered after the one authorized normal reload and again after the final QA deployment.
+- Formation/state: `4-3-3`, 11-player XI and coach Unai Emery preserved; no card, contract, formation, or session reset occurred.
+- Overlay: Álvaro Rodríguez card opened and closed successfully.
+- Private profile: PASS, `VERIFIED PRIVATE AREA`, `35/35` club capacity, `100%` slots used, `0` contract slots, `35` active contracts, `11/11` Starting XI and unified bench `22` (1 GK, 5 DF, 8 MF, 8 FW).
+- Console: clean; only the Safari `Console opened` marker was present.
+- Network/runtime: profile, Arena, roster, state, coach, inventory and squad reads returned expected successful Preview responses; no 4xx/5xx was observed. Vercel's deployment-specific 5xx query returned no records.
+- Final focused location: Arena in the normal Safari window.
+
+### Native Safari ADMIN
+
+- Private Safari remained authenticated as `admin@touchline.com.br` on protected Card Inventory.
+- RBAC/render: PASS; `Owner protected`, `Luiz Lopez TouchLine Owner`, and 120 published cards rendered without loader or white screen.
+- Console: 0 application errors. Two benign Safari CSS preload advisories referenced an older cached deployment and did not reproduce as a runtime/product failure.
+- Network: 24 resources, 2 domains, 0 redirects, no unexpected failure.
+- No save, logout, account switch, cookie/storage clear, or Admin data mutation was performed.
+
 ### Observability
 
-- Latest QA deployment traffic: 1251 HTTP 200, 198 HTTP 307, 10 HTTP 204 in the observed window.
-- 4xx: none.
-- 5xx: none.
-- Warning/error/fatal runtime logs: none.
-- Runtime error clusters: none.
+- Final QA deployment `dpl_6f2KDnM59fbyvBZi6M9DZbbhG7KH`: Preview and stable alias both resolved READY.
+- Deployment-specific traffic captured the authenticated Safari proof: `/club-owner/me`, `/arena`, `/api/touchline-arena/roster`, `/api/touchline-arena/state`, coach, Market inventory, Premier squad and Live endpoints returned expected 200/204/206 responses.
+- 5xx query: none.
+- Unexpected 4xx, warning/error/fatal runtime logs, and runtime error clusters: none.
 
 ## Preserved state
 
-The QA pre-image and read-only proof retained the CUSTOMER account's `4-3-3`, 11-player saved XI, coach, 35 active contracts, and saved layouts. The final changes were presentation-only and introduced no write path. Save → deploy → refresh state therefore remained authoritative and unchanged.
+The QA pre-image and native Safari proof retained the CUSTOMER account's `4-3-3`, 11-player saved XI, coach Unai Emery, 35 authoritative active contracts, 33 currently renderable player cards (`11` XI + `22` bench), zero free contract slots, and saved layouts. The capacity repair introduced no write path. Save → deploy → refresh state remained authoritative and unchanged.
 
 ## Remaining external gates
 
-1. Unlock the Mac, then validate the already-open normal Safari CUSTOMER session and Private Safari ADMIN session without changing either identity. Recheck the final formation geometry, overlay, console/network, and state preservation once.
-2. Wait for complete official provider coverage for the 164 blocked published player/card ranking sources; only then rebuild and publish an audited complete snapshot.
+1. Wait for complete official provider coverage for the 164 blocked published player/card ranking sources; only then rebuild and publish an audited complete snapshot.
 
-Until those external conditions change, no safe local, QA database, automated-browser, deployment, or observability work remains for this checkpoint.
+That external data-coverage gate does not reopen Blocks 5–10 or the final regression and must not be bypassed with a partial snapshot or missing-as-zero data.
