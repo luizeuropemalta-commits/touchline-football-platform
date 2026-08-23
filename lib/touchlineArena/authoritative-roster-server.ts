@@ -12,6 +12,7 @@ import {
   touchlineCountryCode3FromName,
 } from "./country-flags.ts";
 import type { ClubOwnerSquadCard } from "./demo-data.ts";
+import { touchlineArenaTierForKey } from "./card-rules.ts";
 import {
   projectTouchlineCardStatsByPosition,
   type TouchlineCardStats,
@@ -308,10 +309,16 @@ export function mapAuthoritativeRosterRows(
       ?? asString(player.position)
       ?? "Player";
     const editorialCard = publishedCards.get(playerId) ?? null;
-    // An inventory/contract row is not itself a game-card publication. Keep
-    // historical ownership intact but do not expose an unclassified card to
-    // Arena, squad selection or other game consumers.
-    if (!editorialCard) continue;
+    // A public game card still requires editorial publication. The private
+    // ClubOwner roster is narrower: an active contract may retain its frozen
+    // purchase tier so the owner's saved XI never loses its card artwork while
+    // editorial review is pending. This does not provide a price or publish
+    // the card to any public/commercial surface.
+    const contractedTier = touchlineArenaTierForKey(asString(contract.purchase_tier));
+    const contractedPriceVersion = asString(contract.purchase_price_table_version);
+    if (!editorialCard && !contractedTier) {
+      return { ok: false, error: "TL_ROSTER_DATA_INCOMPLETE" };
+    }
 
     const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId), position);
     const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId), position);
@@ -333,7 +340,11 @@ export function mapAuthoritativeRosterRows(
       // the frozen active-contract terms below.
       marketValue: "",
       marketValueSource: "unavailable",
-      cardTier: editorialCard.tierKey,
+      cardTier: editorialCard?.tierKey ?? contractedTier!.key,
+      ...(editorialCard ? {} : {
+        cardPriceVersion: contractedPriceVersion ?? undefined,
+        cardPriceAuthority: "active-contract" as const,
+      }),
       inventoryId,
       // Compatibility field for legacy roster ordering only. Card presentation
       // consumes the explicit null-aware season projection below.

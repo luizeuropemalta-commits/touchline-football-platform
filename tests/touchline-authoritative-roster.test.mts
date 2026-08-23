@@ -219,14 +219,18 @@ test("uses only the published editorial card instead of legacy inventory tiers o
   assert.equal(staleTableResult.snapshot.cards[0]?.editorialCard?.cardPrice.amountMinor, 4_900);
 });
 
-test("preserves the active ownership count when publication policy hides a game card", () => {
+test("keeps an active contract card in the private owner roster without publishing it", () => {
   const result = mapAuthoritativeRosterRows(completeRows(), new Map());
   assert.equal(result.ok, true);
   if (!result.ok) return;
 
   assert.equal(result.snapshot.ownedContractCount, 1);
-  assert.equal(result.snapshot.activeContractCount, 0);
-  assert.deepEqual(result.snapshot.cards, []);
+  assert.equal(result.snapshot.activeContractCount, 1);
+  assert.equal(result.snapshot.cards.length, 1);
+  assert.equal(result.snapshot.cards[0]?.editorialCard, null);
+  assert.equal(result.snapshot.cards[0]?.cardTier, "ruby-red");
+  assert.equal(result.snapshot.cards[0]?.cardPriceAuthority, "active-contract");
+  assert.equal(result.snapshot.cards[0]?.cardPriceVersion, "2026-07-premier-v1");
 });
 
 test("keeps a published card independent from a retired inventory price-table identifier", () => {
