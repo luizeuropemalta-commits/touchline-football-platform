@@ -36,6 +36,11 @@ export const metadata = {
   title: "TouchLine Player Cards Ranking",
 };
 
+// Ranking publication happens independently of application deployments. Keep
+// this public read model live so a newly published V3 snapshot is never
+// hidden behind a build-time preseason render.
+export const dynamic = "force-dynamic";
+
 export default async function TouchLinePlayerCardRankingsPage({
   searchParams,
 }: {
@@ -45,7 +50,7 @@ export default async function TouchLinePlayerCardRankingsPage({
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   const activeRanking = await loadTouchLineActiveRanking();
   // This is the league-wide published-card ranking, never the signed-in
-  // customer's private roster. Every surface receives the same V2 snapshot.
+  // customer's private roster. Every surface receives the same V3 snapshot.
   const rosterCards = await loadTouchLineRankedCardCatalog(activeRanking);
   const competitionByCardId = new Map(rosterCards.map((card) => [
     card.id,
