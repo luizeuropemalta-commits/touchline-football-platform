@@ -61,6 +61,7 @@ type TouchlineCoachCardProps = {
   displayMode?: "default" | "compact";
   optimizeForLiveCompact?: boolean;
   enableInteractiveNeon?: boolean;
+  assetLoading?: "eager" | "lazy";
   frameLoading?: "eager" | "lazy";
   frameDecoding?: "sync" | "async" | "auto";
   frameFetchPriority?: "high" | "low" | "auto";
@@ -98,6 +99,7 @@ export default function TouchlineCoachCard({
   displayMode = "default",
   optimizeForLiveCompact = false,
   enableInteractiveNeon = true,
+  assetLoading,
   frameLoading,
   frameDecoding,
   frameFetchPriority,
@@ -386,7 +388,7 @@ export default function TouchlineCoachCard({
       <div className={styles.inner} data-coach-card-inner="true">
         <div className={styles.identity} {...editableLayerProps("nationality", "Nacionalidade")}>
           <span>{isPortuguese ? "Nacionalidade" : "Nationality"}</span>
-          {flagUrl ? <img ref={flagRef} src={flagUrl} alt={countryCode3} draggable={false} /> : null}
+          {flagUrl ? <img ref={flagRef} src={flagUrl} alt={countryCode3} draggable={false} loading={assetLoading ?? "eager"} /> : null}
           <b>{countryCode3}</b>
         </div>
 
@@ -395,7 +397,7 @@ export default function TouchlineCoachCard({
             <span>{isPortuguese ? "Clube atual" : "Current club"}</span>
             <div data-touchline-card-crest-trace-host="true">
               <TouchlineClubCrestPerimeterTrace />
-              <img ref={crestRef} src={runtimeClubLogoUrl} alt={clubName} draggable={false} data-touchline-card-crest="true" />
+              <img ref={crestRef} src={runtimeClubLogoUrl} alt={clubName} draggable={false} loading={assetLoading ?? "eager"} data-touchline-card-crest="true" />
             </div>
           </div>
         ) : null}

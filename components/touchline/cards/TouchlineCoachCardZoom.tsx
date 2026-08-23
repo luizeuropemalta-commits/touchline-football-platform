@@ -48,6 +48,7 @@ export default function TouchlineCoachCardZoom({
       displayMode={compact ? "compact" : "default"}
       optimizeForLiveCompact={compact}
       enableInteractiveNeon={false}
+      assetLoading="lazy"
       fixtureContext={contract?.currentFixture?.context ?? null}
     />
   );
@@ -67,6 +68,7 @@ export default function TouchlineCoachCardZoom({
           locale={locale}
           forceNeonActive
           enableInteractiveNeon={false}
+          assetLoading="lazy"
           frameLoading="eager"
           frameDecoding="sync"
           frameFetchPriority="high"

@@ -7,6 +7,8 @@ import { fetchTouchlineInternalJson } from "../lib/server/safe-internal-fetch.ts
 const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const squadGridSource = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
 const officialLineupSource = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
+const coachCardZoomSource = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url), "utf8");
+const coachCardSource = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCard.tsx", import.meta.url), "utf8");
 const errorBoundarySource = readFileSync(new URL("../app/error.tsx", import.meta.url), "utf8");
 const safeFetchSource = readFileSync(new URL("../lib/server/safe-internal-fetch.ts", import.meta.url), "utf8");
 const apiAccessSource = readFileSync(new URL("../lib/touchlineArena/api-access.ts", import.meta.url), "utf8");
@@ -27,6 +29,8 @@ test("ClubHub defers the below-the-fold squad artwork without emitting unused im
   assert.doesNotMatch(squadGridSource, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);
   assert.match(squadGridSource, /CARD_BATCH_SIZE = 8/);
   assert.match(officialLineupSource, /imageLoading="lazy"/);
+  assert.equal(coachCardZoomSource.match(/assetLoading="lazy"/g)?.length, 2);
+  assert.equal(coachCardSource.match(/assetLoading \?\? "eager"/g)?.length, 2);
 });
 
 test("ClubHub resolves its internal API URL without request-controlled host headers", () => {
