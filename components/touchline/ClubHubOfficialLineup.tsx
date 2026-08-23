@@ -71,7 +71,8 @@ export default function ClubHubOfficialLineup({
 
       <div className={styles.pitchViewport}>
         <TouchlinePitchSurface className={styles.pitch} ariaLabel={`${clubName} ${isPortuguese ? "campo de escalação" : "line-up pitch"}`}>
-          {lineup.players.length ? lineup.players.map(({ card, x, y }) => {
+          <div className={styles.geometryLayer}>
+            {lineup.players.length ? lineup.players.map(({ card, x, y }) => {
             const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
               displayName: card.name,
               shirtNumber: card.shirtNumber,
@@ -98,7 +99,7 @@ export default function ClubHubOfficialLineup({
               <article
                 key={card.id}
                 className={styles.player}
-                data-lineup-edge={x <= 12 ? "left" : x >= 88 ? "right" : undefined}
+                data-lineup-edge={x <= 8 ? "left" : x >= 92 ? "right" : undefined}
                 style={{ "--lineup-x": `${x}%`, "--lineup-y": `${y}%` } as CSSProperties}
               >
                 <span className={styles.playerName}>{card.name}</span>
@@ -170,9 +171,10 @@ export default function ClubHubOfficialLineup({
                 </TouchlineCardZoom>
               </article>
             );
-          }) : (
-            <div className={styles.empty}>{isPortuguese ? "Nenhum card TouchLine publicado nesta escalação." : "No published TouchLine cards in this line-up."}</div>
-          )}
+            }) : (
+              <div className={styles.empty}>{isPortuguese ? "Nenhum card TouchLine publicado nesta escalação." : "No published TouchLine cards in this line-up."}</div>
+            )}
+          </div>
         </TouchlinePitchSurface>
       </div>
     </section>

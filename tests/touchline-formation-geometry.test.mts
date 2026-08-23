@@ -17,6 +17,7 @@ import {
 
 const arenaClient = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 const migration = readFileSync(new URL("../supabase/qa/028_touchline_qa_formation_geometry_registry.sql", import.meta.url), "utf8");
+const fieldDepthMigration = readFileSync(new URL("../supabase/qa/029_touchline_qa_formation_geometry_field_depth.sql", import.meta.url), "utf8");
 const adminRoute = readFileSync(new URL("../app/api/admin/formation-geometries/route.ts", import.meta.url), "utf8");
 const adminStudio = readFileSync(new URL("../components/touchline/admin/FormationCalibrationStudio.tsx", import.meta.url), "utf8");
 
@@ -54,6 +55,8 @@ test("the calibrated 4-2-3-1 keeps tactical identities rather than generic rows"
     "GK", "RB", "RCB", "LCB", "LB", "RDM", "LDM", "RAM", "CAM", "LAM", "ST",
   ]);
   assert.equal(geometry.slots.find((slot) => slot.id === "GK")?.side, "centre");
+  assert.equal(geometry.slots.find((slot) => slot.id === "GK")?.x, 10);
+  assert.equal(geometry.slots.find((slot) => slot.id === "ST")?.x, 88);
   assert.deepEqual(geometry.slots.find((slot) => slot.id === "RB")?.allowedPositions, ["right-back"]);
   assert.deepEqual(geometry.slots.find((slot) => slot.id === "CAM")?.allowedPositions, ["midfield", "attacker"]);
 });
@@ -137,6 +140,17 @@ test("QA migration is fenced, versioned, service-role only and rolls back as a n
   assert.match(migration, /Arena camera calibration is explicitly out of scope/);
   assert.equal((migration.match(/^\s*\('\d(?:-\d){2,3}', array/gm) ?? []).length, 11);
   assert.doesNotMatch(migration, /grant (?:select|insert|update|delete).*authenticated/i);
+});
+
+test("QA field-depth correction creates a new 2D version without touching Arena calibration", () => {
+  assert.match(fieldDepthMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(fieldDepthMigration, /Line-up, Market and[\s\S]*?Training Center/);
+  assert.match(fieldDepthMigration, /Arena field\/camera geometry is independent/);
+  assert.match(fieldDepthMigration, /role' = 'goalkeeper'[\s\S]*?then 10::numeric/);
+  assert.match(fieldDepthMigration, /role' = 'forward'[\s\S]*?then 88::numeric/);
+  assert.match(fieldDepthMigration, /touchline_publish_formation_geometry/);
+  assert.match(fieldDepthMigration, /QA 2D field-depth calibration; Arena untouched/);
+  assert.doesNotMatch(fieldDepthMigration, /update\s+public\.touchline_formation_geometry_versions[\s\S]*?set\s+geometry/i);
 });
 
 test("Admin calibration uses owner RBAC, same-origin writes, validation and explicit preview/save", () => {

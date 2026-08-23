@@ -94,6 +94,12 @@ const AM = ["midfield", "attacker"] as const;
 const WING = ["attacker", "midfield"] as const;
 const ST = ["centre-forward", "attacker"] as const;
 
+// Flat 2D boards use a top-down tactical depth. Keep the goalkeeper just in
+// front of the goal line and the highest attacking line clear of the opposite
+// goal artwork. Arena camera coordinates are intentionally unrelated.
+const TWO_DIMENSIONAL_GOALKEEPER_X = 10;
+const TWO_DIMENSIONAL_ATTACK_X = 88;
+
 type SlotSeed = Readonly<{
   id: string;
   x: number;
@@ -140,7 +146,7 @@ function geometry(formationCode: TouchlineCalibratedFormationCode, seeds: readon
 
 const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
   geometry("4-3-3", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RB", 36, 17, "defender", "defence", "right", RB),
     slot("RCB", 36, 39, "defender", "defence", "right", CB),
     slot("LCB", 36, 61, "defender", "defence", "left", CB),
@@ -148,12 +154,12 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("RCM", 64, 25, "midfielder", "midfield", "right", MID),
     slot("CM", 64, 50, "midfielder", "midfield", "centre", MID),
     slot("LCM", 64, 75, "midfielder", "midfield", "left", MID),
-    slot("RW", 92, 18, "forward", "attack", "right", WING),
-    slot("ST", 92, 50, "forward", "attack", "centre", ST),
-    slot("LW", 92, 82, "forward", "attack", "left", WING),
+    slot("RW", TWO_DIMENSIONAL_ATTACK_X, 18, "forward", "attack", "right", WING),
+    slot("ST", TWO_DIMENSIONAL_ATTACK_X, 50, "forward", "attack", "centre", ST),
+    slot("LW", TWO_DIMENSIONAL_ATTACK_X, 82, "forward", "attack", "left", WING),
   ]),
   geometry("4-4-2", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RB", 36, 17, "defender", "defence", "right", RB),
     slot("RCB", 36, 39, "defender", "defence", "right", CB),
     slot("LCB", 36, 61, "defender", "defence", "left", CB),
@@ -162,11 +168,11 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("RCM", 64, 39, "midfielder", "midfield", "right", MID),
     slot("LCM", 64, 61, "midfielder", "midfield", "left", MID),
     slot("LM", 64, 83, "midfielder", "midfield", "left", WING),
-    slot("RST", 92, 38, "forward", "attack", "right", ST),
-    slot("LST", 92, 62, "forward", "attack", "left", ST),
+    slot("RST", TWO_DIMENSIONAL_ATTACK_X, 38, "forward", "attack", "right", ST),
+    slot("LST", TWO_DIMENSIONAL_ATTACK_X, 62, "forward", "attack", "left", ST),
   ]),
   geometry("4-2-3-1", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RB", 29, 17, "defender", "defence", "right", RB),
     slot("RCB", 29, 39, "defender", "defence", "right", CB),
     slot("LCB", 29, 61, "defender", "defence", "left", CB),
@@ -176,10 +182,10 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("RAM", 71, 20, "midfielder", "attacking-midfield", "right", AM),
     slot("CAM", 71, 50, "midfielder", "attacking-midfield", "centre", AM),
     slot("LAM", 71, 80, "midfielder", "attacking-midfield", "left", AM),
-    slot("ST", 92, 50, "forward", "attack", "centre", ST),
+    slot("ST", TWO_DIMENSIONAL_ATTACK_X, 50, "forward", "attack", "centre", ST),
   ]),
   geometry("4-1-4-1", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RB", 29, 17, "defender", "defence", "right", RB),
     slot("RCB", 29, 39, "defender", "defence", "right", CB),
     slot("LCB", 29, 61, "defender", "defence", "left", CB),
@@ -189,10 +195,10 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("RCM", 71, 39, "midfielder", "midfield", "right", MID),
     slot("LCM", 71, 61, "midfielder", "midfield", "left", MID),
     slot("LM", 71, 83, "midfielder", "midfield", "left", WING),
-    slot("ST", 92, 50, "forward", "attack", "centre", ST),
+    slot("ST", TWO_DIMENSIONAL_ATTACK_X, 50, "forward", "attack", "centre", ST),
   ]),
   geometry("4-5-1", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RB", 36, 17, "defender", "defence", "right", RB),
     slot("RCB", 36, 39, "defender", "defence", "right", CB),
     slot("LCB", 36, 61, "defender", "defence", "left", CB),
@@ -202,10 +208,10 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("CM", 58, 50, "midfielder", "central-midfield", "centre", MID),
     slot("LCM", 58, 73, "midfielder", "central-midfield", "left", MID),
     slot("LM", 72, 84, "midfielder", "wide-midfield", "left", WING),
-    slot("ST", 92, 50, "forward", "attack", "centre", ST),
+    slot("ST", TWO_DIMENSIONAL_ATTACK_X, 50, "forward", "attack", "centre", ST),
   ]),
   geometry("3-4-3", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RCB", 36, 25, "defender", "defence", "right", CB),
     slot("CB", 36, 50, "defender", "defence", "centre", CB),
     slot("LCB", 36, 75, "defender", "defence", "left", CB),
@@ -213,12 +219,12 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("RCM", 64, 39, "midfielder", "midfield", "right", MID),
     slot("LCM", 64, 61, "midfielder", "midfield", "left", MID),
     slot("LWB", 64, 83, "midfielder", "midfield", "left", LB),
-    slot("RW", 92, 18, "forward", "attack", "right", WING),
-    slot("ST", 92, 50, "forward", "attack", "centre", ST),
-    slot("LW", 92, 82, "forward", "attack", "left", WING),
+    slot("RW", TWO_DIMENSIONAL_ATTACK_X, 18, "forward", "attack", "right", WING),
+    slot("ST", TWO_DIMENSIONAL_ATTACK_X, 50, "forward", "attack", "centre", ST),
+    slot("LW", TWO_DIMENSIONAL_ATTACK_X, 82, "forward", "attack", "left", WING),
   ]),
   geometry("3-5-2", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RCB", 36, 25, "defender", "defence", "right", CB),
     slot("CB", 36, 50, "defender", "defence", "centre", CB),
     slot("LCB", 36, 75, "defender", "defence", "left", CB),
@@ -227,11 +233,11 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("CM", 66, 50, "midfielder", "central-midfield", "centre", MID),
     slot("LCM", 66, 73, "midfielder", "central-midfield", "left", MID),
     slot("LWB", 50, 84, "midfielder", "wing-back", "left", LB),
-    slot("RST", 92, 38, "forward", "attack", "right", ST),
-    slot("LST", 92, 62, "forward", "attack", "left", ST),
+    slot("RST", TWO_DIMENSIONAL_ATTACK_X, 38, "forward", "attack", "right", ST),
+    slot("LST", TWO_DIMENSIONAL_ATTACK_X, 62, "forward", "attack", "left", ST),
   ]),
   geometry("3-4-2-1", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RCB", 29, 25, "defender", "defence", "right", CB),
     slot("CB", 29, 50, "defender", "defence", "centre", CB),
     slot("LCB", 29, 75, "defender", "defence", "left", CB),
@@ -241,10 +247,10 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("LWB", 50, 83, "midfielder", "midfield", "left", LB),
     slot("RAM", 71, 34, "midfielder", "attacking-midfield", "right", AM),
     slot("LAM", 71, 66, "midfielder", "attacking-midfield", "left", AM),
-    slot("ST", 92, 50, "forward", "attack", "centre", ST),
+    slot("ST", TWO_DIMENSIONAL_ATTACK_X, 50, "forward", "attack", "centre", ST),
   ]),
   geometry("5-2-3", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RWB", 50, 16, "defender", "wing-back", "right", RB),
     slot("RCB", 30, 27, "defender", "defence", "right", CB),
     slot("CB", 30, 50, "defender", "defence", "centre", CB),
@@ -252,12 +258,12 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("LWB", 50, 84, "defender", "wing-back", "left", LB),
     slot("RCM", 64, 36, "midfielder", "midfield", "right", MID),
     slot("LCM", 64, 64, "midfielder", "midfield", "left", MID),
-    slot("RW", 92, 18, "forward", "attack", "right", WING),
-    slot("ST", 92, 50, "forward", "attack", "centre", ST),
-    slot("LW", 92, 82, "forward", "attack", "left", WING),
+    slot("RW", TWO_DIMENSIONAL_ATTACK_X, 18, "forward", "attack", "right", WING),
+    slot("ST", TWO_DIMENSIONAL_ATTACK_X, 50, "forward", "attack", "centre", ST),
+    slot("LW", TWO_DIMENSIONAL_ATTACK_X, 82, "forward", "attack", "left", WING),
   ]),
   geometry("5-3-2", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RWB", 50, 16, "defender", "wing-back", "right", RB),
     slot("RCB", 30, 27, "defender", "defence", "right", CB),
     slot("CB", 30, 50, "defender", "defence", "centre", CB),
@@ -266,11 +272,11 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("RCM", 64, 25, "midfielder", "midfield", "right", MID),
     slot("CM", 64, 50, "midfielder", "midfield", "centre", MID),
     slot("LCM", 64, 75, "midfielder", "midfield", "left", MID),
-    slot("RST", 92, 38, "forward", "attack", "right", ST),
-    slot("LST", 92, 62, "forward", "attack", "left", ST),
+    slot("RST", TWO_DIMENSIONAL_ATTACK_X, 38, "forward", "attack", "right", ST),
+    slot("LST", TWO_DIMENSIONAL_ATTACK_X, 62, "forward", "attack", "left", ST),
   ]),
   geometry("5-4-1", [
-    slot("GK", 8, 50, "goalkeeper", "goal", "centre", GK),
+    slot("GK", TWO_DIMENSIONAL_GOALKEEPER_X, 50, "goalkeeper", "goal", "centre", GK),
     slot("RWB", 50, 16, "defender", "wing-back", "right", RB),
     slot("RCB", 30, 27, "defender", "defence", "right", CB),
     slot("CB", 30, 50, "defender", "defence", "centre", CB),
@@ -280,7 +286,7 @@ const DEFAULT_GEOMETRIES: readonly TouchlineFormationGeometry[] = [
     slot("RCM", 64, 39, "midfielder", "midfield", "right", MID),
     slot("LCM", 64, 61, "midfielder", "midfield", "left", MID),
     slot("LM", 72, 83, "midfielder", "wide-midfield", "left", WING),
-    slot("ST", 92, 50, "forward", "attack", "centre", ST),
+    slot("ST", TWO_DIMENSIONAL_ATTACK_X, 50, "forward", "attack", "centre", ST),
   ]),
 ];
 
@@ -408,9 +414,9 @@ function cardRect(slot: TouchlineFormationGeometrySlot, viewport: TouchlineForma
 }
 
 function labelRect(slot: TouchlineFormationGeometrySlot, viewport: TouchlineFormationGeometryViewport): Rect {
-  const left = slot.x <= 12
+  const left = slot.x <= 8
     ? slot.x - viewport.cardWidth / 2
-    : slot.x >= 88
+    : slot.x >= 92
       ? slot.x + viewport.cardWidth / 2 - viewport.labelWidth
       : slot.x - viewport.labelWidth / 2;
   const bottom = slot.y - viewport.cardHeight / 2 - 1;

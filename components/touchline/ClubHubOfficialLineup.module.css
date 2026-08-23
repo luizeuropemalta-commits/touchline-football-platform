@@ -111,11 +111,16 @@
   min-height: calc(var(--lineup-pitch-core-height) + var(--lineup-safe-top-inset));
 }
 
+.geometryLayer {
+  position: absolute;
+  inset: var(--lineup-safe-top-inset) 0 0;
+}
+
 .player {
   position: absolute;
   z-index: 3;
   left: var(--lineup-x);
-  top: calc(var(--lineup-y) + var(--lineup-safe-top-inset));
+  top: var(--lineup-y);
   width: 80px;
   --touchline-card-static-scale: .1860465116;
   display: grid;

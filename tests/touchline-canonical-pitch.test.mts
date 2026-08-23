@@ -16,26 +16,26 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
   assert.deepEqual(TOUCHLINE_CLUB_OWNER_XI_SLOTS[0], { x: 8, y: 50 });
   assert.deepEqual(
     (({ id, role, roleIndex, x, y }) => ({ id, role, roleIndex, x, y }))(TOUCHLINE_STANDARD_433_SLOTS.at(-1)!),
-    { id: "GK", role: "goalkeeper", roleIndex: 0, x: 8, y: 50 },
+    { id: "GK", role: "goalkeeper", roleIndex: 0, x: 10, y: 50 },
   );
   assert.deepEqual(TOUCHLINE_STANDARD_433_SLOTS.slice(0, 3).map(({ x, y }) => ({ x, y })), [
-    { x: 92, y: 18 }, { x: 92, y: 50 }, { x: 92, y: 82 },
+    { x: 88, y: 18 }, { x: 88, y: 50 }, { x: 88, y: 82 },
   ]);
   assert.deepEqual(touchlineCanonicalFormationSlots("4-4-2").map(({ id, x, y }) => ({ id, x, y })), [
-    { id: "GK", x: 8, y: 50 },
+    { id: "GK", x: 10, y: 50 },
     { id: "RB", x: 36, y: 17 }, { id: "RCB", x: 36, y: 39 },
     { id: "LCB", x: 36, y: 61 }, { id: "LB", x: 36, y: 83 },
     { id: "RM", x: 64, y: 17 }, { id: "RCM", x: 64, y: 39 },
     { id: "LCM", x: 64, y: 61 }, { id: "LM", x: 64, y: 83 },
-    { id: "RST", x: 92, y: 38 }, { id: "LST", x: 92, y: 62 },
+    { id: "RST", x: 88, y: 38 }, { id: "LST", x: 88, y: 62 },
   ]);
   assert.deepEqual(touchlineCanonicalFormationSlots("4-2-3-1").map(({ id, x, y }) => ({ id, x, y })), [
-    { id: "GK", x: 8, y: 50 },
+    { id: "GK", x: 10, y: 50 },
     { id: "RB", x: 29, y: 17 }, { id: "RCB", x: 29, y: 39 },
     { id: "LCB", x: 29, y: 61 }, { id: "LB", x: 29, y: 83 },
     { id: "RDM", x: 50, y: 34 }, { id: "LDM", x: 50, y: 66 },
     { id: "RAM", x: 71, y: 20 }, { id: "CAM", x: 71, y: 50 },
-    { id: "LAM", x: 71, y: 80 }, { id: "ST", x: 92, y: 50 },
+    { id: "LAM", x: 71, y: 80 }, { id: "ST", x: 88, y: 50 },
   ]);
   assert.deepEqual(touchlineCanonicalFormationSlots("not-a-formation"), touchlineCanonicalFormationSlots("4-3-3"));
 });
@@ -63,9 +63,12 @@ test("ClubHub formation keeps player names legible above cards without ellipses 
   assert.doesNotMatch(clubHubLineupCss, /\.playerLink/);
 });
 
-test("ClubHub lowers the player assembly with a compensated safe top inset on desktop and mobile", () => {
+test("ClubHub keeps the geometry inside a compensated pitch core on desktop and mobile", () => {
   assert.match(clubHubLineupCss, /\.pitch[\s\S]*?--lineup-safe-top-inset: clamp\(42px, 4\.4vw, 62px\)/);
-  assert.match(clubHubLineupCss, /\.player[\s\S]*?top: calc\(var\(--lineup-y\) \+ var\(--lineup-safe-top-inset\)\)/);
+  assert.match(clubHubLineup, /<div className=\{styles\.geometryLayer\}>/);
+  assert.match(clubHubLineupCss, /\.geometryLayer[\s\S]*?inset: var\(--lineup-safe-top-inset\) 0 0/);
+  assert.match(clubHubLineupCss, /\.player[\s\S]*?top: var\(--lineup-y\)/);
+  assert.doesNotMatch(clubHubLineupCss, /top: calc\(var\(--lineup-y\) \+ var\(--lineup-safe-top-inset\)\)/);
   assert.match(
     clubHubLineupCss,
     /@media \(max-width: 720px\)[\s\S]*?--lineup-safe-top-inset: clamp\(36px, 10vw, 46px\)[\s\S]*?min-height: calc\(var\(--lineup-pitch-core-height\) \+ var\(--lineup-safe-top-inset\)\)/,
@@ -80,6 +83,8 @@ test("ClubHub preserves canonical player coordinates without local role refineme
   assert.doesNotMatch(clubHubLineup, /CLUB_HUB_DEFENDER_Y_REFINEMENT/);
   assert.doesNotMatch(clubHubLineup, /resolveClubHubLineupY\(/);
   assert.match(clubHubLineup, /"--lineup-x": `\$\{x\}%`, "--lineup-y": `\$\{y\}%`/);
+  assert.match(clubHubLineup, /x <= 8 \? "left"/);
+  assert.match(clubHubLineup, /x >= 92 \? "right"/);
 });
 
 test("ClubHub makes an unscheduled opponent explicit without pretending TouchLine is a club", () => {

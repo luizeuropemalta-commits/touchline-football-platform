@@ -96,7 +96,7 @@ test("ClubHub confirms and distributes only a complete provider Starting XI for 
       counts[player.x] = (counts[player.x] ?? 0) + 1;
       return counts;
     }, {}),
-    { 8: 1, 29: 4, 50: 2, 71: 3, 92: 1 },
+    { 10: 1, 29: 4, 50: 2, 71: 3, 88: 1 },
   );
 });
 
