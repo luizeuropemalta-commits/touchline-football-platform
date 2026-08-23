@@ -287,6 +287,8 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.doesNotMatch(component, /from ["'][^"']*(?:card|market|wallet|supabase)/i);
   assert.doesNotMatch(component, /\bfetch\(/);
   assert.match(serverReader, /unstable_cache/);
+  assert.match(serverReader, /touchline-official-league-table-v2/);
+  assert.doesNotMatch(serverReader, /touchline-official-league-table-v1/);
   assert.match(serverReader, /touchline-official-league-table:\$\{TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID\}/);
   assert.match(serverReader, /\.eq\("season_id", scope\.season\.id\)/);
   assert.doesNotMatch(serverReader, /createFootballDataProvider/);
