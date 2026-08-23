@@ -30,6 +30,8 @@ type TableCopy = Readonly<{
   won: string;
   drawn: string;
   lost: string;
+  goalsFor: string;
+  goalsAgainst: string;
   difference: string;
   points: string;
   form: string;
@@ -39,6 +41,11 @@ type TableCopy = Readonly<{
   currentClub: string;
   tiedPosition: string;
   finalResults: string;
+  seasonStatus: string;
+  seasonLive: string;
+  seasonVerified: string;
+  seasonInitial: string;
+  seasonChecking: string;
   pendingTitle: string;
   pendingDescription: string;
   partialTitle: string;
@@ -61,6 +68,8 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     won: "W",
     drawn: "D",
     lost: "L",
+    goalsFor: "GF",
+    goalsAgainst: "GA",
     difference: "GD",
     points: "Pts",
     form: "Form",
@@ -68,8 +77,13 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     stale: "STALE",
     scoreUnavailable: "score unavailable",
     currentClub: "Current club",
-    tiedPosition: "Level on points, goal difference and goals scored. Display order shown for presentation.",
+    tiedPosition: "Tied on points, goal difference and goals scored.",
     finalResults: "verified final results",
+    seasonStatus: "Season status",
+    seasonLive: "Live · provisional",
+    seasonVerified: "Verified through latest final",
+    seasonInitial: "Initial standings",
+    seasonChecking: "Integrity check",
     pendingTitle: "Initial table — all 20 clubs are level.",
     pendingDescription: "Every club is level on sporting criteria. Continuous positions use alphabetical display order only until a verified result separates them.",
     partialTitle: "Verified results remain visible; league positions are temporarily withheld.",
@@ -90,6 +104,8 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     won: "V",
     drawn: "E",
     lost: "D",
+    goalsFor: "GF",
+    goalsAgainst: "GA",
     difference: "SG",
     points: "Pts",
     form: "Forma",
@@ -97,8 +113,13 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     stale: "DESATUALIZADO",
     scoreUnavailable: "placar indisponível",
     currentClub: "Clube atual",
-    tiedPosition: "Empatados em pontos, saldo de gols e gols marcados. A ordem exibida é apenas para apresentação.",
+    tiedPosition: "Empatados em pontos, saldo de gols e gols marcados.",
     finalResults: "resultados finais verificados",
+    seasonStatus: "Status da temporada",
+    seasonLive: "Ao vivo · provisória",
+    seasonVerified: "Verificada até o último resultado final",
+    seasonInitial: "Tabela inicial",
+    seasonChecking: "Verificação de integridade",
     pendingTitle: "Tabela inicial — os 20 clubes estão empatados.",
     pendingDescription: "Todos os clubes estão empatados nos critérios esportivos. As posições contínuas usam ordem alfabética apenas para apresentação até que um resultado verificado os separe.",
     partialTitle: "Os resultados verificados continuam visíveis; as posições estão temporariamente suspensas.",
@@ -118,6 +139,17 @@ function statusCopy(state: TouchlineOfficialLeagueTable["state"], dictionary: Ta
   return null;
 }
 
+function seasonStatusCopy(
+  state: TouchlineOfficialLeagueTable["state"],
+  hasLiveFixture: boolean,
+  dictionary: TableCopy,
+) {
+  if (hasLiveFixture) return dictionary.seasonLive;
+  if (state === "ready") return dictionary.seasonVerified;
+  if (state === "pending_no_final") return dictionary.seasonInitial;
+  return dictionary.seasonChecking;
+}
+
 /** Presentational only: all football data arrives in the canonical table DTO. */
 export default function TouchlineOfficialLeagueTable({
   table,
@@ -134,6 +166,7 @@ export default function TouchlineOfficialLeagueTable({
   const localeQuery = encodeURIComponent(locale);
   const router = useRouter();
   const hasLiveFixture = table.rows.some((row) => Boolean(row.liveFixture));
+  const seasonStatus = seasonStatusCopy(table.state, hasLiveFixture, dictionary);
 
   useEffect(() => {
     if (!hasLiveFixture) return;
@@ -156,6 +189,14 @@ export default function TouchlineOfficialLeagueTable({
         </div>
         <div className={styles.headerActions}>
           {action ? <Link className={styles.action} href={action.href}>{action.label}</Link> : null}
+          <span
+            className={styles.seasonStatus}
+            aria-label={`${dictionary.seasonStatus}: ${seasonStatus}`}
+          >
+            <span>{dictionary.seasonStatus}</span>
+            <strong>{seasonStatus}</strong>
+            {table.season?.name ? <small>{table.season.name}</small> : null}
+          </span>
           <small className={styles.source}>
             {table.coverage.completedFixtures} {dictionary.finalResults}
           </small>
@@ -188,6 +229,8 @@ export default function TouchlineOfficialLeagueTable({
                   <th scope="col" className={styles.optional}>{dictionary.won}</th>
                   <th scope="col" className={styles.optional}>{dictionary.drawn}</th>
                   <th scope="col" className={styles.optional}>{dictionary.lost}</th>
+                  <th scope="col">{dictionary.goalsFor}</th>
+                  <th scope="col">{dictionary.goalsAgainst}</th>
                   <th scope="col">{dictionary.difference}</th>
                   <th scope="col">{dictionary.points}</th>
                   <th scope="col" className={styles.form}>{dictionary.form}</th>
@@ -208,19 +251,20 @@ export default function TouchlineOfficialLeagueTable({
                       data-current={isCurrent || undefined}
                       data-live={row.liveFixture ? "true" : undefined}
                       data-live-stale={row.liveFixture?.stale || undefined}
+                      data-display-position={row.displayPosition ?? undefined}
                     >
                       <td className={styles.rankCell}>
-                        {row.displayPosition === null ? "—" : row.isTied ? (
+                        {row.sportsRank === null ? "—" : row.isTied ? (
                           <span
                             className={styles.tiedRank}
                             tabIndex={0}
                             title={dictionary.tiedPosition}
-                            aria-label={`${row.displayPosition}. ${dictionary.tiedPosition}`}
+                            aria-label={`${row.sportsRank}=. ${dictionary.tiedPosition}`}
                             data-tooltip={dictionary.tiedPosition}
                           >
-                            <span aria-hidden="true">{row.displayPosition}</span>
+                            <span aria-hidden="true">{row.sportsRank}=</span>
                           </span>
-                        ) : row.displayPosition}
+                        ) : row.sportsRank}
                       </td>
                       <th scope="row">
                         <Link href={`/touchline-clubs/${row.team.slug}?lang=${localeQuery}`} aria-current={isCurrent ? "page" : undefined}>
@@ -234,6 +278,8 @@ export default function TouchlineOfficialLeagueTable({
                       <td className={styles.optional}>{row.won}</td>
                       <td className={styles.optional}>{row.drawn}</td>
                       <td className={styles.optional}>{row.lost}</td>
+                      <td>{row.goalsFor}</td>
+                      <td>{row.goalsAgainst}</td>
                       <td>{row.goalDifference > 0 ? `+${row.goalDifference}` : row.goalDifference}</td>
                       <td className={styles.points}>{row.points}</td>
                       <td className={styles.form}>{row.form.join(" · ") || "—"}</td>
