@@ -267,7 +267,11 @@ export default function TouchlineOfficialLeagueTable({
                         ) : row.sportsRank}
                       </td>
                       <th scope="row">
-                        <Link href={`/touchline-clubs/${row.team.slug}?lang=${localeQuery}`} aria-current={isCurrent ? "page" : undefined}>
+                        <Link
+                          href={`/touchline-clubs/${row.team.slug}?lang=${localeQuery}`}
+                          prefetch={false}
+                          aria-current={isCurrent ? "page" : undefined}
+                        >
                           {row.team.logoUrl ? <img src={row.team.logoUrl} alt="" loading="lazy" decoding="async" /> : null}
                           <span>{row.team.name}</span>
                           {isCurrent ? <span className={styles.srOnly}>{dictionary.currentClub}</span> : null}

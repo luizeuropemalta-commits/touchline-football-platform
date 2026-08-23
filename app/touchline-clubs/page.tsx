@@ -73,6 +73,7 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
           <Link
             key={club.teamId}
             href={`/touchline-clubs/${club.slug}?${localeQuery}`}
+            prefetch={false}
             className={styles.clubCard}
             style={{
               "--club-accent": club.accent,

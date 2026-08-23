@@ -432,6 +432,7 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /\{row\.goalsFor\}/);
   assert.match(component, /\{row\.goalsAgainst\}/);
   assert.match(component, /row\.team\.logoUrl[^\n]+loading="lazy"[^\n]+decoding="async"/);
+  assert.match(component, /href=\{`\/touchline-clubs\/\$\{row\.team\.slug\}[^\n]+\n\s+prefetch=\{false\}/);
   assert.match(component, /alphabetical display order only/);
   assert.match(component, /data-live=/);
   assert.match(component, /data-live-stale=/);
@@ -449,6 +450,7 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.doesNotMatch(serverReader, /createFootballDataProvider/);
   assert.match(directory, /loadTouchlineOfficialLeagueTable/);
   assert.match(directory, /id="official-league-table"/);
+  assert.match(directory, /href=\{`\/touchline-clubs\/\$\{club\.slug\}[^\n]+\n\s+prefetch=\{false\}/);
   assert.match(profile, /loadTouchlineOfficialLeagueTable/);
   assert.match(profile, /TouchlineOfficialLeagueTable/);
   assert.doesNotMatch(profile, /buildOfficialStandings/);
