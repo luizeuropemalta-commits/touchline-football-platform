@@ -409,6 +409,7 @@ test("home or away status and card concepts never become standings tie-breakers"
 
 test("shared table component and pages keep data loading on the server boundary", () => {
   const component = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.tsx", import.meta.url), "utf8");
+  const componentStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
   const serverReader = readFileSync(new URL("../lib/football-data/official-league-table-server.ts", import.meta.url), "utf8");
   const directory = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
   const profile = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
@@ -425,6 +426,8 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /Tied on points, goal difference and goals scored\./);
   assert.match(component, /Empatados em pontos, saldo de gols e gols marcados\./);
   assert.match(component, /aria-label=/);
+  assert.match(componentStyles, /\.tableWrap \.rankCell \{[\s\S]*?padding: 0;/);
+  assert.match(componentStyles, /\.tiedRank \{[\s\S]*?min-width: 44px;[\s\S]*?min-height: 44px;/);
   assert.match(component, /Season status/);
   assert.match(component, /Status da temporada/);
   assert.match(component, /dictionary\.goalsFor/);

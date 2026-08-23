@@ -46,8 +46,9 @@ test("Arena exposes a persistent non-financial recovery journey for incomplete c
 });
 
 test("compact Arena and Market controls retain effective 44px targets", async () => {
-  const [source, auth, quickNav, social, matchCentre, rankings] = await Promise.all([
+  const [source, clubHub, auth, quickNav, social, matchCentre, rankings] = await Promise.all([
     read("app/arena/ArenaClient.tsx"),
+    read("app/touchline-clubs/[club]/page.tsx"),
     read("components/auth-form.tsx"),
     read("components/touchline/TouchlineProfileQuickNav.module.css"),
     read("components/touchline/social/TouchlineSocial.module.css"),
@@ -55,6 +56,7 @@ test("compact Arena and Market controls retain effective 44px targets", async ()
     read("app/touchline-player-card-rankings/page.tsx"),
   ]);
   assert.match(source, /\.club-symbol-arrow \{ width: 44px; height: 44px/);
+  assert.match(clubHub, /\.club-hub-section-actions a \{[\s\S]*min-height: 44px/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-position-filters button,[\s\S]*min-height: 44px/);
   assert.match(auth, /grid size-11/);
   assert.match(quickNav, /\.shortcuts a \{[\s\S]*min-height: 44px/);

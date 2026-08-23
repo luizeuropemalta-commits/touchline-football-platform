@@ -1033,7 +1033,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-height: 42px;
+          min-height: 44px;
           border-radius: 999px;
           border: 1px solid rgba(181,255,75,.4);
           background: linear-gradient(135deg, rgba(181,255,75,.18), rgba(0,0,0,.26));

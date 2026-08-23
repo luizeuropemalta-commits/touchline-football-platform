@@ -183,7 +183,7 @@
   text-transform: uppercase;
 }
 
-.tableWrap thead th:nth-child(1) { width: 42px; }
+.tableWrap thead th:nth-child(1) { width: 44px; }
 .tableWrap thead th:nth-child(2) { text-align: start; }
 .tableWrap thead th:nth-child(3),
 .tableWrap thead th:nth-child(4),
@@ -227,11 +227,15 @@
   font-weight: 950;
 }
 
+.tableWrap .rankCell {
+  padding: 0;
+}
+
 .tiedRank {
   position: relative;
   display: inline-flex;
-  min-width: 28px;
-  min-height: 28px;
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(227, 255, 174, .34);
