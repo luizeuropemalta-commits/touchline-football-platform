@@ -81,20 +81,20 @@ function contributions(row?: Row): NonNullable<ClubOwnerSquadCard["matchPointCon
   });
 }
 
-/** Public published-card catalogue decorated only with canonical V2 read models. */
+/** Public published-card catalogue decorated only with canonical V3 read models. */
 export async function loadTouchLineRankedCardCatalog(
   state: TouchlineActiveRankingState,
   providedAdmin?: SupabaseClient | null,
 ): Promise<ClubOwnerSquadCard[]> {
-  if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v2" || !state.seasonId || !state.players.length) return [];
+  if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v3" || !state.seasonId || !state.players.length) return [];
   const admin = providedAdmin ?? createAdminClient();
   if (!admin) return [];
   const playerIds = state.players.map((player) => String(player.playerId)).filter(Boolean);
   const [{ data: playerData, error: playerError }, { data: squadData, error: squadError }, { data: seasonData, error: seasonError }, { data: fixtureData, error: fixtureError }] = await Promise.all([
     admin.from("football_players").select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds),
     admin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }),
-    admin.from("football_player_season_statistics").select("football_player_id,summary_payload,position_statistics_payload").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v2").in("football_player_id", playerIds),
-    admin.from("football_player_fixture_statistics").select("football_player_id,touchline_points,touchline_points_breakdown,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v2").in("football_player_id", playerIds).order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
+    admin.from("football_player_season_statistics").select("football_player_id,summary_payload,position_statistics_payload").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds),
+    admin.from("touchline_player_fixture_score_settlements").select("football_player_id,touchline_points,touchline_points_breakdown,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds).order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
   ]);
   if (playerError || squadError || seasonError || fixtureError) return [];
   const players = rows(playerData);

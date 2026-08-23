@@ -32,7 +32,7 @@ export type TouchlineActiveRankingState = {
   roundId: string | null;
   publishedAt: string | null;
   priceTableVersion: string;
-  scoringVersion: "player_scoring_v1" | "player_scoring_v2" | null;
+  scoringVersion: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3" | null;
   coverageStatus: "complete" | "complete_for_scoring" | null;
   seasonId: string | null;
   fixtureIds: readonly string[];
@@ -120,7 +120,7 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     || !candidate.publishedAt
     || !Number.isFinite(Date.parse(candidate.publishedAt))
     || candidate.priceTableVersion !== TOUCHLINE_CARD_PRICE_TABLE_VERSION
-    || (candidate.scoringVersion !== "player_scoring_v1" && candidate.scoringVersion !== "player_scoring_v2")
+    || (candidate.scoringVersion !== "player_scoring_v1" && candidate.scoringVersion !== "player_scoring_v2" && candidate.scoringVersion !== "player_scoring_v3")
     || (candidate.coverageStatus !== "complete" && candidate.coverageStatus !== "complete_for_scoring")
     || !normalizePlayerId(candidate.seasonId)
     || !isCanonicalFixtureIdArray(candidate.fixtureIds)

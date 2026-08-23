@@ -38,12 +38,16 @@ export function classifyTouchLinePlayerRankingCoverage(input: {
   missingFacts: readonly string[];
   appearanceStatus: "started" | "substitute" | "unused" | "absent" | "unavailable";
 }): TouchLinePlayerRankingCoverageStatus {
+  const nonParticipant = input.appearanceStatus === "unused" || input.appearanceStatus === "absent";
+  // A final official team sheet proves this player did not receive a rating
+  // because they did not play. This is neither a fabricated zero nor a
+  // missing scoring fact for the player's season accumulation.
+  if (input.fixtureFinal && nonParticipant) return "complete_for_scoring";
   if (input.points === null || !Number.isFinite(input.points) || input.scoringCoverageStatus === "unavailable") {
     return "unavailable";
   }
   if (!input.fixtureFinal) return "blocking_partial";
   if (input.scoringCoverageStatus === "complete" && input.missingFacts.length === 0) return "complete";
-  const nonParticipant = input.appearanceStatus === "unused" || input.appearanceStatus === "absent";
   if (
     input.scoringCoverageStatus === "partial"
     && input.missingFacts.length > 0

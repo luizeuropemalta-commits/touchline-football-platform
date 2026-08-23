@@ -7915,6 +7915,14 @@ export default function ArenaClient({
                   aria-pressed={selectedPlayerId === player.id}
                 >
                   <span className="player-ground-shadow" />
+                  {player.card?.matchFantasyPoints === null || player.card?.matchFantasyPoints === undefined ? null : (
+                    <span
+                      className="arena-match-point-number"
+                      aria-label={`${player.name}: ${player.card.matchFantasyPoints} ${siteLanguage === "pt-BR" ? "pontos da partida" : "match points"}`}
+                    >
+                      {player.card.matchFantasyPoints}
+                    </span>
+                  )}
                   {player.card ? (
                     <span className="arena-field-card">
                       <TouchlineEliteExactCard
@@ -16416,6 +16424,26 @@ export default function ArenaClient({
           width: max(100%, 44px);
           height: max(100%, 44px);
           transform: translateX(-50%);
+        }
+
+        /* Deliberately number-only: the accessible label carries the meaning,
+           while the cinematic surface keeps only the live V3 value above the
+           player's head. */
+        .arena-match-point-number {
+          position: absolute;
+          z-index: 2;
+          left: 50%;
+          bottom: calc(100% + 5px);
+          min-width: 18px;
+          transform: translateX(-50%);
+          color: #fff;
+          font-size: clamp(10px, 1.1dvh, 15px);
+          font-weight: 1000;
+          line-height: 1;
+          letter-spacing: -.04em;
+          text-align: center;
+          text-shadow: 0 1px 5px #000, 0 0 11px rgb(var(--arena-tier-neon-rgb, 181 255 75) / .72);
+          pointer-events: none;
         }
 
         .arena-field-player[data-editing="true"] {

@@ -247,7 +247,8 @@ test("Best of the Week receives a large readable promotion stage", () => {
   const socialCss = source("components/touchline/social/TouchlineSocial.module.css");
   const cardZoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
 
-  assert.match(profilePage, /width: min\(310px, 100%\)/);
+  assert.match(profilePage, /width: min\(264px, 100%\)/);
+  assert.match(profilePage, /--touchline-card-static-scale: \.85/);
   assert.match(profilePage, /width: min\(1640px, calc\(100vw - 32px\)\)/);
   assert.match(profilePage, /<TouchlineCardZoom/);
   assert.match(cardZoom, /onClick=\{\(\) => setIsOpen\(false\)\}/);

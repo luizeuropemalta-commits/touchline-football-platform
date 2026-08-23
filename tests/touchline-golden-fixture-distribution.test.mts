@@ -177,7 +177,8 @@ test("Live consumes the persisted allowlisted match detail instead of a static p
   assert.match(component, /contribution\.role === "assist"/);
   assert.match(component, /statistic\?\.minutes \?\? "—"/);
   assert.match(component, /statistic\?\.rating \?\? "—"/);
-  assert.match(reader, /football_player_fixture_statistics/);
+  assert.match(reader, /touchline_player_fixture_score_settlements/);
+  assert.match(reader, /scoring_version", "player_scoring_v3/);
   assert.match(reader, /football_fixture_lifecycle_events/);
   assert.doesNotMatch(reader, /SPORTMONKS_API_TOKEN|api\.sportmonks/);
   assert.match(route, /requireAuthenticatedOrLocalTouchlineEditor/);

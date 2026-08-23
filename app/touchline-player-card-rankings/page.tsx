@@ -61,6 +61,7 @@ export default async function TouchLinePlayerCardRankingsPage({
     })
     .sort(compareTouchLineRankedCards);
   const topCards = rankedCards.slice(0, 3);
+  const topTwentyCards = rankedCards.slice(0, 20);
   const locale = normalizeTouchLineLocale((await searchParams).lang);
   const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
   const totalPoints = rankedCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
@@ -241,19 +242,19 @@ export default async function TouchLinePlayerCardRankingsPage({
           <div className="tl-card-rankings-board-head">
             <div>
               <span>{copy.completeRanking}</span>
-              <strong>{copy.allOwnedCards}</strong>
+              <strong>{locale === "pt-BR" ? "Top 20 · cards oficiais" : "Top 20 · official cards"}</strong>
             </div>
             <small>{copy.connectedDescription}</small>
           </div>
 
           <div className="tl-card-rankings-list">
-            {rankedCards.map((card, index) => {
+            {topTwentyCards.map((card, index) => {
               const club = findTouchLineClub(card.clubName);
               const exactPlayer = squadCardToExactPlayer(card);
               const zoom = zoomPresentation(card);
               return (
                 <article key={card.id} id={`row-${card.id}`} className="tl-card-rankings-row">
-                  <span className="tl-card-rankings-row-rank">#{index + 1}</span>
+                  <span className="tl-card-rankings-row-rank" aria-label={`${locale === "pt-BR" ? "Posição" : "Rank"} ${index + 1}`}>#{index + 1}</span>
                   <div className="tl-card-rankings-row-card">
                     <TouchlineCardZoom
                       ariaLabel={`${locale === "pt-BR" ? "Ampliar card de" : "Open card for"} ${card.name}`}

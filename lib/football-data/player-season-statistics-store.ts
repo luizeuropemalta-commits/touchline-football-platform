@@ -5,9 +5,10 @@ import { buildTouchLinePlayerSeasonAggregate } from "@/lib/football-data/player-
 import {
   touchLinePlayerFixturePoints,
 } from "@/lib/football-data/player-fixture-scoring";
+import { touchLinePlayerFixtureScoreV3 } from "@/lib/football-data/player-score-engine-v3";
 import { classifyTouchLinePlayerRankingCoverage } from "@/lib/football-data/player-ranking-coverage";
 import type { TouchlineFantasyEvent, TouchlineFantasyLineupMember } from "@/lib/football-data/types";
-import { rebuildTouchLinePlayerRankingV2 } from "@/lib/touchlineArena/player-ranking-rebuild-server";
+import { rebuildTouchLinePlayerRankingV3 } from "@/lib/touchlineArena/player-ranking-rebuild-server";
 
 const TOUCHLINE_LIVE_FIXTURE_STATUS = /^(?:live|in[ -]?play|in progress|1st half|2nd half|half[ -]?time|ht|extra time|penalties)$/i;
 
@@ -84,6 +85,7 @@ export type PlayerSeasonStatisticsSyncResult = {
   membershipsRead: number;
   aggregatesWritten: number;
   fixtureRowsWritten: number;
+  v3FixtureRowsWritten: number;
   membershipsWritten: number;
   canonicalEventsWritten: number;
   lifecycleEventsWritten: number;
@@ -98,7 +100,7 @@ export type PlayerSeasonStatisticsSyncResult = {
 };
 
 /**
- * Rebuilds the canonical read model from persisted normalized fixtures and
+ * Rebuilds the QA-only V3 canonical read model from persisted normalized fixtures and
  * feeds. It never calls an external provider and does not guess historical
  * membership: absent memberships yield unavailable rows instead of totals.
  */
@@ -108,6 +110,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
     membershipsRead: 0,
     aggregatesWritten: 0,
     fixtureRowsWritten: 0,
+    v3FixtureRowsWritten: 0,
     membershipsWritten: 0,
     canonicalEventsWritten: 0,
     lifecycleEventsWritten: 0,
@@ -287,11 +290,14 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         teamGoalsConceded: teamGoalsConceded(fixture, membership.club_id),
       });
       const settlementStatus = isTouchLineSettledFixtureStatus(fixture.status) ? "final" as const : "provisional" as const;
+      const isParticipant = (resolvedAppearanceStatus === "started" || resolvedAppearanceStatus === "substitute")
+        && typeof minutesPlayed === "number" && minutesPlayed > 0;
+      const v3PointResult = touchLinePlayerFixtureScoreV3(isParticipant ? rating : null);
       const rankingCoverageStatus = classifyTouchLinePlayerRankingCoverage({
         fixtureFinal: settlementStatus === "final",
-        points: pointResult.points,
-        scoringCoverageStatus: pointResult.coverageStatus,
-        missingFacts: pointResult.missingFacts,
+        points: v3PointResult.points,
+        scoringCoverageStatus: v3PointResult.coverageStatus,
+        missingFacts: v3PointResult.missingFacts,
         appearanceStatus: resolvedAppearanceStatus,
       });
       return {
@@ -303,6 +309,8 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         minutesPlayed,
         rating,
         pointResult,
+        v3PointResult,
+        isParticipant,
         settlementStatus,
         rankingCoverageStatus,
       };
@@ -317,15 +325,15 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         clubId: membership.club_id,
         clubName: membership.football_clubs?.name ?? null,
       },
-      eligibleFixtures: fixtureSettlements.map(({ fixture, feed, lineups, pointResult, rankingCoverageStatus }) => {
+      eligibleFixtures: fixtureSettlements.map(({ fixture, feed, lineups, v3PointResult, isParticipant, rankingCoverageStatus }) => {
         return {
           fixtureId: fixture.id,
           lineups,
           events: feed ? fantasyEvents(feed.events_payload) : null,
           latestSyncAt: feed?.last_synced_at ?? null,
-          touchlinePoints: pointResult.points,
-          scoringStatistics: pointResult.statistics,
-          scoringComplete: pointResult.coverageStatus === "complete",
+          touchlinePoints: v3PointResult.points,
+          scoringIncluded: isParticipant,
+          scoringComplete: v3PointResult.coverageStatus === "complete",
           rankingCoverageStatus,
         };
       }),
@@ -346,9 +354,9 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         aggregated_fixture_ids: aggregate.aggregatedFixtureIds,
         summary_payload: aggregate.summary,
         position_statistics_payload: aggregate.positionStatistics,
-        scoring_version: "player_scoring_v2",
+        scoring_version: "player_scoring_v3",
         source_synced_at: aggregate.latestSyncAt,
-      }, { onConflict: "football_player_id,competition_id,season_id" });
+      }, { onConflict: "football_player_id,competition_id,season_id,scoring_version" });
     if (aggregateError) {
       result.errors.push(`aggregate:${membership.football_player_id}:${aggregateError.message}`);
       continue;
@@ -367,6 +375,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         minutesPlayed,
         rating,
         pointResult,
+        v3PointResult,
         settlementStatus,
         rankingCoverageStatus,
       } = settlement;
@@ -394,9 +403,33 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         }, { onConflict: "football_player_id,fixture_id" });
       if (fixtureError) result.errors.push(`fixture:${fixture.id}:${fixtureError.message}`);
       else result.fixtureRowsWritten += 1;
+
+      const { error: v3FixtureError } = await admin
+        .from("touchline_player_fixture_score_settlements")
+        .upsert({
+          football_player_id: membership.football_player_id,
+          fixture_id: fixture.id,
+          competition_id: membership.competition_id,
+          season_id: membership.season_id,
+          club_id: membership.club_id,
+          scoring_version: v3PointResult.scoringVersion,
+          appearance_status: resolvedAppearanceStatus,
+          minutes_played: minutesPlayed,
+          rating,
+          touchline_points: v3PointResult.points,
+          touchline_points_breakdown: v3PointResult.contributions,
+          statistics_payload: { ...statistics, ...pointResult.statistics },
+          scoring_coverage_status: v3PointResult.coverageStatus,
+          ranking_coverage_status: rankingCoverageStatus,
+          missing_scoring_facts: v3PointResult.missingFacts,
+          settlement_status: settlementStatus,
+          source_synced_at: feed?.last_synced_at ?? null,
+        }, { onConflict: "football_player_id,fixture_id,scoring_version" });
+      if (v3FixtureError) result.errors.push(`v3-fixture:${fixture.id}:${v3FixtureError.message}`);
+      else result.v3FixtureRowsWritten += 1;
     }
   }
-  const ranking = await rebuildTouchLinePlayerRankingV2(admin);
+  const ranking = await rebuildTouchLinePlayerRankingV3(admin);
   result.rankingSnapshotId = ranking.snapshotId;
   result.rankingPlayers = ranking.playerCount;
   result.rankingPublished = ranking.published;

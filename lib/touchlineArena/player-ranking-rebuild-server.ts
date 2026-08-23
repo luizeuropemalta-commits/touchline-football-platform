@@ -72,12 +72,18 @@ function sourceDigest(value: unknown) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-/**
- * Publishes the one player_scoring_v2 season projection consumed by cards and
- * rankings. Inputs are persisted settlements only; this function never calls
- * Sportmonks and never recomputes points.
- */
-export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Promise<TouchLinePlayerRankingRebuildResult> {
+type TouchLinePlayerRankingEngine = Readonly<{
+  scoringVersion: "player_scoring_v2" | "player_scoring_v3";
+  settlementTable: "football_player_fixture_statistics" | "touchline_player_fixture_score_settlements";
+  snapshotPrefix: "player-v2" | "player-v3";
+}>;
+
+/** Inputs are persisted settlements only; this function never calls Sportmonks
+ * and never recomputes points. V2 stays callable for audit; V3 is canonical. */
+async function rebuildTouchLinePlayerRanking(
+  admin: SupabaseClient,
+  engine: TouchLinePlayerRankingEngine,
+): Promise<TouchLinePlayerRankingRebuildResult> {
   const failure = (error: string, extra: Partial<TouchLinePlayerRankingRebuildResult> = {}): TouchLinePlayerRankingRebuildResult => ({
     ok: false, published: false, snapshotId: null, seasonId: null, roundId: null,
     playerCount: 0, fixtureIds: [], expectedFixtureIds: [], coverageStatus: null,
@@ -97,7 +103,7 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
     admin.from("football_player_season_statistics")
       .select("football_player_id,club_id,provider_player_id,summary_payload,coverage_status,expected_fixture_ids,aggregated_fixture_ids,source_synced_at")
       .eq("season_id", seasonId)
-      .eq("scoring_version", "player_scoring_v2"),
+      .eq("scoring_version", engine.scoringVersion),
     admin.from("football_fixtures")
       .select("id,provider_fixture_id,round_id,starts_at,status,source_updated_at")
       .eq("season_id", seasonId),
@@ -113,10 +119,10 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
     admin.from("football_players")
       .select("id,provider_player_id,display_name,name,provider_position,detailed_position,position,current_club_id")
       .in("id", aggregatePlayerIds),
-    admin.from("football_player_fixture_statistics")
+    admin.from(engine.settlementTable)
       .select("football_player_id,fixture_id,touchline_points,settlement_status,ranking_coverage_status")
       .eq("season_id", seasonId)
-      .eq("scoring_version", "player_scoring_v2"),
+      .eq("scoring_version", engine.scoringVersion),
   ]);
   if (playerError || pointError) return failure("ranking-player-source-unavailable", { seasonId });
 
@@ -242,14 +248,14 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
       fixtureIds: player.sourceFixtureIds,
     })).sort((first, second) => first.id.localeCompare(second.id)),
   });
-  const snapshotId = `player-v2:${seasonId}:${digest}`;
+  const snapshotId = `${engine.snapshotPrefix}:${seasonId}:${digest}`;
   const draft = buildSportmonksRankingDraft({
     snapshotId,
     roundId,
     seasonId,
     receivedAt,
     expectedPlayerCount: rankingPlayers.length,
-    scoringVersion: "player_scoring_v2",
+    scoringVersion: engine.scoringVersion,
     coverageStatus,
     fixtureIds,
     expectedFixtureIds,
@@ -330,4 +336,20 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
     playerCount: rankingPlayers.length, fixtureIds, expectedFixtureIds,
     coverageStatus, totalScorePoints, checksum: record.checksum,
   };
+}
+
+export function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient) {
+  return rebuildTouchLinePlayerRanking(admin, {
+    scoringVersion: "player_scoring_v2",
+    settlementTable: "football_player_fixture_statistics",
+    snapshotPrefix: "player-v2",
+  });
+}
+
+export function rebuildTouchLinePlayerRankingV3(admin: SupabaseClient) {
+  return rebuildTouchLinePlayerRanking(admin, {
+    scoringVersion: "player_scoring_v3",
+    settlementTable: "touchline_player_fixture_score_settlements",
+    snapshotPrefix: "player-v3",
+  });
 }

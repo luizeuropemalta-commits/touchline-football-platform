@@ -8,7 +8,7 @@ export type TouchlineRankingPersistenceRecord = {
   snapshotId: string;
   leagueKey: string;
   seasonId: string;
-  scoringVersion: "player_scoring_v1" | "player_scoring_v2";
+  scoringVersion: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3";
   coverageStatus: "complete" | "complete_for_scoring";
   fixtureIds: readonly string[];
   expectedFixtureIds: readonly string[];

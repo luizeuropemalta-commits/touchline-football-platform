@@ -131,9 +131,10 @@ async function readFixtureStatistics(
   if (fixtureError || !canonicalFixtureId) return [] as TouchlinePublicFixturePlayerStatistics[];
 
   const { data, error } = await admin
-    .from("football_player_fixture_statistics")
+    .from("touchline_player_fixture_score_settlements")
     .select("appearance_status,minutes_played,rating,touchline_points,touchline_points_breakdown,statistics_payload,settlement_status,football_players!inner(provider_player_id)")
-    .eq("fixture_id", canonicalFixtureId);
+    .eq("fixture_id", canonicalFixtureId)
+    .eq("scoring_version", "player_scoring_v3");
   if (error || !Array.isArray(data)) return [] as TouchlinePublicFixturePlayerStatistics[];
 
   return (data as FixtureStatisticRow[]).flatMap((row) => {

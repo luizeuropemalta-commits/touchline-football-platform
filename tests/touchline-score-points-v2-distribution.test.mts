@@ -36,13 +36,13 @@ test("Arena refreshes canonical match points without persisting a scoring cache"
   assert.match(arena, /refreshAuthoritativeScoring/);
   assert.match(arena, /setInterval\(\(\) => void refreshAuthoritativeScoring\(\), 45_000\)/);
   assert.match(arena, /fantasyPoints: undefined[\s\S]*matchFantasyPoints: undefined[\s\S]*matchPointContributions: undefined/);
-  assert.match(authoritativeRoster, /football_player_season_statistics[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v2"\)/);
-  assert.match(authoritativeRoster, /football_player_fixture_statistics[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v2"\)/);
+  assert.match(authoritativeRoster, /football_player_season_statistics[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v3"\)/);
+  assert.match(authoritativeRoster, /touchline_player_fixture_score_settlements[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v3"\)/);
 });
 
-test("player ranking publishes only V2 season aggregates with full traceability", () => {
-  assert.match(rankingRebuild, /eq\("scoring_version", "player_scoring_v2"\)/);
-  assert.match(rankingRebuild, /scoringVersion: "player_scoring_v2"/);
+test("player ranking publishes only V3 season aggregates with full traceability", () => {
+  assert.match(rankingRebuild, /scoringVersion: "player_scoring_v3"/);
+  assert.match(rankingRebuild, /settlementTable: "touchline_player_fixture_score_settlements"/);
   assert.match(rankingRebuild, /fixtureIds/);
   assert.match(rankingRebuild, /providerPlayerId: String\(player\.providerPlayerId\)[\s\S]*minutesPlayed: player\.minutesPlayed[\s\S]*appearances: player\.appearances/);
   assert.match(rankingRebuild, /loadTouchlinePublishedCardPresentations/);

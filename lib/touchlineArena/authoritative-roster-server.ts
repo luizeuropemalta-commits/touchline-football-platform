@@ -510,14 +510,14 @@ export async function readAuthoritativeTouchlineRoster(
       ? admin.from("football_player_season_statistics")
         .select("football_player_id,summary_payload,position_statistics_payload,source_synced_at")
         .eq("season_id", currentSeasonId)
-        .eq("scoring_version", "player_scoring_v2")
+        .eq("scoring_version", "player_scoring_v3")
         .in("football_player_id", playerIds)
       : Promise.resolve({ data: [], error: null }),
     currentSeasonId
-      ? admin.from("football_player_fixture_statistics")
+      ? admin.from("touchline_player_fixture_score_settlements")
         .select("football_player_id,touchline_points,touchline_points_breakdown,rating,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
         .eq("season_id", currentSeasonId)
-        .eq("scoring_version", "player_scoring_v2")
+        .eq("scoring_version", "player_scoring_v3")
         .in("football_player_id", playerIds)
         .order("starts_at", { referencedTable: "football_fixtures", ascending: false })
       : Promise.resolve({ data: [], error: null }),

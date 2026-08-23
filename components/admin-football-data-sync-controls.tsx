@@ -16,6 +16,10 @@ type SyncResponse = {
   shirtNumbersProvided?: number;
   clubs?: number;
   recordsUpdated?: number;
+  fixtureRowsWritten?: number;
+  v3FixtureRowsWritten?: number;
+  aggregatesWritten?: number;
+  rankingSnapshotId?: string | null;
   errors?: string[];
   error?: string;
 };
@@ -144,6 +148,28 @@ export function FootballDataSyncControls() {
     }
   }
 
+  async function rebuildPlayerScoreV3() {
+    setState("syncing");
+    setMessage("Rebuilding rating-based V3 settlements from persisted Sportmonks feeds…");
+    try {
+      const response = await fetch("/api/football-data/player-season-statistics/sync", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      const result = await response.json() as SyncResponse;
+      if (!response.ok || !result.ok) {
+        throw new Error(result.errors?.filter(Boolean).join(" ") || result.error || "The V3 score rebuild failed.");
+      }
+      setState("success");
+      setMessage(`${result.v3FixtureRowsWritten ?? 0} V3 fixture settlements and ${result.aggregatesWritten ?? 0} season aggregates rebuilt${result.rankingSnapshotId ? ` · ranking ${result.rankingSnapshotId}` : ""}. Refreshing the control room…`);
+      window.setTimeout(() => window.location.reload(), 1_200);
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "The V3 score rebuild failed.");
+    }
+  }
+
   return (
     <section className="mt-6 rounded-3xl border border-[#a3ff12]/20 bg-[#a3ff12]/[.045] p-5">
       <p className="text-[9px] font-black text-[#c6ff62]">QA owner action · official fixture source</p>
@@ -152,6 +178,14 @@ export function FootballDataSyncControls() {
         Imports only verified Sportmonks fixtures for 21–24 August 2026 into the QA database. Existing verified fixtures are upserted; no fixture is deleted and no score, lineup or card is simulated.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={rebuildPlayerScoreV3}
+          disabled={state === "syncing"}
+          className="rounded-2xl border border-fuchsia-300/40 bg-fuchsia-300/[.08] px-4 py-3 text-[10px] font-black text-fuchsia-100 transition hover:bg-fuchsia-300/[.14] disabled:cursor-wait disabled:opacity-60"
+        >
+          {state === "syncing" ? "Rebuilding Score V3…" : "Rebuild Score Engine V3"}
+        </button>
         <button
           type="button"
           onClick={reconcileQaTwentyClubRosters}

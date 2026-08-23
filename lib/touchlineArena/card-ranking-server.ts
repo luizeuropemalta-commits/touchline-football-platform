@@ -26,7 +26,7 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
     .eq("snapshot_id", active.snapshot_id)
     .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
     .maybeSingle();
-  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v2" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
+  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v3" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
     return TOUCHLINE_PRESEASON_RANKING_STATE;
   }
 

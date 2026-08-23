@@ -16,6 +16,9 @@ type EligibleFixture = {
   latestSyncAt?: string | null;
   events?: TouchlineFantasyEvent[] | null;
   touchlinePoints?: number | null;
+  /** False for an official non-participant: no rating is expected and it is
+   * excluded from the season score rather than converted to zero. */
+  scoringIncluded?: boolean;
   scoringStatistics?: Readonly<Record<string, number>> | null;
   scoringComplete?: boolean;
   rankingCoverageStatus?: TouchLinePlayerRankingCoverageStatus;
@@ -97,7 +100,8 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
     .at(-1) ?? null;
   // The season projection consumes persisted/per-fixture engine results. It
   // never invokes a second scoring implementation or reinterprets facts.
-  const fixturePointValues = synchronizedFixtures.map((fixture) => fixture.touchlinePoints ?? null);
+  const scoredFixtures = synchronizedFixtures.filter((fixture) => fixture.scoringIncluded !== false);
+  const fixturePointValues = scoredFixtures.map((fixture) => fixture.touchlinePoints ?? null);
   const touchlinePoints = fixturePointValues.every((value) => value !== null)
     ? fixturePointValues.reduce((total, value) => total + (value ?? 0), 0)
     : null;
@@ -119,9 +123,9 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
       }),
   );
   const scoringStatistics = Object.fromEntries(
-    [...new Set(synchronizedFixtures.flatMap((fixture) => Object.keys(fixture.scoringStatistics ?? {})))]
+    [...new Set(scoredFixtures.flatMap((fixture) => Object.keys(fixture.scoringStatistics ?? {})))]
       .flatMap((code) => {
-        const values = synchronizedFixtures.map((fixture) => fixture.scoringStatistics?.[code]);
+        const values = scoredFixtures.map((fixture) => fixture.scoringStatistics?.[code]);
         return values.every((value): value is number => typeof value === "number" && Number.isFinite(value))
           ? [[code, values.reduce((total, value) => total + value, 0)] as const]
           : [];

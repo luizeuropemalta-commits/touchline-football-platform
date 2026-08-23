@@ -1094,11 +1094,12 @@ export default async function ClubOwnerProfileRenderer({
 
         .club-owner-best-player-card {
           display: block;
-          width: min(310px, 100%);
+          width: min(264px, 100%);
         }
 
         .club-owner-best-player-rendered {
           width: 100% !important;
+          --touchline-card-static-scale: .85;
         }
 
         .club-owner-best-player-copy {
