@@ -11,6 +11,7 @@ import {
   type TouchLinePlayerSeasonStatistics,
   type TouchLinePlayerStatisticsReadModel,
 } from "@/lib/touchlineArena/player-season-statistics";
+import { projectTouchlinePositionStatisticsByPosition } from "@/lib/touchlineArena/position-aware-card-stats";
 
 const TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID = "8";
 
@@ -101,7 +102,10 @@ function emptyReadModel(providerPlayerId: string | null): TouchLinePlayerStatist
   };
 }
 
-function fixtureStatisticFromRow(row: FixtureStatisticRow): TouchLinePlayerFixtureStatistics {
+function fixtureStatisticFromRow(
+  row: FixtureStatisticRow,
+  position: string | null | undefined,
+): TouchLinePlayerFixtureStatistics {
   const fixture = row.football_fixtures;
   return {
     fixtureId: fixture?.provider_fixture_id ?? row.fixture_id,
@@ -113,7 +117,10 @@ function fixtureStatisticFromRow(row: FixtureStatisticRow): TouchLinePlayerFixtu
     rating: row.rating === null ? null : Number(row.rating),
     touchlinePoints: row.touchline_points === null ? null : Number(row.touchline_points),
     pointContributions: pointContributions(row.touchline_points_breakdown),
-    statistics: record(row.statistics_payload),
+    statistics: projectTouchlinePositionStatisticsByPosition({
+      position,
+      statistics: record(row.statistics_payload),
+    }),
     latestSyncAt: row.source_synced_at,
   };
 }
@@ -123,8 +130,9 @@ function seasonReadModel(input: {
   season?: SeasonRow;
   competition?: CompetitionRow;
   player?: PlayerRow;
+  position?: string | null;
 }): TouchLinePlayerSeasonStatistics {
-  const { row, season, competition, player } = input;
+  const { row, season, competition, player, position } = input;
   if (!row) {
     return emptyTouchLinePlayerSeasonStatistics({
       seasonId: season?.id,
@@ -136,7 +144,7 @@ function seasonReadModel(input: {
       unavailableReason: season ? "not-synchronised" : "season-not-known",
     });
   }
-  return normalizeTouchLinePlayerSeasonStatistics({
+  const normalized = normalizeTouchLinePlayerSeasonStatistics({
     coverageStatus: row.coverage_status,
     seasonId: season?.id ?? row.season_id,
     seasonName: season?.name,
@@ -152,6 +160,13 @@ function seasonReadModel(input: {
     positionStatisticsPayload: row.position_statistics_payload,
     latestSyncAt: row.source_synced_at,
   });
+  return {
+    ...normalized,
+    positionStatistics: projectTouchlinePositionStatisticsByPosition({
+      position,
+      statistics: normalized.positionStatistics,
+    }),
+  };
 }
 
 async function readPlayer(admin: SupabaseClient, providerPlayerId: string) {
@@ -226,6 +241,7 @@ async function readCurrentFixture(admin: SupabaseClient, input: { clubId: string
 export async function loadTouchLinePlayerStatisticsReadModel(input: {
   providerPlayerId?: string | null;
   selectedFixtureId?: string | null;
+  position?: string | null;
 }): Promise<TouchLinePlayerStatisticsReadModel> {
   const providerPlayerId = String(input.providerPlayerId ?? "").trim();
   if (!/^\d+$/.test(providerPlayerId)) return emptyReadModel(null);
@@ -249,7 +265,7 @@ export async function loadTouchLinePlayerStatisticsReadModel(input: {
   ]);
   const seasonRowsById = new Map(seasonRows.map((row) => [row.season_id, row]));
   const allFixtures = fixtureRows
-    .map(fixtureStatisticFromRow)
+    .map((row) => fixtureStatisticFromRow(row, input.position))
     .sort((first, second) => Date.parse(second.fixtureStartsAt ?? "") - Date.parse(first.fixtureStartsAt ?? ""));
   const selectedFixtureStatistic = selectTouchLineCurrentOrLastVerifiedFixture(
     allFixtures,
@@ -278,12 +294,14 @@ export async function loadTouchLinePlayerStatisticsReadModel(input: {
       season: previousCompletedSeason ?? undefined,
       competition,
       player,
+      position: input.position,
     }),
     currentSeason: seasonReadModel({
       row: currentSeason ? seasonRowsById.get(currentSeason.id) : undefined,
       season: currentSeason ?? undefined,
       competition,
       player,
+      position: input.position,
     }),
     lastFiveMatches: input.selectedFixtureId ? [] : allFixtures.slice(0, 5),
     currentOrSelectedFixture,

@@ -633,6 +633,7 @@ export default async function TouchLinePlayerProfilePage({
   const playerStatistics = await loadTouchLinePlayerStatisticsReadModel({
     providerPlayerId: canonicalProviderPlayerId,
     selectedFixtureId: Array.isArray(query.fixture) ? query.fixture[0] : query.fixture,
+    position: canonicalIdentity?.position ?? null,
   });
   if (canonicalProviderPlayerId) exactPlayer.sportmonksPlayerId = canonicalProviderPlayerId;
   const canonicalPlayerId = canonicalIdentity ? publicProjection?.identity.value?.playerId : null;

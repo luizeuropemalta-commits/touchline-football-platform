@@ -25,6 +25,8 @@ export type TouchlineCardStats = Readonly<Partial<Record<
 
 export type TouchlinePlayerPositionKind = "goalkeeper" | "outfield" | "unknown";
 
+export type TouchlinePositionStatistics = Readonly<Record<string, string | number>>;
+
 const COMMON_MATCH_FACTS = [
   "goals",
   "assists",
@@ -64,6 +66,35 @@ const GOALKEEPER_MATCH_FACTS = [
 
 const AUXILIARY_CARD_STATS = ["cards", "minutes", "appearances"] as const satisfies readonly TouchlineCardStatId[];
 
+const GOALKEEPER_ONLY_POSITION_STATISTICS = new Set([
+  "saves",
+  "penalty-saves",
+  "penaltysaves",
+  "goalkeeper-goals-conceded",
+  "goalkeepergoalsconceded",
+  "goals-conceded",
+  "goalsconceded",
+]);
+
+const OUTFIELD_ONLY_POSITION_STATISTICS = new Set([
+  "def-score",
+  "defscore",
+  "defensive-actions-total",
+  "defensiveactionstotal",
+  "tackles-won",
+  "tackleswon",
+  "interceptions",
+  "clearances",
+  "blocked-shots",
+  "blockedshots",
+  "shots-blocked",
+  "shotsblocked",
+  "aerials-won",
+  "aerialswon",
+  "aeriels-won",
+  "aerielswon",
+]);
+
 function normalizedPosition(value: string | null | undefined) {
   return String(value ?? "")
     .normalize("NFD")
@@ -71,6 +102,16 @@ function normalizedPosition(value: string | null | undefined) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function normalizedStatisticKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 /**
@@ -149,4 +190,26 @@ export function projectTouchlineCardStatsByPosition(input: Readonly<{
       : []
   ));
   return entries.length ? Object.fromEntries(entries) as TouchlineCardStats : undefined;
+}
+
+/**
+ * Filters persisted provider/scoring statistics before they enter a profile,
+ * overlay or card read model. Confirmed zeroes remain zero; only facts that do
+ * not apply to the resolved position are removed. Unknown positions fail
+ * closed for both goalkeeper-only and outfield-only facts.
+ */
+export function projectTouchlinePositionStatisticsByPosition(input: Readonly<{
+  position: string | null | undefined;
+  statistics: TouchlinePositionStatistics | null | undefined;
+}>): Record<string, string | number> {
+  if (!input.statistics) return {};
+  const kind = touchlinePlayerPositionKind(input.position);
+  return Object.fromEntries(Object.entries(input.statistics).filter(([key]) => {
+    const normalizedKey = normalizedStatisticKey(key);
+    if (GOALKEEPER_ONLY_POSITION_STATISTICS.has(normalizedKey)) return kind === "goalkeeper";
+    if (OUTFIELD_ONLY_POSITION_STATISTICS.has(normalizedKey) || normalizedKey.startsWith("def-")) {
+      return kind === "outfield";
+    }
+    return true;
+  }));
 }

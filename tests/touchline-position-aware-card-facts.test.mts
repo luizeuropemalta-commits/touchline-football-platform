@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   projectTouchlineCardStatsByPosition,
+  projectTouchlinePositionStatisticsByPosition,
   touchlineCardStatAppliesToPosition,
   touchlinePlayerPositionKind,
 } from "../lib/touchlineArena/position-aware-card-stats.ts";
@@ -77,6 +78,67 @@ test("Eberechi Eze golden regression keeps rating 6.62 and removes the persisted
   }, "en-GB");
   assert.equal(labels.find((field) => field.label === "Rating")?.value, "6.62");
   assert.equal(labels.some((field) => field.label === "Penalty saves"), false);
+});
+
+test("season totals remove role-exclusive facts before the player profile renders them", () => {
+  const persistedSeasonStatistics = {
+    goals: 0,
+    rating: 6.62,
+    "shots-off-target": 1,
+    saves: 5,
+    "penalty-saves": 0,
+    "goalkeeper-goals-conceded": 3,
+    penaltySaves: 0,
+    "def-score": 2,
+    "tackles-won": 4,
+    "shots-blocked": 2,
+    "def-blocked-shots": 2,
+    defBlockedShots: 2,
+  } as const;
+
+  assert.deepEqual(projectTouchlinePositionStatisticsByPosition({
+    position: "Attacking Midfield",
+    statistics: persistedSeasonStatistics,
+  }), {
+    goals: 0,
+    rating: 6.62,
+    "shots-off-target": 1,
+    "def-score": 2,
+    "tackles-won": 4,
+    "shots-blocked": 2,
+    "def-blocked-shots": 2,
+    defBlockedShots: 2,
+  });
+  assert.deepEqual(projectTouchlinePositionStatisticsByPosition({
+    position: "GK",
+    statistics: persistedSeasonStatistics,
+  }), {
+    goals: 0,
+    rating: 6.62,
+    "shots-off-target": 1,
+    saves: 5,
+    "penalty-saves": 0,
+    "goalkeeper-goals-conceded": 3,
+    penaltySaves: 0,
+  });
+  assert.deepEqual(projectTouchlinePositionStatisticsByPosition({
+    position: null,
+    statistics: persistedSeasonStatistics,
+  }), {
+    goals: 0,
+    rating: 6.62,
+    "shots-off-target": 1,
+  });
+});
+
+test("the server read model receives canonical position and projects raw fixture and season facts", async () => {
+  const [reader, profile] = await Promise.all([
+    readFile(new URL("../lib/touchlineArena/player-season-statistics-server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(reader, /positionStatistics: projectTouchlinePositionStatisticsByPosition/);
+  assert.match(reader, /statistics: projectTouchlinePositionStatisticsByPosition/);
+  assert.match(profile, /position: canonicalIdentity\?\.position \?\? null/);
 });
 
 test("goalkeeper projection exposes goalkeeper facts and excludes DEF/outfield-only facts", () => {
