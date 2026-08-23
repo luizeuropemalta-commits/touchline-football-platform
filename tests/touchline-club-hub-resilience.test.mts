@@ -22,8 +22,9 @@ test("ClubHub bounds squad loading and distinguishes unavailable data from a nor
   assert.match(source, /role=\{squadUnavailable \? "status" : undefined\}/);
 });
 
-test("ClubHub prioritizes only the first visible squad cards and defers remaining card artwork", () => {
-  assert.match(squadGridSource, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);
+test("ClubHub defers the below-the-fold squad artwork without emitting unused image preloads", () => {
+  assert.match(squadGridSource, /imageLoading="lazy"/);
+  assert.doesNotMatch(squadGridSource, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);
   assert.match(squadGridSource, /CARD_BATCH_SIZE = 8/);
   assert.match(officialLineupSource, /imageLoading="lazy"/);
 });

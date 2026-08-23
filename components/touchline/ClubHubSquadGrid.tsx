@@ -150,7 +150,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   className="club-hub-rendered-card"
                   player={exactPlayer}
                   labels={labels}
-                  imageLoading={index < 4 ? "eager" : "lazy"}
+                  imageLoading="lazy"
                   staticRenderScale={180 / 430}
                   layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                   playerProfileHref={profileHref}
