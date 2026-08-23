@@ -311,12 +311,16 @@ async function loadClubMatchSnapshot(
     const scoringFixture = selectPublicClubScoringFixture(persistedFixtures, (candidate) => fixtureHasClub(candidate, club));
     const previewFixture = fixture ?? scoringFixture;
     if (!previewFixture) return empty;
-    const persistedFeed = persistedFeeds.find((feed) => feed.fixture.providerId === scoringFixture?.providerId);
-    const publicFeed = persistedFeed ? toPublicFantasyFixtureFeed(persistedFeed) : null;
+    // The upcoming fixture owns its official matchday sheet. Scoring can
+    // intentionally retain a different live/finished fixture so final points
+    // do not disappear before the next kickoff.
+    const matchdayFeed = persistedFeeds.find((feed) => feed.fixture.providerId === fixture?.providerId);
+    const scoringFeed = persistedFeeds.find((feed) => feed.fixture.providerId === scoringFixture?.providerId);
+    const publicFeed = scoringFeed ? toPublicFantasyFixtureFeed(scoringFeed) : null;
     const matchDetail = publicFeed && scoringFixture?.providerId
       ? await readPublicFantasyFixtureMatchDetail(scoringFixture.providerId, publicFeed)
       : null;
-    const formation = persistedFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
+    const formation = matchdayFeed?.formations.find((item) => feedTeamBelongsToClub(item.teamId, item.teamName, club))?.formation ?? null;
     return {
       preview: {
         home: resolveTouchlineClubMatchPreviewTeam(previewFixture.homeTeam, club, locale),
@@ -327,8 +331,8 @@ async function loadClubMatchSnapshot(
           : touchLineT(locale, "kickoffPending"),
         source: touchLineT(locale, "dataCache"),
       },
-      fixtureId: scoringFixture?.providerId ?? null,
-      lineups: persistedFeed?.lineups ?? [],
+      fixtureId: matchdayFeed?.fixture.providerId ?? null,
+      lineups: matchdayFeed?.lineups ?? [],
       formation,
       coach: null,
       publicFixture: toPublicTouchlineFixture(previewFixture),
