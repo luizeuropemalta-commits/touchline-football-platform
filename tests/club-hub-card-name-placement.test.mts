@@ -19,7 +19,8 @@ test("ClubHub compact cards reserve enough width for a readable official shirt n
   assert.match(clubHubPage, /width: min\(100%, 190px\) !important/);
   assert.match(clubHubSquadGrid, /staticRenderScale=\{180 \/ 430\}/);
   assert.doesNotMatch(clubHubSquadGrid, /initialRenderScale=/);
-  assert.match(clubHubSquadGrid, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);
+  assert.match(clubHubSquadGrid, /imageLoading="lazy"/);
+  assert.doesNotMatch(clubHubSquadGrid, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);
 });
 
 test("ClubHub supplies every locale-sensitive player-card label during server rendering", () => {
