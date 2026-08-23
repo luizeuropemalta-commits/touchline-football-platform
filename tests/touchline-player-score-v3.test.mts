@@ -40,3 +40,12 @@ test("the protected V3 rebuild route refuses every runtime outside dedicated QA"
   assert.match(route, /TOUCHLINE_QA_SUPABASE_PROJECT_REF === QA_PROJECT_REF/);
   assert.match(route, /Score Engine V3 rebuild is available only in dedicated QA/);
 });
+
+test("ranking keeps one complete audited V2 snapshot visible until V3 can be published", () => {
+  const reader = readFileSync(new URL("../lib/touchlineArena/card-ranking-server.ts", import.meta.url), "utf8");
+  const catalog = readFileSync(new URL("../lib/touchlineArena/ranked-card-catalog-server.ts", import.meta.url), "utf8");
+  assert.match(reader, /record\.scoring_version !== "player_scoring_v2" && record\.scoring_version !== "player_scoring_v3"/);
+  assert.match(catalog, /const scoringVersion = state\.scoringVersion/);
+  assert.match(catalog, /const settlementTable = scoringVersion === "player_scoring_v3"/);
+  assert.match(catalog, /\.eq\("scoring_version", scoringVersion\)/);
+});
