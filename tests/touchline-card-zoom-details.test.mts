@@ -13,7 +13,10 @@ const PLAYER_ID = "d9428888-122b-11e1-b85c-61cd3cbb3210";
 
 test("keeps confirmed match zero distinct from unavailable statistic facts", () => {
   assert.deepEqual(
-    buildTouchlineVerifiedMatchFactFields({ goals: 1, assists: 0, yellowCards: null, saves: 3 }, "en-GB"),
+    buildTouchlineVerifiedMatchFactFields({
+      position: "Goalkeeper",
+      statistics: { goals: 1, assists: 0, yellowCards: null, saves: 3 },
+    }, "en-GB"),
     [
       { label: "Goals", value: "1" },
       { label: "Assists", value: "0" },
@@ -22,7 +25,10 @@ test("keeps confirmed match zero distinct from unavailable statistic facts", () 
     ],
   );
   assert.deepEqual(
-    buildTouchlineVerifiedMatchFactFields({ cleanSheets: 0, redCards: 1 }, "pt-BR"),
+    buildTouchlineVerifiedMatchFactFields({
+      position: "Defender",
+      statistics: { cleanSheets: 0, redCards: 1 },
+    }, "pt-BR"),
     [
       { label: "Jogos sem sofrer gols", value: "0" },
       { label: "Cartões vermelhos", value: "1" },

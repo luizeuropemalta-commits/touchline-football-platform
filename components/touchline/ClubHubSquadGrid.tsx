@@ -123,7 +123,10 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                       value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
                       accent: true,
                     },
-                    ...buildTouchlineVerifiedMatchFactFields(card.matchStats, locale),
+                    ...buildTouchlineVerifiedMatchFactFields({
+                      statistics: card.matchStats,
+                      position: card.position || card.role,
+                    }, locale),
                     ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
                   ],
                   profileHref,

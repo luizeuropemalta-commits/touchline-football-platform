@@ -12,19 +12,18 @@ import {
   touchlineCardReviewFieldLabel,
   type TouchlineCardReviewPresentation,
 } from "./card-review-state.ts";
+import {
+  projectTouchlineCardStatsByPosition,
+  touchlineMatchFactKeysForPosition,
+  type TouchlineCardStatId,
+  type TouchlineCardStats,
+} from "./position-aware-card-stats.ts";
 
 export type TouchlineCardZoomExtraField = Readonly<{
   label: string;
   value: string | null | undefined;
   accent?: boolean;
 }>;
-
-type TouchlineVerifiedMatchStats = Readonly<Partial<Record<
-  "goals" | "assists" | "cleanSheets" | "saves" | "goalsConceded" | "yellowCards" | "redCards"
-  | "shotsOnTarget" | "shotsOffTarget" | "defensiveActionsTotal" | "defense"
-  | "penaltySaves" | "penaltiesMissed" | "ownGoals",
-  string | number | null
->>>;
 
 /**
  * Builds the match-fact portion of a card overlay from the existing
@@ -33,31 +32,40 @@ type TouchlineVerifiedMatchStats = Readonly<Partial<Record<
  * an explicit null remains unavailable.
  */
 export function buildTouchlineVerifiedMatchFactFields(
-  statistics: TouchlineVerifiedMatchStats | null | undefined,
+  input: Readonly<{
+    position: string | null | undefined;
+    statistics: TouchlineCardStats | null | undefined;
+  }>,
   locale: string,
 ): TouchlineCardZoomExtraField[] {
+  const statistics = projectTouchlineCardStatsByPosition(input);
   if (!statistics) return [];
   const pt = locale === "pt-BR";
-  const facts: readonly [keyof TouchlineVerifiedMatchStats, string, string][] = [
-    ["goals", "Goals", "Gols"],
-    ["assists", "Assists", "Assistências"],
-    ["cleanSheets", "Clean sheets", "Jogos sem sofrer gols"],
-    ["saves", "Saves", "Defesas"],
-    ["goalsConceded", "Goals conceded", "Gols sofridos"],
-    ["yellowCards", "Yellow cards", "Cartões amarelos"],
-    ["redCards", "Red cards", "Cartões vermelhos"],
-    ["shotsOnTarget", "Shots on target", "Chutes no gol"],
-    ["shotsOffTarget", "Shots off target", "Chutes para fora"],
-    ["defensiveActionsTotal", "Defensive actions (DAT)", "Ações defensivas (DAT)"],
-    ["defense", "DEF score", "Pontuação DEF"],
-    ["penaltySaves", "Penalty saves", "Pênaltis defendidos"],
-    ["penaltiesMissed", "Penalties missed", "Pênaltis perdidos"],
-    ["ownGoals", "Own goals", "Gols contra"],
-  ];
+  const labels: Record<TouchlineCardStatId, readonly [string, string]> = {
+    goals: ["Goals", "Gols"],
+    assists: ["Assists", "Assistências"],
+    defense: ["DEF score", "Pontuação DEF"],
+    cleanSheets: ["Clean sheets", "Jogos sem sofrer gols"],
+    cards: ["Cards", "Cartões"],
+    yellowCards: ["Yellow cards", "Cartões amarelos"],
+    redCards: ["Red cards", "Cartões vermelhos"],
+    saves: ["Saves", "Defesas"],
+    goalsConceded: ["Goals conceded", "Gols sofridos"],
+    minutes: ["Minutes", "Minutos"],
+    appearances: ["Appearances", "Aparições"],
+    shotsOnTarget: ["Shots on target", "Chutes no gol"],
+    shotsOffTarget: ["Shots off target", "Chutes para fora"],
+    defensiveActionsTotal: ["Defensive actions (DAT)", "Ações defensivas (DAT)"],
+    penaltySaves: ["Penalty saves", "Pênaltis defendidos"],
+    penaltiesMissed: ["Penalties missed", "Pênaltis perdidos"],
+    ownGoals: ["Own goals", "Gols contra"],
+    rating: ["Rating", "Nota"],
+  };
 
-  return facts.flatMap(([key, englishLabel, portugueseLabel]) => {
+  return touchlineMatchFactKeysForPosition(input.position).flatMap((key) => {
     if (!(key in statistics)) return [];
     const value = statistics[key];
+    const [englishLabel, portugueseLabel] = labels[key];
     return [{ label: pt ? portugueseLabel : englishLabel, value: value == null ? "—" : String(value) }];
   });
 }

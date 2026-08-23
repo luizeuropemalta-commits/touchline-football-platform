@@ -53,14 +53,14 @@ test("canonical fixture points remain distinct from season-card totals and retai
   assert.equal(distributed[0].seasonTouchlinePoints, 24);
   assert.equal(distributed[0].matchTouchlinePoints, 6);
   assert.deepEqual(distributed[0].seasonStats, { goals: 1, assists: 0, yellowCards: 0, redCards: 0 });
-  assert.deepEqual(distributed[0].matchStats, { goals: 1, assists: 0, yellowCards: 0, redCards: 0, cards: 0 });
+  assert.deepEqual(distributed[0].matchStats, { goals: 1, assists: 0, yellowCards: 0, redCards: 0, rating: null, cards: 0 });
   assert.deepEqual(distributed[0].matchPointContributions, [{ role: "primary", eventType: "Goal", minute: 67, points: 6 }]);
   assert.equal(squadCardToExactPlayer(distributed[0]).fantasyPoints, 24);
   assert.equal(squadCardToExactPlayer(distributed[0]).matchFantasyPoints, 6);
 
   assert.equal(distributed[1].seasonTouchlinePoints, 8);
   assert.equal(distributed[1].matchTouchlinePoints, 0, "a provider-confirmed zero remains zero");
-  assert.deepEqual(distributed[1].matchStats, { yellowCards: 0, redCards: 0, cards: 0 });
+  assert.deepEqual(distributed[1].matchStats, { yellowCards: 0, redCards: 0, rating: null, cards: 0 });
 
   assert.equal(distributed[2].seasonTouchlinePoints, null, "a missing season fact is unavailable, never a fabricated zero");
   assert.equal(distributed[2].matchTouchlinePoints, undefined);

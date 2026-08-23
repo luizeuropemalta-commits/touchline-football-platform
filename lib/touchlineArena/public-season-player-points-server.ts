@@ -3,8 +3,10 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { TouchlinePublicSeasonPlayerPoints } from "./matchday-player-points";
+import { projectTouchlineCardStatsByPosition } from "./position-aware-card-stats";
 
 type Row = Readonly<{ football_player_id?: unknown; summary_payload?: unknown; position_statistics_payload?: unknown }>;
+type PlayerRow = Readonly<{ id?: unknown; position?: unknown; provider_position?: unknown; detailed_position?: unknown }>;
 const TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID = "8";
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -46,13 +48,26 @@ export async function readPublicSeasonPlayerPoints(
     ? seasons.map((season) => String(season.id ?? "").trim()).filter(Boolean)
     : [];
   if (seasonsError || seasonIds.length !== 1) return [];
-  const { data, error } = await admin
-    .from("football_player_season_statistics")
-    .select("football_player_id,summary_payload,position_statistics_payload")
-    .eq("competition_id", competitionId)
-    .eq("season_id", seasonIds[0])
-    .in("football_player_id", ids);
-  if (error || !Array.isArray(data)) return [];
+  const [{ data, error }, { data: playerData, error: playerError }] = await Promise.all([
+    admin
+      .from("football_player_season_statistics")
+      .select("football_player_id,summary_payload,position_statistics_payload")
+      .eq("competition_id", competitionId)
+      .eq("season_id", seasonIds[0])
+      .in("football_player_id", ids),
+    admin
+      .from("football_players")
+      .select("id,position,provider_position,detailed_position")
+      .in("id", ids),
+  ]);
+  if (error || playerError || !Array.isArray(data) || !Array.isArray(playerData)) return [];
+  const positionByPlayerId = new Map((playerData as PlayerRow[]).flatMap((player) => {
+    const playerId = String(player.id ?? "").trim();
+    const position = [player.detailed_position, player.provider_position, player.position]
+      .map((value) => String(value ?? "").trim())
+      .find(Boolean);
+    return playerId && position ? [[playerId, position] as const] : [];
+  }));
   return (data as Row[]).flatMap((row) => {
     const canonicalPlayerId = String(row.football_player_id ?? "").trim();
     const summary = record(row.summary_payload);
@@ -67,7 +82,7 @@ export async function readPublicSeasonPlayerPoints(
     const touchlinePoints = finiteNumber(summary?.touchlinePoints);
     const yellowCards = statistic("yellowCards", "yellow-cards", "yellowcards");
     const redCards = statistic("redCards", "red-cards", "redcards");
-    const statistics = {
+    const unscopedStatistics = {
       ...(statistic("goals") === undefined ? {} : { goals: statistic("goals")! }),
       ...(statistic("assists") === undefined ? {} : { assists: statistic("assists")! }),
       ...(yellowCards === undefined ? {} : { yellowCards }),
@@ -76,7 +91,12 @@ export async function readPublicSeasonPlayerPoints(
       ...(statistic("saves") === undefined ? {} : { saves: statistic("saves")! }),
       ...(statistic("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded") === undefined ? {} : { goalsConceded: statistic("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded")! }),
       ...(statistic("def-score") === undefined ? {} : { defense: statistic("def-score")! }),
+      ...(statistic("rating") === undefined ? {} : { rating: statistic("rating")! }),
     };
+    const statistics = (projectTouchlineCardStatsByPosition({
+      position: positionByPlayerId.get(canonicalPlayerId),
+      statistics: unscopedStatistics,
+    }) as TouchlinePublicSeasonPlayerPoints["statistics"] | undefined) ?? {};
     return canonicalPlayerId ? [{ canonicalPlayerId, touchlinePoints, statistics }] : [];
   });
 }

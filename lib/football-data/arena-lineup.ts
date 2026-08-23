@@ -1,6 +1,7 @@
 import type { TouchlinePublicFantasyLineupMember } from "./public-fantasy-fixture";
 import type { TouchlineCardTierKey } from "../touchlineArena/card-rules";
 import type { TouchlinePublicEditorialCardPresentation } from "../touchlineArena/editorial-card-profile";
+import type { TouchlineCardStatId } from "../touchlineArena/position-aware-card-stats";
 
 export type ArenaLineupRole = "forward" | "midfielder" | "defender" | "goalkeeper";
 
@@ -39,8 +40,8 @@ export type ArenaLineupPlayer = {
     editorialCard?: TouchlinePublicEditorialCardPresentation | null;
     inventoryId?: string | null;
     /** Cumulative verified season statistics used by the shared card renderer. */
-    seasonStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances" | "shotsOnTarget" | "shotsOffTarget" | "defensiveActionsTotal" | "penaltySaves" | "penaltiesMissed" | "ownGoals", string | number | null>>;
-    matchStats?: Partial<Record<"goals" | "assists" | "defense" | "cleanSheets" | "cards" | "yellowCards" | "redCards" | "saves" | "goalsConceded" | "minutes" | "appearances" | "shotsOnTarget" | "shotsOffTarget" | "defensiveActionsTotal" | "penaltySaves" | "penaltiesMissed" | "ownGoals", string | number | null>>;
+    seasonStats?: Partial<Record<TouchlineCardStatId, string | number | null>>;
+    matchStats?: Partial<Record<TouchlineCardStatId, string | number | null>>;
     matchPointContributions?: readonly Readonly<{
       role: "primary" | "assist" | "fact";
       eventType: string;

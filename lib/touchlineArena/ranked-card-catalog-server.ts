@@ -8,6 +8,10 @@ import { loadTouchlinePublishedCardPresentations } from "./card-publication-read
 import { hasTouchlineCountryFlag, normalizeTouchlineCountryCode3, touchlineCountryCode3FromName } from "./country-flags";
 import type { TouchlineActiveRankingState } from "./card-ranking-live";
 import type { ClubOwnerSquadCard } from "./demo-data";
+import {
+  projectTouchlineCardStatsByPosition,
+  type TouchlineCardStats,
+} from "./position-aware-card-stats";
 
 type Row = Record<string, unknown>;
 
@@ -25,26 +29,38 @@ function countryCode(player: Row) {
   const stored = normalizeTouchlineCountryCode3(text(player.country_id));
   return hasTouchlineCountryFlag(stored) ? stored : "N/A";
 }
-function verifiedStats(row?: Row) {
+function verifiedStats(row: Row | undefined, playerPosition: string, includeUnavailableRating = false) {
   const summary = object(row?.summary_payload);
   const position = object(row?.position_statistics_payload);
   const value = (...keys: string[]) => keys.map((key) => number(summary[key]) ?? number(position[key])).find((entry) => entry !== null) ?? null;
   const yellow = value("yellowCards", "yellow-cards", "yellowcards");
   const red = value("redCards", "red-cards", "redcards");
-  const result = {
-    goals: value("goals"), assists: value("assists"), defense: value("def-score"),
-    cleanSheets: value("cleanSheets", "clean-sheets", "cleansheets"), yellowCards: yellow, redCards: red,
-    cards: yellow === null || red === null ? null : yellow + red, saves: value("saves"),
-    goalsConceded: value("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded"),
-    minutes: value("minutes"), appearances: value("appearances"), shotsOnTarget: value("shots-on-target"),
-    shotsOffTarget: value("shots-off-target"), defensiveActionsTotal: value("defensive-actions-total"),
-    penaltySaves: value("penalty-saves"), penaltiesMissed: value("penalties-missed"), ownGoals: value("own-goals"),
-  };
-  return Object.values(result).some((entry) => entry !== null) ? result : undefined;
+  const entries = [
+    ["goals", value("goals")], ["assists", value("assists")], ["defense", value("def-score")],
+    ["cleanSheets", value("cleanSheets", "clean-sheets", "cleansheets")], ["yellowCards", yellow], ["redCards", red],
+    ["cards", yellow === null || red === null ? null : yellow + red], ["saves", value("saves")],
+    ["goalsConceded", value("goalsConceded", "goalkeeper-goals-conceded", "goals-conceded")],
+    ["minutes", value("minutes")], ["appearances", value("appearances")], ["shotsOnTarget", value("shots-on-target")],
+    ["shotsOffTarget", value("shots-off-target")], ["defensiveActionsTotal", value("defensive-actions-total")],
+    ["penaltySaves", value("penalty-saves")], ["penaltiesMissed", value("penalties-missed")], ["ownGoals", value("own-goals")],
+  ].filter((entry): entry is [string, number] => typeof entry[1] === "number");
+  const rating = number(row?.rating) ?? value("rating");
+  const statistics = {
+    ...Object.fromEntries(entries),
+    ...(rating !== null || includeUnavailableRating ? { rating } : {}),
+  } as TouchlineCardStats;
+  return projectTouchlineCardStatsByPosition({
+    position: playerPosition,
+    statistics: Object.keys(statistics).length ? statistics : undefined,
+  });
 }
-function verifiedMatchStats(row?: Row) {
+function verifiedMatchStats(row: Row | undefined, playerPosition: string) {
   if (!row) return undefined;
-  return verifiedStats({ summary_payload: row.statistics_payload, position_statistics_payload: row.statistics_payload });
+  return verifiedStats({
+    summary_payload: row.statistics_payload,
+    position_statistics_payload: row.statistics_payload,
+    rating: row.rating,
+  }, playerPosition, true);
 }
 function contributions(row?: Row): NonNullable<ClubOwnerSquadCard["matchPointContributions"]> {
   if (!Array.isArray(row?.touchline_points_breakdown)) return [];
@@ -78,7 +94,7 @@ export async function loadTouchLineRankedCardCatalog(
     admin.from("football_players").select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds),
     admin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }),
     admin.from("football_player_season_statistics").select("football_player_id,summary_payload,position_statistics_payload").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v2").in("football_player_id", playerIds),
-    admin.from("football_player_fixture_statistics").select("football_player_id,touchline_points,touchline_points_breakdown,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v2").in("football_player_id", playerIds).order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
+    admin.from("football_player_fixture_statistics").select("football_player_id,touchline_points,touchline_points_breakdown,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v2").in("football_player_id", playerIds).order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
   ]);
   if (playerError || squadError || seasonError || fixtureError) return [];
   const players = rows(playerData);
@@ -133,8 +149,8 @@ export async function loadTouchLineRankedCardCatalog(
       touchlinePoints: ranking.touchlinePoints,
       seasonTouchlinePoints: ranking.touchlinePoints,
       matchTouchlinePoints: number(match?.touchline_points),
-      seasonStats: verifiedStats(seasonByPlayerId.get(playerId)),
-      matchStats: verifiedMatchStats(match),
+      seasonStats: verifiedStats(seasonByPlayerId.get(playerId), position),
+      matchStats: verifiedMatchStats(match, position),
       ...(pointContributions.length ? { matchPointContributions: pointContributions } : {}),
     }];
   });

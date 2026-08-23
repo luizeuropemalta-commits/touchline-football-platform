@@ -1,5 +1,9 @@
 import type { TouchlinePublicFixturePlayerStatistics } from "@/lib/football-data/public-fantasy-fixture";
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
+import {
+  projectTouchlineCardStatsByPosition,
+  type TouchlineCardStats,
+} from "./position-aware-card-stats.ts";
 
 export type TouchlinePublicSeasonPlayerPoints = Readonly<{
   canonicalPlayerId: string;
@@ -19,6 +23,7 @@ export type TouchlinePublicSeasonPlayerPoints = Readonly<{
     penaltySaves?: number;
     penaltiesMissed?: number;
     ownGoals?: number;
+    rating?: number;
   }>;
 }>;
 
@@ -38,7 +43,7 @@ export function applyTouchlineMatchdayPoints(
     const statistic = byProviderPlayerId.get(String(card.id));
     if (!statistic) return card;
     const { goals, assists, yellowCards, redCards, cleanSheets, saves, goalsConceded, shotsOnTarget, shotsOffTarget, defensiveActionsTotal, defense, penaltySaves, penaltiesMissed, ownGoals } = statistic.statistics;
-    const matchStats = {
+    const unscopedMatchStats = {
       ...(goals === undefined ? {} : { goals }),
       ...(assists === undefined ? {} : { assists }),
       ...(cleanSheets === undefined ? {} : { cleanSheets }),
@@ -54,13 +59,18 @@ export function applyTouchlineMatchdayPoints(
       ...(penaltiesMissed === undefined ? {} : { penaltiesMissed }),
       ...(ownGoals === undefined ? {} : { ownGoals }),
       ...(yellowCards === undefined || redCards === undefined ? {} : { cards: yellowCards + redCards }),
-    };
+      rating: statistic.rating,
+    } satisfies TouchlineCardStats;
+    const matchStats = projectTouchlineCardStatsByPosition({
+      position: card.position || card.role,
+      statistics: unscopedMatchStats,
+    });
     return {
       ...card,
       // Null means the persisted scoring fact is unavailable; a confirmed
       // zero remains zero and final fixture cards retain it after full time.
       matchTouchlinePoints: statistic.touchlinePoints,
-      ...(Object.keys(matchStats).length ? { matchStats } : {}),
+      ...(matchStats && Object.keys(matchStats).length ? { matchStats } : {}),
       ...(statistic.contributions.length
         ? {
           matchPointContributions: statistic.contributions.map((contribution) => ({
@@ -95,10 +105,14 @@ export function applyTouchlineSeasonPoints(
   return cards.map((card) => {
     const canonicalPlayerId = String(card.canonicalPlayerId ?? "").trim();
     const statistic = canonicalPlayerId ? byCanonicalPlayerId.get(canonicalPlayerId) : null;
+    const seasonStats = projectTouchlineCardStatsByPosition({
+      position: card.position || card.role,
+      statistics: statistic?.statistics,
+    });
     return {
       ...card,
       seasonTouchlinePoints: statistic?.touchlinePoints ?? null,
-      ...(statistic && Object.keys(statistic.statistics).length ? { seasonStats: statistic.statistics } : {}),
+      ...(seasonStats && Object.keys(seasonStats).length ? { seasonStats } : {}),
     };
   });
 }

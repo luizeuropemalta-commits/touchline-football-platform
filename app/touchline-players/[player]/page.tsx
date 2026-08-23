@@ -72,6 +72,10 @@ import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
+import {
+  projectTouchlineCardStatsByPosition,
+  type TouchlineCardStats,
+} from "@/lib/touchlineArena/position-aware-card-stats";
 import styles from "./player-profile.module.css";
 
 export const dynamic = "force-dynamic";
@@ -489,8 +493,21 @@ function SeasonStatisticsPanel({
   );
 }
 
-function FixtureStatisticsPanel({ model, text }: { model: TouchLinePlayerStatisticsReadModel; text: typeof copy.en | typeof copy.pt }) {
+function FixtureStatisticsPanel({
+  model,
+  text,
+  matchStats,
+  position,
+  locale,
+}: {
+  model: TouchLinePlayerStatisticsReadModel;
+  text: typeof copy.en | typeof copy.pt;
+  matchStats: TouchlineCardStats | null | undefined;
+  position: string | null | undefined;
+  locale: string;
+}) {
   const current = model.currentOrSelectedFixture;
+  const matchFacts = buildTouchlineVerifiedMatchFactFields({ statistics: matchStats, position }, locale);
   const appearanceLabel = (value: "started" | "substitute" | "unused" | "absent" | "unavailable") => {
     const labels = text === copy.pt
       ? { started: "Titular", substitute: "Substituto", unused: "Não utilizado", absent: "Ausente", unavailable: text.unavailable }
@@ -516,7 +533,19 @@ function FixtureStatisticsPanel({ model, text }: { model: TouchLinePlayerStatist
       <article className={styles.officialGroup}>
         <h3>{text.currentFixture}</h3>
         {current ? (
-          <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small>{text.currentMatchPoints}: {current.touchlinePoints === null ? text.unavailable : String(current.touchlinePoints)}</small></div></div>
+          <>
+            <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small>{text.currentMatchPoints}: {current.touchlinePoints === null ? text.unavailable : String(current.touchlinePoints)}</small></div></div>
+            {matchFacts.length ? (
+              <div className={styles.officialStats} data-stat-count={matchFacts.length} data-position-aware-player-facts>
+                {matchFacts.map((fact) => (
+                  <div key={fact.label} className={fact.value === "—" ? styles.unavailableStat : styles.primaryStat}>
+                    <small>{fact.label}</small>
+                    <strong>{fact.value}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </>
         ) : <p className={styles.unavailableFixture}>{text.unavailable}</p>}
       </article>
     </div>
@@ -646,41 +675,52 @@ export default async function TouchLinePlayerProfilePage({
   const seasonSaves = statisticNumber(seasonPositionStatistics, "saves");
   const seasonGoalsConceded = statisticNumber(seasonPositionStatistics, "goalkeeper-goals-conceded", "goals-conceded");
   const seasonDefense = statisticNumber(seasonPositionStatistics, "def-score");
-  exactPlayer.seasonStats = {
-    goals: playerStatistics.currentSeason.summary.goals,
-    assists: playerStatistics.currentSeason.summary.assists,
-    ...(seasonCleanSheets === undefined ? {} : { cleanSheets: seasonCleanSheets }),
-    ...(seasonSaves === undefined ? {} : { saves: seasonSaves }),
-    ...(seasonGoalsConceded === undefined ? {} : { goalsConceded: seasonGoalsConceded }),
-    ...(seasonDefense === undefined ? {} : { defense: seasonDefense }),
-    yellowCards: playerStatistics.currentSeason.summary.yellowCards,
-    redCards: playerStatistics.currentSeason.summary.redCards,
-    cards: playerStatistics.currentSeason.summary.yellowCards === null
-      || playerStatistics.currentSeason.summary.redCards === null
-      ? null
-      : playerStatistics.currentSeason.summary.yellowCards + playerStatistics.currentSeason.summary.redCards,
-  };
+  const cardFactPosition = canonicalIdentity?.position ?? exactPlayer.position ?? card.position;
+  exactPlayer.seasonStats = projectTouchlineCardStatsByPosition({
+    position: cardFactPosition,
+    statistics: {
+      goals: playerStatistics.currentSeason.summary.goals,
+      assists: playerStatistics.currentSeason.summary.assists,
+      ...(seasonCleanSheets === undefined ? {} : { cleanSheets: seasonCleanSheets }),
+      ...(seasonSaves === undefined ? {} : { saves: seasonSaves }),
+      ...(seasonGoalsConceded === undefined ? {} : { goalsConceded: seasonGoalsConceded }),
+      ...(seasonDefense === undefined ? {} : { defense: seasonDefense }),
+      yellowCards: playerStatistics.currentSeason.summary.yellowCards,
+      redCards: playerStatistics.currentSeason.summary.redCards,
+      cards: playerStatistics.currentSeason.summary.yellowCards === null
+        || playerStatistics.currentSeason.summary.redCards === null
+        ? null
+        : playerStatistics.currentSeason.summary.yellowCards + playerStatistics.currentSeason.summary.redCards,
+      rating: playerStatistics.currentSeason.summary.rating,
+    },
+  });
   const selectedFixtureStatistics = playerStatistics.currentOrSelectedFixture?.statistics ?? {};
   const selectedStatistic = (...keys: string[]) => statisticNumber(selectedFixtureStatistics, ...keys);
   const selectedYellowCards = selectedStatistic("yellow-cards", "yellowcards");
   const selectedRedCards = selectedStatistic("red-cards", "redcards");
-  exactPlayer.matchStats = {
-    ...(selectedStatistic("goals") === undefined ? {} : { goals: selectedStatistic("goals")! }),
-    ...(selectedStatistic("assists") === undefined ? {} : { assists: selectedStatistic("assists")! }),
-    ...(selectedStatistic("clean-sheets", "cleansheets") === undefined ? {} : { cleanSheets: selectedStatistic("clean-sheets", "cleansheets")! }),
-    ...(selectedStatistic("saves") === undefined ? {} : { saves: selectedStatistic("saves")! }),
-    ...(selectedStatistic("goalkeeper-goals-conceded", "goals-conceded") === undefined ? {} : { goalsConceded: selectedStatistic("goalkeeper-goals-conceded", "goals-conceded")! }),
-    ...(selectedStatistic("def-score") === undefined ? {} : { defense: selectedStatistic("def-score")! }),
-    ...(selectedStatistic("shots-on-target") === undefined ? {} : { shotsOnTarget: selectedStatistic("shots-on-target")! }),
-    ...(selectedStatistic("shots-off-target") === undefined ? {} : { shotsOffTarget: selectedStatistic("shots-off-target")! }),
-    ...(selectedStatistic("defensive-actions-total") === undefined ? {} : { defensiveActionsTotal: selectedStatistic("defensive-actions-total")! }),
-    ...(selectedStatistic("penalty-saves") === undefined ? {} : { penaltySaves: selectedStatistic("penalty-saves")! }),
-    ...(selectedStatistic("penalties-missed") === undefined ? {} : { penaltiesMissed: selectedStatistic("penalties-missed")! }),
-    ...(selectedStatistic("own-goals") === undefined ? {} : { ownGoals: selectedStatistic("own-goals")! }),
-    ...(selectedYellowCards === undefined ? {} : { yellowCards: selectedYellowCards }),
-    ...(selectedRedCards === undefined ? {} : { redCards: selectedRedCards }),
-    ...(selectedYellowCards === undefined || selectedRedCards === undefined ? {} : { cards: selectedYellowCards + selectedRedCards }),
-  };
+  exactPlayer.matchStats = projectTouchlineCardStatsByPosition({
+    position: cardFactPosition,
+    statistics: {
+      ...(selectedStatistic("goals") === undefined ? {} : { goals: selectedStatistic("goals")! }),
+      ...(selectedStatistic("assists") === undefined ? {} : { assists: selectedStatistic("assists")! }),
+      ...(selectedStatistic("clean-sheets", "cleansheets") === undefined ? {} : { cleanSheets: selectedStatistic("clean-sheets", "cleansheets")! }),
+      ...(selectedStatistic("saves") === undefined ? {} : { saves: selectedStatistic("saves")! }),
+      ...(selectedStatistic("goalkeeper-goals-conceded", "goals-conceded") === undefined ? {} : { goalsConceded: selectedStatistic("goalkeeper-goals-conceded", "goals-conceded")! }),
+      ...(selectedStatistic("def-score") === undefined ? {} : { defense: selectedStatistic("def-score")! }),
+      ...(selectedStatistic("shots-on-target") === undefined ? {} : { shotsOnTarget: selectedStatistic("shots-on-target")! }),
+      ...(selectedStatistic("shots-off-target") === undefined ? {} : { shotsOffTarget: selectedStatistic("shots-off-target")! }),
+      ...(selectedStatistic("defensive-actions-total") === undefined ? {} : { defensiveActionsTotal: selectedStatistic("defensive-actions-total")! }),
+      ...(selectedStatistic("penalty-saves") === undefined ? {} : { penaltySaves: selectedStatistic("penalty-saves")! }),
+      ...(selectedStatistic("penalties-missed") === undefined ? {} : { penaltiesMissed: selectedStatistic("penalties-missed")! }),
+      ...(selectedStatistic("own-goals") === undefined ? {} : { ownGoals: selectedStatistic("own-goals")! }),
+      ...(selectedYellowCards === undefined ? {} : { yellowCards: selectedYellowCards }),
+      ...(selectedRedCards === undefined ? {} : { redCards: selectedRedCards }),
+      ...(selectedYellowCards === undefined || selectedRedCards === undefined ? {} : { cards: selectedYellowCards + selectedRedCards }),
+      ...(playerStatistics.currentOrSelectedFixture
+        ? { rating: playerStatistics.currentOrSelectedFixture.rating }
+        : {}),
+    },
+  });
   const requestedPreviewTier = Array.isArray(query.previewTier) ? query.previewTier[0] : query.previewTier;
   // Preview tiers are available only for an explicit local-development demo.
   // A public numeric provider ID never accepts a visual tier from a
@@ -776,7 +816,10 @@ export default async function TouchLinePlayerProfilePage({
             value: exactPlayer.matchFantasyPoints === null ? text.unavailable : String(exactPlayer.matchFantasyPoints),
             accent: true,
           },
-          ...buildTouchlineVerifiedMatchFactFields(exactPlayer.matchStats, locale),
+          ...buildTouchlineVerifiedMatchFactFields({
+            statistics: exactPlayer.matchStats,
+            position: exactPlayer.position || card.position,
+          }, locale),
           ...buildTouchlineMatchScoringBreakdownFields(exactPlayer.matchPointContributions, locale),
           { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },
           { label: isPortuguese ? "Idade" : "Age", value: official.player?.age === undefined ? null : String(official.player.age) },
@@ -1119,7 +1162,13 @@ export default async function TouchLinePlayerProfilePage({
             <SeasonStatisticsPanel title={text.latestSeason} statistics={playerStatistics.previousCompletedSeason} text={text} />
             <SeasonStatisticsPanel title={text.currentSeason} statistics={playerStatistics.currentSeason} text={text} />
           </div>
-          <FixtureStatisticsPanel model={playerStatistics} text={text} />
+          <FixtureStatisticsPanel
+            model={playerStatistics}
+            text={text}
+            matchStats={exactPlayer.matchStats}
+            position={cardFactPosition}
+            locale={locale}
+          />
           <p className={styles.providerNote}>{text.fullStats}</p>
         </section>
 

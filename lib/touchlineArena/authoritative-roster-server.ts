@@ -12,6 +12,10 @@ import {
   touchlineCountryCode3FromName,
 } from "./country-flags.ts";
 import type { ClubOwnerSquadCard } from "./demo-data.ts";
+import {
+  projectTouchlineCardStatsByPosition,
+  type TouchlineCardStats,
+} from "./position-aware-card-stats.ts";
 
 type DatabaseRecord = Record<string, unknown>;
 
@@ -113,7 +117,7 @@ function touchlinePointsFor(
   return null;
 }
 
-function verifiedSeasonStats(row?: DatabaseRecord | null) {
+function verifiedSeasonStats(row: DatabaseRecord | null | undefined, position: string) {
   const summary = asRecord(row?.summary_payload);
   if (!summary) return undefined;
   const positionStatistics = asRecord(row?.position_statistics_payload);
@@ -143,10 +147,13 @@ function verifiedSeasonStats(row?: DatabaseRecord | null) {
     ["redCards", red],
     ["cards", yellow === null || red === null ? null : yellow + red],
   ].filter((entry): entry is [string, number] => typeof entry[1] === "number");
-  return entries.length ? Object.fromEntries(entries) : undefined;
+  return projectTouchlineCardStatsByPosition({
+    position,
+    statistics: entries.length ? Object.fromEntries(entries) as TouchlineCardStats : undefined,
+  });
 }
 
-function verifiedMatchStats(row?: DatabaseRecord | null) {
+function verifiedMatchStats(row: DatabaseRecord | null | undefined, position: string) {
   const statistics = asRecord(row?.statistics_payload);
   if (!statistics) return undefined;
   const value = (...keys: string[]) => {
@@ -175,7 +182,12 @@ function verifiedMatchStats(row?: DatabaseRecord | null) {
     ["redCards", red],
     ["cards", yellow === null || red === null ? null : yellow + red],
   ].filter((entry): entry is [string, number] => typeof entry[1] === "number");
-  return entries.length ? Object.fromEntries(entries) : undefined;
+  const rating = asFiniteNumber(row?.rating) ?? value("rating");
+  const statisticsWithRating = {
+    ...Object.fromEntries(entries),
+    rating,
+  } as TouchlineCardStats;
+  return projectTouchlineCardStatsByPosition({ position, statistics: statisticsWithRating });
 }
 
 function verifiedPointContributions(row?: DatabaseRecord | null): NonNullable<ClubOwnerSquadCard["matchPointContributions"]> {
@@ -301,8 +313,8 @@ export function mapAuthoritativeRosterRows(
     // Arena, squad selection or other game consumers.
     if (!editorialCard) continue;
 
-    const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId));
-    const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId));
+    const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId), position);
+    const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId), position);
     const seasonTouchlinePoints = touchlinePointsFor(contract, inventory, seasonStatisticByPlayerId.get(playerId));
     const matchPointContributions = verifiedPointContributions(fixtureStatisticByPlayerId.get(playerId));
     cards.push({
@@ -492,7 +504,7 @@ export async function readAuthoritativeTouchlineRoster(
       : Promise.resolve({ data: [], error: null }),
     currentSeasonId
       ? admin.from("football_player_fixture_statistics")
-        .select("football_player_id,touchline_points,touchline_points_breakdown,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
+        .select("football_player_id,touchline_points,touchline_points_breakdown,rating,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
         .eq("season_id", currentSeasonId)
         .eq("scoring_version", "player_scoring_v2")
         .in("football_player_id", playerIds)
