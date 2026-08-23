@@ -124,8 +124,8 @@ export default async function ManualCardEditorialPage({
   }
   const publicationsByPlayerId = new Map(publicationRows.map((profile) => [profile.player_id, profile.publication_status]));
   const { data: marketValueRows } = !migrationPending && canonicalPlayerIds.length
-    ? await admin.from("football_player_market_values").select("player_id,status,confidence").in("player_id", canonicalPlayerIds)
-    : { data: [] as Array<{ player_id: string; status: string; confidence: string }> };
+    ? await admin.from("football_player_market_values").select("player_id,status,confidence,market_value_eur").in("player_id", canonicalPlayerIds)
+    : { data: [] as Array<{ player_id: string; status: string; confidence: string; market_value_eur: number | null }> };
   const marketValueByPlayerId = new Map((marketValueRows ?? []).map((row) => [row.player_id, row]));
   const editorialOverrides = await loadTouchlineCardEditorialOverrides(canonicalPlayerIds, admin);
   const cardEngineRows: CardEngineInboxRow[] = canonicalPlayers.flatMap((player) => {
@@ -185,6 +185,10 @@ export default async function ManualCardEditorialPage({
         competitionId: membership.competition_id,
       })),
       publicationStatus: publicationsByPlayerId.get(player.id) ?? null,
+      hasVerifiedMarketValue: marketValueByPlayerId.get(player.id)?.status === "verified"
+        && marketValueByPlayerId.get(player.id)?.confidence === "verified"
+        && Number.isSafeInteger(marketValueByPlayerId.get(player.id)?.market_value_eur)
+        && (marketValueByPlayerId.get(player.id)?.market_value_eur ?? -1) >= 0,
     })),
   });
   const { data: historyRows } = migrationPending ? { data: [] } : await admin

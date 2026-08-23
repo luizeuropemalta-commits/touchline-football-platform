@@ -383,10 +383,11 @@ export async function POST(request: NextRequest) {
     hasVerifiedMarketValue: true,
     hasClubAsset: Boolean(club?.logo_url?.trim()),
   });
-  // A publication is an output, never a user-selected review step. Incomplete
-  // inputs retain the protected market-value record only; final completeness
-  // publishes automatically through the atomic command below.
-  const publicationState = cardReview.state === "COMPLETE" ? "published" : "market_value_required";
+  // A publication is an output, never a user-selected review step. This
+  // command has just received a verified market value, so an incomplete card
+  // belongs in the editorial review queue—not in VALUE REQUIRED. Final
+  // completeness still publishes automatically through the atomic command.
+  const publicationState = cardReview.state === "COMPLETE" ? "published" : "ready_for_review";
 
   const { data: existing, error: existingError } = await context.admin
     .from("touchline_card_publications")

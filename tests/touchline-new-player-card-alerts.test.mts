@@ -19,6 +19,7 @@ function candidate(overrides: Record<string, unknown> = {}) {
     currentClubId: CLUB_ID,
     activeSportmonksMemberships: [{ clubId: CLUB_ID, competitionId: COMPETITION_ID }],
     publicationStatus: null,
+    hasVerifiedMarketValue: false,
     ...overrides,
   };
 }
@@ -62,6 +63,13 @@ test("reviewed or published cards never reappear as new-player alerts", () => {
       candidates: [candidate({ publicationStatus })],
     }), []);
   }
+});
+
+test("a verified editorial value leaves VALUE REQUIRED even if another card field needs review", () => {
+  assert.deepEqual(findTouchlineNewPlayerCardAlerts({
+    competitionId: COMPETITION_ID,
+    candidates: [candidate({ publicationStatus: "market_value_required", hasVerifiedMarketValue: true })],
+  }), []);
 });
 
 test("ambiguous, transferred or out-of-scope identities fail closed", () => {

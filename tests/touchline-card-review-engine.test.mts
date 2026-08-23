@@ -70,7 +70,7 @@ test("complete inputs auto-publish atomically while incomplete inputs stay in re
   const route = readFileSync(new URL("../app/api/admin/manual-card-editorial/route.ts", import.meta.url), "utf8");
   const migration = readFileSync(new URL("../supabase/migrations/20260819205247_touchline_card_engine_auto_publication.sql", import.meta.url), "utf8");
   assert.match(route, /touchline_apply_card_editorial_review/);
-  assert.match(route, /const publicationState = cardReview\.state === "COMPLETE" \? "published" : "market_value_required"/);
+  assert.match(route, /const publicationState = cardReview\.state === "COMPLETE" \? "published" : "ready_for_review"/);
   assert.doesNotMatch(route, /const publicationState = text\(body\.publicationState/);
   assert.match(migration, /v_publication\.id is null/);
   assert.match(migration, /when 'shirtNumber' then v_provider_shirt_number::text/);
@@ -79,6 +79,13 @@ test("complete inputs auto-publish atomically while incomplete inputs stay in re
   assert.match(migration, /begin;[\s\S]*?commit;/);
   assert.match(migration, /TL_CARD_REVIEW_COMMAND_INVALID/);
   assert.match(migration, /revoke all on function public\.touchline_apply_card_editorial_review/);
+});
+
+test("VALUE REQUIRED accepts only a verified non-negative integer market value", () => {
+  const page = readFileSync(new URL("../app/(app)/admin/manual-card-editorial/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /player_id,status,confidence,market_value_eur/);
+  assert.match(page, /Number\.isSafeInteger\(marketValueByPlayerId\.get\(player\.id\)\?\.market_value_eur\)/);
+  assert.match(page, /market_value_eur \?\? -1\) >= 0/);
 });
 
 test("derived publication never fabricates a market-value review", () => {

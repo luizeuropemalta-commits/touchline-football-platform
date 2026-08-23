@@ -20,6 +20,12 @@ export type TouchlineNewPlayerCardAlertCandidate = Readonly<{
     competitionId: string;
   }>[];
   publicationStatus: string | null;
+  /**
+   * Derived from the protected editorial value record. This is deliberately
+   * separate from publication: a player can have a verified value while
+   * another real card field still needs review.
+   */
+  hasVerifiedMarketValue: boolean;
 }>;
 
 export type TouchlineNewPlayerCardAlert = Readonly<{
@@ -79,6 +85,7 @@ export function findTouchlineNewPlayerCardAlerts(input: Readonly<{
       || currentClubId !== clubId
       || !candidate.playerName.trim()
       || !candidate.clubName.trim()
+      || candidate.hasVerifiedMarketValue
       || candidate.activeSportmonksMemberships.length !== 1
       || memberships.length !== 1
       || (publicationStatus !== null && publicationStatus !== "detected" && publicationStatus !== "market_value_required")
