@@ -53,7 +53,10 @@ export type TouchlineOfficialLeagueTableCoverage = Readonly<{
 }>;
 
 export type TouchlineOfficialLeagueTableRow = Readonly<{
-  position: number | null;
+  /** Competition rank derived only from Points -> GD -> GF. */
+  sportsRank: number | null;
+  /** True when another club shares every currently verified sporting criterion. */
+  isTied: boolean;
   team: Readonly<{
     providerTeamId: string;
     name: string;
@@ -212,20 +215,34 @@ function tableRows(
   fixtures: readonly TouchlineOfficialLeagueTableFixture[],
   now: number,
 ): readonly TouchlineOfficialLeagueTableRow[] {
+  // Exact sporting ties are ordered by canonical club name for presentation
+  // only. The shared rank below remains derived exclusively from Pts/GD/GF.
+  const displayRows = [...standingsRows].sort((left, right) => (
+    right.points - left.points
+    || right.goalDifference - left.goalDifference
+    || right.goalsFor - left.goalsFor
+    || (left.team.name < right.team.name ? -1 : left.team.name > right.team.name ? 1 : 0)
+    || (left.team.providerTeamId < right.team.providerTeamId ? -1 : left.team.providerTeamId > right.team.providerTeamId ? 1 : 0)
+  ));
+  const sharesOfficialCriteria = (
+    row: OfficialStandingsRow<TouchlineOfficialLeagueTableTeam>,
+    adjacent: OfficialStandingsRow<TouchlineOfficialLeagueTableTeam> | undefined,
+  ) => Boolean(adjacent
+    && row.points === adjacent.points
+    && row.goalDifference === adjacent.goalDifference
+    && row.goalsFor === adjacent.goalsFor);
   let publishedPosition = 0;
-  return standingsRows.flatMap((row, index) => {
+  return displayRows.flatMap((row, index) => {
     const team = row.team;
     if (!team.slug) return [];
-    const previous = standingsRows[index - 1];
-    const sharesOfficialCriteriaWithPrevious = Boolean(previous
-      && row.points === previous.points
-      && row.goalDifference === previous.goalDifference
-      && row.goalsFor === previous.goalsFor);
+    const sharesOfficialCriteriaWithPrevious = sharesOfficialCriteria(row, displayRows[index - 1]);
+    const sharesOfficialCriteriaWithNext = sharesOfficialCriteria(row, displayRows[index + 1]);
     if (!sharesOfficialCriteriaWithPrevious) publishedPosition = index + 1;
     return [{
-      position: positionsPublishable
+      sportsRank: positionsPublishable
         ? publishedPosition
         : null,
+      isTied: positionsPublishable && (sharesOfficialCriteriaWithPrevious || sharesOfficialCriteriaWithNext),
       team: {
         providerTeamId: team.providerTeamId,
         name: team.name,
@@ -259,7 +276,8 @@ function preSeasonRows(
   now: number,
 ): readonly TouchlineOfficialLeagueTableRow[] {
   return teams.flatMap((team) => team.slug ? [{
-    position: null,
+    sportsRank: null,
+    isTied: false,
     team: {
       providerTeamId: team.providerTeamId,
       name: team.name,

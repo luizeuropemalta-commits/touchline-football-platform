@@ -19,7 +19,10 @@ export type TouchlineSportmonksRankingPlayer = TouchlineRankingPlayerInput & {
 export type TouchlineRankingDraft = {
   seasonId: string;
   scoringVersion: "player_scoring_v1" | "player_scoring_v2";
+  coverageStatus: "complete" | "complete_for_scoring";
   fixtureIds: readonly string[];
+  expectedFixtureIds: readonly string[];
+  totalScorePoints: number;
   receivedAt: string;
   expectedPlayerCount: number;
   priceTableVersion: string;
@@ -44,7 +47,10 @@ export type TouchlineAuditedRankingSnapshot = TouchlineRankingSnapshot & {
   source: "sportmonks-audited";
   seasonId: string;
   scoringVersion: "player_scoring_v1" | "player_scoring_v2";
+  coverageStatus: "complete" | "complete_for_scoring";
   fixtureIds: readonly string[];
+  expectedFixtureIds: readonly string[];
+  totalScorePoints: number;
   auditedAt: string;
   priceTableVersion: string;
   checksum: string;
@@ -84,7 +90,10 @@ export function touchlineRankingSnapshotChecksum(input: {
   priceTableVersion: string;
   snapshot: TouchlineRankingSnapshot;
   scoringVersion?: "player_scoring_v1" | "player_scoring_v2";
+  coverageStatus?: "complete" | "complete_for_scoring";
   fixtureIds?: readonly string[];
+  expectedFixtureIds?: readonly string[];
+  totalScorePoints?: number;
 }) {
   const canonicalRows = [...input.snapshot.players]
     .sort((first, second) => first.playerId.localeCompare(second.playerId, "en"))
@@ -106,7 +115,10 @@ export function touchlineRankingSnapshotChecksum(input: {
     roundId: input.snapshot.roundId,
     seasonId: input.seasonId,
     scoringVersion: input.scoringVersion ?? "player_scoring_v1",
+    coverageStatus: input.coverageStatus ?? "complete",
     fixtureIds: [...(input.fixtureIds ?? [])].sort(),
+    expectedFixtureIds: [...(input.expectedFixtureIds ?? input.fixtureIds ?? [])].sort(),
+    totalScorePoints: input.totalScorePoints ?? input.snapshot.players.reduce((total, player) => total + player.touchlinePoints, 0),
     generatedAt: input.snapshot.generatedAt,
     priceTableVersion: input.priceTableVersion,
     rows: canonicalRows,
@@ -121,13 +133,20 @@ export function buildSportmonksRankingDraft(input: {
   expectedPlayerCount: number;
   priceTableVersion?: string;
   scoringVersion?: "player_scoring_v1" | "player_scoring_v2";
+  coverageStatus?: "complete" | "complete_for_scoring";
   fixtureIds?: readonly string[];
+  expectedFixtureIds?: readonly string[];
+  totalScorePoints?: number;
   players: readonly TouchlineSportmonksRankingPlayer[];
 }): TouchlineRankingDraft {
+  const fixtureIds = [...new Set(input.fixtureIds ?? input.players.flatMap((player) => player.sourceFixtureIds))].sort();
   return {
     seasonId: input.seasonId,
     scoringVersion: input.scoringVersion ?? "player_scoring_v1",
-    fixtureIds: [...new Set(input.fixtureIds ?? input.players.flatMap((player) => player.sourceFixtureIds))].sort(),
+    coverageStatus: input.coverageStatus ?? "complete",
+    fixtureIds,
+    expectedFixtureIds: [...new Set(input.expectedFixtureIds ?? fixtureIds)].sort(),
+    totalScorePoints: input.totalScorePoints ?? input.players.reduce((total, player) => total + player.touchlinePoints, 0),
     receivedAt: input.receivedAt,
     expectedPlayerCount: input.expectedPlayerCount,
     priceTableVersion: input.priceTableVersion ?? TOUCHLINE_CARD_PRICE_TABLE_VERSION,
@@ -202,18 +221,42 @@ export function auditTouchlineRankingDraft(
   if (!validIsoDate(draft.receivedAt) || !validIsoDate(auditedAt)) {
     issues.push({ code: "timestamp-invalid", message: "Received and audit timestamps must be valid ISO dates." });
   }
+  if (draft.coverageStatus !== "complete" && draft.coverageStatus !== "complete_for_scoring") {
+    issues.push({ code: "coverage-invalid", message: "Ranking coverage must be complete for scoring." });
+  }
+  if (
+    !draft.fixtureIds.length
+    || draft.fixtureIds.length !== draft.expectedFixtureIds.length
+    || draft.fixtureIds.some((fixtureId, index) => fixtureId !== draft.expectedFixtureIds[index])
+  ) {
+    issues.push({ code: "fixture-coverage-mismatch", message: "Expected and included ranking fixture sets must match exactly." });
+  }
+  const calculatedTotalScorePoints = draft.rows.reduce((total, row) => total + row.touchlinePoints, 0);
+  if (!Number.isFinite(draft.totalScorePoints) || draft.totalScorePoints !== calculatedTotalScorePoints) {
+    issues.push({ code: "total-score-points-mismatch", message: "Snapshot total points must equal the ranked player sum." });
+  }
 
   const checks: TouchlineRankingAuditCheck[] = [
     { key: "provider", label: "Linhas verificadas pelo SportMonks", passed: !issues.some((issue) => issue.code.includes("provider") || issue.code === "source-fixture-missing") },
     { key: "players", label: "Quantidade e IDs dos atletas", passed: !issues.some((issue) => issue.code.includes("player-count") || issue.code === "identity-missing") },
     { key: "positions", label: "Seis grupos posicionais completos", passed: missingGroups.length === 0 },
     { key: "statistics", label: "Pontos, minutos e jogos válidos", passed: !issues.some((issue) => /points|minutes|appearances/.test(issue.code)) },
+    { key: "coverage", label: "Cobertura final completa para pontuação", passed: !issues.some((issue) => /coverage|fixture-coverage/.test(issue.code)) },
     { key: "prices", label: "Tabela de preços oficial", passed: !issues.some((issue) => issue.code.includes("price")) },
     { key: "timestamps", label: "Rastreabilidade temporal", passed: !issues.some((issue) => issue.code.includes("timestamp")) },
   ];
   const passed = issues.length === 0;
   const checksum = passed
-    ? touchlineRankingSnapshotChecksum({ seasonId: draft.seasonId, priceTableVersion: draft.priceTableVersion, snapshot: draft.snapshot, scoringVersion: draft.scoringVersion, fixtureIds: draft.fixtureIds })
+    ? touchlineRankingSnapshotChecksum({
+      seasonId: draft.seasonId,
+      priceTableVersion: draft.priceTableVersion,
+      snapshot: draft.snapshot,
+      scoringVersion: draft.scoringVersion,
+      coverageStatus: draft.coverageStatus,
+      fixtureIds: draft.fixtureIds,
+      expectedFixtureIds: draft.expectedFixtureIds,
+      totalScorePoints: draft.totalScorePoints,
+    })
     : undefined;
   const snapshot = passed && checksum ? {
     ...draft.snapshot,
@@ -221,7 +264,10 @@ export function auditTouchlineRankingDraft(
     source: "sportmonks-audited" as const,
     seasonId: draft.seasonId,
     scoringVersion: draft.scoringVersion,
+    coverageStatus: draft.coverageStatus,
     fixtureIds: draft.fixtureIds,
+    expectedFixtureIds: draft.expectedFixtureIds,
+    totalScorePoints: draft.totalScorePoints,
     auditedAt,
     priceTableVersion: draft.priceTableVersion,
     checksum,

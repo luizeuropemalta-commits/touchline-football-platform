@@ -5,6 +5,7 @@ import { buildTouchLinePlayerSeasonAggregate } from "@/lib/football-data/player-
 import {
   touchLinePlayerFixturePoints,
 } from "@/lib/football-data/player-fixture-scoring";
+import { classifyTouchLinePlayerRankingCoverage } from "@/lib/football-data/player-ranking-coverage";
 import type { TouchlineFantasyEvent, TouchlineFantasyLineupMember } from "@/lib/football-data/types";
 import { rebuildTouchLinePlayerRankingV2 } from "@/lib/touchlineArena/player-ranking-rebuild-server";
 
@@ -87,6 +88,7 @@ export type PlayerSeasonStatisticsSyncResult = {
   canonicalEventsWritten: number;
   lifecycleEventsWritten: number;
   partialAggregates: number;
+  completeForScoringAggregates: number;
   unavailableAggregates: number;
   errors: string[];
   rankingSnapshotId: string | null;
@@ -110,6 +112,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
     canonicalEventsWritten: 0,
     lifecycleEventsWritten: 0,
     partialAggregates: 0,
+    completeForScoringAggregates: 0,
     unavailableAggregates: 0,
     errors: [],
     rankingSnapshotId: null,
@@ -283,6 +286,14 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         events,
         teamGoalsConceded: teamGoalsConceded(fixture, membership.club_id),
       });
+      const settlementStatus = isTouchLineSettledFixtureStatus(fixture.status) ? "final" as const : "provisional" as const;
+      const rankingCoverageStatus = classifyTouchLinePlayerRankingCoverage({
+        fixtureFinal: settlementStatus === "final",
+        points: pointResult.points,
+        scoringCoverageStatus: pointResult.coverageStatus,
+        missingFacts: pointResult.missingFacts,
+        appearanceStatus: resolvedAppearanceStatus,
+      });
       return {
         fixture,
         feed,
@@ -292,6 +303,8 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         minutesPlayed,
         rating,
         pointResult,
+        settlementStatus,
+        rankingCoverageStatus,
       };
     });
     const aggregate = buildTouchLinePlayerSeasonAggregate({
@@ -304,7 +317,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         clubId: membership.club_id,
         clubName: membership.football_clubs?.name ?? null,
       },
-      eligibleFixtures: fixtureSettlements.map(({ fixture, feed, lineups, pointResult }) => {
+      eligibleFixtures: fixtureSettlements.map(({ fixture, feed, lineups, pointResult, rankingCoverageStatus }) => {
         return {
           fixtureId: fixture.id,
           lineups,
@@ -313,6 +326,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
           touchlinePoints: pointResult.points,
           scoringStatistics: pointResult.statistics,
           scoringComplete: pointResult.coverageStatus === "complete",
+          rankingCoverageStatus,
         };
       }),
     });
@@ -341,11 +355,21 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
     }
     result.aggregatesWritten += 1;
     if (aggregate.coverageStatus === "partial") result.partialAggregates += 1;
+    if (aggregate.coverageStatus === "complete_for_scoring") result.completeForScoringAggregates += 1;
     if (aggregate.coverageStatus === "unavailable") result.unavailableAggregates += 1;
 
     for (const settlement of fixtureSettlements) {
-      const { fixture, feed, statistics, appearanceStatus: resolvedAppearanceStatus, minutesPlayed, rating, pointResult } = settlement;
-      const settlementStatus = isTouchLineSettledFixtureStatus(fixture.status) ? "final" : "provisional";
+      const {
+        fixture,
+        feed,
+        statistics,
+        appearanceStatus: resolvedAppearanceStatus,
+        minutesPlayed,
+        rating,
+        pointResult,
+        settlementStatus,
+        rankingCoverageStatus,
+      } = settlement;
       const { error: fixtureError } = await admin
         .from("football_player_fixture_statistics")
         .upsert({
@@ -362,6 +386,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
           touchline_points_breakdown: pointResult.contributions,
           scoring_version: pointResult.scoringVersion,
           scoring_coverage_status: pointResult.coverageStatus,
+          ranking_coverage_status: rankingCoverageStatus,
           missing_scoring_facts: pointResult.missingFacts,
           position_group: pointResult.positionGroup,
           settlement_status: settlementStatus,

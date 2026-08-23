@@ -1,3 +1,5 @@
+import { isTouchLinePlayerRankingCoverageComplete } from "../football-data/player-ranking-coverage.ts";
+
 type TouchLinePlayerSeasonAggregateIdentity = Readonly<{
   coverageStatus: unknown;
   expectedFixtureIds: unknown;
@@ -19,7 +21,7 @@ function canonicalFixtureIds(value: unknown) {
 export function isTouchLinePlayerRankingAggregateComplete(
   aggregate: TouchLinePlayerSeasonAggregateIdentity,
 ) {
-  if (aggregate.coverageStatus !== "complete") return false;
+  if (!isTouchLinePlayerRankingCoverageComplete(aggregate.coverageStatus)) return false;
   const expected = canonicalFixtureIds(aggregate.expectedFixtureIds);
   const aggregated = canonicalFixtureIds(aggregate.aggregatedFixtureIds);
   return Boolean(
@@ -28,4 +30,12 @@ export function isTouchLinePlayerRankingAggregateComplete(
     && expected.length === aggregated.length
     && expected.every((fixtureId, index) => fixtureId === aggregated[index]),
   );
+}
+
+export function isTouchLinePlayerRankingSettlementComplete(settlement: {
+  settlementStatus: unknown;
+  rankingCoverageStatus: unknown;
+}) {
+  return settlement.settlementStatus === "final"
+    && isTouchLinePlayerRankingCoverageComplete(settlement.rankingCoverageStatus);
 }

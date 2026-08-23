@@ -70,7 +70,7 @@ export default async function TouchLinePlayerCardRankingsPage({
     const marketHref = touchlineArenaPanelHref("market", locale);
     return clubSlug ? `${marketHref}&club=${encodeURIComponent(clubSlug)}` : marketHref;
   };
-  const rankingModeLabel = totalPoints > 0 ? copy.liveOrder : copy.demoOrder;
+  const rankingModeLabel = activeRanking.phase === "ranked" ? copy.liveOrder : copy.demoOrder;
   const editorialCopy = locale === "pt-BR"
     ? {
       rankingDescription: "O ranking reúne apenas cards TouchLine publicados. Os Pontos TouchLine publicados definem a posição esportiva; tier e preço são definidos pelo processo de publicação do card.",

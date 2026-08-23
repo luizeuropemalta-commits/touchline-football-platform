@@ -179,6 +179,52 @@ test("audits and atomically publishes a complete SportMonks ranking snapshot", (
   );
 });
 
+test("audits complete-for-scoring without pretending provider details are complete", () => {
+  const players = sportmonksPlayers();
+  const fixtureIds = [...new Set(players.flatMap((player) => player.sourceFixtureIds))].sort();
+  const draft = buildSportmonksRankingDraft({
+    snapshotId: "season-1-complete-for-scoring",
+    roundId: "round-1",
+    seasonId: "season-1",
+    receivedAt: "2026-08-15T18:00:00.000Z",
+    expectedPlayerCount: players.length,
+    coverageStatus: "complete_for_scoring",
+    fixtureIds,
+    expectedFixtureIds: fixtureIds,
+    totalScorePoints: players.reduce((total, player) => total + player.touchlinePoints, 0),
+    players,
+  });
+  const report = auditTouchlineRankingDraft(draft, "2026-08-15T18:01:00.000Z");
+
+  assert.equal(report.passed, true);
+  assert.equal(report.snapshot?.coverageStatus, "complete_for_scoring");
+});
+
+test("publication audit rejects fixture-set and point-sum mismatches", () => {
+  const players = sportmonksPlayers();
+  const fixtureIds = [...new Set(players.flatMap((player) => player.sourceFixtureIds))].sort();
+  const base = {
+    snapshotId: "season-1-invalid-coverage",
+    roundId: "round-1",
+    seasonId: "season-1",
+    receivedAt: "2026-08-15T18:00:00.000Z",
+    expectedPlayerCount: players.length,
+    fixtureIds,
+    players,
+  };
+  const fixtureMismatch = auditTouchlineRankingDraft(buildSportmonksRankingDraft({
+    ...base,
+    expectedFixtureIds: fixtureIds.slice(1),
+  }), "2026-08-15T18:01:00.000Z");
+  const pointMismatch = auditTouchlineRankingDraft(buildSportmonksRankingDraft({
+    ...base,
+    totalScorePoints: 999_999,
+  }), "2026-08-15T18:01:00.000Z");
+
+  assert.ok(fixtureMismatch.issues.some((issue) => issue.code === "fixture-coverage-mismatch"));
+  assert.ok(pointMismatch.issues.some((issue) => issue.code === "total-score-points-mismatch"));
+});
+
 test("rejects an incomplete provider payload and keeps the last published snapshot", () => {
   const players = sportmonksPlayers();
   const validDraft = buildSportmonksRankingDraft({

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { isTouchLinePlayerRankingAggregateComplete } from "../lib/touchlineArena/player-ranking-eligibility.ts";
+import {
+  isTouchLinePlayerRankingAggregateComplete,
+  isTouchLinePlayerRankingSettlementComplete,
+} from "../lib/touchlineArena/player-ranking-eligibility.ts";
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 const [store, liveSync, arena, accountSync, authoritativeRoster, clubOwner, marketStage, rankingRebuild, rankingPage, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
@@ -23,7 +26,7 @@ const [store, liveSync, arena, accountSync, authoritativeRoster, clubOwner, mark
 
 test("finished and live fixtures enter the same player settlement pipeline", () => {
   assert.match(store, /isTouchLineSettledFixtureStatus\(status\) \|\| TOUCHLINE_LIVE_FIXTURE_STATUS\.test\(status\)/);
-  assert.match(store, /settlementStatus = isTouchLineSettledFixtureStatus\(fixture\.status\) \? "final" : "provisional"/);
+  assert.match(store, /settlementStatus = isTouchLineSettledFixtureStatus\(fixture\.status\) \? "final" as const : "provisional" as const/);
   assert.match(liveSync, /syncTouchLinePlayerSeasonStatistics\(admin\)/);
 });
 
@@ -45,6 +48,10 @@ test("player ranking publishes only V2 season aggregates with full traceability"
   assert.match(rankingRebuild, /loadTouchlinePublishedCardPresentations/);
   assert.match(rankingRebuild, /buildTouchlineSelection/);
   assert.match(rankingRebuild, /isTouchLinePlayerRankingAggregateComplete/);
+  assert.match(rankingRebuild, /settlement_status,ranking_coverage_status/);
+  assert.match(rankingRebuild, /isTouchLinePlayerRankingSettlementComplete/);
+  assert.match(rankingRebuild, /expected_fixture_ids/);
+  assert.match(rankingRebuild, /total_score_points/);
   assert.doesNotMatch(rankingRebuild, /touchLinePlayerFixturePoints/);
 });
 
@@ -53,6 +60,11 @@ test("player ranking fails closed for partial, duplicate or mismatched fixture c
     coverageStatus: "complete",
     expectedFixtureIds: ["fixture-b", "fixture-a"],
     aggregatedFixtureIds: ["fixture-a", "fixture-b"],
+  }), true);
+  assert.equal(isTouchLinePlayerRankingAggregateComplete({
+    coverageStatus: "complete_for_scoring",
+    expectedFixtureIds: ["fixture-a", "fixture-b"],
+    aggregatedFixtureIds: ["fixture-b", "fixture-a"],
   }), true);
   assert.equal(isTouchLinePlayerRankingAggregateComplete({
     coverageStatus: "partial",
@@ -69,6 +81,13 @@ test("player ranking fails closed for partial, duplicate or mismatched fixture c
     expectedFixtureIds: ["fixture-a", "fixture-a"],
     aggregatedFixtureIds: ["fixture-a"],
   }), false);
+});
+
+test("ranking settlement eligibility requires a final fixture and complete scoring", () => {
+  assert.equal(isTouchLinePlayerRankingSettlementComplete({ settlementStatus: "final", rankingCoverageStatus: "complete" }), true);
+  assert.equal(isTouchLinePlayerRankingSettlementComplete({ settlementStatus: "final", rankingCoverageStatus: "complete_for_scoring" }), true);
+  assert.equal(isTouchLinePlayerRankingSettlementComplete({ settlementStatus: "provisional", rankingCoverageStatus: "complete" }), false);
+  assert.equal(isTouchLinePlayerRankingSettlementComplete({ settlementStatus: "final", rankingCoverageStatus: "blocking_partial" }), false);
 });
 
 test("ranking pages use the league-wide published catalogue, not a private owner roster", () => {

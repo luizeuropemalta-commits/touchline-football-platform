@@ -74,6 +74,21 @@ test("a missing fixture is partial and never gets a complete-season label", () =
   assert.equal(touchLinePlayerSeasonCoverageMessage(aggregate), "Partial data — 1 of 2 eligible fixtures synchronised");
 });
 
+test("an exact final fixture set can be complete for scoring while details remain unavailable", () => {
+  const aggregate = buildTouchLinePlayerSeasonAggregate({
+    providerPlayerId: "154421",
+    season: { seasonId: "current", seasonName: "2026/27", competitionId: "england", competitionName: "TouchLine England", clubId: "city", clubName: "Manchester City" },
+    eligibleFixtures: [
+      { fixtureId: "f-1", lineups: [lineup({ fixtureId: "f-1", starter: true, minutes: 90 })], latestSyncAt: "2026-08-20T10:00:00.000Z", touchlinePoints: 3, rankingCoverageStatus: "complete" },
+      { fixtureId: "f-2", lineups: [lineup({ fixtureId: "f-2", starter: true, minutes: 90 })], latestSyncAt: "2026-08-21T10:00:00.000Z", touchlinePoints: 1, rankingCoverageStatus: "complete_for_scoring" },
+    ],
+  });
+
+  assert.equal(aggregate.coverageStatus, "complete_for_scoring");
+  assert.equal(aggregate.summary.touchlinePoints, 4);
+  assert.equal(touchLinePlayerSeasonCoverageMessage(aggregate), "Complete for scoring — unavailable provider details remain unavailable");
+});
+
 test("a legacy row claiming complete is downgraded if its fixture identity sets disagree", () => {
   const normalized = normalizeTouchLinePlayerSeasonStatistics({
     coverageStatus: "complete",
@@ -86,6 +101,19 @@ test("a legacy row claiming complete is downgraded if its fixture identity sets 
 
   assert.equal(normalized.coverageStatus, "partial");
   assert.equal(touchLinePlayerSeasonCoverageMessage(normalized), "Partial data — 3 of 4 eligible fixtures synchronised");
+});
+
+test("complete-for-scoring is also downgraded when fixture identities disagree", () => {
+  const normalized = normalizeTouchLinePlayerSeasonStatistics({
+    coverageStatus: "complete_for_scoring",
+    expectedFixtureCount: 2,
+    synchronizedFixtureCount: 2,
+    expectedFixtureIds: ["1", "2"],
+    aggregatedFixtureIds: ["1", "other"],
+    summaryPayload: { touchlinePoints: 4 },
+  });
+
+  assert.equal(normalized.coverageStatus, "partial");
 });
 
 test("a scheduled next fixture cannot erase the last verified final match points", () => {

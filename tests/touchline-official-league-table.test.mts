@@ -58,7 +58,7 @@ test("official league table scopes fixtures to its canonical current season", ()
   assert.equal(result.coverage.completedFixtures, 0);
   assert.equal(result.rows.length, 20);
   assert.deepEqual(result.rows.map((row) => row.team.providerTeamId), teams().map((team) => team.providerTeamId));
-  assert.ok(result.rows.every((row) => row.position === null));
+  assert.ok(result.rows.every((row) => row.sportsRank === null && row.isTied === false));
   assert.ok(result.rows.every((row) => (
     row.played === 0
     && row.won === 0
@@ -89,7 +89,8 @@ test("the one official table applies a verified live draw provisionally", () => 
   assert.equal(result.coverage.liveFixtures, 1);
   assert.equal(result.rows.length, 20);
   assert.deepEqual(result.rows.find((row) => row.team.providerTeamId === "3"), {
-    position: 1,
+    sportsRank: 1,
+    isTied: false,
     team: { providerTeamId: "3", name: "Club 3", shortCode: "C3", slug: "club-3", logoUrl: null },
     played: 1, won: 1, drawn: 0, lost: 0, goalsFor: 1, goalsAgainst: 0, goalDifference: 1, points: 3, form: ["W"],
     liveFixture: { providerFixtureId: "live", scoreFor: 1, scoreAgainst: 0, stale: true },
@@ -126,6 +127,9 @@ test("live score changes, multiple fixtures and full time share one idempotent s
   assert.equal(stateA.rows.find((row) => row.team.providerTeamId === "1")?.points, 4);
   assert.equal(stateA.rows.find((row) => row.team.providerTeamId === "2")?.points, 4);
   assert.equal(stateA.rows.find((row) => row.team.providerTeamId === "3")?.points, 4);
+  assert.deepEqual(stateA.rows.slice(0, 3).map((row) => [row.sportsRank, row.isTied]), [
+    [1, true], [1, true], [1, true],
+  ]);
 
   const stateB = resolveTouchlineOfficialLeagueTable({
     season, teams: teams(4), expectedClubCount: 4,
@@ -136,7 +140,7 @@ test("live score changes, multiple fixtures and full time share one idempotent s
     ],
   });
   assert.equal(stateB.state, "ready");
-  assert.deepEqual(stateB.rows.slice(0, 3).map((row) => [row.team.providerTeamId, row.position, row.points, row.goalDifference]), [
+  assert.deepEqual(stateB.rows.slice(0, 3).map((row) => [row.team.providerTeamId, row.sportsRank, row.points, row.goalDifference]), [
     ["1", 1, 6, 3], ["3", 2, 4, 1], ["2", 3, 3, -1],
   ]);
 
@@ -161,6 +165,29 @@ test("live score changes, multiple fixtures and full time share one idempotent s
   assert.equal(finalState.coverage.liveFixtures, 0);
   assert.equal(finalState.coverage.completedFixtures, 5);
   assert.deepEqual(finalState.rows.map((row) => [row.team.providerTeamId, row.points]), stateC.rows.map((row) => [row.team.providerTeamId, row.points]));
+
+  const equaliserState = resolveTouchlineOfficialLeagueTable({
+    season, teams: teams(4), expectedClubCount: 4,
+    fixtures: [
+      ...base,
+      fixture({ providerFixtureId: "city-hull", status: "LIVE", homeClubId: "club-1", awayClubId: "club-2", homeScore: 1, awayScore: 1 }),
+      fixture({ providerFixtureId: "sunderland-live", status: "LIVE", homeClubId: "club-3", awayClubId: "club-4", homeScore: 1, awayScore: 1 }),
+    ],
+  });
+  assert.deepEqual(equaliserState.rows.slice(0, 3).map((row) => [row.team.providerTeamId, row.sportsRank, row.isTied]), [
+    ["1", 1, true], ["2", 1, true], ["3", 1, true],
+  ]);
+  assert.deepEqual(
+    resolveTouchlineOfficialLeagueTable({
+      season, teams: teams(4), expectedClubCount: 4,
+      fixtures: [
+        ...base,
+        fixture({ providerFixtureId: "city-hull", status: "LIVE", homeClubId: "club-1", awayClubId: "club-2", homeScore: 1, awayScore: 1 }),
+        fixture({ providerFixtureId: "sunderland-live", status: "LIVE", homeClubId: "club-3", awayClubId: "club-4", homeScore: 1, awayScore: 1 }),
+      ],
+    }).rows,
+    equaliserState.rows,
+  );
 });
 
 test("official league table deduplicates a provider fixture before totals are calculated", () => {
@@ -178,7 +205,7 @@ test("official league table deduplicates a provider fixture before totals are ca
   assert.equal(result.coverage.completedFixtures, 1);
   assert.equal(result.coverage.duplicateFixtures, 1);
   assert.equal(result.rows.find((row) => row.team.providerTeamId === "1")?.points, 3);
-  assert.ok(result.rows.every((row) => row.position === null));
+  assert.ok(result.rows.every((row) => row.sportsRank === null && row.isTied === false));
 });
 
 test("pending no-final data is different from an unavailable canonical source", () => {
@@ -224,7 +251,7 @@ test("a fully resolved small table can publish a verified position without a nam
   });
 
   assert.equal(result.state, "ready");
-  assert.deepEqual(result.rows.map((row) => row.position), [1, 2]);
+  assert.deepEqual(result.rows.map((row) => [row.sportsRank, row.isTied]), [[1, false], [2, false]]);
   assert.equal(result.asOf, "2026-08-21T21:00:00.000Z");
 });
 
@@ -238,7 +265,7 @@ test("an unresolved sporting tie stays partial instead of using a club-name tie-
 
   assert.equal(result.state, "partial");
   assert.equal(result.reason, "official-tiebreak-pending");
-  assert.deepEqual(result.rows.map((row) => row.position), [1, 1]);
+  assert.deepEqual(result.rows.map((row) => [row.sportsRank, row.isTied]), [[1, true], [1, true]]);
 
   const source = readFileSync(new URL("../lib/football-data/official-standings.ts", import.meta.url), "utf8");
   assert.doesNotMatch(source, /localeCompare/);
@@ -257,12 +284,67 @@ test("verified criteria publish shared competition ranks across the 20-club tabl
 
   assert.equal(result.state, "partial");
   assert.equal(result.reason, "official-tiebreak-pending");
-  assert.deepEqual(result.rows.slice(0, 3).map((row) => [row.team.providerTeamId, row.position, row.points, row.goalDifference]), [
-    ["1", 1, 3, 3],
-    ["2", 1, 3, 3],
-    ["3", 3, 3, 2],
+  assert.deepEqual(result.rows.slice(0, 3).map((row) => [row.team.providerTeamId, row.sportsRank, row.isTied, row.points, row.goalDifference]), [
+    ["1", 1, true, 3, 3],
+    ["2", 1, true, 3, 3],
+    ["3", 3, false, 3, 2],
   ]);
-  assert.ok(result.rows.every((row) => row.position !== null));
+  assert.ok(result.rows.every((row) => row.sportsRank !== null));
+});
+
+test("four exactly tied clubs share rank while alphabetical display order does not become a sporting tiebreak", () => {
+  const tiedTeams = teams(5).map((team, index) => ({
+    ...team,
+    name: ["Zulu", "Alpha", "Mike", "Bravo", "Opponent"][index],
+  }));
+  const result = resolveTouchlineOfficialLeagueTable({
+    season,
+    teams: tiedTeams,
+    expectedClubCount: 5,
+    fixtures: [1, 2, 3, 4].map((clubIndex) => fixture({
+      providerFixtureId: `winner-${clubIndex}`,
+      homeClubId: `club-${clubIndex}`,
+      awayClubId: "club-5",
+      homeScore: 1,
+      awayScore: 0,
+    })),
+  });
+
+  assert.deepEqual(result.rows.slice(0, 4).map((row) => [row.team.name, row.sportsRank, row.isTied]), [
+    ["Alpha", 1, true],
+    ["Bravo", 1, true],
+    ["Mike", 1, true],
+    ["Zulu", 1, true],
+  ]);
+  assert.deepEqual([result.rows[4]?.sportsRank, result.rows[4]?.isTied], [5, false]);
+});
+
+test("verified GD and then GF remove a shared-rank indicator without inventing another criterion", () => {
+  const gdResult = resolveTouchlineOfficialLeagueTable({
+    season,
+    teams: teams(4),
+    expectedClubCount: 4,
+    fixtures: [
+      fixture({ providerFixtureId: "gd-a", homeClubId: "club-1", awayClubId: "club-3", homeScore: 3, awayScore: 0 }),
+      fixture({ providerFixtureId: "gd-b", homeClubId: "club-2", awayClubId: "club-4", homeScore: 2, awayScore: 0 }),
+    ],
+  });
+  assert.deepEqual(gdResult.rows.slice(0, 2).map((row) => [row.team.providerTeamId, row.sportsRank, row.isTied]), [
+    ["1", 1, false], ["2", 2, false],
+  ]);
+
+  const gfResult = resolveTouchlineOfficialLeagueTable({
+    season,
+    teams: teams(4),
+    expectedClubCount: 4,
+    fixtures: [
+      fixture({ providerFixtureId: "gf-a", homeClubId: "club-1", awayClubId: "club-3", homeScore: 3, awayScore: 1 }),
+      fixture({ providerFixtureId: "gf-b", homeClubId: "club-2", awayClubId: "club-4", homeScore: 2, awayScore: 0 }),
+    ],
+  });
+  assert.deepEqual(gfResult.rows.slice(0, 2).map((row) => [row.team.providerTeamId, row.sportsRank, row.isTied]), [
+    ["1", 1, false], ["2", 2, false],
+  ]);
 });
 
 test("shared table component and pages keep data loading on the server boundary", () => {
@@ -276,7 +358,12 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /status && !table\.rows\.length/);
   assert.match(component, /Initial table — all 20 clubs are level\./);
   assert.match(component, /Tabela inicial — os 20 clubes estão empatados\./);
-  assert.match(component, /row\.position \?\? "—"/);
+  assert.match(component, /row\.sportsRank === null/);
+  assert.match(component, /row\.isTied/);
+  assert.match(component, /\{row\.sportsRank\}=/);
+  assert.match(component, /Tied on points, goal difference and goals scored\./);
+  assert.match(component, /Empatados em pontos, saldo de gols e gols marcados\./);
+  assert.match(component, /aria-label=/);
   assert.match(component, /share a position until official evidence separates them/);
   assert.match(component, /data-live=/);
   assert.match(component, /data-live-stale=/);
@@ -287,8 +374,8 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.doesNotMatch(component, /from ["'][^"']*(?:card|market|wallet|supabase)/i);
   assert.doesNotMatch(component, /\bfetch\(/);
   assert.match(serverReader, /unstable_cache/);
-  assert.match(serverReader, /touchline-official-league-table-v2/);
-  assert.doesNotMatch(serverReader, /touchline-official-league-table-v1/);
+  assert.match(serverReader, /touchline-official-league-table-v3/);
+  assert.doesNotMatch(serverReader, /touchline-official-league-table-v[12]/);
   assert.match(serverReader, /touchline-official-league-table:\$\{TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID\}/);
   assert.match(serverReader, /\.eq\("season_id", scope\.season\.id\)/);
   assert.doesNotMatch(serverReader, /createFootballDataProvider/);

@@ -22,11 +22,11 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
 
   const { data: record, error } = await admin
     .from("touchline_card_ranking_snapshots")
-    .select("snapshot_id, league_key, season_id, round_id, source, status, published_at, price_table_version, expected_player_count, actual_player_count, scoring_version, fixture_ids, ranking_payload")
+    .select("snapshot_id, league_key, season_id, round_id, source, status, published_at, price_table_version, expected_player_count, actual_player_count, scoring_version, coverage_status, fixture_ids, expected_fixture_ids, total_score_points, ranking_payload")
     .eq("snapshot_id", active.snapshot_id)
     .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
     .maybeSingle();
-  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v2" || record.actual_player_count !== record.expected_player_count) {
+  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v2" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
     return TOUCHLINE_PRESEASON_RANKING_STATE;
   }
 
@@ -39,8 +39,11 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
     publishedAt: record.published_at,
     priceTableVersion: record.price_table_version,
     scoringVersion: record.scoring_version,
+    coverageStatus: record.coverage_status,
     seasonId: record.season_id,
     fixtureIds: Array.isArray(record.fixture_ids) ? record.fixture_ids : [],
+    expectedFixtureIds: Array.isArray(record.expected_fixture_ids) ? record.expected_fixture_ids : [],
+    totalScorePoints: record.total_score_points,
     players: Array.isArray(payload?.players) ? payload.players.map((player) => ({
       playerId: player.playerId,
       providerPlayerId: player.providerPlayerId,

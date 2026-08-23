@@ -7,6 +7,12 @@ const cardRankingAclMigration = await readFile(new URL("../supabase/qa/018_touch
 const coachStatusGateMigration = await readFile(new URL("../supabase/qa/019_touchline_qa_score_points_engine_v2_coach_status_gate.sql", import.meta.url), "utf8");
 const coachRankingIdentityMigration = await readFile(new URL("../supabase/qa/020_touchline_qa_score_points_engine_v2_coach_ranking_identity.sql", import.meta.url), "utf8");
 const coachFinalStatusMigration = await readFile(new URL("../supabase/qa/021_touchline_qa_score_points_engine_v2_final_status_normalization.sql", import.meta.url), "utf8");
+const rankingBackupMigration = await readFile(new URL("../supabase/qa/022_touchline_qa_ranking_completion_backup.sql", import.meta.url), "utf8");
+const rankingCompletionMigration = await readFile(new URL("../supabase/qa/023_touchline_qa_ranking_completion.sql", import.meta.url), "utf8");
+const rankingNullSafetyMigration = await readFile(new URL("../supabase/qa/024_touchline_qa_ranking_publication_null_safety.sql", import.meta.url), "utf8");
+const rankingFixtureSetMigration = await readFile(new URL("../supabase/qa/025_touchline_qa_ranking_fixture_set_integrity.sql", import.meta.url), "utf8");
+const rankingFixtureCanonicalizationMigration = await readFile(new URL("../supabase/qa/026_touchline_qa_ranking_fixture_id_canonicalization.sql", import.meta.url), "utf8");
+const rankingFixtureAsciiMigration = await readFile(new URL("../supabase/qa/027_touchline_qa_ranking_fixture_id_ascii_contract.sql", import.meta.url), "utf8");
 
 test("V2 migration is pinned to QA and preserves versioned V1 history", () => {
   assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
@@ -81,4 +87,57 @@ test("coach ranking deduplicates customer contracts by canonical coach and fixtu
   assert.match(coachRankingIdentityMigration, /TL_COACH_RANKING_CLUB_CONFLICT/);
   assert.doesNotMatch(coachRankingIdentityMigration, /'contractId'/);
   assert.match(coachRankingIdentityMigration, /group by coach\.coach_provider_id, coach\.club_id, coach\.club_name/i);
+});
+
+test("ranking completion takes a QA-only server-private backup before mutation", () => {
+  assert.match(rankingBackupMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(rankingBackupMigration, /ranking_completion_player_fixture_20260823/i);
+  assert.match(rankingBackupMigration, /ranking_completion_player_season_20260823/i);
+  assert.match(rankingBackupMigration, /ranking_completion_card_snapshots_20260823/i);
+  assert.match(rankingBackupMigration, /ranking_completion_active_snapshot_20260823/i);
+  assert.match(rankingBackupMigration, /revoke all on all tables in schema touchline_qa_backup from public, anon, authenticated/i);
+});
+
+test("ranking publication is blocked unless fixture coverage and point totals are auditable", () => {
+  assert.match(rankingCompletionMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(rankingCompletionMigration, /complete_for_scoring/i);
+  assert.match(rankingCompletionMigration, /ranking_coverage_status/i);
+  assert.match(rankingCompletionMigration, /candidate\.fixture_ids <> candidate\.expected_fixture_ids/i);
+  assert.match(rankingCompletionMigration, /calculated_total_score_points <> candidate\.total_score_points/i);
+  assert.match(rankingCompletionMigration, /candidate\.actual_player_count <> jsonb_array_length\(candidate\.ranking_payload -> 'players'\)/i);
+  assert.match(rankingCompletionMigration, /auth\.jwt\(\) ->> 'role'[\s\S]*service_role/i);
+  assert.match(rankingCompletionMigration, /revoke all on function public\.publish_touchline_card_ranking_snapshot\(text, text, timestamptz\) from public, anon, authenticated/i);
+  assert.match(rankingCompletionMigration, /never converts absent facts to zero/i);
+  assert.match(rankingNullSafetyMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(rankingNullSafetyMigration, /security definer[\s\S]*?set search_path = ''/i);
+  assert.match(rankingNullSafetyMigration, /jsonb_typeof\(candidate\.ranking_payload -> 'players'\) is distinct from 'array'/i);
+  assert.match(rankingNullSafetyMigration, /jsonb_typeof\(candidate\.selection_payload -> 'players'\) is distinct from 'array'/i);
+  assert.match(rankingNullSafetyMigration, /candidate\.actual_player_count is distinct from candidate\.expected_player_count/i);
+  assert.match(rankingNullSafetyMigration, /sourceSnapshotId' is distinct from candidate\.snapshot_id/i);
+  assert.match(rankingNullSafetyMigration, /requested_published_at is null/i);
+  assert.match(rankingNullSafetyMigration, /revoke all on function public\.publish_touchline_card_ranking_snapshot[\s\S]*?from public, anon, authenticated/i);
+  assert.match(rankingNullSafetyMigration, /grant execute on function public\.publish_touchline_card_ranking_snapshot[\s\S]*?to service_role/i);
+});
+
+test("ranking fixture evidence is a non-empty duplicate-free string set", () => {
+  assert.match(rankingFixtureSetMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(rankingFixtureSetMigration, /jsonb_typeof\(candidate\) is distinct from 'array'/i);
+  assert.match(rankingFixtureSetMigration, /jsonb_array_length\(candidate\) = 0/i);
+  assert.match(rankingFixtureSetMigration, /jsonb_typeof\(element\.value\) is distinct from 'string'/i);
+  assert.match(rankingFixtureSetMigration, /btrim\(fixture\.value\) = ''/i);
+  assert.match(rankingFixtureSetMigration, /count\(distinct fixture\.value\)/i);
+  assert.match(rankingFixtureSetMigration, /touchline_card_ranking_fixture_ids_set_check/i);
+  assert.match(rankingFixtureSetMigration, /touchline_card_ranking_expected_fixture_ids_set_check/i);
+  assert.match(rankingFixtureSetMigration, /revoke all on function public\.touchline_ranking_fixture_id_set_is_valid\(jsonb\)[\s\S]*from public, anon, authenticated/i);
+  assert.match(rankingFixtureSetMigration, /grant execute on function public\.touchline_ranking_fixture_id_set_is_valid\(jsonb\)[\s\S]*to service_role/i);
+  assert.match(rankingFixtureCanonicalizationMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(rankingFixtureCanonicalizationMigration, /fixture\.value is distinct from btrim\(fixture\.value\)/i);
+  assert.match(rankingFixtureCanonicalizationMigration, /count\(distinct btrim\(fixture\.value\)\)/i);
+  assert.match(rankingFixtureCanonicalizationMigration, /revoke all on function public\.touchline_ranking_fixture_id_set_is_valid\(jsonb\)[\s\S]*from public, anon, authenticated/i);
+  assert.match(rankingFixtureCanonicalizationMigration, /grant execute on function public\.touchline_ranking_fixture_id_set_is_valid\(jsonb\)[\s\S]*to service_role/i);
+  assert.match(rankingFixtureAsciiMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(rankingFixtureAsciiMigration, /fixture\.value !~ '\^\[A-Za-z0-9_-\]\+\$'/i);
+  assert.match(rankingFixtureAsciiMigration, /count\(distinct fixture\.value\)/i);
+  assert.match(rankingFixtureAsciiMigration, /revoke all on function public\.touchline_ranking_fixture_id_set_is_valid\(jsonb\)[\s\S]*from public, anon, authenticated/i);
+  assert.match(rankingFixtureAsciiMigration, /grant execute on function public\.touchline_ranking_fixture_id_set_is_valid\(jsonb\)[\s\S]*to service_role/i);
 });

@@ -1,4 +1,4 @@
-export type TouchLineSeasonStatisticsCoverageStatus = "complete" | "partial" | "unavailable";
+export type TouchLineSeasonStatisticsCoverageStatus = "complete" | "complete_for_scoring" | "partial" | "unavailable";
 
 export type TouchLinePlayerSeasonSummary = {
   appearances: number | null;
@@ -186,7 +186,9 @@ export function normalizeTouchLinePlayerSeasonStatistics(input: {
   const summary = Object.fromEntries(
     TOUCHLINE_PLAYER_SEASON_SUMMARY_KEYS.map((key) => [key, finiteNumber(sourceSummary[key])]),
   ) as TouchLinePlayerSeasonSummary;
-  const requestedStatus = input.coverageStatus === "complete" || input.coverageStatus === "partial"
+  const requestedStatus = input.coverageStatus === "complete"
+    || input.coverageStatus === "complete_for_scoring"
+    || input.coverageStatus === "partial"
     ? input.coverageStatus
     : "unavailable";
   const coverageIsComplete = expectedFixtureCount !== null
@@ -194,9 +196,9 @@ export function normalizeTouchLinePlayerSeasonStatistics(input: {
     && expectedFixtureIds.length === expectedFixtureCount
     && aggregatedFixtureIds.length === synchronizedFixtureCount
     && expectedFixtureIds.every((fixtureId) => aggregatedFixtureIds.includes(fixtureId));
-  const coverageStatus = requestedStatus === "complete" && coverageIsComplete
-    ? "complete"
-    : requestedStatus === "complete" || requestedStatus === "partial"
+  const coverageStatus = (requestedStatus === "complete" || requestedStatus === "complete_for_scoring") && coverageIsComplete
+    ? requestedStatus
+    : requestedStatus === "complete" || requestedStatus === "complete_for_scoring" || requestedStatus === "partial"
       ? "partial"
       : "unavailable";
 
@@ -222,6 +224,9 @@ export function normalizeTouchLinePlayerSeasonStatistics(input: {
 }
 
 export function touchLinePlayerSeasonCoverageMessage(statistics: TouchLinePlayerSeasonStatistics) {
+  if (statistics.coverageStatus === "complete_for_scoring") {
+    return "Complete for scoring — unavailable provider details remain unavailable";
+  }
   if (statistics.coverageStatus === "partial") {
     return `Partial data — ${statistics.synchronizedFixtureCount} of ${statistics.expectedFixtureCount ?? "?"} eligible fixtures synchronised`;
   }

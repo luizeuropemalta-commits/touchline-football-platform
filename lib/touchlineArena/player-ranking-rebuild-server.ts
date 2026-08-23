@@ -2,11 +2,15 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isTouchLineSettledFixtureStatus } from "../football-data/fixture-settlement";
 import { buildSportmonksRankingDraft, auditTouchlineRankingDraft } from "./card-ranking-pipeline";
 import { buildTouchlineRankingPersistenceRecord } from "./card-ranking-persistence";
 import { TOUCHLINE_ENGLAND_LEAGUE_KEY } from "./card-ranking-live";
 import { loadTouchlinePublishedCardPresentations } from "./card-publication-read-model";
-import { isTouchLinePlayerRankingAggregateComplete } from "./player-ranking-eligibility";
+import {
+  isTouchLinePlayerRankingAggregateComplete,
+  isTouchLinePlayerRankingSettlementComplete,
+} from "./player-ranking-eligibility";
 import { buildTouchlineSelection } from "./touchline-selection";
 
 type Row = Record<string, unknown>;
@@ -19,6 +23,10 @@ export type TouchLinePlayerRankingRebuildResult = Readonly<{
   roundId: string | null;
   playerCount: number;
   fixtureIds: string[];
+  expectedFixtureIds: string[];
+  coverageStatus: "complete" | "complete_for_scoring" | null;
+  totalScorePoints: number | null;
+  checksum: string | null;
   error?: string;
 }>;
 
@@ -64,10 +72,6 @@ function sourceDigest(value: unknown) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-function isScoringFixtureStatus(value: unknown) {
-  return /^(?:ft(?:[_ -].*)?|full[ -]?time|finished|after extra time|aet|after penalties|penalties finished|live|in[ -]?play|in progress|1st half|2nd half|half[ -]?time|ht|extra time|penalties)$/i.test(text(value) ?? "");
-}
-
 /**
  * Publishes the one player_scoring_v2 season projection consumed by cards and
  * rankings. Inputs are persisted settlements only; this function never calls
@@ -75,7 +79,9 @@ function isScoringFixtureStatus(value: unknown) {
  */
 export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Promise<TouchLinePlayerRankingRebuildResult> {
   const failure = (error: string, extra: Partial<TouchLinePlayerRankingRebuildResult> = {}): TouchLinePlayerRankingRebuildResult => ({
-    ok: false, published: false, snapshotId: null, seasonId: null, roundId: null, playerCount: 0, fixtureIds: [], error, ...extra,
+    ok: false, published: false, snapshotId: null, seasonId: null, roundId: null,
+    playerCount: 0, fixtureIds: [], expectedFixtureIds: [], coverageStatus: null,
+    totalScorePoints: null, checksum: null, error, ...extra,
   });
 
   const { data: season, error: seasonError } = await admin.from("football_seasons")
@@ -99,7 +105,7 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
   if (aggregateError || fixtureError) return failure("ranking-source-unavailable", { seasonId });
 
   const aggregates = rows(aggregateData);
-  const fixtures = rows(fixtureData).filter((fixture) => isScoringFixtureStatus(fixture.status));
+  const fixtures = rows(fixtureData).filter((fixture) => isTouchLineSettledFixtureStatus(text(fixture.status)));
   const aggregatePlayerIds = [...new Set(aggregates.map((row) => text(row.football_player_id)).filter((id): id is string => Boolean(id)))];
   if (!aggregatePlayerIds.length || !fixtures.length) return failure("ranking-source-empty", { seasonId });
 
@@ -108,7 +114,7 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
       .select("id,provider_player_id,display_name,name,provider_position,detailed_position,position,current_club_id")
       .in("id", aggregatePlayerIds),
     admin.from("football_player_fixture_statistics")
-      .select("football_player_id,fixture_id,touchline_points")
+      .select("football_player_id,fixture_id,touchline_points,settlement_status,ranking_coverage_status")
       .eq("season_id", seasonId)
       .eq("scoring_version", "player_scoring_v2"),
   ]);
@@ -122,12 +128,28 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
     return Boolean(id && publishedCards.has(id));
   });
   const aggregateByPlayerId = new Map(aggregates.flatMap((row) => text(row.football_player_id) ? [[text(row.football_player_id)!, row] as const] : []));
+  const fixtureRows = rows(fixturePointData);
+  const settlementByPlayerFixture = new Map(fixtureRows.flatMap((row) => {
+    const playerId = text(row.football_player_id);
+    const fixtureId = text(row.fixture_id);
+    return playerId && fixtureId ? [[`${playerId}:${fixtureId}`, row] as const] : [];
+  }));
+  const settledFixtureIds = new Set(fixtures.map((fixture) => text(fixture.id)).filter((id): id is string => Boolean(id)));
   if (eligiblePlayerRows.some((player) => {
+    const playerId = text(player.id) ?? "";
     const aggregate = aggregateByPlayerId.get(text(player.id) ?? "");
-    return !aggregate || !isTouchLinePlayerRankingAggregateComplete({
+    if (!aggregate || !isTouchLinePlayerRankingAggregateComplete({
       coverageStatus: aggregate.coverage_status,
       expectedFixtureIds: aggregate.expected_fixture_ids,
       aggregatedFixtureIds: aggregate.aggregated_fixture_ids,
+    })) return true;
+    const expectedFixtureIds = stringArray(aggregate.expected_fixture_ids);
+    return expectedFixtureIds.some((fixtureId) => {
+      const settlement = settlementByPlayerFixture.get(`${playerId}:${fixtureId}`);
+      return !settledFixtureIds.has(fixtureId) || !settlement || !isTouchLinePlayerRankingSettlementComplete({
+        settlementStatus: settlement.settlement_status,
+        rankingCoverageStatus: settlement.ranking_coverage_status,
+      });
     });
   })) return failure("ranking-source-incomplete", { seasonId });
   const clubIds = [...new Set(eligiblePlayerRows.map((row) => text(row.current_club_id)).filter((id): id is string => Boolean(id)))];
@@ -153,7 +175,7 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
     ?? "season-to-date";
   const latestRoundFixtureIds = new Set(fixtures.filter((fixture) => text(fixture.round_id) === latestRoundId).map((fixture) => text(fixture.id)).filter((id): id is string => Boolean(id)));
   const roundPointsByPlayerId = new Map<string, number>();
-  for (const row of rows(fixturePointData)) {
+  for (const row of fixtureRows) {
     const playerId = text(row.football_player_id);
     const fixtureId = text(row.fixture_id);
     const points = number(row.touchline_points);
@@ -196,18 +218,30 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
   if (!rankingPlayers.length) return failure("ranking-has-no-published-settlements", { seasonId, roundId });
 
   const fixtureIds = [...new Set(rankingPlayers.flatMap((player) => player.sourceFixtureIds))].sort();
+  const expectedFixtureIds = [...fixtureIds];
+  const coverageStatus = eligiblePlayerRows.every((player) => (
+    aggregateByPlayerId.get(text(player.id) ?? "")?.coverage_status === "complete"
+  )) ? "complete" as const : "complete_for_scoring" as const;
+  const totalScorePoints = rankingPlayers.reduce((total, player) => total + player.touchlinePoints, 0);
   const receivedAt = latestIso([...aggregates.map((row) => row.source_synced_at), ...fixtures.map((row) => row.source_updated_at)]);
-  if (!receivedAt) return failure("ranking-source-time-unavailable", { seasonId, roundId, playerCount: rankingPlayers.length, fixtureIds });
-  const digest = sourceDigest(rankingPlayers.map((player) => ({
-    id: player.playerId,
-    providerPlayerId: String(player.providerPlayerId),
-    position: player.position,
-    points: player.touchlinePoints,
-    roundPoints: player.roundPoints,
-    minutesPlayed: player.minutesPlayed,
-    appearances: player.appearances,
-    fixtureIds: player.sourceFixtureIds,
-  })).sort((first, second) => first.id.localeCompare(second.id)));
+  if (!receivedAt) return failure("ranking-source-time-unavailable", {
+    seasonId, roundId, playerCount: rankingPlayers.length, fixtureIds, expectedFixtureIds,
+    coverageStatus, totalScorePoints,
+  });
+  const digest = sourceDigest({
+    coverageStatus,
+    expectedFixtureIds,
+    players: rankingPlayers.map((player) => ({
+      id: player.playerId,
+      providerPlayerId: String(player.providerPlayerId),
+      position: player.position,
+      points: player.touchlinePoints,
+      roundPoints: player.roundPoints,
+      minutesPlayed: player.minutesPlayed,
+      appearances: player.appearances,
+      fixtureIds: player.sourceFixtureIds,
+    })).sort((first, second) => first.id.localeCompare(second.id)),
+  });
   const snapshotId = `player-v2:${seasonId}:${digest}`;
   const draft = buildSportmonksRankingDraft({
     snapshotId,
@@ -216,16 +250,25 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
     receivedAt,
     expectedPlayerCount: rankingPlayers.length,
     scoringVersion: "player_scoring_v2",
+    coverageStatus,
     fixtureIds,
+    expectedFixtureIds,
+    totalScorePoints,
     players: rankingPlayers,
   });
   const auditedAt = new Date().toISOString();
   const audit = auditTouchlineRankingDraft(draft, auditedAt);
   if (!audit.passed || !audit.snapshot) {
-    return failure(`ranking-audit-failed:${audit.issues.map((issue) => issue.code).join(",")}`, { seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds });
+    return failure(`ranking-audit-failed:${audit.issues.map((issue) => issue.code).join(",")}`, {
+      seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds,
+      expectedFixtureIds, coverageStatus, totalScorePoints,
+    });
   }
   const selection = buildTouchlineSelection(audit.snapshot);
-  if (!selection.complete) return failure(`ranking-selection-incomplete:${selection.missingSlots.join(",")}`, { seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds });
+  if (!selection.complete) return failure(`ranking-selection-incomplete:${selection.missingSlots.join(",")}`, {
+    seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds,
+    expectedFixtureIds, coverageStatus, totalScorePoints,
+  });
   const record = buildTouchlineRankingPersistenceRecord({
     leagueKey: TOUCHLINE_ENGLAND_LEAGUE_KEY,
     expectedPlayerCount: rankingPlayers.length,
@@ -236,7 +279,11 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
   const { data: active } = await admin.from("touchline_card_ranking_active_snapshots")
     .select("snapshot_id").eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY).maybeSingle();
   if (active?.snapshot_id === snapshotId) {
-    return { ok: true, published: false, snapshotId, seasonId, roundId, playerCount: rankingPlayers.length, fixtureIds };
+    return {
+      ok: true, published: false, snapshotId, seasonId, roundId,
+      playerCount: rankingPlayers.length, fixtureIds, expectedFixtureIds,
+      coverageStatus, totalScorePoints, checksum: record.checksum,
+    };
   }
 
   const { error: insertError } = await admin.from("touchline_card_ranking_snapshots").upsert({
@@ -254,13 +301,19 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
     expected_player_count: record.expectedPlayerCount,
     actual_player_count: record.actualPlayerCount,
     scoring_version: record.scoringVersion,
+    coverage_status: record.coverageStatus,
     fixture_ids: record.fixtureIds,
+    expected_fixture_ids: record.expectedFixtureIds,
+    total_score_points: record.totalScorePoints,
     ranking_payload: record.rankingPayload,
     selection_version: record.selectionVersion,
     selection_payload: record.selectionPayload,
     audit_report: record.auditReport,
   }, { onConflict: "snapshot_id", ignoreDuplicates: true });
-  if (insertError) return failure(`ranking-persist-failed:${insertError.message}`, { seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds });
+  if (insertError) return failure(`ranking-persist-failed:${insertError.message}`, {
+    seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds,
+    expectedFixtureIds, coverageStatus, totalScorePoints, checksum: record.checksum,
+  });
 
   const publishedAt = new Date().toISOString();
   const { error: publishError } = await admin.rpc("publish_touchline_card_ranking_snapshot", {
@@ -268,6 +321,13 @@ export async function rebuildTouchLinePlayerRankingV2(admin: SupabaseClient): Pr
     requested_league_key: TOUCHLINE_ENGLAND_LEAGUE_KEY,
     requested_published_at: publishedAt,
   });
-  if (publishError) return failure(`ranking-publish-failed:${publishError.message}`, { seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds });
-  return { ok: true, published: true, snapshotId, seasonId, roundId, playerCount: rankingPlayers.length, fixtureIds };
+  if (publishError) return failure(`ranking-publish-failed:${publishError.message}`, {
+    seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds,
+    expectedFixtureIds, coverageStatus, totalScorePoints, checksum: record.checksum,
+  });
+  return {
+    ok: true, published: true, snapshotId, seasonId, roundId,
+    playerCount: rankingPlayers.length, fixtureIds, expectedFixtureIds,
+    coverageStatus, totalScorePoints, checksum: record.checksum,
+  };
 }

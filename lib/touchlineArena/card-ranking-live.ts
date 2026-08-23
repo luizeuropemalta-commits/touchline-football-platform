@@ -33,8 +33,11 @@ export type TouchlineActiveRankingState = {
   publishedAt: string | null;
   priceTableVersion: string;
   scoringVersion: "player_scoring_v1" | "player_scoring_v2" | null;
+  coverageStatus: "complete" | "complete_for_scoring" | null;
   seasonId: string | null;
   fixtureIds: readonly string[];
+  expectedFixtureIds: readonly string[];
+  totalScorePoints: number | null;
   players: readonly TouchlineActiveRankingPlayer[];
 };
 
@@ -58,8 +61,11 @@ export const TOUCHLINE_PRESEASON_RANKING_STATE: TouchlineActiveRankingState = Ob
   publishedAt: null,
   priceTableVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   scoringVersion: null,
+  coverageStatus: null,
   seasonId: null,
   fixtureIds: Object.freeze([]),
+  expectedFixtureIds: Object.freeze([]),
+  totalScorePoints: null,
   players: Object.freeze([]),
 });
 
@@ -67,6 +73,13 @@ const POSITION_GROUPS = new Set<TouchlinePositionRankingGroup>(TOUCHLINE_POSITIO
 
 function normalizePlayerId(value?: string | number | null) {
   return String(value ?? "").trim().toLowerCase();
+}
+
+function isCanonicalFixtureIdArray(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.length > 0
+    && value.every((fixtureId) => typeof fixtureId === "string" && /^[A-Za-z0-9_-]+$/.test(fixtureId))
+    && new Set(value).size === value.length;
 }
 
 function isRankingPlayer(value: unknown): value is TouchlineActiveRankingPlayer {
@@ -108,9 +121,13 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     || !Number.isFinite(Date.parse(candidate.publishedAt))
     || candidate.priceTableVersion !== TOUCHLINE_CARD_PRICE_TABLE_VERSION
     || (candidate.scoringVersion !== "player_scoring_v1" && candidate.scoringVersion !== "player_scoring_v2")
+    || (candidate.coverageStatus !== "complete" && candidate.coverageStatus !== "complete_for_scoring")
     || !normalizePlayerId(candidate.seasonId)
-    || !Array.isArray(candidate.fixtureIds)
-    || candidate.fixtureIds.some((fixtureId) => !normalizePlayerId(fixtureId))
+    || !isCanonicalFixtureIdArray(candidate.fixtureIds)
+    || !isCanonicalFixtureIdArray(candidate.expectedFixtureIds)
+    || [...candidate.fixtureIds].sort().join("\n") !== [...candidate.expectedFixtureIds].sort().join("\n")
+    || typeof candidate.totalScorePoints !== "number"
+    || !Number.isFinite(candidate.totalScorePoints)
     || !Array.isArray(candidate.players)
     || candidate.players.length === 0
     || !candidate.players.every(isRankingPlayer)
@@ -146,6 +163,9 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
       return null;
     }
   }
+  if (candidate.players.reduce((total, player) => total + player.touchlinePoints, 0) !== candidate.totalScorePoints) {
+    return null;
+  }
 
   return {
     phase: "ranked",
@@ -155,8 +175,11 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     publishedAt: candidate.publishedAt,
     priceTableVersion: candidate.priceTableVersion,
     scoringVersion: candidate.scoringVersion,
+    coverageStatus: candidate.coverageStatus,
     seasonId: candidate.seasonId!,
-    fixtureIds: [...new Set(candidate.fixtureIds)],
+    fixtureIds: candidate.fixtureIds,
+    expectedFixtureIds: candidate.expectedFixtureIds,
+    totalScorePoints: candidate.totalScorePoints,
     players: candidate.players,
   };
 }

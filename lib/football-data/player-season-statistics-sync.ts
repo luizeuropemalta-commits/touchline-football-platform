@@ -4,6 +4,10 @@ import { emptyTouchLinePlayerSeasonStatistics } from "../touchlineArena/player-s
 import {
   touchLinePlayerFixtureEventStatistics,
 } from "./player-fixture-scoring.ts";
+import {
+  isTouchLinePlayerRankingCoverageComplete,
+  type TouchLinePlayerRankingCoverageStatus,
+} from "./player-ranking-coverage.ts";
 import type { TouchlineFantasyEvent } from "./types.ts";
 
 type EligibleFixture = {
@@ -14,6 +18,7 @@ type EligibleFixture = {
   touchlinePoints?: number | null;
   scoringStatistics?: Readonly<Record<string, number>> | null;
   scoringComplete?: boolean;
+  rankingCoverageStatus?: TouchLinePlayerRankingCoverageStatus;
 };
 
 function numericStatistic(member: TouchlineFantasyLineupMember, codes: string[]) {
@@ -96,10 +101,16 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
   const touchlinePoints = fixturePointValues.every((value) => value !== null)
     ? fixturePointValues.reduce((total, value) => total + (value ?? 0), 0)
     : null;
-  const complete = fixtures.length > 0
+  const fixtureSetComplete = fixtures.length > 0
     && allLineupsAvailable
-    && expectedFixtureIds.length === aggregatedFixtureIds.length
-    && synchronizedFixtures.every((fixture) => fixture.scoringComplete === true);
+    && expectedFixtureIds.length === aggregatedFixtureIds.length;
+  const rankingCoverageStatuses = synchronizedFixtures.map((fixture) => (
+    fixture.rankingCoverageStatus ?? (fixture.scoringComplete === true ? "complete" : "blocking_partial")
+  ));
+  const complete = fixtureSetComplete
+    && rankingCoverageStatuses.every((status) => status === "complete");
+  const completeForScoring = fixtureSetComplete
+    && rankingCoverageStatuses.every(isTouchLinePlayerRankingCoverageComplete);
   const providerPositionStatistics = Object.fromEntries(
     [...new Set(playerEntries.flatMap((member) => member.statistics.map((statistic) => String(statistic.code ?? "").trim().toLowerCase()).filter(Boolean)))]
       .flatMap((code) => {
@@ -119,7 +130,13 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
   const positionStatistics = { ...providerPositionStatistics, ...scoringStatistics };
 
   return {
-    coverageStatus: complete ? "complete" : fixtures.length ? "partial" : "unavailable",
+    coverageStatus: complete
+      ? "complete"
+      : completeForScoring
+        ? "complete_for_scoring"
+        : fixtures.length
+          ? "partial"
+          : "unavailable",
     ...input.season,
     expectedFixtureCount: fixtures.length,
     synchronizedFixtureCount: synchronizedFixtures.length,
@@ -143,6 +160,6 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
     },
     positionStatistics,
     latestSyncAt,
-    ...(complete ? {} : { unavailableReason: "not-synchronised" as const }),
+    ...(complete || completeForScoring ? {} : { unavailableReason: "not-synchronised" as const }),
   };
 }

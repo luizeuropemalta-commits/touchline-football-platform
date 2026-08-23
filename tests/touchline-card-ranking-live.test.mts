@@ -49,6 +49,7 @@ function activeState(): TouchlineActiveRankingState {
     players: buildFullLeaguePlayers(),
   });
 
+  const totalScorePoints = snapshot.players.reduce((total, player) => total + player.touchlinePoints, 0);
   return {
     phase: "ranked",
     leagueKey: TOUCHLINE_ENGLAND_LEAGUE_KEY,
@@ -57,8 +58,11 @@ function activeState(): TouchlineActiveRankingState {
     publishedAt: "2026-08-15T18:05:00.000Z",
     priceTableVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     scoringVersion: "player_scoring_v2",
+    coverageStatus: "complete_for_scoring",
     seasonId: "season-1",
     fixtureIds: ["fixture-1"],
+    expectedFixtureIds: ["fixture-1"],
+    totalScorePoints,
     players: snapshot.players,
   };
 }
@@ -177,4 +181,41 @@ test("rejects invalid groups, duplicate ranks and inconsistent group sizes", () 
   assert.equal(parseTouchlineActiveRankingState(invalidGroup), null);
   assert.equal(parseTouchlineActiveRankingState(duplicateRank), null);
   assert.equal(parseTouchlineActiveRankingState(inconsistentSize), null);
+});
+
+test("rejects a published read model with mismatched fixtures or point sum", () => {
+  const state = activeState();
+  assert.equal(parseTouchlineActiveRankingState({ ...state, expectedFixtureIds: ["other"] }), null);
+  assert.equal(parseTouchlineActiveRankingState({ ...state, totalScorePoints: (state.totalScorePoints ?? 0) + 1 }), null);
+});
+
+test("rejects duplicate, blank, or non-string fixture identifiers", () => {
+  const state = activeState();
+  assert.equal(parseTouchlineActiveRankingState({
+    ...state,
+    fixtureIds: ["fixture-1", "fixture-1"],
+    expectedFixtureIds: ["fixture-1", "fixture-1"],
+  }), null);
+  assert.equal(parseTouchlineActiveRankingState({
+    ...state,
+    fixtureIds: [""],
+    expectedFixtureIds: [""],
+  }), null);
+  assert.equal(parseTouchlineActiveRankingState({
+    ...state,
+    fixtureIds: [19722203],
+    expectedFixtureIds: [19722203],
+  } as unknown), null);
+  assert.equal(parseTouchlineActiveRankingState({
+    ...state,
+    fixtureIds: ["fixture-1", " fixture-1 "],
+    expectedFixtureIds: ["fixture-1", " fixture-1 "],
+  }), null);
+  for (const noncanonicalId of ["\tfixture-1\t", "\u00a0fixture-1\u00a0", "fixture/1"]) {
+    assert.equal(parseTouchlineActiveRankingState({
+      ...state,
+      fixtureIds: [noncanonicalId],
+      expectedFixtureIds: [noncanonicalId],
+    }), null);
+  }
 });

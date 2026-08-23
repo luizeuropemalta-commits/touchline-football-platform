@@ -37,6 +37,7 @@ type TableCopy = Readonly<{
   stale: string;
   scoreUnavailable: string;
   currentClub: string;
+  tiedPosition: string;
   finalResults: string;
   pendingTitle: string;
   pendingDescription: string;
@@ -67,6 +68,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     stale: "STALE",
     scoreUnavailable: "score unavailable",
     currentClub: "Current club",
+    tiedPosition: "Tied on points, goal difference and goals scored.",
     finalResults: "verified final results",
     pendingTitle: "Initial table — all 20 clubs are level.",
     pendingDescription: "Every club is shown with neutral statistics. Positions begin after the first verified final result; no league leader or position is invented.",
@@ -95,6 +97,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     stale: "DESATUALIZADO",
     scoreUnavailable: "placar indisponível",
     currentClub: "Clube atual",
+    tiedPosition: "Empatados em pontos, saldo de gols e gols marcados.",
     finalResults: "resultados finais verificados",
     pendingTitle: "Tabela inicial — os 20 clubes estão empatados.",
     pendingDescription: "Todos os clubes aparecem com estatísticas neutras. As posições começam após o primeiro resultado final verificado; nenhuma liderança ou posição é inventada.",
@@ -206,7 +209,19 @@ export default function TouchlineOfficialLeagueTable({
                       data-live={row.liveFixture ? "true" : undefined}
                       data-live-stale={row.liveFixture?.stale || undefined}
                     >
-                      <td>{row.position ?? "—"}</td>
+                      <td className={styles.rankCell}>
+                        {row.sportsRank === null ? "—" : row.isTied ? (
+                          <span
+                            className={styles.tiedRank}
+                            tabIndex={0}
+                            title={dictionary.tiedPosition}
+                            aria-label={`${row.sportsRank}. ${dictionary.tiedPosition}`}
+                            data-tooltip={dictionary.tiedPosition}
+                          >
+                            <span aria-hidden="true">{row.sportsRank}=</span>
+                          </span>
+                        ) : row.sportsRank}
+                      </td>
                       <th scope="row">
                         <Link href={`/touchline-clubs/${row.team.slug}?lang=${localeQuery}`} aria-current={isCurrent ? "page" : undefined}>
                           {row.team.logoUrl ? <img src={row.team.logoUrl} alt="" /> : null}
