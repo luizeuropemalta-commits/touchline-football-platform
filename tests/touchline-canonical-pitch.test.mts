@@ -16,32 +16,32 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
   assert.deepEqual(TOUCHLINE_CLUB_OWNER_XI_SLOTS[0], { x: 8, y: 50 });
   assert.deepEqual(TOUCHLINE_STANDARD_433_SLOTS.at(-1), { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 });
   assert.deepEqual(TOUCHLINE_STANDARD_433_SLOTS.slice(0, 3).map(({ x, y }) => ({ x, y })), [
-    { x: 88, y: 14 }, { x: 88, y: 50 }, { x: 88, y: 86 },
+    { x: 88, y: 20 }, { x: 88, y: 50 }, { x: 88, y: 80 },
   ]);
   assert.deepEqual(touchlineCanonicalFormationSlots("4-4-2"), [
     { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 },
-    { role: "defender", roleIndex: 0, x: 34, y: 14 },
-    { role: "defender", roleIndex: 1, x: 34, y: 38 },
-    { role: "defender", roleIndex: 2, x: 34, y: 62 },
-    { role: "defender", roleIndex: 3, x: 34, y: 86 },
-    { role: "midfielder", roleIndex: 0, x: 61, y: 14 },
-    { role: "midfielder", roleIndex: 1, x: 61, y: 38 },
-    { role: "midfielder", roleIndex: 2, x: 61, y: 62 },
-    { role: "midfielder", roleIndex: 3, x: 61, y: 86 },
-    { role: "forward", roleIndex: 0, x: 88, y: 14 },
-    { role: "forward", roleIndex: 1, x: 88, y: 86 },
+    { role: "defender", roleIndex: 0, x: 34, y: 20 },
+    { role: "defender", roleIndex: 1, x: 34, y: 40 },
+    { role: "defender", roleIndex: 2, x: 34, y: 60 },
+    { role: "defender", roleIndex: 3, x: 34, y: 80 },
+    { role: "midfielder", roleIndex: 0, x: 61, y: 20 },
+    { role: "midfielder", roleIndex: 1, x: 61, y: 40 },
+    { role: "midfielder", roleIndex: 2, x: 61, y: 60 },
+    { role: "midfielder", roleIndex: 3, x: 61, y: 80 },
+    { role: "forward", roleIndex: 0, x: 88, y: 20 },
+    { role: "forward", roleIndex: 1, x: 88, y: 80 },
   ]);
   assert.deepEqual(touchlineCanonicalFormationSlots("4-2-3-1"), [
     { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 },
-    { role: "defender", roleIndex: 0, x: 34, y: 14 },
-    { role: "defender", roleIndex: 1, x: 34, y: 38 },
-    { role: "defender", roleIndex: 2, x: 34, y: 62 },
-    { role: "defender", roleIndex: 3, x: 34, y: 86 },
-    { role: "midfielder", roleIndex: 0, x: 52, y: 14 },
-    { role: "midfielder", roleIndex: 1, x: 52, y: 86 },
-    { role: "midfielder", roleIndex: 2, x: 70, y: 14 },
+    { role: "defender", roleIndex: 0, x: 34, y: 20 },
+    { role: "defender", roleIndex: 1, x: 34, y: 40 },
+    { role: "defender", roleIndex: 2, x: 34, y: 60 },
+    { role: "defender", roleIndex: 3, x: 34, y: 80 },
+    { role: "midfielder", roleIndex: 0, x: 52, y: 20 },
+    { role: "midfielder", roleIndex: 1, x: 52, y: 80 },
+    { role: "midfielder", roleIndex: 2, x: 70, y: 20 },
     { role: "midfielder", roleIndex: 3, x: 70, y: 50 },
-    { role: "midfielder", roleIndex: 4, x: 70, y: 86 },
+    { role: "midfielder", roleIndex: 4, x: 70, y: 80 },
     { role: "forward", roleIndex: 0, x: 88, y: 50 },
   ]);
   assert.deepEqual(touchlineCanonicalFormationSlots("not-a-formation"), touchlineCanonicalFormationSlots("4-3-3"));

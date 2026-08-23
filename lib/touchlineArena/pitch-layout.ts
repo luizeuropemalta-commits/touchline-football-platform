@@ -29,7 +29,10 @@ export const TOUCHLINE_CLUB_OWNER_XI_SLOTS = [
 /** The ClubHub builder selects forwards, midfielders, defenders then goalkeeper. */
 function evenlySpacedFormationY(count: number, index: number) {
   if (count <= 1) return 50;
-  return 14 + ((72 / (count - 1)) * index);
+  // Keep complete card assemblies inside the painted pitch at every shared
+  // Club Hub / Market viewport.  The previous 14–86 span placed the outer
+  // cards beyond the lower field edge once their centred height was applied.
+  return 20 + ((60 / (count - 1)) * index);
 }
 
 function midfieldLineX(lineCount: number, lineIndex: number) {
