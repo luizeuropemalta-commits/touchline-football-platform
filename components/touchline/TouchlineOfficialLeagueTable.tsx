@@ -268,7 +268,7 @@ export default function TouchlineOfficialLeagueTable({
                       </td>
                       <th scope="row">
                         <Link href={`/touchline-clubs/${row.team.slug}?lang=${localeQuery}`} aria-current={isCurrent ? "page" : undefined}>
-                          {row.team.logoUrl ? <img src={row.team.logoUrl} alt="" /> : null}
+                          {row.team.logoUrl ? <img src={row.team.logoUrl} alt="" loading="lazy" decoding="async" /> : null}
                           <span>{row.team.name}</span>
                           {isCurrent ? <span className={styles.srOnly}>{dictionary.currentClub}</span> : null}
                           {row.liveFixture ? <span className={styles.liveScore} aria-label={`${liveLabel}: ${liveScore}`}>{liveLabel} · {liveScore}</span> : null}

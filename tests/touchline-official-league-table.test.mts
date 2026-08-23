@@ -431,6 +431,7 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /dictionary\.goalsAgainst/);
   assert.match(component, /\{row\.goalsFor\}/);
   assert.match(component, /\{row\.goalsAgainst\}/);
+  assert.match(component, /row\.team\.logoUrl[^\n]+loading="lazy"[^\n]+decoding="async"/);
   assert.match(component, /alphabetical display order only/);
   assert.match(component, /data-live=/);
   assert.match(component, /data-live-stale=/);
