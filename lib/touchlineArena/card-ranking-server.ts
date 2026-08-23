@@ -26,10 +26,9 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
     .eq("snapshot_id", active.snapshot_id)
     .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
     .maybeSingle();
-  // V3 becomes canonical as soon as it is published. Until then, a complete,
-  // audited V2 snapshot remains one coherent active read model; never combine
-  // rankings or scoring facts across versions.
-  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || (record.scoring_version !== "player_scoring_v2" && record.scoring_version !== "player_scoring_v3") || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
+  // V2 snapshots remain audit history only. A product surface may activate
+  // exactly one fully auditable V3 ranking, never blend or fall back to V2.
+  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v3" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
     return TOUCHLINE_PRESEASON_RANKING_STATE;
   }
 
