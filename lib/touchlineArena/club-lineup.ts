@@ -1,7 +1,11 @@
 import type { TouchlineFantasyLineupMember } from "../football-data/types.ts";
 import { inferArenaRole, normalizeOfficialShirtNumber } from "../football-data/arena-lineup.ts";
 import { type ClubOwnerSquadCard, type TouchLineClubVisual } from "./demo-data.ts";
-import { touchlineCanonicalFormationSlots, TOUCHLINE_STANDARD_433_SLOTS, type TouchlineFormationPitchSlot } from "./pitch-layout.ts";
+import { touchlineCanonicalFormationSlots, type TouchlineFormationPitchSlot } from "./pitch-layout.ts";
+import {
+  isTouchlineTacticalSlotCandidateEligible,
+  type TouchlineFormationGeometryRegistry,
+} from "./formation-geometry.ts";
 
 export type TouchLineClubLineupStatus = "confirmed" | "preview";
 
@@ -35,8 +39,6 @@ export type TouchLineClubMatchdayPresentation = Readonly<{
   /** Every named player shown in the XI or confirmed technical bench. */
   displayedPlayerIds: readonly string[];
 }>;
-
-const FORMATION_433_SLOTS = TOUCHLINE_STANDARD_433_SLOTS;
 
 function memberPlayerId(member: TouchlineFantasyLineupMember) {
   const playerId = String(member.playerId ?? "").trim();
@@ -73,13 +75,20 @@ function strictCardForOfficialMember(
   };
 }
 
-function previewStartingEleven(squadCards: ClubOwnerSquadCard[]) {
+function selectPreviewStartingEleven(
+  squadCards: ClubOwnerSquadCard[],
+  slots: readonly TouchlineFormationPitchSlot[],
+) {
   const available = [...squadCards];
   const chosen: ClubOwnerSquadCard[] = [];
 
-  for (const slot of FORMATION_433_SLOTS) {
-    const roleIndex = available.findIndex((card) => inferArenaRole(card.role || card.position) === slot.role);
-    const selectedIndex = roleIndex >= 0 ? roleIndex : 0;
+  for (const slot of slots) {
+    const exactIndex = available.findIndex((card) => isTouchlineTacticalSlotCandidateEligible({
+      position: card.position,
+      role: inferArenaRole(card.role || card.position),
+    }, slot));
+    const broadRoleIndex = available.findIndex((card) => inferArenaRole(card.role || card.position) === slot.role);
+    const selectedIndex = exactIndex >= 0 ? exactIndex : broadRoleIndex >= 0 ? broadRoleIndex : 0;
     const [card] = available.splice(selectedIndex, 1);
     if (card) chosen.push(card);
   }
@@ -88,13 +97,12 @@ function previewStartingEleven(squadCards: ClubOwnerSquadCard[]) {
 }
 
 function arrangeCards(cards: ClubOwnerSquadCard[], slots: readonly TouchlineFormationPitchSlot[]) {
-  const remaining = [...cards];
-  return slots.flatMap((slot) => {
-    const roleIndex = remaining.findIndex((card) => inferArenaRole(card.role || card.position) === slot.role);
-    const selectedIndex = roleIndex >= 0 ? roleIndex : 0;
-    const [card] = remaining.splice(selectedIndex, 1);
-    return card ? [{ card, x: slot.x, y: slot.y }] : [];
-  });
+  return slots.flatMap((slot, index) => cards[index] ? [{ card: cards[index]!, x: slot.x, y: slot.y }] : []);
+}
+
+function officialFormationPosition(member: TouchlineFantasyLineupMember) {
+  const value = Number.parseInt(String(member.formationPosition ?? ""), 10);
+  return Number.isInteger(value) && value >= 1 && value <= 11 ? value : Number.POSITIVE_INFINITY;
 }
 
 export function buildTouchLineClubLineup(input: {
@@ -103,6 +111,7 @@ export function buildTouchLineClubLineup(input: {
   officialLineup?: TouchlineFantasyLineupMember[];
   formation?: string | null;
   fixtureId?: string | null;
+  formationGeometryRegistry?: TouchlineFormationGeometryRegistry;
 }): TouchLineClubLineup {
   return buildTouchLineClubMatchdayPresentation(input).lineup;
 }
@@ -120,11 +129,14 @@ export function buildTouchLineClubMatchdayPresentation(input: {
   formation?: string | null;
   fixtureId?: string | null;
   officialCoach?: TouchLineClubOfficialMatchdayCoach | null;
+  formationGeometryRegistry?: TouchlineFormationGeometryRegistry;
 }): TouchLineClubMatchdayPresentation {
   const strictMembers = (input.officialLineup ?? []).filter((member) => (
     isStrictMatchdayMember(member, input.club, input.fixtureId)
   ));
-  const officialStarters = strictMembers.filter((member) => member.isStarter);
+  const officialStarters = strictMembers
+    .filter((member) => member.isStarter)
+    .sort((first, second) => officialFormationPosition(first) - officialFormationPosition(second));
   const starterIds = officialStarters.map(memberPlayerId);
   const startersAreUnique = starterIds.every((id): id is string => Boolean(id))
     && new Set(starterIds).size === starterIds.length;
@@ -135,14 +147,15 @@ export function buildTouchLineClubMatchdayPresentation(input: {
   const formation = hasConfirmedStartingEleven && input.formation?.trim()
     ? input.formation.trim()
     : "4-3-3";
+  const formationSlots = touchlineCanonicalFormationSlots(formation, input.formationGeometryRegistry);
   const cards = hasConfirmedStartingEleven
     ? confirmedStarterCards as ClubOwnerSquadCard[]
-    : previewStartingEleven(input.squadCards);
+    : selectPreviewStartingEleven(input.squadCards, formationSlots);
 
   const lineup: TouchLineClubLineup = {
     status: hasConfirmedStartingEleven ? "confirmed" : "preview",
     formation,
-    players: arrangeCards(cards, touchlineCanonicalFormationSlots(formation)),
+    players: arrangeCards(cards, formationSlots),
   };
 
   const officialBench = strictMembers.filter((member) => member.isSubstitute);

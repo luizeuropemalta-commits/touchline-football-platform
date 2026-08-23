@@ -107,6 +107,7 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "PATCH /api/admin/cards": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_ADMIN_CARD_LIFECYCLE", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/admin/card-engine": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_CARD_ENGINE_EDITORIAL_BATCH", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "PATCH /api/admin/card-engine": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_CARD_ENGINE_EDITORIAL_BATCH", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "POST /api/admin/formation-geometries": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_FORMATION_GEOMETRY_VERSIONS", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/admin/finance/export": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_FINANCE_EXPORT", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/admin/manual-card-editorial": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_MANUAL_CARD_EDITORIAL", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "PATCH /api/admin/manual-card-editorial": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_MANUAL_CARD_EDITORIAL", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },

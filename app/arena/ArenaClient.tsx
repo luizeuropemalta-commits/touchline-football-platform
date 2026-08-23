@@ -196,6 +196,11 @@ import {
 import { TOUCHLINE_QA_CANONICAL_USER_ID } from "@/lib/touchlineArena/qa-canonical-persona";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
+import {
+  isTouchlineTacticalSlotCandidateEligible,
+  resolveTouchlineFormationGeometry,
+  type TouchlineFormationGeometryRegistry,
+} from "@/lib/touchlineArena/formation-geometry";
 import formationLockSeed from "@/data/touchline-arena-formation-locks.json";
 
 const PUBLIC_DATA_SOURCE_LABEL = "TouchLine England";
@@ -1385,13 +1390,19 @@ function buildQuickSubstitutionSessionSource(input: Readonly<{
   players: readonly ArenaPlayer[];
   matchdayBench: readonly BenchOption[];
   allowDemoIdentity: boolean;
+  formationCode: string;
+  twoDimensionalGeometryRegistry?: TouchlineFormationGeometryRegistry;
 }>): QuickSubstitutionSessionSource | null {
   const ownerId = quickSubstitutionOwnerId(input.principal);
   if (!ownerId || input.players.length !== TOUCHLINE_SQUAD_RULES.starters || input.matchdayBench.length !== TOUCHLINE_SQUAD_RULES.bench) {
     return null;
   }
 
-  const initialPitchSlots = trainingCenterPlayerSlots([...input.players]);
+  const initialPitchSlots = trainingCenterPlayerSlots(
+    [...input.players],
+    input.formationCode,
+    input.twoDimensionalGeometryRegistry,
+  );
   const playerByPositionSlotId = new Map<string, ArenaPlayer>();
   const playerByInventoryId = new Map<string, ArenaPlayer>();
   const benchByInventoryId = new Map<string, BenchOption>();
@@ -2344,24 +2355,27 @@ async function preloadLiveProductImages(urls: Array<string | null | undefined>, 
   window.clearTimeout(timeoutId);
 }
 
-function trainingCenterPlayerSlots(players: ArenaPlayer[]) {
+/**
+ * The Training Center is a flat tactical board, so it may share the reusable
+ * 2D registry. This helper must never feed the Arena field/camera positions.
+ */
+function trainingCenterPlayerSlots(
+  players: ArenaPlayer[],
+  formationCode: string,
+  geometryRegistry?: TouchlineFormationGeometryRegistry,
+) {
   const slots = new Map<string, { x: number; y: number }>();
-  const lines: Array<{ role: ArenaPlayer["role"]; x: number }> = [
-    { role: "goalkeeper", x: 9 },
-    { role: "defender", x: 34 },
-    { role: "midfielder", x: 61 },
-    { role: "forward", x: 88 },
-  ];
-
-  for (const line of lines) {
-    const linePlayers = players.filter((player) => player.role === line.role);
-    const spacing = linePlayers.length > 1 ? 72 / (linePlayers.length - 1) : 0;
-    linePlayers.forEach((player, index) => {
-      slots.set(player.id, {
-        x: line.x,
-        y: linePlayers.length === 1 ? 50 : 14 + (spacing * index),
-      });
-    });
+  const available = [...players];
+  for (const slot of resolveTouchlineFormationGeometry(formationCode, geometryRegistry).slots) {
+    const exactIndex = available.findIndex((player) => isTouchlineTacticalSlotCandidateEligible({
+      position: player.card?.position ?? player.role,
+      role: player.role,
+    }, slot));
+    const broadIndex = available.findIndex((player) => player.role === slot.role);
+    const selectedIndex = exactIndex >= 0 ? exactIndex : broadIndex;
+    if (selectedIndex < 0) continue;
+    const [player] = available.splice(selectedIndex, 1);
+    if (player) slots.set(player.id, { x: slot.x, y: slot.y });
   }
 
   return slots;
@@ -3420,6 +3434,8 @@ type ArenaClientProps = {
   initialQaVisualEditor?: boolean;
   /** Server-proven owner capability. Protected routes still enforce authority. */
   canEditCardEngine?: boolean;
+  /** Published 2D geometry for Market/Club Construction only; the Arena field keeps its independent camera calibration. */
+  initialTwoDimensionalFormationRegistry?: TouchlineFormationGeometryRegistry;
 };
 
 type ArenaDragState = {
@@ -3481,6 +3497,7 @@ export default function ArenaClient({
   initialEmptyLineup = false,
   initialQaVisualEditor = false,
   canEditCardEngine = false,
+  initialTwoDimensionalFormationRegistry,
 }: ArenaClientProps) {
   const standaloneExperience = standaloneMarket ? "market" : standalonePanel ?? null;
   const initialBuilderClubKey = TEAM_BUILDER_CLUBS.some((club) => club.teamId === initialContractClubId)
@@ -3720,8 +3737,10 @@ export default function ArenaClient({
       players,
       matchdayBench: matchdayBenchPlayers,
       allowDemoIdentity: isDemoLineup,
+      formationCode: selectedFormationKey,
+      twoDimensionalGeometryRegistry: initialTwoDimensionalFormationRegistry,
     });
-  }, [arenaPersistencePrincipal, isDemoLineup, isQuickSubstitutionOpen, matchdayBenchPlayers, players, standaloneQuickSubstitutionReadiness.state]);
+  }, [arenaPersistencePrincipal, initialTwoDimensionalFormationRegistry, isDemoLineup, isQuickSubstitutionOpen, matchdayBenchPlayers, players, selectedFormationKey, standaloneQuickSubstitutionReadiness.state]);
   const quickSubstitutionSessionStorageKey = useMemo(
     () => (arenaPersistencePrincipal
       ? arenaPersistenceKeys(arenaPersistencePrincipal, "quick-substitution-session").storageKey
@@ -7557,7 +7576,11 @@ export default function ArenaClient({
   const fieldPlayerPositions = new Map(lockedCameraPositions ?? canonical433VideoPositions ?? projectedFieldPlayerPositions);
   const trainingCenterSlots = isQuickSubstitutionSessionActive && quickSubstitutionSessionSource
     ? new Map(quickSubstitutionSessionSource.pitchSlotByPositionSlotId)
-    : trainingCenterPlayerSlots(arenaFieldPlayersForRendering);
+    : trainingCenterPlayerSlots(
+        arenaFieldPlayersForRendering,
+        selectedFormationKey,
+        initialTwoDimensionalFormationRegistry,
+      );
   if (cameraEditPositions && (!canonical433VideoPositions || isQaVisualEditor)) {
     for (const [playerId, slot] of Object.entries(cameraEditPositions)) {
       const player = arenaFieldPlayersForRendering.find((candidate) => candidate.id === playerId);
@@ -9172,6 +9195,7 @@ export default function ArenaClient({
                     formation={selectedFormationKey}
                     formationConfirmed={marketFormationConfirmed}
                     formationOptions={ARENA_FORMATIONS.filter((formation) => isFinalizedArenaFormation(formation.key)).map((formation) => formation.key)}
+                    geometryRegistry={initialTwoDimensionalFormationRegistry}
                     onSelectFormation={(formation) => confirmMarketFormation(formation as ArenaFormationKey)}
                     coachName={activeArenaCoachIdentity?.coach?.displayName ?? coachSlot.coach?.displayName ?? null}
                     coachProfileHref={activeArenaCoachIdentity?.coach

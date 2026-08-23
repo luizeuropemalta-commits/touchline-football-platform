@@ -10,7 +10,7 @@ import {
 import { findTouchLineClub, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
 
 const city = findTouchLineClub("manchester-city")!;
-const starterRoles = ["forward", "forward", "forward", "midfielder", "midfielder", "midfielder", "defender", "defender", "defender", "defender", "goalkeeper"];
+const starterRoles = ["goalkeeper", "defender", "defender", "defender", "defender", "midfielder", "midfielder", "midfielder", "forward", "forward", "forward"];
 const roles = [...starterRoles, "goalkeeper", "defender", "defender", "defender", "midfielder", "midfielder", "midfielder", "forward", "forward"];
 const squadCards: ClubOwnerSquadCard[] = roles.map((role, index) => ({
   id: String(index + 1),
@@ -46,6 +46,7 @@ function officialMember(
     playerId: String(index + 1),
     playerName: `City Player ${index + 1}`,
     jerseyNumber: index + 1,
+    formationPosition: String(index + 1),
     position: roles[index],
     isStarter: options.isStarter ?? true,
     isSubstitute: options.isSubstitute ?? false,
@@ -95,7 +96,7 @@ test("ClubHub confirms and distributes only a complete provider Starting XI for 
       counts[player.x] = (counts[player.x] ?? 0) + 1;
       return counts;
     }, {}),
-    { 9: 1, 34: 4, 52: 2, 70: 3, 88: 1 },
+    { 8: 1, 29: 4, 50: 2, 71: 3, 92: 1 },
   );
 });
 

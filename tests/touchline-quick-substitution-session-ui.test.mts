@@ -59,7 +59,12 @@ test("the authoritative eleven remain mounted in the normal Arena and during Qui
   assert.doesNotMatch(arenaSource, /transition: top \.16s ease, left \.16s ease, height \.16s ease/);
   assert.match(arenaSource, /projectArenaPlayersForLoopCamera\(arenaFieldPlayersForRendering,/);
   assert.match(arenaSource, /roleLayoutForPlayers\(arenaFieldPlayersForRendering,/);
-  assert.match(arenaSource, /trainingCenterPlayerSlots\(arenaFieldPlayersForRendering\)/);
+  assert.match(
+    arenaSource,
+    /trainingCenterPlayerSlots\(\s*arenaFieldPlayersForRendering,\s*selectedFormationKey,\s*initialTwoDimensionalFormationRegistry,\s*\)/,
+  );
+  assert.match(arenaSource, /The Training Center is a flat tactical board/);
+  assert.doesNotMatch(arenaSource, /fieldPlayerPositions[^;]*initialTwoDimensionalFormationRegistry/);
   assert.match(arenaSource, /arenaFieldPlayersForRendering\.find/);
 });
 

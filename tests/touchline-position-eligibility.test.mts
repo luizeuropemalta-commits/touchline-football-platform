@@ -94,7 +94,7 @@ test("Market Transfer uses centralized position eligibility on gallery cards and
   assert.match(source, /marketNeedsOnly/);
   assert.match(source, /<TouchlineSquadBuilderStage/);
   assert.match(source, /onAssignPlayer=\{assignMarketFormationPlayer\}/);
-  assert.match(squadBuilder, /isTouchlineFormationCandidateEligible/);
+  assert.match(squadBuilder, /isTouchlineTacticalSlotCandidateEligible/);
   assert.match(squadBuilder, /const steps = \[/);
   assert.match(squadBuilder, /className=\{styles\.progress\}/);
   assert.match(source, /isPositionLimitReached/);

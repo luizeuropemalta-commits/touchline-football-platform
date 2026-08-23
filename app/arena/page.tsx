@@ -9,6 +9,7 @@ import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
+import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 
 // This read only controls the protected Card Engine affordance. It must not
 // leave the App Router's global loading boundary open if Supabase auth stalls.
@@ -56,7 +57,10 @@ export default async function ArenaPage({
     redirect(touchlineClubOwnerProfileHref(lang));
   }
 
-  const supabase = await createClient();
+  const [supabase, initialTwoDimensionalFormationRegistry] = await Promise.all([
+    createClient(),
+    readTouchlineFormationGeometryRegistry(),
+  ]);
   const user = supabase
     ? await resolveServerReadWithin(
       supabase.auth.getUser().then(({ data }) => data.user),
@@ -78,6 +82,7 @@ export default async function ArenaPage({
       })}
       initialQaVisualEditor={initialQaVisualEditor}
       canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
+      initialTwoDimensionalFormationRegistry={initialTwoDimensionalFormationRegistry}
     />
   );
 }

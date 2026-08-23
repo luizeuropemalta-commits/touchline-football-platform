@@ -14,35 +14,28 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
   assert.equal(TOUCHLINE_CLUB_OWNER_XI_SLOTS.length, 11);
   assert.equal(TOUCHLINE_STANDARD_433_SLOTS.length, 11);
   assert.deepEqual(TOUCHLINE_CLUB_OWNER_XI_SLOTS[0], { x: 8, y: 50 });
-  assert.deepEqual(TOUCHLINE_STANDARD_433_SLOTS.at(-1), { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 });
+  assert.deepEqual(
+    (({ id, role, roleIndex, x, y }) => ({ id, role, roleIndex, x, y }))(TOUCHLINE_STANDARD_433_SLOTS.at(-1)!),
+    { id: "GK", role: "goalkeeper", roleIndex: 0, x: 8, y: 50 },
+  );
   assert.deepEqual(TOUCHLINE_STANDARD_433_SLOTS.slice(0, 3).map(({ x, y }) => ({ x, y })), [
-    { x: 88, y: 20 }, { x: 88, y: 50 }, { x: 88, y: 80 },
+    { x: 92, y: 18 }, { x: 92, y: 50 }, { x: 92, y: 82 },
   ]);
-  assert.deepEqual(touchlineCanonicalFormationSlots("4-4-2"), [
-    { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 },
-    { role: "defender", roleIndex: 0, x: 34, y: 20 },
-    { role: "defender", roleIndex: 1, x: 34, y: 40 },
-    { role: "defender", roleIndex: 2, x: 34, y: 60 },
-    { role: "defender", roleIndex: 3, x: 34, y: 80 },
-    { role: "midfielder", roleIndex: 0, x: 61, y: 20 },
-    { role: "midfielder", roleIndex: 1, x: 61, y: 40 },
-    { role: "midfielder", roleIndex: 2, x: 61, y: 60 },
-    { role: "midfielder", roleIndex: 3, x: 61, y: 80 },
-    { role: "forward", roleIndex: 0, x: 88, y: 20 },
-    { role: "forward", roleIndex: 1, x: 88, y: 80 },
+  assert.deepEqual(touchlineCanonicalFormationSlots("4-4-2").map(({ id, x, y }) => ({ id, x, y })), [
+    { id: "GK", x: 8, y: 50 },
+    { id: "RB", x: 36, y: 17 }, { id: "RCB", x: 36, y: 39 },
+    { id: "LCB", x: 36, y: 61 }, { id: "LB", x: 36, y: 83 },
+    { id: "RM", x: 64, y: 17 }, { id: "RCM", x: 64, y: 39 },
+    { id: "LCM", x: 64, y: 61 }, { id: "LM", x: 64, y: 83 },
+    { id: "RST", x: 92, y: 38 }, { id: "LST", x: 92, y: 62 },
   ]);
-  assert.deepEqual(touchlineCanonicalFormationSlots("4-2-3-1"), [
-    { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 },
-    { role: "defender", roleIndex: 0, x: 34, y: 20 },
-    { role: "defender", roleIndex: 1, x: 34, y: 40 },
-    { role: "defender", roleIndex: 2, x: 34, y: 60 },
-    { role: "defender", roleIndex: 3, x: 34, y: 80 },
-    { role: "midfielder", roleIndex: 0, x: 52, y: 20 },
-    { role: "midfielder", roleIndex: 1, x: 52, y: 80 },
-    { role: "midfielder", roleIndex: 2, x: 70, y: 20 },
-    { role: "midfielder", roleIndex: 3, x: 70, y: 50 },
-    { role: "midfielder", roleIndex: 4, x: 70, y: 80 },
-    { role: "forward", roleIndex: 0, x: 88, y: 50 },
+  assert.deepEqual(touchlineCanonicalFormationSlots("4-2-3-1").map(({ id, x, y }) => ({ id, x, y })), [
+    { id: "GK", x: 8, y: 50 },
+    { id: "RB", x: 29, y: 17 }, { id: "RCB", x: 29, y: 39 },
+    { id: "LCB", x: 29, y: 61 }, { id: "LB", x: 29, y: 83 },
+    { id: "RDM", x: 50, y: 34 }, { id: "LDM", x: 50, y: 66 },
+    { id: "RAM", x: 71, y: 20 }, { id: "CAM", x: 71, y: 50 },
+    { id: "LAM", x: 71, y: 80 }, { id: "ST", x: 92, y: 50 },
   ]);
   assert.deepEqual(touchlineCanonicalFormationSlots("not-a-formation"), touchlineCanonicalFormationSlots("4-3-3"));
 });
@@ -50,8 +43,8 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
 test("field art is a shared component rather than separate page drawings", () => {
   assert.match(clubOwnerRenderer, /TouchlinePitchSurface/);
   assert.match(clubHubLineup, /TouchlinePitchSurface/);
-  assert.match(clubLineupBuilder, /touchlineCanonicalFormationSlots\(formation\)/);
-  assert.match(readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8"), /touchlineCanonicalFormationSlots\(formation\)/);
+  assert.match(clubLineupBuilder, /touchlineCanonicalFormationSlots\(formation, input\.formationGeometryRegistry\)/);
+  assert.match(readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8"), /touchlineCanonicalFormationSlots\(formation, geometryRegistry\)/);
   assert.doesNotMatch(clubOwnerRenderer, /CLUB_OWNER_PROFILE_PITCH_SLOTS/);
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });

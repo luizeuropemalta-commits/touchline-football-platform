@@ -1,11 +1,12 @@
-import { touchlineFormationCapacities } from "./formation-transition.ts";
+import {
+  resolveTouchlineFormationGeometry,
+  type TouchlineFormationGeometryRegistry,
+  type TouchlineFormationGeometrySlot,
+} from "./formation-geometry.ts";
 
 export type TouchlinePitchSlot = Readonly<{ x: number; y: number }>;
-export type TouchlineFormationPitchRole = "goalkeeper" | "defender" | "midfielder" | "forward";
-export type TouchlineFormationPitchSlot = Readonly<TouchlinePitchSlot & {
-  role: TouchlineFormationPitchRole;
-  roleIndex: number;
-}>;
+export type { TouchlineFormationPitchRole } from "./formation-geometry.ts";
+export type TouchlineFormationPitchSlot = TouchlineFormationGeometrySlot;
 
 const GOALKEEPER: TouchlinePitchSlot = { x: 8, y: 50 };
 const DEFENDERS: readonly TouchlinePitchSlot[] = [
@@ -26,56 +27,16 @@ export const TOUCHLINE_CLUB_OWNER_XI_SLOTS = [
   ...FORWARDS,
 ] as const;
 
-/** The ClubHub builder selects forwards, midfielders, defenders then goalkeeper. */
-function evenlySpacedFormationY(count: number, index: number) {
-  if (count <= 1) return 50;
-  // Keep complete card assemblies inside the painted pitch at every shared
-  // Club Hub / Market viewport.  The previous 14–86 span placed the outer
-  // cards beyond the lower field edge once their centred height was applied.
-  return 20 + ((60 / (count - 1)) * index);
-}
-
-function midfieldLineX(lineCount: number, lineIndex: number) {
-  if (lineCount <= 1) return 61;
-  return 52 + ((18 / (lineCount - 1)) * lineIndex);
-}
-
 /**
- * Shared Market Transfer formation geometry. Club Hub consumes this exact
- * source so each club's Squad Preview follows the approved Market pitch for
- * the same formation, without per-club coordinate adjustments.
+ * Shared flat-pitch formation geometry for Market, Club Hub and Matchday.
+ * The Arena field/camera pipeline deliberately does not consume this registry:
+ * Arena is a separate visual system with independent calibration constraints.
  */
-export function touchlineCanonicalFormationSlots(formation: string): TouchlineFormationPitchSlot[] {
-  const validFormation = touchlineFormationCapacities(formation) ? formation : "4-3-3";
-  const lineCounts = validFormation.split("-").map((value) => Number.parseInt(value, 10));
-  const defenderCount = lineCounts[0];
-  const midfieldLineCounts = lineCounts.slice(1, -1);
-  const forwardCount = lineCounts.at(-1)!;
-  let midfielderRoleIndex = 0;
-
-  return [
-    { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 },
-    ...Array.from({ length: defenderCount }, (_, roleIndex) => ({
-      role: "defender" as const,
-      roleIndex,
-      x: 34,
-      y: evenlySpacedFormationY(defenderCount, roleIndex),
-    })),
-    ...midfieldLineCounts.flatMap((count, lineIndex) => (
-      Array.from({ length: count }, (_, index) => ({
-        role: "midfielder" as const,
-        roleIndex: midfielderRoleIndex++,
-        x: midfieldLineX(midfieldLineCounts.length, lineIndex),
-        y: evenlySpacedFormationY(count, index),
-      }))
-    )),
-    ...Array.from({ length: forwardCount }, (_, roleIndex) => ({
-      role: "forward" as const,
-      roleIndex,
-      x: 88,
-      y: evenlySpacedFormationY(forwardCount, roleIndex),
-    })),
-  ];
+export function touchlineCanonicalFormationSlots(
+  formation: string,
+  registry?: TouchlineFormationGeometryRegistry,
+): TouchlineFormationPitchSlot[] {
+  return [...resolveTouchlineFormationGeometry(formation, registry).slots];
 }
 
 /** The ClubHub preview selection order remains forwards, midfielders, defenders, goalkeeper. */

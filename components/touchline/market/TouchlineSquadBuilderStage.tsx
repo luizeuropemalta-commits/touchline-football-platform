@@ -16,8 +16,9 @@ import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 import {
-  isTouchlineFormationCandidateEligible,
-} from "@/lib/touchlineArena/formation-transition";
+  isTouchlineTacticalSlotCandidateEligible,
+  type TouchlineFormationGeometryRegistry,
+} from "@/lib/touchlineArena/formation-geometry";
 import { TOUCHLINE_SQUAD_RULES, resolveTouchlineSquadJourney } from "@/lib/touchlineArena/squad-rules";
 import { touchlineCanonicalFormationSlots } from "@/lib/touchlineArena/pitch-layout";
 
@@ -48,6 +49,7 @@ type Props = {
   formation: string;
   formationConfirmed: boolean;
   formationOptions: readonly string[];
+  geometryRegistry?: TouchlineFormationGeometryRegistry;
   onSelectFormation: (formation: string) => void;
   coachName?: string | null;
   coachCard?: ReactNode;
@@ -135,10 +137,10 @@ function SquadPlayerCardZoom({
   );
 }
 
-function formationSlots(formation: string): FormationSlot[] {
-  return touchlineCanonicalFormationSlots(formation).map((slot) => ({
+function formationSlots(formation: string, geometryRegistry?: TouchlineFormationGeometryRegistry): FormationSlot[] {
+  return touchlineCanonicalFormationSlots(formation, geometryRegistry).map((slot) => ({
     ...slot,
-    id: `${slot.role}-${slot.roleIndex}`,
+    id: slot.id,
   }));
 }
 
@@ -166,6 +168,7 @@ export default function TouchlineSquadBuilderStage({
   formation,
   formationConfirmed,
   formationOptions,
+  geometryRegistry,
   onSelectFormation,
   coachName,
   coachCard,
@@ -179,30 +182,43 @@ export default function TouchlineSquadBuilderStage({
   onAssignPlayer,
 }: Props) {
   const portuguese = locale === "pt-BR";
-  const slots = formationSlots(formation);
+  const slots = useMemo(() => formationSlots(formation, geometryRegistry), [formation, geometryRegistry]);
   const [activeSlot, setActiveSlot] = useState<{
     id: string;
     role: TouchlineSquadBuilderRole;
+    allowedPositions: FormationSlot["allowedPositions"];
     targetPlayerId: string | null;
   } | null>(null);
-  const startersByRole = new Map<TouchlineSquadBuilderRole, TouchlineSquadBuilderStarter[]>();
-  for (const role of ["goalkeeper", "defender", "midfielder", "forward"] as const) {
-    startersByRole.set(role, starters.filter((player) => player.role === role));
-  }
+  const startersBySlot = useMemo(() => {
+    const available = [...starters];
+    const assigned = new Map<string, TouchlineSquadBuilderStarter>();
+    for (const slot of slots) {
+      const exactIndex = available.findIndex((player) => isTouchlineTacticalSlotCandidateEligible({
+        position: player.card.position || player.role,
+        role: player.role,
+      }, slot));
+      const broadIndex = available.findIndex((player) => player.role === slot.role);
+      const selectedIndex = exactIndex >= 0 ? exactIndex : broadIndex;
+      if (selectedIndex < 0) continue;
+      const [player] = available.splice(selectedIndex, 1);
+      if (player) assigned.set(slot.id, player);
+    }
+    return assigned;
+  }, [slots, starters]);
   const squadCandidates = useMemo(
     () => [...bench, ...remainingSquad],
     [bench, remainingSquad],
   );
   const eligibleCandidates = useMemo(() => (
     activeSlot
-      ? squadCandidates.filter((player) => isTouchlineFormationCandidateEligible(
+      ? squadCandidates.filter((player) => isTouchlineTacticalSlotCandidateEligible(
           { position: player.position, role: player.role },
-          activeSlot.role,
+          activeSlot,
         ))
       : []
   ), [activeSlot, squadCandidates]);
   const vacancyCounts = slots.reduce<Partial<Record<TouchlineSquadBuilderRole, number>>>((counts, slot) => {
-    const player = startersByRole.get(slot.role)?.[slot.roleIndex];
+    const player = startersBySlot.get(slot.id);
     if (!player) counts[slot.role] = (counts[slot.role] ?? 0) + 1;
     return counts;
   }, {});
@@ -289,7 +305,7 @@ export default function TouchlineSquadBuilderStage({
               {formationFeedback ? <span>{formationFeedback}</span> : null}
             </div>
             {slots.map((slot) => {
-              const player = startersByRole.get(slot.role)?.[slot.roleIndex];
+              const player = startersBySlot.get(slot.id);
               return player ? (
                 <article
                   key={slot.id}
@@ -303,7 +319,7 @@ export default function TouchlineSquadBuilderStage({
                   <button
                     type="button"
                     className={styles.changePlayer}
-                    onClick={() => setActiveSlot({ id: slot.id, role: slot.role, targetPlayerId: player.id })}
+                    onClick={() => setActiveSlot({ id: slot.id, role: slot.role, allowedPositions: slot.allowedPositions, targetPlayerId: player.id })}
                     disabled={!journey.formationComplete}
                     aria-label={`${portuguese ? "Alterar" : "Change"} ${player.name} · ${roleLabel(slot.role, portuguese)}`}
                     aria-haspopup="dialog"
@@ -317,7 +333,7 @@ export default function TouchlineSquadBuilderStage({
                   type="button"
                   className={`${styles.emptySlot} ${activeSlot?.id === slot.id ? styles.selected : ""}`}
                   style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-                  onClick={() => setActiveSlot({ id: slot.id, role: slot.role, targetPlayerId: null })}
+                  onClick={() => setActiveSlot({ id: slot.id, role: slot.role, allowedPositions: slot.allowedPositions, targetPlayerId: null })}
                   disabled={!journey.formationComplete}
                   aria-label={`${portuguese ? "Adicionar" : "Add"} ${roleLabel(slot.role, portuguese)}`}
                   aria-pressed={activeSlot?.id === slot.id}

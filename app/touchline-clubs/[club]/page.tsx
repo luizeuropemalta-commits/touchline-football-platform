@@ -49,6 +49,7 @@ import { getTouchlineClubTrophyAssets } from "@/lib/touchlineArena/club-trophy-m
 import { fetchTouchlineInternalJson } from "@/lib/server/safe-internal-fetch";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
+import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 
 export const dynamic = "force-dynamic";
 
@@ -357,11 +358,12 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const club = findTouchLineClub(clubParam);
   if (!club) notFound();
 
-  const [squadLoad, matchSnapshot, clubHonours, officialLeagueTable] = await Promise.all([
+  const [squadLoad, matchSnapshot, clubHonours, officialLeagueTable, formationGeometryRegistry] = await Promise.all([
     loadClubSquadCards(club, locale),
     loadClubMatchSnapshot(club, locale),
     loadClubTrophyAssets(club),
     loadTouchlineOfficialLeagueTable(),
+    readTouchlineFormationGeometryRegistry(),
   ]);
   const matchPreview = matchSnapshot.preview;
   const seasonPoints = await readPublicSeasonPlayerPoints(
@@ -382,6 +384,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
     formation: matchSnapshot.formation,
     fixtureId: matchSnapshot.fixtureId,
     officialCoach: matchSnapshot.coach,
+    formationGeometryRegistry,
   });
   const clubLineup = matchdayPresentation.lineup;
   const displayedMatchdayPlayerIds = new Set(matchdayPresentation.displayedPlayerIds.map(String));

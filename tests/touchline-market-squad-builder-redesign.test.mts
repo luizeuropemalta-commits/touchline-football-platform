@@ -38,7 +38,7 @@ test("the Market owns one premium squad-building stage with distinct player grou
   const source = await readFile(stagePath, "utf8");
   assert.match(source, /Monte seu time TouchLine/);
   assert.match(source, /TouchlinePitchSurface/);
-  assert.match(source, /touchlineCanonicalFormationSlots\(formation\)/);
+  assert.match(source, /touchlineCanonicalFormationSlots\(formation, geometryRegistry\)/);
   assert.match(source, /Banco da partida/);
   assert.match(source, /Elenco restante/);
   assert.match(source, /Array\.from\(\{ length: TOUCHLINE_SQUAD_RULES\.bench \}/);

@@ -4,6 +4,7 @@ import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { getTouchLineMarketCopy } from "@/lib/touchlineArena/market-i18n";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
+import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 
 type MarketTransferPageProps = {
   searchParams: Promise<{
@@ -32,7 +33,10 @@ export async function generateMetadata({ searchParams }: MarketTransferPageProps
 export default async function MarketTransferPage({ searchParams }: MarketTransferPageProps) {
   const params = await searchParams;
   const locale = normalizeTouchLineLocale(firstValue(params.lang));
-  const supabase = await createClient();
+  const [supabase, initialTwoDimensionalFormationRegistry] = await Promise.all([
+    createClient(),
+    readTouchlineFormationGeometryRegistry(),
+  ]);
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
 
   return (
@@ -45,6 +49,7 @@ export default async function MarketTransferPage({ searchParams }: MarketTransfe
       initialContractPlayerName={firstValue(params.contractName)}
       initialContractClubId={firstValue(params.contractClub)}
       canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
+      initialTwoDimensionalFormationRegistry={initialTwoDimensionalFormationRegistry}
     />
   );
 }
