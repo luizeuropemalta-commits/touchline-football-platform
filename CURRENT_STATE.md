@@ -1,8 +1,15 @@
 # TouchLine Current State
 
+## QA cumulative Sportmonks rating backfill — GREEN / PUBLISHED
+
+- QA commit `3133a86` adds a canonical cumulative-rating field to the existing server-side season aggregate. The aggregate is recomputed from every persisted final fixture for each canonical player: starts and substitutes who entered with a valid Sportmonks rating are included; unused substitutes and provider-absent ratings are never converted to zero.
+- The protected QA rebuild completed on 2026-08-23. Independent fixture audit: 278 players with eligible appearances, 271 players / 271 player-match ratings with valid provider ratings, 271 cards with persisted `totalRating`, 7 true provider-missing ratings and 0 duplicate `(canonical_player_id, fixture_id)` rows. Numeric aggregate mismatches: 0.
+- The active QA ranking snapshot is now `player-v3:1e83121b-b778-459b-b9a0-7cf1eaff5729:6462744f`, published at `2026-08-23T21:45:10.121Z`. Its 312-player payload carries the same cumulative rating for every rated ranked player (247 payload values; 0 ranking-to-aggregate mismatches). Native Safari CUSTOMER rendered Top 20, Card, Zoom, Profile and Ranking with Jack Hinshelwood’s total rating `8.94`; TouchLine Points remain the independent V3 total `7`.
+- Future fixture syncs use the same canonical aggregate rebuild and immutable fixture identity, so the backfill is idempotent and new valid Sportmonks ratings join the same history automatically.
+
 ## QA Score Engine V3 Ranking — GREEN / PUBLISHED
 
-- The active QA ranking snapshot is `player-v3:1e83121b-b778-459b-b9a0-7cf1eaff5729:2beb347d`: `player_scoring_v3`, `complete_for_scoring`, 312 ranked players, 284 total TouchLine Points, published at `2026-08-23T20:49:39.841Z`.
+- The prior V3 snapshot was `player-v3:1e83121b-b778-459b-b9a0-7cf1eaff5729:2beb347d`: `player_scoring_v3`, `complete_for_scoring`, 312 ranked players, 284 total TouchLine Points, published at `2026-08-23T20:49:39.841Z`.
 - Seven final, low-minute substitute appearances have a persisted official Sportmonks lineup record but no Sportmonks rating: Fabian Schär (19722195, 1'), Ben Gannon-Doak (19722196, 1'), Alejandro Garnacho and Malick Yalcouyé (19722197, 4'), Destiny Udogie (19722198, 4'), Arnaud Kalimuendo (19722199, 1') and Carlos Alcaraz (19722201, 1'). They are provider omissions, never zero-point substitutions and never V2 fallbacks; their ranking coverage is explicitly `complete_for_scoring`.
 - QA commit `25c9a6f` keeps `/touchline-player-card-rankings` dynamically rendered, because snapshot publication is independent of a web deployment. Native Safari CUSTOMER then rendered the V3 live order, all 312 cards and its Top 20. Jack Hinshelwood proved the cross-surface contract: Sportmonks rating `8.94` → V3 match points `7`; Card, Zoom, Profile and Ranking all show season total `7`.
 - QA-only checks passed: focused 36/36, TypeScript and scoped ESLint. Deployment `dpl_2j87vJBUbaPT3wsaME64HbQaEy7N` is READY on the stable `qa` alias. Production remains untouched.
