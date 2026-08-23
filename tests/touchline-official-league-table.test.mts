@@ -89,7 +89,7 @@ test("the one official table applies a verified live draw provisionally", () => 
   assert.equal(result.coverage.liveFixtures, 1);
   assert.equal(result.rows.length, 20);
   assert.deepEqual(result.rows.find((row) => row.team.providerTeamId === "3"), {
-    position: null,
+    position: 1,
     team: { providerTeamId: "3", name: "Club 3", shortCode: "C3", slug: "club-3", logoUrl: null },
     played: 1, won: 1, drawn: 0, lost: 0, goalsFor: 1, goalsAgainst: 0, goalDifference: 1, points: 3, form: ["W"],
     liveFixture: { providerFixtureId: "live", scoreFor: 1, scoreAgainst: 0, stale: true },
@@ -238,10 +238,31 @@ test("an unresolved sporting tie stays partial instead of using a club-name tie-
 
   assert.equal(result.state, "partial");
   assert.equal(result.reason, "official-tiebreak-pending");
-  assert.ok(result.rows.every((row) => row.position === null));
+  assert.deepEqual(result.rows.map((row) => row.position), [1, 1]);
 
   const source = readFileSync(new URL("../lib/football-data/official-standings.ts", import.meta.url), "utf8");
   assert.doesNotMatch(source, /localeCompare/);
+});
+
+test("verified criteria publish shared competition ranks across the 20-club table", () => {
+  const result = resolveTouchlineOfficialLeagueTable({
+    season,
+    teams: teams(),
+    fixtures: [
+      fixture({ providerFixtureId: "leader-a", homeClubId: "club-1", awayClubId: "club-20", homeScore: 3, awayScore: 0 }),
+      fixture({ providerFixtureId: "leader-b", homeClubId: "club-2", awayClubId: "club-19", homeScore: 3, awayScore: 0 }),
+      fixture({ providerFixtureId: "next", homeClubId: "club-3", awayClubId: "club-18", homeScore: 2, awayScore: 0 }),
+    ],
+  });
+
+  assert.equal(result.state, "partial");
+  assert.equal(result.reason, "official-tiebreak-pending");
+  assert.deepEqual(result.rows.slice(0, 3).map((row) => [row.team.providerTeamId, row.position, row.points, row.goalDifference]), [
+    ["1", 1, 3, 3],
+    ["2", 1, 3, 3],
+    ["3", 3, 3, 2],
+  ]);
+  assert.ok(result.rows.every((row) => row.position !== null));
 });
 
 test("shared table component and pages keep data loading on the server boundary", () => {
@@ -256,6 +277,7 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /Initial table — all 20 clubs are level\./);
   assert.match(component, /Tabela inicial — os 20 clubes estão empatados\./);
   assert.match(component, /row\.position \?\? "—"/);
+  assert.match(component, /share a position until official evidence separates them/);
   assert.match(component, /data-live=/);
   assert.match(component, /data-live-stale=/);
   assert.match(component, /latest persisted live scores/);

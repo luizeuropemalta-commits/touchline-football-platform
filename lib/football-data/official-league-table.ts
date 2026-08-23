@@ -208,15 +208,24 @@ function liveFixtureForClub(
 
 function tableRows(
   standingsRows: readonly OfficialStandingsRow<TouchlineOfficialLeagueTableTeam>[],
-  positionsVerified: boolean,
+  positionsPublishable: boolean,
   fixtures: readonly TouchlineOfficialLeagueTableFixture[],
   now: number,
 ): readonly TouchlineOfficialLeagueTableRow[] {
+  let publishedPosition = 0;
   return standingsRows.flatMap((row, index) => {
     const team = row.team;
     if (!team.slug) return [];
+    const previous = standingsRows[index - 1];
+    const sharesOfficialCriteriaWithPrevious = Boolean(previous
+      && row.points === previous.points
+      && row.goalDifference === previous.goalDifference
+      && row.goalsFor === previous.goalsFor);
+    if (!sharesOfficialCriteriaWithPrevious) publishedPosition = index + 1;
     return [{
-      position: positionsVerified ? index + 1 : null,
+      position: positionsPublishable
+        ? publishedPosition
+        : null,
       team: {
         providerTeamId: team.providerTeamId,
         name: team.name,
@@ -349,7 +358,10 @@ export function resolveTouchlineOfficialLeagueTable(input: ResolveInput): Touchl
     season: input.season,
     asOf,
     coverage,
-    rows: tableRows(standings.rows, !hasProvisionalOrdering, fixturesInSeason, now),
+    // Exact sporting ties share their competition rank until the official
+    // provider supplies enough evidence to separate them. A duplicate fixture
+    // is different: it invalidates the projection and suppresses every rank.
+    rows: tableRows(standings.rows, standings.duplicateFixtures === 0, fixturesInSeason, now),
     reason: standings.hasUnresolvedTieBreaks
       ? "official-tiebreak-pending"
       : standings.duplicateFixtures > 0
