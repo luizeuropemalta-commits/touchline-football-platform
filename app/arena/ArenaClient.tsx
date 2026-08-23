@@ -16347,12 +16347,6 @@ export default function ArenaClient({
         .arena-coach-technical-area.is-entry-ready {
           opacity: 1;
           visibility: visible;
-          animation: arena-card-layer-reveal .42s cubic-bezier(.22, 1, .36, 1);
-        }
-
-        @keyframes arena-card-layer-reveal {
-          from { opacity: 0; }
-          to { opacity: 1; }
         }
 
         .arena-field-selection-clear-layer {
@@ -16743,7 +16737,6 @@ export default function ArenaClient({
           gap: 8px;
           pointer-events: auto;
           filter: drop-shadow(0 30px 54px rgba(0,0,0,.62)) drop-shadow(0 0 28px rgba(181,255,75,.18));
-          animation: arenaSpotlightIn .18s ease-out;
         }
 
         .arena-player-spotlight-panel-with-details {
@@ -16849,17 +16842,6 @@ export default function ArenaClient({
           background: linear-gradient(135deg, rgba(9,16,23,.9), rgba(35,62,51,.82));
           color: #f3ffa8;
           box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 16px 34px rgba(0,0,0,.4);
-        }
-
-        @keyframes arenaSpotlightIn {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
         }
 
         .arena-field-placeholder {
