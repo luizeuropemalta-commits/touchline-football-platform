@@ -119,7 +119,7 @@ export function buildTouchLineClubLineup(input: {
 /**
  * Pure ClubHub read model. A public matchday is confirmed only after the
  * selected fixture supplies one exact 11-player XI and the complete technical
- * team sheet (coach plus nine unique substitutes). It never infers a coach,
+ * team sheet (coach plus the provider's unique substitutes). It never infers a coach,
  * bench member, fixture or player identity.
  */
 export function buildTouchLineClubMatchdayPresentation(input: {
@@ -163,7 +163,10 @@ export function buildTouchLineClubMatchdayPresentation(input: {
   const benchAreUnique = benchIds.every((id): id is string => Boolean(id))
     && new Set(benchIds).size === benchIds.length
     && benchIds.every((id) => !starterIds.includes(id));
-  const confirmedBenchCards = benchAreUnique && officialBench.length === 9
+  // Sportmonks determines the official bench size. Competitions and matchday
+  // regulations differ, so a fixed count would turn a valid official sheet
+  // into a perpetual preview.
+  const confirmedBenchCards = benchAreUnique && officialBench.length > 0
     ? officialBench.map((member) => strictCardForOfficialMember(member, input.squadCards))
     : [];
   const coach = input.officialCoach
@@ -175,7 +178,8 @@ export function buildTouchLineClubMatchdayPresentation(input: {
     : null;
   const hasConfirmedTechnicalTeamSheet = hasConfirmedStartingEleven
     && coach !== null
-    && confirmedBenchCards.length === 9
+    && officialBench.length > 0
+    && confirmedBenchCards.length === officialBench.length
     && confirmedBenchCards.every(Boolean);
   const bench = hasConfirmedTechnicalTeamSheet
     ? confirmedBenchCards as ClubOwnerSquadCard[]

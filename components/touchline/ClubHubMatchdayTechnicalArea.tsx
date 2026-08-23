@@ -8,12 +8,11 @@ type ClubHubMatchdayTechnicalAreaProps = {
   locale: string;
 };
 
-const MATCHDAY_BENCH_SIZE = 9;
-
 /**
  * Public ClubHub matchday technical area. This is deliberately a presentation
  * of the fail-closed matchday read model: names appear only with a complete,
- * official coach + nine-substitute team sheet for the selected fixture.
+ * official coach + provider-confirmed technical team sheet for the selected
+ * fixture. The provider determines the bench size.
  */
 export default function ClubHubMatchdayTechnicalArea({
   clubName,
@@ -23,7 +22,8 @@ export default function ClubHubMatchdayTechnicalArea({
   const portuguese = locale === "pt-BR";
   const confirmed = technical.state === "confirmed"
     && technical.coach !== null
-    && technical.bench.length === MATCHDAY_BENCH_SIZE;
+    && technical.bench.length > 0;
+  const benchSize = confirmed ? technical.bench.length : 0;
   const awaitingLabel = portuguese
     ? "Aguardando súmula oficial da partida"
     : "Awaiting official matchday sheet";
@@ -56,14 +56,13 @@ export default function ClubHubMatchdayTechnicalArea({
           )}
         </section>
 
-        <section className={styles.bench} aria-label={`${benchLabel} (${MATCHDAY_BENCH_SIZE})`}>
+        <section className={styles.bench} aria-label={confirmed ? `${benchLabel} (${benchSize})` : benchLabel}>
           <div className={styles.benchHeader}>
             <span className={styles.label}>{benchLabel}</span>
-            <strong>{confirmed ? `${MATCHDAY_BENCH_SIZE}/${MATCHDAY_BENCH_SIZE}` : `0/${MATCHDAY_BENCH_SIZE}`}</strong>
+            <strong>{confirmed ? `${benchSize}/${benchSize}` : "—"}</strong>
           </div>
           <ol className={styles.slots}>
-            {Array.from({ length: MATCHDAY_BENCH_SIZE }, (_, index) => {
-              const player = confirmed ? technical.bench[index] : null;
+            {(confirmed ? technical.bench : [null]).map((player, index) => {
               const slotNumber = index + 1;
               const awaitingSlotLabel = portuguese
                 ? `Vaga ${slotNumber} do banco — aguardando súmula oficial`

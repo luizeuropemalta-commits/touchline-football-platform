@@ -100,7 +100,7 @@ test("ClubHub confirms and distributes only a complete provider Starting XI for 
   );
 });
 
-test("ClubHub confirms the technical area only for an exact fixture, club, XI, coach, and nine-person bench", () => {
+test("ClubHub confirms the technical area only for an exact fixture, club, XI, coach, and provider bench", () => {
   const presentation = buildTouchLineClubMatchdayPresentation({
     club: city,
     squadCards,
@@ -126,6 +126,20 @@ test("ClubHub confirms the technical area only for an exact fixture, club, XI, c
   assert.ok(presentation.displayedPlayerIds.every((id) => lineupIds.includes(id) || benchIds.includes(id)));
 });
 
+test("ClubHub accepts the provider's complete bench size without assuming nine substitutes", () => {
+  const presentation = buildTouchLineClubMatchdayPresentation({
+    club: city,
+    squadCards,
+    officialLineup: [...officialStarters, ...officialBench.slice(0, 7)],
+    fixtureId: "fixture-1",
+    officialCoach: matchingCoach,
+  });
+
+  assert.equal(presentation.lineup.status, "confirmed");
+  assert.equal(presentation.technical.state, "confirmed");
+  assert.equal(presentation.technical.bench.length, 7);
+});
+
 test("ClubHub fail-closes the named technical bench for incomplete or mismatched official sheets", () => {
   const incompleteCases = [
     {
@@ -134,8 +148,8 @@ test("ClubHub fail-closes the named technical bench for incomplete or mismatched
       officialCoach: null,
     },
     {
-      label: "only eight substitutes",
-      officialLineup: [...officialStarters, ...officialBench.slice(0, 8)],
+      label: "no official substitutes",
+      officialLineup: [...officialStarters],
       officialCoach: matchingCoach,
     },
     {
