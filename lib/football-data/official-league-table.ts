@@ -268,10 +268,9 @@ function tableRows(
 }
 
 /**
- * Before the first verified final, the canonical 20-club scope is useful but
- * no sporting position exists. Keep the server-provided club order intact and
- * publish neutral zero statistics with null positions rather than inventing a
- * table or hiding the season entirely.
+ * Before the first verified final, all 20 clubs share sporting rank 1.
+ * Canonical club name orders the presentation-only display position 1..20,
+ * matching the official in-season table without inventing another tiebreaker.
  */
 function preSeasonRows(
   teams: readonly TouchlineOfficialLeagueTableTeam[],
