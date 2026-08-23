@@ -327,6 +327,7 @@ export function mapAuthoritativeRosterRows(
     const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId), position);
     const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId), position);
     const seasonTouchlinePoints = touchlinePointsFor(contract, inventory, seasonStatisticByPlayerId.get(playerId));
+    const seasonTotalRating = totalRatingFor(seasonStatisticByPlayerId.get(playerId));
     const matchPointContributions = verifiedPointContributions(fixtureStatisticByPlayerId.get(playerId));
     cards.push({
       id: playerId,
@@ -354,7 +355,7 @@ export function mapAuthoritativeRosterRows(
       // consumes the explicit null-aware season projection below.
       touchlinePoints: seasonTouchlinePoints ?? 0,
       seasonTouchlinePoints,
-      seasonTotalRating: totalRatingFor(seasonStatisticByPlayerId.get(playerId)),
+      ...(seasonTotalRating === null ? {} : { seasonTotalRating }),
       matchTouchlinePoints: asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.touchline_points),
       ...(seasonStats ? { seasonStats } : {}),
       ...(matchStats ? { matchStats } : {}),
