@@ -81,11 +81,10 @@ test("complete inputs auto-publish atomically while incomplete inputs stay in re
   assert.match(migration, /revoke all on function public\.touchline_apply_card_editorial_review/);
 });
 
-test("VALUE REQUIRED accepts only a verified non-negative integer market value", () => {
+test("VALUE REQUIRED delegates verified market-value validation to the shared alert policy", () => {
   const page = readFileSync(new URL("../app/(app)/admin/manual-card-editorial/page.tsx", import.meta.url), "utf8");
   assert.match(page, /player_id,status,confidence,market_value_eur/);
-  assert.match(page, /Number\.isSafeInteger\(marketValueByPlayerId\.get\(player\.id\)\?\.market_value_eur\)/);
-  assert.match(page, /market_value_eur \?\? -1\) >= 0/);
+  assert.match(page, /hasTouchlineVerifiedMarketValue/);
 });
 
 test("derived publication never fabricates a market-value review", () => {

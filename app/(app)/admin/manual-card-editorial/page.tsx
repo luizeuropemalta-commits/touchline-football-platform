@@ -9,7 +9,7 @@ import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
-import { findTouchlineNewPlayerCardAlerts } from "@/lib/touchlineArena/new-player-card-alerts";
+import { findTouchlineNewPlayerCardAlerts, hasTouchlineVerifiedMarketValue } from "@/lib/touchlineArena/new-player-card-alerts";
 import { hasTouchlineCardPublicationRevertSnapshot } from "@/lib/touchlineArena/card-publication-revert";
 import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
 import { loadTouchlineCardEditorialOverrides } from "@/lib/touchlineArena/card-editorial-overrides";
@@ -185,10 +185,11 @@ export default async function ManualCardEditorialPage({
         competitionId: membership.competition_id,
       })),
       publicationStatus: publicationsByPlayerId.get(player.id) ?? null,
-      hasVerifiedMarketValue: marketValueByPlayerId.get(player.id)?.status === "verified"
-        && marketValueByPlayerId.get(player.id)?.confidence === "verified"
-        && Number.isSafeInteger(marketValueByPlayerId.get(player.id)?.market_value_eur)
-        && (marketValueByPlayerId.get(player.id)?.market_value_eur ?? -1) >= 0,
+      hasVerifiedMarketValue: hasTouchlineVerifiedMarketValue({
+        status: marketValueByPlayerId.get(player.id)?.status,
+        confidence: marketValueByPlayerId.get(player.id)?.confidence,
+        marketValueEur: marketValueByPlayerId.get(player.id)?.market_value_eur,
+      }),
     })),
   });
   const { data: historyRows } = migrationPending ? { data: [] } : await admin

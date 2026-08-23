@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { findTouchlineNewPlayerCardAlerts } from "../lib/touchlineArena/new-player-card-alerts.ts";
+import { findTouchlineNewPlayerCardAlerts, hasTouchlineVerifiedMarketValue } from "../lib/touchlineArena/new-player-card-alerts.ts";
 
 const COMPETITION_ID = "11111111-2222-4333-8444-555555555555";
 const CLUB_ID = "66666666-7777-4888-8999-aaaaaaaaaaaa";
@@ -70,6 +70,12 @@ test("a verified editorial value leaves VALUE REQUIRED even if another card fiel
     competitionId: COMPETITION_ID,
     candidates: [candidate({ publicationStatus: "market_value_required", hasVerifiedMarketValue: true })],
   }), []);
+});
+
+test("verified market value accepts zero but rejects missing and non-integer values", () => {
+  assert.equal(hasTouchlineVerifiedMarketValue({ status: "verified", confidence: "verified", marketValueEur: 0 }), true);
+  assert.equal(hasTouchlineVerifiedMarketValue({ status: "verified", confidence: "verified", marketValueEur: null }), false);
+  assert.equal(hasTouchlineVerifiedMarketValue({ status: "verified", confidence: "verified", marketValueEur: 1.5 }), false);
 });
 
 test("ambiguous, transferred or out-of-scope identities fail closed", () => {

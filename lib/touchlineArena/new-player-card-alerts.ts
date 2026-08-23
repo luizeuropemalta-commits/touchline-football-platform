@@ -39,6 +39,18 @@ export type TouchlineNewPlayerCardAlert = Readonly<{
   label: "NEW PLAYER · MARKET VALUE REQUIRED";
 }>;
 
+/** A confirmed zero is a real value; an absent or fractional value is not. */
+export function hasTouchlineVerifiedMarketValue(value: Readonly<{
+  status: string | null | undefined;
+  confidence: string | null | undefined;
+  marketValueEur: number | null | undefined;
+}>) {
+  return value.status === "verified"
+    && value.confidence === "verified"
+    && Number.isSafeInteger(value.marketValueEur)
+    && (value.marketValueEur ?? -1) >= 0;
+}
+
 function canonicalUuid(value: string | null | undefined) {
   return typeof value === "string" && UUID_PATTERN.test(value.trim().toLowerCase());
 }
