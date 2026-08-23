@@ -658,6 +658,33 @@ export default async function TouchLinePlayerProfilePage({
     touchlinePoints: playerStatistics.currentSeason.summary.touchlinePoints
       ?? (rankingCompetition.ranked ? rankingCompetition.touchlinePoints : null),
   };
+  const zoomMatchHistoryFields = playerStatistics.lastFiveMatches.map((fixture) => {
+    const appearance = isPortuguese
+      ? {
+        started: "Titular",
+        substitute: "Substituto",
+        unused: "Não utilizado",
+        absent: "Ausente",
+        unavailable: text.unavailable,
+      }[fixture.appearanceStatus]
+      : {
+        started: "Started",
+        substitute: "Substitute",
+        unused: "Unused",
+        absent: "Absent",
+        unavailable: text.unavailable,
+      }[fixture.appearanceStatus];
+    const minutes = fixture.minutes === null
+      ? text.unavailable
+      : `${fixture.minutes} ${text.minutes.toLowerCase()}`;
+    const points = fixture.touchlinePoints === null
+      ? text.unavailable
+      : String(fixture.touchlinePoints);
+    return {
+      label: `${isPortuguese ? "Histórico da partida" : "Match history"} · ${fixture.fixtureStartsAt ?? text.unavailable}`,
+      value: `${appearance} · ${minutes} · ${isPortuguese ? "Pontos" : "Points"} ${points}`,
+    };
+  });
   const cumulativePointsText = competition.touchlinePoints === null
     ? text.unavailable
     : String(competition.touchlinePoints);
@@ -822,6 +849,7 @@ export default async function TouchLinePlayerProfilePage({
             position: exactPlayer.position || card.position,
           }, locale),
           ...buildTouchlineMatchScoringBreakdownFields(exactPlayer.matchPointContributions, locale),
+          ...zoomMatchHistoryFields,
           { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },
           { label: isPortuguese ? "Idade" : "Age", value: official.player?.age === undefined ? null : String(official.player.age) },
         ],
