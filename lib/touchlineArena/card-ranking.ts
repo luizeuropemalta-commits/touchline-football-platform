@@ -44,6 +44,8 @@ export type TouchlineRankingPlayerInput = {
   role?: string | null;
   touchlinePoints: number;
   roundPoints?: number | null;
+  /** Immutable snapshot of the canonical season total of valid match ratings. */
+  totalRating?: number | null;
   minutesPlayed?: number | null;
   appearances?: number | null;
 };
@@ -86,6 +88,10 @@ function finiteNumber(value?: number | null) {
 
 function finiteNonNegative(value?: number | null) {
   return Math.max(0, finiteNumber(value));
+}
+
+function finiteNullable(value?: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function stablePlayerKey(player: TouchlineRankingPlayerInput) {
@@ -168,6 +174,7 @@ export function buildTouchlinePositionRankings(
           ...player,
           touchlinePoints: finiteNumber(player.touchlinePoints),
           roundPoints: finiteNumber(player.roundPoints),
+          totalRating: finiteNullable(player.totalRating),
           minutesPlayed: finiteNonNegative(player.minutesPlayed),
           appearances: finiteNonNegative(player.appearances),
           positionGroup: group,

@@ -21,6 +21,7 @@ export type TouchlineActiveRankingPlayer = Pick<
   | "groupSize"
   | "touchlinePoints"
   | "roundPoints"
+  | "totalRating"
   | "tierKey"
   | "priceTc"
 >;
@@ -100,6 +101,9 @@ function isRankingPlayer(value: unknown): value is TouchlineActiveRankingPlayer 
       && POSITION_GROUPS.has(player.positionGroup as TouchlinePositionRankingGroup)
       && typeof player.touchlinePoints === "number"
       && Number.isFinite(player.touchlinePoints)
+      && (player.totalRating === undefined || player.totalRating === null || (
+        typeof player.totalRating === "number" && Number.isFinite(player.totalRating)
+      ))
       && (player.roundPoints === undefined || (
         typeof player.roundPoints === "number"
         && Number.isFinite(player.roundPoints)

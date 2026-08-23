@@ -122,6 +122,13 @@ export default async function TouchLinePlayerCardRankingsPage({
         touchlinePoints: card.touchlinePoints,
         extraFields: [
           {
+            label: locale === "pt-BR" ? "Nota total" : "Total rating",
+            value: card.seasonTotalRating === null || card.seasonTotalRating === undefined
+              ? "—"
+              : String(card.seasonTotalRating),
+            accent: true,
+          },
+          {
             label: locale === "pt-BR" ? "Pontos da partida" : "Match points",
             value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
             accent: true,
@@ -186,6 +193,9 @@ export default async function TouchLinePlayerCardRankingsPage({
               card.position,
               zoom.displayPrice,
               `${card.touchlinePoints} ${copy.pointsShort}`,
+              card.seasonTotalRating === null || card.seasonTotalRating === undefined
+                ? null
+                : `${locale === "pt-BR" ? "Nota total" : "Total rating"} ${card.seasonTotalRating}`,
             ].filter(Boolean).join(" / ");
             return (
               <article key={card.id} id={card.id}>
@@ -307,7 +317,7 @@ export default async function TouchLinePlayerCardRankingsPage({
                     {club?.logoUrl ? <img src={club.logoUrl} alt="" draggable={false} /> : null}
                     <span>{club?.shortCode ?? card.clubName}</span>
                   </div>
-                  <b>{card.touchlinePoints} {copy.pointsShort}</b>
+                  <b aria-label={`${copy.pointsShort} ${card.touchlinePoints}${card.seasonTotalRating === null || card.seasonTotalRating === undefined ? "" : `, ${locale === "pt-BR" ? "Nota total" : "Total rating"} ${card.seasonTotalRating}`}`}>{card.touchlinePoints} {copy.pointsShort}</b>
                   {zoom.displayPrice ? <em>{zoom.displayPrice}</em> : null}
                   <div className="tl-card-rankings-actions">
                     <a href={marketTransferHref(club?.slug)}>{copy.marketTransfer}</a>

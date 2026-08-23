@@ -219,6 +219,8 @@ export type TouchlineEliteExactPlayer = {
   avatarObjectPosition?: string;
   /** Audited, cumulative TouchLine Points balance across published fixtures. */
   fantasyPoints?: string | number | null;
+  /** Audited sum of valid Sportmonks match ratings across appearances. */
+  totalRating?: string | number | null;
   /** Current-fixture points. Only Arena field cards may expose this value. */
   matchFantasyPoints?: string | number | null;
   /** Cumulative TouchLine England league statistics, kept separate from points. */
@@ -879,6 +881,9 @@ export function TouchlineEliteExactCard({
     : player.fantasyPoints === null || player.fantasyPoints === ""
       ? "—"
       : touchlineCardMetricText(player.fantasyPoints);
+  const totalRatingText = player.totalRating === null || player.totalRating === undefined || player.totalRating === ""
+    ? null
+    : touchlineCardMetricText(player.totalRating);
   const cardLabels = { ...localizedCardLabels(runtimeLocale), ...labels };
   // A game card exists only after the server-owned publication policy has
   // attached a published presentation. The authenticated Market can opt into
@@ -1436,7 +1441,8 @@ export function TouchlineEliteExactCard({
           fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           textTransform: "uppercase",
         }}
-        aria-label={`${player.name} TouchLine card`}
+        aria-label={`${player.name} TouchLine card${player.totalRating === null || player.totalRating === undefined ? "" : `, total rating ${touchlineCardMetricText(player.totalRating)}`}`}
+        data-total-rating={player.totalRating === null || player.totalRating === undefined ? undefined : touchlineCardMetricText(player.totalRating)}
       >
         {cardFrameImage()}
         <div
@@ -1585,6 +1591,7 @@ export function TouchlineEliteExactCard({
         >
           <div style={{ color: "rgba(226,246,255,.76)", fontSize: 8 * fieldScale("marketValue"), lineHeight: `${10 * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>{compactPrimaryLabel}</div>
           <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: totalPointsSize * fieldScale("marketValue"), lineHeight: `${(totalPointsSize + 2) * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactPrimaryValue}</div>
+          {totalRatingText ? <div data-card-total-rating="true" style={{ marginTop: 2, color: "rgba(226,246,255,.78)", fontSize: 7 * fieldScale("marketValue"), lineHeight: `${9 * fieldScale("marketValue")}px`, fontWeight: 900, letterSpacing: ".02em", whiteSpace: "nowrap" }}>{runtimeLocale === "pt-BR" ? "NOTA TOTAL" : "TOTAL RATING"} {totalRatingText}</div> : null}
         </div>
 
         <div

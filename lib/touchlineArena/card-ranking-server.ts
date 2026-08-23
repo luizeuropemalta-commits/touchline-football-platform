@@ -54,6 +54,7 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
       groupSize: player.groupSize,
       touchlinePoints: player.touchlinePoints,
       roundPoints: player.roundPoints,
+      totalRating: player.totalRating,
       tierKey: player.tierKey,
       priceTc: player.priceTc,
     })) : [],

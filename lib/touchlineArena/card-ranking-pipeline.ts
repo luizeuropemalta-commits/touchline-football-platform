@@ -104,6 +104,7 @@ export function touchlineRankingSnapshotChecksum(input: {
       positionRank: player.positionRank,
       points: player.touchlinePoints,
       roundPoints: player.roundPoints ?? 0,
+      totalRating: player.totalRating ?? null,
       minutes: player.minutesPlayed ?? 0,
       appearances: player.appearances ?? 0,
       tierKey: player.tierKey,
@@ -186,6 +187,9 @@ export function auditTouchlineRankingDraft(
     }
     if (row.roundPoints !== null && row.roundPoints !== undefined && !Number.isFinite(row.roundPoints)) {
       issues.push({ code: "round-points-invalid", message: "Round points must be finite.", playerId: row.playerId });
+    }
+    if (row.totalRating !== null && row.totalRating !== undefined && !Number.isFinite(row.totalRating)) {
+      issues.push({ code: "total-rating-invalid", message: "Total rating must be finite when available.", playerId: row.playerId });
     }
     for (const [key, value] of [["minutes", row.minutesPlayed], ["appearances", row.appearances]] as const) {
       if (value === null || value === undefined || !Number.isInteger(value) || value < 0) {

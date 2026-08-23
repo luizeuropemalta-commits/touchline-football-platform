@@ -58,6 +58,28 @@ test("a complete season aggregate requires every eligible fixture exactly once",
   assert.equal(aggregate.summary.goals, 1);
   assert.equal(aggregate.summary.assists, 1);
   assert.equal(aggregate.summary.rating, 7.5);
+  assert.equal(aggregate.summary.totalRating, 15);
+  assert.equal(aggregate.summary.ratedAppearances, 2);
+});
+
+test("total rating backfills every valid started or substitute appearance without bench or missing-rating zeros", () => {
+  const unusedBench = lineup({ fixtureId: "f-3", starter: false, minutes: 0, rating: 9 });
+  const enteredWithoutRating = lineup({ fixtureId: "f-4", starter: false, minutes: 4, rating: 7 });
+  enteredWithoutRating.statistics = enteredWithoutRating.statistics.filter((statistic) => statistic.code !== "rating");
+  const aggregate = buildTouchLinePlayerSeasonAggregate({
+    providerPlayerId: "154421",
+    season: { seasonId: "current", seasonName: "2026/27", competitionId: "england", competitionName: "TouchLine England", clubId: "city", clubName: "Manchester City" },
+    eligibleFixtures: [
+      { fixtureId: "f-1", lineups: [lineup({ fixtureId: "f-1", starter: true, minutes: 90, rating: 8.94 })] },
+      { fixtureId: "f-2", lineups: [lineup({ fixtureId: "f-2", starter: false, minutes: 30, rating: 7.5 })] },
+      { fixtureId: "f-3", lineups: [unusedBench] },
+      { fixtureId: "f-4", lineups: [enteredWithoutRating] },
+    ],
+  });
+
+  assert.equal(aggregate.summary.totalRating, 16.44);
+  assert.equal(aggregate.summary.ratedAppearances, 2);
+  assert.equal(aggregate.summary.rating, 8.22);
 });
 
 test("a missing fixture is partial and never gets a complete-season label", () => {
@@ -176,6 +198,8 @@ test("public player surfaces use TouchLine branding and the canonical season rea
   assert.match(profile, /loadTouchLinePlayerStatisticsReadModel/);
   assert.match(profile, /previousCompletedSeason/);
   assert.match(profile, /currentSeason/);
+  assert.match(profile, /matchHistory/);
+  assert.match(profile, /totalRating/);
   assert.match(profile, /lastFiveMatches/);
   assert.doesNotMatch(profile, /SportMonks|Sportmonks|provider response|do provedor/);
   assert.doesNotMatch(coach, />Sportmonks</);

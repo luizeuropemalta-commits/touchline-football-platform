@@ -97,6 +97,7 @@ function emptyReadModel(providerPlayerId: string | null): TouchLinePlayerStatist
     mappingStatus: "unavailable",
     previousCompletedSeason: emptyTouchLinePlayerSeasonStatistics({ unavailableReason: "mapping-not-verified" }),
     currentSeason: emptyTouchLinePlayerSeasonStatistics({ unavailableReason: "mapping-not-verified" }),
+    matchHistory: [],
     lastFiveMatches: [],
     currentOrSelectedFixture: null,
   };
@@ -269,6 +270,9 @@ export async function loadTouchLinePlayerStatisticsReadModel(input: {
   const allFixtures = fixtureRows
     .map((row) => fixtureStatisticFromRow(row, input.position))
     .sort((first, second) => Date.parse(second.fixtureStartsAt ?? "") - Date.parse(first.fixtureStartsAt ?? ""));
+  const matchHistory = allFixtures.filter((fixture) => (
+    fixture.appearanceStatus === "started" || fixture.appearanceStatus === "substitute"
+  ));
   const selectedFixtureStatistic = selectTouchLineCurrentOrLastVerifiedFixture(
     allFixtures,
     input.selectedFixtureId,
@@ -305,7 +309,8 @@ export async function loadTouchLinePlayerStatisticsReadModel(input: {
       player,
       position: input.position,
     }),
-    lastFiveMatches: input.selectedFixtureId ? [] : allFixtures.slice(0, 5),
+    matchHistory: input.selectedFixtureId ? [] : matchHistory,
+    lastFiveMatches: input.selectedFixtureId ? [] : matchHistory.slice(0, 5),
     currentOrSelectedFixture,
   };
 }

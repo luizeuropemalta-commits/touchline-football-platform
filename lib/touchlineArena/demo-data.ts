@@ -56,6 +56,8 @@ export type ClubOwnerSquadCard = {
   touchlinePoints: number;
   /** A public server projection. Null explicitly means the season total is unavailable. */
   seasonTouchlinePoints?: number | null;
+  /** Canonical sum of valid Sportmonks ratings from started/substitute appearances. */
+  seasonTotalRating?: number | null;
   /** Latest reconciled fixture points; null means no verified fixture fact. */
   matchTouchlinePoints?: number | null;
   /** Verified cumulative football statistics used by the shared card. */
@@ -386,6 +388,7 @@ export function squadCardToExactPlayer(
     fantasyPoints: card.seasonTouchlinePoints === undefined
       ? card.touchlinePoints
       : card.seasonTouchlinePoints,
+    totalRating: card.seasonTotalRating,
     matchFantasyPoints: card.matchTouchlinePoints,
     seasonStats: card.seasonStats,
     matchStats: card.matchStats,

@@ -148,6 +148,7 @@ export async function loadTouchLineRankedCardCatalog(
       editorialCard,
       touchlinePoints: ranking.touchlinePoints,
       seasonTouchlinePoints: ranking.touchlinePoints,
+      seasonTotalRating: ranking.totalRating ?? number(object(seasonByPlayerId.get(playerId)?.summary_payload).totalRating),
       matchTouchlinePoints: number(match?.touchline_points),
       seasonStats: verifiedStats(seasonByPlayerId.get(playerId), position),
       matchStats: verifiedMatchStats(match, position),

@@ -43,14 +43,22 @@ function sumOnlyWhenKnown(members: TouchlineFantasyLineupMember[], codes: string
   return values.every((value) => value !== null) ? values.reduce((total, value) => total + (value ?? 0), 0) : null;
 }
 
-function averageOnlyWhenKnown(members: TouchlineFantasyLineupMember[], codes: string[]) {
-  // A player with no recorded appearance has no verified rating. Zero would
-  // look like a measured rating and would violate the unavailable-data rule.
-  if (!members.length) return null;
-  const values = members.map((member) => numericStatistic(member, codes));
-  if (!values.every((value) => value !== null)) return null;
-  const total = values.reduce((sum, value) => sum + (value ?? 0), 0);
-  return Math.round((total / values.length) * 100) / 100;
+function isStartedOrEntered(member: TouchlineFantasyLineupMember) {
+  if (member.isStarter) return true;
+  const minutes = numericStatistic(member, ["minutes-played", "minutes"]);
+  return Boolean(member.isSubstitute && minutes !== null && minutes > 0);
+}
+
+function validRatedAppearances(members: TouchlineFantasyLineupMember[]) {
+  return members.flatMap((member) => {
+    const rating = numericStatistic(member, ["rating"]);
+    return isStartedOrEntered(member) && rating !== null ? [rating] : [];
+  });
+}
+
+function roundedRatingTotal(values: readonly number[]) {
+  if (!values.length) return null;
+  return Math.round(values.reduce((total, value) => total + value, 0) * 100) / 100;
 }
 
 function eventStatisticOnlyWhenKnown(
@@ -89,6 +97,7 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
   const startsKnown = allLineupsAvailable && playerEntries.every((member) => typeof member.isStarter === "boolean");
   const minutes = sumOnlyWhenKnown(playerEntries, ["minutes-played", "minutes"]);
   const knownAppearanceEntries = playerEntries.filter((member) => numericStatistic(member, ["minutes-played", "minutes"]) !== null);
+  const ratedAppearances = validRatedAppearances(playerEntries);
   const appearances = allLineupsAvailable && knownAppearanceEntries.length === playerEntries.length
     ? playerEntries.filter((member) => (numericStatistic(member, ["minutes-played", "minutes"]) ?? 0) > 0).length
     : null;
@@ -163,7 +172,11 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
         ?? sumOnlyWhenKnown(playerEntries, ["goals"]),
       assists: eventStatisticOnlyWhenKnown(synchronizedFixtures, input.providerPlayerId, "assists")
         ?? sumOnlyWhenKnown(playerEntries, ["assists"]),
-      rating: averageOnlyWhenKnown(playerEntries, ["rating"]),
+      rating: ratedAppearances.length
+        ? Math.round((ratedAppearances.reduce((total, value) => total + value, 0) / ratedAppearances.length) * 100) / 100
+        : null,
+      totalRating: roundedRatingTotal(ratedAppearances),
+      ratedAppearances: ratedAppearances.length || null,
       yellowCards: eventStatisticOnlyWhenKnown(synchronizedFixtures, input.providerPlayerId, "yellowCards")
         ?? sumOnlyWhenKnown(playerEntries, ["yellow-cards", "yellowcards"]),
       redCards: eventStatisticOnlyWhenKnown(synchronizedFixtures, input.providerPlayerId, "redCards")

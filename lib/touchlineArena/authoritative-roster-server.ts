@@ -118,6 +118,10 @@ function touchlinePointsFor(
   return null;
 }
 
+function totalRatingFor(seasonStatistic?: DatabaseRecord | null) {
+  return asFiniteNumber(asRecord(seasonStatistic?.summary_payload)?.totalRating);
+}
+
 function verifiedSeasonStats(row: DatabaseRecord | null | undefined, position: string) {
   const summary = asRecord(row?.summary_payload);
   if (!summary) return undefined;
@@ -350,6 +354,7 @@ export function mapAuthoritativeRosterRows(
       // consumes the explicit null-aware season projection below.
       touchlinePoints: seasonTouchlinePoints ?? 0,
       seasonTouchlinePoints,
+      seasonTotalRating: totalRatingFor(seasonStatisticByPlayerId.get(playerId)),
       matchTouchlinePoints: asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.touchline_points),
       ...(seasonStats ? { seasonStats } : {}),
       ...(matchStats ? { matchStats } : {}),

@@ -153,6 +153,9 @@ const copy = {
     goals: "Goals",
     assists: "Assists",
     rating: "Rating",
+    totalRating: "Total rating",
+    ratedAppearances: "Rated appearances",
+    matchHistory: "Match history",
     yellowCards: "Yellow cards",
     redCards: "Red cards",
   },
@@ -221,6 +224,9 @@ const copy = {
     goals: "Gols",
     assists: "Assistências",
     rating: "Nota",
+    totalRating: "Nota total",
+    ratedAppearances: "Partidas com nota",
+    matchHistory: "Histórico de partidas",
     yellowCards: "Cartões amarelos",
     redCards: "Cartões vermelhos",
   },
@@ -440,6 +446,8 @@ function seasonSummaryEntries(statistics: TouchLinePlayerSeasonStatistics, text:
     [text.goals, statistics.summary.goals],
     [text.assists, statistics.summary.assists],
     [text.rating, statistics.summary.rating],
+    [text.totalRating, statistics.summary.totalRating],
+    [text.ratedAppearances, statistics.summary.ratedAppearances],
     [text.yellowCards, statistics.summary.yellowCards],
     [text.redCards, statistics.summary.redCards],
   ] as const;
@@ -517,14 +525,15 @@ function FixtureStatisticsPanel({
   return (
     <div className={styles.fixtureStatsGrid}>
       <article className={styles.officialGroup}>
-        <h3>{text.lastFiveMatches}</h3>
-        {model.lastFiveMatches.length ? (
+        <h3>{text.matchHistory}</h3>
+        {model.matchHistory.length ? (
           <div className={styles.fixtureStatsList}>
-            {model.lastFiveMatches.map((fixture) => (
+            {model.matchHistory.map((fixture) => (
               <div key={fixture.fixtureId}>
                 <span>{fixture.fixtureStartsAt ?? text.unavailable}</span>
                 <strong>{appearanceLabel(fixture.appearanceStatus)}</strong>
                 <small>{fixture.minutes === null ? text.unavailable : `${fixture.minutes} ${text.minutes.toLowerCase()}`}</small>
+                <small>{text.rating}: {fixture.rating === null ? "—" : String(fixture.rating)}</small>
               </div>
             ))}
           </div>
@@ -658,7 +667,7 @@ export default async function TouchLinePlayerProfilePage({
     touchlinePoints: playerStatistics.currentSeason.summary.touchlinePoints
       ?? (rankingCompetition.ranked ? rankingCompetition.touchlinePoints : null),
   };
-  const zoomMatchHistoryFields = playerStatistics.lastFiveMatches.map((fixture) => {
+  const zoomMatchHistoryFields = playerStatistics.matchHistory.map((fixture) => {
     const appearance = isPortuguese
       ? {
         started: "Titular",
@@ -677,18 +686,17 @@ export default async function TouchLinePlayerProfilePage({
     const minutes = fixture.minutes === null
       ? text.unavailable
       : `${fixture.minutes} ${text.minutes.toLowerCase()}`;
-    const points = fixture.touchlinePoints === null
-      ? text.unavailable
-      : String(fixture.touchlinePoints);
+    const rating = fixture.rating === null ? "—" : String(fixture.rating);
     return {
       label: `${isPortuguese ? "Histórico da partida" : "Match history"} · ${fixture.fixtureStartsAt ?? text.unavailable}`,
-      value: `${appearance} · ${minutes} · ${isPortuguese ? "Pontos" : "Points"} ${points}`,
+      value: `${appearance} · ${minutes} · ${isPortuguese ? "Nota" : "Rating"} ${rating}`,
     };
   });
   const cumulativePointsText = competition.touchlinePoints === null
     ? text.unavailable
     : String(competition.touchlinePoints);
   exactPlayer.fantasyPoints = competition.touchlinePoints;
+  exactPlayer.totalRating = playerStatistics.currentSeason.summary.totalRating;
   exactPlayer.matchFantasyPoints = playerStatistics.currentOrSelectedFixture?.touchlinePoints ?? null;
   exactPlayer.matchPointContributions = playerStatistics.currentOrSelectedFixture?.pointContributions ?? [];
   const statisticNumber = (statistics: Record<string, string | number>, ...keys: string[]) => {
@@ -842,6 +850,13 @@ export default async function TouchLinePlayerProfilePage({
           {
             label: text.currentMatchPoints,
             value: exactPlayer.matchFantasyPoints === null ? text.unavailable : String(exactPlayer.matchFantasyPoints),
+            accent: true,
+          },
+          {
+            label: text.totalRating,
+            value: playerStatistics.currentSeason.summary.totalRating === null
+              ? "—"
+              : String(playerStatistics.currentSeason.summary.totalRating),
             accent: true,
           },
           ...buildTouchlineVerifiedMatchFactFields({

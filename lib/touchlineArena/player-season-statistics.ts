@@ -7,7 +7,12 @@ export type TouchLinePlayerSeasonSummary = {
   minutes: number | null;
   goals: number | null;
   assists: number | null;
+  /** Average of valid Sportmonks appearance ratings, never a synthetic zero. */
   rating: number | null;
+  /** Sum of valid Sportmonks ratings across canonical player appearances. */
+  totalRating: number | null;
+  /** Number of rated started/substitute appearances included in totalRating. */
+  ratedAppearances: number | null;
   yellowCards: number | null;
   redCards: number | null;
   touchlinePoints: number | null;
@@ -61,6 +66,9 @@ export type TouchLinePlayerStatisticsReadModel = {
   mappingStatus: "verified" | "unavailable";
   previousCompletedSeason: TouchLinePlayerSeasonStatistics;
   currentSeason: TouchLinePlayerSeasonStatistics;
+  /** Every canonical started/substitute appearance, newest first. */
+  matchHistory: TouchLinePlayerFixtureStatistics[];
+  /** Compact profile rail retained for the immediate match context. */
   lastFiveMatches: TouchLinePlayerFixtureStatistics[];
   currentOrSelectedFixture: TouchLinePlayerFixtureStatistics | null;
 };
@@ -91,6 +99,8 @@ export const TOUCHLINE_PLAYER_SEASON_SUMMARY_KEYS = [
   "goals",
   "assists",
   "rating",
+  "totalRating",
+  "ratedAppearances",
   "yellowCards",
   "redCards",
   "touchlinePoints",
@@ -139,6 +149,8 @@ export function emptyTouchLinePlayerSeasonStatistics(input: Partial<Pick<
       goals: null,
       assists: null,
       rating: null,
+      totalRating: null,
+      ratedAppearances: null,
       yellowCards: null,
       redCards: null,
       touchlinePoints: null,
