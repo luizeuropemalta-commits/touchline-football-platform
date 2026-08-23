@@ -32,31 +32,47 @@ function evenlySpacedFormationY(count: number, index: number) {
   return 14 + ((72 / (count - 1)) * index);
 }
 
+function midfieldLineX(lineCount: number, lineIndex: number) {
+  if (lineCount <= 1) return 61;
+  return 52 + ((18 / (lineCount - 1)) * lineIndex);
+}
+
 /**
  * Shared Market Transfer formation geometry. Club Hub consumes this exact
  * source so each club's Squad Preview follows the approved Market pitch for
  * the same formation, without per-club coordinate adjustments.
  */
 export function touchlineCanonicalFormationSlots(formation: string): TouchlineFormationPitchSlot[] {
-  const capacities = touchlineFormationCapacities(formation) ?? {
-    goalkeeper: 1,
-    defender: 4,
-    midfielder: 3,
-    forward: 3,
-  };
-  const lines: ReadonlyArray<Readonly<{ role: TouchlineFormationPitchRole; count: number; x: number }>> = [
-    { role: "goalkeeper", count: capacities.goalkeeper, x: 9 },
-    { role: "defender", count: capacities.defender, x: 34 },
-    { role: "midfielder", count: capacities.midfielder, x: 61 },
-    { role: "forward", count: capacities.forward, x: 88 },
-  ];
+  const validFormation = touchlineFormationCapacities(formation) ? formation : "4-3-3";
+  const lineCounts = validFormation.split("-").map((value) => Number.parseInt(value, 10));
+  const defenderCount = lineCounts[0];
+  const midfieldLineCounts = lineCounts.slice(1, -1);
+  const forwardCount = lineCounts.at(-1)!;
+  let midfielderRoleIndex = 0;
 
-  return lines.flatMap(({ role, count, x }) => Array.from({ length: count }, (_, roleIndex) => ({
-    role,
-    roleIndex,
-    x,
-    y: evenlySpacedFormationY(count, roleIndex),
-  })));
+  return [
+    { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 },
+    ...Array.from({ length: defenderCount }, (_, roleIndex) => ({
+      role: "defender" as const,
+      roleIndex,
+      x: 34,
+      y: evenlySpacedFormationY(defenderCount, roleIndex),
+    })),
+    ...midfieldLineCounts.flatMap((count, lineIndex) => (
+      Array.from({ length: count }, (_, index) => ({
+        role: "midfielder" as const,
+        roleIndex: midfielderRoleIndex++,
+        x: midfieldLineX(midfieldLineCounts.length, lineIndex),
+        y: evenlySpacedFormationY(count, index),
+      }))
+    )),
+    ...Array.from({ length: forwardCount }, (_, roleIndex) => ({
+      role: "forward" as const,
+      roleIndex,
+      x: 88,
+      y: evenlySpacedFormationY(forwardCount, roleIndex),
+    })),
+  ];
 }
 
 /** The ClubHub preview selection order remains forwards, midfielders, defenders, goalkeeper. */

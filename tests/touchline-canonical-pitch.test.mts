@@ -31,6 +31,20 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
     { role: "forward", roleIndex: 0, x: 88, y: 14 },
     { role: "forward", roleIndex: 1, x: 88, y: 86 },
   ]);
+  assert.deepEqual(touchlineCanonicalFormationSlots("4-2-3-1"), [
+    { role: "goalkeeper", roleIndex: 0, x: 9, y: 50 },
+    { role: "defender", roleIndex: 0, x: 34, y: 14 },
+    { role: "defender", roleIndex: 1, x: 34, y: 38 },
+    { role: "defender", roleIndex: 2, x: 34, y: 62 },
+    { role: "defender", roleIndex: 3, x: 34, y: 86 },
+    { role: "midfielder", roleIndex: 0, x: 52, y: 14 },
+    { role: "midfielder", roleIndex: 1, x: 52, y: 86 },
+    { role: "midfielder", roleIndex: 2, x: 70, y: 14 },
+    { role: "midfielder", roleIndex: 3, x: 70, y: 50 },
+    { role: "midfielder", roleIndex: 4, x: 70, y: 86 },
+    { role: "forward", roleIndex: 0, x: 88, y: 50 },
+  ]);
+  assert.deepEqual(touchlineCanonicalFormationSlots("not-a-formation"), touchlineCanonicalFormationSlots("4-3-3"));
 });
 
 test("field art is a shared component rather than separate page drawings", () => {
