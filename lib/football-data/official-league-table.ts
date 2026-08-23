@@ -57,6 +57,8 @@ export type TouchlineOfficialLeagueTableRow = Readonly<{
   sportsRank: number | null;
   /** True when another club shares every currently verified sporting criterion. */
   isTied: boolean;
+  /** Continuous 1..20 position after presentation-only ordering of exact ties. */
+  displayPosition: number | null;
   team: Readonly<{
     providerTeamId: string;
     name: string;
@@ -243,6 +245,7 @@ function tableRows(
         ? publishedPosition
         : null,
       isTied: positionsPublishable && (sharesOfficialCriteriaWithPrevious || sharesOfficialCriteriaWithNext),
+      displayPosition: positionsPublishable ? index + 1 : null,
       team: {
         providerTeamId: team.providerTeamId,
         name: team.name,
@@ -275,9 +278,17 @@ function preSeasonRows(
   fixtures: readonly TouchlineOfficialLeagueTableFixture[],
   now: number,
 ): readonly TouchlineOfficialLeagueTableRow[] {
-  return teams.flatMap((team) => team.slug ? [{
-    sportsRank: null,
-    isTied: false,
+  const displayTeams = teams
+    .filter((team): team is TouchlineOfficialLeagueTableTeam & Readonly<{ slug: string }> => Boolean(team.slug))
+    .sort((left, right) => (
+      left.name < right.name ? -1 : left.name > right.name ? 1
+      : left.providerTeamId < right.providerTeamId ? -1 : left.providerTeamId > right.providerTeamId ? 1
+      : 0
+    ));
+  return displayTeams.map((team, index) => ({
+    sportsRank: 1,
+    isTied: true,
+    displayPosition: index + 1,
     team: {
       providerTeamId: team.providerTeamId,
       name: team.name,
@@ -295,7 +306,7 @@ function preSeasonRows(
     points: 0,
     form: [],
     liveFixture: liveFixtureForClub(team.clubId, fixtures, now),
-  }] : []);
+  }));
 }
 
 /**
@@ -368,21 +379,21 @@ export function resolveTouchlineOfficialLeagueTable(input: ResolveInput): Touchl
     };
   }
 
-  const hasProvisionalOrdering = standings.hasUnresolvedTieBreaks || standings.duplicateFixtures > 0;
-  const state: TouchlineOfficialLeagueTableState = hasProvisionalOrdering ? "partial" : "ready";
+  const state: TouchlineOfficialLeagueTableState = standings.duplicateFixtures > 0 ? "partial" : "ready";
   return {
     state,
     competitionProviderId: input.competitionProviderId ?? TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID,
     season: input.season,
     asOf,
     coverage,
-    // Exact sporting ties share their competition rank until the official
-    // provider supplies enough evidence to separate them. A duplicate fixture
-    // is different: it invalidates the projection and suppresses every rank.
+    // During the season, exact ties share the competition rank defined by
+    // Points -> GD -> GF. Canonical club name affects presentation order only,
+    // while displayPosition remains continuous. End-of-season Rule C.17
+    // criteria require explicit completion/stakes evidence and are not applied
+    // prematurely by this live projection. A duplicate fixture invalidates the
+    // projection and suppresses both sporting and display positions.
     rows: tableRows(standings.rows, standings.duplicateFixtures === 0, fixturesInSeason, now),
-    reason: standings.hasUnresolvedTieBreaks
-      ? "official-tiebreak-pending"
-      : standings.duplicateFixtures > 0
+    reason: standings.duplicateFixtures > 0
       ? "duplicate-fixture-observed"
       : null,
   };

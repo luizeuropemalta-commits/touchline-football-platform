@@ -232,7 +232,7 @@ export async function loadTouchlineOfficialLeagueTable(
     // Version the cached DTO whenever displayed-table semantics change. This
     // prevents a new deployment from serving one stale prior-shape response
     // while stale-while-revalidate refreshes the shared Data Cache.
-    ["touchline-official-league-table-v3", TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID, scope.season.id],
+    ["touchline-official-league-table-v4", TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID, scope.season.id],
     // The single table includes persisted live score facts provisionally.
     // Ten seconds bounds normal browser polling without requiring a manual
     // reload; a degraded provider leaves the last persisted fixture state.

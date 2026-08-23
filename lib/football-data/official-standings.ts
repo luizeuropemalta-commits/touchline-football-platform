@@ -23,12 +23,6 @@ export type OfficialStandings<T> = Readonly<{
   rows: readonly OfficialStandingsRow<T>[];
   completedFixtures: number;
   duplicateFixtures: number;
-  /**
-   * Fixture results alone cannot decide every competition tie-break. A caller
-   * must not promote a stable sort fallback (such as a club name) to an
-   * official position.
-   */
-  hasUnresolvedTieBreaks: boolean;
 }>;
 
 const FINAL_STATUS = /^(?:ft|finished|full[ -]?time|after extra time|aet|after penalties)$/i;
@@ -113,18 +107,9 @@ export function buildOfficialStandings<T>(input: {
     .sort((left, right) => right.points - left.points
       || (right.goalsFor - right.goalsAgainst) - (left.goalsFor - left.goalsAgainst)
       || right.goalsFor - left.goalsFor);
-  const hasUnresolvedTieBreaks = rankedRows.some((row, index) => {
-    const previous = rankedRows[index - 1];
-    return Boolean(previous
-      && row.points === previous.points
-      && row.goalsFor - row.goalsAgainst === previous.goalsFor - previous.goalsAgainst
-      && row.goalsFor === previous.goalsFor);
-  });
-
   return {
     completedFixtures,
     duplicateFixtures,
-    hasUnresolvedTieBreaks,
     rows: rankedRows
       .map((row) => ({
         team: row.team,

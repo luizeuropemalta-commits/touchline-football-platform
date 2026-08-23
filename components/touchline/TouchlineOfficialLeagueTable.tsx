@@ -68,12 +68,12 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     stale: "STALE",
     scoreUnavailable: "score unavailable",
     currentClub: "Current club",
-    tiedPosition: "Tied on points, goal difference and goals scored.",
+    tiedPosition: "Level on points, goal difference and goals scored. Display order shown for presentation.",
     finalResults: "verified final results",
     pendingTitle: "Initial table — all 20 clubs are level.",
-    pendingDescription: "Every club is shown with neutral statistics. Positions begin after the first verified final result; no league leader or position is invented.",
-    partialTitle: "Verified results or live provisional scores are available; an official tie-break is still being confirmed.",
-    partialDescription: "Clubs level on every verified criterion share a position until official evidence separates them. No alphabetical tie-break is invented.",
+    pendingDescription: "Every club is level on sporting criteria. Continuous positions use alphabetical display order only until a verified result separates them.",
+    partialTitle: "Verified results remain visible; league positions are temporarily withheld.",
+    partialDescription: "TouchLine detected a duplicated fixture observation. No position is published until table integrity is restored.",
     unavailableTitle: "Official standings are temporarily unavailable.",
     unavailableDescription: "No league position is shown until TouchLine can verify the canonical result set again.",
     integrityTitle: "Official standings are being checked.",
@@ -97,12 +97,12 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     stale: "DESATUALIZADO",
     scoreUnavailable: "placar indisponível",
     currentClub: "Clube atual",
-    tiedPosition: "Empatados em pontos, saldo de gols e gols marcados.",
+    tiedPosition: "Empatados em pontos, saldo de gols e gols marcados. A ordem exibida é apenas para apresentação.",
     finalResults: "resultados finais verificados",
     pendingTitle: "Tabela inicial — os 20 clubes estão empatados.",
-    pendingDescription: "Todos os clubes aparecem com estatísticas neutras. As posições começam após o primeiro resultado final verificado; nenhuma liderança ou posição é inventada.",
-    partialTitle: "Há resultados verificados ou placares ao vivo provisórios; um desempate oficial ainda está sendo confirmado.",
-    partialDescription: "Clubes empatados em todos os critérios verificados compartilham a posição até existir evidência oficial para separá-los. Nenhum desempate alfabético é inventado.",
+    pendingDescription: "Todos os clubes estão empatados nos critérios esportivos. As posições contínuas usam ordem alfabética apenas para apresentação até que um resultado verificado os separe.",
+    partialTitle: "Os resultados verificados continuam visíveis; as posições estão temporariamente suspensas.",
+    partialDescription: "A TouchLine detectou uma observação duplicada de fixture. Nenhuma posição é publicada até a integridade da tabela ser restaurada.",
     unavailableTitle: "A tabela oficial está temporariamente indisponível.",
     unavailableDescription: "Nenhuma posição é exibida até a TouchLine verificar novamente o conjunto canônico de resultados.",
     integrityTitle: "A tabela oficial está sendo verificada.",
@@ -210,17 +210,17 @@ export default function TouchlineOfficialLeagueTable({
                       data-live-stale={row.liveFixture?.stale || undefined}
                     >
                       <td className={styles.rankCell}>
-                        {row.sportsRank === null ? "—" : row.isTied ? (
+                        {row.displayPosition === null ? "—" : row.isTied ? (
                           <span
                             className={styles.tiedRank}
                             tabIndex={0}
                             title={dictionary.tiedPosition}
-                            aria-label={`${row.sportsRank}. ${dictionary.tiedPosition}`}
+                            aria-label={`${row.displayPosition}. ${dictionary.tiedPosition}`}
                             data-tooltip={dictionary.tiedPosition}
                           >
-                            <span aria-hidden="true">{row.sportsRank}=</span>
+                            <span aria-hidden="true">{row.displayPosition}</span>
                           </span>
-                        ) : row.sportsRank}
+                        ) : row.displayPosition}
                       </td>
                       <th scope="row">
                         <Link href={`/touchline-clubs/${row.team.slug}?lang=${localeQuery}`} aria-current={isCurrent ? "page" : undefined}>
