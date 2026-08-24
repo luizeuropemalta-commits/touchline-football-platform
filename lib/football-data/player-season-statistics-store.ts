@@ -258,6 +258,14 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
   }
   result.membershipsRead = memberships.length;
 
+  // A full round can contain hundreds of players. Keep the persisted V2
+  // audit rows and the active V3 rows, but materialise each table in one
+  // idempotent command rather than making the live synchronisation wait for
+  // one network round-trip per player and per fixture.
+  const aggregateRows: Record<string, unknown>[] = [];
+  const fixtureRows: Record<string, unknown>[] = [];
+  const v3FixtureRows: Record<string, unknown>[] = [];
+
   for (const membership of memberships as MembershipRow[]) {
     const providerPlayerId = String(membership.football_players?.provider_player_id ?? "").trim();
     const provider = membership.football_players?.provider;
@@ -347,9 +355,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         };
       }),
     });
-    const { error: aggregateError } = await admin
-      .from("football_player_season_statistics")
-      .upsert({
+    aggregateRows.push({
         football_player_id: membership.football_player_id,
         competition_id: membership.competition_id,
         season_id: membership.season_id,
@@ -365,12 +371,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         position_statistics_payload: aggregate.positionStatistics,
         scoring_version: "player_scoring_v3",
         source_synced_at: aggregate.latestSyncAt,
-      }, { onConflict: "football_player_id,competition_id,season_id,scoring_version" });
-    if (aggregateError) {
-      result.errors.push(`aggregate:${membership.football_player_id}:${aggregateError.message}`);
-      continue;
-    }
-    result.aggregatesWritten += 1;
+    });
     if (aggregate.coverageStatus === "partial") result.partialAggregates += 1;
     if (aggregate.coverageStatus === "complete_for_scoring") result.completeForScoringAggregates += 1;
     if (aggregate.coverageStatus === "unavailable") result.unavailableAggregates += 1;
@@ -388,9 +389,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         settlementStatus,
         rankingCoverageStatus,
       } = settlement;
-      const { error: fixtureError } = await admin
-        .from("football_player_fixture_statistics")
-        .upsert({
+      fixtureRows.push({
           football_player_id: membership.football_player_id,
           fixture_id: fixture.id,
           competition_id: membership.competition_id,
@@ -409,13 +408,9 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
           position_group: pointResult.positionGroup,
           settlement_status: settlementStatus,
           source_synced_at: feed?.last_synced_at ?? null,
-        }, { onConflict: "football_player_id,fixture_id" });
-      if (fixtureError) result.errors.push(`fixture:${fixture.id}:${fixtureError.message}`);
-      else result.fixtureRowsWritten += 1;
+      });
 
-      const { error: v3FixtureError } = await admin
-        .from("touchline_player_fixture_score_settlements")
-        .upsert({
+      v3FixtureRows.push({
           football_player_id: membership.football_player_id,
           fixture_id: fixture.id,
           competition_id: membership.competition_id,
@@ -433,11 +428,42 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
           missing_scoring_facts: v3PointResult.missingFacts,
           settlement_status: settlementStatus,
           source_synced_at: feed?.last_synced_at ?? null,
-        }, { onConflict: "football_player_id,fixture_id,scoring_version" });
-      if (v3FixtureError) result.errors.push(`v3-fixture:${fixture.id}:${v3FixtureError.message}`);
-      else result.v3FixtureRowsWritten += 1;
+      });
     }
   }
+
+  const { error: aggregateError } = aggregateRows.length
+    ? await admin
+      .from("football_player_season_statistics")
+      .upsert(aggregateRows, { onConflict: "football_player_id,competition_id,season_id,scoring_version" })
+    : { error: null };
+  if (aggregateError) result.errors.push(`aggregate-batch:${aggregateError.message}`);
+  else result.aggregatesWritten = aggregateRows.length;
+
+  // Do not publish a new fixture-level view when its corresponding season
+  // aggregate could not be saved. This keeps every surface fail-closed while
+  // preserving the previous coherent snapshot for a retry.
+  if (aggregateError) {
+    result.errors.push("fixture-batch:skipped_after_aggregate_batch_failure");
+    result.errors.push("v3-fixture-batch:skipped_after_aggregate_batch_failure");
+  } else {
+    const { error: fixtureError } = fixtureRows.length
+      ? await admin
+        .from("football_player_fixture_statistics")
+        .upsert(fixtureRows, { onConflict: "football_player_id,fixture_id" })
+      : { error: null };
+    if (fixtureError) result.errors.push(`fixture-batch:${fixtureError.message}`);
+    else result.fixtureRowsWritten = fixtureRows.length;
+
+    const { error: v3FixtureError } = v3FixtureRows.length
+      ? await admin
+        .from("touchline_player_fixture_score_settlements")
+        .upsert(v3FixtureRows, { onConflict: "football_player_id,fixture_id,scoring_version" })
+      : { error: null };
+    if (v3FixtureError) result.errors.push(`v3-fixture-batch:${v3FixtureError.message}`);
+    else result.v3FixtureRowsWritten = v3FixtureRows.length;
+  }
+
   const ranking = await rebuildTouchLinePlayerRankingV3(admin);
   result.rankingSnapshotId = ranking.snapshotId;
   result.rankingPlayers = ranking.playerCount;

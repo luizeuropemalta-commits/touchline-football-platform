@@ -76,6 +76,9 @@ export async function readPublicSeasonPlayerPoints(
       .select("football_player_id,summary_payload,position_statistics_payload")
       .eq("competition_id", competitionId)
       .eq("season_id", seasonIds[0])
+      // V2 rows remain in this table strictly for audit/history. Public Card
+      // surfaces must consume the immutable V3 Rating aggregate only.
+      .eq("scoring_version", "player_scoring_v3")
       .in("football_player_id", ids),
     admin
       .from("football_players")

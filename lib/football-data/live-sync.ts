@@ -12,6 +12,7 @@ import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePrevi
 
 const COMPETITION_ID = "8";
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
+const STALE_LIVE_SYNC_RUN_MS = 10 * 60 * 1000;
 
 type Dependencies = {
   provider?: FootballDataProvider;
@@ -61,9 +62,29 @@ async function createRun(admin: SupabaseClient, cadence: string, forceFixtureId?
   return typeof data?.id === "string" ? data.id : undefined;
 }
 
+async function recoverStaleRuns(admin: SupabaseClient, now: number) {
+  const staleBefore = new Date(now - STALE_LIVE_SYNC_RUN_MS).toISOString();
+  const { error } = await admin
+    .from("football_data_sync_runs")
+    .update({
+      status: "error",
+      completed_at: new Date(now).toISOString(),
+      error_message: "stale_run_recovered_before_next_qa_sync",
+    })
+    .eq("provider", "sportmonks")
+    .eq("sync_type", "live_scores")
+    .eq("status", "running")
+    .lt("started_at", staleBefore);
+  return error;
+}
+
+function errorCategories(errors: string[]) {
+  return [...new Set(errors.map((error) => error.split(":", 1)[0]).filter(Boolean))].slice(0, 12);
+}
+
 async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
   if (!result.syncRunId) return;
-  await admin.from("football_data_sync_runs").update({
+  const { error } = await admin.from("football_data_sync_runs").update({
     status: result.status === "skipped" ? "success" : result.status,
     completed_at: new Date().toISOString(),
     records_updated: result.updated,
@@ -81,6 +102,20 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
       skippedReason: result.skippedReason ?? null,
     },
   }).eq("id", result.syncRunId);
+  console[result.status === "success" ? "info" : "warn"](JSON.stringify({
+    event: "touchline.live_sync.completed",
+    syncRunId: result.syncRunId,
+    status: result.status,
+    cadence: result.cadence,
+    fetched: result.fetched,
+    updated: result.updated,
+    snapshotFixtures: result.snapshotFixtures,
+    fantasyFeedsStored: result.fantasyFeedsStored,
+    playerFixtureRowsWritten: result.playerFixtureRowsWritten,
+    coachPointsReconciled: result.coachPointsReconciled,
+    errorCount: result.errors.length + (error ? 1 : 0),
+    errorCategories: [...errorCategories(result.errors), ...(error ? ["run_write"] : [])],
+  }));
 }
 
 function uniqueFixtures(fixtures: TouchlineFixture[]) {
@@ -123,6 +158,9 @@ export async function syncSportmonksLiveState(
     coachPointsReconciled: 0,
     errors: [],
   };
+
+  const staleRunError = await recoverStaleRuns(admin, now);
+  if (staleRunError) result.errors.push(`stale-run-recovery:${staleRunError.code ?? "unknown"}`);
 
   if (!decision.due) {
     return { ...result, ok: true, status: "skipped", skippedReason: "cadence_not_due" };
