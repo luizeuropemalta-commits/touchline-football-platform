@@ -249,7 +249,7 @@ export default async function FootballDataAdminPage({
               Football Data Foundation
             </h1>
             <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300/75">
-              This page verifies the new provider-independent pipeline: Sportmonks feeds the FootballDataProvider layer, data is normalized into
+              This page verifies the new provider-independent pipeline: TouchLine verifies the FootballDataProvider layer, data is normalized into
               Touchline tables, and the app reads from the Touchline database as the source of truth.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -403,7 +403,7 @@ export default async function FootballDataAdminPage({
                 })}
                 {!squadResult.error && !playersResult.error && !squadMembers.length && (
                   <div className="rounded-3xl border border-amber-300/15 bg-amber-300/[.06] p-6 text-sm text-amber-100">
-                    No squad has been synced yet. Run the starter sync endpoint after confirming the Sportmonks club ID.
+                    No squad has been synced yet. Run the starter sync endpoint after confirming the TouchLine club ID.
                   </div>
                 )}
               </div>

@@ -96,7 +96,7 @@ const OWNER_LINKS: ShellLink[] = [
   {
     href: "/admin/football-data",
     label: "Football Data",
-    description: "Sportmonks and data health",
+    description: "TouchLine data health",
     icon: Database,
   },
 ];

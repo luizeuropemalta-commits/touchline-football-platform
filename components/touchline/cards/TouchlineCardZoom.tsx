@@ -91,7 +91,7 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
     {performanceFields.length ? (
       <aside className={`${styles.details} ${styles.performanceDetails}`} aria-label={details.performanceTitle ?? "Performance"}>
         <header className={styles.detailsHeader}>
-          <span>Sportmonks</span>
+          <span>TouchLine Verified</span>
           <h2>{details.performanceTitle ?? "Performance"}</h2>
           <p>{details.performanceSubtitle ?? "Official match ratings and statistics"}</p>
         </header>

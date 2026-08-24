@@ -17,6 +17,7 @@ type ClubHubCanonicalCoachPanelProps = {
   clubAccent?: string;
   locale: string;
   userId: string | null;
+  presentation?: "showcase" | "technical";
 };
 
 export default async function ClubHubCanonicalCoachPanel({
@@ -26,6 +27,7 @@ export default async function ClubHubCanonicalCoachPanel({
   clubAccent,
   locale,
   userId,
+  presentation = "showcase",
 }: ClubHubCanonicalCoachPanelProps) {
   const portuguese = locale === "pt-BR";
   const canonicalCoach = touchlineLiveCoachForTeam(teamId);
@@ -62,6 +64,24 @@ export default async function ClubHubCanonicalCoachPanel({
   } : baseSlot;
   const profileHref = `/touchline-coaches/${encodeURIComponent(canonicalCoach.coach.providerId)}?lang=${encodeURIComponent(locale)}`;
 
+  const card = (
+    <TouchlineCoachCardZoom
+      coach={canonicalCoach.coach}
+      slot={slot}
+      clubName={clubName}
+      clubLogoUrl={clubLogoUrl}
+      clubAccent={clubAccent}
+      countryCode3={canonicalCoach.countryCode3}
+      locale={locale}
+      contract={coachContract}
+      profileHref={profileHref}
+    />
+  );
+
+  if (presentation === "technical") {
+    return <div className={styles.technicalCard}>{card}</div>;
+  }
+
   return (
     <section className={styles.shell} aria-label={`${clubName} ${portuguese ? "treinador principal" : "first-team coach"}`}>
       <div className={styles.copy}>
@@ -72,19 +92,7 @@ export default async function ClubHubCanonicalCoachPanel({
           ? "Abra o card para ver Casa, Fora, W-D-L e todos os TouchLine Points antes de visitar o perfil completo."
           : "Open the card to review Home, Away, W-D-L and all TouchLine Points before visiting the full profile."}</p>
       </div>
-      <div className={styles.card}>
-        <TouchlineCoachCardZoom
-          coach={canonicalCoach.coach}
-          slot={slot}
-          clubName={clubName}
-          clubLogoUrl={clubLogoUrl}
-          clubAccent={clubAccent}
-          countryCode3={canonicalCoach.countryCode3}
-          locale={locale}
-          contract={coachContract}
-          profileHref={profileHref}
-        />
-      </div>
+      <div className={styles.card}>{card}</div>
     </section>
   );
 }

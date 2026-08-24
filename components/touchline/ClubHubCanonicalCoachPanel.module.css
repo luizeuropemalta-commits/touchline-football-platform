@@ -59,6 +59,15 @@
   justify-self: center;
 }
 
+.technicalCard {
+  width: min(100%, 198px);
+  margin-top: 2px;
+}
+
+.technicalCard :global([data-coach-card-art]) {
+  width: 100%;
+}
+
 @media (max-width: 760px) {
   .shell {
     grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);

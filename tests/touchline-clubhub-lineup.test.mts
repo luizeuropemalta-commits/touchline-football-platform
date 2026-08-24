@@ -67,11 +67,17 @@ const matchingCoach = {
 } as const;
 
 test("ClubHub labels squad-only data as preview, never as official", () => {
-  const lineup = buildTouchLineClubLineup({ club: city, squadCards });
+  const presentation = buildTouchLineClubMatchdayPresentation({ club: city, squadCards });
+  const lineup = presentation.lineup;
 
   assert.equal(lineup.status, "preview");
   assert.equal(lineup.formation, "4-3-3");
   assert.equal(lineup.players.length, 11);
+  assert.equal(presentation.technical.state, "awaiting_official_team_sheet");
+  assert.equal(presentation.technical.bench.length, 0);
+  assert.equal(presentation.technical.previewBench.length, 9);
+  assert.equal(new Set(presentation.technical.previewBench.map((card) => card.id)).size, 9);
+  assert.ok(presentation.technical.previewBench.every((card) => !lineup.players.some(({ card: starter }) => starter.id === card.id)));
 });
 
 test("ClubHub confirms and distributes only a complete provider Starting XI for its club", () => {

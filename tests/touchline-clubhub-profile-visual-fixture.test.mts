@@ -40,16 +40,21 @@ test("the ClubHub line-up can isolate the static fixture from ranking activity",
   assert.match(source, /rankingMode=\{staticVisualQa \? "preview" : "live"\}/);
 });
 
-test("the confirmed nine-player bench keeps long names readable without ellipsis", () => {
-  const source = readFileSync(
+test("the nine-card bench is a premium responsive card rail", () => {
+  const css = readFileSync(
     new URL("../components/touchline/ClubHubMatchdayTechnicalArea.module.css", import.meta.url),
     "utf8",
   );
+  const component = readFileSync(
+    new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url),
+    "utf8",
+  );
 
-  const filledSlotNameRule = source.match(/\.filledSlot strong\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
-  assert.match(filledSlotNameRule, /overflow-wrap:\s*anywhere/);
-  assert.match(filledSlotNameRule, /text-overflow:\s*clip/);
-  assert.match(filledSlotNameRule, /white-space:\s*normal/);
-  assert.doesNotMatch(filledSlotNameRule, /text-overflow:\s*ellipsis/);
-  assert.doesNotMatch(filledSlotNameRule, /white-space:\s*nowrap/);
+  assert.match(component, /TouchlineEliteExactCard/);
+  assert.match(component, /technical\.previewBench/);
+  assert.match(component, /\.slice\(0, 9\)/);
+  assert.match(css, /grid-template-columns:\s*repeat\(9, minmax\(74px, 1fr\)\)/);
+  assert.match(css, /overflow-x:\s*auto/);
+  assert.match(css, /scroll-snap-type:\s*x proximity/);
+  assert.doesNotMatch(css, /text-overflow:\s*ellipsis/);
 });

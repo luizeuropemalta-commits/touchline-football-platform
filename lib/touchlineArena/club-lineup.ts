@@ -35,8 +35,14 @@ export type TouchLineClubMatchdayPresentation = Readonly<{
     state: TouchLineClubMatchdayTechnicalState;
     coach: TouchLineClubOfficialMatchdayCoach | null;
     bench: readonly ClubOwnerSquadCard[];
+    /**
+     * Nine distinct squad cards for the pre-match display. They are never
+     * represented as an official bench; the persisted team sheet replaces
+     * them as soon as its substitutes arrive.
+     */
+    previewBench: readonly ClubOwnerSquadCard[];
   }>;
-  /** Every named player shown in the XI or confirmed technical bench. */
+  /** Every named player shown in the XI or the visible technical bench. */
   displayedPlayerIds: readonly string[];
 }>;
 
@@ -184,9 +190,17 @@ export function buildTouchLineClubMatchdayPresentation(input: {
   const bench = hasConfirmedTechnicalTeamSheet
     ? confirmedBenchCards as ClubOwnerSquadCard[]
     : [];
+  // A pre-match Club Hub is still useful before the official team sheet is
+  // available. Keep nine real squad cards visible, but do not promote them to
+  // the official bench DTO or claim they were selected for the fixture.
+  const displayedStartingIds = new Set(lineup.players.map(({ card }) => String(card.id)));
+  const previewBench = input.squadCards
+    .filter((card) => !displayedStartingIds.has(String(card.id)))
+    .slice(0, 9);
+  const displayBench = hasConfirmedTechnicalTeamSheet ? bench : previewBench;
   const displayedPlayerIds = [...new Set([
     ...lineup.players.map(({ card }) => card.id),
-    ...bench.map((card) => card.id),
+    ...displayBench.map((card) => card.id),
   ])];
 
   return {
@@ -195,6 +209,7 @@ export function buildTouchLineClubMatchdayPresentation(input: {
       state: hasConfirmedTechnicalTeamSheet ? "confirmed" : "awaiting_official_team_sheet",
       coach: hasConfirmedTechnicalTeamSheet ? coach : null,
       bench,
+      previewBench,
     },
     displayedPlayerIds,
   };

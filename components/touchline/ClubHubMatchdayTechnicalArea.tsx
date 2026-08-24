@@ -1,4 +1,10 @@
+import type { ReactNode } from "react";
+
+import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import type { TouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
+import { squadCardToExactPlayer, findTouchLineClub } from "@/lib/touchlineArena/demo-data";
+import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
+import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
 
 import styles from "./ClubHubMatchdayTechnicalArea.module.css";
 
@@ -6,84 +12,107 @@ type ClubHubMatchdayTechnicalAreaProps = {
   clubName: string;
   technical: TouchLineClubMatchdayPresentation["technical"];
   locale: string;
+  coachCard: ReactNode;
+  labels: {
+    nationality: string;
+    points: string;
+    totalPoints: string;
+    cardPrice: string;
+  };
 };
 
 /**
- * Public ClubHub matchday technical area. This is deliberately a presentation
- * of the fail-closed matchday read model: names appear only with a complete,
- * official coach + provider-confirmed technical team sheet for the selected
- * fixture. The provider determines the bench size.
+ * The Club Hub always keeps the coach and a nine-card bench close to the
+ * pitch. Until the official sheet is persisted, the cards are explicitly a
+ * squad preview; no player is presented as a confirmed substitute early.
  */
 export default function ClubHubMatchdayTechnicalArea({
   clubName,
   technical,
   locale,
+  coachCard,
+  labels,
 }: ClubHubMatchdayTechnicalAreaProps) {
   const portuguese = locale === "pt-BR";
-  const confirmed = technical.state === "confirmed"
-    && technical.bench.length > 0;
-  const benchSize = confirmed ? technical.bench.length : 0;
-  const awaitingLabel = portuguese
-    ? "Aguardando súmula oficial da partida"
-    : "Awaiting official matchday sheet";
-  const coachLabel = portuguese ? "Treinador" : "Coach";
+  const confirmed = technical.state === "confirmed";
+  const bench = (confirmed ? technical.bench : technical.previewBench).slice(0, 9);
+  const coachLabel = portuguese ? "Treinador principal" : "First-team coach";
   const benchLabel = portuguese ? "Banco" : "Bench";
+  const status = confirmed
+    ? (portuguese ? "Súmula confirmada" : "Team sheet confirmed")
+    : (portuguese ? "Prévia do banco · atualiza com a escalação oficial TouchLine" : "Bench preview · updates with the official TouchLine line-up");
 
   return (
     <section
       className={styles.shell}
-      data-matchday-sheet={confirmed ? "confirmed" : "awaiting"}
+      data-matchday-sheet={confirmed ? "confirmed" : "preview"}
       aria-label={`${clubName} ${portuguese ? "área técnica da partida" : "matchday technical area"}`}
     >
       <header className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>{portuguese ? "SÚMULA DA PARTIDA" : "MATCHDAY SHEET"}</span>
+          <span className={styles.eyebrow}>{portuguese ? "EQUIPE TÉCNICA" : "TECHNICAL STAFF"}</span>
           <h2>{portuguese ? "Área técnica" : "Technical area"}</h2>
         </div>
-        <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`} aria-live="polite">
-          {confirmed ? (portuguese ? "Súmula confirmada" : "Team sheet confirmed") : awaitingLabel}
-        </span>
+        <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`} aria-live="polite">{status}</span>
       </header>
 
       <div className={styles.content}>
         <section className={styles.coach} aria-label={coachLabel}>
           <span className={styles.label}>{coachLabel}</span>
-          {confirmed && technical.coach ? (
-            <strong>{technical.coach.name}</strong>
-          ) : confirmed ? (
-            <p>{portuguese ? "Treinador indisponível no feed oficial" : "Coach unavailable from the official feed"}</p>
-          ) : (
-            <p>{awaitingLabel}</p>
-          )}
+          {coachCard ?? <p>{portuguese ? "Card do treinador indisponível" : "Coach card unavailable"}</p>}
         </section>
 
-        <section className={styles.bench} aria-label={confirmed ? `${benchLabel} (${benchSize})` : benchLabel}>
+        <section className={styles.bench} aria-label={`${benchLabel} (${bench.length})`}>
           <div className={styles.benchHeader}>
-            <span className={styles.label}>{benchLabel}</span>
-            <strong>{confirmed ? `${benchSize}/${benchSize}` : "—"}</strong>
+            <div>
+              <span className={styles.label}>{benchLabel}</span>
+              <p>{confirmed
+                ? (portuguese ? "Reservas da súmula oficial" : "Official sheet substitutes")
+                : (portuguese ? "9 cards do elenco disponível" : "9 cards from the available squad")}</p>
+            </div>
+            <strong>{bench.length}/9</strong>
           </div>
-          <ol className={styles.slots}>
-            {(confirmed ? technical.bench : [null]).map((player, index) => {
-              const slotNumber = index + 1;
-              const awaitingSlotLabel = portuguese
-                ? `Vaga ${slotNumber} do banco — aguardando súmula oficial`
-                : `Bench slot ${slotNumber} — awaiting official matchday sheet`;
-
-              return (
-                <li key={player?.id ?? `awaiting-bench-${slotNumber}`} className={player ? styles.filledSlot : styles.awaitingSlot}>
-                  <span className={styles.slotNumber}>{slotNumber}</span>
-                  {player ? (
-                    <>
-                      <strong>{player.name}</strong>
-                      <small>{player.position}</small>
-                    </>
-                  ) : (
-                    <span>{awaitingSlotLabel}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
+          {bench.length ? (
+            <ol className={styles.cards}>
+              {bench.map((card, index) => {
+                const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
+                  displayName: card.name,
+                  shirtNumber: card.shirtNumber,
+                  countryCode3: card.countryCode3,
+                  position: card.position,
+                  hasVerifiedMarketValue: Boolean(card.editorialCard),
+                  hasClubAsset: Boolean(findTouchLineClub(card.clubName)?.logoUrl),
+                });
+                const exactPlayer = squadCardToExactPlayer({ ...card, cardReview }, { useSuppliedTier: true });
+                const profileHref = touchlinePlayerProfileHref({
+                  sportmonksPlayerId: card.id,
+                  name: card.name,
+                  clubName: card.clubName,
+                  position: card.position,
+                  shirtNumber: card.shirtNumber,
+                  countryCode3: card.countryCode3,
+                }, locale);
+                return (
+                  <li key={card.id}>
+                    <span className={styles.cardNumber}>{index + 1}</span>
+                    <TouchlineEliteExactCard
+                      className={styles.card}
+                      player={exactPlayer}
+                      labels={labels}
+                      imageLoading="lazy"
+                      playerProfileHref={profileHref}
+                      staticRenderScale={104 / 430}
+                      subscribeToRanking={false}
+                      enableInteractiveNeon={false}
+                      rankingMode="preview"
+                      showProfileAction={false}
+                      showSocialMetrics={false}
+                    />
+                  </li>
+                );
+              })}
+            </ol>
+          ) : <p className={styles.empty}>{portuguese ? "Aguardando os reservas da súmula oficial." : "Awaiting substitutes from the official team sheet."}</p>}
         </section>
       </div>
     </section>

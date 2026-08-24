@@ -9,6 +9,7 @@ function source(relativePath: string) {
 test("ClubHub reuses the stroke-only canonical crest trace for club identity only", () => {
   const traceHost = source("components/touchline/ClubHubCrestTrace.tsx");
   const profile = source("app/touchline-clubs/[club]/page.tsx");
+  const lineup = source("components/touchline/ClubHubOfficialLineup.tsx");
   const directory = source("app/touchline-clubs/page.tsx");
   const directoryCss = source("app/touchline-clubs/touchline-clubs.module.css");
   const profileCss = profile.slice(profile.indexOf(".club-hub-logo {"), profile.indexOf(".club-hub-honours {"));
@@ -21,9 +22,10 @@ test("ClubHub reuses the stroke-only canonical crest trace for club identity onl
   assert.doesNotMatch(traceHost, /fetch\(|create(?:Admin)?Client|supabase|providers\/sportmonks|process\.env|mask|clip-path|filter:/i);
 
   assert.match(profile, /<ClubHubCrestTrace[\s\S]*?accent=\{club\.accent\}[\s\S]*?className="club-hub-logo"/);
-  assert.match(profile, /matchPreview\.home\.logoUrl && matchPreview\.home\.accent/);
-  assert.match(profile, /matchPreview\.away\.logoUrl && matchPreview\.away\.accent/);
-  assert.match(profile, /className="club-hub-fixture-crest"/);
+  assert.match(profile, /<ClubHubOfficialLineup[\s\S]*?matchup=\{\{/);
+  assert.match(lineup, /matchup\.home\.logoUrl && matchup\.home\.accent/);
+  assert.match(lineup, /matchup\.away\.logoUrl && matchup\.away\.accent/);
+  assert.match(lineup, /className=\{styles\.matchupCrest\}/);
   assert.match(directory, /<ClubHubCrestTrace[\s\S]*?accent=\{club\.accent\}[\s\S]*?className=\{styles\.logoWrap\}/);
   assert.match(directory, /<svg className=\{styles\.clubCardTrace\}[\s\S]*?<rect className=\{styles\.clubCardTraceRun\}/);
   assert.match(directoryCss, /\.clubCardTraceRun \{[\s\S]*?stroke-dasharray: 12 88[\s\S]*?animation: touchlineClubEdgeTravel 7s linear infinite/);

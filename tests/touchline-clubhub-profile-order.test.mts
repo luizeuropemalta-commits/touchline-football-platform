@@ -13,7 +13,7 @@ function indexOfRequired(source: string, token: string) {
   return index;
 }
 
-test("ClubHub places real club identity, honours and next match before matchday and TouchLine sections", () => {
+test("ClubHub places identity and honours before the matchday surface, where the match-up now lives", () => {
   const heroStart = indexOfRequired(page, '<header className="club-hub-hero">');
   const lineupStart = indexOfRequired(page, "<ClubHubOfficialLineup");
   const technicalStart = indexOfRequired(page, "<ClubHubMatchdayTechnicalArea");
@@ -21,8 +21,12 @@ test("ClubHub places real club identity, honours and next match before matchday 
   const tableStart = indexOfRequired(page, "<TouchlineOfficialLeagueTable");
   const touchlineCardsStart = indexOfRequired(page, "<ClubHubSquadGrid");
   const hero = page.slice(heroStart, lineupStart);
+  const lineupSection = page.slice(lineupStart, technicalStart);
 
-  assert.ok(indexOfRequired(hero, "<ClubTrophyCarousel") < indexOfRequired(hero, 'className="club-hub-next-match"'));
+  assert.match(hero, /<ClubTrophyCarousel/);
+  assert.doesNotMatch(hero, /club-hub-next-match|ClubHubLiveFixtureScore/);
+  assert.match(lineupSection, /matchup=\{\{/);
+  assert.match(lineupSection, /fixtureId: matchSnapshot\.previewFixtureId/);
   assert.ok(heroStart < lineupStart);
   assert.ok(lineupStart < technicalStart);
   assert.ok(technicalStart < outsideStart);
@@ -42,17 +46,20 @@ test("ClubHub partitions the displayed XI, official bench, and plain outside-mat
   assert.doesNotMatch(outsideRoster, /marketValue|cardTier|cardPrice|touchlinePoints|ranking|href=|fetch\(/i);
 });
 
-test("technical area reveals the complete provider-published bench without inventing a coach", () => {
+test("technical area keeps a nine-card preview distinct from the official bench and embeds the coach card", () => {
   assert.match(lineup, /officialBench\.length > 0/);
   assert.match(lineup, /confirmedBenchCards\.length === officialBench\.length/);
   assert.match(lineup, /new Set\(benchIds\)\.size === benchIds\.length/);
   assert.match(lineup, /benchIds\.every\(\(id\) => !starterIds\.includes\(id\)\)/);
   assert.match(lineup, /state: hasConfirmedTechnicalTeamSheet \? "confirmed" : "awaiting_official_team_sheet"/);
-  assert.match(technical, /const benchSize = confirmed \? technical\.bench\.length : 0/);
+  assert.match(lineup, /previewBench/);
+  assert.match(lineup, /\.slice\(0, 9\)/);
   assert.match(technical, /technical\.state === "confirmed"/);
-  assert.match(technical, /Coach unavailable from the official feed/);
-  assert.match(technical, /Awaiting official matchday sheet/);
-  assert.doesNotMatch(technical, /TOUCHLINE_LIVE_COACHES|buildMatchdayBench|create(?:Admin)?Client|supabase|fetch\(|sportmonks|marketValue|contract/i);
+  assert.match(technical, /technical\.previewBench/);
+  assert.match(technical, /TouchlineEliteExactCard/);
+  assert.match(technical, /coachCard/);
+  assert.match(page, /presentation="technical"/);
+  assert.doesNotMatch(technical, /TOUCHLINE_LIVE_COACHES|buildMatchdayBench|create(?:Admin)?Client|supabase|fetch\(/i);
 });
 
 test("the official league table remains server-owned and separate from TouchLine-card content", () => {

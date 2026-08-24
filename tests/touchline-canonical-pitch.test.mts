@@ -89,7 +89,7 @@ test("ClubHub preserves canonical player coordinates without local role refineme
 
 test("ClubHub makes an unscheduled opponent explicit without pretending TouchLine is a club", () => {
   assert.match(clubHubPage, /touchLineT\(locale, "opponentToBeConfirmed"\)/);
-  assert.match(clubHubPage, /className=\{!matchPreview\.away\.logoUrl \? "club-hub-fixture-team-pending" : undefined\}/);
-  assert.match(clubHubPage, /matchPreview\.away\.shortCode/);
+  assert.match(clubHubLineup, /className=\{!matchup\.away\.logoUrl \? styles\.matchupTeamPending : undefined\}/);
+  assert.match(clubHubLineup, /matchup\.away\.shortCode/);
   assert.doesNotMatch(clubHubPage, /club-hub-fixture-pending-mark/);
 });

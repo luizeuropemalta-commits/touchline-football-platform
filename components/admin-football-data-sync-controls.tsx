@@ -35,7 +35,7 @@ export function FootballDataSyncControls() {
 
   async function syncOpeningRound() {
     setState("syncing");
-    setMessage("Reading the verified Sportmonks Premier League schedule…");
+    setMessage("Reading the verified TouchLine Premier League schedule…");
 
     try {
       const params = new URLSearchParams({
@@ -66,7 +66,7 @@ export function FootballDataSyncControls() {
 
   async function syncCapabilities() {
     setState("syncing");
-    setMessage("Reading the active Sportmonks subscription capabilities…");
+    setMessage("Reading active TouchLine data capabilities…");
 
     try {
       const params = new URLSearchParams({ scope: "capabilities" });
@@ -92,7 +92,7 @@ export function FootballDataSyncControls() {
 
   async function reconcileQaCountryData() {
     setState("syncing");
-    setMessage("Validating all 20 Sportmonks squads before the QA-only country-data reconcile…");
+    setMessage("Validating all 20 TouchLine squads before the QA-only country-data reconcile…");
 
     try {
       const params = new URLSearchParams({
@@ -121,7 +121,7 @@ export function FootballDataSyncControls() {
 
   async function reconcileQaTwentyClubRosters() {
     setState("syncing");
-    setMessage("Backing up QA, then reconciling all 20 current Sportmonks squads…");
+    setMessage("Backing up QA, then reconciling all 20 current TouchLine squads…");
 
     try {
       const params = new URLSearchParams({
@@ -150,7 +150,7 @@ export function FootballDataSyncControls() {
 
   async function rebuildPlayerScoreV3() {
     setState("syncing");
-    setMessage("Rebuilding rating-based V3 settlements from persisted Sportmonks feeds…");
+    setMessage("Rebuilding rating-based V3 settlements from persisted TouchLine feeds…");
     try {
       const response = await fetch("/api/football-data/player-season-statistics/sync", {
         method: "POST",
@@ -175,7 +175,7 @@ export function FootballDataSyncControls() {
       <p className="text-[9px] font-black text-[#c6ff62]">QA owner action · official fixture source</p>
       <h2 className="mt-2 text-xl font-black italic text-white">Load the Premier League opening round</h2>
       <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-300/75">
-        Imports only verified Sportmonks fixtures for 21–24 August 2026 into the QA database. Existing verified fixtures are upserted; no fixture is deleted and no score, lineup or card is simulated.
+        Imports only verified TouchLine fixtures for 21–24 August 2026 into the QA database. Existing verified fixtures are upserted; no fixture is deleted and no score, lineup or card is simulated.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button

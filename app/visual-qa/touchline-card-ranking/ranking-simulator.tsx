@@ -200,7 +200,7 @@ export default function RankingSimulator({ snapshot }: { snapshot: TouchlineRank
           <CheckCircle2 aria-hidden="true" />
           <span>Regra de desempate</span>
           <strong>Pontos · Minutos · Jogos</strong>
-          <small>ID SportMonks encerra o empate.</small>
+          <small>ID TouchLine encerra o empate.</small>
         </article>
       </section>
 
@@ -214,7 +214,7 @@ export default function RankingSimulator({ snapshot }: { snapshot: TouchlineRank
           </div>
         </div>
         <div className={styles.auditChecks}>
-          <span className={styles.failedCheck}>SportMonks verificado</span>
+          <span className={styles.failedCheck}>TouchLine verificado</span>
           <span>35 IDs únicos</span>
           <span>6 grupos completos</span>
           <span>Preço oficial v2</span>
@@ -333,7 +333,7 @@ export default function RankingSimulator({ snapshot }: { snapshot: TouchlineRank
               <small>Snapshot {selection.sourceSnapshotId}</small>
               <small>{selection.version}</small>
             </div>
-            <p>O mercado não escolhe nenhum atleta. Pontos, minutos, jogos e ID SportMonks definem a ordem.</p>
+            <p>O mercado não escolhe nenhum atleta. Pontos, minutos, jogos e ID TouchLine definem a ordem.</p>
           </aside>
         </div>
       </section>

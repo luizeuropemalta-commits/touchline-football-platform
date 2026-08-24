@@ -3,7 +3,11 @@ import type { CSSProperties } from "react";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
+import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
+import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
+import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import type { TouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
+import type { TouchlineClubMatchPreviewTeam } from "@/lib/touchlineArena/club-match-preview";
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
@@ -31,6 +35,14 @@ type ClubHubOfficialLineupProps = {
     cardPrice: string;
   };
   canEditCardEngine?: boolean;
+  matchup?: {
+    fixtureId: string | null;
+    initialFixture: TouchlinePublicFixture | null;
+    home: TouchlineClubMatchPreviewTeam;
+    away: TouchlineClubMatchPreviewTeam;
+    status: string;
+    startsAt: string;
+  } | null;
 };
 
 export default function ClubHubOfficialLineup({
@@ -40,6 +52,7 @@ export default function ClubHubOfficialLineup({
   staticVisualQa = false,
   labels,
   canEditCardEngine = false,
+  matchup = null,
 }: ClubHubOfficialLineupProps) {
   const isPortuguese = locale === "pt-BR";
   const confirmed = lineup.status === "confirmed";
@@ -56,15 +69,34 @@ export default function ClubHubOfficialLineup({
           <p>
             {confirmed
               ? (isPortuguese ? "Titulares da súmula persistida para esta partida." : "Starting XI from the persisted team sheet for this fixture.")
-              : (isPortuguese ? "Prévia do elenco disponível. Não é uma previsão: a escalação oficial aparece somente quando a súmula desta partida estiver completa." : "Preview from the available squad. This is not a prediction; the official XI appears only when this fixture's team sheet is complete.")}
+              : (isPortuguese ? "A prévia pode mudar até a escalação oficial TouchLine ser confirmada." : "This preview can change until the official TouchLine line-up is confirmed.")}
           </p>
         </div>
         <div className={styles.statusPanel}>
+          {matchup ? (
+            <aside className={styles.matchup} aria-label={isPortuguese ? "Confronto da partida" : "Match-up"}>
+              <span>{isPortuguese ? "CONFRONTO" : "MATCH-UP"}</span>
+              <div className={styles.matchupTeams}>
+                <div className={!matchup.home.logoUrl ? styles.matchupTeamPending : undefined}>
+                  {matchup.home.logoUrl && matchup.home.accent ? <ClubHubCrestTrace accent={matchup.home.accent} className={styles.matchupCrest} src={matchup.home.logoUrl} /> : null}
+                  <strong>{matchup.home.shortCode}</strong>
+                </div>
+                <ClubHubLiveFixtureScore fixtureId={matchup.fixtureId} initialFixture={matchup.initialFixture} locale={locale === "pt-BR" ? "pt-BR" : "en-GB"} />
+                <div className={!matchup.away.logoUrl ? styles.matchupTeamPending : undefined}>
+                  {matchup.away.logoUrl && matchup.away.accent ? <ClubHubCrestTrace accent={matchup.away.accent} className={styles.matchupCrest} src={matchup.away.logoUrl} /> : null}
+                  <strong>{matchup.away.shortCode}</strong>
+                </div>
+              </div>
+              <small>{[matchup.status, matchup.startsAt].filter(Boolean).join(" · ")}</small>
+            </aside>
+          ) : null}
+          <div className={styles.formationPanel}>
           <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`}>
             {confirmed ? (isPortuguese ? "Escalação confirmada" : "Line-up confirmed") : (isPortuguese ? "Prévia do elenco" : "Squad Preview")}
           </span>
           <span className={styles.syncLabel}>{isPortuguese ? "Formação" : "Formation"}</span>
           <strong className={styles.formation}>{lineup.formation}</strong>
+          </div>
         </div>
       </header>
 

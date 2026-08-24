@@ -443,11 +443,11 @@ export default async function AdminOwnerPanel({
           : "One or more Arena operational reads failed; affected values are shown as unavailable.",
     },
     {
-      name: "Sportmonks configuration",
+      name: "TouchLine data configuration",
       status: sportmonksConfigured ? "CONFIGURED_NOT_VERIFIED" : "NOT_CONFIGURED_YET",
       detail: sportmonksConfigured
         ? "A server token is configured. Connectivity and subscription entitlement are not probed by this page."
-        : "SPORTMONKS_API_TOKEN is not configured.",
+        : "TouchLine data access is not configured.",
     },
     {
       name: "Stripe configuration",

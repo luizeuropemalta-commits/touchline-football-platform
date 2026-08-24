@@ -200,7 +200,8 @@ test("public player surfaces use TouchLine branding and the canonical season rea
   assert.match(profile, /matchHistory/);
   assert.match(profile, /totalRating/);
   assert.match(profile, /lastFiveMatches/);
-  assert.match(profile, /Sportmonks/);
+  assert.match(profile, /TouchLine/);
+  assert.doesNotMatch(profile, /Sportmonks/);
   assert.doesNotMatch(coach, />Sportmonks</);
   assert.doesNotMatch(lineupSurface, /confirmed by the provider|confirmados pelo provedor/);
   assert.doesNotMatch(matchCentre, /official provider|fonte oficial/);

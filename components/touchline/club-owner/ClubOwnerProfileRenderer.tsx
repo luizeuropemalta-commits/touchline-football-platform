@@ -326,7 +326,7 @@ export default async function ClubOwnerProfileRenderer({
   const isPortuguese = locale === "pt-BR";
   const clubCopy = isPortuguese ? {
     rankingUpdated: "Classificação oficial atualizada após cada rodada auditada.",
-    awaitingRound: "Aguardando 1ª rodada", officialPoints: "Nota Sportmonks", openRanking: "Ver ranking completo",
+    awaitingRound: "Aguardando 1ª rodada", officialPoints: "Nota TouchLine", openRanking: "Ver ranking completo",
     privateArea: "Área privada do ClubOwner", verifiedPrivateArea: "Área privada verificada", clubDirection: "Direção do clube",
     privateDescription: "Finanças, contratos, treinamento e estratégia são visíveis somente para o ClubOwner autenticado.",
     protectedStrategy: "Estratégia protegida", hiddenFromFeed: "Não aparece no feed público",
@@ -343,7 +343,7 @@ export default async function ClubOwnerProfileRenderer({
     contracts: "Contratos", squadControl: "Controle do elenco", active: "Ativos", slots: "Vagas", pending: "Pendentes", manageMarket: "Gerir no Mercado de Cards",
   } : {
     rankingUpdated: "Official standings update after every audited round.",
-    awaitingRound: "Awaiting round 1", officialPoints: "Sportmonks rating", openRanking: "View full ranking",
+    awaitingRound: "Awaiting round 1", officialPoints: "TouchLine rating", openRanking: "View full ranking",
     privateArea: "Private ClubOwner area", verifiedPrivateArea: "Verified private area", clubDirection: "Club direction",
     privateDescription: "Finances, contracts, training and strategy are visible only to the authenticated ClubOwner.",
     protectedStrategy: "Protected strategy", hiddenFromFeed: "Not shown in the public feed",

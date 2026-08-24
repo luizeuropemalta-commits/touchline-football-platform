@@ -596,7 +596,7 @@ export default function TouchlineCardStudioPage() {
           </section>
 
           <section className="rounded-lg border border-emerald-200/20 bg-emerald-200/[.06] p-4 text-xs font-bold leading-5 text-emerald-50/76">
-            SportMonks entra somente com dados estruturados. A tela usa apenas artes estaticas TouchLine previamente aprovadas; fotos externas e image_path permanecem bloqueados.
+            TouchLine usa apenas dados estruturados. A tela usa apenas artes estáticas TouchLine previamente aprovadas; fotos externas e image_path permanecem bloqueados.
           </section>
         </aside>
       </section>

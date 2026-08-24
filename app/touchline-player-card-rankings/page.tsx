@@ -63,14 +63,14 @@ export default async function TouchLinePlayerCardRankingsPage({
     return clubSlug ? `${marketHref}&club=${encodeURIComponent(clubSlug)}` : marketHref;
   };
   const rankingModeLabel = activeRanking.phase === "ranked"
-    ? (locale === "pt-BR" ? "Ordem por Nota Sportmonks" : "Sportmonks rating order")
+    ? (locale === "pt-BR" ? "Ordem por Nota TouchLine" : "TouchLine rating order")
     : copy.demoOrder;
   const editorialCopy = locale === "pt-BR"
     ? {
-      rankingDescription: "O ranking reúne apenas cards TouchLine publicados e é ordenado pela soma das notas Sportmonks válidas. Tier e preço são definidos pelo processo de publicação do card.",
+      rankingDescription: "O ranking reúne apenas cards TouchLine publicados e é ordenado pela soma das notas TouchLine verificadas. Tier e preço são definidos pelo processo de publicação do card.",
     }
     : {
-      rankingDescription: "The ranking includes published TouchLine cards only and is ordered by the sum of valid Sportmonks ratings. Tier and card price come from the card-publication process.",
+      rankingDescription: "The ranking includes published TouchLine cards only and is ordered by the sum of verified TouchLine ratings. Tier and card price come from the card-publication process.",
     };
   const cardLabels = {
     nationality: touchLineT(locale, "nationalityShort"),

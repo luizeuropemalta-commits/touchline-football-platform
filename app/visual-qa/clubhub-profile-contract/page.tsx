@@ -234,6 +234,8 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
           clubName={staticClub.name}
           technical={localizedPresentation.technical}
           locale={locale}
+          coachCard={null}
+          labels={copy.labels}
         />
         <ClubHubOutsideMatchRoster
           clubName={staticClub.name}

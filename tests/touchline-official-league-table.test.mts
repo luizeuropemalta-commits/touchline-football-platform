@@ -419,12 +419,10 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(component, /status && !table\.rows\.length/);
   assert.match(component, /Initial table — all 20 clubs are level\./);
   assert.match(component, /Tabela inicial — os 20 clubes estão empatados\./);
-  assert.match(component, /row\.sportsRank === null/);
-  assert.match(component, /row\.isTied/);
-  assert.match(component, /\{row\.sportsRank\}=/);
-  assert.doesNotMatch(component, />\{row\.displayPosition\}</);
-  assert.match(component, /Tied on points, goal difference and goals scored\./);
-  assert.match(component, /Empatados em pontos, saldo de gols e gols marcados\./);
+  assert.match(component, /row\.displayPosition \?\? "—"/);
+  assert.doesNotMatch(component, /row\.isTied/);
+  assert.doesNotMatch(component, /\{row\.sportsRank\}=/);
+  assert.doesNotMatch(component, /tiedRank/);
   assert.match(component, /aria-label=/);
   assert.match(componentStyles, /\.tableWrap \.rankCell \{[\s\S]*?padding: 0;/);
   assert.match(componentStyles, /\.tiedRank \{[\s\S]*?min-width: 44px;[\s\S]*?min-height: 44px;/);

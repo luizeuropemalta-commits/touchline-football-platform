@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import { parseTouchlinePublicFixtures } from "@/lib/football-data/public-fixture-client";
@@ -28,6 +29,7 @@ function presentation(fixture: TouchlinePublicFixture | null, locale: TouchLineL
 /** Club Hub consumes the same durable live DTO as Arena and Live. */
 export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture, locale }: Props) {
   const [fixture, setFixture] = useState(initialFixture);
+  const router = useRouter();
 
   useEffect(() => {
     if (!fixtureId) return;
@@ -42,6 +44,11 @@ export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture, loc
         if (active && next) setFixture(next);
       } catch {
         // The server-rendered last-known-good state remains visible.
+      } finally {
+        // The same short cadence refreshes the server-owned official team
+        // sheet. A newly persisted XI or bench therefore replaces the preview
+        // without asking the supporter to reload the Club Hub manually.
+        if (active) router.refresh();
       }
     }
     void refresh();
@@ -50,7 +57,7 @@ export default function ClubHubLiveFixtureScore({ fixtureId, initialFixture, loc
       active = false;
       window.clearInterval(timer);
     };
-  }, [fixtureId]);
+  }, [fixtureId, router]);
 
   return <b aria-live="polite">{presentation(fixture, locale)}</b>;
 }

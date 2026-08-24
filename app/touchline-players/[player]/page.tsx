@@ -110,7 +110,7 @@ const copy = {
     career: "Career path",
     season: "TouchLine season",
     seasonCopy:
-      "Sportmonks ratings, card rank and verified match history update here as league fixtures are played.",
+      "TouchLine ratings, card rank and verified match history update here as league fixtures are played.",
     current: "Current status",
     currentCopy:
       "The card is connected to the shared TouchLine master used by Arena, squad, market and club profile.",
@@ -181,7 +181,7 @@ const copy = {
     career: "Trajetória",
     season: "Temporada TouchLine",
     seasonCopy:
-      "Notas Sportmonks, rank do card e histórico verificado serão atualizados aqui conforme a liga acontecer.",
+      "Notas TouchLine, rank do card e histórico verificado serão atualizados aqui conforme a liga acontecer.",
     current: "Estado atual",
     currentCopy:
       "O card está conectado ao padrão mestre compartilhado pela Arena, elenco, mercado e perfil do clube.",
@@ -943,8 +943,8 @@ export default async function TouchLinePlayerProfilePage({
         kind: "simulation",
         title: isPortuguese ? `Fim de jogo: grande atuação de ${card.name}` : `Full time: outstanding display from ${card.name}`,
         body: isPortuguese
-          ? "Exemplo de publicação automática após o encerramento da partida com a nota Sportmonks verificada."
-          : "Example of an automatic full-time post with the verified Sportmonks rating.",
+          ? "Exemplo de publicação automática após o encerramento da partida com a nota TouchLine verificada."
+          : "Example of an automatic full-time post with the verified TouchLine rating.",
         meta: isPortuguese ? "Demonstração · após a partida" : "Demo · after the match",
         accent,
         badge: isPortuguese ? "Nota 8,7 · nota total simulada 38,0" : "Rating 8.7 · simulated total rating 38.0",
@@ -966,7 +966,7 @@ export default async function TouchLinePlayerProfilePage({
           : "The TouchLine Verified goal update generates this communication automatically for every follower of the player.",
         meta: isPortuguese ? "Demonstração · 67 minutos" : "Demo · 67 minutes",
         accent,
-        badge: isPortuguese ? "1 gol · nota Sportmonks verificada" : "1 goal · verified Sportmonks rating",
+        badge: isPortuguese ? "1 gol · nota TouchLine verificada" : "1 goal · verified TouchLine rating",
         visual: socialCardVisual(`${isPortuguese ? "Ampliar card do gol de" : "Open goal card for"} ${card.name}`),
         visualTheme: "goal",
         metrics: [

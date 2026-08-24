@@ -7,7 +7,6 @@ import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup"
 import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
-import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
@@ -95,6 +94,7 @@ type ClubMatchPreview = {
 
 type ClubMatchSnapshot = {
   preview: ClubMatchPreview;
+  previewFixtureId: string | null;
   fixtureId: string | null;
   lineups: TouchlineFantasyLineupMember[];
   formation: string | null;
@@ -290,6 +290,7 @@ async function loadClubMatchSnapshot(
 ): Promise<ClubMatchSnapshot> {
   const empty = {
     preview: fallbackClubMatch(club, locale),
+    previewFixtureId: null as string | null,
     fixtureId: null as string | null,
     lineups: [] as TouchlineFantasyLineupMember[],
     formation: null as string | null,
@@ -331,6 +332,7 @@ async function loadClubMatchSnapshot(
           : touchLineT(locale, "kickoffPending"),
         source: touchLineT(locale, "dataCache"),
       },
+      previewFixtureId: previewFixture.providerId,
       fixtureId: matchdayFeed?.fixture.providerId ?? null,
       lineups: matchdayFeed?.lineups ?? [],
       formation,
@@ -441,38 +443,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                   <p className="club-hub-honours-empty" role="status">{t("clubHonoursUnavailable")}</p>
                 </div>
               )}
-              <article className="club-hub-next-match" aria-label={`${club.name} ${t("nextMatch")}`}>
-                <span>{t("nextMatch")}</span>
-                <div className="club-hub-fixture-row">
-                  <div className={!matchPreview.home.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
-                    {matchPreview.home.logoUrl && matchPreview.home.accent ? (
-                      <ClubHubCrestTrace
-                        accent={matchPreview.home.accent}
-                        className="club-hub-fixture-crest"
-                        src={matchPreview.home.logoUrl}
-                      />
-                    ) : null}
-                    <strong>{matchPreview.home.shortCode}</strong>
-                  </div>
-                  <ClubHubLiveFixtureScore
-                    fixtureId={matchSnapshot.fixtureId}
-                    initialFixture={matchSnapshot.publicFixture}
-                    locale={locale}
-                  />
-                  <div className={!matchPreview.away.logoUrl ? "club-hub-fixture-team-pending" : undefined}>
-                    {matchPreview.away.logoUrl && matchPreview.away.accent ? (
-                      <ClubHubCrestTrace
-                        accent={matchPreview.away.accent}
-                        className="club-hub-fixture-crest"
-                        src={matchPreview.away.logoUrl}
-                      />
-                    ) : null}
-                    <strong>{matchPreview.away.shortCode}</strong>
-                  </div>
-                </div>
-                <p>{matchPreview.home.name} vs {matchPreview.away.name}</p>
-                <small>{[localizedFixtureStatus(matchPreview.status, locale), matchPreview.startsAt, matchPreview.source].filter(Boolean).join(" / ")}</small>
-              </article>
             </div>
           </div>
         </header>
@@ -483,21 +453,32 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           locale={locale}
           labels={cardLabels}
           canEditCardEngine={canEditCardEngine}
-        />
-
-        <ClubHubCanonicalCoachPanel
-          teamId={club.teamId}
-          clubName={club.name}
-          clubLogoUrl={club.logoUrl}
-          clubAccent={club.accent}
-          locale={locale}
-          userId={user?.id ?? null}
+          matchup={{
+            fixtureId: matchSnapshot.previewFixtureId,
+            initialFixture: matchSnapshot.publicFixture,
+            home: matchPreview.home,
+            away: matchPreview.away,
+            status: localizedFixtureStatus(matchPreview.status, locale),
+            startsAt: matchPreview.startsAt,
+          }}
         />
 
         <ClubHubMatchdayTechnicalArea
           clubName={club.name}
           technical={matchdayPresentation.technical}
           locale={locale}
+          labels={cardLabels}
+          coachCard={(
+            <ClubHubCanonicalCoachPanel
+              teamId={club.teamId}
+              clubName={club.name}
+              clubLogoUrl={club.logoUrl}
+              clubAccent={club.accent}
+              locale={locale}
+              userId={user?.id ?? null}
+              presentation="technical"
+            />
+          )}
         />
 
         <ClubHubOutsideMatchRoster
@@ -513,11 +494,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           currentTeamId={club.teamId}
           action={{ href: `/touchline-clubs?${localeQuery}#official-league-table`, label: t("fullTables") }}
         />
-
-        <section className="club-hub-board" aria-label={locale === "pt-BR" ? "Informações oficiais do clube" : "Official club information"}>
-          <article><span>{t("clubStore")}</span><strong>{t("officialShopTraffic")}</strong><p>{t("clubStoreDescription")}</p></article>
-          <article><span>{t("partnerSlots")}</span><strong>{club.sponsorSlots} {t("spaces")}</strong><p>{t("partnerDescription")}</p></article>
-        </section>
 
         <section className="club-hub-touchline" aria-label={`${club.name} TouchLine player cards`}>
           <div className="club-hub-section-head">

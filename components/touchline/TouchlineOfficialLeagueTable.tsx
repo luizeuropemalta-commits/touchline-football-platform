@@ -39,7 +39,6 @@ type TableCopy = Readonly<{
   stale: string;
   scoreUnavailable: string;
   currentClub: string;
-  tiedPosition: string;
   finalResults: string;
   seasonStatus: string;
   seasonLive: string;
@@ -77,7 +76,6 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     stale: "STALE",
     scoreUnavailable: "score unavailable",
     currentClub: "Current club",
-    tiedPosition: "Tied on points, goal difference and goals scored.",
     finalResults: "verified final results",
     seasonStatus: "Season status",
     seasonLive: "Live · provisional",
@@ -113,7 +111,6 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     stale: "DESATUALIZADO",
     scoreUnavailable: "placar indisponível",
     currentClub: "Clube atual",
-    tiedPosition: "Empatados em pontos, saldo de gols e gols marcados.",
     finalResults: "resultados finais verificados",
     seasonStatus: "Status da temporada",
     seasonLive: "Ao vivo · provisória",
@@ -254,17 +251,7 @@ export default function TouchlineOfficialLeagueTable({
                       data-display-position={row.displayPosition ?? undefined}
                     >
                       <td className={styles.rankCell}>
-                        {row.sportsRank === null ? "—" : row.isTied ? (
-                          <span
-                            className={styles.tiedRank}
-                            tabIndex={0}
-                            title={dictionary.tiedPosition}
-                            aria-label={`${row.sportsRank}=. ${dictionary.tiedPosition}`}
-                            data-tooltip={dictionary.tiedPosition}
-                          >
-                            <span aria-hidden="true">{row.sportsRank}=</span>
-                          </span>
-                        ) : row.sportsRank}
+                        {row.displayPosition ?? "—"}
                       </td>
                       <th scope="row">
                         <Link
