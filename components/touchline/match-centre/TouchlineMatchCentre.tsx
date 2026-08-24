@@ -13,7 +13,6 @@ import type {
   TouchlinePublicFantasyFixtureMatchDetail,
   TouchlinePublicFantasyLineupMember,
   TouchlinePublicFixturePlayerStatistics,
-  TouchlinePublicPlayerPointContribution,
 } from "@/lib/football-data/public-fantasy-fixture";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
@@ -44,10 +43,10 @@ type FixtureGroup = "live" | "today" | "upcoming" | "finished";
 
 const copy = {
   "pt-BR": {
-    title: "Central da partida", live: "AO VIVO", today: "HOJE", upcoming: "PRÓXIMOS", finished: "ARQUIVO", matchweek: "Rodada", roundPending: "Rodada aguardando confirmação do provider", competition: "TouchLine England", league: "Liga TouchLine England", england: "Inglaterra", select: "Confrontos", alertsSoon: "Alertas de partida em breve", selectedFixture: "Partida selecionada", noFixtures: "Agenda em atualização", noFixturesCopy: "A programação oficial será exibida assim que a competição publicar fixtures canônicos.", venue: "Estádio", venuePending: "Aguardando confirmação TouchLine do estádio", countdown: "Início em", detail: "Dados da partida", dataPending: "Eventos, escalações e estatísticas aparecem assim que forem verificados pela TouchLine.", recent: "Linha do tempo oficial", form: "Escalações verificadas", players: "Pontos da partida", archive: "Arquivo TouchLine", provider: "TouchLine Verified", timezone: "Horário local", versus: "VS", completed: "ENCERRADO", liveNow: "AO VIVO", next: "PRÓXIMO", official: "TouchLine Data", watch: "Acompanhar partida", liveDataUpdating: "Dados ao vivo em atualização", liveDataUpdatingCopy: "Exibindo o último snapshot verificado; o placar pode estar atrasado.", partialScheduleCopy: "A programação persistida está disponível, mas placares ao vivo aguardam um snapshot verificado.", lastVerified: "ÚLTIMO VERIFICADO", lastVerifiedAt: "Última verificação", events: "eventos oficiais", scoring: "contribuições de pontuação", lineupAvailable: "Escalação disponível", starters: "Titulares", bench: "Reservas", minutes: "MIN", rating: "NOTA", points: "PTS", noScoring: "Sem pontuação TouchLine", assist: "Assistência", substitutedFor: "entrou por", dataUnavailable: "—",
+    title: "Central da partida", live: "AO VIVO", today: "HOJE", upcoming: "PRÓXIMOS", finished: "ARQUIVO", matchweek: "Rodada", roundPending: "Rodada aguardando confirmação do provider", competition: "TouchLine England", league: "Liga TouchLine England", england: "Inglaterra", select: "Confrontos", alertsSoon: "Alertas de partida em breve", selectedFixture: "Partida selecionada", noFixtures: "Agenda em atualização", noFixturesCopy: "A programação oficial será exibida assim que a competição publicar fixtures canônicos.", venue: "Estádio", venuePending: "Aguardando confirmação TouchLine do estádio", countdown: "Início em", detail: "Dados da partida", dataPending: "Eventos, escalações e estatísticas aparecem assim que forem verificados pela TouchLine.", recent: "Linha do tempo oficial", form: "Escalações verificadas", players: "Ratings da partida", archive: "Arquivo TouchLine", provider: "TouchLine Verified", timezone: "Horário local", versus: "VS", completed: "ENCERRADO", liveNow: "AO VIVO", next: "PRÓXIMO", official: "TouchLine Data", watch: "Acompanhar partida", liveDataUpdating: "Dados ao vivo em atualização", liveDataUpdatingCopy: "Exibindo o último snapshot verificado; o placar pode estar atrasado.", partialScheduleCopy: "A programação persistida está disponível, mas placares ao vivo aguardam um snapshot verificado.", lastVerified: "ÚLTIMO VERIFICADO", lastVerifiedAt: "Última verificação", events: "eventos oficiais", scoring: "ratings oficiais", lineupAvailable: "Escalação disponível", starters: "Titulares", bench: "Reservas", minutes: "MIN", rating: "NOTA", noScoring: "Sem rating oficial", assist: "Assistência", substitutedFor: "entrou por", dataUnavailable: "—",
   },
   "en-GB": {
-    title: "Match Centre", live: "LIVE NOW", today: "TODAY", upcoming: "UPCOMING", finished: "ARCHIVE", matchweek: "Matchweek", roundPending: "Matchweek awaiting provider confirmation", competition: "TouchLine England", league: "TouchLine England League", england: "England", select: "Fixtures", alertsSoon: "Match alerts coming soon", selectedFixture: "Selected fixture", noFixtures: "Schedule updating", noFixturesCopy: "Official fixtures will appear as soon as the competition publishes the canonical schedule.", venue: "Stadium", venuePending: "Awaiting TouchLine venue verification", countdown: "Kick-off in", detail: "Match data", dataPending: "Events, line-ups and statistics appear as soon as TouchLine verifies them.", recent: "Official timeline", form: "Verified line-ups", players: "Match points", archive: "TouchLine archive", provider: "TouchLine Verified", timezone: "Local time", versus: "VS", completed: "FULL TIME", liveNow: "LIVE", next: "NEXT", official: "TouchLine Data", watch: "Open match", liveDataUpdating: "Live data updating", liveDataUpdatingCopy: "Showing the last verified snapshot; the score may be delayed.", partialScheduleCopy: "The persisted schedule is available, but live scores are awaiting a verified snapshot.", lastVerified: "LAST VERIFIED", lastVerifiedAt: "Last verification", events: "official events", scoring: "scoring contributions", lineupAvailable: "Line-up available", starters: "Starters", bench: "Bench", minutes: "MIN", rating: "RATING", points: "PTS", noScoring: "No TouchLine points", assist: "Assist", substitutedFor: "for", dataUnavailable: "—",
+    title: "Match Centre", live: "LIVE NOW", today: "TODAY", upcoming: "UPCOMING", finished: "ARCHIVE", matchweek: "Matchweek", roundPending: "Matchweek awaiting provider confirmation", competition: "TouchLine England", league: "TouchLine England League", england: "England", select: "Fixtures", alertsSoon: "Match alerts coming soon", selectedFixture: "Selected fixture", noFixtures: "Schedule updating", noFixturesCopy: "Official fixtures will appear as soon as the competition publishes the canonical schedule.", venue: "Stadium", venuePending: "Awaiting TouchLine venue verification", countdown: "Kick-off in", detail: "Match data", dataPending: "Events, line-ups and statistics appear as soon as TouchLine verifies them.", recent: "Official timeline", form: "Verified line-ups", players: "Match ratings", archive: "TouchLine archive", provider: "TouchLine Verified", timezone: "Local time", versus: "VS", completed: "FULL TIME", liveNow: "LIVE", next: "NEXT", official: "TouchLine Data", watch: "Open match", liveDataUpdating: "Live data updating", liveDataUpdatingCopy: "Showing the last verified snapshot; the score may be delayed.", partialScheduleCopy: "The persisted schedule is available, but live scores are awaiting a verified snapshot.", lastVerified: "LAST VERIFIED", lastVerifiedAt: "Last verification", events: "official events", scoring: "official ratings", lineupAvailable: "Line-up available", starters: "Starters", bench: "Bench", minutes: "MIN", rating: "RATING", noScoring: "No official rating", assist: "Assist", substitutedFor: "for", dataUnavailable: "—",
   },
 } as const;
 
@@ -171,23 +170,6 @@ function eventMoment(event: TouchlinePublicFantasyEvent) {
   return `${event.minute}${event.extraMinute ? `+${event.extraMinute}` : ""}′`;
 }
 
-function eventContributions(
-  event: TouchlinePublicFantasyEvent,
-  statistics: readonly TouchlinePublicFixturePlayerStatistics[],
-) {
-  return statistics.flatMap((player) => player.contributions
-    .filter((contribution) => contribution.providerEventId === event.id)
-    .map((contribution) => ({ playerName: player.playerName, ...contribution })));
-}
-
-function contributionLabel(
-  contribution: TouchlinePublicPlayerPointContribution & { playerName: string },
-  language: keyof typeof copy,
-) {
-  const role = contribution.role === "assist" ? copy[language].assist : contribution.eventType;
-  return `${contribution.playerName} · ${role} ${contribution.points > 0 ? "+" : ""}${contribution.points}`;
-}
-
 function teamName(detail: TouchlinePublicFantasyFixtureMatchDetail, teamId?: string) {
   const homeTeam = detail.fixture.homeTeam;
   const awayTeam = detail.fixture.awayTeam;
@@ -224,7 +206,6 @@ function MatchTeamSheet({
     <span className={styles.playerIdentity}><strong>{member.playerName}</strong><small>{member.position ?? "—"}</small></span>
     <span><small>{copy[language].minutes}</small><b>{statistic?.minutes ?? "—"}</b></span>
     <span><small>{copy[language].rating}</small><b>{statistic?.rating ?? "—"}</b></span>
-    <span className={styles.pointsCell}><small>{copy[language].points}</small><b>{statistic?.touchlinePoints ?? "—"}</b></span>
   </li>);
   return <article className={styles.teamSheet}>
     <header><TeamMark fixture={{ ...detail.fixture, providerId: detail.fixture.id, provider: "sportmonks", source: { provider: "sportmonks", providerId: detail.fixture.id, lastSyncedAt: detail.capturedAt } } as TouchlinePublicFixture} side={detail.fixture.homeTeam?.id === teamId ? "home" : "away"} /><strong>{teamName(detail, teamId)}</strong></header>
@@ -413,27 +394,24 @@ export default function TouchlineMatchCentre({
 
           {matchDetail?.fixture.id === selected.providerId ? <section className={styles.verifiedMatchData} data-testid="touchline-verified-match-data">
             <header className={styles.verifiedHeading}>
-              <div><ShieldCheck size={18} /><span>{dictionary.provider}</span><strong>{matchDetail.events.length} {dictionary.events} · {matchDetail.playerStatistics.flatMap((row) => row.contributions).length} {dictionary.scoring}</strong></div>
+              <div><ShieldCheck size={18} /><span>{dictionary.provider}</span><strong>{matchDetail.events.length} {dictionary.events} · {matchDetail.playerStatistics.filter((row) => row.rating !== null).length} {dictionary.scoring}</strong></div>
               {matchDetail.lineupAvailableAt ? <time dateTime={matchDetail.lineupAvailableAt}><UsersRound size={15} /> {dictionary.lineupAvailable} · {fixtureDate({ startsAt: matchDetail.lineupAvailableAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</time> : null}
             </header>
             <div className={styles.matchEvidenceGrid}>
               <section className={styles.timelinePanel}>
                 <div className={styles.panelTitle}><Goal size={17} /><div><span>{dictionary.recent}</span><strong>{fixtureLabel(selected)}</strong></div></div>
                 <ol>{matchDetail.events.map((event) => {
-                  const contributions = eventContributions(event, matchDetail.playerStatistics);
-                  const derivedAssist = contributions.find((contribution) => contribution.role === "assist")?.playerName;
-                  const relatedPlayerName = event.relatedPlayerName ?? derivedAssist;
+                  const relatedPlayerName = event.relatedPlayerName;
                   return <li key={event.id}>
                     <time>{eventMoment(event)}</time>
                     <span><strong>{event.type ?? "Event"}</strong><b>{event.playerName ?? "—"}</b>{relatedPlayerName ? <small>{/substitution/i.test(event.type ?? "") ? dictionary.substitutedFor : dictionary.assist}: {relatedPlayerName}</small> : null}</span>
                     <em>{teamName(matchDetail, event.teamId)}</em>
-                    <span className={styles.eventPoints}>{contributions.length ? contributions.map((contribution) => <small key={`${event.id}:${contribution.playerName}:${contribution.role}`}>{contributionLabel(contribution, language)}</small>) : <small>{dictionary.noScoring}</small>}</span>
                   </li>;
                 })}</ol>
               </section>
               <section className={styles.pointsSummary}>
-                <div className={styles.panelTitle}><Trophy size={17} /><div><span>{dictionary.players}</span><strong>{matchDetail.playerStatistics.reduce((sum, row) => sum + (row.touchlinePoints ?? 0), 0)} pts</strong></div></div>
-                <ul>{matchDetail.playerStatistics.filter((row) => row.touchlinePoints !== null && row.touchlinePoints !== 0).map((row) => <li key={row.playerId}><span><strong>{row.playerName}</strong><small>{teamName(matchDetail, row.teamId)}</small></span><b className={row.touchlinePoints && row.touchlinePoints < 0 ? styles.negativePoints : ""}>{row.touchlinePoints && row.touchlinePoints > 0 ? "+" : ""}{row.touchlinePoints}</b></li>)}</ul>
+                <div className={styles.panelTitle}><Trophy size={17} /><div><span>{dictionary.players}</span><strong>{matchDetail.playerStatistics.filter((row) => row.rating !== null).length} {dictionary.rating}</strong></div></div>
+                <ul>{matchDetail.playerStatistics.filter((row) => row.rating !== null).map((row) => <li key={row.playerId}><span><strong>{row.playerName}</strong><small>{teamName(matchDetail, row.teamId)}</small></span><b>{row.rating}</b></li>)}</ul>
               </section>
             </div>
             <div className={styles.lineupGrid}>

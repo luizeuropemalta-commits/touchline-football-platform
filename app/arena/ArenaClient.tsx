@@ -144,7 +144,6 @@ import { TOUCHLINE_SHIRT_DIGIT_ASSETS } from "@/lib/touchlineArena/shirt-number-
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
 import {
   buildTouchlinePlayerCardZoomDetails,
-  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
 import {
@@ -241,6 +240,9 @@ const ARENA_PERSISTENCE_RESOURCES = {
 type ArenaCard = NonNullable<ArenaLineupPlayer["card"]> & {
   /** Public projection only; raw editorial notes never enter the Arena. */
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
+  /** Sportmonks-only player performance projection. */
+  totalRating?: string | number | null;
+  matchRating?: string | number | null;
 };
 
 type ArenaPlayer = Omit<ArenaLineupPlayer, "card"> & {
@@ -268,6 +270,8 @@ type BenchOption = {
   inventoryId?: string | null;
   touchlinePoints?: string | number | null;
   matchFantasyPoints?: string | number | null;
+  seasonTotalRating?: string | number | null;
+  matchRating?: string | number | null;
   seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
   matchStats?: TouchlineEliteExactPlayer["matchStats"];
   matchPointContributions?: TouchlineEliteExactPlayer["matchPointContributions"];
@@ -367,6 +371,8 @@ type TeamBuilderSquadPlayer = {
   touchlinePoints?: string | number | null;
   /** Current-fixture score. Kept separate from the cumulative balance. */
   matchFantasyPoints?: string | number | null;
+  seasonTotalRating?: string | number | null;
+  matchRating?: string | number | null;
   /** Cumulative official statistics when they have been verified. */
   seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
   /** Current-fixture statistics when supplied by the live provider. */
@@ -384,6 +390,12 @@ function parseStoredMarketDraftIds(value: string | null) {
   } catch {
     return [];
   }
+}
+
+function arenaRating(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 type MarketPositionReplacementCandidate = {
@@ -946,8 +958,8 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
       position: player.card.position || squadPlayer.position || roleLabel(squadPlayer.role),
       countryCode3,
       flagUrl: player.card.flagUrl || squadPlayer.flagUrl || null,
-      fantasyPoints: squadPlayer.touchlinePoints ?? player.card.fantasyPoints ?? null,
-      matchFantasyPoints: squadPlayer.matchFantasyPoints ?? player.card.matchFantasyPoints ?? null,
+      totalRating: arenaRating(squadPlayer.seasonTotalRating) ?? player.card.totalRating ?? null,
+      matchRating: arenaRating(squadPlayer.matchRating) ?? player.card.matchRating ?? null,
       marketValue: "",
       marketValueSource: "unavailable" as const,
       marketValueState: squadPlayer.marketValueState ?? player.card.marketValueState,
@@ -961,7 +973,6 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
       inventoryId: player.card.inventoryId ?? squadPlayer.inventoryId ?? null,
       seasonStats: squadPlayer.seasonStats ?? player.card.seasonStats,
       matchStats: squadPlayer.matchStats ?? player.card.matchStats,
-      matchPointContributions: squadPlayer.matchPointContributions ?? player.card.matchPointContributions,
     },
   };
 }
@@ -987,8 +998,8 @@ function benchOptionToArenaPlayer(bench: BenchOption, target: ArenaPlayer): Aren
       position: bench.position,
       countryCode3: bench.countryCode3,
       flagUrl: null,
-      fantasyPoints: bench.touchlinePoints ?? null,
-      matchFantasyPoints: bench.matchFantasyPoints ?? null,
+      totalRating: arenaRating(bench.seasonTotalRating),
+      matchRating: arenaRating(bench.matchRating),
       marketValue: "",
       marketValueSource: "unavailable",
       marketValueState: bench.marketValueState,
@@ -1066,11 +1077,10 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? null,
-    touchlinePoints: card?.fantasyPoints ?? null,
-    matchFantasyPoints: card?.matchFantasyPoints ?? null,
+    seasonTotalRating: card?.totalRating ?? null,
+    matchRating: card?.matchRating ?? null,
     seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
-    matchPointContributions: card?.matchPointContributions,
     countryCode3: card?.countryCode3 || "N/A",
     impact: replacedBench.impact,
     status: "ready",
@@ -1100,8 +1110,8 @@ function arenaPlayerToFormationReserve(player: ArenaPlayer): BenchOption {
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? null,
-    touchlinePoints: card?.fantasyPoints ?? null,
-    matchFantasyPoints: card?.matchFantasyPoints ?? null,
+    seasonTotalRating: card?.totalRating ?? null,
+    matchRating: card?.matchRating ?? null,
     seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
     countryCode3: card?.countryCode3 || "N/A",
@@ -1132,11 +1142,10 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: player.inventoryId ?? null,
-    touchlinePoints: player.touchlinePoints ?? null,
-    matchFantasyPoints: player.matchFantasyPoints ?? null,
+    seasonTotalRating: player.seasonTotalRating ?? null,
+    matchRating: player.matchRating ?? null,
     seasonStats: player.seasonStats,
     matchStats: player.matchStats,
-    matchPointContributions: player.matchPointContributions,
     countryCode3: player.countryCode3 || "N/A",
     impact: "+ squad depth",
     status: "ready",
@@ -1146,12 +1155,6 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
 function defaultClubOwnerCardByName(name: string) {
   const normalizedName = normalizeTextKey(name);
   return CLUB_OWNER_SQUAD_CARDS.find((card) => normalizeTextKey(card.name) === normalizedName);
-}
-
-function touchlineFinitePointsOrFallback(value: unknown, fallback: number) {
-  if (value === null || value === undefined || value === "") return fallback;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : fallback;
 }
 
 function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
@@ -1181,13 +1184,12 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? defaultCard?.inventoryId ?? null,
-    touchlinePoints: touchlineFinitePointsOrFallback(card?.fantasyPoints, defaultCard?.touchlinePoints ?? 0),
-    matchTouchlinePoints: card?.matchFantasyPoints === null || card?.matchFantasyPoints === undefined || card.matchFantasyPoints === ""
-      ? null
-      : Number.isFinite(Number(card.matchFantasyPoints)) ? Number(card.matchFantasyPoints) : null,
+    touchlinePoints: 0,
+    seasonTouchlinePoints: null,
+    seasonTotalRating: arenaRating(card?.totalRating) ?? defaultCard?.seasonTotalRating ?? null,
+    matchRating: arenaRating(card?.matchRating) ?? defaultCard?.matchRating ?? null,
     seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
-    matchPointContributions: card?.matchPointContributions,
   });
 }
 
@@ -1216,13 +1218,12 @@ function benchOptionToClubOwnerCard(bench: BenchOption): ClubOwnerSquadCard {
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: bench.inventoryId ?? defaultCard?.inventoryId ?? null,
-    touchlinePoints: touchlineFinitePointsOrFallback(bench.touchlinePoints, defaultCard?.touchlinePoints ?? 0),
-    matchTouchlinePoints: bench.matchFantasyPoints === null || bench.matchFantasyPoints === undefined || bench.matchFantasyPoints === ""
-      ? null
-      : Number.isFinite(Number(bench.matchFantasyPoints)) ? Number(bench.matchFantasyPoints) : null,
+    touchlinePoints: 0,
+    seasonTouchlinePoints: null,
+    seasonTotalRating: arenaRating(bench.seasonTotalRating) ?? defaultCard?.seasonTotalRating ?? null,
+    matchRating: arenaRating(bench.matchRating) ?? defaultCard?.matchRating ?? null,
     seasonStats: bench.seasonStats,
     matchStats: bench.matchStats,
-    matchPointContributions: bench.matchPointContributions,
   });
 }
 
@@ -1250,11 +1251,10 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
       editorialCard: card.editorialCard ?? null,
       inventoryId: card.inventoryId ?? null,
       countryCode3: card.countryCode3,
-      touchlinePoints: card.touchlinePoints,
-      matchFantasyPoints: card.matchTouchlinePoints,
+      seasonTotalRating: card.seasonTotalRating ?? null,
+      matchRating: card.matchRating ?? null,
       seasonStats: card.seasonStats,
       matchStats: card.matchStats,
-      matchPointContributions: card.matchPointContributions,
     };
   }
 
@@ -1277,11 +1277,10 @@ function clubOwnerCardToBenchOption(card: ClubOwnerSquadCard): BenchOption {
     editorialCard: card.editorialCard ?? null,
     inventoryId: card.inventoryId ?? null,
     countryCode3: card.countryCode3,
-    touchlinePoints: card.touchlinePoints,
-    matchFantasyPoints: card.matchTouchlinePoints,
+    seasonTotalRating: card.seasonTotalRating ?? null,
+    matchRating: card.matchRating ?? null,
     seasonStats: card.seasonStats,
     matchStats: card.matchStats,
-    matchPointContributions: card.matchPointContributions,
     impact: "+ squad depth",
     status: "ready",
   };
@@ -1482,8 +1481,8 @@ function arenaPlayerToSubstitutedOutOption(player: ArenaPlayer): BenchOption {
     cardPriceAuthority: presentation.cardPriceAuthority,
     editorialCard: presentation.editorialCard,
     inventoryId: card?.inventoryId ?? null,
-    touchlinePoints: card?.fantasyPoints ?? null,
-    matchFantasyPoints: card?.matchFantasyPoints ?? null,
+    seasonTotalRating: card?.totalRating ?? null,
+    matchRating: card?.matchRating ?? null,
     seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
     countryCode3: card?.countryCode3 || "N/A",
@@ -2165,7 +2164,7 @@ const LiveSimulationPlayerCard = memo(function LiveSimulationPlayerCard({
           enableInteractiveNeon={false}
           showCardActions={false}
           showProfileAction={false}
-          showMatchPoints={false}
+          showMatchRating={false}
           showSocialMetrics={false}
           rankingMode="preview"
         />
@@ -2877,13 +2876,12 @@ function projectArenaPlayersForLoopCamera(players: ArenaPlayer[], cameraIndex: n
 function lockArenaPlayerSize(player: ArenaPlayer) {
   const card = player.card ? {
     ...player.card,
-    // Scoring is a server-owned read model. Persist identity/layout only so a
-    // saved Arena lineup can never become a stale points cache.
-    fantasyPoints: undefined,
-    matchFantasyPoints: undefined,
+    // Ratings are a server-owned read model. Persist identity/layout only so a
+    // saved Arena lineup can never become a stale performance cache.
+    totalRating: undefined,
+    matchRating: undefined,
     seasonStats: undefined,
     matchStats: undefined,
-    matchPointContributions: undefined,
   } : undefined;
   return {
     ...player,
@@ -2966,7 +2964,8 @@ function makeDemoArenaPlayer(seed: DemoArenaPlayerSeed): ArenaPlayer {
       position: seed.position,
       countryCode3: seed.countryCode3,
       flagUrl: null,
-      fantasyPoints: "0.0",
+      totalRating: null,
+      matchRating: null,
       marketValue,
       marketValueSource: "unavailable",
       cardTier,
@@ -3087,8 +3086,8 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
     cardTemplateUrl: arenaPublishedCardTemplateUrl(card?.clubName || "", cardTier) || null,
     // A null season value is an explicit unavailable canonical fact, not a
     // numeric zero. Demo-only cards still provide their own literal value.
-    fantasyPoints: card?.fantasyPoints === undefined ? null : card.fantasyPoints,
-    matchFantasyPoints: card?.matchFantasyPoints ?? null,
+    totalRating: card?.totalRating === undefined ? null : card.totalRating,
+    matchRating: card?.matchRating ?? null,
     seasonStats: card?.seasonStats,
     matchStats: card?.matchStats,
   };
@@ -3285,11 +3284,10 @@ function builderPlayerToPreviewCard(
     sourcePhotoUrl: "",
     frameUrl: "",
     cardTemplateUrl: arenaPublishedCardTemplateUrl(player.clubName, previewTier) || null,
-    fantasyPoints: player.touchlinePoints,
-    matchFantasyPoints: player.matchFantasyPoints,
+    totalRating: player.seasonTotalRating ?? null,
+    matchRating: player.matchRating ?? null,
     seasonStats: player.seasonStats,
     matchStats: player.matchStats,
-    matchPointContributions: player.matchPointContributions,
   };
 }
 
@@ -3314,23 +3312,24 @@ function arenaPlayerZoomDetails(
     cardPriceVersion: player.cardPriceVersion,
     editorialCard: player.editorialCard,
     cardReview: player.cardReview,
-    touchlinePoints: player.fantasyPoints,
     extraFields: [
       {
-        label: locale === "pt-BR" ? "Pontos da partida" : "Match points",
-        value: player.matchFantasyPoints === null || player.matchFantasyPoints === undefined
+        label: locale === "pt-BR" ? "Nota total" : "Total rating",
+        value: player.totalRating === null || player.totalRating === undefined
           ? "—"
-          : String(player.matchFantasyPoints),
+          : String(player.totalRating),
         accent: true,
+        primary: true,
+        icon: "★",
       },
-      { label: locale === "pt-BR" ? "Gols na temporada" : "Season goals", value: player.seasonStats?.goals == null ? "—" : String(player.seasonStats.goals) },
-      { label: locale === "pt-BR" ? "Assistências na temporada" : "Season assists", value: player.seasonStats?.assists == null ? "—" : String(player.seasonStats.assists) },
-      { label: locale === "pt-BR" ? "Cartões na temporada" : "Season cards", value: player.seasonStats?.cards == null ? "—" : String(player.seasonStats.cards) },
+      { label: locale === "pt-BR" ? "Nota da última partida" : "Last match rating", value: player.matchRating == null ? "—" : String(player.matchRating), accent: true, icon: "★" },
+      { label: locale === "pt-BR" ? "Gols na temporada" : "Season goals", value: player.seasonStats?.goals == null ? "—" : String(player.seasonStats.goals), icon: "⚽" },
+      { label: locale === "pt-BR" ? "Assistências na temporada" : "Season assists", value: player.seasonStats?.assists == null ? "—" : String(player.seasonStats.assists), icon: "👟" },
+      { label: locale === "pt-BR" ? "Cartões na temporada" : "Season cards", value: player.seasonStats?.cards == null ? "—" : String(player.seasonStats.cards), icon: "🟨" },
       ...buildTouchlineVerifiedMatchFactFields({
         statistics: player.matchStats,
         position: player.position || player.role,
       }, locale),
-      ...buildTouchlineMatchScoringBreakdownFields(player.matchPointContributions, locale),
     ],
     profileHref,
     cardEngineHref: canEditCardEngine
@@ -4235,7 +4234,7 @@ export default function ArenaClient({
         numericPrice: rosterCardValue,
         competition: "england",
       });
-  const rosterPointsTotal = clubOwnerRoster.reduce((sum, card) => sum + card.touchlinePoints, 0);
+  const rosterRatingTotal = clubOwnerRoster.reduce((sum, card) => sum + (card.seasonTotalRating ?? 0), 0);
   const isBuilderSquadCurrent = builderSquadClubKey === selectedBuilderClub.teamId;
   const currentBuilderSquad = isBuilderSquadCurrent ? builderSquad : [];
   const sortedBuilderSquad = [...currentBuilderSquad].sort((a, b) => roleSortWeight(a.role) - roleSortWeight(b.role) || a.name.localeCompare(b.name));
@@ -4384,8 +4383,7 @@ export default function ArenaClient({
   }, [arenaPersistencePrincipal]);
   const cardLabels = useMemo<Partial<TouchlineEliteExactCardLabels>>(() => ({
     nationality: t("nationalityShort"),
-    points: t("points"),
-    totalPoints: t("touchlinePoints"),
+    totalRating: siteLanguage === "pt-BR" ? "Nota total" : "Total rating",
     cardPrice: siteLanguage === "pt-BR" ? "Preço do card" : "Card price",
     currentClub: siteLanguage === "pt-BR" ? "Clube atual" : "Current Club",
   }), [siteLanguage, t]);
@@ -7915,12 +7913,12 @@ export default function ArenaClient({
                   aria-pressed={selectedPlayerId === player.id}
                 >
                   <span className="player-ground-shadow" />
-                  {player.card?.matchFantasyPoints === null || player.card?.matchFantasyPoints === undefined ? null : (
+                  {player.card?.matchRating === null || player.card?.matchRating === undefined ? null : (
                     <span
                       className="arena-match-point-number"
-                      aria-label={`${player.name}: ${player.card.matchFantasyPoints} ${siteLanguage === "pt-BR" ? "pontos da partida" : "match points"}`}
+                      aria-label={`${player.name}: ${player.card.matchRating} ${siteLanguage === "pt-BR" ? "nota da partida" : "match rating"}`}
                     >
-                      {player.card.matchFantasyPoints}
+                      {player.card.matchRating}
                     </span>
                   )}
                   {player.card ? (
@@ -7930,7 +7928,7 @@ export default function ArenaClient({
                         layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                         labels={cardLabels}
                         rankingMode={isDemoLineup ? "preview" : "live"}
-                        showMatchPoints
+                        showMatchRating
                         showProfileAction={false}
                         showSocialMetrics={false}
                         forceNeonActive={selectedPlayerId === player.id}
@@ -8929,8 +8927,8 @@ export default function ArenaClient({
                         <strong>{marketWalletBalanceTc} TC</strong>
                       </span>
                       <span>
-                        <small>{t("touchlinePoints")}</small>
-                        <strong>{rosterPointsTotal}</strong>
+                        <small>{siteLanguage === "pt-BR" ? "Nota total" : "Total rating"}</small>
+                        <strong>{rosterRatingTotal.toFixed(2)}</strong>
                       </span>
                     </div>
                     <div className="bench-rule-stack" aria-label="TouchLine Arena squad rules">
@@ -9669,7 +9667,7 @@ export default function ArenaClient({
                           <span>#{owner.rank}</span>
                           <strong>{owner.name}</strong>
                           <small>{owner.countryCode3} / {owner.squadCount} cards</small>
-                          <b>{owner.touchlinePoints.toLocaleString(siteLanguage)} pts</b>
+                          <b>{owner.squadCount} {siteLanguage === "pt-BR" ? "cards" : "cards"}</b>
                           <em>{formatTouchlineCommercialCardTotal({ numericPrice: owner.squadValueTc, competition: "england" })}</em>
                           </>
                         );
@@ -9694,7 +9692,7 @@ export default function ArenaClient({
                           <TouchlineEliteExactCard className="arena-ranking-card-render" player={squadCardToExactPlayer(card)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} />
                           <div>
                             <strong>{card.shortName}</strong>
-                            <small>{[card.clubName, cardPrice, `${card.touchlinePoints} pts`].filter(Boolean).join(" / ")}</small>
+                            <small>{[card.clubName, cardPrice, `${card.seasonTotalRating?.toFixed(2) ?? "—"} ${siteLanguage === "pt-BR" ? "nota total" : "total rating"}`].filter(Boolean).join(" / ")}</small>
                           </div>
                         </article>
                       );
@@ -9709,7 +9707,7 @@ export default function ArenaClient({
                           <span>#{index + 1}</span>
                           <strong>{card.shortName}</strong>
                           <small>{card.position} / {club?.shortCode ?? card.clubName}</small>
-                          <b>{card.touchlinePoints} pts</b>
+                          <b>{card.seasonTotalRating?.toFixed(2) ?? "—"}</b>
                           {cardPrice ? <em>{cardPrice}</em> : null}
                         </a>
                       );

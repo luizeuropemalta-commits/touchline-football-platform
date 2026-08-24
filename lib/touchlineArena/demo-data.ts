@@ -58,7 +58,9 @@ export type ClubOwnerSquadCard = {
   seasonTouchlinePoints?: number | null;
   /** Canonical sum of valid Sportmonks ratings from started/substitute appearances. */
   seasonTotalRating?: number | null;
-  /** Latest reconciled fixture points; null means no verified fixture fact. */
+  /** Latest reconciled Sportmonks rating; null means provider-unavailable. */
+  matchRating?: number | null;
+  /** Legacy converted score retained only for technical audit compatibility. */
   matchTouchlinePoints?: number | null;
   /** Verified cumulative football statistics used by the shared card. */
   seasonStats?: TouchlineEliteExactPlayer["seasonStats"];
@@ -385,11 +387,10 @@ export function squadCardToExactPlayer(
     // editorial profile is still unpublished. `cardTier` and price remain
     // null in that state, so this asset cannot imply a commercial tier.
     cardTemplateUrl: touchlineArenaClubTemplateForCard(card.clubName, null, cardTier) || null,
-    fantasyPoints: card.seasonTouchlinePoints === undefined
-      ? card.touchlinePoints
-      : card.seasonTouchlinePoints,
-    totalRating: card.seasonTotalRating,
-    matchFantasyPoints: card.matchTouchlinePoints,
+    // Keep provider absences explicit for every card surface. A missing rating
+    // is rendered as —; it must never inherit a legacy score or become zero.
+    totalRating: card.seasonTotalRating ?? null,
+    matchRating: card.matchRating ?? null,
     seasonStats: card.seasonStats,
     matchStats: card.matchStats,
     matchPointContributions: card.matchPointContributions,

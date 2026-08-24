@@ -255,144 +255,6 @@
   text-align: center;
 }
 
-.zoomBackdrop {
-  position: fixed;
-  z-index: 1400;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(1, 8, 8, 0.48);
-  backdrop-filter: blur(3px);
-}
-
-.zoomContent {
-  position: relative;
-  width: clamp(220px, 30%, 356px);
-  background: transparent;
-  filter: drop-shadow(0 24px 24px rgba(0, 0, 0, 0.56));
-}
-
-.zoomCardVisual,
-.zoomCardVisual > div {
-  width: 100%;
-}
-
-.zoomSide {
-  display: grid;
-}
-
-.zoomClose {
-  position: absolute;
-  z-index: 4;
-  top: 5px;
-  right: -42px;
-  display: grid;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: #f5f8f5;
-  background: rgba(2, 13, 13, 0.9);
-  cursor: pointer;
-}
-
-.zoomActions {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.zoomActions .zoomCardEngineAction {
-  border-color: color-mix(in srgb, var(--touchline-card-accent, var(--lime)) 72%, #fff 8%);
-  color: #07100b;
-  background: var(--touchline-card-accent, var(--lime));
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.zoomCardMeta {
-  display: flex;
-  min-height: 30px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 9px;
-  padding: 6px 10px;
-  color: rgba(245, 248, 245, 0.72);
-  background: rgba(2, 10, 10, 0.94);
-  font-size: 10px;
-  font-weight: 850;
-}
-
-.zoomCardMeta strong {
-  color: var(--touchline-card-accent, var(--lime));
-}
-
-.zoomCardMeta span {
-  text-align: right;
-}
-
-.zoomContract {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  min-height: 44px;
-  align-items: center;
-  gap: 9px;
-  margin-top: 8px;
-  border: 1px solid color-mix(in srgb, var(--touchline-card-accent, var(--lime)) 64%, #fff 8%);
-  border-radius: 12px;
-  padding: 8px 13px;
-  color: #f8ffe8;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--touchline-card-accent, var(--lime)) 24%, rgba(3, 10, 8, .98)), rgba(2, 7, 8, .98) 70%);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--touchline-card-accent, var(--lime)) 20%, transparent);
-  font-size: 13px;
-  font-weight: 950;
-  text-decoration: none;
-}
-
-.zoomContract span {
-  min-width: 0;
-}
-
-.zoomContract strong {
-  color: #ffd85a;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.zoomContract:hover,
-.zoomContract:focus-visible {
-  border-color: var(--touchline-card-accent, var(--lime));
-  box-shadow:
-    0 0 10px color-mix(in srgb, var(--touchline-card-accent, var(--lime)) 38%, transparent),
-    0 0 24px color-mix(in srgb, var(--touchline-card-accent, var(--lime)) 24%, transparent);
-  outline: 0;
-}
-
-.zoomActions button,
-.zoomActions a {
-  display: inline-flex;
-  min-height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid rgba(184, 255, 70, 0.36);
-  border-radius: 6px;
-  color: #f5f8f5;
-  background: rgba(3, 17, 16, 0.92);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 850;
-  text-decoration: none;
-  cursor: pointer;
-}
-
 .cascade {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -561,10 +423,6 @@
   .sectionHeading > span { text-align: left; }
   .pitchPlayer { width: clamp(42px, 10vw, 68px); }
   .positionLabel { top: 1px; font-size: 7px; }
-  .zoomContent {
-    width: min(250px, calc(100vw - 76px), calc((100dvh - 190px) * .6223));
-  }
-  .zoomClose { top: 0; right: -46px; width: 44px; height: 44px; }
 }
 
 @media (max-height: 520px) and (orientation: landscape) {
@@ -586,40 +444,6 @@
   .pitch { width: min(100%, 900px); }
   .pitchPlayer { width: clamp(40px, 7vw, 62px); }
 
-  .zoomContent {
-    display: grid;
-    grid-template-columns: minmax(0, calc((100dvh - 40px) * .6223)) minmax(180px, 220px);
-    width: min(calc(((100dvh - 40px) * .6223) + 230px), calc(100vw - 52px));
-    column-gap: 10px;
-  }
-
-  .zoomCardVisual {
-    grid-column: 1;
-    align-self: center;
-  }
-
-  .zoomSide {
-    grid-column: 2;
-    align-self: center;
-    gap: 8px;
-  }
-
-  .zoomCardMeta {
-    margin-top: 0;
-  }
-
-  .zoomContract {
-    margin-top: 0;
-  }
-
-  .zoomActions {
-    margin-top: 0;
-  }
-
-  .zoomClose {
-    top: -10px;
-    right: -10px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

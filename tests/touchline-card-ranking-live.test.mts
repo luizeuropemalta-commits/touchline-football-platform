@@ -31,7 +31,7 @@ function buildFullLeaguePlayers(): TouchlineRankingPlayerInput[] {
         name: `Player ${providerPlayerId}`,
         clubName: `Club ${(providerPlayerId % 20) + 1}`,
         position: POSITION_CODES[groupIndex],
-        touchlinePoints: groupSize - index,
+        totalRating: groupSize - index,
         minutesPlayed: 900 - index,
         appearances: 10,
       };
@@ -49,7 +49,7 @@ function activeState(): TouchlineActiveRankingState {
     players: buildFullLeaguePlayers(),
   });
 
-  const totalScorePoints = snapshot.players.reduce((total, player) => total + player.touchlinePoints, 0);
+  const totalScorePoints = 0;
   return {
     phase: "ranked",
     leagueKey: TOUCHLINE_ENGLAND_LEAGUE_KEY,
@@ -57,7 +57,7 @@ function activeState(): TouchlineActiveRankingState {
     roundId: snapshot.roundId,
     publishedAt: "2026-08-15T18:05:00.000Z",
     priceTableVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-    scoringVersion: "player_scoring_v2",
+    scoringVersion: "player_scoring_v3",
     coverageStatus: "complete_for_scoring",
     seasonId: "season-1",
     fixtureIds: ["fixture-1"],
@@ -89,9 +89,9 @@ test("the shared live ranking client refreshes without F5 and releases its timer
   assert.match(clientSource, /if \(!listeners\.size && refreshTimer !== null\)[\s\S]*window\.clearInterval\(refreshTimer\)/);
 });
 
-test("a real negative score remains negative in ranking instead of becoming a false zero", () => {
+test("a valid lower rating remains ordered as supplied rather than becoming a false zero", () => {
   const players = buildFullLeaguePlayers();
-  players[0] = { ...players[0], touchlinePoints: -1 };
+  players[0] = { ...players[0], totalRating: 0.01 };
   const snapshot = buildTouchlineRankingSnapshot({
     snapshotId: "negative-score-v2",
     roundId: "round-01",
@@ -100,7 +100,7 @@ test("a real negative score remains negative in ranking instead of becoming a fa
     source: "sportmonks-audited",
     players,
   });
-  assert.equal(snapshot.players.find((player) => player.playerId === players[0].playerId)?.touchlinePoints, -1);
+  assert.equal(snapshot.players.find((player) => player.playerId === players[0].playerId)?.totalRating, 0.01);
 });
 
 test("every card resolves its tier and TC price from the same published snapshot", () => {
@@ -116,7 +116,7 @@ test("every card resolves its tier and TC price from the same published snapshot
   assert.equal(resolved.snapshotId, state.snapshotId);
   assert.equal(resolved.tierKey, "diamond-gold");
   assert.equal(resolved.priceTc, 15);
-  assert.equal(resolved.touchlinePoints, rankedPlayer.touchlinePoints);
+  assert.equal(resolved.totalRating, rankedPlayer.totalRating);
 });
 
 test("an unknown card never borrows another player's rank", () => {
@@ -130,7 +130,7 @@ test("an unknown card never borrows another player's rank", () => {
   assert.equal(resolved.ranked, false);
   assert.equal(resolved.tierKey, "ruby-red");
   assert.equal(resolved.priceTc, 0);
-  assert.equal(resolved.touchlinePoints, 0);
+  assert.equal(resolved.totalRating, null);
 });
 
 test("without a valid publication ranking has no economic charge", () => {
@@ -144,7 +144,7 @@ test("without a valid publication ranking has no economic charge", () => {
   assert.equal(resolved.ranked, false);
   assert.equal(resolved.tierKey, "ruby-red");
   assert.equal(resolved.priceTc, 0);
-  assert.equal(resolved.touchlinePoints, 0);
+  assert.equal(resolved.totalRating, null);
 });
 
 test("rejects a published snapshot when a tier price has been altered", () => {

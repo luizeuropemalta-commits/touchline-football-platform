@@ -15,7 +15,6 @@ export type TouchLinePlayerSeasonSummary = {
   ratedAppearances: number | null;
   yellowCards: number | null;
   redCards: number | null;
-  touchlinePoints: number | null;
 };
 
 export type TouchLinePlayerSeasonStatistics = {
@@ -44,18 +43,6 @@ export type TouchLinePlayerFixtureStatistics = {
   appearanceStatus: "started" | "substitute" | "unused" | "absent" | "unavailable";
   minutes: number | null;
   rating: number | null;
-  touchlinePoints: number | null;
-  pointContributions: Array<{
-    role: "primary" | "assist" | "fact";
-    ruleCode?: string;
-    eventType: string;
-    minute: number | null;
-    quantity?: number;
-    unitPoints?: number;
-    points: number;
-    factValue?: number;
-    detail?: string;
-  }>;
   statistics: Record<string, number | string>;
   latestSyncAt: string | null;
 };
@@ -76,7 +63,7 @@ export type TouchLinePlayerStatisticsReadModel = {
 /**
  * A player profile keeps the latest verified match projection after full time.
  * A future fixture has no player fact yet and must not erase the prior final
- * points, statistics or event-backed scoring explanation.
+ * rating or official statistics.
  */
 export function selectTouchLineCurrentOrLastVerifiedFixture(
   fixtures: readonly TouchLinePlayerFixtureStatistics[],
@@ -85,8 +72,7 @@ export function selectTouchLineCurrentOrLastVerifiedFixture(
   const selected = String(selectedFixtureId ?? "").trim();
   if (selected) return fixtures.find((fixture) => fixture.fixtureId === selected) ?? null;
   return fixtures.find((fixture) => (
-    fixture.touchlinePoints !== null
-    || fixture.pointContributions.length > 0
+    fixture.rating !== null
     || Object.keys(fixture.statistics).length > 0
   )) ?? null;
 }
@@ -103,7 +89,6 @@ export const TOUCHLINE_PLAYER_SEASON_SUMMARY_KEYS = [
   "ratedAppearances",
   "yellowCards",
   "redCards",
-  "touchlinePoints",
 ] as const satisfies readonly (keyof TouchLinePlayerSeasonSummary)[];
 
 function finiteNumber(value: unknown) {
@@ -153,7 +138,6 @@ export function emptyTouchLinePlayerSeasonStatistics(input: Partial<Pick<
       ratedAppearances: null,
       yellowCards: null,
       redCards: null,
-      touchlinePoints: null,
     },
     positionStatistics: {},
     latestSyncAt: null,

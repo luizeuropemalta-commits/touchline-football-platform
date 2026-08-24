@@ -118,8 +118,8 @@ test("season points remain unavailable until the event feed is known", () => {
     season: { seasonId: "2026-27", seasonName: "2026/27", competitionId: "8", competitionName: "Premier League", clubId: "19", clubName: "Arsenal" },
     eligibleFixtures: [{ fixtureId: "19722203", lineups: [lineup], events: GOLDEN_EVENTS, touchlinePoints: 6, scoringStatistics: { goals: 1, assists: 0 }, scoringComplete: false }],
   });
-  assert.equal(unavailable.summary.touchlinePoints, null);
-  assert.equal(reconciled.summary.touchlinePoints, 6);
+  assert.equal(unavailable.summary.totalRating, null);
+  assert.equal(reconciled.summary.totalRating, null);
   assert.equal(reconciled.summary.goals, 1);
   assert.equal(reconciled.summary.assists, 0);
   assert.equal(reconciled.summary.yellowCards, 0);
@@ -174,7 +174,7 @@ test("Live consumes the persisted allowlisted match detail instead of a static p
   assert.match(component, /if \(!canReadMatchDetail\) return/);
   assert.match(component, /touchline-verified-match-data/);
   assert.match(component, /matchDetail\.events\.map/);
-  assert.match(component, /contribution\.role === "assist"/);
+  assert.match(component, /event\.relatedPlayerName/);
   assert.match(component, /statistic\?\.minutes \?\? "—"/);
   assert.match(component, /statistic\?\.rating \?\? "—"/);
   assert.match(reader, /touchline_player_fixture_score_settlements/);

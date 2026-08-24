@@ -55,7 +55,7 @@ const player: TouchlineEliteExactPlayer = {
   sourcePhotoUrl: null,
   frameUrl: null,
   cardTemplateUrl: null,
-  fantasyPoints: 0,
+  totalRating: null,
   seasonStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, yellowCards: 0, redCards: 0 },
 };
 

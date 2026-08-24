@@ -62,26 +62,7 @@ function verifiedMatchStats(row: Row | undefined, playerPosition: string) {
     rating: row.rating,
   }, playerPosition, true);
 }
-function contributions(row?: Row): NonNullable<ClubOwnerSquadCard["matchPointContributions"]> {
-  if (!Array.isArray(row?.touchline_points_breakdown)) return [];
-  return row.touchline_points_breakdown.flatMap((value) => {
-    const item = object(value);
-    const role = item.role === "primary" || item.role === "assist" || item.role === "fact" ? item.role : null;
-    const eventType = text(item.eventType);
-    const points = number(item.points);
-    if (!role || !eventType || points === null) return [];
-    return [{
-      role, eventType, points, minute: number(item.minute),
-      ...(text(item.ruleCode) ? { ruleCode: text(item.ruleCode)! } : {}),
-      ...(number(item.quantity) === null ? {} : { quantity: number(item.quantity)! }),
-      ...(number(item.unitPoints) === null ? {} : { unitPoints: number(item.unitPoints)! }),
-      ...(number(item.factValue) === null ? {} : { factValue: number(item.factValue)! }),
-      ...(text(item.detail) ? { detail: text(item.detail)! } : {}),
-    }];
-  });
-}
-
-/** Public published-card catalogue decorated only from canonical V3 score data. */
+/** Public published-card catalogue decorated from canonical Sportmonks ratings. */
 export async function loadTouchLineRankedCardCatalog(
   state: TouchlineActiveRankingState,
   providedAdmin?: SupabaseClient | null,
@@ -94,7 +75,7 @@ export async function loadTouchLineRankedCardCatalog(
     admin.from("football_players").select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds),
     admin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }),
     admin.from("football_player_season_statistics").select("football_player_id,summary_payload,position_statistics_payload").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds),
-    admin.from("touchline_player_fixture_score_settlements").select("football_player_id,touchline_points,touchline_points_breakdown,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds).order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
+    admin.from("touchline_player_fixture_score_settlements").select("football_player_id,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds).order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
   ]);
   if (playerError || squadError || seasonError || fixtureError) return [];
   const players = rows(playerData);
@@ -129,7 +110,6 @@ export async function loadTouchLineRankedCardCatalog(
     if (!name) return [];
     const position = text(squad?.position) ?? text(player.detailed_position) ?? text(player.provider_position) ?? text(player.position) ?? "Player";
     const match = matchByPlayerId.get(playerId);
-    const pointContributions = contributions(match);
     return [{
       id: playerId,
       canonicalPlayerId: playerId,
@@ -146,13 +126,14 @@ export async function loadTouchLineRankedCardCatalog(
       classificationState: "verified" as const,
       cardTier: editorialCard.tierKey,
       editorialCard,
-      touchlinePoints: ranking.touchlinePoints,
-      seasonTouchlinePoints: ranking.touchlinePoints,
+      // Kept only to satisfy the established private DTO while all active
+      // player surfaces read the two rating fields below.
+      touchlinePoints: 0,
+      seasonTouchlinePoints: null,
       seasonTotalRating: ranking.totalRating ?? number(object(seasonByPlayerId.get(playerId)?.summary_payload).totalRating),
-      matchTouchlinePoints: number(match?.touchline_points),
+      matchRating: number(match?.rating),
       seasonStats: verifiedStats(seasonByPlayerId.get(playerId), position),
       matchStats: verifiedMatchStats(match, position),
-      ...(pointContributions.length ? { matchPointContributions: pointContributions } : {}),
     }];
   });
 }

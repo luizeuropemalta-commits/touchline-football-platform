@@ -11,8 +11,6 @@ import {
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "@/lib/touchlineArena/card-rules";
-import { useTouchlineActiveRanking } from "@/lib/touchlineArena/card-ranking-client";
-import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
 import { normalizeTouchlineCountryCode3, touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
@@ -138,7 +136,7 @@ const FIELD_LABELS: Partial<Record<EditableBlock, string>> = {
   shirtClub: "Player name",
   clubCrest: "Club crest",
   flag: "Flag",
-  marketValue: "TouchLine Points",
+  marketValue: "Market value",
   cardPrice: "Card price",
   name: "Legacy club text",
   touchlineLogo: "Logo TL",
@@ -217,17 +215,19 @@ export type TouchlineEliteExactPlayer = {
   cardTemplateUrl?: string | null;
   avatarImageScale?: number;
   avatarObjectPosition?: string;
-  /** Audited, cumulative TouchLine Points balance across published fixtures. */
+  /** Legacy audit-only converted score. It is never rendered on a player card. */
   fantasyPoints?: string | number | null;
   /** Audited sum of valid Sportmonks match ratings across appearances. */
   totalRating?: string | number | null;
-  /** Current-fixture points. Only Arena field cards may expose this value. */
+  /** Latest Sportmonks rating for the selected/current fixture. */
+  matchRating?: string | number | null;
+  /** Legacy audit-only converted score. It is never rendered on a player card. */
   matchFantasyPoints?: string | number | null;
   /** Cumulative TouchLine England league statistics, kept separate from points. */
   seasonStats?: Partial<Record<MatchStatId, string | number | null>>;
   /** @deprecated Use seasonStats. Kept temporarily for legacy Arena payloads. */
   matchStats?: Partial<Record<MatchStatId, string | number | null>>;
-  /** Allowlisted, event-backed explanation for current/last match points. */
+  /** Legacy audit-only converted-score explanation. It is never rendered. */
   matchPointContributions?: readonly Readonly<{
     role: "primary" | "assist" | "fact";
     ruleCode?: string;
@@ -246,8 +246,11 @@ export type TouchlineEliteExactCardPlayer = TouchlineEliteExactPlayer;
 
 export type TouchlineEliteExactCardLabels = {
   nationality: string;
-  points: string;
-  totalPoints: string;
+  totalRating: string;
+  /** Legacy caller compatibility; ignored by the active player card. */
+  points?: string;
+  /** Legacy caller compatibility; ignored by the active player card. */
+  totalPoints?: string;
   cardPrice: string;
   currentClub?: string;
   yellowRedCards: string;
@@ -261,8 +264,7 @@ export type TouchlineEliteExactCardLabels = {
 
 const DEFAULT_CARD_LABELS: TouchlineEliteExactCardLabels = {
   nationality: "Nat",
-  points: "Points",
-  totalPoints: "TouchLine Points",
+  totalRating: "Total rating",
   cardPrice: "Card price",
   currentClub: "Current Club",
   yellowRedCards: "Yellow and red cards",
@@ -278,8 +280,7 @@ function localizedCardLabels(locale: string | null): TouchlineEliteExactCardLabe
   if (locale === "pt-BR") {
     return {
       nationality: "País",
-      points: "Pontos",
-      totalPoints: "Pontos TouchLine",
+      totalRating: "Nota total",
       cardPrice: "Preço do card",
       currentClub: "Clube atual",
       yellowRedCards: "Cartões amarelo e vermelho",
@@ -329,6 +330,9 @@ type Props = {
   enableInteractiveNeon?: boolean;
   showCardActions?: boolean;
   showProfileAction?: boolean;
+  /** Shows only the current Sportmonks rating above an Arena card. */
+  showMatchRating?: boolean;
+  /** Legacy caller compatibility; renders only the Sportmonks rating. */
   showMatchPoints?: boolean;
   rankingMode?: "live" | "preview";
   playerProfileHref?: string;
@@ -688,6 +692,7 @@ export function TouchlineEliteExactCard({
   enableInteractiveNeon = true,
   showCardActions = false,
   showProfileAction = true,
+  showMatchRating = false,
   showMatchPoints = false,
   rankingMode = "live",
   playerProfileHref,
@@ -698,6 +703,7 @@ export function TouchlineEliteExactCard({
   followerCount,
   likeCount,
 }: Props) {
+  const effectiveShowMatchRating = showMatchRating || showMatchPoints;
   const shellRef = useRef<HTMLDivElement | null>(null);
   const shirtNameMaskRef = useRef<HTMLDivElement | null>(null);
   const shouldUseStoredLayout = isEditable && !ignoreStoredLayout;
@@ -725,7 +731,6 @@ export function TouchlineEliteExactCard({
   const [isNeonActive, setIsNeonActive] = useState(false);
   const neonInstanceId = useId();
   const didSkipInitialLayoutWriteRef = useRef(false);
-  const activeRanking = useTouchlineActiveRanking(subscribeToRanking);
   const baseFollowerCount = followerCount ?? demoSocialCount(player.sportmonksPlayerId, 12_400, 975_000);
   const baseLikeCount = likeCount ?? demoSocialCount(`${player.sportmonksPlayerId}:card`, 840, 84_000);
 
@@ -754,7 +759,7 @@ export function TouchlineEliteExactCard({
   }, [optimizeForLiveCompact]);
 
   useLayoutEffect(() => {
-    if (!enableInteractiveNeon || isEditable || showMatchPoints || typeof window === "undefined") return;
+    if (!enableInteractiveNeon || isEditable || effectiveShowMatchRating || typeof window === "undefined") return;
 
     function clearWhenAnotherCardIsSelected(event: Event) {
       const selectedId = (event as CustomEvent<{ id?: string }>).detail?.id;
@@ -772,7 +777,7 @@ export function TouchlineEliteExactCard({
       window.removeEventListener("touchline-card-neon-select", clearWhenAnotherCardIsSelected);
       document.removeEventListener("pointerdown", clearWhenPointerLeavesTheCard);
     };
-  }, [enableInteractiveNeon, isEditable, neonInstanceId, showMatchPoints]);
+  }, [effectiveShowMatchRating, enableInteractiveNeon, isEditable, neonInstanceId]);
 
   useLayoutEffect(() => {
     if (!persistLayoutToMaster || typeof window === "undefined") {
@@ -868,21 +873,8 @@ export function TouchlineEliteExactCard({
 
   const countryCode3 = normalizeTouchlineCountryCode3(player.countryCode3);
   const shirtNumber = String(player.shirtNumber ?? player.overall ?? "").trim();
-  const liveCompetition = resolveTouchlineCardCompetition({
-    state: activeRanking,
-    playerId: player.formationPlayerId,
-    providerPlayerId: player.sportmonksPlayerId,
-  });
-  // A card may carry a server-owned season projection. Prefer that explicit
-  // canonical fact to a separately published ranking snapshot; absent facts
-  // render as unavailable instead of becoming a synthetic zero.
-  const totalPointsText = player.fantasyPoints === undefined
-    ? touchlineCardMetricText(liveCompetition.touchlinePoints)
-    : player.fantasyPoints === null || player.fantasyPoints === ""
-      ? "—"
-      : touchlineCardMetricText(player.fantasyPoints);
   const totalRatingText = player.totalRating === null || player.totalRating === undefined || player.totalRating === ""
-    ? null
+    ? "—"
     : touchlineCardMetricText(player.totalRating);
   const cardLabels = { ...localizedCardLabels(runtimeLocale), ...labels };
   // A game card exists only after the server-owned publication policy has
@@ -912,8 +904,8 @@ export function TouchlineEliteExactCard({
     ? formatTouchlineEditorialCardPrice(editorialCard.cardPrice, runtimeLocale ?? undefined)
     : null;
   const hasPublishedCardProfile = Boolean(editorialCard);
-  const compactPrimaryLabel = cardLabels.totalPoints;
-  const compactPrimaryValue = totalPointsText;
+  const compactPrimaryLabel = cardLabels.totalRating;
+  const compactPrimaryValue = totalRatingText;
   const compactSecondaryLabel = hasPublishedCardProfile || reviewRequired
     ? cardLabels.cardPrice
     : (runtimeLocale === "pt-BR" ? "POSIÇÃO" : "POSITION");
@@ -923,10 +915,10 @@ export function TouchlineEliteExactCard({
       ? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
       : player.position;
   const preseasonMissingValue = "—";
-  const matchPointsText = player.matchFantasyPoints === null || player.matchFantasyPoints === undefined || player.matchFantasyPoints === ""
+  const matchRatingText = player.matchRating === null || player.matchRating === undefined || player.matchRating === ""
     ? preseasonMissingValue
-    : touchlineCardMetricText(player.matchFantasyPoints);
-  const totalPointsSize = valueDisplaySize(compactPrimaryValue);
+    : touchlineCardMetricText(player.matchRating);
+  const totalRatingSize = valueDisplaySize(compactPrimaryValue);
   const cardPriceSize = valueDisplaySize(compactSecondaryValue);
   const cardTemplateUrl = reviewRequired
     ? null
@@ -1353,10 +1345,10 @@ export function TouchlineEliteExactCard({
           {runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required"}
         </div>
       ) : null}
-      {showMatchPoints ? (
+      {effectiveShowMatchRating ? (
         <div
-          aria-label={`${runtimeLocale === "pt-BR" ? "Pontos da partida" : "Match points"}: ${matchPointsText}`}
-          data-arena-match-points="true"
+          aria-label={`${runtimeLocale === "pt-BR" ? "Nota da partida" : "Match rating"}: ${matchRatingText}`}
+          data-arena-match-rating="true"
           style={{
             position: "absolute",
             left: "50%",
@@ -1380,13 +1372,9 @@ export function TouchlineEliteExactCard({
             backdropFilter: "blur(7px)",
             color: "#fff",
             fontWeight: 950,
-            textTransform: "uppercase",
             whiteSpace: "nowrap",
           }}
         >
-          <span style={{ fontSize: 3.3, lineHeight: 1, opacity: 0.62, letterSpacing: 0.45 }}>
-            PTS
-          </span>
           <strong
             style={{
               minWidth: 0,
@@ -1398,7 +1386,7 @@ export function TouchlineEliteExactCard({
               fontVariantNumeric: "tabular-nums",
             }}
           >
-            {matchPointsText}
+            {matchRatingText}
           </strong>
         </div>
       ) : null}
@@ -1590,8 +1578,7 @@ export function TouchlineEliteExactCard({
           }}
         >
           <div style={{ color: "rgba(226,246,255,.76)", fontSize: 8 * fieldScale("marketValue"), lineHeight: `${10 * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>{compactPrimaryLabel}</div>
-          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: totalPointsSize * fieldScale("marketValue"), lineHeight: `${(totalPointsSize + 2) * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactPrimaryValue}</div>
-          {totalRatingText ? <div data-card-total-rating="true" style={{ marginTop: 2, color: "rgba(226,246,255,.78)", fontSize: 7 * fieldScale("marketValue"), lineHeight: `${9 * fieldScale("marketValue")}px`, fontWeight: 900, letterSpacing: ".02em", whiteSpace: "nowrap" }}>{runtimeLocale === "pt-BR" ? "NOTA TOTAL" : "TOTAL RATING"} {totalRatingText}</div> : null}
+          <div data-card-total-rating="true" style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: totalRatingSize * fieldScale("marketValue"), lineHeight: `${(totalRatingSize + 2) * fieldScale("marketValue")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactPrimaryValue}</div>
         </div>
 
         <div

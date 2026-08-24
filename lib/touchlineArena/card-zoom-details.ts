@@ -23,6 +23,8 @@ export type TouchlineCardZoomExtraField = Readonly<{
   label: string;
   value: string | null | undefined;
   accent?: boolean;
+  icon?: string;
+  primary?: boolean;
 }>;
 
 /**
@@ -66,7 +68,13 @@ export function buildTouchlineVerifiedMatchFactFields(
     if (!(key in statistics)) return [];
     const value = statistics[key];
     const [englishLabel, portugueseLabel] = labels[key];
-    return [{ label: pt ? portugueseLabel : englishLabel, value: value == null ? "—" : String(value) }];
+    const icons: Partial<Record<TouchlineCardStatId, string>> = {
+      goals: "⚽", assists: "👟", defense: "🛡", cleanSheets: "🥅", cards: "🟨",
+      yellowCards: "🟨", redCards: "🟥", saves: "🧤", shotsOnTarget: "🎯",
+      shotsOffTarget: "◌", defensiveActionsTotal: "🛡", penaltySaves: "🧤",
+      penaltiesMissed: "⚠", ownGoals: "⚠", rating: "★", minutes: "◷", appearances: "◎",
+    };
+    return [{ label: pt ? portugueseLabel : englishLabel, value: value == null ? "—" : String(value), icon: icons[key] }];
   });
 }
 
@@ -158,9 +166,16 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   extraFields?: readonly TouchlineCardZoomExtraField[];
 }>): TouchlineCardZoomDetails {
   const isPortuguese = input.locale === "pt-BR";
-  const field = (label: string, value: string | number | null | undefined, accent = false) => {
+  const field = (
+    label: string,
+    value: string | number | null | undefined,
+    accent = false,
+    group: "identity" | "performance" = "identity",
+    icon?: string,
+    primary = false,
+  ) => {
     if (value === null || value === undefined || value === "") return null;
-    return { label, value: String(value), accent };
+    return { label, value: String(value), accent, group, icon, primary };
   };
   const publicCard = input.editorialCard
     ? {
@@ -180,13 +195,18 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         isPortuguese ? "Status do card" : "Card status",
         isPortuguese ? "Revisão pendente" : "Review pending",
         true,
+        "identity",
+        "✦",
       ),
       ...(!publicCard
-        ? [field(isPortuguese ? "Preço do card" : "Card price", isPortuguese ? "Pendente" : "Pending", true)]
+        ? [field(isPortuguese ? "Preço do card" : "Card price", isPortuguese ? "Pendente" : "Pending", true, "identity", "⌾")]
         : []),
       ...(input.cardReview?.missingFields ?? []).map((missingField) => field(
         isPortuguese ? "Campo pendente" : "Missing field",
         touchlineCardReviewFieldLabel(missingField, input.locale),
+        false,
+        "identity",
+        "◌",
       )),
     ]
     : [];
@@ -196,29 +216,40 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         isPortuguese ? "Tier do card" : "Card tier",
         touchlineCardTierName(publicCard.tierKey, input.locale),
         true,
+        "identity",
+        "✦",
       ),
       field(
         isPortuguese ? "Preço do card" : "Card price",
         publicCard.cardPrice,
         true,
+        "identity",
+        "⌾",
       ),
     ]
     : [];
   const baseFields = [
     ...reviewFields,
     ...editorialFields,
-    field(isPortuguese ? "Posição" : "Position", input.position),
-    field(isPortuguese ? "Nacionalidade" : "Nationality", input.nationality),
-    ...(input.touchlinePoints === null || input.touchlinePoints === undefined
-      ? []
-      : [field(isPortuguese ? "Pontos TouchLine" : "TouchLine points", input.touchlinePoints)]),
-    ...(input.extraFields ?? []).map((extra) => field(extra.label, extra.value, extra.accent)),
+    field(isPortuguese ? "Clube atual" : "Current club", input.clubName, false, "identity", "◈"),
+    field(isPortuguese ? "Posição" : "Position", input.position, false, "identity", "◉"),
+    field(isPortuguese ? "Nacionalidade" : "Nationality", input.nationality, false, "identity", "⚑"),
+    ...(input.extraFields ?? []).map((extra) => field(
+      extra.label,
+      extra.value,
+      extra.accent,
+      "performance",
+      extra.icon ?? (extra.label.toLowerCase().includes("total rating") || extra.label.toLowerCase().includes("nota total") ? "★" : undefined),
+      extra.primary ?? (extra.label.toLowerCase().includes("total rating") || extra.label.toLowerCase().includes("nota total")),
+    )),
   ].filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
 
   return {
     eyebrow: input.eyebrow ?? (isPortuguese ? "Perfil do card" : "Card profile"),
     title: input.name,
     subtitle: [input.clubName, input.position].filter(Boolean).join(" · "),
+    performanceTitle: isPortuguese ? "Desempenho" : "Performance",
+    performanceSubtitle: isPortuguese ? "Ratings e estatísticas oficiais da partida" : "Official match ratings and statistics",
     fields: baseFields,
     profileHref: input.profileHref ?? undefined,
     profileLabel: isPortuguese ? "Ver perfil completo" : "View full profile",

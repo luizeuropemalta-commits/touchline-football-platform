@@ -9,7 +9,6 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import {
   buildTouchlinePlayerCardZoomDetails,
-  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
@@ -120,20 +119,21 @@ export default function ClubHubOfficialLineup({
                     editorialCard: card.editorialCard,
                     cardReview,
                     activeContractCard: null,
-                    touchlinePoints: card.seasonTouchlinePoints === undefined
-                      ? card.touchlinePoints
-                      : card.seasonTouchlinePoints,
                     extraFields: [
                       {
-                        label: isPortuguese ? "Pontos da partida" : "Match points",
-                        value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
+                        label: isPortuguese ? "Nota total" : "Total rating",
+                        value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
+                        accent: true,
+                      },
+                      {
+                        label: isPortuguese ? "Nota da partida" : "Match rating",
+                        value: card.matchRating == null ? "—" : String(card.matchRating),
                         accent: true,
                       },
                       ...buildTouchlineVerifiedMatchFactFields({
                         statistics: card.matchStats,
                         position: card.position || card.role,
                       }, locale),
-                      ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
                     ],
                     profileHref,
                     cardEngineHref: canEditCardEngine
@@ -166,7 +166,7 @@ export default function ClubHubOfficialLineup({
                     rankingMode={staticVisualQa ? "preview" : "live"}
                     showProfileAction={false}
                     showSocialMetrics={false}
-                    showMatchPoints
+                    showMatchRating
                   />
                 </TouchlineCardZoom>
               </article>

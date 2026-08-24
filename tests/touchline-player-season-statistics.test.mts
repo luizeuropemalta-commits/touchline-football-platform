@@ -107,19 +107,20 @@ test("an exact final fixture set can be complete for scoring while details remai
   });
 
   assert.equal(aggregate.coverageStatus, "complete_for_scoring");
-  assert.equal(aggregate.summary.touchlinePoints, 4);
+  assert.equal(aggregate.summary.totalRating, 14);
   assert.equal(touchLinePlayerSeasonCoverageMessage(aggregate), "Complete for scoring — unavailable provider details remain unavailable");
 });
 
-test("a provider-omitted rating never turns an official appearance into zero points", () => {
+test("a provider-omitted rating never turns an official appearance into a synthetic zero", () => {
+  const enteredWithoutRating = lineup({ fixtureId: "f-1", starter: false, minutes: 4 });
+  enteredWithoutRating.statistics = enteredWithoutRating.statistics.filter((statistic) => statistic.code !== "rating");
   const aggregate = buildTouchLinePlayerSeasonAggregate({
     providerPlayerId: "154421",
     season: { seasonId: "current", seasonName: "2026/27", competitionId: "england", competitionName: "TouchLine England", clubId: "city", clubName: "Manchester City" },
     eligibleFixtures: [
       {
         fixtureId: "f-1",
-        lineups: [lineup({ fixtureId: "f-1", starter: false, minutes: 4 })],
-        touchlinePoints: null,
+        lineups: [enteredWithoutRating],
         scoringIncluded: false,
         providerRatingAbsentFromFinalLineup: true,
         rankingCoverageStatus: "complete_for_scoring",
@@ -128,7 +129,7 @@ test("a provider-omitted rating never turns an official appearance into zero poi
   });
 
   assert.equal(aggregate.coverageStatus, "complete_for_scoring");
-  assert.equal(aggregate.summary.touchlinePoints, null);
+  assert.equal(aggregate.summary.totalRating, null);
 });
 
 test("a legacy row claiming complete is downgraded if its fixture identity sets disagree", () => {
@@ -152,23 +153,21 @@ test("complete-for-scoring is also downgraded when fixture identities disagree",
     synchronizedFixtureCount: 2,
     expectedFixtureIds: ["1", "2"],
     aggregatedFixtureIds: ["1", "other"],
-    summaryPayload: { touchlinePoints: 4 },
+    summaryPayload: { totalRating: 14 },
   });
 
   assert.equal(normalized.coverageStatus, "partial");
 });
 
-test("a scheduled next fixture cannot erase the last verified final match points", () => {
-  const fixture = (id: string, points: number | null, statistics: Record<string, number | string>) => ({
+test("a scheduled next fixture cannot erase the last verified final match rating", () => {
+  const fixture = (id: string, rating: number | null, statistics: Record<string, number | string>) => ({
     fixtureId: id,
     fixtureName: null,
     fixtureStartsAt: id === "next" ? "2026-08-28T19:00:00.000Z" : "2026-08-21T19:00:00.000Z",
     fixtureStatus: id === "next" ? "Not Started" : "Full Time",
     appearanceStatus: "started" as const,
     minutes: 90,
-    rating: null,
-    touchlinePoints: points,
-    pointContributions: id === "final" ? [{ role: "primary" as const, eventType: "Goal", minute: 67, points: 6 }] : [],
+    rating,
     statistics,
     latestSyncAt: "2026-08-22T10:00:00.000Z",
   });
@@ -201,7 +200,7 @@ test("public player surfaces use TouchLine branding and the canonical season rea
   assert.match(profile, /matchHistory/);
   assert.match(profile, /totalRating/);
   assert.match(profile, /lastFiveMatches/);
-  assert.doesNotMatch(profile, /SportMonks|Sportmonks|provider response|do provedor/);
+  assert.match(profile, /Sportmonks/);
   assert.doesNotMatch(coach, />Sportmonks</);
   assert.doesNotMatch(lineupSurface, /confirmed by the provider|confirmados pelo provedor/);
   assert.doesNotMatch(matchCentre, /official provider|fonte oficial/);

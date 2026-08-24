@@ -30,17 +30,17 @@ test("finished and live fixtures enter the same player settlement pipeline", () 
   assert.match(liveSync, /syncTouchLinePlayerSeasonStatistics\(admin\)/);
 });
 
-test("Arena refreshes canonical match points without persisting a scoring cache", () => {
-  assert.match(accountSync, /fantasyPoints: rosterCard\.seasonTouchlinePoints \?\? rosterCard\.touchlinePoints/);
-  assert.match(accountSync, /matchFantasyPoints: rosterCard\.matchTouchlinePoints \?\? null/);
+test("Arena refreshes canonical Sportmonks ratings without persisting a performance cache", () => {
+  assert.match(accountSync, /totalRating: rosterCard\.seasonTotalRating \?\? null/);
+  assert.match(accountSync, /matchRating: rosterCard\.matchRating \?\? null/);
   assert.match(arena, /refreshAuthoritativeScoring/);
   assert.match(arena, /setInterval\(\(\) => void refreshAuthoritativeScoring\(\), 45_000\)/);
-  assert.match(arena, /fantasyPoints: undefined[\s\S]*matchFantasyPoints: undefined[\s\S]*matchPointContributions: undefined/);
+  assert.match(arena, /totalRating: undefined[\s\S]*matchRating: undefined[\s\S]*seasonStats: undefined/);
   assert.match(authoritativeRoster, /football_player_season_statistics[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v3"\)/);
   assert.match(authoritativeRoster, /touchline_player_fixture_score_settlements[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v3"\)/);
 });
 
-test("player ranking publishes only V3 season aggregates with full traceability", () => {
+test("player ranking publishes Sportmonks totals with V3 retained only as technical provenance", () => {
   assert.match(rankingRebuild, /scoringVersion: "player_scoring_v3"/);
   assert.match(rankingRebuild, /settlementTable: "touchline_player_fixture_score_settlements"/);
   assert.match(rankingRebuild, /fixtureIds/);
@@ -97,7 +97,7 @@ test("ranking pages use the league-wide published catalogue, not a private owner
   assert.match(tablesPage, /cardPlayerRank = \[\.\.\.rankedCards\]\.sort\(compareTouchLineRankedCards\)/);
   for (const surface of [rankingPage, clubOwner, marketStage]) {
     assert.match(surface, /buildTouchlineVerifiedMatchFactFields/);
-    assert.match(surface, /buildTouchlineMatchScoringBreakdownFields/);
+    assert.doesNotMatch(surface, /buildTouchlineMatchScoringBreakdownFields/);
   }
 });
 

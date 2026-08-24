@@ -2,30 +2,28 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 import {
   ChevronRight,
   ExternalLink,
-  PencilLine,
   ShieldCheck,
   Trophy,
-  UserRound,
-  X,
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
-import { useTouchlineDialog } from "@/components/touchline/a11y/TouchlineDialog";
-import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
+import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
-import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import {
   touchlineCardTierName,
   touchlineCardTierPalette,
 } from "@/lib/touchlineArena/card-rules";
 import {
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "@/lib/touchlineArena/card-zoom-details";
+import {
   formatTouchlineCommercialCardTotal,
 } from "@/lib/touchlineArena/commercial-card-pricing";
-import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import type { TouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import {
@@ -85,19 +83,6 @@ function RankingPending({ copy }: { copy: RankingsCopy }) {
   );
 }
 
-function tableCardPresentation(card: ClubOwnerSquadCard, locale: string) {
-  const tierKey = card.editorialCard?.tierKey ?? null;
-  const cardPrice = card.editorialCard
-    ? formatTouchlineEditorialCardPrice(card.editorialCard.cardPrice, locale)
-    : null;
-
-  return {
-    tierKey,
-    cardPrice,
-    hasActiveContract: false,
-  };
-}
-
 function CompactPlayerCard({
   card,
   locale,
@@ -113,7 +98,7 @@ function CompactPlayerCard({
       player={squadCardToExactPlayer(card, { useSuppliedTier: true })}
       labels={{
         nationality: locale === "pt-BR" ? "País" : "Nat",
-        totalPoints: locale === "pt-BR" ? "Pontos TouchLine" : "TouchLine Points",
+        totalRating: locale === "pt-BR" ? "Nota total" : "Total rating",
         cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
         currentClub: locale === "pt-BR" ? "Clube atual" : "Current Club",
       }}
@@ -124,6 +109,62 @@ function CompactPlayerCard({
       showProfileAction={false}
       showSocialMetrics={expanded}
     />
+  );
+}
+
+function TablePlayerCardZoom({
+  card,
+  locale,
+  canEditCardEngine,
+}: {
+  card: ClubOwnerSquadCard;
+  locale: string;
+  canEditCardEngine: boolean;
+}) {
+  const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
+  const tierKey = card.editorialCard?.tierKey ?? null;
+  const isPortuguese = locale === "pt-BR";
+  const profileHref = touchlinePlayerProfileHref(player, locale);
+
+  return (
+    <TouchlineCardZoom
+      ariaLabel={`${isPortuguese ? "Ampliar card de" : "Open card for"} ${card.name}`}
+      tierAccent={tierKey ? touchlineCardTierPalette(tierKey).accent : "#b8ff46"}
+      tierLabel={tierKey ? touchlineCardTierName(tierKey, locale) : undefined}
+      details={buildTouchlinePlayerCardZoomDetails({
+        locale,
+        name: card.name,
+        clubName: card.clubName,
+        position: card.position,
+        nationality: card.countryCode3,
+        editorialCard: card.editorialCard,
+        cardReview: card.cardReview,
+        profileHref,
+        cardEngineHref: canEditCardEngine
+          ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+          : null,
+        extraFields: [
+          {
+            label: isPortuguese ? "Nota total" : "Total rating",
+            value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
+            accent: true,
+            primary: true,
+          },
+          {
+            label: isPortuguese ? "Nota da partida" : "Match rating",
+            value: card.matchRating == null ? "—" : String(card.matchRating),
+            accent: true,
+          },
+          ...buildTouchlineVerifiedMatchFactFields({
+            statistics: card.matchStats,
+            position: card.position,
+          }, locale),
+        ],
+      })}
+      expandedContent={<CompactPlayerCard card={card} locale={locale} expanded />}
+    >
+      <CompactPlayerCard card={card} locale={locale} />
+    </TouchlineCardZoom>
   );
 }
 
@@ -144,38 +185,9 @@ export default function TouchLineTablesClient({
   totalOwnerValue,
   touchLineEnglandTable,
 }: TouchLineTablesClientProps) {
-  const [zoomedCardId, setZoomedCardId] = useState<string | null>(null);
-  const zoomTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const zoomCloseRef = useRef<HTMLButtonElement | null>(null);
   const selection = publishedTopEleven?.slots ?? null;
   const publishedRosterCards = rosterCards.filter((card) => Boolean(card.editorialCard));
-  const zoomedCard = publishedRosterCards.find((card) => card.id === zoomedCardId) ?? null;
   const isPortuguese = locale === "pt-BR";
-  const zoomedPresentation = zoomedCard ? tableCardPresentation(zoomedCard, locale) : null;
-  const zoomedCardTierLabel = zoomedPresentation?.tierKey
-    ? touchlineCardTierName(zoomedPresentation.tierKey, locale)
-    : "";
-  const zoomedCardTierAccent = zoomedPresentation?.tierKey
-    ? touchlineCardTierPalette(zoomedPresentation.tierKey).accent
-    : "#b8ff46";
-  const zoomedCardContractHref = zoomedCard && zoomedPresentation?.hasActiveContract
-    ? touchlineArenaContractHref({
-        locale,
-        playerId: zoomedCard.id,
-        playerName: zoomedCard.name,
-      })
-    : null;
-  const zoomedCardEngineHref = zoomedCard && canEditCardEngine
-    ? touchlineCardEnginePlayerHref(zoomedCard.canonicalPlayerId, locale)
-    : null;
-
-  const { dialogProps: zoomDialogProps } = useTouchlineDialog<HTMLDivElement>({
-    open: Boolean(zoomedCard),
-    onDismiss: () => setZoomedCardId(null),
-    label: `${isPortuguese ? "Card ampliado de" : "Expanded card for"} ${zoomedCard?.name ?? ""}`.trim(),
-    initialFocusRef: zoomCloseRef,
-    returnFocusRef: zoomTriggerRef,
-  });
 
   return (
     <main className={styles.page}>
@@ -229,17 +241,9 @@ export default function TouchLineTablesClient({
                 style={{ left: `${point.x}%`, top: `${point.y}%` } as CSSProperties}
               >
                 <span className={styles.positionLabel}>{slot.label}</span>
-                <button
-                  type="button"
-                  className={styles.cardButton}
-                  aria-label={`${isPortuguese ? "Ampliar card de" : "Open card for"} ${card.name}`}
-                  onClick={(event) => {
-                    zoomTriggerRef.current = event.currentTarget;
-                    setZoomedCardId(card.id);
-                  }}
-                >
-                  <CompactPlayerCard card={card} locale={locale} />
-                </button>
+                <div className={styles.cardButton}>
+                  <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
+                </div>
               </article>
             );
           })}
@@ -310,19 +314,11 @@ export default function TouchLineTablesClient({
             {cardPlayerRank.map((card, index) => (
               <li key={card.id}>
                 <b>{String(index + 1).padStart(2, "0")}</b>
-                <button
-                  type="button"
-                  className={styles.playerRankCardButton}
-                  aria-label={`${isPortuguese ? "Ampliar card de" : "Open card for"} ${card.name}`}
-                  onClick={(event) => {
-                    zoomTriggerRef.current = event.currentTarget;
-                    setZoomedCardId(card.id);
-                  }}
-                >
-                  <CompactPlayerCard card={card} locale={locale} />
-                </button>
+                <div className={styles.playerRankCardButton}>
+                  <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
+                </div>
                 <div className={styles.rowIdentity}><strong>{card.name}</strong><span>{card.position} · {card.clubName}</span></div>
-                <div className={styles.pointsValue}><strong>{card.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
+                <div className={styles.pointsValue}><strong>{card.seasonTotalRating?.toFixed(2) ?? "—"}</strong><span>{isPortuguese ? "nota total" : "total rating"}</span></div>
                 <Link href={touchlinePlayerProfileHref(squadCardToExactPlayer(card), locale)} aria-label={`${isPortuguese ? "Abrir perfil de" : "Open profile for"} ${card.name}`}>
                   <ExternalLink aria-hidden="true" />
                 </Link>
@@ -351,68 +347,6 @@ export default function TouchLineTablesClient({
           </ol> : <RankingPending copy={copy} />}
         </section>
       </div>
-
-      {zoomedCard ? (
-        <div {...zoomDialogProps} className={styles.zoomBackdrop} onClick={() => setZoomedCardId(null)}>
-          <div
-            className={styles.zoomContent}
-            style={{ "--touchline-card-accent": zoomedCardTierAccent } as CSSProperties}
-            onClick={(event) => {
-              event.stopPropagation();
-              if ((event.target as HTMLElement).closest("a,button")) return;
-              setZoomedCardId(null);
-            }}
-          >
-            <button
-              ref={zoomCloseRef}
-              type="button"
-              className={styles.zoomClose}
-              aria-label={isPortuguese ? "Fechar" : "Close"}
-              onClick={() => setZoomedCardId(null)}
-            >
-              <X aria-hidden="true" size={20} />
-            </button>
-            <div className={styles.zoomCardVisual}>
-              <CompactPlayerCard card={zoomedCard} locale={locale} expanded />
-            </div>
-            <div className={styles.zoomSide}>
-              {zoomedCardTierLabel ? (
-                <div className={styles.zoomCardMeta}>
-                  <strong>{zoomedCardTierLabel}</strong>
-                  {zoomedPresentation?.hasActiveContract ? <span>{isPortuguese ? "Contrato · 1 temporada" : "Contract · 1 season"}</span> : null}
-                </div>
-              ) : null}
-              {zoomedPresentation?.cardPrice ? (
-                zoomedCardContractHref ? (
-                  <Link className={styles.zoomContract} href={zoomedCardContractHref}>
-                    <TouchlineCoinMark size={18} />
-                    <span>{isPortuguese ? "Contratar" : "Contract"}</span>
-                    <strong>{zoomedPresentation.cardPrice}</strong>
-                  </Link>
-                ) : (
-                  <div className={styles.zoomContract}>
-                    <TouchlineCoinMark size={18} />
-                    <span>{isPortuguese ? "Preço do card" : "Card price"}</span>
-                    <strong>{zoomedPresentation.cardPrice}</strong>
-                  </div>
-                )
-              ) : null}
-              <div className={styles.zoomActions}>
-                <Link href={touchlinePlayerProfileHref(squadCardToExactPlayer(zoomedCard), locale)}>
-                  <UserRound aria-hidden="true" size={17} />
-                  {isPortuguese ? "Perfil" : "Profile"}
-                </Link>
-                {zoomedCardEngineHref ? (
-                  <Link className={styles.zoomCardEngineAction} href={zoomedCardEngineHref}>
-                    <PencilLine aria-hidden="true" size={17} />
-                    {isPortuguese ? "Editar no Card Engine" : "Edit in Card Engine"}
-                  </Link>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       <footer className={styles.footer}>
         <Trophy aria-hidden="true" size={19} />

@@ -153,13 +153,10 @@ function canonicalArenaPlayer(
       position: rosterCard.position,
       countryCode3: rosterCard.countryCode3,
       flagUrl: null,
-      // `touchlinePoints` remains a numeric compatibility field for legacy
-      // ordering. The card must receive the null-aware canonical projection,
-      // otherwise an unavailable season fact would be rendered as zero.
-      fantasyPoints: rosterCard.seasonTouchlinePoints === undefined
-        ? rosterCard.touchlinePoints
-        : rosterCard.seasonTouchlinePoints,
-      matchFantasyPoints: rosterCard.matchTouchlinePoints ?? null,
+      // Player performance is provider-owned: never project the legacy score
+      // fields into an Arena card. An unavailable provider rating remains null.
+      totalRating: rosterCard.seasonTotalRating ?? null,
+      matchRating: rosterCard.matchRating ?? null,
       marketValue: rosterCard.marketValue,
       marketValueSource: rosterCard.marketValueSource ?? "unavailable",
       ...(rosterCard.marketValueState != null

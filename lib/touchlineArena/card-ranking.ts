@@ -42,10 +42,11 @@ export type TouchlineRankingPlayerInput = {
   clubName: string;
   position?: string | null;
   role?: string | null;
-  touchlinePoints: number;
+  /** Legacy converted score retained only inside immutable audit snapshots. */
+  touchlinePoints?: number;
   roundPoints?: number | null;
-  /** Immutable snapshot of the canonical season total of valid match ratings. */
-  totalRating?: number | null;
+  /** Canonical sum of valid Sportmonks match ratings. */
+  totalRating: number | null;
   minutesPlayed?: number | null;
   appearances?: number | null;
 };
@@ -118,8 +119,14 @@ export function compareTouchlineRankingPlayers(
   first: TouchlineRankingPlayerInput,
   second: TouchlineRankingPlayerInput,
 ) {
-  const pointDifference = finiteNumber(second.touchlinePoints) - finiteNumber(first.touchlinePoints);
-  if (pointDifference) return pointDifference;
+  const firstRating = finiteNullable(first.totalRating);
+  const secondRating = finiteNullable(second.totalRating);
+  if (firstRating !== null || secondRating !== null) {
+    if (firstRating === null) return 1;
+    if (secondRating === null) return -1;
+    const ratingDifference = secondRating - firstRating;
+    if (ratingDifference) return ratingDifference;
+  }
 
   const minuteDifference = finiteNonNegative(second.minutesPlayed) - finiteNonNegative(first.minutesPlayed);
   if (minuteDifference) return minuteDifference;
@@ -172,8 +179,8 @@ export function buildTouchlinePositionRankings(
 
         return {
           ...player,
-          touchlinePoints: finiteNumber(player.touchlinePoints),
-          roundPoints: finiteNumber(player.roundPoints),
+          ...(player.touchlinePoints === undefined ? {} : { touchlinePoints: finiteNumber(player.touchlinePoints) }),
+          ...(player.roundPoints === undefined ? {} : { roundPoints: finiteNumber(player.roundPoints) }),
           totalRating: finiteNullable(player.totalRating),
           minutesPlayed: finiteNonNegative(player.minutesPlayed),
           appearances: finiteNonNegative(player.appearances),

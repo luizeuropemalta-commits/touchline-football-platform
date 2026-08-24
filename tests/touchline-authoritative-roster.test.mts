@@ -128,9 +128,8 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
     marketValueSource: "unavailable",
     cardTier: "emerald-green",
     inventoryId: INVENTORY_ID,
-    touchlinePoints: 12,
-    seasonTouchlinePoints: 12,
-    matchTouchlinePoints: null,
+    touchlinePoints: 0,
+    seasonTouchlinePoints: null,
     editorialCard: PUBLISHED_EDITORIAL_CARD,
   });
 });
@@ -276,7 +275,7 @@ test("strict lineup ownership guard accepts only unique active inventory ids", (
   });
 });
 
-test("Arena persistence rebuilds spoofed card identity, tier, value, points and stats from the authoritative roster", () => {
+test("Arena persistence rebuilds spoofed card identity, tier, value, rating and stats from the authoritative roster", () => {
   const result = canonicalizeArenaLineupForPersistence([{
     id: "attacker-controlled-id",
     name: "Spoofed Name",
@@ -327,8 +326,8 @@ test("Arena persistence rebuilds spoofed card identity, tier, value, points and 
     position: "ST",
     countryCode3: "NOR",
     flagUrl: null,
-    fantasyPoints: 12,
-    matchFantasyPoints: null,
+    totalRating: null,
+    matchRating: null,
     marketValue: "",
     marketValueSource: "unavailable",
     cardTier: "emerald-green",

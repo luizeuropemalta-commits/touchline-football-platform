@@ -112,7 +112,7 @@ const DEFAULT_PLAYER: TouchlineEliteExactPlayer = {
   cardTemplateUrl: touchlineArenaClubTemplateForCard("Manchester City", null, "diamond-gold"),
   avatarImageScale: 1.15,
   avatarObjectPosition: "center top",
-  fantasyPoints: "0.0",
+  totalRating: null,
 };
 
 function slugify(value?: string | null) {
@@ -242,7 +242,7 @@ function buildPreviewPlayer(basePlayer: TouchlineEliteExactPlayer, preview: (typ
     cardPriceVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
     frameUrl: "",
     cardTemplateUrl: touchlineArenaClubTemplateForTierPreview(basePlayer.clubName, preview.tierKey),
-    fantasyPoints: "0.0",
+    totalRating: null,
   };
 }
 
@@ -273,7 +273,7 @@ function arenaLineupCardToStudioPlayer(savedPlayer: Partial<ArenaLineupPlayer>, 
       touchlineArenaClubTemplateForCard(card?.clubName || fallback.clubName, null, cardTier)
       || fallback.cardTemplateUrl,
     frameUrl: "",
-    fantasyPoints: card?.fantasyPoints ?? fallback.fantasyPoints ?? "0.0",
+    totalRating: card?.totalRating ?? fallback.totalRating ?? null,
     matchStats: card?.matchStats || fallback.matchStats,
   };
 }
@@ -455,7 +455,7 @@ export default function TouchlineCardStudioPage() {
           position: player.position || null,
           countryCode3: player.countryCode3 || null,
           flagUrl: player.flagUrl || null,
-          fantasyPoints: player.fantasyPoints ?? "0.0",
+          totalRating: player.totalRating ?? null,
           marketValue: player.marketValue || null,
           marketValueSource: player.marketValue ? "provider" : "unavailable",
           cardTier: touchlineArenaCompetitionTierForCard(player.cardTier).key,

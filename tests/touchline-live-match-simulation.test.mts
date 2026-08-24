@@ -128,14 +128,14 @@ test("Live clears a previous XI and reveals complete verified cards atomically",
   assert.doesNotMatch(globalCssSource, /\[data-card-live-scale-mode=[^\]]+\] \[data-live-card-compact-detail="true"\][\s\S]*?display: none !important/);
   assert.doesNotMatch(eliteCardSource, /touchlineCardForegroundFrameUrl/);
   assert.match(eliteCardSource, /touchlineCardMetricText/);
-  assert.match(eliteCardSource, /player\.fantasyPoints === undefined[\s\S]*?liveCompetition\.touchlinePoints/);
+  assert.match(eliteCardSource, /player\.totalRating === undefined/);
   assert.match(eliteCardSource, /const preseasonMissingValue = "—"/);
   assert.match(eliteCardSource, /return text \|\| "—"/);
   const liveBuilder = arenaClientSource.match(/function builderPlayerToPreviewCard\([\s\S]*?\n\}/)?.[0] ?? "";
   assert.ok(liveBuilder, "Live player card builder must exist");
-  assert.doesNotMatch(liveBuilder, /fantasyPoints:\s*"0\.0"/);
+  assert.doesNotMatch(liveBuilder, /totalRating:\s*"0\.0"/);
   assert.doesNotMatch(liveBuilder, /matchStats:\s*\{\s*goals:\s*0/);
-  assert.match(liveBuilder, /fantasyPoints:\s*player\.touchlinePoints/);
+  assert.match(liveBuilder, /totalRating:\s*player\.seasonTotalRating/);
   assert.match(liveBuilder, /matchStats:\s*player\.matchStats/);
   assert.match(eliteCardSource, /const \[useWebKitCompactPaintScale, setUseWebKitCompactPaintScale\] = useState\(false\)/);
   assert.match(eliteCardSource, /const isWebKitEngine =[\s\S]*?AppleWebKit[\s\S]*?Chrome\|Chromium\|Edg\|OPR\|SamsungBrowser/);
@@ -224,7 +224,7 @@ test("Live warms only the current verified 22 player card products", () => {
   assert.match(eliteCardSource, /LIVE_COMPACT_CLUB_TEMPLATE_ROOT/);
   assert.match(eliteCardSource, /touchlineLiveCompactFrameUrl\(versionedCardTemplateUrl\)/);
   assert.match(eliteCardSource, /if \(!unversionedUrl\.startsWith\(clubTemplateRoot\)\) return unversionedUrl/);
-  assert.match(eliteCardSource, /useTouchlineActiveRanking\(subscribeToRanking\)/);
+  assert.doesNotMatch(eliteCardSource, /useTouchlineActiveRanking\(subscribeToRanking\)/);
   assert.match(coachCardSource, /templates\/live-compact\/coaches/);
   assert.match(coachCardSource, /templates\/zoom\/coaches/);
   assert.match(

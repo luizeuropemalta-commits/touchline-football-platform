@@ -39,7 +39,7 @@ const MASTER_PREVIEW_PLAYER: TouchlineEliteExactPlayer = {
   cardTemplateUrl: touchlineArenaClubTemplateForTierPreview("Newcastle United", "emerald-green"),
   avatarImageScale: 1,
   avatarObjectPosition: "center top",
-  fantasyPoints: 128,
+  totalRating: 128,
   seasonStats: {
     goals: 12,
     assists: 7,

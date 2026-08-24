@@ -9,7 +9,6 @@ import {
   squadCardToExactPlayer,
 } from "@/lib/touchlineArena/demo-data";
 import { createClient } from "@/lib/supabase/server";
-import { resolveTouchlineCardCompetition } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { loadTouchLineRankedCardCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
 import { compareTouchLineRankedCards } from "@/lib/touchlineArena/ranked-card-catalog";
@@ -22,7 +21,6 @@ import {
 } from "@/lib/touchlineArena/card-rules";
 import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import {
-  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlinePlayerCardZoomDetails,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
@@ -52,42 +50,31 @@ export default async function TouchLinePlayerCardRankingsPage({
   // This is the league-wide published-card ranking, never the signed-in
   // customer's private roster. Every surface receives the same V3 snapshot.
   const rosterCards = await loadTouchLineRankedCardCatalog(activeRanking);
-  const competitionByCardId = new Map(rosterCards.map((card) => [
-    card.id,
-    resolveTouchlineCardCompetition({ state: activeRanking, playerId: card.id }),
-  ]));
-  const rankedCards = rosterCards
-    .map((card) => {
-      const competition = competitionByCardId.get(card.id)!;
-      return {
-        ...card,
-        touchlinePoints: competition.touchlinePoints,
-      };
-    })
-    .sort(compareTouchLineRankedCards);
+  const rankedCards = rosterCards.sort(compareTouchLineRankedCards);
   const topCards = rankedCards.slice(0, 3);
   const topTwentyCards = rankedCards.slice(0, 20);
   const locale = normalizeTouchLineLocale((await searchParams).lang);
   const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
-  const totalPoints = rankedCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
+  const totalRatings = rankedCards.reduce((sum, card) => sum + (card.seasonTotalRating ?? 0), 0);
   const copy = getTouchLineRankingsCopy(locale);
   const localeQuery = `lang=${encodeURIComponent(locale)}`;
   const marketTransferHref = (clubSlug?: string) => {
     const marketHref = touchlineArenaPanelHref("market", locale);
     return clubSlug ? `${marketHref}&club=${encodeURIComponent(clubSlug)}` : marketHref;
   };
-  const rankingModeLabel = activeRanking.phase === "ranked" ? copy.liveOrder : copy.demoOrder;
+  const rankingModeLabel = activeRanking.phase === "ranked"
+    ? (locale === "pt-BR" ? "Ordem por Nota Sportmonks" : "Sportmonks rating order")
+    : copy.demoOrder;
   const editorialCopy = locale === "pt-BR"
     ? {
-      rankingDescription: "O ranking reúne apenas cards TouchLine publicados. Os Pontos TouchLine publicados definem a posição esportiva; tier e preço são definidos pelo processo de publicação do card.",
+      rankingDescription: "O ranking reúne apenas cards TouchLine publicados e é ordenado pela soma das notas Sportmonks válidas. Tier e preço são definidos pelo processo de publicação do card.",
     }
     : {
-      rankingDescription: "The ranking includes published TouchLine cards only. Published TouchLine Points determine sporting position; tier and card price come from the card-publication process.",
+      rankingDescription: "The ranking includes published TouchLine cards only and is ordered by the sum of valid Sportmonks ratings. Tier and card price come from the card-publication process.",
     };
   const cardLabels = {
     nationality: touchLineT(locale, "nationalityShort"),
-    points: touchLineT(locale, "points"),
-    totalPoints: touchLineT(locale, "touchlinePoints"),
+    totalRating: locale === "pt-BR" ? "Nota total" : "Total rating",
     cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
   };
   const editorialPresentation = (card: (typeof rankedCards)[number]) => {
@@ -119,7 +106,6 @@ export default async function TouchLinePlayerCardRankingsPage({
         editorialCard: card.editorialCard,
         cardReview: card.cardReview,
         activeContractCard: null,
-        touchlinePoints: card.touchlinePoints,
         extraFields: [
           {
             label: locale === "pt-BR" ? "Nota total" : "Total rating",
@@ -129,15 +115,14 @@ export default async function TouchLinePlayerCardRankingsPage({
             accent: true,
           },
           {
-            label: locale === "pt-BR" ? "Pontos da partida" : "Match points",
-            value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
+            label: locale === "pt-BR" ? "Nota da partida" : "Match rating",
+            value: card.matchRating == null ? "—" : String(card.matchRating),
             accent: true,
           },
           ...buildTouchlineVerifiedMatchFactFields({
             statistics: card.matchStats,
             position: card.position || card.role,
           }, locale),
-          ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
         ],
         profileHref,
         cardEngineHref: canEditCardEngine
@@ -174,8 +159,8 @@ export default async function TouchLinePlayerCardRankingsPage({
               <strong>{rankedCards.length}</strong>
             </article>
             <article>
-              <span>{copy.pointsMode}</span>
-              <strong>{totalPoints}</strong>
+              <span>{locale === "pt-BR" ? "Soma das notas" : "Rating sum"}</span>
+              <strong>{totalRatings.toFixed(2)}</strong>
             </article>
             <article className="is-mode">
               <span>{copy.mode}</span>
@@ -192,7 +177,6 @@ export default async function TouchLinePlayerCardRankingsPage({
             const featuredSummary = [
               card.position,
               zoom.displayPrice,
-              `${card.touchlinePoints} ${copy.pointsShort}`,
               card.seasonTotalRating === null || card.seasonTotalRating === undefined
                 ? null
                 : `${locale === "pt-BR" ? "Nota total" : "Total rating"} ${card.seasonTotalRating}`,
@@ -317,7 +301,7 @@ export default async function TouchLinePlayerCardRankingsPage({
                     {club?.logoUrl ? <img src={club.logoUrl} alt="" draggable={false} /> : null}
                     <span>{club?.shortCode ?? card.clubName}</span>
                   </div>
-                  <b aria-label={`${copy.pointsShort} ${card.touchlinePoints}${card.seasonTotalRating === null || card.seasonTotalRating === undefined ? "" : `, ${locale === "pt-BR" ? "Nota total" : "Total rating"} ${card.seasonTotalRating}`}`}>{card.touchlinePoints} {copy.pointsShort}</b>
+                  <b aria-label={`${locale === "pt-BR" ? "Nota total" : "Total rating"} ${card.seasonTotalRating ?? "—"}`}>{card.seasonTotalRating ?? "—"}</b>
                   {zoom.displayPrice ? <em>{zoom.displayPrice}</em> : null}
                   <div className="tl-card-rankings-actions">
                     <a href={marketTransferHref(club?.slug)}>{copy.marketTransfer}</a>

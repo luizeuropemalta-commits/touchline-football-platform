@@ -43,10 +43,11 @@
 }
 
 .panelWithDetails {
-  width: min(820px, calc(100vw - 44px));
-  grid-template-columns: minmax(280px, 390px) minmax(260px, 1fr);
+  width: min(1240px, calc(100vw - 44px));
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 390px) minmax(220px, 1fr);
+  grid-template-areas: "identity card performance";
   align-items: center;
-  gap: 18px;
+  gap: clamp(18px, 3vw, 48px);
 }
 
 /* A detail panel can become vertically scrollable on narrow or short
@@ -56,6 +57,7 @@
 
 .cardColumn {
   display: grid;
+  grid-area: card;
   min-width: 0;
   gap: 9px;
 }
@@ -165,14 +167,26 @@
 .details {
   display: grid;
   min-width: 0;
-  gap: 14px;
-  padding: 12px 6px 12px 18px;
+  gap: 16px;
+  padding: 16px 0;
   color: #f5fff3;
   background:
-    radial-gradient(circle at 100% 0%, rgba(158, 255, 45, .10), transparent 42%);
-  border-left: 1px solid rgba(158, 255, 45, .28);
+    radial-gradient(circle at 50% 0%, rgba(158, 255, 45, .08), transparent 50%);
   cursor: default;
 }
+
+.identityDetails {
+  grid-area: identity;
+  text-align: right;
+}
+
+.performanceDetails {
+  grid-area: performance;
+  text-align: left;
+}
+
+.identityDetails .detailsGrid > div { padding-right: 2px; }
+.performanceDetails .detailsGrid > div { padding-left: 2px; }
 
 .details [data-coach-profile-action="true"] {
   display: grid;
@@ -218,20 +232,35 @@
 
 .detailsGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 0;
   margin: 0;
 }
 
 .detailsGrid > div {
   min-width: 0;
   border-bottom: 1px solid rgba(255,255,255,.10);
-  padding: 9px 0;
+  padding: 12px 0;
   background: transparent;
 }
 
 .detailsGrid .detailAccent {
   border-color: rgba(158, 255, 45, .55);
+}
+
+.detailsGrid .detailPrimary {
+  border-color: rgba(255, 220, 118, .72);
+  padding-block: 17px;
+}
+
+.detailIcon {
+  display: inline-grid;
+  width: 20px;
+  margin-right: 7px;
+  place-items: center;
+  color: #f7d76d;
+  font-size: 14px;
+  vertical-align: -1px;
 }
 
 .detailsGrid dd {
@@ -241,6 +270,14 @@
   font-size: 14px;
   font-weight: 900;
   line-height: 1.2;
+}
+
+.detailPrimary dd {
+  color: #fff2b5;
+  font-size: clamp(32px, 4vw, 50px);
+  line-height: .94;
+  letter-spacing: -.04em;
+  text-shadow: 0 0 24px rgba(255, 211, 93, .22);
 }
 
 .detailActions {
@@ -293,6 +330,7 @@
     width: min(390px, calc(100vw - 28px));
     max-height: calc(100dvh - 28px);
     grid-template-columns: 1fr;
+    grid-template-areas: "card" "identity" "performance";
     align-items: start;
     overflow: visible;
   }
@@ -301,8 +339,9 @@
     --touchline-card-static-scale: .6744186047;
     margin-inline: auto;
   }
-  .details { border-left: 0; border-top: 1px solid rgba(158, 255, 45, .28); padding: 16px 0 0; }
-  .detailsGrid { grid-template-columns: 1fr 1fr; }
+  .details { border-top: 1px solid rgba(158, 255, 45, .28); padding: 16px 0 0; }
+  .identityDetails { text-align: left; }
+  .detailsGrid { grid-template-columns: 1fr 1fr; gap: 0 16px; }
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
@@ -318,13 +357,14 @@
   }
 
   .panelWithDetails {
-    width: min(900px, calc(100vw - 40px));
-    grid-template-columns: minmax(0, calc((100dvh - 40px) * .6223)) minmax(280px, 1fr);
+    width: min(1100px, calc(100vw - 40px));
+    grid-template-columns: minmax(150px, 1fr) minmax(0, calc((100dvh - 40px) * .6223)) minmax(180px, 1fr);
+    grid-template-areas: "identity card performance";
     grid-template-rows: auto;
     overflow: visible;
   }
 
-  .cardColumn { grid-column: 1; grid-row: 1; }
+  .cardColumn { grid-column: auto; grid-row: auto; }
 
   .expandedMeta {
     grid-column: 2;
@@ -338,7 +378,7 @@
     align-self: start;
   }
 
-  .panelWithDetails .details { grid-column: 2; grid-row: 1; }
+  .panelWithDetails .details { grid-column: auto; grid-row: auto; }
 }
 
 @media (orientation: landscape) and (max-height: 420px) {

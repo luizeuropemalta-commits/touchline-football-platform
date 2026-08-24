@@ -19,8 +19,6 @@ export type TouchlineActiveRankingPlayer = Pick<
   | "positionGroup"
   | "positionRank"
   | "groupSize"
-  | "touchlinePoints"
-  | "roundPoints"
   | "totalRating"
   | "tierKey"
   | "priceTc"
@@ -38,6 +36,7 @@ export type TouchlineActiveRankingState = {
   seasonId: string | null;
   fixtureIds: readonly string[];
   expectedFixtureIds: readonly string[];
+  /** Legacy immutable audit column; active presentation never reads it. */
   totalScorePoints: number | null;
   players: readonly TouchlineActiveRankingPlayer[];
 };
@@ -47,8 +46,7 @@ export type TouchlineResolvedCardCompetition = {
   ranked: boolean;
   tierKey: TouchlineCardTierKey;
   priceTc: number;
-  touchlinePoints: number;
-  roundPoints: number;
+  totalRating: number | null;
   positionGroup: TouchlinePositionRankingGroup | null;
   positionRank: number | null;
   snapshotId: string | null;
@@ -99,14 +97,8 @@ function isRankingPlayer(value: unknown): value is TouchlineActiveRankingPlayer 
       && Number(player.groupSize) > 0
       && Number(player.positionRank) <= Number(player.groupSize)
       && POSITION_GROUPS.has(player.positionGroup as TouchlinePositionRankingGroup)
-      && typeof player.touchlinePoints === "number"
-      && Number.isFinite(player.touchlinePoints)
-      && (player.totalRating === undefined || player.totalRating === null || (
+      && (player.totalRating === null || (
         typeof player.totalRating === "number" && Number.isFinite(player.totalRating)
-      ))
-      && (player.roundPoints === undefined || (
-        typeof player.roundPoints === "number"
-        && Number.isFinite(player.roundPoints)
       ))
   );
 }
@@ -130,8 +122,7 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     || !isCanonicalFixtureIdArray(candidate.fixtureIds)
     || !isCanonicalFixtureIdArray(candidate.expectedFixtureIds)
     || [...candidate.fixtureIds].sort().join("\n") !== [...candidate.expectedFixtureIds].sort().join("\n")
-    || typeof candidate.totalScorePoints !== "number"
-    || !Number.isFinite(candidate.totalScorePoints)
+    || candidate.totalScorePoints !== 0
     || !Array.isArray(candidate.players)
     || candidate.players.length === 0
     || !candidate.players.every(isRankingPlayer)
@@ -167,10 +158,6 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
       return null;
     }
   }
-  if (candidate.players.reduce((total, player) => total + player.touchlinePoints, 0) !== candidate.totalScorePoints) {
-    return null;
-  }
-
   return {
     phase: "ranked",
     leagueKey: candidate.leagueKey,
@@ -202,8 +189,7 @@ export function resolveTouchlineCardCompetition(input: {
       ranked: false,
       tierKey: startingTier.key,
       priceTc: startingTier.retailPriceTc,
-      touchlinePoints: 0,
-      roundPoints: 0,
+      totalRating: null,
       positionGroup: null,
       positionRank: null,
       snapshotId: null,
@@ -223,8 +209,7 @@ export function resolveTouchlineCardCompetition(input: {
       ranked: false,
       tierKey: startingTier.key,
       priceTc: startingTier.retailPriceTc,
-      touchlinePoints: 0,
-      roundPoints: 0,
+      totalRating: null,
       positionGroup: null,
       positionRank: null,
       snapshotId: state.snapshotId,
@@ -236,8 +221,7 @@ export function resolveTouchlineCardCompetition(input: {
     ranked: true,
     tierKey: entry.tierKey,
     priceTc: entry.priceTc,
-    touchlinePoints: entry.touchlinePoints,
-    roundPoints: entry.roundPoints ?? 0,
+    totalRating: entry.totalRating,
     positionGroup: entry.positionGroup,
     positionRank: entry.positionRank,
     snapshotId: state.snapshotId,

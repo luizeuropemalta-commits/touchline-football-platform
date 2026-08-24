@@ -232,11 +232,11 @@ test("ClubOwner Best of the Week follows the latest round and preserves any winn
   const tablesClient = source("app/touchline-tables/touchline-tables-client.tsx");
 
   assert.match(profilePage, /loadTouchLineActiveRanking\(\)/);
-  assert.match(profilePage, /touchlinePoints: competition\.touchlinePoints/);
-  assert.match(profilePage, /roundPoints: competition\.roundPoints/);
-  assert.match(profilePage, /second\.roundPoints - first\.roundPoints/);
+  assert.match(profilePage, /seasonTotalRating: competition\.totalRating/);
+  assert.match(profilePage, /seasonTotalRating/);
+  assert.doesNotMatch(profilePage, /roundPoints/);
   assert.match(profilePage, /Best of the Week/);
-  assert.match(profilePage, /Maior pontuação da última rodada concluída/);
+  assert.match(profilePage, /Maior nota acumulada entre os cards publicados/);
   assert.match(profilePage, /backgroundAccent=\{bestPlayerPalette\.accent\}/);
   assert.match(tablesClient, /squadCardToExactPlayer\(card, \{ useSuppliedTier: true \}\)/);
   assert.doesNotMatch(tablesClient, /TOUCHLINE_CARD_STARTING_TIER_KEY/);
@@ -265,14 +265,14 @@ test("best-player rankings use player cards and one reversible zoom on every dev
 
   assert.ok(playerRankStart >= 0);
   assert.match(playerRankSource, /playerRankCardButton/);
-  assert.match(playerRankSource, /<CompactPlayerCard card=\{card\}/);
+  assert.match(playerRankSource, /<TablePlayerCardZoom card=\{card\}/);
   assert.doesNotMatch(playerRankSource, /<ClubLogo/);
-  assert.match(tablesClient, /zoomTriggerRef\.current = event\.currentTarget;[\s\S]*?setZoomedCardId\(card\.id\)/);
-  assert.match(tablesClient, /useTouchlineDialog<HTMLDivElement>/);
-  assert.match(tablesClient, /className=\{styles\.zoomBackdrop\}[\s\S]*?onClick=\{\(\) => setZoomedCardId\(null\)\}/);
-  assert.match(tablesClient, /className=\{styles\.zoomContent\}[\s\S]*?setZoomedCardId\(null\)/);
+  assert.match(tablesClient, /import TouchlineCardZoom/);
+  assert.match(tablesClient, /function TablePlayerCardZoom[\s\S]*?<TouchlineCardZoom/);
+  assert.match(tablesClient, /buildTouchlinePlayerCardZoomDetails/);
   assert.match(tablesClient, /showSocialMetrics=\{expanded\}/);
-  assert.match(tablesCss, /\.zoomBackdrop \{[\s\S]*?position: fixed/);
+  assert.doesNotMatch(tablesClient, /useTouchlineDialog<HTMLDivElement>/);
+  assert.match(tablesCss, /\.pitchRenderedCard/);
 });
 
 test("dedicated player-card ranking reuses the shared zoom and keeps compact cards free of internal controls", () => {
@@ -283,7 +283,7 @@ test("dedicated player-card ranking reuses the shared zoom and keeps compact car
   assert.match(rankingsSource, /showProfileAction=\{false\}[\s\S]*?showSocialMetrics=\{false\}/);
   assert.match(rankingsSource, /imageLoading="eager"[\s\S]*?showCardActions[\s\S]*?showProfileAction/);
   assert.match(rankingsSource, /published TouchLine cards only/);
-  assert.match(rankingsSource, /tier and card price come from the card-publication process/);
+  assert.match(rankingsSource, /Tier and card price come from the card-publication process/);
   assert.doesNotMatch(rankingsSource, /resolveTouchlineVerifiedPlayerEconomy|Market value|market value pending/);
 });
 
@@ -522,15 +522,15 @@ test("Arena compact cards keep one click target, one selected neon and a compact
   const spotlightSource = arenaClient.slice(spotlightStart, spotlightStart + 700);
 
   assert.ok(fieldCardStart >= 0);
-  assert.match(fieldCardSource, /showMatchPoints/);
+  assert.match(fieldCardSource, /showMatchRating/);
   assert.match(fieldCardSource, /showProfileAction=\{false\}/);
   assert.match(fieldCardSource, /showSocialMetrics=\{false\}/);
   assert.match(fieldCardSource, /forceNeonActive=\{selectedPlayerId === player\.id\}/);
   assert.match(exactCard, /forceNeonActive \|\| isNeonActive/);
-  assert.match(exactCard, /data-arena-match-points="true"[\s\S]*?top: -16,[\s\S]*?minWidth: 24,[\s\S]*?height: 16,[\s\S]*?padding: "1px 5px"/);
-  assert.match(exactCard, /data-arena-match-points="true"[\s\S]*?<strong[\s\S]*?fontSize: 9,[\s\S]*?fontVariantNumeric: "tabular-nums"/);
-  assert.match(exactCard, /const compactPrimaryLabel = cardLabels\.totalPoints/);
-  assert.match(exactCard, /const compactPrimaryValue = totalPointsText/);
+  assert.match(exactCard, /data-arena-match-rating="true"[\s\S]*?top: -16,[\s\S]*?minWidth: 24,[\s\S]*?height: 16,[\s\S]*?padding: "1px 5px"/);
+  assert.match(exactCard, /data-arena-match-rating="true"[\s\S]*?<strong[\s\S]*?fontSize: 9,[\s\S]*?fontVariantNumeric: "tabular-nums"/);
+  assert.match(exactCard, /const compactPrimaryLabel = cardLabels\.totalRating/);
+  assert.match(exactCard, /const compactPrimaryValue = totalRatingText/);
   assert.ok(spotlightStart >= 0);
   assert.match(spotlightSource, /showProfileAction[\s\S]*?forceNeonActive/);
   assert.match(arenaClient, /arena-player-spotlight-meta/);
@@ -609,15 +609,12 @@ test("ClubHub honours use complete discrete pages rather than a continuous parti
   assert.doesNotMatch(honoursStyles, /mask-image|club-hub-honour-track|club-hub-honour-set/);
 });
 
-test("TouchLine tables enlarged cards expose the same football contract language outside the frame", () => {
+test("TouchLine tables enlarged cards reuse the premium identity-and-performance zoom", () => {
   const tablesClient = source("app/touchline-tables/touchline-tables-client.tsx");
-  const tablesStyles = source("app/touchline-tables/touchline-tables.module.css");
-
   assert.match(tablesClient, /touchlineCardTierName/);
-  assert.match(tablesClient, /touchlineArenaContractHref/);
-  assert.match(tablesClient, /Contrato · 1 temporada/);
-  assert.match(tablesClient, /className=\{styles\.zoomContract\}/);
-  assert.match(tablesClient, /Contratar/);
-  assert.match(tablesStyles, /\.zoomCardMeta/);
-  assert.match(tablesStyles, /\.zoomContract/);
+  assert.match(tablesClient, /buildTouchlinePlayerCardZoomDetails/);
+  assert.match(tablesClient, /buildTouchlineVerifiedMatchFactFields/);
+  assert.match(tablesClient, /Nota total/);
+  assert.match(tablesClient, /Nota da partida/);
+  assert.doesNotMatch(tablesClient, /zoomBackdrop|zoomContent|useTouchlineDialog/);
 });

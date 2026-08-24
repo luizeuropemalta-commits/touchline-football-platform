@@ -14,13 +14,13 @@ function asRankingPlayer(card: ClubOwnerSquadCard) {
     clubName: card.clubName,
     position: card.position,
     role: card.role,
-    touchlinePoints: card.seasonTouchlinePoints ?? card.touchlinePoints,
+    totalRating: card.seasonTotalRating ?? null,
     minutesPlayed: finiteNumber(card.seasonStats?.minutes),
     appearances: finiteNumber(card.seasonStats?.appearances),
   };
 }
 
-/** Uses the same stable V2 ranking tie-break contract on every public card list. */
+/** Every public card list uses the same canonical total-rating order. */
 export function compareTouchLineRankedCards(
   first: ClubOwnerSquadCard,
   second: ClubOwnerSquadCard,

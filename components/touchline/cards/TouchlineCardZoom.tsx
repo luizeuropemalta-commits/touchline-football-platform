@@ -10,10 +10,15 @@ export type TouchlineCardZoomDetails = {
   eyebrow?: string;
   title: string;
   subtitle?: string;
+  performanceTitle?: string;
+  performanceSubtitle?: string;
   fields: ReadonlyArray<{
     label: string;
     value: string;
     accent?: boolean;
+    group?: "identity" | "performance";
+    icon?: string;
+    primary?: boolean;
   }>;
   profileHref?: string;
   profileLabel?: string;
@@ -38,21 +43,31 @@ type TouchlineCardZoomProps = {
 };
 
 export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineCardZoomDetails }) {
+  const identityFields = details.fields.filter((field) => field.group !== "performance");
+  const performanceFields = details.fields.filter((field) => field.group === "performance");
+  const renderFields = (fields: typeof details.fields) => (
+    <dl className={styles.detailsGrid}>
+      {fields.map((field) => (
+        <div
+          key={`${field.label}-${field.value}`}
+          className={`${field.accent ? styles.detailAccent : ""} ${field.primary ? styles.detailPrimary : ""}`}
+        >
+          <dt>{field.icon ? <span className={styles.detailIcon} aria-hidden="true">{field.icon}</span> : null}{field.label}</dt>
+          <dd>{field.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+
   return (
-    <aside className={styles.details} aria-label={details.title}>
+    <>
+    <aside className={`${styles.details} ${styles.identityDetails}`} aria-label={details.title}>
       <header className={styles.detailsHeader}>
         {details.eyebrow ? <span>{details.eyebrow}</span> : null}
         <h2>{details.title}</h2>
         {details.subtitle ? <p>{details.subtitle}</p> : null}
       </header>
-      <dl className={styles.detailsGrid}>
-        {details.fields.map((field) => (
-          <div key={`${field.label}-${field.value}`} className={field.accent ? styles.detailAccent : undefined}>
-            <dt>{field.label}</dt>
-            <dd>{field.value}</dd>
-          </div>
-        ))}
-      </dl>
+      {identityFields.length ? renderFields(identityFields) : null}
       {(details.profileHref || details.historyHref || details.cardEngineHref) ? (
         <nav className={styles.detailActions} aria-label={details.title}>
           {details.profileHref ? (
@@ -73,6 +88,17 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
         </nav>
       ) : null}
     </aside>
+    {performanceFields.length ? (
+      <aside className={`${styles.details} ${styles.performanceDetails}`} aria-label={details.performanceTitle ?? "Performance"}>
+        <header className={styles.detailsHeader}>
+          <span>Sportmonks</span>
+          <h2>{details.performanceTitle ?? "Performance"}</h2>
+          <p>{details.performanceSubtitle ?? "Official match ratings and statistics"}</p>
+        </header>
+        {renderFields(performanceFields)}
+      </aside>
+    ) : null}
+    </>
   );
 }
 

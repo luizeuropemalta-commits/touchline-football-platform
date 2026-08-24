@@ -16,7 +16,6 @@ import {
 } from "@/lib/touchlineArena/card-rules";
 import {
   buildTouchlinePlayerCardZoomDetails,
-  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
@@ -114,20 +113,21 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   editorialCard: card.editorialCard,
                   cardReview,
                   activeContractCard: null,
-                  touchlinePoints: card.seasonTouchlinePoints === undefined
-                    ? card.touchlinePoints
-                    : card.seasonTouchlinePoints,
                   extraFields: [
                     {
-                      label: pt ? "Pontos da partida" : "Match points",
-                      value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
+                      label: pt ? "Nota total" : "Total rating",
+                      value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
+                      accent: true,
+                    },
+                    {
+                      label: pt ? "Nota da partida" : "Match rating",
+                      value: card.matchRating == null ? "—" : String(card.matchRating),
                       accent: true,
                     },
                     ...buildTouchlineVerifiedMatchFactFields({
                       statistics: card.matchStats,
                       position: card.position || card.role,
                     }, locale),
-                    ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
                   ],
                   profileHref,
                   cardEngineHref: canEditCardEngine
@@ -156,13 +156,13 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   playerProfileHref={profileHref}
                   showProfileAction={false}
                     showSocialMetrics={false}
-                    showMatchPoints
+                    showMatchRating
                 />
               </TouchlineCardZoom>
               <div className="club-hub-card-meta">
                 <a href={profileHref} aria-label={`${openProfileLabel}: ${card.name}`}>{openProfileLabel}</a>
                 <small>
-                  {localizedPosition(card.position, pt)} / {card.touchlinePoints} pts
+                  {localizedPosition(card.position, pt)} / {pt ? "Nota total" : "Total rating"} {card.seasonTotalRating ?? "—"}
                 </small>
               </div>
             </article>

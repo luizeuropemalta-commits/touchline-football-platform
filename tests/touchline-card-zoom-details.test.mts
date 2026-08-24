@@ -16,7 +16,7 @@ test("keeps confirmed match zero distinct from unavailable statistic facts", () 
     buildTouchlineVerifiedMatchFactFields({
       position: "Goalkeeper",
       statistics: { goals: 1, assists: 0, yellowCards: null, saves: 3 },
-    }, "en-GB"),
+    }, "en-GB").map(({ label, value }) => ({ label, value })),
     [
       { label: "Goals", value: "1" },
       { label: "Assists", value: "0" },
@@ -28,7 +28,7 @@ test("keeps confirmed match zero distinct from unavailable statistic facts", () 
     buildTouchlineVerifiedMatchFactFields({
       position: "Defender",
       statistics: { cleanSheets: 0, redCards: 1 },
-    }, "pt-BR"),
+    }, "pt-BR").map(({ label, value }) => ({ label, value })),
     [
       { label: "Jogos sem sofrer gols", value: "0" },
       { label: "Cartões vermelhos", value: "1" },
@@ -73,19 +73,18 @@ test("renders a published manual editorial tier and price in Portuguese", () => 
     position: "Centroavante / ST",
     nationality: "BRA",
     editorialCard,
-    touchlinePoints: 19,
     profileHref: "/touchline-players/jogador-de-teste?lang=pt-BR",
   });
 
   assert.equal(details.eyebrow, "Perfil do card");
   assert.equal(details.title, "Jogador de teste");
   assert.equal(details.subtitle, "Arsenal FC · Centroavante / ST");
-  assert.deepEqual(details.fields, [
+  assert.deepEqual(details.fields.map(({ label, value, accent }) => ({ label, value, accent })), [
     { label: "Tier do card", value: "Diamante Dourado", accent: true },
     { label: "Preço do card", value: "£ 15,00", accent: true },
+    { label: "Clube atual", value: "Arsenal FC", accent: false },
     { label: "Posição", value: "Centroavante / ST", accent: false },
     { label: "Nacionalidade", value: "BRA", accent: false },
-    { label: "Pontos TouchLine", value: "19", accent: false },
   ]);
   assert.equal(details.profileHref, "/touchline-players/jogador-de-teste?lang=pt-BR");
   assert.equal(details.profileLabel, "Ver perfil completo");
@@ -105,9 +104,10 @@ test("renders the same published editorial profile with English labels", () => {
   });
 
   assert.equal(details.eyebrow, "Card profile");
-  assert.deepEqual(details.fields, [
+  assert.deepEqual(details.fields.map(({ label, value, accent }) => ({ label, value, accent })), [
     { label: "Card tier", value: "Diamond Gold", accent: true },
     { label: "Card price", value: "£15.00", accent: true },
+    { label: "Current club", value: "Arsenal FC", accent: false },
     { label: "Position", value: "Forward", accent: false },
     { label: "Nationality", value: "BRA", accent: false },
   ]);
@@ -145,7 +145,6 @@ test("an unpublished player keeps only real identity fields with no valuation pl
     name: "Unpublished player",
     position: "Midfielder",
     nationality: "ENG",
-    touchlinePoints: 0,
     // Legacy inputs must be ignored rather than leaking an economic state.
     marketValue: "€70m",
     marketValueSource: "provider",
@@ -155,10 +154,9 @@ test("an unpublished player keeps only real identity fields with no valuation pl
     cardPriceAuthority: "active-contract",
   });
 
-  assert.deepEqual(details.fields, [
+  assert.deepEqual(details.fields.map(({ label, value, accent }) => ({ label, value, accent })), [
     { label: "Position", value: "Midfielder", accent: false },
     { label: "Nationality", value: "ENG", accent: false },
-    { label: "TouchLine points", value: "0", accent: false },
   ]);
   assert.doesNotMatch(JSON.stringify(details), /market value|market range|economic|pending|updating/i);
 });
@@ -169,21 +167,19 @@ test("an incomplete real player exposes pending card price and each missing fiel
     name: "Incomplete goalkeeper",
     position: "Goalkeeper",
     nationality: "NIR",
-    touchlinePoints: 0,
     cardReview: {
       state: "REVIEW_REQUIRED",
       missingFields: ["market_value", "shirt_number"],
     },
   });
 
-  assert.deepEqual(details.fields, [
+  assert.deepEqual(details.fields.map(({ label, value, accent }) => ({ label, value, accent })), [
     { label: "Card status", value: "Review pending", accent: true },
     { label: "Card price", value: "Pending", accent: true },
     { label: "Missing field", value: "Market Value", accent: false },
     { label: "Missing field", value: "Shirt number", accent: false },
     { label: "Position", value: "Goalkeeper", accent: false },
     { label: "Nationality", value: "NIR", accent: false },
-    { label: "TouchLine points", value: "0", accent: false },
   ]);
 });
 

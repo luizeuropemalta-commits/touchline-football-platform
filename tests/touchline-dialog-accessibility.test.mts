@@ -32,7 +32,7 @@ test("card and tables use the shared accessible dialog behaviour", () => {
   assert.match(cardZoom, /returnFocusRef: triggerRef/);
   assert.match(cardZoom, /document\.documentElement\.lang === "pt-BR"/);
 
-  assert.match(tables, /useTouchlineDialog<HTMLDivElement>/);
-  assert.match(tables, /initialFocusRef: zoomCloseRef/);
-  assert.match(tables, /returnFocusRef: zoomTriggerRef/);
+  assert.match(tables, /import TouchlineCardZoom/);
+  assert.match(tables, /function TablePlayerCardZoom[\s\S]*?<TouchlineCardZoom/);
+  assert.doesNotMatch(tables, /useTouchlineDialog<HTMLDivElement>/);
 });

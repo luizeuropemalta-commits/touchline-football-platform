@@ -39,7 +39,7 @@ function fixtureStatistic(input: Partial<TouchlinePublicFixturePlayerStatistics>
   };
 }
 
-test("canonical fixture points remain distinct from season-card totals and retain verified zero", () => {
+test("legacy fixture score data remains technical and never becomes an active card metric", () => {
   const sourceCards = [card("saka-provider", "saka-canonical"), card("gabriel-provider", "gabriel-canonical"), card("unknown-provider", "unknown-canonical")];
   const withSeasonPoints = applyTouchlineSeasonPoints(sourceCards, [
     { canonicalPlayerId: "saka-canonical", touchlinePoints: 24, statistics: { goals: 1, assists: 0, yellowCards: 0, redCards: 0 } },
@@ -55,8 +55,8 @@ test("canonical fixture points remain distinct from season-card totals and retai
   assert.deepEqual(distributed[0].seasonStats, { goals: 1, assists: 0, yellowCards: 0, redCards: 0 });
   assert.deepEqual(distributed[0].matchStats, { goals: 1, assists: 0, yellowCards: 0, redCards: 0, rating: null, cards: 0 });
   assert.deepEqual(distributed[0].matchPointContributions, [{ role: "primary", eventType: "Goal", minute: 67, points: 6 }]);
-  assert.equal(squadCardToExactPlayer(distributed[0]).fantasyPoints, 24);
-  assert.equal(squadCardToExactPlayer(distributed[0]).matchFantasyPoints, 6);
+  assert.equal(squadCardToExactPlayer(distributed[0]).totalRating, null);
+  assert.equal(squadCardToExactPlayer(distributed[0]).matchRating, null);
 
   assert.equal(distributed[1].seasonTouchlinePoints, 8);
   assert.equal(distributed[1].matchTouchlinePoints, 0, "a provider-confirmed zero remains zero");
@@ -64,7 +64,7 @@ test("canonical fixture points remain distinct from season-card totals and retai
 
   assert.equal(distributed[2].seasonTouchlinePoints, null, "a missing season fact is unavailable, never a fabricated zero");
   assert.equal(distributed[2].matchTouchlinePoints, undefined);
-  assert.equal(squadCardToExactPlayer(distributed[2]).fantasyPoints, null);
+  assert.equal(squadCardToExactPlayer(distributed[2]).totalRating, null);
 });
 
 test("Club Hub receives only allowlisted canonical match and season projections", () => {
@@ -91,15 +91,15 @@ test("Club Hub receives only allowlisted canonical match and season projections"
   assert.match(seasonReader, /provider_competition_id/);
   assert.match(seasonReader, /\.eq\("is_current", true\)/);
   assert.doesNotMatch(seasonReader, /\.from\("(?:touchline_card_contracts|touchline_wallet|profiles)"\)/);
-  assert.match(lineup, /showMatchPoints/);
-  assert.match(grid, /showMatchPoints/);
+  assert.match(lineup, /showMatchRating/);
+  assert.match(grid, /showMatchRating/);
   assert.match(lineup, /buildTouchlineVerifiedMatchFactFields/);
   assert.match(grid, /buildTouchlineVerifiedMatchFactFields/);
-  assert.match(exactCard, /player\.fantasyPoints === undefined/);
+  assert.match(exactCard, /player\.totalRating === undefined/);
   assert.match(exactCard, /const preseasonMissingValue = "—"/);
-  assert.match(authoritativeRoster, /seasonTouchlinePoints/);
-  assert.match(authoritativeRoster, /summary\?\.touchlinePoints/);
+  assert.match(authoritativeRoster, /seasonTotalRating/);
+  assert.doesNotMatch(authoritativeRoster, /summary\?\.touchlinePoints/);
   assert.match(authoritativeRoster, /return null;/);
-  assert.match(authoritativeArena, /rosterCard\.seasonTouchlinePoints/);
+  assert.match(authoritativeArena, /rosterCard\.seasonTotalRating/);
   assert.match(exactCard, /GOL=goals, AST=assists/);
 });

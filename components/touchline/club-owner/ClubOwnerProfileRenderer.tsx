@@ -51,7 +51,6 @@ import {
   resolveTouchlineClubOwnerPageIdentity,
 } from "@/lib/touchlineArena/club-owner-page-identity";
 import {
-  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlinePlayerCardZoomDetails,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
@@ -80,7 +79,7 @@ const trophyGallery = [
     league: "TouchLine England League",
     season: "2026/27",
     status: "In progress",
-    points: "0 pts",
+    points: "Legacy",
     image: TOUCHLINE_ENGLAND_TROPHY,
   },
 ];
@@ -146,18 +145,21 @@ function clubOwnerCardZoomDetails(
     editorialCard: card.editorialCard,
     cardReview: card.cardReview,
     activeContractCard: null,
-    touchlinePoints: card.seasonTouchlinePoints ?? card.touchlinePoints,
     extraFields: [
       {
-        label: locale === "pt-BR" ? "Pontos da partida" : "Match points",
-        value: card.matchTouchlinePoints == null ? "—" : String(card.matchTouchlinePoints),
+        label: locale === "pt-BR" ? "Nota total" : "Total rating",
+        value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
+        accent: true,
+      },
+      {
+        label: locale === "pt-BR" ? "Nota da partida" : "Match rating",
+        value: card.matchRating == null ? "—" : String(card.matchRating),
         accent: true,
       },
       ...buildTouchlineVerifiedMatchFactFields({
         statistics: card.matchStats,
         position: card.position || card.role,
       }, locale),
-      ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
     ],
     profileHref,
     cardEngineHref: canEditCardEngine
@@ -263,9 +265,8 @@ export default async function ClubOwnerProfileRenderer({
     const competition = resolveTouchlineCardCompetition({ state: activeRanking, playerId: card.id });
     return {
       ...card,
-      touchlinePoints: competition.touchlinePoints,
-      roundPoints: competition.roundPoints,
-      // Ranking changes sporting points only. A card tier must originate in
+      seasonTotalRating: competition.totalRating ?? card.seasonTotalRating ?? null,
+      // Ranking changes display order only. A card tier must originate in
       // a published editorial profile or a frozen active contract; never
       // derive one from a demo player identity or a market valuation.
       cardTier: publicCardProfileTier(card) ?? undefined,
@@ -274,7 +275,7 @@ export default async function ClubOwnerProfileRenderer({
   const sortedClubOwnerSquadCards = [...rosterCards].sort(rankClubOwnerCards);
   const publishedClubOwnerSquadCards = sortedClubOwnerSquadCards.filter((card) => Boolean(card.editorialCard));
   const bestPlayerCard = [...publishedClubOwnerSquadCards].sort((first, second) => (
-    second.roundPoints - first.roundPoints || rankClubOwnerCards(first, second)
+    (second.seasonTotalRating ?? -1) - (first.seasonTotalRating ?? -1) || rankClubOwnerCards(first, second)
   ))[0] ?? null;
   const bestPlayerPalette = touchlineCardTierPalette(bestPlayerCard?.cardTier);
   const startingShowcaseCards = publishedClubOwnerSquadCards.slice(0, 6);
@@ -301,7 +302,7 @@ export default async function ClubOwnerProfileRenderer({
     (sum, card) => sum + (activeContractCardNumericPrice(card) ?? 0),
     0,
   );
-  const squadPointsTotal = sortedClubOwnerSquadCards.reduce((sum, card) => sum + card.touchlinePoints, 0);
+  const squadRatingTotal = sortedClubOwnerSquadCards.reduce((sum, card) => sum + (card.seasonTotalRating ?? 0), 0);
   const walletEntries = walletEntriesResponse.data;
   const walletBalanceTc = activeClubOwnerUser
     ? Math.max(0, Math.floor((walletEntries ?? []).reduce(
@@ -325,7 +326,7 @@ export default async function ClubOwnerProfileRenderer({
   const isPortuguese = locale === "pt-BR";
   const clubCopy = isPortuguese ? {
     rankingUpdated: "Classificação oficial atualizada após cada rodada auditada.",
-    awaitingRound: "Aguardando 1ª rodada", officialPoints: "Pontuação oficial", openRanking: "Ver ranking completo",
+    awaitingRound: "Aguardando 1ª rodada", officialPoints: "Nota Sportmonks", openRanking: "Ver ranking completo",
     privateArea: "Área privada do ClubOwner", verifiedPrivateArea: "Área privada verificada", clubDirection: "Direção do clube",
     privateDescription: "Finanças, contratos, treinamento e estratégia são visíveis somente para o ClubOwner autenticado.",
     protectedStrategy: "Estratégia protegida", hiddenFromFeed: "Não aparece no feed público",
@@ -342,7 +343,7 @@ export default async function ClubOwnerProfileRenderer({
     contracts: "Contratos", squadControl: "Controle do elenco", active: "Ativos", slots: "Vagas", pending: "Pendentes", manageMarket: "Gerir no Mercado de Cards",
   } : {
     rankingUpdated: "Official standings update after every audited round.",
-    awaitingRound: "Awaiting round 1", officialPoints: "Official points", openRanking: "View full ranking",
+    awaitingRound: "Awaiting round 1", officialPoints: "Sportmonks rating", openRanking: "View full ranking",
     privateArea: "Private ClubOwner area", verifiedPrivateArea: "Verified private area", clubDirection: "Club direction",
     privateDescription: "Finances, contracts, training and strategy are visible only to the authenticated ClubOwner.",
     protectedStrategy: "Protected strategy", hiddenFromFeed: "Not shown in the public feed",
@@ -362,8 +363,7 @@ export default async function ClubOwnerProfileRenderer({
   const localeSuffix = `?lang=${encodeURIComponent(locale)}`;
   const cardLabels = {
     nationality: t("nationalityShort"),
-    points: t("points"),
-    totalPoints: t("touchlinePoints"),
+    totalRating: isPortuguese ? "Nota total" : "Total rating",
     cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
   };
   const ownerPositionLabel = locale === "pt-BR" ? "Posição do ClubOwner" : "Club Owner position";
@@ -384,8 +384,8 @@ export default async function ClubOwnerProfileRenderer({
       meta: isPortuguese ? "Elenco oficial" : "Official squad",
       accent: touchlineCardTierPalette(tierKey).accent,
       badge: priceLabel
-        ? `${card.touchlinePoints} ${isPortuguese ? "pontos acumulados" : "cumulative points"} · ${priceLabel}`
-        : `${card.touchlinePoints} ${isPortuguese ? "pontos acumulados" : "cumulative points"}`,
+        ? `${card.seasonTotalRating ?? "—"} ${isPortuguese ? "nota total" : "total rating"} · ${priceLabel}`
+        : `${card.seasonTotalRating ?? "—"} ${isPortuguese ? "nota total" : "total rating"}`,
       visual: (
         <TouchlineCardZoom
           ariaLabel={`${locale === "pt-BR" ? "Ampliar card de" : "Open card for"} ${card.name}`}
@@ -430,7 +430,7 @@ export default async function ClubOwnerProfileRenderer({
       visualTheme: "squad",
       metrics: [
         { label: isPortuguese ? "Clube" : "Club", value: club?.shortCode ?? card.clubName },
-        { label: isPortuguese ? "Pontos" : "Points", value: String(card.touchlinePoints) },
+        { label: isPortuguese ? "Nota total" : "Total rating", value: String(card.seasonTotalRating ?? "—") },
         ...(priceLabel ? [{ label: isPortuguese ? "Preço" : "Price", value: priceLabel }] : []),
       ],
       actionHref: touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier }),
@@ -519,13 +519,12 @@ export default async function ClubOwnerProfileRenderer({
                 <span className="club-owner-best-player-copy">
                   <strong>{bestPlayerCard.shortName}</strong>
                   <small>
-                    {bestPlayerCard.roundPoints} pts {locale === "pt-BR" ? "na semana" : "this week"}
-                    {" · "}{bestPlayerCard.touchlinePoints} pts {locale === "pt-BR" ? "no total" : "total"}
+                    {locale === "pt-BR" ? "Nota total" : "Total rating"} {bestPlayerCard.seasonTotalRating ?? "—"}
                   </small>
                   <em>
                     {locale === "pt-BR"
-                      ? "Maior pontuação da última rodada concluída"
-                      : "Highest score from the latest completed round"}
+                      ? "Maior nota acumulada entre os cards publicados"
+                      : "Highest accumulated rating among published cards"}
                   </em>
                 </span>
                 <a href={touchlinePlayerProfileHref(squadCardToExactPlayer(bestPlayerCard, { useSuppliedTier: true }), locale, { previewTier: bestPlayerCard.cardTier })}>
@@ -559,8 +558,8 @@ export default async function ClubOwnerProfileRenderer({
                 <small>{clubCopy.awaitingRound}</small>
               </article>
               <article>
-                <span>{t("touchlinePoints")}</span>
-                <strong>{squadPointsTotal}</strong>
+                <span>{isPortuguese ? "Soma das notas" : "Rating sum"}</span>
+                <strong>{squadRatingTotal.toFixed(2)}</strong>
                 <small>{clubCopy.officialPoints}</small>
               </article>
               <a href={`/touchline-player-card-rankings${localeSuffix}`}>
@@ -827,7 +826,7 @@ export default async function ClubOwnerProfileRenderer({
                     <div className="club-owner-profile-card-meta">
                       <a href={profileHref}>{card.shortName}</a>
                       <span>{card.clubName}</span>
-                      <small>{priceLabel ? `${priceLabel} / ` : ""}{card.touchlinePoints} {isPortuguese ? "pontos" : "pts"}</small>
+                      <small>{priceLabel ? `${priceLabel} / ` : ""}{isPortuguese ? "Nota total" : "Total rating"} {card.seasonTotalRating ?? "—"}</small>
                     </div>
                   </article>
                 );

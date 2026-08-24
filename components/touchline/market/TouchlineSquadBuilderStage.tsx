@@ -7,7 +7,6 @@ import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSu
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import {
-  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlinePlayerCardZoomDetails,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
@@ -97,18 +96,21 @@ function SquadPlayerCardZoom({
         nationality: card.nationality || card.countryCode3,
         editorialCard: card.editorialCard,
         cardReview: card.cardReview,
-        touchlinePoints: card.fantasyPoints,
         extraFields: [
           {
-            label: portuguese ? "Pontos da partida" : "Match points",
-            value: card.matchFantasyPoints == null ? "—" : String(card.matchFantasyPoints),
+            label: portuguese ? "Nota total" : "Total rating",
+            value: card.totalRating == null ? "—" : String(card.totalRating),
+            accent: true,
+          },
+          {
+            label: portuguese ? "Nota da partida" : "Match rating",
+            value: card.matchRating == null ? "—" : String(card.matchRating),
             accent: true,
           },
           ...buildTouchlineVerifiedMatchFactFields({
             statistics: card.matchStats,
             position: card.position || card.role,
           }, locale),
-          ...buildTouchlineMatchScoringBreakdownFields(card.matchPointContributions, locale),
         ],
         profileHref,
         cardEngineHref,

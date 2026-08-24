@@ -99,11 +99,11 @@ function SelectionCard({
       player={squadCardToExactPlayer({
         ...baseCard,
         cardTier: tierKey,
-        touchlinePoints: player.touchlinePoints,
+        seasonTotalRating: player.totalRating,
       })}
       labels={{
         nationality: "País",
-        totalPoints: "TouchLine Points",
+        totalRating: "Nota total",
         cardPrice: "TC",
       }}
       layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
@@ -242,7 +242,7 @@ export default function RankingSimulator({ snapshot }: { snapshot: TouchlineRank
                 <span className={styles.leaderCopy}>
                   <small>{TOUCHLINE_POSITION_RANKING_LABELS[position.group].pt}</small>
                   <strong>{leader.name}</strong>
-                  <em>{leader.touchlinePoints} pts · {leader.minutesPlayed} min</em>
+                  <em>Rating {leader.totalRating?.toFixed(2) ?? "—"} · {leader.minutesPlayed} min</em>
                 </span>
                 <span className={styles.tierSwatch} style={{ background: TIER_COLORS[shownTier] }} title={shownTier} />
               </button>
@@ -399,7 +399,7 @@ export default function RankingSimulator({ snapshot }: { snapshot: TouchlineRank
                 <th>Posição</th>
                 <th>Jogador</th>
                 <th>Clube</th>
-                <th>Pontos</th>
+                <th>Nota total</th>
                 <th>Minutos</th>
                 <th>Jogos</th>
                 <th>Cor</th>
@@ -415,7 +415,7 @@ export default function RankingSimulator({ snapshot }: { snapshot: TouchlineRank
                     <td><b>#{player.positionRank}</b><small>{TOUCHLINE_POSITION_RANKING_LABELS[player.positionGroup].pt}</small></td>
                     <td><strong>{player.name}</strong><small>{player.position}</small></td>
                     <td><span className={styles.clubCell}><PlayerLogo player={player} /> {player.clubName}</span></td>
-                    <td><strong>{player.touchlinePoints}</strong></td>
+                    <td><strong>{player.totalRating?.toFixed(2) ?? "—"}</strong></td>
                     <td>{player.minutesPlayed}</td>
                     <td>{player.appearances}</td>
                     <td><span className={styles.tierCell}><i style={{ background: TIER_COLORS[shownTier] }} /> {tier?.label}</span></td>

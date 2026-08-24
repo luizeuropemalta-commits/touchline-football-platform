@@ -45,6 +45,7 @@ function sportmonksPlayers(): TouchlineSportmonksRankingPlayer[] {
       clubName: "TouchLine Test Club",
       position,
       touchlinePoints: 30 - playerIndex,
+      totalRating: 30 - playerIndex,
       minutesPlayed: 900 - playerIndex,
       appearances: 10,
     })),
@@ -66,6 +67,7 @@ test("ranks every player exactly once and gives each positional leader Diamond G
       clubName: "TouchLine Test Club",
       position,
       touchlinePoints: 30 - playerIndex,
+      totalRating: 30 - playerIndex,
       minutesPlayed: 900 - playerIndex,
       appearances: 10,
     })),
@@ -86,12 +88,12 @@ test("ranks every player exactly once and gives each positional leader Diamond G
   }
 });
 
-test("uses points, minutes, appearances and provider id as stable tie breakers", () => {
+test("uses total rating, minutes, appearances and provider id as stable tie breakers", () => {
   const rankings = buildTouchlinePositionRankings([
-    { playerId: "d", providerPlayerId: 40, name: "D", clubName: "Club", position: "ST", touchlinePoints: 10, minutesPlayed: 90, appearances: 2 },
-    { playerId: "c", providerPlayerId: 30, name: "C", clubName: "Club", position: "ST", touchlinePoints: 10, minutesPlayed: 90, appearances: 2 },
-    { playerId: "b", providerPlayerId: 20, name: "B", clubName: "Club", position: "ST", touchlinePoints: 10, minutesPlayed: 90, appearances: 3 },
-    { playerId: "a", providerPlayerId: 10, name: "A", clubName: "Club", position: "ST", touchlinePoints: 10, minutesPlayed: 180, appearances: 2 },
+    { playerId: "d", providerPlayerId: 40, name: "D", clubName: "Club", position: "ST", totalRating: 10, minutesPlayed: 90, appearances: 2 },
+    { playerId: "c", providerPlayerId: 30, name: "C", clubName: "Club", position: "ST", totalRating: 10, minutesPlayed: 90, appearances: 2 },
+    { playerId: "b", providerPlayerId: 20, name: "B", clubName: "Club", position: "ST", totalRating: 10, minutesPlayed: 90, appearances: 3 },
+    { playerId: "a", providerPlayerId: 10, name: "A", clubName: "Club", position: "ST", totalRating: 10, minutesPlayed: 180, appearances: 2 },
   ]);
 
   const strikerIds = rankings.find((ranking) => ranking.group === "striker")?.players.map((player) => player.playerId);
@@ -114,8 +116,8 @@ test("splits the players below the leader across the six remaining tiers", () =>
 test("rejects duplicate player ids before publishing a ranking", () => {
   assert.throws(
     () => buildTouchlinePositionRankings([
-      { playerId: "same", name: "One", clubName: "Club", position: "GK", touchlinePoints: 1 },
-      { playerId: "same", name: "Two", clubName: "Club", position: "ST", touchlinePoints: 2 },
+      { playerId: "same", name: "One", clubName: "Club", position: "GK", totalRating: 1 },
+      { playerId: "same", name: "Two", clubName: "Club", position: "ST", totalRating: 2 },
     ]),
     /Duplicate playerId/,
   );
@@ -136,8 +138,8 @@ test("only an audited SportMonks snapshot can become live", () => {
 
 test("market value cannot change ranking, tier or card price", () => {
   const players = [
-    { playerId: "low-market", providerPlayerId: 2, name: "Low market", clubName: "Club", position: "ST", touchlinePoints: 20, minutesPlayed: 180, appearances: 2, marketValue: 1 },
-    { playerId: "high-market", providerPlayerId: 1, name: "High market", clubName: "Club", position: "ST", touchlinePoints: 10, minutesPlayed: 900, appearances: 10, marketValue: 300_000_000 },
+    { playerId: "low-market", providerPlayerId: 2, name: "Low market", clubName: "Club", position: "ST", totalRating: 20, minutesPlayed: 180, appearances: 2, marketValue: 1 },
+    { playerId: "high-market", providerPlayerId: 1, name: "High market", clubName: "Club", position: "ST", totalRating: 10, minutesPlayed: 900, appearances: 10, marketValue: 300_000_000 },
   ];
   const strikerPlayers = buildTouchlinePositionRankings(players).find((ranking) => ranking.group === "striker")?.players ?? [];
 
@@ -191,7 +193,7 @@ test("audits complete-for-scoring without pretending provider details are comple
     coverageStatus: "complete_for_scoring",
     fixtureIds,
     expectedFixtureIds: fixtureIds,
-    totalScorePoints: players.reduce((total, player) => total + player.touchlinePoints, 0),
+    totalScorePoints: 0,
     players,
   });
   const report = auditTouchlineRankingDraft(draft, "2026-08-15T18:01:00.000Z");
@@ -200,7 +202,7 @@ test("audits complete-for-scoring without pretending provider details are comple
   assert.equal(report.snapshot?.coverageStatus, "complete_for_scoring");
 });
 
-test("publication audit rejects fixture-set and point-sum mismatches", () => {
+test("publication audit rejects fixture-set mismatches and legacy converted-score totals", () => {
   const players = sportmonksPlayers();
   const fixtureIds = [...new Set(players.flatMap((player) => player.sourceFixtureIds))].sort();
   const base = {
@@ -222,7 +224,7 @@ test("publication audit rejects fixture-set and point-sum mismatches", () => {
   }), "2026-08-15T18:01:00.000Z");
 
   assert.ok(fixtureMismatch.issues.some((issue) => issue.code === "fixture-coverage-mismatch"));
-  assert.ok(pointMismatch.issues.some((issue) => issue.code === "total-score-points-mismatch"));
+  assert.ok(pointMismatch.issues.some((issue) => issue.code === "legacy-score-total-must-be-zero"));
 });
 
 test("rejects an incomplete provider payload and keeps the last published snapshot", () => {

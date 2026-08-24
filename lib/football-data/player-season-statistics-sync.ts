@@ -110,18 +110,9 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
     .filter((value): value is string => Boolean(value && Number.isFinite(Date.parse(value))))
     .sort()
     .at(-1) ?? null;
-  // The season projection consumes persisted/per-fixture engine results. It
-  // never invokes a second scoring implementation or reinterprets facts.
+  // Legacy V2/V3 settlement metadata may be present for audit, but public
+  // player aggregation is derived only from Sportmonks appearance ratings.
   const scoredFixtures = synchronizedFixtures.filter((fixture) => fixture.scoringIncluded !== false);
-  const fixturePointValues = scoredFixtures.map((fixture) => fixture.touchlinePoints ?? null);
-  const hasProviderRatingAbsentFromFinalLineup = synchronizedFixtures.some((fixture) => (
-    fixture.providerRatingAbsentFromFinalLineup === true
-  ));
-  const touchlinePoints = hasProviderRatingAbsentFromFinalLineup
-    ? null
-    : fixturePointValues.every((value) => value !== null)
-    ? fixturePointValues.reduce((total, value) => total + (value ?? 0), 0)
-    : null;
   const fixtureSetComplete = fixtures.length > 0
     && allLineupsAvailable
     && expectedFixtureIds.length === aggregatedFixtureIds.length;
@@ -181,7 +172,6 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
         ?? sumOnlyWhenKnown(playerEntries, ["yellow-cards", "yellowcards"]),
       redCards: eventStatisticOnlyWhenKnown(synchronizedFixtures, input.providerPlayerId, "redCards")
         ?? sumOnlyWhenKnown(playerEntries, ["red-cards", "redcards"]),
-      touchlinePoints,
     },
     positionStatistics,
     latestSyncAt,

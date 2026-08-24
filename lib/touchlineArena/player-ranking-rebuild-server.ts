@@ -75,11 +75,12 @@ function sourceDigest(value: unknown) {
 type TouchLinePlayerRankingEngine = Readonly<{
   scoringVersion: "player_scoring_v2" | "player_scoring_v3";
   settlementTable: "football_player_fixture_statistics" | "touchline_player_fixture_score_settlements";
-  snapshotPrefix: "player-v2" | "player-v3";
+  snapshotPrefix: "player-v2" | "player-rating";
 }>;
 
-/** Inputs are persisted settlements only; this function never calls Sportmonks
- * and never recomputes points. V2 stays callable for audit; V3 is canonical. */
+/** Inputs are persisted canonical facts only; this function never calls Sportmonks.
+ * V2/V3 conversion rows remain technical audit evidence, while the active
+ * product ranking is ordered only by the persisted Sportmonks rating total. */
 async function rebuildTouchLinePlayerRanking(
   admin: SupabaseClient,
   engine: TouchLinePlayerRankingEngine,
@@ -115,16 +116,16 @@ async function rebuildTouchLinePlayerRanking(
   const aggregatePlayerIds = [...new Set(aggregates.map((row) => text(row.football_player_id)).filter((id): id is string => Boolean(id)))];
   if (!aggregatePlayerIds.length || !fixtures.length) return failure("ranking-source-empty", { seasonId });
 
-  const [{ data: playerData, error: playerError }, { data: fixturePointData, error: pointError }] = await Promise.all([
+  const [{ data: playerData, error: playerError }, { data: fixtureRatingData, error: ratingError }] = await Promise.all([
     admin.from("football_players")
       .select("id,provider_player_id,display_name,name,provider_position,detailed_position,position,current_club_id")
       .in("id", aggregatePlayerIds),
     admin.from(engine.settlementTable)
-      .select("football_player_id,fixture_id,touchline_points,settlement_status,ranking_coverage_status")
+      .select("football_player_id,fixture_id,settlement_status,ranking_coverage_status")
       .eq("season_id", seasonId)
       .eq("scoring_version", engine.scoringVersion),
   ]);
-  if (playerError || pointError) return failure("ranking-player-source-unavailable", { seasonId });
+  if (playerError || ratingError) return failure("ranking-player-source-unavailable", { seasonId });
 
   const playerRows = rows(playerData);
   const playerIds = playerRows.map((row) => text(row.id)).filter((id): id is string => Boolean(id));
@@ -134,16 +135,14 @@ async function rebuildTouchLinePlayerRanking(
     return Boolean(id && publishedCards.has(id));
   });
   const aggregateByPlayerId = new Map(aggregates.flatMap((row) => text(row.football_player_id) ? [[text(row.football_player_id)!, row] as const] : []));
-  // A provider-confirmed appearance without a Sportmonks rating has no V3
-  // points. It remains visible on the player surface as unavailable, but may
-  // not receive a fabricated zero or a ranking position. Other published
-  // players still need complete final fixture coverage below.
+  // Provider-absent ratings remain visible as unavailable on player surfaces,
+  // never as a synthetic zero and never as a ranking contribution.
   const rankingEligiblePlayerRows = eligiblePlayerRows.filter((player) => {
     const aggregate = aggregateByPlayerId.get(text(player.id) ?? "");
-    return number(object(aggregate?.summary_payload).touchlinePoints) !== null;
+    return number(object(aggregate?.summary_payload).totalRating) !== null;
   });
   if (!rankingEligiblePlayerRows.length) return failure("ranking-has-no-published-settlements", { seasonId });
-  const fixtureRows = rows(fixturePointData);
+  const fixtureRows = rows(fixtureRatingData);
   const settlementByPlayerFixture = new Map(fixtureRows.flatMap((row) => {
     const playerId = text(row.football_player_id);
     const fixtureId = text(row.fixture_id);
@@ -188,22 +187,12 @@ async function rebuildTouchLinePlayerRanking(
   const roundId = text(roundById.get(latestRoundId ?? "")?.provider_round_id)
     ?? text(roundById.get(latestRoundId ?? "")?.name)
     ?? "season-to-date";
-  const latestRoundFixtureIds = new Set(fixtures.filter((fixture) => text(fixture.round_id) === latestRoundId).map((fixture) => text(fixture.id)).filter((id): id is string => Boolean(id)));
-  const roundPointsByPlayerId = new Map<string, number>();
-  for (const row of fixtureRows) {
-    const playerId = text(row.football_player_id);
-    const fixtureId = text(row.fixture_id);
-    const points = number(row.touchline_points);
-    if (!playerId || !fixtureId || points === null || !latestRoundFixtureIds.has(fixtureId)) continue;
-    roundPointsByPlayerId.set(playerId, (roundPointsByPlayerId.get(playerId) ?? 0) + points);
-  }
-
   const clubById = new Map(rows(clubData).flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const rankingPlayers = rankingEligiblePlayerRows.flatMap((player) => {
     const playerId = text(player.id);
     const aggregate = playerId ? aggregateByPlayerId.get(playerId) : null;
     const summary = object(aggregate?.summary_payload);
-    const touchlinePoints = number(summary.touchlinePoints);
+    const totalRating = number(summary.totalRating);
     const providerPlayerId = text(player.provider_player_id) ?? text(aggregate?.provider_player_id);
     const name = text(player.display_name) ?? text(player.name);
     const position = text(player.detailed_position) ?? text(player.provider_position) ?? text(player.position);
@@ -213,7 +202,7 @@ async function rebuildTouchLinePlayerRanking(
       return providerFixtureId ? [providerFixtureId] : [];
     });
     const clubName = text(clubById.get(text(player.current_club_id) ?? "")?.name);
-    if (!playerId || !providerPlayerId || !name || !position || !clubName || touchlinePoints === null || !sourceFixtureIds.length) return [];
+    if (!playerId || !providerPlayerId || !name || !position || !clubName || totalRating === null || !sourceFixtureIds.length) return [];
     return [{
       playerId,
       providerPlayerId,
@@ -221,9 +210,7 @@ async function rebuildTouchLinePlayerRanking(
       clubName,
       position,
       role: text(player.provider_position),
-      touchlinePoints,
-      roundPoints: roundPointsByPlayerId.get(playerId) ?? 0,
-      totalRating: number(summary.totalRating),
+      totalRating,
       minutesPlayed: finiteNonNegativeInteger(summary.minutes),
       appearances: finiteNonNegativeInteger(summary.appearances),
       provider: "sportmonks" as const,
@@ -238,7 +225,9 @@ async function rebuildTouchLinePlayerRanking(
   const coverageStatus = rankingEligiblePlayerRows.every((player) => (
     aggregateByPlayerId.get(text(player.id) ?? "")?.coverage_status === "complete"
   )) ? "complete" as const : "complete_for_scoring" as const;
-  const totalScorePoints = rankingPlayers.reduce((total, player) => total + player.touchlinePoints, 0);
+  // The legacy storage column is retained for audit compatibility only. No
+  // active converted-score total is materialised in a rating ranking.
+  const totalScorePoints = 0;
   const receivedAt = latestIso([...aggregates.map((row) => row.source_synced_at), ...fixtures.map((row) => row.source_updated_at)]);
   if (!receivedAt) return failure("ranking-source-time-unavailable", {
     seasonId, roundId, playerCount: rankingPlayers.length, fixtureIds, expectedFixtureIds,
@@ -251,8 +240,6 @@ async function rebuildTouchLinePlayerRanking(
       id: player.playerId,
       providerPlayerId: String(player.providerPlayerId),
       position: player.position,
-      points: player.touchlinePoints,
-      roundPoints: player.roundPoints,
       totalRating: player.totalRating,
       minutesPlayed: player.minutesPlayed,
       appearances: player.appearances,
@@ -361,6 +348,6 @@ export function rebuildTouchLinePlayerRankingV3(admin: SupabaseClient) {
   return rebuildTouchLinePlayerRanking(admin, {
     scoringVersion: "player_scoring_v3",
     settlementTable: "touchline_player_fixture_score_settlements",
-    snapshotPrefix: "player-v3",
+    snapshotPrefix: "player-rating",
   });
 }

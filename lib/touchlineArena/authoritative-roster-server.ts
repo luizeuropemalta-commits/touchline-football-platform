@@ -93,31 +93,6 @@ function countryCodeForPlayer(player: DatabaseRecord) {
   return hasTouchlineCountryFlag(fromStoredCode) ? fromStoredCode : "N/A";
 }
 
-function touchlinePointsFor(
-  contract: DatabaseRecord,
-  inventory: DatabaseRecord,
-  seasonStatistic?: DatabaseRecord | null,
-) {
-  const summary = asRecord(seasonStatistic?.summary_payload);
-  const contractMetadata = asRecord(contract.metadata);
-  const inventoryMetadata = asRecord(inventory.metadata);
-  // Current player-season statistics are authoritative. Existing immutable
-  // contract/inventory score snapshots remain a legacy verified fallback for
-  // cards whose historical season row has not been rebuilt yet; no candidate
-  // exists means unavailable rather than an invented zero.
-  for (const candidate of [
-    summary?.touchlinePoints,
-    contractMetadata?.touchlinePoints,
-    contractMetadata?.touchline_points,
-    inventoryMetadata?.touchlinePoints,
-    inventoryMetadata?.touchline_points,
-  ]) {
-    const points = asFiniteNumber(candidate);
-    if (points !== null) return points;
-  }
-  return null;
-}
-
 function totalRatingFor(seasonStatistic?: DatabaseRecord | null) {
   return asFiniteNumber(asRecord(seasonStatistic?.summary_payload)?.totalRating);
 }
@@ -193,28 +168,6 @@ function verifiedMatchStats(row: DatabaseRecord | null | undefined, position: st
     rating,
   } as TouchlineCardStats;
   return projectTouchlineCardStatsByPosition({ position, statistics: statisticsWithRating });
-}
-
-function verifiedPointContributions(row?: DatabaseRecord | null): NonNullable<ClubOwnerSquadCard["matchPointContributions"]> {
-  if (!Array.isArray(row?.touchline_points_breakdown)) return [];
-  return row.touchline_points_breakdown.flatMap((value) => {
-    const item = asRecord(value);
-    const role = item?.role === "primary" || item?.role === "assist" || item?.role === "fact" ? item.role : null;
-    const eventType = asString(item?.eventType);
-    const points = asFiniteNumber(item?.points);
-    if (!role || !eventType || points === null) return [];
-    return [{
-      role,
-      eventType,
-      minute: asFiniteNumber(item?.minute),
-      points,
-      ...(asString(item?.ruleCode) ? { ruleCode: asString(item?.ruleCode)! } : {}),
-      ...(asFiniteNumber(item?.quantity) === null ? {} : { quantity: asFiniteNumber(item?.quantity)! }),
-      ...(asFiniteNumber(item?.unitPoints) === null ? {} : { unitPoints: asFiniteNumber(item?.unitPoints)! }),
-      ...(asFiniteNumber(item?.factValue) === null ? {} : { factValue: asFiniteNumber(item?.factValue)! }),
-      ...(asString(item?.detail) ? { detail: asString(item?.detail)! } : {}),
-    }];
-  });
 }
 
 function preferredSquadMember(
@@ -326,9 +279,8 @@ export function mapAuthoritativeRosterRows(
 
     const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId), position);
     const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId), position);
-    const seasonTouchlinePoints = touchlinePointsFor(contract, inventory, seasonStatisticByPlayerId.get(playerId));
     const seasonTotalRating = totalRatingFor(seasonStatisticByPlayerId.get(playerId));
-    const matchPointContributions = verifiedPointContributions(fixtureStatisticByPlayerId.get(playerId));
+    const matchRating = asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.rating);
     cards.push({
       id: playerId,
       canonicalPlayerId: playerId,
@@ -351,15 +303,14 @@ export function mapAuthoritativeRosterRows(
         cardPriceAuthority: "active-contract" as const,
       }),
       inventoryId,
-      // Compatibility field for legacy roster ordering only. Card presentation
-      // consumes the explicit null-aware season projection below.
-      touchlinePoints: seasonTouchlinePoints ?? 0,
-      seasonTouchlinePoints,
+      // Legacy V2/V3 scoring data deliberately does not cross this player UI
+      // read model. The fields remain inert only for the persisted DTO shape.
+      touchlinePoints: 0,
+      seasonTouchlinePoints: null,
       ...(seasonTotalRating === null ? {} : { seasonTotalRating }),
-      matchTouchlinePoints: asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.touchline_points),
+      ...(matchRating === null ? {} : { matchRating }),
       ...(seasonStats ? { seasonStats } : {}),
       ...(matchStats ? { matchStats } : {}),
-      ...(matchPointContributions.length ? { matchPointContributions } : {}),
       editorialCard,
     });
     inventoryIds.push(inventoryId);
@@ -521,7 +472,7 @@ export async function readAuthoritativeTouchlineRoster(
       : Promise.resolve({ data: [], error: null }),
     currentSeasonId
       ? admin.from("touchline_player_fixture_score_settlements")
-        .select("football_player_id,touchline_points,touchline_points_breakdown,rating,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
+        .select("football_player_id,rating,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
         .eq("season_id", currentSeasonId)
         .eq("scoring_version", "player_scoring_v3")
         .in("football_player_id", playerIds)

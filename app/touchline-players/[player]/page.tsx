@@ -54,7 +54,6 @@ import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/ca
 import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import {
   buildTouchlinePlayerCardZoomDetails,
-  buildTouchlineMatchScoringBreakdownFields,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
 import {
@@ -102,7 +101,7 @@ const copy = {
     foot: "Preferred foot",
     joined: "Joined club",
     contract: "Contract",
-    points: "TouchLine points",
+    points: "Total rating",
     rank: "Position rank",
     rankGroup: "Ranking group",
     price: "Card price",
@@ -111,7 +110,7 @@ const copy = {
     career: "Career path",
     season: "TouchLine season",
     seasonCopy:
-      "Match points, card rank and historical TouchLine performance will update here as league fixtures are played.",
+      "Sportmonks ratings, card rank and verified match history update here as league fixtures are played.",
     current: "Current status",
     currentCopy:
       "The card is connected to the shared TouchLine master used by Arena, squad, market and club profile.",
@@ -144,7 +143,7 @@ const copy = {
     currentSeason: "Current season",
     lastFiveMatches: "Last five matches",
     currentFixture: "Current or selected fixture",
-    currentMatchPoints: "Current match points",
+    currentMatchPoints: "Current match rating",
     unavailable: "Unavailable",
     appearances: "Appearances",
     starts: "Starts",
@@ -173,7 +172,7 @@ const copy = {
     foot: "Pé preferido",
     joined: "Chegou ao clube",
     contract: "Contrato",
-    points: "Pontos TouchLine",
+    points: "Nota total",
     rank: "Rank da posição",
     rankGroup: "Grupo do ranking",
     price: "Preço do card",
@@ -182,7 +181,7 @@ const copy = {
     career: "Trajetória",
     season: "Temporada TouchLine",
     seasonCopy:
-      "Pontos das partidas, rank do card e histórico de desempenho TouchLine serão atualizados aqui conforme a liga acontecer.",
+      "Notas Sportmonks, rank do card e histórico verificado serão atualizados aqui conforme a liga acontecer.",
     current: "Estado atual",
     currentCopy:
       "O card está conectado ao padrão mestre compartilhado pela Arena, elenco, mercado e perfil do clube.",
@@ -215,7 +214,7 @@ const copy = {
     currentSeason: "Temporada atual",
     lastFiveMatches: "Últimas cinco partidas",
     currentFixture: "Fixture atual ou selecionada",
-    currentMatchPoints: "Pontos da partida atual",
+    currentMatchPoints: "Nota da partida atual",
     unavailable: "Indisponível",
     appearances: "Jogos",
     starts: "Titularidades",
@@ -543,7 +542,7 @@ function FixtureStatisticsPanel({
         <h3>{text.currentFixture}</h3>
         {current ? (
           <>
-            <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small>{text.currentMatchPoints}: {current.touchlinePoints === null ? text.unavailable : String(current.touchlinePoints)}</small></div></div>
+            <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small>{text.currentMatchPoints}: {current.rating === null ? "—" : String(current.rating)}</small></div></div>
             {matchFacts.length ? (
               <div className={styles.officialStats} data-stat-count={matchFacts.length} data-position-aware-player-facts>
                 {matchFacts.map((fact) => (
@@ -662,11 +661,7 @@ export default async function TouchLinePlayerProfilePage({
     playerId: card.id,
     providerPlayerId: canonicalProviderPlayerId,
   });
-  const competition = {
-    ...rankingCompetition,
-    touchlinePoints: playerStatistics.currentSeason.summary.touchlinePoints
-      ?? (rankingCompetition.ranked ? rankingCompetition.touchlinePoints : null),
-  };
+  const competition = rankingCompetition;
   const zoomMatchHistoryFields = playerStatistics.matchHistory.map((fixture) => {
     const appearance = isPortuguese
       ? {
@@ -692,13 +687,12 @@ export default async function TouchLinePlayerProfilePage({
       value: `${appearance} · ${minutes} · ${isPortuguese ? "Nota" : "Rating"} ${rating}`,
     };
   });
-  const cumulativePointsText = competition.touchlinePoints === null
+  const totalRatingText = playerStatistics.currentSeason.summary.totalRating ?? competition.totalRating;
+  const cumulativeRatingText = totalRatingText === null
     ? text.unavailable
-    : String(competition.touchlinePoints);
-  exactPlayer.fantasyPoints = competition.touchlinePoints;
-  exactPlayer.totalRating = playerStatistics.currentSeason.summary.totalRating;
-  exactPlayer.matchFantasyPoints = playerStatistics.currentOrSelectedFixture?.touchlinePoints ?? null;
-  exactPlayer.matchPointContributions = playerStatistics.currentOrSelectedFixture?.pointContributions ?? [];
+    : String(totalRatingText);
+  exactPlayer.totalRating = totalRatingText;
+  exactPlayer.matchRating = playerStatistics.currentOrSelectedFixture?.rating ?? null;
   const statisticNumber = (statistics: Record<string, string | number>, ...keys: string[]) => {
     for (const key of keys) {
       const value = statistics[key];
@@ -840,7 +834,6 @@ export default async function TouchLinePlayerProfilePage({
         nationality: displayNationality,
         editorialCard,
         cardReview: exactPlayer.cardReview,
-        touchlinePoints: competition.touchlinePoints,
         profileHref,
         cardEngineHref: currentUser && isOwnerEmail(currentUser.email)
           ? touchlineCardEnginePlayerHref(canonicalPlayerId, locale)
@@ -849,7 +842,7 @@ export default async function TouchLinePlayerProfilePage({
         extraFields: [
           {
             label: text.currentMatchPoints,
-            value: exactPlayer.matchFantasyPoints === null ? text.unavailable : String(exactPlayer.matchFantasyPoints),
+            value: exactPlayer.matchRating === null ? "—" : String(exactPlayer.matchRating),
             accent: true,
           },
           {
@@ -863,7 +856,6 @@ export default async function TouchLinePlayerProfilePage({
             statistics: exactPlayer.matchStats,
             position: exactPlayer.position || card.position,
           }, locale),
-          ...buildTouchlineMatchScoringBreakdownFields(exactPlayer.matchPointContributions, locale),
           ...zoomMatchHistoryFields,
           { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },
           { label: isPortuguese ? "Idade" : "Age", value: official.player?.age === undefined ? null : String(official.player.age) },
@@ -891,7 +883,7 @@ export default async function TouchLinePlayerProfilePage({
         staticRenderScale={178 / 430}
         showProfileAction={false}
         showSocialMetrics={false}
-        showMatchPoints
+        showMatchRating
       />
     </TouchlineCardZoom>
   ) : undefined;
@@ -907,11 +899,11 @@ export default async function TouchLinePlayerProfilePage({
         : "Tier and price appear only when the editorial team publishes this card.",
       meta: "TouchLine",
       accent,
-      badge: tierDisplayName ?? `${cumulativePointsText} ${isPortuguese ? "pontos acumulados" : "cumulative points"}`,
+      badge: tierDisplayName ?? `${cumulativeRatingText} ${isPortuguese ? "nota total" : "total rating"}`,
       visual: socialCardVisual(`${isPortuguese ? "Ampliar card atual de" : "Open current card for"} ${card.name}`),
       visualTheme: "market",
       metrics: [
-        { label: isPortuguese ? "Pontos" : "Points", value: cumulativePointsText },
+        { label: text.totalRating, value: cumulativeRatingText },
         ...(tierDisplayName ? [{ label: isPortuguese ? "Tier do card" : "Card tier", value: tierDisplayName }] : []),
         ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
       ],
@@ -951,17 +943,17 @@ export default async function TouchLinePlayerProfilePage({
         kind: "simulation",
         title: isPortuguese ? `Fim de jogo: grande atuação de ${card.name}` : `Full time: outstanding display from ${card.name}`,
         body: isPortuguese
-          ? "Exemplo de publicação automática após o encerramento da partida. O sistema reúne desempenho e pontuação em uma única notícia para evitar excesso de posts."
-          : "Example of an automatic full-time post. The system combines performance and scoring in one update to avoid excessive posts.",
+          ? "Exemplo de publicação automática após o encerramento da partida com a nota Sportmonks verificada."
+          : "Example of an automatic full-time post with the verified Sportmonks rating.",
         meta: isPortuguese ? "Demonstração · após a partida" : "Demo · after the match",
         accent,
-        badge: isPortuguese ? "+12 pontos na partida · total simulado 38" : "+12 match points · simulated total 38",
+        badge: isPortuguese ? "Nota 8,7 · nota total simulada 38,0" : "Rating 8.7 · simulated total rating 38.0",
         visual: socialCardVisual(`${isPortuguese ? "Ampliar card da partida de" : "Open match card for"} ${card.name}`),
         visualTheme: "match",
         metrics: [
           { label: isPortuguese ? "Nota" : "Rating", value: isPortuguese ? "8,7" : "8.7" },
           { label: isPortuguese ? "Minutos" : "Minutes", value: "90" },
-          { label: "Total", value: "38 PTS" },
+          { label: isPortuguese ? "Nota total" : "Total rating", value: "38.0" },
         ],
         baseLikeCount: 11_420,
       },
@@ -974,13 +966,13 @@ export default async function TouchLinePlayerProfilePage({
           : "The TouchLine Verified goal update generates this communication automatically for every follower of the player.",
         meta: isPortuguese ? "Demonstração · 67 minutos" : "Demo · 67 minutes",
         accent,
-        badge: isPortuguese ? "1 gol · +5 pontos TouchLine" : "1 goal · +5 TouchLine points",
+        badge: isPortuguese ? "1 gol · nota Sportmonks verificada" : "1 goal · verified Sportmonks rating",
         visual: socialCardVisual(`${isPortuguese ? "Ampliar card do gol de" : "Open goal card for"} ${card.name}`),
         visualTheme: "goal",
         metrics: [
           { label: isPortuguese ? "Gols" : "Goals", value: "1" },
           { label: isPortuguese ? "Minuto" : "Minute", value: "67'" },
-          { label: isPortuguese ? "Pontos" : "Points", value: "+5" },
+          { label: isPortuguese ? "Nota" : "Rating", value: "8.7" },
         ],
         baseLikeCount: 3_018,
       },
@@ -1173,7 +1165,7 @@ export default async function TouchLinePlayerProfilePage({
           highlights={[
             ...(tierDisplayName ? [{ label: isPortuguese ? "Tier do card" : "Card tier", value: tierDisplayName }] : []),
             ...(displayedPriceText ? [{ label: isPortuguese ? "Preço do card" : "Card price", value: displayedPriceText }] : []),
-            { label: isPortuguese ? "Pontos acumulados" : "Cumulative points", value: cumulativePointsText },
+            { label: text.totalRating, value: cumulativeRatingText },
             { label: isPortuguese ? "Posição" : "Position", value: displayPosition || "—" },
           ]}
           defaultActionHref={hasActiveContractOffer ? marketHref : undefined}
@@ -1228,7 +1220,7 @@ export default async function TouchLinePlayerProfilePage({
           <div className={styles.metrics}>
             <div>
               <small>{text.points}</small>
-              <strong>{competition.touchlinePoints === null ? text.unavailable : competition.touchlinePoints.toLocaleString(locale)}</strong>
+              <strong>{cumulativeRatingText}</strong>
             </div>
             <div>
               <small>{text.rank}</small>

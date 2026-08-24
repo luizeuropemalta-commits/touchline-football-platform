@@ -102,8 +102,6 @@ export function touchlineRankingSnapshotChecksum(input: {
       providerPlayerId: String(player.providerPlayerId ?? ""),
       positionGroup: player.positionGroup,
       positionRank: player.positionRank,
-      points: player.touchlinePoints,
-      roundPoints: player.roundPoints ?? 0,
       totalRating: player.totalRating ?? null,
       minutes: player.minutesPlayed ?? 0,
       appearances: player.appearances ?? 0,
@@ -119,7 +117,8 @@ export function touchlineRankingSnapshotChecksum(input: {
     coverageStatus: input.coverageStatus ?? "complete",
     fixtureIds: [...(input.fixtureIds ?? [])].sort(),
     expectedFixtureIds: [...(input.expectedFixtureIds ?? input.fixtureIds ?? [])].sort(),
-    totalScorePoints: input.totalScorePoints ?? input.snapshot.players.reduce((total, player) => total + player.touchlinePoints, 0),
+    // Deprecated database audit column. Active ranking has no converted-score sum.
+    totalScorePoints: input.totalScorePoints ?? 0,
     generatedAt: input.snapshot.generatedAt,
     priceTableVersion: input.priceTableVersion,
     rows: canonicalRows,
@@ -147,7 +146,7 @@ export function buildSportmonksRankingDraft(input: {
     coverageStatus: input.coverageStatus ?? "complete",
     fixtureIds,
     expectedFixtureIds: [...new Set(input.expectedFixtureIds ?? fixtureIds)].sort(),
-    totalScorePoints: input.totalScorePoints ?? input.players.reduce((total, player) => total + player.touchlinePoints, 0),
+    totalScorePoints: input.totalScorePoints ?? 0,
     receivedAt: input.receivedAt,
     expectedPlayerCount: input.expectedPlayerCount,
     priceTableVersion: input.priceTableVersion ?? TOUCHLINE_CARD_PRICE_TABLE_VERSION,
@@ -182,14 +181,8 @@ export function auditTouchlineRankingDraft(
     if (!row.sourceFixtureIds.length) {
       issues.push({ code: "source-fixture-missing", message: "Player row has no source fixture trace.", playerId: row.playerId });
     }
-    if (!Number.isFinite(row.touchlinePoints)) {
-      issues.push({ code: "points-invalid", message: "TouchLine points must be finite.", playerId: row.playerId });
-    }
-    if (row.roundPoints !== null && row.roundPoints !== undefined && !Number.isFinite(row.roundPoints)) {
-      issues.push({ code: "round-points-invalid", message: "Round points must be finite.", playerId: row.playerId });
-    }
-    if (row.totalRating !== null && row.totalRating !== undefined && !Number.isFinite(row.totalRating)) {
-      issues.push({ code: "total-rating-invalid", message: "Total rating must be finite when available.", playerId: row.playerId });
+    if (row.totalRating === null || !Number.isFinite(row.totalRating)) {
+      issues.push({ code: "total-rating-invalid", message: "Total Sportmonks rating must be finite.", playerId: row.playerId });
     }
     for (const [key, value] of [["minutes", row.minutesPlayed], ["appearances", row.appearances]] as const) {
       if (value === null || value === undefined || !Number.isInteger(value) || value < 0) {
@@ -235,17 +228,16 @@ export function auditTouchlineRankingDraft(
   ) {
     issues.push({ code: "fixture-coverage-mismatch", message: "Expected and included ranking fixture sets must match exactly." });
   }
-  const calculatedTotalScorePoints = draft.rows.reduce((total, row) => total + row.touchlinePoints, 0);
-  if (!Number.isFinite(draft.totalScorePoints) || draft.totalScorePoints !== calculatedTotalScorePoints) {
-    issues.push({ code: "total-score-points-mismatch", message: "Snapshot total points must equal the ranked player sum." });
+  if (draft.totalScorePoints !== 0) {
+    issues.push({ code: "legacy-score-total-must-be-zero", message: "An active rating ranking cannot carry converted score totals." });
   }
 
   const checks: TouchlineRankingAuditCheck[] = [
     { key: "provider", label: "Linhas verificadas pelo SportMonks", passed: !issues.some((issue) => issue.code.includes("provider") || issue.code === "source-fixture-missing") },
     { key: "players", label: "Quantidade e IDs dos atletas", passed: !issues.some((issue) => issue.code.includes("player-count") || issue.code === "identity-missing") },
     { key: "positions", label: "Seis grupos posicionais completos", passed: missingGroups.length === 0 },
-    { key: "statistics", label: "Pontos, minutos e jogos válidos", passed: !issues.some((issue) => /points|minutes|appearances/.test(issue.code)) },
-    { key: "coverage", label: "Cobertura final completa para pontuação", passed: !issues.some((issue) => /coverage|fixture-coverage/.test(issue.code)) },
+    { key: "statistics", label: "Ratings, minutos e jogos válidos", passed: !issues.some((issue) => /rating|minutes|appearances/.test(issue.code)) },
+    { key: "coverage", label: "Cobertura final completa de ratings", passed: !issues.some((issue) => /coverage|fixture-coverage/.test(issue.code)) },
     { key: "prices", label: "Tabela de preços oficial", passed: !issues.some((issue) => issue.code.includes("price")) },
     { key: "timestamps", label: "Rastreabilidade temporal", passed: !issues.some((issue) => issue.code.includes("timestamp")) },
   ];

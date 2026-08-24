@@ -254,7 +254,7 @@ test("shared player cards require a manual published profile, apart from a froze
   assert.match(source, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
   assert.match(source, /allowVisualInventoryPreview = false/);
   assert.match(source, /player\.cardPriceAuthority === "active-contract"/);
-  assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|Market value|Valor de mercado|formatTouchlineContractedCommercialCardPrice/);
+  assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|Valor de mercado|formatTouchlineContractedCommercialCardPrice/);
 });
 
 test("incomplete ClubHub players remain in the shared premium card grid", () => {

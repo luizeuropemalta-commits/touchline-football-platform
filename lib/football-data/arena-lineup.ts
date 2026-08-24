@@ -23,9 +23,10 @@ export type ArenaLineupPlayer = {
     position?: string | null;
     countryCode3?: string | null;
     flagUrl?: string | null;
-    fantasyPoints?: string | number | null;
-    /** Points earned in the latest reconciled fixture, separate from the season total. */
-    matchFantasyPoints?: string | number | null;
+    /** Sum of valid Sportmonks ratings for eligible appearances. */
+    totalRating?: string | number | null;
+    /** Sportmonks rating for the latest reconciled fixture. */
+    matchRating?: string | number | null;
     marketValue?: string | null;
     marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
     /** Server-owned public value state. Never infer it from a display string. */

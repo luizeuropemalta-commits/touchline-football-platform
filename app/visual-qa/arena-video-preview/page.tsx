@@ -118,17 +118,15 @@ function fantasyEventToArenaAlert(event: TouchlineFantasyEvent): ArenaAlert {
   const minute = event.minute ? `${event.minute}' ` : "";
   const playerName = event.playerName || "Player";
   const related = event.relatedPlayerName ? ` Assist: ${event.relatedPlayerName}.` : "";
-  const points = typeof event.fantasyPoints === "number" ? event.fantasyPoints : 0;
 
   return {
     id: `sportmonks-${event.id}`,
     kind,
     title: `${minute}${ALERT_KIND_LABELS[kind]} - ${playerName}`,
-    body: `${event.type || "Live event"}${related} Card impact: ${points >= 0 ? "+" : ""}${points} pts.`,
+    body: `${event.type || "Live event"}${related}`,
     playerName,
     fixtureName: event.fixtureId ? `Fixture ${event.fixtureId}` : undefined,
     minute: event.minute,
-    points,
     source: "SportMonks",
     occurredAt: new Date().toISOString(),
     isReal: true,
@@ -209,7 +207,7 @@ function arenaCardToPlayer(player: ArenaLineupPlayer): TouchlineEliteExactPlayer
     sourcePhotoUrl: "",
     frameUrl: "",
     cardTemplateUrl: clubTemplateUrl || DEFAULT_CLUB_TEMPLATE_URL,
-    fantasyPoints: card?.fantasyPoints ?? "0.0",
+    totalRating: card?.totalRating ?? null,
     matchStats: card?.matchStats,
   };
 }

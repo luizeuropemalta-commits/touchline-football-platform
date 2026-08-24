@@ -52,7 +52,7 @@ const FIXTURE_BASE: Omit<
   sourcePhotoUrl: null,
   frameUrl: null,
   cardTemplateUrl: null,
-  fantasyPoints: 0,
+  totalRating: null,
   seasonStats: {
     goals: 0,
     assists: 0,

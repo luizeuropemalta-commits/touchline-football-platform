@@ -197,23 +197,21 @@ describe("TouchLine Arena legacy inventory reconciliation", () => {
     assert.deepEqual(merged[0].card?.editorialCard, editorialCard);
   });
 
-  it("hydrates verified season, match and breakdown facts without moving the saved slot", () => {
+  it("hydrates verified season and match ratings without moving the saved slot", () => {
     const player = fieldPlayer({ card: { ...fieldPlayer().card!, inventoryId: INVENTORY_ID } });
     const merged = mergeArenaLineupInventoryFromRoster([player], [{
       ...ALISSON_CARD,
       inventoryId: INVENTORY_ID,
-      seasonTouchlinePoints: 24,
-      matchTouchlinePoints: 6,
+      seasonTotalRating: 24,
+      matchRating: 8.94,
       seasonStats: { goals: 2, assists: 1 },
       matchStats: { goals: 1, assists: 0 },
-      matchPointContributions: [{ role: "primary", eventType: "Goal", minute: 23, points: 3 }],
     }]);
     assert.equal(merged[0].x, player.x);
     assert.equal(merged[0].y, player.y);
-    assert.equal(merged[0].card?.fantasyPoints, 24);
-    assert.equal(merged[0].card?.matchFantasyPoints, 6);
+    assert.equal(merged[0].card?.totalRating, 24);
+    assert.equal(merged[0].card?.matchRating, 8.94);
     assert.equal(merged[0].card?.matchStats?.goals, 1);
-    assert.equal(merged[0].card?.matchPointContributions?.[0]?.points, 3);
   });
 
   it("does not merge a same-name card from another club or a malformed inventory id", () => {
