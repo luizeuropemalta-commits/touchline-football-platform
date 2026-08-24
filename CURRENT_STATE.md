@@ -7,6 +7,11 @@
 - Cross-surface public sample: Martin Ødegaard is `8.08` in Arsenal Club Hub, Player Card, open Zoom and the Top 20 ranking. The zoom dialog rendered the same total and match history. The Arena server contract maps only `seasonTotalRating`/`matchRating` through the shared exact card and zoom; no legacy point field enters that presentation path.
 - Verification: focused `22/22`, complete `1275/1275`, TypeScript, local Next build, `git diff --check` and Vercel Preview release build passed. Safari's existing session could not be refreshed for the exact deployment because macOS was locked; this is not represented as native Safari pass. Production remains untouched.
 
+## QA Arena Card Rating parity — DEPLOYED / SAFARI ISSUE CORRECTED
+
+- Native Safari QA exposed a genuine private-surface gap in the previous deployment: Senne Lammens' card/Zoom showed the current match rating `6.36` in Performance while `TOTAL RATING` was `—`. Commit `8891fa0` extends the existing authoritative private-roster read with the same immutable published V3 snapshot fallback already used by Club Hub. It does not change calculations, settlements, contracts, data, V2 history or card ownership.
+- The new exact Preview `https://touchline-arena-official-42m0fm2lq-fifa-agent-plataform.vercel.app` is READY. Focused Arena/rating contracts `51/51`, full suite `1276/1276`, TypeScript, local build and Vercel release verification passed. The existing authenticated Safari session is bound to an older isolated Preview host, so the new host correctly requires a session and was not logged into; a new exact-host authenticated visual assertion is pending without credentials. Production remains untouched.
+
 ## QA Club Hub premium matchday — GREEN / DEPLOYED
 
 - QA commits `418f0fc`, `c8dd778` and `ba2be55` remove the Club Hub shop/partner board and standalone coach showcase; they move the live confrontation into the squad-preview header, render eleven actual starter cards on the pitch, a visible coach card and nine available-squad bench cards in the technical area, and refresh the server projection every 45 seconds for official lineup changes. No provider, roster, card, contract or Production data was changed.
