@@ -151,9 +151,10 @@ function TablePlayerCardZoom({
             primary: true,
           },
           {
-            label: isPortuguese ? "Nota da partida" : "Match rating",
+            label: isPortuguese ? "Nota da última partida" : "Last match rating",
             value: card.matchRating == null ? "—" : String(card.matchRating),
             accent: true,
+            kind: "rating-last",
           },
           ...buildTouchlineVerifiedMatchFactFields({
             statistics: card.matchStats,

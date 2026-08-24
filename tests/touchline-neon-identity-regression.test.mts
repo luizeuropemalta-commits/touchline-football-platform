@@ -615,6 +615,6 @@ test("TouchLine tables enlarged cards reuse the premium identity-and-performance
   assert.match(tablesClient, /buildTouchlinePlayerCardZoomDetails/);
   assert.match(tablesClient, /buildTouchlineVerifiedMatchFactFields/);
   assert.match(tablesClient, /Nota total/);
-  assert.match(tablesClient, /Nota da partida/);
+  assert.match(tablesClient, /Nota da última partida/);
   assert.doesNotMatch(tablesClient, /zoomBackdrop|zoomContent|useTouchlineDialog/);
 });

@@ -103,9 +103,10 @@ function SquadPlayerCardZoom({
             accent: true,
           },
           {
-            label: portuguese ? "Nota da partida" : "Match rating",
+            label: portuguese ? "Nota da última partida" : "Last match rating",
             value: card.matchRating == null ? "—" : String(card.matchRating),
             accent: true,
+            kind: "rating-last",
           },
           ...buildTouchlineVerifiedMatchFactFields({
             statistics: card.matchStats,

@@ -153,7 +153,7 @@ function clubOwnerCardZoomDetails(
         kind: "rating-total",
       },
       {
-        label: locale === "pt-BR" ? "Nota da partida" : "Match rating",
+        label: locale === "pt-BR" ? "Nota da última partida" : "Last match rating",
         value: card.matchRating == null ? "—" : String(card.matchRating),
         accent: true,
         kind: "rating-last",

@@ -120,9 +120,10 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                       accent: true,
                     },
                     {
-                      label: pt ? "Nota da partida" : "Match rating",
+                      label: pt ? "Nota da última partida" : "Last match rating",
                       value: card.matchRating == null ? "—" : String(card.matchRating),
                       accent: true,
+                      kind: "rating-last",
                     },
                     ...buildTouchlineVerifiedMatchFactFields({
                       statistics: card.matchStats,
