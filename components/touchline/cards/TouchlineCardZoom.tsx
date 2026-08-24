@@ -1,7 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import {
+  Activity,
+  Award,
+  BadgeDollarSign,
+  Building2,
+  ChartNoAxesCombined,
+  ChevronDown,
+  CircleGauge,
+  Clock3,
+  Flag,
+  Footprints,
+  Goal,
+  Hand,
+  History,
+  Medal,
+  Shield,
+  ShieldCheck,
+  Shirt,
+  Star,
+  Target,
+  Trophy,
+  UserRound,
+} from "lucide-react";
 import { useTouchlineDialog } from "@/components/touchline/a11y/TouchlineDialog";
 import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import styles from "./TouchlineCardZoom.module.css";
@@ -17,6 +40,8 @@ export type TouchlineCardZoomDetails = {
     value: string;
     accent?: boolean;
     group?: "identity" | "performance";
+    /** Controls the compact performance composition without changing data. */
+    kind?: "identity" | "rating-total" | "rating-last" | "stat" | "history";
     icon?: string;
     primary?: boolean;
   }>;
@@ -45,18 +70,73 @@ type TouchlineCardZoomProps = {
 export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineCardZoomDetails }) {
   const identityFields = details.fields.filter((field) => field.group !== "performance");
   const performanceFields = details.fields.filter((field) => field.group === "performance");
-  const renderFields = (fields: typeof details.fields) => (
-    <dl className={styles.detailsGrid}>
-      {fields.map((field) => (
-        <div
-          key={`${field.label}-${field.value}`}
-          className={`${field.accent ? styles.detailAccent : ""} ${field.primary ? styles.detailPrimary : ""}`}
-        >
-          <dt>{field.icon ? <span className={styles.detailIcon} aria-hidden="true">{field.icon}</span> : null}{field.label}</dt>
+  const [isFullPerformanceOpen, setIsFullPerformanceOpen] = useState(false);
+  const fullPerformanceId = useId();
+  const isGoalkeeper = /goalkeeper|goleiro|guarda-redes|keeper/i.test(details.subtitle ?? "");
+  const isPortuguese = details.performanceTitle === "Desempenho";
+  const copy = isPortuguese
+    ? { hide: "Ocultar desempenho completo", view: "Ver desempenho completo", history: "Histórico de partidas", recent: "Últimas partidas", full: "Desempenho completo" }
+    : { hide: "Hide full performance", view: "View full performance", history: "Match history", recent: "Recent matches", full: "Full performance" };
+  const fieldKind = (field: TouchlineCardZoomDetails["fields"][number]) => {
+    if (field.kind) return field.kind;
+    const label = field.label.toLowerCase();
+    if (field.primary || /total rating|nota total/.test(label)) return "rating-total";
+    if (/last match|última partida|ultima partida|nota da partida|current match/.test(label)) return "rating-last";
+    if (/match history|histórico da partida|historico da partida/.test(label)) return "history";
+    return "stat";
+  };
+  const performanceByKind = performanceFields.reduce<Record<string, typeof performanceFields>>((groups, field) => {
+    const kind = fieldKind(field);
+    (groups[kind] ??= []).push(field);
+    return groups;
+  }, {});
+  const totalRating = performanceByKind["rating-total"]?.[0];
+  const lastMatchRating = performanceByKind["rating-last"]?.[0];
+  const history = performanceByKind.history ?? [];
+  const statistics = performanceByKind.stat ?? [];
+  const coreStatLimit = isGoalkeeper ? 5 : 6;
+  const availableStatistics = statistics.filter((field) => field.value !== "—");
+  const coreStatistics = [...availableStatistics, ...statistics.filter((field) => field.value === "—")]
+    .slice(0, coreStatLimit);
+  const advancedStatistics = statistics.filter((field) => !coreStatistics.includes(field));
+  const iconForField = (field: TouchlineCardZoomDetails["fields"][number], context: "identity" | "performance") => {
+    const token = `${field.icon ?? ""} ${field.label}`.toLowerCase();
+    const Icon = token.includes("price") || token.includes("preço") ? BadgeDollarSign
+      : token.includes("tier") ? Medal
+      : token.includes("club") || token.includes("clube") ? Building2
+      : token.includes("national") || token.includes("nacional") ? Flag
+      : token.includes("position") || token.includes("posição") ? UserRound
+      : token.includes("shirt") || token.includes("camisa") ? Shirt
+      : token.includes("total rating") || token.includes("nota total") || token.includes("rating") || token.includes("nota") ? Star
+      : token.includes("goal") || token.includes("gols") ? Goal
+      : token.includes("assist") ? Footprints
+      : token.includes("save") || token.includes("defesa") ? Hand
+      : token.includes("clean") || token.includes("sem sofrer") ? ShieldCheck
+      : token.includes("def") || token.includes("defens") ? Shield
+      : token.includes("card") || token.includes("cart") ? Award
+      : token.includes("minute") || token.includes("minuto") ? Clock3
+      : token.includes("appearance") || token.includes("apariç") ? Trophy
+      : token.includes("history") || token.includes("histórico") ? History
+      : token.includes("shot") || token.includes("chute") ? Target
+      : context === "identity" ? UserRound : Activity;
+    return <Icon aria-hidden="true" strokeWidth={1.8} />;
+  };
+  const renderIdentityFields = (fields: typeof identityFields) => (
+    <dl className={styles.identityGrid}>
+      {fields.slice(0, 5).map((field) => (
+        <div key={`${field.label}-${field.value}`} className={field.accent ? styles.detailAccent : undefined}>
+          <dt><span className={styles.detailIcon}>{iconForField(field, "identity")}</span>{field.label}</dt>
           <dd>{field.value}</dd>
         </div>
       ))}
     </dl>
+  );
+  const renderStat = (field: TouchlineCardZoomDetails["fields"][number], compact = false) => (
+    <div key={`${field.label}-${field.value}`} className={compact ? styles.statTile : styles.fullStat}>
+      <span className={styles.statIcon}>{iconForField(field, "performance")}</span>
+      <span>{field.label}</span>
+      <strong>{field.value}</strong>
+    </div>
   );
 
   return (
@@ -67,7 +147,7 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
         <h2>{details.title}</h2>
         {details.subtitle ? <p>{details.subtitle}</p> : null}
       </header>
-      {identityFields.length ? renderFields(identityFields) : null}
+      {identityFields.length ? renderIdentityFields(identityFields) : null}
       {(details.profileHref || details.historyHref || details.cardEngineHref) ? (
         <nav className={styles.detailActions} aria-label={details.title}>
           {details.profileHref ? (
@@ -95,7 +175,51 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
           <h2>{details.performanceTitle ?? "Performance"}</h2>
           <p>{details.performanceSubtitle ?? "Official match ratings and statistics"}</p>
         </header>
-        {renderFields(performanceFields)}
+        {totalRating ? (
+          <section className={styles.ratingHero} aria-label={totalRating.label}>
+            <span><Star aria-hidden="true" strokeWidth={1.8} />{totalRating.label}</span>
+            <strong>{totalRating.value}</strong>
+            {lastMatchRating ? <p><CircleGauge aria-hidden="true" strokeWidth={1.8} />{lastMatchRating.label}: <b>{lastMatchRating.value}</b></p> : null}
+          </section>
+        ) : lastMatchRating ? (
+          <section className={styles.ratingHero} aria-label={lastMatchRating.label}>
+            <span><Star aria-hidden="true" strokeWidth={1.8} />{lastMatchRating.label}</span>
+            <strong>{lastMatchRating.value}</strong>
+          </section>
+        ) : null}
+        {coreStatistics.length ? <div className={styles.statGrid}>{coreStatistics.map((field) => renderStat(field, true))}</div> : null}
+        {(advancedStatistics.length || history.length) ? (
+          <>
+            <button
+              type="button"
+              className={styles.fullPerformanceToggle}
+              aria-expanded={isFullPerformanceOpen}
+              aria-controls={fullPerformanceId}
+              onClick={() => setIsFullPerformanceOpen((open) => !open)}
+            >
+              <ChartNoAxesCombined aria-hidden="true" strokeWidth={1.8} />
+              <span>{isFullPerformanceOpen ? copy.hide : copy.view}</span>
+              <ChevronDown aria-hidden="true" strokeWidth={2} />
+            </button>
+            {isFullPerformanceOpen ? (
+              <section id={fullPerformanceId} className={styles.fullPerformance} aria-label={copy.full}>
+                {advancedStatistics.length ? <div className={styles.fullStats}>{advancedStatistics.map((field) => renderStat(field))}</div> : null}
+                {history.length ? (
+                  <div className={styles.matchHistory}>
+                    <h3><History aria-hidden="true" strokeWidth={1.8} />{copy.history}</h3>
+                    {history.map((field) => <p key={`${field.label}-${field.value}`}><span>{field.label.replace(/^(Match history|Histórico da partida)\s*·\s*/i, "")}</span>{field.value}</p>)}
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+          </>
+        ) : null}
+        {history.length && !isFullPerformanceOpen ? (
+          <div className={styles.historyPreview} aria-label={copy.recent}>
+            <h3><History aria-hidden="true" strokeWidth={1.8} />{copy.recent}</h3>
+            {history.slice(0, 3).map((field) => <p key={`${field.label}-${field.value}`}><span>{field.label.replace(/^(Match history|Histórico da partida)\s*·\s*/i, "")}</span>{field.value}</p>)}
+          </div>
+        ) : null}
       </aside>
     ) : null}
     </>

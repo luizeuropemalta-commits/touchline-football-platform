@@ -150,11 +150,13 @@ function clubOwnerCardZoomDetails(
         label: locale === "pt-BR" ? "Nota total" : "Total rating",
         value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
         accent: true,
+        kind: "rating-total",
       },
       {
         label: locale === "pt-BR" ? "Nota da partida" : "Match rating",
         value: card.matchRating == null ? "—" : String(card.matchRating),
         accent: true,
+        kind: "rating-last",
       },
       ...buildTouchlineVerifiedMatchFactFields({
         statistics: card.matchStats,

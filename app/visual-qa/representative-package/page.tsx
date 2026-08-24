@@ -143,6 +143,19 @@ export default async function RepresentativePackageVisualQaPage({ searchParams }
     editorialCard: longNamePlayer.editorialCard,
     touchlinePoints: 0,
     eyebrow: "QA FIXTURE · PUBLISHED EDITORIAL CARD",
+    extraFields: [
+      { label: pt ? "Nota total" : "Total rating", value: "23.25", accent: true, kind: "rating-total", icon: "rating" },
+      { label: pt ? "Nota da última partida" : "Last match rating", value: "8.21", accent: true, kind: "rating-last", icon: "rating" },
+      { label: pt ? "Gols" : "Goals", value: "2", icon: "goal" },
+      { label: pt ? "Assistências" : "Assists", value: "1", icon: "assist" },
+      { label: pt ? "Pontuação DEF" : "DEF score", value: "7", icon: "defense" },
+      { label: pt ? "Jogos sem sofrer gols" : "Clean sheets", value: "1", icon: "clean-sheet" },
+      { label: pt ? "Cartões amarelos" : "Yellow cards", value: "0", icon: "yellow-card" },
+      { label: pt ? "Chutes no gol" : "Shots on target", value: "3", icon: "shots-on-target" },
+      { label: `${pt ? "Histórico da partida" : "Match history"} · 24 ago. 2026`, value: pt ? "Titular · 90 minutos · Nota 8.21" : "Started · 90 minutes · Rating 8.21", kind: "history", icon: "history" },
+      { label: `${pt ? "Histórico da partida" : "Match history"} · 17 ago. 2026`, value: pt ? "Titular · 74 minutos · Nota 7.50" : "Started · 74 minutes · Rating 7.50", kind: "history", icon: "history" },
+      { label: `${pt ? "Histórico da partida" : "Match history"} · 10 ago. 2026`, value: pt ? "Substituto · 31 minutos · Nota 6.81" : "Substitute · 31 minutes · Rating 6.81", kind: "history", icon: "history" },
+    ],
   });
   const copy = pt
     ? {

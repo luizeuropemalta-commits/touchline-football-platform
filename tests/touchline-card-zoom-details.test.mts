@@ -246,3 +246,35 @@ test("a detailed zoom does not repeat the tier in a detached metadata strip", ()
   assert.match(zoomSource, /contractTermLabel \|\| \(!details && tierLabel\)/);
   assert.match(zoomSource, /!details && tierLabel \? <strong>/);
 });
+
+test("the premium shared zoom prioritizes rating, keeps the full tree on demand and uses real icon components", () => {
+  const zoomSource = readFileSync(
+    new URL("../components/touchline/cards/TouchlineCardZoom.tsx", import.meta.url),
+    "utf8",
+  );
+  const zoomCss = readFileSync(
+    new URL("../components/touchline/cards/TouchlineCardZoom.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(zoomSource, /kind\?: "identity" \| "rating-total" \| "rating-last" \| "stat" \| "history"/);
+  assert.match(zoomSource, /const \[isFullPerformanceOpen, setIsFullPerformanceOpen\] = useState\(false\)/);
+  assert.match(zoomSource, /aria-expanded=\{isFullPerformanceOpen\}/);
+  assert.match(zoomSource, /isFullPerformanceOpen \? \(\s*<section id=\{fullPerformanceId\}/);
+  assert.match(zoomSource, /from "lucide-react"/);
+  assert.match(zoomCss, /\.ratingHero \{/);
+  assert.match(zoomCss, /\.statGrid \{/);
+  assert.match(zoomCss, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("profile zoom supplies rating semantics and bounded match history without reintroducing points", () => {
+  const profileSource = readFileSync(
+    new URL("../app/touchline-players/[player]/page.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(profileSource, /kind: "rating-total"/);
+  assert.match(profileSource, /kind: "rating-last"/);
+  assert.match(profileSource, /kind: "history" as const/);
+  assert.doesNotMatch(profileSource, /buildTouchlineMatchScoringBreakdownFields/);
+});

@@ -23,6 +23,7 @@ export type TouchlineCardZoomExtraField = Readonly<{
   label: string;
   value: string | null | undefined;
   accent?: boolean;
+  kind?: "rating-total" | "rating-last" | "stat" | "history";
   icon?: string;
   primary?: boolean;
 }>;
@@ -69,10 +70,10 @@ export function buildTouchlineVerifiedMatchFactFields(
     const value = statistics[key];
     const [englishLabel, portugueseLabel] = labels[key];
     const icons: Partial<Record<TouchlineCardStatId, string>> = {
-      goals: "⚽", assists: "👟", defense: "🛡", cleanSheets: "🥅", cards: "🟨",
-      yellowCards: "🟨", redCards: "🟥", saves: "🧤", shotsOnTarget: "🎯",
-      shotsOffTarget: "◌", defensiveActionsTotal: "🛡", penaltySaves: "🧤",
-      penaltiesMissed: "⚠", ownGoals: "⚠", rating: "★", minutes: "◷", appearances: "◎",
+      goals: "goal", assists: "assist", defense: "defense", cleanSheets: "clean-sheet", cards: "cards",
+      yellowCards: "yellow-card", redCards: "red-card", saves: "saves", shotsOnTarget: "shots-on-target",
+      shotsOffTarget: "shots-off-target", defensiveActionsTotal: "defense", penaltySaves: "saves",
+      penaltiesMissed: "penalty-missed", ownGoals: "own-goal", rating: "rating", minutes: "minutes", appearances: "appearances",
     };
     return [{ label: pt ? portugueseLabel : englishLabel, value: value == null ? "—" : String(value), icon: icons[key] }];
   });
@@ -173,9 +174,10 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
     group: "identity" | "performance" = "identity",
     icon?: string,
     primary = false,
+    kind?: TouchlineCardZoomExtraField["kind"],
   ) => {
     if (value === null || value === undefined || value === "") return null;
-    return { label, value: String(value), accent, group, icon, primary };
+    return { label, value: String(value), accent, group, icon, primary, kind };
   };
   const publicCard = input.editorialCard
     ? {
@@ -196,17 +198,17 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         isPortuguese ? "Revisão pendente" : "Review pending",
         true,
         "identity",
-        "✦",
+        "status",
       ),
       ...(!publicCard
-        ? [field(isPortuguese ? "Preço do card" : "Card price", isPortuguese ? "Pendente" : "Pending", true, "identity", "⌾")]
+        ? [field(isPortuguese ? "Preço do card" : "Card price", isPortuguese ? "Pendente" : "Pending", true, "identity", "price")]
         : []),
       ...(input.cardReview?.missingFields ?? []).map((missingField) => field(
         isPortuguese ? "Campo pendente" : "Missing field",
         touchlineCardReviewFieldLabel(missingField, input.locale),
         false,
         "identity",
-        "◌",
+        "missing-field",
       )),
     ]
     : [];
@@ -217,30 +219,31 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         touchlineCardTierName(publicCard.tierKey, input.locale),
         true,
         "identity",
-        "✦",
+        "tier",
       ),
       field(
         isPortuguese ? "Preço do card" : "Card price",
         publicCard.cardPrice,
         true,
         "identity",
-        "⌾",
+        "price",
       ),
     ]
     : [];
   const baseFields = [
     ...reviewFields,
     ...editorialFields,
-    field(isPortuguese ? "Clube atual" : "Current club", input.clubName, false, "identity", "◈"),
-    field(isPortuguese ? "Posição" : "Position", input.position, false, "identity", "◉"),
-    field(isPortuguese ? "Nacionalidade" : "Nationality", input.nationality, false, "identity", "⚑"),
+    field(isPortuguese ? "Clube atual" : "Current club", input.clubName, false, "identity", "club"),
+    field(isPortuguese ? "Posição" : "Position", input.position, false, "identity", "position"),
+    field(isPortuguese ? "Nacionalidade" : "Nationality", input.nationality, false, "identity", "nationality"),
     ...(input.extraFields ?? []).map((extra) => field(
       extra.label,
       extra.value,
       extra.accent,
       "performance",
-      extra.icon ?? (extra.label.toLowerCase().includes("total rating") || extra.label.toLowerCase().includes("nota total") ? "★" : undefined),
+      extra.icon ?? (extra.label.toLowerCase().includes("total rating") || extra.label.toLowerCase().includes("nota total") ? "rating" : undefined),
       extra.primary ?? (extra.label.toLowerCase().includes("total rating") || extra.label.toLowerCase().includes("nota total")),
+      extra.kind,
     )),
   ].filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate));
 

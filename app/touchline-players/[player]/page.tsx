@@ -685,6 +685,7 @@ export default async function TouchLinePlayerProfilePage({
     return {
       label: `${isPortuguese ? "Histórico da partida" : "Match history"} · ${fixture.fixtureStartsAt ?? text.unavailable}`,
       value: `${appearance} · ${minutes} · ${isPortuguese ? "Nota" : "Rating"} ${rating}`,
+      kind: "history" as const,
     };
   });
   const totalRatingText = playerStatistics.currentSeason.summary.totalRating ?? competition.totalRating;
@@ -841,9 +842,10 @@ export default async function TouchLinePlayerProfilePage({
         eyebrow: isPortuguese ? "Perfil oficial do atleta" : "Official player profile",
         extraFields: [
           {
-            label: text.currentMatchPoints,
+            label: isPortuguese ? "Nota da última partida" : "Last match rating",
             value: exactPlayer.matchRating === null ? "—" : String(exactPlayer.matchRating),
             accent: true,
+            kind: "rating-last",
           },
           {
             label: text.totalRating,
@@ -851,14 +853,13 @@ export default async function TouchLinePlayerProfilePage({
               ? "—"
               : String(playerStatistics.currentSeason.summary.totalRating),
             accent: true,
+            kind: "rating-total",
           },
           ...buildTouchlineVerifiedMatchFactFields({
             statistics: exactPlayer.matchStats,
             position: exactPlayer.position || card.position,
           }, locale),
           ...zoomMatchHistoryFields,
-          { label: isPortuguese ? "Nascimento" : "Born", value: official.player?.dateOfBirth },
-          { label: isPortuguese ? "Idade" : "Age", value: official.player?.age === undefined ? null : String(official.player.age) },
         ],
       })}
       expandedContent={(
