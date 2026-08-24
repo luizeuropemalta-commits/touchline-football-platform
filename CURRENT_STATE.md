@@ -1,5 +1,11 @@
 # TouchLine Current State
 
+## QA Player Zoom transparent detail layer — DEPLOYED / QA GREEN
+
+- Commit `41f404c` removes only the green-tinted backgrounds from the shared Player Zoom identity, performance and compact-stat surfaces. Copy, iconography, borders, card art, rating values, full-performance interaction and global modal backdrop remain intact; the information now sits directly over the cinematic background behind the card.
+- Exact QA Preview `https://touchline-arena-official-q2x518emx-fifa-agent-plataform.vercel.app` (`dpl_8BHxNgZv67Y6ouzaasvKvEtQCx6g`) returned HTTP `200` for the public Arsenal Club Hub. Noni Madueke's open Zoom reported `background-image: none` for both detail panels and transparent backgrounds for all six compact stats, with no horizontal overflow.
+- Focused zoom/dialog tests `19/19`, ESLint with zero errors (six established unrelated warnings), `git diff --check` and local visual inspection passed. Production remains untouched.
+
 ## QA premium Player Zoom redesign — DEPLOYED / QA GREEN
 
 - Commit `24345a4` redesigns the existing shared `TouchlineCardZoom` presentation only. Every surface already using the shared zoom — Player Profile, Club Hub, Club Owner, Arena, rankings, tables and Market — now receives the same cinematic composition: identity at left, the existing card art at centre and performance at right. The Zoom card remains intentionally 15% smaller than the global card.

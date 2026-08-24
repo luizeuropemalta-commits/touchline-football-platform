@@ -3,6 +3,11 @@
 This is the sole authoritative continuation ledger. It supersedes the former
 Full Product Recovery ledger without deleting its historical evidence.
 
+## 2026-08-25 Player Zoom transparent information layer — QA GREEN
+
+- **Scope:** commit `41f404c` removes only the green-tinted visual fills from the shared identity, performance and compact-stat panels. It preserves the card, backdrop, text, icon, rating, border, accessibility and full-performance contracts; no football, scoring, provider, database, Card Engine or Production boundary changed.
+- **Evidence:** exact QA Preview `dpl_8BHxNgZv67Y6ouzaasvKvEtQCx6g` at `https://touchline-arena-official-q2x518emx-fifa-agent-plataform.vercel.app` returned public Club Hub HTTP `200`. Noni Madueke's actual opened Zoom had `background-image: none` for both details panels and six transparent stat-tile backgrounds, with no horizontal overflow. Focused zoom/dialog suite `19/19` and ESLint (zero errors; six established unrelated warnings) passed. Production remains untouched.
+
 ## Resume protocol
 
 At the beginning of every execution:
