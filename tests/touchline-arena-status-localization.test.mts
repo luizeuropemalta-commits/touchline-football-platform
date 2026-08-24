@@ -15,14 +15,14 @@ test("Arena operational statuses are localized through the shared TouchLine dict
   assert.equal(touchLineT("pt-BR", "chooseReserve"), "escolha um reserva");
 });
 
-test("player-card ordering copy names Sportmonks Rating rather than retired player points", () => {
+test("player-card ordering copy uses the public TouchLine Rating name rather than a provider label or retired player points", () => {
   assert.equal(
     touchLineT("en-GB", "playerOrderDescription"),
-    "Player cards are ordered by accumulated valid Sportmonks Rating, highest first.",
+    "Player cards are ordered by accumulated verified TouchLine Rating, highest first.",
   );
   assert.equal(
     touchLineT("pt-BR", "playerOrderDescription"),
-    "Os cards de jogadores são ordenados pelo Rating Sportmonks válido acumulado, do maior para o menor.",
+    "Os cards de jogadores são ordenados pela Nota TouchLine verificada acumulada, do maior para o menor.",
   );
 });
 
