@@ -1,5 +1,12 @@
 # TouchLine Current State
 
+## QA all-club Card Rating parity — DEPLOYED / PUBLIC UI GREEN
+
+- QA commits `3f9aab9`, `bc4d041` and `74422d6` complete the existing public season-card adapter. The adapter now projects the immutable published `player_scoring_v3` cumulative rating into Club Hub cards, including during a technical `is_current` season-marker transition. It neither recalculates Rating/Points nor reads V2, and it preserves the explicit unavailable state when no valid provider rating exists.
+- Exact Preview `https://touchline-arena-official-dt58c8oyd-fifa-agent-plataform.vercel.app` (commit `74422d6`) rendered all twenty public Club Hubs. Playwright desktop QA found `529` visible cards, `276` cards with a valid cumulative rating, `0` invisible cards, `0` broken images, `0` horizontal-overflow routes and `0` console errors. The remaining cards retain the intentional unavailable display rather than an invented zero.
+- Cross-surface public sample: Martin Ødegaard is `8.08` in Arsenal Club Hub, Player Card, open Zoom and the Top 20 ranking. The zoom dialog rendered the same total and match history. The Arena server contract maps only `seasonTotalRating`/`matchRating` through the shared exact card and zoom; no legacy point field enters that presentation path.
+- Verification: focused `22/22`, complete `1275/1275`, TypeScript, local Next build, `git diff --check` and Vercel Preview release build passed. Safari's existing session could not be refreshed for the exact deployment because macOS was locked; this is not represented as native Safari pass. Production remains untouched.
+
 ## QA Club Hub premium matchday — GREEN / DEPLOYED
 
 - QA commits `418f0fc`, `c8dd778` and `ba2be55` remove the Club Hub shop/partner board and standalone coach showcase; they move the live confrontation into the squad-preview header, render eleven actual starter cards on the pitch, a visible coach card and nine available-squad bench cards in the technical area, and refresh the server projection every 45 seconds for official lineup changes. No provider, roster, card, contract or Production data was changed.
