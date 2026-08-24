@@ -1,5 +1,12 @@
 # TouchLine Current State
 
+## QA premium Player Zoom redesign — DEPLOYING / LOCAL QA GREEN
+
+- Commit `24345a4` redesigns the existing shared `TouchlineCardZoom` presentation only. Every surface already using the shared zoom — Player Profile, Club Hub, Club Owner, Arena, rankings, tables and Market — now receives the same cinematic composition: identity at left, the existing card art at centre and performance at right. The Zoom card remains intentionally 15% smaller than the global card.
+- Performance now makes the persisted cumulative **TouchLine Rating** the hero value, keeps the last-match rating in context, and renders at most six position-aware verified facts (five for a goalkeeper). Remaining facts and match history are not mounted until **Ver desempenho completo** is chosen; the closed state retains a compact latest-three history. Actual Lucide SVG icons replace text/emoji decoration. No TouchLine Points, V2 computation, V3 settlement, rating formula, provider mapping, card data or database write was changed.
+- QA visual fixture proof: total `23.25`, latest `8.21`, six compact metrics and three fixture-rating history rows were rendered together in Chromium, Firefox and Playwright WebKit on desktop `1440×1040`, tablet `820×1180` and mobile `390×844`. All nine renderings had zero horizontal overflow. Focused contracts `14/14`, the wider zoom/dialog regression set `48/48`, TypeScript, ESLint (zero new errors; six established unrelated warnings), `git diff --check` and the local 136-route production build passed.
+- Native Safari is presently displaying Safari's own `This web page was reloaded because a problem occurred` banner on the previous public Preview host. No reload, login, cookie/storage action, authentication action or data action was performed to work around it. Fresh native Safari verification remains scoped to the exact QA Preview when Safari is stable. Production remains untouched.
+
 ## QA all-club Card Rating parity — DEPLOYED / PUBLIC UI GREEN
 
 - QA commits `3f9aab9`, `bc4d041` and `74422d6` complete the existing public season-card adapter. The adapter now projects the immutable published `player_scoring_v3` cumulative rating into Club Hub cards, including during a technical `is_current` season-marker transition. It neither recalculates Rating/Points nor reads V2, and it preserves the explicit unavailable state when no valid provider rating exists.
