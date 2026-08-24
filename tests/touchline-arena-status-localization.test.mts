@@ -15,6 +15,17 @@ test("Arena operational statuses are localized through the shared TouchLine dict
   assert.equal(touchLineT("pt-BR", "chooseReserve"), "escolha um reserva");
 });
 
+test("player-card ordering copy names Sportmonks Rating rather than retired player points", () => {
+  assert.equal(
+    touchLineT("en-GB", "playerOrderDescription"),
+    "Player cards are ordered by accumulated valid Sportmonks Rating, highest first.",
+  );
+  assert.equal(
+    touchLineT("pt-BR", "playerOrderDescription"),
+    "Os cards de jogadores são ordenados pelo Rating Sportmonks válido acumulado, do maior para o menor.",
+  );
+});
+
 test("Arena state updates do not hard-code the former English-only operational statuses", () => {
   for (const legacyStatus of [
     'setSaveStatus("Arena cleared")',
