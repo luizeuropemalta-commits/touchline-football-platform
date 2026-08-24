@@ -171,8 +171,7 @@
   gap: 18px;
   padding: 22px 0;
   color: #f5fff3;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(158, 255, 45, .10), transparent 58%);
+  background: transparent;
   cursor: default;
 }
 
@@ -336,7 +335,7 @@
   border: 1px solid rgba(211, 255, 177, .15);
   border-radius: 9px;
   padding: 9px;
-  background: linear-gradient(135deg, rgba(158, 255, 45, .06), rgba(0, 10, 9, .38));
+  background: transparent;
 }
 
 .statIcon { display: grid; width: 18px; height: 18px; place-items: center; color: #a9f95a; }
@@ -353,7 +352,7 @@
   border-radius: 10px;
   padding: 8px 11px;
   color: #e8ffc8;
-  background: rgba(158, 255, 45, .06);
+  background: transparent;
   font: inherit;
   font-size: 12px;
   font-weight: 900;
@@ -365,7 +364,7 @@
 .fullPerformanceToggle svg:last-child { transition: transform .2s ease; }
 .fullPerformanceToggle[aria-expanded="true"] svg:last-child { transform: rotate(180deg); }
 .fullPerformanceToggle:hover,
-.fullPerformanceToggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; background: rgba(158, 255, 45, .14); }
+.fullPerformanceToggle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; background: transparent; }
 
 .fullPerformance { display: grid; gap: 13px; }
 .fullStats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }

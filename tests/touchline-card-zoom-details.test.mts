@@ -264,6 +264,8 @@ test("the premium shared zoom prioritizes rating, keeps the full tree on demand 
   assert.match(zoomSource, /from "lucide-react"/);
   assert.match(zoomCss, /\.ratingHero \{/);
   assert.match(zoomCss, /\.statGrid \{/);
+  assert.match(zoomCss, /\.details \{[\s\S]*?background: transparent;/);
+  assert.match(zoomCss, /\.statTile \{[\s\S]*?background: transparent;/);
   assert.match(zoomCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
