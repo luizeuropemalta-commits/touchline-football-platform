@@ -1,5 +1,13 @@
 # TouchLine Current State
 
+## QA Club Hub premium matchday — GREEN / DEPLOYED
+
+- QA commits `418f0fc`, `c8dd778` and `ba2be55` remove the Club Hub shop/partner board and standalone coach showcase; they move the live confrontation into the squad-preview header, render eleven actual starter cards on the pitch, a visible coach card and nine available-squad bench cards in the technical area, and refresh the server projection every 45 seconds for official lineup changes. No provider, roster, card, contract or Production data was changed.
+- Public language now uses the verified **TouchLine Rating** / **Nota TouchLine** name; provider implementation identifiers remain internal only. The short preview copy explicitly states that it can change until TouchLine confirms the official lineup.
+- League-table presentation now has continuous display positions `1…20`, never `2=` or `4=`. Sporting ties and official criteria remain separately retained in the canonical resolver. This matches the Premier League’s in-season presentation: clubs can be sporting-tied while vertical placement remains deterministic, with final-table criteria resolved separately.
+- Verification: focused `37/37`, complete `1275/1275`, TypeScript, ESLint (`0` errors; `6` existing warnings), `git diff --check`, local 136-route build and Vercel’s Preview release build passed. Commit `ba2be55` is READY at `https://touchline-arena-official-fbzjkjwc6-fifa-agent-plataform.vercel.app`; it is pushed only to `qa`.
+- Native Safari QA rendered the exact deployment with no shop/partner board, `CONFRONTO` beside the preview formation, 11 pitch cards, Mikel Arteta’s visible coach card, nine bench cards, TouchLine-only public copy and sequential table positions. Chromium phone (390px), WebKit desktop and Firefox desktop each returned `200` with no horizontal overflow, no console errors and no public provider name. Production remains untouched.
+
 ## QA cumulative Sportmonks rating backfill — GREEN / PUBLISHED
 
 - QA commit `3133a86` adds a canonical cumulative-rating field to the existing server-side season aggregate. The aggregate is recomputed from every persisted final fixture for each canonical player: starts and substitutes who entered with a valid Sportmonks rating are included; unused substitutes and provider-absent ratings are never converted to zero.
