@@ -28,6 +28,8 @@ export type AuthoritativeRosterRows = {
   squadMembers: DatabaseRecord[];
   playerSeasonStatistics?: DatabaseRecord[];
   playerFixtureStatistics?: DatabaseRecord[];
+  /** Immutable V3 fallback while the seasonal `is_current` marker changes. */
+  publishedV3TotalRatings?: ReadonlyMap<string, number>;
 };
 
 export type AuthoritativeRosterSnapshot = {
@@ -279,7 +281,11 @@ export function mapAuthoritativeRosterRows(
 
     const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId), position);
     const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId), position);
-    const seasonTotalRating = totalRatingFor(seasonStatisticByPlayerId.get(playerId));
+    // The public ranking is already the audited V3 publication. Its rating is
+    // authoritative when the season aggregate is temporarily outside the
+    // current-season marker, never a local recalculation or V2 fallback.
+    const seasonTotalRating = totalRatingFor(seasonStatisticByPlayerId.get(playerId))
+      ?? asFiniteNumber(rows.publishedV3TotalRatings?.get(playerId));
     const matchRating = asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.rating);
     cards.push({
       id: playerId,
@@ -427,7 +433,7 @@ export async function readAuthoritativeTouchlineRoster(
     ...players.map((player) => asUuid(player.current_club_id)),
   ].filter((id): id is string => Boolean(id)))];
 
-  const [clubsResponse, squadResponse, currentSeasonResponse] = await Promise.all([
+  const [clubsResponse, squadResponse, currentSeasonResponse, activeRanking] = await Promise.all([
     clubIds.length
       ? admin
         .from("football_clubs")
@@ -447,6 +453,7 @@ export async function readAuthoritativeTouchlineRoster(
       .eq("is_current", true)
       .eq("football_competitions.provider_competition_id", "8")
       .maybeSingle(),
+    import("./card-ranking-server.ts").then(({ loadTouchLineActiveRanking }) => loadTouchLineActiveRanking()),
   ]);
   if (clubsResponse.error) {
     return { ok: false, error: "TL_ROSTER_CLUBS_UNAVAILABLE" };
@@ -462,6 +469,17 @@ export async function readAuthoritativeTouchlineRoster(
   }
 
   const currentSeasonId = asUuid(currentSeasonResponse.data?.id);
+  const publishedV3TotalRatings = new Map(
+    activeRanking.phase === "ranked" && activeRanking.scoringVersion === "player_scoring_v3"
+      ? activeRanking.players.flatMap((player) => {
+        const playerId = asUuid(player.playerId);
+        const totalRating = player.totalRating;
+        return playerId && typeof totalRating === "number" && Number.isFinite(totalRating)
+          ? [[playerId, totalRating] as const]
+          : [];
+      })
+      : [],
+  );
   const [seasonStatisticsResponse, fixtureStatisticsResponse] = await Promise.all([
     currentSeasonId
       ? admin.from("football_player_season_statistics")
@@ -496,6 +514,7 @@ export async function readAuthoritativeTouchlineRoster(
     squadMembers,
     playerSeasonStatistics: dataRows(seasonStatisticsResponse.data) ?? [],
     playerFixtureStatistics: dataRows(fixtureStatisticsResponse.data) ?? [],
+    publishedV3TotalRatings,
   }, publishedCards);
 }
 

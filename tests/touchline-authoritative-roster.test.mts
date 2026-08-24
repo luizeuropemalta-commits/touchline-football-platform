@@ -134,6 +134,17 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
   });
 });
 
+test("uses the published V3 rating when the current-season marker has no aggregate row", () => {
+  const rows = completeRows();
+  rows.publishedV3TotalRatings = new Map([[PLAYER_ID, 8.21]]);
+
+  const result = mapAuthoritativeRosterRows(rows, publishedCards());
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.equal(result.snapshot.cards[0]?.seasonTotalRating, 8.21);
+});
+
 test("counts represented clubs from active-contract inventory club IDs only", () => {
   const rows = completeRows();
   rows.contracts.push({
