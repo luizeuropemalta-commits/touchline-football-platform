@@ -8,6 +8,8 @@ import {
 export type TouchlinePublicSeasonPlayerPoints = Readonly<{
   canonicalPlayerId: string;
   touchlinePoints: number | null;
+  /** Canonical cumulative provider rating. Null remains an explicit absence. */
+  totalRating?: number | null;
   statistics: Readonly<{
     goals?: number;
     assists?: number;
@@ -112,6 +114,11 @@ export function applyTouchlineSeasonPoints(
     return {
       ...card,
       seasonTouchlinePoints: statistic?.touchlinePoints ?? null,
+      // The Club Hub already consumes this same server-owned season
+      // projection for stats. Keep the audited cumulative rating alongside it
+      // so every card surface renders the exact canonical total, never a
+      // locally derived value or a legacy score fallback.
+      seasonTotalRating: statistic?.totalRating ?? null,
       ...(seasonStats && Object.keys(seasonStats).length ? { seasonStats } : {}),
     };
   });

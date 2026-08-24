@@ -80,6 +80,10 @@ export async function readPublicSeasonPlayerPoints(
       return undefined;
     };
     const touchlinePoints = finiteNumber(summary?.touchlinePoints);
+    // `totalRating` is materialised by the V3 season aggregation from valid
+    // Sportmonks appearance ratings. It is an allowlisted public fact, not a
+    // card calculation; preserve null when the provider supplied no rating.
+    const totalRating = finiteNumber(summary?.totalRating);
     const yellowCards = statistic("yellowCards", "yellow-cards", "yellowcards");
     const redCards = statistic("redCards", "red-cards", "redcards");
     const unscopedStatistics = {
@@ -97,6 +101,6 @@ export async function readPublicSeasonPlayerPoints(
       position: positionByPlayerId.get(canonicalPlayerId),
       statistics: unscopedStatistics,
     }) as TouchlinePublicSeasonPlayerPoints["statistics"] | undefined) ?? {};
-    return canonicalPlayerId ? [{ canonicalPlayerId, touchlinePoints, statistics }] : [];
+    return canonicalPlayerId ? [{ canonicalPlayerId, touchlinePoints, totalRating, statistics }] : [];
   });
 }
