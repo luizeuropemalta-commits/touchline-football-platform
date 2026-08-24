@@ -20,6 +20,13 @@ type TouchlineCoachCardZoomProps = {
   contract: TouchlineCoachContractSnapshot | null;
   profileHref: string;
   compact?: boolean;
+  /**
+   * A coach card in the matchday technical area is immediately visible above
+   * the fold. Safari can defer the two identity assets on a lazy compact card,
+   * which also holds back the atomic frame reveal. Allow that surface to opt
+   * into eager assets without changing the regular feed/market behaviour.
+   */
+  assetLoading?: "eager" | "lazy";
 };
 
 export default function TouchlineCoachCardZoom({
@@ -33,6 +40,7 @@ export default function TouchlineCoachCardZoom({
   contract,
   profileHref,
   compact = true,
+  assetLoading,
 }: TouchlineCoachCardZoomProps) {
   const portuguese = locale === "pt-BR";
   const palette = touchlineCardTierPalette(slot.cardTier);
@@ -48,7 +56,7 @@ export default function TouchlineCoachCardZoom({
       displayMode={compact ? "compact" : "default"}
       optimizeForLiveCompact={compact}
       enableInteractiveNeon={false}
-      assetLoading="lazy"
+      assetLoading={assetLoading ?? "lazy"}
       fixtureContext={contract?.currentFixture?.context ?? null}
     />
   );
@@ -68,7 +76,7 @@ export default function TouchlineCoachCardZoom({
           locale={locale}
           forceNeonActive
           enableInteractiveNeon={false}
-          assetLoading="lazy"
+          assetLoading="eager"
           frameLoading="eager"
           frameDecoding="sync"
           frameFetchPriority="high"

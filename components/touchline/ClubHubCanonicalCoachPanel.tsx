@@ -75,6 +75,7 @@ export default async function ClubHubCanonicalCoachPanel({
       locale={locale}
       contract={coachContract}
       profileHref={profileHref}
+      assetLoading={presentation === "technical" ? "eager" : "lazy"}
     />
   );
 

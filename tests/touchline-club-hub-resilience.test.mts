@@ -7,6 +7,7 @@ import { fetchTouchlineInternalJson } from "../lib/server/safe-internal-fetch.ts
 const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const squadGridSource = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
 const officialLineupSource = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
+const clubCoachPanelSource = readFileSync(new URL("../components/touchline/ClubHubCanonicalCoachPanel.tsx", import.meta.url), "utf8");
 const coachCardZoomSource = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url), "utf8");
 const coachCardSource = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCard.tsx", import.meta.url), "utf8");
 const errorBoundarySource = readFileSync(new URL("../app/error.tsx", import.meta.url), "utf8");
@@ -24,12 +25,15 @@ test("ClubHub bounds squad loading and distinguishes unavailable data from a nor
   assert.match(source, /role=\{squadUnavailable \? "status" : undefined\}/);
 });
 
-test("ClubHub defers the below-the-fold squad artwork without emitting unused image preloads", () => {
+test("ClubHub defers below-the-fold squad artwork while eagerly revealing its visible technical coach card", () => {
   assert.match(squadGridSource, /imageLoading="lazy"/);
   assert.doesNotMatch(squadGridSource, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);
   assert.match(squadGridSource, /CARD_BATCH_SIZE = 8/);
   assert.match(officialLineupSource, /imageLoading="lazy"/);
-  assert.equal(coachCardZoomSource.match(/assetLoading="lazy"/g)?.length, 2);
+  assert.match(coachCardZoomSource, /assetLoading\?: "eager" \| "lazy"/);
+  assert.match(coachCardZoomSource, /assetLoading=\{assetLoading \?\? "lazy"\}/);
+  assert.match(coachCardZoomSource, /assetLoading="eager"/);
+  assert.match(clubCoachPanelSource, /assetLoading=\{presentation === "technical" \? "eager" : "lazy"\}/);
   assert.equal(coachCardSource.match(/assetLoading \?\? "eager"/g)?.length, 2);
 });
 
