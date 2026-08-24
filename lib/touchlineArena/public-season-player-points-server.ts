@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { loadTouchLineActiveRanking } from "./card-ranking-server";
 
 import type { TouchlinePublicSeasonPlayerPoints } from "./matchday-player-points";
 import { projectTouchlineCardStatsByPosition } from "./position-aware-card-stats";
@@ -31,12 +32,16 @@ export async function readPublicSeasonPlayerPoints(
   const ids = [...new Set(canonicalPlayerIds.map((id) => id.trim()).filter(Boolean))];
   const admin = createAdminClient();
   if (!ids.length || !admin) return [];
-  const { data: competition, error: competitionError } = await admin
-    .from("football_competitions")
-    .select("id")
-    .eq("provider", "sportmonks")
-    .eq("provider_competition_id", TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID)
-    .maybeSingle();
+  const [activeRanking, competitionResult] = await Promise.all([
+    loadTouchLineActiveRanking(),
+    admin
+      .from("football_competitions")
+      .select("id")
+      .eq("provider", "sportmonks")
+      .eq("provider_competition_id", TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID)
+      .maybeSingle(),
+  ]);
+  const { data: competition, error: competitionError } = competitionResult;
   const competitionId = String(competition?.id ?? "").trim();
   if (competitionError || !competitionId) return [];
   const { data: seasons, error: seasonsError } = await admin
@@ -61,6 +66,20 @@ export async function readPublicSeasonPlayerPoints(
       .in("id", ids),
   ]);
   if (error || playerError || !Array.isArray(data) || !Array.isArray(playerData)) return [];
+  // Profile and Ranking already resolve their visible cumulative rating from
+  // this immutable V3 snapshot if a season row is not the currently-marked
+  // one. The Club Hub must use the same canonical fallback, rather than
+  // turning a valid published rating into an em dash because of a season flag
+  // transition.
+  const rankingTotalRatingByPlayerId = new Map(
+    activeRanking.phase === "ranked" && activeRanking.scoringVersion === "player_scoring_v3"
+      ? activeRanking.players.flatMap((player) => (
+        player.totalRating === null || !Number.isFinite(player.totalRating)
+          ? []
+          : [[String(player.playerId).trim(), player.totalRating] as const]
+      ))
+      : [],
+  );
   const positionByPlayerId = new Map((playerData as PlayerRow[]).flatMap((player) => {
     const playerId = String(player.id ?? "").trim();
     const position = [player.detailed_position, player.provider_position, player.position]
@@ -68,10 +87,14 @@ export async function readPublicSeasonPlayerPoints(
       .find(Boolean);
     return playerId && position ? [[playerId, position] as const] : [];
   }));
-  return (data as Row[]).flatMap((row) => {
+  const seasonRowByPlayerId = new Map((data as Row[]).flatMap((row) => {
     const canonicalPlayerId = String(row.football_player_id ?? "").trim();
-    const summary = record(row.summary_payload);
-    const positionStatistics = record(row.position_statistics_payload);
+    return canonicalPlayerId ? [[canonicalPlayerId, row] as const] : [];
+  }));
+  return ids.flatMap((canonicalPlayerId) => {
+    const row = seasonRowByPlayerId.get(canonicalPlayerId);
+    const summary = record(row?.summary_payload);
+    const positionStatistics = record(row?.position_statistics_payload);
     const statistic = (...keys: string[]) => {
       for (const key of keys) {
         const value = finiteNumber(summary?.[key]) ?? finiteNumber(positionStatistics?.[key]);
@@ -83,7 +106,9 @@ export async function readPublicSeasonPlayerPoints(
     // `totalRating` is materialised by the V3 season aggregation from valid
     // Sportmonks appearance ratings. It is an allowlisted public fact, not a
     // card calculation; preserve null when the provider supplied no rating.
-    const totalRating = finiteNumber(summary?.totalRating);
+    const totalRating = finiteNumber(summary?.totalRating)
+      ?? rankingTotalRatingByPlayerId.get(canonicalPlayerId)
+      ?? null;
     const yellowCards = statistic("yellowCards", "yellow-cards", "yellowcards");
     const redCards = statistic("redCards", "red-cards", "redcards");
     const unscopedStatistics = {
@@ -101,6 +126,9 @@ export async function readPublicSeasonPlayerPoints(
       position: positionByPlayerId.get(canonicalPlayerId),
       statistics: unscopedStatistics,
     }) as TouchlinePublicSeasonPlayerPoints["statistics"] | undefined) ?? {};
-    return canonicalPlayerId ? [{ canonicalPlayerId, touchlinePoints, totalRating, statistics }] : [];
+    // A player may have an active V3 ranking total while its season aggregate
+    // row is waiting for the current-season marker. That is a valid persisted
+    // rating fact with no invented stats, so retain it for the shared card.
+    return row || totalRating !== null ? [{ canonicalPlayerId, touchlinePoints, totalRating, statistics }] : [];
   });
 }
