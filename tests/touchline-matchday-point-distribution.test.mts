@@ -92,6 +92,8 @@ test("Club Hub receives only allowlisted canonical match and season projections"
   assert.match(seasonReader, /const totalRating = finiteNumber\(summary\?\.totalRating\)/);
   assert.match(seasonReader, /loadTouchLineActiveRanking/);
   assert.match(seasonReader, /rankingTotalRatingByPlayerId/);
+  assert.match(seasonReader, /rankingOnlyProjection/);
+  assert.match(seasonReader, /if \(seasonsError \|\| seasonIds\.length !== 1\) return rankingOnlyProjection\(\)/);
   assert.match(seasonReader, /\{ canonicalPlayerId, touchlinePoints, totalRating, statistics \}/);
   assert.match(seasonReader, /provider_competition_id/);
   assert.match(seasonReader, /\.eq\("is_current", true\)/);
