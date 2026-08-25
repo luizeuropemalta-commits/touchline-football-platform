@@ -166,7 +166,7 @@ test("fails closed when an official player is requested for the wrong club", () 
   assert.equal(projection.classification.reason, "club-mismatch");
 });
 
-test("the public squad adapter keeps valuation data out of the publication path", () => {
+test("the public squad adapter exposes only verified canonical Market Value", () => {
   const route = readFileSync(
     new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url),
     "utf8",
@@ -174,7 +174,8 @@ test("the public squad adapter keeps valuation data out of the publication path"
 
   assert.doesNotMatch(route, /rawMarketValueEur/);
   assert.match(route, /includeMarketValues: true/);
-  assert.match(route, /The value\s+\/\/ itself remains private/);
-  assert.match(route, /marketValueEur: null/);
+  assert.match(route, /provider\/raw valuation data never crosses/);
+  assert.match(route, /formatTouchlineMarketValueEur\(verifiedMarketValueEur, "en-GB"\)/);
+  assert.match(route, /marketValueEur: verifiedMarketValueEur \?\? null/);
   assert.match(route, /editorialCard,/);
 });

@@ -20,6 +20,7 @@ export type TouchlineGlobalNavigationRoute =
   | "live"
   | "market"
   | "rankings"
+  | "fantasy"
   | "myClub"
   | "clubOwnerHistory"
   | "clubOwnerRenewals"
@@ -33,7 +34,7 @@ export type TouchlineTrustedNavigationContext = Readonly<{
   }>;
 }>;
 
-export type TouchlineGlobalNavigationItemKey = "clubHub" | "live" | "market" | "rankings" | "myClub";
+export type TouchlineGlobalNavigationItemKey = "clubHub" | "live" | "market" | "rankings" | "fantasy" | "myClub";
 
 export type TouchlineGlobalNavigationItem = Readonly<{
   key: TouchlineGlobalNavigationItemKey;
@@ -71,6 +72,7 @@ export function resolveTouchlineGlobalNavigationItems(
     { key: "live", href: `/live?lang=${lang}` },
     { key: "market", href: `/market-transfer?lang=${lang}` },
     { key: "rankings", href: `/touchline-tables?lang=${lang}` },
+    { key: "fantasy", href: `/fantasy?lang=${lang}` },
   ];
 
   return surface === "authenticated"

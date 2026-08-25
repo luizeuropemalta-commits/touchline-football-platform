@@ -19,7 +19,7 @@ import { TouchlineClubCrestPerimeterTrace } from "@/components/touchline/cards/T
 import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/TouchlineCardPerimeterTrace";
 import { TouchlineShirtNumber } from "@/components/touchline/cards/TouchlineShirtNumber";
 import {
-  formatTouchlineEditorialCardPrice,
+  formatTouchlineMarketValueEur,
   type TouchlinePublicEditorialCardPresentation,
 } from "@/lib/touchlineArena/editorial-card-profile";
 import masterCardLayout from "@/public/touchlineArena/card-layouts/master-shirt-back-layout.json";
@@ -157,8 +157,8 @@ const FIELD_LABELS_PT_BR: Partial<Record<EditableBlock, string>> = {
   shirtClub: "Nome do jogador",
   clubCrest: "Escudo do clube",
   flag: "Bandeira",
-  marketValue: "Pontos TouchLine",
-  cardPrice: "Preço do card",
+  marketValue: "Rating total",
+  cardPrice: "Valor de mercado",
   name: "Texto antigo do clube",
   touchlineLogo: "Logo TL",
   touchlinePremier: "Estatísticas da TouchLine England League",
@@ -251,7 +251,9 @@ export type TouchlineEliteExactCardLabels = {
   points?: string;
   /** Legacy caller compatibility; ignored by the active player card. */
   totalPoints?: string;
-  cardPrice: string;
+  /** @deprecated Caller compatibility; the visual card now shows market value. */
+  cardPrice?: string;
+  marketValue?: string;
   currentClub?: string;
   yellowRedCards: string;
   yellowCard: string;
@@ -265,7 +267,7 @@ export type TouchlineEliteExactCardLabels = {
 const DEFAULT_CARD_LABELS: TouchlineEliteExactCardLabels = {
   nationality: "Nat",
   totalRating: "Total rating",
-  cardPrice: "Card price",
+  marketValue: "Market value",
   currentClub: "Current Club",
   yellowRedCards: "Yellow and red cards",
   yellowCard: "Yellow card",
@@ -281,7 +283,7 @@ function localizedCardLabels(locale: string | null): TouchlineEliteExactCardLabe
     return {
       nationality: "País",
       totalRating: "Nota total",
-      cardPrice: "Preço do card",
+      marketValue: "Valor de mercado",
       currentClub: "Clube atual",
       yellowRedCards: "Cartões amarelo e vermelho",
       yellowCard: "Cartão amarelo",
@@ -900,17 +902,19 @@ export function TouchlineEliteExactCard({
   // The selected artwork is only used by a published card. An asset cannot
   // turn an unpublished football player into a game card.
   const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl);
-  const cardPriceText = editorialCard
-    ? formatTouchlineEditorialCardPrice(editorialCard.cardPrice, runtimeLocale ?? undefined)
-    : null;
+  const marketValueText = editorialCard?.marketValueEur !== undefined
+    ? formatTouchlineMarketValueEur(editorialCard.marketValueEur, runtimeLocale ?? undefined)
+    : player.marketValueState === "verified" && player.marketValue
+      ? player.marketValue
+      : null;
   const hasPublishedCardProfile = Boolean(editorialCard);
   const compactPrimaryLabel = cardLabels.totalRating;
   const compactPrimaryValue = totalRatingText;
   const compactSecondaryLabel = hasPublishedCardProfile || reviewRequired
-    ? cardLabels.cardPrice
+    ? (cardLabels.marketValue ?? (runtimeLocale === "pt-BR" ? "Valor de mercado" : "Market value"))
     : (runtimeLocale === "pt-BR" ? "POSIÇÃO" : "POSITION");
   const compactSecondaryValue = hasPublishedCardProfile
-    ? cardPriceText ?? ""
+    ? marketValueText ?? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
     : reviewRequired
       ? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
       : player.position;
@@ -919,7 +923,7 @@ export function TouchlineEliteExactCard({
     ? preseasonMissingValue
     : touchlineCardMetricText(player.matchRating);
   const totalRatingSize = valueDisplaySize(compactPrimaryValue);
-  const cardPriceSize = valueDisplaySize(compactSecondaryValue);
+  const marketValueSize = valueDisplaySize(compactSecondaryValue);
   const cardTemplateUrl = reviewRequired
     ? null
     : marketTier
@@ -1392,6 +1396,7 @@ export function TouchlineEliteExactCard({
       ) : null}
       <div
         data-card-price-version={cardPriceVersion}
+        data-market-value={marketValueText ?? "unavailable"}
         data-card-tier={marketTier?.key ?? "neutral"}
         data-card-live-scale-mode={
           optimizeForLiveCompact
@@ -1601,7 +1606,7 @@ export function TouchlineEliteExactCard({
           <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3 * fieldScale("cardPrice"), color: "rgba(254,240,138,.88)", fontSize: 8 * fieldScale("cardPrice"), lineHeight: `${10 * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textTransform: "uppercase", whiteSpace: "nowrap" }}>
             <span>{compactSecondaryLabel}</span>
           </div>
-          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: cardPriceSize * fieldScale("cardPrice"), lineHeight: `${(cardPriceSize + 2) * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactSecondaryValue}</div>
+          <div style={{ marginTop: 4, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff", fontSize: marketValueSize * fieldScale("cardPrice"), lineHeight: `${(marketValueSize + 2) * fieldScale("cardPrice")}px`, fontWeight: 950, letterSpacing: 0, textShadow: "0 2px 10px rgba(0,0,0,.72)" }}>{compactSecondaryValue}</div>
         </div>
 
         <div

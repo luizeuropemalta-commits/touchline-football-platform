@@ -12,6 +12,7 @@ import type { TouchlineCardTierKey } from "@/lib/touchlineArena/card-rules";
 import { isTouchlineCardPublicationGateEnabled } from "@/lib/touchlineArena/card-publication-gate";
 import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
 import {
+  formatTouchlineMarketValueEur,
   parseTouchlinePublicEditorialCardPresentation,
   type TouchlinePublicEditorialCardPresentation,
 } from "@/lib/touchlineArena/editorial-card-profile";
@@ -161,8 +162,8 @@ function publicProjectionOmission(
 /**
  * Transitional display only. While the publication gate is OFF, an already
  * verified canonical value/classification may keep its existing game card.
- * It never exposes the EUR value and disappears as soon as the explicit
- * publication gate is enabled after backfill/cutover proof.
+ * It disappears as soon as the explicit publication gate is enabled after
+ * backfill/cutover proof. A verified canonical market value may be exposed.
  */
 function legacyVerifiedCardPresentation(
   projection: TouchlinePublicPlayerProjection | undefined,
@@ -177,6 +178,7 @@ function legacyVerifiedCardPresentation(
   return parseTouchlinePublicEditorialCardPresentation({
     tierKey: classification.tierKey,
     cardPrice: { amountMinor: classification.nominalPrice * 100, currency: "GBP" },
+    marketValueEur: projection?.marketValue.value?.eur ?? undefined,
     lastReviewedAt,
   });
 }
@@ -199,8 +201,8 @@ async function projectSquadForPublic(
   const batch = await loadTouchlinePublicPlayerProjections({
     providerPlayerIds: candidates.map((candidate) => candidate.providerId),
     context: { expectedClubProviderTeamId },
-    // Value status is required to explain a REVIEW_REQUIRED card. The value
-    // itself remains private and is never included in this public response.
+    // Only the verified canonical value is eligible for the public card and
+    // Fantasy budget projection; provider/raw valuation data never crosses.
     includeMarketValues: true,
   });
   if (batch.status === "error") return { state: "error", players: [], omitted: [] };
@@ -234,6 +236,8 @@ async function projectSquadForPublic(
     const editorialCard = publicationGateEnabled
       ? publishedCards.get(identity.playerId) ?? null
       : legacyVerifiedCardPresentation(projection);
+    const verifiedMarketValueEur = editorialCard?.marketValueEur
+      ?? (projection.marketValue.status === "verified" ? projection.marketValue.value?.eur : null);
     const override = editorialOverrides.get(identity.playerId.toLowerCase());
     const effectiveName = override?.displayName ?? identity.displayName;
     const effectiveShirtNumber = override?.shirtNumber ?? membership.jerseyNumber;
@@ -258,15 +262,17 @@ async function projectSquadForPublic(
       countryCode3: effectiveCountryCode3,
       flagUrl: touchlineCountryFlagUrl(effectiveCountryCode3),
       nationality: identity.nationality,
-      marketValue: null,
-      marketValueSource: "unavailable",
-      marketValueState: "unavailable",
+      marketValue: verifiedMarketValueEur === null || verifiedMarketValueEur === undefined
+        ? null
+        : formatTouchlineMarketValueEur(verifiedMarketValueEur, "en-GB"),
+      marketValueSource: verifiedMarketValueEur === null || verifiedMarketValueEur === undefined ? "unavailable" : "verified-cache",
+      marketValueState: verifiedMarketValueEur === null || verifiedMarketValueEur === undefined ? "unavailable" : "verified",
       classificationState: "unavailable",
       cardTier: editorialCard?.tierKey ?? null,
       cardPriceVersion: null,
-      marketValueEur: null,
-      marketValueUpdatedAt: null,
-      authoritativeMarketValueSource: null,
+      marketValueEur: verifiedMarketValueEur ?? null,
+      marketValueUpdatedAt: projection.marketValue.value?.lastVerified ?? null,
+      authoritativeMarketValueSource: verifiedMarketValueEur === null || verifiedMarketValueEur === undefined ? null : "verified-cache",
       canonicalPlayerId: identity.playerId,
       editorialCard,
       cardReview: evaluateTouchlineCardCompleteness({

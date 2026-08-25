@@ -16,12 +16,13 @@ function source(relativePath: string) {
 test("global public navigation keeps the fixed safe order and no private destination", () => {
   const items = resolveTouchlineGlobalNavigationItems("pt-BR", "public");
 
-  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "market", "rankings"]);
+  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "market", "rankings", "fantasy"]);
   assert.deepEqual(items.map((item) => item.href), [
     "/touchline-clubs?lang=pt-BR",
     "/live?lang=pt-BR",
     "/market-transfer?lang=pt-BR",
     "/touchline-tables?lang=pt-BR",
+    "/fantasy?lang=pt-BR",
   ]);
   assert.equal(touchlineGlobalNavigationArenaHref("pt-BR"), "/arena?lang=pt-BR");
   assert.equal(resolveTouchlineGlobalNavigationItems("es-ES", "auth")[0]?.href, "/touchline-clubs?lang=en-GB");
@@ -31,7 +32,7 @@ test("global public navigation keeps the fixed safe order and no private destina
 test("authenticated navigation may add only the server-resolved My Club boundary", () => {
   const items = resolveTouchlineGlobalNavigationItems("en-GB", "authenticated");
 
-  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "market", "rankings", "myClub"]);
+  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "market", "rankings", "fantasy", "myClub"]);
   assert.equal(items.at(-1)?.href, "/club-owner/me?lang=en-GB");
   assert.doesNotMatch(JSON.stringify(items), /luiz-lopez|manchester-united|manchester-city/i);
 });

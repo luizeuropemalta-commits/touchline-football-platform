@@ -5,7 +5,7 @@ import {
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
 import {
-  formatTouchlineEditorialCardPrice,
+  formatTouchlineMarketValueEur,
   type TouchlinePublicEditorialCardPresentation,
 } from "./editorial-card-profile.ts";
 import {
@@ -131,10 +131,9 @@ type TouchlineActiveContractCardPresentation = Readonly<{
 /**
  * Shared player-card zoom model.
  *
- * This is deliberately editorial rather than economic: player valuation,
- * valuation sources and valuation-derived ranges never cross this public UI
- * boundary. A published editorial profile may expose only its manually
- * approved tier and display price.
+ * Tier remains editorial. Market value is the independently verified,
+ * persisted football fact displayed on every card surface; it never becomes
+ * checkout authority and never recalculates the tier.
  */
 export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   locale: string;
@@ -145,11 +144,8 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   editorialCard?: TouchlinePublicEditorialCardPresentation | null;
   cardReview?: TouchlineCardReviewPresentation | null;
   activeContractCard?: TouchlineActiveContractCardPresentation | null;
-  /** @deprecated Retained temporarily for call-site compatibility; ignored. */
   marketValue?: string | number | null;
-  /** @deprecated Retained temporarily for call-site compatibility; ignored. */
   marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
-  /** @deprecated Retained temporarily for call-site compatibility; ignored. */
   marketValueState?: string | null;
   /** @deprecated Retained temporarily for call-site compatibility; ignored. */
   classificationState?: string | null;
@@ -182,14 +178,20 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   const publicCard = input.editorialCard
     ? {
       tierKey: input.editorialCard.tierKey,
-      cardPrice: formatTouchlineEditorialCardPrice(input.editorialCard.cardPrice, input.locale),
+      marketValue: input.editorialCard.marketValueEur === undefined
+        ? null
+        : formatTouchlineMarketValueEur(input.editorialCard.marketValueEur, input.locale),
     }
     : input.activeContractCard && touchlineArenaTierForKey(input.activeContractCard.tierKey)
       ? {
         tierKey: input.activeContractCard.tierKey,
-        cardPrice: input.activeContractCard.cardPrice,
+        marketValue: null,
       }
       : null;
+  const marketValue = publicCard?.marketValue
+    ?? (input.marketValueState === "verified" && input.marketValue !== null && input.marketValue !== undefined
+      ? String(input.marketValue)
+      : null);
   const reviewRequired = input.cardReview?.state === "REVIEW_REQUIRED";
   const reviewFields = reviewRequired
     ? [
@@ -200,8 +202,8 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         "identity",
         "status",
       ),
-      ...(!publicCard
-        ? [field(isPortuguese ? "Preço do card" : "Card price", isPortuguese ? "Pendente" : "Pending", true, "identity", "price")]
+      ...(!marketValue
+        ? [field(isPortuguese ? "Valor de mercado" : "Market value", isPortuguese ? "Pendente" : "Pending", true, "identity", "price")]
         : []),
       ...(input.cardReview?.missingFields ?? []).map((missingField) => field(
         isPortuguese ? "Campo pendente" : "Missing field",
@@ -222,8 +224,8 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         "tier",
       ),
       field(
-        isPortuguese ? "Preço do card" : "Card price",
-        publicCard.cardPrice,
+        isPortuguese ? "Valor de mercado" : "Market value",
+        marketValue ?? (isPortuguese ? "Pendente" : "Pending"),
         true,
         "identity",
         "price",

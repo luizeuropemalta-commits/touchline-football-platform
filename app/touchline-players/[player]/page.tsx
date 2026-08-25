@@ -51,7 +51,7 @@ import {
   TOUCHLINE_NEUTRAL_CARD_SECONDARY,
 } from "@/lib/touchlineArena/public-card-presentation";
 import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
-import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
+import { formatTouchlineEditorialCardPrice, formatTouchlineMarketValueEur } from "@/lib/touchlineArena/editorial-card-profile";
 import {
   buildTouchlinePlayerCardZoomDetails,
   buildTouchlineVerifiedMatchFactFields,
@@ -651,9 +651,11 @@ export default async function TouchLinePlayerProfilePage({
     : new Map();
   const editorialCard = canonicalPlayerId ? publishedCards.get(canonicalPlayerId) ?? null : null;
   exactPlayer.editorialCard = editorialCard;
-  exactPlayer.marketValue = null;
-  exactPlayer.marketValueSource = "unavailable";
-  exactPlayer.marketValueState = "unavailable";
+  exactPlayer.marketValue = editorialCard?.marketValueEur === undefined
+    ? null
+    : formatTouchlineMarketValueEur(editorialCard.marketValueEur, locale);
+  exactPlayer.marketValueSource = editorialCard?.marketValueEur === undefined ? "unavailable" : "verified-cache";
+  exactPlayer.marketValueState = editorialCard?.marketValueEur === undefined ? "unavailable" : "verified";
   exactPlayer.cardTier = editorialCard?.tierKey ?? null;
   exactPlayer.classificationState = "unavailable";
   const rankingCompetition = resolveTouchlineCardCompetition({

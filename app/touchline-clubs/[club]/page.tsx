@@ -126,8 +126,7 @@ function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): Clu
     clubName,
     shirtNumber: normalizeOfficialShirtNumber(player.shirtNumber),
     countryCode3: player.countryCode3 || "N/A",
-    // Legacy compatibility only: public cards no longer expose valuations.
-    marketValue: "",
+    marketValue: player.marketValue ?? "",
     marketValueSource: player.marketValueSource || "unavailable",
     marketValueState: player.marketValueState,
     classificationState: player.classificationState,

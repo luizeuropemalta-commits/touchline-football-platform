@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { inferArenaRole, makeArenaShortName, normalizeOfficialShirtNumber } from "@/lib/football-data/arena-lineup";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadTouchlinePublishedCardPresentations } from "./card-publication-read-model";
+import { formatTouchlineMarketValueEur } from "./editorial-card-profile";
 import { hasTouchlineCountryFlag, normalizeTouchlineCountryCode3, touchlineCountryCode3FromName } from "./country-flags";
 import type { TouchlineActiveRankingState } from "./card-ranking-live";
 import type { ClubOwnerSquadCard } from "./demo-data";
@@ -120,9 +121,11 @@ export async function loadTouchLineRankedCardCatalog(
       clubName,
       shirtNumber: normalizeOfficialShirtNumber(squad?.jersey_number),
       countryCode3: countryCode(player),
-      marketValue: "",
-      marketValueSource: "unavailable" as const,
-      marketValueState: "unavailable" as const,
+      marketValue: editorialCard.marketValueEur === undefined
+        ? ""
+        : formatTouchlineMarketValueEur(editorialCard.marketValueEur, "en-GB"),
+      marketValueSource: editorialCard.marketValueEur === undefined ? "unavailable" as const : "verified-cache" as const,
+      marketValueState: editorialCard.marketValueEur === undefined ? "unavailable" as const : "verified" as const,
       classificationState: "verified" as const,
       cardTier: editorialCard.tierKey,
       editorialCard,

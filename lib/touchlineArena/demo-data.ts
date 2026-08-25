@@ -365,12 +365,9 @@ export function squadCardToExactPlayer(
     clubName: card.clubName,
     clubLogoUrl: club?.logoUrl ?? null,
     leagueName: "TouchLine England",
-    // Public card presentation no longer consumes a player valuation. These
-    // compatibility fields remain neutral while older consumers migrate to
-    // the editorial profile.
-    marketValue: null,
-    marketValueSource: "unavailable",
-    marketValueState: "unavailable",
+    marketValue: card.marketValue || null,
+    marketValueSource: card.marketValueSource ?? "unavailable",
+    marketValueState: card.marketValueState ?? "unavailable",
     classificationState: "unavailable",
     cardTier,
     cardPriceVersion: card.cardPriceVersion || TOUCHLINE_CARD_PRICE_TABLE_VERSION,

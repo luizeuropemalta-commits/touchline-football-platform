@@ -70,6 +70,7 @@ function isPublicationRowValid(
   return parseTouchlinePublicEditorialCardPresentation({
     tierKey,
     cardPrice: { amountMinor: price * 100, currency: "GBP" },
+    marketValueEur: safeInteger(value.market_value_eur),
     lastReviewedAt: reviewedAt,
   });
 }

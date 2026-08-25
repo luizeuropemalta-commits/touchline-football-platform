@@ -6,6 +6,7 @@ import {
   Handshake,
   MoreHorizontal,
   Shield,
+  Sparkles,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -43,6 +44,7 @@ type NavigationCopy = Readonly<{
   live: string;
   market: string;
   rankings: string;
+  fantasy: string;
   myClub: string;
   more: string;
   currentClub: string;
@@ -57,6 +59,7 @@ const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
     live: "Live",
     market: "Market",
     rankings: "Rankings",
+    fantasy: "Fantasy",
     myClub: "My Club",
     more: "More",
     currentClub: "Current club",
@@ -69,6 +72,7 @@ const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
     live: "Ao vivo",
     market: "Mercado",
     rankings: "Rankings",
+    fantasy: "Fantasy",
     myClub: "Meu Clube",
     more: "Mais",
     currentClub: "Clube atual",
@@ -80,6 +84,7 @@ const navigationIcons: Record<TouchlineGlobalNavigationItemKey, LucideIcon> = {
   live: Activity,
   market: Handshake,
   rankings: BarChart3,
+  fantasy: Sparkles,
   myClub: UserRound,
 };
 

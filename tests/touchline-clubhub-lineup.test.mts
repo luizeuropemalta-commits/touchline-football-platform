@@ -252,15 +252,16 @@ test("Market preserves every real roster player when card data is pending", () =
   assert.match(source, /playerCount: rosterPlayers\.length/);
 });
 
-test("shared player cards require a manual published profile, apart from a frozen owned-contract render", () => {
+test("shared player cards require publication and show only a verified market value", () => {
   const source = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
 
   assert.match(source, /const editorialCard = player\.editorialCard \?\? null/);
-  assert.match(source, /formatTouchlineEditorialCardPrice/);
+  assert.match(source, /formatTouchlineMarketValueEur/);
+  assert.match(source, /player\.marketValueState === "verified"/);
   assert.match(source, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
   assert.match(source, /allowVisualInventoryPreview = false/);
   assert.match(source, /player\.cardPriceAuthority === "active-contract"/);
-  assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|Valor de mercado|formatTouchlineContractedCommercialCardPrice/);
+  assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|formatTouchlineContractedCommercialCardPrice/);
 });
 
 test("incomplete ClubHub players remain in the shared premium card grid", () => {

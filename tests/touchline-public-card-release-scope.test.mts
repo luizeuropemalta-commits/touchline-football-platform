@@ -67,17 +67,18 @@ test("only explicitly published editorial records cross the public card boundary
   assert.equal(review, null);
 });
 
-test("the shared exact card accepts an editorial profile and exposes no Market Value UI", () => {
+test("the shared exact card preserves the editorial tier and exposes verified Market Value", () => {
   assert.match(card, /editorialCard\?: TouchlinePublicEditorialCardPresentation \| null/);
   assert.match(card, /const editorialCard = player\.editorialCard \?\? null/);
-  assert.match(card, /formatTouchlineEditorialCardPrice\(editorialCard\.cardPrice, runtimeLocale \?\? undefined\)/);
+  assert.match(card, /formatTouchlineMarketValueEur\(editorialCard\.marketValueEur, runtimeLocale \?\? undefined\)/);
+  assert.match(card, /player\.marketValueState === "verified"/);
   assert.match(card, /data-card-editorial-state=\{reviewRequired \? "review_required" : editorialCard \? "published" : "unpublished"\}/);
   assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
 
   assert.doesNotMatch(card, /resolveTouchlineVerifiedPlayerEconomy/);
   assert.doesNotMatch(card, /resolveTouchlinePublicCardPresentation/);
-  assert.doesNotMatch(card, /["']MARKET VALUE["']/);
-  assert.doesNotMatch(card, /["']VALOR DE MERCADO["']/);
+  assert.match(card, /marketValue: "Market value"/);
+  assert.match(card, /marketValue: "Valor de mercado"/);
 });
 
 test("an unpublished football player cannot become a commercial card through artwork or a legacy price", () => {
@@ -105,8 +106,8 @@ test("ClubHub has an explicit safe cutover: existing verified cards stay availab
   assert.match(squadRoute, /currency: "GBP"/);
   assert.match(squadRoute, /publicationGateEnabled \? "touchline_editorial" : "touchline_legacy_verified"/);
   assert.match(squadRoute, /cardTier: editorialCard\?\.tierKey \?\? null/);
-  assert.match(squadRoute, /marketValueEur:\s*null/);
-  assert.match(squadRoute, /authoritativeMarketValueSource:\s*null/);
+  assert.match(squadRoute, /marketValueEur: verifiedMarketValueEur \?\? null/);
+  assert.match(squadRoute, /authoritativeMarketValueSource: verifiedMarketValueEur === null/);
   assert.doesNotMatch(squadRoute, /parseMarketValueEur/);
 
   assert.match(clubHubPage, /editorialCard: player\.editorialCard \?\? null/);
@@ -124,15 +125,16 @@ test("ClubHub grid, official lineup and zoom use the shared editorial presentati
   }
 
   assert.match(zoomDetails, /editorialCard\?: TouchlinePublicEditorialCardPresentation \| null/);
-  assert.match(zoomDetails, /formatTouchlineEditorialCardPrice\(input\.editorialCard\.cardPrice, input\.locale\)/);
+  assert.match(zoomDetails, /formatTouchlineMarketValueEur\(input\.editorialCard\.marketValueEur, input\.locale\)/);
   assert.doesNotMatch(zoomDetails, /resolveTouchlinePublicCardPresentation/);
-  assert.doesNotMatch(zoomDetails, /["']Market value["']/);
-  assert.doesNotMatch(zoomDetails, /["']Valor de mercado["']/);
+  assert.match(zoomDetails, /["']Market value["']/);
+  assert.match(zoomDetails, /["']Valor de mercado["']/);
 });
 
-test("ClubHub game-card surfaces never use a contract or valuation fallback", () => {
+test("ClubHub game-card surfaces never use contract or unverified valuation fallback", () => {
   for (const surface of [grid, lineup]) {
     assert.doesNotMatch(surface, /cardPriceAuthority === "active-contract"|formatTouchlineContractedCommercialCardPrice|contractHref=\{activeContract/);
   }
-  assert.match(card, /const cardPriceText = editorialCard[\s\S]{0,180}: null/);
+  assert.match(card, /const marketValueText = editorialCard\?\.marketValueEur/);
+  assert.match(card, /player\.marketValueState === "verified"/);
 });

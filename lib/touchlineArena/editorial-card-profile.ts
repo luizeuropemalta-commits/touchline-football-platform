@@ -60,6 +60,8 @@ export type TouchlineEditorialCardRecord = Readonly<{
 export type TouchlinePublicEditorialCardPresentation = Readonly<{
   tierKey: TouchlineEditorialCardTierKey;
   cardPrice: TouchlineEditorialCardPrice;
+  /** Canonical verified value used by the Fantasy/card presentation only. */
+  marketValueEur?: number;
   lastReviewedAt: string;
 }>;
 
@@ -77,7 +79,7 @@ const RECORD_KEYS = new Set([
   "internalSource",
 ]);
 const PRICE_KEYS = new Set(["amountMinor", "currency"]);
-const PUBLIC_PRESENTATION_KEYS = new Set(["tierKey", "cardPrice", "lastReviewedAt"]);
+const PUBLIC_PRESENTATION_KEYS = new Set(["tierKey", "cardPrice", "marketValueEur", "lastReviewedAt"]);
 
 function asPlainRecord(value: unknown): UnknownRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -216,19 +218,38 @@ export function parseTouchlinePublicEditorialCardPresentation(
 ): TouchlinePublicEditorialCardPresentation | null {
   const record = asPlainRecord(value);
   const cardPrice = record ? parsePrice(record.cardPrice) : null;
+  const marketValueEur = record?.marketValueEur;
   if (
     !record
     || !hasOnlyKnownKeys(record, PUBLIC_PRESENTATION_KEYS)
     || !isOneOf(record.tierKey, TOUCHLINE_EDITORIAL_CARD_TIER_KEYS)
     || !cardPrice
+    || (marketValueEur !== undefined && (
+      typeof marketValueEur !== "number"
+      || !Number.isSafeInteger(marketValueEur)
+      || marketValueEur < 0
+    ))
     || !isValidIsoTimestamp(record.lastReviewedAt)
   ) return null;
 
   return Object.freeze({
     tierKey: record.tierKey,
     cardPrice,
+    ...(marketValueEur === undefined ? {} : { marketValueEur }),
     lastReviewedAt: record.lastReviewedAt as string,
   });
+}
+
+export function formatTouchlineMarketValueEur(
+  valueEur: number,
+  locale: string | null | undefined,
+) {
+  return new Intl.NumberFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
+    style: "currency",
+    currency: "EUR",
+    notation: "compact",
+    maximumFractionDigits: valueEur < 10_000_000 ? 2 : 1,
+  }).format(valueEur);
 }
 
 /**

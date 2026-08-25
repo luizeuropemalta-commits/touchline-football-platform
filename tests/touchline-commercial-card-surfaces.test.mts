@@ -15,7 +15,7 @@ const publicCardPriceSurfaces = [
 test("card-price surfaces use a shared approved presentation helper rather than inline wallet values", () => {
   for (const relativePath of publicCardPriceSurfaces) {
     const source = readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8");
-    assert.match(source, /(?:formatTouchlineEditorialCardPrice|formatTouchlineContractedCommercialCardPrice|formatTouchlineVerifiedCommercialCardPrice|formatTouchlineCommercialCardPrice|buildTouchlinePlayerCardZoomDetails)/,
+    assert.match(source, /(?:formatTouchlineMarketValueEur|formatTouchlineEditorialCardPrice|formatTouchlineContractedCommercialCardPrice|formatTouchlineVerifiedCommercialCardPrice|formatTouchlineCommercialCardPrice|buildTouchlinePlayerCardZoomDetails)/,
       `${relativePath} must use a shared approved card-price presentation helper`);
     assert.doesNotMatch(source, /\$\{(?:economy|spotlightPlayerEconomy)\.priceTc\} TC/,
       `${relativePath} must not render a card price as Touch Credits`);

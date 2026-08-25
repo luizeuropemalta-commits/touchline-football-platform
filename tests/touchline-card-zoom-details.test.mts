@@ -62,7 +62,7 @@ function publishedEditorialRecord(overrides: Record<string, unknown> = {}) {
   };
 }
 
-test("renders a published manual editorial tier and price in Portuguese", () => {
+test("renders a published tier with a pending market value in Portuguese", () => {
   const editorialCard = resolveTouchlinePublicEditorialCardPresentation(publishedEditorialRecord());
   assert.ok(editorialCard);
 
@@ -81,7 +81,7 @@ test("renders a published manual editorial tier and price in Portuguese", () => 
   assert.equal(details.subtitle, "Arsenal FC · Centroavante / ST");
   assert.deepEqual(details.fields.map(({ label, value, accent }) => ({ label, value, accent })), [
     { label: "Tier do card", value: "Diamante Dourado", accent: true },
-    { label: "Preço do card", value: "£ 15,00", accent: true },
+    { label: "Valor de mercado", value: "Pendente", accent: true },
     { label: "Clube atual", value: "Arsenal FC", accent: false },
     { label: "Posição", value: "Centroavante / ST", accent: false },
     { label: "Nacionalidade", value: "BRA", accent: false },
@@ -106,7 +106,7 @@ test("renders the same published editorial profile with English labels", () => {
   assert.equal(details.eyebrow, "Card profile");
   assert.deepEqual(details.fields.map(({ label, value, accent }) => ({ label, value, accent })), [
     { label: "Card tier", value: "Diamond Gold", accent: true },
-    { label: "Card price", value: "£15.00", accent: true },
+    { label: "Market value", value: "Pending", accent: true },
     { label: "Current club", value: "Arsenal FC", accent: false },
     { label: "Position", value: "Forward", accent: false },
     { label: "Nationality", value: "BRA", accent: false },
@@ -161,7 +161,7 @@ test("an unpublished player keeps only real identity fields with no valuation pl
   assert.doesNotMatch(JSON.stringify(details), /market value|market range|economic|pending|updating/i);
 });
 
-test("an incomplete real player exposes pending card price and each missing field", () => {
+test("an incomplete real player exposes pending market value and each missing field", () => {
   const details = buildTouchlinePlayerCardZoomDetails({
     locale: "en-GB",
     name: "Incomplete goalkeeper",
@@ -175,7 +175,7 @@ test("an incomplete real player exposes pending card price and each missing fiel
 
   assert.deepEqual(details.fields.map(({ label, value, accent }) => ({ label, value, accent })), [
     { label: "Card status", value: "Review pending", accent: true },
-    { label: "Card price", value: "Pending", accent: true },
+    { label: "Market value", value: "Pending", accent: true },
     { label: "Missing field", value: "Market Value", accent: false },
     { label: "Missing field", value: "Shirt number", accent: false },
     { label: "Position", value: "Goalkeeper", accent: false },
@@ -183,13 +183,13 @@ test("an incomplete real player exposes pending card price and each missing fiel
   ]);
 });
 
-test("the shared card never substitutes a football position for pending card price", () => {
+test("the shared card never substitutes a football position for pending market value", () => {
   const cardSource = readFileSync(
     new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url),
     "utf8",
   );
 
-  assert.match(cardSource, /hasPublishedCardProfile \|\| reviewRequired[\s\S]*?cardLabels\.cardPrice/);
+  assert.match(cardSource, /hasPublishedCardProfile \|\| reviewRequired[\s\S]*?cardLabels\.marketValue/);
   assert.match(cardSource, /reviewRequired[\s\S]*?"PENDING"[\s\S]*?: player\.position/);
 });
 

@@ -22,7 +22,7 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(exactCard, /data-card-neon="permanent-tier-art"/);
   assert.match(exactCard, /TouchLine England League Stats/);
   assert.doesNotMatch(exactCard, /TouchLine Arena Points/);
-  assert.match(exactCard, /formatTouchlineEditorialCardPrice/);
+  assert.match(exactCard, /formatTouchlineMarketValueEur/);
   assert.doesNotMatch(exactCard, /formatTouchlineContractedCommercialCardPrice/);
   assert.match(exactCard, /<span>\{compactSecondaryLabel\}<\/span>/);
   assert.match(exactCard, /data-card-tier=\{marketTier\?\.key \?\? "neutral"\}/);
