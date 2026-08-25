@@ -1,0 +1,32 @@
+.shell {
+  /* Parents choose one long edge per responsive surface. The horizontal
+     footprint is the exact 691:430 inverse of the canonical upright card. */
+  position: relative;
+  display: block;
+  width: var(--touchline-attack-card-long-edge, 94px);
+  max-width: none;
+  aspect-ratio: 691 / 430;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.shell > * {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 62.2286541%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center;
+}
+
+/* Only the floating Rating at the head of an on-pitch card stays horizontal.
+   The full Zoom is portalled outside this wrapper and therefore remains in
+   the standard upright card presentation. */
+.shell :global([data-arena-match-rating="true"]) {
+  transform: translateX(-50%) rotate(-90deg) !important;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell > * { transition: none !important; }
+}

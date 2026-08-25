@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
+import TouchlineGoalFacingPitchCard from "@/components/touchline/cards/TouchlineGoalFacingPitchCard";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
@@ -134,74 +135,76 @@ export default function ClubHubOfficialLineup({
                 style={{ "--lineup-x": `${x}%`, "--lineup-y": `${y}%` } as CSSProperties}
               >
                 <span className={styles.playerName}>{card.name}</span>
-                <TouchlineCardZoom
-                  ariaLabel={`${isPortuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}
-                  contractHref={undefined}
-                  contractLabel={isPortuguese ? "Contratar" : "Contract player"}
-                  contractValue={undefined}
-                  contractTermLabel={undefined}
-                  tierAccent={tierAccent}
-                  tierLabel={tierLabel}
-                  details={buildTouchlinePlayerCardZoomDetails({
-                    locale,
-                    name: card.name,
-                    clubName: card.clubName,
-                    position: card.position,
-                    nationality: card.countryCode3,
-                    editorialCard: card.editorialCard,
-                    cardReview,
-                    activeContractCard: null,
-                    extraFields: [
-                      {
-                        label: isPortuguese ? "Nota total" : "Total rating",
-                        value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
-                        accent: true,
-                      },
-                      {
-                        label: isPortuguese ? "Nota da última partida" : "Last match rating",
-                        value: card.matchRating == null ? "—" : String(card.matchRating),
-                        accent: true,
-                        kind: "rating-last",
-                      },
-                      ...buildTouchlineVerifiedMatchFactFields({
-                        statistics: card.matchStats,
-                        position: card.position || card.role,
-                      }, locale),
-                    ],
-                    profileHref,
-                    cardEngineHref: canEditCardEngine
-                      ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
-                      : null,
-                  })}
-                  expandedContent={(
+                <TouchlineGoalFacingPitchCard className={styles.pitchCard}>
+                  <TouchlineCardZoom
+                    ariaLabel={`${isPortuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}
+                    contractHref={undefined}
+                    contractLabel={isPortuguese ? "Contratar" : "Contract player"}
+                    contractValue={undefined}
+                    contractTermLabel={undefined}
+                    tierAccent={tierAccent}
+                    tierLabel={tierLabel}
+                    details={buildTouchlinePlayerCardZoomDetails({
+                      locale,
+                      name: card.name,
+                      clubName: card.clubName,
+                      position: card.position,
+                      nationality: card.countryCode3,
+                      editorialCard: card.editorialCard,
+                      cardReview,
+                      activeContractCard: null,
+                      extraFields: [
+                        {
+                          label: isPortuguese ? "Nota total" : "Total rating",
+                          value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
+                          accent: true,
+                        },
+                        {
+                          label: isPortuguese ? "Nota da última partida" : "Last match rating",
+                          value: card.matchRating == null ? "—" : String(card.matchRating),
+                          accent: true,
+                          kind: "rating-last",
+                        },
+                        ...buildTouchlineVerifiedMatchFactFields({
+                          statistics: card.matchStats,
+                          position: card.position || card.role,
+                        }, locale),
+                      ],
+                      profileHref,
+                      cardEngineHref: canEditCardEngine
+                        ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+                        : null,
+                    })}
+                    expandedContent={(
+                      <TouchlineEliteExactCard
+                        player={exactPlayer}
+                        labels={labels}
+                        imageLoading="lazy"
+                        playerProfileHref={profileHref}
+                        staticRenderScale={390 / 430}
+                        subscribeToRanking={!staticVisualQa}
+                        enableInteractiveNeon={!staticVisualQa}
+                        rankingMode={staticVisualQa ? "preview" : "live"}
+                        forceNeonActive
+                      />
+                    )}
+                  >
                     <TouchlineEliteExactCard
+                      className={styles.card}
                       player={exactPlayer}
                       labels={labels}
                       imageLoading="lazy"
                       playerProfileHref={profileHref}
-                      staticRenderScale={390 / 430}
+                      staticRenderScale={80 / 430}
                       subscribeToRanking={!staticVisualQa}
                       enableInteractiveNeon={!staticVisualQa}
                       rankingMode={staticVisualQa ? "preview" : "live"}
-                      forceNeonActive
+                      showProfileAction={false}
+                      showSocialMetrics={false}
+                      showMatchRating
                     />
-                  )}
-                >
-                  <TouchlineEliteExactCard
-                    className={styles.card}
-                    player={exactPlayer}
-                    labels={labels}
-                    imageLoading="lazy"
-                    playerProfileHref={profileHref}
-                    staticRenderScale={80 / 430}
-                    subscribeToRanking={!staticVisualQa}
-                    enableInteractiveNeon={!staticVisualQa}
-                    rankingMode={staticVisualQa ? "preview" : "live"}
-                    showProfileAction={false}
-                    showSocialMetrics={false}
-                    showMatchRating
-                  />
-                </TouchlineCardZoom>
+                  </TouchlineCardZoom>
+                </TouchlineGoalFacingPitchCard>
               </article>
             );
             }) : (

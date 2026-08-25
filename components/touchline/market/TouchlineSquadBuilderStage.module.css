@@ -186,8 +186,7 @@
   cursor: pointer;
 }
 
-.playerCardZoom { display: block; width: 58px; aspect-ratio: 430 / 691; }
-.playerCardZoom > * { width: 100%; }
+.playerCardZoom { --touchline-attack-card-long-edge: 94px; }
 .playerSlot strong {
   max-width: 82px;
   overflow: hidden;

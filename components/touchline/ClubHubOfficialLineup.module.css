@@ -168,13 +168,15 @@
   z-index: 3;
   left: var(--lineup-x);
   top: var(--lineup-y);
-  width: 80px;
+  width: 129px;
   --touchline-card-static-scale: .1860465116;
   display: grid;
   justify-items: center;
   overflow: visible;
   transform: translate(-50%, -50%);
 }
+
+.pitchCard { --touchline-attack-card-long-edge: 129px; }
 
 /* The name belongs to the pitch, not to the card artwork.  Keeping this as a
    sibling of the zoom trigger means it has one stable anchor at every card
@@ -277,18 +279,22 @@
   .formationPanel { justify-items: start; }
   .matchup { width: min(100%, 330px); }
   .player {
-    width: 58px;
+    width: 94px;
     --touchline-card-static-scale: .1348837209;
   }
+
+  .pitchCard { --touchline-attack-card-long-edge: 94px; }
 
   .pendingCard { min-height: 86px; }
 }
 
 @media (min-width: 981px) and (max-width: 1199px) {
   .player {
-    width: 68px;
+    width: 109px;
     --touchline-card-static-scale: .1581395349;
   }
+
+  .pitchCard { --touchline-attack-card-long-edge: 109px; }
 }
 
 @media (max-width: 720px) {
@@ -348,9 +354,11 @@
   }
 
   .player {
-    width: 58px;
+    width: 94px;
     --touchline-card-static-scale: .1348837209;
   }
+
+  .pitchCard { --touchline-attack-card-long-edge: 94px; }
 
   .playerName {
     bottom: calc(100% + 5px);
@@ -429,9 +437,11 @@
   }
 
   .player {
-    width: 58px;
+    width: 94px;
     --touchline-card-static-scale: .1348837209;
   }
+
+  .pitchCard { --touchline-attack-card-long-edge: 94px; }
 
   .playerName {
     bottom: calc(100% + 5px);
@@ -454,9 +464,11 @@
   }
 
   .player {
-    width: 58px;
+    width: 94px;
     --touchline-card-static-scale: .1348837209;
   }
+
+  .pitchCard { --touchline-attack-card-long-edge: 94px; }
 
   .playerName {
     width: clamp(82px, 12vw, 118px);

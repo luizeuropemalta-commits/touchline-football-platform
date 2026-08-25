@@ -6,6 +6,7 @@ import { Check, X } from "lucide-react";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
+import TouchlineGoalFacingPitchCard from "@/components/touchline/cards/TouchlineGoalFacingPitchCard";
 import {
   buildTouchlinePlayerCardZoomDetails,
   buildTouchlineVerifiedMatchFactFields,
@@ -315,9 +316,9 @@ export default function TouchlineSquadBuilderStage({
                   className={styles.playerSlot}
                   style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                 >
-                  <span className={styles.playerCardZoom}>
+                  <TouchlineGoalFacingPitchCard className={styles.playerCardZoom}>
                     <SquadPlayerCardZoom card={player.card} locale={locale} canEditCardEngine={canEditCardEngine} />
-                  </span>
+                  </TouchlineGoalFacingPitchCard>
                   <strong>{player.shortName}</strong>
                   <button
                     type="button"
