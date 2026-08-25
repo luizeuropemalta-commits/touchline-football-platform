@@ -162,6 +162,6 @@ test("the canonical Market Transfer owns the Gameweek builder while legacy Arena
   assert.doesNotMatch(marketPageSource, /standaloneMarket|<ArenaClient/);
   assert.match(arenaClientSource, /const standaloneExperience = standaloneMarket \? "market" : standalonePanel \?\? null/);
   assert.match(arenaClientSource, /if \(standaloneExperience\) \{[\s\S]*setActiveArenaPanel\(standaloneExperience === "live" \? null : standaloneExperience\)/);
-  assert.match(arenaClientSource, /\[initialPanel, initialQaVisualEditor, standaloneExperience\]/);
+  assert.match(arenaClientSource, /\[initialFantasyLineup, initialPanel, initialQaVisualEditor, standaloneExperience\]/);
   assert.match(arenaClientSource, /const isArenaFunctionalReady = Boolean\(standaloneExperience\) \|\| \(/);
 });
