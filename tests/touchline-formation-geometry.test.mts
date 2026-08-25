@@ -122,7 +122,7 @@ test("one formation registry is reusable by all twenty clubs without club-specif
 
 test("Arena field and camera calibration remain independent from the 2D registry", () => {
   assert.match(arenaClient, /Market\/Club Construction only; the Arena field keeps its independent camera calibration/);
-  assert.match(arenaClient, /The Training Center is a flat tactical board/);
+  assert.match(arenaClient, /Squad management uses a flat tactical board/);
   assert.match(arenaClient, /const fieldPlayerPositions = new Map\(lockedCameraPositions \?\? canonical433VideoPositions \?\? projectedFieldPlayerPositions\)/);
   assert.doesNotMatch(arenaClient, /arenaSlotsForFormation\([^)]*initialTwoDimensionalFormationRegistry/);
   assert.doesNotMatch(arenaClient, /fieldPlayerPositions[^;]*initialTwoDimensionalFormationRegistry/);

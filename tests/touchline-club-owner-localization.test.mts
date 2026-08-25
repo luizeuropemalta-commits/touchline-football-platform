@@ -17,4 +17,5 @@ test("ClubOwner private controls localize their visible operational copy", () =>
   assert.match(renderer, /"View full collection"/);
   assert.match(renderer, /\{clubCopy\.manageMarket\}/);
   assert.doesNotMatch(renderer, />Gerir no Mercado de Cards</);
+  assert.doesNotMatch(renderer, /club-owner-training|trainingCentre|Training Centre|Centro de Treinamento/);
 });

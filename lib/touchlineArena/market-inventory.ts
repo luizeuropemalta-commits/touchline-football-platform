@@ -40,6 +40,17 @@ export type TouchlineMarketInventorySnapshot = {
   cards: TouchlineMarketInventoryCard[];
 };
 
+export type TouchlineMarketInventoryResponse = {
+  ok: boolean;
+  status: number;
+  payload: unknown;
+};
+
+type TouchlineMarketInventoryRetryOptions = {
+  retryDelaysMs?: readonly number[];
+  wait?: (delayMs: number) => Promise<void>;
+};
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TEAM_ID_PATTERN = /^[0-9]{1,20}$/;
 const CARD_TIERS = new Set<string>(TOUCHLINE_CARD_TIER_KEYS);
@@ -189,6 +200,52 @@ export function parseTouchlineMarketInventorySnapshot(value: unknown): Touchline
     checkoutPolicy,
     cards: parsedCards,
   };
+}
+
+const DEFAULT_INVENTORY_RETRY_DELAYS_MS = [350, 900] as const;
+
+function isRetryableInventoryStatus(status: number) {
+  return status === 0
+    || status === 408
+    || status === 409
+    || status === 425
+    || status === 429
+    || status >= 500;
+}
+
+/**
+ * Keep one transient Market read from pinning an authenticated account header
+ * to an unavailable state until the whole page is reloaded. Authorization and
+ * validation failures still fail closed and are never retried as demo data.
+ */
+export async function loadTouchlineMarketInventorySnapshot(
+  request: () => Promise<TouchlineMarketInventoryResponse>,
+  options: TouchlineMarketInventoryRetryOptions = {},
+) {
+  const retryDelaysMs = options.retryDelaysMs ?? DEFAULT_INVENTORY_RETRY_DELAYS_MS;
+  const wait = options.wait ?? ((delayMs: number) => new Promise<void>((resolve) => {
+    setTimeout(resolve, delayMs);
+  }));
+
+  for (let attempt = 0; attempt <= retryDelaysMs.length; attempt += 1) {
+    try {
+      const response = await request();
+      const snapshot = response.ok
+        ? parseTouchlineMarketInventorySnapshot(response.payload)
+        : null;
+      if (snapshot) return snapshot;
+      if (!response.ok && !isRetryableInventoryStatus(response.status)) return null;
+    } catch {
+      // Network and abort-like transport errors may be transient. The caller
+      // still owns cancellation and ignores a result after unmount.
+    }
+
+    const delayMs = retryDelaysMs[attempt];
+    if (delayMs === undefined) break;
+    await wait(delayMs);
+  }
+
+  return null;
 }
 
 export function marketInventoryCardByProviderPlayerId(

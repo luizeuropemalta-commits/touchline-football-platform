@@ -76,6 +76,19 @@ test("the account header exposes four canonical metrics without fake capacity or
   assert.match(marketI18n, /squadValue: "Squad card value"/);
   assert.match(marketI18n, /clubsRepresented: "Clubs represented"/);
   assert.doesNotMatch(marketI18n, /Signing balance|Contract slots|Club players/);
+  assert.match(source, /\.team-builder-bank \.touchline-tc-balance b \{[\s\S]*?color: #ffd75c;/);
+  assert.match(source, /loadTouchlineMarketInventorySnapshot\(\(\) => touchlineJsonRequest/);
+});
+
+test("the standalone Market has no separate squad-management navigation slot", async () => {
+  const source = await readFile(arenaClientPath, "utf8");
+  const navStart = source.indexOf('<nav className="arena-club-sections"');
+  const navEnd = source.indexOf("</nav>", navStart);
+  const nav = source.slice(navStart, navEnd);
+
+  assert.ok(navStart > 0);
+  assert.doesNotMatch(nav, /substitutesBench|panel=bench|openArenaPanel\("bench"\)/);
+  assert.match(source, /\.arena-club-sections\[data-panel="market"\] \{[\s\S]*?repeat\(3, minmax\(0, 1fr\)\)/);
 });
 
 test("the Market keeps account capacity first and guides a field slot directly to player selection", async () => {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  loadTouchlineMarketInventorySnapshot,
   marketInventoryCardByProviderPlayerId,
   parseTouchlineMarketInventorySnapshot,
 } from "../lib/touchlineArena/market-inventory.ts";
@@ -145,4 +146,56 @@ test("rejects a missing, fractional or impossible account summary", () => {
   const impossibleClubCount = validSnapshot();
   impossibleClubCount.representedClubCount = 33;
   assert.equal(parseTouchlineMarketInventorySnapshot(impossibleClubCount), null);
+});
+
+test("recovers the authoritative account summary after one transient Market failure", async () => {
+  const statuses = [503, 200];
+  const waits: number[] = [];
+  let requests = 0;
+  const snapshot = await loadTouchlineMarketInventorySnapshot(async () => {
+    const status = statuses[requests++] ?? 500;
+    return {
+      ok: status === 200,
+      status,
+      payload: status === 200 ? validSnapshot() : { error: "temporarily unavailable" },
+    };
+  }, {
+    retryDelaysMs: [10, 20],
+    wait: async (delayMs) => { waits.push(delayMs); },
+  });
+
+  assert.equal(requests, 2);
+  assert.deepEqual(waits, [10]);
+  assert.equal(snapshot?.walletBalanceTc, 60);
+  assert.equal(snapshot?.squadValueGbp, 171);
+  assert.equal(snapshot?.activeContractCount, 32);
+  assert.equal(snapshot?.representedClubCount, 7);
+});
+
+test("does not retry a rejected authenticated Market request", async () => {
+  let requests = 0;
+  const snapshot = await loadTouchlineMarketInventorySnapshot(async () => {
+    requests += 1;
+    return { ok: false, status: 401, payload: { error: "Authentication required." } };
+  }, {
+    retryDelaysMs: [10, 20],
+    wait: async () => assert.fail("authorization failures must not wait for a retry"),
+  });
+
+  assert.equal(snapshot, null);
+  assert.equal(requests, 1);
+});
+
+test("bounds transient Market retries and never fabricates account totals", async () => {
+  let requests = 0;
+  const snapshot = await loadTouchlineMarketInventorySnapshot(async () => {
+    requests += 1;
+    throw new Error("offline");
+  }, {
+    retryDelaysMs: [1, 2],
+    wait: async () => undefined,
+  });
+
+  assert.equal(snapshot, null);
+  assert.equal(requests, 3);
 });

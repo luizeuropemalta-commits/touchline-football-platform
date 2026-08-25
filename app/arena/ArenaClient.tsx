@@ -67,6 +67,7 @@ import {
 import { orderTouchlineBenchByPosition } from "@/lib/touchlineArena/bench-presentation";
 import { quoteTouchlineMarketCart, type TouchlineMarketCartErrorCode } from "@/lib/touchlineArena/market-cart";
 import {
+  loadTouchlineMarketInventorySnapshot,
   normalizeTouchlineMarketInventoryId,
   parseTouchlineMarketInventorySnapshot,
   type TouchlineMarketInventorySnapshot,
@@ -2355,7 +2356,7 @@ async function preloadLiveProductImages(urls: Array<string | null | undefined>, 
 }
 
 /**
- * The Training Center is a flat tactical board, so it may share the reusable
+ * Squad management uses a flat tactical board, so it may share the reusable
  * 2D registry. This helper must never feed the Arena field/camera positions.
  */
 function trainingCenterPlayerSlots(
@@ -5598,24 +5599,20 @@ export default function ArenaClient({
       arenaPersistencePrincipal,
       arenaAccountSyncStatus,
     )
-      ? touchlineJsonRequest<unknown>(
+      ? loadTouchlineMarketInventorySnapshot(() => touchlineJsonRequest<unknown>(
           `/api/touchline-arena/market/inventory?teamId=${encodeURIComponent(builderClub.teamId)}`,
-        ).catch(() => null)
+          { cache: "no-store", timeoutMs: 8_000 },
+        ))
       : Promise.resolve(null);
 
     Promise.all([squadRequest, inventoryRequest])
-      .then(([payload, inventoryResponse]) => {
+      .then(([payload, inventorySnapshot]) => {
         const rosterPlayers = payload.rosterPlayers ?? payload.players;
-        const inventorySnapshot = inventoryResponse?.ok
-          ? parseTouchlineMarketInventorySnapshot(inventoryResponse.payload)
-          : null;
         const inventoryMode: TouchlineMarketInventoryMode = inventorySnapshot
           ? "authoritative"
           : arenaPersistencePrincipal?.kind === "authenticated"
             ? "unavailable"
-            : inventoryResponse?.status === 401 || inventoryResponse?.status === 503
-              ? "demo"
-              : "unavailable";
+            : "demo";
 
         if (cancelled) return;
         if (inventorySnapshot && arenaPersistencePrincipal?.kind === "authenticated") {
@@ -8819,21 +8816,12 @@ export default function ArenaClient({
               ) : null}
 
               {["market", "rankings"].includes(arenaOverlayPanel) ? (
-                <nav className="arena-club-sections" aria-label={t("clubControl")}>
+                <nav className="arena-club-sections" data-panel={arenaOverlayPanel} aria-label={t("clubControl")}>
                   <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
                     {t("profile")}
                   </a>
                   <a href={allClubsHubHref}>
                     {t("clubHub")}
-                  </a>
-                  <a
-                    href={touchlineArenaPanelHref("bench", siteLanguage)}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openArenaPanel("bench");
-                    }}
-                  >
-                    {t("substitutesBench")}
                   </a>
                   {arenaOverlayPanel !== "market" ? (
                     <a href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
@@ -14200,7 +14188,7 @@ export default function ArenaClient({
 
         .arena-club-sections {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 7px;
           margin-top: 10px;
           padding: 4px;
@@ -14208,6 +14196,10 @@ export default function ArenaClient({
           border-radius: 12px;
           background: rgba(0,0,0,.2);
           box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+        }
+
+        .arena-club-sections[data-panel="market"] {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
         .arena-club-sections button,
@@ -15783,6 +15775,10 @@ export default function ArenaClient({
           align-items: center;
           gap: 6px;
           font-variant-numeric: tabular-nums;
+        }
+
+        .team-builder-bank .touchline-tc-balance b {
+          color: #ffd75c;
         }
 
         .team-builder-bank .touchline-card-value {

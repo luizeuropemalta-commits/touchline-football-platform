@@ -11,8 +11,8 @@ type TouchlinePitchSurfaceProps = Readonly<{
 /**
  * The one canonical TouchLine horizontal football field. Consumers own their
  * cards and interactions, never a second field design or a second set of
- * markings. This keeps Arena, Match Centre, Training Centre and ClubHub on
- * the same broadcast-quality football surface.
+ * markings. This keeps Arena, Match Centre, squad-management views and
+ * ClubHub on the same broadcast-quality football surface.
  */
 export default function TouchlinePitchSurface({ ariaLabel, children, className }: TouchlinePitchSurfaceProps) {
   return (

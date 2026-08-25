@@ -55,8 +55,6 @@ export type TouchLineTranslationKey =
   | "touchlineArenaOnline"
   | "startMenu"
   | "startMenuDescription"
-  | "substitutesBench"
-  | "trainingCenterDescription"
   | "touchlineMarketTransfer"
   | "playerCardsRanking"
   | "watchGuide"
@@ -367,8 +365,6 @@ const en: Record<TouchLineTranslationKey, string> = {
   touchlineArenaOnline: "TouchLine Arena Online",
   startMenu: "Start Menu",
   startMenuDescription: "Choose an area and return to the pitch without leaving the Arena atmosphere.",
-  substitutesBench: "Training Center",
-  trainingCenterDescription: "Lineup, squad, bench and substitutions",
   touchlineMarketTransfer: "TouchLine Market Transfer",
   playerCardsRanking: "Player Cards Ranking",
   watchGuide: "Watch Guide",
@@ -678,8 +674,6 @@ const ptBR: Record<TouchLineTranslationKey, string> = {
   touchlineArenaOnline: "TouchLine Arena Online",
   startMenu: "Menu inicial",
   startMenuDescription: "Escolha uma área e volte ao campo sem sair da atmosfera da Arena.",
-  substitutesBench: "Centro de Treinamento",
-  trainingCenterDescription: "Escalação, elenco, banco e substituições",
   touchlineMarketTransfer: "TouchLine Market Transfer",
   playerCardsRanking: "Ranking dos cards de jogadores",
   watchGuide: "Guia para assistir",

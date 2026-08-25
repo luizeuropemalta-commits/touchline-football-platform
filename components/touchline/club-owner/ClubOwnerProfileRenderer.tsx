@@ -330,7 +330,7 @@ export default async function ClubOwnerProfileRenderer({
     rankingUpdated: "Classificação oficial atualizada após cada rodada auditada.",
     awaitingRound: "Aguardando 1ª rodada", officialPoints: "Nota TouchLine", openRanking: "Ver ranking completo",
     privateArea: "Área privada do ClubOwner", verifiedPrivateArea: "Área privada verificada", clubDirection: "Direção do clube",
-    privateDescription: "Finanças, contratos, treinamento e estratégia são visíveis somente para o ClubOwner autenticado.",
+    privateDescription: "Finanças, contratos e estratégia são visíveis somente para o ClubOwner autenticado.",
     protectedStrategy: "Estratégia protegida", hiddenFromFeed: "Não aparece no feed público",
     finance: "Financeiro", balanceAndBudget: "Saldo e orçamento", substitution: "Substituição", quickSquadChange: "Troca rápida do elenco",
     live: "Ao vivo", gamesAndStats: "Jogos e estatísticas", market: "Mercado", contractPlayers: "Contratar atletas", officialTables: "Tabelas oficiais",
@@ -340,14 +340,12 @@ export default async function ClubOwnerProfileRenderer({
     spendableBalance: "Saldo para gastar", marketAvailable: "Disponível no mercado", cardAssets: "Patrimônio em cards", updatedValue: "Valor atualizado",
     contractSlots: "Vagas de contrato", limit35: "Limite de 35", pendingCommitments: "Compromissos pendentes", noOpenPurchase: "Nenhuma compra aberta",
     budgetInvested: "das vagas de card usadas", accounting: "Contabilidade TouchLine", ledgerFootnote: "Todos os movimentos TC serão registrados com data, origem e saldo após a operação.",
-    trainingCentre: "Centro de Treinamento", privateSportsOperation: "Operação esportiva privada", private: "Privado",
-    privateStrategy: "Escalação, posição no campo e estratégia nunca são publicadas automaticamente.", openSubstitution: "Abrir Substituição",
     contracts: "Contratos", squadControl: "Controle do elenco", active: "Ativos", slots: "Vagas", pending: "Pendentes", manageMarket: "Gerir no Mercado de Cards",
   } : {
     rankingUpdated: "Official standings update after every audited round.",
     awaitingRound: "Awaiting round 1", officialPoints: "TouchLine rating", openRanking: "View full ranking",
     privateArea: "Private ClubOwner area", verifiedPrivateArea: "Verified private area", clubDirection: "Club direction",
-    privateDescription: "Finances, contracts, training and strategy are visible only to the authenticated ClubOwner.",
+    privateDescription: "Finances, contracts and strategy are visible only to the authenticated ClubOwner.",
     protectedStrategy: "Protected strategy", hiddenFromFeed: "Not shown in the public feed",
     finance: "Finance", balanceAndBudget: "Balance and budget", substitution: "Substitution", quickSquadChange: "Quick squad change",
     live: "Live", gamesAndStats: "Matches and statistics", market: "Market", contractPlayers: "Contract players", officialTables: "Official tables",
@@ -357,8 +355,6 @@ export default async function ClubOwnerProfileRenderer({
     spendableBalance: "Balance to spend", marketAvailable: "Available in the market", cardAssets: "Card assets", updatedValue: "Updated value",
     contractSlots: "Contract slots", limit35: "35 limit", pendingCommitments: "Pending commitments", noOpenPurchase: "No open purchase",
     budgetInvested: "of card slots used", accounting: "TouchLine accounting", ledgerFootnote: "Every TC movement is recorded with date, source and balance after the operation.",
-    trainingCentre: "Training Centre", privateSportsOperation: "Private sporting operation", private: "Private",
-    privateStrategy: "Line-up, field position and strategy are never published automatically.", openSubstitution: "Open substitution",
     contracts: "Contracts", squadControl: "Squad control", active: "Active", slots: "Slots", pending: "Pending", manageMarket: "Manage in Card Market",
   };
   const t = (key: Parameters<typeof touchLineT>[1]) => touchLineT(locale, key);
@@ -644,23 +640,6 @@ export default async function ClubOwnerProfileRenderer({
                     <span style={{ width: `${occupiedContractPercent ?? 0}%` }} />
                   </div>
                   <footer><span>{clubCopy.accounting}</span><small>{clubCopy.ledgerFootnote}</small></footer>
-                </article>
-
-                <article className="club-owner-training" id="club-owner-training">
-                  <div className="club-owner-board-card-head">
-                    <div>
-                      <span><Users aria-hidden="true" /> {clubCopy.trainingCentre}</span>
-                      <strong>{clubCopy.privateSportsOperation}</strong>
-                    </div>
-                    <b><LockKeyhole aria-hidden="true" /> {clubCopy.private}</b>
-                  </div>
-                  <div className="club-owner-training-metrics">
-                    <div><strong>{startingXiCards.length}/11</strong><span>{t("startingXi")}</span></div>
-                    <div><strong>{allBenchCards.length}</strong><span>{locale === "pt-BR" ? "Banco unificado" : "Unified bench"}</span></div>
-                    <div><strong>GK · DF · MF · FW</strong><span>{locale === "pt-BR" ? "Ordem por posição" : "Position order"}</span></div>
-                  </div>
-                  <p>{clubCopy.privateStrategy}</p>
-                  <a href={touchlineArenaPanelHref("bench", locale)}>{clubCopy.openSubstitution} <ArrowRight aria-hidden="true" /></a>
                 </article>
 
                 <article className="club-owner-contracts" id="club-owner-contracts">
@@ -1396,11 +1375,9 @@ export default async function ClubOwnerProfileRenderer({
         }
 
         .club-owner-finance {
-          grid-row: span 2;
           padding: 22px;
         }
 
-        .club-owner-training,
         .club-owner-contracts {
           padding: 18px;
         }
@@ -1520,14 +1497,13 @@ export default async function ClubOwnerProfileRenderer({
         .club-owner-finance footer { display:flex; justify-content:space-between; gap:16px; margin-top:11px; color:rgba(255,255,255,.38); font-size:8px; }
         .club-owner-finance footer span { color:rgba(163,255,18,.72); font-weight:950; text-transform:uppercase; }
 
-        .club-owner-training-metrics,.club-owner-contract-numbers { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:17px; }
-        .club-owner-training-metrics > div,.club-owner-contract-numbers > div { min-width:0; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.025); padding:11px 8px; text-align:center; }
-        .club-owner-training-metrics strong,.club-owner-training-metrics span,.club-owner-contract-numbers strong,.club-owner-contract-numbers span { display:block; }
-        .club-owner-training-metrics strong,.club-owner-contract-numbers strong { color:white; font-size:18px; }
-        .club-owner-training-metrics span,.club-owner-contract-numbers span { margin-top:4px; overflow:hidden; color:rgba(255,255,255,.4); font-size:7px; font-weight:850; text-overflow:ellipsis; white-space:nowrap; }
-        .club-owner-training p { margin:14px 0 0; color:rgba(255,255,255,.46); font-size:9px; line-height:1.5; }
-        .club-owner-training > a,.club-owner-contracts > a { display:flex; min-height:36px; align-items:center; justify-content:space-between; gap:8px; margin-top:14px; border:1px solid rgba(163,255,18,.2); border-radius:10px; padding:0 11px; color:#efffb0; background:rgba(163,255,18,.055); font-size:8px; font-weight:950; text-decoration:none; }
-        .club-owner-training > a svg,.club-owner-contracts > a svg { width:14px; height:14px; }
+        .club-owner-contract-numbers { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:17px; }
+        .club-owner-contract-numbers > div { min-width:0; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.025); padding:11px 8px; text-align:center; }
+        .club-owner-contract-numbers strong,.club-owner-contract-numbers span { display:block; }
+        .club-owner-contract-numbers strong { color:white; font-size:18px; }
+        .club-owner-contract-numbers span { margin-top:4px; overflow:hidden; color:rgba(255,255,255,.4); font-size:7px; font-weight:850; text-overflow:ellipsis; white-space:nowrap; }
+        .club-owner-contracts > a { display:flex; min-height:36px; align-items:center; justify-content:space-between; gap:8px; margin-top:14px; border:1px solid rgba(163,255,18,.2); border-radius:10px; padding:0 11px; color:#efffb0; background:rgba(163,255,18,.055); font-size:8px; font-weight:950; text-decoration:none; }
+        .club-owner-contracts > a svg { width:14px; height:14px; }
         .club-owner-contract-progress { margin-top:20px; }
 
         .club-owner-squad-command {
@@ -2262,7 +2238,6 @@ export default async function ClubOwnerProfileRenderer({
           .club-owner-bench-position > header { padding-inline: 10px; }
 
           .club-owner-finance,
-          .club-owner-training,
           .club-owner-contracts {
             padding: 16px;
           }

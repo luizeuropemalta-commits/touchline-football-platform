@@ -52,8 +52,7 @@ export function touchlineArenaPanelHref(panel: TouchlineArenaPanelKey, locale: s
   const lang = `lang=${encodeURIComponent(effectiveLocale)}`;
   if (panel === "market") return `/market-transfer?${lang}`;
   // Quick Substitution is an Arena action: it overlays the live Arena field
-  // and temporarily replaces the score rail. Keep the historical Training
-  // Centre route for formation management only.
+  // and temporarily replaces the score rail. It is not a separate site area.
   if (panel === "bench") return `/arena?panel=bench&${lang}`;
   if (panel === "formation") return touchlineClubOwnerSubstitutionHref(effectiveLocale);
   if (panel === "live" || panel === "watch") return `/live?${lang}`;
