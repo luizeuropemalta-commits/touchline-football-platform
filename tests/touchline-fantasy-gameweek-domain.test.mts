@@ -152,8 +152,8 @@ test("only mobile landscape devices receive the rotate gate", () => {
 
 test("the canonical deadline renders identically in server and browser time zones", () => {
   const deadline = "2026-08-21T19:55:00.000Z";
-  assert.match(formatTouchlineFantasyDeadline(deadline, "en-GB"), /21 Aug 2026.*20:55/);
-  assert.match(formatTouchlineFantasyDeadline(deadline, "pt-BR"), /21 de ago\. de 2026.*20:55/);
+  assert.equal(formatTouchlineFantasyDeadline(deadline, "en-GB"), "21 Aug 2026, 20:55");
+  assert.equal(formatTouchlineFantasyDeadline(deadline, "pt-BR"), "21 de ago. de 2026, 20:55");
   assert.equal(formatTouchlineFantasyDeadline("invalid", "en-GB"), "—");
 });
 

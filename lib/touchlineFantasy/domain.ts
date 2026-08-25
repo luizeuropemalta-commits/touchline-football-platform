@@ -286,11 +286,18 @@ export function touchlineFantasyLandscapeIsBlocked(input: Readonly<{
 export function formatTouchlineFantasyDeadline(value: string, locale: string) {
   const deadline = new Date(value);
   if (Number.isNaN(deadline.getTime())) return "—";
-  return new Intl.DateTimeFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
+  const resolvedLocale = locale === "pt-BR" ? "pt-BR" : "en-GB";
+  const date = new Intl.DateTimeFormat(resolvedLocale, {
     dateStyle: "medium",
-    timeStyle: "short",
     timeZone: TOUCHLINE_FANTASY_DEADLINE_TIME_ZONE,
   }).format(deadline);
+  const time = new Intl.DateTimeFormat(resolvedLocale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: TOUCHLINE_FANTASY_DEADLINE_TIME_ZONE,
+  }).format(deadline);
+  return `${date}, ${time}`;
 }
 
 export function formatTouchlineFantasyMarketValue(valueEur: number, locale: string) {
