@@ -5,7 +5,7 @@ import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineGameweekTeamSnapshot from "@/components/touchline/fantasy/TouchlineGameweekTeamSnapshot";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import ClubOwnerAvatarUpload from "@/components/touchline/ClubOwnerAvatarUpload";
-import { Activity, ArrowRight, BarChart3, CalendarClock, Coins, Handshake, Landmark, LockKeyhole, ShieldCheck, Users, WalletCards } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, CalendarClock, Coins, Handshake, Landmark, LockKeyhole, ShieldCheck, WalletCards } from "lucide-react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
