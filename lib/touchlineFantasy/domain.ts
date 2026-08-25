@@ -10,6 +10,7 @@ export const TOUCHLINE_FANTASY_SUBSCRIPTION_CURRENCY = "GBP" as const;
 export const TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 350_000_000 as const;
 export const TOUCHLINE_FANTASY_MAX_PLAYERS_PER_CLUB = 3 as const;
 export const TOUCHLINE_FANTASY_DEFAULT_LOCK_OFFSET_MINUTES = 5 as const;
+export const TOUCHLINE_FANTASY_DEADLINE_TIME_ZONE = "Europe/London" as const;
 
 export type TouchlineFantasyPublicManagerRank = Readonly<{
   rank: number;
@@ -280,6 +281,16 @@ export function touchlineFantasyLandscapeIsBlocked(input: Readonly<{
   mobileDevice?: boolean;
 }>) {
   return (input.coarsePointer || input.mobileDevice === true) && input.width > input.height;
+}
+
+export function formatTouchlineFantasyDeadline(value: string, locale: string) {
+  const deadline = new Date(value);
+  if (Number.isNaN(deadline.getTime())) return "—";
+  return new Intl.DateTimeFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: TOUCHLINE_FANTASY_DEADLINE_TIME_ZONE,
+  }).format(deadline);
 }
 
 export function formatTouchlineFantasyMarketValue(valueEur: number, locale: string) {

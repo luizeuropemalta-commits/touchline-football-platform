@@ -41,6 +41,7 @@ test("the guided Markt presents coach, formation, 11 upright cards, review and A
   assert.match(client, /touchlineFantasyLandscapeIsBlocked/);
   assert.match(client, /Android\|iPhone\|iPad\|iPod\|Mobile/);
   assert.match(client, /navigator\.maxTouchPoints > 1/);
+  assert.match(client, /formatTouchlineFantasyDeadline\(activeGameweek\.locksAt, locale\)/);
   assert.match(client, /\/arena\?lang=/);
 });
 
@@ -55,6 +56,7 @@ test("Club Owner and Arena consume the same canonical Gameweek snapshot without 
   assert.match(shared, /snapshot!?\.selections\.find/);
   assert.match(shared, /data-canonical-player-id/);
   assert.match(shared, /No Fantasy bench|Nenhum banco Fantasy/);
+  assert.match(shared, /formatTouchlineFantasyDeadline\(gameweek\.locksAt, locale\)/);
   assert.match(arena, /buildTouchlineFantasyArenaLineup\(fantasySnapshot\)/);
   assert.match(arena, /initialFantasyLineup=\{fantasyArenaLineup\}/);
   assert.doesNotMatch(arena, /TouchlineGameweekTeamSnapshot/);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  formatTouchlineFantasyDeadline,
   parseTouchlineFantasyLineupRequest,
   rankTouchlineFantasyManagers,
   resolveTouchlineFantasyBuilderStep,
@@ -147,6 +148,13 @@ test("only mobile landscape devices receive the rotate gate", () => {
   assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 874, height: 402, coarsePointer: false, mobileDevice: true }), true);
   assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 402, height: 874, coarsePointer: false, mobileDevice: true }), false);
   assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 1440, height: 900, coarsePointer: false }), false);
+});
+
+test("the canonical deadline renders identically in server and browser time zones", () => {
+  const deadline = "2026-08-21T19:55:00.000Z";
+  assert.match(formatTouchlineFantasyDeadline(deadline, "en-GB"), /21 Aug 2026.*20:55/);
+  assert.match(formatTouchlineFantasyDeadline(deadline, "pt-BR"), /21 de ago\. de 2026.*20:55/);
+  assert.equal(formatTouchlineFantasyDeadline("invalid", "en-GB"), "—");
 });
 
 test("the required formation matrix derives 11 position-aware slots from the canonical registry", () => {
