@@ -72,6 +72,10 @@ export function applyTouchlineMatchdayPoints(
       // Null means the persisted scoring fact is unavailable; a confirmed
       // zero remains zero and final fixture cards retain it after full time.
       matchTouchlinePoints: statistic.touchlinePoints,
+      // The same persisted fixture row owns the provider rating shown by the
+      // shared card and Zoom. Keep null explicit; never derive it from stats
+      // or from the preserved legacy points field.
+      matchRating: statistic.rating,
       ...(matchStats && Object.keys(matchStats).length ? { matchStats } : {}),
       ...(statistic.contributions.length
         ? {

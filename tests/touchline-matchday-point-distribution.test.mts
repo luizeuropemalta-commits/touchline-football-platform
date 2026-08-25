@@ -46,17 +46,17 @@ test("legacy fixture score data remains technical and never becomes an active ca
     { canonicalPlayerId: "gabriel-canonical", touchlinePoints: 8, totalRating: 7.18, statistics: { goals: 0, assists: 0, yellowCards: 1, redCards: 0 } },
   ]);
   const distributed = applyTouchlineMatchdayPoints(withSeasonPoints, [
-    fixtureStatistic({ playerId: "saka-provider", touchlinePoints: 6, contributions: [{ providerEventId: "goal-1", role: "primary", eventType: "Goal", minute: 67, points: 6 }], statistics: { goals: 1, assists: 0, yellowCards: 0, redCards: 0 } }),
+    fixtureStatistic({ playerId: "saka-provider", rating: 8.21, touchlinePoints: 6, contributions: [{ providerEventId: "goal-1", role: "primary", eventType: "Goal", minute: 67, points: 6 }], statistics: { goals: 1, assists: 0, yellowCards: 0, redCards: 0 } }),
     fixtureStatistic({ playerId: "gabriel-provider", touchlinePoints: 0, statistics: { yellowCards: 0, redCards: 0 } }),
   ]);
 
   assert.equal(distributed[0].seasonTouchlinePoints, 24);
   assert.equal(distributed[0].matchTouchlinePoints, 6);
   assert.deepEqual(distributed[0].seasonStats, { goals: 1, assists: 0, yellowCards: 0, redCards: 0 });
-  assert.deepEqual(distributed[0].matchStats, { goals: 1, assists: 0, yellowCards: 0, redCards: 0, rating: null, cards: 0 });
+  assert.deepEqual(distributed[0].matchStats, { goals: 1, assists: 0, yellowCards: 0, redCards: 0, rating: 8.21, cards: 0 });
   assert.deepEqual(distributed[0].matchPointContributions, [{ role: "primary", eventType: "Goal", minute: 67, points: 6 }]);
   assert.equal(squadCardToExactPlayer(distributed[0]).totalRating, 15.43);
-  assert.equal(squadCardToExactPlayer(distributed[0]).matchRating, null);
+  assert.equal(squadCardToExactPlayer(distributed[0]).matchRating, 8.21);
 
   assert.equal(distributed[1].seasonTouchlinePoints, 8);
   assert.equal(distributed[1].seasonTotalRating, 7.18);
