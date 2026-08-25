@@ -39,6 +39,8 @@ test("the guided Markt presents coach, formation, 11 upright cards, review and A
   assert.match(card, /TouchlineCardZoom/);
   assert.doesNotMatch(client, /TouchlineGoalFacingPitchCard/);
   assert.match(client, /touchlineFantasyLandscapeIsBlocked/);
+  assert.match(client, /Android\|iPhone\|iPad\|iPod\|Mobile/);
+  assert.match(client, /navigator\.maxTouchPoints > 1/);
   assert.match(client, /\/arena\?lang=/);
 });
 

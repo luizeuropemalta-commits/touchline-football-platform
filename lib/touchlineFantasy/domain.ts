@@ -277,8 +277,9 @@ export function touchlineFantasyLandscapeIsBlocked(input: Readonly<{
   width: number;
   height: number;
   coarsePointer: boolean;
+  mobileDevice?: boolean;
 }>) {
-  return input.coarsePointer && input.width > input.height;
+  return (input.coarsePointer || input.mobileDevice === true) && input.width > input.height;
 }
 
 export function formatTouchlineFantasyMarketValue(valueEur: number, locale: string) {
