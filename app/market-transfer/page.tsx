@@ -1,55 +1,48 @@
-import ArenaClient from "@/app/arena/ArenaClient";
 import type { Metadata } from "next";
-import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
-import { getTouchLineMarketCopy } from "@/lib/touchlineArena/market-i18n";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+
+import FantasyGameweekClient from "@/app/fantasy/FantasyGameweekClient";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import { isOwnerEmail } from "@/lib/admin/owner";
-import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
+import { createClient } from "@/lib/supabase/server";
+import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
+import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 
-type MarketTransferPageProps = {
-  searchParams: Promise<{
-    lang?: string | string[];
-    contractPlayer?: string | string[];
-    contractName?: string | string[];
-    contractClub?: string | string[];
-  }>;
-};
+export const dynamic = "force-dynamic";
 
-function firstValue(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] : value;
+type MarketTransferSearchParams = Promise<{ lang?: string | string[] }>;
+
+async function marketLocale(searchParams: MarketTransferSearchParams) {
+  const params = await searchParams;
+  return normalizeTouchLineLocale(Array.isArray(params.lang) ? params.lang[0] : params.lang);
 }
 
-export async function generateMetadata({ searchParams }: MarketTransferPageProps): Promise<Metadata> {
-  const params = await searchParams;
-  const locale = normalizeTouchLineLocale(firstValue(params.lang));
-  const copy = getTouchLineMarketCopy(locale);
-
-  return {
-    title: copy.fullProductName,
-    description: copy.metadataDescription,
-  };
+export async function generateMetadata({ searchParams }: {
+  searchParams: MarketTransferSearchParams;
+}): Promise<Metadata> {
+  const locale = await marketLocale(searchParams);
+  return locale === "pt-BR"
+    ? {
+        title: "TouchLine Markt · Equipe da rodada",
+        description: "Escolha treinador, formação e os 11 cards da sua equipe TouchLine para a rodada.",
+      }
+    : {
+        title: "TouchLine Markt · Gameweek XI",
+        description: "Choose the coach, formation and 11 cards for your TouchLine Gameweek team.",
+      };
 }
 
-export default async function MarketTransferPage({ searchParams }: MarketTransferPageProps) {
-  const params = await searchParams;
-  const locale = normalizeTouchLineLocale(firstValue(params.lang));
-  const [supabase, initialTwoDimensionalFormationRegistry] = await Promise.all([
-    createClient(),
-    readTouchlineFormationGeometryRegistry(),
-  ]);
+export default async function MarketTransferPage({ searchParams }: {
+  searchParams: MarketTransferSearchParams;
+}) {
+  const locale = await marketLocale(searchParams);
+  const supabase = await createClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
-
-  return (
-    <ArenaClient
-      standaloneMarket
-      initialPanel="market"
-      initialIntroIntent="skip"
-      initialLocale={locale}
-      initialContractPlayerId={firstValue(params.contractPlayer)}
-      initialContractPlayerName={firstValue(params.contractName)}
-      initialContractClubId={firstValue(params.contractClub)}
-      canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
-      initialTwoDimensionalFormationRegistry={initialTwoDimensionalFormationRegistry}
-    />
-  );
+  if (!user) redirect(`/login?returnTo=${encodeURIComponent(`/market-transfer?lang=${locale}`)}`);
+  const snapshot = await loadTouchlineFantasySnapshot(user);
+  return <main>
+    <TouchlineGlobalNavigation locale={locale} currentRoute="market" surface={resolveTouchlineGlobalNavigationSurface({ isAuthenticated: true, isAdmin: isOwnerEmail(user.email) })} />
+    <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} />
+  </main>;
 }

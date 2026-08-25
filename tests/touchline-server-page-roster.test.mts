@@ -137,7 +137,7 @@ test("the authenticated profile bounds its private avatar lookup before identity
   );
 });
 
-test("the authenticated profile reads the saved Arena XI only for the server-derived owner", () => {
+test("the authenticated profile reads the Gameweek XI only for the server-derived owner", () => {
   const source = readFileSync(
     new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url),
     "utf8",
@@ -145,7 +145,8 @@ test("the authenticated profile reads the saved Arena XI only for the server-der
 
   assert.match(
     source,
-    /const arenaStateRead = activeClubOwnerUser && admin[\s\S]*?\.from\("touchline_user_arena_state"\)[\s\S]*?\.select\("lineup"\)[\s\S]*?\.eq\("user_id", activeClubOwnerUser\.id\)[\s\S]*?\{ data: null \},[\s\S]*?CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS/,
+    /const fantasySnapshotRead = activeClubOwnerUser[\s\S]*?resolveServerReadWithin\(loadTouchlineFantasySnapshot\(activeClubOwnerUser\), null, CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS\)[\s\S]*?: Promise\.resolve\(null\)/,
   );
-  assert.match(source, /selectSavedArenaStartingXi\(rosterCards, arenaStateResponse\.data\?\.lineup\)/);
+  assert.match(source, /<TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}/);
+  assert.doesNotMatch(source, /const arenaStateRead = activeClubOwnerUser/);
 });

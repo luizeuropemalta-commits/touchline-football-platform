@@ -2,10 +2,10 @@
 
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
-import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
+import TouchlineGameweekTeamSnapshot from "@/components/touchline/fantasy/TouchlineGameweekTeamSnapshot";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import ClubOwnerAvatarUpload from "@/components/touchline/ClubOwnerAvatarUpload";
-import { Activity, ArrowRight, BarChart3, CalendarClock, Coins, Handshake, Landmark, LockKeyhole, Repeat2, ShieldCheck, Users, WalletCards } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, CalendarClock, Coins, Handshake, Landmark, LockKeyhole, ShieldCheck, Users, WalletCards } from "lucide-react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
@@ -41,12 +41,6 @@ import {
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
-import { TOUCHLINE_CLUB_OWNER_XI_SLOTS } from "@/lib/touchlineArena/pitch-layout";
-import {
-  orderClubOwnerBenchCards,
-  partitionClubOwnerRoster,
-  selectSavedArenaStartingXi,
-} from "@/lib/touchlineArena/club-owner-roster";
 import {
   resolveTouchlineClubOwnerPageIdentity,
 } from "@/lib/touchlineArena/club-owner-page-identity";
@@ -64,6 +58,7 @@ import {
   type TouchlineSocialPost,
 } from "@/components/touchline/social/TouchlineSocial";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
+import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 
 const TOUCHLINE_ENGLAND_TROPHY =
   "/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png";
@@ -71,7 +66,6 @@ const CLUB_OWNER_TOUCHLINE_NEON = "#a3ff12";
 const CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS = 8_000;
 type ClubOwnerWalletEntry = { amount_cents: number | null };
 type ClubOwnerAvatarProfile = { avatar_url?: unknown };
-type ClubOwnerArenaState = { lineup?: unknown };
 
 const trophyGallery = [
   {
@@ -230,23 +224,14 @@ export default async function ClubOwnerProfileRenderer({
       CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
     )
     : Promise.resolve({ data: null });
-  const arenaStateRead = activeClubOwnerUser && admin
-    ? resolveServerReadWithin<{ data: ClubOwnerArenaState | null }>(
-      admin
-        .from("touchline_user_arena_state")
-        .select("lineup")
-        .eq("user_id", activeClubOwnerUser.id)
-        .maybeSingle()
-        .then(({ data }) => ({ data: data as ClubOwnerArenaState | null })),
-      { data: null },
-      CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
-    )
-    : Promise.resolve({ data: null });
-  const [activeRanking, authoritativeRoster, walletEntriesResponse, arenaStateResponse] = await Promise.all([
+  const fantasySnapshotRead = activeClubOwnerUser
+    ? resolveServerReadWithin(loadTouchlineFantasySnapshot(activeClubOwnerUser), null, CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS)
+    : Promise.resolve(null);
+  const [activeRanking, authoritativeRoster, walletEntriesResponse, fantasySnapshot] = await Promise.all([
     activeRankingRead,
     authoritativeRosterRead,
     walletEntriesRead,
-    arenaStateRead,
+    fantasySnapshotRead,
   ]);
   const publicRosterCookieValue = activeClubOwnerUser
     ? null
@@ -281,7 +266,6 @@ export default async function ClubOwnerProfileRenderer({
   ))[0] ?? null;
   const bestPlayerPalette = touchlineCardTierPalette(bestPlayerCard?.cardTier);
   const startingShowcaseCards = publishedClubOwnerSquadCards.slice(0, 6);
-  const rosterSections = partitionClubOwnerRoster(sortedClubOwnerSquadCards);
   const ownedContractCount = activeClubOwnerUser
     ? authoritativeRoster?.ok
       ? authoritativeRoster.snapshot.ownedContractCount
@@ -290,16 +274,6 @@ export default async function ClubOwnerProfileRenderer({
   const openContractSlotCount = ownedContractCount === null
     ? null
     : Math.max(0, 35 - ownedContractCount);
-  const savedStartingXiCards = activeClubOwnerUser
-    ? selectSavedArenaStartingXi(rosterCards, arenaStateResponse.data?.lineup)
-    : null;
-  const startingXiCards = savedStartingXiCards ?? rosterSections.startingXiCards;
-  const savedStartingXiIds = new Set(savedStartingXiCards?.map((selected) => selected.id));
-  const allBenchCards = savedStartingXiCards
-    ? orderClubOwnerBenchCards(
-      rosterSections.allCards.filter((card) => !savedStartingXiIds.has(card.id)),
-    )
-    : rosterSections.allBenchCards;
   const squadCardValue = sortedClubOwnerSquadCards.reduce(
     (sum, card) => sum + (activeContractCardNumericPrice(card) ?? 0),
     0,
@@ -316,15 +290,6 @@ export default async function ClubOwnerProfileRenderer({
     ? null
     : Math.round((ownedContractCount / 35) * 100);
   const locale = normalizeTouchLineLocale(params.lang);
-  const benchPositionGroups = ([
-    { role: "goalkeeper", label: locale === "pt-BR" ? "Guarda-redes" : "Goalkeepers" },
-    { role: "defender", label: locale === "pt-BR" ? "Defesas" : "Defenders" },
-    { role: "midfielder", label: locale === "pt-BR" ? "Médios" : "Midfielders" },
-    { role: "forward", label: locale === "pt-BR" ? "Avançados" : "Forwards" },
-  ] as const).map((group) => ({
-    ...group,
-    cards: allBenchCards.filter((card) => card.role === group.role),
-  }));
   const isPortuguese = locale === "pt-BR";
   const clubCopy = isPortuguese ? {
     rankingUpdated: "Classificação oficial atualizada após cada rodada auditada.",
@@ -595,7 +560,6 @@ export default async function ClubOwnerProfileRenderer({
 
               <nav className="club-owner-control-nav" aria-label={clubCopy.clubDirection}>
                 <a href="#club-owner-finance"><Landmark aria-hidden="true" /><span>{clubCopy.finance}<small>{clubCopy.balanceAndBudget}</small></span></a>
-                <a href={touchlineArenaPanelHref("bench", locale)}><Repeat2 aria-hidden="true" /><span>{clubCopy.substitution}<small>{clubCopy.quickSquadChange}</small></span></a>
                 <a href={touchlineArenaPanelHref("live", locale)}><Activity aria-hidden="true" /><span>{clubCopy.live}<small>{clubCopy.gamesAndStats}</small></span></a>
                 <a href={touchlineArenaPanelHref("market", locale)}><Handshake aria-hidden="true" /><span>{clubCopy.market}<small>{clubCopy.contractPlayers}</small></span></a>
                 <a href={`/touchline-tables${localeSuffix}`}><BarChart3 aria-hidden="true" /><span>{t("rankings")}<small>{clubCopy.officialTables}</small></span></a>
@@ -659,58 +623,9 @@ export default async function ClubOwnerProfileRenderer({
                 </article>
               </div>
 
-              <section className="club-owner-squad-command" id="club-owner-squad" aria-label={locale === "pt-BR" ? "Gestão do elenco" : "Squad management"}>
-                <header>
-                  <div>
-                    <span><Users aria-hidden="true" /> {locale === "pt-BR" ? "Gestão do elenco" : "Squad management"}</span>
-                    <strong>{locale === "pt-BR" ? "Seu time, em uma única tela" : "Your team, on one screen"}</strong>
-                    <small>{locale === "pt-BR" ? "Titulares e um único banco, ordenado por impacto e posição. A estratégia continua privada." : "Starting XI and one unified bench, ordered by impact and position. Your strategy stays private."}</small>
-                  </div>
-                  <a href={touchlineArenaPanelHref("bench", locale)}><Repeat2 aria-hidden="true" /> {locale === "pt-BR" ? "Fazer substituição" : "Make substitution"}</a>
-                </header>
-
-                <TouchlinePitchSurface className="club-owner-squad-pitch" ariaLabel={t("startingXi")}>
-                  {startingXiCards.map((card, index) => {
-                    const slot = TOUCHLINE_CLUB_OWNER_XI_SLOTS[index] ?? { x: 50, y: 50 };
-                    const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
-                    return (
-                      <a
-                        key={card.id}
-                        className="club-owner-squad-pitch-card"
-                        href={touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier })}
-                        style={{ "--squad-x": `${slot.x}%`, "--squad-y": `${slot.y}%` } as CSSProperties}
-                      >
-                        <span aria-hidden="true"><TouchlineEliteExactCard player={player} labels={cardLabels} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} rankingMode="preview" showProfileAction={false} showSocialMetrics={false} /></span>
-                        <strong>{card.shortName}</strong>
-                      </a>
-                    );
-                  })}
-                  {startingXiCards.length === 0 ? <p>{locale === "pt-BR" ? "Contrate seus primeiros atletas para montar o XI." : "Contract your first players to build the XI."}</p> : null}
-                </TouchlinePitchSurface>
-
-                <div className="club-owner-squad-row-heading">
-                  <span>{locale === "pt-BR" ? "Banco" : "Bench"}</span>
-                  <strong>{allBenchCards.length}</strong>
-                </div>
-                <div className="club-owner-unified-bench">
-                  {benchPositionGroups.map((group) => group.cards.length ? (
-                    <section key={group.role} className="club-owner-bench-position" aria-label={group.label}>
-                      <header><span>{group.label}</span><strong>{group.cards.length}</strong></header>
-                      <div className="club-owner-squad-card-row">
-                        {group.cards.map((card) => {
-                          const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
-                          return (
-                            <a key={card.id} href={touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier })}>
-                              <span aria-hidden="true"><TouchlineEliteExactCard player={player} labels={cardLabels} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} rankingMode="preview" showProfileAction={false} showSocialMetrics={false} /></span>
-                              <strong>{card.shortName}</strong>
-                            </a>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  ) : null)}
-                </div>
-              </section>
+              <div id="club-owner-squad">
+                <TouchlineGameweekTeamSnapshot snapshot={fantasySnapshot} locale={locale} surface="club-owner" />
+              </div>
             </section>
           ) : null}
 

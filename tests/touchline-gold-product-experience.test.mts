@@ -6,7 +6,8 @@ const read = (file: string) => readFile(new URL(`../${file}`, import.meta.url), 
 
 test("Arena honours the explicit URL locale on first render", async () => {
   const source = await read("app/arena/page.tsx");
-  assert.match(source, /initialLocale=\{normalizeTouchLineLocale\(firstValue\(params\.lang\)\)\}/);
+  assert.match(source, /const locale = normalizeTouchLineLocale\(firstValue\(params\.lang\)\)/);
+  assert.match(source, /initialLocale=\{locale\}/);
 });
 
 test("Portuguese Notifications and Football Search use first-party localized copy", async () => {

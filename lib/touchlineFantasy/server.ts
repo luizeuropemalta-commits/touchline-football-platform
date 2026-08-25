@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { User } from "@supabase/supabase-js";
+import type { TouchlineCoach } from "@/lib/football-data/types";
 
 import { inferArenaRole, makeArenaShortName, normalizeOfficialShirtNumber } from "@/lib/football-data/arena-lineup";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -12,9 +13,14 @@ import {
   touchlineCountryCode3FromName,
 } from "@/lib/touchlineArena/country-flags";
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
+import { createTouchlineArenaCoachSlot, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { formatTouchlineMarketValueEur } from "@/lib/touchlineArena/editorial-card-profile";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 import type { TouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry";
+import {
+  TOUCHLINE_LIVE_COACHES,
+  touchlineCoachClassificationForProviderId,
+} from "@/lib/touchlineArena/live-coaches";
 import {
   rankTouchlineFantasyManagers,
   type TouchlineFantasyGameweekState,
@@ -39,6 +45,24 @@ export type TouchlineFantasySelectionView = Readonly<{
 }>;
 
 export type TouchlineFantasyManagerRank = TouchlineFantasyPublicManagerRank;
+
+export type TouchlineFantasyCoachView = Readonly<{
+  id: string;
+  coach: TouchlineCoach;
+  slot: TouchlineArenaCoachSlot;
+  clubId: string;
+  clubName: string;
+  clubLogoUrl: string | null;
+  countryCode3: string;
+}>;
+
+export type TouchlineFantasyLineupAlert = Readonly<{
+  playerId: string;
+  fixtureId: string;
+  state: "NOT_SELECTED_ALERT_ELIGIBLE";
+  wasEditableAtDetection: boolean;
+  detectedAt: string;
+}>;
 
 export type TouchlineFantasyMatchHistory = Readonly<{
   fixtureId: string;
@@ -68,9 +92,12 @@ export type TouchlineFantasySnapshot = Readonly<{
     state: "DRAFT" | "CONFIRMED" | "LOCKED" | "FINAL";
     totalMarketValueEur: number;
     carriedFromPrevious: boolean;
+    selectedCoachId: string | null;
   }> | null;
   selections: readonly TouchlineFantasySelectionView[];
   catalogue: readonly ClubOwnerSquadCard[];
+  coaches: readonly TouchlineFantasyCoachView[];
+  lineupAlerts: readonly TouchlineFantasyLineupAlert[];
   formationRegistry: TouchlineFormationGeometryRegistry;
   gameweekScore: number;
   seasonScore: number;
@@ -236,6 +263,36 @@ async function loadRankings(
   };
 }
 
+async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
+  const teamIds = TOUCHLINE_LIVE_COACHES.map(({ coach }) => coach.teamId);
+  const { data, error } = await admin.from("football_clubs")
+    .select("id,provider_team_id,name,logo_url")
+    .eq("provider", "sportmonks")
+    .in("provider_team_id", teamIds);
+  if (error) return [];
+  const clubByTeamId = new Map(rows(data).flatMap((club) => {
+    const teamId = text(club.provider_team_id);
+    return teamId ? [[teamId, club] as const] : [];
+  }));
+  return TOUCHLINE_LIVE_COACHES.flatMap(({ coach, countryCode3 }): TouchlineFantasyCoachView[] => {
+    if (!coach.teamId) return [];
+    const club = clubByTeamId.get(coach.teamId);
+    const clubId = text(club?.id);
+    const clubName = text(club?.name);
+    const classification = touchlineCoachClassificationForProviderId(coach.providerId);
+    if (!clubId || !clubName || !classification) return [];
+    return [{
+      id: coach.providerId,
+      coach,
+      slot: createTouchlineArenaCoachSlot(coach, classification.finalPosition, classification.tierKey),
+      clubId,
+      clubName,
+      clubLogoUrl: text(club?.logo_url),
+      countryCode3,
+    }];
+  });
+}
+
 export async function loadTouchlineFantasySnapshot(user: User): Promise<TouchlineFantasySnapshot | null> {
   const admin = createAdminClient();
   if (!admin) return null;
@@ -283,11 +340,12 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     await admin.rpc("touchline_fantasy_prepare_user_gameweek", { p_user_id: user.id, p_gameweek_id: activeGameweek.id });
   }
 
-  const [catalogue, userGameweekResponse, rankings] = await Promise.all([
+  const [catalogue, coaches, userGameweekResponse, rankings] = await Promise.all([
     loadCatalogue(admin),
+    loadCoaches(admin),
     activeGameweek
       ? admin.from("touchline_fantasy_user_gameweeks")
-        .select("id,formation_code,state,total_market_value_eur,carry_source_user_gameweek_id")
+        .select("id,formation_code,selected_coach_id,locked_coach_id,state,total_market_value_eur,carry_source_user_gameweek_id")
         .eq("user_id", user.id)
         .eq("gameweek_id", activeGameweek.id)
         .maybeSingle()
@@ -296,7 +354,10 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
   ]);
   const userGameweekRow = userGameweekResponse.data as Row | null;
   const userGameweekId = text(userGameweekRow?.id);
-  const [draftResponse, lockedResponse, scoreResponse, seasonScoresResponse] = userGameweekId
+  if (activeGameweek && userGameweekId) {
+    await admin.rpc("touchline_fantasy_reconcile_lineup_alerts", { p_gameweek_id: activeGameweek.id });
+  }
+  const [draftResponse, lockedResponse, scoreResponse, seasonScoresResponse, alertsResponse] = userGameweekId
     ? await Promise.all([
       admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
       admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
@@ -304,8 +365,12 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
       admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status,touchline_fantasy_user_gameweeks!inner(user_id,touchline_fantasy_gameweeks!inner(season_id))")
         .eq("touchline_fantasy_user_gameweeks.user_id", user.id)
         .eq("touchline_fantasy_user_gameweeks.touchline_fantasy_gameweeks.season_id", seasonId),
+      admin.from("touchline_fantasy_lineup_alerts")
+        .select("player_id,fixture_id,state,was_editable_at_detection,detected_at")
+        .eq("user_gameweek_id", userGameweekId)
+        .order("detected_at", { ascending: false }),
     ])
-    : [{ data: [], error: null }, { data: [], error: null }, { data: null, error: null }, { data: [], error: null }];
+    : [{ data: [], error: null }, { data: [], error: null }, { data: null, error: null }, { data: [], error: null }, { data: [], error: null }];
   const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
   const selections = selectionRows.flatMap((row): TouchlineFantasySelectionView[] => {
     const playerId = text(row.player_id);
@@ -336,6 +401,19 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
       settlementStatus: status,
     }];
   });
+  const lineupAlerts = rows(alertsResponse.data).flatMap((row): TouchlineFantasyLineupAlert[] => {
+    const playerId = text(row.player_id);
+    const fixtureId = text(row.fixture_id);
+    const detectedAt = text(row.detected_at);
+    if (!playerId || !fixtureId || !detectedAt || text(row.state) !== "NOT_SELECTED_ALERT_ELIGIBLE") return [];
+    return [{
+      playerId,
+      fixtureId,
+      state: "NOT_SELECTED_ALERT_ELIGIBLE",
+      wasEditableAtDetection: row.was_editable_at_detection === true,
+      detectedAt,
+    }];
+  });
 
   return {
     userId: user.id,
@@ -344,7 +422,7 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     config: {
       budgetEur: number(config.budget_eur) ?? 350_000_000,
       maxPlayersPerClub: number(config.max_players_per_club) ?? 3,
-      lockOffsetMinutes: number(config.lock_offset_minutes) ?? 90,
+      lockOffsetMinutes: number(config.lock_offset_minutes) ?? 5,
     },
     gameweeks,
     activeGameweek,
@@ -354,9 +432,12 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
       state: (text(userGameweekRow?.state) ?? "DRAFT") as "DRAFT" | "CONFIRMED" | "LOCKED" | "FINAL",
       totalMarketValueEur: number(userGameweekRow?.total_market_value_eur) ?? 0,
       carriedFromPrevious: Boolean(text(userGameweekRow?.carry_source_user_gameweek_id)),
+      selectedCoachId: text(userGameweekRow?.locked_coach_id) ?? text(userGameweekRow?.selected_coach_id),
     } : null,
     selections,
     catalogue,
+    coaches,
+    lineupAlerts,
     formationRegistry,
     gameweekScore: number((scoreResponse.data as Row | null)?.gameweek_score) ?? 0,
     seasonScore: rows(seasonScoresResponse.data)

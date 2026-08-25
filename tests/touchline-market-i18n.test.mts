@@ -46,10 +46,11 @@ test("the dedicated route resolves lang before rendering and localizes metadata"
 
   assert.match(marketPage, /lang\?: string \| string\[\]/);
   assert.match(marketPage, /generateMetadata/);
-  assert.match(marketPage, /getTouchLineMarketCopy\(locale\)/);
-  assert.match(marketPage, /initialLocale=\{locale\}/);
-  assert.match(marketPage, /title: copy\.fullProductName/);
-  assert.match(marketPage, /description: copy\.metadataDescription/);
+  assert.match(marketPage, /marketLocale\(searchParams\)/);
+  assert.match(marketPage, /locale === "pt-BR"/);
+  assert.match(marketPage, /<FantasyGameweekClient initialSnapshot=\{snapshot\} locale=\{locale\}/);
+  assert.match(marketPage, /title: "TouchLine Markt · Equipe da rodada"/);
+  assert.match(marketPage, /title: "TouchLine Markt · Gameweek XI"/);
 });
 
 test("shared Market Transfer navigation contains no retired product name", () => {

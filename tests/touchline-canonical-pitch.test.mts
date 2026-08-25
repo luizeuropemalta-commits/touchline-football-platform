@@ -5,6 +5,7 @@ import test from "node:test";
 import { TOUCHLINE_CLUB_OWNER_XI_SLOTS, TOUCHLINE_STANDARD_433_SLOTS, touchlineCanonicalFormationSlots } from "../lib/touchlineArena/pitch-layout.ts";
 
 const clubOwnerRenderer = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
+const gameweekTeamSnapshot = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx", import.meta.url), "utf8");
 const clubHubLineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 const clubLineupBuilder = readFileSync(new URL("../lib/touchlineArena/club-lineup.ts", import.meta.url), "utf8");
 const clubHubLineupCss = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
@@ -41,7 +42,8 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
 });
 
 test("field art is a shared component rather than separate page drawings", () => {
-  assert.match(clubOwnerRenderer, /TouchlinePitchSurface/);
+  assert.match(clubOwnerRenderer, /TouchlineGameweekTeamSnapshot/);
+  assert.match(gameweekTeamSnapshot, /TouchlinePitchSurface/);
   assert.match(clubHubLineup, /TouchlinePitchSurface/);
   assert.match(clubLineupBuilder, /touchlineCanonicalFormationSlots\(formation, input\.formationGeometryRegistry\)/);
   assert.match(readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8"), /touchlineCanonicalFormationSlots\(formation, geometryRegistry\)/);

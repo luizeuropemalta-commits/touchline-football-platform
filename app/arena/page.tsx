@@ -10,6 +10,8 @@ import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadli
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
+import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
+import TouchlineGameweekTeamSnapshot from "@/components/touchline/fantasy/TouchlineGameweekTeamSnapshot";
 
 // This read only controls the protected Card Engine affordance. It must not
 // leave the App Router's global loading boundary open if Supabase auth stalls.
@@ -68,11 +70,15 @@ export default async function ArenaPage({
       ARENA_SERVER_AUTH_READ_TIMEOUT_MS,
     )
     : null;
+  const locale = normalizeTouchLineLocale(firstValue(params.lang));
+  const fantasySnapshot = user && !isOwnerEmail(user.email)
+    ? await loadTouchlineFantasySnapshot(user)
+    : null;
 
   return (
-    <ArenaClient
+    <>{fantasySnapshot ? <TouchlineGameweekTeamSnapshot snapshot={fantasySnapshot} locale={locale} surface="arena" /> : null}<ArenaClient
       initialPanel={initialPanel}
-      initialLocale={normalizeTouchLineLocale(firstValue(params.lang))}
+      initialLocale={locale}
       initialContractPlayerId={firstValue(params.contractPlayer)}
       initialContractPlayerName={firstValue(params.contractName)}
       initialContractClubId={firstValue(params.contractClub)}
@@ -83,6 +89,6 @@ export default async function ArenaPage({
       initialQaVisualEditor={initialQaVisualEditor}
       canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
       initialTwoDimensionalFormationRegistry={initialTwoDimensionalFormationRegistry}
-    />
+    /></>
   );
 }

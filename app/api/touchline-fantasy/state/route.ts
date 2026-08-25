@@ -16,6 +16,8 @@ export async function GET() {
     ok: true,
     activeGameweek: snapshot.activeGameweek,
     userGameweek: snapshot.userGameweek,
+    selections: snapshot.selections,
+    lineupAlerts: snapshot.lineupAlerts,
     gameweekScore: snapshot.gameweekScore,
     seasonScore: snapshot.seasonScore,
     matchHistory: snapshot.matchHistory,

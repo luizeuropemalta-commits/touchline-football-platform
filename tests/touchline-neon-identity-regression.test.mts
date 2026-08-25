@@ -578,15 +578,15 @@ test("Arena coach uses compact typography and an isolated fullscreen spotlight",
   assert.match(arenaClient, /\.arena-stage:fullscreen \.arena-coach-spotlight[\s\S]*?z-index: 2147483646/);
 });
 
-test("ClubOwner headquarters centralizes squad decisions and Arena keeps substitution simple", () => {
+test("ClubOwner exposes the canonical Gameweek XI without restoring the retired local Fantasy bench", () => {
   const arenaClient = source("app/arena/ArenaClient.tsx");
   const clubOwner = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
+  const gameweekSnapshot = source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx");
 
-  assert.match(clubOwner, /className="club-owner-squad-pitch"/);
-  assert.match(clubOwner, /startingXiCards\.map/);
-  assert.match(clubOwner, /allBenchCards/);
-  assert.match(clubOwner, /benchPositionGroups\.map/);
-  assert.match(clubOwner, /Fazer substituição/);
+  assert.match(clubOwner, /TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}/);
+  assert.match(gameweekSnapshot, /snapshot!?\.selections\.find/);
+  assert.match(gameweekSnapshot, /Nenhum banco Fantasy|No Fantasy bench/);
+  assert.doesNotMatch(clubOwner, /<div className="club-owner-unified-bench"|Fazer substituição|Make substitution/);
   assert.match(arenaClient, /draggable=\{!isLocked\}/);
   assert.match(arenaClient, /text\/touchline-bench-id/);
   assert.match(arenaClient, /data-substitution-target-id=\{player\.id\}/);

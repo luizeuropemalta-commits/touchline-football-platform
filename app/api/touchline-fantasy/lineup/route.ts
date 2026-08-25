@@ -6,14 +6,27 @@ import { parseTouchlineFantasyLineupRequest } from "@/lib/touchlineFantasy/domai
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+const MAX_LINEUP_REQUEST_BYTES = 8_192;
 
 function sameOrigin(request: NextRequest) {
   const origin = request.headers.get("origin");
   if (!origin) return false;
   try {
-    return new URL(origin).host === request.nextUrl.host;
+    return new URL(origin).origin === request.nextUrl.origin;
   } catch {
     return false;
+  }
+}
+
+async function readBoundedJson(request: NextRequest) {
+  const declaredLength = Number(request.headers.get("content-length") ?? "0");
+  if (!Number.isFinite(declaredLength) || declaredLength > MAX_LINEUP_REQUEST_BYTES) return null;
+  const bodyText = await request.text().catch(() => "");
+  if (!bodyText || new TextEncoder().encode(bodyText).byteLength > MAX_LINEUP_REQUEST_BYTES) return null;
+  try {
+    return JSON.parse(bodyText) as unknown;
+  } catch {
+    return null;
   }
 }
 
@@ -29,13 +42,14 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   if (!user) return NextResponse.json({ ok: false, error: "AUTH_REQUIRED" }, { status: 401 });
-  const input = parseTouchlineFantasyLineupRequest(await request.json().catch(() => null));
+  const input = parseTouchlineFantasyLineupRequest(await readBoundedJson(request));
   if (!input) return NextResponse.json({ ok: false, error: "INVALID_LINEUP_REQUEST" }, { status: 400 });
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ ok: false, error: "SERVICE_UNAVAILABLE" }, { status: 503 });
   const { data, error } = await admin.rpc("touchline_fantasy_save_lineup", {
     p_user_id: user.id,
     p_gameweek_id: input.gameweekId,
+    p_selected_coach_id: input.selectedCoachId,
     p_formation_code: input.formationCode,
     p_selections: input.selections,
     p_action: input.action,

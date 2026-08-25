@@ -6,7 +6,6 @@ import {
   Handshake,
   MoreHorizontal,
   Shield,
-  Sparkles,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -84,7 +83,6 @@ const navigationIcons: Record<TouchlineGlobalNavigationItemKey, LucideIcon> = {
   live: Activity,
   market: Handshake,
   rankings: BarChart3,
-  fantasy: Sparkles,
   myClub: UserRound,
 };
 

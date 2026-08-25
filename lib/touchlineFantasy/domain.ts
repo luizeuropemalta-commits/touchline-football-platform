@@ -9,7 +9,7 @@ export const TOUCHLINE_FANTASY_SUBSCRIPTION_PRICE_MINOR = 2_990 as const;
 export const TOUCHLINE_FANTASY_SUBSCRIPTION_CURRENCY = "GBP" as const;
 export const TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 350_000_000 as const;
 export const TOUCHLINE_FANTASY_MAX_PLAYERS_PER_CLUB = 3 as const;
-export const TOUCHLINE_FANTASY_DEFAULT_LOCK_OFFSET_MINUTES = 90 as const;
+export const TOUCHLINE_FANTASY_DEFAULT_LOCK_OFFSET_MINUTES = 5 as const;
 
 export type TouchlineFantasyPublicManagerRank = Readonly<{
   rank: number;
@@ -222,6 +222,7 @@ export function assignTouchlineFantasyPlayerToFirstSlot(input: Readonly<{
 
 export type TouchlineFantasyLineupRequest = Readonly<{
   gameweekId: string;
+  selectedCoachId: string;
   formationCode: string;
   selections: readonly TouchlineFantasySelection[];
   action: "draft" | "confirm";
@@ -232,6 +233,7 @@ export function parseTouchlineFantasyLineupRequest(value: unknown): TouchlineFan
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
   if (!UUID_PATTERN.test(String(record.gameweekId ?? ""))) return null;
+  if (!/^\d{1,16}$/.test(String(record.selectedCoachId ?? ""))) return null;
   if (!/^\d(?:-\d){2,3}$/.test(String(record.formationCode ?? ""))) return null;
   if (record.action !== "draft" && record.action !== "confirm") return null;
   if (!IDEMPOTENCY_PATTERN.test(String(record.idempotencyKey ?? ""))) return null;
@@ -247,11 +249,36 @@ export function parseTouchlineFantasyLineupRequest(value: unknown): TouchlineFan
   }
   return {
     gameweekId: String(record.gameweekId).toLowerCase(),
+    selectedCoachId: String(record.selectedCoachId),
     formationCode: String(record.formationCode),
     selections,
     action: record.action,
     idempotencyKey: String(record.idempotencyKey),
   };
+}
+
+export type TouchlineFantasyBuilderStep = "coach" | "formation" | "players" | "review" | "locked";
+
+export function resolveTouchlineFantasyBuilderStep(input: Readonly<{
+  editable: boolean;
+  selectedCoachId: string | null;
+  formationCode: string | null;
+  selectedCount: number;
+  lineupValid: boolean;
+}>): TouchlineFantasyBuilderStep {
+  if (!input.editable) return "locked";
+  if (!input.selectedCoachId) return "coach";
+  if (!input.formationCode) return "formation";
+  if (input.selectedCount < 11 || !input.lineupValid) return "players";
+  return "review";
+}
+
+export function touchlineFantasyLandscapeIsBlocked(input: Readonly<{
+  width: number;
+  height: number;
+  coarsePointer: boolean;
+}>) {
+  return input.coarsePointer && input.width > input.height;
 }
 
 export function formatTouchlineFantasyMarketValue(valueEur: number, locale: string) {

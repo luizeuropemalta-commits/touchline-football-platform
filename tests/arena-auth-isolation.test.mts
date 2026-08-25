@@ -156,9 +156,10 @@ test("the proxy protects the Arena itself and its current operations without leg
   assert.doesNotMatch(proxySource, /"\/dashboard"|"\/players"|"\/agencies"|"\/deals"|"\/scouting"/);
 });
 
-test("the standalone Market Transfer cannot lose its active panel during URL synchronization", () => {
-  assert.match(marketPageSource, /standaloneMarket/);
-  assert.match(marketPageSource, /initialPanel="market"/);
+test("the canonical Market Transfer owns the Gameweek builder while legacy Arena panel state remains isolated", () => {
+  assert.match(marketPageSource, /loadTouchlineFantasySnapshot\(user\)/);
+  assert.match(marketPageSource, /<FantasyGameweekClient initialSnapshot=\{snapshot\}/);
+  assert.doesNotMatch(marketPageSource, /standaloneMarket|<ArenaClient/);
   assert.match(arenaClientSource, /const standaloneExperience = standaloneMarket \? "market" : standalonePanel \?\? null/);
   assert.match(arenaClientSource, /if \(standaloneExperience\) \{[\s\S]*setActiveArenaPanel\(standaloneExperience === "live" \? null : standaloneExperience\)/);
   assert.match(arenaClientSource, /\[initialPanel, initialQaVisualEditor, standaloneExperience\]/);
