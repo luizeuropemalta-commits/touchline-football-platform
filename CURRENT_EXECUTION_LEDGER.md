@@ -1,7 +1,7 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
 Status: CURRENT AUTHORITATIVE INDEX
-Last reviewed: 2026-08-14
+Last reviewed: 2026-08-26
 
 Read [CURRENT_STATE.md](CURRENT_STATE.md) first for the active SHA, gates, blockers, and next action.
 
@@ -27,3 +27,11 @@ After material work:
 - Release preflight passed governance, TypeScript, lint with zero errors/five pre-existing warnings and `1117/1117` release tests.
 - P0 status: GREEN / CLOSED. Resume the preserved Block 4A Security Diff Scan next.
 - Production: NOT TOUCHED.
+
+# 2026-08-26 — QA TouchLine Markt Gameweek XI redesign
+
+- Reused Fantasy Gameweek V1 and made `/market-transfer` its canonical coach → formation → 11 cards → review → confirm → Arena journey; `/fantasy` now redirects into the same system. No Fantasy bench or parallel source of truth was created.
+- Added server-owned T−5 lock, immutable confirmed snapshots, coach/XI carry-forward, twenty canonical coaches, exact-XI and club/budget validation, evidence-gated non-selection alerts, and foreign-key coverage in QA only. Transactional probes passed and were rolled back; `0` duplicate canonical keys remain.
+- Arena and Club Owner now read the same confirmed canonical snapshot. Arena cannot mutate a synced Gameweek XI through the retired Quick Substitution route. The CUSTOMER's honest `SETTLED` `0/11` state was preserved; no test XI was left behind.
+- Native Safari CUSTOMER passed desktop, iPad portrait and controlled mobile-identity landscape gating without logout, account switch, cookie/storage clearing or data mutation. Draft/state survived rotation; deadline punctuation remained deterministic and React hydration stayed clean after the Safari-specific formatting correction.
+- Product SHA `fcce81095527fa55aa308ad7e20261ef7c770004`; QA Preview `dpl_EP6T5jfemYpbjJsQydEftT1bQ8dE` is `READY` on the stable QA alias. Focused `15/15`, complete `1302/1302`, remote release `1274/1274`, TypeScript, ESLint (`0` errors), build, governance, release-readiness and diff check passed. Production was not touched.
