@@ -3567,7 +3567,10 @@ export default function ArenaClient({
     && introExperienceMode === "hidden"
     && hasEntryVideoFinished
   );
-  const [activeArenaPanel, setActiveArenaPanel] = useState<ArenaPanelKey | null>(standalonePanel === "bench" ? "bench" : initialPanel === "live" ? null : initialPanel);
+  const [activeArenaPanel, setActiveArenaPanel] = useState<ArenaPanelKey | null>(() => {
+    const requestedPanel = standalonePanel === "bench" ? "bench" : initialPanel === "live" ? null : initialPanel;
+    return initialFantasyLineup && !standalonePanel && requestedPanel === "bench" ? null : requestedPanel;
+  });
   const [isLiveDockOpen, setIsLiveDockOpen] = useState(standalonePanel === "live" || initialPanel === "live");
   const [selectedLiveFixtureId, setSelectedLiveFixtureId] = useState<string | null>(null);
   const [pendingLiveFixtureId, setPendingLiveFixtureId] = useState<string | null>(null);
@@ -3674,7 +3677,11 @@ export default function ArenaClient({
       // A route can provide a deliberate initial panel (the visual QA fixture
       // uses it for the in-Arena Quick Sub rail). A URL panel still wins, but
       // an absent query parameter must not immediately erase that initial UI.
-      const panel = parseTouchlineArenaPanel(new URLSearchParams(window.location.search).get("panel")) ?? initialPanel;
+      const requestedPanel = parseTouchlineArenaPanel(new URLSearchParams(window.location.search).get("panel")) ?? initialPanel;
+      const panel = initialFantasyLineup && requestedPanel === "bench" ? null : requestedPanel;
+      if (requestedPanel === "bench" && panel === null) {
+        window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, null));
+      }
       setActiveArenaPanel(panel === "live" ? null : panel);
       setIsEditorOpen(initialQaVisualEditor || panel === "formation");
       setIsArenaNavOpen(false);
@@ -3684,7 +3691,7 @@ export default function ArenaClient({
     syncArenaPanelFromUrl();
     window.addEventListener("popstate", syncArenaPanelFromUrl);
     return () => window.removeEventListener("popstate", syncArenaPanelFromUrl);
-  }, [initialPanel, initialQaVisualEditor, standaloneExperience]);
+  }, [initialFantasyLineup, initialPanel, initialQaVisualEditor, standaloneExperience]);
   const initialContractHandledRef = useRef(false);
   const [selectedFormationKey, setSelectedFormationKey] = useState<ArenaFormationKey>(() => (
     initialFantasyLineup ? parseArenaFormationKey(initialFantasyLineup.formationCode) : DEFAULT_ARENA_FORMATION_KEY
@@ -3893,14 +3900,6 @@ export default function ArenaClient({
   const arenaInteractivePlayers = hasSyncedFantasyLineup
     ? fantasyArenaPlayers!
     : quickSubstitutionInteractivePlayers;
-  useEffect(() => {
-    if (!hasSyncedFantasyLineup || activeArenaPanel !== "bench" || standalonePanel) return;
-    window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, null));
-    setActiveArenaPanel(null);
-    setReplacementTargetId(null);
-    setSelectedBenchId("");
-    setIsQuickSubstitutionConfirmationOpen(false);
-  }, [activeArenaPanel, hasSyncedFantasyLineup, standalonePanel]);
   const standaloneQuickSubstitutionSessionState = standaloneQuickSubstitutionReadiness.state === "ready"
       ? !quickSubstitutionSessionSource
       ? "identity-required"
