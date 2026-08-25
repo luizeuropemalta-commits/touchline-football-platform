@@ -209,7 +209,7 @@ test("Live warms only the current verified 22 player card products", () => {
   assert.doesNotMatch(arenaClientSource, /coaches\.querySelectorAll\("\[data-live-coach-card\]"\)/);
   assert.match(
     arenaClientSource,
-    /const shouldRenderArenaOwnerLayer = \(shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)\s*&& standaloneExperience !== "live"\s*&& !isCoachSelectionRequired/,
+    /const shouldRenderArenaOwnerLayer = \(hasSyncedFantasyLineup \|\| shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)\s*&& standaloneExperience !== "live"\s*&& !isCoachSelectionRequired/,
   );
   assert.match(arenaClientSource, /standalonePanel !== "live" \? \([\s\S]*?<div className="arena-video-stack"/);
   assert.match(arenaClientSource, /optimizeForLiveCompact/);

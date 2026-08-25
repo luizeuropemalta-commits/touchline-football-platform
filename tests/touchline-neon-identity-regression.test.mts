@@ -205,7 +205,7 @@ test("Arena places the ClubOwner profile first in both menus", () => {
   assert.ok(sectionMenuStart >= 0);
   assert.match(arenaClient.slice(quickMenuStart, quickMenuStart + 720), /touchlineClubOwnerProfileHref\(siteLanguage\)[\s\S]*?ClubOwner/);
   assert.match(arenaClient.slice(sectionMenuStart, sectionMenuStart + 420), /touchlineClubOwnerProfileHref\(siteLanguage\)[\s\S]*?t\("profile"\)/);
-  assert.match(arenaClient.slice(quickMenuStart, quickMenuStart + 900), /ClubOwner[\s\S]*?allClubsHubHref[\s\S]*?quickSubstitution/);
+  assert.match(arenaClient.slice(quickMenuStart, quickMenuStart + 1200), /ClubOwner[\s\S]*?allClubsHubHref[\s\S]*?quickSubstitution/);
   assert.match(arenaClient.slice(sectionMenuStart, sectionMenuStart + 900), /t\("profile"\)[\s\S]*?allClubsHubHref[\s\S]*?t\("clubHub"\)/);
 });
 

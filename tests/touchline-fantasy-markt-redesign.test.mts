@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { buildTouchlineFantasyArenaLineup } from "../lib/touchlineFantasy/arena-lineup.ts";
 
 async function source(path: string) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -41,18 +42,103 @@ test("the guided Markt presents coach, formation, 11 upright cards, review and A
   assert.match(client, /\/arena\?lang=/);
 });
 
-test("Club Owner and Arena render the same canonical Gameweek snapshot without a Fantasy bench", async () => {
-  const [shared, arena, owner] = await Promise.all([
+test("Club Owner and Arena consume the same canonical Gameweek snapshot without a Fantasy bench", async () => {
+  const [shared, arena, arenaClient, arenaAdapter, owner] = await Promise.all([
     source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx"),
     source("app/arena/page.tsx"),
+    source("app/arena/ArenaClient.tsx"),
+    source("lib/touchlineFantasy/arena-lineup.ts"),
     source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
   ]);
   assert.match(shared, /snapshot!?\.selections\.find/);
   assert.match(shared, /data-canonical-player-id/);
   assert.match(shared, /No Fantasy bench|Nenhum banco Fantasy/);
-  assert.match(arena, /<TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}[\s\S]*?surface="arena"/);
+  assert.match(arena, /buildTouchlineFantasyArenaLineup\(fantasySnapshot\)/);
+  assert.match(arena, /initialFantasyLineup=\{fantasyArenaLineup\}/);
+  assert.doesNotMatch(arena, /TouchlineGameweekTeamSnapshot/);
+  assert.match(arenaAdapter, /userGameweek\.state === "DRAFT"/);
+  assert.match(arenaAdapter, /snapshot\.selections\.length !== 11/);
+  assert.match(arenaAdapter, /seen\.size !== 11/);
+  assert.match(arenaAdapter, /canonicalPlayerId: playerId/);
+  assert.match(arenaAdapter, /role: slot\.role/);
+  assert.match(arenaClient, /data-fantasy-gameweek-xi=\{hasSyncedFantasyLineup \? "true"/);
+  assert.match(arenaClient, /data-canonical-player-id=\{hasSyncedFantasyLineup/);
+  assert.match(arenaClient, /GAMEWEEK XI SYNCED/);
+  assert.match(arenaClient, /arenaDisplayFormationKey/);
+  assert.match(arenaClient, /return initialFantasyLineup\.players\.map/);
+  assert.match(arenaClient, /const savedLayout = hasSyncedFantasyLineup[\s\S]*?\? null/);
+  assert.match(arenaClient, /const isQuickSubstitutionOpen = activeArenaPanel === "bench" && !hasSyncedFantasyLineup/);
+  assert.match(arenaClient, /!hasSyncedFantasyLineup \? <a[\s\S]*?touchlineArenaPanelHref\("bench"/);
   assert.match(owner, /<TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}[\s\S]*?surface="club-owner"/);
   assert.doesNotMatch(owner, />Fazer substituição<|>Make substitution<|<div className="club-owner-unified-bench"/);
+});
+
+test("the Arena adapter accepts only one confirmed canonical 11-player snapshot", () => {
+  const playerIds = Array.from({ length: 11 }, (_, index) => `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`);
+  const slots = playerIds.map((_, index) => ({
+    id: `SLOT-${index + 1}`,
+    x: 10 + (index * 7),
+    y: 20 + (index * 5),
+    role: index === 0 ? "goalkeeper" : index < 5 ? "defender" : index < 8 ? "midfielder" : "forward",
+    roleIndex: index,
+    line: "test",
+    side: "centre",
+    priority: index + 1,
+    allowedPositions: index === 0 ? ["goalkeeper"] : ["midfield"],
+  }));
+  const snapshot = {
+    activeGameweek: { number: 1 },
+    userGameweek: { formationCode: "4-3-3", state: "CONFIRMED", selectedCoachId: "307" },
+    selections: playerIds.map((playerId, index) => ({ playerId, slotId: slots[index].id })),
+    catalogue: playerIds.map((canonicalPlayerId, index) => ({
+      id: canonicalPlayerId,
+      canonicalPlayerId,
+      name: `Player ${index + 1}`,
+      shortName: `P${index + 1}`,
+      role: slots[index].role,
+      position: slots[index].role,
+      clubName: `Club ${index % 3}`,
+      shirtNumber: index + 1,
+      countryCode3: "ENG",
+      marketValue: "€1m",
+      touchlinePoints: 0,
+      seasonTotalRating: 7 + (index / 100),
+    })),
+    formationRegistry: {
+      "4-3-3": { schemaVersion: 1, formationCode: "4-3-3", geometryVersion: 1, source: "code-default", publishedAt: null, slots },
+    },
+  } as const;
+
+  const result = buildTouchlineFantasyArenaLineup(snapshot);
+  assert.equal(result?.players.length, 11);
+  assert.deepEqual(result?.players.map((player) => player.id), playerIds);
+  assert.equal(result?.formationCode, "4-3-3");
+  assert.equal(result?.coachProviderId, "307");
+  assert.equal(result?.players[0].card?.canonicalPlayerId, playerIds[0]);
+  assert.equal(result?.players[10].card?.totalRating, 7.1);
+
+  const threeFourTwoOneSlots = slots.map((slot, index) => ({
+    ...slot,
+    id: `3421-${index + 1}`,
+    x: index === 0 ? 8 : index < 4 ? 29 : index < 10 ? (index < 8 ? 50 : 71) : 92,
+    role: index === 0 ? "goalkeeper" : index < 4 ? "defender" : index < 10 ? "midfielder" : "forward",
+  }));
+  const threeFourTwoOne = buildTouchlineFantasyArenaLineup({
+    ...snapshot,
+    userGameweek: { ...snapshot.userGameweek, formationCode: "3-4-2-1" },
+    selections: playerIds.map((playerId, index) => ({ playerId, slotId: threeFourTwoOneSlots[index].id })),
+    formationRegistry: {
+      "3-4-2-1": { schemaVersion: 1, formationCode: "3-4-2-1", geometryVersion: 1, source: "code-default", publishedAt: null, slots: threeFourTwoOneSlots },
+    },
+  });
+  assert.equal(threeFourTwoOne?.formationCode, "3-4-2-1");
+  assert.equal(threeFourTwoOne?.players.filter((player) => player.role === "midfielder").length, 6);
+  assert.deepEqual(threeFourTwoOne?.players.map(({ x, y }) => ({ x, y })), threeFourTwoOneSlots.map(({ x, y }) => ({ x, y })));
+
+  assert.equal(buildTouchlineFantasyArenaLineup({ ...snapshot, userGameweek: { ...snapshot.userGameweek, state: "DRAFT" } }), null);
+  assert.equal(buildTouchlineFantasyArenaLineup({ ...snapshot, selections: snapshot.selections.slice(0, 10) }), null);
+  assert.equal(buildTouchlineFantasyArenaLineup({ ...snapshot, selections: snapshot.selections.map((selection, index) => index === 10 ? { ...selection, playerId: playerIds[0] } : selection) }), null);
+  assert.equal(buildTouchlineFantasyArenaLineup({ ...snapshot, selections: snapshot.selections.map((selection, index) => index === 10 ? { ...selection, playerId: "provider-123" } : selection) }), null);
 });
 
 test("the forward migration fixes T-5, coach snapshot immutability and official-lineup alert state", async () => {

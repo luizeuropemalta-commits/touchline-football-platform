@@ -116,7 +116,7 @@ test("the human QA editor has a separate, viewport-specific key for the camera d
 
 test("Arena accepts a user-approved QA layout only in the specific QA editor pathway", () => {
   assert.match(arenaSource, /resolveArena433VideoSlots\([\s\S]*?arenaFieldPlayersForRendering[\s\S]*?arenaVideoViewport/);
-  assert.match(arenaSource, /const qaManualCameraLayout = isStableQaArenaHost && QA_EDITABLE_FORMATION_KEYS\.has\(selectedFormationKey\)/);
+  assert.match(arenaSource, /const qaManualCameraLayout = !hasSyncedFantasyLineup && isStableQaArenaHost && QA_EDITABLE_FORMATION_KEYS\.has\(arenaDisplayFormationKey\)/);
   assert.match(arenaSource, /const fieldPlayerPositions = new Map\(lockedCameraPositions \?\? canonical433VideoPositions \?\? projectedFieldPlayerPositions\)/);
   assert.match(arenaSource, /if \(cameraEditPositions && \(!canonical433VideoPositions \|\| isQaVisualEditor\)\)/);
   assert.match(arenaSource, /Save Arena QA standard/);

@@ -33,6 +33,7 @@ import type {
   TouchlinePublicFantasyFixtureFeed,
   TouchlinePublicFantasyLineupMember,
 } from "@/lib/football-data/public-fantasy-fixture";
+import type { TouchlineFantasyArenaLineup } from "@/lib/touchlineFantasy/arena-lineup";
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
@@ -2382,7 +2383,7 @@ function trainingCenterPlayerSlots(
 }
 
 function parseArenaFormationKey(value?: string | null): ArenaFormationKey {
-  return FINALIZED_ARENA_FORMATION_KEYS.has(value as ArenaFormationKey)
+  return ARENA_FORMATIONS.some((formation) => formation.key === value)
     ? (value as ArenaFormationKey)
     : DEFAULT_ARENA_FORMATION_KEY;
 }
@@ -3437,6 +3438,8 @@ type ArenaClientProps = {
   canEditCardEngine?: boolean;
   /** Published 2D geometry for Market/Club Construction only; the Arena field keeps its independent camera calibration. */
   initialTwoDimensionalFormationRegistry?: TouchlineFormationGeometryRegistry;
+  /** Confirmed canonical Gameweek XI rendered through the existing Arena card layer. */
+  initialFantasyLineup?: TouchlineFantasyArenaLineup | null;
 };
 
 type ArenaDragState = {
@@ -3499,6 +3502,7 @@ export default function ArenaClient({
   initialQaVisualEditor = false,
   canEditCardEngine = false,
   initialTwoDimensionalFormationRegistry,
+  initialFantasyLineup = null,
 }: ArenaClientProps) {
   const standaloneExperience = standaloneMarket ? "market" : standalonePanel ?? null;
   const initialBuilderClubKey = TEAM_BUILDER_CLUBS.some((club) => club.teamId === initialContractClubId)
@@ -3682,7 +3686,9 @@ export default function ArenaClient({
     return () => window.removeEventListener("popstate", syncArenaPanelFromUrl);
   }, [initialPanel, initialQaVisualEditor, standaloneExperience]);
   const initialContractHandledRef = useRef(false);
-  const [selectedFormationKey, setSelectedFormationKey] = useState<ArenaFormationKey>(DEFAULT_ARENA_FORMATION_KEY);
+  const [selectedFormationKey, setSelectedFormationKey] = useState<ArenaFormationKey>(() => (
+    initialFantasyLineup ? parseArenaFormationKey(initialFantasyLineup.formationCode) : DEFAULT_ARENA_FORMATION_KEY
+  ));
   const [rumourSignals, setRumourSignals] = useState<TouchLineArenaRumourSignal[]>([]);
   const [rumourStatus, setRumourStatus] = useState("Open New Rumours");
   const [rumourError, setRumourError] = useState<string | null>(null);
@@ -3709,7 +3715,18 @@ export default function ArenaClient({
     () => orderTouchlineBenchByPosition(benchPlayers.filter((bench) => !matchdayBenchIds.has(bench.id))),
     [benchPlayers, matchdayBenchIds],
   );
-  const isQuickSubstitutionOpen = activeArenaPanel === "bench";
+  const arenaFantasyFormationKey = initialFantasyLineup
+    ? parseArenaFormationKey(initialFantasyLineup.formationCode)
+    : null;
+  const fantasyArenaPlayers = useMemo(() => {
+    if (!initialFantasyLineup || !arenaFantasyFormationKey || initialFantasyLineup.players.length !== 11) return null;
+    return initialFantasyLineup.players.map((player) => ({
+      ...player,
+      card: normalizeArenaPlayerCard(player),
+    } as ArenaPlayer));
+  }, [arenaFantasyFormationKey, initialFantasyLineup]);
+  const hasSyncedFantasyLineup = fantasyArenaPlayers?.length === 11;
+  const isQuickSubstitutionOpen = activeArenaPanel === "bench" && !hasSyncedFantasyLineup;
   useEffect(() => {
     if (!isQuickSubstitutionConfirmationOpen) return;
     function handleQuickSubConfirmationKeyDown(event: KeyboardEvent) {
@@ -3870,6 +3887,20 @@ export default function ArenaClient({
   const quickSubstitutionInteractiveBench = isQuickSubstitutionSessionActive
     ? quickSubstitutionAvailableBenchPlayers!
     : matchdayBenchPlayers;
+  const arenaDisplayFormationKey = hasSyncedFantasyLineup
+    ? arenaFantasyFormationKey!
+    : selectedFormationKey;
+  const arenaInteractivePlayers = hasSyncedFantasyLineup
+    ? fantasyArenaPlayers!
+    : quickSubstitutionInteractivePlayers;
+  useEffect(() => {
+    if (!hasSyncedFantasyLineup || activeArenaPanel !== "bench" || standalonePanel) return;
+    window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, null));
+    setActiveArenaPanel(null);
+    setReplacementTargetId(null);
+    setSelectedBenchId("");
+    setIsQuickSubstitutionConfirmationOpen(false);
+  }, [activeArenaPanel, hasSyncedFantasyLineup, standalonePanel]);
   const standaloneQuickSubstitutionSessionState = standaloneQuickSubstitutionReadiness.state === "ready"
       ? !quickSubstitutionSessionSource
       ? "identity-required"
@@ -3877,13 +3908,13 @@ export default function ArenaClient({
         ? "ready"
         : "session-loading"
     : standaloneQuickSubstitutionReadiness.state;
-  const selectedPlayer = quickSubstitutionInteractivePlayers.find((player) => player.id === selectedPlayerId) ?? quickSubstitutionInteractivePlayers[0] ?? null;
-  const spotlightPlayer = quickSubstitutionInteractivePlayers.find((player) => player.id === spotlightPlayerId) ?? null;
+  const selectedPlayer = arenaInteractivePlayers.find((player) => player.id === selectedPlayerId) ?? arenaInteractivePlayers[0] ?? null;
+  const spotlightPlayer = arenaInteractivePlayers.find((player) => player.id === spotlightPlayerId) ?? null;
   const selectedBench = selectedBenchId
     ? quickSubstitutionInteractiveBench.find((bench) => bench.id === selectedBenchId) ?? null
     : null;
   const replacementTarget = replacementTargetId
-    ? quickSubstitutionInteractivePlayers.find((player) => player.id === replacementTargetId) ?? null
+    ? arenaInteractivePlayers.find((player) => player.id === replacementTargetId) ?? null
     : null;
   const clubOwnerRoster = arenaClubOwnerRoster(players, benchPlayers);
   const ownedSquadCount = clubOwnerRoster.length;
@@ -3932,7 +3963,7 @@ export default function ArenaClient({
   // silently inherit the builder's initial Manchester City selection.
   const allClubsHubHref = touchlineClubHubHref(siteLanguage);
   const selectedBuilderClubHubHref = clubHubHref(selectedBuilderClub, siteLanguage);
-  const selectedFormation = arenaFormationDefinition(selectedFormationKey);
+  const selectedFormation = arenaFormationDefinition(arenaDisplayFormationKey);
   const spotlightPlayerCard = spotlightPlayer
     ? arenaCardToPlayer(spotlightPlayer, isDemoLineup ? touchlineDemoTierForPlayer(spotlightPlayer.id, spotlightPlayer.name) : undefined)
     : null;
@@ -4055,6 +4086,7 @@ export default function ArenaClient({
     && hasLoadedOwnerCoach
     && arenaPersistencePrincipal?.kind !== "demo"
     && standaloneExperience === null
+    && !hasSyncedFantasyLineup
     && (!activeArenaCoachIdentity?.coach || ownedSquadCount < 11),
   );
   const coachFirstLoginHref = touchLineAuthEntryHref(
@@ -4121,7 +4153,7 @@ export default function ArenaClient({
   // the normal Arena as well as during Quick Sub. `shouldRenderPlayers` stays
   // false while account/roster state is being reconciled, so no stale cards can
   // flash before the saved formation is restored.
-  const shouldRenderArenaOwnerLayer = (shouldRenderPlayers || isQuickSubstitutionSessionActive)
+  const shouldRenderArenaOwnerLayer = (hasSyncedFantasyLineup || shouldRenderPlayers || isQuickSubstitutionSessionActive)
     && standaloneExperience !== "live"
     && !isCoachSelectionRequired;
   const selectedLiveHomeCoachSlot = useMemo(
@@ -4389,9 +4421,7 @@ export default function ArenaClient({
     cardPrice: siteLanguage === "pt-BR" ? "Preço do card" : "Card price",
     currentClub: siteLanguage === "pt-BR" ? "Clube atual" : "Current Club",
   }), [siteLanguage, t]);
-  const arenaFieldPlayersForRendering = isQuickSubstitutionSessionActive
-    ? quickSubstitutionInteractivePlayers
-    : players;
+  const arenaFieldPlayersForRendering = arenaInteractivePlayers;
   const arenaFieldCardSignature = useMemo(() => arenaFieldPlayersForRendering
     .filter((player) => Boolean(player.card))
     .map((player) => {
@@ -6242,7 +6272,7 @@ export default function ArenaClient({
 
   function handleFieldPlayerClick(player: ArenaPlayer) {
     setSelectedPlayerId(player.id);
-    if (activeArenaPanel === "bench") {
+    if (isQuickSubstitutionOpen) {
       setReplacementTargetId(player.id);
       setPendingContractReleaseTargetId(null);
       if (selectedBench) {
@@ -6400,7 +6430,7 @@ export default function ArenaClient({
   function handleFieldPlayerPointerDown(event: ReactPointerEvent<HTMLDivElement>, player: ArenaPlayer) {
     if ((event.target as HTMLElement).closest("a,button")) return;
     setSelectedPlayerId(player.id);
-    if (activeArenaPanel === "bench") {
+    if (isQuickSubstitutionOpen) {
       setReplacementTargetId(player.id);
       setSaveStatus(selectedBench
         ? `${selectedBench.shortName} · ${t("selectedForThisGame")} · ${player.shortName}`
@@ -6438,7 +6468,7 @@ export default function ArenaClient({
   function handleFieldPlayerKeyDown(event: ReactKeyboardEvent<HTMLDivElement>, player: ArenaPlayer) {
     if (event.target !== event.currentTarget) return;
 
-    if (isQaVisualEditor && isEditorOpen) {
+    if (!hasSyncedFantasyLineup && isQaVisualEditor && isEditorOpen) {
       const keyboardMove = {
         ArrowUp: [0, -1],
         ArrowDown: [0, 1],
@@ -7025,6 +7055,12 @@ export default function ArenaClient({
     setIsQuickSubRailClosing(false);
     window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, panel));
     setIsQuickSubstitutionConfirmationOpen(false);
+    if (panel === "bench" && hasSyncedFantasyLineup) {
+      setActiveArenaPanel(null);
+      setReplacementTargetId(null);
+      setSelectedBenchId("");
+      return;
+    }
     if (panel === "live") {
       setActiveArenaPanel(null);
       setIsEditorOpen(false);
@@ -7548,7 +7584,9 @@ export default function ArenaClient({
     setSaveStatus(marketUi.replacementReleased(incomingPlayer.shortName, releasedPlayer.shortName));
   }
 
-  const canonical433VideoPositions = selectedFormationKey === "4-3-3"
+  const canonical433VideoPositions = (hasSyncedFantasyLineup
+    ? initialFantasyLineup?.formationCode === "4-3-3"
+    : arenaDisplayFormationKey === "4-3-3")
     ? resolveArena433VideoSlots(
       arenaFieldPlayersForRendering,
       arenaLoopCameraProfile(loopCameraIndex).id,
@@ -7556,25 +7594,31 @@ export default function ArenaClient({
     )
     : null;
   const projectedFieldPlayerPositions = projectArenaPlayersForLoopCamera(arenaFieldPlayersForRendering, loopCameraIndex);
-  const savedLayout = readLockedFormationLayout(selectedFormationKey, arenaPersistencePrincipal);
+  const savedLayout = hasSyncedFantasyLineup
+    ? null
+    : readLockedFormationLayout(arenaDisplayFormationKey, arenaPersistencePrincipal);
   // A user-approved QA layout is intentionally more specific than the
   // canonical fallback: it is only read on the exact QA host and is keyed by
   // this video pass + viewport. Production and other Arena surfaces cannot
   // observe or write it.
-  const qaManualCameraLayout = isStableQaArenaHost && QA_EDITABLE_FORMATION_KEYS.has(selectedFormationKey)
+  const qaManualCameraLayout = !hasSyncedFantasyLineup && isStableQaArenaHost && QA_EDITABLE_FORMATION_KEYS.has(arenaDisplayFormationKey)
     ? savedLayout?.cameras?.[currentQaManualCameraId]
     : null;
   const lockedCameraLayout = qaManualCameraLayout ?? savedLayout?.cameras?.[currentCameraId];
   const lockedCameraPositions = roleLayoutForPlayers(arenaFieldPlayersForRendering, lockedCameraLayout, loopCameraIndex, isQaVisualEditor);
-  const cameraEditPositions = cameraEditSlots[currentCameraEditKey];
+  const cameraEditPositions = hasSyncedFantasyLineup
+    ? undefined
+    : cameraEditSlots[currentCameraEditKey];
   // 4-3-3 remains a protected match presentation everywhere except for the
   // deliberate per-camera/per-viewport QA standard saved by its owner.
   const fieldPlayerPositions = new Map(lockedCameraPositions ?? canonical433VideoPositions ?? projectedFieldPlayerPositions);
-  const trainingCenterSlots = isQuickSubstitutionSessionActive && quickSubstitutionSessionSource
+  const trainingCenterSlots = hasSyncedFantasyLineup
+    ? new Map(arenaFieldPlayersForRendering.map((player) => [player.id, { x: player.x, y: player.y }]))
+    : isQuickSubstitutionSessionActive && quickSubstitutionSessionSource
     ? new Map(quickSubstitutionSessionSource.pitchSlotByPositionSlotId)
     : trainingCenterPlayerSlots(
         arenaFieldPlayersForRendering,
-        selectedFormationKey,
+        arenaDisplayFormationKey,
         initialTwoDimensionalFormationRegistry,
       );
   if (cameraEditPositions && (!canonical433VideoPositions || isQaVisualEditor)) {
@@ -7849,11 +7893,26 @@ export default function ArenaClient({
           onClick={() => setSelectedPlayerId(null)}
         />
 
+        {hasSyncedFantasyLineup && initialFantasyLineup ? (
+          <div
+            className="arena-fantasy-sync-badge"
+            role="status"
+            data-gameweek-number={initialFantasyLineup.gameweekNumber}
+            data-formation={initialFantasyLineup.formationCode}
+          >
+            <strong>{siteLanguage === "pt-BR" ? "XI DA RODADA SINCRONIZADO" : "GAMEWEEK XI SYNCED"}</strong>
+            <span>GW {initialFantasyLineup.gameweekNumber} · {initialFantasyLineup.formationCode} · 11/11</span>
+          </div>
+        ) : null}
+
         {shouldRenderArenaOwnerLayer ? (
           <section
             className="field-player-layer is-entry-ready"
             data-card-assets-ready={arenaFieldCardsAreReady ? "true" : "false"}
-            aria-label={siteLanguage === "pt-BR" ? "Jogadores de linha editáveis" : "Editable field players"}
+            data-fantasy-gameweek-xi={hasSyncedFantasyLineup ? "true" : undefined}
+            aria-label={hasSyncedFantasyLineup
+              ? (siteLanguage === "pt-BR" ? "Onze canônico da rodada na Arena" : "Canonical Gameweek XI in Arena")
+              : (siteLanguage === "pt-BR" ? "Jogadores de linha editáveis" : "Editable field players")}
             aria-hidden={false}
           >
             {arenaFieldPlayersForRendering.map((player) => {
@@ -7867,10 +7926,11 @@ export default function ArenaClient({
                   key={player.id}
                   role="button"
                   tabIndex={0}
-                  className={`arena-field-player ${selectedPlayerId === player.id ? "is-selected" : ""}${isQuickSubstitutionOpen && selectedBench && canBenchReplaceTarget(selectedBench, player) && !isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, player) ? " is-substitution-eligible" : ""}${isQuickSubstitutionOpen && replacementTargetId === player.id ? " is-substitution-target" : ""}`}
+                  className={`arena-field-player ${selectedPlayerId === player.id ? "is-selected" : ""}${!hasSyncedFantasyLineup && isQuickSubstitutionOpen && selectedBench && canBenchReplaceTarget(selectedBench, player) && !isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, player) ? " is-substitution-eligible" : ""}${!hasSyncedFantasyLineup && isQuickSubstitutionOpen && replacementTargetId === player.id ? " is-substitution-target" : ""}`}
                   data-camera={arenaLoopCameraProfile(loopCameraIndex).id}
-                  data-editing={isEditorOpen}
-                  data-substitution-target-id={isQuickSubstitutionOpen ? player.id : undefined}
+                  data-editing={!hasSyncedFantasyLineup && isEditorOpen}
+                  data-canonical-player-id={hasSyncedFantasyLineup ? player.card?.canonicalPlayerId ?? player.id : undefined}
+                  data-substitution-target-id={!hasSyncedFantasyLineup && isQuickSubstitutionOpen ? player.id : undefined}
                   style={{
                     left: `${fieldPosition.x}%`,
                     top: `${fieldPosition.y}%`,
@@ -7880,29 +7940,29 @@ export default function ArenaClient({
                     height: `${baseHeight}dvh`,
                     zIndex: selectedPlayerId === player.id ? 1200 : Math.round(fieldPosition.y * 10),
                   }}
-                  onPointerDown={(event) => handleFieldPlayerPointerDown(event, player)}
-                  onPointerMove={(event) => handleFieldPlayerPointerMove(event, player)}
-                  onPointerUp={handleFieldPlayerPointerUp}
-                  onPointerCancel={handleFieldPlayerPointerUp}
+                  onPointerDown={hasSyncedFantasyLineup ? undefined : (event) => handleFieldPlayerPointerDown(event, player)}
+                  onPointerMove={hasSyncedFantasyLineup ? undefined : (event) => handleFieldPlayerPointerMove(event, player)}
+                  onPointerUp={hasSyncedFantasyLineup ? undefined : handleFieldPlayerPointerUp}
+                  onPointerCancel={hasSyncedFantasyLineup ? undefined : handleFieldPlayerPointerUp}
                   onDragOver={(event) => {
-                    if (!isQuickSubstitutionOpen || !draggingBenchId) return;
+                    if (hasSyncedFantasyLineup || !isQuickSubstitutionOpen || !draggingBenchId) return;
                     event.preventDefault();
                     event.dataTransfer.dropEffect = "move";
                   }}
                   onDrop={(event) => {
-                    if (!isQuickSubstitutionOpen) return;
+                    if (hasSyncedFantasyLineup || !isQuickSubstitutionOpen) return;
                     event.preventDefault();
                     const benchId = event.dataTransfer.getData("text/touchline-bench-id") || draggingBenchId;
                     if (benchId) handleBenchDrop(player, benchId);
                   }}
                   onClickCapture={(event) => {
-                    if (!isQuickSubstitutionOpen) return;
+                    if (hasSyncedFantasyLineup || !isQuickSubstitutionOpen) return;
                     event.preventDefault();
                     event.stopPropagation();
                     handleFieldPlayerClick(player);
                   }}
                   onClick={(event) => {
-                    if (isQuickSubstitutionOpen) return;
+                    if (!hasSyncedFantasyLineup && isQuickSubstitutionOpen) return;
                     if ((event.target as HTMLElement).closest("a,button")) return;
                     handleFieldPlayerClick(player);
                   }}
@@ -7979,15 +8039,15 @@ export default function ArenaClient({
                 <a href={allClubsHubHref}>
                   {t("clubHub")}
                 </a>
-                <a
-                  href={touchlineArenaPanelHref("bench", siteLanguage)}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    openArenaPanel("bench");
-                  }}
-                >
-                  {t("quickSubstitution")}
-                </a>
+                {!hasSyncedFantasyLineup ? <a
+                    href={touchlineArenaPanelHref("bench", siteLanguage)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openArenaPanel("bench");
+                    }}
+                  >
+                    {t("quickSubstitution")}
+                  </a> : null}
                 {hasEntryVideoFinished ? (
                   <button type="button" onClick={replayEntryVideo}>
                     {siteLanguage === "pt-BR" ? "Ver intro" : "Watch intro"}
@@ -10667,7 +10727,8 @@ export default function ArenaClient({
         .arena-stage[data-entry-state="intro"] .club-symbol-carousel,
         .arena-stage[data-entry-state="intro"] .arena-action-layer,
         .arena-stage[data-entry-state="intro"] .arena-player-spotlight,
-        .arena-stage[data-entry-state="intro"] .arena-coach-spotlight {
+        .arena-stage[data-entry-state="intro"] .arena-coach-spotlight,
+        .arena-stage[data-entry-state="intro"] .arena-fantasy-sync-badge {
           opacity: 0;
           pointer-events: none;
         }
@@ -16364,6 +16425,43 @@ export default function ArenaClient({
           inset: 0;
           z-index: 12;
           pointer-events: none;
+        }
+
+        .arena-fantasy-sync-badge {
+          position: absolute;
+          z-index: 218;
+          top: max(12px, env(safe-area-inset-top));
+          left: 50%;
+          display: grid;
+          gap: 2px;
+          min-width: 190px;
+          padding: 9px 15px;
+          border: 1px solid rgba(151,255,34,.55);
+          border-radius: 999px;
+          color: #f5ffe9;
+          background: rgba(2,14,9,.82);
+          box-shadow: 0 12px 36px rgba(0,0,0,.4), inset 0 0 22px rgba(151,255,34,.07);
+          backdrop-filter: blur(14px);
+          transform: translateX(-50%);
+          text-align: center;
+          pointer-events: none;
+        }
+
+        .arena-fantasy-sync-badge strong {
+          color: #97ff22;
+          font-size: 9px;
+          font-weight: 1000;
+          letter-spacing: .11em;
+        }
+
+        .arena-fantasy-sync-badge span {
+          font-size: 10px;
+          font-weight: 850;
+        }
+
+        .field-player-layer[data-fantasy-gameweek-xi="true"] .arena-field-player {
+          touch-action: manipulation;
+          cursor: zoom-in;
         }
 
         .field-player-layer.is-entry-hidden,

@@ -37,7 +37,7 @@ test("Quick Substitution replaces the score rail with nine cards and a central c
 test("the authoritative eleven remain mounted in the normal Arena and during Quick Sub", () => {
   assert.match(
     arenaSource,
-    /const shouldRenderArenaOwnerLayer = \(shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)\s*&& standaloneExperience !== "live"\s*&& !isCoachSelectionRequired/,
+    /const shouldRenderArenaOwnerLayer = \(hasSyncedFantasyLineup \|\| shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)\s*&& standaloneExperience !== "live"\s*&& !isCoachSelectionRequired/,
   );
   const ownerLayerGuard = arenaSource.slice(
     arenaSource.indexOf("const shouldRenderArenaOwnerLayer"),
@@ -46,7 +46,7 @@ test("the authoritative eleven remain mounted in the normal Arena and during Qui
   assert.doesNotMatch(ownerLayerGuard, /isArenaMatchdayViewActive/);
   assert.match(
     arenaSource,
-    /const arenaFieldPlayersForRendering = isQuickSubstitutionSessionActive[\s\S]*?\? quickSubstitutionInteractivePlayers[\s\S]*?: players/,
+    /const arenaInteractivePlayers = hasSyncedFantasyLineup[\s\S]*?\? fantasyArenaPlayers![\s\S]*?: quickSubstitutionInteractivePlayers[\s\S]*?const arenaFieldPlayersForRendering = arenaInteractivePlayers/,
   );
   assert.match(
     arenaSource,
@@ -61,7 +61,7 @@ test("the authoritative eleven remain mounted in the normal Arena and during Qui
   assert.match(arenaSource, /roleLayoutForPlayers\(arenaFieldPlayersForRendering,/);
   assert.match(
     arenaSource,
-    /trainingCenterPlayerSlots\(\s*arenaFieldPlayersForRendering,\s*selectedFormationKey,\s*initialTwoDimensionalFormationRegistry,\s*\)/,
+    /trainingCenterPlayerSlots\(\s*arenaFieldPlayersForRendering,\s*arenaDisplayFormationKey,\s*initialTwoDimensionalFormationRegistry,\s*\)/,
   );
   assert.match(arenaSource, /Squad management uses a flat tactical board/);
   assert.doesNotMatch(arenaSource, /fieldPlayerPositions[^;]*initialTwoDimensionalFormationRegistry/);
@@ -181,7 +181,7 @@ test("Quick Sub supports desktop drop and a touch-safe long-press drag on the li
 
   assert.ok(livePitchStart >= 0);
   assert.ok(livePitchEnd > livePitchStart);
-  assert.match(livePitch, /data-substitution-target-id=\{isQuickSubstitutionOpen \? player\.id : undefined\}/);
+  assert.match(livePitch, /data-substitution-target-id=\{!hasSyncedFantasyLineup && isQuickSubstitutionOpen \? player\.id : undefined\}/);
   assert.match(livePitch, /onDragOver=/);
   assert.match(livePitch, /handleBenchDrop\(player/);
   assert.match(arenaSource, /handleQuickSubPointerDown/);
