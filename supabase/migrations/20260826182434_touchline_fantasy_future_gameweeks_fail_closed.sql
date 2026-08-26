@@ -1,50 +1,7 @@
--- The Markt opens only after the previous round has actually finished. A
--- fixture finalization timestamp is immutable so later schedule refreshes
--- cannot move the opening window forward.
-
-alter table public.football_fixtures
-  add column if not exists finalized_at timestamptz;
-
-update public.football_fixtures
-set finalized_at = coalesce(provider_updated_at, source_updated_at, updated_at)
-where finalized_at is null
-  and public.touchline_fantasy_fixture_is_final(status);
-
-create or replace function public.touchline_stamp_fixture_finalized_at()
-returns trigger
-language plpgsql
-set search_path = ''
-as $$
-begin
-  if tg_op = 'UPDATE' then
-    if old.finalized_at is not null then
-      new.finalized_at := old.finalized_at;
-      return new;
-    end if;
-  end if;
-
-  if public.touchline_fantasy_fixture_is_final(new.status) then
-    new.finalized_at := coalesce(
-      new.finalized_at,
-      new.provider_updated_at,
-      new.source_updated_at,
-      clock_timestamp()
-    );
-  else
-    new.finalized_at := null;
-  end if;
-  return new;
-end;
-$$;
-
-drop trigger if exists touchline_stamp_fixture_finalized_at
-  on public.football_fixtures;
-create trigger touchline_stamp_fixture_finalized_at
-  before insert or update on public.football_fixtures
-  for each row execute function public.touchline_stamp_fixture_finalized_at();
-
-comment on column public.football_fixtures.finalized_at is
-  'Immutable first observation of a provider-final fixture; canonical source for the next Markt opening.';
+-- Materialize every scheduled Gameweek while keeping rounds after an
+-- unfinished predecessor strictly fail-closed. This replaces the same
+-- canonical synchronizer introduced by the preceding migration; it does not
+-- create a parallel market-window system.
 
 create or replace function public.touchline_fantasy_sync_gameweeks()
 returns integer
@@ -107,10 +64,6 @@ begin
       case
         when round_sequence = 1 then first_fixture_at - interval '7 days'
         when previous_round_all_final then previous_round_completed_at + interval '5 minutes'
-        -- Keep future rounds materialized without opening them before the
-        -- provider has finalized every fixture in the previous round. The
-        -- one-microsecond sentinel satisfies the existing strict window
-        -- constraint; state selection below remains explicitly fail-closed.
         else locks_at - interval '1 microsecond'
       end as market_opens_at
     from timing
@@ -174,8 +127,6 @@ begin
 end;
 $$;
 
-revoke all on function public.touchline_stamp_fixture_finalized_at()
-  from public, anon, authenticated;
 revoke all on function public.touchline_fantasy_sync_gameweeks()
   from public, anon, authenticated;
 grant execute on function public.touchline_fantasy_sync_gameweeks()

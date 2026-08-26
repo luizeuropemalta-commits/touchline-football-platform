@@ -174,19 +174,24 @@ test("the forward migration fixes T-5, coach snapshot immutability and official-
 });
 
 test("the canonical Markt window opens five minutes after the previous round finishes", async () => {
-  const [migration, liveSync, rollback] = await Promise.all([
+  const [migration, correction, liveSync, rollback] = await Promise.all([
     source("supabase/migrations/20260826173229_touchline_fantasy_inter_round_market_window.sql"),
+    source("supabase/migrations/20260826182434_touchline_fantasy_future_gameweeks_fail_closed.sql"),
     source("lib/football-data/live-sync.ts"),
     source("supabase/qa/031_touchline_qa_fantasy_inter_round_market_window_rollback.sql"),
   ]);
-  assert.match(migration, /lag\([\s\S]*?previous_round_completed_at/i);
-  assert.match(migration, /previous_round_completed_at \+ interval '5 minutes'/i);
-  assert.match(migration, /first_fixture_at - make_interval\(mins => lock_offset_minutes\)/i);
-  assert.match(migration, /clock_timestamp\(\) < market_opens_at then 'UPCOMING'/i);
-  assert.match(migration, /clock_timestamp\(\) < locks_at then 'MARKET_OPEN'/i);
-  assert.match(migration, /when round_sequence = 1 then first_fixture_at - interval '7 days'/i);
-  assert.match(migration, /when previous_round_all_final then previous_round_completed_at \+ interval '5 minutes'/i);
-  assert.match(migration, /else locks_at/i);
+  for (const gameweekSync of [migration, correction]) {
+    assert.match(gameweekSync, /lag\([\s\S]*?previous_round_completed_at/i);
+    assert.match(gameweekSync, /previous_round_completed_at \+ interval '5 minutes'/i);
+    assert.match(gameweekSync, /first_fixture_at - make_interval\(mins => lock_offset_minutes\)/i);
+    assert.match(gameweekSync, /clock_timestamp\(\) < market_opens_at then 'UPCOMING'/i);
+    assert.match(gameweekSync, /clock_timestamp\(\) < locks_at then 'MARKET_OPEN'/i);
+    assert.match(gameweekSync, /when round_sequence = 1 then first_fixture_at - interval '7 days'/i);
+    assert.match(gameweekSync, /when previous_round_all_final then previous_round_completed_at \+ interval '5 minutes'/i);
+    assert.match(gameweekSync, /else locks_at - interval '1 microsecond'/i);
+    assert.match(gameweekSync, /round_sequence > 1 and not coalesce\(previous_round_all_final, false\) then 'UPCOMING'/i);
+    assert.doesNotMatch(gameweekSync, /else locks_at\s+end as market_opens_at/i);
+  }
   assert.match(liveSync, /syncSportmonksFixtureSchedule/);
   assert.match(liveSync, /FIXTURE_SCHEDULE_REFRESH_MS = 6 \* 60 \* 60 \* 1000/);
   assert.match(liveSync, /sync_type", "fixture_schedule"/);
