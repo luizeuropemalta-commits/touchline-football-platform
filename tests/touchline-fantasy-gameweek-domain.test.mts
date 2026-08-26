@@ -76,7 +76,7 @@ test("manager rankings expose only public identity and current-manager state", (
   assert.equal("userId" in ranking[0], false);
 });
 
-test("lineup validation enforces 11, formation, budget and club limit", () => {
+test("lineup validation enforces 11, formation and budget while club choice remains customer-owned", () => {
   const geometry = resolveTouchlineFormationGeometry("4-3-3");
   const buckets = [
     "goalkeeper",
@@ -101,6 +101,16 @@ test("lineup validation enforces 11, formation, budget and club limit", () => {
   });
   assert.equal(valid.valid, true);
   assert.equal(valid.totalMarketValueEur, 220_000_000);
+
+  const sameClubPlayers = players.map((player) => ({ ...player, clubId: "one-club" }));
+  assert.equal(validateTouchlineFantasyLineup({
+    selections,
+    players: sameClubPlayers,
+    geometry,
+    budgetEur: 350_000_000,
+    maxPlayersPerClub: 1,
+    requireComplete: true,
+  }).valid, true, "all eleven eligible players may come from the same club");
 
   const ten = validateTouchlineFantasyLineup({ ...validInput(), selections: selections.slice(0, 10), players });
   assert.ok(ten.issues.includes("SELECTION_COUNT"));

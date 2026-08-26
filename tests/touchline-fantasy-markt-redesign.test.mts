@@ -200,3 +200,28 @@ test("the canonical Markt window opens five minutes after the previous round fin
   assert.match(rollback, /drop trigger if exists touchline_stamp_fixture_finalized_at/);
   assert.match(rollback, /min\(fixture\.starts_at\) - interval '7 days'/);
 });
+
+test("the customer owns club choice and every successful save is reloaded from the QA source of truth", async () => {
+  const [client, domain, stateRoute, migration, rollback] = await Promise.all([
+    source("app/fantasy/FantasyGameweekClient.tsx"),
+    source("lib/touchlineFantasy/domain.ts"),
+    source("app/api/touchline-fantasy/state/route.ts"),
+    source("supabase/migrations/20260826203421_touchline_fantasy_remove_club_limit.sql"),
+    source("supabase/qa/032_touchline_qa_fantasy_remove_club_limit_rollback.sql"),
+  ]);
+  assert.match(domain, /TOUCHLINE_FANTASY_MAX_PLAYERS_PER_CLUB = 11/);
+  assert.doesNotMatch(domain, /issues\.add\("CLUB_LIMIT"\)/);
+  assert.match(client, /No per-club player limit|Escolha livre de jogadores por clube/);
+  assert.doesNotMatch(client, /nextValidation\.issues\.includes\("CLUB_LIMIT"\)/);
+  assert.match(client, /loadPersistedLineup/);
+  assert.match(client, /authoritativeFingerprint !== expectedFingerprint/);
+  assert.match(client, /Rascunho gravado e verificado no TouchLine/);
+  assert.match(client, /Alterações não salvas/);
+  assert.match(client, /Trocar treinador/);
+  assert.match(client, /Editar jogadores/);
+  assert.match(stateRoute, /selections: snapshot\.selections/);
+  assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(migration, /there is no per-club cap/);
+  assert.match(migration, /set max_players_per_club = 11/);
+  assert.match(rollback, /TL_FANTASY_CLUB_LIMIT_EXCEEDED/);
+});

@@ -8,7 +8,7 @@ export const TOUCHLINE_FANTASY_ENTITLEMENT_KEY = "fantasy_access" as const;
 export const TOUCHLINE_FANTASY_SUBSCRIPTION_PRICE_MINOR = 2_990 as const;
 export const TOUCHLINE_FANTASY_SUBSCRIPTION_CURRENCY = "GBP" as const;
 export const TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 350_000_000 as const;
-export const TOUCHLINE_FANTASY_MAX_PLAYERS_PER_CLUB = 3 as const;
+export const TOUCHLINE_FANTASY_MAX_PLAYERS_PER_CLUB = 11 as const;
 export const TOUCHLINE_FANTASY_DEFAULT_LOCK_OFFSET_MINUTES = 5 as const;
 export const TOUCHLINE_FANTASY_DEADLINE_TIME_ZONE = "Europe/London" as const;
 
@@ -74,7 +74,6 @@ export type TouchlineFantasyLineupIssue =
   | "PLAYER_INELIGIBLE"
   | "SLOT_INVALID"
   | "POSITION_INVALID"
-  | "CLUB_LIMIT"
   | "BUDGET_EXCEEDED";
 
 export type TouchlineFantasyLineupValidation = Readonly<{
@@ -170,7 +169,6 @@ export function validateTouchlineFantasyLineup(input: Readonly<{
   const slots = slotMap(input.geometry);
   const seenPlayers = new Set<string>();
   const seenSlots = new Set<string>();
-  const clubCounts = new Map<string, number>();
   let totalMarketValueEur = 0;
 
   if (input.selections.length > 11 || (input.requireComplete && input.selections.length !== 11)) {
@@ -195,10 +193,8 @@ export function validateTouchlineFantasyLineup(input: Readonly<{
     }
     if (!slotAcceptsPlayer(slot, player)) issues.add("POSITION_INVALID");
     totalMarketValueEur += player.marketValueEur;
-    clubCounts.set(player.clubId, (clubCounts.get(player.clubId) ?? 0) + 1);
   }
 
-  if ([...clubCounts.values()].some((count) => count > input.maxPlayersPerClub)) issues.add("CLUB_LIMIT");
   if (totalMarketValueEur > input.budgetEur) issues.add("BUDGET_EXCEEDED");
 
   return {

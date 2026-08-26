@@ -421,7 +421,7 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     subscription: { amountMinor: 2990, currency: "GBP" },
     config: {
       budgetEur: number(config.budget_eur) ?? 350_000_000,
-      maxPlayersPerClub: number(config.max_players_per_club) ?? 3,
+      maxPlayersPerClub: number(config.max_players_per_club) ?? 11,
       lockOffsetMinutes: number(config.lock_offset_minutes) ?? 5,
     },
     gameweeks,

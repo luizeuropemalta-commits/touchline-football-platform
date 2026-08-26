@@ -101,6 +101,10 @@
 .reviewCoach svg{color:var(--gold)}
 .reviewCoach div{display:grid}
 .reviewCoach span{color:#9eaaa4}
+.editActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+.editActions button{min-height:42px;border:1px solid rgba(170,255,62,.42);border-radius:11px;color:#eaffd0;background:rgba(170,255,62,.07);font:inherit;font-size:.72rem;font-weight:900;cursor:pointer}
+.editActions button:disabled{cursor:not-allowed;opacity:.42}
+.editActions button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 .reviewList{margin:12px 0 0;padding:0;border-top:1px solid rgba(255,255,255,.08);list-style:none}
 .reviewList li{display:grid;grid-template-columns:46px 1fr auto;gap:8px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.08);font-size:.72rem}
 .reviewList li span{color:var(--lime);font-weight:900}
@@ -117,6 +121,9 @@
 .actionRail{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:14px 18px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.025)}
 .actionRail>div:first-child{display:grid}
 .actionRail span{color:#8fa198;font-size:.68rem}
+.actionRail em{margin-top:5px;color:#9aa9a0;font-size:.65rem;font-style:normal;font-weight:800}
+.actionRail em[data-save-state=dirty]{color:#ffbf77}
+.actionRail em[data-save-state=saved]{color:var(--lime)}
 .actionRail>div:last-child{display:flex;gap:9px}
 .actionRail button{display:flex;align-items:center;gap:7px;color:#fff;background:#0a1b13}
 .actionRail button.confirm{color:#071008;background:var(--lime)}
