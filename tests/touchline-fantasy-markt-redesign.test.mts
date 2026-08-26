@@ -27,9 +27,10 @@ test("TouchLine Markt reuses the one Fantasy Gameweek transaction boundary", asy
 });
 
 test("the classic Markt presentation keeps the guided coach-first Gameweek flow", async () => {
-  const [client, card, styles] = await Promise.all([
+  const [client, card, exactCard, styles] = await Promise.all([
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("components/touchline/fantasy/TouchlineGameweekCard.tsx"),
+    source("components/touchline/cards/TouchlineEliteExactCard.tsx"),
     source("app/fantasy/fantasy.module.css"),
   ]);
   assert.match(client, /const STEPS:[\s\S]*?"coach"[\s\S]*?"formation"[\s\S]*?"players"[\s\S]*?"review"[\s\S]*?"locked"/);
@@ -39,9 +40,19 @@ test("the classic Markt presentation keeps the guided coach-first Gameweek flow"
   assert.match(client, /TOUCHLINE_LIVE_COACHES|snapshot\.coaches\.map/);
   assert.match(client, /selections\.length === 11/);
   assert.match(client, /TouchlineGameweekCard/);
-  assert.match(client, /TouchlineGoalFacingPitchCard/);
+  assert.doesNotMatch(client, /TouchlineGoalFacingPitchCard/);
+  assert.match(client, /className=\{styles\.pitchCard\}>\s*<TouchlineGameweekCard[^>]*compact[^>]*displayWidth=\{62\}/);
+  assert.match(client, /data-player-choice-card="premium"/);
+  const playerChooser = client.match(/<div className=\{styles\.playerGrid\}>[\s\S]*?<footer className=\{styles\.pagination\}>/)?.[0] ?? "";
+  assert.match(playerChooser, /<div className=\{styles\.marketCard\}>[\s\S]*?<div className=\{styles\.playerIdentity\}>\s*<b>\{card\.name\}<\/b>/);
+  assert.doesNotMatch(playerChooser, /card\.marketValue|VALOR DE MERCADO|MARKET VALUE/);
   assert.match(card, /TouchlineEliteExactCard/);
   assert.match(card, /TouchlineCardZoom/);
+  assert.match(exactCard, /data-card-market-value-panel="true"/);
+  assert.match(styles, /\.marketCard \[data-card-market-value-panel="true"\]\{display:none!important\}/);
+  assert.match(styles, /\.playerIdentity\{[\s\S]*?text-align:center/);
+  assert.match(styles, /\.pitchCard\{[\s\S]*?width:62px[\s\S]*?aspect-ratio:430 \/ 691/);
+  assert.doesNotMatch(styles, /\.attackCard/);
   assert.match(styles, /\.shell\{[\s\S]*?width:min\(1880px,calc\(100% - 24px\)\)/);
   assert.match(styles, /\.hero h1\{[\s\S]*?font-size:clamp\(28px,3vw,46px\)/);
   assert.match(client, /touchlineFantasyLandscapeIsBlocked/);

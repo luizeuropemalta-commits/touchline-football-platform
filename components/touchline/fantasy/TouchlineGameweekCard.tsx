@@ -6,10 +6,11 @@ import { touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 
-export default function TouchlineGameweekCard({ card, locale, compact = false }: {
+export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth }: {
   card: ClubOwnerSquadCard;
   locale: string;
   compact?: boolean;
+  displayWidth?: number;
 }) {
   const exact = squadCardToExactPlayer(card);
   const palette = touchlineCardTierPalette(card.editorialCard?.tierKey ?? null);
@@ -44,7 +45,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false }:
   >
     <TouchlineEliteExactCard
       player={exact}
-      staticRenderScale={(compact ? 74 : 132) / 430}
+      staticRenderScale={(displayWidth ?? (compact ? 74 : 132)) / 430}
       optimizeForLiveCompact
       runtimeLocaleOverride={locale}
       subscribeToRanking={false}

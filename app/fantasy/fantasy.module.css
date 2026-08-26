@@ -47,15 +47,14 @@
 .sectionHeading strong{color:var(--gold);font-size:1.2rem}
 
 .pitch{position:relative;min-height:600px;margin:0 14px;border:1px solid rgba(201,255,182,.24);border-radius:20px;overflow:hidden;box-shadow:inset 0 0 70px rgba(0,0,0,.28),0 18px 42px rgba(0,0,0,.28)}
-.pitchSlot{position:absolute;z-index:5;display:grid;place-items:center;width:112px;min-height:106px;padding:0;border:0;color:#fff;background:transparent;transform:translate(-50%,-50%);cursor:pointer}
+.pitchSlot{position:absolute;z-index:5;display:grid;place-items:center;width:104px;min-height:128px;padding:0;border:0;color:#fff;background:transparent;transform:translate(-50%,-50%);cursor:pointer}
 .pitchSlot[data-state=active] .emptySlot{border-color:var(--lime);outline:2px solid rgba(170,255,62,.28);background:rgba(170,255,62,.14);box-shadow:0 0 24px rgba(170,255,62,.22)}
 .pitchSlot[data-state=invalid] .pitchCard{filter:drop-shadow(0 0 12px #ff573d)}
 .pitchSlot[data-state=locked]{cursor:default}
 .pitchSlot:focus-visible{outline:2px solid var(--lime);outline-offset:3px;border-radius:12px}
-.pitchCard{display:grid;place-items:center;width:100px;height:66px}
-.attackCard{--touchline-attack-card-long-edge:94px}
-.pitchSlot>b{max-width:100px;margin-top:2px;padding:3px 7px;border-radius:6px;background:rgba(1,7,4,.88);font-size:.57rem;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pitchSlot>i{position:absolute;right:1px;top:2px;display:grid;place-items:center;width:24px;height:24px;border:1px solid rgba(255,255,255,.18);border-radius:50%;color:#fff;background:#9e2020;font-size:1rem;font-style:normal}
+.pitchCard{display:grid;place-items:center;width:62px;aspect-ratio:430 / 691;filter:drop-shadow(0 10px 16px rgba(0,0,0,.52))}
+.pitchSlot>b{max-width:96px;margin-top:5px;padding:3px 7px;border:1px solid rgba(170,255,62,.18);border-radius:7px;background:rgba(1,7,4,.9);box-shadow:0 5px 14px rgba(0,0,0,.3);font-size:.57rem;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pitchSlot>i{position:absolute;right:3px;top:7px;display:grid;place-items:center;width:24px;height:24px;border:1px solid rgba(255,255,255,.18);border-radius:50%;color:#fff;background:#9e2020;font-size:1rem;font-style:normal}
 .pitchSlot>i:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .pitchSlot>em{position:absolute;bottom:-20px;display:flex;align-items:center;gap:3px;color:#ffb391;font-size:.55rem;font-style:normal;font-weight:900;white-space:nowrap}
 .pitchSlot>em svg{width:12px}
@@ -86,15 +85,16 @@
 .filters svg{width:17px;color:var(--lime)}
 .filters input,.filters select{min-width:0;width:100%;border:0;outline:0;color:#fff;background:transparent}
 .filters select option{background:#07110d}
-.playerGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-.playerGrid article{display:grid;grid-template-columns:108px minmax(0,1fr);min-height:155px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.025);overflow:hidden}
-.marketCard{display:grid;place-items:center;width:108px;overflow:hidden}
-.playerGrid article>div:last-child{display:flex;min-width:0;flex-direction:column;justify-content:center;gap:4px;padding:10px 9px 10px 0}
-.playerGrid b{overflow:hidden;font-size:.82rem;text-overflow:ellipsis;white-space:nowrap}
-.playerGrid span{overflow:hidden;color:#92a199;font-size:.6rem;text-overflow:ellipsis;white-space:nowrap}
-.playerGrid strong{display:grid;color:var(--gold);font-size:.9rem}
-.playerGrid strong small{font-size:.48rem;letter-spacing:.08em}
-.playerGrid button{margin-top:3px;padding:7px;font-size:.58rem}
+.playerGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.playerGrid article{position:relative;display:grid;grid-template-rows:auto auto auto;align-content:start;justify-items:center;min-width:0;padding:14px 12px 12px;border:1px solid rgba(170,255,62,.15);border-radius:18px;background:radial-gradient(circle at 50% 26%,rgba(170,255,62,.1),transparent 42%),linear-gradient(160deg,rgba(14,32,23,.98),rgba(2,10,7,.98));box-shadow:0 14px 28px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden;isolation:isolate;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.playerGrid article::before{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.06),transparent 28%,transparent 70%,rgba(170,255,62,.05));content:"";pointer-events:none}
+.playerGrid article:hover{border-color:rgba(170,255,62,.4);box-shadow:0 18px 36px rgba(0,0,0,.42),0 0 24px rgba(170,255,62,.08),inset 0 1px 0 rgba(255,255,255,.08);transform:translateY(-2px)}
+.marketCard{position:relative;z-index:1;display:grid;place-items:center;width:146px;max-width:100%;aspect-ratio:430 / 691;overflow:visible;filter:drop-shadow(0 14px 18px rgba(0,0,0,.48))}
+.marketCard [data-card-market-value-panel="true"]{display:none!important}
+.playerIdentity{position:relative;z-index:1;display:grid;width:100%;min-width:0;gap:4px;padding:10px 4px 8px;text-align:center}
+.playerIdentity b{min-height:2.3em;overflow:visible;color:#f7fff8;font-size:.78rem;line-height:1.15;text-wrap:balance;text-transform:uppercase;white-space:normal}
+.playerIdentity span{overflow:hidden;color:#91a49a;font-size:.59rem;text-overflow:ellipsis;white-space:nowrap}
+.playerGrid article>button{position:relative;z-index:1;width:100%;margin-top:auto;padding:8px;font-size:.59rem;box-shadow:0 8px 18px rgba(91,154,19,.18)}
 .pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:14px}
 .pagination button{width:38px;height:38px;border:1px solid rgba(255,255,255,.16);border-radius:50%;color:#fff;background:#07140f}
 .reviewCoach{display:flex;align-items:center;gap:10px;padding:14px;border:1px solid rgba(170,255,62,.24);border-radius:12px;background:rgba(170,255,62,.06)}
@@ -158,9 +158,6 @@
   .guidePanel{max-height:none}
   .pitch{min-height:570px}
   .playerGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .playerGrid article{grid-template-columns:1fr}
-  .marketCard{width:100%;height:154px}
-  .playerGrid article>div:last-child{padding:10px}
   .coachGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 
@@ -182,9 +179,8 @@
   .guidePanel{margin-top:12px;padding:16px}
   .sectionHeading{padding:15px}
   .pitch{min-height:500px;margin:0 6px}
-  .pitchSlot{width:84px;min-height:88px}
-  .pitchCard{width:76px;height:52px}
-  .attackCard{--touchline-attack-card-long-edge:74px}
+  .pitchSlot{width:84px;min-height:116px}
+  .pitchCard{width:62px}
   .pitchSlot>b{max-width:78px;font-size:.48rem}
   .pitchFooter{display:grid;padding:14px}
   .coachGrid{grid-template-columns:1fr 1fr}
@@ -209,4 +205,5 @@
 @media(prefers-reduced-motion:reduce){
   .rotateGate svg{animation:none}
   .shell *{scroll-behavior:auto!important}
+  .playerGrid article{transition:none}
 }
