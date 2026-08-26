@@ -172,3 +172,26 @@ test("the forward migration fixes T-5, coach snapshot immutability and official-
   assert.match(indexes, /touchline_fantasy_lineup_alerts_player_idx/);
   assert.match(indexes, /touchline_fantasy_lineup_alerts_fixture_idx/);
 });
+
+test("the canonical Markt window opens five minutes after the previous round finishes", async () => {
+  const [migration, liveSync, rollback] = await Promise.all([
+    source("supabase/migrations/20260826173229_touchline_fantasy_inter_round_market_window.sql"),
+    source("lib/football-data/live-sync.ts"),
+    source("supabase/qa/031_touchline_qa_fantasy_inter_round_market_window_rollback.sql"),
+  ]);
+  assert.match(migration, /lag\([\s\S]*?previous_round_completed_at/i);
+  assert.match(migration, /previous_round_completed_at \+ interval '5 minutes'/i);
+  assert.match(migration, /first_fixture_at - make_interval\(mins => lock_offset_minutes\)/i);
+  assert.match(migration, /clock_timestamp\(\) < market_opens_at then 'UPCOMING'/i);
+  assert.match(migration, /clock_timestamp\(\) < locks_at then 'MARKET_OPEN'/i);
+  assert.match(migration, /when round_sequence = 1 then first_fixture_at - interval '7 days'/i);
+  assert.match(migration, /when previous_round_all_final then previous_round_completed_at \+ interval '5 minutes'/i);
+  assert.match(migration, /else locks_at/i);
+  assert.match(liveSync, /syncSportmonksFixtureSchedule/);
+  assert.match(liveSync, /FIXTURE_SCHEDULE_REFRESH_MS = 6 \* 60 \* 60 \* 1000/);
+  assert.match(liveSync, /sync_type", "fixture_schedule"/);
+  assert.match(liveSync, /return \["fixture-schedule:refresh-failed"\]/);
+  assert.match(rollback, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(rollback, /drop trigger if exists touchline_stamp_fixture_finalized_at/);
+  assert.match(rollback, /min\(fixture\.starts_at\) - interval '7 days'/);
+});

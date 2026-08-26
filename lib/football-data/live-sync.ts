@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { persistFantasyFixtureFeed } from "@/lib/football-data/fantasy-store";
+import { syncSportmonksFixtureSchedule } from "@/lib/football-data/fixture-schedule-sync";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { persistLiveFixtureStates, mergeCanonicalLiveFixture } from "@/lib/football-data/live-fixture-store";
 import { persistLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
@@ -13,6 +14,7 @@ import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePrevi
 const COMPETITION_ID = "8";
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
 const STALE_LIVE_SYNC_RUN_MS = 10 * 60 * 1000;
+const FIXTURE_SCHEDULE_REFRESH_MS = 6 * 60 * 60 * 1000;
 
 type Dependencies = {
   provider?: FootballDataProvider;
@@ -49,6 +51,33 @@ async function latestSuccessfulRun(admin: SupabaseClient) {
     .limit(1)
     .maybeSingle();
   return typeof data?.completed_at === "string" ? data.completed_at : null;
+}
+
+async function latestFixtureScheduleRun(admin: SupabaseClient) {
+  const { data } = await admin
+    .from("football_data_sync_runs")
+    .select("completed_at")
+    .eq("provider", "sportmonks")
+    .eq("sync_type", "fixture_schedule")
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return typeof data?.completed_at === "string" ? data.completed_at : null;
+}
+
+async function refreshFixtureScheduleWhenStale(admin: SupabaseClient, now: number) {
+  try {
+    const latest = Date.parse(await latestFixtureScheduleRun(admin) ?? "");
+    if (Number.isFinite(latest) && now - latest < FIXTURE_SCHEDULE_REFRESH_MS) return [] as string[];
+    const refreshed = await syncSportmonksFixtureSchedule(admin, { competitionId: COMPETITION_ID });
+    return refreshed.ok ? [] : refreshed.errors.map((error) => `fixture-schedule:${error}`);
+  } catch {
+    // Schedule refresh is additive. A temporary provider or persistence error
+    // must not stop the existing live-state reconciler from using its last
+    // complete canonical schedule.
+    return ["fixture-schedule:refresh-failed"];
+  }
 }
 
 async function createRun(admin: SupabaseClient, cadence: string, forceFixtureId?: string | null) {
@@ -139,6 +168,9 @@ export async function syncSportmonksLiveState(
   assertQaLiveSyncRuntime();
   const now = dependencies.now?.() ?? Date.now();
   const readFixtures = dependencies.readFixtures ?? readPublicCompetitionFixtures;
+  const fixtureScheduleErrors = dependencies.readFixtures
+    ? []
+    : await refreshFixtureScheduleWhenStale(admin, now);
   const schedule = await readFixtures({ includeHistorical: true, limit: 240, now });
   const lastSuccessfulSyncAt = await latestSuccessfulRun(admin);
   const decision = decideLiveSyncCadence(schedule, {
@@ -158,6 +190,7 @@ export async function syncSportmonksLiveState(
     coachPointsReconciled: 0,
     errors: [],
   };
+  result.errors.push(...fixtureScheduleErrors);
 
   const staleRunError = await recoverStaleRuns(admin, now);
   if (staleRunError) result.errors.push(`stale-run-recovery:${staleRunError.code ?? "unknown"}`);
