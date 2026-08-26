@@ -49,7 +49,7 @@ function RankingTable({ title, entries, empty }: { title: string; entries: Touch
 }
 function CompactClubIdentity({ clubName, clubLogoUrl, detail }: { clubName: string; clubLogoUrl?: string | null; detail?: string }) {
   return <span className={styles.clubIdentity} data-club-identity="compact">
-    {clubLogoUrl ? <Image src={clubLogoUrl} alt="" width={22} height={22} aria-hidden="true" /> : <i aria-hidden="true" />}
+    {clubLogoUrl ? <Image src={clubLogoUrl} alt="" width={22} height={22} unoptimized aria-hidden="true" /> : <i aria-hidden="true" />}
     <small>{clubName}{detail ? ` · ${detail}` : ""}</small>
   </span>;
 }
