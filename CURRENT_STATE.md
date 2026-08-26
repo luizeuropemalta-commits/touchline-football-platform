@@ -1,5 +1,13 @@
 # TouchLine Current State
 
+## QA TouchLine Markt premium player chooser + upright pitch cards — GREEN / NATIVE SAFARI CUSTOMER PASS
+
+- Product commit `5dc2e67f47b49f852e8ebda5d38d1bd7a4e1b305` changes only the existing Fantasy Gameweek/Markt presentation. Player-choice tiles now use an upright premium card, a centred external player identity below it and one full-width selection action. The duplicated external Market Value and the compact card's internal Market Value panel are hidden only while the catalogue card is closed.
+- The existing portalled Player Zoom is deliberately outside the catalogue CSS boundary and remains unchanged. Native Safari opened Djordje Petrovic from the selector and proved the full upright card, Total Rating `6.95` and Market Value `€28 mi` in both the card and profile detail.
+- Selected cards on the canonical Markt pitch no longer use the attack-facing rotation wrapper. A temporary local Djordje Petrovic selection rendered upright at goalkeeper with `PETROVIC` below the card; the remaining catalogue advanced to the RB slot. No Save draft or Confirm XI action was invoked, and an ordinary reload restored the authoritative CUSTOMER state: `0/11`, `Treinador pendente` and `Ainda não salvo`.
+- Regression-first coverage passed focused `52/52` and complete local `1304/1304`. TypeScript, scoped/full ESLint with zero errors, `git diff --check`, mission governance and release-readiness passed. The standalone local Next build remained silent in the known macOS FileProvider state and was interrupted without a compiler diagnostic; the exact-SHA Git-native Vercel pipeline is authoritative and passed governance, TypeScript, ESLint, `1274/1274` release tests, compilation and `135/135` generated routes.
+- Preview `dpl_EsNswf8P6R6Z4cTAo3E4MqGJUZXX` is `READY`, exact source `5dc2e67`, and owns `https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app`. The stable route returned HTTP `200` for the authenticated native Safari session; deployment-scoped `5xx` logs and `/market-transfer` runtime-error clusters are empty. Production remains untouched.
+
 ## QA TouchLine Markt editable persistence + free club choice — GREEN / NATIVE SAFARI CUSTOMER PASS
 
 - Product commit `02c88b0bbe0d5f483520967914dff039deb974a8` keeps the existing Fantasy Gameweek/Markt transaction and makes its persisted lineup the only client authority. Coach, formation and player changes are marked unsaved; Save/Confirm report success only after `/api/touchline-fantasy/state` returns the exact saved fingerprint. Review and confirmed screens expose `Trocar treinador` and `Editar jogadores` while the canonical market window is open. No second lineup system, API or table was created.
