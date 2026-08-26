@@ -45,7 +45,8 @@ test("the classic Markt presentation keeps the guided coach-first Gameweek flow"
   assert.match(client, /data-player-choice-card="premium"/);
   assert.match(client, /import Image from "next\/image"/);
   assert.match(client, /findTouchLineClub/);
-  assert.match(client, /function CompactClubIdentity[\s\S]*?data-club-identity="compact"[\s\S]*?<Image[^>]*unoptimized/);
+  assert.match(client, /touchlineLiveOptimizedClubLogoUrl/);
+  assert.match(client, /function CompactClubIdentity[\s\S]*?touchlineLiveOptimizedClubLogoUrl\(clubLogoUrl\)[\s\S]*?data-club-identity="compact"[\s\S]*?<Image[^>]*unoptimized[^>]*loading="eager"/);
   assert.match(client, /snapshot\.coaches\.map[\s\S]*?<CompactClubIdentity clubName=\{entry\.clubName\} clubLogoUrl=\{entry\.clubLogoUrl/);
   assert.match(client, /<aside className=\{styles\.guidePanel\} tabIndex=\{0\}[^>]*onPointerDown=\{\(event\) => event\.currentTarget\.focus\(\{ preventScroll: true \}\)\}/);
   const playerChooser = client.match(/<div className=\{styles\.playerGrid\}>[\s\S]*?<footer className=\{styles\.pagination\}>/)?.[0] ?? "";

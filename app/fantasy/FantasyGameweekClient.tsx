@@ -7,6 +7,7 @@ import { BadgeCheck, CalendarClock, Check, ChevronRight, CircleAlert, Crown, Fil
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
+import { touchlineLiveOptimizedClubLogoUrl } from "@/lib/touchlineArena/club-crests";
 import { findTouchLineClub, type ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 import type { TouchlineFormationGeometrySlot } from "@/lib/touchlineArena/formation-geometry";
 import { touchlineMarketPositionBucket } from "@/lib/touchlineArena/position-eligibility";
@@ -48,8 +49,9 @@ function RankingTable({ title, entries, empty }: { title: string; entries: Touch
   return <section className={styles.rankingPanel}><h3><Trophy aria-hidden="true" />{title}</h3>{entries.length ? <ol>{entries.slice(0, 20).map((entry) => <li key={entry.rank} data-current-manager={entry.isCurrentManager ? "true" : undefined}><span>#{entry.rank}</span><b>{entry.name}</b><strong>{entry.score.toFixed(2)}</strong></li>)}</ol> : <p>{empty}</p>}</section>;
 }
 function CompactClubIdentity({ clubName, clubLogoUrl, detail }: { clubName: string; clubLogoUrl?: string | null; detail?: string }) {
+  const compactLogoUrl = touchlineLiveOptimizedClubLogoUrl(clubLogoUrl);
   return <span className={styles.clubIdentity} data-club-identity="compact">
-    {clubLogoUrl ? <Image src={clubLogoUrl} alt="" width={22} height={22} unoptimized aria-hidden="true" /> : <i aria-hidden="true" />}
+    {compactLogoUrl ? <Image src={compactLogoUrl} alt="" width={22} height={22} unoptimized loading="eager" aria-hidden="true" /> : <i aria-hidden="true" />}
     <small>{clubName}{detail ? ` · ${detail}` : ""}</small>
   </span>;
 }
