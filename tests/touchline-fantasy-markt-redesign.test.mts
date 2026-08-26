@@ -26,18 +26,24 @@ test("TouchLine Markt reuses the one Fantasy Gameweek transaction boundary", asy
   assert.match(route, /parseTouchlineFantasyLineupRequest\(await readBoundedJson\(request\)\)/);
 });
 
-test("the guided Markt presents coach, formation, 11 upright cards, review and Arena sync", async () => {
-  const [client, card] = await Promise.all([
+test("the classic Markt presentation keeps the guided coach-first Gameweek flow", async () => {
+  const [client, card, styles] = await Promise.all([
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("components/touchline/fantasy/TouchlineGameweekCard.tsx"),
+    source("app/fantasy/fantasy.module.css"),
   ]);
   assert.match(client, /const STEPS:[\s\S]*?"coach"[\s\S]*?"formation"[\s\S]*?"players"[\s\S]*?"review"[\s\S]*?"locked"/);
+  assert.match(client, /data-market-visual="classic"/);
+  assert.match(client, /Monte seu time TouchLine|Build Your TouchLine Team/);
+  assert.match(client, /Escolha primeiro seu treinador, depois a formação/);
   assert.match(client, /TOUCHLINE_LIVE_COACHES|snapshot\.coaches\.map/);
   assert.match(client, /selections\.length === 11/);
   assert.match(client, /TouchlineGameweekCard/);
+  assert.match(client, /TouchlineGoalFacingPitchCard/);
   assert.match(card, /TouchlineEliteExactCard/);
   assert.match(card, /TouchlineCardZoom/);
-  assert.doesNotMatch(client, /TouchlineGoalFacingPitchCard/);
+  assert.match(styles, /\.shell\{[\s\S]*?width:min\(1880px,calc\(100% - 24px\)\)/);
+  assert.match(styles, /\.hero h1\{[\s\S]*?font-size:clamp\(28px,3vw,46px\)/);
   assert.match(client, /touchlineFantasyLandscapeIsBlocked/);
   assert.match(client, /Android\|iPhone\|iPad\|iPod\|Mobile/);
   assert.match(client, /navigator\.maxTouchPoints > 1/);
