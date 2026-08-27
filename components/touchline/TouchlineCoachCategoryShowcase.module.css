@@ -123,6 +123,15 @@
   max-width: 100%;
 }
 
+/* Safari can postpone the client-side atomic reveal for an off-screen card
+   inside a content-visibility surface. This public gallery already preloads
+   its seven coach assets, so keep its frame and content paintable even before
+   that enhancement runs. The shared coach card remains unchanged elsewhere. */
+.coachCardVisual :global([data-coach-card-inner="true"]),
+.coachCardVisual :global([data-touchline-card-frame="true"]) {
+  opacity: 1 !important;
+}
+
 .pendingCard > img {
   width: 100%;
   height: auto;

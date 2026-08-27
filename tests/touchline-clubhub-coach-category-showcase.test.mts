@@ -8,6 +8,10 @@ const component = readFileSync(
   new URL("../components/touchline/TouchlineCoachCategoryShowcase.tsx", import.meta.url),
   "utf8",
 );
+const componentStyles = readFileSync(
+  new URL("../components/touchline/TouchlineCoachCategoryShowcase.module.css", import.meta.url),
+  "utf8",
+);
 const page = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
 
 test("ClubHub exposes the seven canonical player and coach borders with real representative boundaries", () => {
@@ -31,6 +35,8 @@ test("ClubHub exposes the seven canonical player and coach borders with real rep
   assert.match(component, /TouchlineCoachCard/);
   assert.match(component, /assetLoading="eager"/);
   assert.match(component, /frameLoading="eager"/);
+  assert.match(componentStyles, /data-coach-card-inner="true"/);
+  assert.match(componentStyles, /data-touchline-card-frame="true"/);
   assert.match(component, /dictionary\.representativePendingDescription/);
   assert.doesNotMatch(component, /TOUCHLINE_DEMO_COACH|competition-card-offer|retailPrice|touchCredit|\bfetch\(/);
 });
