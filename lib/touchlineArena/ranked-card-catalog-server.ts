@@ -140,3 +140,116 @@ export async function loadTouchLineRankedCardCatalog(
     }];
   });
 }
+
+/**
+ * Public ClubHub border showcase source. Unlike the competitive Ranking, this
+ * catalogue follows the editorial publication lifecycle directly, so a
+ * preseason ranking cannot hide an already published card. It is read-only
+ * and still passes every row through the canonical publication gate above.
+ */
+export async function loadTouchlinePublishedCardShowcaseCatalog(
+  providedAdmin?: SupabaseClient | null,
+): Promise<ClubOwnerSquadCard[]> {
+  const admin = providedAdmin ?? createAdminClient();
+  if (!admin) return [];
+
+  const { data: publicationData, error: publicationError } = await admin
+    .from("touchline_card_publications")
+    .select("player_id")
+    .eq("publication_status", "published")
+    .limit(750);
+  if (publicationError) return [];
+
+  const playerIds = [...new Set(rows(publicationData)
+    .map((row) => text(row.player_id)?.toLowerCase())
+    .filter((playerId): playerId is string => Boolean(playerId)))];
+  if (!playerIds.length) return [];
+
+  const [playersResponse, squadsResponse, seasonStatsResponse, published] = await Promise.all([
+    admin
+      .from("football_players")
+      .select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
+      .in("id", playerIds),
+    admin
+      .from("football_squad_members")
+      .select("player_id,club_id,jersey_number,position,status,source_updated_at")
+      .in("player_id", playerIds)
+      .eq("status", "active")
+      .order("source_updated_at", { ascending: false }),
+    admin
+      .from("football_player_season_statistics")
+      .select("football_player_id,summary_payload,position_statistics_payload,source_synced_at")
+      .eq("scoring_version", "player_scoring_v3")
+      .in("football_player_id", playerIds)
+      .order("source_synced_at", { ascending: false }),
+    loadTouchlinePublishedCardPresentations({ playerIds, providedAdmin: admin as never }),
+  ]);
+  if (playersResponse.error || squadsResponse.error || seasonStatsResponse.error || !published.size) return [];
+
+  const players = rows(playersResponse.data);
+  const clubIds = [...new Set(players
+    .map((player) => text(player.current_club_id))
+    .filter((clubId): clubId is string => Boolean(clubId)))];
+  const { data: clubData, error: clubError } = clubIds.length
+    ? await admin.from("football_clubs").select("id,name").in("id", clubIds)
+    : { data: [], error: null };
+  if (clubError) return [];
+
+  const playerById = new Map(players.flatMap((row) => {
+    const playerId = text(row.id)?.toLowerCase();
+    return playerId ? [[playerId, row] as const] : [];
+  }));
+  const clubById = new Map(rows(clubData).flatMap((row) => {
+    const clubId = text(row.id);
+    return clubId ? [[clubId, row] as const] : [];
+  }));
+  const squadByPlayerId = new Map<string, Row>();
+  for (const row of rows(squadsResponse.data)) {
+    const playerId = text(row.player_id)?.toLowerCase();
+    if (playerId && !squadByPlayerId.has(playerId)) squadByPlayerId.set(playerId, row);
+  }
+  const seasonByPlayerId = new Map<string, Row>();
+  for (const row of rows(seasonStatsResponse.data)) {
+    const playerId = text(row.football_player_id)?.toLowerCase();
+    if (playerId && !seasonByPlayerId.has(playerId)) seasonByPlayerId.set(playerId, row);
+  }
+
+  return [...published.entries()].flatMap(([playerId, editorialCard]) => {
+    const player = playerById.get(playerId);
+    if (!player) return [];
+    const squad = squadByPlayerId.get(playerId);
+    const name = text(player.display_name) ?? text(player.name);
+    if (!name) return [];
+    const clubName = text(clubById.get(text(player.current_club_id) ?? "")?.name) ?? "Club pending";
+    const position = text(squad?.position)
+      ?? text(player.detailed_position)
+      ?? text(player.provider_position)
+      ?? text(player.position)
+      ?? "Player";
+    const season = seasonByPlayerId.get(playerId);
+    return [{
+      id: playerId,
+      canonicalPlayerId: playerId,
+      name,
+      shortName: makeArenaShortName(name),
+      role: inferArenaRole(position),
+      position,
+      clubName,
+      shirtNumber: normalizeOfficialShirtNumber(squad?.jersey_number),
+      countryCode3: countryCode(player),
+      marketValue: editorialCard.marketValueEur === undefined
+        ? ""
+        : formatTouchlineMarketValueEur(editorialCard.marketValueEur, "en-GB"),
+      marketValueSource: editorialCard.marketValueEur === undefined ? "unavailable" as const : "verified-cache" as const,
+      marketValueState: editorialCard.marketValueEur === undefined ? "unavailable" as const : "verified" as const,
+      classificationState: "verified" as const,
+      cardTier: editorialCard.tierKey,
+      editorialCard,
+      touchlinePoints: 0,
+      seasonTouchlinePoints: null,
+      seasonTotalRating: number(object(season?.summary_payload).totalRating),
+      matchRating: null,
+      seasonStats: verifiedStats(season, position),
+    }];
+  });
+}

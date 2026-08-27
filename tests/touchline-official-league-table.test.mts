@@ -449,11 +449,12 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.match(serverReader, /touchline-official-league-table:\$\{TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID\}/);
   assert.match(serverReader, /\.eq\("season_id", scope\.season\.id\)/);
   assert.doesNotMatch(serverReader, /createFootballDataProvider/);
-  assert.match(directory, /loadTouchlineOfficialLeagueTable/);
-  assert.match(directory, /id="official-league-table"/);
+  assert.doesNotMatch(directory, /loadTouchlineOfficialLeagueTable/);
+  assert.doesNotMatch(directory, /TouchlineOfficialLeagueTable/);
+  assert.doesNotMatch(directory, /id="official-league-table"/);
   assert.match(directory, /href=\{`\/touchline-clubs\/\$\{club\.slug\}[^\n]+\n\s+prefetch=\{false\}/);
   assert.match(profile, /loadTouchlineOfficialLeagueTable/);
   assert.match(profile, /TouchlineOfficialLeagueTable/);
   assert.doesNotMatch(profile, /buildOfficialStandings/);
-  assert.match(profile, /\/touchline-clubs\?\$\{localeQuery\}#official-league-table/);
+  assert.doesNotMatch(profile, /\/touchline-clubs\?\$\{localeQuery\}#official-league-table/);
 });

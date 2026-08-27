@@ -491,7 +491,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           locale={locale}
           variant="profile"
           currentTeamId={club.teamId}
-          action={{ href: `/touchline-clubs?${localeQuery}#official-league-table`, label: t("fullTables") }}
         />
 
         <section className="club-hub-touchline" aria-label={`${club.name} TouchLine player cards`}>

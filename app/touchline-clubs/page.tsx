@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import { Check, ChevronDown, Languages } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineCoachCategoryShowcase from "@/components/touchline/TouchlineCoachCategoryShowcase";
-import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
-import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
+import { loadTouchlinePublishedCardShowcaseCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK } from "@/lib/touchlineArena/demo-data";
 import { normalizeTouchLineLocale, type TouchLineLocale } from "@/lib/touchlineArena/i18n";
 
@@ -28,6 +28,7 @@ const copy = {
     clubs: "20 clubes",
     verified: "TouchLine Verified",
     hint: "Seleção premium de clubes",
+    language: "Idioma",
   },
   "en-GB": {
     eyebrow: "TouchLine England",
@@ -37,6 +38,7 @@ const copy = {
     clubs: "20 clubs",
     verified: "TouchLine Verified",
     hint: "Premium club selection",
+    language: "Language",
   },
 } as const;
 
@@ -49,16 +51,34 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
   const locale = normalizeTouchLineLocale(params.lang);
   const dictionary = locale === "pt-BR" ? copy["pt-BR"] : copy["en-GB"];
   const localeQuery = languageQuery(locale);
-  const officialLeagueTable = await loadTouchlineOfficialLeagueTable();
+  const publishedPlayerCards = await loadTouchlinePublishedCardShowcaseCatalog();
 
   return (
     <main className={styles.shell}>
-      <TouchlineGlobalNavigation
-        locale={locale}
-        currentRoute="clubHub"
-        surface="public"
-        className={styles.globalNavigation}
-      />
+      <div className={styles.topbar}>
+        <TouchlineGlobalNavigation
+          locale={locale}
+          currentRoute="clubHub"
+          surface="public"
+          className={styles.globalNavigation}
+        />
+        <details className={styles.languageMenu}>
+          <summary aria-label={dictionary.language}>
+            <Languages aria-hidden="true" />
+            <span>{dictionary.language}</span>
+            <b>{locale === "pt-BR" ? "PT" : "EN"}</b>
+            <ChevronDown aria-hidden="true" />
+          </summary>
+          <div className={styles.languagePanel}>
+            <Link href="/touchline-clubs?lang=en-GB" aria-current={locale === "en-GB" ? "page" : undefined}>
+              <span>🇬🇧 English</span>{locale === "en-GB" ? <Check aria-hidden="true" /> : null}
+            </Link>
+            <Link href="/touchline-clubs?lang=pt-BR" aria-current={locale === "pt-BR" ? "page" : undefined}>
+              <span>🇧🇷 Português</span>{locale === "pt-BR" ? <Check aria-hidden="true" /> : null}
+            </Link>
+          </div>
+        </details>
+      </div>
 
       <section className={styles.hero}>
         <div>
@@ -102,14 +122,7 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
         ))}
       </section>
 
-      <TouchlineOfficialLeagueTable
-        id="official-league-table"
-        table={officialLeagueTable}
-        locale={locale}
-        variant="directory"
-      />
-
-      <TouchlineCoachCategoryShowcase locale={locale} />
+      <TouchlineCoachCategoryShowcase locale={locale} playerCards={publishedPlayerCards} />
 
       <footer className={styles.footer}>
         <span>{dictionary.clubs}</span>

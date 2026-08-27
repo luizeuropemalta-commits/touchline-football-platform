@@ -10,7 +10,7 @@ const component = readFileSync(
 );
 const page = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
 
-test("ClubHub exposes exactly seven decorative coach category frames without coach or market claims", () => {
+test("ClubHub exposes the seven canonical player and coach borders with real representative boundaries", () => {
   assert.equal(TOUCHLINE_COACH_TIER_GALLERY.length, 7);
   assert.equal(new Set(TOUCHLINE_COACH_TIER_GALLERY.map((item) => item.tierKey)).size, 7);
 
@@ -23,12 +23,26 @@ test("ClubHub exposes exactly seven decorative coach category frames without coa
     );
   }
 
-  assert.match(component, /Static, non-interactive framework/);
   assert.match(component, /alt=""/);
-  assert.match(component, /<ul className=\{styles\.grid\}>/);
-  assert.doesNotMatch(component, /TOUCHLINE_DEMO_COACH|TOUCHLINE_LIVE_COACHES|competition-card-offer|providerId|retailPrice|touchCredit|\bfetch\(/);
+  assert.equal((component.match(/<ul className=\{styles\.grid\}/g) ?? []).length, 2);
+  assert.match(component, /selectTouchlinePlayerTierRepresentatives\(playerCards\)/);
+  assert.match(component, /selectTouchlineCoachTierRepresentatives\(\)/);
+  assert.match(component, /TouchlineEliteExactCard/);
+  assert.match(component, /TouchlineCoachCard/);
+  assert.match(component, /dictionary\.representativePendingDescription/);
+  assert.doesNotMatch(component, /TOUCHLINE_DEMO_COACH|competition-card-offer|retailPrice|touchCredit|\bfetch\(/);
 });
 
-test("the public ClubHub keeps the coach framework after the shared official table", () => {
-  assert.match(page, /<TouchlineOfficialLeagueTable[\s\S]*?\/>[\s\S]*?<TouchlineCoachCategoryShowcase locale=\{locale\} \/>/);
+test("the public ClubHub keeps language selection at the top and player borders before coach borders without the league table", () => {
+  assert.match(page, /<details className=\{styles\.languageMenu\}>/);
+  assert.match(page, /href="\/touchline-clubs\?lang=en-GB"/);
+  assert.match(page, /href="\/touchline-clubs\?lang=pt-BR"/);
+  assert.match(page, /loadTouchlinePublishedCardShowcaseCatalog\(\)/);
+  assert.match(page, /<TouchlineCoachCategoryShowcase locale=\{locale\} playerCards=\{publishedPlayerCards\} \/>/);
+  assert.doesNotMatch(page, /TouchlineOfficialLeagueTable|loadTouchlineOfficialLeagueTable|official-league-table/);
+
+  const playerSection = component.indexOf("touchline-player-border-title");
+  const coachSection = component.indexOf("touchline-coach-border-title");
+  assert.ok(playerSection >= 0);
+  assert.ok(coachSection > playerSection);
 });

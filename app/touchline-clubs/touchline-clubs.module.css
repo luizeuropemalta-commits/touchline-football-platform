@@ -9,7 +9,100 @@
   font-family: Arial, sans-serif;
 }
 
-.globalNavigation { max-width: 1440px; }
+.topbar {
+  position: relative;
+  z-index: 60;
+  max-width: 1440px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 auto;
+}
+
+.globalNavigation {
+  flex: 1 1 auto;
+  max-width: none;
+  margin: 0;
+}
+
+.languageMenu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.languageMenu summary {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(183, 255, 75, .32);
+  border-radius: 999px;
+  padding: 0 13px;
+  color: #efffd2;
+  background: rgba(3, 12, 9, .84);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28), inset 0 1px rgba(255, 255, 255, .08);
+  cursor: pointer;
+  list-style: none;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.languageMenu summary::-webkit-details-marker { display: none; }
+.languageMenu summary svg { width: 14px; height: 14px; color: #b9ff56; }
+.languageMenu summary svg:last-child { width: 12px; height: 12px; transition: transform .18s ease; }
+.languageMenu[open] summary svg:last-child { transform: rotate(180deg); }
+
+.languageMenu summary:hover,
+.languageMenu summary:focus-visible {
+  border-color: #b9ff56;
+  outline: none;
+  box-shadow: 0 0 10px rgba(185, 255, 86, .42), 0 0 24px rgba(185, 255, 86, .16);
+}
+
+.languageMenu summary b {
+  min-width: 24px;
+  color: #b9ff56;
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+
+.languagePanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid rgba(220, 255, 195, .2);
+  border-radius: 16px;
+  background: rgba(3, 12, 9, .98);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .46);
+}
+
+.languagePanel a {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 11px;
+  padding: 0 11px;
+  color: rgba(246, 255, 236, .8);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.languagePanel a:hover,
+.languagePanel a:focus-visible,
+.languagePanel a[aria-current="page"] {
+  color: #fff;
+  background: rgba(183, 255, 75, .12);
+  outline: none;
+}
+
+.languagePanel a svg { width: 14px; height: 14px; color: #b9ff56; }
 
 .hero {
   display: flex;
@@ -241,6 +334,8 @@
 }
 
 @media (max-width: 820px) {
+  .topbar { align-items: flex-start; }
+
   .hero {
     align-items: stretch;
     flex-direction: column;
@@ -296,6 +391,10 @@
   .footer {
     flex-direction: column;
   }
+
+  .topbar { flex-wrap: wrap; }
+  .globalNavigation { flex-basis: 100%; }
+  .languageMenu { margin-left: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
