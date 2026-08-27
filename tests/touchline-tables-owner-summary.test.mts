@@ -11,9 +11,8 @@ const rankingsCopySource = readFileSync(
   "utf8",
 );
 
-test("Tables and Market use the same canonical squad card value label", () => {
-  assert.match(rankingsCopySource, /totalValue: "Squad card value"/);
-  assert.match(rankingsCopySource, /totalValue: "Valor dos cards do elenco"/);
+test("Tables no longer exposes a wealth or squad-value ranking label", () => {
+  assert.doesNotMatch(rankingsCopySource, /totalValue:|mostValuableOwners:|ownerValueRule:/);
 });
 
 function publishedCard(id: string, amountMinor: number): ClubOwnerSquadCard {

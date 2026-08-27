@@ -97,7 +97,6 @@ test("public pages retain the isolated demo cookie and demo fallback", () => {
 test("account-aware server pages gate cookies behind the public branch", () => {
   const pagePaths = [
     "../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
-    "../app/touchline-tables/page.tsx",
   ];
 
   for (const pagePath of pagePaths) {
@@ -111,6 +110,12 @@ test("account-aware server pages gate cookies behind the public branch", () => {
     assert.doesNotMatch(source, /kind:\s*["']authenticated["']/);
     assert.doesNotMatch(source, /fallback:\s*user\s*\?/);
   }
+});
+
+test("the public rankings page never reads a private contract roster", () => {
+  const source = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
+  assert.doesNotMatch(source, /readAuthoritativeTouchlineRoster|resolveTouchlineServerPageRoster|publicRosterCookieValue/);
 });
 
 test("the league-wide player ranking never reads a private roster or demo cookie", () => {

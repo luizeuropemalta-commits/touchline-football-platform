@@ -100,7 +100,8 @@ test("ranking pages use the league-wide published catalogue, not a private owner
   assert.match(rankingPage, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
   assert.doesNotMatch(rankingPage, /readAuthoritativeTouchlineRoster/);
   assert.match(tablesPage, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
-  assert.match(tablesPage, /cardPlayerRank = \[\.\.\.rankedCards\]\.sort\(compareTouchLineRankedCards\)/);
+  assert.match(tablesPage, /rosterCards=\{rankedCards\}/);
+  assert.doesNotMatch(tablesPage, /cardPlayerRank/);
   for (const surface of [rankingPage, clubOwner, marketStage]) {
     assert.match(surface, /buildTouchlineVerifiedMatchFactFields/);
     assert.doesNotMatch(surface, /buildTouchlineMatchScoringBreakdownFields/);

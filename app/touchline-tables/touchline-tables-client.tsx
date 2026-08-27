@@ -5,7 +5,7 @@ import Link from "next/link";
 import { type CSSProperties } from "react";
 import {
   ChevronRight,
-  ExternalLink,
+  Crown,
   ShieldCheck,
   Trophy,
 } from "lucide-react";
@@ -21,9 +21,6 @@ import {
   buildTouchlinePlayerCardZoomDetails,
   buildTouchlineVerifiedMatchFactFields,
 } from "@/lib/touchlineArena/card-zoom-details";
-import {
-  formatTouchlineCommercialCardTotal,
-} from "@/lib/touchlineArena/commercial-card-pricing";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import type { TouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import {
@@ -43,8 +40,6 @@ type RankingsCopy = ReturnType<typeof getTouchLineRankingsCopy>;
 
 type TouchLineTablesClientProps = {
   canEditCardEngine: boolean;
-  cardClubOwnerRank: TouchLineClubOwnerStanding[];
-  cardPlayerRank: ClubOwnerSquadCard[];
   coachRanking: TouchLineCoachRankingState;
   copy: RankingsCopy;
   currentProviderRoundName: string | null;
@@ -55,7 +50,6 @@ type TouchLineTablesClientProps = {
   rosterCards: ClubOwnerSquadCard[];
   totalCards: number;
   totalClubOwners: number;
-  totalOwnerValue: string;
   touchLineEnglandTable: TouchLineClubOwnerStanding[];
 };
 
@@ -171,8 +165,6 @@ function TablePlayerCardZoom({
 
 export default function TouchLineTablesClient({
   canEditCardEngine,
-  cardClubOwnerRank,
-  cardPlayerRank,
   coachRanking,
   copy,
   currentProviderRoundName,
@@ -183,7 +175,6 @@ export default function TouchLineTablesClient({
   rosterCards,
   totalCards,
   totalClubOwners,
-  totalOwnerValue,
   touchLineEnglandTable,
 }: TouchLineTablesClientProps) {
   const selection = publishedTopEleven?.slots ?? null;
@@ -217,137 +208,104 @@ export default function TouchLineTablesClient({
           <div><dt>{copy.clubOwners}</dt><dd>{totalClubOwners}</dd></div>
           <div><dt>{copy.cardsTracked}</dt><dd>{totalCards}</dd></div>
           <div><dt>{copy.rankMode}</dt><dd>{rankMode}</dd></div>
-          <div><dt>{copy.totalValue}</dt><dd>{totalOwnerValue}</dd></div>
         </dl>
       </section>
 
       <section className={styles.selectionSection} id="best-xi">
-        <div className={styles.sectionHeading}>
-          <div>
-            <p>{copy.touchLineXi}</p>
-            <h2>{copy.seasonSelection}</h2>
+        <div className={styles.rankStage}>
+          <div className={styles.bestXiPanel}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <p>{copy.touchLineXi}</p>
+                <h2>{copy.seasonSelection}</h2>
+              </div>
+              <span>{copy.seasonSelectionRule}</span>
+            </div>
+
+            {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection}>
+              {selection.map((slot) => {
+                const card = publishedRosterCards.find((item) => slot.playerIds.includes(item.id));
+                if (!card) return null;
+                const point = projectedPitchPoint(slot.x, slot.y);
+                return (
+                  <article
+                    key={slot.id}
+                    className={styles.pitchPlayer}
+                    data-best-eleven-player={card.canonicalPlayerId}
+                    data-best-eleven-position={slot.label}
+                    style={{ left: `${point.x}%`, top: `${point.y}%` } as CSSProperties}
+                  >
+                    <span className={styles.positionLabel}>{slot.label}</span>
+                    <div className={styles.cardButton}>
+                      <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
+                    </div>
+                    <div className={styles.pitchIdentity}>
+                      <strong>{card.shortName}</strong>
+                      <span>{card.seasonTotalRating?.toFixed(2) ?? "—"}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </TouchlinePitchSurface>
+            <p className={styles.pitchHint}>
+              {isPortuguese
+                ? "Toque em um card para ampliar. Cada vaga muda automaticamente quando outro jogador da mesma posição assume a maior Nota TouchLine acumulada."
+                : "Tap a card to enlarge it. Each slot updates automatically when another player in the same position takes the highest accumulated TouchLine Rating."}
+            </p></> : <div className={styles.selectionPending} role="status"><strong>{copy.seasonSelectionPending}</strong><p>{copy.seasonSelectionPendingDescription}</p></div>}
           </div>
-          <span>{copy.seasonSelectionRule}</span>
+          <aside className={styles.coachPanel} id="coach-rankings" aria-labelledby="coach-ranking-title">
+            <header>
+              <span><Crown aria-hidden="true" /> {isPortuguese ? "TREINADORES" : "COACHES"}</span>
+              <h2 id="coach-ranking-title">{isPortuguese ? "Comando da temporada" : "Season leaders"}</h2>
+              <p>{isPortuguese ? "Classificação automática pelos pontos canônicos dos treinadores." : "Automatically ordered by canonical coach points."}</p>
+            </header>
+            {coachRanking.phase === "ranked" && coachRanking.rows.length ? <ol
+              className={styles.coachList}
+              data-coach-scoring-version={coachRanking.scoringVersion ?? undefined}
+              tabIndex={0}
+              aria-label={isPortuguese ? "Classificação dos treinadores" : "Coach standings"}
+            >
+              {coachRanking.rows.map((coach) => (
+                <li key={coach.coachProviderId} data-coach-rank={coach.rank}>
+                  <b>{String(coach.rank).padStart(2, "0")}</b>
+                  <div className={styles.coachMonogram}><span aria-hidden="true">{coach.coachName.slice(0, 2)}</span></div>
+                  <div className={styles.rowIdentity}><strong>{coach.coachName}</strong><span>{coach.clubName} · {coach.wins}W {coach.draws}D {coach.losses}L</span></div>
+                  <div className={styles.pointsValue}><strong>{coach.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
+                </li>
+              ))}
+            </ol> : <RankingPending copy={copy} />}
+          </aside>
         </div>
-
-        {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection}>
-          {selection.map((slot) => {
-            const card = publishedRosterCards.find((item) => slot.playerIds.includes(item.id));
-            if (!card) return null;
-            const point = projectedPitchPoint(slot.x, slot.y);
-            return (
-              <article
-                key={slot.id}
-                className={styles.pitchPlayer}
-                style={{ left: `${point.x}%`, top: `${point.y}%` } as CSSProperties}
-              >
-                <span className={styles.positionLabel}>{slot.label}</span>
-                <div className={styles.cardButton}>
-                  <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
-                </div>
-              </article>
-            );
-          })}
-
-        </TouchlinePitchSurface>
-        <p className={styles.pitchHint}>
-          {isPortuguese
-            ? "Toque em um card para ampliar. A Seleção TouchLine usa o mesmo ranking de todas as páginas do jogo."
-            : "Tap a card to enlarge it. The TouchLine XI uses the same ranking across the game."}
-        </p></> : <div className={styles.selectionPending} role="status"><strong>{copy.seasonSelectionPending}</strong><p>{copy.seasonSelectionPendingDescription}</p></div>}
       </section>
 
-      <div className={styles.cascade}>
-        <section className={styles.rankSection} id="club-owner-table">
-          <div className={styles.sectionHeading}>
-            <div><p>{copy.clubOwnerRank}</p><h2>{copy.mostValuableOwners}</h2></div>
-            <span>{copy.ownerValueRule}</span>
+      <section className={styles.clubOwnerSection} id="club-owner-table">
+        <div className={styles.sectionHeading}>
+          <div>
+            <p>{copy.englandTable}</p>
+            <h2>{copy.ownerLeagueTable}</h2>
           </div>
-          {cardClubOwnerRank.length ? <ol className={styles.ownerList}>
-            {cardClubOwnerRank.map((owner, index) => (
-              <li key={owner.id}>
-                <b>{String(index + 1).padStart(2, "0")}</b>
-                <div className={styles.ownerAvatar}><OwnerAvatar owner={owner} /></div>
-                <div className={styles.rowIdentity}>
-                  <strong>{owner.name}</strong>
-                  <span>{owner.clubName}</span>
-                </div>
-                <div className={styles.rowValue}>
-                  <strong>{formatTouchlineCommercialCardTotal({
-                    numericPrice: owner.squadValueTc,
-                    competition: "england",
-                  })}</strong>
-                  <span>{owner.squadCount} {copy.cards}</span>
-                </div>
-                {owner.profileHref ? (
-                  <Link href={`${owner.profileHref}?lang=${encodeURIComponent(locale)}`} aria-label={`${isPortuguese ? "Abrir perfil de" : "Open profile for"} ${owner.name}`}>
-                    <ChevronRight aria-hidden="true" />
-                  </Link>
-                ) : <span className={styles.rowEnd} />}
-              </li>
-            ))}
-          </ol> : <RankingPending copy={copy} />}
-        </section>
-
-        <section className={styles.rankSection} id="touchline-england">
-          <div className={styles.sectionHeading}>
-            <div><p>{copy.englandTable}</p><h2>{copy.ownerLeagueTable}</h2></div>
-            <span>{copy.ownerLeagueRule}</span>
+          <span>{copy.ownerLeagueRule}</span>
+        </div>
+        <div className={styles.clubOwnerTableShell}>
+          <div className={styles.clubOwnerTableHeader}>
+            <span>{isPortuguese ? "POS" : "POS"}</span>
+            <span>CLUBOWNER</span>
+            <span>{isPortuguese ? "CLUBE" : "CLUB"}</span>
+            <span>{isPortuguese ? "PONTOS" : "POINTS"}</span>
           </div>
-          {touchLineEnglandTable.length ? <ol className={styles.tableList}>
+          {touchLineEnglandTable.length ? <ol className={styles.ownerTableList}>
             {touchLineEnglandTable.map((owner, index) => (
               <li key={owner.id}>
                 <b>{String(index + 1).padStart(2, "0")}</b>
                 <div className={styles.ownerAvatar}><OwnerAvatar owner={owner} /></div>
                 <div className={styles.rowIdentity}><strong>{owner.name}</strong><span>{owner.clubName}</span></div>
                 <div className={styles.pointsValue}><strong>{owner.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
+                {owner.profileHref ? <Link href={`${owner.profileHref}?lang=${encodeURIComponent(locale)}`} aria-label={`${isPortuguese ? "Abrir perfil de" : "Open profile for"} ${owner.name}`}><ChevronRight aria-hidden="true" /></Link> : <span className={styles.rowEnd} />}
               </li>
             ))}
           </ol> : <RankingPending copy={copy} />}
-        </section>
-
-        <section className={styles.playerRankSection} id="card-rankings">
-          <div className={styles.sectionHeading}>
-            <div><p>{copy.playerRank}</p><h2>{copy.bestPlayerCards}</h2></div>
-            <span>{copy.playerOrderRule}</span>
-          </div>
-          {cardPlayerRank.length ? <ol className={styles.playerList}>
-            {cardPlayerRank.map((card, index) => (
-              <li key={card.id}>
-                <b>{String(index + 1).padStart(2, "0")}</b>
-                <div className={styles.playerRankCardButton}>
-                  <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
-                </div>
-                <div className={styles.rowIdentity}><strong>{card.name}</strong><span>{card.position} · {card.clubName}</span></div>
-                <div className={styles.pointsValue}><strong>{card.seasonTotalRating?.toFixed(2) ?? "—"}</strong><span>{isPortuguese ? "nota total" : "total rating"}</span></div>
-                <Link href={touchlinePlayerProfileHref(squadCardToExactPlayer(card), locale)} aria-label={`${isPortuguese ? "Abrir perfil de" : "Open profile for"} ${card.name}`}>
-                  <ExternalLink aria-hidden="true" />
-                </Link>
-              </li>
-            ))}
-          </ol> : <RankingPending copy={copy} />}
-        </section>
-
-        <section className={styles.rankSection} id="coach-rankings">
-          <div className={styles.sectionHeading}>
-            <div>
-              <p>{isPortuguese ? "Ranking de treinadores" : "Coach ranking"}</p>
-              <h2>{isPortuguese ? "Melhores treinadores TouchLine" : "Top TouchLine coaches"}</h2>
-            </div>
-            <span>{isPortuguese ? "Pontos V2, vitórias e vitórias fora de casa definem a ordem." : "V2 points, wins and away wins define the order."}</span>
-          </div>
-          {coachRanking.phase === "ranked" && coachRanking.rows.length ? <ol className={styles.tableList} data-coach-scoring-version={coachRanking.scoringVersion ?? undefined}>
-            {coachRanking.rows.map((coach) => (
-              <li key={coach.coachProviderId}>
-                <b>{String(coach.rank).padStart(2, "0")}</b>
-                <div className={styles.ownerAvatar}><span aria-hidden="true">{coach.coachName.slice(0, 2)}</span></div>
-                <div className={styles.rowIdentity}><strong>{coach.coachName}</strong><span>{coach.clubName} · {coach.wins}W {coach.draws}D {coach.losses}L</span></div>
-                <div className={styles.pointsValue}><strong>{coach.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
-              </li>
-            ))}
-          </ol> : <RankingPending copy={copy} />}
-        </section>
-      </div>
+        </div>
+      </section>
 
       <footer className={styles.footer}>
         <Trophy aria-hidden="true" size={19} />

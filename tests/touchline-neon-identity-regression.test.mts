@@ -258,22 +258,23 @@ test("Best of the Week receives a large readable promotion stage", () => {
   assert.match(socialCss, /minmax\(370px, 430px\)/);
 });
 
-test("best-player rankings use player cards and one reversible zoom on every device", () => {
+test("the positional Best XI uses player cards and one reversible zoom on every device", () => {
   const tablesClient = source("app/touchline-tables/touchline-tables-client.tsx");
   const tablesCss = source("app/touchline-tables/touchline-tables.module.css");
-  const playerRankStart = tablesClient.indexOf('className={styles.playerList}');
-  const playerRankSource = tablesClient.slice(playerRankStart, playerRankStart + 1700);
+  const bestElevenStart = tablesClient.indexOf("data-best-eleven-player");
+  const bestElevenSource = tablesClient.slice(bestElevenStart, bestElevenStart + 1100);
 
-  assert.ok(playerRankStart >= 0);
-  assert.match(playerRankSource, /playerRankCardButton/);
-  assert.match(playerRankSource, /<TablePlayerCardZoom card=\{card\}/);
-  assert.doesNotMatch(playerRankSource, /<ClubLogo/);
+  assert.ok(bestElevenStart >= 0);
+  assert.match(bestElevenSource, /cardButton/);
+  assert.match(bestElevenSource, /<TablePlayerCardZoom card=\{card\}/);
+  assert.doesNotMatch(bestElevenSource, /<ClubLogo/);
   assert.match(tablesClient, /import TouchlineCardZoom/);
   assert.match(tablesClient, /function TablePlayerCardZoom[\s\S]*?<TouchlineCardZoom/);
   assert.match(tablesClient, /buildTouchlinePlayerCardZoomDetails/);
   assert.match(tablesClient, /showSocialMetrics=\{expanded\}/);
   assert.doesNotMatch(tablesClient, /useTouchlineDialog<HTMLDivElement>/);
   assert.match(tablesCss, /\.pitchRenderedCard/);
+  assert.doesNotMatch(tablesClient, /playerList|playerRankCardButton/);
 });
 
 test("dedicated player-card ranking reuses the shared zoom and keeps compact cards free of internal controls", () => {

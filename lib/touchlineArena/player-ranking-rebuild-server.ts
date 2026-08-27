@@ -11,7 +11,7 @@ import {
   isTouchLinePlayerRankingAggregateComplete,
   isTouchLinePlayerRankingSettlementComplete,
 } from "./player-ranking-eligibility";
-import { buildTouchlineSelection } from "./touchline-selection";
+import { TOUCHLINE_SELECTION_VERSION, buildTouchlineSelection } from "./touchline-selection";
 
 type Row = Record<string, unknown>;
 
@@ -236,6 +236,7 @@ async function rebuildTouchLinePlayerRanking(
   const digest = sourceDigest({
     coverageStatus,
     expectedFixtureIds,
+    selectionVersion: TOUCHLINE_SELECTION_VERSION,
     players: rankingPlayers.map((player) => ({
       id: player.playerId,
       providerPlayerId: String(player.providerPlayerId),

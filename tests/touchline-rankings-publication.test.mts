@@ -10,13 +10,17 @@ test("TouchLine Tables never present demo data as an official competition rankin
   assert.doesNotMatch(page, /rankClubOwnerCards|buildDemoClubOwnerStandings|buildTouchlineRankingSnapshot/);
   assert.match(page, /loadTouchLineActiveRanking\(\)/);
   assert.match(page, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
-  assert.match(page, /compareTouchLineRankedCards/);
-  assert.match(page, /const cardClubOwnerRank: never\[\] = \[\]/);
   assert.match(page, /const touchLineEnglandTable: never\[\] = \[\]/);
-  assert.match(page, /const cardPlayerRank = \[\.\.\.rankedCards\]\.sort\(compareTouchLineRankedCards\)/);
   assert.match(client, /function RankingPending/);
-  assert.match(client, /cardClubOwnerRank\.length \?/);
   assert.match(client, /touchLineEnglandTable\.length \?/);
-  assert.match(client, /cardPlayerRank\.length \?/);
   assert.match(copy, /rankingPending/);
+});
+
+test("TouchLine Tables shows one positional Best XI, coaches and the sporting ClubOwner Table", () => {
+  assert.match(client, /data-best-eleven-player/);
+  assert.match(client, /data-best-eleven-position/);
+  assert.match(client, /id="coach-rankings"/);
+  assert.match(client, /id="club-owner-table"/);
+  assert.doesNotMatch(client, /cardClubOwnerRank|playerList|playerRankSection/);
+  assert.doesNotMatch(copy, /Highest squad card value|Maiores valores de cards do elenco/);
 });

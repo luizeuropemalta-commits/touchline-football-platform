@@ -281,6 +281,64 @@ test("builds the complete 4-3-3 TouchLine Selection from the same snapshot", () 
   );
 });
 
+test("the Best XI keeps left and right leaders in their exact slots", () => {
+  const snapshot = buildTouchlineRankingSnapshot({
+    snapshotId: "exact-sides-v2",
+    roundId: "round-1",
+    generatedAt: "2026-08-27T18:00:00.000Z",
+    players: [
+      { playerId: "gk", name: "Goalkeeper", clubName: "Club", position: "GK", totalRating: 8 },
+      { playerId: "lb", name: "Left Back", clubName: "Club", position: "Left Back", totalRating: 7 },
+      { playerId: "rb-best", name: "Right Back Leader", clubName: "Club", position: "Right Back", totalRating: 12 },
+      { playerId: "rb-next", name: "Right Back Second", clubName: "Club", position: "RB", totalRating: 11 },
+      { playerId: "cb-1", name: "Centre Back 1", clubName: "Club", position: "CB", totalRating: 9 },
+      { playerId: "cb-2", name: "Centre Back 2", clubName: "Club", position: "CB", totalRating: 8 },
+      { playerId: "cm-1", name: "Midfielder 1", clubName: "Club", position: "CM", totalRating: 9 },
+      { playerId: "cm-2", name: "Midfielder 2", clubName: "Club", position: "DM", totalRating: 8 },
+      { playerId: "cm-3", name: "Midfielder 3", clubName: "Club", position: "AM", totalRating: 7 },
+      { playerId: "lw", name: "Left Wing", clubName: "Club", position: "Left Wing", totalRating: 7 },
+      { playerId: "rw-best", name: "Right Wing Leader", clubName: "Club", position: "Right Wing", totalRating: 12 },
+      { playerId: "rw-next", name: "Right Wing Second", clubName: "Club", position: "RW", totalRating: 11 },
+      { playerId: "st", name: "Striker", clubName: "Club", position: "Centre Forward", totalRating: 10 },
+    ],
+  });
+
+  const selection = buildTouchlineSelection(snapshot);
+  const bySlot = Object.fromEntries(selection.players.map((entry) => [entry.id, entry.player.playerId]));
+
+  assert.equal(selection.complete, true);
+  assert.equal(bySlot.lb, "lb");
+  assert.equal(bySlot.rb, "rb-best");
+  assert.equal(bySlot.lw, "lw");
+  assert.equal(bySlot.rw, "rw-best");
+});
+
+test("a higher canonical rating automatically replaces the leader of the same slot", () => {
+  const players = (haalandRating: number): TouchlineRankingPlayerInput[] => [
+    { playerId: "gk", name: "Goalkeeper", clubName: "Club", position: "GK", totalRating: 8 },
+    { playerId: "lb", name: "Left Back", clubName: "Club", position: "LB", totalRating: 8 },
+    { playerId: "rb", name: "Right Back", clubName: "Club", position: "RB", totalRating: 8 },
+    { playerId: "cb-1", name: "Centre Back 1", clubName: "Club", position: "CB", totalRating: 8 },
+    { playerId: "cb-2", name: "Centre Back 2", clubName: "Club", position: "CB", totalRating: 7 },
+    { playerId: "cm-1", name: "Midfielder 1", clubName: "Club", position: "CM", totalRating: 8 },
+    { playerId: "cm-2", name: "Midfielder 2", clubName: "Club", position: "DM", totalRating: 7 },
+    { playerId: "cm-3", name: "Midfielder 3", clubName: "Club", position: "AM", totalRating: 6 },
+    { playerId: "lw", name: "Left Wing", clubName: "Club", position: "LW", totalRating: 8 },
+    { playerId: "rw", name: "Right Wing", clubName: "Club", position: "RW", totalRating: 8 },
+    { playerId: "joao-pedro", name: "Joao Pedro", clubName: "Club", position: "ST", totalRating: 10 },
+    { playerId: "haaland", name: "Haaland", clubName: "Club", position: "ST", totalRating: haalandRating },
+  ];
+  const leader = (haalandRating: number) => buildTouchlineSelection(buildTouchlineRankingSnapshot({
+    snapshotId: `leader-${haalandRating}`,
+    roundId: "round-1",
+    generatedAt: "2026-08-27T18:00:00.000Z",
+    players: players(haalandRating),
+  })).players.find((entry) => entry.id === "st")?.player.playerId;
+
+  assert.equal(leader(9), "joao-pedro");
+  assert.equal(leader(11), "haaland");
+});
+
 test("persists the audited ranking and complete Selection as one publication candidate", () => {
   const players = sportmonksPlayers();
   const draft = buildSportmonksRankingDraft({
