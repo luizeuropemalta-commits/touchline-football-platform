@@ -15,10 +15,25 @@
 .hero span,.sectionHeading span,.guidePanel>span,.rules span{color:var(--lime);font-size:.65rem;font-weight:900;letter-spacing:.16em}
 .hero h1{margin:0;font-size:clamp(28px,3vw,46px);font-weight:650;line-height:.96;letter-spacing:-.045em}
 .hero p{max-width:760px;margin:0;color:#a9b8af;font-size:.82rem;line-height:1.5}
-.hero aside{display:grid;min-width:190px;padding:12px 16px;border:1px solid rgba(170,255,62,.3);border-radius:18px;background:rgba(170,255,62,.07)}
-.hero aside small{color:#9eaca3;font-size:.64rem;font-weight:900;letter-spacing:.08em}
-.hero aside strong{color:var(--gold);font-size:2rem;line-height:1.05}
-.hero aside span{margin-top:3px;color:#e7f1e9;font-size:.7rem;letter-spacing:0}
+.marketClock{position:relative;display:grid;flex:0 0 auto;gap:10px;min-width:250px;max-width:330px;padding:14px 16px;border:1px solid rgba(255,215,92,.34);border-radius:19px;background:radial-gradient(circle at 88% 10%,rgba(255,215,92,.14),transparent 34%),linear-gradient(145deg,rgba(11,31,19,.97),rgba(3,14,10,.99));box-shadow:0 16px 38px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.06);overflow:hidden;isolation:isolate}
+.marketClock::before{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,rgba(170,255,62,.08),transparent 34%,transparent 72%,rgba(255,215,92,.07));content:"";pointer-events:none}
+.marketClock[data-market-clock-phase=opening]{border-color:rgba(170,255,62,.38)}
+.marketClock[data-market-clock-phase=awaiting-final] .clockHeading i,.marketClock[data-market-clock-phase=syncing] .clockHeading i{color:var(--lime);border-color:rgba(170,255,62,.28);background:rgba(170,255,62,.08)}
+.clockHeading{position:relative;z-index:1;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px}
+.clockHeading>i{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(255,215,92,.3);border-radius:50%;color:var(--gold);background:rgba(255,215,92,.08);box-shadow:0 0 22px rgba(255,215,92,.08)}
+.clockHeading svg{width:18px;height:18px}
+.clockHeading>span{display:grid;min-width:0;gap:1px}
+.clockHeading small{color:#9eaca3;font-size:.54rem;font-weight:900;letter-spacing:.13em}
+.clockHeading b{overflow:hidden;color:#f4fbf6;font-size:.78rem;text-overflow:ellipsis;white-space:nowrap}
+.clockHeading em{padding:4px 6px;border:1px solid rgba(170,255,62,.2);border-radius:7px;color:var(--lime);background:rgba(170,255,62,.06);font-size:.56rem;font-style:normal;font-weight:900;letter-spacing:.04em}
+.clockDigits{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;font-variant-numeric:tabular-nums}
+.clockDigits>span{display:flex;align-items:baseline;justify-content:center;gap:2px;min-width:0;padding:7px 4px 6px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(0,7,4,.68);box-shadow:inset 0 1px rgba(255,255,255,.025)}
+.clockDigits b{color:var(--gold);font-size:1.08rem;line-height:1;letter-spacing:-.035em}
+.clockDigits small{color:#7f9086;font-size:.48rem;font-weight:900}
+.clockRule{position:relative;z-index:1;color:var(--gold);font-size:1.85rem;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.04em}
+.marketClock>p{position:relative;z-index:1;display:flex;align-items:center;gap:6px;min-width:0;margin:0;color:#9eaca3;font-size:.59rem;line-height:1.3}
+.marketClock>p>span{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 10px rgba(170,255,62,.62)}
+.srOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 
 .stepper{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:8px;overflow-x:auto;padding:4px 0 8px;scrollbar-width:thin;scrollbar-color:rgba(170,255,62,.46) transparent}
 .stepper button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;min-height:50px;padding:8px 10px;border:1px solid rgba(255,255,255,.09);border-radius:12px;color:#85928b;background:rgba(255,255,255,.025);font:inherit;cursor:pointer}
@@ -174,8 +189,7 @@
   .hero{align-items:start;flex-direction:column}
   .hero h1{font-size:30px}
   .hero p{max-width:330px}
-  .hero aside{width:100%;grid-template-columns:1fr auto;align-items:center}
-  .hero aside strong{grid-row:1/3;grid-column:2;font-size:1.8rem}
+  .marketClock{width:100%;max-width:none;box-sizing:border-box}
   .stepper{grid-template-columns:repeat(5,132px);margin-inline:-13px;padding-inline:13px}
   .paywall{grid-template-columns:1fr}
   .paywall aside{text-align:left}

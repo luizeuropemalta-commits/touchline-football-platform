@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { buildTouchlineFantasyArenaLineup } from "../lib/touchlineFantasy/arena-lineup.ts";
+import { resolveTouchlineFantasyMarketClock } from "../lib/touchlineFantasy/domain.ts";
 
 async function source(path: string) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -73,7 +74,74 @@ test("the classic Markt presentation keeps the guided coach-first Gameweek flow"
   assert.match(client, /Android\|iPhone\|iPad\|iPod\|Mobile/);
   assert.match(client, /navigator\.maxTouchPoints > 1/);
   assert.match(client, /formatTouchlineFantasyDeadline\(activeGameweek\.locksAt, locale\)/);
+  assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} \/>/);
+  assert.match(client, /resolveTouchlineFantasyMarketClock/);
+  assert.match(client, /Mercado fecha em|Market closes in/);
+  assert.match(client, /Mercado reabre em|Market reopens in/);
+  assert.match(client, /5 min após o fim da rodada|5 min after the Gameweek ends/);
+  assert.doesNotMatch(client, /GAMEWEEK RATING/);
+  assert.match(styles, /\.marketClock\{[\s\S]*?min-width:250px[\s\S]*?overflow:hidden/);
+  assert.match(styles, /\.clockDigits\{[\s\S]*?font-variant-numeric:tabular-nums/);
+  assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.marketClock\{width:100%/);
   assert.match(client, /\/arena\?lang=/);
+});
+
+test("the Markt clock follows canonical close and reopen timestamps without inventing a live-round deadline", () => {
+  const base = {
+    id: "gameweek-2",
+    number: 2,
+    firstFixtureAt: "2026-08-28T20:00:00.000Z",
+    lastFixtureAt: "2026-08-30T18:00:00.000Z",
+  } as const;
+  const next = {
+    id: "gameweek-3",
+    number: 3,
+    firstFixtureAt: "2026-09-04T20:00:00.000Z",
+    lastFixtureAt: "2026-09-06T18:00:00.000Z",
+  } as const;
+
+  assert.deepEqual(resolveTouchlineFantasyMarketClock([{
+    ...base,
+    state: "MARKET_OPEN",
+    marketOpensAt: "2026-08-24T19:55:00.000Z",
+    locksAt: "2026-08-28T19:55:00.000Z",
+  }], Date.parse("2026-08-27T19:00:00.000Z")), {
+    phase: "closing",
+    targetAt: "2026-08-28T19:55:00.000Z",
+    gameweekNumber: 2,
+  });
+
+  assert.deepEqual(resolveTouchlineFantasyMarketClock([{
+    ...base,
+    state: "FINAL",
+    marketOpensAt: "2026-08-24T19:55:00.000Z",
+    locksAt: "2026-08-28T19:55:00.000Z",
+  }, {
+    ...next,
+    state: "UPCOMING",
+    marketOpensAt: "2026-08-30T20:03:00.000Z",
+    locksAt: "2026-09-04T19:55:00.000Z",
+  }], Date.parse("2026-08-30T20:00:00.000Z")), {
+    phase: "opening",
+    targetAt: "2026-08-30T20:03:00.000Z",
+    gameweekNumber: 3,
+  });
+
+  assert.deepEqual(resolveTouchlineFantasyMarketClock([{
+    ...base,
+    state: "LIVE",
+    marketOpensAt: "2026-08-24T19:55:00.000Z",
+    locksAt: "2026-08-28T19:55:00.000Z",
+  }, {
+    ...next,
+    state: "UPCOMING",
+    marketOpensAt: "2026-09-04T19:54:59.999Z",
+    locksAt: "2026-09-04T19:55:00.000Z",
+  }], Date.parse("2026-08-30T18:00:00.000Z")), {
+    phase: "awaiting-final",
+    targetAt: null,
+    gameweekNumber: 3,
+  });
 });
 
 test("Club Owner and Arena consume the same canonical Gameweek snapshot without a Fantasy bench", async () => {

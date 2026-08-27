@@ -41,6 +41,69 @@ export type TouchlineFantasyGameweekState =
   | "FINAL"
   | "SETTLED";
 
+export type TouchlineFantasyMarketClock = Readonly<{
+  phase: "closing" | "opening" | "awaiting-final" | "syncing" | "unavailable";
+  targetAt: string | null;
+  gameweekNumber: number | null;
+}>;
+
+type TouchlineFantasyMarketClockGameweek = Readonly<{
+  number: number;
+  state: TouchlineFantasyGameweekState;
+  marketOpensAt: string;
+  locksAt: string;
+}>;
+
+/**
+ * Resolves the visible Markt clock exclusively from the canonical Gameweek
+ * timestamps. Future rounds retain a lock-minus-one-microsecond sentinel until
+ * the previous round is final; that sentinel is deliberately never presented
+ * as a fabricated reopening countdown.
+ */
+export function resolveTouchlineFantasyMarketClock(
+  gameweeks: readonly TouchlineFantasyMarketClockGameweek[],
+  nowMs: number,
+): TouchlineFantasyMarketClock {
+  const parsed = gameweeks.flatMap((gameweek) => {
+    const marketOpensAtMs = Date.parse(gameweek.marketOpensAt);
+    const locksAtMs = Date.parse(gameweek.locksAt);
+    return Number.isFinite(marketOpensAtMs) && Number.isFinite(locksAtMs)
+      ? [{ gameweek, marketOpensAtMs, locksAtMs }]
+      : [];
+  });
+  const openGameweek = parsed
+    .filter(({ gameweek, locksAtMs }) => gameweek.state === "MARKET_OPEN" && locksAtMs > nowMs)
+    .sort((first, second) => first.locksAtMs - second.locksAtMs)[0];
+  if (openGameweek) {
+    return {
+      phase: "closing",
+      targetAt: openGameweek.gameweek.locksAt,
+      gameweekNumber: openGameweek.gameweek.number,
+    };
+  }
+
+  const nextOpening = parsed
+    .filter(({ marketOpensAtMs }) => marketOpensAtMs > nowMs)
+    .sort((first, second) => first.marketOpensAtMs - second.marketOpensAtMs)[0];
+  if (nextOpening) {
+    const awaitingPreviousRoundFinal = nextOpening.gameweek.number > 1
+      && nextOpening.marketOpensAtMs >= nextOpening.locksAtMs - 1_000;
+    return {
+      phase: awaitingPreviousRoundFinal ? "awaiting-final" : "opening",
+      targetAt: awaitingPreviousRoundFinal ? null : nextOpening.gameweek.marketOpensAt,
+      gameweekNumber: nextOpening.gameweek.number,
+    };
+  }
+
+  const staleOpening = parsed
+    .filter(({ gameweek, marketOpensAtMs, locksAtMs }) => gameweek.state === "UPCOMING" && marketOpensAtMs <= nowMs && locksAtMs > nowMs)
+    .sort((first, second) => first.marketOpensAtMs - second.marketOpensAtMs)[0];
+  if (staleOpening) {
+    return { phase: "syncing", targetAt: null, gameweekNumber: staleOpening.gameweek.number };
+  }
+  return { phase: "unavailable", targetAt: null, gameweekNumber: null };
+}
+
 export type TouchlineFantasyParticipation =
   | "rated_appearance"
   | "no_provider_rating"
