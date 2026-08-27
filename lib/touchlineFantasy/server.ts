@@ -23,6 +23,7 @@ import {
 } from "@/lib/touchlineArena/live-coaches";
 import {
   rankTouchlineFantasyManagers,
+  TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
   type TouchlineFantasyGameweekState,
   type TouchlineFantasyPublicManagerRank,
 } from "./domain";
@@ -420,7 +421,7 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     entitlementActive,
     subscription: { amountMinor: 2990, currency: "GBP" },
     config: {
-      budgetEur: number(config.budget_eur) ?? 350_000_000,
+      budgetEur: number(config.budget_eur) ?? TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
       maxPlayersPerClub: number(config.max_players_per_club) ?? 11,
       lockOffsetMinutes: number(config.lock_offset_minutes) ?? 5,
     },

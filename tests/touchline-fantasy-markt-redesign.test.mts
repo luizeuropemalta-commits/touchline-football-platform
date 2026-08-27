@@ -27,9 +27,10 @@ test("TouchLine Markt reuses the one Fantasy Gameweek transaction boundary", asy
 });
 
 test("the classic Markt presentation keeps the guided coach-first Gameweek flow", async () => {
-  const [client, card, styles] = await Promise.all([
+  const [client, card, exactCard, styles] = await Promise.all([
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("components/touchline/fantasy/TouchlineGameweekCard.tsx"),
+    source("components/touchline/cards/TouchlineEliteExactCard.tsx"),
     source("app/fantasy/fantasy.module.css"),
   ]);
   assert.match(client, /const STEPS:[\s\S]*?"coach"[\s\S]*?"formation"[\s\S]*?"players"[\s\S]*?"review"[\s\S]*?"locked"/);
@@ -39,9 +40,33 @@ test("the classic Markt presentation keeps the guided coach-first Gameweek flow"
   assert.match(client, /TOUCHLINE_LIVE_COACHES|snapshot\.coaches\.map/);
   assert.match(client, /selections\.length === 11/);
   assert.match(client, /TouchlineGameweekCard/);
-  assert.match(client, /TouchlineGoalFacingPitchCard/);
+  assert.doesNotMatch(client, /TouchlineGoalFacingPitchCard/);
+  assert.match(client, /className=\{styles\.pitchCard\}>\s*<TouchlineGameweekCard[^>]*compact[^>]*displayWidth=\{62\}/);
+  assert.match(client, /data-player-choice-card="premium"/);
+  assert.match(client, /import Image from "next\/image"/);
+  assert.match(client, /findTouchLineClub/);
+  assert.match(client, /touchlineLiveOptimizedClubLogoUrl/);
+  assert.match(client, /function CompactClubIdentity[\s\S]*?touchlineLiveOptimizedClubLogoUrl\(clubLogoUrl\)[\s\S]*?data-club-identity="compact"[\s\S]*?<Image[^>]*unoptimized[^>]*loading="eager"/);
+  assert.match(client, /snapshot\.coaches\.map[\s\S]*?<CompactClubIdentity clubName=\{entry\.clubName\} clubLogoUrl=\{entry\.clubLogoUrl/);
+  assert.match(client, /<aside className=\{styles\.guidePanel\} tabIndex=\{0\}[^>]*onPointerDown=\{\(event\) => event\.currentTarget\.focus\(\{ preventScroll: true \}\)\}/);
+  const playerChooser = client.match(/<div className=\{styles\.playerGrid\}>[\s\S]*?<footer className=\{styles\.pagination\}>/)?.[0] ?? "";
+  assert.match(playerChooser, /<div className=\{styles\.marketCard\}>[\s\S]*?<div className=\{styles\.playerIdentity\}>\s*<b>\{card\.name\}<\/b>/);
+  assert.match(playerChooser, /<CompactClubIdentity clubName=\{card\.clubName\} clubLogoUrl=\{findTouchLineClub\(card\.clubName\)\?\.logoUrl \?\? null\} detail=\{card\.position\}/);
+  assert.doesNotMatch(playerChooser, /card\.marketValue|VALOR DE MERCADO|MARKET VALUE/);
   assert.match(card, /TouchlineEliteExactCard/);
   assert.match(card, /TouchlineCardZoom/);
+  assert.match(exactCard, /data-card-market-value-panel="true"/);
+  assert.match(styles, /\.marketCard \[data-card-market-value-panel="true"\]\{display:none!important\}/);
+  assert.match(styles, /\.playerIdentity\{[\s\S]*?text-align:center/);
+  assert.match(styles, /\.clubIdentity\{[\s\S]*?justify-self:start[\s\S]*?width:calc\(100% - 4px\)[\s\S]*?max-width:100%[\s\S]*?box-sizing:border-box[\s\S]*?overflow:hidden/);
+  assert.match(styles, /\.clubIdentity img\{[\s\S]*?width:22px[\s\S]*?height:22px[\s\S]*?object-fit:contain/);
+  assert.match(styles, /\.guidePanel\{[\s\S]*?overflow:auto[\s\S]*?overscroll-behavior-y:contain[\s\S]*?scrollbar-gutter:stable[\s\S]*?touch-action:pan-y/);
+  assert.match(styles, /\.guidePanel\{[\s\S]*?max-height:min\(760px,calc\(100dvh - 32px\)\)/);
+  assert.match(styles, /@media\(max-width:1180px\)\{[\s\S]*?\.guidePanel\{max-height:min\(720px,70dvh\)\}/);
+  assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.guidePanel\{[\s\S]*?max-height:min\(680px,72dvh\)/);
+  assert.doesNotMatch(styles, /\.guidePanel\{max-height:none\}/);
+  assert.match(styles, /\.pitchCard\{[\s\S]*?width:62px[\s\S]*?aspect-ratio:430 \/ 691/);
+  assert.doesNotMatch(styles, /\.attackCard/);
   assert.match(styles, /\.shell\{[\s\S]*?width:min\(1880px,calc\(100% - 24px\)\)/);
   assert.match(styles, /\.hero h1\{[\s\S]*?font-size:clamp\(28px,3vw,46px\)/);
   assert.match(client, /touchlineFantasyLandscapeIsBlocked/);
@@ -224,4 +249,26 @@ test("the customer owns club choice and every successful save is reloaded from t
   assert.match(migration, /there is no per-club cap/);
   assert.match(migration, /set max_players_per_club = 11/);
   assert.match(rollback, /TL_FANTASY_CLUB_LIMIT_EXCEEDED/);
+});
+
+test("the existing Gameweek transaction owns the canonical €900M budget", async () => {
+  const [domain, server, client, migration, rollback] = await Promise.all([
+    source("lib/touchlineFantasy/domain.ts"),
+    source("lib/touchlineFantasy/server.ts"),
+    source("app/fantasy/FantasyGameweekClient.tsx"),
+    source("supabase/migrations/20260827062243_touchline_fantasy_budget_900m.sql"),
+    source("supabase/qa/033_touchline_qa_fantasy_budget_900m_rollback.sql"),
+  ]);
+  assert.match(domain, /TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 900_000_000/);
+  assert.match(server, /budgetEur: number\(config\.budget_eur\) \?\? TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR/);
+  assert.doesNotMatch(server, /budgetEur:[^\n]*350_000_000/);
+  assert.match(client, /orçamento de €900M/);
+  assert.match(client, /orçamento permanece em €900M/);
+  assert.doesNotMatch(client, /€350M/);
+  assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(migration, /set budget_eur = 900000000/);
+  assert.match(migration, /set budget_eur_snapshot = 900000000/);
+  assert.match(migration, /state in \('DRAFT', 'CONFIRMED'\)/);
+  assert.match(rollback, /set budget_eur = 350000000/);
+  assert.match(rollback, /set budget_eur_snapshot = 350000000/);
 });

@@ -1589,6 +1589,7 @@ export function TouchlineEliteExactCard({
         <div
           {...dragAttrs("cardPrice")}
           data-live-card-compact-detail="true"
+          data-card-market-value-panel="true"
           style={{
             ...editableStyle("cardPrice", 23),
             borderRadius: 12,
