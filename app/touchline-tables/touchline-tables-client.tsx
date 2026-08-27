@@ -186,7 +186,10 @@ export default function TouchLineTablesClient({
 }: TouchLineTablesClientProps) {
   const selection = publishedTopEleven?.slots ?? null;
   const publishedRosterCards = rosterCards.filter((card) => Boolean(card.editorialCard));
-  const topPlayerCards = publishedRosterCards.slice(0, 3);
+  const topPlayerCards = publishedRosterCards
+    .filter((card) => card.seasonTotalRating != null)
+    .sort((left, right) => (right.seasonTotalRating ?? 0) - (left.seasonTotalRating ?? 0))
+    .slice(0, 3);
   const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
   const topCoachRow = topSevenCoaches[0] ?? null;
   const topCoachIdentity = topCoachRow
