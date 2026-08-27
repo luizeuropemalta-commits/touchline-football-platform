@@ -19,7 +19,12 @@ test("TouchLine Tables never present demo data as an official competition rankin
 test("TouchLine Tables shows one positional Best XI, coaches and the sporting ClubOwner Table", () => {
   assert.match(client, /data-best-eleven-player/);
   assert.match(client, /data-best-eleven-position/);
+  assert.match(client, /data-top-coach-card/);
   assert.match(client, /id="coach-rankings"/);
+  assert.match(client, /coachRanking\.rows\.slice\(0, 7\)/);
+  assert.match(client, /publishedRosterCards\.slice\(0, 3\)/);
+  assert.match(client, /Top 3 Cards da Temporada/);
+  assert.match(client, /Melhores treinadores/);
   assert.match(client, /id="club-owner-table"/);
   assert.doesNotMatch(client, /cardClubOwnerRank|playerList|playerRankSection/);
   assert.doesNotMatch(copy, /Highest squad card value|Maiores valores de cards do elenco/);

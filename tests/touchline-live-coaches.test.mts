@@ -7,6 +7,7 @@ import {
   TOUCHLINE_LIVE_COACHES_BY_TEAM,
   TOUCHLINE_LIVE_COACHES,
   TOUCHLINE_LIVE_COACHES_FETCHED_AT,
+  touchlineCompetitionCoachAssignments,
   touchlineLiveCoachForProviderId,
   touchlineLiveCoachForTeam,
 } from "../lib/touchlineArena/live-coaches.ts";
@@ -85,6 +86,15 @@ test("exposes the same canonical coach identities for secure ClubOwner selection
   assert.equal(touchlineLiveCoachForProviderId("307")?.coach.name, "Mikel Arteta");
   assert.equal(touchlineLiveCoachForProviderId(" demo-enzo-maresca "), null);
   assert.equal(touchlineLiveCoachForProviderId("unknown"), null);
+});
+
+test("distributes all 20 canonical coach assignments to the ranking reconciler", () => {
+  const assignments = touchlineCompetitionCoachAssignments();
+
+  assert.equal(assignments.length, 20);
+  assert.equal(new Set(assignments.map(({ coach_provider_id }) => coach_provider_id)).size, 20);
+  assert.equal(new Set(assignments.map(({ club_provider_id }) => club_provider_id)).size, 20);
+  assert.deepEqual(assignments[0], { coach_provider_id: "307", club_provider_id: "19" });
 });
 
 test("uses the audited 2025/26 season evidence instead of colouring every coach Sapphire Blue", () => {

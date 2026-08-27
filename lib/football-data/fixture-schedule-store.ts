@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-coaches";
 import type {
   FootballDataProviderName,
   TouchlineCompetition,
@@ -379,7 +380,10 @@ export async function persistCompetitionFixtureSchedule(
   // reconciled only after the canonical fixture write succeeds; final rows are
   // protected as immutable by the database command.
   const { data: coachReconciliation, error: coachReconciliationError } = await admin
-    .rpc("touchline_reconcile_coach_fixture_points", { p_fixture_id: null });
+    .rpc("touchline_reconcile_coach_fixture_points", {
+      p_fixture_id: null,
+      p_competition_coaches: touchlineCompetitionCoachAssignments(),
+    });
   if (coachReconciliationError) {
     return {
       stored: false as const,

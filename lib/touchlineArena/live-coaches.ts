@@ -17,6 +17,11 @@ export type TouchlineLiveCoachSnapshot = TouchlineLiveCoachLookup &
     fetchedAt: string;
   }>;
 
+export type TouchlineCompetitionCoachAssignment = Readonly<{
+  coach_provider_id: string;
+  club_provider_id: string;
+}>;
+
 type TouchlineLiveCoachSeed = Readonly<{
   teamId: string;
   name: string;
@@ -132,6 +137,22 @@ export const TOUCHLINE_LIVE_COACHES_BY_TEAM: Readonly<Record<string, TouchlineLi
 export const TOUCHLINE_LIVE_COACHES: readonly TouchlineLiveCoachSnapshot[] = Object.freeze(
   TOUCHLINE_LIVE_COACH_SEEDS.map(createLiveCoachSnapshot),
 );
+
+const TOUCHLINE_COMPETITION_COACH_ASSIGNMENTS: readonly TouchlineCompetitionCoachAssignment[] = Object.freeze(
+  TOUCHLINE_LIVE_COACHES.map(({ coach }) => Object.freeze({
+    coach_provider_id: coach.providerId,
+    club_provider_id: coach.teamId ?? "",
+  })),
+);
+
+/**
+ * Server-safe canonical coach-to-club map used by the existing V2
+ * reconciliation boundary. Competition rankings cover all 20 clubs
+ * independently of which coaches customers have selected.
+ */
+export function touchlineCompetitionCoachAssignments() {
+  return TOUCHLINE_COMPETITION_COACH_ASSIGNMENTS;
+}
 
 /**
  * The live registry deliberately does not manufacture historical league-table

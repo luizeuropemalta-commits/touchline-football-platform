@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
+import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import {
@@ -25,6 +26,7 @@ import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import type { TouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
+  TOUCHLINE_ENGLAND_CLUBS,
   squadCardToExactPlayer,
   type ClubOwnerSquadCard,
   type TouchLineClubOwnerStanding,
@@ -33,6 +35,11 @@ import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published-top-eleven";
 import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
+import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
+import {
+  touchlineCoachClassificationForProviderId,
+  touchlineLiveCoachForProviderId,
+} from "@/lib/touchlineArena/live-coaches";
 import type { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
 import styles from "./touchline-tables.module.css";
 
@@ -179,6 +186,28 @@ export default function TouchLineTablesClient({
 }: TouchLineTablesClientProps) {
   const selection = publishedTopEleven?.slots ?? null;
   const publishedRosterCards = rosterCards.filter((card) => Boolean(card.editorialCard));
+  const topPlayerCards = publishedRosterCards.slice(0, 3);
+  const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
+  const topCoachRow = topSevenCoaches[0] ?? null;
+  const topCoachIdentity = topCoachRow
+    ? touchlineLiveCoachForProviderId(topCoachRow.coachProviderId)
+    : null;
+  const topCoachClub = topCoachIdentity
+    ? TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === topCoachIdentity.coach.teamId) ?? null
+    : null;
+  const topCoachClassification = topCoachRow
+    ? touchlineCoachClassificationForProviderId(topCoachRow.coachProviderId)
+    : null;
+  const topCoachSlot = topCoachIdentity && topCoachRow ? {
+    ...createTouchlineArenaCoachSlot(topCoachIdentity.coach, null, topCoachClassification?.tierKey),
+    touchlinePoints: topCoachRow.touchlinePoints,
+    status: "audited" as const,
+    scoreEvidence: {
+      provider: "sportmonks" as const,
+      providerEventIds: [...coachRanking.fixtureIds],
+      scoringVersion: coachRanking.scoringVersion ?? "coach_scoring_v2",
+    },
+  } : null;
   const isPortuguese = locale === "pt-BR";
 
   return (
@@ -253,29 +282,97 @@ export default function TouchLineTablesClient({
                 : "Tap a card to enlarge it. Each slot updates automatically when another player in the same position takes the highest accumulated TouchLine Rating."}
             </p></> : <div className={styles.selectionPending} role="status"><strong>{copy.seasonSelectionPending}</strong><p>{copy.seasonSelectionPendingDescription}</p></div>}
           </div>
-          <aside className={styles.coachPanel} id="coach-rankings" aria-labelledby="coach-ranking-title">
+          <aside className={styles.topCoachPanel} data-top-coach-card aria-labelledby="top-coach-title">
             <header>
-              <span><Crown aria-hidden="true" /> {isPortuguese ? "TREINADORES" : "COACHES"}</span>
-              <h2 id="coach-ranking-title">{isPortuguese ? "Comando da temporada" : "Season leaders"}</h2>
-              <p>{isPortuguese ? "Classificação automática pelos pontos canônicos dos treinadores." : "Automatically ordered by canonical coach points."}</p>
+              <span><Crown aria-hidden="true" /> {isPortuguese ? "TREINADOR Nº 1" : "NO. 1 COACH"}</span>
+              <h2 id="top-coach-title">{isPortuguese ? "Melhor treinador" : "Best coach"}</h2>
+              <p>{isPortuguese ? "Líder atual pelos resultados oficiais da temporada." : "Current leader from official season results."}</p>
             </header>
-            {coachRanking.phase === "ranked" && coachRanking.rows.length ? <ol
-              className={styles.coachList}
-              data-coach-scoring-version={coachRanking.scoringVersion ?? undefined}
-              tabIndex={0}
-              aria-label={isPortuguese ? "Classificação dos treinadores" : "Coach standings"}
-            >
-              {coachRanking.rows.map((coach) => (
-                <li key={coach.coachProviderId} data-coach-rank={coach.rank}>
-                  <b>{String(coach.rank).padStart(2, "0")}</b>
-                  <div className={styles.coachMonogram}><span aria-hidden="true">{coach.coachName.slice(0, 2)}</span></div>
-                  <div className={styles.rowIdentity}><strong>{coach.coachName}</strong><span>{coach.clubName} · {coach.wins}W {coach.draws}D {coach.losses}L</span></div>
-                  <div className={styles.pointsValue}><strong>{coach.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
-                </li>
-              ))}
-            </ol> : <RankingPending copy={copy} />}
+            {topCoachIdentity && topCoachClub && topCoachSlot && topCoachRow ? (
+              <div className={styles.topCoachBody}>
+                <Link
+                  className={styles.topCoachCardLink}
+                  href={`/touchline-coaches/${encodeURIComponent(topCoachRow.coachProviderId)}?lang=${encodeURIComponent(locale)}`}
+                  aria-label={`${isPortuguese ? "Abrir card de" : "Open card for"} ${topCoachRow.coachName}`}
+                >
+                  <TouchlineCoachCard
+                    className={styles.topCoachCard}
+                    coach={topCoachIdentity.coach}
+                    slot={topCoachSlot}
+                    clubName={topCoachClub.name}
+                    clubLogoUrl={topCoachClub.logoUrl}
+                    clubAccent={topCoachClub.accent}
+                    countryCode3={topCoachIdentity.countryCode3}
+                    locale={locale}
+                    displayMode="compact"
+                    optimizeForLiveCompact
+                    assetLoading="eager"
+                    frameLoading="eager"
+                    frameFetchPriority="high"
+                  />
+                </Link>
+                <div className={styles.topCoachIdentity}>
+                  <span>{isPortuguese ? "LÍDER DA TEMPORADA" : "SEASON LEADER"}</span>
+                  <strong>{topCoachRow.coachName}</strong>
+                  <small>{topCoachRow.clubName}</small>
+                  <b>{topCoachRow.touchlinePoints} {copy.pointsShort}</b>
+                </div>
+              </div>
+            ) : <RankingPending copy={copy} />}
           </aside>
         </div>
+      </section>
+
+      <section className={styles.rankingHighlights} aria-label={isPortuguese ? "Destaques da temporada" : "Season highlights"}>
+        <div className={styles.podiumPanel} id="top-player-cards">
+          <div className={styles.sectionHeading}>
+            <div>
+              <p>{isPortuguese ? "PÓDIO GERAL" : "OVERALL PODIUM"}</p>
+              <h2>{isPortuguese ? "Top 3 Cards da Temporada" : "Season Top 3 Cards"}</h2>
+            </div>
+            <span>{isPortuguese ? "Os três maiores Ratings acumulados, atualizados automaticamente." : "The three highest accumulated Ratings, updated automatically."}</span>
+          </div>
+          {topPlayerCards.length ? (
+            <ol className={styles.playerPodium}>
+              {topPlayerCards.map((card, index) => (
+                <li key={card.canonicalPlayerId} data-player-podium-rank={index + 1}>
+                  <span className={styles.podiumRank}>{String(index + 1).padStart(2, "0")}</span>
+                  <div className={styles.podiumCard}>
+                    <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
+                  </div>
+                  <div className={styles.podiumIdentity}>
+                    <strong>{card.shortName}</strong>
+                    <span>{card.clubName} · {card.position}</span>
+                    <b>{card.seasonTotalRating?.toFixed(2) ?? "—"}</b>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : <RankingPending copy={copy} />}
+        </div>
+
+        <aside className={styles.coachRankingPanel} id="coach-rankings" aria-labelledby="coach-ranking-title">
+          <header>
+            <span><Crown aria-hidden="true" /> {isPortuguese ? "RANKING DA TEMPORADA" : "SEASON RANKING"}</span>
+            <h2 id="coach-ranking-title">{isPortuguese ? "Melhores treinadores" : "Best coaches"}</h2>
+            <p>{isPortuguese ? "Top 7 pelos pontos canônicos. Empates seguem vitórias, vitórias fora e identidade canônica." : "Top 7 by canonical points. Ties use wins, away wins and canonical identity."}</p>
+          </header>
+          {topSevenCoaches.length ? <ol
+            className={styles.coachList}
+            data-coach-scoring-version={coachRanking.scoringVersion ?? undefined}
+            tabIndex={0}
+            aria-label={isPortuguese ? "Classificação dos treinadores" : "Coach standings"}
+          >
+            {topSevenCoaches.map((coach) => (
+              <li key={coach.coachProviderId} data-coach-rank={coach.rank}>
+                <b>{String(coach.rank).padStart(2, "0")}</b>
+                <div className={styles.coachMonogram}><span aria-hidden="true">{coach.coachName.slice(0, 2)}</span></div>
+                <div className={styles.rowIdentity}><strong>{coach.coachName}</strong><span>{coach.clubName} · {coach.wins}W {coach.draws}D {coach.losses}L</span></div>
+                <div className={styles.pointsValue}><strong>{coach.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
+              </li>
+            ))}
+          </ol> : <RankingPending copy={copy} />}
+        </aside>
       </section>
 
       <section className={styles.clubOwnerSection} id="club-owner-table">

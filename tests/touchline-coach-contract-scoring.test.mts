@@ -190,6 +190,7 @@ test("legacy selections are backfilled from migration time with no retroactive p
 test("fixture ingestion reconciles coach points through the protected server path", () => {
   assert.match(fixtureStore, /touchline_reconcile_coach_fixture_points/);
   assert.match(fixtureStore, /p_fixture_id: null/);
+  assert.match(fixtureStore, /p_competition_coaches: touchlineCompetitionCoachAssignments\(\)/);
 });
 
 test("current fixture selection skips recently finished fixtures", () => {

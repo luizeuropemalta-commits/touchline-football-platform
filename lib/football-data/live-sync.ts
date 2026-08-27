@@ -10,6 +10,7 @@ import { decideLiveSyncCadence } from "@/lib/football-data/live-sync-cadence";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
+import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-coaches";
 
 const COMPETITION_ID = "8";
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
@@ -260,7 +261,10 @@ export async function syncSportmonksLiveState(
     result.playerFixtureRowsWritten = playerReconciliation.fixtureRowsWritten;
     result.errors.push(...playerReconciliation.errors.map((error) => `player-points:${error}`));
     const { data: coachReconciliation, error: coachReconciliationError } = await admin
-      .rpc("touchline_reconcile_coach_fixture_points", { p_fixture_id: null });
+      .rpc("touchline_reconcile_coach_fixture_points", {
+        p_fixture_id: null,
+        p_competition_coaches: touchlineCompetitionCoachAssignments(),
+      });
     if (coachReconciliationError) {
       result.errors.push(`coach-points:${coachReconciliationError.code ?? "unknown"}`);
     } else {
