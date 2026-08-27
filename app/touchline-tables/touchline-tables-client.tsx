@@ -34,6 +34,7 @@ import {
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published-top-eleven";
+import { compareTouchLineRankedCards } from "@/lib/touchlineArena/ranked-card-catalog";
 import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import {
@@ -188,7 +189,7 @@ export default function TouchLineTablesClient({
   const publishedRosterCards = rosterCards.filter((card) => Boolean(card.editorialCard));
   const topPlayerCards = publishedRosterCards
     .filter((card) => card.seasonTotalRating != null)
-    .sort((left, right) => (right.seasonTotalRating ?? 0) - (left.seasonTotalRating ?? 0))
+    .sort(compareTouchLineRankedCards)
     .slice(0, 3);
   const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
   const topCoachRow = topSevenCoaches[0] ?? null;

@@ -22,8 +22,9 @@ test("TouchLine Tables shows one positional Best XI, coaches and the sporting Cl
   assert.match(client, /data-top-coach-card/);
   assert.match(client, /id="coach-rankings"/);
   assert.match(client, /coachRanking\.rows\.slice\(0, 7\)/);
+  assert.match(client, /compareTouchLineRankedCards/);
   assert.match(client, /filter\(\(card\) => card\.seasonTotalRating != null\)/);
-  assert.match(client, /sort\(\(left, right\) => \(right\.seasonTotalRating \?\? 0\) - \(left\.seasonTotalRating \?\? 0\)\)/);
+  assert.match(client, /sort\(compareTouchLineRankedCards\)/);
   assert.match(client, /\.slice\(0, 3\)/);
   assert.match(client, /Top 3 Cards da Temporada/);
   assert.match(client, /Melhores treinadores/);
