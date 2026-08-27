@@ -10,6 +10,7 @@ import {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_PLAYER_IDS = 750;
+const PLAYER_ID_QUERY_CHUNK_SIZE = 150;
 
 type Row = Record<string, unknown>;
 type Admin = NonNullable<ReturnType<typeof createAdminClient>>;
@@ -75,15 +76,13 @@ function isPublicationRowValid(
   });
 }
 
-async function readPublishedTouchlineCards(playerIds: readonly string[], admin: Admin | null) {
-  if (!admin || !playerIds.length || playerIds.length > MAX_PLAYER_IDS) return new Map<string, TouchlinePublicEditorialCardPresentation>();
-
+async function readPublishedTouchlineCardsChunk(playerIds: readonly string[], admin: Admin) {
   const publicationsResponse = await admin
     .from("touchline_card_publications")
     .select("player_id,current_membership_id,competition_id,effective_season,publication_status,calculated_tier,calculated_nominal_price_gbp,last_reviewed_at")
     .eq("publication_status", "published")
     .in("player_id", playerIds);
-  if (publicationsResponse.error) return new Map<string, TouchlinePublicEditorialCardPresentation>();
+  if (publicationsResponse.error) return null;
   const publications = rows(publicationsResponse.data);
   if (!publications.length) return new Map<string, TouchlinePublicEditorialCardPresentation>();
 
@@ -93,7 +92,7 @@ async function readPublishedTouchlineCards(playerIds: readonly string[], admin: 
     admin.from("football_players").select("id,current_club_id").in("id", publishedPlayerIds),
     admin.from("football_squad_members").select("id,player_id,club_id,competition_id,status").in("player_id", publishedPlayerIds),
   ]);
-  if (valuesResponse.error || playersResponse.error || membershipsResponse.error) return new Map<string, TouchlinePublicEditorialCardPresentation>();
+  if (valuesResponse.error || playersResponse.error || membershipsResponse.error) return null;
 
   const valuesByPlayer = new Map(rows(valuesResponse.data).flatMap((row) => {
     const playerId = text(row.player_id)?.toLowerCase();
@@ -119,6 +118,24 @@ async function readPublishedTouchlineCards(playerIds: readonly string[], admin: 
       membershipsById.get(text(publication.current_membership_id) ?? ""),
     );
     if (presentation) result.set(playerId, presentation);
+  }
+  return result;
+}
+
+async function readPublishedTouchlineCards(playerIds: readonly string[], admin: Admin | null) {
+  if (!admin || !playerIds.length || playerIds.length > MAX_PLAYER_IDS) return new Map<string, TouchlinePublicEditorialCardPresentation>();
+
+  const chunks = Array.from(
+    { length: Math.ceil(playerIds.length / PLAYER_ID_QUERY_CHUNK_SIZE) },
+    (_, index) => playerIds.slice(index * PLAYER_ID_QUERY_CHUNK_SIZE, (index + 1) * PLAYER_ID_QUERY_CHUNK_SIZE),
+  );
+  const chunkResults = await Promise.all(chunks.map((chunk) => readPublishedTouchlineCardsChunk(chunk, admin)));
+  if (chunkResults.some((result) => result === null)) return new Map<string, TouchlinePublicEditorialCardPresentation>();
+
+  const result = new Map<string, TouchlinePublicEditorialCardPresentation>();
+  for (const chunk of chunkResults) {
+    if (!chunk) continue;
+    for (const [playerId, presentation] of chunk) result.set(playerId, presentation);
   }
   return result;
 }

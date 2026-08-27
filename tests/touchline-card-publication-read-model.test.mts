@@ -28,6 +28,13 @@ test("the shared read model exposes only a published, current canonical card cla
   assert.doesNotMatch(source, /fetch\s*\(|\.insert\s*\(|\.update\s*\(|\.upsert\s*\(|\.delete\s*\(/);
 });
 
+test("the shared publication policy chunks large canonical player sets before querying PostgREST", () => {
+  assert.match(source, /const PLAYER_ID_QUERY_CHUNK_SIZE = 150/);
+  assert.match(source, /readPublishedTouchlineCardsChunk/);
+  assert.match(source, /Promise\.all\(chunks\.map/);
+  assert.match(source, /chunkResults\.some\(\(result\) => result === null\)/);
+});
+
 test("the public Premier League roster asks the single publication policy instead of a local card catalogue", () => {
   assert.match(squadRoute, /loadTouchlinePublishedCardPresentations/);
   assert.doesNotMatch(squadRoute, /editorial-card-catalog|findTouchlineEditorialCardPresentation/);
