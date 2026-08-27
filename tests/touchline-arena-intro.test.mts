@@ -246,7 +246,7 @@ test("Arena without a lang query restores the stored language before using the c
   assert.match(arena, /setSiteLanguage\(\(current\) => current === preferredLocale \? current : preferredLocale\)/);
 });
 
-test("Arena supports portrait, reveals first access quickly and keeps replay explicit", () => {
+test("Arena relies on the global landscape boundary, reveals first access quickly and keeps replay explicit", () => {
   const arena = source("app/arena/ArenaClient.tsx");
   const page = source("app/arena/page.tsx");
   const zonePage = source("app/arena/[zone]/page.tsx");
@@ -273,7 +273,7 @@ test("Arena supports portrait, reveals first access quickly and keeps replay exp
   assert.match(arena, /setIntroExperienceMode\("hidden"\)/);
   assert.match(arena, /startCardLoopVideo\(\)/);
   assert.match(arena, /const isArenaIntroViewportReady = true/);
-  assert.match(arena, /Every supported viewport, including portrait phones/);
+  assert.match(arena, /root layout already prevents phone\/tablet portrait gameplay/);
   assert.match(
     arena,
     /const isArenaFunctionalReady = Boolean\(standaloneExperience\) \|\| \(\s*isArenaIntroViewportReady\s*&& introExperienceMode === "hidden"\s*&& hasEntryVideoFinished\s*\)/,

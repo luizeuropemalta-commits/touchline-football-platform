@@ -20,6 +20,7 @@ import {
 } from "../lib/touchlineArena/i18n.ts";
 
 const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+const landscapeBoundary = readFileSync(new URL("../components/touchline/TouchlineLandscapeBoundary.tsx", import.meta.url), "utf8");
 const localeSync = readFileSync(new URL("../components/touchline/DocumentLocaleSync.tsx", import.meta.url), "utf8");
 const comingSoon = readFileSync(new URL("../app/coming-soon/page.tsx", import.meta.url), "utf8");
 const proxy = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
@@ -62,8 +63,12 @@ test("root document receives the request locale before hydration and has one reu
   assert.match(layout, /await headers\(\)/);
   assert.match(layout, /requestHeaders\.get\(TOUCHLINE_PRESENTATION_LOCALE_HEADER\)/);
   assert.match(layout, /<html lang=\{locale\} dir=\{touchlineDocumentDirection\(locale\)\}>/);
-  assert.match(layout, /href="#touchline-main-content"/);
-  assert.match(layout, /id="touchline-main-content" tabIndex=\{-1\}/);
+  assert.match(layout, /<TouchlineLandscapeBoundary locale=\{locale\} skipLabel=\{skipLabel\}>/);
+  assert.match(landscapeBoundary, /href="#touchline-main-content"/);
+  assert.match(landscapeBoundary, /id="touchline-main-content"/);
+  assert.match(landscapeBoundary, /tabIndex=\{-1\}/);
+  assert.equal((landscapeBoundary.match(/href="#touchline-main-content"/g) ?? []).length, 1);
+  assert.equal((landscapeBoundary.match(/id="touchline-main-content"/g) ?? []).length, 1);
   assert.match(layout, /<DocumentLocaleSync initialLocale=\{locale\}/);
   assert.match(proxy, /function nextResponseWithPresentationLocale/);
   assert.match(proxy, /TOUCHLINE_PRESENTATION_LOCALE_HEADER/);

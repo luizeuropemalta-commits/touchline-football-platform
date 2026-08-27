@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Suspense } from "react";
 
 import DocumentLocaleSync from "@/components/touchline/DocumentLocaleSync";
+import TouchlineLandscapeBoundary from "@/components/touchline/TouchlineLandscapeBoundary";
 import { TouchlineActivityTracker } from "@/components/touchline-activity-tracker";
 import {
   isTouchlineIsolatedPreviewRequest,
@@ -70,12 +71,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={locale} dir={touchlineDocumentDirection(locale)}>
       <body>
-        <a
-          href="#touchline-main-content"
-          className="sr-only fixed left-4 top-4 z-[2147483647] rounded-lg bg-[#edfff0] px-4 py-3 text-sm font-black text-[#041019] shadow-[0_16px_48px_rgba(0,0,0,.45)] focus:not-sr-only focus:outline focus:outline-3 focus:outline-offset-4 focus:outline-cyan-300"
-        >
-          {skipLabel}
-        </a>
         {!isIsolatedPreview ? (
           <Suspense fallback={null}>
             <DocumentLocaleSync initialLocale={locale} />
@@ -87,9 +82,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           landmark. Each route keeps its own semantic main; the wrapper lets
           the global skip link work uniformly without nesting landmarks.
         */}
-        <div id="touchline-main-content" tabIndex={-1} data-touchline-main-content-fallback>
+        <TouchlineLandscapeBoundary locale={locale} skipLabel={skipLabel}>
           {children}
-        </div>
+        </TouchlineLandscapeBoundary>
       </body>
     </html>
   );

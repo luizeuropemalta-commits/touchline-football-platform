@@ -165,12 +165,7 @@
 .rules h2{margin:4px 0;font-size:1.25rem}
 .rules p{margin:0;color:#aab8b0}
 
-.rotateGate{position:fixed;inset:0;z-index:99999;display:grid;place-content:center;justify-items:center;padding:30px;color:#fff;background:radial-gradient(circle,#173d18,#020805 65%);text-align:center}
-.rotateGate svg{width:70px;height:70px;color:var(--lime);animation:turn 1.8s ease-in-out infinite}
-.rotateGate p{max-width:520px;color:#b9c7c0}
 .unavailable{min-height:100vh;padding:180px 30px;color:#fff;background:#030b08;text-align:center}
-
-@keyframes turn{50%{transform:rotate(90deg)}}
 
 @media(max-width:1180px){
   .workspace{grid-template-columns:1fr}
@@ -220,8 +215,59 @@
   .pitchSlot{transform:translate(-50%,-50%) scale(.88)}
 }
 
+@media (orientation:landscape) and (max-width:1100px) and (max-height:520px){
+  .shell{width:100%;padding:48px 0 24px}
+  .controlRail,.classicBuilder,.rankings,.rules{width:calc(100% - 12px)}
+  .controlRail{gap:5px;padding:5px;border-radius:14px}
+  .controlRail>div{min-height:52px;gap:1px 7px;padding:7px 9px;border-radius:10px}
+  .controlRail svg{width:18px}
+  .controlRail span{font-size:.55rem}
+  .controlRail strong{font-size:.88rem}
+  .classicBuilder{gap:9px;padding:10px;border-radius:16px}
+  .hero{align-items:center;gap:10px;padding:0}
+  .hero>div{gap:3px}
+  .hero h1{font-size:clamp(21px,3.3vw,28px)}
+  .hero p{max-width:470px;font-size:.63rem;line-height:1.35}
+  .marketClock{gap:6px;min-width:228px;max-width:250px;padding:9px 10px;border-radius:13px}
+  .clockHeading{gap:6px}
+  .clockHeading>i{width:27px;height:27px}
+  .clockHeading svg{width:14px;height:14px}
+  .clockHeading small{font-size:.43rem}
+  .clockHeading b{font-size:.64rem}
+  .clockDigits{gap:3px}
+  .clockDigits>span{padding:5px 2px 4px;border-radius:7px}
+  .clockDigits b{font-size:.82rem}
+  .marketClock>p{font-size:.47rem}
+  .stepper{grid-template-columns:repeat(5,minmax(108px,1fr));gap:5px;padding-bottom:4px}
+  .stepper button{min-height:38px;padding:5px 7px}
+  .stepper i{width:22px;height:22px}
+  .stepper span{font-size:.58rem}
+  .workspace{grid-template-columns:minmax(0,1.35fr) minmax(270px,.65fr);gap:8px}
+  .sectionHeading{padding:9px 11px}
+  .sectionHeading h2{font-size:1.05rem}
+  .sectionHeading strong{font-size:.9rem}
+  .pitch{min-height:338px;margin:0 7px;border-radius:13px}
+  .pitchSlot{width:76px;min-height:88px}
+  .pitchCard{width:46px}
+  .pitchSlot>b{max-width:68px;margin-top:2px;padding:2px 5px;font-size:.43rem}
+  .pitchSlot>i{right:5px;top:1px;width:19px;height:19px;font-size:.75rem}
+  .pitchFooter{gap:7px;padding:8px 10px;font-size:.52rem}
+  .guidePanel{max-height:338px;padding:11px}
+  .guidePanel h2{font-size:1.12rem}
+  .guidePanel>p{margin-bottom:9px;font-size:.61rem}
+  .playerGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .playerGrid article{padding:7px 6px;border-radius:12px}
+  .marketCard{width:92px}
+  .playerIdentity{padding:5px 2px}
+  .playerIdentity b{font-size:.57rem}
+  .clubIdentity{grid-template-columns:16px minmax(0,1fr);min-height:26px;gap:4px;padding:3px 5px}
+  .clubIdentity img,.clubIdentity>i{width:16px;height:16px;max-width:16px}
+  .clubIdentity small{font-size:.45rem}
+  .playerGrid article>button{min-height:34px;padding:5px;font-size:.48rem}
+  .coachGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
 @media(prefers-reduced-motion:reduce){
-  .rotateGate svg{animation:none}
   .shell *{scroll-behavior:auto!important}
   .playerGrid article{transition:none}
 }

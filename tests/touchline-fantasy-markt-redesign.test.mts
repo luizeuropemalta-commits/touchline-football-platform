@@ -70,9 +70,7 @@ test("the classic Markt presentation keeps the guided coach-first Gameweek flow"
   assert.doesNotMatch(styles, /\.attackCard/);
   assert.match(styles, /\.shell\{[\s\S]*?width:min\(1880px,calc\(100% - 24px\)\)/);
   assert.match(styles, /\.hero h1\{[\s\S]*?font-size:clamp\(28px,3vw,46px\)/);
-  assert.match(client, /touchlineFantasyLandscapeIsBlocked/);
-  assert.match(client, /Android\|iPhone\|iPad\|iPod\|Mobile/);
-  assert.match(client, /navigator\.maxTouchPoints > 1/);
+  assert.doesNotMatch(client, /Gire para o modo retrato|Rotate to portrait|touchlineFantasyLandscapeIsBlocked/);
   assert.match(client, /formatTouchlineFantasyDeadline\(activeGameweek\.locksAt, locale\)/);
   assert.match(client, /<MarketWindowClock gameweeks=\{gameweeks\} locale=\{locale\} \/>/);
   assert.match(client, /resolveTouchlineFantasyMarketClock/);
@@ -83,6 +81,8 @@ test("the classic Markt presentation keeps the guided coach-first Gameweek flow"
   assert.match(styles, /\.marketClock\{[\s\S]*?min-width:250px[\s\S]*?overflow:hidden/);
   assert.match(styles, /\.clockDigits\{[\s\S]*?font-variant-numeric:tabular-nums/);
   assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.marketClock\{width:100%/);
+  assert.match(styles, /@media \(orientation:landscape\) and \(max-width:1100px\) and \(max-height:520px\)/);
+  assert.match(styles, /\.pitchCard\{width:46px\}/);
   assert.match(client, /\/arena\?lang=/);
 });
 

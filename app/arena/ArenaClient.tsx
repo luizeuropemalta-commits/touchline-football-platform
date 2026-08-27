@@ -3537,9 +3537,9 @@ export default function ArenaClient({
   const [introExperienceMode, setIntroExperienceMode] = useState<"pending" | "hidden" | TouchlineArenaIntroLaunchMode>(initialIntroWasSkipped ? "hidden" : "pending");
   const [introExperienceRun, setIntroExperienceRun] = useState(0);
   const [isEntrySkipAvailable, setIsEntrySkipAvailable] = useState(false);
-  // Every supported viewport, including portrait phones, can run the Arena
-  // journey immediately. Landscape fullscreen remains an optional immersion
-  // control rather than an entry requirement.
+  // The root layout already prevents phone/tablet portrait gameplay. Every
+  // viewport that reaches the Arena is therefore ready for the intro; native
+  // landscape fullscreen remains an optional immersion enhancement.
   const isArenaIntroViewportReady = true;
   const [hasLoadedSavedLineup, setHasLoadedSavedLineup] = useState(false);
   const [hasLoadedClubOwnerRoster, setHasLoadedClubOwnerRoster] = useState(false);

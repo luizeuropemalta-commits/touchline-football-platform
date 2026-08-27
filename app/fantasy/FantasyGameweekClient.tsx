@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, CalendarClock, Check, ChevronRight, CircleAlert, Crown, Filter, LockKeyhole, RotateCcw, Save, Search, Send, ShieldCheck, Sparkles, TimerReset, Trophy, Users, WalletCards } from "lucide-react";
+import { BadgeCheck, CalendarClock, Check, ChevronRight, CircleAlert, Crown, Filter, LockKeyhole, Save, Search, Send, ShieldCheck, Sparkles, TimerReset, Trophy, Users, WalletCards } from "lucide-react";
 
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
@@ -11,7 +11,7 @@ import { touchlineLiveOptimizedClubLogoUrl } from "@/lib/touchlineArena/club-cre
 import { findTouchLineClub, type ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 import type { TouchlineFormationGeometrySlot } from "@/lib/touchlineArena/formation-geometry";
 import { touchlineMarketPositionBucket } from "@/lib/touchlineArena/position-eligibility";
-import { assignTouchlineFantasyPlayerToFirstSlot, formatTouchlineFantasyDeadline, formatTouchlineFantasyMarketValue, resolveTouchlineFantasyBuilderStep, resolveTouchlineFantasyMarketClock, touchlineFantasyLandscapeIsBlocked, validateTouchlineFantasyLineup, type TouchlineFantasyBuilderStep, type TouchlineFantasyEligiblePlayer, type TouchlineFantasySelection } from "@/lib/touchlineFantasy/domain";
+import { assignTouchlineFantasyPlayerToFirstSlot, formatTouchlineFantasyDeadline, formatTouchlineFantasyMarketValue, resolveTouchlineFantasyBuilderStep, resolveTouchlineFantasyMarketClock, validateTouchlineFantasyLineup, type TouchlineFantasyBuilderStep, type TouchlineFantasyEligiblePlayer, type TouchlineFantasySelection } from "@/lib/touchlineFantasy/domain";
 import type { TouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 import styles from "./fantasy.module.css";
 
@@ -37,6 +37,7 @@ function lineupErrorCopy(code: string, pt: boolean) {
   return messages[code]?.[pt ? 1 : 0] ?? (pt ? "Não foi possível salvar sua equipe." : "Unable to save your team.");
 }
 function wait(milliseconds: number) { return new Promise((resolve) => window.setTimeout(resolve, milliseconds)); }
+function countdownUnit(value: number, singular: string, plural: string) { return `${value} ${value === 1 ? singular : plural}`; }
 function statusCopy(state: string | undefined, pt: boolean) {
   const values: Record<string, readonly [string, string]> = { UPCOMING: ["Upcoming", "Em breve"], MARKET_OPEN: ["Market open", "Mercado aberto"], LOCKED: ["Locked", "Bloqueada"], LIVE: ["Live", "Ao vivo"], FINAL: ["Final", "Final"], SETTLED: ["Settled", "Liquidada"] };
   return values[state ?? ""]?.[pt ? 1 : 0] ?? "—";
@@ -84,7 +85,12 @@ function MarketWindowClock({ gameweeks, locale }: { gameweeks: TouchlineFantasyS
       : clock?.targetAt
         ? `${formatTouchlineFantasyDeadline(clock.targetAt, locale)} · ${pt ? "Londres" : "London"}`
         : (pt ? "Horário em confirmação" : "Time to be confirmed");
-  const accessibleCountdown = `${parts[0].value} ${pt ? "dias" : "days"}, ${parts[1].value} ${pt ? "horas" : "hours"}, ${parts[2].value} ${pt ? "minutos" : "minutes"}, ${parts[3].value} ${pt ? "segundos" : "seconds"}`;
+  const accessibleCountdown = [
+    countdownUnit(parts[0].value, pt ? "dia" : "day", pt ? "dias" : "days"),
+    countdownUnit(parts[1].value, pt ? "hora" : "hour", pt ? "horas" : "hours"),
+    countdownUnit(parts[2].value, pt ? "minuto" : "minute", pt ? "minutos" : "minutes"),
+    countdownUnit(parts[3].value, pt ? "segundo" : "second", pt ? "segundos" : "seconds"),
+  ].join(", ");
   const timed = phase === "closing" || phase === "opening";
   return <aside className={styles.marketClock} data-market-clock-phase={phase} aria-label={`${heading}. ${timed ? accessibleCountdown : detail}`}>
     <div className={styles.clockHeading}><i aria-hidden="true"><TimerReset /></i><span><small>TOUCHLINE MARKT</small><b>{heading}</b></span>{clock?.gameweekNumber ? <em>GW {clock.gameweekNumber}</em> : null}</div>
@@ -115,7 +121,7 @@ export default function FantasyGameweekClient({ initialSnapshot, locale }: { ini
   const [visibleStep, setVisibleStep] = useState<TouchlineFantasyBuilderStep>(selectedCoachId ? (formationCode ? "players" : "formation") : "coach");
   const [query, setQuery] = useState(""); const [clubFilter, setClubFilter] = useState("all");
   const [feedback, setFeedback] = useState<string | null>(null); const [saving, setSaving] = useState(false); const [page, setPage] = useState(1);
-  const [landscapeBlocked, setLandscapeBlocked] = useState(false); const [deadlineReachedFor, setDeadlineReachedFor] = useState<string | null>(null);
+  const [deadlineReachedFor, setDeadlineReachedFor] = useState<string | null>(null);
   const snapshot = initialSnapshot; const activeGameweek = live?.activeGameweek ?? snapshot?.activeGameweek ?? null;
   const persistedUserGameweek = live?.userGameweek ?? snapshot?.userGameweek ?? null;
   const persistedSelections = live?.selections ?? snapshot?.selections ?? [];
@@ -134,7 +140,6 @@ export default function FantasyGameweekClient({ initialSnapshot, locale }: { ini
   const selectedCoach = snapshot?.coaches.find((entry) => entry.id === selectedCoachId) ?? null;
   const activeSlot = geometry?.slots.find((slot) => slot.id === activeSlotId) ?? geometry?.slots.find((slot) => !selections.some((selection) => selection.slotId === slot.id)) ?? null;
 
-  useEffect(() => { function updateOrientationGate() { const coarsePointer = window.matchMedia("(pointer: coarse)").matches; const mobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1); setLandscapeBlocked(touchlineFantasyLandscapeIsBlocked({ width: window.innerWidth, height: window.innerHeight, coarsePointer, mobileDevice })); } updateOrientationGate(); window.addEventListener("resize", updateOrientationGate); window.addEventListener("orientationchange", updateOrientationGate); return () => { window.removeEventListener("resize", updateOrientationGate); window.removeEventListener("orientationchange", updateOrientationGate); }; }, []);
   useEffect(() => { if (!activeGameweek) return; const deadline = Date.parse(activeGameweek.locksAt); if (!Number.isFinite(deadline)) return; const remaining = Math.max(0, deadline - Date.now()); const gameweekId = activeGameweek.id; const timer = window.setTimeout(() => setDeadlineReachedFor(gameweekId), Math.min(remaining, 2_147_000_000)); return () => window.clearTimeout(timer); }, [activeGameweek]);
   useEffect(() => { if (!snapshot?.entitlementActive || !activeGameweek) return; const poll = window.setInterval(() => { fetch("/api/touchline-fantasy/state", { cache: "no-store" }).then((response) => response.ok ? response.json() : null).then((payload) => { if (!payload?.ok) return; setLive(payload); if (payload.activeGameweek?.id !== activeGameweek.id) { setSelectedCoachId(payload.userGameweek?.selectedCoachId ?? null); setFormationCode(payload.userGameweek?.formationCode ?? null); setSelections(Array.isArray(payload.selections) ? payload.selections : []); setVisibleStep(payload.userGameweek?.selectedCoachId ? "players" : "coach"); } }).catch(() => undefined); }, 20_000); return () => window.clearInterval(poll); }, [activeGameweek, snapshot?.entitlementActive]);
   if (!snapshot) return <section className={styles.unavailable}><h1>TouchLine Markt</h1><p>{pt ? "Serviço temporariamente indisponível." : "Service temporarily unavailable."}</p></section>;
@@ -186,7 +191,6 @@ export default function FantasyGameweekClient({ initialSnapshot, locale }: { ini
   const currentAlerts = live?.lineupAlerts ?? snapshot.lineupAlerts;
 
   return <div className={styles.shell} data-canonical-step={canonicalStep} data-market-visual="classic">
-    {landscapeBlocked ? <div className={styles.rotateGate} role="dialog" aria-modal="true"><RotateCcw /><h2>{pt ? "Gire para o modo retrato" : "Rotate to portrait"}</h2><p>{pt ? "Seu rascunho está preservado. O TouchLine Markt foi calibrado para jogar em retrato no celular e tablet." : "Your draft is preserved. TouchLine Markt is calibrated for portrait play on phones and tablets."}</p></div> : null}
     <section className={styles.controlRail}><div><CalendarClock /><span>Gameweek</span><strong>{activeGameweek?.number ?? "—"}</strong></div><div><ShieldCheck /><span>{pt ? "Estado" : "State"}</span><strong>{statusCopy(activeGameweek?.state, pt)}</strong></div><div><WalletCards /><span>{pt ? "Restante" : "Remaining"}</span><strong>{formatTouchlineFantasyMarketValue(validation?.budgetRemainingEur ?? snapshot.config.budgetEur, locale)}</strong></div><div><Crown /><span>XI</span><strong>{selections.length}/11</strong></div></section>
     <section className={styles.classicBuilder} aria-labelledby="touchline-markt-title">
       <header className={styles.hero}><div><span>{pt ? "ESCALAÇÃO DA RODADA" : "GAMEWEEK TEAM"}</span><h1 id="touchline-markt-title">{pt ? "Monte seu time TouchLine" : "Build Your TouchLine Team"}</h1><p>{pt ? "Escolha primeiro seu treinador, depois a formação e complete exatamente 11 cards para a rodada." : "Choose your coach first, then formation, and complete exactly 11 cards for the Gameweek."}</p></div><MarketWindowClock gameweeks={gameweeks} locale={locale} /></header>

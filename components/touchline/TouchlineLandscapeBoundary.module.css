@@ -1,0 +1,150 @@
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-content: center;
+  justify-items: center;
+  overflow: hidden;
+  padding:
+    max(28px, env(safe-area-inset-top))
+    max(28px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom))
+    max(28px, env(safe-area-inset-left));
+  color: #f5fff4;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(163, 255, 18, .2), transparent 30%),
+    radial-gradient(circle at 16% 14%, rgba(29, 211, 238, .12), transparent 34%),
+    linear-gradient(155deg, #07170e 0%, #020805 58%, #010403 100%);
+  isolation: isolate;
+}
+
+.gate::before,
+.gate::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+.gate::before {
+  inset: 18px;
+  border: 1px solid rgba(163, 255, 18, .3);
+  border-radius: 28px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .035),
+    0 0 80px rgba(163, 255, 18, .08);
+}
+
+.gate::after {
+  width: min(82vw, 540px);
+  aspect-ratio: 1.8;
+  border: 1px solid rgba(163, 255, 18, .16);
+  border-radius: 50%;
+  box-shadow: 0 0 0 30px rgba(163, 255, 18, .025);
+  transform: rotate(-8deg);
+}
+
+.gate[data-active="true"] {
+  display: grid;
+}
+
+.panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(100%, 560px);
+  justify-items: center;
+  padding: clamp(28px, 7vw, 52px);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(9, 28, 17, .94), rgba(2, 9, 6, .96));
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .55);
+  backdrop-filter: blur(24px) saturate(135%);
+}
+
+.icon {
+  display: grid;
+  width: 78px;
+  height: 78px;
+  margin-bottom: 22px;
+  place-items: center;
+  border: 1px solid rgba(163, 255, 18, .45);
+  border-radius: 24px;
+  color: #a3ff12;
+  background: rgba(163, 255, 18, .07);
+  box-shadow: 0 0 34px rgba(163, 255, 18, .14);
+}
+
+.icon > span {
+  display: grid;
+  place-items: center;
+  animation: touchline-landscape-turn 1.8s ease-in-out infinite;
+}
+
+.icon svg {
+  width: 42px;
+  height: 42px;
+}
+
+.eyebrow {
+  color: #a3ff12;
+  font-size: .7rem;
+  font-weight: 950;
+  letter-spacing: .2em;
+}
+
+.panel h2 {
+  margin: 10px 0 12px;
+  font-size: clamp(1.75rem, 7vw, 3rem);
+  line-height: .98;
+  letter-spacing: -.045em;
+}
+
+.panel p {
+  max-width: 430px;
+  margin: 0;
+  color: #b9c9c0;
+  font-size: clamp(.92rem, 3.8vw, 1.08rem);
+  line-height: 1.55;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  color: #f7c65d;
+  font-size: .74rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.status::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #f7c65d;
+  box-shadow: 0 0 14px rgba(247, 198, 93, .75);
+  content: "";
+}
+
+@keyframes touchline-landscape-turn {
+  0%, 22% { transform: rotate(0deg); }
+  62%, 100% { transform: rotate(90deg); }
+}
+
+/* Prevent a portrait flash before hydration on real touch-first devices. */
+@media (orientation: portrait) and (pointer: coarse),
+  (orientation: portrait) and (hover: none) {
+  .gate[data-active="false"] {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon > span { animation: none; transform: rotate(90deg); }
+}

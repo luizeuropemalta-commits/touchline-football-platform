@@ -7,7 +7,6 @@ import {
   rankTouchlineFantasyManagers,
   resolveTouchlineFantasyBuilderStep,
   TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
-  touchlineFantasyLandscapeIsBlocked,
   touchlineFantasyFixtureContribution,
   touchlineFantasyGameweekScore,
   validateTouchlineFantasyLineup,
@@ -176,16 +175,6 @@ test("guided builder requires coach, formation, exactly 11 valid players, then r
   assert.equal(resolveTouchlineFantasyBuilderStep({ editable: true, selectedCoachId: "307", formationCode: "4-3-3", selectedCount: 10, lineupValid: false }), "players");
   assert.equal(resolveTouchlineFantasyBuilderStep({ editable: true, selectedCoachId: "307", formationCode: "4-3-3", selectedCount: 11, lineupValid: true }), "review");
   assert.equal(resolveTouchlineFantasyBuilderStep({ editable: false, selectedCoachId: "307", formationCode: "4-3-3", selectedCount: 11, lineupValid: true }), "locked");
-});
-
-test("only mobile landscape devices receive the rotate gate", () => {
-  assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 844, height: 390, coarsePointer: true }), true);
-  assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 1180, height: 820, coarsePointer: true }), true);
-  assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 390, height: 844, coarsePointer: true }), false);
-  assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 820, height: 1180, coarsePointer: true }), false);
-  assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 874, height: 402, coarsePointer: false, mobileDevice: true }), true);
-  assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 402, height: 874, coarsePointer: false, mobileDevice: true }), false);
-  assert.equal(touchlineFantasyLandscapeIsBlocked({ width: 1440, height: 900, coarsePointer: false }), false);
 });
 
 test("the canonical deadline renders identically in server and browser time zones", () => {

@@ -333,15 +333,6 @@ export function resolveTouchlineFantasyBuilderStep(input: Readonly<{
   return "review";
 }
 
-export function touchlineFantasyLandscapeIsBlocked(input: Readonly<{
-  width: number;
-  height: number;
-  coarsePointer: boolean;
-  mobileDevice?: boolean;
-}>) {
-  return (input.coarsePointer || input.mobileDevice === true) && input.width > input.height;
-}
-
 export function formatTouchlineFantasyDeadline(value: string, locale: string) {
   const deadline = new Date(value);
   if (Number.isNaN(deadline.getTime())) return "—";
