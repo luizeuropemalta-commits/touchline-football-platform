@@ -195,7 +195,6 @@ export default function TouchlineCoachCard({
 
   useEffect(() => {
     let active = true;
-    let paintFrame = 0;
     // Reset the atomic reveal when any of the three visual assets changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsFrameReady(false);
@@ -243,14 +242,14 @@ export default function TouchlineCoachCard({
       waitForDecodedImage(crestRef.current),
     ]).then(() => {
       if (!active) return;
-      paintFrame = window.requestAnimationFrame(() => {
-        if (active) setIsFrameReady(true);
-      });
+      // The assets have already loaded, decoded or reached the safety timer.
+      // Commit immediately: Safari can suspend requestAnimationFrame for a
+      // background tab and otherwise leave the entire coach card invisible.
+      setIsFrameReady(true);
     }).catch(() => undefined);
 
     return () => {
       active = false;
-      if (paintFrame) window.cancelAnimationFrame(paintFrame);
     };
   }, [flagUrl, runtimeCardTemplateUrl, runtimeClubLogoUrl]);
 

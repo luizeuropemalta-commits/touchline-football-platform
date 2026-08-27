@@ -208,6 +208,8 @@ test("reveals every coach card as one decoded product instead of exposing floati
   assert.match(coachCard, /waitForDecodedImage\(frameRef\.current\)/);
   assert.match(coachCard, /waitForDecodedImage\(flagRef\.current\)/);
   assert.match(coachCard, /waitForDecodedImage\(crestRef\.current\)/);
+  assert.match(coachCard, /if \(!active\) return;[\s\S]*?setIsFrameReady\(true\);/);
+  assert.doesNotMatch(coachCard, /paintFrame = window\.requestAnimationFrame/);
   assert.match(coachCardStyles, /\.shell\[data-coach-frame-ready="true"\] \.inner \{\s*opacity: 1;/);
   assert.match(coachCardStyles, /\.shell\[data-coach-frame-ready="true"\] \.frame \{\s*opacity: 1;/);
   assert.doesNotMatch(coachCardStyles, /\.inner \{[\s\S]*?transition: opacity/);
