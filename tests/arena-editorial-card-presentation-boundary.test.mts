@@ -48,15 +48,19 @@ test("Arena refreshes every saved card from the current roster and never lets a 
   assert.doesNotMatch(hydrationEffect, /hasMissingCardIdentityData/);
 });
 
-test("Arena renders the Starting XI from the first frame independently of Quick Sub and intro video state", () => {
+test("Arena mounts the Starting XI ahead of reveal but keeps it hidden throughout the official intro", () => {
   const fieldLayer = sourceBetween(
     "{shouldRenderArenaOwnerLayer ? (",
     "{arenaFieldPlayersForRendering.map((player) => {",
   );
 
-  assert.match(fieldLayer, /className="field-player-layer is-entry-ready"/);
-  assert.match(fieldLayer, /aria-hidden=\{false\}/);
+  assert.match(
+    fieldLayer,
+    /className=\{`field-player-layer \$\{isArenaFunctionalReady \? "is-entry-ready" : "is-entry-hidden"\}`\}/,
+  );
+  assert.match(fieldLayer, /aria-hidden=\{!isArenaFunctionalReady\}/);
   assert.doesNotMatch(fieldLayer, /hasEntryVideoFinished/);
+  assert.match(arena, /\.field-player-layer\.is-entry-hidden,[\s\S]*?visibility: hidden;/);
 });
 
 test("non-demo Arena card adapters do not derive a public frame, tier, or price from valuation data", () => {

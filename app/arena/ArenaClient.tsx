@@ -7906,13 +7906,13 @@ export default function ArenaClient({
 
         {shouldRenderArenaOwnerLayer ? (
           <section
-            className="field-player-layer is-entry-ready"
+            className={`field-player-layer ${isArenaFunctionalReady ? "is-entry-ready" : "is-entry-hidden"}`}
             data-card-assets-ready={arenaFieldCardsAreReady ? "true" : "false"}
             data-fantasy-gameweek-xi={hasSyncedFantasyLineup ? "true" : undefined}
             aria-label={hasSyncedFantasyLineup
               ? (siteLanguage === "pt-BR" ? "Onze canônico da rodada na Arena" : "Canonical Gameweek XI in Arena")
               : (siteLanguage === "pt-BR" ? "Jogadores de linha editáveis" : "Editable field players")}
-            aria-hidden={false}
+            aria-hidden={!isArenaFunctionalReady}
           >
             {arenaFieldPlayersForRendering.map((player) => {
               const fieldPosition = fieldPlayerPositions.get(player.id) ?? projectArenaPlayerForLoopCamera(player, loopCameraIndex);
@@ -8037,6 +8037,9 @@ export default function ArenaClient({
                 </a>
                 <a href={allClubsHubHref}>
                   {t("clubHub")}
+                </a>
+                <a href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
+                  Markt
                 </a>
                 {!hasSyncedFantasyLineup ? <a
                     href={touchlineArenaPanelHref("bench", siteLanguage)}
