@@ -88,31 +88,32 @@ function promotionRank(classification: TouchlineCoachClassification) {
 }
 
 /**
- * Selects only coach identities whose immutable classification actually owns
- * the displayed border. Official final position is authoritative; coach name
- * is the last tiebreak. A tier with no approved identity remains explicitly
- * empty rather than borrowing another coach's club position.
+ * Orders the seven representatives by their immutable previous-season
+ * evidence, then assigns that order to the seven commercial borders from
+ * highest to entry. Official final position is authoritative; promotion route
+ * follows completed top-flight positions and coach name is the final tiebreak.
  */
 export function selectTouchlineCoachTierRepresentatives(): readonly TouchlineCoachTierRepresentative[] {
-  return TOUCHLINE_CLUBHUB_TIER_ORDER.map((tierKey) => {
-    const candidates = TOUCHLINE_LIVE_COACHES
-      .flatMap((snapshot) => {
-        const classification = TOUCHLINE_LIVE_COACH_CLASSIFICATIONS[snapshot.coach.providerId];
-        return classification?.tierKey === tierKey ? [{ snapshot, classification }] : [];
-      })
-      .sort((first, second) => {
-        const firstPosition = first.classification.finalPosition ?? Number.MAX_SAFE_INTEGER;
-        const secondPosition = second.classification.finalPosition ?? Number.MAX_SAFE_INTEGER;
-        return firstPosition - secondPosition
-          || promotionRank(first.classification) - promotionRank(second.classification)
-          || first.snapshot.coach.displayName.localeCompare(
-            second.snapshot.coach.displayName,
-            "en-GB",
-            { sensitivity: "base" },
-          );
-      });
+  const ranked = TOUCHLINE_LIVE_COACHES
+    .flatMap((snapshot) => {
+      const classification = TOUCHLINE_LIVE_COACH_CLASSIFICATIONS[snapshot.coach.providerId];
+      return classification?.sourceSeasonId ? [{ snapshot, classification }] : [];
+    })
+    .sort((first, second) => {
+      const firstPosition = first.classification.finalPosition ?? Number.MAX_SAFE_INTEGER;
+      const secondPosition = second.classification.finalPosition ?? Number.MAX_SAFE_INTEGER;
+      return firstPosition - secondPosition
+        || promotionRank(first.classification) - promotionRank(second.classification)
+        || first.snapshot.coach.displayName.localeCompare(
+          second.snapshot.coach.displayName,
+          "en-GB",
+          { sensitivity: "base" },
+        );
+    })
+    .slice(0, TOUCHLINE_CLUBHUB_TIER_ORDER.length);
 
-    const representative = candidates[0];
+  return TOUCHLINE_CLUBHUB_TIER_ORDER.map((tierKey, index) => {
+    const representative = ranked[index];
     return {
       tierKey,
       snapshot: representative?.snapshot ?? null,

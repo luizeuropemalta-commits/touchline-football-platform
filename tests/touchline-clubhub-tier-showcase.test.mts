@@ -60,20 +60,21 @@ test("player border gallery follows the canonical high-to-entry order", () => {
   }
 });
 
-test("coach border representatives use only their approved immutable classification", () => {
+test("coach border representatives follow approved previous-season order across all seven borders", () => {
   const representatives = selectTouchlineCoachTierRepresentatives();
   const byTier = new Map(representatives.map((item) => [item.tierKey, item]));
 
   assert.equal(byTier.get("diamond-gold")?.snapshot?.coach.displayName, "Mikel Arteta");
   assert.equal(byTier.get("clear-diamond")?.snapshot?.coach.displayName, "Unai Emery");
   assert.equal(byTier.get("emerald-green")?.snapshot?.coach.displayName, "Régis Le Bris");
-  assert.equal(byTier.get("radiant-gold")?.snapshot?.coach.displayName, "Keith Andrews");
-  assert.equal(byTier.get("amethyst-purple")?.snapshot?.coach.displayName, "David Moyes");
-  assert.equal(byTier.get("sapphire-blue")?.snapshot?.coach.displayName, "Frank Lampard");
-  assert.equal(byTier.get("ruby-red")?.snapshot, null);
+  assert.equal(byTier.get("radiant-gold")?.snapshot?.coach.displayName, "Fabian Hürzeler");
+  assert.equal(byTier.get("amethyst-purple")?.snapshot?.coach.displayName, "Keith Andrews");
+  assert.equal(byTier.get("sapphire-blue")?.snapshot?.coach.displayName, "Eddie Howe");
+  assert.equal(byTier.get("ruby-red")?.snapshot?.coach.displayName, "David Moyes");
 
-  for (const representative of representatives) {
-    if (!representative.snapshot || !representative.classification) continue;
-    assert.equal(representative.classification.tierKey, representative.tierKey);
-  }
+  assert.equal(representatives.every((item) => item.snapshot && item.classification), true);
+  assert.deepEqual(
+    representatives.map((item) => item.classification?.finalPosition),
+    [1, 4, 7, 8, 9, 12, 13],
+  );
 });
