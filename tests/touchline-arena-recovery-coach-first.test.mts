@@ -166,3 +166,17 @@ test("the intro action remains an explicit top-right control", () => {
   assert.match(arena, /Watch intro/);
   assert.match(arena, /\.arena-intro-actions \{[\s\S]*?right: max\(18px, env\(safe-area-inset-right\)\)/);
 });
+
+test("the Arena quick menu exposes the canonical localized TouchLine Markt", () => {
+  const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+  const menuStart = arena.indexOf('<nav ref={arenaNavRef} className={`arena-quick-dock');
+  const menuEnd = arena.indexOf("</nav>", menuStart);
+  const quickMenu = arena.slice(menuStart, menuEnd);
+
+  assert.ok(menuStart >= 0 && menuEnd > menuStart);
+  assert.match(
+    quickMenu,
+    /href=\{`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/,
+  );
+  assert.match(quickMenu, />\s*Markt\s*<\/a>/);
+});

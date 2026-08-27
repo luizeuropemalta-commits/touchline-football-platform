@@ -1,5 +1,11 @@
 # TouchLine Current State
 
+## QA Arena intro isolation + Markt quick link — GREEN / NATIVE SAFARI CUSTOMER PASS
+
+- The canonical Arena keeps the confirmed Gameweek XI mounted for preload, but the player layer is now visually hidden, non-interactive and `aria-hidden` until the official premium intro finishes. The Arena quick menu exposes the localized same-origin `Markt` link. No lineup, Rating, card, persistence, API or database system changed.
+- Native Safari CUSTOMER proved the intro on desktop and Responsive Design Mode `390×844`: only the official intro and skip control were present visually and in the accessibility tree. After reveal, the same Gameweek 2 `4-3-3 · 11/11` returned. Opening `Markt` preserved Mikel Arteta and all eleven saved players; no lineup write, logout, cookie/storage action or account switch occurred.
+- Focused tests passed `35/35`; the complete current-QA suite passed `1305/1305`, TypeScript passed and scoped ESLint completed with zero errors. Production was not touched.
+
 ## QA TouchLine Markt editable persistence + free club choice — GREEN / NATIVE SAFARI CUSTOMER PASS
 
 - Product commit `02c88b0bbe0d5f483520967914dff039deb974a8` keeps the existing Fantasy Gameweek/Markt transaction and makes its persisted lineup the only client authority. Coach, formation and player changes are marked unsaved; Save/Confirm report success only after `/api/touchline-fantasy/state` returns the exact saved fingerprint. Review and confirmed screens expose `Trocar treinador` and `Editar jogadores` while the canonical market window is open. No second lineup system, API or table was created.
