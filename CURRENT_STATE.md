@@ -260,6 +260,14 @@ Canonical programme addendum registered on 2026-08-21: in Block 3, preserve both
 
 The permanent Codex environment is ready for product work. Do not continue environment optimization unless a new material environment blocker appears.
 
+## 2026-08-27 canonical Markt clock and global landscape game — QA GREEN / NATIVE SAFARI CUSTOMER
+
+- **Canonical clock:** commit `e87580be021a4237ee20ddb6a3f9c64b3c8081ef` replaces the former Gameweek Rating hero tile with the existing Gameweek window countdown. It reads only canonical `market_opens_at`, `locks_at` and state data, shows `Mercado fecha em` while open and the reopening phase after lock, and creates no timer, rule, table, RPC or persistence authority.
+- **Global device contract:** commit `379c88add6467e691574136c4c8f194b662d1f5b` installs one root landscape boundary for every TouchLine route. Real phone/tablet portrait receives a full-screen rotation gate while the underlying route is `inert`, `aria-hidden` and non-scrollable; PWA orientation remains `landscape`. Rotating releases the same mounted route and preserved session. Desktop windows remain unrestricted.
+- **Responsive proof:** the Markt short-landscape breakpoint reduces the rail, hero, countdown, pitch, pitch cards, names and chooser cards at phone height. Native Safari CUSTOMER passed iPhone `402×874` blocked, iPhone `874×402` released, phone `844×390`, tablet `1024×768` and desktop `1280×800`. Arena, Club Hub, Tables/Rankings and Maxim De Cuyper's Profile also rendered at `844×390` without a white screen, infinite loader, broken-image regression or relevant horizontal overflow. The Arena and Markt retained `GW 2`, `4-3-3`, Mikel Arteta and the same saved `11/11`; no Save, Confirm, player, coach, formation, cookie or storage action occurred.
+- **Cross-browser and quality:** Chromium, Playwright WebKit and Firefox passed the public Club Hub, Tables and player-profile matrix at `844×390` with HTTP `200`, `landscape-ready` and zero horizontal overflow. All three activated `portrait-blocked` at `390×844`; WebKit confirmed the root wrapper is inert and hidden from assistive navigation. Focused landscape/locale coverage passed `8/8`, the affected set passed `31/31`, the complete suite passed `1311/1311`, TypeScript, ESLint (`0` errors; seven established warnings), governance, release-readiness, QA-persona preflight, `git diff --check` and the local `135/135` route build passed.
+- **Release and observability:** Preview `dpl_2Hy2RgbmJzeNdo8r7Hvuwgt9yQoh` is `READY`, exact product SHA `379c88a`, and owns the stable QA alias. Its build completed all `135/135` routes. Deployment-scoped logs show successful traffic only, no `4xx`, no `5xx`, no error/fatal line and no runtime-error cluster on the audited routes. Production was not touched.
+
 For detailed immutable evidence, use `CURRENT_EXECUTION_LEDGER.md`.
 
 ## 2026-08-22 Block 4A — Card Engine QA deployment / authenticated Safari blocked
