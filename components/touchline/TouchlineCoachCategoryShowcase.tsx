@@ -194,8 +194,8 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards }: 
                         displayMode="compact"
                         optimizeForLiveCompact
                         enableInteractiveNeon={false}
-                        assetLoading="lazy"
-                        frameLoading="lazy"
+                        assetLoading="eager"
+                        frameLoading="eager"
                       />
                     </span>
                     <span className={styles.identity}>

@@ -29,6 +29,8 @@ test("ClubHub exposes the seven canonical player and coach borders with real rep
   assert.match(component, /selectTouchlineCoachTierRepresentatives\(\)/);
   assert.match(component, /TouchlineEliteExactCard/);
   assert.match(component, /TouchlineCoachCard/);
+  assert.match(component, /assetLoading="eager"/);
+  assert.match(component, /frameLoading="eager"/);
   assert.match(component, /dictionary\.representativePendingDescription/);
   assert.doesNotMatch(component, /TOUCHLINE_DEMO_COACH|competition-card-offer|retailPrice|touchCredit|\bfetch\(/);
 });
