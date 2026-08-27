@@ -28,7 +28,7 @@ function lineupFingerprint(input: Readonly<{ selectedCoachId: string | null; for
 }
 function lineupErrorCopy(code: string, pt: boolean) {
   const messages: Record<string, readonly [string, string]> = {
-    TL_FANTASY_BUDGET_EXCEEDED: ["This team exceeds the €350M budget.", "Este time ultrapassa o orçamento de €350M."],
+    TL_FANTASY_BUDGET_EXCEEDED: ["This team exceeds the €900M budget.", "Este time ultrapassa o orçamento de €900M."],
     TL_FANTASY_GAMEWEEK_LOCKED: ["The market is closed for this Gameweek.", "O mercado está fechado para esta rodada."],
     TL_FANTASY_XI_REQUIRES_11: ["Complete exactly 11 players before confirming.", "Complete exatamente 11 jogadores antes de confirmar."],
     TL_FANTASY_SELECTION_INELIGIBLE: ["One selected card is no longer eligible. Replace it and save again.", "Um card escolhido não está mais elegível. Troque-o e salve novamente."],
@@ -160,6 +160,6 @@ export default function FantasyGameweekClient({ initialSnapshot, locale }: { ini
     {currentAlerts.length ? <section className={styles.alertPanel}><CircleAlert /><div><b>{pt ? "Atualização da escalação oficial" : "Official lineup update"}</b><p>{pt ? `${currentAlerts.length} jogador(es) selecionado(s) não aparece(m) entre titulares ou banco. ${editable ? "Você ainda pode editar antes do prazo." : "O prazo encerrou; a equipe permanece imutável."}` : `${currentAlerts.length} selected player(s) are absent from starters and bench. ${editable ? "You can still edit before the deadline." : "The deadline passed; the team remains immutable."}`}</p></div></section> : null}
     </section>
     <section className={styles.rankings}><RankingTable title={pt ? "Ranking da rodada" : "Gameweek ranking"} entries={live?.gameweekRanking ?? []} empty={pt ? "Será publicado após existirem equipes bloqueadas." : "Published after locked teams exist."} /><RankingTable title={pt ? "Ranking da temporada" : "Season ranking"} entries={live?.seasonRanking ?? []} empty={pt ? "Ainda não há resultados finais." : "No final results yet."} /></section>
-    <section className={styles.rules}><Users /><div><span>TOUCHLINE GAMEWEEK RULES</span><h2>{pt ? "11 cards. Nenhum banco Fantasy." : "11 cards. No Fantasy bench."}</h2><p>{pt ? "Rating oficial TouchLine é a fonte da rodada; Rating ausente nunca é inventado. O orçamento permanece em €350M." : "Official TouchLine Rating is the Gameweek source; a missing Rating is never invented. Budget remains €350M."}</p></div></section>
+    <section className={styles.rules}><Users /><div><span>TOUCHLINE GAMEWEEK RULES</span><h2>{pt ? "11 cards. Nenhum banco Fantasy." : "11 cards. No Fantasy bench."}</h2><p>{pt ? "Rating oficial TouchLine é a fonte da rodada; Rating ausente nunca é inventado. O orçamento permanece em €900M." : "Official TouchLine Rating is the Gameweek source; a missing Rating is never invented. Budget remains €900M."}</p></div></section>
   </div>;
 }

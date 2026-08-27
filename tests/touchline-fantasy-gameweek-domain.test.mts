@@ -6,6 +6,7 @@ import {
   parseTouchlineFantasyLineupRequest,
   rankTouchlineFantasyManagers,
   resolveTouchlineFantasyBuilderStep,
+  TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
   touchlineFantasyLandscapeIsBlocked,
   touchlineFantasyFixtureContribution,
   touchlineFantasyGameweekScore,
@@ -14,6 +15,10 @@ import {
 import { resolveTouchlineFormationGeometry } from "../lib/touchlineArena/formation-geometry.ts";
 
 const PLAYER_IDS = Array.from({ length: 12 }, (_, index) => `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`);
+
+test("the canonical Gameweek budget is €900M", () => {
+  assert.equal(TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR, 900_000_000);
+});
 
 test("Rating is the sole score and the hat-trick multiplier is applied once", () => {
   for (const goals of [0, 1, 2]) {
@@ -95,19 +100,42 @@ test("lineup validation enforces 11, formation and budget while club choice rema
     selections,
     players,
     geometry,
-    budgetEur: 350_000_000,
+    budgetEur: TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
     maxPlayersPerClub: 3,
     requireComplete: true,
   });
   assert.equal(valid.valid, true);
   assert.equal(valid.totalMarketValueEur, 220_000_000);
 
+  const premiumPlayers = players.map((player) => ({ ...player, marketValueEur: 80_000_000 }));
+  const premium = validateTouchlineFantasyLineup({
+    selections,
+    players: premiumPlayers,
+    geometry,
+    budgetEur: TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
+    maxPlayersPerClub: 11,
+    requireComplete: true,
+  });
+  assert.equal(premium.valid, true, "an €880M XI remains selectable");
+  assert.equal(premium.budgetRemainingEur, 20_000_000);
+
+  const overBudget = validateTouchlineFantasyLineup({
+    selections,
+    players: players.map((player) => ({ ...player, marketValueEur: 82_000_000 })),
+    geometry,
+    budgetEur: TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
+    maxPlayersPerClub: 11,
+    requireComplete: true,
+  });
+  assert.equal(overBudget.totalMarketValueEur, 902_000_000);
+  assert.ok(overBudget.issues.includes("BUDGET_EXCEEDED"));
+
   const sameClubPlayers = players.map((player) => ({ ...player, clubId: "one-club" }));
   assert.equal(validateTouchlineFantasyLineup({
     selections,
     players: sameClubPlayers,
     geometry,
-    budgetEur: 350_000_000,
+    budgetEur: TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
     maxPlayersPerClub: 1,
     requireComplete: true,
   }).valid, true, "all eleven eligible players may come from the same club");
@@ -122,7 +150,7 @@ test("lineup validation enforces 11, formation and budget while club choice rema
   assert.ok(twelve.issues.includes("SELECTION_COUNT"));
 
   function validInput() {
-    return { geometry, budgetEur: 350_000_000, maxPlayersPerClub: 3, requireComplete: true } as const;
+    return { geometry, budgetEur: TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR, maxPlayersPerClub: 3, requireComplete: true } as const;
   }
 });
 
@@ -192,7 +220,7 @@ test("the required formation matrix derives 11 position-aware slots from the can
       selections,
       players,
       geometry,
-      budgetEur: 350_000_000,
+      budgetEur: TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
       maxPlayersPerClub: 3,
       requireComplete: true,
     }).valid, true, `${formationCode} must accept its own canonical slot map`);

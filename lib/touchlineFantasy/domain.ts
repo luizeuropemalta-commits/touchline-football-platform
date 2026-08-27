@@ -7,7 +7,7 @@ import type { TouchlineMarketPositionBucket } from "../touchlineArena/position-e
 export const TOUCHLINE_FANTASY_ENTITLEMENT_KEY = "fantasy_access" as const;
 export const TOUCHLINE_FANTASY_SUBSCRIPTION_PRICE_MINOR = 2_990 as const;
 export const TOUCHLINE_FANTASY_SUBSCRIPTION_CURRENCY = "GBP" as const;
-export const TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 350_000_000 as const;
+export const TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 900_000_000 as const;
 export const TOUCHLINE_FANTASY_MAX_PLAYERS_PER_CLUB = 11 as const;
 export const TOUCHLINE_FANTASY_DEFAULT_LOCK_OFFSET_MINUTES = 5 as const;
 export const TOUCHLINE_FANTASY_DEADLINE_TIME_ZONE = "Europe/London" as const;

@@ -250,3 +250,25 @@ test("the customer owns club choice and every successful save is reloaded from t
   assert.match(migration, /set max_players_per_club = 11/);
   assert.match(rollback, /TL_FANTASY_CLUB_LIMIT_EXCEEDED/);
 });
+
+test("the existing Gameweek transaction owns the canonical €900M budget", async () => {
+  const [domain, server, client, migration, rollback] = await Promise.all([
+    source("lib/touchlineFantasy/domain.ts"),
+    source("lib/touchlineFantasy/server.ts"),
+    source("app/fantasy/FantasyGameweekClient.tsx"),
+    source("supabase/migrations/20260827062243_touchline_fantasy_budget_900m.sql"),
+    source("supabase/qa/033_touchline_qa_fantasy_budget_900m_rollback.sql"),
+  ]);
+  assert.match(domain, /TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR = 900_000_000/);
+  assert.match(server, /budgetEur: number\(config\.budget_eur\) \?\? TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR/);
+  assert.doesNotMatch(server, /budgetEur:[^\n]*350_000_000/);
+  assert.match(client, /orçamento de €900M/);
+  assert.match(client, /orçamento permanece em €900M/);
+  assert.doesNotMatch(client, /€350M/);
+  assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
+  assert.match(migration, /set budget_eur = 900000000/);
+  assert.match(migration, /set budget_eur_snapshot = 900000000/);
+  assert.match(migration, /state in \('DRAFT', 'CONFIRMED'\)/);
+  assert.match(rollback, /set budget_eur = 350000000/);
+  assert.match(rollback, /set budget_eur_snapshot = 350000000/);
+});
