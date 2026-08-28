@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync, statSync } from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+import sharp from "sharp";
 
 import type { TouchlineFixture } from "../lib/football-data/types.ts";
 import {
@@ -95,6 +97,7 @@ test("Crystal Palace home fixture resolves the verified Selhurst Park card", () 
     capacity: 25_486,
     homeClubName: "Crystal Palace",
     imageUrl: "/touchlineArena/stadiums/aerial/08-crystal-palace-selhurst-park.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/08-crystal-palace-selhurst-park-live.webp",
   });
   assert.equal("source" in publicFixture, false);
   assert.equal("venueId" in (publicFixture.homeTeam ?? {}), false);
@@ -116,13 +119,29 @@ test("every verified home club resolves only with its exact venue identity", () 
   }
 });
 
-test("only the four approved home grounds expose bounded interior hero artwork", () => {
+test("all twenty approved home grounds expose bounded interior hero artwork", async () => {
   const entriesWithInterior = TOUCHLINE_STADIUM_CATALOG.filter((entry) => entry.interiorImageUrl);
   const expected = [
     ["19", "204", "01-arsenal-emirates-stadium-live.webp"],
     ["15", "5", "02-aston-villa-villa-park-live.webp"],
     ["52", "146", "03-bournemouth-vitality-stadium-live.webp"],
+    ["236", "338817", "04-brentford-gtech-community-stadium-live.webp"],
+    ["78", "480", "05-brighton-american-express-stadium-live.webp"],
+    ["18", "321614", "06-chelsea-stamford-bridge-live.webp"],
+    ["117", "270", "07-coventry-cbs-arena-live.webp"],
+    ["51", "201", "08-crystal-palace-selhurst-park-live.webp"],
+    ["13", "343762", "09-everton-hill-dickinson-stadium-live.webp"],
+    ["11", "485", "10-fulham-craven-cottage-live.webp"],
+    ["22", "199", "11-hull-city-mkm-stadium-live.webp"],
+    ["116", "504", "12-ipswich-town-portman-road-live.webp"],
+    ["71", "488", "13-leeds-united-elland-road-live.webp"],
+    ["8", "230", "14-liverpool-anfield-live.webp"],
+    ["9", "151", "15-manchester-city-etihad-stadium-live.webp"],
     ["14", "206", "16-manchester-united-old-trafford-interior.webp"],
+    ["20", "449", "17-newcastle-united-st-james-park-live.webp"],
+    ["63", "542", "18-nottingham-forest-city-ground-live.webp"],
+    ["3", "212", "19-sunderland-stadium-of-light-live.webp"],
+    ["6", "281313", "20-tottenham-hotspur-stadium-live.webp"],
   ] as const;
 
   assert.equal(entriesWithInterior.length, expected.length);
@@ -135,13 +154,20 @@ test("only the four approved home grounds expose bounded interior hero artwork",
     const asset = new URL(`../public${stadium.interiorImageUrl}`, import.meta.url);
     assert.equal(existsSync(asset), true, `missing optimized interior asset ${fileName}`);
     assert.ok(statSync(asset).size < 1_000_000, `${fileName} must stay below 1 MB`);
+    const metadata = await sharp(fileURLToPath(asset)).metadata();
+    assert.equal(metadata.format, "webp", `${fileName} must be delivered as WebP`);
+    assert.equal(metadata.width, 1_600, `${fileName} must retain the approved 1600px width`);
+    assert.equal(metadata.height, 1_000, `${fileName} must retain the approved 1000px height`);
     assert.equal(
       toTouchlineLiveFixture(fixture(homeTeamProviderId, providerVenueId)).venue?.interiorImageUrl,
       stadium.interiorImageUrl,
     );
   }
 
-  assert.equal(toTouchlineLiveFixture(fixture("9", "151")).venue?.interiorImageUrl, undefined);
+  assert.equal(
+    toTouchlineLiveFixture(fixture("9", "151")).venue?.interiorImageUrl,
+    "/touchlineArena/stadiums/interiors/15-manchester-city-etihad-stadium-live.webp",
+  );
   assert.equal(toTouchlineLiveFixture(fixture("14", "151")).venue, undefined);
 });
 
@@ -153,6 +179,26 @@ test("the visitor never selects or supplies the Live interior", () => {
 
   assert.equal(toTouchlineLiveFixture(fixture("19", "5", "15")).venue, undefined);
   assert.equal(toTouchlineLiveFixture(fixture("15", "204", "19")).venue, undefined);
-  assert.equal(toTouchlineLiveFixture(fixture("9", "151", "14")).venue?.interiorImageUrl, undefined);
-  assert.equal(toTouchlineLiveFixture(fixture("51", "201", "52")).venue?.interiorImageUrl, undefined);
+  const etihadInterior = "/touchlineArena/stadiums/interiors/15-manchester-city-etihad-stadium-live.webp";
+  assert.equal(toTouchlineLiveFixture(fixture("9", "151", "14")).venue?.interiorImageUrl, etihadInterior);
+  assert.equal(
+    toTouchlineLiveFixture(fixture("51", "201", "52")).venue?.interiorImageUrl,
+    "/touchlineArena/stadiums/interiors/08-crystal-palace-selhurst-park-live.webp",
+  );
+
+  for (const awayTeamProviderId of TOUCHLINE_STADIUM_CATALOG.map((entry) => entry.homeTeamProviderId)) {
+    assert.equal(
+      toTouchlineLiveFixture(fixture("9", "151", awayTeamProviderId)).venue?.interiorImageUrl,
+      etihadInterior,
+      `away team ${awayTeamProviderId} must not supply the Live interior`,
+    );
+  }
+
+  const tottenhamHome = toTouchlineLiveFixture(fixture("6", "281313", "9"));
+  const tottenhamAway = toTouchlineLiveFixture(fixture("9", "151", "6"));
+  assert.equal(
+    tottenhamHome.venue?.interiorImageUrl,
+    "/touchlineArena/stadiums/interiors/20-tottenham-hotspur-stadium-live.webp",
+  );
+  assert.equal(tottenhamAway.venue?.interiorImageUrl, etihadInterior);
 });

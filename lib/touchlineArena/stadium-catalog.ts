@@ -55,6 +55,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Gtech Community Stadium",
     homeClubName: "Brentford",
     imageUrl: "/touchlineArena/stadiums/aerial/04-brentford-gtech-community-stadium.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/04-brentford-gtech-community-stadium-live.webp",
   },
   {
     id: "american-express-stadium",
@@ -63,6 +64,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "American Express Stadium",
     homeClubName: "Brighton & Hove Albion",
     imageUrl: "/touchlineArena/stadiums/aerial/05-brighton-american-express-stadium.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/05-brighton-american-express-stadium-live.webp",
   },
   {
     id: "stamford-bridge",
@@ -71,6 +73,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Stamford Bridge",
     homeClubName: "Chelsea",
     imageUrl: "/touchlineArena/stadiums/aerial/06-chelsea-stamford-bridge.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/06-chelsea-stamford-bridge-live.webp",
   },
   {
     id: "coventry-building-society-arena",
@@ -79,6 +82,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Coventry Building Society Arena",
     homeClubName: "Coventry City",
     imageUrl: "/touchlineArena/stadiums/aerial/07-coventry-coventry-building-society-arena.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/07-coventry-cbs-arena-live.webp",
   },
   {
     id: "selhurst-park",
@@ -88,6 +92,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     capacity: 25_486,
     homeClubName: "Crystal Palace",
     imageUrl: "/touchlineArena/stadiums/aerial/08-crystal-palace-selhurst-park.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/08-crystal-palace-selhurst-park-live.webp",
   },
   {
     id: "hill-dickinson-stadium",
@@ -96,6 +101,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Hill Dickinson Stadium",
     homeClubName: "Everton",
     imageUrl: "/touchlineArena/stadiums/aerial/09-everton-hill-dickinson-stadium.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/09-everton-hill-dickinson-stadium-live.webp",
   },
   {
     id: "craven-cottage",
@@ -104,6 +110,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Craven Cottage",
     homeClubName: "Fulham",
     imageUrl: "/touchlineArena/stadiums/aerial/10-fulham-craven-cottage.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/10-fulham-craven-cottage-live.webp",
   },
   {
     id: "mkm-stadium",
@@ -112,6 +119,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "MKM Stadium",
     homeClubName: "Hull City",
     imageUrl: "/touchlineArena/stadiums/aerial/11-hull-city-mkm-stadium.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/11-hull-city-mkm-stadium-live.webp",
   },
   {
     id: "portman-road",
@@ -120,6 +128,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Portman Road",
     homeClubName: "Ipswich Town",
     imageUrl: "/touchlineArena/stadiums/aerial/12-ipswich-town-portman-road.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/12-ipswich-town-portman-road-live.webp",
   },
   {
     id: "elland-road",
@@ -128,6 +137,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Elland Road",
     homeClubName: "Leeds United",
     imageUrl: "/touchlineArena/stadiums/aerial/13-leeds-united-elland-road.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/13-leeds-united-elland-road-live.webp",
   },
   {
     id: "anfield",
@@ -136,6 +146,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Anfield",
     homeClubName: "Liverpool",
     imageUrl: "/touchlineArena/stadiums/aerial/14-liverpool-anfield.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/14-liverpool-anfield-live.webp",
   },
   {
     id: "etihad-stadium",
@@ -144,6 +155,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Etihad Stadium",
     homeClubName: "Manchester City",
     imageUrl: "/touchlineArena/stadiums/aerial/15-manchester-city-etihad-stadium.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/15-manchester-city-etihad-stadium-live.webp",
   },
   {
     id: "old-trafford",
@@ -161,6 +173,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "St James' Park",
     homeClubName: "Newcastle United",
     imageUrl: "/touchlineArena/stadiums/aerial/17-newcastle-united-st-james-park.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/17-newcastle-united-st-james-park-live.webp",
   },
   {
     id: "city-ground",
@@ -169,6 +182,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "City Ground",
     homeClubName: "Nottingham Forest",
     imageUrl: "/touchlineArena/stadiums/aerial/18-nottingham-forest-city-ground.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/18-nottingham-forest-city-ground-live.webp",
   },
   {
     id: "stadium-of-light",
@@ -177,6 +191,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Stadium of Light",
     homeClubName: "Sunderland",
     imageUrl: "/touchlineArena/stadiums/aerial/19-sunderland-stadium-of-light.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/19-sunderland-stadium-of-light-live.webp",
   },
   {
     id: "tottenham-hotspur-stadium",
@@ -185,6 +200,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Tottenham Hotspur Stadium",
     homeClubName: "Tottenham Hotspur",
     imageUrl: "/touchlineArena/stadiums/aerial/20-tottenham-hotspur-stadium.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/20-tottenham-hotspur-stadium-live.webp",
   },
 ]);
 
