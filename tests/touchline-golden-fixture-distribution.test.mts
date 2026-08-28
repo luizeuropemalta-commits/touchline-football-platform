@@ -173,7 +173,7 @@ test("Live consumes the persisted allowlisted match detail instead of a static p
   assert.match(page, /const canReadMatchDetail = hasTouchLineArenaAccess\(user\)/);
   assert.match(component, /if \(!canReadMatchDetail\) return/);
   assert.match(component, /touchline-verified-match-data/);
-  assert.match(component, /matchDetail\.events\.map/);
+  assert.match(component, /verifiedDetail\.events\.map/);
   assert.match(component, /event\.relatedPlayerName/);
   assert.match(component, /statistic\?\.minutes \?\? "—"/);
   assert.match(component, /statistic\?\.rating \?\? "—"/);

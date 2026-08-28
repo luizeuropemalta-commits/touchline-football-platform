@@ -1,5 +1,6 @@
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import type { TouchlineFixture } from "@/lib/football-data/types";
+import { selectArenaFixtureRound } from "./arena-fixture-round.ts";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 
 export type TouchlineMatchState = "live" | "upcoming" | "finished" | "unknown";
@@ -95,6 +96,56 @@ export function mergeTouchlineLiveFixtures(
     ...current.map((fixture) => snapshotByIdentity.get(touchlinePublicFixtureIdentity(fixture)) ?? fixture),
     ...snapshot.filter((fixture) => !currentIdentities.has(touchlinePublicFixtureIdentity(fixture))),
   ];
+}
+
+const MATCH_CENTRE_SECTION_LIMIT = 10;
+
+function fixtureStartMillis(fixture: Pick<TouchlinePublicFixture, "startsAt">) {
+  const startsAt = fixture.startsAt ? Date.parse(fixture.startsAt) : Number.NaN;
+  return Number.isFinite(startsAt) ? startsAt : Number.POSITIVE_INFINITY;
+}
+
+function fixtureRoundIdentity(
+  fixture: Pick<TouchlinePublicFixture, "competitionId" | "seasonId" | "roundId" | "roundName">,
+) {
+  const scope = `${fixture.competitionId?.trim() ?? "competition"}:${fixture.seasonId?.trim() ?? "season"}`;
+  if (fixture.roundId?.trim()) return `${scope}:id:${fixture.roundId.trim()}`;
+  if (fixture.roundName?.trim()) return `${scope}:name:${fixture.roundName.trim().toLocaleLowerCase("en-GB")}`;
+  return null;
+}
+
+/**
+ * Live has exactly two canonical rails: the active provider round and the ten
+ * most recent verified results before it. A live snapshot may contain a wider
+ * window, but it can update facts only; it cannot make extra rounds visible.
+ */
+export function selectTouchlineMatchCentreSchedule<T extends TouchlinePublicFixture>(
+  fixtures: readonly T[],
+  now = Date.now(),
+) {
+  const uniqueFixtures = [...new Map(
+    fixtures.map((fixture) => [touchlinePublicFixtureIdentity(fixture), fixture]),
+  ).values()];
+  const seedRound = selectArenaFixtureRound(uniqueFixtures, now);
+  const roundIdentity = seedRound[0] ? fixtureRoundIdentity(seedRound[0]) : null;
+  const currentFixtures = (roundIdentity
+    ? uniqueFixtures.filter((fixture) => fixtureRoundIdentity(fixture) === roundIdentity)
+    : seedRound
+  )
+    .slice()
+    .sort((first, second) => fixtureStartMillis(first) - fixtureStartMillis(second))
+    .slice(0, MATCH_CENTRE_SECTION_LIMIT);
+  const currentIdentities = new Set(currentFixtures.map(touchlinePublicFixtureIdentity));
+  const recentResults = uniqueFixtures
+    .filter((fixture) => (
+      touchlineFixtureState(fixture, now) === "finished"
+      && !currentIdentities.has(touchlinePublicFixtureIdentity(fixture))
+    ))
+    .slice()
+    .sort((first, second) => fixtureStartMillis(second) - fixtureStartMillis(first))
+    .slice(0, MATCH_CENTRE_SECTION_LIMIT);
+
+  return { currentFixtures, recentResults };
 }
 
 /**

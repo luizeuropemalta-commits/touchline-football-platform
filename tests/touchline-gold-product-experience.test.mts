@@ -62,7 +62,7 @@ test("compact Arena and Market controls retain effective 44px targets", async ()
   assert.match(auth, /grid size-11/);
   assert.match(quickNav, /\.shortcuts a \{[\s\S]*min-height: 44px/);
   assert.match(social, /\.post footer button, \.post footer a \{[^\n]*min-height: 44px/);
-  assert.match(matchCentre, /\.brand \{[^\n]*min-height: 44px/);
+  assert.match(matchCentre, /\.brand \{[^\n]*min-height: 52px/);
   assert.match(rankings, /\.tl-card-rankings-featured-copy a,[\s\S]*min-height: 44px/);
 });
 

@@ -232,7 +232,7 @@ test("Live warms only the current verified 22 player card products", () => {
     /subscribeToUpdates \? getActiveRankingSnapshot : getPreseasonRankingSnapshot/,
   );
   assert.match(livePageSource, /initialLocale=\{initialLocale\}/);
-  assert.match(livePageSource, /selectArenaFixtureRound\([\s\S]*?readPublicCompetitionFixtures\(\{ includeHistorical: true, limit: 240 \}\)/);
+  assert.match(livePageSource, /readPublicCompetitionFixtures\(\{ includeHistorical: true, limit: 240 \}\)[\s\S]*?selectTouchlineMatchCentreSchedule\(fixtures, initialNow\)/);
 });
 
 test("Live keeps no-store by default and bounds persisted read requests", () => {

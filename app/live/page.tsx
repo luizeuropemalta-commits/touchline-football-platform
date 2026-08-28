@@ -5,7 +5,6 @@ import TouchlineMatchCentre from "@/components/touchline/match-centre/TouchlineM
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { readPublicFantasyFixtureMatchDetail } from "@/lib/football-data/public-fixture-match-detail-server";
 import { createClient } from "@/lib/supabase/server";
-import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import {
   isTouchLineLocaleComplete,
@@ -13,6 +12,7 @@ import {
 } from "@/lib/touchlineArena/i18n";
 import {
   normalizeTouchlineMatchCentreTimeZone,
+  selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
 } from "@/lib/touchlineArena/match-centre";
 
@@ -42,12 +42,15 @@ export default async function TouchLineLivePage({
   // eslint-disable-next-line react-hooks/purity
   const initialNow = Date.now();
 
-  // Live is intentionally a matchweek surface. The archive is reached from
-  // verified weekly results, never by mixing future rounds into the live rail.
-  const fixtures = selectArenaFixtureRound(
-    await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
-  );
-  const initiallySelected = selectTouchlineMatchCentreFixture(fixtures, requestedFixture, initialNow);
+  // Keep the durable schedule available to the client while the presentation
+  // selector exposes only the current ten-match round and ten prior results.
+  const fixtures = await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 });
+  const initialSchedule = selectTouchlineMatchCentreSchedule(fixtures, initialNow);
+  const initiallyVisibleFixtures = [
+    ...initialSchedule.currentFixtures,
+    ...initialSchedule.recentResults,
+  ];
+  const initiallySelected = selectTouchlineMatchCentreFixture(initiallyVisibleFixtures, requestedFixture, initialNow);
   const supabase = await createClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   const canReadMatchDetail = hasTouchLineArenaAccess(user);

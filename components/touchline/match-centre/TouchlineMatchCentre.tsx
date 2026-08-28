@@ -4,7 +4,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from "react";
-import { BellRing, CalendarDays, Clock3, Goal, Radio, ShieldCheck, Trophy, UsersRound } from "lucide-react";
+import { BellRing, CalendarDays, Clock3, Crown, Goal, Radio, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
@@ -16,9 +16,11 @@ import type {
 } from "@/lib/football-data/public-fantasy-fixture";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
 import {
   isTouchlineLiveReadMetadata,
   mergeTouchlineLiveFixtures,
+  selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
   touchlineFixtureStatusLabel,
   touchlineMatchCentreDisplayState,
@@ -39,14 +41,14 @@ type Props = {
   initialTimeZone: string;
 };
 
-type FixtureGroup = "live" | "today" | "upcoming" | "finished";
+type FixtureSection = "current" | "results";
 
 const copy = {
   "pt-BR": {
-    title: "Central da partida", live: "AO VIVO", today: "HOJE", upcoming: "PRÓXIMOS", finished: "ARQUIVO", matchweek: "Rodada", roundPending: "Rodada aguardando confirmação do provider", competition: "TouchLine England", league: "Liga TouchLine England", england: "Inglaterra", select: "Confrontos", alertsSoon: "Alertas de partida em breve", selectedFixture: "Partida selecionada", noFixtures: "Agenda em atualização", noFixturesCopy: "A programação oficial será exibida assim que a competição publicar fixtures canônicos.", venue: "Estádio", venuePending: "Aguardando confirmação TouchLine do estádio", countdown: "Início em", detail: "Dados da partida", dataPending: "Eventos, escalações e estatísticas aparecem assim que forem verificados pela TouchLine.", recent: "Linha do tempo oficial", form: "Escalações verificadas", players: "Ratings da partida", archive: "Arquivo TouchLine", provider: "TouchLine Verified", timezone: "Horário local", versus: "VS", completed: "ENCERRADO", liveNow: "AO VIVO", next: "PRÓXIMO", official: "TouchLine Data", watch: "Acompanhar partida", liveDataUpdating: "Dados ao vivo em atualização", liveDataUpdatingCopy: "Exibindo o último snapshot verificado; o placar pode estar atrasado.", partialScheduleCopy: "A programação persistida está disponível, mas placares ao vivo aguardam um snapshot verificado.", lastVerified: "ÚLTIMO VERIFICADO", lastVerifiedAt: "Última verificação", events: "eventos oficiais", scoring: "ratings oficiais", lineupAvailable: "Escalação disponível", starters: "Titulares", bench: "Reservas", minutes: "MIN", rating: "NOTA", noScoring: "Sem rating oficial", assist: "Assistência", substitutedFor: "entrou por", dataUnavailable: "—",
+    title: "Central da partida", live: "AO VIVO", today: "HOJE", upcoming: "PRÓXIMOS", finished: "ARQUIVO", currentFixtures: "Confrontos desta semana", recentResults: "Últimos resultados", matchweek: "Rodada", roundPending: "Rodada aguardando confirmação TouchLine", competition: "TouchLine England", league: "Liga TouchLine England", england: "Inglaterra", select: "Confrontos", alertsSoon: "Alertas de partida em breve", selectedFixture: "Partida selecionada", noFixtures: "Agenda em atualização", noFixturesCopy: "A programação oficial será exibida assim que a competição publicar fixtures canônicos.", venue: "Estádio", venuePending: "Aguardando confirmação TouchLine do estádio", countdown: "Início em", detail: "Dados da partida", dataPending: "Eventos, escalações e estatísticas aparecem assim que forem verificados pela TouchLine.", recent: "Linha do tempo oficial", form: "Escalações verificadas", players: "Ratings da partida", archive: "Arquivo TouchLine", provider: "TouchLine Verified", timezone: "Horário local", versus: "VS", completed: "ENCERRADO", liveNow: "AO VIVO", next: "PRÓXIMO", official: "TouchLine Data", watch: "Acompanhar partida", liveDataUpdating: "Dados ao vivo em atualização", liveDataUpdatingCopy: "Exibindo o último snapshot verificado; o placar pode estar atrasado.", partialScheduleCopy: "A programação persistida está disponível, mas placares ao vivo aguardam um snapshot verificado.", lastVerified: "ÚLTIMO VERIFICADO", lastVerifiedAt: "Última verificação", events: "eventos oficiais", scoring: "ratings oficiais", lineupAvailable: "Escalação disponível", starters: "Titulares", bench: "Reservas", minutes: "MIN", rating: "NOTA", noScoring: "Sem rating oficial", assist: "Assistência", substitutedFor: "entrou por", dataUnavailable: "—", highlights: "Destaques TouchLine", bestCoach: "Best Coach", bestCards: "Best Cards", winnerVerified: "Vitória confirmada", calculating: "Em apuração", ratingVerified: "Rating verificado",
   },
   "en-GB": {
-    title: "Match Centre", live: "LIVE NOW", today: "TODAY", upcoming: "UPCOMING", finished: "ARCHIVE", matchweek: "Matchweek", roundPending: "Matchweek awaiting provider confirmation", competition: "TouchLine England", league: "TouchLine England League", england: "England", select: "Fixtures", alertsSoon: "Match alerts coming soon", selectedFixture: "Selected fixture", noFixtures: "Schedule updating", noFixturesCopy: "Official fixtures will appear as soon as the competition publishes the canonical schedule.", venue: "Stadium", venuePending: "Awaiting TouchLine venue verification", countdown: "Kick-off in", detail: "Match data", dataPending: "Events, line-ups and statistics appear as soon as TouchLine verifies them.", recent: "Official timeline", form: "Verified line-ups", players: "Match ratings", archive: "TouchLine archive", provider: "TouchLine Verified", timezone: "Local time", versus: "VS", completed: "FULL TIME", liveNow: "LIVE", next: "NEXT", official: "TouchLine Data", watch: "Open match", liveDataUpdating: "Live data updating", liveDataUpdatingCopy: "Showing the last verified snapshot; the score may be delayed.", partialScheduleCopy: "The persisted schedule is available, but live scores are awaiting a verified snapshot.", lastVerified: "LAST VERIFIED", lastVerifiedAt: "Last verification", events: "official events", scoring: "official ratings", lineupAvailable: "Line-up available", starters: "Starters", bench: "Bench", minutes: "MIN", rating: "RATING", noScoring: "No official rating", assist: "Assist", substitutedFor: "for", dataUnavailable: "—",
+    title: "Match Centre", live: "LIVE NOW", today: "TODAY", upcoming: "UPCOMING", finished: "ARCHIVE", currentFixtures: "This week's fixtures", recentResults: "Latest results", matchweek: "Matchweek", roundPending: "Matchweek awaiting TouchLine confirmation", competition: "TouchLine England", league: "TouchLine England League", england: "England", select: "Fixtures", alertsSoon: "Match alerts coming soon", selectedFixture: "Selected fixture", noFixtures: "Schedule updating", noFixturesCopy: "Official fixtures will appear as soon as the competition publishes the canonical schedule.", venue: "Stadium", venuePending: "Awaiting TouchLine venue verification", countdown: "Kick-off in", detail: "Match data", dataPending: "Events, line-ups and statistics appear as soon as TouchLine verifies them.", recent: "Official timeline", form: "Verified line-ups", players: "Match ratings", archive: "TouchLine archive", provider: "TouchLine Verified", timezone: "Local time", versus: "VS", completed: "FULL TIME", liveNow: "LIVE", next: "NEXT", official: "TouchLine Data", watch: "Open match", liveDataUpdating: "Live data updating", liveDataUpdatingCopy: "Showing the last verified snapshot; the score may be delayed.", partialScheduleCopy: "The persisted schedule is available, but live scores are awaiting a verified snapshot.", lastVerified: "LAST VERIFIED", lastVerifiedAt: "Last verification", events: "official events", scoring: "official ratings", lineupAvailable: "Line-up available", starters: "Starters", bench: "Bench", minutes: "MIN", rating: "RATING", noScoring: "No official rating", assist: "Assist", substitutedFor: "for", dataUnavailable: "—", highlights: "TouchLine Highlights", bestCoach: "Best Coach", bestCards: "Best Cards", winnerVerified: "Verified win", calculating: "Calculating", ratingVerified: "Verified rating",
   },
 } as const;
 
@@ -107,29 +109,6 @@ function status(
   return fixtureDate(fixture, language, timeZone, { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
-function fixtureDayKey(value: string | number, timeZone: string) {
-  const parsed = typeof value === "number" ? new Date(value) : new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(parsed);
-}
-
-function groupFixtures(fixtures: TouchlinePublicFixture[], now: number, timeZone: string): Record<FixtureGroup, TouchlinePublicFixture[]> {
-  const today = fixtureDayKey(now, timeZone);
-  return fixtures.reduce<Record<FixtureGroup, TouchlinePublicFixture[]>>((groups, fixture) => {
-    const state = touchlineFixtureState(fixture, now);
-    if (state === "live") groups.live.push(fixture);
-    else if (state === "finished") groups.finished.push(fixture);
-    else if (fixture.startsAt && fixtureDayKey(fixture.startsAt, timeZone) === today) groups.today.push(fixture);
-    else if (state === "upcoming") groups.upcoming.push(fixture);
-    return groups;
-  }, { live: [], today: [], upcoming: [], finished: [] });
-}
-
 function Countdown({ startsAt, language, initialNow }: { startsAt?: string; language: keyof typeof copy; initialNow: number }) {
   const [now, setNow] = useState(initialNow);
   useEffect(() => {
@@ -186,6 +165,20 @@ function lineupPlayerRows(
   return members.map((member) => ({ member, statistic: member.playerId ? statisticsByPlayer.get(member.playerId) : undefined }));
 }
 
+function winningTeamId(fixture: TouchlinePublicFixture) {
+  if (!Number.isFinite(fixture.homeScore) || !Number.isFinite(fixture.awayScore) || fixture.homeScore === fixture.awayScore) return null;
+  const winner = fixture.homeScore! > fixture.awayScore! ? fixture.homeTeam : fixture.awayTeam;
+  return winner?.providerId ?? winner?.id ?? null;
+}
+
+function topRatedPlayers(detail: TouchlinePublicFantasyFixtureMatchDetail) {
+  return detail.playerStatistics
+    .filter((row) => Number.isFinite(row.rating) && (row.appearanceStatus === "started" || row.appearanceStatus === "substitute"))
+    .sort((left, right) => (right.rating ?? Number.NEGATIVE_INFINITY) - (left.rating ?? Number.NEGATIVE_INFINITY)
+      || left.playerName.localeCompare(right.playerName))
+    .slice(0, 3);
+}
+
 function MatchTeamSheet({
   detail,
   teamId,
@@ -239,7 +232,9 @@ export default function TouchlineMatchCentre({
 
   useEffect(() => {
     if (!canReadMatchDetail) return;
-    const selected = selectTouchlineMatchCentreFixture(fixtures, selectedId, now);
+    const schedule = selectTouchlineMatchCentreSchedule(fixtures, now);
+    const visibleFixtures = [...schedule.currentFixtures, ...schedule.recentResults];
+    const selected = selectTouchlineMatchCentreFixture(visibleFixtures, selectedId, now);
     const fixtureId = selected?.providerId;
     if (!fixtureId || matchDetail?.fixture.id === fixtureId) return;
     const requestedFixtureId = fixtureId;
@@ -288,10 +283,21 @@ export default function TouchlineMatchCentre({
     return () => { controller.abort(); window.clearInterval(timer); };
   }, []);
 
-  const selected = useMemo(() => selectTouchlineMatchCentreFixture(fixtures, selectedId, now), [fixtures, now, selectedId]);
-  const groups = useMemo(() => groupFixtures(fixtures, now, initialTimeZone), [fixtures, initialTimeZone, now]);
-  const orderedGroups: Array<{ id: FixtureGroup; label: string }> = [
-    { id: "live", label: dictionary.live }, { id: "today", label: dictionary.today }, { id: "upcoming", label: dictionary.upcoming }, { id: "finished", label: dictionary.finished },
+  const schedule = useMemo(() => selectTouchlineMatchCentreSchedule(fixtures, now), [fixtures, now]);
+  const visibleFixtures = useMemo(
+    () => [...schedule.currentFixtures, ...schedule.recentResults],
+    [schedule.currentFixtures, schedule.recentResults],
+  );
+  const selected = useMemo(() => selectTouchlineMatchCentreFixture(visibleFixtures, selectedId, now), [now, selectedId, visibleFixtures]);
+  const verifiedDetail = matchDetail?.fixture.id === selected?.providerId ? matchDetail : null;
+  const bestCards = useMemo(() => verifiedDetail ? topRatedPlayers(verifiedDetail) : [], [verifiedDetail]);
+  const bestCoach = useMemo(() => {
+    if (!selected || touchlineFixtureState(selected, now) !== "finished") return null;
+    return touchlineLiveCoachForTeam(winningTeamId(selected));
+  }, [now, selected]);
+  const fixtureSections: Array<{ id: FixtureSection; label: string; fixtures: TouchlinePublicFixture[] }> = [
+    { id: "current", label: dictionary.currentFixtures, fixtures: schedule.currentFixtures },
+    { id: "results", label: dictionary.recentResults, fixtures: schedule.recentResults },
   ];
 
   function selectFixture(fixture: TouchlinePublicFixture) {
@@ -312,8 +318,15 @@ export default function TouchlineMatchCentre({
   return (
     <main className={styles.shell} data-testid="touchline-match-centre">
       <header className={styles.header}>
-        <span className={styles.brand}>TOUCHLINE <span>ENGLAND</span></span>
-        <div><span>{dictionary.official}</span><h1 className={styles.title}>{dictionary.title}</h1></div>
+        <span className={styles.brand}>
+          <span className={styles.brandMark}><img src="/touchlineArena/brand/tl-shield-lime.svg" alt="" /></span>
+          <span className={styles.brandWordmark}><b>TOUCHLINE</b><small>ENGLAND</small></span>
+        </span>
+        <div className={styles.headerTitle}><span>{dictionary.official}</span><h1 className={styles.title}>{dictionary.title}</h1></div>
+        <div className={styles.headerSignal}>
+          <span className={styles.signalPulse} aria-hidden="true" />
+          <span><small>{dictionary.currentFixtures}</small><strong>{schedule.currentFixtures.length}/10</strong></span>
+        </div>
       </header>
       <TouchlineGlobalNavigation locale={language} currentRoute="live" surface="public" />
       <p className={styles.selectionAnnouncement} role="status" aria-live="polite" aria-atomic="true">
@@ -334,21 +347,22 @@ export default function TouchlineMatchCentre({
           <div className={styles.railHeading}>
             <span className={styles.englandFlag} aria-label={dictionary.england} role="img" />
             <span className={styles.railLeague}><small>{dictionary.competition}</small><strong>{dictionary.league}</strong></span>
-            <span className={styles.fixtureCount}><Radio size={14} aria-hidden="true" />{fixtures.length}</span>
+            <span className={styles.fixtureCount} aria-label={`${schedule.currentFixtures.length} + ${schedule.recentResults.length}`}><Radio size={14} aria-hidden="true" />{schedule.currentFixtures.length} + {schedule.recentResults.length}</span>
           </div>
           <div className={styles.fixtureScroller}>
-            {orderedGroups.map((group) => {
-              const railFixtures = groups[group.id];
-              return railFixtures.length ? <section key={group.id} className={styles.fixtureGroup}>
-              <h2>{group.id === "live" && readMetadata?.degraded ? dictionary.lastVerified : group.label}</h2>
-              {railFixtures.map((fixture) => {
+            {fixtureSections.map((section) => {
+              const railFixtures = section.fixtures;
+              const isResultSection = section.id === "results";
+              return railFixtures.length ? <section key={section.id} className={styles.fixtureGroup} data-section={section.id}>
+              <h2><span>{section.label}</span><b>{railFixtures.length}</b></h2>
+              <div className={styles.fixtureList}>{railFixtures.map((fixture) => {
                 const isSelected = selected?.id === fixture.id;
                 const fixtureScores = fixtureScorePair(fixture);
                 const railStatus = fixtureRailStatus(fixture, language, readMetadata, now);
                 return <button key={fixture.id} type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
                   <span className={styles.fixtureStack}>
                     <span className={styles.fixtureCentre}>
-                      <time dateTime={fixture.startsAt}>{fixtureDate(fixture, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
+                      <time dateTime={fixture.startsAt}>{isResultSection ? `${fixtureDate(fixture, language, initialTimeZone, { day: "2-digit", month: "short" })} · ` : ""}{fixtureDate(fixture, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
                       {railStatus ? <small className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{railStatus}</small> : null}
                     </span>
                     <span className={styles.fixtureTeams}>
@@ -362,14 +376,14 @@ export default function TouchlineMatchCentre({
                   <span
                     className={styles.fixtureAlert}
                     role="img"
-                    title={dictionary.alertsSoon}
-                    aria-label={dictionary.alertsSoon}
-                  ><BellRing size={13} aria-hidden="true" /></span>
+                    title={isResultSection ? dictionary.completed : dictionary.alertsSoon}
+                    aria-label={isResultSection ? dictionary.completed : dictionary.alertsSoon}
+                  >{isResultSection ? <Trophy size={13} aria-hidden="true" /> : <BellRing size={13} aria-hidden="true" />}</span>
                 </button>;
-              })}
+              })}</div>
               </section> : null;
             })}
-            {!fixtures.length ? <div className={styles.emptyRail}><CalendarDays size={22} /><strong>{dictionary.noFixtures}</strong></div> : null}
+            {!visibleFixtures.length ? <div className={styles.emptyRail}><CalendarDays size={22} /><strong>{dictionary.noFixtures}</strong></div> : null}
           </div>
         </aside>
 
@@ -392,31 +406,46 @@ export default function TouchlineMatchCentre({
             <article><span>{dictionary.archive}</span><strong>{fixtureLabel(selected)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : dictionary.provider}</small></article>
           </div>
 
-          {matchDetail?.fixture.id === selected.providerId ? <section className={styles.verifiedMatchData} data-testid="touchline-verified-match-data">
+          {verifiedDetail ? <section className={styles.verifiedMatchData} data-testid="touchline-verified-match-data">
             <header className={styles.verifiedHeading}>
-              <div><ShieldCheck size={18} /><span>{dictionary.provider}</span><strong>{matchDetail.events.length} {dictionary.events} · {matchDetail.playerStatistics.filter((row) => row.rating !== null).length} {dictionary.scoring}</strong></div>
-              {matchDetail.lineupAvailableAt ? <time dateTime={matchDetail.lineupAvailableAt}><UsersRound size={15} /> {dictionary.lineupAvailable} · {fixtureDate({ startsAt: matchDetail.lineupAvailableAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</time> : null}
+              <div><ShieldCheck size={18} /><span>{dictionary.provider}</span><strong>{verifiedDetail.events.length} {dictionary.events} · {verifiedDetail.playerStatistics.filter((row) => row.rating !== null).length} {dictionary.scoring}</strong></div>
+              {verifiedDetail.lineupAvailableAt ? <time dateTime={verifiedDetail.lineupAvailableAt}><UsersRound size={15} /> {dictionary.lineupAvailable} · {fixtureDate({ startsAt: verifiedDetail.lineupAvailableAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</time> : null}
             </header>
+            <section className={styles.highlightDeck} aria-label={dictionary.highlights}>
+              <header><Sparkles size={16} aria-hidden="true" /><span>{dictionary.highlights}</span></header>
+              <article className={styles.coachHighlight}>
+                <Crown size={17} aria-hidden="true" />
+                <span><small>{dictionary.bestCoach}</small><strong>{bestCoach?.coach.displayName ?? bestCoach?.coach.name ?? dictionary.calculating}</strong><em>{bestCoach ? `${teamName(verifiedDetail, bestCoach.coach.teamId)} · ${dictionary.winnerVerified}` : dictionary.dataPending}</em></span>
+              </article>
+              <div className={styles.cardHighlights}>
+                <small>{dictionary.bestCards}</small>
+                <ol>{bestCards.length ? bestCards.map((row, index) => <li key={row.playerId}>
+                  <b>{String(index + 1).padStart(2, "0")}</b>
+                  <span><strong>{row.playerName}</strong><em>{teamName(verifiedDetail, row.teamId)} · {dictionary.ratingVerified}</em></span>
+                  <mark>{row.rating}</mark>
+                </li>) : <li className={styles.pendingHighlight}><span><strong>{dictionary.calculating}</strong><em>{dictionary.dataPending}</em></span></li>}</ol>
+              </div>
+            </section>
             <div className={styles.matchEvidenceGrid}>
               <section className={styles.timelinePanel}>
                 <div className={styles.panelTitle}><Goal size={17} /><div><span>{dictionary.recent}</span><strong>{fixtureLabel(selected)}</strong></div></div>
-                <ol>{matchDetail.events.map((event) => {
+                <ol>{verifiedDetail.events.map((event) => {
                   const relatedPlayerName = event.relatedPlayerName;
                   return <li key={event.id}>
                     <time>{eventMoment(event)}</time>
                     <span><strong>{event.type ?? "Event"}</strong><b>{event.playerName ?? "—"}</b>{relatedPlayerName ? <small>{/substitution/i.test(event.type ?? "") ? dictionary.substitutedFor : dictionary.assist}: {relatedPlayerName}</small> : null}</span>
-                    <em>{teamName(matchDetail, event.teamId)}</em>
+                    <em>{teamName(verifiedDetail, event.teamId)}</em>
                   </li>;
                 })}</ol>
               </section>
               <section className={styles.pointsSummary}>
-                <div className={styles.panelTitle}><Trophy size={17} /><div><span>{dictionary.players}</span><strong>{matchDetail.playerStatistics.filter((row) => row.rating !== null).length} {dictionary.rating}</strong></div></div>
-                <ul>{matchDetail.playerStatistics.filter((row) => row.rating !== null).map((row) => <li key={row.playerId}><span><strong>{row.playerName}</strong><small>{teamName(matchDetail, row.teamId)}</small></span><b>{row.rating}</b></li>)}</ul>
+                <div className={styles.panelTitle}><Trophy size={17} /><div><span>{dictionary.players}</span><strong>{verifiedDetail.playerStatistics.filter((row) => row.rating !== null).length} {dictionary.rating}</strong></div></div>
+                <ul>{verifiedDetail.playerStatistics.filter((row) => row.rating !== null).map((row) => <li key={row.playerId}><span><strong>{row.playerName}</strong><small>{teamName(verifiedDetail, row.teamId)}</small></span><b>{row.rating}</b></li>)}</ul>
               </section>
             </div>
             <div className={styles.lineupGrid}>
-              <MatchTeamSheet detail={matchDetail} teamId={matchDetail.fixture.homeTeam?.id} language={language} />
-              <MatchTeamSheet detail={matchDetail} teamId={matchDetail.fixture.awayTeam?.id} language={language} />
+              <MatchTeamSheet detail={verifiedDetail} teamId={verifiedDetail.fixture.homeTeam?.id} language={language} />
+              <MatchTeamSheet detail={verifiedDetail} teamId={verifiedDetail.fixture.awayTeam?.id} language={language} />
             </div>
           </section> : <div className={styles.contentGrid}>
             <section className={styles.featurePanel}><div className={styles.panelTitle}><ShieldCheck size={17} /><div><span>{dictionary.recent}</span><strong>{fixtureLabel(selected)}</strong></div></div><p>{dictionary.dataPending}</p></section>

@@ -6,6 +6,7 @@ import {
   isTouchlineLiveReadMetadata,
   mergeTouchlineLiveFixtures,
   normalizeTouchlineMatchCentreTimeZone,
+  selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
   touchlineFixtureState,
   touchlineFixtureStatusLabel,
@@ -27,6 +28,78 @@ function fixture(id: string, startsAt: string, status: string): TouchlineFixture
     source: { provider: "sportmonks", providerId: id },
   };
 }
+
+function roundFixture(input: {
+  id: number;
+  round: number;
+  startsAt: string;
+  status: string;
+}): TouchlinePublicFixture {
+  const homeId = String(input.round * 100 + input.id * 2);
+  const awayId = String(input.round * 100 + input.id * 2 + 1);
+  return {
+    id: String(input.round * 1_000 + input.id),
+    providerId: String(input.round * 1_000 + input.id),
+    startsAt: input.startsAt,
+    status: input.status,
+    seasonId: "2026-27",
+    roundId: `round-${input.round}`,
+    roundName: String(input.round),
+    homeTeam: { id: homeId, providerId: homeId, name: `Home ${input.round}-${input.id}` },
+    awayTeam: { id: awayId, providerId: awayId, name: `Away ${input.round}-${input.id}` },
+  };
+}
+
+test("Match Centre exposes only ten fixtures from the current provider round and ten previous results", () => {
+  const now = Date.parse("2026-08-28T12:00:00Z");
+  const previousRound = Array.from({ length: 10 }, (_, index) => roundFixture({
+    id: index,
+    round: 1,
+    startsAt: `2026-08-${String(18 + Math.floor(index / 2)).padStart(2, "0")}T${String(12 + (index % 2) * 3).padStart(2, "0")}:00:00Z`,
+    status: "Finished",
+  }));
+  const currentRound = Array.from({ length: 10 }, (_, index) => roundFixture({
+    id: index,
+    round: 2,
+    startsAt: `2026-08-${String(29 + Math.floor(index / 5)).padStart(2, "0")}T${String(12 + (index % 5) * 2).padStart(2, "0")}:00:00Z`,
+    status: "Not Started",
+  }));
+  const laterRound = Array.from({ length: 10 }, (_, index) => roundFixture({
+    id: index,
+    round: 3,
+    startsAt: `2026-09-${String(5 + Math.floor(index / 5)).padStart(2, "0")}T${String(12 + (index % 5) * 2).padStart(2, "0")}:00:00Z`,
+    status: "Not Started",
+  }));
+
+  const schedule = selectTouchlineMatchCentreSchedule(
+    [...laterRound, ...previousRound, ...currentRound],
+    now,
+  );
+
+  assert.equal(schedule.currentFixtures.length, 10);
+  assert.equal(schedule.recentResults.length, 10);
+  assert.ok(schedule.currentFixtures.every((candidate) => candidate.roundId === "round-2"));
+  assert.ok(schedule.recentResults.every((candidate) => candidate.roundId === "round-1"));
+  assert.equal(new Set([...schedule.currentFixtures, ...schedule.recentResults].map((candidate) => candidate.id)).size, 20);
+});
+
+test("Match Centre keeps all ten matches in the current round after early fixtures finish", () => {
+  const now = Date.parse("2026-08-30T12:00:00Z");
+  const currentRound = Array.from({ length: 10 }, (_, index) => roundFixture({
+    id: index,
+    round: 2,
+    startsAt: index < 4
+      ? `2026-08-29T${String(12 + index * 2).padStart(2, "0")}:00:00Z`
+      : `2026-08-30T${String(13 + (index - 4)).padStart(2, "0")}:00:00Z`,
+    status: index < 4 ? "Finished" : "Not Started",
+  }));
+
+  const schedule = selectTouchlineMatchCentreSchedule(currentRound, now);
+
+  assert.equal(schedule.currentFixtures.length, 10);
+  assert.equal(schedule.recentResults.length, 0);
+  assert.deepEqual(new Set(schedule.currentFixtures.map((candidate) => candidate.roundId)), new Set(["round-2"]));
+});
 
 test("Match Centre always prioritizes live, then upcoming, then finished", () => {
   const liveNow = Date.parse("2026-08-20T15:00:00Z");
@@ -166,7 +239,8 @@ test("Match Centre lets its mobile grid shrink while keeping only the fixture ra
   assert.match(styles, /\.layout \{[^}]*min-width: 0/);
   assert.match(styles, /\.fixtureRail \{[^}]*min-width: 0/);
   assert.match(styles, /\.matchPanel \{[^}]*min-width: 0/);
-  assert.match(styles, /\.fixtureScroller \{[^}]*overflow: auto/);
+  assert.match(styles, /\.fixtureScroller \{[^}]*overflow-y: auto/);
+  assert.match(styles, /@media \(max-width: 850px\)[\s\S]*?\.fixtureList \{[^}]*grid-auto-flow: column[^}]*overflow-x: auto/);
 });
 
 test("Match Centre fixture rail presents each confrontation as a vertical score card", () => {
@@ -185,7 +259,13 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /className=\{styles\.fixtureTeam\}>\s*<TeamMark fixture=\{fixture\} side="home"/);
   assert.match(component, /className=\{styles\.fixtureTeam\}>\s*<TeamMark fixture=\{fixture\} side="away"/);
   assert.match(component, /className=\{styles\.fixtureCentre\}/);
-  assert.match(component, /const railFixtures = groups\[group\.id\];/);
+  assert.match(component, /const railFixtures = section\.fixtures;/);
+  assert.match(component, /fixtureSections\.map\(\(section\) =>/);
+  assert.match(component, /currentFixtures: "Confrontos desta semana"/);
+  assert.match(component, /recentResults: "Últimos resultados"/);
+  assert.match(component, /data-section=\{section\.id\}/);
+  assert.match(component, /className=\{styles\.fixtureList\}/);
+  assert.match(component, /\{schedule\.currentFixtures\.length\} \+ \{schedule\.recentResults\.length\}/);
   assert.match(component, /railFixtures\.map\(\(fixture\) =>/);
   assert.match(component, /function fixtureRailStatus\(/);
   assert.match(component, /function fixtureScorePair\(fixture: TouchlinePublicFixture\) \{\s*if \(Number\.isFinite\(fixture\.homeScore\) && Number\.isFinite\(fixture\.awayScore\)\)/);
@@ -194,15 +274,33 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /setFixtures\(\(current\) => mergeTouchlineLiveFixtures\(current, liveSnapshot\)\)/);
   assert.doesNotMatch(component, /return copy\[language\]\.next;/);
   assert.doesNotMatch(component, /homeScore \?\? 0|awayScore \?\? 0/);
-  assert.match(component, /<time dateTime=\{fixture\.startsAt\}>\{fixtureDate\(fixture, language, initialTimeZone/);
+  assert.match(component, /<time dateTime=\{fixture\.startsAt\}>\{isResultSection \?[^}]*fixtureDate\(fixture, language, initialTimeZone/);
   assert.match(component, /className=\{styles\.fixtureScore\}/);
   assert.match(component, /BellRing/);
-  assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 108px/);
+  assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 104px/);
   assert.match(styles, /\.fixtureStack \{[^}]*grid-template-columns: 44px minmax\(0,1fr\)[^}]*gap: 4px/);
   assert.match(styles, /\.fixtureScore \{[^}]*top: 50%[^}]*right: 47px[^}]*translateY\(-50%\)/);
   assert.match(styles, /\.teamMark \{[^}]*width: 34px[^}]*height: 34px[^}]*background: transparent[^}]*box-shadow: none/);
   assert.match(styles, /\.teamMark \{[^}]*background: transparent[^}]*box-shadow: none/);
   assert.match(styles, /\.englandFlag \{[^}]*#cf2540/);
+});
+
+test("Live highlights use only verified match ratings and a final winning coach", () => {
+  const component = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+
+  const topRatedFunction = component.match(/function topRatedPlayers\([\s\S]*?\n\}/)?.[0] ?? "";
+  assert.match(topRatedFunction, /Number\.isFinite\(row\.rating\)/);
+  assert.match(topRatedFunction, /appearanceStatus === "started"[\s\S]*?appearanceStatus === "substitute"/);
+  assert.match(topRatedFunction, /slice\(0, 3\)/);
+  assert.doesNotMatch(topRatedFunction, /touchlinePoints/);
+  assert.match(component, /touchlineFixtureState\(selected, now\) !== "finished"/);
+  assert.match(component, /touchlineLiveCoachForTeam\(winningTeamId\(selected\)\)/);
+  assert.match(component, /highlights: "Destaques TouchLine"/);
+  assert.match(component, /bestCoach: "Best Coach"/);
+  assert.match(component, /bestCards: "Best Cards"/);
 });
 
 test("Match Centre keeps the live pitch at a real football-field proportion", () => {
