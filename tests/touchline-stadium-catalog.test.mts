@@ -115,3 +115,25 @@ test("every verified home club resolves only with its exact venue identity", () 
     assert.equal(toTouchlineLiveFixture(fixture(entry.homeTeamProviderId, `${entry.providerVenueId}-other`)).venue, undefined);
   }
 });
+
+test("Old Trafford alone exposes the approved interior hero artwork", () => {
+  const entriesWithInterior = TOUCHLINE_STADIUM_CATALOG.filter((entry) => entry.interiorImageUrl);
+  assert.equal(entriesWithInterior.length, 1);
+
+  const oldTrafford = entriesWithInterior[0];
+  assert.equal(oldTrafford?.homeTeamProviderId, "14");
+  assert.equal(oldTrafford?.providerVenueId, "206");
+  assert.equal(
+    oldTrafford?.interiorImageUrl,
+    "/touchlineArena/stadiums/interiors/16-manchester-united-old-trafford-interior.webp",
+  );
+
+  const asset = new URL(`../public${oldTrafford?.interiorImageUrl}`, import.meta.url);
+  assert.equal(existsSync(asset), true, "missing optimized Old Trafford interior asset");
+  assert.ok(statSync(asset).size < 1_000_000, "Old Trafford interior asset must stay below 1 MB");
+
+  const manchesterUnitedHome = toTouchlineLiveFixture(fixture("14", "206"));
+  assert.equal(manchesterUnitedHome.venue?.interiorImageUrl, oldTrafford?.interiorImageUrl);
+  assert.equal(toTouchlineLiveFixture(fixture("9", "151")).venue?.interiorImageUrl, undefined);
+  assert.equal(toTouchlineLiveFixture(fixture("14", "151")).venue, undefined);
+});

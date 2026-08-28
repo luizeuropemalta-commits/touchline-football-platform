@@ -1,5 +1,6 @@
 .shell {
   position: relative;
+  scroll-margin-top: 24px;
   width: 100%;
   min-width: 0;
   max-width: 100%;

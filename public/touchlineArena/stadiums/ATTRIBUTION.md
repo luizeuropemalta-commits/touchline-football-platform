@@ -10,6 +10,19 @@ card in the Live Match Centre and are not the main match background.
 Production use remains outside this mission and requires the separate visual
 approval described by the source asset manifest.
 
+## TouchLine interior stadium proof — QA visual only
+
+The file under `interiors/` is an optimized derivative of the AI-generated
+Old Trafford interior supplied and approved by the product owner for this
+isolated QA proof. It is used only as the main Live hero background when the
+verified home team is Manchester United and the verified venue is Old Trafford.
+
+- `16-manchester-united-old-trafford-interior.webp` — product-owner supplied
+  TouchLine visual draft; QA use only.
+
+Other fixtures deliberately retain the existing generic pitch background.
+Production use and additional stadium interiors require separate approval.
+
 ## Legacy verified-photo sources
 
 These files are resized and converted presentation derivatives retained from

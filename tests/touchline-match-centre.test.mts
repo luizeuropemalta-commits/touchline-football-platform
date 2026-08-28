@@ -199,10 +199,58 @@ test("Match Centre never invents a zero score when only one side is present", ()
     new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
     "utf8",
   );
-  const scoreFunction = source.match(/function score\(fixture: TouchlinePublicFixture\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
+  const scoreFunction = source.match(/function score\([\s\S]*?\) \{([\s\S]*?)\n\}/)?.[1] ?? "";
   assert.match(scoreFunction, /Number\.isFinite\(fixture\.homeScore\) && Number\.isFinite\(fixture\.awayScore\)/);
+  assert.match(scoreFunction, /displayState === "live" && !Number\.isFinite\(fixture\.homeScore\) && !Number\.isFinite\(fixture\.awayScore\)/);
   assert.match(scoreFunction, /return "VS"/);
   assert.doesNotMatch(scoreFunction, /\?\? 0/);
+});
+
+test("Match Centre keeps kickoff time only in the lower line and exposes AO VIVO only for canonical live state", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const styles = readFileSync(
+    new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /selectedDisplayState === "live" \? <span className=\{styles\.statusPill\} role="status" aria-live="polite" aria-atomic="true">/);
+  assert.match(source, /copy\["pt-BR"\]\.liveNow/);
+  assert.match(source, /<time className=\{styles\.heroKickoff\}[\s\S]*?hour: "2-digit", minute: "2-digit"/);
+  assert.match(source, /score\(selected, selectedDisplayState\)/);
+  assert.doesNotMatch(source, /<span className=\{styles\.statusPill\}>\{status\(/);
+  assert.match(styles, /\.statusPill \{[^}]*animation: heroLivePulse/);
+  assert.match(styles, /@keyframes heroLivePulse/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.statusPill \{ animation: none; \}/);
+});
+
+test("Manchester United home hero exposes an honest verified-lineup call to action", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const styles = readFileSync(
+    new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
+    "utf8",
+  );
+  const clubHub = readFileSync(
+    new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /selected\?\.homeTeam\?\.providerId === "14" && selected\?\.venue\?\.id === "old-trafford"/);
+  assert.match(source, /verifiedDetail\?\.lineupAvailableAt[\s\S]*?verifiedDetail\.lineups\.some\(\(member\) => member\.teamId === selected\?\.homeTeam\?\.providerId\)/);
+  assert.match(source, /selectedCanonicalState === "live" \|\| selectedCanonicalState === "finished"/);
+  assert.match(source, /Escalação oficial ainda não disponível/);
+  assert.match(source, /A TouchLine avisará assim que os dados oficiais chegarem\./);
+  assert.match(source, /VER ESCALAÇÃO/);
+  assert.match(source, /\/touchline-clubs\/manchester-united\?lang=pt-BR#touchline-club-lineup/);
+  assert.doesNotMatch(source, /lineup[^\n]*(?:60|90)\s*\*\s*60_000/i);
+  assert.match(styles, /\.homeLineupCallout \{[^}]*border-radius:[^}]*backdrop-filter:/);
+  assert.match(styles, /\.homeLineupLink:focus-visible/);
+  assert.match(clubHub, /<section id="touchline-club-lineup" className=\{styles\.shell\}/);
 });
 
 test("a venue awaiting verification is not labelled as verified", () => {
@@ -238,6 +286,23 @@ test("Match Centre renders a verified stadium card and a premium kickoff treatme
   assert.match(styles, /\.venueVisual\[data-fallback="true"\]/);
   assert.match(styles, /\.heroKickoff \{[^}]*border-radius: 999px/);
   assert.match(styles, /\.heroTeams \.teamMark \{[^}]*width: clamp\(96px,13vw,156px\)/);
+});
+
+test("Match Centre renders the optional home-stadium interior behind a strong readable overlay", () => {
+  const component = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const styles = readFileSync(
+    new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(component, /function HeroVenueArtwork\(/);
+  assert.match(component, /<HeroVenueArtwork venue=\{selected\.venue\} \/>/);
+  assert.match(component, /onError=\{\(\) => setFailedInteriorImageUrl\(interiorImageUrl\)\}/);
+  assert.match(styles, /\.heroVenueArtwork \{[^}]*position: absolute[^}]*object-fit: cover[^}]*pointer-events: none/);
+  assert.match(styles, /\.hero::after \{[^}]*linear-gradient\(180deg, rgba\(1,5,4,\.66\), rgba\(1,8,5,\.82\)\)[^}]*pointer-events: none/);
 });
 
 test("Match Centre uses the provider round instead of mislabelling a season as matchweek", () => {

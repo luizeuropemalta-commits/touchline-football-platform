@@ -17,7 +17,8 @@ type TouchlineStadiumCatalogEntry = TouchlinePublicVenue & {
  * the TouchLine stadium identity and presentation facts. Resolution requires
  * both the venue and its verified home club, so a neutral-site fixture cannot
  * silently inherit a club stadium. The aerial artwork is presentation-only
- * and never replaces the Live match background or the provider venue fact.
+ * and never replaces the provider venue fact. Interior artwork is opt-in per
+ * verified home ground and otherwise leaves the neutral Live hero unchanged.
  */
 export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] = Object.freeze([
   {
@@ -148,6 +149,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Old Trafford",
     homeClubName: "Manchester United",
     imageUrl: "/touchlineArena/stadiums/aerial/16-manchester-united-old-trafford.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/16-manchester-united-old-trafford-interior.webp",
   },
   {
     id: "st-james-park",
@@ -204,6 +206,7 @@ function publicVenue(stadium: TouchlineStadiumCatalogEntry): TouchlinePublicVenu
     ...(stadium.capacity === undefined ? {} : { capacity: stadium.capacity }),
     homeClubName: stadium.homeClubName,
     imageUrl: stadium.imageUrl,
+    ...(stadium.interiorImageUrl === undefined ? {} : { interiorImageUrl: stadium.interiorImageUrl }),
     ...(stadium.photoCredit === undefined ? {} : { photoCredit: { ...stadium.photoCredit } }),
   };
 }

@@ -27,6 +27,7 @@ import {
   touchlineMatchCentreDisplayState,
   touchlineFixtureState,
   type TouchlineLiveReadMetadata,
+  type TouchlineMatchCentreDisplayState,
 } from "@/lib/touchlineArena/match-centre";
 
 import styles from "./touchline-match-centre.module.css";
@@ -67,8 +68,9 @@ function fixtureDate(
   return new Intl.DateTimeFormat(locale, { ...options, timeZone }).format(new Date(fixture.startsAt));
 }
 
-function score(fixture: TouchlinePublicFixture) {
+function score(fixture: TouchlinePublicFixture, displayState: TouchlineMatchCentreDisplayState | null) {
   if (Number.isFinite(fixture.homeScore) && Number.isFinite(fixture.awayScore)) return `${fixture.homeScore} — ${fixture.awayScore}`;
+  if (displayState === "live" && !Number.isFinite(fixture.homeScore) && !Number.isFinite(fixture.awayScore)) return "0 — 0";
   return "VS";
 }
 
@@ -142,6 +144,23 @@ function VenueArtwork({ venue }: { venue: TouchlinePublicVenue }) {
       ? <img src={venue.imageUrl} alt="" width={960} height={960} decoding="async" onError={() => setFailedImageUrl(venue.imageUrl)} />
       : <Landmark size={34} strokeWidth={1.35} />}
   </div>;
+}
+
+function HeroVenueArtwork({ venue }: { venue?: TouchlinePublicVenue }) {
+  const [failedInteriorImageUrl, setFailedInteriorImageUrl] = useState<string | null>(null);
+  const interiorImageUrl = venue?.interiorImageUrl;
+  if (!interiorImageUrl || failedInteriorImageUrl === interiorImageUrl) return null;
+
+  return <img
+    className={styles.heroVenueArtwork}
+    src={interiorImageUrl}
+    alt=""
+    width={1600}
+    height={1000}
+    decoding="async"
+    aria-hidden="true"
+    onError={() => setFailedInteriorImageUrl(interiorImageUrl)}
+  />;
 }
 
 function verificationLabel(metadata: TouchlineLiveReadMetadata, language: keyof typeof copy, timeZone: string) {
@@ -301,7 +320,15 @@ export default function TouchlineMatchCentre({
     [schedule.currentFixtures, schedule.recentResults],
   );
   const selected = useMemo(() => selectTouchlineMatchCentreFixture(visibleFixtures, selectedId, now), [now, selectedId, visibleFixtures]);
+  const selectedDisplayState = selected ? touchlineMatchCentreDisplayState(selected, readMetadata, now) : null;
+  const selectedCanonicalState = selected ? touchlineFixtureState(selected, now) : null;
   const verifiedDetail = matchDetail?.fixture.id === selected?.providerId ? matchDetail : null;
+  const isManchesterUnitedHome = selected?.homeTeam?.providerId === "14" && selected?.venue?.id === "old-trafford";
+  const homeLineupAvailable = Boolean(
+    verifiedDetail?.lineupAvailableAt
+    && verifiedDetail.lineups.some((member) => member.teamId === selected?.homeTeam?.providerId)
+    && (selectedCanonicalState === "live" || selectedCanonicalState === "finished"),
+  );
   const bestCards = useMemo(() => verifiedDetail ? topRatedPlayers(verifiedDetail) : [], [verifiedDetail]);
   const bestCoach = useMemo(() => {
     if (!selected || touchlineFixtureState(selected, now) !== "finished") return null;
@@ -411,11 +438,23 @@ export default function TouchlineMatchCentre({
 
         {selected ? <section id="touchline-match-panel" className={styles.matchPanel} aria-label={fixtureLabel(selected)}>
           <div className={styles.matchMeta}><span><Trophy size={14} /> {dictionary.competition}</span><span>{selected.roundName ? `${dictionary.matchweek} · ${selected.roundName}` : dictionary.roundPending}</span><span><Clock3 size={14} /> {dictionary.timezone}</span></div>
-          <div className={styles.hero} data-state={touchlineMatchCentreDisplayState(selected, readMetadata, now)}>
-            <span className={styles.statusPill}>{status(selected, language, initialTimeZone, readMetadata, now)}</span>
+          <div className={styles.hero} data-state={selectedDisplayState ?? "unknown"}>
+            <HeroVenueArtwork venue={selected.venue} />
+            {selectedDisplayState === "live" ? <span className={styles.statusPill} role="status" aria-live="polite" aria-atomic="true">
+              <span className={styles.liveStatusDot} aria-hidden="true" />
+              {copy["pt-BR"].liveNow}
+            </span> : null}
             <div className={styles.heroTeams}>
-              <div><TeamMark fixture={selected} side="home" /><strong>{selected.homeTeam?.name ?? "Home"}</strong></div>
-              <b className={styles.score}>{score(selected)}</b>
+              <div>
+                <TeamMark fixture={selected} side="home" />
+                <strong>{selected.homeTeam?.name ?? "Home"}</strong>
+                {isManchesterUnitedHome ? <aside className={styles.homeLineupCallout} data-state={homeLineupAvailable ? "available" : "pending"}>
+                  {homeLineupAvailable
+                    ? <a className={styles.homeLineupLink} href="/touchline-clubs/manchester-united?lang=pt-BR#touchline-club-lineup"><UsersRound size={14} aria-hidden="true" /> VER ESCALAÇÃO</a>
+                    : <><span>Escalação oficial ainda não disponível</span><small>A TouchLine avisará assim que os dados oficiais chegarem.</small></>}
+                </aside> : null}
+              </div>
+              <b className={styles.score}>{score(selected, selectedDisplayState)}</b>
               <div><TeamMark fixture={selected} side="away" /><strong>{selected.awayTeam?.name ?? "Away"}</strong></div>
             </div>
             <time className={styles.heroKickoff} dateTime={selected.startsAt}>

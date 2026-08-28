@@ -62,7 +62,7 @@ export default function ClubHubOfficialLineup({
     : (isPortuguese ? "Prévia do elenco" : "Squad Preview");
 
   return (
-    <section className={styles.shell} aria-label={`${clubName} ${title}`}>
+    <section id="touchline-club-lineup" className={styles.shell} aria-label={`${clubName} ${title}`}>
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>{isPortuguese ? "Escalação da partida" : "Matchday line-up"}</span>
