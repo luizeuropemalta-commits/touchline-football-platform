@@ -465,7 +465,7 @@ export default function TouchlineMatchCentre({
               <span><CalendarDays size={14} aria-hidden="true" />{fixtureDate(selected, language, initialTimeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
               <strong><Clock3 size={15} aria-hidden="true" />{fixtureDate(selected, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false })}</strong>
             </time>
-            {touchlineFixtureState(selected, now) === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={now} /> : <strong className={styles.countdown}>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.liveDataUpdating : selected.status ?? dictionary.provider}</strong>}
+            {touchlineFixtureState(selected, now) === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={now} /> : <strong className={styles.countdown}>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.liveDataUpdating : touchlineFixtureStatusLabel(selected.status, language) || dictionary.provider}</strong>}
           </div>
 
           <div className={styles.infoGrid}>

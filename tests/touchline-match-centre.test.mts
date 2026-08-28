@@ -362,6 +362,7 @@ test("Match Centre keeps the first server and browser render in one validated ti
   assert.match(componentSource, /useState\(initialNow\)/);
   assert.doesNotMatch(componentSource, /useState\(\(\) => Date\.now\(\)\)/);
   assert.match(componentSource, /new Intl\.DateTimeFormat\(locale, \{ \.\.\.options, timeZone \}\)/);
+  assert.match(componentSource, /touchlineFixtureStatusLabel\(selected\.status, language\) \|\| dictionary\.provider/);
 });
 
 test("fixture rail labels expose today or a compact localized day and date", () => {
