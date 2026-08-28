@@ -295,6 +295,14 @@ The permanent Codex environment is ready for product work. Do not continue envir
 
 For detailed immutable evidence, use `CURRENT_EXECUTION_LEDGER.md`.
 
+## 2026-08-28 QA Player Card shirt-number/value audit — GREEN
+
+- **Canonical inventory:** QA project `xgxbwqxjssxxuihuwmgy` has `581` active Premier League cards. All `581` have a verified market value; `10` have no current shirt number. Those ten remain explicitly review-required only for `shirt_number`, but all ten are published and visible, as previously authorized for players whose club has not assigned a number.
+- **Evidence-backed corrections:** the existing transactional Card Engine batch `319da126-cb05-4b5c-98aa-bae4d459661c` matched `3/3` canonical player IDs with zero review/conflict/unmatched rows, was approved and published, and has five audit events. Matheus França is now `#27`; Zavier Gozo is corrected from his prior-club `#72` to Crystal Palace `#12`; Elliot Stroud's stale `#17` was removed because Hull's current `#17` belongs to Abu Kamara and no current Hull number is published for Stroud.
+- **Publication correction:** Denner's already verified owner-authorized fallback value `€1M` and Elliot Stroud's verified `€8M` publication were advanced from `ready_to_publish` to `published` through the existing manual Card Engine publication function. Their cards remain eligible and visible with `--` for the unassigned shirt, while the real values no longer display as `PENDENTE`.
+- **Remote product proof:** stable QA rendered all ten review-required cards across Chelsea, Hull City, Leeds United, Manchester City, Nottingham Forest and Sunderland. Every card showed `Shirt number unavailable` and its verified market value; Matheus rendered `#27`, Zavier rendered `#12`, and a Matheus Zoom opened normally. A refresh preserved Denner at `€1M`; browser console logs remained empty.
+- **Verification:** focused Card Engine/editorial/Club Hub/shirt-number coverage passed `46/46`; `git diff --check` passed. No application code, schema, deployment, provider fact, production branch, Production database or Production runtime was changed.
+
 ## 2026-08-22 Block 4A — Card Engine QA deployment / authenticated Safari blocked
 
 - **Current QA source:** merge commit `522c99e96d5f01479130e46811495ded6182339d`, pushed only to `origin/qa`. It preserves the closed P0B chain and adds the bounded Card Engine editorial-batch surface; no Production branch, environment, database, DNS, payment, credential or `touchline.com.br` action occurred.
