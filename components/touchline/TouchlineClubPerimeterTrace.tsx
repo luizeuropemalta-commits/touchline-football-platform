@@ -28,18 +28,14 @@ export default function TouchlineClubPerimeterTrace({ accent, className }: Props
       <rect
         className={styles.base}
         data-touchline-club-perimeter-trace-base="true"
-        height="calc(100% - 2px)"
         pathLength="100"
-        width="calc(100% - 2px)"
         x="1"
         y="1"
       />
       <rect
         className={styles.run}
         data-touchline-club-perimeter-trace-run="true"
-        height="calc(100% - 2px)"
         pathLength="100"
-        width="calc(100% - 2px)"
         x="1"
         y="1"
       />

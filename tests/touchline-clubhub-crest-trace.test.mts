@@ -32,6 +32,8 @@ test("ClubHub reuses the stroke-only canonical crest trace for club identity onl
   assert.match(directory, /<TouchlineClubPerimeterTrace accent=\{club\.accent\} className=\{styles\.clubCardTrace\}/);
   assert.match(perimeterTrace, /data-touchline-club-perimeter-trace="true"/);
   assert.match(perimeterTrace, /data-touchline-club-perimeter-trace-run="true"/);
+  assert.doesNotMatch(perimeterTrace, /(?:width|height)="calc\(/);
+  assert.match(perimeterTraceCss, /\.base,[\s\S]*?width: calc\(100% - 2px\)[\s\S]*?height: calc\(100% - 2px\)/);
   assert.match(perimeterTraceCss, /\.run \{[\s\S]*?stroke-dasharray: 12 88[\s\S]*?animation: touchlineClubEdgeTravel/);
   assert.doesNotMatch(directoryCss, /\.clubCard::after|mask-composite|conic-gradient/);
 

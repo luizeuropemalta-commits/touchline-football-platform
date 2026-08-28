@@ -11,6 +11,8 @@
 
 .base,
 .run {
+  width: calc(100% - 2px);
+  height: calc(100% - 2px);
   rx: var(--touchline-perimeter-radius, 24px);
   ry: var(--touchline-perimeter-radius, 24px);
   fill: none;
