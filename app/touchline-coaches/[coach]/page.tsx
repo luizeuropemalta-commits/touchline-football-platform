@@ -88,6 +88,7 @@ export default async function TouchlineCoachProfilePage({
     ? {
       snapshotId: coachRanking.snapshotId,
       seasonId: coachRanking.seasonId,
+      seasonLabel: TOUCHLINE_ENGLAND_SEASON,
       rank: coachRankingRow.rank,
       scoringVersion: coachRanking.scoringVersion,
       home: coachRankingRow.home,
@@ -154,7 +155,7 @@ export default async function TouchlineCoachProfilePage({
           <h2>{pt ? "Desempenho da temporada" : "Season performance"}</h2>
           <div className="coach-profile-offer-grid">
             <div><Gem aria-hidden="true" /><span><small>Tier</small><strong>{touchlineCardTierName(classification.tierKey, locale)}</strong></span></div>
-            <div><ShieldCheck aria-hidden="true" /><span><small>{pt ? "Temporada" : "Season"}</small><strong>{competition?.seasonId ?? TOUCHLINE_ENGLAND_SEASON}</strong></span></div>
+            <div><ShieldCheck aria-hidden="true" /><span><small>{pt ? "Temporada" : "Season"}</small><strong>{competition?.seasonLabel ?? TOUCHLINE_ENGLAND_SEASON}</strong></span></div>
             <div><Trophy aria-hidden="true" /><span><small>{pt ? "Ranking atual" : "Current rank"}</small><strong>{competition ? `#${competition.rank}` : "—"}</strong></span></div>
             <div><CalendarDays aria-hidden="true" /><span><small>{pt ? "Partidas" : "Matches"}</small><strong>{matchesPlayed ?? "—"}</strong></span></div>
           </div>

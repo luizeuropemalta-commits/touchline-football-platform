@@ -53,6 +53,7 @@ export default async function ClubHubCanonicalCoachPanel({
     ? {
       snapshotId: coachRanking.snapshotId,
       seasonId: coachRanking.seasonId,
+      seasonLabel: "2026-27",
       rank: coachRankingRow.rank,
       scoringVersion: coachRanking.scoringVersion,
       home: coachRankingRow.home,

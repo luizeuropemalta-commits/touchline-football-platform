@@ -24,6 +24,7 @@ export type TouchlineCoachRecord = Readonly<{
 export type TouchlineCoachCompetitionSnapshot = Readonly<{
   snapshotId: string;
   seasonId: string;
+  seasonLabel: string;
   rank: number;
   scoringVersion: typeof TOUCHLINE_COACH_SCORING_VERSION;
   home: TouchlineCoachRecord;

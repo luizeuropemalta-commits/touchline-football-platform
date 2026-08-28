@@ -109,7 +109,7 @@ export default function TouchlineCoachPerformance({
 
       {competition ? (
         <dl className={styles.contractMeta} data-coach-competition-snapshot={competition.snapshotId}>
-          <div><dt>{portuguese ? "Temporada" : "Season"}</dt><dd>{competition.seasonId}</dd></div>
+          <div><dt>{portuguese ? "Temporada" : "Season"}</dt><dd>{competition.seasonLabel}</dd></div>
           <div><dt>{portuguese ? "Partidas" : "Matches"}</dt><dd>{competition.home.wins + competition.home.draws + competition.home.losses + competition.away.wins + competition.away.draws + competition.away.losses}</dd></div>
         </dl>
       ) : contract ? (

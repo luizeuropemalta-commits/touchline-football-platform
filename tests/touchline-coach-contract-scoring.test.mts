@@ -229,6 +229,8 @@ test("public coach profile separates real football history from the shared Touch
   assert.match(coachPerformance, /competition\?\.home \?\? contract\?\.home/);
   assert.match(coachPerformance, /competition\?\.away \?\? contract\?\.away/);
   assert.match(coachPerformance, /competition\?\.totalTouchlinePoints \?\? contract\?\.totalTouchlinePoints/);
+  assert.match(coachPerformance, /competition\.seasonLabel/);
+  assert.doesNotMatch(coachPerformance, /<dd>\{competition\.seasonId\}<\/dd>/);
   assert.doesNotMatch(coachProfile, /offer\.displayPrice|Official price|Preço oficial|WalletCards/);
   assert.match(coachPerformance, /data-coach-contract-history="true"/);
   assert.match(coachPerformance, /PRESERVED LIFECYCLE/);
