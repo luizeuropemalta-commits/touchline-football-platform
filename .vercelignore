@@ -13,9 +13,9 @@ project-quarantine
 # Documentation remains excluded from deployments, except for the two small
 # canonical governance inputs required by the release preflight itself.
 docs/*
-!docs/touchline/
+!docs/touchline
 docs/touchline/*
-!docs/touchline/project-memory/
+!docs/touchline/project-memory
 docs/touchline/project-memory/*
 !docs/touchline/project-memory/TOUCHLINE_MISSION_FOOTER.md
 !docs/touchline/project-memory/TOUCHLINE_CODEX_PROMPT_TEMPLATE.md
