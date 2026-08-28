@@ -7799,13 +7799,13 @@ export default function ArenaClient({
                   <i>{siteLanguage === "pt-BR" ? "Escolha" : "Choose"}</i>
                   {siteLanguage === "pt-BR" ? " seu treinador" : " your coach"}
                 </h1>
-                <p>{siteLanguage === "pt-BR" ? "Defina a mente tática do seu clube. Cada treinador entra com a sua identidade, tier e preço canônicos antes de você montar o elenco." : "Set the tactical mind of your club. Every coach enters with their own canonical identity, tier and price before you build the squad."}</p>
+                <p>{siteLanguage === "pt-BR" ? "Defina a mente tática do seu clube. Cada treinador entra com identidade e tier canônicos antes de você montar o elenco." : "Set the tactical mind of your club. Every coach enters with their canonical identity and tier before you build the squad."}</p>
                 {coachSelectionError ? <p className="arena-coach-selection-error" role="alert">{coachSelectionError}</p> : null}
               </div>
               <div className="arena-coach-market-proof" aria-label={siteLanguage === "pt-BR" ? "Mercado oficial de treinadores" : "Official coach market"}>
                 <strong>{TOUCHLINE_LIVE_COACHES.length}</strong>
                 <span>{siteLanguage === "pt-BR" ? "treinadores oficiais" : "official coaches"}</span>
-                <small>{siteLanguage === "pt-BR" ? "Tier, frame e preço canônicos" : "Canonical tier, frame and price"}</small>
+                <small>{siteLanguage === "pt-BR" ? "Tier e frame canônicos" : "Canonical tier and frame"}</small>
               </div>
             </header>
             <div className="arena-coach-choice-rail" role="list">
@@ -7842,7 +7842,7 @@ export default function ArenaClient({
                     role="listitem"
                     disabled={isCoachSaving}
                     onClick={() => void selectOfficialArenaCoach(coach.providerId)}
-                    aria-label={`${siteLanguage === "pt-BR" ? "Selecionar" : "Select"} ${coach.displayName}, ${offer.tierName}, ${offer.displayPrice}`}
+                    aria-label={`${siteLanguage === "pt-BR" ? "Selecionar" : "Select"} ${coach.displayName}, ${offer.tierName}`}
                     data-tier={offer.tierKey}
                     style={{
                       "--coach-offer-accent": tierPalette.accent,
@@ -7851,7 +7851,6 @@ export default function ArenaClient({
                   >
                     <span className="arena-coach-choice-topline" aria-hidden="true">
                       <b>{offer.tierName}</b>
-                      <i>{offer.displayPrice}</i>
                     </span>
                     <span className="arena-coach-choice-card" aria-hidden="true">
                       <TouchlineCoachCard

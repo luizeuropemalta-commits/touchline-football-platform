@@ -12,12 +12,13 @@ const source = readFileSync(
   "utf8",
 );
 
-test("Coach Profile resolves only the canonical live-coach registry and server-owned offer", () => {
+test("Coach Profile resolves the canonical live-coach registry and shared competition ranking", () => {
   assert.match(source, /TOUCHLINE_LIVE_COACHES/);
   assert.match(source, /touchlineCoachClassificationForProviderId/);
-  assert.match(source, /resolveCompetitionCardOffer/);
-  assert.match(source, /subjectType: "coach"/);
-  assert.match(source, /competitionId: "england"/);
+  assert.match(source, /loadTouchLineCoachRanking/);
+  assert.match(source, /coachRanking\.rows\.find/);
+  assert.match(source, /TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
+  assert.doesNotMatch(source, /offer\.displayPrice|Official price|Preço oficial|WalletCards/);
   assert.match(source, /notFound\(\)/);
 });
 

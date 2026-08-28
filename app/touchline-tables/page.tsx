@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { loadTouchLineActiveRanking, loadTouchLinePublishedTopEleven } from "@/lib/touchlineArena/card-ranking-server";
 import { loadTouchLineRankedCardCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
+import { countTouchlinePublishedPlayerCards } from "@/lib/touchlineArena/card-publication-read-model";
 import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { getTouchLineRankingsCopy } from "@/lib/touchlineArena/rankings-i18n";
@@ -22,11 +23,12 @@ export default async function TouchLineTablesPage({
   const supabase = await createClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   const activeRanking = await loadTouchLineActiveRanking();
-  const [publishedTopEleven, publicFixtures, rankedCards, coachRanking] = await Promise.all([
+  const [publishedTopEleven, publicFixtures, rankedCards, coachRanking, publishedCardCount] = await Promise.all([
     loadTouchLinePublishedTopEleven(),
     readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
     loadTouchLineRankedCardCatalog(activeRanking),
     loadTouchLineCoachRanking(),
+    countTouchlinePublishedPlayerCards(),
   ]);
   const selectedProviderRound = selectArenaFixtureRound(publicFixtures);
   const providerRoundNames = [...new Set(selectedProviderRound
@@ -52,8 +54,8 @@ export default async function TouchLineTablesPage({
         isAdmin: Boolean(user && isOwnerEmail(user.email)),
       })}
       rosterCards={rankedCards}
-      totalCards={rankedCards.length}
-      totalClubOwners={touchLineEnglandTable.length}
+      totalPublishedCards={publishedCardCount}
+      totalRankedCards={rankedCards.length}
       touchLineEnglandTable={touchLineEnglandTable}
     />
   );

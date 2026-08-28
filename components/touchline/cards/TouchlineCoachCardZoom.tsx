@@ -2,7 +2,10 @@
 
 import type { TouchlineCoach } from "@/lib/football-data/types";
 import type { TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
-import type { TouchlineCoachContractSnapshot } from "@/lib/touchlineArena/coach-scoring";
+import type {
+  TouchlineCoachCompetitionSnapshot,
+  TouchlineCoachContractSnapshot,
+} from "@/lib/touchlineArena/coach-scoring";
 import { touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 
 import TouchlineCardZoom from "./TouchlineCardZoom";
@@ -18,6 +21,7 @@ type TouchlineCoachCardZoomProps = {
   countryCode3?: string;
   locale?: string;
   contract: TouchlineCoachContractSnapshot | null;
+  competition?: TouchlineCoachCompetitionSnapshot | null;
   profileHref: string;
   compact?: boolean;
   /**
@@ -38,6 +42,7 @@ export default function TouchlineCoachCardZoom({
   countryCode3,
   locale = "en-GB",
   contract,
+  competition = null,
   profileHref,
   compact = true,
   assetLoading,
@@ -85,7 +90,7 @@ export default function TouchlineCoachCardZoom({
       }
       detailsContent={
         <div>
-          <TouchlineCoachPerformance contract={contract} locale={locale} />
+          <TouchlineCoachPerformance contract={contract} competition={competition} locale={locale} />
           <a data-coach-profile-action="true" href={profileHref}>{portuguese ? "Ver perfil completo" : "View full profile"}</a>
         </div>
       }

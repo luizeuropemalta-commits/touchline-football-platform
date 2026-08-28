@@ -161,3 +161,15 @@ export async function loadTouchlinePublishedCardPresentations(input: Readonly<{
   unstable_noStore();
   return readPublishedTouchlineCards(playerIds, createAdminClient());
 }
+
+/** Public summary count; it never expands the publication DTO or exposes rows. */
+export async function countTouchlinePublishedPlayerCards() {
+  unstable_noStore();
+  const admin = createAdminClient();
+  if (!admin) return null;
+  const { count, error } = await admin
+    .from("touchline_card_publications")
+    .select("player_id", { count: "exact", head: true })
+    .eq("publication_status", "published");
+  return error || count === null ? null : count;
+}

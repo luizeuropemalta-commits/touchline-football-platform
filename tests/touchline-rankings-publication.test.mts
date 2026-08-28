@@ -32,3 +32,12 @@ test("TouchLine Tables shows one positional Best XI, coaches and the sporting Cl
   assert.doesNotMatch(client, /cardClubOwnerRank|playerList|playerRankSection/);
   assert.doesNotMatch(copy, /Highest squad card value|Maiores valores de cards do elenco/);
 });
+
+test("TouchLine Tables distinguishes every published card from the current eligible ranking snapshot", () => {
+  assert.match(page, /countTouchlinePublishedPlayerCards\(\)/);
+  assert.match(client, /copy\.publishedCards/);
+  assert.match(client, /totalPublishedCards \?\? "—"/);
+  assert.match(client, /copy\.rankedCards/);
+  assert.match(client, /totalRankedCards/);
+  assert.doesNotMatch(client, /copy\.clubOwners/);
+});

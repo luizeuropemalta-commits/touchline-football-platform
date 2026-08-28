@@ -127,7 +127,7 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(selectCoach, /confirmMarketFormation[\s\S]*?reconcileTouchlineFormationStarters/);
   assert.match(selectCoach, /confirmMarketFormation[\s\S]*?setMarketPositionBucketFilter\("all"\)/);
   assert.match(arena, /coachOffersByProviderId/);
-  assert.match(arena, /offer\.displayPrice/);
+  assert.doesNotMatch(arena, /offer\.displayPrice/);
   assert.match(arena, /className="arena-coach-market-header"/);
   assert.match(arena, /data-tier=\{offer\.tierKey\}/);
   assert.match(arena, /"--coach-offer-accent": tierPalette\.accent/);

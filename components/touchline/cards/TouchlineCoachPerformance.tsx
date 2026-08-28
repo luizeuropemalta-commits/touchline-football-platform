@@ -1,12 +1,17 @@
 import { BadgeCheck, CalendarClock, History, House, PlaneTakeoff, ShieldCheck, Trophy } from "lucide-react";
 
-import type { TouchlineCoachContractSnapshot, TouchlineCoachRecord } from "@/lib/touchlineArena/coach-scoring";
+import type {
+  TouchlineCoachCompetitionSnapshot,
+  TouchlineCoachContractSnapshot,
+  TouchlineCoachRecord,
+} from "@/lib/touchlineArena/coach-scoring";
 
 import styles from "./TouchlineCoachPerformance.module.css";
 
 type TouchlineCoachPerformanceProps = {
   contract: TouchlineCoachContractSnapshot | null;
   contractHistory?: readonly TouchlineCoachContractSnapshot[];
+  competition?: TouchlineCoachCompetitionSnapshot | null;
   locale?: string;
   showHistory?: boolean;
 };
@@ -49,28 +54,35 @@ function RecordPanel({
 export default function TouchlineCoachPerformance({
   contract,
   contractHistory = [],
+  competition = null,
   locale = "en-GB",
   showHistory = false,
 }: TouchlineCoachPerformanceProps) {
   const portuguese = locale === "pt-BR";
-  const home: TouchlineCoachRecord | null = contract?.home ?? null;
-  const away: TouchlineCoachRecord | null = contract?.away ?? null;
-  const total = contract?.totalTouchlinePoints ?? null;
+  const home: TouchlineCoachRecord | null = competition?.home ?? contract?.home ?? null;
+  const away: TouchlineCoachRecord | null = competition?.away ?? contract?.away ?? null;
+  const total = competition?.totalTouchlinePoints ?? contract?.totalTouchlinePoints ?? null;
   const lifecycle = contractHistory.length
     ? [...contractHistory].sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt))
     : contract ? [contract] : [];
-  const status = contract
+  const status = competition
+    ? (portuguese ? `Ranking #${competition.rank}` : `Rank #${competition.rank}`)
+    : contract
     ? (contract.status === "active" ? (portuguese ? "Contrato ativo" : "Active contract") : (portuguese ? "Contrato encerrado" : "Ended contract"))
     : (portuguese ? "Sem contrato TouchLine" : "No TouchLine contract");
 
   return (
-    <section className={styles.panel} aria-label={portuguese ? "Pontuação TouchLine do treinador" : "Coach TouchLine Points"}>
+    <section
+      className={styles.panel}
+      aria-label={portuguese ? "Desempenho TouchLine do treinador" : "Coach TouchLine performance"}
+      data-coach-performance-source={competition ? "competition-ranking" : contract ? "club-owner-contract" : "unavailable"}
+    >
       <header className={styles.header}>
         <div className={styles.title}>
           <span className={styles.titleIcon}><ShieldCheck aria-hidden="true" size={22} /></span>
-          <div><span>TOUCHLINE GAME</span><strong>TouchLine Points</strong></div>
+          <div><span>{competition ? (portuguese ? "TEMPORADA TOUCHLINE" : "TOUCHLINE SEASON") : "TOUCHLINE GAME"}</span><strong>{competition ? (portuguese ? "Desempenho oficial" : "Official performance") : "TouchLine Points"}</strong></div>
         </div>
-        <span className={styles.status} data-contract-status={contract?.status ?? "none"}>{status}</span>
+        <span className={styles.status} data-contract-status={competition ? "competition" : contract?.status ?? "none"}>{status}</span>
       </header>
 
       <div className={styles.records}>
@@ -95,7 +107,12 @@ export default function TouchlineCoachPerformance({
         </div>
       </div>
 
-      {contract ? (
+      {competition ? (
+        <dl className={styles.contractMeta} data-coach-competition-snapshot={competition.snapshotId}>
+          <div><dt>{portuguese ? "Temporada" : "Season"}</dt><dd>{competition.seasonId}</dd></div>
+          <div><dt>{portuguese ? "Partidas" : "Matches"}</dt><dd>{competition.home.wins + competition.home.draws + competition.home.losses + competition.away.wins + competition.away.draws + competition.away.losses}</dd></div>
+        </dl>
+      ) : contract ? (
         <dl className={styles.contractMeta}>
           <div><dt>{portuguese ? "Início do contrato" : "Contract start"}</dt><dd>{formatDate(contract.startedAt, locale)}</dd></div>
           <div><dt>{portuguese ? "Fim do contrato" : "Contract end"}</dt><dd>{contract.endedAt ? formatDate(contract.endedAt, locale) : (portuguese ? "Em vigor" : "Active")}</dd></div>

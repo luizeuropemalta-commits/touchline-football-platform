@@ -221,11 +221,15 @@ test("Arena exposes current contract, cancellation confirmation, and preserved h
   assert.match(arena, /TouchlineCoachPerformance contract=\{activeCoachContract\}/);
 });
 
-test("coach profile separates real football history from TouchLine game data", () => {
+test("public coach profile separates real football history from the shared TouchLine competition record", () => {
   assert.match(coachProfile, /Real football history/i);
-  assert.match(coachProfile, /TouchLine game data/i);
-  assert.match(coachProfile, /TouchlineCoachPerformance contract=\{displayedContract\} contractHistory=\{coachContracts\}/);
-  assert.match(coachProfile, /showHistory/);
+  assert.match(coachProfile, /loadTouchLineCoachRanking/);
+  assert.match(coachProfile, /TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
+  assert.match(coachPerformance, /data-coach-performance-source/);
+  assert.match(coachPerformance, /competition\?\.home \?\? contract\?\.home/);
+  assert.match(coachPerformance, /competition\?\.away \?\? contract\?\.away/);
+  assert.match(coachPerformance, /competition\?\.totalTouchlinePoints \?\? contract\?\.totalTouchlinePoints/);
+  assert.doesNotMatch(coachProfile, /offer\.displayPrice|Official price|Preço oficial|WalletCards/);
   assert.match(coachPerformance, /data-coach-contract-history="true"/);
   assert.match(coachPerformance, /PRESERVED LIFECYCLE/);
   assert.match(coachPerformance, /item\.totalTouchlinePoints/);
@@ -254,6 +258,8 @@ test("Club Hub always shows the canonical club coach card without claiming an un
   assert.match(clubProfile, /<ClubHubCanonicalCoachPanel/);
   assert.match(clubProfile, /teamId=\{club\.teamId\}/);
   assert.match(clubCoachPanel, /touchlineLiveCoachForTeam\(teamId\)/);
+  assert.match(clubCoachPanel, /loadTouchLineCoachRanking\(\)/);
+  assert.match(clubCoachPanel, /competition=\{competition\}/);
   assert.match(clubCoachPanel, /TouchlineCoachCardZoom/);
   assert.match(clubCoachPanel, /Open the card to review Home, Away, W-D-L and all TouchLine Points/);
 });

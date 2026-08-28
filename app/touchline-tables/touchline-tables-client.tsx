@@ -56,8 +56,8 @@ type TouchLineTablesClientProps = {
   rankMode: string;
   publishedTopEleven: TouchlinePublishedTopEleven | null;
   rosterCards: ClubOwnerSquadCard[];
-  totalCards: number;
-  totalClubOwners: number;
+  totalPublishedCards: number | null;
+  totalRankedCards: number;
   touchLineEnglandTable: TouchLineClubOwnerStanding[];
 };
 
@@ -181,8 +181,8 @@ export default function TouchLineTablesClient({
   rankMode,
   publishedTopEleven,
   rosterCards,
-  totalCards,
-  totalClubOwners,
+  totalPublishedCards,
+  totalRankedCards,
   touchLineEnglandTable,
 }: TouchLineTablesClientProps) {
   const selection = publishedTopEleven?.slots ?? null;
@@ -238,8 +238,8 @@ export default function TouchLineTablesClient({
           <span>{copy.tablesDescription}</span>
         </div>
         <dl className={styles.summary}>
-          <div><dt>{copy.clubOwners}</dt><dd>{totalClubOwners}</dd></div>
-          <div><dt>{copy.cardsTracked}</dt><dd>{totalCards}</dd></div>
+          <div><dt>{copy.publishedCards}</dt><dd>{totalPublishedCards ?? "—"}</dd></div>
+          <div><dt>{copy.rankedCards}</dt><dd>{totalRankedCards}</dd></div>
           <div><dt>{copy.rankMode}</dt><dd>{rankMode}</dd></div>
         </dl>
       </section>

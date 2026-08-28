@@ -113,7 +113,7 @@ test("a captured coach classification stays fixed until the next season reset", 
   }), nextCandidate);
 });
 
-test("Coach-first receives server-owned offers and does not use a second price table", () => {
+test("Coach-first keeps server-owned offer tiers while hiding monetary coach values", () => {
   const coachCard = readFileSync(new URL("../lib/touchlineArena/coach-card.ts", import.meta.url), "utf8");
   const coachRoute = readFileSync(new URL("../app/api/touchline-arena/coach/route.ts", import.meta.url), "utf8");
   const marketRoute = readFileSync(new URL("../app/api/touchline-arena/market/inventory/route.ts", import.meta.url), "utf8");
@@ -126,6 +126,6 @@ test("Coach-first receives server-owned offers and does not use a second price t
   assert.match(marketRoute, /resolveCompetitionCardOffer/);
   assert.match(marketRoute, /subjectType: "player"/);
   assert.match(arena, /coachOffersByProviderId/);
-  assert.match(arena, /offer\.displayPrice/);
+  assert.doesNotMatch(arena, /offer\.displayPrice/);
   assert.match(arena, /offer\.tierKey/);
 });

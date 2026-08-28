@@ -16,6 +16,21 @@ export type TouchlineCoachRecord = Readonly<{
   touchlinePoints: number;
 }>;
 
+/**
+ * Public competition projection for one canonical coach. It is intentionally
+ * independent from a ClubOwner contract: every current coach receives the
+ * same audited season record on Card, Zoom, Profile and Ranking surfaces.
+ */
+export type TouchlineCoachCompetitionSnapshot = Readonly<{
+  snapshotId: string;
+  seasonId: string;
+  rank: number;
+  scoringVersion: typeof TOUCHLINE_COACH_SCORING_VERSION;
+  home: TouchlineCoachRecord;
+  away: TouchlineCoachRecord;
+  totalTouchlinePoints: number;
+}>;
+
 export type TouchlineCoachContractSnapshot = Readonly<{
   id: string;
   coachProviderId: string;

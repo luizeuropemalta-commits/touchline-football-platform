@@ -4,19 +4,16 @@ import type { Metadata } from "next";
 
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
-import { BadgeCheck, Gem, ShieldCheck, WalletCards } from "lucide-react";
+import { CalendarDays, Gem, ShieldCheck, Trophy } from "lucide-react";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
-import { resolveCompetitionCardOffer } from "@/lib/touchlineArena/competition-card-offer";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
+import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
 import { touchlineCardTierName } from "@/lib/touchlineArena/card-rules";
 import {
   touchlineCoachClassificationForProviderId,
   TOUCHLINE_LIVE_COACHES,
 } from "@/lib/touchlineArena/live-coaches";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
-import { readTouchlineCoachContracts } from "@/lib/touchlineArena/coach-contracts-server";
 
 const TOUCHLINE_ENGLAND_SEASON = "2026-27";
 
@@ -83,32 +80,36 @@ export default async function TouchlineCoachProfilePage({
   if (!classification) notFound();
   const club = TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === entry.coach.teamId);
   if (!club) notFound();
-  const offer = resolveCompetitionCardOffer({
-    subjectType: "coach",
-    subjectId: entry.coach.providerId,
-    competitionId: "england",
-    seasonId: TOUCHLINE_ENGLAND_SEASON,
-    tierKey: classification.tierKey,
-    classification,
-  });
-  const slot = createTouchlineArenaCoachSlot(entry.coach, null, offer.tierKey);
-  const [supabase, admin] = await Promise.all([createClient(), Promise.resolve(createAdminClient())]);
-  const userResult = supabase ? await supabase.auth.getUser() : null;
-  const user = userResult?.data.user ?? null;
-  const ownerContracts = user && admin ? await readTouchlineCoachContracts(admin, user.id).catch(() => []) : [];
-  const coachContracts = ownerContracts.filter((contract) => contract.coachProviderId === entry.coach.providerId);
-  const currentContract = coachContracts.find((contract) => contract.status === "active") ?? null;
-  const displayedContract = currentContract ?? coachContracts[0] ?? null;
-  const scoredSlot = currentContract ? {
+  const coachRanking = await loadTouchLineCoachRanking();
+  const coachRankingRow = coachRanking.phase === "ranked"
+    ? coachRanking.rows.find((candidate) => candidate.coachProviderId === entry.coach.providerId) ?? null
+    : null;
+  const competition = coachRankingRow && coachRanking.snapshotId && coachRanking.seasonId && coachRanking.scoringVersion
+    ? {
+      snapshotId: coachRanking.snapshotId,
+      seasonId: coachRanking.seasonId,
+      rank: coachRankingRow.rank,
+      scoringVersion: coachRanking.scoringVersion,
+      home: coachRankingRow.home,
+      away: coachRankingRow.away,
+      totalTouchlinePoints: coachRankingRow.touchlinePoints,
+    }
+    : null;
+  const slot = createTouchlineArenaCoachSlot(entry.coach, null, classification.tierKey);
+  const scoredSlot = competition ? {
     ...slot,
-    touchlinePoints: currentContract.totalTouchlinePoints,
+    touchlinePoints: competition.totalTouchlinePoints,
     status: "audited" as const,
     scoreEvidence: {
       provider: "sportmonks" as const,
-      providerEventIds: currentContract.fixtureHistory.map((fixture) => fixture.fixtureId),
-      scoringVersion: currentContract.scoringVersion,
+      providerEventIds: [...coachRanking.fixtureIds],
+      scoringVersion: competition.scoringVersion,
     },
   } : slot;
+  const matchesPlayed = competition
+    ? competition.home.wins + competition.home.draws + competition.home.losses
+      + competition.away.wins + competition.away.draws + competition.away.losses
+    : null;
   const profileLocale = `?lang=${encodeURIComponent(locale)}`;
   const historyAvailable = Boolean(
     classification.sourceClub
@@ -145,21 +146,20 @@ export default async function TouchlineCoachProfilePage({
           locale={locale}
           forceNeonActive
           enableInteractiveNeon={false}
-          fixtureContext={currentContract?.currentFixture?.context ?? null}
         /></div>
       </section>
       <section className="coach-profile-grid">
         <article className="coach-profile-game-card">
           <span>{pt ? "TOUCHLINE GAME" : "TOUCHLINE GAME"}</span>
-          <h2>{pt ? "Contrato e pontuação" : "Contract and scoring"}</h2>
+          <h2>{pt ? "Desempenho da temporada" : "Season performance"}</h2>
           <div className="coach-profile-offer-grid">
-            <div><Gem aria-hidden="true" /><span><small>Tier</small><strong>{touchlineCardTierName(offer.tierKey, locale)}</strong></span></div>
-            <div><WalletCards aria-hidden="true" /><span><small>{pt ? "Preço oficial" : "Official price"}</small><strong>{offer.displayPrice}</strong></span></div>
-            <div><ShieldCheck aria-hidden="true" /><span><small>{pt ? "Temporada" : "Season"}</small><strong>{offer.seasonId}</strong></span></div>
-            <div><BadgeCheck aria-hidden="true" /><span><small>{pt ? "Contratos preservados" : "Preserved contracts"}</small><strong>{coachContracts.length}</strong></span></div>
+            <div><Gem aria-hidden="true" /><span><small>Tier</small><strong>{touchlineCardTierName(classification.tierKey, locale)}</strong></span></div>
+            <div><ShieldCheck aria-hidden="true" /><span><small>{pt ? "Temporada" : "Season"}</small><strong>{competition?.seasonId ?? TOUCHLINE_ENGLAND_SEASON}</strong></span></div>
+            <div><Trophy aria-hidden="true" /><span><small>{pt ? "Ranking atual" : "Current rank"}</small><strong>{competition ? `#${competition.rank}` : "—"}</strong></span></div>
+            <div><CalendarDays aria-hidden="true" /><span><small>{pt ? "Partidas" : "Matches"}</small><strong>{matchesPlayed ?? "—"}</strong></span></div>
           </div>
-          <TouchlineCoachPerformance contract={displayedContract} contractHistory={coachContracts} locale={locale} showHistory />
-          <p>{pt ? "Dados de jogo TouchLine: contrato, pontos e histórico pertencem à conta autenticada. Nenhum resultado real de futebol é alterado." : "TouchLine game data: contract, points and history belong to the authenticated account. No real-football result is changed."}</p>
+          <TouchlineCoachPerformance contract={null} competition={competition} locale={locale} />
+          <p>{pt ? "Vitórias, empates, derrotas e pontos vêm da classificação canônica da competição e são os mesmos para todos os cards deste treinador." : "Wins, draws, losses and points come from the canonical competition standings and remain identical on every card for this coach."}</p>
           <p>{pt ? `Classificação: ${coachReason(classification.classificationReason, pt)}. O tier fica fixo durante a temporada.` : `Classification: ${coachReason(classification.classificationReason, pt)}. The tier stays fixed through the season.`}</p>
         </article>
         <article>

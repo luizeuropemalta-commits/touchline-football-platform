@@ -18,6 +18,7 @@ const coachProvisionalBackfillMigration = await readFile(new URL("../supabase/qa
 const coachRankingBackfillPublishMigration = await readFile(new URL("../supabase/qa/030_touchline_qa_coach_ranking_provisional_backfill_publish.sql", import.meta.url), "utf8");
 const competitionCoachRankingMigration = await readFile(new URL("../supabase/qa/034_touchline_qa_competition_coach_ranking_v2.sql", import.meta.url), "utf8");
 const competitionCoachRankingCompatibilityMigration = await readFile(new URL("../supabase/qa/035_touchline_qa_competition_coach_ranking_deploy_compatibility.sql", import.meta.url), "utf8");
+const competitionCoachProfileRecordsMigration = await readFile(new URL("../supabase/qa/036_touchline_qa_competition_coach_profile_records.sql", import.meta.url), "utf8");
 
 test("V2 migration is pinned to QA and preserves versioned V1 history", () => {
   assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
@@ -140,6 +141,17 @@ test("coach ranking deploy transition preserves the active snapshot for legacy c
   assert.match(competitionCoachRankingCompatibilityMigration, /preservedActiveSnapshot/i);
   assert.match(competitionCoachRankingCompatibilityMigration, /touchline_rebuild_coach_ranking_v2\(p_competition_coaches\)/i);
   assert.match(competitionCoachRankingCompatibilityMigration, /revoke execute on function public\.touchline_reconcile_coach_fixture_points\(uuid, jsonb\)[\s\S]*from public, anon, authenticated/i);
+});
+
+test("coach ranking snapshot publishes the same Home and Away records consumed by every public coach surface", () => {
+  assert.match(competitionCoachProfileRecordsMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
+  assert.match(competitionCoachProfileRecordsMigration, /create or replace function public\.touchline_rebuild_coach_ranking_v2/i);
+  assert.match(competitionCoachProfileRecordsMigration, /'home', jsonb_build_object\([\s\S]*?'wins', home_wins[\s\S]*?'touchlinePoints', home_points/i);
+  assert.match(competitionCoachProfileRecordsMigration, /'away', jsonb_build_object\([\s\S]*?'wins', away_wins[\s\S]*?'touchlinePoints', away_points/i);
+  assert.match(competitionCoachProfileRecordsMigration, /home_points[\s\S]*?away_points/i);
+  assert.match(competitionCoachProfileRecordsMigration, /order by touchline_points desc, wins desc, away_wins desc, coach_provider_id/i);
+  assert.match(competitionCoachProfileRecordsMigration, /revoke execute on function public\.touchline_rebuild_coach_ranking_v2\(jsonb\)[\s\S]*from public, anon, authenticated/i);
+  assert.doesNotMatch(competitionCoachProfileRecordsMigration, /touchline_coach_contracts|insert into public\.football_fixtures/i);
 });
 
 test("ranking completion takes a QA-only server-private backup before mutation", () => {

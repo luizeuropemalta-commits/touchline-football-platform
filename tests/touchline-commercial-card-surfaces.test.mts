@@ -78,7 +78,9 @@ test("player-card rankings expose published card terms only", () => {
   const rankingsCopy = readFileSync(new URL("../lib/touchlineArena/rankings-i18n.ts", import.meta.url), "utf8");
   const rankedCatalog = readFileSync(new URL("../lib/touchlineArena/ranked-card-catalog-server.ts", import.meta.url), "utf8");
 
-  assert.match(tablesPage, /totalCards=\{rankedCards\.length\}/);
+  assert.match(tablesPage, /countTouchlinePublishedPlayerCards\(\)/);
+  assert.match(tablesPage, /totalPublishedCards=\{publishedCardCount\}/);
+  assert.match(tablesPage, /totalRankedCards=\{rankedCards\.length\}/);
   assert.doesNotMatch(tablesPage, /resolveTouchlineTablesOwnerSummary|formatTouchlineCommercialCardTotal/);
   assert.doesNotMatch(tablesClient, /squadValueTc|formatTouchlineCommercialCardTotal/);
   assert.match(tablesClient, /data-best-eleven-player/);

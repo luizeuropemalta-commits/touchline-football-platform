@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { TouchlineCoachRecord } from "./coach-scoring";
 import { touchlineLiveCoachForProviderId } from "./live-coaches";
 
 export type TouchLineCoachRankingRow = Readonly<{
@@ -13,6 +14,8 @@ export type TouchLineCoachRankingRow = Readonly<{
   draws: number;
   losses: number;
   awayWins: number;
+  home: TouchlineCoachRecord;
+  away: TouchlineCoachRecord;
 }>;
 
 export type TouchLineCoachRankingState = Readonly<{
@@ -32,6 +35,21 @@ const EMPTY: TouchLineCoachRankingState = Object.freeze({
 
 function text(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
 function integer(value: unknown) { return typeof value === "number" && Number.isInteger(value) ? value : null; }
+function object(value: unknown) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+function record(value: unknown): TouchlineCoachRecord | null {
+  const candidate = object(value);
+  if (!candidate) return null;
+  const wins = integer(candidate.wins);
+  const draws = integer(candidate.draws);
+  const losses = integer(candidate.losses);
+  const touchlinePoints = integer(candidate.touchlinePoints);
+  if (wins === null || draws === null || losses === null || touchlinePoints === null) return null;
+  return { wins, draws, losses, touchlinePoints };
+}
 
 /** Server-only projection; contract/user identities never enter the browser DTO. */
 export async function loadTouchLineCoachRanking(): Promise<TouchLineCoachRankingState> {
@@ -52,9 +70,17 @@ export async function loadTouchLineCoachRanking(): Promise<TouchLineCoachRanking
     const clubName = text(row.clubName);
     const touchlinePoints = integer(row.touchlinePoints);
     const wins = integer(row.wins); const draws = integer(row.draws); const losses = integer(row.losses); const awayWins = integer(row.awayWins);
+    const home = record(row.home); const away = record(row.away);
     const coach = coachProviderId ? touchlineLiveCoachForProviderId(coachProviderId) : null;
-    if (!rank || !coachProviderId || !clubName || touchlinePoints === null || wins === null || draws === null || losses === null || awayWins === null || !coach) return [];
-    return [{ rank, coachProviderId, coachName: coach.coach.displayName ?? coach.coach.name, clubName, touchlinePoints, wins, draws, losses, awayWins }];
+    if (!rank || !coachProviderId || !clubName || touchlinePoints === null || wins === null || draws === null || losses === null || awayWins === null || !home || !away || !coach) return [];
+    if (
+      home.wins + away.wins !== wins
+      || home.draws + away.draws !== draws
+      || home.losses + away.losses !== losses
+      || home.touchlinePoints + away.touchlinePoints !== touchlinePoints
+      || away.wins !== awayWins
+    ) return [];
+    return [{ rank, coachProviderId, coachName: coach.coach.displayName ?? coach.coach.name, clubName, touchlinePoints, wins, draws, losses, awayWins, home, away }];
   });
   const coachIds = parsed.map((row) => row.coachProviderId);
   if (

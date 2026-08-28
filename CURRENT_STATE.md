@@ -1,5 +1,13 @@
 # TouchLine Current State
 
+## QA public coach performance authority — IMPLEMENTED / RELEASE VERIFICATION PENDING
+
+- Every public coach Profile, Club Hub Zoom and Ranking now consumes the same active immutable competition snapshot. Home and Away W-D-L/TP records are materialized in that existing snapshot and checked against its aggregate totals; a missing private ClubOwner contract can no longer turn real competition results into dashes.
+- QA-only in-place migration `036_touchline_qa_competition_coach_profile_records.sql` published snapshot `coach-v2:1e83121b-b778-459b-b9a0-7cf1eaff5729:40025b53cf300552d473d95d659d7830`: `20` coaches, `10` fixtures, `11` coaches with positive points and `32` total points. Every nested Home/Away total matches its aggregate row. Home remains `3/1/0`; Away remains `4/2/0`.
+- Coach Profile and Arena coach selection no longer display a card price. Tier, frame, identity and internal historical contract authority remain intact; no replacement monthly amount was invented.
+- The Rankings summary now distinguishes all published cards from cards in the active snapshot and removes the misleading zero-ClubOwner counter. QA currently has `568` published player cards and `276` cards in the current ranking. The sporting ClubOwner Table remains pending until an audited points publication exists.
+- Focused contracts passed `73/73`; complete local suite passed `1321/1321`; TypeScript, scoped ESLint with zero errors and `git diff --check` passed. Exact-sha QA deployment, native Safari CUSTOMER proof and deployment observability remain the active gate. Production remains forbidden.
+
 ## QA Ranking premium Top 3 + full coach synchronization — GREEN / NATIVE SAFARI CUSTOMER PASS
 
 - Product commits `803756da4a255a7a1b01d4f33a68692024cf438d`, `be2e65d06084044adeeef0afee88bc500e1741f0`, `746fa00e99b5a7f2dc63fe29df2ebac8286eb0cb` and `5a3e62221aa35f777fc140dd26f5c7561d685e75` complete the existing Ranking surface without changing Rating, player settlement, Card, Zoom or Profile authorities. The premium stage keeps exactly eleven positional leaders and one full Top-1 coach card; the section below is a concise three-card podium, followed by the Top 7 coaches and the existing sporting ClubOwner Table. The podium reuses the same canonical Ranking comparator—Total Rating, minutes, appearances and stable identity—before taking three cards. The former richest-ClubOwner ranking remains absent.
