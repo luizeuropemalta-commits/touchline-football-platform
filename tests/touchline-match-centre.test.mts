@@ -225,13 +225,17 @@ test("Match Centre renders a verified stadium card and a premium kickoff treatme
   );
 
   assert.match(component, /selected\.venue \? <article className=\{styles\.venueCard\}>/);
-  assert.match(component, /src=\{selected\.venue\.imageUrl\}/);
+  assert.match(component, /<VenueArtwork venue=\{selected\.venue\} \/>/);
+  assert.match(component, /onError=\{\(\) => setFailedImageUrl\(venue\.imageUrl\)\}/);
   assert.match(component, /selected\.venue\.capacity/);
   assert.match(component, /className=\{styles\.heroKickoff\}/);
   assert.match(component, /<CalendarDays size=\{14\}/);
   assert.match(component, /<Clock3 size=\{15\}/);
   assert.match(styles, /\.venueCard \{[^}]*position: relative[^}]*overflow: hidden/);
-  assert.match(styles, /\.venueBackdrop \{[^}]*object-fit: cover/);
+  assert.match(styles, /\.venueCard::before \{[^}]*border-radius: inherit/);
+  assert.match(styles, /\.venueVisual \{[^}]*border-radius:/);
+  assert.match(styles, /\.venueVisual img \{[^}]*object-fit: cover/);
+  assert.match(styles, /\.venueVisual\[data-fallback="true"\]/);
   assert.match(styles, /\.heroKickoff \{[^}]*border-radius: 999px/);
   assert.match(styles, /\.heroTeams \.teamMark \{[^}]*width: clamp\(96px,13vw,156px\)/);
 });

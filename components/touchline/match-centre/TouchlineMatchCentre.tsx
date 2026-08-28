@@ -4,10 +4,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from "react";
-import { BellRing, CalendarDays, Clock3, Crown, Goal, Radio, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
+import { BellRing, CalendarDays, Clock3, Crown, Goal, Landmark, Radio, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
-import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
+import type { TouchlinePublicFixture, TouchlinePublicVenue } from "@/lib/football-data/public-fixture";
 import type {
   TouchlinePublicFantasyEvent,
   TouchlinePublicFantasyFixtureMatchDetail,
@@ -131,6 +131,17 @@ function TeamMark({ fixture, side }: { fixture: TouchlinePublicFixture; side: "h
   const canonicalClub = findTouchLineClub(team?.providerId) ?? findTouchLineClub(team?.name) ?? findTouchLineClub(team?.shortCode);
   const logoUrl = canonicalClub?.logoUrl ?? team?.logoUrl;
   return <span className={styles.teamMark}>{logoUrl ? <img src={logoUrl} alt="" /> : <span>{team?.name?.slice(0, 2).toUpperCase() ?? "TL"}</span>}</span>;
+}
+
+function VenueArtwork({ venue }: { venue: TouchlinePublicVenue }) {
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const imageAvailable = failedImageUrl !== venue.imageUrl;
+
+  return <div className={styles.venueVisual} data-fallback={imageAvailable ? "false" : "true"} aria-hidden="true">
+    {imageAvailable
+      ? <img src={venue.imageUrl} alt="" width={960} height={960} decoding="async" onError={() => setFailedImageUrl(venue.imageUrl)} />
+      : <Landmark size={34} strokeWidth={1.35} />}
+  </div>;
 }
 
 function verificationLabel(metadata: TouchlineLiveReadMetadata, language: keyof typeof copy, timeZone: string) {
@@ -416,11 +427,13 @@ export default function TouchlineMatchCentre({
 
           <div className={styles.infoGrid}>
             {selected.venue ? <article className={styles.venueCard}>
-              <img className={styles.venueBackdrop} src={selected.venue.imageUrl} alt="" />
-              <span>{dictionary.venue}</span>
-              <strong>{selected.venue.name}</strong>
-              <small>{selected.venue.capacity ? `${dictionary.capacity} ${new Intl.NumberFormat(language).format(selected.venue.capacity)} · ` : ""}{dictionary.homeOf} {selected.venue.homeClubName}</small>
-              <em>{dictionary.photo}: <a href={selected.venue.photoCredit.sourceUrl} target="_blank" rel="noreferrer">{selected.venue.photoCredit.label}</a> · <a href={selected.venue.photoCredit.licenseUrl} target="_blank" rel="noreferrer">{selected.venue.photoCredit.licenseLabel}</a></em>
+              <VenueArtwork venue={selected.venue} />
+              <div className={styles.venueCopy}>
+                <span>{dictionary.venue}</span>
+                <strong>{selected.venue.name}</strong>
+                <small>{selected.venue.capacity ? `${dictionary.capacity} ${new Intl.NumberFormat(language).format(selected.venue.capacity)} · ` : ""}{dictionary.homeOf} {selected.venue.homeClubName}</small>
+                {selected.venue.photoCredit ? <em>{dictionary.photo}: <a href={selected.venue.photoCredit.sourceUrl} target="_blank" rel="noreferrer">{selected.venue.photoCredit.label}</a> · <a href={selected.venue.photoCredit.licenseUrl} target="_blank" rel="noreferrer">{selected.venue.photoCredit.licenseLabel}</a></em> : null}
+              </div>
             </article> : <article><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.official}</small></article>}
             <article><span>{dictionary.detail}</span><strong>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.lastVerified : touchlineFixtureState(selected, now) === "live" ? dictionary.liveNow : touchlineFixtureState(selected, now) === "finished" ? dictionary.completed : dictionary.watch}</strong><small>{dictionary.dataPending}</small></article>
             <article><span>{dictionary.archive}</span><strong>{fixtureLabel(selected)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : dictionary.provider}</small></article>

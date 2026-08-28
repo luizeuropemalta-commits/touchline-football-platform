@@ -19,7 +19,7 @@ export type TouchlinePublicVenue = {
   capacity?: number;
   homeClubName: string;
   imageUrl: string;
-  photoCredit: {
+  photoCredit?: {
     label: string;
     sourceUrl: string;
     licenseLabel: string;
