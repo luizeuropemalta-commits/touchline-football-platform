@@ -28,9 +28,22 @@ export default function TouchlineLandscapeBoundary({
   const [blocked, setBlocked] = useState(false);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const gateRef = useRef<HTMLDivElement | null>(null);
+  const lastLandscapeScrollYRef = useRef(0);
+  const wasBlockedRef = useRef(false);
 
   useEffect(() => {
     const content = contentRef.current;
+    let restoreScrollFrame: number | undefined;
+
+    function rememberLandscapeScroll() {
+      // A resize from landscape to portrait can itself emit a scroll event.
+      // Only remember positions while the viewport is still landscape so the
+      // orientation gate can restore the user's real reading position.
+      if (window.innerWidth > window.innerHeight) {
+        lastLandscapeScrollYRef.current = window.scrollY;
+      }
+    }
+
     function syncOrientation() {
       const nextBlocked = touchlineDeviceNeedsLandscape({
         width: window.innerWidth,
@@ -44,23 +57,37 @@ export default function TouchlineLandscapeBoundary({
       document.documentElement.dataset.touchlineOrientation = nextBlocked ? "portrait-blocked" : "landscape-ready";
       document.body.style.overflow = nextBlocked ? "hidden" : "";
       if (nextBlocked) {
-        gateRef.current?.focus({ preventScroll: true });
         const orientation = window.screen.orientation as LockableScreenOrientation | undefined;
         void orientation?.lock?.("landscape").catch(() => undefined);
       }
+      if (!nextBlocked && wasBlockedRef.current) {
+        if (restoreScrollFrame !== undefined) window.cancelAnimationFrame(restoreScrollFrame);
+        restoreScrollFrame = window.requestAnimationFrame(() => {
+          window.scrollTo({ top: lastLandscapeScrollYRef.current, left: 0, behavior: "auto" });
+        });
+      }
+      wasBlockedRef.current = nextBlocked;
     }
 
+    rememberLandscapeScroll();
     syncOrientation();
+    window.addEventListener("scroll", rememberLandscapeScroll, { passive: true });
     window.addEventListener("resize", syncOrientation);
     window.addEventListener("orientationchange", syncOrientation);
     return () => {
+      window.removeEventListener("scroll", rememberLandscapeScroll);
       window.removeEventListener("resize", syncOrientation);
       window.removeEventListener("orientationchange", syncOrientation);
+      if (restoreScrollFrame !== undefined) window.cancelAnimationFrame(restoreScrollFrame);
       if (content) content.inert = false;
       delete document.documentElement.dataset.touchlineOrientation;
       document.body.style.overflow = "";
     };
   }, []);
+
+  useEffect(() => {
+    if (blocked) gateRef.current?.focus({ preventScroll: true });
+  }, [blocked]);
 
   return <>
     <a

@@ -33,6 +33,10 @@ test("the root layout owns one global landscape boundary and the PWA requests la
   assert.match(boundary, /window\.matchMedia\("\(hover: none\)"\)/);
   assert.match(boundary, /orientation\?\.lock\?\.\("landscape"\)/);
   assert.match(boundary, /const content = contentRef\.current[\s\S]*?content\.inert = nextBlocked/);
+  assert.match(boundary, /if \(blocked\) gateRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(boundary, /lastLandscapeScrollYRef/);
+  assert.match(boundary, /window\.addEventListener\("scroll", rememberLandscapeScroll, \{ passive: true \}\)/);
+  assert.match(boundary, /window\.scrollTo\(\{ top: lastLandscapeScrollYRef\.current, left: 0, behavior: "auto" \}\)/);
   assert.match(boundary, /Gire para o modo horizontal|Rotate to landscape/);
   assert.match(styles, /@media \(orientation: portrait\) and \(pointer: coarse\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
