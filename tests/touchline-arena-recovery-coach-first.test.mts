@@ -37,6 +37,27 @@ test("Arena carousel selects one coherent ten-match canonical round instead of m
   assert.deepEqual(selected.map((item) => item.id), firstRound.map((item) => item.id));
 });
 
+test("the persisted Full Time status releases the completed round for the next ten fixtures", () => {
+  const finishedRound = Array.from({ length: 10 }, (_, index) => fixture(
+    index + 1,
+    `2026-08-${String(21 + Math.floor(index / 2)).padStart(2, "0")}T${String(12 + (index % 2) * 3).padStart(2, "0")}:00:00Z`,
+    "Full Time",
+  ));
+  const upcomingRound = Array.from({ length: 10 }, (_, index) => fixture(
+    index + 101,
+    `2026-08-29T${String(10 + index).padStart(2, "0")}:00:00Z`,
+    "Not Started",
+  ));
+
+  const selected = selectArenaFixtureRound(
+    [...finishedRound, ...upcomingRound],
+    Date.parse("2026-08-28T10:00:00Z"),
+  );
+
+  assert.equal(selected.length, 10);
+  assert.deepEqual(selected.map((item) => item.id), upcomingRound.map((item) => item.id));
+});
+
 test("a live fixture keeps its complete round visible even when it is not the first kickoff", () => {
   const fixtures = Array.from({ length: 10 }, (_, index) => fixture(index + 1, `2026-08-21T${String(12 + index).padStart(2, "0")}:00:00Z`));
   fixtures[5] = { ...fixtures[5], status: "LIVE" };

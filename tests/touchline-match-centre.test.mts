@@ -56,7 +56,7 @@ test("Match Centre exposes only ten fixtures from the current provider round and
     id: index,
     round: 1,
     startsAt: `2026-08-${String(18 + Math.floor(index / 2)).padStart(2, "0")}T${String(12 + (index % 2) * 3).padStart(2, "0")}:00:00Z`,
-    status: "Finished",
+    status: "Full Time",
   }));
   const currentRound = Array.from({ length: 10 }, (_, index) => roundFixture({
     id: index,
@@ -298,9 +298,13 @@ test("Live highlights use only verified match ratings and a final winning coach"
   assert.doesNotMatch(topRatedFunction, /touchlinePoints/);
   assert.match(component, /touchlineFixtureState\(selected, now\) !== "finished"/);
   assert.match(component, /touchlineLiveCoachForTeam\(winningTeamId\(selected\)\)/);
-  assert.match(component, /highlights: "Destaques TouchLine"/);
-  assert.match(component, /bestCoach: "Best Coach"/);
-  assert.match(component, /bestCards: "Best Cards"/);
+  assert.match(component, /highlights: "Destaques da partida"/);
+  assert.match(component, /highlights: "Match Highlights"/);
+  assert.match(component, /bestCoach: "Treinador vencedor"/);
+  assert.match(component, /bestCoach: "Winning Coach"/);
+  assert.match(component, /bestCards: "Melhores cards da partida"/);
+  assert.match(component, /bestCards: "Top Match Cards"/);
+  assert.doesNotMatch(component, /bestCoach: "Best Coach"/);
 });
 
 test("Match Centre keeps the live pitch at a real football-field proportion", () => {

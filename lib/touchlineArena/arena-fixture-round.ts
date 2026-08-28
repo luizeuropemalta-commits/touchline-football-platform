@@ -12,7 +12,7 @@ type FixtureRoundCandidate = Readonly<{
 }>;
 
 const LIVE_STATUS = /\b(live|inplay|in play|1st half|2nd half|half time|ht|extra time|penalties)\b/i;
-const FINISHED_STATUS = /\b(finished|ft|after extra time|aet|penalties finished|cancelled|postponed)\b/i;
+const FINISHED_STATUS = /\b(finished|full[ -]?time|ft|after extra time|aet|penalties finished|cancelled|postponed)\b/i;
 
 function fixtureStartTime(fixture: FixtureRoundCandidate) {
   const value = fixture.startsAt ? Date.parse(fixture.startsAt) : Number.NaN;
