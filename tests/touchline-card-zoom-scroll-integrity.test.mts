@@ -38,3 +38,14 @@ test("the zoom close control stays neutral instead of inheriting a card tier col
   assert.match(closeRule, /color: #eaffba;/);
   assert.doesNotMatch(closeRule, /touchline-card-zoom-accent/);
 });
+
+test("card zoom ignores a drag gesture while preserving keyboard activation", () => {
+  const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
+  const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
+
+  assert.match(zoom, /pointerOriginRef/);
+  assert.match(zoom, /Math\.hypot\([\s\S]*?\) >= 8/);
+  assert.match(zoom, /if \(pointerMovedRef\.current\) \{[\s\S]*?return;/);
+  assert.match(zoom, /event\.key !== "Enter" && event\.key !== " "/);
+  assert.match(zoomCss, /touch-action: pan-x pan-y;/);
+});

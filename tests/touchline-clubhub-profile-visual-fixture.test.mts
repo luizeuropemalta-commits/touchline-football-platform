@@ -51,6 +51,10 @@ test("the nine-card bench is a premium responsive card rail", () => {
   );
 
   assert.match(component, /TouchlineEliteExactCard/);
+  assert.match(component, /TouchlineCardZoom/);
+  assert.match(component, /ariaLabel=\{`\$\{portuguese \? "Ampliar card de" : "Expand card for"\} \$\{card\.name\}`\}/);
+  assert.match(component, /buildTouchlinePlayerCardZoomDetails/);
+  assert.match(component, /buildTouchlineVerifiedMatchFactFields/);
   assert.match(component, /technical\.previewBench/);
   assert.match(component, /\.slice\(0, 9\)/);
   assert.match(css, /grid-template-columns:\s*repeat\(9, minmax\(74px, 1fr\)\)/);

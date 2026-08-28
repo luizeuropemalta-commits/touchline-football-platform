@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Activity,
@@ -242,6 +242,8 @@ export default function TouchlineCardZoom({
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const pointerOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerMovedRef = useRef(false);
   const { dialogProps } = useTouchlineDialog<HTMLDivElement>({
     open: isOpen,
     onDismiss: () => setIsOpen(false),
@@ -280,8 +282,25 @@ export default function TouchlineCardZoom({
   }, [isOpen]);
 
   function openFromCard(event: MouseEvent<HTMLDivElement>) {
+    if (pointerMovedRef.current) {
+      pointerMovedRef.current = false;
+      return;
+    }
     if ((event.target as HTMLElement).closest("a,button")) return;
     setIsOpen(true);
+  }
+
+  function rememberPointerOrigin(event: PointerEvent<HTMLDivElement>) {
+    pointerOriginRef.current = { x: event.clientX, y: event.clientY };
+    pointerMovedRef.current = false;
+  }
+
+  function trackPointerMovement(event: PointerEvent<HTMLDivElement>) {
+    const origin = pointerOriginRef.current;
+    if (!origin) return;
+    if (Math.hypot(event.clientX - origin.x, event.clientY - origin.y) >= 8) {
+      pointerMovedRef.current = true;
+    }
   }
 
   function openFromKeyboard(event: KeyboardEvent<HTMLDivElement>) {
@@ -304,6 +323,12 @@ export default function TouchlineCardZoom({
           tabIndex={0}
           aria-label={ariaLabel}
           aria-expanded={isOpen}
+          onPointerDown={rememberPointerOrigin}
+          onPointerMove={trackPointerMovement}
+          onPointerCancel={() => {
+            pointerOriginRef.current = null;
+            pointerMovedRef.current = false;
+          }}
           onClick={openFromCard}
           onKeyDown={openFromKeyboard}
         >

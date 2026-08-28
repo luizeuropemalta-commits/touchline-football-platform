@@ -1,10 +1,18 @@
 import type { ReactNode } from "react";
 
+import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import type { TouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import { squadCardToExactPlayer, findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
+import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
+import {
+  buildTouchlinePlayerCardZoomDetails,
+  buildTouchlineVerifiedMatchFactFields,
+} from "@/lib/touchlineArena/card-zoom-details";
+import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
+import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 
 import styles from "./ClubHubMatchdayTechnicalArea.module.css";
 
@@ -13,6 +21,7 @@ type ClubHubMatchdayTechnicalAreaProps = {
   technical: TouchLineClubMatchdayPresentation["technical"];
   locale: string;
   coachCard: ReactNode;
+  canEditCardEngine?: boolean;
   labels: {
     nationality: string;
     points: string;
@@ -31,6 +40,7 @@ export default function ClubHubMatchdayTechnicalArea({
   technical,
   locale,
   coachCard,
+  canEditCardEngine = false,
   labels,
 }: ClubHubMatchdayTechnicalAreaProps) {
   const portuguese = locale === "pt-BR";
@@ -84,6 +94,11 @@ export default function ClubHubMatchdayTechnicalArea({
                   hasClubAsset: Boolean(findTouchLineClub(card.clubName)?.logoUrl),
                 });
                 const exactPlayer = squadCardToExactPlayer({ ...card, cardReview }, { useSuppliedTier: true });
+                const tierKey = card.editorialCard?.tierKey ?? null;
+                const tierAccent = tierKey
+                  ? touchlineCardTierPalette(tierKey).accent
+                  : TOUCHLINE_NEUTRAL_CARD_ACCENT;
+                const tierLabel = tierKey ? touchlineCardTierName(tierKey, locale) : undefined;
                 const profileHref = touchlinePlayerProfileHref({
                   sportmonksPlayerId: card.id,
                   name: card.name,
@@ -95,19 +110,70 @@ export default function ClubHubMatchdayTechnicalArea({
                 return (
                   <li key={card.id}>
                     <span className={styles.cardNumber}>{index + 1}</span>
-                    <TouchlineEliteExactCard
-                      className={styles.card}
-                      player={exactPlayer}
-                      labels={labels}
-                      imageLoading="lazy"
-                      playerProfileHref={profileHref}
-                      staticRenderScale={104 / 430}
-                      subscribeToRanking={false}
-                      enableInteractiveNeon={false}
-                      rankingMode="preview"
-                      showProfileAction={false}
-                      showSocialMetrics={false}
-                    />
+                    <TouchlineCardZoom
+                      ariaLabel={`${portuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}
+                      tierAccent={tierAccent}
+                      tierLabel={tierLabel}
+                      details={buildTouchlinePlayerCardZoomDetails({
+                        locale,
+                        name: card.name,
+                        clubName: card.clubName,
+                        position: card.position,
+                        nationality: card.countryCode3,
+                        editorialCard: card.editorialCard,
+                        cardReview,
+                        activeContractCard: null,
+                        extraFields: [
+                          {
+                            label: portuguese ? "Nota total" : "Total rating",
+                            value: card.seasonTotalRating == null ? "—" : String(card.seasonTotalRating),
+                            accent: true,
+                          },
+                          {
+                            label: portuguese ? "Nota da última partida" : "Last match rating",
+                            value: card.matchRating == null ? "—" : String(card.matchRating),
+                            accent: true,
+                            kind: "rating-last",
+                          },
+                          ...buildTouchlineVerifiedMatchFactFields({
+                            statistics: card.matchStats,
+                            position: card.position || card.role,
+                          }, locale),
+                        ],
+                        profileHref,
+                        cardEngineHref: canEditCardEngine
+                          ? touchlineCardEnginePlayerHref(card.canonicalPlayerId, locale)
+                          : null,
+                      })}
+                      expandedContent={(
+                        <TouchlineEliteExactCard
+                          player={exactPlayer}
+                          labels={labels}
+                          imageLoading="lazy"
+                          playerProfileHref={profileHref}
+                          staticRenderScale={390 / 430}
+                          subscribeToRanking={false}
+                          enableInteractiveNeon={false}
+                          rankingMode="live"
+                          forceNeonActive
+                        />
+                      )}
+                    >
+                      <TouchlineEliteExactCard
+                        className={styles.card}
+                        player={exactPlayer}
+                        labels={labels}
+                        imageLoading="lazy"
+                        playerProfileHref={profileHref}
+                        staticRenderScale={104 / 430}
+                        subscribeToRanking={false}
+                        enableInteractiveNeon={false}
+                        rankingMode="preview"
+                        showProfileAction={false}
+                        showSocialMetrics={false}
+                        showMatchRating
+                      />
+                    </TouchlineCardZoom>
                   </li>
                 );
               })}

@@ -467,6 +467,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           technical={matchdayPresentation.technical}
           locale={locale}
           labels={cardLabels}
+          canEditCardEngine={canEditCardEngine}
           coachCard={(
             <ClubHubCanonicalCoachPanel
               teamId={club.teamId}
