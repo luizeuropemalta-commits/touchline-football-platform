@@ -13,6 +13,20 @@ export type TouchlinePublicTeam = {
   logoUrl?: string;
 };
 
+export type TouchlinePublicVenue = {
+  id: string;
+  name: string;
+  capacity?: number;
+  homeClubName: string;
+  imageUrl: string;
+  photoCredit: {
+    label: string;
+    sourceUrl: string;
+    licenseLabel: string;
+    licenseUrl: string;
+  };
+};
+
 export type TouchlinePublicFixture = {
   id: string;
   providerId: string;
@@ -25,6 +39,7 @@ export type TouchlinePublicFixture = {
   roundName?: string;
   homeTeam?: TouchlinePublicTeam;
   awayTeam?: TouchlinePublicTeam;
+  venue?: TouchlinePublicVenue;
   homeScore?: number;
   awayScore?: number;
   providerStateId?: string;

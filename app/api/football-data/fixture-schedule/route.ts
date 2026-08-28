@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
-import { toPublicTouchlineFixtures } from "@/lib/football-data/public-fixture";
+import { toTouchlineLiveFixtures } from "@/lib/touchlineArena/stadium-catalog";
 
 export async function GET() {
   let fixtures = [] as Awaited<ReturnType<typeof readPublicCompetitionFixtures>>;
@@ -24,7 +24,7 @@ export async function GET() {
 
   return NextResponse.json({
     ok: true,
-    data: toPublicTouchlineFixtures(fixtures),
+    data: toTouchlineLiveFixtures(fixtures),
     // The current normalized tables do not yet publish one immutable schedule
     // revision. Keep the state honest and do not mint a request-time timestamp.
     state: "partial-persisted-schedule",

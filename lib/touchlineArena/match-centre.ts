@@ -37,6 +37,51 @@ export function normalizeTouchlineMatchCentreTimeZone(value?: string | null) {
   }
 }
 
+function touchlineDateKey(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
+/**
+ * Compact, localized fixture context for the Live rail. Keeping this shared
+ * prevents individual screens from guessing whether a kick-off is "today".
+ */
+export function touchlineFixtureRailDateLabel(
+  fixture: Pick<TouchlinePublicFixture, "startsAt">,
+  locale: TouchLineLocale,
+  timeZone: string,
+  now = Date.now(),
+) {
+  const startsAt = fixture.startsAt ? Date.parse(fixture.startsAt) : Number.NaN;
+  if (!Number.isFinite(startsAt) || !Number.isFinite(now)) return "—";
+
+  const normalizedTimeZone = normalizeTouchlineMatchCentreTimeZone(timeZone);
+  const fixtureDate = new Date(startsAt);
+  if (touchlineDateKey(fixtureDate, normalizedTimeZone) === touchlineDateKey(new Date(now), normalizedTimeZone)) {
+    return locale === "pt-BR" ? "HOJE" : "TODAY";
+  }
+
+  const parts = new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "short",
+    timeZone: normalizedTimeZone,
+    weekday: "short",
+  }).formatToParts(fixtureDate);
+  const compact = (type: Intl.DateTimeFormatPartTypes) => (
+    parts.find((part) => part.type === type)?.value.replace(/[.,]/g, "").trim() ?? ""
+  );
+  return [compact("weekday"), compact("day"), compact("month")]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleUpperCase(locale);
+}
+
 type TouchlineFixtureStateSource = Pick<TouchlineFixture, "startsAt" | "status">;
 type TouchlineFixtureSelectionSource = TouchlineFixtureStateSource & Pick<TouchlineFixture, "id" | "providerId">;
 
@@ -93,7 +138,13 @@ export function mergeTouchlineLiveFixtures(
   const snapshotByIdentity = new Map(snapshot.map((fixture) => [touchlinePublicFixtureIdentity(fixture), fixture]));
   const currentIdentities = new Set(current.map(touchlinePublicFixtureIdentity));
   return [
-    ...current.map((fixture) => snapshotByIdentity.get(touchlinePublicFixtureIdentity(fixture)) ?? fixture),
+    ...current.map((fixture) => {
+      const liveFixture = snapshotByIdentity.get(touchlinePublicFixtureIdentity(fixture));
+      if (!liveFixture) return fixture;
+      return fixture.venue && !liveFixture.venue
+        ? { ...liveFixture, venue: fixture.venue }
+        : liveFixture;
+    }),
     ...snapshot.filter((fixture) => !currentIdentities.has(touchlinePublicFixtureIdentity(fixture))),
   ];
 }

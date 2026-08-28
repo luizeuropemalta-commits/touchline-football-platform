@@ -22,6 +22,7 @@ import {
   mergeTouchlineLiveFixtures,
   selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
+  touchlineFixtureRailDateLabel,
   touchlineFixtureStatusLabel,
   touchlineMatchCentreDisplayState,
   touchlineFixtureState,
@@ -45,10 +46,10 @@ type FixtureSection = "current" | "results";
 
 const copy = {
   "pt-BR": {
-    title: "Central da partida", live: "AO VIVO", today: "HOJE", upcoming: "PRÓXIMOS", finished: "ARQUIVO", currentFixtures: "Confrontos desta semana", recentResults: "Últimos resultados", matchweek: "Rodada", roundPending: "Rodada aguardando confirmação TouchLine", competition: "TouchLine England", league: "Liga TouchLine England", england: "Inglaterra", select: "Confrontos", alertsSoon: "Alertas de partida em breve", selectedFixture: "Partida selecionada", noFixtures: "Agenda em atualização", noFixturesCopy: "A programação oficial será exibida assim que a competição publicar fixtures canônicos.", venue: "Estádio", venuePending: "Aguardando confirmação TouchLine do estádio", countdown: "Início em", detail: "Dados da partida", dataPending: "Eventos, escalações e estatísticas aparecem assim que forem verificados pela TouchLine.", recent: "Linha do tempo oficial", form: "Escalações verificadas", players: "Ratings da partida", archive: "Arquivo TouchLine", provider: "TouchLine Verified", timezone: "Horário local", versus: "VS", completed: "ENCERRADO", liveNow: "AO VIVO", next: "PRÓXIMO", official: "TouchLine Data", watch: "Acompanhar partida", liveDataUpdating: "Dados ao vivo em atualização", liveDataUpdatingCopy: "Exibindo o último snapshot verificado; o placar pode estar atrasado.", partialScheduleCopy: "A programação persistida está disponível, mas placares ao vivo aguardam um snapshot verificado.", lastVerified: "ÚLTIMO VERIFICADO", lastVerifiedAt: "Última verificação", events: "eventos oficiais", scoring: "ratings oficiais", lineupAvailable: "Escalação disponível", starters: "Titulares", bench: "Reservas", minutes: "MIN", rating: "NOTA", noScoring: "Sem rating oficial", assist: "Assistência", substitutedFor: "entrou por", dataUnavailable: "—", highlights: "Destaques da partida", bestCoach: "Treinador vencedor", bestCards: "Melhores cards da partida", winnerVerified: "Vitória confirmada", calculating: "Em apuração", ratingVerified: "Rating verificado",
+    title: "Central da partida", live: "AO VIVO", today: "HOJE", upcoming: "PRÓXIMOS", finished: "ARQUIVO", currentFixtures: "Confrontos desta semana", recentResults: "Últimos resultados", matchweek: "Rodada", roundPending: "Rodada aguardando confirmação TouchLine", competition: "TouchLine England", league: "Liga TouchLine England", england: "Inglaterra", select: "Confrontos", alertsSoon: "Alertas de partida em breve", selectedFixture: "Partida selecionada", noFixtures: "Agenda em atualização", noFixturesCopy: "A programação oficial será exibida assim que a competição publicar fixtures canônicos.", venue: "Estádio", venuePending: "Aguardando confirmação TouchLine do estádio", capacity: "Capacidade", homeOf: "Casa do", photo: "Foto", countdown: "Início em", detail: "Dados da partida", dataPending: "Eventos, escalações e estatísticas aparecem assim que forem verificados pela TouchLine.", recent: "Linha do tempo oficial", form: "Escalações verificadas", players: "Ratings da partida", archive: "Arquivo TouchLine", provider: "TouchLine Verified", timezone: "Horário local", versus: "VS", completed: "ENCERRADO", liveNow: "AO VIVO", next: "PRÓXIMO", official: "TouchLine Data", watch: "Acompanhar partida", liveDataUpdating: "Dados ao vivo em atualização", liveDataUpdatingCopy: "Exibindo o último snapshot verificado; o placar pode estar atrasado.", partialScheduleCopy: "A programação persistida está disponível, mas placares ao vivo aguardam um snapshot verificado.", lastVerified: "ÚLTIMO VERIFICADO", lastVerifiedAt: "Última verificação", events: "eventos oficiais", scoring: "ratings oficiais", lineupAvailable: "Escalação disponível", starters: "Titulares", bench: "Reservas", minutes: "MIN", rating: "NOTA", noScoring: "Sem rating oficial", assist: "Assistência", substitutedFor: "entrou por", dataUnavailable: "—", highlights: "Destaques da partida", bestCoach: "Treinador vencedor", bestCards: "Melhores cards da partida", winnerVerified: "Vitória confirmada", calculating: "Em apuração", ratingVerified: "Rating verificado",
   },
   "en-GB": {
-    title: "Match Centre", live: "LIVE NOW", today: "TODAY", upcoming: "UPCOMING", finished: "ARCHIVE", currentFixtures: "This week's fixtures", recentResults: "Latest results", matchweek: "Matchweek", roundPending: "Matchweek awaiting TouchLine confirmation", competition: "TouchLine England", league: "TouchLine England League", england: "England", select: "Fixtures", alertsSoon: "Match alerts coming soon", selectedFixture: "Selected fixture", noFixtures: "Schedule updating", noFixturesCopy: "Official fixtures will appear as soon as the competition publishes the canonical schedule.", venue: "Stadium", venuePending: "Awaiting TouchLine venue verification", countdown: "Kick-off in", detail: "Match data", dataPending: "Events, line-ups and statistics appear as soon as TouchLine verifies them.", recent: "Official timeline", form: "Verified line-ups", players: "Match ratings", archive: "TouchLine archive", provider: "TouchLine Verified", timezone: "Local time", versus: "VS", completed: "FULL TIME", liveNow: "LIVE", next: "NEXT", official: "TouchLine Data", watch: "Open match", liveDataUpdating: "Live data updating", liveDataUpdatingCopy: "Showing the last verified snapshot; the score may be delayed.", partialScheduleCopy: "The persisted schedule is available, but live scores are awaiting a verified snapshot.", lastVerified: "LAST VERIFIED", lastVerifiedAt: "Last verification", events: "official events", scoring: "official ratings", lineupAvailable: "Line-up available", starters: "Starters", bench: "Bench", minutes: "MIN", rating: "RATING", noScoring: "No official rating", assist: "Assist", substitutedFor: "for", dataUnavailable: "—", highlights: "Match Highlights", bestCoach: "Winning Coach", bestCards: "Top Match Cards", winnerVerified: "Verified win", calculating: "Calculating", ratingVerified: "Verified rating",
+    title: "Match Centre", live: "LIVE NOW", today: "TODAY", upcoming: "UPCOMING", finished: "ARCHIVE", currentFixtures: "This week's fixtures", recentResults: "Latest results", matchweek: "Matchweek", roundPending: "Matchweek awaiting TouchLine confirmation", competition: "TouchLine England", league: "TouchLine England League", england: "England", select: "Fixtures", alertsSoon: "Match alerts coming soon", selectedFixture: "Selected fixture", noFixtures: "Schedule updating", noFixturesCopy: "Official fixtures will appear as soon as the competition publishes the canonical schedule.", venue: "Stadium", venuePending: "Awaiting TouchLine venue verification", capacity: "Capacity", homeOf: "Home of", photo: "Photo", countdown: "Kick-off in", detail: "Match data", dataPending: "Events, line-ups and statistics appear as soon as TouchLine verifies them.", recent: "Official timeline", form: "Verified line-ups", players: "Match ratings", archive: "TouchLine archive", provider: "TouchLine Verified", timezone: "Local time", versus: "VS", completed: "FULL TIME", liveNow: "LIVE", next: "NEXT", official: "TouchLine Data", watch: "Open match", liveDataUpdating: "Live data updating", liveDataUpdatingCopy: "Showing the last verified snapshot; the score may be delayed.", partialScheduleCopy: "The persisted schedule is available, but live scores are awaiting a verified snapshot.", lastVerified: "LAST VERIFIED", lastVerifiedAt: "Last verification", events: "official events", scoring: "official ratings", lineupAvailable: "Line-up available", starters: "Starters", bench: "Bench", minutes: "MIN", rating: "RATING", noScoring: "No official rating", assist: "Assist", substitutedFor: "for", dataUnavailable: "—", highlights: "Match Highlights", bestCoach: "Winning Coach", bestCards: "Top Match Cards", winnerVerified: "Verified win", calculating: "Calculating", ratingVerified: "Verified rating",
   },
 } as const;
 
@@ -349,7 +350,11 @@ export default function TouchlineMatchCentre({
             <span className={styles.railLeague}><small>{dictionary.competition}</small><strong>{dictionary.league}</strong></span>
             <span className={styles.fixtureCount} aria-label={`${schedule.currentFixtures.length} + ${schedule.recentResults.length}`}><Radio size={14} aria-hidden="true" />{schedule.currentFixtures.length} + {schedule.recentResults.length}</span>
           </div>
-          <div className={styles.fixtureScroller}>
+          <div
+            className={styles.fixtureScroller}
+            tabIndex={0}
+            aria-label={`${dictionary.select}: ${schedule.currentFixtures.length} + ${schedule.recentResults.length}`}
+          >
             {fixtureSections.map((section) => {
               const railFixtures = section.fixtures;
               const isResultSection = section.id === "results";
@@ -362,7 +367,13 @@ export default function TouchlineMatchCentre({
                 return <button key={fixture.id} type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
                   <span className={styles.fixtureStack}>
                     <span className={styles.fixtureCentre}>
-                      <time dateTime={fixture.startsAt}>{isResultSection ? `${fixtureDate(fixture, language, initialTimeZone, { day: "2-digit", month: "short" })} · ` : ""}{fixtureDate(fixture, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
+                      <time
+                        dateTime={fixture.startsAt}
+                        aria-label={fixtureDate(fixture, language, initialTimeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}
+                      >
+                        <span className={styles.fixtureDay}>{touchlineFixtureRailDateLabel(fixture, language, initialTimeZone, now)}</span>
+                        <span className={styles.fixtureKickoff}>{fixtureDate(fixture, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false })}</span>
+                      </time>
                       {railStatus ? <small className={touchlineMatchCentreDisplayState(fixture, readMetadata, now) === "live" ? styles.liveStatus : ""}>{railStatus}</small> : null}
                     </span>
                     <span className={styles.fixtureTeams}>
@@ -396,12 +407,21 @@ export default function TouchlineMatchCentre({
               <b className={styles.score}>{score(selected)}</b>
               <div><TeamMark fixture={selected} side="away" /><strong>{selected.awayTeam?.name ?? "Away"}</strong></div>
             </div>
-            <p>{fixtureDate(selected, language, initialTimeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</p>
+            <time className={styles.heroKickoff} dateTime={selected.startsAt}>
+              <span><CalendarDays size={14} aria-hidden="true" />{fixtureDate(selected, language, initialTimeZone, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+              <strong><Clock3 size={15} aria-hidden="true" />{fixtureDate(selected, language, initialTimeZone, { hour: "2-digit", minute: "2-digit", hour12: false })}</strong>
+            </time>
             {touchlineFixtureState(selected, now) === "upcoming" ? <Countdown startsAt={selected.startsAt} language={language} initialNow={now} /> : <strong className={styles.countdown}>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.liveDataUpdating : selected.status ?? dictionary.provider}</strong>}
           </div>
 
           <div className={styles.infoGrid}>
-            <article><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.official}</small></article>
+            {selected.venue ? <article className={styles.venueCard}>
+              <img className={styles.venueBackdrop} src={selected.venue.imageUrl} alt="" />
+              <span>{dictionary.venue}</span>
+              <strong>{selected.venue.name}</strong>
+              <small>{selected.venue.capacity ? `${dictionary.capacity} ${new Intl.NumberFormat(language).format(selected.venue.capacity)} · ` : ""}{dictionary.homeOf} {selected.venue.homeClubName}</small>
+              <em>{dictionary.photo}: <a href={selected.venue.photoCredit.sourceUrl} target="_blank" rel="noreferrer">{selected.venue.photoCredit.label}</a> · <a href={selected.venue.photoCredit.licenseUrl} target="_blank" rel="noreferrer">{selected.venue.photoCredit.licenseLabel}</a></em>
+            </article> : <article><span>{dictionary.venue}</span><strong>{dictionary.venuePending}</strong><small>{dictionary.official}</small></article>}
             <article><span>{dictionary.detail}</span><strong>{touchlineMatchCentreDisplayState(selected, readMetadata, now) === "stale" ? dictionary.lastVerified : touchlineFixtureState(selected, now) === "live" ? dictionary.liveNow : touchlineFixtureState(selected, now) === "finished" ? dictionary.completed : dictionary.watch}</strong><small>{dictionary.dataPending}</small></article>
             <article><span>{dictionary.archive}</span><strong>{fixtureLabel(selected)}</strong><small>{selected.verifiedAt ? `${dictionary.provider} · ${fixtureDate({ startsAt: selected.verifiedAt }, language, initialTimeZone, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : dictionary.provider}</small></article>
           </div>

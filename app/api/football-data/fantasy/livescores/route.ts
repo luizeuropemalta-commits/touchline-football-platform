@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { readPersistedLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
-import { toPublicTouchlineFixtures } from "@/lib/football-data/public-fixture";
 import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
+import { toTouchlineLiveFixtures } from "@/lib/touchlineArena/stadium-catalog";
 
 const LIVE_SNAPSHOT_STALE_AFTER_MS = 5 * 60 * 1_000;
 
 function response(
-  fixtures: Parameters<typeof toPublicTouchlineFixtures>[0],
+  fixtures: Parameters<typeof toTouchlineLiveFixtures>[0],
   metadata: {
     state: "persisted-live-snapshot" | "partial-persisted-schedule";
     fetchedAt?: string;
@@ -17,7 +17,7 @@ function response(
 ) {
   return NextResponse.json({
     ok: true,
-    data: toPublicTouchlineFixtures(fixtures),
+    data: toTouchlineLiveFixtures(fixtures),
     state: metadata.state,
     ...(metadata.fetchedAt ? { fetchedAt: metadata.fetchedAt } : {}),
     degraded: metadata.degraded,

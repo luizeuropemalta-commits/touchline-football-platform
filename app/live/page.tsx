@@ -15,6 +15,7 @@ import {
   selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
 } from "@/lib/touchlineArena/match-centre";
+import { toTouchlineLiveFixtures } from "@/lib/touchlineArena/stadium-catalog";
 
 export const metadata: Metadata = {
   title: "Ao vivo | TouchLine England",
@@ -44,7 +45,9 @@ export default async function TouchLineLivePage({
 
   // Keep the durable schedule available to the client while the presentation
   // selector exposes only the current ten-match round and ten prior results.
-  const fixtures = await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 });
+  const fixtures = toTouchlineLiveFixtures(
+    await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
+  );
   const initialSchedule = selectTouchlineMatchCentreSchedule(fixtures, initialNow);
   const initiallyVisibleFixtures = [
     ...initialSchedule.currentFixtures,

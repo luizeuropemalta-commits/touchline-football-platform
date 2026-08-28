@@ -8,6 +8,7 @@ import {
   normalizeTouchlineMatchCentreTimeZone,
   selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
+  touchlineFixtureRailDateLabel,
   touchlineFixtureState,
   touchlineFixtureStatusLabel,
   touchlineMatchCentreDisplayState,
@@ -149,6 +150,18 @@ test("Match Centre overlays a live snapshot by provider fixture ID without dupli
     id: "sportmonks:19722203",
     providerId: "19722203",
     name: "Arsenal vs Coventry City",
+    venue: {
+      id: "verified-stadium",
+      name: "Verified Stadium",
+      homeClubName: "Arsenal",
+      imageUrl: "/stadium.webp",
+      photoCredit: {
+        label: "TouchLine",
+        sourceUrl: "https://example.com/source",
+        licenseLabel: "Verified license",
+        licenseUrl: "https://example.com/license",
+      },
+    },
   };
   const browserSnapshot: TouchlinePublicFixture = {
     id: "19722203",
@@ -160,7 +173,8 @@ test("Match Centre overlays a live snapshot by provider fixture ID without dupli
   const merged = mergeTouchlineLiveFixtures([renderedFromServer], [browserSnapshot]);
 
   assert.equal(merged.length, 1);
-  assert.equal(merged[0], browserSnapshot);
+  assert.equal(merged[0]?.status, browserSnapshot.status);
+  assert.equal(merged[0]?.venue, renderedFromServer.venue);
 });
 
 test("Match Centre never presents a degraded live snapshot as currently live", () => {
@@ -200,6 +214,28 @@ test("a venue awaiting verification is not labelled as verified", () => {
   assert.doesNotMatch(source, /<strong>\{dictionary\.venuePending\}<\/strong><small>\{dictionary\.provider\}<\/small>/);
 });
 
+test("Match Centre renders a verified stadium card and a premium kickoff treatment", () => {
+  const component = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const styles = readFileSync(
+    new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(component, /selected\.venue \? <article className=\{styles\.venueCard\}>/);
+  assert.match(component, /src=\{selected\.venue\.imageUrl\}/);
+  assert.match(component, /selected\.venue\.capacity/);
+  assert.match(component, /className=\{styles\.heroKickoff\}/);
+  assert.match(component, /<CalendarDays size=\{14\}/);
+  assert.match(component, /<Clock3 size=\{15\}/);
+  assert.match(styles, /\.venueCard \{[^}]*position: relative[^}]*overflow: hidden/);
+  assert.match(styles, /\.venueBackdrop \{[^}]*object-fit: cover/);
+  assert.match(styles, /\.heroKickoff \{[^}]*border-radius: 999px/);
+  assert.match(styles, /\.heroTeams \.teamMark \{[^}]*width: clamp\(96px,13vw,156px\)/);
+});
+
 test("Match Centre uses the provider round instead of mislabelling a season as matchweek", () => {
   const source = readFileSync(
     new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
@@ -230,6 +266,19 @@ test("Match Centre keeps the first server and browser render in one validated ti
   assert.match(componentSource, /new Intl\.DateTimeFormat\(locale, \{ \.\.\.options, timeZone \}\)/);
 });
 
+test("fixture rail labels expose today or a compact localized day and date", () => {
+  const now = Date.parse("2026-08-28T12:00:00Z");
+  const today = roundFixture({ id: 1, round: 2, startsAt: "2026-08-28T19:00:00Z", status: "Not Started" });
+  const tomorrow = roundFixture({ id: 2, round: 2, startsAt: "2026-08-29T11:30:00Z", status: "Not Started" });
+  const missing = { ...tomorrow, startsAt: undefined };
+
+  assert.equal(touchlineFixtureRailDateLabel(today, "pt-BR", "Europe/Malta", now), "HOJE");
+  assert.equal(touchlineFixtureRailDateLabel(today, "en-GB", "Europe/Malta", now), "TODAY");
+  assert.equal(touchlineFixtureRailDateLabel(tomorrow, "pt-BR", "Europe/Malta", now), "SÁB 29 AGO");
+  assert.equal(touchlineFixtureRailDateLabel(tomorrow, "en-GB", "Europe/Malta", now), "SAT 29 AUG");
+  assert.equal(touchlineFixtureRailDateLabel(missing, "en-GB", "Europe/Malta", now), "—");
+});
+
 test("Match Centre lets its mobile grid shrink while keeping only the fixture rail scrollable", () => {
   const styles = readFileSync(
     new URL("../components/touchline/match-centre/touchline-match-centre.module.css", import.meta.url),
@@ -237,10 +286,20 @@ test("Match Centre lets its mobile grid shrink while keeping only the fixture ra
   );
 
   assert.match(styles, /\.layout \{[^}]*min-width: 0/);
-  assert.match(styles, /\.fixtureRail \{[^}]*min-width: 0/);
+  assert.match(styles, /\.fixtureRail \{[^}]*display: grid[^}]*grid-template-rows: auto minmax\(0, 1fr\)[^}]*height: calc\(100dvh - 28px\)[^}]*min-width: 0/);
   assert.match(styles, /\.matchPanel \{[^}]*min-width: 0/);
-  assert.match(styles, /\.fixtureScroller \{[^}]*overflow-y: auto/);
+  assert.match(styles, /\.fixtureScroller \{[^}]*min-height: 0[^}]*overflow-y: scroll[^}]*overscroll-behavior-y: contain[^}]*scrollbar-gutter: stable[^}]*touch-action: pan-y[^}]*-webkit-overflow-scrolling: touch/);
+  assert.match(styles, /\.fixtureScroller::-webkit-scrollbar \{[^}]*width:/);
+  assert.match(styles, /\.fixtureScroller::-webkit-scrollbar-thumb \{[^}]*border-radius:/);
+  assert.match(styles, /\.fixtureScroller:focus-visible \{[^}]*outline:/);
+  assert.match(styles, /@media \(max-width: 850px\)[\s\S]*?\.fixtureRail \{[^}]*display: block[^}]*height: auto[^}]*max-height: none/);
   assert.match(styles, /@media \(max-width: 850px\)[\s\S]*?\.fixtureList \{[^}]*grid-auto-flow: column[^}]*overflow-x: auto/);
+
+  const component = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(component, /className=\{styles\.fixtureScroller\}[^>]*tabIndex=\{0\}/);
 });
 
 test("Match Centre fixture rail presents each confrontation as a vertical score card", () => {
@@ -274,11 +333,13 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /setFixtures\(\(current\) => mergeTouchlineLiveFixtures\(current, liveSnapshot\)\)/);
   assert.doesNotMatch(component, /return copy\[language\]\.next;/);
   assert.doesNotMatch(component, /homeScore \?\? 0|awayScore \?\? 0/);
-  assert.match(component, /<time dateTime=\{fixture\.startsAt\}>\{isResultSection \?[^}]*fixtureDate\(fixture, language, initialTimeZone/);
+  assert.match(component, /touchlineFixtureRailDateLabel\(fixture, language, initialTimeZone, now\)/);
+  assert.match(component, /className=\{styles\.fixtureDay\}/);
+  assert.match(component, /className=\{styles\.fixtureKickoff\}/);
   assert.match(component, /className=\{styles\.fixtureScore\}/);
   assert.match(component, /BellRing/);
   assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 104px/);
-  assert.match(styles, /\.fixtureStack \{[^}]*grid-template-columns: 44px minmax\(0,1fr\)[^}]*gap: 4px/);
+  assert.match(styles, /\.fixtureStack \{[^}]*grid-template-columns: 86px minmax\(0,1fr\)[^}]*gap: 6px/);
   assert.match(styles, /\.fixtureScore \{[^}]*top: 50%[^}]*right: 47px[^}]*translateY\(-50%\)/);
   assert.match(styles, /\.teamMark \{[^}]*width: 34px[^}]*height: 34px[^}]*background: transparent[^}]*box-shadow: none/);
   assert.match(styles, /\.teamMark \{[^}]*background: transparent[^}]*box-shadow: none/);
