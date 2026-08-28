@@ -1,12 +1,12 @@
 # TouchLine Current State
 
-## QA public coach performance authority — IMPLEMENTED / RELEASE VERIFICATION PENDING
+## QA public coach performance authority — GREEN / NATIVE SAFARI CUSTOMER PASS
 
 - Every public coach Profile, Club Hub Zoom and Ranking now consumes the same active immutable competition snapshot. Home and Away W-D-L/TP records are materialized in that existing snapshot and checked against its aggregate totals; a missing private ClubOwner contract can no longer turn real competition results into dashes.
 - QA-only in-place migration `036_touchline_qa_competition_coach_profile_records.sql` published snapshot `coach-v2:1e83121b-b778-459b-b9a0-7cf1eaff5729:40025b53cf300552d473d95d659d7830`: `20` coaches, `10` fixtures, `11` coaches with positive points and `32` total points. Every nested Home/Away total matches its aggregate row. Home remains `3/1/0`; Away remains `4/2/0`.
 - Coach Profile and Arena coach selection no longer display a card price. Tier, frame, identity and internal historical contract authority remain intact; no replacement monthly amount was invented.
 - The Rankings summary now distinguishes all published cards from cards in the active snapshot and removes the misleading zero-ClubOwner counter. QA currently has `568` published player cards and `276` cards in the current ranking. The sporting ClubOwner Table remains pending until an audited points publication exists.
-- Focused contracts passed `73/73`; complete local suite passed `1321/1321`; TypeScript, scoped ESLint with zero errors and `git diff --check` passed. Exact-sha QA deployment, native Safari CUSTOMER proof and deployment observability remain the active gate. Production remains forbidden.
+- Focused contracts passed `73/73` before the final season-label correction and `65/65` after it; the complete local suite passed `1321/1321`. TypeScript, scoped ESLint with zero errors, `git diff --check`, release governance, release readiness and the local `135/135` route build passed. Native Safari CUSTOMER proved Daniel Farke's public Profile and Club Hub Zoom at Home `0/0/0/0`, Away `1/0/0/4`, total `4`, rank `#1`, season `2026-27`, with no visible coach price or technical UUID. Preview `dpl_Ftvat1LMmywa1Deb58C33DPLKxju` is `READY` for exact product SHA `acf08535528ec5138beb52de827e59e7de773ef2` and owns the stable QA alias. Deployment-scoped traffic is `157×200`, `15×307`, `3×204`, with zero error/fatal or `5xx` event. Production remains forbidden and untouched.
 
 ## QA Ranking premium Top 3 + full coach synchronization — GREEN / NATIVE SAFARI CUSTOMER PASS
 
