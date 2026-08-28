@@ -8,7 +8,7 @@ import {
   toTouchlineLiveFixture,
 } from "../lib/touchlineArena/stadium-catalog.ts";
 
-function fixture(homeTeamProviderId: string, venueId: string): TouchlineFixture {
+function fixture(homeTeamProviderId: string, venueId: string, awayTeamProviderId = "9"): TouchlineFixture {
   return {
     id: "sportmonks:19722189",
     providerId: "19722189",
@@ -24,11 +24,11 @@ function fixture(homeTeamProviderId: string, venueId: string): TouchlineFixture 
       source: { provider: "sportmonks", providerId: homeTeamProviderId },
     },
     awayTeam: {
-      id: "sportmonks:9",
-      providerId: "9",
+      id: `sportmonks:${awayTeamProviderId}`,
+      providerId: awayTeamProviderId,
       provider: "sportmonks",
       name: "Manchester City",
-      source: { provider: "sportmonks", providerId: "9" },
+      source: { provider: "sportmonks", providerId: awayTeamProviderId },
     },
     source: { provider: "sportmonks", providerId: "19722189" },
   };
@@ -116,24 +116,43 @@ test("every verified home club resolves only with its exact venue identity", () 
   }
 });
 
-test("Old Trafford alone exposes the approved interior hero artwork", () => {
+test("only the four approved home grounds expose bounded interior hero artwork", () => {
   const entriesWithInterior = TOUCHLINE_STADIUM_CATALOG.filter((entry) => entry.interiorImageUrl);
-  assert.equal(entriesWithInterior.length, 1);
+  const expected = [
+    ["19", "204", "01-arsenal-emirates-stadium-live.webp"],
+    ["15", "5", "02-aston-villa-villa-park-live.webp"],
+    ["52", "146", "03-bournemouth-vitality-stadium-live.webp"],
+    ["14", "206", "16-manchester-united-old-trafford-interior.webp"],
+  ] as const;
 
-  const oldTrafford = entriesWithInterior[0];
-  assert.equal(oldTrafford?.homeTeamProviderId, "14");
-  assert.equal(oldTrafford?.providerVenueId, "206");
-  assert.equal(
-    oldTrafford?.interiorImageUrl,
-    "/touchlineArena/stadiums/interiors/16-manchester-united-old-trafford-interior.webp",
-  );
+  assert.equal(entriesWithInterior.length, expected.length);
+  for (const [homeTeamProviderId, providerVenueId, fileName] of expected) {
+    const stadium = entriesWithInterior.find((entry) => entry.homeTeamProviderId === homeTeamProviderId);
+    assert.ok(stadium, `missing interior mapping for home team ${homeTeamProviderId}`);
+    assert.equal(stadium.providerVenueId, providerVenueId);
+    assert.equal(stadium.interiorImageUrl, `/touchlineArena/stadiums/interiors/${fileName}`);
 
-  const asset = new URL(`../public${oldTrafford?.interiorImageUrl}`, import.meta.url);
-  assert.equal(existsSync(asset), true, "missing optimized Old Trafford interior asset");
-  assert.ok(statSync(asset).size < 1_000_000, "Old Trafford interior asset must stay below 1 MB");
+    const asset = new URL(`../public${stadium.interiorImageUrl}`, import.meta.url);
+    assert.equal(existsSync(asset), true, `missing optimized interior asset ${fileName}`);
+    assert.ok(statSync(asset).size < 1_000_000, `${fileName} must stay below 1 MB`);
+    assert.equal(
+      toTouchlineLiveFixture(fixture(homeTeamProviderId, providerVenueId)).venue?.interiorImageUrl,
+      stadium.interiorImageUrl,
+    );
+  }
 
-  const manchesterUnitedHome = toTouchlineLiveFixture(fixture("14", "206"));
-  assert.equal(manchesterUnitedHome.venue?.interiorImageUrl, oldTrafford?.interiorImageUrl);
   assert.equal(toTouchlineLiveFixture(fixture("9", "151")).venue?.interiorImageUrl, undefined);
   assert.equal(toTouchlineLiveFixture(fixture("14", "151")).venue, undefined);
+});
+
+test("the visitor never selects or supplies the Live interior", () => {
+  const arsenalHome = toTouchlineLiveFixture(fixture("19", "204", "15"));
+  const villaHome = toTouchlineLiveFixture(fixture("15", "5", "19"));
+  assert.equal(arsenalHome.venue?.interiorImageUrl, "/touchlineArena/stadiums/interiors/01-arsenal-emirates-stadium-live.webp");
+  assert.equal(villaHome.venue?.interiorImageUrl, "/touchlineArena/stadiums/interiors/02-aston-villa-villa-park-live.webp");
+
+  assert.equal(toTouchlineLiveFixture(fixture("19", "5", "15")).venue, undefined);
+  assert.equal(toTouchlineLiveFixture(fixture("15", "204", "19")).venue, undefined);
+  assert.equal(toTouchlineLiveFixture(fixture("9", "151", "14")).venue?.interiorImageUrl, undefined);
+  assert.equal(toTouchlineLiveFixture(fixture("51", "201", "52")).venue?.interiorImageUrl, undefined);
 });

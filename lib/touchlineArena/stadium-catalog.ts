@@ -28,6 +28,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Emirates Stadium",
     homeClubName: "Arsenal",
     imageUrl: "/touchlineArena/stadiums/aerial/01-arsenal-emirates-stadium.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/01-arsenal-emirates-stadium-live.webp",
   },
   {
     id: "villa-park",
@@ -36,6 +37,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Villa Park",
     homeClubName: "Aston Villa",
     imageUrl: "/touchlineArena/stadiums/aerial/02-aston-villa-villa-park.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/02-aston-villa-villa-park-live.webp",
   },
   {
     id: "vitality-stadium",
@@ -44,6 +46,7 @@ export const TOUCHLINE_STADIUM_CATALOG: readonly TouchlineStadiumCatalogEntry[] 
     name: "Vitality Stadium",
     homeClubName: "AFC Bournemouth",
     imageUrl: "/touchlineArena/stadiums/aerial/03-bournemouth-vitality-stadium.webp",
+    interiorImageUrl: "/touchlineArena/stadiums/interiors/03-bournemouth-vitality-stadium-live.webp",
   },
   {
     id: "gtech-community-stadium",

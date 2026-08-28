@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BellRing, CalendarDays, Clock3, Crown, Goal, Landmark, Radio, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchlinePublicFixture, TouchlinePublicVenue } from "@/lib/football-data/public-fixture";
 import type {
   TouchlinePublicFantasyEvent,
@@ -14,7 +15,7 @@ import type {
   TouchlinePublicFantasyLineupMember,
   TouchlinePublicFixturePlayerStatistics,
 } from "@/lib/football-data/public-fantasy-fixture";
-import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
+import { findTouchLineClub, TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
 import {
@@ -323,6 +324,8 @@ export default function TouchlineMatchCentre({
   const selectedDisplayState = selected ? touchlineMatchCentreDisplayState(selected, readMetadata, now) : null;
   const selectedCanonicalState = selected ? touchlineFixtureState(selected, now) : null;
   const verifiedDetail = matchDetail?.fixture.id === selected?.providerId ? matchDetail : null;
+  const selectedHomeClub = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === selected?.homeTeam?.providerId);
+  const verifiedHomeAccent = selected?.venue ? selectedHomeClub?.accent : undefined;
   const isManchesterUnitedHome = selected?.homeTeam?.providerId === "14" && selected?.venue?.id === "old-trafford";
   const homeLineupAvailable = Boolean(
     verifiedDetail?.lineupAvailableAt
@@ -440,6 +443,7 @@ export default function TouchlineMatchCentre({
           <div className={styles.matchMeta}><span><Trophy size={14} /> {dictionary.competition}</span><span>{selected.roundName ? `${dictionary.matchweek} · ${selected.roundName}` : dictionary.roundPending}</span><span><Clock3 size={14} /> {dictionary.timezone}</span></div>
           <div className={styles.hero} data-state={selectedDisplayState ?? "unknown"}>
             <HeroVenueArtwork venue={selected.venue} />
+            <TouchlineClubPerimeterTrace accent={verifiedHomeAccent} className={styles.heroPerimeterTrace} />
             {selectedDisplayState === "live" ? <span className={styles.statusPill} role="status" aria-live="polite" aria-atomic="true">
               <span className={styles.liveStatusDot} aria-hidden="true" />
               {copy["pt-BR"].liveNow}
@@ -466,6 +470,7 @@ export default function TouchlineMatchCentre({
 
           <div className={styles.infoGrid}>
             {selected.venue ? <article className={styles.venueCard}>
+              <TouchlineClubPerimeterTrace accent={verifiedHomeAccent} className={styles.venuePerimeterTrace} />
               <VenueArtwork venue={selected.venue} />
               <div className={styles.venueCopy}>
                 <span>{dictionary.venue}</span>

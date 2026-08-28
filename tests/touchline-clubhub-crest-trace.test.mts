@@ -12,6 +12,8 @@ test("ClubHub reuses the stroke-only canonical crest trace for club identity onl
   const lineup = source("components/touchline/ClubHubOfficialLineup.tsx");
   const directory = source("app/touchline-clubs/page.tsx");
   const directoryCss = source("app/touchline-clubs/touchline-clubs.module.css");
+  const perimeterTrace = source("components/touchline/TouchlineClubPerimeterTrace.tsx");
+  const perimeterTraceCss = source("components/touchline/TouchlineClubPerimeterTrace.module.css");
   const profileCss = profile.slice(profile.indexOf(".club-hub-logo {"), profile.indexOf(".club-hub-honours {"));
 
   assert.match(traceHost, /TouchlineClubCrestPerimeterTrace/);
@@ -27,8 +29,10 @@ test("ClubHub reuses the stroke-only canonical crest trace for club identity onl
   assert.match(lineup, /matchup\.away\.logoUrl && matchup\.away\.accent/);
   assert.match(lineup, /className=\{styles\.matchupCrest\}/);
   assert.match(directory, /<ClubHubCrestTrace[\s\S]*?accent=\{club\.accent\}[\s\S]*?className=\{styles\.logoWrap\}/);
-  assert.match(directory, /<svg className=\{styles\.clubCardTrace\}[\s\S]*?<rect className=\{styles\.clubCardTraceRun\}/);
-  assert.match(directoryCss, /\.clubCardTraceRun \{[\s\S]*?stroke-dasharray: 12 88[\s\S]*?animation: touchlineClubEdgeTravel 7s linear infinite/);
+  assert.match(directory, /<TouchlineClubPerimeterTrace accent=\{club\.accent\} className=\{styles\.clubCardTrace\}/);
+  assert.match(perimeterTrace, /data-touchline-club-perimeter-trace="true"/);
+  assert.match(perimeterTrace, /data-touchline-club-perimeter-trace-run="true"/);
+  assert.match(perimeterTraceCss, /\.run \{[\s\S]*?stroke-dasharray: 12 88[\s\S]*?animation: touchlineClubEdgeTravel/);
   assert.doesNotMatch(directoryCss, /\.clubCard::after|mask-composite|conic-gradient/);
 
   assert.match(profileCss, /overflow: visible/);
@@ -39,17 +43,18 @@ test("ClubHub reuses the stroke-only canonical crest trace for club identity onl
 test("ClubHub crest motion is bounded, pointer-safe and static under reduced motion", () => {
   const profile = source("app/touchline-clubs/[club]/page.tsx");
   const directoryCss = source("app/touchline-clubs/touchline-clubs.module.css");
+  const perimeterTraceCss = source("components/touchline/TouchlineClubPerimeterTrace.module.css");
   const cardTraceCss = source("app/globals.css");
 
   assert.match(profile, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?translate3d\(0, -2px, 0\)/);
   assert.match(profile, /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?translate3d\(0, -1px, 0\)/);
   assert.match(profile, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?transform: none !important/);
   assert.match(directoryCss, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.clubCard:hover \.logoWrap/);
-  assert.match(directoryCss, /\.clubCard:hover \.clubCardTraceRun[\s\S]*?animation-duration: 2\.8s/);
+  assert.match(directoryCss, /\.clubCard:hover \.clubCardTrace[\s\S]*?--touchline-perimeter-speed: 2\.8s/);
   assert.match(directoryCss, /\.logoWrap \{[\s\S]*?width: clamp\(106px, 11\.7vw, 161px\)/);
   assert.match(directoryCss, /\.logoWrap img \{[\s\S]*?width: 78%[\s\S]*?height: 78%/);
   assert.match(directoryCss, /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?\.clubCard:active \.logoWrap/);
-  assert.match(directoryCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.clubCardTraceRun \{ animation: none; \}/);
+  assert.match(perimeterTraceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.run \{ animation: none; \}/);
   assert.match(directoryCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.clubCard:active \.logoWrap[\s\S]*?transform: none !important/);
   assert.match(cardTraceCss, /\[data-touchline-card-crest-trace="true"\][\s\S]*?pointer-events: none/);
   assert.match(cardTraceCss, /\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: touchline-card-perimeter-trace 5\.8s/);

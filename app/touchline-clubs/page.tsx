@@ -5,6 +5,7 @@ import { Check, ChevronDown, Languages } from "lucide-react";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineCoachCategoryShowcase from "@/components/touchline/TouchlineCoachCategoryShowcase";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import { loadTouchlinePublishedCardShowcaseCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK } from "@/lib/touchlineArena/demo-data";
 import { normalizeTouchLineLocale, type TouchLineLocale } from "@/lib/touchlineArena/i18n";
@@ -100,10 +101,7 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
               "--club-secondary": club.secondaryAccent,
             } as CSSProperties}
           >
-            <svg className={styles.clubCardTrace} aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <rect className={styles.clubCardTraceBase} x=".8" y=".8" width="98.4" height="98.4" rx="9" pathLength="100" />
-              <rect className={styles.clubCardTraceRun} x=".8" y=".8" width="98.4" height="98.4" rx="9" pathLength="100" />
-            </svg>
+            <TouchlineClubPerimeterTrace accent={club.accent} className={styles.clubCardTrace} />
             <span className={styles.clubIndex}>{String(index + 1).padStart(2, "0")}</span>
             {club.logoUrl ? (
               <ClubHubCrestTrace

@@ -272,7 +272,7 @@ test("Match Centre renders a verified stadium card and a premium kickoff treatme
     "utf8",
   );
 
-  assert.match(component, /selected\.venue \? <article className=\{styles\.venueCard\}>/);
+  assert.match(component, /selected\.venue \? <article className=\{styles\.venueCard\}/);
   assert.match(component, /<VenueArtwork venue=\{selected\.venue\} \/>/);
   assert.match(component, /onError=\{\(\) => setFailedImageUrl\(venue\.imageUrl\)\}/);
   assert.match(component, /selected\.venue\.capacity/);
@@ -280,12 +280,41 @@ test("Match Centre renders a verified stadium card and a premium kickoff treatme
   assert.match(component, /<CalendarDays size=\{14\}/);
   assert.match(component, /<Clock3 size=\{15\}/);
   assert.match(styles, /\.venueCard \{[^}]*position: relative[^}]*overflow: hidden/);
-  assert.match(styles, /\.venueCard::before \{[^}]*border-radius: inherit/);
+  assert.doesNotMatch(styles, /\.venueCard::before \{/);
   assert.match(styles, /\.venueVisual \{[^}]*border-radius:/);
   assert.match(styles, /\.venueVisual img \{[^}]*object-fit: cover/);
   assert.match(styles, /\.venueVisual\[data-fallback="true"\]/);
   assert.match(styles, /\.heroKickoff \{[^}]*border-radius: 999px/);
   assert.match(styles, /\.heroTeams \.teamMark \{[^}]*width: clamp\(96px,13vw,156px\)/);
+});
+
+test("Live hero and Stadium card reuse the Club Hub rounded perimeter trace with the verified home-club colour", () => {
+  const component = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const clubHub = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
+  const trace = readFileSync(
+    new URL("../components/touchline/TouchlineClubPerimeterTrace.tsx", import.meta.url),
+    "utf8",
+  );
+  const traceStyles = readFileSync(
+    new URL("../components/touchline/TouchlineClubPerimeterTrace.module.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(component, /TOUCHLINE_ENGLAND_CLUBS\.find\(\(club\) => club\.teamId === selected\?\.homeTeam\?\.providerId\)/);
+  assert.match(component, /const verifiedHomeAccent = selected\?\.venue \? selectedHomeClub\?\.accent : undefined/);
+  assert.equal((component.match(/<TouchlineClubPerimeterTrace/g) ?? []).length, 2);
+  assert.match(component, /<TouchlineClubPerimeterTrace accent=\{verifiedHomeAccent\} className=\{styles\.heroPerimeterTrace\}/);
+  assert.match(component, /<TouchlineClubPerimeterTrace accent=\{verifiedHomeAccent\} className=\{styles\.venuePerimeterTrace\}/);
+  assert.doesNotMatch(component, /awayTeam[\s\S]{0,120}(?:accent|PerimeterTrace)/);
+  assert.match(clubHub, /<TouchlineClubPerimeterTrace accent=\{club\.accent\} className=\{styles\.clubCardTrace\}/);
+  assert.match(trace, /aria-hidden="true"/);
+  assert.match(trace, /pathLength="100"/);
+  assert.match(traceStyles, /rx: var\(--touchline-perimeter-radius, 24px\)/);
+  assert.match(traceStyles, /animation: touchlineClubEdgeTravel/);
+  assert.match(traceStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
 test("Match Centre renders the optional home-stadium interior behind a strong readable overlay", () => {

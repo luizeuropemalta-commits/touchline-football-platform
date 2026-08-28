@@ -172,6 +172,7 @@
 }
 
 .clubCard {
+  --touchline-perimeter-radius: 24px;
   position: relative;
   min-width: 0;
   min-height: 218px;
@@ -201,45 +202,16 @@
 }
 
 .clubCardTrace {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+  --touchline-perimeter-radius: 24px;
 }
 
-.clubCardTraceBase,
-.clubCardTraceRun {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.clubCardTraceBase {
-  stroke: color-mix(in srgb, var(--club-accent) 42%, rgba(255,255,255,.12));
-  stroke-width: .62;
-  opacity: .72;
-}
-
-.clubCardTraceRun {
-  /* The travelling line is SVG, so it follows the real rounded perimeter —
-     no rectangular glow or conic wedge can ever spill through the card. */
-  stroke: var(--club-accent);
-  stroke-width: 1.05;
-  stroke-dasharray: 12 88;
-  stroke-dashoffset: 0;
-  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--club-accent) 78%, transparent));
-  animation: touchlineClubEdgeTravel 7s linear infinite;
-}
-
-.clubCard:hover .clubCardTraceRun,
-.clubCard:focus-visible .clubCardTraceRun,
-.clubCard:active .clubCardTraceRun {
-  stroke: color-mix(in srgb, var(--club-accent) 82%, #fff 18%);
-  stroke-width: 1.3;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--club-accent) 90%, transparent));
-  animation-duration: 2.8s;
+.clubCard:hover .clubCardTrace,
+.clubCard:focus-visible .clubCardTrace,
+.clubCard:active .clubCardTrace {
+  --touchline-perimeter-run-color: color-mix(in srgb, var(--club-accent) 82%, #fff 18%);
+  --touchline-perimeter-run-width: 1.3px;
+  --touchline-perimeter-glow: 4px;
+  --touchline-perimeter-speed: 2.8s;
 }
 
 .clubIndex {
@@ -327,8 +299,6 @@
   text-transform: uppercase;
 }
 
-@keyframes touchlineClubEdgeTravel { to { stroke-dashoffset: -100; } }
-
 @media (max-width: 1120px) {
   .clubGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -365,6 +335,7 @@
   }
 
   .clubCard {
+    --touchline-perimeter-radius: 18px;
     min-height: 142px;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
@@ -398,8 +369,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .clubCardTraceRun { animation: none; }
-
   .clubCard:hover .logoWrap,
   .clubCard:focus-visible .logoWrap,
   .clubCard:active .logoWrap {

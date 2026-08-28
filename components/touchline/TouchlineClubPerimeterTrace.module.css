@@ -1,0 +1,43 @@
+.trace {
+  position: absolute;
+  z-index: var(--touchline-perimeter-z-index, 2);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--touchline-perimeter-radius, 24px);
+  pointer-events: none;
+}
+
+.base,
+.run {
+  rx: var(--touchline-perimeter-radius, 24px);
+  ry: var(--touchline-perimeter-radius, 24px);
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.base {
+  stroke: color-mix(in srgb, var(--touchline-perimeter-accent) 42%, rgba(255, 255, 255, .12));
+  stroke-width: var(--touchline-perimeter-base-width, .62px);
+  opacity: .72;
+}
+
+.run {
+  stroke: var(--touchline-perimeter-run-color, var(--touchline-perimeter-accent));
+  stroke-width: var(--touchline-perimeter-run-width, 1.05px);
+  stroke-dasharray: 12 88;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 var(--touchline-perimeter-glow, 2px) color-mix(in srgb, var(--touchline-perimeter-accent) 78%, transparent));
+  animation: touchlineClubEdgeTravel var(--touchline-perimeter-speed, 7s) linear infinite;
+}
+
+@keyframes touchlineClubEdgeTravel {
+  to { stroke-dashoffset: -100; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run { animation: none; }
+}
