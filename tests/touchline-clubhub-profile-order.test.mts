@@ -15,22 +15,23 @@ function indexOfRequired(source: string, token: string) {
 
 test("ClubHub places identity and honours before the matchday surface, where the match-up now lives", () => {
   const heroStart = indexOfRequired(page, '<header className="club-hub-hero">');
-  const lineupStart = indexOfRequired(page, "<ClubHubOfficialLineup");
-  const technicalStart = indexOfRequired(page, "<ClubHubMatchdayTechnicalArea");
-  const outsideStart = indexOfRequired(page, "<ClubHubOutsideMatchRoster");
-  const tableStart = indexOfRequired(page, "<TouchlineOfficialLeagueTable");
-  const touchlineCardsStart = indexOfRequired(page, "<ClubHubSquadGrid");
+  const lineupStart = page.indexOf("<ClubHubLineupSection", heroStart);
+  const technicalStart = page.indexOf("<ClubHubTechnicalSections", lineupStart);
+  const tableStart = page.indexOf("<ClubHubLeagueTableSection", technicalStart);
+  const touchlineCardsStart = page.indexOf("<ClubHubCardsSection", tableStart);
+  const lineupHelperStart = indexOfRequired(page, "async function ClubHubLineupSection");
+  const lineupHelperEnd = indexOfRequired(page, "async function ClubHubTechnicalSections");
   const hero = page.slice(heroStart, lineupStart);
-  const lineupSection = page.slice(lineupStart, technicalStart);
+  const lineupSection = page.slice(lineupHelperStart, lineupHelperEnd);
 
+  assert.ok(lineupStart >= 0 && technicalStart >= 0 && tableStart >= 0 && touchlineCardsStart >= 0);
   assert.match(hero, /<ClubTrophyCarousel/);
   assert.doesNotMatch(hero, /club-hub-next-match|ClubHubLiveFixtureScore/);
   assert.match(lineupSection, /matchup=\{\{/);
   assert.match(lineupSection, /fixtureId: matchSnapshot\.previewFixtureId/);
   assert.ok(heroStart < lineupStart);
   assert.ok(lineupStart < technicalStart);
-  assert.ok(technicalStart < outsideStart);
-  assert.ok(outsideStart < tableStart);
+  assert.ok(technicalStart < tableStart);
   assert.ok(tableStart < touchlineCardsStart);
   assert.doesNotMatch(hero, /Official club value|Valor oficial do clube|marketValuePending|formatCompactEuro/);
   assert.doesNotMatch(hero, /touchlineCards|touchlinePoints|squadSource|club-hub-metrics/);

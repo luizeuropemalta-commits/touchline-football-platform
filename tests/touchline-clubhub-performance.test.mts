@@ -15,14 +15,14 @@ const route = readFileSync(new URL("../app/api/football-data/premier-squad/route
 const reader = readFileSync(new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url), "utf8");
 const pending = readFileSync(new URL("../components/touchline/ClubHubNavigationPending.tsx", import.meta.url), "utf8");
 const cardLink = readFileSync(new URL("../components/touchline/ClubHubCardLink.tsx", import.meta.url), "utf8");
-const loading = readFileSync(new URL("../app/touchline-clubs/[club]/loading.tsx", import.meta.url), "utf8");
+const fullPageLoadingBoundary = new URL("../app/touchline-clubs/[club]/loading.tsx", import.meta.url);
 const trophyCarousel = readFileSync(new URL("../components/touchline/ClubTrophyCarousel.tsx", import.meta.url), "utf8");
 
 function publicPath(assetUrl: string) {
   return path.join(process.cwd(), "public", decodeURIComponent(assetUrl));
 }
 
-test("Club selection uses link-local pending feedback and a segment loading boundary", () => {
+test("Club selection keeps feedback local and streams meaningful destination content", () => {
   assert.match(clubsPage, /<ClubHubCardLink/);
   assert.match(cardLink, /<Link/);
   assert.match(cardLink, /prefetch={false}/);
@@ -44,9 +44,22 @@ test("Club selection uses link-local pending feedback and a segment loading boun
   assert.match(pending, /aria-busy=\{active\}/);
   assert.match(pending, /onPendingSettled\?\.\(\)/);
   assert.doesNotMatch(pending, /useRouter|router\.push|preventDefault/);
-  assert.match(loading, /aria-busy="true"/);
-  assert.match(loading, /styles\.hero/);
-  assert.match(loading, /styles\.pitch/);
+  assert.equal(existsSync(fullPageLoadingBoundary), false);
+  assert.match(clubPage, /<Suspense fallback=\{<ClubHubDeferredSection size="lineup"/);
+  assert.match(clubPage, /club-hub-deferred-lineup/);
+  assert.match(clubPage, /prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(clubPage, /ClubHubLoading|loading\.module\.css/);
+});
+
+test("ClubHub starts independent loaders together and begins season points as soon as the squad resolves", () => {
+  assert.match(clubPage, /const squadLoadPromise = traceClubHubLoader/);
+  assert.match(clubPage, /const matchSnapshotPromise = traceClubHubLoader/);
+  assert.match(clubPage, /const formationGeometryPromise = traceClubHubLoader/);
+  assert.match(clubPage, /const seasonPointsPromise = squadLoadPromise\.then/);
+  assert.match(clubPage, /Promise\.all\(\[\s*squadLoadPromise,\s*matchSnapshotPromise,\s*formationGeometryPromise,\s*seasonPointsPromise,/s);
+  assert.match(clubPage, /const presentationPromise = loadClubHubPresentation/);
+  assert.match(clubPage, /const viewerAccessPromise = loadClubHubViewerAccess/);
+  assert.match(clubPage, /const tablePromise = traceClubHubLoader/);
 });
 
 test("ClubHub and the public endpoint consume one server-only persisted squad reader", () => {
