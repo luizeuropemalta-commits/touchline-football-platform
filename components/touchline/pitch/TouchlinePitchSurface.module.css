@@ -105,6 +105,79 @@
 .spotStart { left: 13.5%; }
 .spotEnd { right: 13.5%; }
 
+.surfaceVertical {
+  background:
+    radial-gradient(ellipse at 50% 48%, rgba(178,255,134,.1), transparent 40%),
+    linear-gradient(180deg, rgba(1,17,12,.1), rgba(0,9,7,.52)),
+    url("/touchlineArena/live/official-live-pitch-960.webp") center / cover no-repeat,
+    repeating-linear-gradient(0deg, rgba(25,109,63,.92) 0 12.5%, rgba(14,72,43,.94) 12.5% 25%);
+}
+
+.surfaceVertical .halfway {
+  inset: 50% 5% auto;
+  width: auto;
+  height: 1px;
+  transform: translateY(-50%);
+}
+
+.surfaceVertical .box {
+  left: 27%;
+  width: 46%;
+  height: 16%;
+}
+
+.surfaceVertical .boxStart {
+  top: 5%;
+  border-top: 0;
+  border-left: 1px solid rgba(239,255,242,.4);
+}
+
+.surfaceVertical .boxEnd {
+  top: auto;
+  right: auto;
+  bottom: 5%;
+  border-right: 1px solid rgba(239,255,242,.4);
+  border-bottom: 0;
+}
+
+.surfaceVertical .sixYardBox {
+  left: 38%;
+  width: 24%;
+  height: 7%;
+}
+
+.surfaceVertical .sixYardBoxStart {
+  top: 5%;
+  border-top: 0;
+  border-left: 1px solid rgba(239,255,242,.36);
+}
+
+.surfaceVertical .sixYardBoxEnd {
+  top: auto;
+  right: auto;
+  bottom: 5%;
+  border-right: 1px solid rgba(239,255,242,.36);
+  border-bottom: 0;
+}
+
+.surfaceVertical .goal {
+  left: 41%;
+  width: 18%;
+  height: 2.2%;
+  background: repeating-linear-gradient(90deg, transparent 0 5px, rgba(255,255,255,.13) 5px 6px);
+}
+
+.surfaceVertical .goalStart { top: 2.8%; }
+.surfaceVertical .goalEnd { top: auto; right: auto; bottom: 2.8%; }
+
+.surfaceVertical .spot {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.surfaceVertical .spotStart { top: 13.5%; }
+.surfaceVertical .spotEnd { top: auto; right: auto; bottom: 13.5%; }
+
 @media (max-width: 760px) {
   .surface { border-radius: 14px; }
   .surface::after { width: min(22%, 100px); }

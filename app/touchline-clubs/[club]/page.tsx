@@ -44,8 +44,8 @@ import {
 import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
 import { getTouchlineClubTrophyAssets } from "@/lib/touchlineArena/club-trophy-manifest";
 import {
+  publicPremierSquadPlayerToCard,
   readPublicPremierSquad,
-  type PublicPremierSquadPlayer,
 } from "@/lib/football-data/public-premier-squad-server";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
@@ -91,29 +91,6 @@ function loadClubTrophyAssets(club: NonNullable<ReturnType<typeof findTouchLineC
 
 export function generateStaticParams() {
   return TOUCHLINE_ENGLAND_CLUBS.map((club) => ({ club: club.slug }));
-}
-
-function squadApiPlayerToCard(player: PublicPremierSquadPlayer, clubName: string): ClubOwnerSquadCard {
-  return {
-    id: player.providerId || player.id,
-    canonicalPlayerId: player.canonicalPlayerId ?? null,
-    name: player.name,
-    shortName: player.shortName || player.name,
-    role: player.role || "midfielder",
-    position: player.position || player.role || "MID",
-    clubName,
-    shirtNumber: normalizeOfficialShirtNumber(player.shirtNumber),
-    countryCode3: player.countryCode3 || "N/A",
-    marketValue: player.marketValue ?? "",
-    marketValueSource: player.marketValueSource || "unavailable",
-    marketValueState: player.marketValueState,
-    classificationState: player.classificationState,
-    cardTier: player.cardTier ?? undefined,
-    cardPriceVersion: player.cardPriceVersion || undefined,
-    editorialCard: player.editorialCard ?? null,
-    cardReview: player.cardReview,
-    touchlinePoints: 0,
-  };
 }
 
 function persistedSquadPlayerToCard(player: PersistedSquadPlayer, clubName: string): ClubOwnerSquadCard {
@@ -164,7 +141,7 @@ async function loadClubSquadCards(club: NonNullable<ReturnType<typeof findTouchL
     const payload = result.body;
 
     return {
-      cards: (payload.rosterPlayers ?? payload.players).map((player) => squadApiPlayerToCard(player, club.name)),
+      cards: (payload.rosterPlayers ?? payload.players).map((player) => publicPremierSquadPlayerToCard(player, club.name)),
       status: payload.status ?? `${payload.players.length} TouchLine cards`,
       source: payload.cached ? touchLineT(locale, "dataCache") : touchLineT(locale, "liveData"),
       state: "ready" as const,

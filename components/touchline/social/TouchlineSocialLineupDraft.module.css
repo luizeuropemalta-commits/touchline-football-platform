@@ -1,0 +1,241 @@
+.canvas {
+  width: 1080px;
+  height: 1350px;
+  overflow: hidden;
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 210px;
+  gap: 14px;
+  padding: 20px;
+  color: #f8fff3;
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--social-club-accent) 34%, transparent), transparent 30%),
+    radial-gradient(circle at 96% 14%, color-mix(in srgb, var(--social-club-secondary) 22%, transparent), transparent 28%),
+    linear-gradient(145deg, #06120e 0%, #020807 54%, #07100d 100%);
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  isolation: isolate;
+}
+
+.canvas::before {
+  content: "";
+  position: absolute;
+  inset: 17px;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--social-club-accent) 48%, rgba(255,255,255,.18));
+  border-radius: 34px;
+  box-shadow: inset 0 0 52px rgba(0,0,0,.32), 0 0 34px color-mix(in srgb, var(--social-club-accent) 14%, transparent);
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.matchup,
+.footer {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.teamIdentity span,
+.footer span {
+  color: #b6ff4f;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .16em;
+}
+.header {
+  position: absolute;
+  z-index: 7;
+  top: 26px;
+  left: 28px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 24px;
+  padding: 12px 15px;
+  background: linear-gradient(100deg, rgba(1,10,7,.9), rgba(1,10,7,.64));
+  box-shadow: 0 16px 36px rgba(0,0,0,.34);
+  backdrop-filter: blur(14px);
+}
+.matchup {
+  justify-content: flex-end;
+  gap: 16px;
+  border: 1px solid color-mix(in srgb, var(--social-club-accent) 38%, rgba(255,255,255,.15));
+  border-radius: 20px;
+  padding: 8px 16px;
+  background: rgba(0,8,7,.66);
+  box-shadow: inset 0 1px rgba(255,255,255,.05);
+}
+.matchup img { object-fit: contain; }
+.matchup > div { display: grid; justify-items: center; gap: 4px; }
+.matchup span { font-size: 18px; font-weight: 1000; letter-spacing: .06em; }
+.matchup span b { color: #b6ff4f; padding: 0 6px; }
+.matchup strong { color: rgba(255,255,255,.68); font-size: 12px; letter-spacing: .05em; }
+
+.crestFrame {
+  width: 82px;
+  height: 82px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--social-club-accent) 66%, #fff 18%);
+  border-radius: 20px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--social-club-accent) 24%, transparent), rgba(0,0,0,.38));
+  box-shadow: 0 0 28px color-mix(in srgb, var(--social-club-accent) 26%, transparent);
+}
+.crestFrame img { object-fit: contain; }
+.teamIdentity { min-width: 0; display: flex; align-items: center; gap: 15px; }
+.teamIdentity > div:last-child { min-width: 0; display: grid; gap: 4px; }
+.teamIdentity h1 {
+  overflow: hidden;
+  margin: 0;
+  color: #fff;
+  font-size: 36px;
+  font-weight: 950;
+  line-height: .98;
+  letter-spacing: -.045em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.teamIdentity p { margin: 0; color: rgba(255,255,255,.7); font-size: 15px; font-weight: 850; letter-spacing: .08em; }
+
+.pitch {
+  width: 100%;
+  height: 100%;
+  border-radius: 34px;
+  border-color: color-mix(in srgb, var(--social-club-accent) 62%, rgba(255,255,255,.3));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 -100px 180px rgba(0,0,0,.44),
+    0 0 34px color-mix(in srgb, var(--social-club-accent) 24%, transparent),
+    0 34px 80px rgba(0,0,0,.42);
+}
+
+.coachPanel {
+  min-width: 0;
+  position: relative;
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  column-gap: 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--social-club-accent) 52%, rgba(255,255,255,.2));
+  border-radius: 26px;
+  padding: 10px 18px 10px 14px;
+  background:
+    radial-gradient(circle at 12% 50%, color-mix(in srgb, var(--social-club-accent) 24%, transparent), transparent 34%),
+    linear-gradient(100deg, rgba(1,12,8,.96), rgba(2,9,8,.9));
+  box-shadow: inset 0 1px rgba(255,255,255,.06), 0 0 26px color-mix(in srgb, var(--social-club-accent) 16%, transparent);
+}
+
+.coachCard {
+  grid-row: 1 / 3;
+  width: 126px;
+  align-self: center;
+}
+
+.coachCopy {
+  min-width: 0;
+  align-self: center;
+  display: grid;
+  gap: 5px;
+}
+
+.coachCopy span {
+  color: #b6ff4f;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .16em;
+}
+
+.coachCopy strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 34px;
+  font-weight: 1000;
+  letter-spacing: -.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coachCopy small {
+  color: rgba(255,255,255,.62);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.pitchGlow {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(circle at 50% 50%, transparent 26%, rgba(0,0,0,.18) 100%);
+  pointer-events: none;
+}
+
+.player {
+  position: absolute;
+  z-index: 4;
+  left: var(--social-lineup-x);
+  top: var(--social-lineup-y);
+  width: 132px;
+  height: 154px;
+  display: grid;
+  justify-items: center;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+
+.card {
+  width: 96px;
+  height: 154px;
+  transform: none;
+  rotate: 0deg;
+}
+
+.playerName {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  width: 132px;
+  overflow: hidden;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 8px;
+  padding: 4px 5px;
+  color: #fff;
+  background: rgba(1,8,6,.86);
+  box-shadow: 0 5px 12px rgba(0,0,0,.42);
+  font-size: 9px;
+  font-weight: 1000;
+  line-height: 1.05;
+  letter-spacing: .015em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.footer {
+  grid-column: 2;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  padding-top: 9px;
+}
+.footer span { color: rgba(255,255,255,.52); font-size: 9px; }
+.footer strong { color: #efffd9; font-size: 15px; letter-spacing: .12em; }
+.footer i { color: #b6ff4f; font-style: normal; }
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas *, .canvas *::before, .canvas *::after { animation: none !important; transition: none !important; }
+}

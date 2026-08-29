@@ -15,7 +15,7 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 58);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 59);
   assert.equal(rows.filter((item) => item.kind === "API").length, 65);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
@@ -34,6 +34,9 @@ test("separates public, authenticated, ClubOwner, Admin, audit, and isolated pre
   assert.equal(row("/club-owner/me/substitution").auth, "CLUBOWNER_SELF");
   assert.equal(row("/admin/cards").auth, "ADMIN");
   assert.equal(row("/visual-qa/representative-package").role, "OWNER_ADMIN");
+  assert.equal(row("/visual-qa/social-lineup").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-lineup").role, "OWNER_ADMIN");
+  assert.equal(row("/visual-qa/social-lineup").data, "QA_VERIFIED_OFFICIAL_LINEUP_DRAFT");
   assert.equal(row("/audit-index").auth, "AUDIT_TOKEN");
   assert.equal(row("/preview").auth, "ISOLATED_PREVIEW");
 });

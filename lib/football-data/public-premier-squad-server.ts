@@ -1,6 +1,6 @@
 import "server-only";
 
-import { inferArenaRole, makeArenaShortName } from "@/lib/football-data/arena-lineup";
+import { inferArenaRole, makeArenaShortName, normalizeOfficialShirtNumber } from "@/lib/football-data/arena-lineup";
 import { readPersistedSquadSnapshot, type PersistedSquadPlayer } from "@/lib/football-data/squad-snapshot-store";
 import { resolveOfficialShirtNumber } from "@/lib/football-data/official-shirt-numbers";
 import type { TouchlineCardTierKey } from "@/lib/touchlineArena/card-rules";
@@ -22,7 +22,7 @@ import {
   touchlineCountryCode3FromName,
   touchlineCountryFlagUrl,
 } from "@/lib/touchlineArena/country-flags";
-import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
+import { TOUCHLINE_ENGLAND_CLUBS, type ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 import { resolveTouchlineMarketCataloguePosition } from "@/lib/touchlineArena/market-position-catalogue";
 import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
 import { loadTouchlineCardEditorialOverrides } from "@/lib/touchlineArena/card-editorial-overrides";
@@ -123,6 +123,37 @@ export type PublicPremierSquadPlayer = Omit<
   source: "touchline_database" | "touchline_editorial" | "touchline_legacy_verified";
   publicProjectionState: "ready" | "partial";
 }>;
+
+/**
+ * Canonical public-roster adapter shared by ClubHub and presentation-only
+ * surfaces. Keeping one adapter prevents a social draft from silently
+ * changing the identity, tier or shirt number of the card shown on the site.
+ */
+export function publicPremierSquadPlayerToCard(
+  player: PublicPremierSquadPlayer,
+  clubName: string,
+): ClubOwnerSquadCard {
+  return {
+    id: player.providerId || player.id,
+    canonicalPlayerId: player.canonicalPlayerId ?? null,
+    name: player.name,
+    shortName: player.shortName || player.name,
+    role: player.role || "midfielder",
+    position: player.position || player.role || "MID",
+    clubName,
+    shirtNumber: normalizeOfficialShirtNumber(player.shirtNumber),
+    countryCode3: player.countryCode3 || "N/A",
+    marketValue: player.marketValue ?? "",
+    marketValueSource: player.marketValueSource || "unavailable",
+    marketValueState: player.marketValueState,
+    classificationState: player.classificationState,
+    cardTier: player.cardTier ?? undefined,
+    cardPriceVersion: player.cardPriceVersion || undefined,
+    editorialCard: player.editorialCard ?? null,
+    cardReview: player.cardReview,
+    touchlinePoints: 0,
+  };
+}
 
 export type PendingPublicPremierSquadPlayer = Readonly<{
   id: string;

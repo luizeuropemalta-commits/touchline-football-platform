@@ -51,6 +51,7 @@ const PAGE_POLICIES: Record<string, Partial<RoutePolicy>> = {
   "/audit-index": { auth: "AUDIT_TOKEN", role: "AUDITOR", data: "STATIC_AUDIT_REGISTRY", status: "PENDING_AUDIT_TOKEN_QA" },
   "/audit/[...route]": { auth: "AUDIT_TOKEN", role: "AUDITOR", data: "STATIC_AUDIT_RENDER", status: "PENDING_AUDIT_TOKEN_QA" },
   "/preview": { auth: "ISOLATED_PREVIEW", role: "PREVIEW_AUDITOR", data: "STATIC_ISOLATED_PREVIEW", status: "PREVIEW_CONTRACT_ONLY" },
+  "/visual-qa/social-lineup": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_OFFICIAL_LINEUP_DRAFT", status: "PENDING_VISUAL_QA" },
 };
 
 const API_POLICIES: Record<string, RoutePolicy> = {
@@ -155,7 +156,14 @@ function pagePolicy(route: string): RoutePolicy {
     return { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_ADMIN", browser: "REQUIRED", status: "PENDING_ADMIN_BROWSER_QA" };
   }
   if (route.startsWith("/visual-qa")) {
-    return { auth: "ADMIN", role: "OWNER_ADMIN", data: route === "/visual-qa/representative-package" ? "QA_STATIC_REPRESENTATIVE_FIXTURE" : "STATIC_VISUAL_QA_FIXTURE", browser: "REQUIRED", status: "PENDING_VISUAL_QA" };
+    return {
+      auth: "ADMIN",
+      role: "OWNER_ADMIN",
+      data: route === "/visual-qa/representative-package" ? "QA_STATIC_REPRESENTATIVE_FIXTURE" : "STATIC_VISUAL_QA_FIXTURE",
+      browser: "REQUIRED",
+      status: "PENDING_VISUAL_QA",
+      ...PAGE_POLICIES[route],
+    };
   }
   if (route.startsWith("/club-owner/")) {
     if (route === "/club-owner/luiz-lopez") {

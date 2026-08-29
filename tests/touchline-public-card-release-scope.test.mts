@@ -110,7 +110,10 @@ test("ClubHub has an explicit safe cutover: existing verified cards stay availab
   assert.match(squadRoute, /authoritativeMarketValueSource: verifiedMarketValueEur === null/);
   assert.doesNotMatch(squadRoute, /parseMarketValueEur/);
 
-  assert.match(clubHubPage, /editorialCard: player\.editorialCard \?\? null/);
+  assert.match(squadRoute, /export function publicPremierSquadPlayerToCard/);
+  assert.match(squadRoute, /editorialCard: player\.editorialCard \?\? null/);
+  assert.match(clubHubPage, /publicPremierSquadPlayerToCard/);
+  assert.match(clubHubPage, /\.map\(\(player\) => publicPremierSquadPlayerToCard\(player, club\.name\)\)/);
 });
 
 test("ClubHub grid, official lineup and zoom use the shared editorial presentation", () => {

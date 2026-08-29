@@ -6,6 +6,7 @@ type TouchlinePitchSurfaceProps = Readonly<{
   ariaLabel: string;
   children?: ReactNode;
   className?: string;
+  orientation?: "horizontal" | "vertical";
 }>;
 
 /**
@@ -14,10 +15,20 @@ type TouchlinePitchSurfaceProps = Readonly<{
  * markings. This keeps Arena, Match Centre, squad-management views and
  * ClubHub on the same broadcast-quality football surface.
  */
-export default function TouchlinePitchSurface({ ariaLabel, children, className }: TouchlinePitchSurfaceProps) {
+export default function TouchlinePitchSurface({
+  ariaLabel,
+  children,
+  className,
+  orientation = "horizontal",
+}: TouchlinePitchSurfaceProps) {
   return (
     <div
-      className={[styles.surface, className].filter(Boolean).join(" ")}
+      className={[
+        styles.surface,
+        orientation === "vertical" ? styles.surfaceVertical : null,
+        className,
+      ].filter(Boolean).join(" ")}
+      data-touchline-pitch-orientation={orientation}
       role="group"
       aria-label={ariaLabel}
     >
