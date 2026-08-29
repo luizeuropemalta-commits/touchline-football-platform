@@ -6,7 +6,7 @@ import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNav
 import TouchlineCoachCategoryShowcase from "@/components/touchline/TouchlineCoachCategoryShowcase";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
-import ClubHubNavigationPending from "@/components/touchline/ClubHubNavigationPending";
+import ClubHubCardLink from "@/components/touchline/ClubHubCardLink";
 import { loadTouchlinePublishedCardShowcaseCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK } from "@/lib/touchlineArena/demo-data";
 import { normalizeTouchLineLocale, type TouchLineLocale } from "@/lib/touchlineArena/i18n";
@@ -94,11 +94,11 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
 
       <section className={styles.clubGrid} aria-label={dictionary.hint}>
         {TOUCHLINE_ENGLAND_CLUBS_BY_RANK.map((club, index) => (
-          <Link
+          <ClubHubCardLink
             key={club.teamId}
             href={`/touchline-clubs/${club.slug}?${localeQuery}`}
-            prefetch={false}
             className={styles.clubCard}
+            pendingLabel={`${dictionary.openingClub}: ${club.name}`}
             style={{
               "--club-accent": club.accent,
               "--club-secondary": club.secondaryAccent,
@@ -119,8 +119,7 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
               <small>{club.shortCode} · {dictionary.verified}</small>
             </span>
             <span className={styles.open}>{dictionary.open}</span>
-            <ClubHubNavigationPending label={`${dictionary.openingClub}: ${club.name}`} />
-          </Link>
+          </ClubHubCardLink>
         ))}
       </section>
 

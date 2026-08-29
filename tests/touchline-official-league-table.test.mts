@@ -412,6 +412,7 @@ test("shared table component and pages keep data loading on the server boundary"
   const componentStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
   const serverReader = readFileSync(new URL("../lib/football-data/official-league-table-server.ts", import.meta.url), "utf8");
   const directory = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
+  const directoryCardLink = readFileSync(new URL("../components/touchline/ClubHubCardLink.tsx", import.meta.url), "utf8");
   const profile = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 
   assert.match(component, /variant: "directory" \| "profile"/);
@@ -452,7 +453,8 @@ test("shared table component and pages keep data loading on the server boundary"
   assert.doesNotMatch(directory, /loadTouchlineOfficialLeagueTable/);
   assert.doesNotMatch(directory, /TouchlineOfficialLeagueTable/);
   assert.doesNotMatch(directory, /id="official-league-table"/);
-  assert.match(directory, /href=\{`\/touchline-clubs\/\$\{club\.slug\}[^\n]+\n\s+prefetch=\{false\}/);
+  assert.match(directory, /<ClubHubCardLink[\s\S]*?href=\{`\/touchline-clubs\/\$\{club\.slug\}/);
+  assert.match(directoryCardLink, /prefetch=\{false\}/);
   assert.match(profile, /loadTouchlineOfficialLeagueTable/);
   assert.match(profile, /TouchlineOfficialLeagueTable/);
   assert.doesNotMatch(profile, /buildOfficialStandings/);

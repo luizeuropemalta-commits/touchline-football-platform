@@ -14,6 +14,7 @@ const clubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", 
 const route = readFileSync(new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url), "utf8");
 const reader = readFileSync(new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url), "utf8");
 const pending = readFileSync(new URL("../components/touchline/ClubHubNavigationPending.tsx", import.meta.url), "utf8");
+const cardLink = readFileSync(new URL("../components/touchline/ClubHubCardLink.tsx", import.meta.url), "utf8");
 const loading = readFileSync(new URL("../app/touchline-clubs/[club]/loading.tsx", import.meta.url), "utf8");
 const trophyCarousel = readFileSync(new URL("../components/touchline/ClubTrophyCarousel.tsx", import.meta.url), "utf8");
 
@@ -22,11 +23,24 @@ function publicPath(assetUrl: string) {
 }
 
 test("Club selection uses link-local pending feedback and a segment loading boundary", () => {
-  assert.match(clubsPage, /<ClubHubNavigationPending label=/);
+  assert.match(clubsPage, /<ClubHubCardLink/);
+  assert.match(cardLink, /<Link/);
+  assert.match(cardLink, /prefetch={false}/);
+  assert.match(cardLink, /onClick={handleClick}/);
+  assert.match(cardLink, /event\.button !== 0/);
+  assert.match(cardLink, /event\.metaKey/);
+  assert.match(cardLink, /hasAttribute\("download"\)/);
+  assert.match(cardLink, /target !== "_self"/);
+  assert.match(cardLink, /window\.addEventListener\("pageshow", resetPending\)/);
+  assert.match(cardLink, /pendingState\.pathname === pathname/);
+  assert.match(cardLink, /PENDING_FAILSAFE_MS/);
+  assert.doesNotMatch(cardLink, /useRouter|router\.push|preventDefault/);
   assert.match(pending, /useLinkStatus\(\)/);
-  assert.match(pending, /data-pending=\{pending \? "true" : "false"\}/);
+  assert.match(pending, /const active = forcePending \|\| pending/);
+  assert.match(pending, /data-pending=\{active \? "true" : "false"\}/);
   assert.match(pending, /aria-live="polite"/);
-  assert.match(pending, /aria-busy=\{pending\}/);
+  assert.match(pending, /aria-busy=\{active\}/);
+  assert.match(pending, /onPendingSettled\?\.\(\)/);
   assert.doesNotMatch(pending, /useRouter|router\.push|preventDefault/);
   assert.match(loading, /aria-busy="true"/);
   assert.match(loading, /styles\.hero/);
