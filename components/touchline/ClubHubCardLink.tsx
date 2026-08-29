@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import ClubHubNavigationPending from "./ClubHubNavigationPending";
 
@@ -16,6 +16,7 @@ type ClubHubCardLinkProps = {
 };
 
 const PENDING_FAILSAFE_MS = 10_000;
+const PENDING_SETTLE_GRACE_MS = 4_000;
 
 /**
  * Keeps navigation feedback local to the activated card, including after a
@@ -30,15 +31,28 @@ export default function ClubHubCardLink({
 }: ClubHubCardLinkProps) {
   const pathname = usePathname();
   const [pendingState, setPendingState] = useState({ pathname, requested: false });
+  const settleTimer = useRef<number | null>(null);
   const requested = pendingState.pathname === pathname && pendingState.requested;
   const resetPending = useCallback(() => {
+    if (settleTimer.current !== null) {
+      window.clearTimeout(settleTimer.current);
+      settleTimer.current = null;
+    }
     setPendingState({ pathname, requested: false });
   }, [pathname]);
+  const schedulePendingReset = useCallback(() => {
+    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
+    settleTimer.current = window.setTimeout(resetPending, PENDING_SETTLE_GRACE_MS);
+  }, [resetPending]);
 
   useEffect(() => {
     window.addEventListener("pageshow", resetPending);
     return () => window.removeEventListener("pageshow", resetPending);
   }, [resetPending]);
+
+  useEffect(() => () => {
+    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
+  }, []);
 
   useEffect(() => {
     if (!requested) return;
@@ -57,6 +71,7 @@ export default function ClubHubCardLink({
       || event.currentTarget.hasAttribute("download")
       || (event.currentTarget.target !== "" && event.currentTarget.target !== "_self")
     ) return;
+    if (settleTimer.current !== null) window.clearTimeout(settleTimer.current);
     setPendingState({ pathname, requested: true });
   }
 
@@ -72,7 +87,7 @@ export default function ClubHubCardLink({
       <ClubHubNavigationPending
         label={pendingLabel}
         forcePending={requested}
-        onPendingSettled={resetPending}
+        onPendingSettled={schedulePendingReset}
       />
     </Link>
   );

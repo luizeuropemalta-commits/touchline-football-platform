@@ -34,6 +34,8 @@ test("Club selection uses link-local pending feedback and a segment loading boun
   assert.match(cardLink, /window\.addEventListener\("pageshow", resetPending\)/);
   assert.match(cardLink, /pendingState\.pathname === pathname/);
   assert.match(cardLink, /PENDING_FAILSAFE_MS/);
+  assert.match(cardLink, /PENDING_SETTLE_GRACE_MS/);
+  assert.match(cardLink, /onPendingSettled=\{schedulePendingReset\}/);
   assert.doesNotMatch(cardLink, /useRouter|router\.push|preventDefault/);
   assert.match(pending, /useLinkStatus\(\)/);
   assert.match(pending, /const active = forcePending \|\| pending/);
