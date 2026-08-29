@@ -7,6 +7,8 @@ import {
 } from "@/lib/football-data/player-fixture-scoring";
 import { touchLinePlayerFixtureScoreV3 } from "@/lib/football-data/player-score-engine-v3";
 import { classifyTouchLinePlayerRankingCoverage } from "@/lib/football-data/player-ranking-coverage";
+import { groupTouchLinePlayerSeasonMemberships } from "@/lib/football-data/player-season-membership-grouping";
+import { upsertTouchLineRowsResiliently } from "@/lib/football-data/resilient-batch-upsert";
 import type { TouchlineFantasyEvent, TouchlineFantasyLineupMember } from "@/lib/football-data/types";
 import { rebuildTouchLinePlayerRankingV3 } from "@/lib/touchlineArena/player-ranking-rebuild-server";
 
@@ -22,6 +24,7 @@ type MembershipRow = {
   competition_id: string;
   season_id: string;
   club_id: string;
+  source_synced_at?: string | null;
   football_players?: { provider?: string; provider_player_id?: string; provider_position?: string | null; position?: string | null } | null;
   football_seasons?: { name?: string | null } | null;
   football_competitions?: { name?: string | null } | null;
@@ -97,7 +100,31 @@ export type PlayerSeasonStatisticsSyncResult = {
   rankingPlayers: number;
   rankingPublished: boolean;
   rankingError: string | null;
+  scoringFixtureIds: string[];
+  failedFixtureIds: string[];
+  missingSettlementFixtureIds: string[];
 };
+
+function stringField(row: Record<string, unknown>, key: string) {
+  const value = row[key];
+  return typeof value === "string" ? value : "";
+}
+
+function aggregateRowKey(row: Record<string, unknown>) {
+  return ["football_player_id", "competition_id", "season_id", "scoring_version"]
+    .map((key) => stringField(row, key))
+    .join(":");
+}
+
+function fixtureRowKey(row: Record<string, unknown>) {
+  return ["football_player_id", "fixture_id"].map((key) => stringField(row, key)).join(":");
+}
+
+function v3FixtureRowKey(row: Record<string, unknown>) {
+  return ["football_player_id", "fixture_id", "scoring_version"]
+    .map((key) => stringField(row, key))
+    .join(":");
+}
 
 /**
  * Rebuilds the QA-only V3 canonical read model from persisted normalized fixtures and
@@ -122,6 +149,9 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
     rankingPlayers: 0,
     rankingPublished: false,
     rankingError: null,
+    scoringFixtureIds: [],
+    failedFixtureIds: [],
+    missingSettlementFixtureIds: [],
   };
   const { data: fixtures, error: fixturesError } = await admin
     .from("football_fixtures")
@@ -251,7 +281,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
 
   const { data: memberships, error: membershipsError } = await admin
     .from("football_player_season_memberships")
-    .select("football_player_id,competition_id,season_id,club_id,football_players(provider,provider_player_id,provider_position,position),football_seasons(name),football_competitions(name),football_clubs(name)");
+    .select("football_player_id,competition_id,season_id,club_id,source_synced_at,football_players(provider,provider_player_id,provider_position,position),football_seasons(name),football_competitions(name),football_clubs(name)");
   if (membershipsError || !Array.isArray(memberships)) {
     result.errors.push(membershipsError?.message ?? "player-season-memberships-unavailable");
     return result;
@@ -265,23 +295,42 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
   const aggregateRows: Record<string, unknown>[] = [];
   const fixtureRows: Record<string, unknown>[] = [];
   const v3FixtureRows: Record<string, unknown>[] = [];
+  const scoreableFixtures = (fixtures as FixtureRow[]).filter((fixture) => isTouchLineScoringFixtureStatus(fixture.status));
+  result.scoringFixtureIds = scoreableFixtures.map((fixture) => fixture.id).sort();
 
-  for (const membership of memberships as MembershipRow[]) {
+  const membershipGroups = groupTouchLinePlayerSeasonMemberships(memberships as MembershipRow[]);
+  for (const { canonicalMembership: membership, historicalMemberships } of membershipGroups) {
     const providerPlayerId = String(membership.football_players?.provider_player_id ?? "").trim();
     const provider = membership.football_players?.provider;
     if (provider !== "sportmonks" || !/^\d+$/.test(providerPlayerId)) {
       result.errors.push(`invalid-player-mapping:${membership.football_player_id}`);
       continue;
     }
+    const historicalClubIds = new Set(historicalMemberships.map((candidate) => candidate.club_id));
     const eligibleFixtures = (fixtures as FixtureRow[]).filter((fixture) =>
       fixture.season_id === membership.season_id
+      && fixture.competition_id === membership.competition_id
       && isTouchLineScoringFixtureStatus(fixture.status)
-      && (fixture.home_club_id === membership.club_id || fixture.away_club_id === membership.club_id),
+      && (
+        (fixture.home_club_id ? historicalClubIds.has(fixture.home_club_id) : false)
+        || (fixture.away_club_id ? historicalClubIds.has(fixture.away_club_id) : false)
+      ),
     );
     const fixtureSettlements = eligibleFixtures.map((fixture) => {
       const feed = feedByKey.get(`${fixture.provider}:${fixture.provider_fixture_id}`);
       const lineups = feed ? lineupMembers(feed.lineups_payload) : null;
       const member = lineups?.find((lineup) => String(lineup.playerId ?? "") === providerPlayerId);
+      const lineupClubId = member?.teamId ? clubIdByProviderId.get(String(member.teamId)) : null;
+      const fixtureMemberships = historicalMemberships.filter((candidate) => (
+        candidate.club_id === fixture.home_club_id || candidate.club_id === fixture.away_club_id
+      ));
+      const fixtureMembership = (
+        lineupClubId
+          ? fixtureMemberships.find((candidate) => candidate.club_id === lineupClubId)
+          : null
+      ) ?? fixtureMemberships.find((candidate) => candidate.club_id === membership.club_id)
+        ?? fixtureMemberships[0];
+      if (!fixtureMembership) return null;
       const statistics = member ? providerStatisticMap(member) : {};
       const resolvedAppearanceStatus = feed ? appearanceStatus(member) : "unavailable";
       const minutesPlayed = statistics["minutes-played"] ?? statistics.minutes ?? null;
@@ -295,7 +344,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         rating,
         statistics: member ? statistics : null,
         events,
-        teamGoalsConceded: teamGoalsConceded(fixture, membership.club_id),
+        teamGoalsConceded: teamGoalsConceded(fixture, fixtureMembership.club_id),
       });
       const settlementStatus = isTouchLineSettledFixtureStatus(fixture.status) ? "final" as const : "provisional" as const;
       const isParticipant = (resolvedAppearanceStatus === "started" || resolvedAppearanceStatus === "substitute")
@@ -317,6 +366,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
       });
       return {
         fixture,
+        fixtureMembership,
         feed,
         lineups,
         statistics,
@@ -330,7 +380,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
         settlementStatus,
         rankingCoverageStatus,
       };
-    });
+    }).filter((settlement): settlement is NonNullable<typeof settlement> => settlement !== null);
     const aggregate = buildTouchLinePlayerSeasonAggregate({
       providerPlayerId,
       season: {
@@ -378,7 +428,8 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
 
     for (const settlement of fixtureSettlements) {
       const {
-        fixture,
+          fixture,
+          fixtureMembership,
         feed,
         statistics,
         appearanceStatus: resolvedAppearanceStatus,
@@ -394,7 +445,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
           fixture_id: fixture.id,
           competition_id: membership.competition_id,
           season_id: membership.season_id,
-          club_id: membership.club_id,
+          club_id: fixtureMembership.club_id,
           appearance_status: resolvedAppearanceStatus,
           minutes_played: minutesPlayed,
           rating,
@@ -415,7 +466,7 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
           fixture_id: fixture.id,
           competition_id: membership.competition_id,
           season_id: membership.season_id,
-          club_id: membership.club_id,
+          club_id: fixtureMembership.club_id,
           scoring_version: v3PointResult.scoringVersion,
           appearance_status: resolvedAppearanceStatus,
           minutes_played: minutesPlayed,
@@ -432,36 +483,62 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
     }
   }
 
-  const { error: aggregateError } = aggregateRows.length
-    ? await admin
-      .from("football_player_season_statistics")
-      .upsert(aggregateRows, { onConflict: "football_player_id,competition_id,season_id,scoring_version" })
-    : { error: null };
-  if (aggregateError) result.errors.push(`aggregate-batch:${aggregateError.message}`);
-  else result.aggregatesWritten = aggregateRows.length;
+  const aggregateWrite = await upsertTouchLineRowsResiliently(aggregateRows, async (batch) => admin
+    .from("football_player_season_statistics")
+    .upsert(batch, { onConflict: "football_player_id,competition_id,season_id,scoring_version" }));
+  result.aggregatesWritten = aggregateWrite.written.length;
+  const successfulAggregateKeys = new Set(aggregateWrite.written.map(aggregateRowKey));
+  for (const failure of aggregateWrite.failed) {
+    const key = aggregateRowKey(failure.row);
+    const affectedFixtureIds = fixtureRows
+      .filter((row) => aggregateRowKey({ ...row, scoring_version: "player_scoring_v3" }) === key)
+      .map((row) => stringField(row, "fixture_id"))
+      .filter(Boolean);
+    result.failedFixtureIds.push(...affectedFixtureIds);
+    result.errors.push(`aggregate-row:${key}:${failure.error}:fixtures=${affectedFixtureIds.join(",") || "none"}`);
+  }
 
-  // Do not publish a new fixture-level view when its corresponding season
-  // aggregate could not be saved. This keeps every surface fail-closed while
-  // preserving the previous coherent snapshot for a retry.
-  if (aggregateError) {
-    result.errors.push("fixture-batch:skipped_after_aggregate_batch_failure");
-    result.errors.push("v3-fixture-batch:skipped_after_aggregate_batch_failure");
-  } else {
-    const { error: fixtureError } = fixtureRows.length
-      ? await admin
-        .from("football_player_fixture_statistics")
-        .upsert(fixtureRows, { onConflict: "football_player_id,fixture_id" })
-      : { error: null };
-    if (fixtureError) result.errors.push(`fixture-batch:${fixtureError.message}`);
-    else result.fixtureRowsWritten = fixtureRows.length;
+  const eligibleFixtureRows = fixtureRows.filter((row) => successfulAggregateKeys.has(aggregateRowKey({
+    ...row,
+    scoring_version: "player_scoring_v3",
+  })));
+  const eligibleV3FixtureRows = v3FixtureRows.filter((row) => successfulAggregateKeys.has(aggregateRowKey(row)));
+  const fixtureWrite = await upsertTouchLineRowsResiliently(eligibleFixtureRows, async (batch) => admin
+    .from("football_player_fixture_statistics")
+    .upsert(batch, { onConflict: "football_player_id,fixture_id" }));
+  result.fixtureRowsWritten = fixtureWrite.written.length;
+  for (const failure of fixtureWrite.failed) {
+    const fixtureId = stringField(failure.row, "fixture_id");
+    if (fixtureId) result.failedFixtureIds.push(fixtureId);
+    result.errors.push(`fixture-row:${fixtureRowKey(failure.row)}:${failure.error}`);
+  }
 
-    const { error: v3FixtureError } = v3FixtureRows.length
-      ? await admin
-        .from("touchline_player_fixture_score_settlements")
-        .upsert(v3FixtureRows, { onConflict: "football_player_id,fixture_id,scoring_version" })
-      : { error: null };
-    if (v3FixtureError) result.errors.push(`v3-fixture-batch:${v3FixtureError.message}`);
-    else result.v3FixtureRowsWritten = v3FixtureRows.length;
+  const v3FixtureWrite = await upsertTouchLineRowsResiliently(eligibleV3FixtureRows, async (batch) => admin
+    .from("touchline_player_fixture_score_settlements")
+    .upsert(batch, { onConflict: "football_player_id,fixture_id,scoring_version" }));
+  result.v3FixtureRowsWritten = v3FixtureWrite.written.length;
+  for (const failure of v3FixtureWrite.failed) {
+    const fixtureId = stringField(failure.row, "fixture_id");
+    if (fixtureId) result.failedFixtureIds.push(fixtureId);
+    result.errors.push(`v3-fixture-row:${v3FixtureRowKey(failure.row)}:${failure.error}`);
+  }
+
+  result.failedFixtureIds = [...new Set(result.failedFixtureIds)].sort();
+  if (result.scoringFixtureIds.length) {
+    const { data: persistedSettlements, error: settlementAuditError } = await admin
+      .from("touchline_player_fixture_score_settlements")
+      .select("fixture_id")
+      .eq("scoring_version", "player_scoring_v3")
+      .in("fixture_id", result.scoringFixtureIds);
+    if (settlementAuditError || !Array.isArray(persistedSettlements)) {
+      result.errors.push(`v3-settlement-audit:${settlementAuditError?.message ?? "unavailable"}`);
+    } else {
+      const persistedFixtureIds = new Set(persistedSettlements.map((row) => String(row.fixture_id ?? "")).filter(Boolean));
+      result.missingSettlementFixtureIds = result.scoringFixtureIds.filter((fixtureId) => !persistedFixtureIds.has(fixtureId));
+      if (result.missingSettlementFixtureIds.length) {
+        result.errors.push(`v3-fixture-backfill-missing:${result.missingSettlementFixtureIds.join(",")}`);
+      }
+    }
   }
 
   const ranking = await rebuildTouchLinePlayerRankingV3(admin);

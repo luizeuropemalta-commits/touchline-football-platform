@@ -36,6 +36,9 @@ export type LiveSyncResult = {
   fantasyFeedsStored: number;
   playerFixtureRowsWritten: number;
   coachPointsReconciled: number;
+  playerScoringFixtureIds: string[];
+  playerFailedFixtureIds: string[];
+  playerMissingSettlementFixtureIds: string[];
   errors: string[];
   syncRunId?: string;
   skippedReason?: string;
@@ -129,6 +132,9 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
       fantasyFeedsStored: result.fantasyFeedsStored,
       playerFixtureRowsWritten: result.playerFixtureRowsWritten,
       coachPointsReconciled: result.coachPointsReconciled,
+      playerScoringFixtureIds: result.playerScoringFixtureIds,
+      playerFailedFixtureIds: result.playerFailedFixtureIds,
+      playerMissingSettlementFixtureIds: result.playerMissingSettlementFixtureIds,
       skippedReason: result.skippedReason ?? null,
     },
   }).eq("id", result.syncRunId);
@@ -189,6 +195,9 @@ export async function syncSportmonksLiveState(
     fantasyFeedsStored: 0,
     playerFixtureRowsWritten: 0,
     coachPointsReconciled: 0,
+    playerScoringFixtureIds: [],
+    playerFailedFixtureIds: [],
+    playerMissingSettlementFixtureIds: [],
     errors: [],
   };
   result.errors.push(...fixtureScheduleErrors);
@@ -259,6 +268,9 @@ export async function syncSportmonksLiveState(
     // previous score.
     const playerReconciliation = await syncTouchLinePlayerSeasonStatistics(admin);
     result.playerFixtureRowsWritten = playerReconciliation.fixtureRowsWritten;
+    result.playerScoringFixtureIds = playerReconciliation.scoringFixtureIds;
+    result.playerFailedFixtureIds = playerReconciliation.failedFixtureIds;
+    result.playerMissingSettlementFixtureIds = playerReconciliation.missingSettlementFixtureIds;
     result.errors.push(...playerReconciliation.errors.map((error) => `player-points:${error}`));
     const { data: coachReconciliation, error: coachReconciliationError } = await admin
       .rpc("touchline_reconcile_coach_fixture_points", {

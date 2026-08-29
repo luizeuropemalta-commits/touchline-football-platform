@@ -27,10 +27,12 @@ const [store, liveSync, arena, accountSync, authoritativeRoster, clubOwner, mark
 test("finished and live fixtures enter the same player settlement pipeline", () => {
   assert.match(store, /isTouchLineSettledFixtureStatus\(status\) \|\| TOUCHLINE_LIVE_FIXTURE_STATUS\.test\(status\)/);
   assert.match(store, /settlementStatus = isTouchLineSettledFixtureStatus\(fixture\.status\) \? "final" as const : "provisional" as const/);
-  assert.match(store, /upsert\(aggregateRows, \{ onConflict: "football_player_id,competition_id,season_id,scoring_version" \}\)/);
-  assert.match(store, /upsert\(fixtureRows, \{ onConflict: "football_player_id,fixture_id" \}\)/);
-  assert.match(store, /upsert\(v3FixtureRows, \{ onConflict: "football_player_id,fixture_id,scoring_version" \}\)/);
-  assert.match(store, /skipped_after_aggregate_batch_failure/);
+  assert.match(store, /upsert\(batch, \{ onConflict: "football_player_id,competition_id,season_id,scoring_version" \}\)/);
+  assert.match(store, /upsert\(batch, \{ onConflict: "football_player_id,fixture_id" \}\)/);
+  assert.match(store, /upsert\(batch, \{ onConflict: "football_player_id,fixture_id,scoring_version" \}\)/);
+  assert.match(store, /groupTouchLinePlayerSeasonMemberships/);
+  assert.match(store, /upsertTouchLineRowsResiliently/);
+  assert.match(store, /v3-fixture-backfill-missing/);
   assert.match(liveSync, /syncTouchLinePlayerSeasonStatistics\(admin\)/);
   assert.match(liveSync, /recoverStaleRuns\(admin, now\)/);
   assert.match(liveSync, /event: "touchline\.live_sync\.completed"/);
