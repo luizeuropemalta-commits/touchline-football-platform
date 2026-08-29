@@ -19,6 +19,9 @@ const coachRankingBackfillPublishMigration = await readFile(new URL("../supabase
 const competitionCoachRankingMigration = await readFile(new URL("../supabase/qa/034_touchline_qa_competition_coach_ranking_v2.sql", import.meta.url), "utf8");
 const competitionCoachRankingCompatibilityMigration = await readFile(new URL("../supabase/qa/035_touchline_qa_competition_coach_ranking_deploy_compatibility.sql", import.meta.url), "utf8");
 const competitionCoachProfileRecordsMigration = await readFile(new URL("../supabase/qa/036_touchline_qa_competition_coach_profile_records.sql", import.meta.url), "utf8");
+const canonicalCoachScoringRestoreMigration = await readFile(new URL("../supabase/qa/037_touchline_qa_restore_canonical_coach_scoring_v2.sql", import.meta.url), "utf8");
+const canonicalCoachScoringRollback = await readFile(new URL("../supabase/qa/037_touchline_qa_restore_canonical_coach_scoring_v2_rollback.sql", import.meta.url), "utf8");
+const canonicalCoachScoringDryRun = await readFile(new URL("../scripts/qa/touchline-coach-scoring-v2-canonical-dry-run.sql", import.meta.url), "utf8");
 
 test("V2 migration is pinned to QA and preserves versioned V1 history", () => {
   assert.match(migration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
@@ -43,7 +46,7 @@ test("V2 coach reconciliation applies every approved home and away result", () =
   assert.match(migration, /fixture\.starts_at < contract\.ended_at/i);
 });
 
-test("canonical coach outcomes remove negative loss scoring while preserving final immutability", () => {
+test("historical migration 028 records the superseded scoring regression for audit", () => {
   assert.match(coachCanonicalOutcomesMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
   assert.match(coachCanonicalOutcomesMigration, /v_context = 'home' and v_outcome = 'win' then 3/i);
   assert.match(coachCanonicalOutcomesMigration, /v_context = 'home' and v_outcome = 'draw' then 1/i);
@@ -52,6 +55,57 @@ test("canonical coach outcomes remove negative loss scoring while preserving fin
   assert.match(coachCanonicalOutcomesMigration, /v_outcome = 'draw' then 2/i);
   assert.match(coachCanonicalOutcomesMigration, /else 0/i);
   assert.match(coachCanonicalOutcomesMigration, /settlement_status <> 'final'/i);
+});
+
+test("forward migration restores the complete owner-approved coach matrix", () => {
+  assert.match(canonicalCoachScoringRestoreMigration, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
+  for (const rule of [
+    /p_context = 'home' and p_outcome = 'win' then 3/i,
+    /p_context = 'home' and p_outcome = 'draw' then 1/i,
+    /p_context = 'home' and p_outcome = 'loss' then -2/i,
+    /p_context = 'away' and p_outcome = 'win' then 6/i,
+    /p_context = 'away' and p_outcome = 'draw' then 3/i,
+    /p_context = 'away' and p_outcome = 'loss' then -1/i,
+  ]) assert.match(canonicalCoachScoringRestoreMigration, rule);
+  assert.match(canonicalCoachScoringRestoreMigration, /check \(touchline_points between -2 and 6\)/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /touchline_coach_points_v2\(results\.fixture_context, results\.outcome\)/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /v_points := public\.touchline_coach_points_v2\(v_context, v_outcome\)/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /order by touchline_points desc, wins desc, away_wins desc, coach_provider_id/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /'tiebreaker', 'points,wins,awayWins,coachProviderId'/i);
+});
+
+test("forward migration preserves an auditable pre-image and restores final immutability", () => {
+  assert.match(canonicalCoachScoringRestoreMigration, /coach_scoring_canonical_metadata_20260829/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /coach_scoring_canonical_points_20260829/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /coach_scoring_canonical_active_snapshot_20260829/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /pg_get_functiondef\('public\.touchline_rebuild_coach_ranking_v2\(jsonb\)'::regprocedure\)/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /lock table public\.touchline_coach_fixture_points in access exclusive mode/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /drop trigger if exists touchline_coach_fixture_points_immutable/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /create trigger touchline_coach_fixture_points_immutable[\s\S]*touchline_coach_final_points_are_immutable/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /TL_COACH_CANONICAL_POINTS_MISMATCH/i);
+  assert.doesNotMatch(canonicalCoachScoringRestoreMigration, /delete\s+from/i);
+  assert.match(canonicalCoachScoringRestoreMigration, /revoke execute on function public\.touchline_coach_points_v2\(text, text\)[\s\S]*from public, anon, authenticated/i);
+});
+
+test("canonical coach scoring dry-run is read-only and exposes exact before-after impact", () => {
+  assert.match(canonicalCoachScoringDryRun, /READ ONLY/i);
+  assert.match(canonicalCoachScoringDryRun, /old_points/i);
+  assert.match(canonicalCoachScoringDryRun, /new_points/i);
+  assert.match(canonicalCoachScoringDryRun, /old_total/i);
+  assert.match(canonicalCoachScoringDryRun, /new_total/i);
+  assert.match(canonicalCoachScoringDryRun, /old_rank/i);
+  assert.match(canonicalCoachScoringDryRun, /new_rank/i);
+  assert.doesNotMatch(canonicalCoachScoringDryRun, /\b(?:insert|update|delete|alter|drop|create|truncate|grant|revoke)\b\s+(?:into|from|table|function|schema|on)/i);
+});
+
+test("canonical coach scoring rollback is exact, QA-pinned and fail-closed", () => {
+  assert.match(canonicalCoachScoringRollback, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/i);
+  assert.match(canonicalCoachScoringRollback, /TL_COACH_CANONICAL_ROLLBACK_PREIMAGE_MISSING/i);
+  assert.match(canonicalCoachScoringRollback, /TL_COACH_CANONICAL_ROLLBACK_NEW_HISTORY/i);
+  assert.match(canonicalCoachScoringRollback, /execute v_rebuild/i);
+  assert.match(canonicalCoachScoringRollback, /execute v_reconcile/i);
+  assert.match(canonicalCoachScoringRollback, /coach_scoring_canonical_active_snapshot_20260829/i);
+  assert.match(canonicalCoachScoringRollback, /create trigger touchline_coach_fixture_points_immutable[\s\S]*touchline_coach_final_points_are_immutable/i);
 });
 
 test("canonical coach backfill touches only mutable V2 settlements", () => {

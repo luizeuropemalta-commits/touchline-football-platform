@@ -2,8 +2,8 @@ export const TOUCHLINE_COACH_SCORING_VERSION = "coach_scoring_v2" as const;
 
 export const TOUCHLINE_COACH_SCORING = Object.freeze({
   version: TOUCHLINE_COACH_SCORING_VERSION,
-  home: Object.freeze({ win: 3, draw: 1, loss: 0 }),
-  away: Object.freeze({ win: 4, draw: 2, loss: 0 }),
+  home: Object.freeze({ win: 3, draw: 1, loss: -2 }),
+  away: Object.freeze({ win: 6, draw: 3, loss: -1 }),
 });
 
 export type TouchlineCoachFixtureContext = "home" | "away";

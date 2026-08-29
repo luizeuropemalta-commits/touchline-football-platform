@@ -58,10 +58,10 @@ test("coach_scoring_v2 preserves the approved home and away values", () => {
   assert.equal(TOUCHLINE_COACH_SCORING_VERSION, "coach_scoring_v2");
   assert.equal(touchlineCoachPoints("home", "win"), 3);
   assert.equal(touchlineCoachPoints("home", "draw"), 1);
-  assert.equal(touchlineCoachPoints("home", "loss"), 0);
-  assert.equal(touchlineCoachPoints("away", "win"), 4);
-  assert.equal(touchlineCoachPoints("away", "draw"), 2);
-  assert.equal(touchlineCoachPoints("away", "loss"), 0);
+  assert.equal(touchlineCoachPoints("home", "loss"), -2);
+  assert.equal(touchlineCoachPoints("away", "win"), 6);
+  assert.equal(touchlineCoachPoints("away", "draw"), 3);
+  assert.equal(touchlineCoachPoints("away", "loss"), -1);
 });
 
 test("fixture outcome is evaluated from the contracted club context", () => {
