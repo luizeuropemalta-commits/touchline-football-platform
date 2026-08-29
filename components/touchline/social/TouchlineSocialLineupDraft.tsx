@@ -66,6 +66,12 @@ export default function TouchlineSocialLineupDraftView({ draft }: { draft: Touch
             <Image src={draft.home.logoUrl!} alt={draft.home.name} width={48} height={48} priority />
             <div>
               <span>{draft.home.shortCode} <b>VS</b> {draft.away.shortCode}</span>
+              {draft.score ? (
+                <div className={styles.finalScore} aria-label={`Full time ${draft.home.name} ${draft.score.home}, ${draft.away.name} ${draft.score.away}`}>
+                  <em>FULL TIME</em>
+                  <b>{draft.score.home} — {draft.score.away}</b>
+                </div>
+              ) : null}
               <strong>{kickoffLabel(draft.startsAt)}</strong>
             </div>
             <Image src={draft.away.logoUrl!} alt={draft.away.name} width={48} height={48} priority />

@@ -10,6 +10,9 @@ function detail(): TouchlinePublicFantasyFixtureMatchDetail {
     fixture: {
       id: "19722193",
       startsAt: "2026-08-29T14:00:00Z",
+      status: "Full Time",
+      homeScore: 1,
+      awayScore: 1,
       homeTeam: { id: "52", name: "AFC Bournemouth" },
       awayTeam: { id: "13", name: "Everton" },
     },
@@ -114,7 +117,10 @@ test("social draft uses canonical upright cards and vertical canonical pitch", a
   assert.match(component, /TouchlineCoachCard/);
   assert.match(component, /data-coach-provider-id=/);
   assert.match(component, /data-coach-tier=/);
+  assert.match(component, /FULL TIME/);
+  assert.match(component, /draft\.score\.home/);
   assert.match(server, /touchlineLiveCoachForTeam/);
+  assert.match(server, /touchlineFixtureState/);
   assert.match(server, /loadTouchLineCoachRanking/);
   assert.match(server, /createTouchlineArenaCoachSlot/);
 });

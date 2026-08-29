@@ -79,6 +79,28 @@
 .matchup span { font-size: 18px; font-weight: 1000; letter-spacing: .06em; }
 .matchup span b { color: #b6ff4f; padding: 0 6px; }
 .matchup strong { color: rgba(255,255,255,.68); font-size: 12px; letter-spacing: .05em; }
+.finalScore {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--social-club-accent) 42%, rgba(255,255,255,.18));
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: rgba(0,0,0,.34);
+}
+.finalScore em {
+  color: #b6ff4f;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 950;
+  letter-spacing: .14em;
+}
+.finalScore b {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 1000;
+  line-height: 1;
+}
 
 .crestFrame {
   width: 82px;

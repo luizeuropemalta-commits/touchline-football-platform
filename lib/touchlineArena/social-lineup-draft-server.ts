@@ -22,6 +22,7 @@ import {
 import { readPublicSeasonPlayerPoints } from "@/lib/touchlineArena/public-season-player-points-server";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 import { validateTouchlineSocialLineupContract } from "@/lib/touchlineArena/social-lineup-contract";
+import { touchlineFixtureState } from "@/lib/touchlineArena/match-centre";
 
 const NUMERIC_ID = /^[0-9]{1,20}$/;
 
@@ -31,6 +32,11 @@ export type TouchlineSocialLineupDraft = Readonly<{
   lineupAvailableAt: string;
   startsAt: string;
   status: string;
+  score: Readonly<{
+    state: "finished";
+    home: number;
+    away: number;
+  }> | null;
   side: "home" | "away";
   formation: string;
   club: TouchLineClubVisual;
@@ -70,6 +76,14 @@ export async function readTouchlineSocialLineupDraft(input: {
   if (!detail) return { ok: false, reason: "fixture-detail-unavailable" };
   const contract = validateTouchlineSocialLineupContract(detail, teamId);
   if (!contract.ok) return contract;
+  const matchState = touchlineFixtureState(detail.fixture);
+  const homeScore = detail.fixture.homeScore;
+  const awayScore = detail.fixture.awayScore;
+  const score = matchState === "finished"
+    && Number.isInteger(homeScore) && Number(homeScore) >= 0
+    && Number.isInteger(awayScore) && Number(awayScore) >= 0
+    ? { state: "finished" as const, home: Number(homeScore), away: Number(awayScore) }
+    : null;
 
   const homeTeamId = String(detail.fixture.homeTeam?.id ?? "").trim();
   const awayTeamId = String(detail.fixture.awayTeam?.id ?? "").trim();
@@ -157,6 +171,7 @@ export async function readTouchlineSocialLineupDraft(input: {
       lineupAvailableAt: contract.value.lineupAvailableAt,
       startsAt: detail.fixture.startsAt ?? "",
       status: detail.fixture.status ?? "",
+      score,
       side: contract.value.side,
       formation: contract.value.formation,
       club,
