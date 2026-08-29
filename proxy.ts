@@ -11,6 +11,12 @@ import {
   touchLinePostAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
+import {
+  isTouchlineLaunchGateProductRoute,
+  resolveTouchlinePublicLaunchGate,
+  TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY,
+  type TouchlinePublicLaunchGateMode,
+} from "@/lib/touchlineArena/public-launch-gate";
 import { touchlineClubOwnerSlugForUser } from "@/lib/touchlineArena/club-owner-page-identity";
 import { resolveTouchlineClubOwnerRouteAccess } from "@/lib/touchlineArena/club-owner-route-access";
 import {
@@ -239,6 +245,24 @@ function nextResponseWithPresentationLocale(request: NextRequest) {
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
+function touchlinePublicLaunchRewrite(
+  request: NextRequest,
+  mode: Exclude<TouchlinePublicLaunchGateMode, "off">,
+) {
+  const locale = requestLocale(request);
+  const launchUrl = new URL("/coming-soon", request.url);
+  launchUrl.searchParams.set("lang", locale);
+  if (mode === "qa-opt-in") launchUrl.searchParams.set(TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY, "1");
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, locale);
+  const response = NextResponse.rewrite(launchUrl, { request: { headers: requestHeaders } });
+  response.headers.set("cache-control", "no-store, no-cache, must-revalidate");
+  response.headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+  response.headers.set("x-touchline-launch-gate", mode);
+  return response;
+}
+
 function applyIsolatedPreviewHeaders(response: NextResponse) {
   response.headers.set("cache-control", "no-store, no-cache, must-revalidate");
   response.headers.set("x-robots-tag", "noindex, nofollow, noarchive, nosnippet");
@@ -430,6 +454,13 @@ async function handleTouchLineRequest(request: NextRequest) {
   );
   const localeRedirect = canonicalPresentationLocaleRedirect(request);
   if (localeRedirect) return localeRedirect;
+  const launchGate = resolveTouchlinePublicLaunchGate({
+    previewOptIn: request.nextUrl.searchParams.get(TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY),
+    requestHostname: hostname,
+  });
+  if (launchGate.active && isTouchlineLaunchGateProductRoute(pathname)) {
+    return touchlinePublicLaunchRewrite(request, launchGate.mode);
+  }
   const isLocalDev = localDevHosts.has(hostname);
   if (isLocalDev) return nextResponseWithPresentationLocale(request);
 

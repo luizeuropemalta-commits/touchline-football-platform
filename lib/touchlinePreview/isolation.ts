@@ -69,6 +69,7 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_CARD_PUBLICATION_GATE",
   "TOUCHLINE_OWNER_EMAILS",
   "TOUCHLINE_SITE_OFFLINE",
+  "TOUCHLINE_PUBLIC_LAUNCH_GATE",
   // Functional QA is the only Preview contract allowed to call Sportmonks.
   // Isolated previews remain provider-free via the separate allowlist above.
   "SPORTMONKS_API_TOKEN",

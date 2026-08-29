@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import { TouchlineComingSoonLanding } from "@/components/touchline/coming-soon/TouchlineComingSoonLanding";
+import { TouchlinePublicLaunchGate } from "@/components/touchline/coming-soon/TouchlinePublicLaunchGate";
+import { resolveTouchLineRequestHostname } from "@/lib/server/touchline-host-routing";
+import {
+  resolveTouchlinePublicLaunchGate,
+  TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY,
+} from "@/lib/touchlineArena/public-launch-gate";
 import {
   resolveTouchLinePresentationLocale,
   type TouchLinePresentationLocale,
@@ -9,6 +16,7 @@ import {
 type TouchLineComingSoonPageProps = {
   searchParams: Promise<{
     lang?: string | string[];
+    launchPreview?: string | string[];
   }>;
 };
 
@@ -38,7 +46,22 @@ export async function generateMetadata({ searchParams }: TouchLineComingSoonPage
 
 export default async function TouchLineComingSoonPage({ searchParams }: TouchLineComingSoonPageProps) {
   const params = await searchParams;
+  const requestHeaders = await headers();
   const locale = resolveTouchLinePresentationLocale(params.lang);
+  const launchGate = resolveTouchlinePublicLaunchGate({
+    previewOptIn: Array.isArray(params[TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY])
+      ? params[TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY][0]
+      : params[TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY],
+    requestHostname: resolveTouchLineRequestHostname(
+      requestHeaders.get("x-forwarded-host"),
+      requestHeaders.get("host"),
+      "",
+    ),
+  });
+
+  if (launchGate.active) {
+    return <TouchlinePublicLaunchGate locale={locale} mode={launchGate.mode} />;
+  }
 
   return <TouchlineComingSoonLanding locale={locale} />;
 }
