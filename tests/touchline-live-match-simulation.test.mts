@@ -26,8 +26,8 @@ const rankingClientSource = readFileSync(
   new URL("../lib/touchlineArena/card-ranking-client.ts", import.meta.url),
   "utf8",
 );
-const premierSquadRouteSource = readFileSync(
-  new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url),
+const premierSquadReaderSource = readFileSync(
+  new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url),
   "utf8",
 );
 const globalCssSource = readFileSync(
@@ -105,8 +105,8 @@ test("Live clears a previous XI and reveals complete verified cards atomically",
   assert.match(arenaClientSource, /home: \[\], away: \[\], status: "loading"/);
   assert.match(arenaClientSource, /async function applyVerifiedLineupSnapshot/);
   assert.doesNotMatch(arenaClientSource, /params\.set\("preferSnapshot", "1"\)/);
-  assert.match(premierSquadRouteSource, /readPersistedSquadSnapshot\(teamId\)/);
-  assert.doesNotMatch(premierSquadRouteSource, /createFootballDataProvider|persistSquadSnapshot|preferSnapshot/);
+  assert.match(premierSquadReaderSource, /readPersistedSquadSnapshot\(teamId\)/);
+  assert.doesNotMatch(premierSquadReaderSource, /createFootballDataProvider|persistSquadSnapshot|preferSnapshot/);
   assert.match(arenaClientSource, /normalizeLiveClubSquad\(payload\.players, club, payload\.teamId\)/);
   assert.match(arenaClientSource, /className=\{`\$\{className\} is-card-ready`\}/);
   assert.doesNotMatch(arenaClientSource, /<LiveSimulationPlayerCard[\s\S]*?isReady=/);
@@ -270,10 +270,10 @@ test("Live restores the saved fixture before choosing the first fallback", () =>
 });
 
 test("Premier squad responses carry the canonical team identity used by Live", () => {
-  assert.match(premierSquadRouteSource, /clubTeamId,/);
-  assert.match(premierSquadRouteSource, /teamId: metadata\.teamId/);
-  assert.match(premierSquadRouteSource, /providerId: metadata\.teamId/);
-  assert.match(premierSquadRouteSource, /teamId is not registered in TouchLine England/);
+  assert.match(premierSquadReaderSource, /clubTeamId,/);
+  assert.match(premierSquadReaderSource, /teamId: metadata\.teamId/);
+  assert.match(premierSquadReaderSource, /providerId: metadata\.teamId/);
+  assert.match(premierSquadReaderSource, /teamId is not registered in TouchLine England/);
 });
 
 test("Live club marks remain transparent and scoreboard names stay contained", () => {

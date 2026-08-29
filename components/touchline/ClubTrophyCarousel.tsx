@@ -8,6 +8,10 @@ type ClubTrophyCarouselItem = {
   label: string;
   count: number;
   imageUrl: string;
+  imageSources: {
+    avif: string;
+    webp: string;
+  };
   tone: "gold" | "silver" | "blue" | "green";
 };
 
@@ -24,6 +28,42 @@ const AUTO_ADVANCE_DELAY_MS = 5600;
 const EXIT_DURATION_MS = 220;
 const EMPTY_GAP_MS = 90;
 const ENTER_DURATION_MS = 220;
+
+function TrophyArtwork({ honour }: { honour: ClubTrophyCarouselItem }) {
+  const [useOriginal, setUseOriginal] = useState(false);
+
+  if (useOriginal) {
+    return (
+      <img
+        src={honour.imageUrl}
+        alt=""
+        width={256}
+        height={256}
+        loading="lazy"
+        decoding="async"
+        draggable={false}
+      />
+    );
+  }
+
+  return (
+    <picture>
+      <source srcSet={`${honour.imageSources.avif} 256w`} sizes="98px" type="image/avif" />
+      <source srcSet={`${honour.imageSources.webp} 256w`} sizes="98px" type="image/webp" />
+      <img
+        src={honour.imageUrl}
+        alt=""
+        width={256}
+        height={256}
+        loading="lazy"
+        decoding="async"
+        fetchPriority="low"
+        draggable={false}
+        onError={() => setUseOriginal(true)}
+      />
+    </picture>
+  );
+}
 
 function pageSizeForWidth(width: number, itemCount: number) {
   const cardWidth = 98;
@@ -169,7 +209,7 @@ export default function ClubTrophyCarousel({
             {activeHonours.map((honour) => (
               <article key={honour.id} className={`club-hub-honour is-${honour.tone}`}>
                 <div className="club-hub-honour-avatar" aria-hidden="true">
-                  <img src={honour.imageUrl} alt="" draggable={false} />
+                  <TrophyArtwork honour={honour} />
                 </div>
                 <strong>{honour.count}</strong>
                 <small title={honour.label}>{honour.label}</small>

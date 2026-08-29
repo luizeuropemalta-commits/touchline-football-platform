@@ -23,7 +23,7 @@ const clubHubPage = readFileSync(
   "utf8",
 );
 const squadRoute = readFileSync(
-  new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url),
+  new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url),
   "utf8",
 );
 const zoomDetails = readFileSync(

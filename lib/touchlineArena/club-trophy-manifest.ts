@@ -13,6 +13,10 @@ export type ClubTrophyAsset = {
   label: string;
   count: number;
   imageUrl: string;
+  imageSources: {
+    avif: string;
+    webp: string;
+  };
   tone: ClubTrophyTone;
 };
 
@@ -222,6 +226,10 @@ function trophyAssetFromFileName(fileName: string, folderSlug: string): ClubTrop
     label,
     count: Number.isFinite(count) && count > 0 ? count : 1,
     imageUrl: "/touchlineArena/clubs/" + folderSlug + "/trophies/" + encodeURIComponent(fileName),
+    imageSources: {
+      avif: "/touchlineArena/clubs/" + folderSlug + "/trophies/optimized/" + encodeURIComponent(baseName + ".avif"),
+      webp: "/touchlineArena/clubs/" + folderSlug + "/trophies/optimized/" + encodeURIComponent(baseName + ".webp"),
+    },
     tone: trophyTone(label),
   };
 }

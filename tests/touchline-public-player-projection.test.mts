@@ -168,7 +168,7 @@ test("fails closed when an official player is requested for the wrong club", () 
 
 test("the public squad adapter exposes only verified canonical Market Value", () => {
   const route = readFileSync(
-    new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url),
+    new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url),
     "utf8",
   );
 

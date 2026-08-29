@@ -1,0 +1,71 @@
+.pending {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+}
+
+.pending[data-pending="true"] {
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: color-mix(in srgb, #020807 76%, var(--club-accent) 8%);
+  backdrop-filter: blur(7px);
+}
+
+.panel {
+  width: 100%;
+  min-height: 170px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
+}
+
+.crest {
+  width: 76px;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--club-accent) 66%, #fff 12%);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--club-accent) 14%, transparent);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--club-accent) 24%, transparent);
+}
+
+.lines {
+  width: min(190px, 72%);
+  display: grid;
+  gap: 8px;
+}
+
+.lines span {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .16);
+}
+
+.lines span:last-child {
+  width: 66%;
+  justify-self: center;
+}
+
+.copy {
+  color: #f6ffe8;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .crest,
+  .lines span {
+    animation: club-card-pending 900ms ease-in-out infinite alternate;
+  }
+}
+
+@keyframes club-card-pending {
+  from { opacity: .45; }
+  to { opacity: 1; }
+}

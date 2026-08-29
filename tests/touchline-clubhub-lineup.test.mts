@@ -236,7 +236,7 @@ test("ClubHub calls an unconfirmed eleven a Squad Preview, never an expected lin
 });
 
 test("the persisted-squad API preserves every canonical roster player for Club Hub", () => {
-  const source = readFileSync(new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 
   assert.match(source, /rosterPlayers: sortedPlayers/);

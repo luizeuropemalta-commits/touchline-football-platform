@@ -21,8 +21,8 @@ const liveScoresRouteSource = readFileSync(
   new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url),
   "utf8",
 );
-const premierSquadRouteSource = readFileSync(
-  new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url),
+const premierSquadReaderSource = readFileSync(
+  new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url),
   "utf8",
 );
 const sportmonksProviderSource = readFileSync(
@@ -119,9 +119,9 @@ test("live scores and public squads never fall through to Sportmonks", () => {
   assert.match(liveScoresRouteSource, /persisted-live-data-unavailable/);
   assert.doesNotMatch(liveScoresRouteSource, /createFootballDataProvider|persistLiveScoreSnapshot|writeLiveScoreSnapshot|readLiveScoreSnapshot|mergeTouchlineLiveFixtureDeltas|new Date\(/);
 
-  assert.match(premierSquadRouteSource, /readPersistedSquadSnapshot\(teamId\)/);
-  assert.match(premierSquadRouteSource, /No coherent persisted squad snapshot is available/);
-  assert.doesNotMatch(premierSquadRouteSource, /createFootballDataProvider|persistSquadSnapshot|readSnapshotForLiveRefresh|backgroundRefresh|after\(|\.getSquad\(/);
+  assert.match(premierSquadReaderSource, /readPersistedSquadSnapshot\(teamId\)/);
+  assert.match(premierSquadReaderSource, /No coherent persisted squad snapshot is available/);
+  assert.doesNotMatch(premierSquadReaderSource, /createFootballDataProvider|persistSquadSnapshot|readSnapshotForLiveRefresh|backgroundRefresh|after\(|\.getSquad\(/);
 });
 
 test("Sportmonks bounds and parallelizes the two squad requests", () => {

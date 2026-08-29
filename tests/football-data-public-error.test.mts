@@ -26,14 +26,14 @@ test("the retired signals surface does not return raw provider error messages", 
 });
 
 test("the public squad reader fails closed when its canonical snapshot is unavailable", () => {
-  const squadRoute = readFileSync(
-    new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url),
+  const squadReader = readFileSync(
+    new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url),
     "utf8",
   );
 
-  assert.match(squadRoute, /canonical-squad-unavailable/);
-  assert.match(squadRoute, /No coherent persisted squad snapshot is available/);
-  assert.doesNotMatch(squadRoute, /createFootballDataProvider|persistSquadSnapshot|publicFootballDataFailure/);
+  assert.match(squadReader, /canonical-squad-unavailable/);
+  assert.match(squadReader, /No coherent persisted squad snapshot is available/);
+  assert.doesNotMatch(squadReader, /createFootballDataProvider|persistSquadSnapshot|publicFootballDataFailure/);
 });
 
 test("the public fixture reader fails closed when its canonical feed is unavailable", () => {

@@ -11,13 +11,13 @@ const clubCoachPanelSource = readFileSync(new URL("../components/touchline/ClubH
 const coachCardZoomSource = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url), "utf8");
 const coachCardSource = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCard.tsx", import.meta.url), "utf8");
 const errorBoundarySource = readFileSync(new URL("../app/error.tsx", import.meta.url), "utf8");
-const safeFetchSource = readFileSync(new URL("../lib/server/safe-internal-fetch.ts", import.meta.url), "utf8");
 const apiAccessSource = readFileSync(new URL("../lib/touchlineArena/api-access.ts", import.meta.url), "utf8");
 const editorRequestSource = readFileSync(new URL("../lib/touchlineArena/editor-request.ts", import.meta.url), "utf8");
+const squadReaderSource = readFileSync(new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url), "utf8");
 
 test("ClubHub bounds squad loading and distinguishes unavailable data from a normal empty state", () => {
-  assert.match(safeFetchSource, /AbortSignal\.timeout\(timeoutMs\)/);
-  assert.match(safeFetchSource, /TOUCHLINE_INTERNAL_FETCH_TIMEOUT_MS = 6_000/);
+  assert.match(source, /readPublicPremierSquad\(club\.teamId\)/);
+  assert.match(squadReaderSource, /readPersistedSquadSnapshot\(teamId\)/);
   assert.match(source, /state: "ready" as const/);
   assert.match(source, /state: "unavailable" as const/);
   assert.match(source, /Não foi possível carregar o elenco agora\./);
@@ -37,9 +37,10 @@ test("ClubHub defers below-the-fold squad artwork while eagerly revealing its vi
   assert.equal(coachCardSource.match(/assetLoading \?\? "eager"/g)?.length, 2);
 });
 
-test("ClubHub resolves its internal API URL without request-controlled host headers", () => {
+test("ClubHub bypasses internal HTTP while the reusable URL resolver rejects request-controlled hosts", () => {
   assert.doesNotMatch(source, /x-forwarded-host|x-forwarded-proto|from "next\/headers"/);
-  assert.match(source, /fetchTouchlineInternalJson<[\s\S]*?\/api\/football-data\/premier-squad/);
+  assert.doesNotMatch(source, /fetchTouchlineInternalJson|\/api\/football-data\/premier-squad/);
+  assert.doesNotMatch(squadReaderSource, /fetch\s*\(|new Request|new Response|NextResponse|cookies\(|headers\(/);
   assert.equal(
     resolveTouchlineInternalAppOrigin({
       NODE_ENV: "production",

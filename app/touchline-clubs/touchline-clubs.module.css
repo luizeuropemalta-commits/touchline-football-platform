@@ -201,6 +201,10 @@
   outline: none;
 }
 
+.clubCard:has([aria-busy="true"]) {
+  cursor: progress;
+}
+
 .clubCardTrace {
   --touchline-perimeter-radius: 24px;
 }

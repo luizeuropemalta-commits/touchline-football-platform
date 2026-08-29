@@ -29,8 +29,6 @@ import { toPublicFantasyFixtureFeed, type TouchlinePublicFixturePlayerStatistics
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { selectPublicClubFixture } from "@/lib/football-data/public-fixture-selection";
-import type { TouchlinePublicEditorialCardPresentation } from "@/lib/touchlineArena/editorial-card-profile";
-import type { TouchlineCardReviewPresentation } from "@/lib/touchlineArena/card-review-state";
 import { buildTouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import { applyTouchlineMatchdayPoints, applyTouchlineSeasonPoints } from "@/lib/touchlineArena/matchday-player-points";
 import { readPublicSeasonPlayerPoints } from "@/lib/touchlineArena/public-season-player-points-server";
@@ -45,7 +43,10 @@ import {
 } from "@/lib/touchlineArena/i18n";
 import { touchlineCountryCode3FromName } from "@/lib/touchlineArena/country-flags";
 import { getTouchlineClubTrophyAssets } from "@/lib/touchlineArena/club-trophy-manifest";
-import { fetchTouchlineInternalJson } from "@/lib/server/safe-internal-fetch";
+import {
+  readPublicPremierSquad,
+  type PublicPremierSquadPlayer,
+} from "@/lib/football-data/public-premier-squad-server";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
@@ -59,29 +60,6 @@ type ClubHubPageProps = {
   searchParams: Promise<{
     lang?: string;
   }>;
-};
-
-type PremierSquadPlayer = {
-  id: string;
-  canonicalPlayerId?: string | null;
-  providerId?: string | null;
-  name: string;
-  shortName: string;
-  role: string;
-  position?: string | null;
-  shirtNumber?: string | number | null;
-  clubName: string;
-  clubShortCode: string;
-  marketValue?: string | null;
-  marketValueSource?: ClubOwnerSquadCard["marketValueSource"];
-  marketValueState?: ClubOwnerSquadCard["marketValueState"];
-  classificationState?: ClubOwnerSquadCard["classificationState"];
-  cardTier?: ClubOwnerSquadCard["cardTier"];
-  cardPriceVersion?: string | null;
-  editorialCard?: TouchlinePublicEditorialCardPresentation | null;
-  cardReview?: TouchlineCardReviewPresentation;
-  countryCode3?: string | null;
-  nationality?: string | null;
 };
 
 type ClubMatchPreview = {
@@ -115,7 +93,7 @@ export function generateStaticParams() {
   return TOUCHLINE_ENGLAND_CLUBS.map((club) => ({ club: club.slug }));
 }
 
-function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): ClubOwnerSquadCard {
+function squadApiPlayerToCard(player: PublicPremierSquadPlayer, clubName: string): ClubOwnerSquadCard {
   return {
     id: player.providerId || player.id,
     canonicalPlayerId: player.canonicalPlayerId ?? null,
@@ -130,7 +108,7 @@ function squadApiPlayerToCard(player: PremierSquadPlayer, clubName: string): Clu
     marketValueSource: player.marketValueSource || "unavailable",
     marketValueState: player.marketValueState,
     classificationState: player.classificationState,
-    cardTier: player.cardTier,
+    cardTier: player.cardTier ?? undefined,
     cardPriceVersion: player.cardPriceVersion || undefined,
     editorialCard: player.editorialCard ?? null,
     cardReview: player.cardReview,
@@ -181,19 +159,9 @@ async function loadPersistedClubSquadCards(
 
 async function loadClubSquadCards(club: NonNullable<ReturnType<typeof findTouchLineClub>>, locale: TouchLineLocale) {
   try {
-    const params = new URLSearchParams({
-      teamId: club.teamId,
-      clubName: club.name,
-      clubShortCode: club.shortCode,
-      clubLogoUrl: club.logoUrl ?? "",
-    });
-    const result = await fetchTouchlineInternalJson<
-      | { ok: true; players: PremierSquadPlayer[]; rosterPlayers?: PremierSquadPlayer[]; status?: string; cached?: boolean; fetchedAt?: string }
-      | { ok: false; error?: string; status?: string }
-    >(`/api/football-data/premier-squad?${params.toString()}`);
-
-    if (result.state !== "ready" || result.data.ok === false) throw new Error("Squad unavailable");
-    const payload = result.data;
+    const result = await readPublicPremierSquad(club.teamId);
+    if (result.status !== 200 || result.body.ok === false) throw new Error("Squad unavailable");
+    const payload = result.body;
 
     return {
       cards: (payload.rosterPlayers ?? payload.players).map((player) => squadApiPlayerToCard(player, club.name)),
@@ -759,6 +727,12 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           height: 100%;
           object-fit: contain;
           filter: drop-shadow(0 10px 16px rgba(0,0,0,.48));
+        }
+        .club-hub-honour-avatar picture {
+          width: 100%;
+          height: 100%;
+          display: grid;
+          place-items: center;
         }
         .club-hub-honour strong {
           font-size: 20px;

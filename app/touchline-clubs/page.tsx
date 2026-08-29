@@ -6,6 +6,7 @@ import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNav
 import TouchlineCoachCategoryShowcase from "@/components/touchline/TouchlineCoachCategoryShowcase";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
+import ClubHubNavigationPending from "@/components/touchline/ClubHubNavigationPending";
 import { loadTouchlinePublishedCardShowcaseCatalog } from "@/lib/touchlineArena/ranked-card-catalog-server";
 import { TOUCHLINE_ENGLAND_CLUBS_BY_RANK } from "@/lib/touchlineArena/demo-data";
 import { normalizeTouchLineLocale, type TouchLineLocale } from "@/lib/touchlineArena/i18n";
@@ -30,6 +31,7 @@ const copy = {
     verified: "TouchLine Verified",
     hint: "Seleção premium de clubes",
     language: "Idioma",
+    openingClub: "Abrindo ClubHub",
   },
   "en-GB": {
     eyebrow: "TouchLine England",
@@ -40,6 +42,7 @@ const copy = {
     verified: "TouchLine Verified",
     hint: "Premium club selection",
     language: "Language",
+    openingClub: "Opening ClubHub",
   },
 } as const;
 
@@ -116,6 +119,7 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
               <small>{club.shortCode} · {dictionary.verified}</small>
             </span>
             <span className={styles.open}>{dictionary.open}</span>
+            <ClubHubNavigationPending label={`${dictionary.openingClub}: ${club.name}`} />
           </Link>
         ))}
       </section>
