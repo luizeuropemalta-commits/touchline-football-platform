@@ -3,6 +3,7 @@
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   findTouchLineClub,
@@ -137,6 +138,9 @@ export default async function TouchLinePlayerCardRankingsPage({
 
   return (
     <main className="tl-card-rankings">
+      <TouchlineLivePresentationRefresh
+        initialPlayerRankingSnapshotId={activeRanking.snapshotId}
+      />
       <TouchlineGlobalNavigation
         locale={locale}
         currentRoute="rankings"

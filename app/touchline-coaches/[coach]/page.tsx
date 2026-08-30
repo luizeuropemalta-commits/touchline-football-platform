@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
+import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import { CalendarDays, Gem, ShieldCheck, Trophy } from "lucide-react";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
@@ -121,6 +122,9 @@ export default async function TouchlineCoachProfilePage({
 
   return (
     <main className="coach-profile-page">
+      <TouchlineLivePresentationRefresh
+        initialCoachRankingSnapshotId={coachRanking.snapshotId}
+      />
       <nav className="coach-profile-nav" aria-label={pt ? "Navegação do perfil" : "Profile navigation"}>
         <Link href={`/touchline-clubs/${club.slug}${profileLocale}`}>← {pt ? "Clube" : "Club"}</Link>
         <Link href={`/live${profileLocale}`}>{pt ? "Match Centre" : "Match Centre"}</Link>

@@ -12,6 +12,20 @@ export type LiveSyncDecision = {
   candidateFixtureIds: string[];
 };
 
+export type LiveSyncRunCadenceOutcome = Readonly<{
+  status: "success" | "partial" | "error" | "not_configured";
+  cadenceExecuted: boolean;
+}>;
+
+/**
+ * Only a successful run that crossed the cadence gate may anchor the next
+ * provider window. A cron wake recorded as a successful no-op must never
+ * postpone real work, and failures/non-configured runs must retry normally.
+ */
+export function isEffectiveLiveSyncCadenceSuccess(outcome: LiveSyncRunCadenceOutcome) {
+  return outcome.status === "success" && outcome.cadenceExecuted;
+}
+
 function fixtureStartsAt(fixture: TouchlineFixture) {
   const parsed = Date.parse(fixture.startsAt ?? "");
   return Number.isFinite(parsed) ? parsed : null;
@@ -31,9 +45,10 @@ function fixtureState(fixture: TouchlineFixture, now: number) {
 
 /**
  * The database scheduler wakes once per minute, while this gate controls
- * provider traffic. A fixture is checked intensively from 30 minutes before
- * kick-off until four hours after it starts so delayed state transitions and
- * final whistles are repaired without a browser request.
+ * provider traffic. A fixture is checked intensively from 60 minutes before
+ * kick-off so the first official team sheet is captured before the fantasy
+ * deadline, and until four hours after it starts so delayed state transitions
+ * and final whistles are repaired without a browser request.
  */
 export function decideLiveSyncCadence(
   fixtures: TouchlineFixture[],
@@ -49,7 +64,7 @@ export function decideLiveSyncCadence(
     const state = fixtureState(fixture, now);
     if (state === "live") candidateFixtureIds.add(fixture.providerId);
     if (startsAt === null) continue;
-    if (startsAt >= now - 4 * HOUR && startsAt <= now + 30 * MINUTE && state !== "finished") {
+    if (startsAt >= now - 4 * HOUR && startsAt <= now + 60 * MINUTE && state !== "finished") {
       candidateFixtureIds.add(fixture.providerId);
     }
     if (Math.abs(startsAt - now) <= 24 * HOUR) matchWithinDay = true;

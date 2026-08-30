@@ -15,6 +15,7 @@ import {
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   CLUB_OWNER_SQUAD_CARDS,
@@ -1024,6 +1025,9 @@ export default async function TouchLinePlayerProfilePage({
   }
   return (
     <main className={styles.page} style={pageStyle}>
+      <TouchlineLivePresentationRefresh
+        initialPlayerRankingSnapshotId={activeRanking.snapshotId}
+      />
       <div className={styles.backgroundGlow} aria-hidden="true" />
       <div className={styles.shell}>
         <div className={styles.topbar}>

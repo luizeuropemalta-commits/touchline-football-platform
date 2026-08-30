@@ -34,7 +34,8 @@ test("finished and live fixtures enter the same player settlement pipeline", () 
   assert.match(store, /upsertTouchLineRowsResiliently/);
   assert.match(store, /v3-fixture-backfill-missing/);
   assert.match(liveSync, /syncTouchLinePlayerSeasonStatistics\(admin\)/);
-  assert.match(liveSync, /recoverStaleRuns\(admin, now\)/);
+  assert.match(liveSync, /acquireTouchlineLiveSyncRun/);
+  assert.ok(liveSync.indexOf("const lease = await") < liveSync.indexOf("syncTouchLinePlayerSeasonStatistics(admin)"));
   assert.match(liveSync, /event: "touchline\.live_sync\.completed"/);
 });
 

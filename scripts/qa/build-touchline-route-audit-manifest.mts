@@ -93,6 +93,7 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "GET /api/touchline-arena/card-layout-master": { auth: "PUBLIC", role: "ANY", data: "STATIC_LAYOUT_CAPABILITY", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-arena/card-layout-master": { auth: "LOCAL_EDITOR", role: "LOCAL_EDITOR", data: "LOCAL_STATIC_LAYOUT_WRITE", browser: "LOCAL_HTTP_CONTRACT", status: "LOCAL_ONLY" },
   "GET /api/touchline-arena/card-ranking/active": { auth: "PUBLIC", role: "ANY", data: "PUBLIC_ACTIVE_RANKING", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /api/touchline-arena/live-presentation-state": { auth: "PUBLIC", role: "ANY", data: "PUBLIC_ACTIVE_RANKING_AND_FIXTURE_REVISIONS", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/touchline-arena/coach-card-layout": { auth: "PUBLIC", role: "ANY", data: "STATIC_COACH_LAYOUT_CAPABILITY", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-arena/coach-card-layout": { auth: "LOCAL_EDITOR", role: "LOCAL_EDITOR", data: "LOCAL_STATIC_COACH_LAYOUT_WRITE", browser: "LOCAL_HTTP_CONTRACT", status: "LOCAL_ONLY" },
   "GET /api/touchline-arena/coach": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "CANONICAL_COACH_OFFERS_AND_OWNER_CONTRACT_HISTORY", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },

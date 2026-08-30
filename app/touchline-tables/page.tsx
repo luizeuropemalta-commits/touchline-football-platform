@@ -10,6 +10,7 @@ import { isOwnerEmail } from "@/lib/admin/owner";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
 import TouchLineTablesClient from "./touchline-tables-client";
+import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 
 export const metadata = { title: "TouchLine Tables" };
 
@@ -41,7 +42,12 @@ export default async function TouchLineTablesPage({
   const copy = getTouchLineRankingsCopy(locale);
 
   return (
-    <TouchLineTablesClient
+    <>
+      <TouchlineLivePresentationRefresh
+        initialCoachRankingSnapshotId={coachRanking.snapshotId}
+        initialPlayerRankingSnapshotId={activeRanking.snapshotId}
+      />
+      <TouchLineTablesClient
       canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
       coachRanking={coachRanking}
       copy={copy}
@@ -57,6 +63,7 @@ export default async function TouchLineTablesPage({
       totalPublishedCards={publishedCardCount}
       totalRankedCards={rankedCards.length}
       touchLineEnglandTable={touchLineEnglandTable}
-    />
+      />
+    </>
   );
 }

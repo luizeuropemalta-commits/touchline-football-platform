@@ -16,7 +16,7 @@ function row(route: string) {
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 59);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 65);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 66);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -43,6 +43,7 @@ test("separates public, authenticated, ClubOwner, Admin, audit, and isolated pre
 
 test("distinguishes read methods, disabled ingestion, local editors, user writes, and signed webhooks", () => {
   assert.equal(row("GET /api/football-data/fixture-schedule").auth, "PUBLIC");
+  assert.equal(row("GET /api/touchline-arena/live-presentation-state").data, "PUBLIC_ACTIVE_RANKING_AND_FIXTURE_REVISIONS");
   assert.equal(row("GET /api/football-data/provider-diagnostic").auth, "OWNER_SESSION");
   assert.equal(row("POST /api/football-data/fixture-schedule").status, "METHOD_DISABLED");
   assert.equal(row("GET /api/football-data/live-sync").status, "METHOD_DISABLED");

@@ -7,6 +7,7 @@ import { persistLiveFixtureStates, mergeCanonicalLiveFixture } from "@/lib/footb
 import { persistLiveScoreSnapshot } from "@/lib/football-data/live-score-persistence";
 import { syncTouchLinePlayerSeasonStatistics } from "@/lib/football-data/player-season-statistics-store";
 import { decideLiveSyncCadence } from "@/lib/football-data/live-sync-cadence";
+import { acquireTouchlineLiveSyncRun } from "@/lib/football-data/live-sync-lease";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
@@ -14,7 +15,6 @@ import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-
 
 const COMPETITION_ID = "8";
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
-const STALE_LIVE_SYNC_RUN_MS = 10 * 60 * 1000;
 const FIXTURE_SCHEDULE_REFRESH_MS = 6 * 60 * 60 * 1000;
 
 type Dependencies = {
@@ -23,6 +23,7 @@ type Dependencies = {
   persistStates?: typeof persistLiveFixtureStates;
   persistSnapshot?: typeof persistLiveScoreSnapshot;
   persistFantasyFeed?: typeof persistFantasyFixtureFeed;
+  acquireRun?: typeof acquireTouchlineLiveSyncRun;
   now?: () => number;
 };
 
@@ -44,17 +45,18 @@ export type LiveSyncResult = {
   skippedReason?: string;
 };
 
-async function latestSuccessfulRun(admin: SupabaseClient) {
+async function latestSuccessfulRunStartedAt(admin: SupabaseClient) {
   const { data } = await admin
     .from("football_data_sync_runs")
-    .select("completed_at")
+    .select("started_at")
     .eq("provider", "sportmonks")
     .eq("sync_type", "live_scores")
     .eq("status", "success")
-    .order("completed_at", { ascending: false })
+    .eq("source_payload->>cadenceExecuted", "true")
+    .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return typeof data?.completed_at === "string" ? data.completed_at : null;
+  return typeof data?.started_at === "string" ? data.started_at : null;
 }
 
 async function latestFixtureScheduleRun(admin: SupabaseClient) {
@@ -84,32 +86,7 @@ async function refreshFixtureScheduleWhenStale(admin: SupabaseClient, now: numbe
   }
 }
 
-async function createRun(admin: SupabaseClient, cadence: string, forceFixtureId?: string | null) {
-  const { data, error } = await admin.from("football_data_sync_runs").insert({
-    provider: "sportmonks",
-    sync_type: "live_scores",
-    status: "running",
-    source_payload: { competitionProviderId: COMPETITION_ID, cadence, forcedFixture: Boolean(forceFixtureId) },
-  }).select("id").single();
-  if (error) throw new Error(`Could not create live sync run: ${error.message}`);
-  return typeof data?.id === "string" ? data.id : undefined;
-}
-
-async function recoverStaleRuns(admin: SupabaseClient, now: number) {
-  const staleBefore = new Date(now - STALE_LIVE_SYNC_RUN_MS).toISOString();
-  const { error } = await admin
-    .from("football_data_sync_runs")
-    .update({
-      status: "error",
-      completed_at: new Date(now).toISOString(),
-      error_message: "stale_run_recovered_before_next_qa_sync",
-    })
-    .eq("provider", "sportmonks")
-    .eq("sync_type", "live_scores")
-    .eq("status", "running")
-    .lt("started_at", staleBefore);
-  return error;
-}
+export { acquireTouchlineLiveSyncRun } from "@/lib/football-data/live-sync-lease";
 
 function errorCategories(errors: string[]) {
   return [...new Set(errors.map((error) => error.split(":", 1)[0]).filter(Boolean))].slice(0, 12);
@@ -135,6 +112,7 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
       playerScoringFixtureIds: result.playerScoringFixtureIds,
       playerFailedFixtureIds: result.playerFailedFixtureIds,
       playerMissingSettlementFixtureIds: result.playerMissingSettlementFixtureIds,
+      cadenceExecuted: result.status !== "skipped",
       skippedReason: result.skippedReason ?? null,
     },
   }).eq("id", result.syncRunId);
@@ -174,21 +152,10 @@ export async function syncSportmonksLiveState(
 ): Promise<LiveSyncResult> {
   assertQaLiveSyncRuntime();
   const now = dependencies.now?.() ?? Date.now();
-  const readFixtures = dependencies.readFixtures ?? readPublicCompetitionFixtures;
-  const fixtureScheduleErrors = dependencies.readFixtures
-    ? []
-    : await refreshFixtureScheduleWhenStale(admin, now);
-  const schedule = await readFixtures({ includeHistorical: true, limit: 240, now });
-  const lastSuccessfulSyncAt = await latestSuccessfulRun(admin);
-  const decision = decideLiveSyncCadence(schedule, {
-    now,
-    lastSuccessfulSyncAt,
-    forceFixtureId: options.forceFixtureId,
-  });
   const result: LiveSyncResult = {
     ok: false,
     status: "error",
-    cadence: decision.cadence,
+    cadence: "idle",
     fetched: 0,
     updated: 0,
     snapshotFixtures: 0,
@@ -200,17 +167,42 @@ export async function syncSportmonksLiveState(
     playerMissingSettlementFixtureIds: [],
     errors: [],
   };
-  result.errors.push(...fixtureScheduleErrors);
-
-  const staleRunError = await recoverStaleRuns(admin, now);
-  if (staleRunError) result.errors.push(`stale-run-recovery:${staleRunError.code ?? "unknown"}`);
-
-  if (!decision.due) {
-    return { ...result, ok: true, status: "skipped", skippedReason: "cadence_not_due" };
+  // The durable QA RPC serializes acquisition and creates the running row in
+  // one transaction. No schedule refresh, provider request or fixture write
+  // is allowed before this lease exists.
+  const lease = await (dependencies.acquireRun ?? acquireTouchlineLiveSyncRun)(
+    admin,
+    now,
+    options.forceFixtureId,
+  );
+  if (!lease.acquired) {
+    return { ...result, ok: true, status: "skipped", skippedReason: lease.reason };
   }
-
-  result.syncRunId = await createRun(admin, decision.cadence, options.forceFixtureId);
+  result.syncRunId = lease.runId;
   try {
+    const readFixtures = dependencies.readFixtures ?? readPublicCompetitionFixtures;
+    const fixtureScheduleErrors = dependencies.readFixtures
+      ? []
+      : await refreshFixtureScheduleWhenStale(admin, now);
+    result.errors.push(...fixtureScheduleErrors);
+    const schedule = await readFixtures({ includeHistorical: true, limit: 240, now });
+    // Cadence is anchored to when the last effective successful run started.
+    // A cadence_not_due row remains auditable but cannot postpone real work.
+    // The durable lease above remains the authority for overlapping runs.
+    const lastSuccessfulSyncAt = await latestSuccessfulRunStartedAt(admin);
+    const decision = decideLiveSyncCadence(schedule, {
+      now,
+      lastSuccessfulSyncAt,
+      forceFixtureId: options.forceFixtureId,
+    });
+    result.cadence = decision.cadence;
+    if (!decision.due) {
+      result.ok = true;
+      result.status = "skipped";
+      result.skippedReason = "cadence_not_due";
+      return result;
+    }
+
     if (!dependencies.provider && !process.env.SPORTMONKS_API_TOKEN) {
       result.status = "not_configured";
       result.errors.push("SPORTMONKS_API_TOKEN is not configured.");
