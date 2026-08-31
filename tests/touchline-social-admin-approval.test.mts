@@ -12,6 +12,10 @@ test("owner Admin exposes independent artwork and caption reviews without a publ
   assert.match(page, /createSignedUrl\(draft\.artifact_storage_key, 300\)/);
   assert.match(page, /touchline_social_generation_reviews/);
   assert.match(page, /touchline_social_generation_cycles/);
+  assert.match(page, /touchline_social_executor_cycles/);
+  assert.match(page, /touchline_social_generation_jobs/);
+  assert.match(page, /Scheduler e runner duráveis/);
+  assert.match(page, /Executor 040 ausente/);
   assert.match(page, /Ciclo automático auditável/);
   assert.match(page, /generationHealth/);
   assert.match(page, /Aprovações bloqueadas/);
@@ -45,6 +49,11 @@ test("social review API binds the exact current checksums and never dispatches",
   assert.match(route, /draft\.manifest_checksum !== expectedManifestChecksum/);
   assert.match(route, /currentChecksum !== expectedChecksum/);
   assert.match(route, /touchline_social_generation_reviews/);
+  assert.match(route, /touchline_social_executor_cycles/);
+  assert.match(route, /touchline_social_generation_jobs/);
+  assert.match(route, /executorHealth\.operational/);
+  assert.match(route, /job_state", "COMPLETED"/);
+  assert.match(route, /generated_draft_id", draft\.id/);
   assert.match(route, /generation\.generated_draft_id !== draft\.id/);
   assert.match(route, /readTouchlineSocialLineupDraft/);
   assert.match(route, /currentSource\.data\.sourceChecksum === draft\.source_checksum/);

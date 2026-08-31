@@ -4,6 +4,7 @@ import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
+import { touchlineSocialExecutorHealth } from "@/lib/touchlineArena/social-draft-executor-health";
 import { readTouchlineSocialLineupDraft } from "@/lib/touchlineArena/social-lineup-draft-server";
 import {
   assertTouchlineSocialQaRuntime,
@@ -102,6 +103,29 @@ export async function POST(request: NextRequest) {
     if (generationError) return response({ error: "The current generation state could not be verified." }, 500);
     if (generation?.review_state !== "GENERATED" || generation.generated_draft_id !== draft.id) {
       return response({ error: "A newer or blocked official team sheet invalidated this draft." }, 409);
+    }
+    const { data: executorCycles, error: executorCyclesError } = await admin
+      .from("touchline_social_executor_cycles")
+      .select("component,lease_token,lease_expires_at,next_eligible_at,consecutive_failures,run_count,completed_count,timeout_recovery_count,last_started_at,last_completed_at,last_success_at,last_failure_at,last_outcome,last_error_code,last_items_processed")
+      .in("component", ["SCHEDULER", "RUNNER"]);
+    const executorHealth = touchlineSocialExecutorHealth(executorCycles ?? []);
+    if (executorCyclesError || !executorHealth.operational) {
+      return response({ error: "The automatic DRAFT executor is not healthy; approval remains blocked." }, 409);
+    }
+    const { data: generationJob, error: generationJobError } = await admin
+      .from("touchline_social_generation_jobs")
+      .select("id")
+      .eq("fixture_provider_id", draft.fixture_provider_id)
+      .eq("team_provider_id", draft.team_provider_id)
+      .eq("content_type", "LINEUP")
+      .eq("template_version", draft.template_version)
+      .eq("input_checksum", draft.input_checksum)
+      .eq("source_revision_checksum", draft.source_revision_checksum)
+      .eq("job_state", "COMPLETED")
+      .eq("generated_draft_id", draft.id)
+      .maybeSingle();
+    if (generationJobError || !generationJob) {
+      return response({ error: "The exact automatic DRAFT job is not complete; approval remains blocked." }, 409);
     }
     const { data: cycle, error: cycleError } = await admin
       .from("touchline_social_generation_cycles")

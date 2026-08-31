@@ -26,8 +26,11 @@
     "preflight:qa-persona": "node --experimental-strip-types scripts/assert-touchline-qa-persona.mts",
     "preflight:qa-persona:qa": "TOUCHLINE_QA_BASE_URL=https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app node --env-file=.env.development.local --experimental-strip-types scripts/assert-touchline-qa-persona.mts",
     "social:generate:qa": "node --experimental-strip-types scripts/qa/generate-touchline-social-lineup-drafts.mts",
+    "social:schedule:qa": "node --experimental-strip-types scripts/qa/schedule-touchline-social-lineup-drafts.mts",
+    "social:run-queue:qa": "node --experimental-strip-types scripts/qa/run-touchline-social-lineup-draft-queue.mts",
     "social:watch:qa": "node --experimental-strip-types scripts/qa/watch-touchline-social-lineup-drafts.mts",
-    "verify:social-shadow-039": "node --experimental-strip-types scripts/qa/verify-touchline-social-shadow-039.mts"
+    "verify:social-shadow-039": "node --experimental-strip-types scripts/qa/verify-touchline-social-shadow-039.mts",
+    "verify:social-shadow-040": "node --experimental-strip-types scripts/qa/verify-touchline-social-shadow-040.mts"
   },
   "dependencies": {
     "@sentry/nextjs": "10.70.0",

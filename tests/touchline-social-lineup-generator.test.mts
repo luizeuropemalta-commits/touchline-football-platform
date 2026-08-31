@@ -12,12 +12,13 @@ import {
 } from "../lib/touchlineArena/social-lineup-worker-budget.ts";
 
 const source = readFileSync(new URL("../scripts/qa/generate-touchline-social-lineup-drafts.mts", import.meta.url), "utf8");
+const candidateSource = readFileSync(new URL("../scripts/qa/touchline-social-lineup-candidates.mts", import.meta.url), "utf8");
 const watcher = readFileSync(new URL("../scripts/qa/watch-touchline-social-lineup-drafts.mts", import.meta.url), "utf8");
 
 test("automatic lineup worker is QA-bound and discovers first complete team sheets", () => {
   assert.match(source, /QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy"/);
-  assert.match(source, /football_fixture_lifecycle_events/);
-  assert.match(source, /event_type", "LINEUP_AVAILABLE"/);
+  assert.match(candidateSource, /football_fixture_lifecycle_events/);
+  assert.match(candidateSource, /event_type", "LINEUP_AVAILABLE"/);
   assert.match(source, /process\.env\.VERCEL_ENV === "production"/);
   assert.match(source, /base\.hostname === "touchline\.com\.br"/);
   assert.match(source, /base\.hostname !== STABLE_QA_HOST/);
@@ -42,21 +43,20 @@ test("worker fails closed unless exact 11+9 canonical render and immutable media
   assert.match(source, /touchline_social_renew_generation_cycle/);
   assert.match(source, /touchline_social_complete_generation_cycle/);
   assert.match(source, /p_input_checksum: candidate\.inputChecksum/);
-  assert.match(source, /football_fantasy_fixture_feeds/);
-  assert.match(source, /readCurrentSource/);
-  assert.match(source, /\/api\/admin\/social-publications\/source/);
+  assert.match(candidateSource, /football_fantasy_fixture_feeds/);
+  assert.match(candidateSource, /readCurrentSource/);
+  assert.match(candidateSource, /\/api\/admin\/social-publications\/source/);
   assert.match(source, /touchline_social_renew_generation/);
-  assert.match(source, /current\.sourceChecksum/);
+  assert.match(candidateSource, /current\.sourceChecksum/);
   assert.match(source, /metadata\.sourceChecksum !== candidate\.inputChecksum/);
-  assert.match(source, /sourceReadiness: "REVIEW_REQUIRED"/);
-  assert.match(source, /source incompleteness is a per-candidate review outcome/i);
+  assert.match(candidateSource, /sourceReadiness: "REVIEW_REQUIRED"/);
   assert.match(source, /candidate\.sourceReadiness !== "READY"[\s\S]*completeGeneration\(candidate, leaseToken, "REVIEW_REQUIRED"/);
   const sourceGuard = source.indexOf('candidate.sourceReadiness !== "READY"');
   assert.ok(sourceGuard > 0);
   assert.ok(sourceGuard < source.indexOf("if (!browser)", sourceGuard));
-  assert.match(source, /TOUCHLINE_SOCIAL_MAX_CANDIDATES_PER_CYCLE/);
-  assert.match(source, /OFFICIAL_TEAM_SHEET_STABILITY_MS = 2 \* 60 \* 1000/);
-  assert.match(source, /Date\.parse\(firstObservedAt\) > now - OFFICIAL_TEAM_SHEET_STABILITY_MS/);
+  assert.match(candidateSource, /TOUCHLINE_SOCIAL_MAX_CANDIDATES_PER_CYCLE/);
+  assert.match(candidateSource, /OFFICIAL_TEAM_SHEET_STABILITY_MS = 2 \* 60 \* 1000/);
+  assert.match(candidateSource, /Date\.parse\(firstObservedAt\) > now - OFFICIAL_TEAM_SHEET_STABILITY_MS/);
   assert.ok(source.indexOf("claimGenerationCycle()") < source.indexOf("chromium.launch"));
   assert.match(source, /if \(!browser\)[\s\S]*chromium\.launch/);
   assert.match(source, /GENERATION_REVIEW_PERSIST_FAILED/);
@@ -101,9 +101,9 @@ test("QA watcher continuously invokes the finite worker without overlap or Produ
 });
 
 test("review cooldown fingerprint excludes volatile persistence timestamps", () => {
-  const fingerprintStart = source.indexOf("const discoveryFingerprintByFixtureId");
-  const fingerprintEnd = source.indexOf("const teamByClubId", fingerprintStart);
-  const fingerprintBlock = source.slice(fingerprintStart, fingerprintEnd);
+  const fingerprintStart = candidateSource.indexOf("const discoveryFingerprintByFixtureId");
+  const fingerprintEnd = candidateSource.indexOf("const teamByClubId", fingerprintStart);
+  const fingerprintBlock = candidateSource.slice(fingerprintStart, fingerprintEnd);
   assert.match(fingerprintBlock, /fixture_payload/);
   assert.match(fingerprintBlock, /lineups_payload/);
   assert.match(fingerprintBlock, /events_payload/);

@@ -11,9 +11,10 @@ When text and executable behaviour disagree, stop fail-closed and record the gap
 
 1. Data gates: [`official-team-sheet-readiness.ts`](../../../lib/football-data/official-team-sheet-readiness.ts), [`social-lineup-contract.ts`](../../../lib/touchlineArena/social-lineup-contract.ts), [`social-final-score-draft-server.ts`](../../../lib/touchlineArena/social-final-score-draft-server.ts).
 2. Render/read contracts: [`social-lineup-draft-server.ts`](../../../lib/touchlineArena/social-lineup-draft-server.ts), [`social-lineup-presentation-policy.ts`](../../../lib/touchlineArena/social-lineup-presentation-policy.ts), [`social-publication-contract.ts`](../../../lib/touchlineArena/social-publication-contract.ts).
-3. Approval/outbox schema candidate: [`039_touchline_qa_social_approval_outbox.sql`](../../../supabase/qa/039_touchline_qa_social_approval_outbox.sql) and its [rollback](../../../supabase/qa/039_touchline_qa_social_approval_outbox_rollback.sql).
+3. Approval/outbox schema authority in shared QA: [`039_touchline_qa_social_approval_outbox.sql`](../../../supabase/qa/039_touchline_qa_social_approval_outbox.sql) and its [rollback](../../../supabase/qa/039_touchline_qa_social_approval_outbox_rollback.sql).
 4. Generator and storage controls: [`generate-touchline-social-lineup-drafts.mts`](../../../scripts/qa/generate-touchline-social-lineup-drafts.mts), [`social-artifact-storage-core.ts`](../../../lib/touchlineArena/social-artifact-storage-core.ts).
 5. Admin review surface: [`admin/social-publications/page.tsx`](../../../app/(app)/admin/social-publications/page.tsx) and [`TouchlineSocialDraftReviewActions.tsx`](../../../components/touchline/admin/TouchlineSocialDraftReviewActions.tsx).
+6. Local-only durable executor candidate: [`040_touchline_qa_social_draft_executor.sql`](../../../supabase/qa/040_touchline_qa_social_draft_executor.sql), its [rollback](../../../supabase/qa/040_touchline_qa_social_draft_executor_rollback.sql), [scheduler](../../../scripts/qa/schedule-touchline-social-lineup-drafts.mts) and [runner](../../../scripts/qa/run-touchline-social-lineup-draft-queue.mts). This authority is not active until a separate second audit and activation decision.
 
 ## Index
 
@@ -25,15 +26,17 @@ When text and executable behaviour disagree, stop fail-closed and record the gap
 - [Club Owner Timeline — design only](CLUB_OWNER_TIMELINE_DESIGN.md)
 - [Club Social Feed — roadmap only](CLUB_SOCIAL_FEED_ROADMAP.md)
 - [Admin approval-only workflow](ADMIN_APPROVAL_WORKFLOW.md)
+- [Durable DRAFT executor — QA threat review](DRAFT_EXECUTOR_QA_THREAT_REVIEW.md)
 - [Data and fail-closed policy](DATA_AND_FAIL_CLOSED.md)
 - [Formats, limits and cadence](FORMATS_LIMITS_AND_CADENCE.md)
 - [Audit and rollback](AUDIT_AND_ROLLBACK.md)
 
 ## Current gaps — not release approval
 
-- Migration 039 is a reviewed candidate but is **not documented here as applied to shared QA**.
+- Migration 039 and private Storage are the accepted shared-QA approval-only authority. This does not authorise external dispatch.
+- Migration candidate 040 and its scheduler/runner are local-only pending a second independent audit; no durable scheduler is configured. The candidate now heartbeats through discovery, uses canonical rollback lock order and enforces executor/job approval health atomically in PostgreSQL rather than trusting the Admin preflight.
 - Real Instagram dispatch remains disabled and has no approved Meta credential or controlled delivery proof.
-- The owner-approved two-minute team-sheet stability period is enforced by the worker/claim contract and exercised in the disposable PostgreSQL shadow; shared-QA runtime proof is still required before release.
+- The owner-approved two-minute team-sheet stability period is enforced by the worker/claim contract. Durable 040 scheduler/runner runtime proof is still required before activation.
 - The automatic finite worker currently generates LINE-UP Feed drafts; automated FULL TIME, Story, Reel and multi-slide publication assembly remain incomplete.
 - A canonical automatic hashtag builder is not implemented.
 - `FINAL_SCORE` approval/outbox remains deliberately disabled until a typed current-source attestation exists; only read-only DRAFT evidence is available.
