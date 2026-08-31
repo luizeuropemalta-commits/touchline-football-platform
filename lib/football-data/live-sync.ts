@@ -12,6 +12,7 @@ import { createFootballDataProvider } from "@/lib/football-data/provider-factory
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-coaches";
+import { recordTouchlineLineupAvailableObservation } from "@/lib/football-data/official-team-sheet-readiness";
 
 const COMPETITION_ID = "8";
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
@@ -24,6 +25,7 @@ type Dependencies = {
   persistSnapshot?: typeof persistLiveScoreSnapshot;
   persistFantasyFeed?: typeof persistFantasyFixtureFeed;
   acquireRun?: typeof acquireTouchlineLiveSyncRun;
+  recordLineupObservation?: typeof recordTouchlineLineupAvailableObservation;
   now?: () => number;
 };
 
@@ -35,6 +37,8 @@ export type LiveSyncResult = {
   updated: number;
   snapshotFixtures: number;
   fantasyFeedsStored: number;
+  lineupObservationsInserted: number;
+  lineupObservationsExisting: number;
   playerFixtureRowsWritten: number;
   coachPointsReconciled: number;
   playerScoringFixtureIds: string[];
@@ -107,6 +111,8 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
       updated: result.updated,
       snapshotFixtures: result.snapshotFixtures,
       fantasyFeedsStored: result.fantasyFeedsStored,
+      lineupObservationsInserted: result.lineupObservationsInserted,
+      lineupObservationsExisting: result.lineupObservationsExisting,
       playerFixtureRowsWritten: result.playerFixtureRowsWritten,
       coachPointsReconciled: result.coachPointsReconciled,
       playerScoringFixtureIds: result.playerScoringFixtureIds,
@@ -125,6 +131,8 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
     updated: result.updated,
     snapshotFixtures: result.snapshotFixtures,
     fantasyFeedsStored: result.fantasyFeedsStored,
+    lineupObservationsInserted: result.lineupObservationsInserted,
+    lineupObservationsExisting: result.lineupObservationsExisting,
     playerFixtureRowsWritten: result.playerFixtureRowsWritten,
     coachPointsReconciled: result.coachPointsReconciled,
     errorCount: result.errors.length + (error ? 1 : 0),
@@ -160,6 +168,8 @@ export async function syncSportmonksLiveState(
     updated: 0,
     snapshotFixtures: 0,
     fantasyFeedsStored: 0,
+    lineupObservationsInserted: 0,
+    lineupObservationsExisting: 0,
     playerFixtureRowsWritten: 0,
     coachPointsReconciled: 0,
     playerScoringFixtureIds: [],
@@ -227,8 +237,18 @@ export async function syncSportmonksLiveState(
       if (!feedResponse.data) continue;
       incoming.push(feedResponse.data.fixture);
       const persisted = await (dependencies.persistFantasyFeed ?? persistFantasyFixtureFeed)(feedResponse.data);
-      if (persisted.persisted) result.fantasyFeedsStored += 1;
-      else result.errors.push(`${fixtureId}:fantasy-feed:${persisted.reason ?? "failed"}`);
+      if (persisted.persisted) {
+        result.fantasyFeedsStored += 1;
+        const observed = await (
+          dependencies.recordLineupObservation ?? recordTouchlineLineupAvailableObservation
+        )(admin, feedResponse.data, new Date(now).toISOString());
+        if (observed.recorded) result.lineupObservationsInserted += 1;
+        else if ("outcome" in observed && observed.outcome === "noop_existing") {
+          result.lineupObservationsExisting += 1;
+        } else if ("error" in observed) {
+          result.errors.push(`${fixtureId}:lineup-observation:${observed.error}`);
+        }
+      } else result.errors.push(`${fixtureId}:fantasy-feed:${persisted.reason ?? "failed"}`);
     }
 
     const fetchedAt = new Date(now).toISOString();

@@ -14,6 +14,7 @@ import {
 import {
   loadTouchlinePublicPlayerProjections,
   type TouchlinePublicPlayerProjection,
+  type TouchlinePublicPlayerProjectionRequest,
   type TouchlinePublicProjectionStatus,
 } from "@/lib/touchlineArena/market-value-read-model";
 import {
@@ -193,6 +194,7 @@ function legacyVerifiedCardPresentation(projection: TouchlinePublicPlayerProject
 async function projectSquadForPublic(
   candidates: SquadCandidate[],
   expectedClubProviderTeamId: string,
+  providedAdmin?: TouchlinePublicPlayerProjectionRequest["providedAdmin"],
 ): Promise<{
   state: "ready" | "partial" | "error";
   players: PublicPremierSquadPlayer[];
@@ -205,6 +207,7 @@ async function projectSquadForPublic(
     // Only the verified canonical value is eligible for the public card and
     // Fantasy budget projection; provider/raw valuation data never crosses.
     includeMarketValues: true,
+    providedAdmin,
   });
   if (batch.status === "error") return { state: "error", players: [], omitted: [] };
 
@@ -214,6 +217,7 @@ async function projectSquadForPublic(
       playerIds: batch.projections.flatMap((projection) => projection.identity.status === "verified" && projection.identity.value
         ? [projection.identity.value.playerId]
         : []),
+      providedAdmin,
     })
     : new Map<string, TouchlinePublicEditorialCardPresentation>();
   const editorialOverrides = await loadTouchlineCardEditorialOverrides(
@@ -365,6 +369,10 @@ export type PublicPremierSquadReadResult = {
  */
 export async function readPublicPremierSquad(
   teamIdInput: string | null | undefined,
+  options: Readonly<{
+    /** Internal verified-render reads bypass the five-minute public cache. */
+    providedAdmin?: TouchlinePublicPlayerProjectionRequest["providedAdmin"];
+  }> = {},
 ): Promise<PublicPremierSquadReadResult> {
   const teamId = teamIdInput?.trim();
   if (!teamId || !/^[0-9]{1,20}$/.test(teamId)) {
@@ -378,7 +386,9 @@ export async function readPublicPremierSquad(
 
   let persistedSnapshot;
   try {
-    persistedSnapshot = await readPersistedSquadSnapshot(teamId);
+    persistedSnapshot = options.providedAdmin
+      ? await readPersistedSquadSnapshot(teamId, options.providedAdmin)
+      : await readPersistedSquadSnapshot(teamId);
   } catch {
     persistedSnapshot = null;
   }
@@ -402,7 +412,7 @@ export async function readPublicPremierSquad(
     registeredClub.shortCode,
     registeredClub.logoUrl ?? null,
   ));
-  const projected = await projectSquadForPublic(candidates, teamId);
+  const projected = await projectSquadForPublic(candidates, teamId, options.providedAdmin);
   if (projected.state === "error") {
     return {
       status: 503,

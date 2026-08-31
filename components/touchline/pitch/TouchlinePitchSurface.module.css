@@ -1,116 +1,155 @@
 .surface {
+  --pitch-line: rgba(244, 255, 246, .66);
+  --pitch-line-soft: rgba(244, 255, 246, .52);
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  border: 1px solid rgba(220,255,229,.38);
+  aspect-ratio: 105 / 68;
+  border: 1px solid rgba(220, 255, 229, .38);
   border-radius: 20px;
+  /* Sample only the grass from the licensed canonical TouchLine pitch. The
+     regulation markings below are drawn once by this shared component. */
   background:
-    radial-gradient(ellipse at 50% 48%, rgba(178,255,134,.1), transparent 40%),
-    linear-gradient(180deg, rgba(1,17,12,.1), rgba(0,9,7,.52)),
-    url("/touchlineArena/live/official-live-pitch-960.webp") center / cover no-repeat,
-    repeating-linear-gradient(90deg, rgba(25,109,63,.92) 0 12.5%, rgba(14,72,43,.94) 12.5% 25%);
+    radial-gradient(ellipse at 50% 46%, rgba(181, 255, 142, .14), transparent 45%),
+    linear-gradient(180deg, rgba(0, 24, 12, .08), rgba(0, 10, 6, .48)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .022) 0 11.25%, rgba(0, 0, 0, .026) 11.25% 22.5%),
+    url("/touchlineArena/live/official-live-pitch-960.webp") 24% 30% / 620% auto no-repeat,
+    #17602f;
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.035),
-    inset 0 -90px 130px rgba(0,0,0,.44),
-    inset 0 0 88px rgba(0,0,0,.58),
-    0 18px 42px rgba(0,0,0,.3);
+    inset 0 0 0 1px rgba(255, 255, 255, .035),
+    inset 0 -90px 130px rgba(0, 0, 0, .38),
+    inset 0 0 88px rgba(0, 0, 0, .5),
+    0 18px 42px rgba(0, 0, 0, .3);
 }
 
-.surface::after {
+.surface::before {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
-  width: min(18%, 148px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(239,255,242,.42);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, .05), transparent 24%),
+    radial-gradient(circle at 82% 76%, rgba(0, 0, 0, .12), transparent 30%);
+  mix-blend-mode: soft-light;
   pointer-events: none;
 }
 
 .boundary,
 .halfway,
-.box {
+.centreCircle,
+.centreSpot,
+.box,
+.sixYardBox,
+.goal,
+.spot,
+.penaltyArc,
+.cornerArc {
   position: absolute;
   z-index: 1;
-  border-color: rgba(239,255,242,.4);
   pointer-events: none;
 }
 
-.boundary {
-  inset: 5%;
-  border: 1px solid rgba(239,255,242,.34);
-}
+.boundary { inset: 5%; border: 1px solid var(--pitch-line); }
 
 .halfway {
   top: 5%;
   bottom: 5%;
   left: 50%;
   width: 1px;
-  background: rgba(239,255,242,.36);
+  background: var(--pitch-line);
   transform: translateX(-50%);
 }
 
-.box {
-  top: 27%;
-  width: 16%;
-  height: 46%;
-  border: 1px solid rgba(239,255,242,.4);
+.centreCircle {
+  top: 50%;
+  left: 50%;
+  width: 15.686%;
+  aspect-ratio: 1;
+  border: 1px solid var(--pitch-line);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
+.centreSpot,
+.spot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 0 5px rgba(255, 255, 255, .32);
+}
+
+.centreSpot { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+.box {
+  top: 23.318%;
+  width: 14.143%;
+  height: 53.365%;
+  border: 1px solid var(--pitch-line);
+}
 .boxStart { left: 5%; border-left: 0; }
 .boxEnd { right: 5%; border-right: 0; }
 
-.sixYardBox,
-.goal,
-.spot {
-  position: absolute;
-  z-index: 1;
-  pointer-events: none;
-}
-
 .sixYardBox {
-  top: 38%;
-  width: 7%;
-  height: 24%;
-  border: 1px solid rgba(239,255,242,.36);
+  top: 37.876%;
+  width: 4.714%;
+  height: 24.247%;
+  border: 1px solid var(--pitch-line-soft);
 }
-
 .sixYardBoxStart { left: 5%; border-left: 0; }
 .sixYardBoxEnd { right: 5%; border-right: 0; }
 
 .goal {
-  top: 41%;
-  width: 2.2%;
-  height: 18%;
-  border: 1px solid rgba(239,255,242,.32);
-  background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(255,255,255,.13) 5px 6px);
+  top: 45.156%;
+  width: 1.8%;
+  height: 9.688%;
+  border: 1px solid var(--pitch-line-soft);
+  background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(255, 255, 255, .13) 5px 6px);
 }
+.goalStart { left: 3.2%; }
+.goalEnd { right: 3.2%; }
 
-.goalStart { left: 2.8%; }
-.goalEnd { right: 2.8%; }
+.spot { top: 50%; transform: translate(-50%, -50%); }
+.spotStart { left: 14.429%; }
+.spotEnd { left: 85.571%; }
 
-.spot {
+.penaltyArc {
   top: 50%;
-  width: 4px;
-  height: 4px;
+  width: 15.686%;
+  aspect-ratio: 1;
+  border: 1px solid var(--pitch-line-soft);
   border-radius: 50%;
-  background: rgba(255,255,255,.62);
-  box-shadow: 0 0 5px rgba(255,255,255,.3);
-  transform: translateY(-50%);
+}
+.penaltyArcStart {
+  left: 14.429%;
+  clip-path: inset(0 0 0 79.9%);
+  transform: translate(-50%, -50%);
+}
+.penaltyArcEnd {
+  right: 14.429%;
+  clip-path: inset(0 79.9% 0 0);
+  transform: translate(50%, -50%);
 }
 
-.spotStart { left: 13.5%; }
-.spotEnd { right: 13.5%; }
+.cornerArc {
+  width: 1.714%;
+  aspect-ratio: 1;
+  border: 1px solid var(--pitch-line-soft);
+  border-radius: 50%;
+}
+.cornerStartTop { top: 5%; left: 5%; transform: translate(-50%, -50%); clip-path: inset(50% 0 0 50%); }
+.cornerStartBottom { bottom: 5%; left: 5%; transform: translate(-50%, 50%); clip-path: inset(0 0 50% 50%); }
+.cornerEndTop { top: 5%; right: 5%; transform: translate(50%, -50%); clip-path: inset(50% 50% 0 0); }
+.cornerEndBottom { right: 5%; bottom: 5%; transform: translate(50%, 50%); clip-path: inset(0 50% 50% 0); }
 
 .surfaceVertical {
+  aspect-ratio: 68 / 105;
   background:
-    radial-gradient(ellipse at 50% 48%, rgba(178,255,134,.1), transparent 40%),
-    linear-gradient(180deg, rgba(1,17,12,.1), rgba(0,9,7,.52)),
-    url("/touchlineArena/live/official-live-pitch-960.webp") center / cover no-repeat,
-    repeating-linear-gradient(0deg, rgba(25,109,63,.92) 0 12.5%, rgba(14,72,43,.94) 12.5% 25%);
+    radial-gradient(ellipse at 50% 46%, rgba(181, 255, 142, .14), transparent 45%),
+    linear-gradient(180deg, rgba(0, 24, 12, .08), rgba(0, 10, 6, .48)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .022) 0 11.25%, rgba(0, 0, 0, .026) 11.25% 22.5%),
+    url("/touchlineArena/live/official-live-pitch-960.webp") 24% 30% / 620% auto no-repeat,
+    #17602f;
 }
 
 .surfaceVertical .halfway {
@@ -119,66 +158,64 @@
   height: 1px;
   transform: translateY(-50%);
 }
+.surfaceVertical .centreCircle { width: 24.221%; }
 
-.surfaceVertical .box {
-  left: 27%;
-  width: 46%;
-  height: 16%;
-}
-
+.surfaceVertical .box { left: 23.318%; width: 53.365%; height: 14.143%; }
 .surfaceVertical .boxStart {
   top: 5%;
   border-top: 0;
-  border-left: 1px solid rgba(239,255,242,.4);
+  border-left: 1px solid var(--pitch-line);
 }
-
 .surfaceVertical .boxEnd {
   top: auto;
   right: auto;
   bottom: 5%;
-  border-right: 1px solid rgba(239,255,242,.4);
+  border-right: 1px solid var(--pitch-line);
   border-bottom: 0;
 }
 
-.surfaceVertical .sixYardBox {
-  left: 38%;
-  width: 24%;
-  height: 7%;
-}
-
+.surfaceVertical .sixYardBox { left: 37.876%; width: 24.247%; height: 4.714%; }
 .surfaceVertical .sixYardBoxStart {
   top: 5%;
   border-top: 0;
-  border-left: 1px solid rgba(239,255,242,.36);
+  border-left: 1px solid var(--pitch-line-soft);
 }
-
 .surfaceVertical .sixYardBoxEnd {
   top: auto;
   right: auto;
   bottom: 5%;
-  border-right: 1px solid rgba(239,255,242,.36);
+  border-right: 1px solid var(--pitch-line-soft);
   border-bottom: 0;
 }
 
 .surfaceVertical .goal {
-  left: 41%;
-  width: 18%;
-  height: 2.2%;
-  background: repeating-linear-gradient(90deg, transparent 0 5px, rgba(255,255,255,.13) 5px 6px);
+  left: 45.156%;
+  width: 9.688%;
+  height: 1.8%;
+  background: repeating-linear-gradient(90deg, transparent 0 5px, rgba(255, 255, 255, .13) 5px 6px);
 }
+.surfaceVertical .goalStart { top: 3.2%; }
+.surfaceVertical .goalEnd { top: auto; right: auto; bottom: 3.2%; }
 
-.surfaceVertical .goalStart { top: 2.8%; }
-.surfaceVertical .goalEnd { top: auto; right: auto; bottom: 2.8%; }
+.surfaceVertical .spot { left: 50%; transform: translate(-50%, -50%); }
+.surfaceVertical .spotStart { top: 14.429%; }
+.surfaceVertical .spotEnd { top: 85.571%; right: auto; }
 
-.surfaceVertical .spot {
-  left: 50%;
-  transform: translateX(-50%);
+.surfaceVertical .penaltyArc { left: 50%; width: 24.221%; }
+.surfaceVertical .penaltyArcStart {
+  top: 14.429%;
+  clip-path: inset(79.9% 0 0 0);
+  transform: translate(-50%, -50%);
 }
-
-.surfaceVertical .spotStart { top: 13.5%; }
-.surfaceVertical .spotEnd { top: auto; right: auto; bottom: 13.5%; }
+.surfaceVertical .penaltyArcEnd {
+  top: auto;
+  right: auto;
+  bottom: 14.429%;
+  clip-path: inset(0 0 79.9% 0);
+  transform: translate(-50%, 50%);
+}
+.surfaceVertical .cornerArc { width: 2.647%; }
 
 @media (max-width: 760px) {
   .surface { border-radius: 14px; }
-  .surface::after { width: min(22%, 100px); }
 }

@@ -1,0 +1,105 @@
+.canvas {
+  width: 1080px;
+  height: 1350px;
+  overflow: hidden;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 416px 180px minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 30px;
+  color: #f9fff7;
+  background:
+    linear-gradient(180deg, rgba(1,5,4,.74), rgba(1,8,5,.93)),
+    radial-gradient(circle at 8% 2%, color-mix(in srgb, var(--final-home-accent) 32%, transparent), transparent 30%),
+    radial-gradient(circle at 94% 10%, color-mix(in srgb, var(--final-away-accent) 28%, transparent), transparent 30%),
+    url("/touchlineArena/stadiums/interiors/16-manchester-united-old-trafford-interior.webp") center 62% / cover no-repeat,
+    #020706;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  isolation: isolate;
+}
+
+.canvas::before {
+  content: "";
+  position: absolute;
+  inset: 19px;
+  z-index: -1;
+  border: 1px solid color-mix(in srgb, var(--final-winner-accent) 48%, rgba(255,255,255,.14));
+  border-radius: 38px;
+  box-shadow: inset 0 0 60px rgba(0,0,0,.34), 0 0 34px color-mix(in srgb, var(--final-winner-accent) 14%, transparent);
+}
+
+.masthead,
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.masthead { border-bottom: 1px solid rgba(255,255,255,.12); padding: 0 8px 18px; }
+.masthead span { display: flex; align-items: center; gap: 9px; color: #b6ff4f; font-size: 14px; font-weight: 950; letter-spacing: .14em; }
+.masthead strong { color: rgba(255,255,255,.72); font-size: 15px; letter-spacing: .18em; }
+
+.scoreHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 32px;
+  padding: 24px;
+  background: linear-gradient(110deg, rgba(255,255,255,.055), rgba(0,0,0,.32));
+  box-shadow: 0 28px 70px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.06);
+}
+.club { min-width: 0; display: grid; align-content: center; justify-items: center; gap: 9px; text-align: center; }
+.club > div { width: 134px; height: 134px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.08), rgba(0,0,0,.28)); }
+.club img { object-fit: contain; }
+.club strong { max-width: 100%; overflow: hidden; color: #fff; font-size: 25px; font-weight: 1000; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.teamGoals { display: grid; width: 100%; max-width: 280px; gap: 4px; margin: 2px 0 0; padding: 0; list-style: none; }
+.teamGoals li { display: flex; min-width: 0; justify-content: space-between; gap: 8px; align-items: center; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; padding: 6px 9px; background: rgba(1,8,5,.66); backdrop-filter: blur(8px); }
+.teamGoals li > b { overflow: hidden; color: #f8fff4; font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.teamGoals li > span { display: inline-flex; flex: 0 0 auto; gap: 4px; align-items: center; color: #b6ff4f; font-size: 10px; font-weight: 1000; }
+.teamGoals li em { border: 1px solid rgba(255,216,94,.48); border-radius: 999px; padding: 1px 4px; color: #ffd85e; font-size: 7px; font-style: normal; letter-spacing: .08em; }
+.score { display: grid; justify-items: center; gap: 7px; }
+.score span { color: #b6ff4f; font-size: 13px; font-weight: 1000; letter-spacing: .18em; }
+.score > strong { color: #fff; font-size: 86px; font-weight: 1000; line-height: .95; letter-spacing: -.07em; text-shadow: 0 12px 32px rgba(0,0,0,.48); }
+.score > strong i { color: rgba(255,255,255,.36); font-style: normal; }
+.score small { color: rgba(255,255,255,.5); font-size: 10px; font-weight: 850; letter-spacing: .12em; }
+
+.resultStory {
+  min-height: 0;
+  display: block;
+}
+.headline,
+.goals { min-width: 0; border: 1px solid rgba(255,255,255,.11); border-radius: 26px; background: rgba(1,9,7,.76); }
+.headline { display: grid; align-content: center; gap: 10px; padding: 28px; }
+.headline { height: 100%; background: linear-gradient(110deg, rgba(1,9,7,.9), rgba(4,24,17,.74)); }
+.headline span { color: #b6ff4f; font-size: 11px; font-weight: 950; letter-spacing: .17em; }
+.headline h1 { margin: 0; color: #fff; font-size: 44px; font-weight: 1000; line-height: .98; letter-spacing: -.05em; }
+.headline p { margin: 0; color: rgba(255,255,255,.62); font-size: 14px; font-weight: 700; line-height: 1.45; }
+
+.topCard {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: center;
+  gap: 38px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--final-winner-accent) 46%, rgba(255,255,255,.16));
+  border-radius: 30px;
+  padding: 18px 42px;
+  background: radial-gradient(circle at 85% 50%, color-mix(in srgb, var(--final-winner-accent) 18%, transparent), transparent 38%), rgba(1,9,7,.78);
+}
+.topCardCopy { min-width: 0; display: grid; gap: 8px; }
+.topCardCopy > span { display: flex; align-items: center; gap: 8px; color: #b6ff4f; font-size: 13px; font-weight: 950; letter-spacing: .14em; }
+.topCardCopy h2 { margin: 0; color: #fff; font-size: 54px; font-weight: 1000; line-height: .96; letter-spacing: -.055em; }
+.topCardCopy p { margin: 0; color: rgba(255,255,255,.65); font-size: 18px; font-weight: 850; }
+.topCardCopy > div { width: max-content; display: grid; gap: 2px; margin-top: 8px; border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 10px 18px; background: rgba(0,0,0,.28); }
+.topCardCopy small { color: rgba(255,255,255,.58); font-size: 10px; font-weight: 900; letter-spacing: .12em; }
+.topCardCopy > div strong { color: #ffd85e; font-size: 38px; font-weight: 1000; font-variant-numeric: tabular-nums; }
+.topCardCopy em { color: rgba(255,255,255,.46); font-size: 10px; font-style: normal; font-weight: 800; }
+.cardFrame { width: 286px; height: 460px; rotate: 0deg; }
+
+.footer { border-top: 1px solid rgba(255,255,255,.1); padding: 14px 8px 0; }
+.footer span { color: rgba(255,255,255,.48); font-size: 10px; font-weight: 850; letter-spacing: .08em; }
+.footer strong { color: #efffd9; font-size: 14px; letter-spacing: .12em; }
+.footer i { color: #b6ff4f; font-style: normal; }
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas *, .canvas *::before, .canvas *::after { animation: none !important; transition: none !important; }
+}

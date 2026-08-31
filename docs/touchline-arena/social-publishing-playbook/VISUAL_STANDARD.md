@@ -1,0 +1,32 @@
+# Visual standard
+
+## Authenticity
+
+Use only current canonical TouchLine cards, crests, icons, typography, match-centre components and persisted values. Do not redraw, approximate, substitute or infer a branded asset. Public wording is `TouchLine Verified` or `TouchLine Verified Match Data`; never expose internal provider/API wording.
+
+The LINE-UP renderer is [`TouchlineSocialLineupDraft.tsx`](../../../components/touchline/social/TouchlineSocialLineupDraft.tsx), using the shared regulation pitch [`TouchlinePitchSurface.tsx`](../../../components/touchline/pitch/TouchlinePitchSurface.tsx). The current Feed contract is:
+
+- 1080×1350, 4:5;
+- regulation field geometry 105×68, portrait orientation, attack upwards;
+- exactly 11 upright cards at 0° on official formation coordinates;
+- official bench ordered 2+2+2+2+1, ninth card centred;
+- technical rail must not compress the pitch;
+- current club coach in a separate labelled box;
+- zero clipping, overlap, deformation, unreadable names or unsafe margins.
+
+FULL TIME derives from the real TouchLine Live language. The current renderer is [`TouchlineSocialFinalScoreDraft.tsx`](../../../components/touchline/social/TouchlineSocialFinalScoreDraft.tsx): real crests, final score, scorers beneath the respective club, OG/PEN only when persisted, and one Top Match Card by final official Match Rating.
+
+## Synthetic visual QA
+
+Synthetic geometry evidence must use [`TouchlineSocialLineupGeometryQa.tsx`](../../../components/touchline/social/TouchlineSocialLineupGeometryQa.tsx) and [`createTouchlineGeometryQaFixture`](../../../lib/touchlineArena/social-lineup-presentation-policy.ts). It must visibly say:
+
+- `GEOMETRY QA`;
+- `SYNTHETIC FIXTURE · NOT PUBLISHABLE`;
+- synthetic fixture/team IDs;
+- placeholder players only.
+
+It must not use a real club name, crest, player card, fixture ID or `LINE-UP CONFIRMED`. The official renderer rejects synthetic identity before rendering.
+
+## Template versioning
+
+Any change to layout, size, typography, visual hierarchy or semantic content requires a new template version and new owner approval. Only fixture-bound data fields may change within one locked version.

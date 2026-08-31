@@ -41,6 +41,7 @@ import {
 
 const siteOffline = process.env.TOUCHLINE_SITE_OFFLINE === "true";
 const localDevHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+const stableQaHost = "touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app";
 const authPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/auth/callback"] as const;
 const authEntryPaths = ["/login", "/register", "/forgot-password"] as const;
 const protectedArenaPaths = ["/arena", "/market-transfer", "/fantasy", "/admin", "/notifications", "/inbox", "/football-search", "/visual-qa"] as const;
@@ -48,6 +49,30 @@ const adminOnlyArenaPaths = ["/admin", "/visual-qa"] as const;
 
 function matchesRoute(pathname: string, route: string) {
   return pathname === route || pathname.startsWith(`${route}/`);
+}
+
+async function hasQaSocialRenderBearer(request: NextRequest, hostname: string) {
+  const internalSocialPaths = new Set([
+    "/visual-qa/social-lineup",
+    "/api/admin/social-publications/source",
+  ]);
+  if (process.env.VERCEL_ENV === "production"
+    || hostname !== stableQaHost
+    || !internalSocialPaths.has(request.nextUrl.pathname)) return false;
+  const secret = process.env.TOUCHLINE_LIVE_SYNC_SECRET?.trim() ?? "";
+  const provided = request.cookies.get("tl-social-render")?.value?.trim() ?? "";
+  if (secret.length < 32) return false;
+  if (provided.length !== secret.length) return false;
+  const encoder = new TextEncoder();
+  const [expectedDigest, providedDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(secret)),
+    crypto.subtle.digest("SHA-256", encoder.encode(provided)),
+  ]);
+  const expected = new Uint8Array(expectedDigest);
+  const actual = new Uint8Array(providedDigest);
+  let difference = 0;
+  for (let index = 0; index < expected.length; index += 1) difference |= expected[index]! ^ actual[index]!;
+  return difference === 0;
 }
 
 function offlineResponse(locale: "en-GB" | "pt-BR") {
@@ -463,6 +488,13 @@ async function handleTouchLineRequest(request: NextRequest) {
   }
   const isLocalDev = localDevHosts.has(hostname);
   if (isLocalDev) return nextResponseWithPresentationLocale(request);
+  if (await hasQaSocialRenderBearer(request, hostname)) {
+    const response = nextResponseWithPresentationLocale(request);
+    response.headers.set("cache-control", "private, no-store");
+    response.headers.set("x-robots-tag", "noindex, nofollow, noarchive");
+    response.headers.set("x-touchline-social-render", "qa-internal");
+    return response;
+  }
 
   const isAuditPath = pathname === "/audit-index" || pathname.startsWith("/audit/");
 

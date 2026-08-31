@@ -52,6 +52,7 @@ const PAGE_POLICIES: Record<string, Partial<RoutePolicy>> = {
   "/audit/[...route]": { auth: "AUDIT_TOKEN", role: "AUDITOR", data: "STATIC_AUDIT_RENDER", status: "PENDING_AUDIT_TOKEN_QA" },
   "/preview": { auth: "ISOLATED_PREVIEW", role: "PREVIEW_AUDITOR", data: "STATIC_ISOLATED_PREVIEW", status: "PREVIEW_CONTRACT_ONLY" },
   "/visual-qa/social-lineup": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_OFFICIAL_LINEUP_DRAFT", status: "PENDING_VISUAL_QA" },
+  "/admin/social-publications": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_SOCIAL_DRAFT_SEPARATE_APPROVAL", status: "PENDING_VISUAL_QA" },
 };
 
 const API_POLICIES: Record<string, RoutePolicy> = {
@@ -121,6 +122,8 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "PATCH /api/admin/market-values/import": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_MARKET_VALUE_IMPORT", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/admin/promotions": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_PROMOTION_LIFECYCLE", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "PATCH /api/admin/promotions": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_PROMOTION_LIFECYCLE", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /api/admin/social-publications/source": { auth: "QA_RENDER_SECRET_COOKIE", role: "SERVER_JOB", data: "CURRENT_VERIFIED_SOCIAL_RENDER_SOURCE", browser: "SERVER_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "POST /api/admin/social-publications/review": { auth: "ADMIN_SAME_ORIGIN", role: "OWNER_ADMIN", data: "SUPABASE_SOCIAL_DRAFT_SEPARATE_APPROVAL", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
 };
 
 const ROUTE_METHOD_OVERRIDES: Record<string, string[]> = {

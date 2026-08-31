@@ -91,7 +91,6 @@ export type PlayerSeasonStatisticsSyncResult = {
   v3FixtureRowsWritten: number;
   membershipsWritten: number;
   canonicalEventsWritten: number;
-  lifecycleEventsWritten: number;
   partialAggregates: number;
   completeForScoringAggregates: number;
   unavailableAggregates: number;
@@ -140,7 +139,6 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
     v3FixtureRowsWritten: 0,
     membershipsWritten: 0,
     canonicalEventsWritten: 0,
-    lifecycleEventsWritten: 0,
     partialAggregates: 0,
     completeForScoringAggregates: 0,
     unavailableAggregates: 0,
@@ -222,8 +220,9 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
     result.membershipsWritten = membershipRows.length;
   }
 
-  // Store the provider events as normalized facts and record the first time a
-  // complete line-up became observable. Both writes are naturally idempotent.
+  // Store provider events as normalized facts. LINEUP_AVAILABLE is written
+  // only by the shared official-team-sheet guard in live-sync; this statistics
+  // rebuild must not maintain a weaker, duplicate lifecycle writer.
   for (const feed of feeds as FeedRow[]) {
     const fixture = (fixtures as FixtureRow[]).find((candidate) => (
       candidate.provider === feed.provider && candidate.provider_fixture_id === feed.provider_fixture_id
@@ -256,26 +255,6 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
       });
       if (error) result.errors.push(`events:${fixture.id}:${error.message}`);
       else result.canonicalEventsWritten += eventRows.length;
-    }
-    if ((lineupMembers(feed.lineups_payload) ?? []).length) {
-      const firstObservedAt = feed.created_at ?? feed.last_synced_at;
-      if (!firstObservedAt) {
-        result.errors.push(`lifecycle:${fixture.id}:observation-timestamp-unavailable`);
-        continue;
-      }
-      const { error } = await admin.from("football_fixture_lifecycle_events").upsert({
-        fixture_id: fixture.id,
-        event_type: "LINEUP_AVAILABLE",
-        first_observed_at: firstObservedAt,
-        source_synced_at: feed.last_synced_at,
-        evidence_payload: {
-          lineupCount: lineupMembers(feed.lineups_payload)?.length ?? 0,
-          observationBasis: feed.created_at ? "first-persisted-feed" : "first-sync-timestamp",
-          providerPublicationTimestampAvailable: false,
-        },
-      }, { onConflict: "fixture_id,event_type" });
-      if (error) result.errors.push(`lifecycle:${fixture.id}:${error.message}`);
-      else result.lifecycleEventsWritten += 1;
     }
   }
 

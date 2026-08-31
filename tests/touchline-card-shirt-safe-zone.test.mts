@@ -25,6 +25,10 @@ test("shirt names keep their full text inside a crest-aware safe zone", () => {
   assert.match(cardSource, /paddingRight: shirtNamePadding\.right/);
   assert.match(cardSource, /textOverflow: "clip"/);
   assert.match(cardSource, /whiteSpace: "nowrap"/);
+  assert.match(
+    cardSource,
+    /data-full-player-name=\{shirtPlayerName\}[\s\S]{0,700}overflow: "visible"/,
+  );
   assert.doesNotMatch(cardSource, /data-shirt-name=\{shirtPlayerName\}[\s\S]{0,500}textOverflow: "ellipsis"/);
 });
 

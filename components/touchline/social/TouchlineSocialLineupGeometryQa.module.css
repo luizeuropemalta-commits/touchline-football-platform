@@ -1,0 +1,69 @@
+.canvas {
+  position: relative;
+  width: 1080px;
+  height: 1350px;
+  padding: 28px;
+  overflow: hidden;
+  color: #effff9;
+  background: #05110f;
+}
+
+.banner {
+  position: absolute;
+  z-index: 4;
+  inset: 24px 24px auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 20px;
+  border: 2px solid #53e6d0;
+  border-radius: 18px;
+  background: rgba(3, 17, 15, .94);
+  color: #bfffee;
+  font: 900 22px/1.1 Arial, sans-serif;
+  letter-spacing: .08em;
+}
+
+.pitch {
+  width: 832px;
+  margin: 0 auto;
+}
+
+.player {
+  position: absolute;
+  left: var(--qa-x);
+  top: var(--qa-y);
+  width: 92px;
+  height: 144px;
+  translate: -50% -50%;
+  display: grid;
+  place-items: center;
+  border: 2px dashed rgba(191, 255, 238, .88);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(15, 69, 62, .96), rgba(4, 26, 23, .96));
+  box-shadow: 0 0 0 3px rgba(83, 230, 208, .1);
+  color: #effff9;
+  font: 900 15px/1.2 Arial, sans-serif;
+  text-align: center;
+}
+
+.player::before {
+  content: "PLACEHOLDER";
+  position: absolute;
+  top: 14px;
+  color: #7ef5df;
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+
+.footer {
+  position: absolute;
+  z-index: 4;
+  inset: auto 24px 24px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(3, 17, 15, .94);
+  color: #bfffee;
+  font: 800 16px/1.2 Arial, sans-serif;
+  text-align: center;
+}

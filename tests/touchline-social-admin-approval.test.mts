@@ -1,0 +1,66 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const source = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+
+test("owner Admin exposes independent artwork and caption reviews without a publish action", () => {
+  const page = source("app/(app)/admin/social-publications/page.tsx");
+  const actions = source("components/touchline/admin/TouchlineSocialDraftReviewActions.tsx");
+
+  assert.match(page, /artwork_approval_state,caption_approval_state/);
+  assert.match(page, /createSignedUrl\(draft\.artifact_storage_key, 300\)/);
+  assert.match(page, /touchline_social_generation_reviews/);
+  assert.match(page, /touchline_social_generation_cycles/);
+  assert.match(page, /Ciclo automático auditável/);
+  assert.match(page, /generationHealth/);
+  assert.match(page, /Aprovações bloqueadas/);
+  assert.match(page, /visibleReviewResult/);
+  assert.match(page, /blockedReviewResult/);
+  assert.match(page, /REVIEW_REQUIRED · fail-closed/);
+  assert.match(page, /blockedReviewCount > 0/);
+  assert.match(page, /Esta página ficou fora do intervalo atual/);
+  assert.match(page, /reviewPage=0/);
+  assert.match(page, /isOwnerEmail\(user\?\.email\)/);
+  assert.match(actions, /Aprovar somente a arte/);
+  assert.match(actions, /Aprovar somente a legenda/);
+  assert.match(actions, /approve-artwork/);
+  assert.match(actions, /approve-caption/);
+  assert.match(actions, /previewState === "ready"/);
+  assert.match(actions, /onLoad/);
+  assert.match(actions, /onError/);
+  assert.match(actions, /aprovação bloqueada/);
+  assert.match(actions, /generationCurrent/);
+  assert.match(actions, /fonte oficial atualmente habilitada/);
+  assert.doesNotMatch(actions, /enqueue|dispatch|instagram/i);
+});
+
+test("social review API binds the exact current checksums and never dispatches", () => {
+  const route = source("app/api/admin/social-publications/review/route.ts");
+
+  assert.match(route, /sameOrigin\(request\)/);
+  assert.match(route, /assertTouchlineSocialQaRuntime\(\)/);
+  assert.match(route, /hasTouchLineArenaAccess\(user\)/);
+  assert.match(route, /isOwnerEmail\(user\?\.email\)/);
+  assert.match(route, /draft\.manifest_checksum !== expectedManifestChecksum/);
+  assert.match(route, /currentChecksum !== expectedChecksum/);
+  assert.match(route, /touchline_social_generation_reviews/);
+  assert.match(route, /generation\.generated_draft_id !== draft\.id/);
+  assert.match(route, /readTouchlineSocialLineupDraft/);
+  assert.match(route, /currentSource\.data\.sourceChecksum === draft\.source_checksum/);
+  assert.match(route, /currentSource\.data\.sourceChecksum === draft\.input_checksum/);
+  assert.doesNotMatch(route, /currentSource\.data\.capturedAt === draft\.source_snapshot_at/);
+  assert.match(route, /draft\.content_type !== "LINEUP"/);
+  assert.match(route, /This content type is not enabled for approval yet/);
+  assert.match(route, /touchline_social_issue_review_intent/);
+  assert.match(route, /p_intent_id: intentId/);
+  assert.match(route, /p_expected_source_checksum: draft\.source_checksum/);
+  assert.match(route, /supabase\.rpc\(rpcName, rpcArgs\)/);
+  assert.doesNotMatch(route, /admin\.rpc\(rpcName, rpcArgs\)/);
+  assert.match(route, /verifyTouchlineSocialStoredArtifact/);
+  assert.match(route, /createTouchlineSocialArtifactStorageFromEnvironment/);
+  assert.match(route, /Approval remains blocked/);
+  assert.match(route, /touchline_social_approve_artwork/);
+  assert.match(route, /touchline_social_approve_caption/);
+  assert.doesNotMatch(route, /touchline_social_enqueue_dispatch|fetch\([^)]*instagram/i);
+});

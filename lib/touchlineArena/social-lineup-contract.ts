@@ -1,6 +1,7 @@
 import type { TouchlinePublicFantasyFixtureMatchDetail } from "@/lib/football-data/public-fantasy-fixture";
 
 const NUMERIC_ID = /^[0-9]{1,20}$/;
+const FORMATION_POSITION = /^(?:[1-9]|1[01])$/;
 
 export type TouchlineSocialLineupContract = Readonly<{
   teamId: string;
@@ -51,8 +52,11 @@ export function validateTouchlineSocialLineupContract(
   ))) {
     return { ok: false, reason: "starting-xi-invalid-shirt-number" };
   }
-  const formationPositions = starters.map((member) => Number.parseInt(String(member.formationPosition ?? ""), 10));
-  if (formationPositions.some((position) => !Number.isInteger(position) || position < 1 || position > 11)) {
+  const formationPositions = starters.map((member) => {
+    const normalized = String(member.formationPosition ?? "").trim();
+    return FORMATION_POSITION.test(normalized) ? Number(normalized) : null;
+  });
+  if (formationPositions.some((position) => position === null)) {
     return { ok: false, reason: "starting-xi-invalid-formation-position" };
   }
   if (new Set(formationPositions).size !== 11) {

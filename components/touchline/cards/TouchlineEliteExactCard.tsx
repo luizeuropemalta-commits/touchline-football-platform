@@ -1465,7 +1465,11 @@ export function TouchlineEliteExactCard({
               display: "block",
               width: "100%",
               maxWidth: "100%",
-              overflow: "hidden",
+              // The parent shirt mask owns clipping. Keep the fitted glyph run
+              // visible here because scaleX is applied after layout; clipping
+              // this inner box first cut long canonical names even when the
+              // transformed text fitted safely inside the shirt mask.
+              overflow: "visible",
               textOverflow: "clip",
               whiteSpace: "nowrap",
               fontFamily: '"Bebas Neue", "Anton", Impact, Inter, sans-serif',

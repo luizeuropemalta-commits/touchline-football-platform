@@ -232,6 +232,9 @@ test("the writer is server-only, constant-time authenticated and provider-scoped
   assert.match(sync, /getLiveScores\(\{ competitionId: COMPETITION_ID \}\)/);
   assert.match(sync, /getFixtureFantasyFeed\(fixtureId\)/);
   assert.match(sync, /persistLiveScoreSnapshot/);
+  assert.match(sync, /recordTouchlineLineupAvailableObservation/);
+  assert.match(sync, /lineupObservationsInserted/);
+  assert.match(sync, /lineupObservationsExisting/);
   assert.match(sync, /inspectTouchlineIsolatedPreviewEnvironment\(\)/);
   assert.match(sync, /inspection\.status !== "qa"/);
   assert.match(sync, /process\.env\.VERCEL_ENV !== "preview"/);

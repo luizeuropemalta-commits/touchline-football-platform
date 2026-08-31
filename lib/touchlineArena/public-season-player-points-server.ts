@@ -9,6 +9,13 @@ import { projectTouchlineCardStatsByPosition } from "./position-aware-card-stats
 type Row = Readonly<{ football_player_id?: unknown; summary_payload?: unknown; position_statistics_payload?: unknown }>;
 type PlayerRow = Readonly<{ id?: unknown; position?: unknown; provider_position?: unknown; detailed_position?: unknown }>;
 const TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID = "8";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type PublicSeasonPlayerPointsOptions = Readonly<{
+  competitionId?: string;
+  seasonId?: string;
+  providedAdmin?: NonNullable<ReturnType<typeof createAdminClient>>;
+}>;
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -28,18 +35,26 @@ function finiteNumber(value: unknown) {
  */
 export async function readPublicSeasonPlayerPoints(
   canonicalPlayerIds: readonly string[],
+  options: PublicSeasonPlayerPointsOptions = {},
 ): Promise<TouchlinePublicSeasonPlayerPoints[]> {
   const ids = [...new Set(canonicalPlayerIds.map((id) => id.trim()).filter(Boolean))];
-  const admin = createAdminClient();
+  const admin = options.providedAdmin ?? createAdminClient();
   if (!ids.length || !admin) return [];
-  const [activeRanking, competitionResult] = await Promise.all([
-    loadTouchLineActiveRanking(),
-    admin
+  const requestedCompetitionId = options.competitionId?.trim() ?? "";
+  const requestedSeasonId = options.seasonId?.trim() ?? "";
+  const fixtureSeasonScoped = UUID.test(requestedCompetitionId) && UUID.test(requestedSeasonId);
+  if (Boolean(requestedCompetitionId || requestedSeasonId) && !fixtureSeasonScoped) return [];
+  const competitionRead = fixtureSeasonScoped
+    ? Promise.resolve({ data: { id: requestedCompetitionId }, error: null })
+    : admin
       .from("football_competitions")
       .select("id")
       .eq("provider", "sportmonks")
       .eq("provider_competition_id", TOUCHLINE_ENGLAND_COMPETITION_PROVIDER_ID)
-      .maybeSingle(),
+      .maybeSingle();
+  const [activeRanking, competitionResult] = await Promise.all([
+    loadTouchLineActiveRanking(),
+    competitionRead,
   ]);
   // The published V3 snapshot is the canonical source for the cumulative
   // rating. It remains usable even while the season aggregate's `is_current`
@@ -61,21 +76,25 @@ export async function readPublicSeasonPlayerPoints(
   const { data: competition, error: competitionError } = competitionResult;
   const competitionId = String(competition?.id ?? "").trim();
   if (competitionError || !competitionId) return rankingOnlyProjection();
-  const { data: seasons, error: seasonsError } = await admin
-    .from("football_seasons")
-    .select("id")
-    .eq("competition_id", competitionId)
-    .eq("is_current", true);
-  const seasonIds = Array.isArray(seasons)
-    ? seasons.map((season) => String(season.id ?? "").trim()).filter(Boolean)
-    : [];
-  if (seasonsError || seasonIds.length !== 1) return rankingOnlyProjection();
+  let seasonId = requestedSeasonId;
+  if (!fixtureSeasonScoped) {
+    const { data: seasons, error: seasonsError } = await admin
+      .from("football_seasons")
+      .select("id")
+      .eq("competition_id", competitionId)
+      .eq("is_current", true);
+    const seasonIds = Array.isArray(seasons)
+      ? seasons.map((season) => String(season.id ?? "").trim()).filter(Boolean)
+      : [];
+    if (seasonsError || seasonIds.length !== 1) return rankingOnlyProjection();
+    [seasonId] = seasonIds;
+  }
   const [{ data, error }, { data: playerData, error: playerError }] = await Promise.all([
     admin
       .from("football_player_season_statistics")
       .select("football_player_id,summary_payload,position_statistics_payload")
       .eq("competition_id", competitionId)
-      .eq("season_id", seasonIds[0])
+      .eq("season_id", seasonId)
       // V2 rows remain in this table strictly for audit/history. Public Card
       // surfaces must consume the immutable V3 Rating aggregate only.
       .eq("scoring_version", "player_scoring_v3")

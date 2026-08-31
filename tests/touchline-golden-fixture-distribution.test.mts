@@ -125,7 +125,7 @@ test("season points remain unavailable until the event feed is known", () => {
   assert.equal(reconciled.summary.yellowCards, 0);
 });
 
-test("fixture persistence keeps points unavailable when provider events are absent", async () => {
+test("fixture persistence keeps points unavailable and delegates lineup lifecycle to the shared guard", async () => {
   const source = await readFile(new URL("../lib/football-data/player-season-statistics-store.ts", import.meta.url), "utf8");
   assert.match(source, /events = feed \? fantasyEvents\(feed\.events_payload\) : null/);
   assert.match(source, /touchline_points: pointResult\.points/);
@@ -133,6 +133,11 @@ test("fixture persistence keeps points unavailable when provider events are abse
   assert.match(source, /scoring_coverage_status: pointResult\.coverageStatus/);
   assert.match(source, /isTouchLineSettledFixtureStatus\(fixture\.status\)/);
   assert.match(source, /statistics_payload: \{ \.\.\.statistics, \.\.\.pointResult\.statistics \}/);
+  assert.doesNotMatch(source, /completeOfficialTeamSheet/);
+  assert.doesNotMatch(source, /football_fixture_lifecycle_events/);
+  assert.doesNotMatch(source, /event_type:\s*"LINEUP_AVAILABLE"/);
+  assert.match(source, /shared official-team-sheet guard in live-sync/);
+  assert.doesNotMatch(source, /observationBasis: feed\.created_at \? "first-persisted-feed"/);
 });
 
 test("the QA distribution migration is idempotent and browser roles cannot read or write canonical facts", async () => {
