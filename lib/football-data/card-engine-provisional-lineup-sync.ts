@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { inspectTouchlineOfficialTeamSheet } from "./official-team-sheet-readiness.ts";
 import type { TouchlineFantasyFixtureFeed, TouchlineFantasyLineupMember } from "./types";
+import { isTouchlineProvisionalRpcUnavailable } from "../touchlineArena/card-engine-provisional-schema-compat.ts";
 
 export type TouchlineOfficialLineupShirtFact = Readonly<{
   playerId: string;
@@ -64,7 +65,10 @@ export function selectTouchlineOfficialLineupShirtFacts(feed: TouchlineFantasyFi
   return complete;
 }
 
-type ReconcileRpc = { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }> };
+type ReconcileRpc = { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{
+  data: unknown;
+  error: { code?: string; message: string } | null;
+}> };
 
 export async function reconcileTouchlineProvisionalShirtsFromOfficialLineup(input: Readonly<{
   admin: SupabaseClient;
@@ -78,6 +82,9 @@ export async function reconcileTouchlineProvisionalShirtsFromOfficialLineup(inpu
     p_persisted_at: input.persistedAt,
     p_facts: facts,
   });
+  if (isTouchlineProvisionalRpcUnavailable(error)) {
+    return { reconciled: false, reason: "provisional-schema-unavailable" } as const;
+  }
   if (error) return { reconciled: false, reason: error.message } as const;
   return { reconciled: true, result: data } as const;
 }

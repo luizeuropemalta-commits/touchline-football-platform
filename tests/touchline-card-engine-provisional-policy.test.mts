@@ -15,6 +15,10 @@ import {
   parseTouchlinePublicEditorialCardPresentation,
 } from "../lib/touchlineArena/editorial-card-profile.ts";
 import { resolveTouchlinePublicCardPresentation } from "../lib/touchlineArena/public-card-presentation.ts";
+import {
+  isTouchlineProvisionalColumnsUnavailable,
+  isTouchlineProvisionalRpcUnavailable,
+} from "../lib/touchlineArena/card-engine-provisional-schema-compat.ts";
 
 const migration = readFileSync(
   new URL("../supabase/migrations/20260901090000_touchline_card_engine_provisional_fields.sql", import.meta.url),
@@ -125,6 +129,24 @@ test("official shirt facts require exact 11+9 sheets and formation positions", (
   const invalidPosition = structuredClone(feed) as { lineups: Array<{ formationPosition?: string }> };
   invalidPosition.lineups[0]!.formationPosition = "12";
   assert.deepEqual(selectTouchlineOfficialLineupShirtFacts(invalidPosition as never), []);
+});
+
+test("the additive provisional schema degrades only for exact missing-schema errors", () => {
+  assert.equal(isTouchlineProvisionalRpcUnavailable({
+    code: "PGRST202",
+    message: "Could not find the function public.touchline_card_engine_reconcile_official_lineup_shirts in the schema cache",
+  }), true);
+  assert.equal(isTouchlineProvisionalRpcUnavailable({ code: "42501", message: "permission denied" }), false);
+  assert.equal(isTouchlineProvisionalColumnsUnavailable({
+    code: "42703",
+    message: "column touchline_card_editorial_overrides.provenance_status does not exist",
+  }), true);
+  assert.equal(isTouchlineProvisionalColumnsUnavailable({
+    code: "PGRST204",
+    message: "Could not find the next_verification_at column in the schema cache",
+  }), true);
+  assert.equal(isTouchlineProvisionalColumnsUnavailable({ code: "42501", message: "permission denied" }), false);
+  assert.equal(isTouchlineProvisionalColumnsUnavailable({ code: "PGRST204", message: "another column is missing" }), false);
 });
 
 test("public presentation accepts only the exact labelled provisional values", () => {

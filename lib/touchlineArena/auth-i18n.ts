@@ -52,16 +52,16 @@ const en = {
   login: {
     eyebrow: "Arena access",
     title: "Enter the arena",
-    description: "Login to start building and testing TouchLine Arena.",
+    description: "Sign in to build your squad and enter TouchLine Arena.",
   },
   register: {
     back: "Back to access",
-    eyebrow: "Arena beta",
+    eyebrow: "Arena access",
     title: "Create arena access",
     description: "Create secure access for TouchLine Arena and enter your squad environment.",
-    betaTitle: "TouchLine Beta · Test environment",
+    betaTitle: "TouchLine Arena · Secure access",
     betaDescription:
-      "This site is in testing. Some features may still change. Thank you for your patience and for helping build TouchLine.",
+      "Create your account, verify your identity and enter TouchLine Arena. Your account and progress remain protected.",
   },
   forgot: {
     back: "Back to access",
@@ -89,7 +89,7 @@ const en = {
     showPassword: "Show password",
     hidePassword: "Hide password",
     terms:
-      "I agree to the Terms and Privacy Policy. During Beta, TouchLine measures active time, device class and feature areas to improve gameplay — never passwords, messages or typed content.",
+      "I agree to the Terms and Privacy Policy. TouchLine measures active time, device class and feature areas to improve gameplay — never passwords, messages or typed content.",
     signIn: "Sign in",
     signingIn: "Signing in…",
     createAccount: "Create account",
@@ -171,16 +171,16 @@ const ptBR: typeof en = {
   login: {
     eyebrow: "Acesso à Arena",
     title: "Entre na Arena",
-    description: "Entre para começar a montar e testar seu elenco na TouchLine Arena.",
+    description: "Entre para montar seu elenco e acessar a TouchLine Arena.",
   },
   register: {
     back: "Voltar ao acesso",
-    eyebrow: "Arena beta",
+    eyebrow: "Acesso à Arena",
     title: "Criar acesso à Arena",
     description: "Crie seu acesso seguro à TouchLine Arena e entre no ambiente do seu elenco.",
-    betaTitle: "TouchLine Beta · Ambiente de testes",
+    betaTitle: "TouchLine Arena · Acesso seguro",
     betaDescription:
-      "Este site está em fase de testes. Algumas funções ainda podem mudar. Obrigado pela paciência e por fazer parte da construção da TouchLine.",
+      "Crie sua conta, confirme sua identidade e entre na TouchLine Arena. Sua conta e seu progresso permanecem protegidos.",
   },
   forgot: {
     back: "Voltar ao acesso",
@@ -208,7 +208,7 @@ const ptBR: typeof en = {
     showPassword: "Mostrar senha",
     hidePassword: "Ocultar senha",
     terms:
-      "Concordo com os Termos e a Política de Privacidade. Durante o Beta, a TouchLine mede tempo ativo, tipo de dispositivo e áreas utilizadas para melhorar a jogabilidade — nunca senhas, mensagens ou conteúdo digitado.",
+      "Concordo com os Termos e a Política de Privacidade. A TouchLine mede tempo ativo, tipo de dispositivo e áreas utilizadas para melhorar a jogabilidade — nunca senhas, mensagens ou conteúdo digitado.",
     signIn: "Entrar",
     signingIn: "Entrando…",
     createAccount: "Criar conta",

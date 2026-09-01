@@ -36,6 +36,16 @@ test("authentication copy is Portuguese for pt-BR and English for unsupported lo
   assert.equal(getTouchLineAuthCopy("en-GB").login.title, "Enter the arena");
 });
 
+test("public authentication copy describes the launched Arena without beta or test wording", () => {
+  for (const locale of ["en-GB", "pt-BR"] as const) {
+    const copy = getTouchLineAuthCopy(locale);
+    const publicCopy = JSON.stringify({ login: copy.login, register: copy.register, terms: copy.form.terms });
+    assert.doesNotMatch(publicCopy, /coming soon|currently in testing|\bbeta\b|test environment|ambiente de testes|fase de testes|montar e testar|building and testing/i);
+  }
+  assert.equal(getTouchLineAuthCopy("en-GB").register.betaTitle, "TouchLine Arena · Secure access");
+  assert.equal(getTouchLineAuthCopy("pt-BR").register.betaTitle, "TouchLine Arena · Acesso seguro");
+});
+
 test("authentication destinations preserve the normalized locale", () => {
   assert.equal(touchLineAuthHref("/arena", "pt-BR"), "/arena?lang=pt-BR");
   assert.equal(touchlineArenaFirstEntryHref("pt-BR"), "/arena?lang=pt-BR&intro=first");

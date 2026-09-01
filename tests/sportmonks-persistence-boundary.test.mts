@@ -74,6 +74,7 @@ test("fixture feeds and provider capabilities are sanitized before every upsert"
   assert.match(fantasyStore, /resources_payload: sanitizedCapabilities\.resources/);
   assert.match(fantasyStore, /enrichments_payload: sanitizedCapabilities\.enrichments/);
   assert.doesNotMatch(fantasyStore, /fixture_payload: feed\.|resources_payload: capabilities\./);
+  assert.match(fantasyStore, /provisional-schema-unavailable/);
 });
 
 test("forward migration removes browser policies and grants while preserving service-role access", () => {

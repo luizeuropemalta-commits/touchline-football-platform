@@ -40,6 +40,12 @@ test("the shared publication policy chunks large canonical player sets before qu
   assert.match(source, /chunkResults\.some\(\(result\) => result === null\)/);
 });
 
+test("the public card reader falls back to the legacy override projection only when provisional columns are absent", () => {
+  assert.match(source, /isTouchlineProvisionalColumnsUnavailable/);
+  assert.match(source, /select\("player_id,field_key,effective_value,status"\)/);
+  assert.match(source, /compatibleOverridesResponse/);
+});
+
 test("the public Premier League roster asks the single publication policy instead of a local card catalogue", () => {
   assert.match(squadRoute, /loadTouchlinePublishedCardPresentations/);
   assert.doesNotMatch(squadRoute, /editorial-card-catalog|findTouchlineEditorialCardPresentation/);

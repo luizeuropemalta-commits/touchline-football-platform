@@ -34,7 +34,11 @@ export async function persistFantasyFixtureFeed(feed: TouchlineFantasyFixtureFee
     feed: sanitizedFeed,
     persistedAt,
   });
-  if (!provisionalReconciliation.reconciled && provisionalReconciliation.reason !== "official-lineup-not-ready") {
+  if (
+    !provisionalReconciliation.reconciled
+    && provisionalReconciliation.reason !== "official-lineup-not-ready"
+    && provisionalReconciliation.reason !== "provisional-schema-unavailable"
+  ) {
     return { persisted: false, reason: `card_engine_provisional_reconciliation:${provisionalReconciliation.reason}` };
   }
   return { persisted: true };

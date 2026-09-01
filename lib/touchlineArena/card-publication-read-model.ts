@@ -12,6 +12,7 @@ import {
   TOUCHLINE_PROVISIONAL_MISSING_MARKET_VALUE,
   TOUCHLINE_PROVISIONAL_MISSING_SHIRT,
 } from "./card-engine-provisional-policy.ts";
+import { isTouchlineProvisionalColumnsUnavailable } from "./card-engine-provisional-schema-compat.ts";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_PLAYER_IDS = 750;
@@ -151,7 +152,15 @@ async function readPublishedTouchlineCardsChunk(playerIds: readonly string[], ad
       .in("player_id", publishedPlayerIds)
       .in("field_key", ["shirtNumber", "marketValueEur"]),
   ]);
-  if (valuesResponse.error || playersResponse.error || membershipsResponse.error || overridesResponse.error) return null;
+  if (valuesResponse.error || playersResponse.error || membershipsResponse.error) return null;
+  const compatibleOverridesResponse = overridesResponse.error
+    && isTouchlineProvisionalColumnsUnavailable(overridesResponse.error)
+    ? await admin.from("touchline_card_editorial_overrides")
+      .select("player_id,field_key,effective_value,status")
+      .in("player_id", publishedPlayerIds)
+      .in("field_key", ["shirtNumber", "marketValueEur"])
+    : overridesResponse;
+  if (compatibleOverridesResponse.error) return null;
 
   const valuesByPlayer = new Map(rows(valuesResponse.data).flatMap((row) => {
     const playerId = text(row.player_id)?.toLowerCase();
@@ -166,7 +175,7 @@ async function readPublishedTouchlineCardsChunk(playerIds: readonly string[], ad
     return membershipId ? [[membershipId, row] as const] : [];
   }));
   const overridesByPlayer = new Map<string, Map<string, Row>>();
-  for (const row of rows(overridesResponse.data)) {
+  for (const row of rows(compatibleOverridesResponse.data)) {
     const playerId = text(row.player_id)?.toLowerCase();
     const fieldKey = text(row.field_key);
     if (!playerId || !fieldKey) continue;
