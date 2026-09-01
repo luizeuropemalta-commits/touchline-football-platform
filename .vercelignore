@@ -19,6 +19,13 @@ docs/touchline/*
 docs/touchline/project-memory/*
 !docs/touchline/project-memory/TOUCHLINE_MISSION_FOOTER.md
 !docs/touchline/project-memory/TOUCHLINE_CODEX_PROMPT_TEMPLATE.md
+# Module 046 hashes this exact checked-in lexicon during the QA build. Keep the
+# single canonical input available without shipping the rest of the playbook.
+!docs/touchline-arena
+docs/touchline-arena/*
+!docs/touchline-arena/social-publishing-playbook
+docs/touchline-arena/social-publishing-playbook/*
+!docs/touchline-arena/social-publishing-playbook/CANONICAL_SOCIAL_ICON_LEXICON.md
 exports
 TOUCHLINE_VISUAL_AUDIT_2026-07-31
 TOUCHLINE_VISUAL_AUDIT_2026-07-31 2

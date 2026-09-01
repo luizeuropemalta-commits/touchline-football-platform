@@ -28,6 +28,14 @@ test("046 registry derives immutable identities from the checked-in visual, copy
   }
 });
 
+test("046 keeps the canonical lexicon in the Vercel build context", () => {
+  const ignore = readFileSync(".vercelignore", "utf8");
+  assert.match(ignore, /^!docs\/touchline-arena$/m);
+  assert.match(ignore, /^!docs\/touchline-arena\/social-publishing-playbook$/m);
+  assert.match(ignore,
+    /^!docs\/touchline-arena\/social-publishing-playbook\/CANONICAL_SOCIAL_ICON_LEXICON\.md$/m);
+});
+
 test("046 changes identity for visual, copy, lexicon or rendered-field changes", () => {
   const base = {
     contentType: "MATCH_PREVIEW" as const,
