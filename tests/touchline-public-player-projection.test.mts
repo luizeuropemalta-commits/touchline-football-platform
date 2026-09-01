@@ -166,7 +166,7 @@ test("fails closed when an official player is requested for the wrong club", () 
   assert.equal(projection.classification.reason, "club-mismatch");
 });
 
-test("the public squad adapter exposes only verified canonical Market Value", () => {
+test("the public squad adapter exposes only verified canonical or exactly-labelled provisional Market Value", () => {
   const route = readFileSync(
     new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url),
     "utf8",
@@ -175,7 +175,9 @@ test("the public squad adapter exposes only verified canonical Market Value", ()
   assert.doesNotMatch(route, /rawMarketValueEur/);
   assert.match(route, /includeMarketValues: true/);
   assert.match(route, /provider\/raw valuation data never crosses/);
-  assert.match(route, /formatTouchlineMarketValueEur\(verifiedMarketValueEur, "en-GB"\)/);
-  assert.match(route, /marketValueEur: verifiedMarketValueEur \?\? null/);
+  assert.match(route, /formatTouchlineMarketValueEur\(projectedMarketValueEur, "en-GB"\)/);
+  assert.match(route, /marketValueEur: projectedMarketValueEur \?\? null/);
+  assert.match(route, /projectedMarketValueState === "provisional"/);
+  assert.match(route, /\? "provisional-fallback"/);
   assert.match(route, /editorialCard,/);
 });

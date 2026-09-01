@@ -7,9 +7,16 @@ import {
   resolveCardEngineImportRows,
   summarizeCardEngineRows,
 } from "../lib/touchlineArena/card-engine-editorial-import.ts";
+import {
+  prepareTouchlineMarketValueCardEngineRows,
+  touchlineMarketValueBatchContentIdentity,
+} from "../lib/touchlineArena/card-engine-market-value-batch.ts";
 
 const migration = readFileSync(new URL("../supabase/migrations/20260818100529_touchline_card_engine_editorial_control_plane.sql", import.meta.url), "utf8");
 const route = readFileSync(new URL("../app/api/admin/card-engine/route.ts", import.meta.url), "utf8");
+const marketValuesRoute = readFileSync(new URL("../app/api/admin/market-values/import/route.ts", import.meta.url), "utf8");
+const batchServer = readFileSync(new URL("../lib/touchlineArena/card-engine-batch-server.ts", import.meta.url), "utf8");
+const candidatesServer = readFileSync(new URL("../lib/touchlineArena/card-engine-candidates-server.ts", import.meta.url), "utf8");
 const consoleSource = readFileSync(new URL("../components/admin-card-engine-console.tsx", import.meta.url), "utf8");
 
 const candidates = [{
@@ -33,6 +40,36 @@ test("Card Engine rejects formula-like cells and bounds delimited imports", () =
   assert.match(resolved[0]?.errors.join(",") ?? "", /no-supported-editorial-change|formula/);
 });
 
+test("a multi-club Market Values snapshot becomes one reviewable Card Engine batch without publishing", () => {
+  const multiClubCandidates = [
+    candidates[0]!,
+    {
+      playerId: "22222222-2222-4222-8222-222222222222",
+      providerPlayerId: "202",
+      name: "Grace Hopper",
+      club: "Second Club FC",
+      dateOfBirth: "2001-02-02",
+      provider: { displayName: "Grace Hopper", jerseyNumber: 9, sourceUpdatedAt: "2026-08-18T00:00:00Z", clubId: "club-2" },
+    },
+  ] as const;
+  const rows = [
+    { playerId: candidates[0]!.playerId, externalPlayerId: "tm-1", sourceUrl: "https://licensed.example/1", marketValue: 12_000_000, currency: "EUR" as const, marketValueEur: 12_000_000 },
+    { playerId: multiClubCandidates[1].playerId, externalPlayerId: "tm-2", sourceUrl: "https://licensed.example/2", marketValue: 22_000_000, currency: "EUR" as const, marketValueEur: 22_000_000 },
+  ];
+  const resolved = prepareTouchlineMarketValueCardEngineRows({ rows, candidates: multiClubCandidates, source: "licensed_import" });
+  assert.deepEqual(summarizeCardEngineRows(resolved), { matched: 2, review: 0, conflict: 0, unmatched: 0 });
+  assert.deepEqual(resolved.map((row) => row.proposed.marketValueEur), [12_000_000, 22_000_000]);
+  assert.equal((resolved[1]!.raw as { marketValueSource?: { sourceUrl?: string } }).marketValueSource?.sourceUrl, "https://licensed.example/2");
+  assert.notEqual(
+    touchlineMarketValueBatchContentIdentity({ scope: "league", verifiedSeason: "2026-27", source: "licensed_import", jobKey: "annual_full_refresh", rows }),
+    touchlineMarketValueBatchContentIdentity({ scope: "league", verifiedSeason: "2026-27", source: "licensed_import", jobKey: "annual_full_refresh", rows: rows.slice(0, 1) }),
+  );
+  assert.throws(
+    () => prepareTouchlineMarketValueCardEngineRows({ rows: [rows[0]!, rows[0]!], candidates: multiClubCandidates, source: "licensed_import" }),
+    /same canonical player twice/,
+  );
+});
+
 test("Card Engine migration is protected, atomic, audited, idempotent and reversible", () => {
   for (const required of [
     "touchline_card_editorial_batches", "touchline_card_editorial_batch_items", "touchline_card_editorial_overrides", "touchline_card_editorial_audit_events",
@@ -47,9 +84,23 @@ test("Card Engine migration is protected, atomic, audited, idempotent and revers
 
 test("server route enforces owner access, same-origin writes, bounds and never writes provider facts directly", () => {
   assert.match(route, /isOwnerEmail/); assert.match(route, /hasTouchLineArenaAccess/); assert.match(route, /isSameOrigin/); assert.match(route, /MAX_IMPORT_BYTES/); assert.match(route, /readBoundedJson/); assert.match(route, /reader\.cancel/);
-  assert.match(route, /touchline_card_engine_create_batch/); assert.match(route, /touchline_card_engine_approve_batch/); assert.match(route, /touchline_card_engine_publish_batch/); assert.match(route, /touchline_card_engine_revert_batch/);
+  assert.match(route, /createTouchlineCardEngineBatch/); assert.match(route, /transitionTouchlineCardEngineBatch/);
+  assert.match(batchServer, /touchline_card_engine_create_batch/); assert.match(batchServer, /touchline_card_engine_approve_batch/); assert.match(batchServer, /touchline_card_engine_publish_batch/); assert.match(batchServer, /touchline_card_engine_revert_batch/);
   assert.doesNotMatch(route, /\.from\("football_players"\)[\s\S]{0,240}\.(?:update|upsert|insert|delete)\(/);
   assert.doesNotMatch(route, /sportmonks\.com|fetch\s*\(/);
   assert.doesNotMatch(route, /"xlsx"/);
   assert.doesNotMatch(consoleSource, /from "xlsx"|\.xlsx|XLSX\./);
+});
+
+test("the existing Market Values entry point is connected to Card Engine review and supports canonical multi-club candidates", () => {
+  assert.match(marketValuesRoute, /createMarketValueReviewBatch/);
+  assert.match(marketValuesRoute, /createTouchlineCardEngineBatch/);
+  assert.match(marketValuesRoute, /prepareTouchlineMarketValueCardEngineRows/);
+  assert.match(marketValuesRoute, /nextAction: "review_in_card_engine"/);
+  assert.match(marketValuesRoute, /status: "card_engine_review_required"/);
+  assert.match(marketValuesRoute, /isSameOrigin/);
+  assert.doesNotMatch(marketValuesRoute, /applyTouchlineMarketValueImport/);
+  assert.doesNotMatch(marketValuesRoute, /football_player_market_values/);
+  assert.match(candidatesServer, /membershipsForPlayer\.length !== 1/);
+  assert.doesNotMatch(candidatesServer, /\.eq\("club_id"/);
 });

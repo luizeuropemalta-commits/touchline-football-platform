@@ -52,7 +52,11 @@ import {
   TOUCHLINE_NEUTRAL_CARD_SECONDARY,
 } from "@/lib/touchlineArena/public-card-presentation";
 import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
-import { formatTouchlineEditorialCardPrice, formatTouchlineMarketValueEur } from "@/lib/touchlineArena/editorial-card-profile";
+import {
+  formatTouchlineEditorialCardPrice,
+  formatTouchlineMarketValueEur,
+  formatTouchlinePublicShirtNumber,
+} from "@/lib/touchlineArena/editorial-card-profile";
 import {
   buildTouchlinePlayerCardZoomDetails,
   buildTouchlineVerifiedMatchFactFields,
@@ -652,13 +656,24 @@ export default async function TouchLinePlayerProfilePage({
     : new Map();
   const editorialCard = canonicalPlayerId ? publishedCards.get(canonicalPlayerId) ?? null : null;
   exactPlayer.editorialCard = editorialCard;
+  if (editorialCard?.shirtNumber !== undefined) exactPlayer.shirtNumber = editorialCard.shirtNumber;
   exactPlayer.marketValue = editorialCard?.marketValueEur === undefined
     ? null
     : formatTouchlineMarketValueEur(editorialCard.marketValueEur, locale);
-  exactPlayer.marketValueSource = editorialCard?.marketValueEur === undefined ? "unavailable" : "verified-cache";
-  exactPlayer.marketValueState = editorialCard?.marketValueEur === undefined ? "unavailable" : "verified";
+  exactPlayer.marketValueSource = editorialCard?.marketValueEur === undefined
+    ? "unavailable"
+    : editorialCard.marketValueState === "provisional"
+      ? "provisional-fallback"
+      : "verified-cache";
+  exactPlayer.marketValueState = editorialCard?.marketValueEur === undefined
+    ? "unavailable"
+    : editorialCard.marketValueState ?? "verified";
   exactPlayer.cardTier = editorialCard?.tierKey ?? null;
-  exactPlayer.classificationState = "unavailable";
+  exactPlayer.classificationState = !editorialCard
+    ? "unavailable"
+    : editorialCard.marketValueState === "provisional"
+      ? "provisional"
+      : "verified";
   const rankingCompetition = resolveTouchlineCardCompetition({
     state: activeRanking,
     playerId: card.id,
@@ -786,6 +801,7 @@ export default async function TouchLinePlayerProfilePage({
     ? TOUCHLINE_POSITION_RANKING_LABELS[competition.positionGroup][locale === "pt-BR" ? "pt" : "en"]
     : text.rankPending;
   const displayPosition = localizedPositionLabel(canonicalIdentity?.position ?? (!officialLookup.providerPlayerId ? official.player?.position : null) ?? card.position, locale);
+  const displayShirtNumber = formatTouchlinePublicShirtNumber(card.shirtNumber);
   const displayNationality = localizedCountryLabel(canonicalIdentity?.nationality ?? (!officialLookup.providerPlayerId ? official.player?.nationality : null) ?? card.countryCode3, locale);
   const officialNationality = canonicalIdentity?.nationality?.trim() ?? (!officialLookup.providerPlayerId ? official.player?.nationality?.trim() : null);
   const officialCountryCode3 = touchlineCountryCode3FromName(officialNationality)
@@ -1078,7 +1094,11 @@ export default async function TouchLinePlayerProfilePage({
               ) : null}
             </div>
             <p className={styles.roleLine}>
-              {displayPosition} · {card.clubName} · {card.shirtNumber ? `#${card.shirtNumber}` : "--"}
+              {displayPosition} · {card.clubName} · {card.shirtNumber === 0
+                ? (isPortuguese ? "#00 provisório" : "provisional #00")
+                : displayShirtNumber
+                  ? `#${displayShirtNumber}`
+                  : "--"}
             </p>
 
             <div className={styles.socialActions}>

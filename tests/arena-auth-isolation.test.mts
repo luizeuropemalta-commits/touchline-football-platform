@@ -104,7 +104,7 @@ test("protected routes require the server-owned welcome completion predicate", (
   assert.match(arenaAccessServiceSource, /await markTouchLineArenaAccess\(user, admin\)/);
   assert.match(proxySource, /const hasArenaAccess = hasTouchLineArenaAccess\(user\)/);
   assert.match(proxySource, /if \(user && isProtectedArenaRoute && !hasArenaAccess\) return loginRedirect/);
-  assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);
+  assert.match(proxySource, /shouldTouchlineRedirectAuthenticatedAuthEntry/);
   for (const api of protectedArenaApiSources) {
     assert.match(api.source, /hasTouchLineArenaAccess/, `${api.path} must enforce completed Arena access`);
   }

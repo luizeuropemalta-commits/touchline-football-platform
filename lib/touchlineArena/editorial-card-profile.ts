@@ -1,3 +1,5 @@
+import { TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR } from "./card-engine-provisional-policy.ts";
+
 /**
  * Local editorial contract for a player card.
  *
@@ -60,8 +62,12 @@ export type TouchlineEditorialCardRecord = Readonly<{
 export type TouchlinePublicEditorialCardPresentation = Readonly<{
   tierKey: TouchlineEditorialCardTierKey;
   cardPrice: TouchlineEditorialCardPrice;
-  /** Canonical verified value used by the Fantasy/card presentation only. */
+  /** Canonical verified value or the explicit monitored EUR 1m fallback. */
   marketValueEur?: number;
+  marketValueState?: "verified" | "provisional";
+  /** Zero is allowed only for the monitored missing-shirt fallback. */
+  shirtNumber?: number;
+  shirtNumberState?: "verified" | "provisional";
   lastReviewedAt: string;
 }>;
 
@@ -79,7 +85,15 @@ const RECORD_KEYS = new Set([
   "internalSource",
 ]);
 const PRICE_KEYS = new Set(["amountMinor", "currency"]);
-const PUBLIC_PRESENTATION_KEYS = new Set(["tierKey", "cardPrice", "marketValueEur", "lastReviewedAt"]);
+const PUBLIC_PRESENTATION_KEYS = new Set([
+  "tierKey",
+  "cardPrice",
+  "marketValueEur",
+  "marketValueState",
+  "shirtNumber",
+  "shirtNumberState",
+  "lastReviewedAt",
+]);
 
 function asPlainRecord(value: unknown): UnknownRecord | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -219,6 +233,9 @@ export function parseTouchlinePublicEditorialCardPresentation(
   const record = asPlainRecord(value);
   const cardPrice = record ? parsePrice(record.cardPrice) : null;
   const marketValueEur = record?.marketValueEur;
+  const marketValueState = record?.marketValueState;
+  const shirtNumber = record?.shirtNumber;
+  const shirtNumberState = record?.shirtNumberState;
   if (
     !record
     || !hasOnlyKnownKeys(record, PUBLIC_PRESENTATION_KEYS)
@@ -229,6 +246,19 @@ export function parseTouchlinePublicEditorialCardPresentation(
       || !Number.isSafeInteger(marketValueEur)
       || marketValueEur < 0
     ))
+    || (marketValueState !== undefined && !isOneOf(marketValueState, ["verified", "provisional"] as const))
+    || (marketValueState !== undefined && marketValueEur === undefined)
+    || (marketValueState === "provisional" && marketValueEur !== TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR)
+    || (shirtNumber !== undefined && (
+      typeof shirtNumber !== "number"
+      || !Number.isSafeInteger(shirtNumber)
+      || shirtNumber < 0
+      || shirtNumber > 999
+    ))
+    || (shirtNumberState !== undefined && !isOneOf(shirtNumberState, ["verified", "provisional"] as const))
+    || (shirtNumberState !== undefined && shirtNumber === undefined)
+    || (shirtNumberState === "provisional" && shirtNumber !== 0)
+    || (shirtNumberState === "verified" && (shirtNumber ?? 0) < 1)
     || !isValidIsoTimestamp(record.lastReviewedAt)
   ) return null;
 
@@ -236,6 +266,9 @@ export function parseTouchlinePublicEditorialCardPresentation(
     tierKey: record.tierKey,
     cardPrice,
     ...(marketValueEur === undefined ? {} : { marketValueEur }),
+    ...(marketValueState === undefined ? {} : { marketValueState }),
+    ...(shirtNumber === undefined ? {} : { shirtNumber }),
+    ...(shirtNumberState === undefined ? {} : { shirtNumberState }),
     lastReviewedAt: record.lastReviewedAt as string,
   });
 }
@@ -244,12 +277,32 @@ export function formatTouchlineMarketValueEur(
   valueEur: number,
   locale: string | null | undefined,
 ) {
+  if (valueEur === TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR) return "€1M";
   return new Intl.NumberFormat(locale === "pt-BR" ? "pt-BR" : "en-GB", {
     style: "currency",
     currency: "EUR",
     notation: "compact",
     maximumFractionDigits: valueEur < 10_000_000 ? 2 : 1,
   }).format(valueEur);
+}
+
+/**
+ * Formats the public shirt identifier without changing its canonical value.
+ * The Card Engine stores a missing shirt as the monitored numeric sentinel 0;
+ * public card surfaces render that exact sentinel as 00 until an official
+ * 11+9 team sheet resolves it.
+ */
+export function formatTouchlinePublicShirtNumber(value: unknown) {
+  const normalized = typeof value === "number"
+    ? value
+    : typeof value === "string" && /^\d{1,3}$/.test(value.trim())
+      ? Number(value.trim())
+      : null;
+
+  if (normalized === null || !Number.isSafeInteger(normalized) || normalized < 0 || normalized > 999) {
+    return null;
+  }
+  return normalized === 0 ? "00" : String(normalized);
 }
 
 /**

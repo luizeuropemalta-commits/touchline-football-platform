@@ -295,7 +295,7 @@ export function mapAuthoritativeRosterRows(
       role: inferArenaRole(position),
       position,
       clubName,
-      shirtNumber: normalizeOfficialShirtNumber(squadMember?.jersey_number),
+      shirtNumber: editorialCard?.shirtNumber ?? normalizeOfficialShirtNumber(squadMember?.jersey_number),
       countryCode3: countryCodeForPlayer(player),
       // The authoritative roster is a card/contract read, not a valuation
       // feed. Legacy fields stay inert for DTO compatibility; the shared card

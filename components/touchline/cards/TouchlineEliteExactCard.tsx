@@ -20,6 +20,7 @@ import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/Touchl
 import { TouchlineShirtNumber } from "@/components/touchline/cards/TouchlineShirtNumber";
 import {
   formatTouchlineMarketValueEur,
+  formatTouchlinePublicShirtNumber,
   type TouchlinePublicEditorialCardPresentation,
 } from "@/lib/touchlineArena/editorial-card-profile";
 import masterCardLayout from "@/public/touchlineArena/card-layouts/master-shirt-back-layout.json";
@@ -189,10 +190,10 @@ export type TouchlineEliteExactPlayer = {
   leagueName: string;
   leagueLogoUrl?: string | null;
   marketValue: string | null;
-  marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+  marketValueSource?: "provider" | "verified-cache" | "provisional-fallback" | "unavailable" | null;
   /** Explicit canonical public state; absent keeps the established legacy path. */
-  marketValueState?: "verified" | "pending" | "unavailable" | "error" | null;
-  classificationState?: "verified" | "pending" | "unavailable" | "error" | null;
+  marketValueState?: "verified" | "provisional" | "pending" | "unavailable" | "error" | null;
+  classificationState?: "verified" | "provisional" | "pending" | "unavailable" | "error" | null;
   cardTier?: TouchlineCardTierKey | null;
   cardPriceVersion?: string | null;
   /** Legacy compatibility field. It is never public game-card authority. */
@@ -893,7 +894,7 @@ export function TouchlineEliteExactCard({
   }, [removalMarkers, markerStorageKey]);
 
   const countryCode3 = normalizeTouchlineCountryCode3(player.countryCode3);
-  const shirtNumber = String(player.shirtNumber ?? player.overall ?? "").trim();
+  const shirtNumber = formatTouchlinePublicShirtNumber(player.shirtNumber ?? player.overall) ?? "";
   const totalRatingText = player.totalRating === null || player.totalRating === undefined || player.totalRating === ""
     ? "—"
     : touchlineCardMetricText(player.totalRating);
@@ -903,7 +904,7 @@ export function TouchlineEliteExactCard({
   // a visual-only inventory preview below; it never turns that preview into a
   // public publication or commercial authority.
   const editorialCard = player.editorialCard ?? null;
-  const reviewRequired = player.cardReview?.state === "REVIEW_REQUIRED";
+  const reviewRequired = !editorialCard && player.cardReview?.state === "REVIEW_REQUIRED";
   const editorialTier = editorialCard
     ? touchlineArenaTierForKey(editorialCard.tierKey)
     : null;
@@ -930,7 +931,9 @@ export function TouchlineEliteExactCard({
   const compactPrimaryLabel = cardLabels.totalRating;
   const compactPrimaryValue = totalRatingText;
   const compactSecondaryLabel = hasPublishedCardProfile || reviewRequired
-    ? (cardLabels.marketValue ?? (runtimeLocale === "pt-BR" ? "Valor de mercado" : "Market value"))
+    ? editorialCard?.marketValueState === "provisional"
+      ? (runtimeLocale === "pt-BR" ? "Valor provisório" : "Provisional value")
+      : (cardLabels.marketValue ?? (runtimeLocale === "pt-BR" ? "Valor de mercado" : "Market value"))
     : (runtimeLocale === "pt-BR" ? "POSIÇÃO" : "POSITION");
   const compactSecondaryValue = hasPublishedCardProfile
     ? marketValueText ?? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")

@@ -182,7 +182,7 @@ export function parseMarketValueEurOrNull(value?: number | string | null) {
   return parsed >= 0 ? parsed : null;
 }
 
-export type TouchlineMarketValueSource = "provider" | "verified-cache" | "unavailable";
+export type TouchlineMarketValueSource = "provider" | "verified-cache" | "provisional-fallback" | "unavailable";
 
 /**
  * Fail-closed player economy resolver shared by every public card surface.

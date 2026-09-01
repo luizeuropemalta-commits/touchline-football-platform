@@ -28,11 +28,11 @@ export type ArenaLineupPlayer = {
     /** Sportmonks rating for the latest reconciled fixture. */
     matchRating?: string | number | null;
     marketValue?: string | null;
-    marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+    marketValueSource?: "provider" | "verified-cache" | "provisional-fallback" | "unavailable" | null;
     /** Server-owned public value state. Never infer it from a display string. */
-    marketValueState?: "verified" | "pending" | "unavailable" | "error" | null;
+    marketValueState?: "verified" | "provisional" | "pending" | "unavailable" | "error" | null;
     /** Server-owned public classification state paired with marketValueState. */
-    classificationState?: "verified" | "pending" | "unavailable" | "error" | null;
+    classificationState?: "verified" | "provisional" | "pending" | "unavailable" | "error" | null;
     cardTier?: TouchlineCardTierKey | null;
     cardPriceVersion?: string | null;
     /** Only active server-side contracts may freeze the card classification. */

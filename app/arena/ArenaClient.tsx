@@ -150,6 +150,7 @@ import {
 } from "@/lib/touchlineArena/card-zoom-details";
 import {
   formatTouchlineEditorialCardPrice,
+  formatTouchlinePublicShirtNumber,
   parseTouchlinePublicEditorialCardPresentation,
   type TouchlinePublicEditorialCardPresentation,
 } from "@/lib/touchlineArena/editorial-card-profile";
@@ -262,7 +263,7 @@ type BenchOption = {
   position: string;
   shirtNumber: number | null;
   marketValue: string;
-  marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+  marketValueSource?: "provider" | "verified-cache" | "provisional-fallback" | "unavailable" | null;
   marketValueState?: ClubOwnerSquadCard["marketValueState"];
   classificationState?: ClubOwnerSquadCard["classificationState"];
   cardTier?: TouchlineCardTierKey | null;
@@ -344,7 +345,7 @@ type TeamBuilderSquadPlayer = {
   clubShortCode: string;
   clubLogoUrl?: string | null;
   marketValue?: string | null;
-  marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+  marketValueSource?: "provider" | "verified-cache" | "provisional-fallback" | "unavailable" | null;
   marketValueState?: ClubOwnerSquadCard["marketValueState"];
   classificationState?: ClubOwnerSquadCard["classificationState"];
   cardTier?: TouchlineCardTierKey | null;
@@ -854,9 +855,15 @@ function arenaPublishedCardTemplateUrl(clubName: string, cardTier: TouchlineCard
     : "";
 }
 
+function normalizeArenaShirtNumber(...values: unknown[]) {
+  return normalizeOfficialShirtNumber(...values)
+    ?? (values.some((value) => value === 0) ? 0 : null);
+}
+
 function arenaShirtNumberLabel(value: unknown) {
-  const shirtNumber = normalizeOfficialShirtNumber(value);
-  return shirtNumber ? `#${shirtNumber}` : "--";
+  const shirtNumber = normalizeArenaShirtNumber(value);
+  const displayNumber = formatTouchlinePublicShirtNumber(shirtNumber);
+  return displayNumber === null ? "--" : `#${displayNumber}`;
 }
 
 function normalizeArenaPlayerCard(player: Partial<ArenaPlayer>) {
@@ -865,7 +872,7 @@ function normalizeArenaPlayerCard(player: Partial<ArenaPlayer>) {
   const card = { ...player.card } as typeof player.card & { cardPrice?: unknown };
   delete card.cardPrice;
   const presentation = resolveArenaPublicCardPresentation(player.card);
-  const shirtNumber = normalizeOfficialShirtNumber(player.card.shirtNumber);
+  const shirtNumber = normalizeArenaShirtNumber(player.card.shirtNumber);
 
   return {
     ...card,
@@ -943,7 +950,7 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
     : currentPresentation;
   const clubName = player.card.clubName || squadPlayer.clubName;
   const countryCode3 = hasUsableCountryCode(player.card.countryCode3) ? player.card.countryCode3 : squadPlayer.countryCode3 || null;
-  const shirtNumber = normalizeOfficialShirtNumber(player.card.shirtNumber, squadPlayer.shirtNumber);
+  const shirtNumber = normalizeArenaShirtNumber(player.card.shirtNumber, squadPlayer.shirtNumber);
 
   return {
     ...player,
@@ -1067,7 +1074,7 @@ function arenaPlayerToBenchOption(player: ArenaPlayer, replacedBench: BenchOptio
     role: player.role,
     club: card?.clubName || "TouchLine XI",
     position: card?.position || roleLabel(player.role),
-    shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
+    shirtNumber: normalizeArenaShirtNumber(card?.shirtNumber),
     marketValue: "",
     marketValueSource: "unavailable",
     marketValueState: "unavailable",
@@ -1100,7 +1107,7 @@ function arenaPlayerToFormationReserve(player: ArenaPlayer): BenchOption {
     role: player.role,
     club: card?.clubName || "TouchLine XI",
     position: card?.position || roleLabel(player.role),
-    shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
+    shirtNumber: normalizeArenaShirtNumber(card?.shirtNumber),
     marketValue: "",
     marketValueSource: "unavailable",
     marketValueState: card?.marketValueState ?? "unavailable",
@@ -1132,7 +1139,7 @@ function builderPlayerToBenchOption(player: TeamBuilderSquadPlayer): BenchOption
     role: player.role,
     club: player.clubName,
     position: player.position || roleLabel(player.role),
-    shirtNumber: normalizeOfficialShirtNumber(player.shirtNumber),
+    shirtNumber: normalizeArenaShirtNumber(player.shirtNumber),
     marketValue: "",
     marketValueSource: "unavailable",
     marketValueState: player.marketValueState,
@@ -1173,7 +1180,7 @@ function arenaPlayerToClubOwnerCard(player: ArenaPlayer): ClubOwnerSquadCard {
     role: player.role,
     position: card?.position || roleLabel(player.role),
     clubName: card?.clubName || "TouchLine XI",
-    shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
+    shirtNumber: normalizeArenaShirtNumber(card?.shirtNumber),
     countryCode3: card?.countryCode3 || "N/A",
     marketValue: "",
     marketValueSource: "unavailable",
@@ -1471,7 +1478,7 @@ function arenaPlayerToSubstitutedOutOption(player: ArenaPlayer): BenchOption {
     role: player.role,
     club: card?.clubName || "TouchLine XI",
     position: card?.position || roleLabel(player.role),
-    shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
+    shirtNumber: normalizeArenaShirtNumber(card?.shirtNumber),
     marketValue: "",
     marketValueSource: "unavailable",
     marketValueState: card?.marketValueState ?? undefined,
@@ -3053,8 +3060,8 @@ function arenaCardToPlayer(player: ArenaPlayer, previewTier?: TouchlineCardTierK
   return {
     sportmonksPlayerId: player.id,
     canonicalPlayerId: player.card?.canonicalPlayerId ?? null,
-    overall: card?.shirtNumber || "--",
-    shirtNumber: card?.shirtNumber || "",
+    overall: card?.shirtNumber ?? "--",
+    shirtNumber: card?.shirtNumber ?? "",
     role: card?.position || player.role,
     position: card?.position || player.role,
     flagUrl: card?.flagUrl || "",
@@ -3241,7 +3248,7 @@ function builderPlayerToPreviewCard(
   player: TeamBuilderSquadPlayer,
   options: Readonly<{ allowInventoryVisualPreview?: boolean }> = {},
 ): TouchlineEliteExactPlayer {
-  const shirtNumber = normalizeOfficialShirtNumber(player.shirtNumber);
+  const shirtNumber = normalizeArenaShirtNumber(player.shirtNumber);
   const presentation = resolveArenaPublicCardPresentation(player);
   // Keep the server-approved inventory tier inside the authenticated Market
   // preview only. This is a visual frame selector, never a publication,
@@ -9584,6 +9591,7 @@ export default function ArenaClient({
                             : touchlineCardTierPalette(player.cardTier);
                           const isSelectedMarketPlayer = selectedBuilderPlayerId === fieldId;
                           const marketCard = builderPlayerToPreviewCard(player, { allowInventoryVisualPreview: true });
+                          const displayedShirtNumber = formatTouchlinePublicShirtNumber(player.shirtNumber);
                           return (
                             <article
                               key={fieldId}
@@ -9618,7 +9626,7 @@ export default function ArenaClient({
                                 </span>
                                 <span className="team-builder-gallery-caption">
                                   <strong>{player.name}</strong>
-                                  <small>{positionLabel}{player.shirtNumber ? ` · #${player.shirtNumber}` : ""}</small>
+                                  <small>{positionLabel}{displayedShirtNumber ? ` · #${displayedShirtNumber}` : ""}</small>
                                   <em className={isPositionLimitReached ? "team-builder-position-cap is-full" : "team-builder-position-cap"}>{marketUi.positionRosterCount(positionCount, positionLimit)}</em>
                                 </span>
                               </button>

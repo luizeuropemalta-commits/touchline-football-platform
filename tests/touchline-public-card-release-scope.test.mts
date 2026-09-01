@@ -97,7 +97,7 @@ test("an unpublished football player cannot become a commercial card through art
   );
 });
 
-test("ClubHub has an explicit safe cutover: existing verified cards stay available until the publication gate is enabled", () => {
+test("ClubHub has an explicit safe cutover and exposes only verified or exactly-labelled provisional values", () => {
   assert.match(squadRoute, /isTouchlineCardPublicationGateEnabled/);
   assert.match(squadRoute, /const publicationGateEnabled = isTouchlineCardPublicationGateEnabled\(\)/);
   assert.match(squadRoute, /includeMarketValues:\s*true/);
@@ -106,8 +106,10 @@ test("ClubHub has an explicit safe cutover: existing verified cards stay availab
   assert.match(squadRoute, /currency: "GBP"/);
   assert.match(squadRoute, /publicationGateEnabled \? "touchline_editorial" : "touchline_legacy_verified"/);
   assert.match(squadRoute, /cardTier: editorialCard\?\.tierKey \?\? null/);
-  assert.match(squadRoute, /marketValueEur: verifiedMarketValueEur \?\? null/);
-  assert.match(squadRoute, /authoritativeMarketValueSource: verifiedMarketValueEur === null/);
+  assert.match(squadRoute, /marketValueEur: projectedMarketValueEur \?\? null/);
+  assert.match(squadRoute, /projectedMarketValueState === "provisional"/);
+  assert.match(squadRoute, /\? "provisional-fallback"/);
+  assert.match(squadRoute, /authoritativeMarketValueSource: projectedMarketValueEur === null/);
   assert.doesNotMatch(squadRoute, /parseMarketValueEur/);
 
   assert.match(squadRoute, /export function publicPremierSquadPlayerToCard/);

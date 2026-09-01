@@ -1,4 +1,5 @@
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
+import { formatTouchlinePublicShirtNumber } from "@/lib/touchlineArena/editorial-card-profile";
 
 import styles from "./ClubHubOutsideMatchRoster.module.css";
 
@@ -47,18 +48,19 @@ export default function ClubHubOutsideMatchRoster({
 
       {cards.length ? (
         <ul className={styles.list}>
-          {cards.map((card) => (
-            <li key={card.id} className={styles.player}>
+          {cards.map((card) => {
+            const displayedShirtNumber = formatTouchlinePublicShirtNumber(card.shirtNumber);
+            return <li key={card.id} className={styles.player}>
               <span
                 className={styles.shirtNumber}
-                aria-label={card.shirtNumber === null ? noShirtNumber : `${shirtNumberLabel} ${card.shirtNumber}`}
+                aria-label={displayedShirtNumber === null ? noShirtNumber : `${shirtNumberLabel} ${displayedShirtNumber}`}
               >
-                {card.shirtNumber ?? "—"}
+                {displayedShirtNumber ?? "—"}
               </span>
               <strong>{card.name}</strong>
               <span className={styles.position}>{card.position}</span>
-            </li>
-          ))}
+            </li>;
+          })}
         </ul>
       ) : (
         <div className={styles.empty} role="status">

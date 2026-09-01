@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { TouchlineFantasyFixtureFeed, TouchlineProviderCapabilities } from "@/lib/football-data/types";
 import { sanitizeProviderPayloadForPersistence } from "@/lib/football-data/provider-payload-sanitize";
+import { reconcileTouchlineProvisionalShirtsFromOfficialLineup } from "@/lib/football-data/card-engine-provisional-lineup-sync";
 
 export type FantasyPersistenceResult = {
   persisted: boolean;
@@ -11,6 +12,7 @@ export async function persistFantasyFixtureFeed(feed: TouchlineFantasyFixtureFee
   const supabase = createAdminClient();
   if (!supabase) return { persisted: false, reason: "supabase_admin_not_configured" };
   const sanitizedFeed = sanitizeProviderPayloadForPersistence(feed);
+  const persistedAt = new Date().toISOString();
 
   const { error } = await supabase.from("football_fantasy_fixture_feeds").upsert(
     {
@@ -21,12 +23,20 @@ export async function persistFantasyFixtureFeed(feed: TouchlineFantasyFixtureFee
       formations_payload: sanitizedFeed.formations,
       sidelined_payload: sanitizedFeed.sidelined,
       events_payload: sanitizedFeed.events,
-      last_synced_at: new Date().toISOString(),
+      last_synced_at: persistedAt,
     },
     { onConflict: "provider,provider_fixture_id" },
   );
 
   if (error) return { persisted: false, reason: error.message };
+  const provisionalReconciliation = await reconcileTouchlineProvisionalShirtsFromOfficialLineup({
+    admin: supabase,
+    feed: sanitizedFeed,
+    persistedAt,
+  });
+  if (!provisionalReconciliation.reconciled && provisionalReconciliation.reason !== "official-lineup-not-ready") {
+    return { persisted: false, reason: `card_engine_provisional_reconciliation:${provisionalReconciliation.reason}` };
+  }
   return { persisted: true };
 }
 

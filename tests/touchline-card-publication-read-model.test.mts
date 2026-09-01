@@ -18,8 +18,13 @@ test("the shared read model exposes only a published, current canonical card cla
   assert.match(source, /football_player_market_values/);
   assert.match(source, /football_squad_members/);
   assert.match(source, /text\(membership\.status\) !== "active"/);
-  assert.match(source, /text\(value\.status\) !== "verified"/);
-  assert.match(source, /text\(value\.confidence\) !== "verified"/);
+  assert.match(source, /verifiedMarketValue/);
+  assert.match(source, /provisionalMarketValue/);
+  assert.match(source, /text\(value\.status\) === "verified"/);
+  assert.match(source, /text\(value\.confidence\) === "verified"/);
+  assert.match(source, /TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR/);
+  assert.match(source, /touchline_card_engine_provisional_defaults/);
+  assert.match(source, /TOUCHLINE_PROVISIONAL_MISSING_SHIRT/);
   assert.match(source, /calculated_nominal_price_gbp/);
   assert.match(source, /currency: "GBP"/);
   assert.doesNotMatch(source, /calculated_price_tc/);

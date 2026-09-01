@@ -110,7 +110,7 @@ export type PublicPremierSquadPlayer = Omit<
   | "source"
 > & Readonly<{
   marketValue: string | null;
-  marketValueSource: "verified-cache" | "unavailable";
+  marketValueSource: "verified-cache" | "provisional-fallback" | "unavailable";
   marketValueState: TouchlinePublicProjectionStatus;
   classificationState: TouchlinePublicProjectionStatus;
   cardTier: TouchlineCardTierKey | null;
@@ -142,7 +142,7 @@ export function publicPremierSquadPlayerToCard(
     role: player.role || "midfielder",
     position: player.position || player.role || "MID",
     clubName,
-    shirtNumber: normalizeOfficialShirtNumber(player.shirtNumber),
+    shirtNumber: player.shirtNumber === 0 ? 0 : normalizeOfficialShirtNumber(player.shirtNumber),
     countryCode3: player.countryCode3 || "N/A",
     marketValue: player.marketValue ?? "",
     marketValueSource: player.marketValueSource || "unavailable",
@@ -241,11 +241,13 @@ async function projectSquadForPublic(
     const editorialCard = publicationGateEnabled
       ? publishedCards.get(identity.playerId) ?? null
       : legacyVerifiedCardPresentation(projection);
-    const verifiedMarketValueEur = editorialCard?.marketValueEur
+    const projectedMarketValueEur = editorialCard?.marketValueEur
       ?? (projection.marketValue.status === "verified" ? projection.marketValue.value?.eur : null);
+    const projectedMarketValueState = editorialCard?.marketValueState
+      ?? (projection.marketValue.status === "verified" ? "verified" : "unavailable");
     const override = editorialOverrides.get(identity.playerId.toLowerCase());
     const effectiveName = override?.displayName ?? identity.displayName;
-    const effectiveShirtNumber = override?.shirtNumber ?? membership.jerseyNumber;
+    const effectiveShirtNumber = editorialCard?.shirtNumber ?? override?.shirtNumber ?? membership.jerseyNumber;
     const effectivePosition = override?.position ?? membership.position;
     const effectiveCountryCode3 = countryCode3(identity.nationality, override?.countryCode3 ?? identity.countryCode3);
     players.push({
@@ -260,23 +262,38 @@ async function projectSquadForPublic(
       shirtNumberSource: "verified-cache",
       shirtNumberVerifiedAt: null,
       shirtNumberSourceUrl: null,
-      cardEligibility: effectiveShirtNumber ? "eligible" : "awaiting-shirt-number",
+      cardEligibility: effectiveShirtNumber === 0
+        ? "provisional-shirt-number"
+        : effectiveShirtNumber
+          ? "eligible"
+          : "awaiting-shirt-number",
       clubTeamId: club.providerTeamId,
       clubName: club.name,
       countryCode3: effectiveCountryCode3,
       flagUrl: touchlineCountryFlagUrl(effectiveCountryCode3),
       nationality: identity.nationality,
-      marketValue: verifiedMarketValueEur === null || verifiedMarketValueEur === undefined
+      marketValue: projectedMarketValueEur === null || projectedMarketValueEur === undefined
         ? null
-        : formatTouchlineMarketValueEur(verifiedMarketValueEur, "en-GB"),
-      marketValueSource: verifiedMarketValueEur === null || verifiedMarketValueEur === undefined ? "unavailable" : "verified-cache",
-      marketValueState: verifiedMarketValueEur === null || verifiedMarketValueEur === undefined ? "unavailable" : "verified",
-      classificationState: "unavailable",
+        : formatTouchlineMarketValueEur(projectedMarketValueEur, "en-GB"),
+      marketValueSource: projectedMarketValueEur === null || projectedMarketValueEur === undefined
+        ? "unavailable"
+        : projectedMarketValueState === "provisional"
+          ? "provisional-fallback"
+          : "verified-cache",
+      marketValueState: projectedMarketValueState,
+      classificationState: !editorialCard
+        ? "unavailable"
+        : editorialCard.marketValueState === "provisional"
+          ? "provisional"
+          : "verified",
       cardTier: editorialCard?.tierKey ?? null,
       cardPriceVersion: null,
-      marketValueEur: verifiedMarketValueEur ?? null,
+      marketValueEur: projectedMarketValueEur ?? null,
       marketValueUpdatedAt: projection.marketValue.value?.lastVerified ?? null,
-      authoritativeMarketValueSource: verifiedMarketValueEur === null || verifiedMarketValueEur === undefined ? null : "verified-cache",
+      authoritativeMarketValueSource: projectedMarketValueEur === null || projectedMarketValueEur === undefined
+        || projectedMarketValueState === "provisional"
+        ? null
+        : "verified-cache",
       canonicalPlayerId: identity.playerId,
       editorialCard,
       cardReview: evaluateTouchlineCardCompleteness({

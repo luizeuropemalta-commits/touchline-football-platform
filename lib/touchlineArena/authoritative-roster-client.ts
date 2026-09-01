@@ -26,7 +26,7 @@ function optionalText(value: unknown) {
 }
 
 function marketValueSource(value: unknown): ClubOwnerSquadCard["marketValueSource"] | null {
-  return value === "provider" || value === "verified-cache" || value === "unavailable"
+  return value === "provider" || value === "verified-cache" || value === "provisional-fallback" || value === "unavailable"
     ? value
     : null;
 }
@@ -120,7 +120,7 @@ export function parseAuthoritativeRosterResponse(
       role,
       position,
       clubName,
-      shirtNumber: normalizeOfficialShirtNumber(card?.shirtNumber),
+      shirtNumber: card?.shirtNumber === 0 ? 0 : normalizeOfficialShirtNumber(card?.shirtNumber),
       countryCode3,
       marketValue,
       marketValueSource: source,

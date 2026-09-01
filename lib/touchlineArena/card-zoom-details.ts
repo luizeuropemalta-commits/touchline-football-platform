@@ -145,7 +145,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   cardReview?: TouchlineCardReviewPresentation | null;
   activeContractCard?: TouchlineActiveContractCardPresentation | null;
   marketValue?: string | number | null;
-  marketValueSource?: "provider" | "verified-cache" | "unavailable" | null;
+  marketValueSource?: "provider" | "verified-cache" | "provisional-fallback" | "unavailable" | null;
   marketValueState?: string | null;
   /** @deprecated Retained temporarily for call-site compatibility; ignored. */
   classificationState?: string | null;
@@ -178,6 +178,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   const publicCard = input.editorialCard
     ? {
       tierKey: input.editorialCard.tierKey,
+      marketValueState: input.editorialCard.marketValueState ?? "verified" as const,
       marketValue: input.editorialCard.marketValueEur === undefined
         ? null
         : formatTouchlineMarketValueEur(input.editorialCard.marketValueEur, input.locale),
@@ -185,6 +186,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
     : input.activeContractCard && touchlineArenaTierForKey(input.activeContractCard.tierKey)
       ? {
         tierKey: input.activeContractCard.tierKey,
+        marketValueState: "unavailable" as const,
         marketValue: null,
       }
       : null;
@@ -192,7 +194,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
     ?? (input.marketValueState === "verified" && input.marketValue !== null && input.marketValue !== undefined
       ? String(input.marketValue)
       : null);
-  const reviewRequired = input.cardReview?.state === "REVIEW_REQUIRED";
+  const reviewRequired = !publicCard && input.cardReview?.state === "REVIEW_REQUIRED";
   const reviewFields = reviewRequired
     ? [
       field(
@@ -224,7 +226,9 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
         "tier",
       ),
       field(
-        isPortuguese ? "Valor de mercado" : "Market value",
+        publicCard.marketValueState === "provisional"
+          ? (isPortuguese ? "Valor provisório" : "Provisional value")
+          : (isPortuguese ? "Valor de mercado" : "Market value"),
         marketValue ?? (isPortuguese ? "Pendente" : "Pending"),
         true,
         "identity",

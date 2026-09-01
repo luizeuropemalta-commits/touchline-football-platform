@@ -1,9 +1,11 @@
 import {
+  parseMarketValueEurOrNull,
   resolveTouchlineVerifiedPlayerEconomy,
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
   type TouchlineMarketValueSource,
 } from "./card-rules.ts";
+import { TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR } from "./card-engine-provisional-policy.ts";
 
 /**
  * Public-card presentation is deliberately narrower than inventory or a
@@ -11,7 +13,7 @@ import {
  * player card. A current-season contract remains an explicit, frozen
  * exception, because its stored tier/price are not recalculated here.
  */
-export const TOUCHLINE_PUBLIC_CARD_STATES = ["verified", "pending", "unavailable", "error"] as const;
+export const TOUCHLINE_PUBLIC_CARD_STATES = ["verified", "provisional", "pending", "unavailable", "error"] as const;
 
 export type TouchlinePublicCardState = (typeof TOUCHLINE_PUBLIC_CARD_STATES)[number];
 export type TouchlinePublicCardVisualState = TouchlinePublicCardState | "active-contract";
@@ -56,6 +58,7 @@ function mostRestrictiveState(...states: Array<TouchlinePublicCardState | null |
   if (states.includes("error")) return "error";
   if (states.includes("unavailable")) return "unavailable";
   if (states.includes("pending")) return "pending";
+  if (states.includes("provisional")) return "provisional";
   return "verified";
 }
 
@@ -72,6 +75,8 @@ export function resolveTouchlinePublicCardPresentation(
     marketValueSource: input.marketValueSource,
   });
   const isActiveContract = input.cardPriceAuthority === "active-contract";
+  const hasValidProvisionalMarketValue = input.marketValueSource === "provisional-fallback"
+    && parseMarketValueEurOrNull(input.marketValue) === TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR;
   const requestedMarketValueState = isPublicCardState(input.marketValueState)
     ? input.marketValueState
     : undefined;
@@ -81,8 +86,10 @@ export function resolveTouchlinePublicCardPresentation(
   const hasVerifiedMarketValue = economy.status === "resolved";
   const marketValueState = requestedMarketValueState === "verified"
     ? (hasVerifiedMarketValue ? "verified" : "unavailable")
-    : requestedMarketValueState
-      ?? (hasVerifiedMarketValue ? "verified" : "unavailable");
+    : requestedMarketValueState === "provisional"
+      ? (hasValidProvisionalMarketValue ? "provisional" : "unavailable")
+      : requestedMarketValueState
+        ?? (hasVerifiedMarketValue ? "verified" : "unavailable");
   const requestedClassificationState = isPublicCardState(input.classificationState)
     ? input.classificationState
     : undefined;
@@ -97,7 +104,9 @@ export function resolveTouchlinePublicCardPresentation(
     ? requestedClassificationState ?? "verified"
     : marketValueState === "verified"
       ? requestedClassificationState ?? "unavailable"
-      : mostRestrictiveState(marketValueState, requestedClassificationState);
+      : marketValueState === "provisional"
+        ? requestedClassificationState ?? "provisional"
+        : mostRestrictiveState(marketValueState, requestedClassificationState);
   // The tier is an approved seasonal classification, not a value-to-tier
   // calculation performed by a presentation component. A missing tier must
   // therefore remain unavailable instead of becoming a visual Ruby fallback.
@@ -107,10 +116,14 @@ export function resolveTouchlinePublicCardPresentation(
 
   const canExposeCommercialPresentation = isActiveContract
     ? Boolean(approvedTierKey)
-    : marketValueState === "verified"
+    : (
+      marketValueState === "verified"
       && classificationState === "verified"
       && hasVerifiedMarketValue
-      && Boolean(approvedTierKey);
+      || marketValueState === "provisional"
+      && classificationState === "provisional"
+      && hasValidProvisionalMarketValue
+    ) && Boolean(approvedTierKey);
   const tierKey = canExposeCommercialPresentation
     ? approvedTierKey
     : null;
@@ -118,7 +131,7 @@ export function resolveTouchlinePublicCardPresentation(
   return {
     marketValueState,
     classificationState,
-    visualState: isActiveContract && tierKey ? "active-contract" : (tierKey ? "verified" : classificationState),
+    visualState: isActiveContract && tierKey ? "active-contract" : classificationState,
     hasVerifiedMarketValue: marketValueState === "verified" && hasVerifiedMarketValue,
     tierKey,
     canExposeCommercialPresentation: Boolean(tierKey),
@@ -134,6 +147,7 @@ export function touchlinePublicCardStatusLabel(
   if (state === "error") return pt ? "Temporariamente indisponível" : "Temporarily unavailable";
   if (state === "unavailable") return pt ? "Indisponível" : "Unavailable";
   if (state === "pending") return pt ? "Pendente" : "Pending";
+  if (state === "provisional") return pt ? "Provisório" : "Provisional";
   return pt ? "Verificado" : "Verified";
 }
 
@@ -145,5 +159,6 @@ export function touchlinePublicMarketValueStatusLabel(
   if (state === "error") return pt ? "Valor indisponível" : "Value unavailable";
   if (state === "unavailable") return pt ? "Valor indisponível" : "Value unavailable";
   if (state === "pending") return pt ? "Valor pendente" : "Market value pending";
+  if (state === "provisional") return pt ? "Valor provisório" : "Provisional value";
   return pt ? "Verificado" : "Verified";
 }

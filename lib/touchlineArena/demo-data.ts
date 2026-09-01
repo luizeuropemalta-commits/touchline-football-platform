@@ -40,10 +40,10 @@ export type ClubOwnerSquadCard = {
   shirtNumber: number | null;
   countryCode3: string;
   marketValue: string;
-  marketValueSource?: "provider" | "verified-cache" | "unavailable";
+  marketValueSource?: "provider" | "verified-cache" | "provisional-fallback" | "unavailable";
   /** Server-owned public state; absence retains the existing legacy card path. */
-  marketValueState?: "verified" | "pending" | "unavailable" | "error";
-  classificationState?: "verified" | "pending" | "unavailable" | "error";
+  marketValueState?: "verified" | "provisional" | "pending" | "unavailable" | "error";
+  classificationState?: "verified" | "provisional" | "pending" | "unavailable" | "error";
   cardTier?: TouchlineCardTierKey;
   cardPriceVersion?: string;
   /** Present only for a roster read from an active server-side card contract. */

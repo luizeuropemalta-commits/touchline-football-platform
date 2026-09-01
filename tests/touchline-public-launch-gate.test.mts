@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   isTouchlineLaunchGateProductRoute,
   resolveTouchlinePublicLaunchGate,
+  shouldTouchlineRedirectAuthenticatedAuthEntry,
   touchlineLaunchGateReturnTo,
 } from "../lib/touchlineArena/public-launch-gate.ts";
 
@@ -182,8 +183,36 @@ test("the root and protected-route proxy use one canonical launch experience wit
   assert.match(proxySource, /if \(launchGate\.active && isTouchlineLaunchGateProductRoute\(pathname\)\)/);
   assert.match(proxySource, /const isAuth = authPaths\.some/);
   assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect/);
-  assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);
+  assert.match(proxySource, /shouldTouchlineRedirectAuthenticatedAuthEntry/);
   assert.match(previewContractSource, /"TOUCHLINE_PUBLIC_LAUNCH_GATE"/);
+});
+
+test("authenticated browsers can still follow the launch login CTA without an Arena redirect loop", () => {
+  assert.match(proxySource, /launch gate deliberately offers login and registration/);
+  assert.equal(shouldTouchlineRedirectAuthenticatedAuthEntry({
+    hasArenaAccess: true,
+    isAuthEntry: true,
+    isAuthenticated: true,
+    launchGateActive: true,
+  }), false);
+  assert.equal(shouldTouchlineRedirectAuthenticatedAuthEntry({
+    hasArenaAccess: true,
+    isAuthEntry: true,
+    isAuthenticated: true,
+    launchGateActive: false,
+  }), true);
+  assert.equal(shouldTouchlineRedirectAuthenticatedAuthEntry({
+    hasArenaAccess: false,
+    isAuthEntry: true,
+    isAuthenticated: true,
+    launchGateActive: false,
+  }), false);
+  assert.equal(shouldTouchlineRedirectAuthenticatedAuthEntry({
+    hasArenaAccess: true,
+    isAuthEntry: false,
+    isAuthenticated: true,
+    launchGateActive: false,
+  }), false);
 });
 
 test("the premium launch copy and both authentication calls to action are present", () => {

@@ -72,6 +72,20 @@ export function isTouchlineLaunchGateProductRoute(pathname: string) {
   return productRoutePrefixes.some((route) => matchesRoute(pathname, route));
 }
 
+export function shouldTouchlineRedirectAuthenticatedAuthEntry({
+  hasArenaAccess,
+  isAuthEntry,
+  isAuthenticated,
+  launchGateActive,
+}: Readonly<{
+  hasArenaAccess: boolean;
+  isAuthEntry: boolean;
+  isAuthenticated: boolean;
+  launchGateActive: boolean;
+}>) {
+  return isAuthenticated && hasArenaAccess && isAuthEntry && !launchGateActive;
+}
+
 export function touchlineLaunchGateReturnTo(
   locale: TouchLinePresentationLocale,
   mode: Exclude<TouchlinePublicLaunchGateMode, "off">,

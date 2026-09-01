@@ -19,6 +19,7 @@ export const TOUCHLINE_ENGLAND_EFFECTIVE_SEASON = "2026-27";
 
 export type TouchlinePublicProjectionStatus =
   | "verified"
+  | "provisional"
   | "pending"
   | "unavailable"
   | "error";

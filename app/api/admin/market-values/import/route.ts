@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
 import {
-  applyTouchlineMarketValueImport,
-  type TouchlineMarketValueImportRequest,
-} from "@/lib/touchlineArena/market-value-import-server";
+  createTouchlineCardEngineBatch,
+  type TouchlineCardEngineBatchSourceType,
+} from "@/lib/touchlineArena/card-engine-batch-server";
+import { loadTouchlineCardEngineCandidates } from "@/lib/touchlineArena/card-engine-candidates-server";
+import {
+  prepareTouchlineMarketValueCardEngineRows,
+  touchlineMarketValueBatchContentIdentity,
+  type TouchlineMarketValueBatchSource,
+} from "@/lib/touchlineArena/card-engine-market-value-batch";
+import { CARD_ENGINE_IMPORT_MAX_ROWS, summarizeCardEngineRows } from "@/lib/touchlineArena/card-engine-editorial-import";
 import type { TouchlineMarketValueImportRow } from "@/lib/touchlineArena/market-value-import";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -27,7 +34,7 @@ function positiveIntegerOrNull(value: unknown) {
 }
 
 function importRows(value: unknown): TouchlineMarketValueImportRow[] | null {
-  if (!Array.isArray(value) || !value.length) return null;
+  if (!Array.isArray(value) || !value.length || value.length > CARD_ENGINE_IMPORT_MAX_ROWS) return null;
   const rows: TouchlineMarketValueImportRow[] = [];
   for (const item of value) {
     if (!item || typeof item !== "object") return null;
@@ -46,7 +53,54 @@ function importRows(value: unknown): TouchlineMarketValueImportRow[] | null {
   return rows;
 }
 
+function isSameOrigin(request: NextRequest) {
+  const origin = request.headers.get("origin");
+  return !origin || origin === request.nextUrl.origin;
+}
+
+function cardEngineSourceType(source: TouchlineMarketValueBatchSource): TouchlineCardEngineBatchSourceType {
+  return source === "licensed_import" ? "csv" : "single_edit";
+}
+
+async function createMarketValueReviewBatch(input: Readonly<{
+  admin: NonNullable<ReturnType<typeof createAdminClient>>;
+  actorUserId: string;
+  rows: readonly TouchlineMarketValueImportRow[];
+  scope: string;
+  verifiedSeason: string;
+  source: TouchlineMarketValueBatchSource;
+  jobKey: string;
+  competitionId?: string | null;
+  clubId?: string | null;
+  sourceImportFile?: string | null;
+}>) {
+  const resolved = prepareTouchlineMarketValueCardEngineRows({
+    rows: input.rows,
+    candidates: await loadTouchlineCardEngineCandidates(input.admin),
+    source: input.source,
+  });
+  const summary = summarizeCardEngineRows(resolved);
+  const batch = await createTouchlineCardEngineBatch(input.admin, {
+    sourceType: cardEngineSourceType(input.source),
+    sourceFilename: input.sourceImportFile,
+    effectiveSeason: input.verifiedSeason,
+    rows: resolved,
+    actorId: input.actorUserId,
+    contentIdentity: touchlineMarketValueBatchContentIdentity({
+      scope: input.scope,
+      verifiedSeason: input.verifiedSeason,
+      source: input.source,
+      jobKey: input.jobKey,
+      competitionId: input.competitionId,
+      clubId: input.clubId,
+      rows: input.rows,
+    }),
+  });
+  return { batch, summary, rows: resolved };
+}
+
 export async function POST(request: NextRequest) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Cross-origin Market Values write blocked." }, { status: 403 });
   const supabase = await createClient();
   const admin = createAdminClient();
   if (!supabase || !admin) return NextResponse.json({ error: "Server market-value administration is not configured." }, { status: 503 });
@@ -72,26 +126,28 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await applyTouchlineMarketValueImport(admin, {
-      scope: scope as TouchlineMarketValueImportRequest["scope"],
+    const result = await createMarketValueReviewBatch({
+      admin,
+      scope,
       verifiedSeason,
-      source,
+      source: source as TouchlineMarketValueBatchSource,
       actorUserId,
       rows,
-      jobKey: jobKey as TouchlineMarketValueImportRequest["jobKey"],
+      jobKey,
       competitionId: cleanText(body.competitionId),
       clubId: cleanText(body.clubId),
       sourceImportFile: cleanText(body.sourceImportFile),
     });
-    return NextResponse.json({ ok: true, result });
+    return NextResponse.json({ ok: true, result, nextAction: "review_in_card_engine" });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Market-value import failed." }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Market Values batch creation failed." }, { status: 409 });
   }
 }
 
-/** Owner-only queue actions. Approval re-enters the same canonical importer so
- * history and run accounting remain complete; it never touches card economy. */
+/** Owner-only queue actions. A queue approval creates a Card Engine review
+ * batch; it does not publish or mutate a player Market Value directly. */
 export async function PATCH(request: NextRequest) {
+  if (!isSameOrigin(request)) return NextResponse.json({ error: "Cross-origin Market Values write blocked." }, { status: 403 });
   const supabase = await createClient();
   const admin = createAdminClient();
   if (!supabase || !admin) return NextResponse.json({ error: "Server market-value administration is not configured." }, { status: 503 });
@@ -123,19 +179,19 @@ export async function PATCH(request: NextRequest) {
     const verifiedSeason = cleanText(body.verifiedSeason);
     if (!row || !verifiedSeason) return NextResponse.json({ error: "An approved row and verifiedSeason are required." }, { status: 400 });
     try {
-      const result = await applyTouchlineMarketValueImport(admin, {
+      const result = await createMarketValueReviewBatch({
+        admin,
         scope: "player",
         verifiedSeason,
         source: "manual_approval",
         actorUserId,
         rows: [row],
         jobKey: "manual_emergency_player_import",
+        sourceImportFile: `market-value-queue-item-${itemId}`,
       });
-      const { error } = await admin.from("football_market_value_import_items").update({ status: "imported", failure_code: null }).eq("id", itemId);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-      return NextResponse.json({ ok: true, result });
+      return NextResponse.json({ ok: true, status: "card_engine_review_required", result });
     } catch (error) {
-      return NextResponse.json({ error: error instanceof Error ? error.message : "Market-value approval failed." }, { status: 500 });
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Market Values review batch creation failed." }, { status: 409 });
     }
   }
   return NextResponse.json({ error: "Unsupported market-value queue action." }, { status: 400 });

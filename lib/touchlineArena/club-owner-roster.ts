@@ -5,6 +5,7 @@ import {
   touchlineArenaCompetitionTierForCard,
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
+import { TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR } from "./card-engine-provisional-policy.ts";
 import {
   CLUB_OWNER_SQUAD_CARDS,
   type ClubOwnerSquadCard,
@@ -206,7 +207,7 @@ function isCompactRosterCardV2(value: unknown): value is CompactRosterCardV2 {
     && (typeof value[6] === "number" || value[6] === null)
     && value.slice(7, 9).every((entry) => typeof entry === "string")
     && typeof value[9] === "number"
-    && (value[10] === null || ["provider", "verified-cache", "unavailable"].includes(String(value[10])))
+    && (value[10] === null || ["provider", "verified-cache", "provisional-fallback", "unavailable"].includes(String(value[10])))
     && (value[11] === null || typeof value[11] === "string")
     && (value[12] === null || typeof value[12] === "string");
 }
@@ -226,7 +227,7 @@ function isCompactRosterCardV4(value: unknown): value is CompactRosterCardV4 {
 }
 
 function isCompactRosterCardV5(value: unknown): value is CompactRosterCardV5 {
-  const publicStates = ["verified", "pending", "unavailable", "error"];
+  const publicStates = ["verified", "provisional", "pending", "unavailable", "error"];
   return Array.isArray(value)
     && value.length === 17
     && isCompactRosterCardV4(value.slice(0, 15))
@@ -246,9 +247,14 @@ export function canonicalClubOwnerRosterCard(card: ClubOwnerSquadCard): ClubOwne
     card.marketValueSource === "provider"
     || card.marketValueSource === "verified-cache"
   );
+  const hasProvisionalFallback = card.marketValueSource === "provisional-fallback"
+    && card.marketValueState === "provisional"
+    && parseMarketValueEurOrNull(card.marketValue) === TOUCHLINE_PROVISIONAL_MARKET_VALUE_EUR;
   const keepsSuppliedMarketValue = hasCardMarketValue
-    && hasVerifiedSource
-    && (!hasCanonicalPublicState || card.marketValueState === "verified");
+    && (
+      hasVerifiedSource && (!hasCanonicalPublicState || card.marketValueState === "verified")
+      || hasProvisionalFallback
+    );
   const canonicalMarketValue = hasCanonicalPublicState
     ? keepsSuppliedMarketValue
       ? card.marketValue
@@ -514,7 +520,9 @@ export function writeBrowserClubOwnerRoster(
 
 export function clubOwnerRosterMarketValue(cards: ClubOwnerSquadCard[]) {
   return cards.reduce((sum, card) => (
-    card.marketValueSource === "provider" || card.marketValueSource === "verified-cache"
+    card.marketValueSource === "provider"
+      || card.marketValueSource === "verified-cache"
+      || card.marketValueSource === "provisional-fallback"
       ? sum + parseMarketValueEur(card.marketValue)
       : sum
   ), 0);

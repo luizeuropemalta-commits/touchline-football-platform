@@ -119,14 +119,20 @@ export async function loadTouchLineRankedCardCatalog(
       role: inferArenaRole(position),
       position,
       clubName,
-      shirtNumber: normalizeOfficialShirtNumber(squad?.jersey_number),
+      shirtNumber: editorialCard.shirtNumber ?? normalizeOfficialShirtNumber(squad?.jersey_number),
       countryCode3: countryCode(player),
       marketValue: editorialCard.marketValueEur === undefined
         ? ""
         : formatTouchlineMarketValueEur(editorialCard.marketValueEur, "en-GB"),
-      marketValueSource: editorialCard.marketValueEur === undefined ? "unavailable" as const : "verified-cache" as const,
-      marketValueState: editorialCard.marketValueEur === undefined ? "unavailable" as const : "verified" as const,
-      classificationState: "verified" as const,
+      marketValueSource: editorialCard.marketValueEur === undefined
+        ? "unavailable" as const
+        : editorialCard.marketValueState === "provisional"
+          ? "provisional-fallback" as const
+          : "verified-cache" as const,
+      marketValueState: editorialCard.marketValueEur === undefined
+        ? "unavailable" as const
+        : editorialCard.marketValueState ?? "verified" as const,
+      classificationState: editorialCard.marketValueState === "provisional" ? "provisional" as const : "verified" as const,
       cardTier: editorialCard.tierKey,
       editorialCard,
       // Kept only to satisfy the established private DTO while all active
@@ -235,14 +241,20 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
       role: inferArenaRole(position),
       position,
       clubName,
-      shirtNumber: normalizeOfficialShirtNumber(squad?.jersey_number),
+      shirtNumber: editorialCard.shirtNumber ?? normalizeOfficialShirtNumber(squad?.jersey_number),
       countryCode3: countryCode(player),
       marketValue: editorialCard.marketValueEur === undefined
         ? ""
         : formatTouchlineMarketValueEur(editorialCard.marketValueEur, "en-GB"),
-      marketValueSource: editorialCard.marketValueEur === undefined ? "unavailable" as const : "verified-cache" as const,
-      marketValueState: editorialCard.marketValueEur === undefined ? "unavailable" as const : "verified" as const,
-      classificationState: "verified" as const,
+      marketValueSource: editorialCard.marketValueEur === undefined
+        ? "unavailable" as const
+        : editorialCard.marketValueState === "provisional"
+          ? "provisional-fallback" as const
+          : "verified-cache" as const,
+      marketValueState: editorialCard.marketValueEur === undefined
+        ? "unavailable" as const
+        : editorialCard.marketValueState ?? "verified" as const,
+      classificationState: editorialCard.marketValueState === "provisional" ? "provisional" as const : "verified" as const,
       cardTier: editorialCard.tierKey,
       editorialCard,
       touchlinePoints: 0,

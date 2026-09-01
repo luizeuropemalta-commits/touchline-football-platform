@@ -14,6 +14,7 @@ import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import {
   isTouchlineLaunchGateProductRoute,
   resolveTouchlinePublicLaunchGate,
+  shouldTouchlineRedirectAuthenticatedAuthEntry,
   TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY,
   type TouchlinePublicLaunchGateMode,
 } from "@/lib/touchlineArena/public-launch-gate";
@@ -611,7 +612,17 @@ async function handleTouchLineRequest(request: NextRequest) {
   if (user && isProtectedArenaRoute && !hasArenaAccess) return loginRedirect(request, response);
   if (user && isAdminOnlyArenaRoute && !isAdmin) return arenaRedirect(request, response);
   if (isEmergencyOffline && user && !isAdmin && !isAuth) return offlineResponse(requestLocale(request));
-  if (user && hasArenaAccess && isAuthEntry) {
+  // The public launch gate deliberately offers login and registration as its
+  // only exits. Keep those pages reachable even when this browser already has
+  // an Arena session, otherwise the CTA loops straight back to the gated Arena
+  // and appears dead. No session is cleared or replaced until the user submits
+  // an authentication form.
+  if (shouldTouchlineRedirectAuthenticatedAuthEntry({
+    hasArenaAccess,
+    isAuthEntry,
+    isAuthenticated: Boolean(user),
+    launchGateActive: launchGate.active,
+  })) {
     const lang = request.nextUrl.searchParams.get("lang");
     const returnTo = normalizeTouchLineAuthReturnTo(request.nextUrl.searchParams.get("returnTo"));
     const destination = touchLinePostAuthHref(returnTo, lang);

@@ -30,7 +30,8 @@
     "social:run-queue:qa": "node --experimental-strip-types scripts/qa/run-touchline-social-lineup-draft-queue.mts",
     "social:watch:qa": "node --experimental-strip-types scripts/qa/watch-touchline-social-lineup-drafts.mts",
     "verify:social-shadow-039": "node --experimental-strip-types scripts/qa/verify-touchline-social-shadow-039.mts",
-    "verify:social-shadow-040": "node --experimental-strip-types scripts/qa/verify-touchline-social-shadow-040.mts"
+    "verify:social-shadow-040": "node --experimental-strip-types scripts/qa/verify-touchline-social-shadow-040.mts",
+    "verify:card-provisional-shadow": "node --experimental-strip-types scripts/qa/verify-touchline-card-engine-provisional-shadow.mts"
   },
   "dependencies": {
     "@sentry/nextjs": "10.70.0",
