@@ -1,0 +1,94 @@
+import Image from "next/image";
+import Link from "next/link";
+
+import type { TouchlineClubSocialFeedPage } from "@/lib/touchlineArena/club-social-feed-server";
+import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+
+import styles from "./TouchlineClubSocialFeed.module.css";
+
+const LABELS: Readonly<Record<string, Readonly<{ en: string; pt: string }>>> = Object.freeze({
+  LINEUP: { en: "Official line-up", pt: "Escalação oficial" },
+  FULL_TIME: { en: "Full Time", pt: "Fim de jogo" },
+  GOAL_CONFIRMED: { en: "Goal confirmed", pt: "Gol confirmado" },
+  RED_CARD_CONFIRMED: { en: "Red card confirmed", pt: "Cartão vermelho confirmado" },
+  GAMEWEEK_RANKING_PREVIEW: { en: "Gameweek ranking", pt: "Ranking da Gameweek" },
+  GAMEWEEK_RANKING_FINAL: { en: "Gameweek final ranking", pt: "Ranking final da Gameweek" },
+  PLAYER_DUEL: { en: "TouchLine card duel", pt: "Duelo de cards TouchLine" },
+  GAMEWEEK_HERO: { en: "Gameweek hero", pt: "Herói da Gameweek" },
+  TOP_PERFORMER: { en: "Top performer", pt: "Destaque da partida" },
+  HAT_TRICK_HERO: { en: "Hat-trick hero", pt: "Herói do hat-trick" },
+});
+
+function contentLabel(contentType: string, locale: TouchLineLocale) {
+  const label = LABELS[contentType];
+  return label ? (locale === "pt-BR" ? label.pt : label.en) : "TouchLine update";
+}
+
+export default function TouchlineClubSocialFeed({
+  clubName,
+  clubSlug,
+  locale,
+  page,
+}: Readonly<{
+  clubName: string;
+  clubSlug: string;
+  locale: TouchLineLocale;
+  page: TouchlineClubSocialFeedPage;
+}>) {
+  const pt = locale === "pt-BR";
+  return (
+    <section className={styles.shell} aria-labelledby="club-social-feed-title">
+      <header className={styles.header}>
+        <div>
+          <span className={styles.eyebrow}>{pt ? "Canal oficial do clube" : "Official club channel"}</span>
+          <h2 className={styles.title} id="club-social-feed-title">{clubName} · TouchLine</h2>
+        </div>
+        <span className={styles.verified}>TouchLine Verified</span>
+      </header>
+
+      {page.state === "ready" ? (
+        <div className={styles.grid}>
+          {page.items.map((item) => (
+            <article className={styles.card} key={item.id}>
+              <div className={styles.media}>
+                <Image
+                  alt={`${contentLabel(item.contentType, locale)} · ${clubName}`}
+                  fill
+                  sizes="(max-width: 620px) 92vw, (max-width: 960px) 45vw, 30vw"
+                  src={item.imageUrl}
+                  unoptimized
+                />
+              </div>
+              <div className={styles.body}>
+                <span className={styles.kind}>{contentLabel(item.contentType, locale)}</span>
+                <p className={styles.copy}>{item.copy}</p>
+                <time className={styles.date} dateTime={item.publishedAt}>
+                  {new Intl.DateTimeFormat(locale, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                    timeZone: "Europe/Malta",
+                  }).format(new Date(item.publishedAt))}
+                </time>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className={styles.empty} role="status">
+          {page.state === "unavailable"
+            ? (pt ? "As atualizações oficiais estão temporariamente indisponíveis." : "Official updates are temporarily unavailable.")
+            : (pt ? "As próximas atualizações oficiais aparecerão aqui." : "The next official club updates will appear here.")}
+        </p>
+      )}
+
+      {page.nextCursor ? (
+        <Link
+          className={styles.more}
+          href={`/touchline-clubs/${clubSlug}?lang=${encodeURIComponent(locale)}&feedCursor=${encodeURIComponent(page.nextCursor)}`}
+        >
+          {pt ? "Ver atualizações anteriores" : "View earlier updates"}
+        </Link>
+      ) : null}
+    </section>
+  );
+}

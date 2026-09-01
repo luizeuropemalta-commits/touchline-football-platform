@@ -1,6 +1,6 @@
-# Club Social Feed — roadmap only
+# Club Social Feed — local module 045 candidate
 
-Status: **approved product direction; no runtime, schema, job, Storage or UI implementation authorised during the current fixes**.
+Status: **implemented and shadow-validated locally; not independently approved, applied, scheduled or deployed**.
 
 Each Club Hub may eventually expose a first-party TouchLine social feed filtered by the canonical `clubId`/provider `teamId` mapping. It reuses the Club Owner Timeline editorial source and channel adapter; it is not an Instagram embed and does not create an independent copy of fixture facts.
 
@@ -15,7 +15,9 @@ Each Club Hub may eventually expose a first-party TouchLine social feed filtered
 - verified coach/card milestones;
 - club ranking and verified form.
 
-Phase 1 contains official TouchLine posts plus moderated comments/reactions only. User-generated posts are a separate later phase with their own identity, moderation, abuse, privacy and deletion contract.
+Phase 1 contains official TouchLine posts only. Comments, reactions and
+user-generated posts are disabled until their separate moderation, abuse,
+privacy and deletion contracts are approved.
 
 ## Canonical identity and fan-out
 
@@ -39,7 +41,7 @@ Phase 1 contains official TouchLine posts plus moderated comments/reactions only
 - Canonical football data, fixture evidence, cards, ratings and settlements remain outside the feed and are never deleted by feed retention.
 - Timeline-only heavy derivatives may be removed through reference-counted Storage lifecycle after hard-delete. A shared Instagram or approval reference prevents deletion of the same content-addressed object.
 
-## Runtime gates required later
+## Runtime gates still required
 
 Before implementation, a separate reviewed proposal must prove:
 
@@ -52,4 +54,8 @@ Before implementation, a separate reviewed proposal must prove:
 7. concurrency/idempotency for one Match Thread per fixture and one canonical post/revision;
 8. disposable database, RLS/security, performance and browser tests before shared QA.
 
-No item above authorises a migration, deploy, shared QA write, Production change or Instagram dispatch.
+The local candidate covers items 2, 3, 4, 6 and 7 in its current first-party
+scope and has a disposable PostgreSQL proof. Items 1, 5 and 8 remain explicit
+activation gates, and an independent review must verify all eight against the
+actual diff. No item above authorises a migration, deploy, shared QA write,
+Production change or Instagram dispatch.

@@ -111,10 +111,12 @@ create table public.football_rounds (
   id uuid primary key default gen_random_uuid(), provider text, season_id uuid, name text
 );
 create table public.football_clubs (
-  id uuid primary key default gen_random_uuid(), provider text, provider_team_id text, name text
+  id uuid primary key default gen_random_uuid(), provider text, competition_id uuid,
+  provider_team_id text, name text
 );
 create table public.football_players (
-  id uuid primary key default gen_random_uuid(), provider text, provider_player_id text, display_name text
+  id uuid primary key default gen_random_uuid(), provider text, provider_player_id text, display_name text,
+  current_club_id uuid
 );
 create table public.football_squad_members (
   id uuid primary key default gen_random_uuid(), provider text, player_id uuid, club_id uuid,
@@ -129,12 +131,41 @@ create table public.football_fixture_lifecycle_events (
   id uuid primary key default gen_random_uuid(), fixture_id uuid, event_type text,
   first_observed_at timestamptz
 );
+create table public.football_fixture_events (
+  id uuid primary key default gen_random_uuid(),
+  fixture_id uuid not null references public.football_fixtures(id) on delete cascade,
+  provider text not null,
+  provider_event_id text not null,
+  provider_sort_order integer,
+  minute integer,
+  extra_minute integer,
+  provider_team_id text,
+  provider_player_id text,
+  football_player_id uuid references public.football_players(id) on delete set null,
+  player_name text,
+  related_provider_player_id text,
+  related_football_player_id uuid references public.football_players(id) on delete set null,
+  related_player_name text,
+  event_type text not null,
+  result text,
+  info text,
+  addition text,
+  event_status text not null default 'recorded' check (event_status in ('recorded', 'rescinded')),
+  source_synced_at timestamptz,
+  created_at timestamptz not null default clock_timestamp(),
+  updated_at timestamptz not null default clock_timestamp(),
+  unique (provider, provider_event_id)
+);
 create table public.football_player_season_statistics (
   id uuid primary key default gen_random_uuid(), football_player_id uuid, rating numeric
 );
 create table public.touchline_player_fixture_score_settlements (
   id uuid primary key default gen_random_uuid(), football_player_id uuid, fixture_id uuid,
   official_match_rating numeric, settlement_state text
+);
+create table public.touchline_coach_fixture_points (
+  id uuid primary key default gen_random_uuid(), fixture_id uuid, scoring_version text,
+  settlement_status text, touchline_points integer, updated_at timestamptz default clock_timestamp()
 );
 create table public.touchline_card_publications (
   id uuid primary key default gen_random_uuid(), player_id uuid, publication_state text, tier_key text

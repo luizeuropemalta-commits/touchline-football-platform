@@ -46,6 +46,7 @@ export type TouchlineSocialLineupDraft = Readonly<{
   seasonId: string;
   gameweekNumber: number;
   venueName: string;
+  venueInteriorImageUrl: string;
   caption: string;
   sourceVersion: string;
   sourceChecksum: string;
@@ -171,7 +172,7 @@ export async function readTouchlineSocialLineupDraft(input: {
   const venue = resolveTouchlineFixtureVenue(scheduleFixture);
   const gameweekMatch = String(scheduleFixture.roundName ?? "").match(/\d+/);
   const gameweekNumber = gameweekMatch ? Number(gameweekMatch[0]) : NaN;
-  if (!venue?.name || !Number.isInteger(gameweekNumber) || gameweekNumber < 1) {
+  if (!venue?.name || !venue.interiorImageUrl || !Number.isInteger(gameweekNumber) || gameweekNumber < 1) {
     return { ok: false, reason: "verified-match-context-unavailable" };
   }
   const coachIdentity = touchlineLiveCoachForTeam(teamId);
@@ -350,6 +351,7 @@ export async function readTouchlineSocialLineupDraft(input: {
     seasonId: String(scheduleFixture.seasonId),
     gameweekNumber,
     venueName: venue.name,
+    venueInteriorImageUrl: venue.interiorImageUrl,
     caption: captionResult.caption,
     score,
     side: contract.value.side,

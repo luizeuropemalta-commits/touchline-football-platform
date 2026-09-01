@@ -11,7 +11,8 @@
   background:
     radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--social-club-accent) 34%, transparent), transparent 30%),
     radial-gradient(circle at 96% 14%, color-mix(in srgb, var(--social-club-secondary) 22%, transparent), transparent 28%),
-    linear-gradient(145deg, #06120e 0%, #020807 54%, #07100d 100%);
+    linear-gradient(145deg, rgba(6,18,14,.62) 0%, rgba(2,8,7,.7) 54%, rgba(7,16,13,.66) 100%),
+    var(--social-stadium) center / cover no-repeat;
   font-family: var(--font-geist-sans), Arial, sans-serif;
   isolation: isolate;
 }
@@ -61,9 +62,13 @@
   border: 1px solid rgba(255,255,255,.14);
   border-radius: 24px;
   padding: 12px 15px;
-  background: linear-gradient(100deg, rgba(1,10,7,.9), rgba(1,10,7,.64));
+  background: linear-gradient(
+    100deg,
+    var(--touchline-social-glass-outer-start),
+    var(--touchline-social-glass-outer-end)
+  );
   box-shadow: 0 16px 36px rgba(0,0,0,.34);
-  backdrop-filter: blur(14px);
+  backdrop-filter: var(--touchline-social-glass-outer-filter);
 }
 .matchup {
   justify-content: flex-end;
@@ -71,7 +76,8 @@
   border: 1px solid color-mix(in srgb, var(--social-club-accent) 38%, rgba(255,255,255,.15));
   border-radius: 20px;
   padding: 8px 10px;
-  background: rgba(0,8,7,.66);
+  background: var(--touchline-social-glass-inner-end);
+  backdrop-filter: var(--touchline-social-glass-inner-filter);
   box-shadow: inset 0 1px rgba(255,255,255,.05);
 }
 .matchup img { object-fit: contain; }
@@ -155,7 +161,12 @@
   padding: 14px 12px 12px;
   background:
     radial-gradient(circle at 12% 50%, color-mix(in srgb, var(--social-club-accent) 24%, transparent), transparent 34%),
-    linear-gradient(100deg, rgba(1,12,8,.96), rgba(2,9,8,.9));
+    linear-gradient(
+      100deg,
+      var(--touchline-social-glass-outer-start),
+      var(--touchline-social-glass-outer-end)
+    );
+  backdrop-filter: var(--touchline-social-glass-outer-filter);
   box-shadow: inset 0 1px rgba(255,255,255,.06), 0 0 26px color-mix(in srgb, var(--social-club-accent) 16%, transparent);
 }
 
@@ -207,7 +218,8 @@
   border: 1px solid color-mix(in srgb, var(--social-club-accent) 44%, rgba(255,255,255,.16));
   border-radius: 18px;
   padding: 9px;
-  background: rgba(0,0,0,.28);
+  background: var(--touchline-social-glass-inner-end);
+  backdrop-filter: var(--touchline-social-glass-inner-filter);
 }
 
 .coachCard {

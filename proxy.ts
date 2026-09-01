@@ -54,6 +54,11 @@ function matchesRoute(pathname: string, route: string) {
 async function hasQaSocialRenderBearer(request: NextRequest, hostname: string) {
   const internalSocialPaths = new Set([
     "/visual-qa/social-lineup",
+    "/visual-qa/social-match-preview",
+    "/visual-qa/social-full-time",
+    "/visual-qa/social-final-score",
+    "/visual-qa/social-confirmed-event",
+    "/visual-qa/social-ranking",
     "/api/admin/social-publications/source",
   ]);
   if (process.env.VERCEL_ENV === "production"

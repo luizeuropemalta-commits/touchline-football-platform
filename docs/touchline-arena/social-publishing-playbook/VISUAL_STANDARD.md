@@ -16,6 +16,20 @@ The LINE-UP renderer is [`TouchlineSocialLineupDraft.tsx`](../../../components/t
 
 FULL TIME derives from the real TouchLine Live language. The current renderer is [`TouchlineSocialFinalScoreDraft.tsx`](../../../components/touchline/social/TouchlineSocialFinalScoreDraft.tsx): real crests, final score, scorers beneath the respective club, OG/PEN only when persisted, and one Top Match Card by final official Match Rating.
 
+MATCH PREVIEW uses two complete published TouchLine cards at exactly equal size
+and visual weight, the two canonical crests, fixture venue, Europe/Malta
+kick-off, Premier League Gameweek and verified current table positions. The
+background may use the canonical home venue interior. It must not display a
+pitch formation, XI, bench or coach before the official team sheet.
+
+The shared card-frame surface over Arena imagery is a dark translucent smoke
+glass, never solid black. Its canonical token is
+[`social-visual-tokens.ts`](../../../lib/touchlineArena/social-visual-tokens.ts):
+the Arena remains perceptible through the combined outer/inner layers, while a
+controlled blur and a minimum 4.5:1 pale-text contrast gate preserve card and
+copy legibility. Modules that reuse this frame must import the shared token;
+fixture-specific opacity overrides are not permitted.
+
 ## Synthetic visual QA
 
 Synthetic geometry evidence must use [`TouchlineSocialLineupGeometryQa.tsx`](../../../components/touchline/social/TouchlineSocialLineupGeometryQa.tsx) and [`createTouchlineGeometryQaFixture`](../../../lib/touchlineArena/social-lineup-presentation-policy.ts). It must visibly say:

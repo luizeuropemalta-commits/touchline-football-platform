@@ -6,6 +6,7 @@ import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineElite
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import type { TouchlineSocialLineupDraft } from "@/lib/touchlineArena/social-lineup-draft-server";
 import { assertTouchlineOfficialLineupPresentation } from "@/lib/touchlineArena/social-lineup-presentation-policy";
+import { TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES } from "@/lib/touchlineArena/social-visual-tokens";
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
 
 import styles from "./TouchlineSocialLineupDraft.module.css";
@@ -47,8 +48,10 @@ export default function TouchlineSocialLineupDraftView({ draft }: { draft: Touch
     <main
       className={styles.canvas}
       style={{
+        ...TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES,
         "--social-club-accent": draft.club.accent,
         "--social-club-secondary": draft.club.secondaryAccent,
+        "--social-stadium": `url("${draft.venueInteriorImageUrl}")`,
       } as CSSProperties}
       data-social-art="touchline-official-lineup"
       data-fixture-kind={draft.sourceProvenance}

@@ -22,8 +22,18 @@ Do not crop a Feed design into Story or Reel. Each format requires its own locke
 
 ## Timing
 
+- MATCH PREVIEW: T-24 hours, or the reviewed configurable previous-day window,
+  through kick-off. It still requires current fixture, table, ranking and both
+  published club leaders. A later ranking/table revision creates a new immutable
+  draft revision; it never silently updates an approval.
 - LINE-UP: target T-30, but generate only after the complete verified team sheet and stability gate.
 - FULL TIME: only after canonical finished state, reconciled score/events and final rating/card readiness.
+- GOAL CONFIRMED Story: after official confirmation plus reviewed debounce and
+  reconciliation; never while pending or under VAR review.
+- RED CARD CONFIRMED Story: immediately after canonical confirmation.
+- GAMEWEEK RANKING PREVIEW: before the first eligible fixture.
+- GAMEWEEK RANKING FINAL: only after every scoreable fixture and settlement is
+  final and the consolidated snapshot is active.
 - Late data generates late or remains blocked; never use an inferred deadline to fabricate content.
 
 The two-minute source stability gate is implemented locally in both the worker and claim RPC candidate; runtime proof remains a release gate. Automatic FULL TIME/Story/Reel scheduling remains incomplete.

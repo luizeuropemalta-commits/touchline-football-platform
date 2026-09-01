@@ -15,8 +15,8 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 60);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 68);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 65);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 69);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -37,6 +37,17 @@ test("separates public, authenticated, ClubOwner, Admin, audit, and isolated pre
   assert.equal(row("/visual-qa/social-lineup").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-lineup").role, "OWNER_ADMIN");
   assert.equal(row("/visual-qa/social-lineup").data, "QA_VERIFIED_OFFICIAL_LINEUP_DRAFT");
+  assert.equal(row("/visual-qa/social-match-preview").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-match-preview").role, "OWNER_ADMIN");
+  assert.equal(row("/visual-qa/social-match-preview").data, "QA_VERIFIED_MATCH_PREVIEW_DRAFT");
+  assert.equal(row("/visual-qa/social-full-time").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-full-time").data, "QA_VERIFIED_FULL_TIME_DRAFT");
+  assert.equal(row("/visual-qa/social-final-score").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-final-score").data, "QA_VERIFIED_FINAL_SCORE_STORY_DRAFT");
+  assert.equal(row("/visual-qa/social-confirmed-event").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-confirmed-event").data, "QA_VERIFIED_CONFIRMED_EVENT_STORY_DRAFT");
+  assert.equal(row("/visual-qa/social-ranking").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-ranking").data, "QA_VERIFIED_RANKING_FAMILY_DRAFT");
   assert.equal(row("/audit-index").auth, "AUDIT_TOKEN");
   assert.equal(row("/preview").auth, "ISOLATED_PREVIEW");
 });
@@ -61,6 +72,8 @@ test("distinguishes read methods, disabled ingestion, local editors, user writes
   assert.equal(row("GET /api/admin/social-publications/source").auth, "QA_RENDER_SECRET_COOKIE");
   assert.equal(row("GET /api/admin/social-publications/source").role, "SERVER_JOB");
   assert.equal(row("GET /api/admin/social-publications/source").data, "CURRENT_VERIFIED_SOCIAL_RENDER_SOURCE");
+  assert.equal(row("POST /api/admin/social-publications/template-policy").auth, "ADMIN_SAME_ORIGIN");
+  assert.equal(row("POST /api/admin/social-publications/template-policy").data, "SUPABASE_SOCIAL_TEMPLATE_VERSION_POLICY");
 });
 
 test("does not claim browser PASS before observed page-by-page QA", () => {

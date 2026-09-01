@@ -326,6 +326,12 @@ type Props = {
   initialRenderScale?: number;
   /** CSS-owned public compact scale; it avoids a blank first paint. */
   staticRenderScale?: number;
+  /**
+   * Static social capture cannot depend on hydration to fit a long canonical
+   * name inside the shirt mask. This opt-in seeds the same conservative fit
+   * before the client-side canvas measurement refines it.
+   */
+  ensureStaticNameFit?: boolean;
   optimizeForLiveCompact?: boolean;
   runtimeLocaleOverride?: string | null;
   subscribeToRanking?: boolean;
@@ -435,6 +441,16 @@ function fitShirtBackNameSize(text: string) {
   if (clean.length > 12) return 21;
   if (clean.length > 9 || clean.includes(" ")) return 23;
   return 31;
+}
+
+function initialStaticShirtNameFit(text: string) {
+  const clean = text.trim();
+  return {
+    size: fitShirtBackNameSize(clean) * SHIRT_NAME_READABILITY_MULTIPLIER,
+    // Long names use the same minimum horizontal scale already enforced by
+    // the measured client fit. Short names preserve the canonical geometry.
+    horizontalScale: clean.length > 9 ? MIN_SHIRT_NAME_HORIZONTAL_SCALE : 1,
+  };
 }
 
 function shirtNameSafePadding(layout: CardLayout, hasClubCrest: boolean) {
@@ -688,6 +704,7 @@ export function TouchlineEliteExactCard({
   imageLoading = "eager",
   initialRenderScale,
   staticRenderScale,
+  ensureStaticNameFit = false,
   optimizeForLiveCompact = false,
   runtimeLocaleOverride = null,
   subscribeToRanking = true,
@@ -724,10 +741,12 @@ export function TouchlineEliteExactCard({
   const [runtimeLocaleFromUrl, setRuntimeLocaleFromUrl] = useState<string | null>(null);
   const runtimeLocale = runtimeLocaleOverride ?? localeFromPlayerProfileHref(playerProfileHref) ?? runtimeLocaleFromUrl;
   const [useWebKitCompactPaintScale, setUseWebKitCompactPaintScale] = useState(false);
-  const [shirtPlayerNameFit, setShirtPlayerNameFit] = useState({
-    size: 31 * SHIRT_NAME_READABILITY_MULTIPLIER,
-    horizontalScale: 1,
-  });
+  const initialShirtPlayerName = backName(player.name);
+  const [shirtPlayerNameFit, setShirtPlayerNameFit] = useState(() => (
+    ensureStaticNameFit
+      ? initialStaticShirtNameFit(initialShirtPlayerName)
+      : { size: 31 * SHIRT_NAME_READABILITY_MULTIPLIER, horizontalScale: 1 }
+  ));
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isNeonActive, setIsNeonActive] = useState(false);
@@ -936,7 +955,7 @@ export function TouchlineEliteExactCard({
   const cardPriceVersion = TOUCHLINE_CARD_PRICE_TABLE_VERSION;
   const localPlayerFlagUrl = player.flagUrl?.startsWith("/") ? player.flagUrl : null;
   const flagImageUrl = touchlineCountryFlagUrl(countryCode3) || localPlayerFlagUrl;
-  const shirtPlayerName = backName(player.name);
+  const shirtPlayerName = initialShirtPlayerName;
   const shirtClubScale = layout.shirtClub?.scale || DEFAULT_CARD_LAYOUT.shirtClub.scale;
   const resolvedClub = useMemo(() => findTouchLineClub(player.clubName), [player.clubName]);
   const localPlayerClubLogoUrl = player.clubLogoUrl?.startsWith("/") ? player.clubLogoUrl : null;
@@ -1460,6 +1479,7 @@ export function TouchlineEliteExactCard({
           <div
             data-shirt-name={shirtPlayerName}
             data-full-player-name={shirtPlayerName}
+            data-static-name-fit={ensureStaticNameFit ? "true" : undefined}
             aria-label={shirtPlayerName}
             style={{
               display: "block",

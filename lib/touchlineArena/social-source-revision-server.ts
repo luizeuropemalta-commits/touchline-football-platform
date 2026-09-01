@@ -3,7 +3,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const SHA256 = /^sha256:[0-9a-f]{64}$/;
-const SOURCE_KEY = /^(fixture-provider|fixture|competition|season|round|club|player|formation|coach-ranking|card-ranking):[A-Za-z0-9._-]{1,160}$/;
+const SOURCE_KEY = /^(fixture-provider|fixture-event|fixture|competition|season|round|club|player|formation|coach-ranking|card-ranking|league-table):[A-Za-z0-9._-]{1,160}$/;
 
 export type TouchlineSocialSourceRevisionCheckpoint = Readonly<{
   clockRevision: number;

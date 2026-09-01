@@ -12,10 +12,31 @@
     linear-gradient(180deg, rgba(1,5,4,.74), rgba(1,8,5,.93)),
     radial-gradient(circle at 8% 2%, color-mix(in srgb, var(--final-home-accent) 32%, transparent), transparent 30%),
     radial-gradient(circle at 94% 10%, color-mix(in srgb, var(--final-away-accent) 28%, transparent), transparent 30%),
-    url("/touchlineArena/stadiums/interiors/16-manchester-united-old-trafford-interior.webp") center 62% / cover no-repeat,
+    var(--final-stadium-image) center 62% / cover no-repeat,
     #020706;
   font-family: var(--font-geist-sans), Arial, sans-serif;
   isolation: isolate;
+}
+
+.canvas[data-social-placement="story"] {
+  height: 1920px;
+  grid-template-rows: auto 500px 230px minmax(0, 1fr) auto;
+  gap: 30px;
+  padding: 42px;
+}
+
+.canvas[data-social-placement="story"] .scoreHero {
+  padding: 36px 28px;
+}
+
+.canvas[data-social-placement="story"] .topCard {
+  grid-template-columns: minmax(0, 1fr) 360px;
+  padding: 44px 54px;
+}
+
+.canvas[data-social-placement="story"] .cardFrame {
+  transform: scale(1.12);
+  transform-origin: center;
 }
 
 .canvas::before {

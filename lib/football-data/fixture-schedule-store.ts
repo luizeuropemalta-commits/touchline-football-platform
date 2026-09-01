@@ -145,6 +145,69 @@ function fixtureFromRow(
   };
 }
 
+/**
+ * Exact server-only fixture read for workflows that already possess one
+ * verified provider fixture identity. Unlike the bounded schedule reader,
+ * this query never enumerates the season, so fixture 380 is as reachable as
+ * fixture 1 and an unrelated historical window cannot hide the target.
+ */
+export async function readPublicCompetitionFixtureByProviderId(
+  providerFixtureId: string,
+  options: Readonly<{
+    provider?: FootballDataProviderName;
+    competitionProviderId?: string;
+    providedAdmin?: FixtureAdminClient;
+  }> = {},
+) {
+  if (!isOfficialSportmonksFixtureId(providerFixtureId)) return null;
+  const admin = options.providedAdmin ?? createAdminClient();
+  if (!admin) return null;
+
+  const provider = options.provider ?? DEFAULT_PROVIDER;
+  const competitionProviderId = options.competitionProviderId ?? DEFAULT_COMPETITION_PROVIDER_ID;
+  const { data: competition, error: competitionError } = await admin
+    .from("football_competitions")
+    .select("id")
+    .eq("provider", provider)
+    .eq("provider_competition_id", competitionProviderId)
+    .maybeSingle();
+  if (competitionError || !competition?.id) return null;
+
+  const { data: fixtureRows, error: fixtureError } = await admin
+    .from("football_fixtures")
+    .select("provider,provider_fixture_id,competition_id,season_id,round_id,starts_at,status,home_score,away_score,home_club_id,away_club_id,source_updated_at,provider_state_id,live_minute,live_second,live_period,events_count,provider_updated_at")
+    .eq("provider", provider)
+    .eq("competition_id", competition.id)
+    .eq("provider_fixture_id", providerFixtureId)
+    .limit(2);
+  if (fixtureError || !Array.isArray(fixtureRows) || fixtureRows.length !== 1) return null;
+
+  const row = fixtureRows[0] as FixtureRow;
+  const clubIds = [asString(row.home_club_id), asString(row.away_club_id)]
+    .filter((id): id is string => Boolean(id));
+  const seasonId = asString(row.season_id);
+  const roundId = asString(row.round_id);
+  if (clubIds.length !== 2 || new Set(clubIds).size !== 2 || !seasonId || !roundId) return null;
+
+  const [{ data: clubs, error: clubsError }, seasonResult, roundResult] = await Promise.all([
+    admin
+      .from("football_clubs")
+      .select("id,provider_team_id,name,short_code,logo_url,country,country_id,founded,venue_id,source_updated_at")
+      .in("id", clubIds),
+    admin.from("football_seasons").select("id,provider_season_id").eq("id", seasonId).maybeSingle(),
+    admin.from("football_rounds").select("id,provider_round_id,name").eq("id", roundId).maybeSingle(),
+  ]);
+  if (clubsError || seasonResult.error || roundResult.error
+    || !Array.isArray(clubs) || clubs.length !== 2 || !seasonResult.data || !roundResult.data) return null;
+
+  const clubsById = new Map((clubs as DatabaseRecord[])
+    .map((club) => [asString(club.id), club] as const)
+    .filter((entry): entry is [string, DatabaseRecord] => Boolean(entry[0])));
+  const seasonsById = new Map([[seasonId, seasonResult.data as DatabaseRecord]]);
+  const roundsById = new Map([[roundId, roundResult.data as DatabaseRecord]]);
+  return fixtureFromRow(row, clubsById, seasonsById, roundsById, competitionProviderId);
+}
+
 /** Server-only schedule read shared by ClubHub, Arena and TouchLine Live. */
 export async function readPublicCompetitionFixtures(options: {
   provider?: FootballDataProviderName;

@@ -11,13 +11,32 @@ The Admin surface is [`/admin/social-publications`](../../../app/(app)/admin/soc
 5. A create-only content-addressed object is stored in the private `touchline-social-drafts` bucket.
 6. An immutable DRAFT records source, template, caption, object locator, byte checksum and manifest checksum.
 7. Admin shows the integral artefact, caption, exact job and executor health as a UX preflight; this page check is not the security authority.
-8. Luiz approves artwork and caption separately through fresh one-use review intents. The 040 database gate atomically revalidates both executor components and the exact `COMPLETED` job when the intent is issued and again when either approval transition is attempted.
+8. Luiz approves artwork and caption separately through fresh one-use review intents. The authenticated OWNER route re-hashes private media, then the server-only service-role boundary issues the actor-bound one-use intent. Authenticated clients cannot mint intents directly. The database gate atomically revalidates both executor components and the exact `COMPLETED` job when the intent is issued and again when either approval transition is attempted.
 9. Both current checksums must match the same current manifest before the DRAFT becomes `APPROVED`.
 10. A future enqueue may create one idempotent outbox identity. Approval does not itself publish.
 
 Any rendered source, artefact, caption, revision or checksum change makes the older revision ineligible for enqueue/dispatch and requires a new immutable revision and review. Season statistics used by a LINE-UP draft are explicitly scoped to the canonical fixture competition and season; another row merely marked current is not a renderer dependency. A historical approval row remains immutable audit evidence; it is not rewritten or silently relabelled as rejected. Failed previews, stale generation health or current-source mismatch block approval.
 
-Current fail-closed boundary: only `LINEUP` is enabled for approval in the candidate contract. `FINAL_SCORE` may be rendered as read-only DRAFT evidence, but its approval/outbox path remains blocked until a typed current-source generation/attestation contract receives its own review and shadow tests.
+Current shared-QA fail-closed boundary: only `LINEUP` is enabled for approval.
+Module 041 proposes a separate `MATCH_PREVIEW` executor/job attestation and
+database approval branch; it is local-only until its own shadow and second audit
+pass. `FINAL_SCORE` remains read-only DRAFT evidence pending module 042.
+
+041 does not claim runtime byte identity with 040. It preserves the 039/040
+LINEUP tables, RPC grants and LINEUP approval branch, while intentionally
+replacing the shared approval-trigger function with a content-type dispatcher.
+The 041 rollback restores the 040 LINEUP-only function semantics; the disposable
+shadow compares those semantics and exercises both the service-only intent
+boundary and the 041 branch.
+
+The future template-approval state machine is module 046, not part of the 041
+pilot. It will require the OWNER to approve the first artwork and base caption of
+an exact template identity before later eligible items can enter
+`AUTO_PUBLISH_ENABLED`. A visual, dimensional, field, lexicon, placement,
+template-checksum or version change returns to `TEMPLATE_APPROVAL_REQUIRED`.
+Dynamic-data validation remains mandatory for every item. Kill switches, quotas,
+pause/revoke and delivery reconciliation are database/runtime gates, not Admin
+convenience flags.
 
 ## External delivery
 

@@ -7,6 +7,7 @@ import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup"
 import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
+import TouchlineClubSocialFeed from "@/components/touchline/club-social/TouchlineClubSocialFeed";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
@@ -50,6 +51,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
+import { readTouchlineClubSocialFeed } from "@/lib/touchlineArena/club-social-feed-server";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,7 @@ type ClubHubPageProps = {
   }>;
   searchParams: Promise<{
     lang?: string;
+    feedCursor?: string;
   }>;
 };
 
@@ -534,8 +537,32 @@ async function ClubHubCardsSection({
   );
 }
 
+async function ClubHubSocialFeedSection({
+  club,
+  locale,
+  cursor,
+}: {
+  club: NonNullable<ReturnType<typeof findTouchLineClub>>;
+  locale: TouchLineLocale;
+  cursor: string | null;
+}) {
+  const page = await readTouchlineClubSocialFeed({
+    providerTeamId: club.teamId,
+    limit: 6,
+    cursor,
+  });
+  return (
+    <TouchlineClubSocialFeed
+      clubName={club.name}
+      clubSlug={club.slug}
+      locale={locale}
+      page={page}
+    />
+  );
+}
+
 export default async function ClubHubPage({ params, searchParams }: ClubHubPageProps) {
-  const [{ club: clubParam }, { lang }] = await Promise.all([params, searchParams]);
+  const [{ club: clubParam }, { lang, feedCursor }] = await Promise.all([params, searchParams]);
   const locale = normalizeTouchLineLocale(lang);
   const t = (key: Parameters<typeof touchLineT>[1]) => touchLineT(locale, key);
   const localeQuery = `lang=${encodeURIComponent(locale)}`;
@@ -626,6 +653,10 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
 
         <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando classificação" : "Updating standings"} />}>
           <ClubHubLeagueTableSection club={club} locale={locale} tablePromise={tablePromise} />
+        </Suspense>
+
+        <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando atualizações do clube" : "Preparing club updates"} />}>
+          <ClubHubSocialFeedSection club={club} locale={locale} cursor={feedCursor ?? null} />
         </Suspense>
 
         <Suspense fallback={<ClubHubDeferredSection size="cards" label={locale === "pt-BR" ? "Preparando cards do elenco" : "Preparing squad cards"} />}>

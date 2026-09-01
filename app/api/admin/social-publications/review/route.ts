@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { touchlineSocialExecutorHealth } from "@/lib/touchlineArena/social-draft-executor-health";
 import { readTouchlineSocialLineupDraft } from "@/lib/touchlineArena/social-lineup-draft-server";
+import { readTouchlineSocialMatchPreviewDraft } from "@/lib/touchlineArena/social-match-preview-draft-server";
+import { readTouchlineSocialFinalScoreDraft } from "@/lib/touchlineArena/social-final-score-draft-server";
+import { readTouchlineSocialConfirmedEventDraft } from "@/lib/touchlineArena/social-confirmed-event-draft-server";
+import { readTouchlineSocialRankingFamilyDraft } from "@/lib/touchlineArena/social-ranking-family-draft-server";
 import {
   assertTouchlineSocialQaRuntime,
   createTouchlineSocialArtifactStorageFromEnvironment,
@@ -14,6 +18,10 @@ import { verifyTouchlineSocialStoredArtifact } from "@/lib/touchlineArena/social
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SHA256 = /^sha256:[0-9a-f]{64}$/;
+const RANKING_CONTENT_TYPES = [
+  "GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
+  "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO",
+] as const;
 
 function response(body: Record<string, unknown>, status = 200) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store" } });
@@ -58,7 +66,7 @@ export async function POST(request: NextRequest) {
 
   const { data: draft, error: draftError } = await admin
     .from("touchline_social_publication_drafts")
-    .select("id,fixture_provider_id,team_provider_id,content_type,template_version,source_version,source_checksum,source_revision_manifest,source_revision_checksum,input_checksum,source_snapshot_at,approval_state,artwork_approval_state,caption_approval_state,artifact_checksum,caption_checksum,manifest_checksum,artifact_storage_provider,artifact_storage_bucket,artifact_storage_key,artifact_etag,artifact_content_type,artifact_byte_length,width,height")
+    .select("id,fixture_provider_id,team_provider_id,event_provider_id,scope_provider_id,subject_player_provider_id,content_type,template_version,source_version,source_checksum,source_revision_manifest,source_revision_checksum,input_checksum,source_snapshot_at,approval_state,artwork_approval_state,caption_approval_state,artifact_checksum,caption_checksum,manifest_checksum,artifact_storage_provider,artifact_storage_bucket,artifact_storage_key,artifact_etag,artifact_content_type,artifact_byte_length,width,height")
     .eq("id", draftId)
     .maybeSingle();
   if (draftError) {
@@ -73,15 +81,35 @@ export async function POST(request: NextRequest) {
   const currentState = artwork ? draft.artwork_approval_state : draft.caption_approval_state;
   if (currentChecksum !== expectedChecksum) return response({ error: "The reviewed content changed; review the current revision again." }, 409);
   if (currentState === "APPROVED") return response({ error: artwork ? "Artwork is already approved." : "Caption is already approved." }, 409);
-  if (draft.content_type !== "LINEUP") {
+  if (!["LINEUP", "MATCH_PREVIEW", "FULL_TIME", "FINAL_SCORE", "GOAL_CONFIRMED", "RED_CARD_CONFIRMED",
+    ...RANKING_CONTENT_TYPES].includes(String(draft.content_type))) {
     return response({ error: "This content type is not enabled for approval yet." }, 409);
   }
   const sourceIsCurrent = async () => {
-    if (typeof draft.team_provider_id !== "string") return false;
-    const currentSource = await readTouchlineSocialLineupDraft({
-      fixtureId: draft.fixture_provider_id,
-      teamId: draft.team_provider_id,
-    });
+    const rankingType = RANKING_CONTENT_TYPES.find((value) => value === draft.content_type);
+    const currentSource = rankingType
+      ? await readTouchlineSocialRankingFamilyDraft({
+        contentType: rankingType,
+        fixtureId: draft.fixture_provider_id,
+        scopeId: typeof draft.scope_provider_id === "string" ? draft.scope_provider_id : null,
+        playerId: typeof draft.subject_player_provider_id === "string" ? draft.subject_player_provider_id : null,
+      })
+      : draft.content_type === "MATCH_PREVIEW"
+      ? await readTouchlineSocialMatchPreviewDraft({ fixtureId: draft.fixture_provider_id })
+      : draft.content_type === "GOAL_CONFIRMED" || draft.content_type === "RED_CARD_CONFIRMED"
+        ? await readTouchlineSocialConfirmedEventDraft(
+          draft.fixture_provider_id,
+          String(draft.event_provider_id ?? ""),
+        )
+      : draft.content_type === "FULL_TIME" || draft.content_type === "FINAL_SCORE"
+        ? await readTouchlineSocialFinalScoreDraft(draft.fixture_provider_id)
+        : typeof draft.team_provider_id === "string"
+        ? await readTouchlineSocialLineupDraft({
+          fixtureId: draft.fixture_provider_id,
+          teamId: draft.team_provider_id,
+        })
+        : null;
+    if (!currentSource) return false;
     return currentSource.ok
       && currentSource.data.sourceVersion === draft.source_version
       && currentSource.data.sourceChecksum === draft.source_checksum
@@ -89,9 +117,9 @@ export async function POST(request: NextRequest) {
       && currentSource.data.sourceChecksum === draft.input_checksum;
   };
   if (!await sourceIsCurrent()) {
-    return response({ error: "The official team sheet changed; generate and review the current revision." }, 409);
+    return response({ error: "The canonical match data changed; generate and review the current revision." }, 409);
   }
-  {
+  if (draft.content_type === "LINEUP") {
     const { data: generation, error: generationError } = await admin
       .from("touchline_social_generation_reviews")
       .select("review_state,generated_draft_id")
@@ -188,10 +216,23 @@ export async function POST(request: NextRequest) {
   // intent then locks the exact persisted fixture revision and current
   // generation before the owner consumes the one-use capability.
   if (!await sourceIsCurrent()) {
-    return response({ error: "The official team sheet changed during review; approval remains blocked." }, 409);
+    return response({ error: "The canonical match data changed during review; approval remains blocked." }, 409);
   }
 
-  const { data: intentData, error: intentError } = await admin.rpc("touchline_social_issue_review_intent", {
+  const intentRpc = draft.content_type === "MATCH_PREVIEW"
+    ? "touchline_social_041_issue_review_intent"
+    : RANKING_CONTENT_TYPES.includes(draft.content_type as typeof RANKING_CONTENT_TYPES[number])
+      ? "touchline_social_044_issue_review_intent"
+    : draft.content_type === "GOAL_CONFIRMED" || draft.content_type === "RED_CARD_CONFIRMED"
+      ? "touchline_social_043_issue_review_intent"
+    : draft.content_type === "FULL_TIME" || draft.content_type === "FINAL_SCORE"
+      ? "touchline_social_042_issue_review_intent"
+      : "touchline_social_issue_review_intent";
+  // Intent issuance is a server-side attestation after the private artifact
+  // bytes and current semantic revision have been reverified. Authenticated
+  // callers can consume their owner-bound one-use intent, but cannot mint it.
+  // This also preserves the frozen 039/040 LINEUP service-role boundary.
+  const { data: intentData, error: intentError } = await admin.rpc(intentRpc, {
     p_draft_id: draftId,
     p_review_kind: artwork ? "ARTWORK" : "CAPTION",
     p_expected_content_checksum: expectedChecksum,
@@ -205,8 +246,29 @@ export async function POST(request: NextRequest) {
     return response({ error: "The current review attestation was rejected." }, 409);
   }
 
-  const rpcName = artwork ? "touchline_social_approve_artwork" : "touchline_social_approve_caption";
-  const rpcArgs = artwork ? {
+  const independentApproval = draft.content_type === "MATCH_PREVIEW"
+    || draft.content_type === "FULL_TIME" || draft.content_type === "FINAL_SCORE"
+    || draft.content_type === "GOAL_CONFIRMED" || draft.content_type === "RED_CARD_CONFIRMED"
+    || RANKING_CONTENT_TYPES.includes(draft.content_type as typeof RANKING_CONTENT_TYPES[number]);
+  const rpcName = draft.content_type === "MATCH_PREVIEW"
+    ? "touchline_social_041_approve"
+    : RANKING_CONTENT_TYPES.includes(draft.content_type as typeof RANKING_CONTENT_TYPES[number])
+      ? "touchline_social_044_approve"
+    : draft.content_type === "GOAL_CONFIRMED" || draft.content_type === "RED_CARD_CONFIRMED"
+      ? "touchline_social_043_approve"
+    : draft.content_type === "FULL_TIME" || draft.content_type === "FINAL_SCORE"
+      ? "touchline_social_042_approve"
+      : artwork ? "touchline_social_approve_artwork" : "touchline_social_approve_caption";
+  const rpcArgs = independentApproval ? {
+    p_intent_id: intentId,
+    p_draft_id: draftId,
+    p_review_kind: artwork ? "ARTWORK" : "CAPTION",
+    p_expected_content_checksum: expectedChecksum,
+    p_expected_manifest_checksum: expectedManifestChecksum,
+    p_expected_source_checksum: draft.source_checksum,
+    p_expected_source_revision_checksum: draft.source_revision_checksum,
+    p_actor_id: user.id,
+  } : artwork ? {
     p_intent_id: intentId,
     p_draft_id: draftId,
     p_expected_artifact_checksum: expectedChecksum,

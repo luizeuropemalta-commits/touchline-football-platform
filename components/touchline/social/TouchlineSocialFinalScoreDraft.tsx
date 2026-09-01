@@ -20,7 +20,13 @@ function goalKindLabel(kind: TouchlineSocialFinalScoreDraft["goals"][number]["ki
   return null;
 }
 
-export default function TouchlineSocialFinalScoreDraftView({ draft }: { draft: TouchlineSocialFinalScoreDraft }) {
+export default function TouchlineSocialFinalScoreDraftView({
+  draft,
+  placement = "feed",
+}: {
+  draft: TouchlineSocialFinalScoreDraft;
+  placement?: "feed" | "story";
+}) {
   const winner = draft.score.home === draft.score.away
     ? null
     : draft.score.home > draft.score.away ? draft.home : draft.away;
@@ -31,9 +37,18 @@ export default function TouchlineSocialFinalScoreDraftView({ draft }: { draft: T
         "--final-home-accent": draft.home.accent,
         "--final-away-accent": draft.away.accent,
         "--final-winner-accent": winner?.accent ?? "#9eff2d",
+        "--final-stadium-image": `url(${JSON.stringify(draft.venue.interiorImageUrl)})`,
       } as CSSProperties}
       data-social-art="touchline-final-score"
-      data-fixture-id={draft.fixtureId}
+      data-social-placement={placement}
+      data-content-type={placement === "feed" ? "FULL_TIME" : "FINAL_SCORE"}
+      data-template-version={placement === "feed" ? "touchline-full-time-feed-v1" : "touchline-final-score-story-v1"}
+      data-source-version={draft.sourceVersion}
+      data-source-checksum={draft.sourceChecksum}
+      data-source-revision-checksum={draft.sourceRevisionChecksum}
+      data-source-snapshot-at={draft.sourceSnapshotAt}
+      data-starts-at={draft.startsAt}
+      data-caption={draft.caption}
       data-score-state="finished"
     >
       <header className={styles.masthead}>
@@ -55,7 +70,7 @@ export default function TouchlineSocialFinalScoreDraftView({ draft }: { draft: T
         <div className={styles.score}>
           <span>FULL TIME</span>
           <strong>{draft.score.home} <i>—</i> {draft.score.away}</strong>
-          <small>FIXTURE {draft.fixtureId}</small>
+          <small>GAMEWEEK {draft.gameweekNumber} · {draft.venue.name.toUpperCase()}</small>
         </div>
         <article className={styles.club}>
           <div><Image src={draft.away.logoUrl!} alt={draft.away.name} width={154} height={154} priority /></div>

@@ -130,6 +130,12 @@ test("social draft uses canonical upright cards and regulation vertical pitch", 
   assert.match(styles, /\.benchPlayer:nth-child\(9\)[\s\S]*?grid-column:\s*1\s*\/\s*-1/);
   assert.match(component, /const CARD_WIDTH = 98/);
   assert.match(component, /const BENCH_CARD_WIDTH = 76/);
+  assert.match(component, /TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES/);
+  assert.match(component, /draft\.venueInteriorImageUrl/);
+  assert.match(styles, /var\(--social-stadium\) center \/ cover no-repeat/);
+  assert.match(styles, /var\(--touchline-social-glass-outer-start\)/);
+  assert.match(styles, /var\(--touchline-social-glass-inner-end\)/);
+  assert.doesNotMatch(styles, /\.technicalRail\s*\{[^}]*background:\s*(?:#000|black)/s);
   assert.match(pitch, /data-touchline-pitch-orientation/);
   assert.match(pitch, /centreCircle/);
   assert.match(pitch, /centreSpot/);
@@ -160,6 +166,7 @@ test("social draft uses canonical upright cards and regulation vertical pitch", 
   assert.match(server, /\.eq\("is_current", true\)/);
   assert.match(server, /current-season-mismatch/);
   assert.match(server, /resolveTouchlineFixtureVenue/);
+  assert.match(server, /venueInteriorImageUrl: venue\.interiorImageUrl/);
   assert.match(server, /buildTouchlineOfficialLineupCaption/);
   assert.match(server, /sourceChecksum/);
   assert.match(component, /data-lineup-first-observed-at/);

@@ -213,6 +213,25 @@ test("official league table deduplicates a provider fixture before totals are ca
   assert.ok(result.rows.every((row) => row.sportsRank === null && row.isTied === false && row.displayPosition === null));
 });
 
+test("a complete 380-fixture Premier League season is not truncated", () => {
+  const seasonFixtures = Array.from({ length: 380 }, (_, index) => fixture({
+    providerFixtureId: `season-fixture-${index + 1}`,
+    homeClubId: `club-${(index % 20) + 1}`,
+    awayClubId: `club-${((index + 1) % 20) + 1}`,
+    startsAt: new Date(Date.UTC(2026, 7, 1) + index * 60_000).toISOString(),
+    sourceUpdatedAt: new Date(Date.UTC(2026, 7, 1, 2) + index * 60_000).toISOString(),
+  }));
+  const result = resolveTouchlineOfficialLeagueTable({ season, teams: teams(), fixtures: seasonFixtures });
+  assert.equal(result.coverage.fixturesInSeason, 380);
+  assert.equal(result.coverage.completedFixtures, 380);
+  assert.equal(result.coverage.duplicateFixtures, 0);
+  assert.equal(result.rows.reduce((total, row) => total + row.played, 0), 760);
+
+  const server = readFileSync(new URL("../lib/football-data/official-league-table-server.ts", import.meta.url), "utf8");
+  assert.match(server, /const MAX_SEASON_FIXTURES = 400/);
+  assert.match(server, /\.limit\(MAX_SEASON_FIXTURES \+ 1\)/);
+});
+
 test("pending no-final data is different from an unavailable canonical source", () => {
   const pending = resolveTouchlineOfficialLeagueTable({
     season,

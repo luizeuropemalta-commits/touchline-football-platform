@@ -1,6 +1,6 @@
-# Club Owner Timeline — design only
+# Club Owner Timeline — local candidate
 
-Status: **proposal; no runtime, schema, job, Storage or UI implementation authorised**.
+Status: **module 045 implemented and shadow-validated locally; independent second audit and every remote action remain pending**.
 
 The Club Owner Timeline is a first-party TouchLine channel. It is separate from Instagram, the approval-only Instagram outbox and external publishing cadence, but it consumes the same approved canonical editorial facts and copy source.
 
@@ -61,6 +61,13 @@ Fixture-scoped posts appear in the timelines of both participating clubs. Compet
 - A Timeline post adapted for Instagram becomes a separate immutable social DRAFT with the same factual source checksum, its own artefact/caption checksums and separate owner approvals.
 - Instagram retention and external deletion are outside this proposal.
 
-## Required review before implementation
+## Local candidate boundary and required review
 
-Before runtime work, provide a separate proposal covering schema/RLS, owner and customer visibility, comment/reaction policy, fan-out references, cursor design, minimal tombstone schema, Storage reference counting, 14-day deletion/lifecycle failure recovery, moderation, privacy/export/deletion obligations, load budget and rollback. It requires security/privacy review, disposable database tests and explicit owner authorisation.
+The local candidate implements one canonical post plus immutable club references,
+server-only bounded cursor reads, 14-day hard-delete, minimal tombstones and a
+durable single-flight fan-out executor. It deliberately does not implement
+comments, reactions, UGC, Storage object deletion or external delivery.
+
+Before any shared-QA activation it still requires independent security/privacy
+review of RLS, cross-club isolation, retention concurrency, query/index budget,
+rollback and the ClubHub surface, followed by explicit operational authorisation.
