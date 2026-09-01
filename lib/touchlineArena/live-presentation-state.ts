@@ -1,5 +1,7 @@
 export const TOUCHLINE_LIVE_PRESENTATION_STATE_VERSION = 1 as const;
-export const TOUCHLINE_LIVE_PRESENTATION_POLL_MS = 15_000;
+// A five-second shared server cache plus a ten-second browser cadence keeps a
+// newly published snapshot observable within the fifteen-second product SLA.
+export const TOUCHLINE_LIVE_PRESENTATION_POLL_MS = 10_000;
 export const TOUCHLINE_PREMATCH_PRESENTATION_POLL_MS = 30_000;
 export const TOUCHLINE_PREMATCH_PRESENTATION_WINDOW_MS = 60 * 60 * 1_000;
 
