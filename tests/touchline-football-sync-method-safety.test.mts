@@ -37,6 +37,20 @@ test("football-data synchronization remains available only through POST", () => 
   assert.match(routeSource, /scope === "qa_twenty_club_roster_sync"[\s\S]*?syncQaTwentyClubRosters/);
   assert.match(routeSource, /randomUUID\(\)/);
   assert.match(routeSource, /Owner session or football data sync secret required/);
+  assert.match(routeSource, /authorization === `Bearer \$\{secret\}`/);
+  assert.match(routeSource, /hasTouchLineArenaAccess\(user\) && isOwnerEmail\(user\?\.email\)/);
+  assert.match(routeSource, /fromDate: request\.nextUrl\.searchParams\.get\("fromDate"\)/);
+  assert.match(routeSource, /throughDate: request\.nextUrl\.searchParams\.get\("throughDate"\)/);
+});
+
+test("production exposes only foundation and official fixture schedule mutations", () => {
+  assert.match(routeSource, /function allowsQaOnlySyncScopes/);
+  assert.match(routeSource, /vercelEnvironment === "production"\) return false/);
+  assert.match(routeSource, /vercelEnvironment === "preview"\) return gitBranch === "qa"/);
+  assert.match(routeSource, /qaOnlyScopeAllowed && scope === "capabilities"/);
+  assert.match(routeSource, /qaOnlyScopeAllowed && scope === "qa_country_sync"/);
+  assert.match(routeSource, /qaOnlyScopeAllowed && scope === "qa_twenty_club_roster_sync"/);
+  assert.match(routeSource, /Use scope=foundation or scope=fixture_schedule/);
 });
 
 test("QA country reconciliation is an explicit owner POST control", () => {

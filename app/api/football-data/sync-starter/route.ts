@@ -19,6 +19,14 @@ function syncSecret() {
   return process.env.FOOTBALL_DATA_SYNC_SECRET ?? process.env.FOOTBALL_DATA_VALIDATION_SECRET;
 }
 
+function allowsQaOnlySyncScopes() {
+  const vercelEnvironment = String(process.env.VERCEL_ENV ?? "").trim().toLowerCase();
+  const gitBranch = String(process.env.VERCEL_GIT_COMMIT_REF ?? "").trim().toLowerCase();
+  if (vercelEnvironment === "production") return false;
+  if (vercelEnvironment === "preview") return gitBranch === "qa";
+  return process.env.NODE_ENV !== "production";
+}
+
 async function authorize(request: NextRequest): Promise<SyncAuthResult> {
   const secret = syncSecret();
   const authorization = request.headers.get("authorization");
@@ -62,9 +70,10 @@ async function runFootballDataSync(request: NextRequest) {
   const competitionId = request.nextUrl.searchParams.get("competitionId") ?? undefined;
   const clubId = request.nextUrl.searchParams.get("clubId") ?? undefined;
   const scope = request.nextUrl.searchParams.get("scope") ?? "foundation";
+  const qaOnlyScopeAllowed = allowsQaOnlySyncScopes();
 
   try {
-    const result = scope === "capabilities"
+    const result = qaOnlyScopeAllowed && scope === "capabilities"
       ? await syncSportmonksProviderCapabilities()
       : scope === "fixture_schedule"
       ? await syncSportmonksFixtureSchedule(admin, {
@@ -74,15 +83,21 @@ async function runFootballDataSync(request: NextRequest) {
         })
       : scope === "foundation"
         ? await syncSportmonksStarterFoundation(admin, { competitionId, clubId })
-        : scope === "qa_country_sync"
+        : qaOnlyScopeAllowed && scope === "qa_country_sync"
           ? await syncQaCountryData(admin, request.nextUrl.searchParams.get("runId") ?? randomUUID())
-          : scope === "qa_twenty_club_roster_sync"
+          : qaOnlyScopeAllowed && scope === "qa_twenty_club_roster_sync"
             ? await syncQaTwentyClubRosters(admin, request.nextUrl.searchParams.get("runId") ?? randomUUID())
           : null;
 
     if (!result) {
       return NextResponse.json(
-        { ok: false, status: "invalid_scope", error: "Use scope=capabilities, foundation, fixture_schedule, qa_country_sync or qa_twenty_club_roster_sync." },
+        {
+          ok: false,
+          status: "invalid_scope",
+          error: qaOnlyScopeAllowed
+            ? "Use scope=capabilities, foundation, fixture_schedule, qa_country_sync or qa_twenty_club_roster_sync."
+            : "Use scope=foundation or scope=fixture_schedule.",
+        },
         { status: 400, headers: { "Cache-Control": "no-store" } },
       );
     }
