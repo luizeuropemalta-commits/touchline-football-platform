@@ -22,7 +22,7 @@ export const TOUCHLINE_LOCALE_SURFACE_RELEASE_MANIFEST = [
   {
     id: "root-document-and-navigation",
     kind: "public",
-    paths: ["/", "/arena", "/coming-soon"],
+    paths: ["/", "/arena"],
     requires: ["document-lang", "direction", "global-navigation", "first-visit", "persistence"],
   },
   {
@@ -40,7 +40,7 @@ export const TOUCHLINE_LOCALE_SURFACE_RELEASE_MANIFEST = [
   {
     id: "market-and-card-surfaces",
     kind: "private",
-    paths: ["/market-transfer", "/arena"],
+    paths: ["/market-transfer"],
     requires: ["market-copy", "pending-state", "price-labels", "auth-return", "viewport"],
   },
   {

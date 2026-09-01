@@ -28,18 +28,15 @@ test("Match Centre exposes one page heading, a selected-fixture state and motion
   assert.match(styles, /@media \(max-width: 850px\) \{[\s\S]*?\.header \{ grid-template-columns: 1fr auto;[^}]*\}[\s\S]*?\.headerTitle \{ display: none; \}[\s\S]*?\.headerSignal \{ min-width: 150px; \}/);
 });
 
-test("Coming Soon stops its automatic timeline and videos for reduced motion", () => {
-  const component = source("components/touchline/coming-soon/TouchlineComingSoonLanding.tsx");
+test("the public Arena introduction respects reduced motion", () => {
+  const component = source("components/touchline/arena/TouchlineArenaIntro.tsx");
 
   assert.match(component, /useState<MotionPreference>\("pending"\)/);
   assert.match(component, /window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
   assert.match(component, /media\.addEventListener\("change", syncPreference\)/);
-  assert.match(component, /const displayPhase: TouchlineArenaIntroPhase = reducedMotion \? "reveal" : phase/);
-  assert.match(component, /if \(motionPreference === "reduce"\) return;/);
-  assert.match(component, /setCycle\(\(value\) => value \+ 1\), CYCLE_MS/);
-  assert.match(component, /if \(reducedMotion\) \{[\s\S]*?entryVideoRef\.current\?\.pause\(\);[\s\S]*?loopVideoRef\.current\?\.pause\(\);[\s\S]*?return;/);
-  assert.match(component, /transition: reducedMotion \? "none"/);
-  assert.match(component, /backgroundColor: reducedMotion \? "#020604" : undefined/);
+  assert.match(component, /touchlineArenaIntroTimeline\(reducedMotion\)/);
+  assert.match(component, /revealRef\.current\(reducedMotion\)/);
+  assert.match(component, /return \(\) => media\.removeEventListener\("change", syncPreference\)/);
 });
 
 test("Club trophies remain manually operable without autoplay when reduced motion is preferred", () => {

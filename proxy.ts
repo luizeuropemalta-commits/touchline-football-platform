@@ -11,13 +11,6 @@ import {
   touchLinePostAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
-import {
-  isTouchlineLaunchGateProductRoute,
-  resolveTouchlinePublicLaunchGate,
-  shouldTouchlineRedirectAuthenticatedAuthEntry,
-  TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY,
-  type TouchlinePublicLaunchGateMode,
-} from "@/lib/touchlineArena/public-launch-gate";
 import { touchlineClubOwnerSlugForUser } from "@/lib/touchlineArena/club-owner-page-identity";
 import { resolveTouchlineClubOwnerRouteAccess } from "@/lib/touchlineArena/club-owner-route-access";
 import {
@@ -45,7 +38,9 @@ const localDevHosts = new Set(["localhost", "127.0.0.1", "::1"]);
 const stableQaHost = "touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app";
 const authPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/auth/callback"] as const;
 const authEntryPaths = ["/login", "/register", "/forgot-password"] as const;
-const protectedArenaPaths = ["/arena", "/market-transfer", "/fantasy", "/admin", "/notifications", "/inbox", "/football-search", "/visual-qa"] as const;
+// The Arena itself is the public product entrance. Account-backed operations
+// remain protected and their APIs independently enforce the same capability.
+const protectedArenaPaths = ["/market-transfer", "/fantasy", "/admin", "/notifications", "/inbox", "/football-search", "/visual-qa"] as const;
 const adminOnlyArenaPaths = ["/admin", "/visual-qa"] as const;
 
 function matchesRoute(pathname: string, route: string) {
@@ -83,11 +78,11 @@ async function hasQaSocialRenderBearer(request: NextRequest, hostname: string) {
 
 function offlineResponse(locale: "en-GB" | "pt-BR") {
   const isPortuguese = locale === "pt-BR";
-  const title = isPortuguese ? "TouchLine — Em breve" : "TouchLine — Coming soon";
+  const title = isPortuguese ? "TouchLine — Temporariamente indisponível" : "TouchLine — Temporarily unavailable";
   const description = isPortuguese
-    ? "Estamos preparando uma nova experiência premium de futebol, cards oficiais, ClubOwners e competições TouchLine."
-    : "We are preparing a new premium football experience, official cards, ClubOwners and TouchLine competitions.";
-  const statusLabel = isPortuguese ? "Em breve" : "Coming soon";
+    ? "A Arena está temporariamente indisponível. Tente novamente em instantes."
+    : "The Arena is temporarily unavailable. Please try again shortly.";
+  const statusLabel = isPortuguese ? "Tente novamente em instantes" : "Please try again shortly";
 
   return new NextResponse(
     `<!doctype html>
@@ -274,24 +269,6 @@ function nextResponseWithPresentationLocale(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, requestLocale(request));
   return NextResponse.next({ request: { headers: requestHeaders } });
-}
-
-function touchlinePublicLaunchRewrite(
-  request: NextRequest,
-  mode: Exclude<TouchlinePublicLaunchGateMode, "off">,
-) {
-  const locale = requestLocale(request);
-  const launchUrl = new URL("/coming-soon", request.url);
-  launchUrl.searchParams.set("lang", locale);
-  if (mode === "qa-opt-in") launchUrl.searchParams.set(TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY, "1");
-
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(TOUCHLINE_PRESENTATION_LOCALE_HEADER, locale);
-  const response = NextResponse.rewrite(launchUrl, { request: { headers: requestHeaders } });
-  response.headers.set("cache-control", "no-store, no-cache, must-revalidate");
-  response.headers.set("x-robots-tag", "noindex, nofollow, noarchive");
-  response.headers.set("x-touchline-launch-gate", mode);
-  return response;
 }
 
 function applyIsolatedPreviewHeaders(response: NextResponse) {
@@ -485,13 +462,6 @@ async function handleTouchLineRequest(request: NextRequest) {
   );
   const localeRedirect = canonicalPresentationLocaleRedirect(request);
   if (localeRedirect) return localeRedirect;
-  const launchGate = resolveTouchlinePublicLaunchGate({
-    previewOptIn: request.nextUrl.searchParams.get(TOUCHLINE_PUBLIC_LAUNCH_GATE_QUERY),
-    requestHostname: hostname,
-  });
-  if (launchGate.active && isTouchlineLaunchGateProductRoute(pathname)) {
-    return touchlinePublicLaunchRewrite(request, launchGate.mode);
-  }
   const isLocalDev = localDevHosts.has(hostname);
   if (isLocalDev) return nextResponseWithPresentationLocale(request);
   if (await hasQaSocialRenderBearer(request, hostname)) {
@@ -612,17 +582,7 @@ async function handleTouchLineRequest(request: NextRequest) {
   if (user && isProtectedArenaRoute && !hasArenaAccess) return loginRedirect(request, response);
   if (user && isAdminOnlyArenaRoute && !isAdmin) return arenaRedirect(request, response);
   if (isEmergencyOffline && user && !isAdmin && !isAuth) return offlineResponse(requestLocale(request));
-  // The public launch gate deliberately offers login and registration as its
-  // only exits. Keep those pages reachable even when this browser already has
-  // an Arena session, otherwise the CTA loops straight back to the gated Arena
-  // and appears dead. No session is cleared or replaced until the user submits
-  // an authentication form.
-  if (shouldTouchlineRedirectAuthenticatedAuthEntry({
-    hasArenaAccess,
-    isAuthEntry,
-    isAuthenticated: Boolean(user),
-    launchGateActive: launchGate.active,
-  })) {
+  if (user && hasArenaAccess && isAuthEntry) {
     const lang = request.nextUrl.searchParams.get("lang");
     const returnTo = normalizeTouchLineAuthReturnTo(request.nextUrl.searchParams.get("returnTo"));
     const destination = touchLinePostAuthHref(returnTo, lang);

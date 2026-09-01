@@ -148,5 +148,5 @@ test("proxy permits the recovery page while keeping ordinary authenticated entry
   assert.match(proxySource, /authPaths\s*=\s*\["\/login", "\/register", "\/forgot-password", "\/reset-password", "\/auth\/callback"\]/);
   assert.match(proxySource, /authEntryPaths\s*=\s*\["\/login", "\/register", "\/forgot-password"\]/);
   assert.match(proxySource, /user && !isAdmin && !isAuth/);
-  assert.match(proxySource, /shouldTouchlineRedirectAuthenticatedAuthEntry/);
+  assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);
 });

@@ -104,7 +104,7 @@ test("protected routes require the server-owned welcome completion predicate", (
   assert.match(arenaAccessServiceSource, /await markTouchLineArenaAccess\(user, admin\)/);
   assert.match(proxySource, /const hasArenaAccess = hasTouchLineArenaAccess\(user\)/);
   assert.match(proxySource, /if \(user && isProtectedArenaRoute && !hasArenaAccess\) return loginRedirect/);
-  assert.match(proxySource, /shouldTouchlineRedirectAuthenticatedAuthEntry/);
+  assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);
   for (const api of protectedArenaApiSources) {
     assert.match(api.source, /hasTouchLineArenaAccess/, `${api.path} must enforce completed Arena access`);
   }
@@ -141,8 +141,9 @@ test("authentication presents only the current TouchLine Arena product", () => {
   assert.doesNotMatch(registerPageSource, /Professional modules come later/);
 });
 
-test("the proxy protects the Arena itself and its current operations without legacy billing gates", () => {
-  assert.match(proxySource, /protectedArenaPaths\s*=\s*\["\/arena", "\/market-transfer", "\/fantasy", "\/admin", "\/notifications", "\/inbox", "\/football-search", "\/visual-qa"\]/);
+test("the proxy exposes the Arena entrance and protects account-backed operations without legacy billing gates", () => {
+  assert.match(proxySource, /protectedArenaPaths\s*=\s*\["\/market-transfer", "\/fantasy", "\/admin", "\/notifications", "\/inbox", "\/football-search", "\/visual-qa"\]/);
+  assert.doesNotMatch(proxySource, /protectedArenaPaths\s*=\s*\[[^\]]*"\/arena"/);
   assert.match(proxySource, /adminOnlyArenaPaths\s*=\s*\["\/admin", "\/visual-qa"\]/);
   assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
   assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return arenaRedirect\(request, response\)/);

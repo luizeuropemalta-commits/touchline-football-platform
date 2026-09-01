@@ -82,12 +82,10 @@ test("client locale sync keeps the server locale when the URL has no explicit la
   assert.doesNotMatch(localeSync, /readBrowserStorage/);
 });
 
-test("Coming Soon resolves both content and metadata through the public locale boundary", () => {
-  assert.match(comingSoon, /export async function generateMetadata/);
-  assert.match(comingSoon, /resolveTouchLinePresentationLocale\(params\.lang\)/);
-  assert.match(comingSoon, /TouchLine Arena — Coming soon/);
-  assert.match(comingSoon, /TouchLine Arena is being prepared to enter the pitch/);
-  assert.match(comingSoon, /<TouchlineComingSoonLanding locale=\{locale\}/);
+test("the retired Coming Soon route preserves locale and redirects into the Arena", () => {
+  assert.match(comingSoon, /resolveTouchLineRootLocale\(params\.lang\)/);
+  assert.match(comingSoon, /redirect\(`\/arena\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
+  assert.doesNotMatch(comingSoon, /Coming soon|Em breve|TouchlineComingSoonLanding/);
 });
 
 test("generic public navigation keeps the same effective locale and never picks a club or owner", () => {

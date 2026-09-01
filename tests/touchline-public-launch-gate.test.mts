@@ -2,228 +2,51 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import {
-  isTouchlineLaunchGateProductRoute,
-  resolveTouchlinePublicLaunchGate,
-  shouldTouchlineRedirectAuthenticatedAuthEntry,
-  touchlineLaunchGateReturnTo,
-} from "../lib/touchlineArena/public-launch-gate.ts";
-
 const proxySource = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 const homeSource = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
+const arenaSource = readFileSync(new URL("../app/arena/page.tsx", import.meta.url), "utf8");
+const arenaClientSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 const comingSoonSource = readFileSync(new URL("../app/coming-soon/page.tsx", import.meta.url), "utf8");
-const landingSource = readFileSync(
-  new URL("../components/touchline/coming-soon/TouchlinePublicLaunchGate.tsx", import.meta.url),
-  "utf8",
-);
-const previewContractSource = readFileSync(new URL("../lib/touchlinePreview/isolation.ts", import.meta.url), "utf8");
 
-function qaPreviewEnvironment(overrides: Record<string, string | undefined> = {}) {
-  return {
-    VERCEL_ENV: "preview",
-    VERCEL_URL: "touchline-launch-gate-123.vercel.app",
-    TOUCHLINE_DEPLOYMENT_MODE: "qa-preview",
-    NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE: "qa-preview",
-    VERCEL_GIT_COMMIT_REF: "codex/launch-gate-visual-proof",
-    ...overrides,
-  };
-}
-
-test("the public launch gate is server-owned, off by default and explicit when globally enabled", () => {
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({ environment: {} }), {
-    active: false,
-    mode: "off",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: { TOUCHLINE_PUBLIC_LAUNCH_GATE: "true" },
-  }), {
-    active: true,
-    mode: "global",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: { TOUCHLINE_PUBLIC_LAUNCH_GATE: "TRUE" },
-  }), {
-    active: false,
-    mode: "off",
-  });
+test("the public root and retired pre-launch route both enter the canonical Arena", () => {
+  assert.match(homeSource, /redirect\(`\/arena\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
+  assert.match(comingSoonSource, /redirect\(`\/arena\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
+  assert.doesNotMatch(homeSource, /TouchlinePublicLaunchGate|resolveTouchlinePublicLaunchGate|launchPreview/);
+  assert.doesNotMatch(comingSoonSource, /TouchlinePublicLaunchGate|TouchlineComingSoonLanding|resolveTouchlinePublicLaunchGate|launchPreview/);
 });
 
-test("the Git-native qa branch is fully gated without a query and Production remains untouched", () => {
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment({ VERCEL_GIT_COMMIT_REF: "qa" }),
-    requestHostname: "touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app",
-  }), {
-    active: true,
-    mode: "qa-branch",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment({
-      VERCEL_ENV: "production",
-      VERCEL_GIT_COMMIT_REF: "qa",
-    }),
-    requestHostname: "touchline.com.br",
-  }), {
-    active: false,
-    mode: "off",
-  });
+test("no middleware flag, branch or query can rewrite public product routes to pre-launch content", () => {
+  assert.doesNotMatch(proxySource, /public-launch-gate|TOUCHLINE_PUBLIC_LAUNCH_GATE|launchPreview/);
+  assert.doesNotMatch(proxySource, /touchlinePublicLaunchRewrite|x-touchline-launch-gate/);
+  assert.doesNotMatch(proxySource, /new URL\("\/coming-soon"/);
 });
 
-test("the non-persistent opt-in works only inside a functional QA Preview and never in Production", () => {
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment(),
-    previewOptIn: "1",
-    requestHostname: "touchline-launch-gate-123.vercel.app",
-  }), {
-    active: true,
-    mode: "qa-opt-in",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment(),
-    previewOptIn: undefined,
-    requestHostname: "touchline-launch-gate-123.vercel.app",
-  }), {
-    active: false,
-    mode: "off",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment({ VERCEL_ENV: "production" }),
-    previewOptIn: "1",
-    requestHostname: "touchline-launch-gate-123.vercel.app",
-  }), {
-    active: false,
-    mode: "off",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment({ TOUCHLINE_DEPLOYMENT_MODE: "isolated-preview" }),
-    previewOptIn: "1",
-    requestHostname: "touchline-launch-gate-123.vercel.app",
-  }), {
-    active: false,
-    mode: "off",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment({ NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE: "isolated-preview" }),
-    previewOptIn: "1",
-    requestHostname: "touchline-launch-gate-123.vercel.app",
-  }), {
-    active: false,
-    mode: "off",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment(),
-    previewOptIn: "1",
-    requestHostname: "touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app",
-  }), {
-    active: false,
-    mode: "off",
-  });
-  assert.deepEqual(resolveTouchlinePublicLaunchGate({
-    environment: qaPreviewEnvironment(),
-    previewOptIn: "1",
-    requestHostname: null,
-  }), {
-    active: false,
-    mode: "off",
-  });
-});
-
-test("the gate covers customer product surfaces without swallowing auth, callbacks, access APIs or owner admin", () => {
-  for (const pathname of [
-    "/arena",
-    "/market-transfer",
-    "/fantasy",
-    "/touchline-clubs",
-    "/touchline-clubs/arsenal",
-    "/touchline-players/player-1",
-    "/touchline-coaches/coach-1",
-    "/touchline-player-card-rankings",
-    "/touchline-tables",
-    "/live",
-    "/club-owner/me",
-    "/notifications",
-    "/inbox",
-    "/football-search",
-  ]) {
-    assert.equal(isTouchlineLaunchGateProductRoute(pathname), true, pathname);
-  }
-
-  for (const pathname of [
-    "/",
-    "/coming-soon",
-    "/login",
-    "/register",
-    "/forgot-password",
-    "/reset-password",
-    "/auth/callback",
-    "/api/auth/login",
-    "/api/touchline-arena/access",
-    "/admin",
-    "/visual-qa/card-neon-trace",
-  ]) {
-    assert.equal(isTouchlineLaunchGateProductRoute(pathname), false, pathname);
-  }
-});
-
-test("launch CTAs preserve an ephemeral QA opt-in only in their safe Arena return destination", () => {
-  assert.equal(touchlineLaunchGateReturnTo("pt-BR", "global"), "/arena?lang=pt-BR");
-  assert.equal(touchlineLaunchGateReturnTo("pt-BR", "qa-branch"), "/arena?lang=pt-BR");
-  assert.equal(
-    touchlineLaunchGateReturnTo("en-GB", "qa-opt-in"),
-    "/arena?launchPreview=1&lang=en-GB",
-  );
-});
-
-test("the root and protected-route proxy use one canonical launch experience without changing auth", () => {
-  assert.match(homeSource, /resolveTouchlinePublicLaunchGate/);
-  assert.match(homeSource, /<TouchlinePublicLaunchGate/);
-  assert.match(comingSoonSource, /resolveTouchlinePublicLaunchGate/);
-  assert.match(comingSoonSource, /<TouchlinePublicLaunchGate/);
-  assert.match(proxySource, /isTouchlineLaunchGateProductRoute/);
-  assert.match(proxySource, /touchlinePublicLaunchRewrite/);
-  assert.match(proxySource, /if \(launchGate\.active && isTouchlineLaunchGateProductRoute\(pathname\)\)/);
-  assert.match(proxySource, /const isAuth = authPaths\.some/);
-  assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect/);
-  assert.match(proxySource, /shouldTouchlineRedirectAuthenticatedAuthEntry/);
-  assert.match(previewContractSource, /"TOUCHLINE_PUBLIC_LAUNCH_GATE"/);
-});
-
-test("authenticated browsers can still follow the launch login CTA without an Arena redirect loop", () => {
-  assert.match(proxySource, /launch gate deliberately offers login and registration/);
-  assert.equal(shouldTouchlineRedirectAuthenticatedAuthEntry({
-    hasArenaAccess: true,
-    isAuthEntry: true,
-    isAuthenticated: true,
-    launchGateActive: true,
-  }), false);
-  assert.equal(shouldTouchlineRedirectAuthenticatedAuthEntry({
-    hasArenaAccess: true,
-    isAuthEntry: true,
-    isAuthenticated: true,
-    launchGateActive: false,
-  }), true);
-  assert.equal(shouldTouchlineRedirectAuthenticatedAuthEntry({
-    hasArenaAccess: false,
-    isAuthEntry: true,
-    isAuthenticated: true,
-    launchGateActive: false,
-  }), false);
-  assert.equal(shouldTouchlineRedirectAuthenticatedAuthEntry({
-    hasArenaAccess: true,
-    isAuthEntry: false,
-    isAuthenticated: true,
-    launchGateActive: false,
-  }), false);
-});
-
-test("the premium launch copy and both authentication calls to action are present", () => {
-  assert.match(landingSource, /A ARENA ESTÁ QUASE PRONTA/);
-  assert.match(landingSource, /Seu lugar já pode ser garantido\./);
+test("anonymous visitors may enter the Arena while account-backed product operations stay protected", () => {
   assert.match(
-    landingSource,
-    /Crie sua conta agora e seja um dos primeiros a entrar em campo quando a TouchLine abrir oficialmente\./,
+    proxySource,
+    /protectedArenaPaths\s*=\s*\["\/market-transfer", "\/fantasy", "\/admin", "\/notifications", "\/inbox", "\/football-search", "\/visual-qa"\]/,
   );
-  assert.match(landingSource, /LANÇAMENTO EM BREVE/);
-  assert.match(landingSource, /touchLineAuthEntryHref\("\/login"/);
-  assert.match(landingSource, /touchLineAuthEntryHref\("\/register"/);
-  assert.match(landingSource, /TouchlineClubPerimeterTrace/);
+  assert.doesNotMatch(proxySource, /protectedArenaPaths\s*=\s*\[[^\]]*"\/arena"/);
+  assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
+  assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);
+  assert.match(arenaSource, /const user = supabase/);
+  assert.match(arenaSource, /fantasySnapshot = user && !isOwnerEmail\(user\.email\)/);
+  assert.match(arenaClientSource, /kind: "anonymous"/);
+  assert.match(arenaClientSource, /touchline-arena-anonymous/);
+});
+
+test("the live public entry files contain no pre-launch admission copy", () => {
+  const publicEntrySource = [homeSource, comingSoonSource, proxySource].join("\n");
+  assert.doesNotMatch(
+    publicEntrySource,
+    /A ARENA ESTÁ QUASE PRONTA|THE ARENA IS ALMOST READY|LANÇAMENTO EM BREVE|LAUNCHING SOON|early registration|site is in testing|TouchLine Beta/i,
+  );
+  assert.match(proxySource, /Temporariamente indisponível/);
+  assert.match(proxySource, /Temporarily unavailable/);
+});
+
+test("Admin and OWNER-only boundaries remain fail-closed", () => {
+  assert.match(proxySource, /adminOnlyArenaPaths\s*=\s*\["\/admin", "\/visual-qa"\]/);
+  assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return arenaRedirect/);
+  assert.match(proxySource, /isOwnerEmail\(user\?\.email\)/);
 });
