@@ -15,7 +15,7 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 65);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 68);
   assert.equal(rows.filter((item) => item.kind === "API").length, 69);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
@@ -48,6 +48,9 @@ test("separates public, authenticated, ClubOwner, Admin, audit, and isolated pre
   assert.equal(row("/visual-qa/social-confirmed-event").data, "QA_VERIFIED_CONFIRMED_EVENT_STORY_DRAFT");
   assert.equal(row("/visual-qa/social-ranking").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-ranking").data, "QA_VERIFIED_RANKING_FAMILY_DRAFT");
+  assert.equal(row("/visual-qa/clubhub-next-fixture-post").role, "OWNER_ADMIN");
+  assert.equal(row("/visual-qa/clubhub-premium-redesign").role, "OWNER_ADMIN");
+  assert.equal(row("/visual-qa/market-premium-pitch").role, "OWNER_ADMIN");
   assert.equal(row("/audit-index").auth, "AUDIT_TOKEN");
   assert.equal(row("/preview").auth, "ISOLATED_PREVIEW");
 });

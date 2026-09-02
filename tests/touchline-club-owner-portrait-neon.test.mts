@@ -65,11 +65,11 @@ test("the Club Owner portrait trace keeps hover, reduced-motion and photo bounda
   assert.match(reducedMotion, /\[data-club-owner-portrait-neon-trace-base="true"\] \{ opacity: \.76; \}/);
   assert.match(reducedMotion, /data-club-owner-portrait-trace="touchline-logo-green"\] \{ transform: none !important; \}/);
   assert.doesNotMatch(reducedMotion, /touch-action:\s*none/);
-  // Card/crest touch elevation was delivered in the preceding card-trace
-  // checkpoint. Validate that contract here instead of adding a parallel rule.
-  assert.match(globalCss, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]:hover \[data-touchline-card-crest-trace-host="true"\][\s\S]*?translate3d\(0, -1px, 0\)/);
+  // Card/crest touch elevation remains available without adding a decorative
+  // circular wrapper around the official club symbol.
+  assert.match(globalCss, /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]:hover \[data-touchline-card-crest-host="true"\][\s\S]*?translate3d\(0, -1px, 0\)/);
   assert.match(globalCss, /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]\[data-neon-active="true"\][\s\S]*?scale\(1\.028\)/);
-  assert.match(globalCss, /:active \[data-touchline-card-crest-trace-host="true"\][\s\S]*?translate3d\(0, -1px, 0\)/);
+  assert.match(globalCss, /:active \[data-touchline-card-crest-host="true"\][\s\S]*?translate3d\(0, -1px, 0\)/);
   assert.match(globalCss, /touch-action: manipulation/);
   assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.touchline-card-surface\[data-card-motion="true"\]:hover,[\s\S]*?transform: none !important/);
 });

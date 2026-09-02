@@ -11,9 +11,11 @@ const configuredDevOrigins = (process.env.TOUCHLINE_DEV_ORIGINS ?? "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const localTurbopackRoot = process.env.TOUCHLINE_LOCAL_TURBOPACK_ROOT?.trim();
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: [...new Set(["127.0.0.1", "localhost", ...configuredDevOrigins])],
+  ...(localTurbopackRoot ? { turbopack: { root: localTurbopackRoot } } : {}),
   async headers() {
     const cacheHeaders = [
       {

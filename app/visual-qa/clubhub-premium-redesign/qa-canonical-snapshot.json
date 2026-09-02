@@ -1,0 +1,744 @@
+{
+  "kind": "TOUCHLINE_LOCAL_QA_READONLY_SNAPSHOT",
+  "club": {
+    "teamId": "19",
+    "slug": "arsenal",
+    "name": "Arsenal FC"
+  },
+  "source": {
+    "environment": "TouchLine Development QA",
+    "capturedAt": "2026-09-02T00:00:00.000+02:00",
+    "mode": "read-only"
+  },
+  "nextFixture": {
+    "state": "ready",
+    "startsAt": "2026-09-06T15:30:00+00:00",
+    "status": "Not Started",
+    "competition": "Premier League",
+    "roundName": "Gameweek 3",
+    "venue": {
+      "name": "Emirates Stadium",
+      "interiorImageUrl": "/touchlineArena/stadiums/interiors/01-arsenal-emirates-stadium-live.webp"
+    },
+    "homeTeam": {
+      "teamId": "19",
+      "name": "Arsenal",
+      "shortCode": "ARS",
+      "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/arsenal.png"
+    },
+    "awayTeam": {
+      "teamId": "18",
+      "name": "Chelsea",
+      "shortCode": "CHE",
+      "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/chelsea.png"
+    }
+  },
+  "coach": {
+    "state": "ready",
+    "name": "Mikel Arteta",
+    "nationality": "Spain",
+    "capturedAt": "2026-07-27T00:00:00.000Z"
+  },
+  "ranking": {
+    "state": "ready",
+    "snapshotId": "player-rating:1e83121b-b778-459b-b9a0-7cf1eaff5729:eb5382ca",
+    "generatedAt": "2026-08-31T21:11:02.704Z",
+    "publishedAt": "2026-08-31T21:11:14.430Z",
+    "scoringVersion": "player_scoring_v3",
+    "coverageStatus": "complete_for_scoring",
+    "leaders": [
+      {
+        "teamId": "19",
+        "canonicalPlayerId": "cdb6b24b-0282-4952-b168-0ea3beb0d457",
+        "name": "Bukayo Saka",
+        "totalRating": 15.5,
+        "overallRank": 7,
+        "positionGroup": "winger",
+        "positionRank": 1
+      },
+      {
+        "teamId": "18",
+        "canonicalPlayerId": "c2c119c3-3394-4e54-8388-bdc0e1ece6c0",
+        "name": "João Pedro",
+        "totalRating": 16.45,
+        "overallRank": 3,
+        "positionGroup": "striker",
+        "positionRank": 1
+      }
+    ]
+  },
+  "table": {
+    "state": "ready",
+    "asOf": "2026-09-01T18:43:02.580Z",
+    "season": {
+      "name": "2026/2027",
+      "sourceUpdatedAt": "2026-09-01T18:43:02.58+00:00"
+    },
+    "coverage": {
+      "expectedClubs": 20,
+      "mappedClubs": 20,
+      "fixturesInSeason": 50,
+      "completedFixtures": 20,
+      "liveFixtures": 0,
+      "duplicateFixtures": 0
+    },
+    "rows": [
+      {
+        "displayPosition": 1,
+        "team": {
+          "teamId": "9",
+          "name": "Manchester City",
+          "shortCode": "MCI",
+          "slug": "manchester-city",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/manchester-city.png"
+        },
+        "played": 2,
+        "won": 2,
+        "drawn": 0,
+        "lost": 0,
+        "goalsFor": 6,
+        "goalsAgainst": 2,
+        "goalDifference": 4,
+        "points": 6,
+        "form": [
+          "W",
+          "W"
+        ]
+      },
+      {
+        "displayPosition": 2,
+        "team": {
+          "teamId": "19",
+          "name": "Arsenal",
+          "shortCode": "ARS",
+          "slug": "arsenal",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/arsenal.png"
+        },
+        "played": 2,
+        "won": 2,
+        "drawn": 0,
+        "lost": 0,
+        "goalsFor": 4,
+        "goalsAgainst": 0,
+        "goalDifference": 4,
+        "points": 6,
+        "form": [
+          "W",
+          "W"
+        ]
+      },
+      {
+        "displayPosition": 3,
+        "team": {
+          "teamId": "22",
+          "name": "Hull City",
+          "shortCode": "HUL",
+          "slug": "hull-city",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/hull-city.png"
+        },
+        "played": 2,
+        "won": 2,
+        "drawn": 0,
+        "lost": 0,
+        "goalsFor": 3,
+        "goalsAgainst": 0,
+        "goalDifference": 3,
+        "points": 6,
+        "form": [
+          "W",
+          "W"
+        ]
+      },
+      {
+        "displayPosition": 4,
+        "team": {
+          "teamId": "18",
+          "name": "Chelsea",
+          "shortCode": "CHE",
+          "slug": "chelsea",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/chelsea.png"
+        },
+        "played": 2,
+        "won": 2,
+        "drawn": 0,
+        "lost": 0,
+        "goalsFor": 7,
+        "goalsAgainst": 5,
+        "goalDifference": 2,
+        "points": 6,
+        "form": [
+          "W",
+          "W"
+        ]
+      },
+      {
+        "displayPosition": 5,
+        "team": {
+          "teamId": "236",
+          "name": "Brentford",
+          "shortCode": "BRE",
+          "slug": "brentford",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/brentford.png"
+        },
+        "played": 2,
+        "won": 1,
+        "drawn": 1,
+        "lost": 0,
+        "goalsFor": 4,
+        "goalsAgainst": 1,
+        "goalDifference": 3,
+        "points": 4,
+        "form": [
+          "W",
+          "D"
+        ]
+      },
+      {
+        "displayPosition": 6,
+        "team": {
+          "teamId": "20",
+          "name": "Newcastle United",
+          "shortCode": "NEW",
+          "slug": "newcastle-united",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/newcastle-united.png"
+        },
+        "played": 2,
+        "won": 1,
+        "drawn": 1,
+        "lost": 0,
+        "goalsFor": 4,
+        "goalsAgainst": 2,
+        "goalDifference": 2,
+        "points": 4,
+        "form": [
+          "D",
+          "W"
+        ]
+      },
+      {
+        "displayPosition": 7,
+        "team": {
+          "teamId": "13",
+          "name": "Everton",
+          "shortCode": "EVE",
+          "slug": "everton",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/everton.png"
+        },
+        "played": 2,
+        "won": 1,
+        "drawn": 1,
+        "lost": 0,
+        "goalsFor": 3,
+        "goalsAgainst": 1,
+        "goalDifference": 2,
+        "points": 4,
+        "form": [
+          "W",
+          "D"
+        ]
+      },
+      {
+        "displayPosition": 8,
+        "team": {
+          "teamId": "71",
+          "name": "Leeds United",
+          "shortCode": "LEE",
+          "slug": "leeds-united",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/leeds-united.png"
+        },
+        "played": 2,
+        "won": 1,
+        "drawn": 1,
+        "lost": 0,
+        "goalsFor": 2,
+        "goalsAgainst": 1,
+        "goalDifference": 1,
+        "points": 4,
+        "form": [
+          "W",
+          "D"
+        ]
+      },
+      {
+        "displayPosition": 9,
+        "team": {
+          "teamId": "78",
+          "name": "Brighton & Hove Albion",
+          "shortCode": "BHA",
+          "slug": "brighton",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/brighton.png"
+        },
+        "played": 2,
+        "won": 1,
+        "drawn": 0,
+        "lost": 1,
+        "goalsFor": 7,
+        "goalsAgainst": 4,
+        "goalDifference": 3,
+        "points": 3,
+        "form": [
+          "W",
+          "L"
+        ]
+      },
+      {
+        "displayPosition": 10,
+        "team": {
+          "teamId": "14",
+          "name": "Manchester United",
+          "shortCode": "MUN",
+          "slug": "manchester-united",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/manchester-united.png"
+        },
+        "played": 2,
+        "won": 1,
+        "drawn": 0,
+        "lost": 1,
+        "goalsFor": 5,
+        "goalsAgainst": 4,
+        "goalDifference": 1,
+        "points": 3,
+        "form": [
+          "L",
+          "W"
+        ]
+      },
+      {
+        "displayPosition": 11,
+        "team": {
+          "teamId": "3",
+          "name": "Sunderland",
+          "shortCode": "SUN",
+          "slug": "sunderland",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/sunderland.png"
+        },
+        "played": 2,
+        "won": 1,
+        "drawn": 0,
+        "lost": 1,
+        "goalsFor": 2,
+        "goalsAgainst": 2,
+        "goalDifference": 0,
+        "points": 3,
+        "form": [
+          "L",
+          "W"
+        ]
+      },
+      {
+        "displayPosition": 12,
+        "team": {
+          "teamId": "116",
+          "name": "Ipswich Town",
+          "shortCode": "IPS",
+          "slug": "ipswich-town",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/ipswich-town.png"
+        },
+        "played": 2,
+        "won": 1,
+        "drawn": 0,
+        "lost": 1,
+        "goalsFor": 4,
+        "goalsAgainst": 6,
+        "goalDifference": -2,
+        "points": 3,
+        "form": [
+          "W",
+          "L"
+        ]
+      },
+      {
+        "displayPosition": 13,
+        "team": {
+          "teamId": "8",
+          "name": "Liverpool",
+          "shortCode": "LIV",
+          "slug": "liverpool",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/liverpool.png"
+        },
+        "played": 2,
+        "won": 0,
+        "drawn": 2,
+        "lost": 0,
+        "goalsFor": 4,
+        "goalsAgainst": 4,
+        "goalDifference": 0,
+        "points": 2,
+        "form": [
+          "D",
+          "D"
+        ]
+      },
+      {
+        "displayPosition": 14,
+        "team": {
+          "teamId": "52",
+          "name": "AFC Bournemouth",
+          "shortCode": "BOU",
+          "slug": "bournemouth",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/bournemouth.png"
+        },
+        "played": 2,
+        "won": 0,
+        "drawn": 1,
+        "lost": 1,
+        "goalsFor": 2,
+        "goalsAgainst": 3,
+        "goalDifference": -1,
+        "points": 1,
+        "form": [
+          "L",
+          "D"
+        ]
+      },
+      {
+        "displayPosition": 15,
+        "team": {
+          "teamId": "63",
+          "name": "Nottingham Forest",
+          "shortCode": "NFO",
+          "slug": "nottingham-forest",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/nottingham-forest.png"
+        },
+        "played": 2,
+        "won": 0,
+        "drawn": 1,
+        "lost": 1,
+        "goalsFor": 2,
+        "goalsAgainst": 3,
+        "goalDifference": -1,
+        "points": 1,
+        "form": [
+          "L",
+          "D"
+        ]
+      },
+      {
+        "displayPosition": 16,
+        "team": {
+          "teamId": "11",
+          "name": "Fulham",
+          "shortCode": "FUL",
+          "slug": "fulham",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/fulham.png"
+        },
+        "played": 2,
+        "won": 0,
+        "drawn": 0,
+        "lost": 2,
+        "goalsFor": 2,
+        "goalsAgainst": 4,
+        "goalDifference": -2,
+        "points": 0,
+        "form": [
+          "L",
+          "L"
+        ]
+      },
+      {
+        "displayPosition": 17,
+        "team": {
+          "teamId": "117",
+          "name": "Coventry City",
+          "shortCode": "COV",
+          "slug": "coventry-city",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/coventry-city.png"
+        },
+        "played": 2,
+        "won": 0,
+        "drawn": 0,
+        "lost": 2,
+        "goalsFor": 0,
+        "goalsAgainst": 4,
+        "goalDifference": -4,
+        "points": 0,
+        "form": [
+          "L",
+          "L"
+        ]
+      },
+      {
+        "displayPosition": 18,
+        "team": {
+          "teamId": "51",
+          "name": "Crystal Palace",
+          "shortCode": "CRY",
+          "slug": "crystal-palace",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/crystal-palace.png"
+        },
+        "played": 2,
+        "won": 0,
+        "drawn": 0,
+        "lost": 2,
+        "goalsFor": 1,
+        "goalsAgainst": 6,
+        "goalDifference": -5,
+        "points": 0,
+        "form": [
+          "L",
+          "L"
+        ]
+      },
+      {
+        "displayPosition": 19,
+        "team": {
+          "teamId": "15",
+          "name": "Aston Villa",
+          "shortCode": "AVL",
+          "slug": "aston-villa",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/aston-villa.png"
+        },
+        "played": 2,
+        "won": 0,
+        "drawn": 0,
+        "lost": 2,
+        "goalsFor": 0,
+        "goalsAgainst": 5,
+        "goalDifference": -5,
+        "points": 0,
+        "form": [
+          "L",
+          "L"
+        ]
+      },
+      {
+        "displayPosition": 20,
+        "team": {
+          "teamId": "6",
+          "name": "Tottenham Hotspur",
+          "shortCode": "TOT",
+          "slug": "tottenham-hotspur",
+          "logoUrl": "/touchlineArena/shared/club-logos/2026-27/ui-512/tottenham-hotspur.png"
+        },
+        "played": 2,
+        "won": 0,
+        "drawn": 0,
+        "lost": 2,
+        "goalsFor": 0,
+        "goalsAgainst": 5,
+        "goalDifference": -5,
+        "points": 0,
+        "form": [
+          "L",
+          "L"
+        ]
+      }
+    ]
+  },
+  "squad": {
+    "state": "last_verified",
+    "capturedAt": "2026-08-21T15:56:01.882782+00:00",
+    "degraded": true,
+    "totalPlayers": 29,
+    "players": [
+      {
+        "canonicalPlayerId": "43cd0ace-1049-490d-9bc4-d7574c3bd31a",
+        "name": "David Raya",
+        "role": "goalkeeper",
+        "position": "Goalkeeper",
+        "shirtNumber": 1
+      },
+      {
+        "canonicalPlayerId": "1fb15cb4-6bbe-4512-9b8a-e5180ecd33bd",
+        "name": "Illan Meslier",
+        "role": "goalkeeper",
+        "position": "Goalkeeper",
+        "shirtNumber": 30
+      },
+      {
+        "canonicalPlayerId": "b9594f52-cb5d-44d5-9314-69eee24a7222",
+        "name": "Kepa Arrizabalaga",
+        "role": "goalkeeper",
+        "position": "Goalkeeper",
+        "shirtNumber": 13
+      },
+      {
+        "canonicalPlayerId": "ceae4df3-2450-44c8-90e6-461abdb870a0",
+        "name": "Tommy Setford",
+        "role": "goalkeeper",
+        "position": "Goalkeeper",
+        "shirtNumber": 35
+      },
+      {
+        "canonicalPlayerId": "42a52638-f230-4e85-8297-ee6784c4cefb",
+        "name": "Ben White",
+        "role": "defender",
+        "position": "Right Back",
+        "shirtNumber": 4
+      },
+      {
+        "canonicalPlayerId": "45d5b428-d985-401a-8c12-144f15f22939",
+        "name": "Cristhian Mosquera",
+        "role": "defender",
+        "position": "Centre Back",
+        "shirtNumber": 3
+      },
+      {
+        "canonicalPlayerId": "b871ef82-cacd-4ff7-9c88-0a494905885a",
+        "name": "Gabriel",
+        "role": "defender",
+        "position": "Centre Back",
+        "shirtNumber": 6
+      },
+      {
+        "canonicalPlayerId": "975dcd59-eeec-4598-850e-9ee77a68bda7",
+        "name": "Jurriën Timber",
+        "role": "defender",
+        "position": "Right Back",
+        "shirtNumber": 12
+      },
+      {
+        "canonicalPlayerId": "148e259f-cea2-41f3-a99c-fc66b7f139f5",
+        "name": "Myles Lewis-Skelly",
+        "role": "defender",
+        "position": "Left Back",
+        "shirtNumber": 49
+      },
+      {
+        "canonicalPlayerId": "d7145702-3247-4b46-9392-02f02e7b823a",
+        "name": "Piero Hincapié",
+        "role": "defender",
+        "position": "Centre Back",
+        "shirtNumber": 5
+      },
+      {
+        "canonicalPlayerId": "04562dad-bb0c-49f2-af49-1f536149200c",
+        "name": "Riccardo Calafiori",
+        "role": "defender",
+        "position": "Left Back",
+        "shirtNumber": 33
+      },
+      {
+        "canonicalPlayerId": "03e9c693-31c9-41f1-836f-7448a8e47dce",
+        "name": "William Saliba",
+        "role": "defender",
+        "position": "Centre Back",
+        "shirtNumber": 2
+      },
+      {
+        "canonicalPlayerId": "75673a9e-607d-4f41-b912-dcfbb6efb57f",
+        "name": "Bruno Guimarães",
+        "role": "midfielder",
+        "position": "Central Midfield",
+        "shirtNumber": 39
+      },
+      {
+        "canonicalPlayerId": "8a51720b-2692-48f8-bcd6-a4a8bea79248",
+        "name": "Declan Rice",
+        "role": "midfielder",
+        "position": "Central Midfield",
+        "shirtNumber": 41
+      },
+      {
+        "canonicalPlayerId": "7b066dc7-7c50-4072-acbf-f79171ec2fc7",
+        "name": "Eberechi Eze",
+        "role": "midfielder",
+        "position": "Attacking Midfield",
+        "shirtNumber": 10
+      },
+      {
+        "canonicalPlayerId": "8d665a46-d3ff-40c1-9deb-c637e8b13730",
+        "name": "Ethan Nwaneri",
+        "role": "midfielder",
+        "position": "Attacking Midfield",
+        "shirtNumber": 22
+      },
+      {
+        "canonicalPlayerId": "da1e7e1e-1843-4479-be82-d16a7d4cb19d",
+        "name": "Fábio Vieira",
+        "role": "midfielder",
+        "position": "Attacking Midfield",
+        "shirtNumber": 21
+      },
+      {
+        "canonicalPlayerId": "0418d8c4-9755-432d-bdd7-30a0021cac97",
+        "name": "Martin Ødegaard",
+        "role": "midfielder",
+        "position": "Attacking Midfield",
+        "shirtNumber": 8
+      },
+      {
+        "canonicalPlayerId": "d7829c0d-2653-4931-a559-3990ac6a6d2d",
+        "name": "Martín Zubimendi",
+        "role": "midfielder",
+        "position": "Defensive Midfield",
+        "shirtNumber": 36
+      },
+      {
+        "canonicalPlayerId": "2bd1aa2d-3421-426b-9aea-b2076f29767d",
+        "name": "Mikel Merino",
+        "role": "midfielder",
+        "position": "Central Midfield",
+        "shirtNumber": 23
+      },
+      {
+        "canonicalPlayerId": "cdb6b24b-0282-4952-b168-0ea3beb0d457",
+        "name": "Bukayo Saka",
+        "role": "forward",
+        "position": "Right Wing",
+        "shirtNumber": 7
+      },
+      {
+        "canonicalPlayerId": "05e21229-3e14-4b26-9081-1343e5905df7",
+        "name": "Christos Tzolis",
+        "role": "forward",
+        "position": "Left Wing",
+        "shirtNumber": 17
+      },
+      {
+        "canonicalPlayerId": "21c5d432-7514-404a-953f-75002457b9ae",
+        "name": "Gabriel Jesus",
+        "role": "forward",
+        "position": "Centre Forward",
+        "shirtNumber": 9
+      },
+      {
+        "canonicalPlayerId": "302b5f3d-8b8c-49c8-a8ca-3167d77c1268",
+        "name": "Gabriel Martinelli",
+        "role": "forward",
+        "position": "Left Wing",
+        "shirtNumber": 11
+      },
+      {
+        "canonicalPlayerId": "9b7d556e-2c0e-4c91-9168-24a0dc38931b",
+        "name": "Kai Havertz",
+        "role": "forward",
+        "position": "Centre Forward",
+        "shirtNumber": 29
+      },
+      {
+        "canonicalPlayerId": "2ff2341e-403c-42c0-94e2-5d25e9fe4e40",
+        "name": "Max Dowman",
+        "role": "forward",
+        "position": "Right Wing",
+        "shirtNumber": 56
+      },
+      {
+        "canonicalPlayerId": "0fcbbe3e-5dd2-4d3a-9a8d-dd0edb6ba134",
+        "name": "Noni Madueke",
+        "role": "forward",
+        "position": "Right Wing",
+        "shirtNumber": 20
+      },
+      {
+        "canonicalPlayerId": "db2699dd-d43c-449e-bd0a-17b99eb583b0",
+        "name": "Reiss Nelson",
+        "role": "forward",
+        "position": "Left Wing",
+        "shirtNumber": 24
+      },
+      {
+        "canonicalPlayerId": "bcf1f971-9eb8-47d4-bb96-1d3b7b9c212a",
+        "name": "Viktor Gyökeres",
+        "role": "forward",
+        "position": "Centre Forward",
+        "shirtNumber": 14
+      }
+    ]
+  },
+  "feed": {
+    "state": "empty",
+    "items": [],
+    "limit": 12
+  }
+}

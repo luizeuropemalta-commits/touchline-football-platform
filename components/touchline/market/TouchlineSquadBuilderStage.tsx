@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, X } from "lucide-react";
 
-import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
+import TouchlinePitchSurface, { TOUCHLINE_MARKET_HOUSE_CAMPAIGN } from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineGoalFacingPitchCard from "@/components/touchline/cards/TouchlineGoalFacingPitchCard";
@@ -19,7 +19,7 @@ import {
   isTouchlineTacticalSlotCandidateEligible,
   type TouchlineFormationGeometryRegistry,
 } from "@/lib/touchlineArena/formation-geometry";
-import { TOUCHLINE_SQUAD_RULES, resolveTouchlineSquadJourney } from "@/lib/touchlineArena/squad-rules";
+import { resolveTouchlineSquadJourney } from "@/lib/touchlineArena/squad-rules";
 import { touchlineCanonicalFormationSlots } from "@/lib/touchlineArena/pitch-layout";
 
 import styles from "./TouchlineSquadBuilderStage.module.css";
@@ -148,6 +148,16 @@ function formationSlots(formation: string, geometryRegistry?: TouchlineFormation
   }));
 }
 
+function verticalPitchPosition(slot: FormationSlot) {
+  // Canonical formation coordinates are authored for attack-right surfaces.
+  // The Market pitch attacks upwards, so rotate the same geometry 90 degrees
+  // counter-clockwise and retain a camera-safe perimeter around goals/LEDs.
+  const left = Math.min(88, Math.max(12, slot.y));
+  const canonicalTop = Math.min(88, Math.max(12, 100 - slot.x));
+  const top = 19 + ((canonicalTop - 12) * 69) / 76;
+  return { left: `${left}%`, top: `${top}%` };
+}
+
 function roleLabel(role: TouchlineSquadBuilderRole, portuguese: boolean) {
   if (role === "goalkeeper") return portuguese ? "Goleiro" : "Goalkeeper";
   if (role === "defender") return portuguese ? "Defensor" : "Defender";
@@ -249,11 +259,9 @@ export default function TouchlineSquadBuilderStage({
     { key: "coach", label: portuguese ? "Treinador" : "Coach", complete: journey.coachComplete },
     { key: "formation", label: portuguese ? "Formação" : "Formation", complete: journey.formationComplete },
     { key: "starting-xi", label: portuguese ? "Time titular" : "Starting XI", complete: journey.startingXiComplete },
-    { key: "bench", label: portuguese ? "Banco" : "Bench", complete: journey.benchComplete },
-    { key: "full-squad", label: portuguese ? "Elenco completo" : "Full squad", complete: journey.fullSquadComplete },
-    { key: "review", label: portuguese ? "Revisar clube" : "Review club", complete: false },
   ] as const;
-  const currentStepIndex = Math.max(0, steps.findIndex((step) => step.key === journey.currentStep));
+  const firstIncompleteStepIndex = steps.findIndex((step) => !step.complete);
+  const currentStepIndex = firstIncompleteStepIndex < 0 ? steps.length - 1 : firstIncompleteStepIndex;
 
   return (
     <section className={styles.shell} aria-labelledby="touchline-squad-builder-title">
@@ -303,20 +311,28 @@ export default function TouchlineSquadBuilderStage({
 
       <div className={styles.workspace}>
         <div className={styles.pitchColumn}>
-          <TouchlinePitchSurface className={styles.pitch} ariaLabel={portuguese ? `Time titular ${formation}` : `${formation} Starting XI`}>
-            <div className={`${styles.formationStatus} ${vacancyTotal ? styles.incompleteFormation : styles.readyFormation}`} role="status" aria-live="polite">
-              <strong>{vacancyTotal ? vacancySummary : (portuguese ? "Formação completa" : "Formation complete")}</strong>
-              {formationFeedback ? <span>{formationFeedback}</span> : null}
-            </div>
+          <TouchlinePitchSurface
+            advertisingCampaign={TOUCHLINE_MARKET_HOUSE_CAMPAIGN}
+            className={styles.pitch}
+            ariaLabel={portuguese ? `Time titular ${formation}` : `${formation} Starting XI`}
+            orientation="vertical"
+            surfaceVariant="premium-stadium"
+          >
+            {vacancyTotal ? (
+              <div className={`${styles.formationStatus} ${styles.incompleteFormation}`} role="status" aria-live="polite">
+                <strong>{vacancySummary}</strong>
+                {formationFeedback ? <span>{formationFeedback}</span> : null}
+              </div>
+            ) : null}
             {slots.map((slot) => {
               const player = startersBySlot.get(slot.id);
               return player ? (
                 <article
                   key={slot.id}
                   className={styles.playerSlot}
-                  style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                  style={verticalPitchPosition(slot)}
                 >
-                  <TouchlineGoalFacingPitchCard className={styles.playerCardZoom}>
+                  <TouchlineGoalFacingPitchCard className={styles.playerCardZoom} orientation="attack-up">
                     <SquadPlayerCardZoom card={player.card} locale={locale} canEditCardEngine={canEditCardEngine} />
                   </TouchlineGoalFacingPitchCard>
                   <strong>{player.shortName}</strong>
@@ -336,7 +352,7 @@ export default function TouchlineSquadBuilderStage({
                   key={slot.id}
                   type="button"
                   className={`${styles.emptySlot} ${activeSlot?.id === slot.id ? styles.selected : ""}`}
-                  style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                  style={verticalPitchPosition(slot)}
                   onClick={() => setActiveSlot({ id: slot.id, role: slot.role, allowedPositions: slot.allowedPositions, targetPlayerId: null })}
                   disabled={!journey.formationComplete}
                   aria-label={`${portuguese ? "Adicionar" : "Add"} ${roleLabel(slot.role, portuguese)}`}
@@ -348,22 +364,38 @@ export default function TouchlineSquadBuilderStage({
                 </button>
               );
             })}
+          </TouchlinePitchSurface>
+
+          <aside className={styles.technicalArea} aria-label={portuguese ? "Área técnica e preparação do elenco" : "Technical area and squad preparation"}>
+            <span>{portuguese ? "ÁREA TÉCNICA" : "TECHNICAL AREA"}</span>
+            {coachProfileHref && coachCard ? (
+              <a className={styles.coachCardLink} href={coachProfileHref} aria-label={portuguese ? `Abrir perfil de ${coachName ?? "treinador"}` : `Open profile for ${coachName ?? "coach"}`}>
+                <div className={styles.coachCard}>{coachCard}</div>
+              </a>
+            ) : (
+              <div className={styles.coachCard}>{coachCard ?? <b className={styles.emptyCoach} aria-hidden="true">+</b>}</div>
+            )}
+            <div className={styles.coachBrief}>
+              <strong>{coachName ?? (portuguese ? "Escolha seu treinador" : "Choose your coach")}</strong>
+              <p>{portuguese ? "Defina a formação e contrate os seus 11 titulares." : "Set the formation and sign your Starting XI for the Arena."}</p>
+              {coachProfileHref ? <a href={coachProfileHref}>{portuguese ? "Ver perfil do treinador" : "View coach profile"}</a> : null}
+            </div>
             {activeSlot ? (
               <section className={styles.slotPicker} role="dialog" aria-modal="false" aria-labelledby="formation-slot-picker-title">
                 <header>
                   <div>
-                    <span>{portuguese ? "SELEÇÃO NO CAMPO" : "ON-PITCH SELECTION"}</span>
+                    <span>{portuguese ? "PASSO 3 · TIME TITULAR" : "STEP 3 · STARTING XI"}</span>
                     <strong id="formation-slot-picker-title">
                       {activeSlot.targetPlayerId
                         ? (portuguese ? `Substituir ${roleLabel(activeSlot.role, portuguese)}` : `Replace ${roleLabel(activeSlot.role, portuguese)}`)
-                        : (portuguese ? `${roleLabel(activeSlot.role, portuguese)} necessário` : `${roleLabel(activeSlot.role, portuguese)} required`)}
+                        : (portuguese ? `Escolher ${roleLabel(activeSlot.role, portuguese)}` : `Choose ${roleLabel(activeSlot.role, portuguese)}`)}
                     </strong>
                   </div>
                   <button type="button" onClick={() => setActiveSlot(null)} aria-label={portuguese ? "Fechar seleção" : "Close selection"} autoFocus>
                     <X aria-hidden="true" />
                   </button>
                 </header>
-                <p>{portuguese ? "Somente atletas elegíveis para esta posição." : "Only players eligible for this position."}</p>
+                <p>{portuguese ? "Cards elegíveis para a posição selecionada no campo." : "Cards eligible for the selected position on the pitch."}</p>
                 <div className={styles.slotPickerCandidates}>
                   {eligibleCandidates.length ? eligibleCandidates.map((candidate) => (
                     <button
@@ -393,77 +425,20 @@ export default function TouchlineSquadBuilderStage({
                       <span><b>{candidate.shortName}</b><small>{candidate.position}</small></span>
                     </button>
                   )) : (
-                    <p>{portuguese ? "Nenhum atleta elegível disponível no elenco." : "No eligible squad player is available."}</p>
+                    <p>{portuguese ? "Nenhum atleta elegível disponível para esta posição." : "No eligible player is available for this position."}</p>
                   )}
                 </div>
               </section>
-            ) : null}
-          </TouchlinePitchSurface>
-
-          <aside className={styles.technicalArea} aria-label={portuguese ? "Área técnica e preparação do elenco" : "Technical area and squad preparation"}>
-            <span>{portuguese ? "ÁREA TÉCNICA" : "TECHNICAL AREA"}</span>
-            {coachProfileHref && coachCard ? (
-              <a className={styles.coachCardLink} href={coachProfileHref} aria-label={portuguese ? `Abrir perfil de ${coachName ?? "treinador"}` : `Open profile for ${coachName ?? "coach"}`}>
-                <div className={styles.coachCard}>{coachCard}</div>
-              </a>
             ) : (
-              <div className={styles.coachCard}>{coachCard ?? <b className={styles.emptyCoach} aria-hidden="true">+</b>}</div>
+              <section className={styles.positionPrompt} aria-label={portuguese ? "Seleção dos titulares" : "Starting XI selection"}>
+                <span>{portuguese ? "PASSO 3 · TIME TITULAR" : "STEP 3 · STARTING XI"}</span>
+                <strong>{portuguese ? "Escolha uma posição no campo" : "Choose a position on the pitch"}</strong>
+                <p>{portuguese ? "Os cards elegíveis aparecerão aqui para completar os 11 titulares." : "Eligible cards will appear here to complete the Starting XI."}</p>
+              </section>
             )}
-            <div className={styles.coachBrief}>
-              <strong>{coachName ?? (portuguese ? "Escolha seu treinador" : "Choose your coach")}</strong>
-              <p>{portuguese ? "Defina a formação, contrate atletas e leve o grupo completo para a Arena." : "Set the formation, sign players and take the complete group into the Arena."}</p>
-              {coachProfileHref ? <a href={coachProfileHref}>{portuguese ? "Ver perfil do treinador" : "View coach profile"}</a> : null}
-            </div>
-            <div className={styles.summary} aria-label={portuguese ? "Progresso do elenco" : "Squad progress"}>
-              <span><small>{portuguese ? "Titulares" : "Starting XI"}</small><strong>{starters.length}/11</strong></span>
-              <span><small>{portuguese ? "Banco" : "Bench"}</small><strong>{bench.length}/9</strong></span>
-              <span><small>{portuguese ? "Elenco" : "Squad"}</small><strong>{contractedCount}/35</strong></span>
-            </div>
           </aside>
         </div>
       </div>
-
-      <section className={styles.bench} aria-label={portuguese ? "Banco da partida" : "Matchday bench"}>
-        <header><span>TOUCHLINE</span><strong>{portuguese ? "Banco da partida" : "Matchday bench"}</strong><small>{bench.length}/{TOUCHLINE_SQUAD_RULES.bench}</small></header>
-        <div className={styles.benchSlots}>
-          {Array.from({ length: TOUCHLINE_SQUAD_RULES.bench }, (_, index) => {
-            const player = bench[index];
-            return (
-              <div key={player?.id ?? `empty-bench-${index}`} className={player ? styles.filledBenchSlot : ""}>
-                {player ? (
-                  <div className={styles.rosterCard}>
-                    <SquadPlayerCardZoom card={player.card} locale={locale} canEditCardEngine={canEditCardEngine} />
-                  </div>
-                ) : null}
-                <b>{player?.shortName ?? "+"}</b>
-                <small>{player?.position ?? (portuguese ? "Vaga" : "Slot")}</small>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className={styles.remaining} aria-label={portuguese ? "Elenco restante" : "Remaining squad"}>
-        <header>
-          <strong>{portuguese ? "Elenco restante" : "Remaining squad"}</strong>
-          <small>
-            {starters.length === TOUCHLINE_SQUAD_RULES.starters
-              ? `${remainingSquad.length}/${TOUCHLINE_SQUAD_RULES.reserveVault}`
-              : portuguese
-                ? `${remainingSquad.length} · aguardando ${TOUCHLINE_SQUAD_RULES.starters - starters.length}`
-                : `${remainingSquad.length} · ${TOUCHLINE_SQUAD_RULES.starters - starters.length} awaiting placement`}
-          </small>
-        </header>
-        <div>{remainingSquad.length ? remainingSquad.map((player) => (
-          <div key={player.id}>
-            <div className={styles.rosterCard}>
-              <SquadPlayerCardZoom card={player.card} locale={locale} canEditCardEngine={canEditCardEngine} />
-            </div>
-            <b>{player.shortName}</b>
-            <small>{player.position}</small>
-          </div>
-        )) : <p>{portuguese ? "Os próximos contratos aparecerão aqui depois de completar o time titular e o banco." : "New contracts appear here after the Starting XI and bench are complete."}</p>}</div>
-      </section>
     </section>
   );
 }

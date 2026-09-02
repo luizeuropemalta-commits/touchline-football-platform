@@ -1,5 +1,13 @@
 # TouchLine Current State
 
+## QA Markt + ClubHub + Social 041 approved candidate — LOCAL/SHADOW GREEN, QA DEPLOY PENDING
+
+- The user-approved candidate combines the premium vertical Markt pitch and internal player chooser, the Arsenal-based reusable ClubHub model, the two-club-leader duel artwork, and MATCH_PREVIEW module 041. Public coming-soon presentation is removed while authentication, OWNER-only Admin/visual-QA access and account-backed operation guards remain intact.
+- MATCH_PREVIEW remains factual and draft/review-first: one canonical published leader per club, British-English copy, separate artwork/caption approval, immutable media checksum and no public provider fixture identity. LINEUP 039/040 authority is preserved. Modules 042–046 remain checked-in, fail-closed and outbound-disabled; their new artwork will be designed and approved separately.
+- Real PostgreSQL 17.11 shadow verification passed the full 039→040→041→042→043→044→045→046 chain and conservative rollback, with `0` shared-QA writes and `0` Production writes. Focused social coverage passed `49/49`; the complete suite passed `1562/1562`; governance, TypeScript, ESLint with `0` errors and seven established warnings, `git diff --check`, release readiness and the Next.js production build with `139/139` routes passed.
+- Chromium and WebKit verified the local production build. Desktop, phone landscape, internal scroll, 20-club chooser, 578-card catalogue, owner-only previews, zoom/profile actions, responsive overflow and the duel artwork passed with an empty console. Final Codex Security diff scan `07949578-fa28-4392-8d61-8f4e589dafd9` reviewed all `50/50` executable changed-source items with complete coverage and zero findings.
+- One Git-native QA deployment is authorised after the exact candidate is committed. No remote migration, Supabase write, Production deployment, Instagram/Facebook publication or outbound connector activation is authorised by this candidate.
+
 ## QA Live complete twenty-stadium interior collection — GREEN / WEBKIT PASS
 
 - Product commit `d7f58e155f41af9041c3163ba94a483e9e591162` completes the existing verified stadium catalog with one approved `1600×1000` WebP interior for every league home club. Resolution remains fail-closed and requires the exact persisted provider `homeTeamId + venueId`; the away club never selects the background or perimeter colour, and any mismatch or image failure retains the generic Live pitch.

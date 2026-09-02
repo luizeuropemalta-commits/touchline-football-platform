@@ -37,6 +37,10 @@ const coachZoom = await readFile(
   new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url),
   "utf8",
 );
+const cardZoom = await readFile(
+  new URL("../components/touchline/cards/TouchlineCardZoom.tsx", import.meta.url),
+  "utf8",
+);
 const clubCoachPanel = await readFile(
   new URL("../components/touchline/ClubHubCanonicalCoachPanel.tsx", import.meta.url),
   "utf8",
@@ -239,9 +243,20 @@ test("public coach profile separates real football history from the shared Touch
   assert.match(coachPerformance, /item\.away\.touchlinePoints/);
 });
 
-test("coach zoom renders premium icon-led Home, Away and total TouchLine Points before profile navigation", () => {
-  assert.match(coachZoom, /TouchlineCoachPerformance contract=\{contract\}/);
-  assert.match(coachZoom, /data-coach-profile-action="true"/);
+test("coach zoom centres the shared card between canonical identity and verified TouchLine record", () => {
+  assert.match(coachZoom, /details=\{details\}/);
+  assert.match(coachZoom, /profileActionKind: "coach"/);
+  assert.match(coachZoom, /Current club/);
+  assert.match(coachZoom, /Nationality/);
+  assert.match(coachZoom, /First-team coach/);
+  assert.match(coachZoom, /Date of birth/);
+  assert.match(coachZoom, /Card tier/);
+  assert.match(coachZoom, /Competition rank/);
+  assert.match(coachZoom, /Home · W-D-L/);
+  assert.match(coachZoom, /Away · W-D-L/);
+  assert.match(coachZoom, /Awaiting verified data/);
+  assert.doesNotMatch(coachZoom, /birthplace|place of birth/i);
+  assert.match(cardZoom, /data-coach-profile-action=\{details\.profileActionKind === "coach"/);
   assert.match(coachPerformance, /PlaneTakeoff/);
   assert.match(coachPerformance, /House/);
   assert.match(coachPerformance, /Trophy/);

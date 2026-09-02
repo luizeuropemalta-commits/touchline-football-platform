@@ -275,7 +275,7 @@ export default async function AdminOwnerPanel({
     footballCompetitions,
     footballSquadMembers,
     cardInventory,
-    activeContracts,
+    retainedLegacyContracts,
     marketOrders,
     analyticsSessions,
     betaGrantCount,
@@ -339,7 +339,10 @@ export default async function AdminOwnerPanel({
     safeCount(admin.from("football_competitions").select("id", { count: "exact", head: true })),
     safeCount(admin.from("football_squad_members").select("id", { count: "exact", head: true })),
     safeCount(admin.from("touchline_card_inventory").select("id", { count: "exact", head: true })),
-    safeCount(admin.from("touchline_card_contracts").select("id", { count: "exact", head: true }).eq("status", "active")),
+    // Historical contract rows are retained for audit only. Current-season
+    // gameplay is the independently validated Gameweek XI (exactly 11), so
+    // this dashboard must not describe legacy contract status as operational.
+    safeCount(admin.from("touchline_card_contracts").select("id", { count: "exact", head: true })),
     safeCount(admin.from("touchline_market_orders").select("id", { count: "exact", head: true }).eq("status", "completed")),
     safeCount(admin.from("touchline_analytics_sessions").select("id", { count: "exact", head: true })),
     safeCount(admin.from("touchline_beta_tc_grants").select("id", { count: "exact", head: true })),
@@ -387,7 +390,7 @@ export default async function AdminOwnerPanel({
     recentCards.error,
     ledger.error,
     cardInventory.error,
-    activeContracts.error,
+    retainedLegacyContracts.error,
     marketOrders.error,
     analyticsSessions.error,
     betaGrantCount.error,
@@ -499,7 +502,7 @@ export default async function AdminOwnerPanel({
   ];
   const economyCoverage = [
     { label: "Completed orders", result: marketOrders },
-    { label: "Active contracts", result: activeContracts },
+    { label: "Historical contracts", result: retainedLegacyContracts },
     { label: "Saved Arenas", result: arenaStateCount },
     { label: "Ledger entries", result: creditLedgerCount },
   ];
@@ -539,7 +542,7 @@ export default async function AdminOwnerPanel({
         <StatTile icon={Database} label="Players" value={countText(footballPlayers)} delta={footballPlayers.error ? "read unavailable" : "football_*"} accent={footballPlayers.error ? "rose" : "cyan"} />
         <StatTile icon={ShieldCheck} label="Clubs" value={countText(footballClubs)} delta={footballClubs.error ? "read unavailable" : "normalized"} accent={footballClubs.error ? "rose" : "lime"} />
         <StatTile icon={Sparkles} label="Cards" value={countText(cardInventory)} delta={cardInventory.error ? "read unavailable" : "inventory"} accent={cardInventory.error ? "rose" : "gold"} />
-        <StatTile icon={WalletCards} label="Contracts" value={countText(activeContracts)} delta={activeContracts.error ? "read unavailable" : "active"} accent="rose" />
+        <StatTile icon={WalletCards} label="Legacy contracts" value={countText(retainedLegacyContracts)} delta={retainedLegacyContracts.error ? "read unavailable" : "audit only · not gameplay"} accent="gold" />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -711,8 +714,9 @@ export default async function AdminOwnerPanel({
         </GamePanel>
 
         <GamePanel className="p-5">
-          <p className="text-[9px] font-black text-amber-300">Arena economy read model</p>
-          <h2 className="mt-1 text-xl font-black italic text-white">Contracts and credits</h2>
+          <p className="text-[9px] font-black text-amber-300">Historical economy read model</p>
+          <h2 className="mt-1 text-xl font-black italic text-white">Legacy contracts and credits</h2>
+          <p className="mt-2 text-[9px] leading-4 text-slate-500">Retained for audit and history only. They do not select, limit or compose the current Gameweek XI.</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
             {economyCoverage.map(({ label, result }) => (
               <div key={label} className={`rounded-2xl border bg-white/[.025] p-4 ${result.error ? "border-rose-300/20" : "border-white/[.07]"}`}>

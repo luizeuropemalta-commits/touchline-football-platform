@@ -1,0 +1,73 @@
+.page {
+  min-height: 100vh;
+  padding: 34px;
+  color: #f7fff1;
+  background:
+    radial-gradient(circle at 16% 10%, rgba(121, 255, 29, .14), transparent 32%),
+    linear-gradient(145deg, #06110d, #010504 66%);
+  font-family: Arial, Helvetica, sans-serif;
+}
+.intro { max-width: 1480px; margin: 0 auto 24px; }
+.intro span, .label { color: #b6ff4f; font-size: 12px; font-weight: 950; letter-spacing: .18em; }
+.intro h1 { margin: 10px 0 6px; font-size: clamp(34px, 4vw, 62px); letter-spacing: -.045em; }
+.intro p { margin: 0; color: rgba(255,255,255,.62); font-size: 17px; }
+
+.reviewGrid {
+  max-width: 1480px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(600px, 720px) minmax(370px, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+
+.artViewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: 1px solid rgba(182,255,79,.45);
+  border-radius: 24px;
+  background: #03100d;
+  box-shadow: 0 26px 90px rgba(0,0,0,.42), 0 0 36px rgba(151,255,50,.08);
+}
+
+.artScale {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 1080px;
+  height: 1350px;
+  transform: scale(var(--post-preview-scale, .6666667));
+  transform-origin: top left;
+}
+
+.captionPanel {
+  border: 1px solid rgba(182,255,79,.24);
+  border-radius: 24px;
+  padding: 26px;
+  background: linear-gradient(145deg, rgba(5,25,19,.94), rgba(0,8,6,.96));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 22px 70px rgba(0,0,0,.3);
+}
+
+.destinations { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.destinations span { padding: 8px 11px; border: 1px solid rgba(182,255,79,.32); border-radius: 999px; color: #dfffc1; font-size: 12px; font-weight: 850; }
+.captionPanel pre { margin: 18px 0 26px; white-space: pre-wrap; color: #f8fff2; font: 700 16px/1.58 Arial, Helvetica, sans-serif; }
+.captionPanel dl { display: grid; gap: 10px; margin: 0; }
+.captionPanel dl div { display: flex; justify-content: space-between; gap: 18px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+.captionPanel dt { color: rgba(255,255,255,.48); }
+.captionPanel dd { margin: 0; color: #b6ff4f; font-weight: 850; text-align: right; }
+
+.unavailable { min-height: 100vh; display: grid; place-items: center; color: #b6ff4f; background: #020807; font: 900 24px Arial, sans-serif; }
+
+@media (max-width: 1180px) {
+  .reviewGrid { grid-template-columns: 1fr; }
+  .artViewport { max-width: 720px; }
+}
+
+@media (max-width: 760px) {
+  .page { padding: 18px; }
+  .reviewGrid { display: block; }
+  .artViewport { width: 100%; }
+  .artScale { transform: scale(calc((100vw - 36px) / 1080)); }
+  .captionPanel { margin-top: 20px; padding: 20px; }
+}

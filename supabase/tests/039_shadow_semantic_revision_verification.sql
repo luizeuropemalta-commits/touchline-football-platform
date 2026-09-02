@@ -45,8 +45,24 @@ begin
   insert into public.football_competitions values ('10000000-0000-4000-8000-000000000001', 'sportmonks', '8', 'Competition');
   insert into public.football_seasons values ('10000000-0000-4000-8000-000000000002', 'sportmonks', '10000000-0000-4000-8000-000000000001', '26000', true, 'Season');
   insert into public.football_rounds values ('10000000-0000-4000-8000-000000000003', 'sportmonks', '10000000-0000-4000-8000-000000000002', 'GW');
-  insert into public.football_clubs values ('10000000-0000-4000-8000-000000000004', 'sportmonks', '19', 'Home');
-  insert into public.football_clubs values ('10000000-0000-4000-8000-000000000005', 'sportmonks', '20', 'Away');
+  insert into public.football_clubs (
+    id, provider, competition_id, provider_team_id, name
+  ) values (
+    '10000000-0000-4000-8000-000000000004',
+    'sportmonks',
+    '10000000-0000-4000-8000-000000000001',
+    '19',
+    'Home'
+  );
+  insert into public.football_clubs (
+    id, provider, competition_id, provider_team_id, name
+  ) values (
+    '10000000-0000-4000-8000-000000000005',
+    'sportmonks',
+    '10000000-0000-4000-8000-000000000001',
+    '20',
+    'Away'
+  );
   insert into public.football_players values ('10000000-0000-4000-8000-000000000006', 'sportmonks', '1006', 'Player');
   insert into public.football_squad_members values ('10000000-0000-4000-8000-000000000007', 'sportmonks', '10000000-0000-4000-8000-000000000006', '10000000-0000-4000-8000-000000000004', 6, 'MID', true);
   insert into public.football_fixtures values ('10000000-0000-4000-8000-000000000008', 'sportmonks', '19722192', '10000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000003', '10000000-0000-4000-8000-000000000004', '10000000-0000-4000-8000-000000000005', clock_timestamp(), 'NS');

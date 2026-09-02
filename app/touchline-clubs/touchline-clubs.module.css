@@ -227,17 +227,14 @@
 
 .logoWrap {
   --touchline-club-crest-color: var(--club-accent);
-  /* The crest host owns both the symbol and its circular travelling trace.
-     Scale them together, leaving the surrounding card copy and perimeter clear. */
+  /* Preserve the official crest's natural silhouette with no circular plate. */
   width: clamp(106px, 11.7vw, 161px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   justify-self: center;
-  border-radius: 50%;
   overflow: visible;
   isolation: isolate;
-  background: radial-gradient(circle, rgba(255,255,255,.13), rgba(255,255,255,.035) 58%, transparent 70%);
 }
 
 .logoWrap img {

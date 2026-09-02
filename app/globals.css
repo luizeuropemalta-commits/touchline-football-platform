@@ -877,7 +877,7 @@ a, button { outline: none; }
   100% { stroke-dasharray: 2 98; stroke-dashoffset: 0; opacity: 0; }
 }
 
-[data-touchline-card-crest-trace-host="true"] {
+[data-touchline-card-crest-host="true"] {
   position: relative;
   display: grid;
   width: 100%;
@@ -890,43 +890,7 @@ a, button { outline: none; }
   transition: transform 180ms ease;
 }
 
-[data-touchline-card-crest-trace="true"] {
-  position: absolute;
-  /* The travelling perimeter belongs outside/behind the crest artwork. It
-     must never draw across a club symbol, even when the artwork fills its box. */
-  z-index: 0;
-  inset: -3.5%;
-  display: block;
-  width: 107%;
-  height: 107%;
-  overflow: visible;
-  color: var(--touchline-club-crest-color);
-  pointer-events: none;
-  user-select: none;
-}
-
-[data-touchline-card-crest-trace-base="true"],
-[data-touchline-card-crest-trace-run="true"] {
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-[data-touchline-card-crest-trace-base="true"] {
-  stroke-width: 1.1;
-  opacity: .52;
-}
-
-[data-touchline-card-crest-trace-run="true"] {
-  stroke-width: 2.2;
-  stroke-dasharray: 4 96;
-  stroke-dashoffset: 0;
-  opacity: 0;
-  animation: touchline-card-perimeter-trace 5.8s cubic-bezier(.22,.74,.28,1) infinite;
-}
-
-[data-touchline-card-crest-trace-host="true"] > img {
+[data-touchline-card-crest-host="true"] > img {
   position: relative;
   z-index: 1;
 }
@@ -944,7 +908,7 @@ a, button { outline: none; }
     transform: translateZ(0) scale(1.035) !important;
   }
 
-  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-crest-trace-host="true"] {
+  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-crest-host="true"] {
     transform: translate3d(0, -1px, 0);
   }
 }
@@ -958,16 +922,7 @@ a, button { outline: none; }
   position: relative;
   z-index: 1;
   display: block;
-  border-radius: 50%;
-  outline: 1px solid color-mix(in srgb, var(--touchline-club-crest-color) 58%, transparent);
-  outline-offset: 1px;
-  background: radial-gradient(circle, color-mix(in srgb, var(--touchline-club-crest-color) 12%, transparent) 0 54%, transparent 58%);
   box-shadow: 0 2px 6px rgba(0,0,0,.42);
-  transition: outline-color 180ms ease, background-color 180ms ease;
-}
-
-.touchline-card-surface[data-card-motion="true"]:is(:focus-within, [data-neon-active="true"]) [data-touchline-card-crest="true"] {
-  outline-color: color-mix(in srgb, var(--touchline-club-crest-color) 86%, white 14%);
 }
 
 /* Touch screens do not have desktop hover. A tap-selected card receives the
@@ -983,8 +938,8 @@ a, button { outline: none; }
     transform: translate3d(0, 0, 0) scale(1.028) !important;
   }
 
-  .touchline-card-surface[data-card-motion="true"]:active [data-touchline-card-crest-trace-host="true"],
-  .touchline-card-surface[data-card-motion="true"][data-neon-active="true"] [data-touchline-card-crest-trace-host="true"] {
+  .touchline-card-surface[data-card-motion="true"]:active [data-touchline-card-crest-host="true"],
+  .touchline-card-surface[data-card-motion="true"][data-neon-active="true"] [data-touchline-card-crest-host="true"] {
     transform: translate3d(0, -1px, 0);
   }
 }
@@ -1000,7 +955,7 @@ a, button { outline: none; }
   }
 
   .touchline-card-surface[data-card-motion="true"]:hover,
-  .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest-trace-host="true"] {
+  .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest-host="true"] {
     transform: none !important;
     transition: none;
   }
@@ -1015,15 +970,6 @@ a, button { outline: none; }
     opacity: 0 !important;
   }
 
-  [data-touchline-card-crest-trace-base="true"] {
-    stroke-width: 1.9;
-    opacity: .72;
-  }
-
-  [data-touchline-card-crest-trace-run="true"] {
-    animation: none !important;
-    opacity: 0 !important;
-  }
 }
 /* Registration keeps the form immediately usable while the Arena creates the first impression. */
 .auth-cinematic-media {

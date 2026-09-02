@@ -1,8 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import type { CSSProperties } from "react";
 
-import { TouchlineClubCrestPerimeterTrace } from "@/components/touchline/cards/TouchlineClubCrestPerimeterTrace";
-
 type Props = Readonly<{
   accent: string;
   alt?: string;
@@ -14,8 +12,8 @@ type Props = Readonly<{
 
 /**
  * Presentational ClubHub crest only. The logo remains the canonical local
- * asset supplied by the caller; the decorative trace carries no club data and
- * cannot manufacture a crest for an unresolved opponent.
+ * asset supplied by the caller. Decorative circular wrappers are deliberately
+ * excluded so every club keeps the natural silhouette of its official crest.
  */
 export default function ClubHubCrestTrace({
   accent,
@@ -29,13 +27,12 @@ export default function ClubHubCrestTrace({
     <span
       aria-label={ariaLabel}
       className={className}
-      data-club-hub-crest-trace-host="true"
-      data-touchline-card-crest-trace-host="true"
+      data-club-hub-crest-host="true"
+      data-touchline-card-crest-host="true"
       role={ariaLabel ? "img" : undefined}
       style={{ "--touchline-club-crest-color": accent } as CSSProperties}
     >
       <img alt={alt} draggable={false} loading={loading} src={src} />
-      <TouchlineClubCrestPerimeterTrace />
     </span>
   );
 }

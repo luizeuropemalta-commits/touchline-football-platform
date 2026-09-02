@@ -5,6 +5,7 @@ import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineElite
 import { touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { buildTouchlinePlayerCardZoomDetails } from "@/lib/touchlineArena/card-zoom-details";
 import { squadCardToExactPlayer, type ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
+import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 
 export default function TouchlineGameweekCard({ card, locale, compact = false, displayWidth }: {
   card: ClubOwnerSquadCard;
@@ -14,6 +15,17 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
 }) {
   const exact = squadCardToExactPlayer(card);
   const palette = touchlineCardTierPalette(card.editorialCard?.tierKey ?? null);
+  // Public profile links use TouchLine presentation identity only. Provider
+  // identifiers remain server-side and never leak into a card URL.
+  const profileHref = touchlinePlayerProfileHref({
+    name: exact.name,
+    clubName: exact.clubName,
+    position: exact.position,
+    shirtNumber: exact.shirtNumber,
+    countryCode3: exact.countryCode3,
+  }, locale, { previewTier: exact.cardTier });
+  const resolvedDisplayWidth = displayWidth ?? (compact ? 74 : 132);
+  const useLiveCompactAsset = resolvedDisplayWidth <= 119;
   return <TouchlineCardZoom
     ariaLabel={`${card.name} TouchLine card`}
     tierAccent={palette.accent}
@@ -33,6 +45,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
         primary: true,
         kind: "rating-total",
       }],
+      profileHref,
     })}
     expandedContent={<TouchlineEliteExactCard
       player={exact}
@@ -41,12 +54,13 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
       subscribeToRanking={false}
       rankingMode="preview"
       forceNeonActive
+      playerProfileHref={profileHref}
     />}
   >
     <TouchlineEliteExactCard
       player={exact}
-      staticRenderScale={(displayWidth ?? (compact ? 74 : 132)) / 430}
-      optimizeForLiveCompact
+      staticRenderScale={resolvedDisplayWidth / 430}
+      optimizeForLiveCompact={useLiveCompactAsset}
       runtimeLocaleOverride={locale}
       subscribeToRanking={false}
       enableInteractiveNeon={false}

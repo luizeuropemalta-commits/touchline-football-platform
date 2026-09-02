@@ -118,7 +118,7 @@ test("Market Transfer keeps the buying workspace visible on Safari/mobile landsc
   assert.match(source, /max-width: 940px\) and \(max-height: 540px\)/);
   assert.match(squadBuilderStyles, /max-height: 480px\) and \(orientation: landscape\)/);
   assert.match(squadBuilderStyles, /\.workspace \{ grid-template-columns: 1fr; \}/);
-  assert.match(squadBuilderStyles, /\.pitch \{ min-height: 330px; \}/);
+  assert.match(squadBuilderStyles, /\.pitch \{ min-height: 0; border-right:/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market > \.team-builder-bank \{[\s\S]*?display: grid;/);
   assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-board \{[\s\S]*?"clubs clubs"[\s\S]*?"roster roster"/);
   assert.match(source, /Final Market Transfer gallery authority/);

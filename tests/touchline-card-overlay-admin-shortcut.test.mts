@@ -50,14 +50,14 @@ test("public card pages derive Card Engine visibility from the authenticated ser
   assert.match(source("components/touchline/market/TouchlineSquadBuilderStage.tsx"), /canEditCardEngine = false/);
 });
 
-test("Starting XI, Bench and Remaining Squad reuse the same zoom without nesting the change action", () => {
+test("Market keeps card zoom on the Starting XI without rendering a substitute bench", () => {
   const builder = source("components/touchline/market/TouchlineSquadBuilderStage.tsx");
 
   assert.match(builder, /function SquadPlayerCardZoom/);
-  assert.equal(builder.match(/<SquadPlayerCardZoom/g)?.length, 3);
-  assert.match(builder, /Matchday bench/);
-  assert.match(builder, /const player = bench\[index\]/);
-  assert.match(builder, /remainingSquad\.map[\s\S]*?<SquadPlayerCardZoom/);
+  assert.equal(builder.match(/<SquadPlayerCardZoom/g)?.length, 1);
+  assert.doesNotMatch(builder, /Matchday bench/);
+  assert.doesNotMatch(builder, /remainingSquad\.map[\s\S]*?<SquadPlayerCardZoom/);
+  assert.match(builder, /const squadCandidates = useMemo\([\s\S]*?\[\.\.\.bench, \.\.\.remainingSquad\]/);
   assert.match(builder, /className=\{styles\.changePlayer\}/);
 });
 

@@ -1,16 +1,17 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
-import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
-import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
+import TouchlineSocialDuelFrame from "@/components/touchline/social/TouchlineSocialDuelFrame";
 import type { TouchlineSocialMatchPreviewDraft } from "@/lib/touchlineArena/social-match-preview-draft-server";
 import { touchlineEnglishOrdinal } from "@/lib/touchlineArena/social-match-preview-caption";
 import { TOUCHLINE_MATCH_PREVIEW_TEMPLATE_VERSION } from "@/lib/touchlineArena/social-match-preview-draft-server";
+import {
+  TOUCHLINE_SOCIAL_DUEL_FRAME,
+  TOUCHLINE_SOCIAL_DUEL_FRAME_VERSION,
+} from "@/lib/touchlineArena/social-duel-frame";
 import { TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES } from "@/lib/touchlineArena/social-visual-tokens";
 
 import styles from "./TouchlineSocialMatchPreviewDraft.module.css";
-
-const CARD_WIDTH = 292;
 
 function kickOffLabel(startsAt: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -22,13 +23,6 @@ function kickOffLabel(startsAt: string) {
     minute: "2-digit",
     hour12: false,
   }).format(new Date(startsAt)).replace(",", " ·");
-}
-
-function sideStyle(accent: string, secondaryAccent: string) {
-  return {
-    "--preview-accent": accent,
-    "--preview-secondary": secondaryAccent,
-  } as CSSProperties;
 }
 
 export default function TouchlineSocialMatchPreviewDraftView({
@@ -46,7 +40,6 @@ export default function TouchlineSocialMatchPreviewDraftView({
       style={canvasStyle}
       data-social-art="touchline-match-preview"
       data-content-type="MATCH_PREVIEW"
-      data-fixture-id={draft.fixtureId}
       data-template-version={TOUCHLINE_MATCH_PREVIEW_TEMPLATE_VERSION}
       data-source-version={draft.sourceVersion}
       data-source-checksum={draft.sourceChecksum}
@@ -54,9 +47,10 @@ export default function TouchlineSocialMatchPreviewDraftView({
       data-source-snapshot-at={draft.sourceSnapshotAt}
       data-starts-at={draft.startsAt}
       data-caption={draft.caption}
-      data-home-team-id={draft.home.club.teamId}
-      data-away-team-id={draft.away.club.teamId}
+      data-home-team-key={draft.home.club.shortCode}
+      data-away-team-key={draft.away.club.shortCode}
       data-lineup-fields="absent"
+      data-duel-frame-version={TOUCHLINE_SOCIAL_DUEL_FRAME_VERSION}
     >
       <div className={styles.stadium} aria-hidden="true" />
       <div className={styles.atmosphere} aria-hidden="true" />
@@ -89,46 +83,30 @@ export default function TouchlineSocialMatchPreviewDraftView({
       </section>
 
       <div className={styles.duelHeading}>
-        <span>LEADING TOUCHLINE CARDS</span>
+        <span>{TOUCHLINE_SOCIAL_DUEL_FRAME.heading}</span>
         <h1>WHO COMES OUT ON TOP?</h1>
       </div>
 
-      <section className={styles.duel} aria-label="Leading TouchLine cards">
-        {[draft.home, draft.away].map((side) => (
-          <article
-            key={side.club.teamId}
-            className={styles.contender}
-            style={sideStyle(side.club.accent, side.club.secondaryAccent)}
-            data-preview-team-id={side.club.teamId}
-            data-preview-player-id={side.leader.card.id}
-            data-preview-canonical-player-id={side.leader.card.canonicalPlayerId ?? undefined}
-            data-preview-total-rating={side.leader.totalRating.toFixed(2)}
-            data-preview-card-axis="0deg"
-          >
-            <div className={styles.cardFrame}>
-              <TouchlineEliteExactCard
-                player={squadCardToExactPlayer(side.leader.card, { useSuppliedTier: true })}
-                staticRenderScale={CARD_WIDTH / 430}
-                ensureStaticNameFit
-                runtimeLocaleOverride="en-GB"
-                subscribeToRanking={false}
-                enableInteractiveNeon={false}
-                showCardActions={false}
-                showProfileAction={false}
-                showSocialMetrics={false}
-                rankingMode="preview"
-                forceNeonActive
-                imageLoading="eager"
-              />
-            </div>
-            <div className={styles.contenderCopy}>
-              <span>{side.club.shortCode} · CURRENT CLUB LEADER</span>
-              <strong>{side.leader.card.name}</strong>
-              <div><b>{side.leader.totalRating.toFixed(2)}</b><small>TOTAL RATING</small></div>
-            </div>
-          </article>
-        ))}
-      </section>
+      <TouchlineSocialDuelFrame sides={[
+        {
+          teamId: draft.home.club.teamId,
+          shortCode: draft.home.club.shortCode,
+          clubName: draft.home.club.name,
+          accent: draft.home.club.accent,
+          secondaryAccent: draft.home.club.secondaryAccent,
+          card: draft.home.leader.card,
+          totalRating: draft.home.leader.totalRating,
+        },
+        {
+          teamId: draft.away.club.teamId,
+          shortCode: draft.away.club.shortCode,
+          clubName: draft.away.club.name,
+          accent: draft.away.club.accent,
+          secondaryAccent: draft.away.club.secondaryAccent,
+          card: draft.away.leader.card,
+          totalRating: draft.away.leader.totalRating,
+        },
+      ]} />
 
       <section className={styles.tableStrip} aria-label="Current verified league positions">
         {[draft.home, draft.away].map((side) => (

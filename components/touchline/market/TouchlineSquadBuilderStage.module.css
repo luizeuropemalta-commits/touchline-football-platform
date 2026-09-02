@@ -47,7 +47,7 @@
 
 .progress {
   display: grid;
-  grid-template-columns: repeat(6, minmax(110px, 1fr));
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
   gap: 8px;
   margin: 0;
   padding: 4px 0 8px;
@@ -127,16 +127,21 @@
 }
 
 .pitchColumn {
+  --market-technical-width: clamp(360px, 40%, 720px);
   position: relative;
+  width: 100%;
   min-width: 0;
-  padding-right: 270px;
+  margin-inline: 0;
+  padding-right: var(--market-technical-width);
 }
 
 .pitch {
   position: relative;
-  min-height: 548px;
+  width: 100%;
+  min-height: 0;
   border: 1px solid rgba(201, 255, 182, .24);
-  border-radius: 20px;
+  border-right: 0;
+  border-radius: 20px 0 0 20px;
   overflow: hidden;
   box-shadow: inset 0 0 70px rgba(0, 0, 0, .28), 0 18px 42px rgba(0, 0, 0, .28);
 }
@@ -164,7 +169,6 @@
 .formationStatus span { color: #b8c7bd; font-size: 9px; }
 .formationStatus.incompleteFormation { border-color: rgba(255, 195, 73, .72); }
 .formationStatus.incompleteFormation strong { color: #ffd86f; }
-.formationStatus.readyFormation strong { color: #baff76; }
 
 .playerSlot,
 .emptySlot {
@@ -238,20 +242,22 @@
 .emptySlot:focus-visible { border-color: #aaff3e; outline: 2px solid rgba(170, 255, 62, .28); background: rgba(170, 255, 62, .14); }
 
 .slotPicker {
-  position: absolute;
+  position: relative;
   z-index: 20;
-  inset: 58px 7% 26px;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 10px;
+  width: 100%;
+  min-height: 0;
+  max-height: 720px;
   padding: 16px;
   border: 1px solid rgba(170, 255, 62, .56);
   border-radius: 18px;
   color: #f5fff1;
   background:
     radial-gradient(circle at 50% 0%, rgba(170, 255, 62, .12), transparent 42%),
-    rgba(2, 12, 8, .97);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, .68), inset 0 1px rgba(255, 255, 255, .06);
+    rgba(2, 12, 8, .86);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .06), 0 14px 34px rgba(0, 0, 0, .28);
   backdrop-filter: blur(12px);
 }
 
@@ -284,7 +290,7 @@
 
 .slotPickerCandidates {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   overflow: auto;
   padding: 2px;
@@ -293,7 +299,7 @@
 
 .slotPickerCandidates > button {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 50px minmax(0, 1fr);
   align-items: center;
   gap: 9px;
   min-height: 76px;
@@ -320,96 +326,65 @@
 .slotPickerCard { display: block; width: 42px; aspect-ratio: 430 / 691; overflow: hidden; }
 .slotPickerCard > * { width: 100%; }
 
+.positionPrompt {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 220px;
+  padding: 22px;
+  border: 1px dashed rgba(170, 255, 62, .34);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(170, 255, 62, .11), transparent 46%),
+    rgba(3, 14, 9, .58);
+  text-align: center;
+}
+.positionPrompt span { color: #aaff3e; font-size: 8px; font-weight: 950; letter-spacing: .14em; }
+.positionPrompt strong { color: #efffe6; font-size: 15px; }
+.positionPrompt p { margin: 0; color: #9eaca3; font-size: 10px; line-height: 1.5; }
+
 .technicalArea {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-rows: auto auto auto 1fr;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   justify-items: center;
   align-content: start;
-  gap: 12px;
-  width: 250px;
+  gap: 8px;
+  width: var(--market-technical-width);
   padding: 19px 17px;
   border: 1px solid rgba(170, 255, 62, .3);
-  border-radius: 20px;
+  border-left-color: rgba(208, 255, 176, .2);
+  border-radius: 0 20px 20px 0;
   background: linear-gradient(180deg, rgba(8, 21, 14, .96), rgba(2, 8, 6, .98));
 }
 
 .technicalArea > span { color: #aaff3e; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
 .coachCardLink { display: block; border-radius: 17px; outline-offset: 5px; }
 .coachCardLink:focus-visible { outline: 2px solid #aaff3e; }
-.coachCard { display: grid; place-items: center; width: 212px; min-height: 330px; overflow: visible; }
-.coachCard > * { width: 208px; }
+.coachCard { display: grid; place-items: center; width: 78px; min-height: 112px; overflow: visible; }
+.coachCard > * { width: 76px; }
 .coachCard .emptyCoach {
   display: grid;
   place-items: center;
-  width: 96px;
-  height: 138px;
+  width: 58px;
+  height: 86px;
   border: 1px dashed rgba(170, 255, 62, .48);
-  border-radius: 16px;
+  border-radius: 12px;
   color: #aaff3e;
   background: rgba(170, 255, 62, .06);
-  font-size: 28px;
+  font-size: 20px;
 }
-.coachBrief { display: grid; gap: 6px; text-align: center; }
-.coachBrief strong { font-size: 15px; line-height: 1.2; }
-.coachBrief p { margin: 0; color: #a9b8af; font-size: 10px; line-height: 1.45; }
-.coachBrief a { color: #baff76; font-size: 9px; font-weight: 900; text-decoration: none; }
-.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.summary { width: 100%; margin-top: auto; }
-.summary span { display: grid; gap: 5px; padding: 10px 5px; border-radius: 10px; background: rgba(0, 0, 0, .24); text-align: center; }
-.summary small { color: #91a099; font-size: 8px; text-transform: uppercase; }
-.summary strong { font-size: 14px; }
-
-.bench,
-.remaining {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, .09);
-  border-radius: 18px;
-  background: linear-gradient(180deg, #07100d, #020806);
-}
-
-.bench header,
-.remaining header { display: flex; align-items: center; gap: 10px; }
-.bench header span { color: #aaff3e; font-size: 10px; font-weight: 950; letter-spacing: .16em; }
-.bench header strong,
-.remaining header strong { font-size: 13px; }
-.bench header small,
-.remaining header small { margin-left: auto; color: #aaff3e; font-weight: 900; }
-.benchSlots { display: grid; grid-template-columns: repeat(9, minmax(88px, 1fr)); gap: 7px; overflow-x: auto; padding-bottom: 3px; }
-.benchSlots > div,
-.remaining > div > div {
-  display: grid;
-  gap: 4px;
-  justify-items: center;
-  align-content: center;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, .08);
-  border-radius: 10px;
-  color: #76827c;
-  background: rgba(255, 255, 255, .025);
-  text-align: center;
-}
-.benchSlots > div { min-height: 62px; }
-.benchSlots .filledBenchSlot,
-.remaining > div > div { min-height: 184px; }
-.benchSlots .filledBenchSlot { color: #fff; border-color: rgba(170, 255, 62, .25); background: rgba(170, 255, 62, .07); }
-.rosterCard { display: block; width: min(100%, 76px); aspect-ratio: 430 / 691; }
-.rosterCard > * { width: 100%; }
-.benchSlots b,
-.remaining b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
-.benchSlots small,
-.remaining small { color: #91a099; font-size: 7px; text-transform: uppercase; }
-.remaining > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 7px; }
-.remaining .rosterCard { width: min(100%, 96px); }
-.remaining p { margin: 0; color: #89968f; font-size: 11px; }
-
+.coachBrief { display: grid; gap: 4px; text-align: center; }
+.coachBrief strong { font-size: 11px; line-height: 1.2; }
+.coachBrief p { margin: 0; color: #a9b8af; font-size: 8px; line-height: 1.35; }
+.coachBrief a { color: #baff76; font-size: 8px; font-weight: 900; text-decoration: none; }
 @media (max-width: 1050px) {
-  .pitch { min-height: 490px; }
+  .pitchColumn { --market-technical-width: clamp(300px, 38%, 380px); width: 100%; }
+  .slotPickerCandidates { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
@@ -421,20 +396,21 @@
   .formationStep { grid-template-columns: 1fr; }
   .formationStep > div:last-child { width: 100%; }
   .formationStep button { flex: 1; min-width: 0; }
-  .pitchColumn { padding-right: 0; padding-bottom: 172px; }
-  .pitch { min-height: 330px; }
+  .pitchColumn { --market-technical-width: 100%; width: min(100%, 356px); margin-inline: auto; padding-right: 0; padding-bottom: 330px; }
+  .pitch { min-height: 0; border-right: 1px solid rgba(201, 255, 182, .24); border-radius: 20px 20px 0 0; }
   .formationStatus { top: 8px; max-width: 84%; padding: 6px 10px; }
   .formationStatus span { display: none; }
-  .slotPicker { inset: 42px 4% 14px; padding: 11px; }
+  .slotPicker { max-height: 260px; padding: 11px; }
   .slotPicker > header strong { font-size: 14px; }
   .slotPickerCandidates { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
-  .technicalArea { inset: auto 0 0 0; grid-template-columns: 72px minmax(0, 1fr) minmax(150px, 1fr); grid-template-rows: auto 1fr; width: auto; height: 154px; align-items: center; justify-items: stretch; padding: 12px; }
+  .technicalArea { inset: auto 0 0 0; grid-template-columns: 72px minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); width: auto; height: 330px; align-items: center; justify-items: stretch; padding: 12px; border-top-color: rgba(208, 255, 176, .2); border-left-color: rgba(170, 255, 62, .3); border-radius: 0 0 20px 20px; }
   .technicalArea > span { grid-column: 1 / -1; }
-  .coachCard { width: 70px; min-height: 104px; }
-  .coachCard > * { width: 68px; }
+  .coachCard { width: 56px; min-height: 82px; }
+  .coachCard > * { width: 54px; }
   .coachBrief { text-align: left; }
-  .summary { align-self: stretch; margin: 0; }
-  .benchSlots { grid-template-columns: repeat(9, 88px); }
+  .slotPicker,
+  .positionPrompt { grid-column: 1 / -1; }
+  .positionPrompt { min-height: 150px; }
 }
 
 @media (max-height: 480px) and (orientation: landscape) {
@@ -446,15 +422,15 @@
   .formationStep > div:first-child small { display: none; }
   .progress li { min-height: 44px; }
   .workspace { grid-template-columns: 1fr; }
-  .pitchColumn { padding-right: 132px; padding-bottom: 0; }
-  .pitch { min-height: 330px; }
+  .pitchColumn { --market-technical-width: 300px; width: min(100%, 656px); padding-right: var(--market-technical-width); padding-bottom: 0; }
+  .pitch { min-height: 0; }
   .slotPicker { inset: 40px 3% 10px; grid-template-rows: auto minmax(0, 1fr); gap: 7px; padding: 9px; }
   .slotPicker > p { display: none; }
   .slotPickerCandidates { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
   .slotPickerCandidates > button { min-height: 66px; }
-  .technicalArea { inset: 0 0 0 auto; grid-template: auto auto auto 1fr / 1fr; width: 118px; height: auto; padding: 10px; }
-  .coachCard { width: 88px; min-height: 142px; }
-  .coachCard > * { width: 84px; }
+  .technicalArea { inset: 0 0 0 auto; grid-template: auto auto auto minmax(0, 1fr) / 1fr; width: 300px; height: auto; padding: 10px; }
+  .coachCard { width: 62px; min-height: 92px; }
+  .coachCard > * { width: 60px; }
   .coachBrief p,
   .coachBrief a { display: none; }
 }

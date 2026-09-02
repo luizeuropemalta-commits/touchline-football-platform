@@ -18,7 +18,6 @@ import {
   type TouchlineCoachCardLayout,
   type TouchlineCoachLayerKey,
 } from "@/lib/touchlineArena/coach-card-layout";
-import { TouchlineClubCrestPerimeterTrace } from "@/components/touchline/cards/TouchlineClubCrestPerimeterTrace";
 import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/TouchlineCardPerimeterTrace";
 
 import styles from "./TouchlineCoachCard.module.css";
@@ -394,8 +393,7 @@ export default function TouchlineCoachCard({
         {runtimeClubLogoUrl ? (
           <div className={styles.clubBadge} {...editableLayerProps("clubCrest", "Escudo do clube")}>
             <span>{isPortuguese ? "Clube atual" : "Current club"}</span>
-            <div data-touchline-card-crest-trace-host="true">
-              <TouchlineClubCrestPerimeterTrace />
+            <div data-touchline-card-crest-host="true">
               <img ref={crestRef} src={runtimeClubLogoUrl} alt={clubName} draggable={false} loading={assetLoading ?? "eager"} data-touchline-card-crest="true" />
             </div>
           </div>

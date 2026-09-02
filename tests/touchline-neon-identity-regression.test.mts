@@ -12,7 +12,6 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   const exactCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
   const coachCard = source("components/touchline/cards/TouchlineCoachCard.tsx");
   const trace = source("components/touchline/cards/TouchlineCardPerimeterTrace.tsx");
-  const crestTrace = source("components/touchline/cards/TouchlineClubCrestPerimeterTrace.tsx");
   const arenaClient = source("app/arena/ArenaClient.tsx");
   const traceCss = globalCss.slice(
     globalCss.indexOf('[data-touchline-card-neon-trace="true"]'),
@@ -56,25 +55,21 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(coachCard, /--touchline-club-crest-color": clubAccent/);
   assert.match(exactCard, /<TouchlineCardPerimeterTrace\s*\/>/);
   assert.match(coachCard, /<TouchlineCardPerimeterTrace\s*\/>/);
-  assert.match(exactCard, /TouchlineClubCrestPerimeterTrace/);
-  assert.match(coachCard, /TouchlineClubCrestPerimeterTrace/);
-  assert.match(exactCard, /data-touchline-card-crest-trace-host="true"/);
-  assert.match(coachCard, /data-touchline-card-crest-trace-host="true"/);
+  assert.doesNotMatch(exactCard, /TouchlineClubCrestPerimeterTrace|crest-trace/);
+  assert.doesNotMatch(coachCard, /TouchlineClubCrestPerimeterTrace|crest-trace/);
+  assert.match(exactCard, /data-touchline-card-crest-host="true"/);
+  assert.match(coachCard, /data-touchline-card-crest-host="true"/);
   assert.match(exactCard, /data-touchline-card-crest="true"/);
   assert.match(coachCard, /data-touchline-card-crest="true"/);
-  assert.match(crestTrace, /data-touchline-card-crest-trace="true"/);
-  assert.match(crestTrace, /aria-hidden="true"/);
-  assert.match(crestTrace, /focusable="false"/);
-  assert.match(crestTrace, /pathLength="100"/);
-  assert.match(crestTrace, /fill="none"/);
-  assert.match(crestTrace, /r="46\.5"/);
-  assert.doesNotMatch(crestTrace, /mask|clip-path|filter:|touch-action:\s*none/);
-  assert.match(globalCss, /\[data-touchline-card-crest-trace="true"\][\s\S]*?pointer-events: none/);
-  assert.match(globalCss, /\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: touchline-card-perimeter-trace 5\.8s/);
-  assert.match(globalCss, /\[data-touchline-card-crest="true"\][\s\S]*?--touchline-club-crest-color/);
+  assert.doesNotMatch(globalCss, /data-touchline-card-crest-trace/);
+  assert.match(globalCss, /\[data-touchline-card-crest-host="true"\][\s\S]*?place-items: center/);
+  const crestCss = globalCss.slice(
+    globalCss.indexOf('.touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest="true"]'),
+    globalCss.indexOf('/* Touch screens do not have desktop hover.'),
+  );
+  assert.doesNotMatch(crestCss, /border-radius:\s*50%|outline:|radial-gradient\(circle/);
   assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-run="true"\][\s\S]*?animation: none !important/);
   assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-neon-trace-base="true"\][\s\S]*?opacity: \.72/);
-  assert.match(globalCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: none !important/);
   assert.match(globalCss, /touch-action: manipulation/);
   assert.doesNotMatch(traceCss, /touch-action:\s*none/);
   assert.match(globalCss, /\[data-neon-active="true"\]/);
@@ -92,9 +87,8 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(exactCard, /touchline-card-neon-select/);
   assert.match(exactCard, /document\.addEventListener\("pointerdown", clearWhenPointerLeavesTheCard\)/);
   assert.match(exactCard, /selectedId !== neonInstanceId/);
-  assert.match(arenaClient, /arena-live-moving-card[\s\S]*?data-touchline-card-crest-trace-run="true"[\s\S]*?animation: none !important/);
-  assert.match(arenaClient, /arena-live-coach-card[\s\S]*?data-touchline-card-crest-trace-run="true"[\s\S]*?animation: none !important/);
-  assert.match(arenaClient, /data-touchline-card-crest-trace-run="true"\]\) \{[\s\S]*?will-change: auto !important/);
+  assert.doesNotMatch(arenaClient, /data-touchline-card-crest-trace/);
+  assert.match(arenaClient, /arena-live-moving-card[\s\S]*?data-touchline-card-neon-trace-run="true"[\s\S]*?will-change: auto !important/);
 });
 
 test("card controls stay inside the master safe zone and contracting stays outside the artwork", () => {
@@ -469,9 +463,9 @@ test("coach uses official coach art with player-card nationality and club identi
   assert.match(coachCardStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.shell:hover[\s\S]*?transform: none !important/);
   assert.match(coachCardStyles, /\.shell\[data-coach-card-editable="true"\] \[data-coach-layer\] \{[\s\S]*?pointer-events: auto;/);
   assert.match(coachCardStyles, /\.shell\[data-coach-card-editable="true"\] \[data-coach-layer\] \{[\s\S]*?outline: 0;/);
-  assert.match(coachCardStyles, /\.clubBadge \[data-touchline-card-crest-trace-host="true"\] \{[\s\S]*?width: var\(--coach-crest-size, 132px\)/);
-  assert.match(coachCardStyles, /\.clubBadge \[data-touchline-card-crest-trace-host="true"\] > img \{[\s\S]*?width: var\(--coach-crest-size, 132px\)/);
-  assert.doesNotMatch(coachCardStyles, /\.clubBadge \[data-touchline-card-crest-trace-host="true"\] \{[\s\S]*?96px/);
+  assert.match(coachCardStyles, /\.clubBadge \[data-touchline-card-crest-host="true"\] \{[\s\S]*?width: var\(--coach-crest-size, 132px\)/);
+  assert.match(coachCardStyles, /\.clubBadge \[data-touchline-card-crest-host="true"\] > img \{[\s\S]*?width: var\(--coach-crest-size, 132px\)/);
+  assert.doesNotMatch(coachCardStyles, /\.clubBadge \[data-touchline-card-crest-host="true"\] \{[\s\S]*?96px/);
   assert.doesNotMatch(coachEditor, /label="Tamanho do escudo"/);
   assert.match(coachEditor, /1\. Nome \+ clube/);
   assert.match(coachEditor, /2\. Dados técnicos/);
@@ -586,7 +580,8 @@ test("ClubOwner exposes the canonical Gameweek XI without restoring the retired 
 
   assert.match(clubOwner, /TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}/);
   assert.match(gameweekSnapshot, /snapshot!?\.selections\.find/);
-  assert.match(gameweekSnapshot, /Nenhum banco Fantasy|No Fantasy bench/);
+  assert.match(gameweekSnapshot, /Um XI titular|One Starting XI/);
+  assert.doesNotMatch(gameweekSnapshot, /Nenhum banco Fantasy|No Fantasy bench/);
   assert.doesNotMatch(clubOwner, /<div className="club-owner-unified-bench"|Fazer substituição|Make substitution/);
   assert.match(arenaClient, /draggable=\{!isLocked\}/);
   assert.match(arenaClient, /text\/touchline-bench-id/);

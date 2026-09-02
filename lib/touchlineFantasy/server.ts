@@ -14,6 +14,8 @@ import {
 } from "@/lib/touchlineArena/country-flags";
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 import { createTouchlineArenaCoachSlot, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
+import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
+import type { TouchlineCoachCompetitionSnapshot } from "@/lib/touchlineArena/coach-scoring";
 import { formatTouchlineMarketValueEur } from "@/lib/touchlineArena/editorial-card-profile";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 import type { TouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry";
@@ -55,6 +57,7 @@ export type TouchlineFantasyCoachView = Readonly<{
   clubName: string;
   clubLogoUrl: string | null;
   countryCode3: string;
+  competition: TouchlineCoachCompetitionSnapshot | null;
 }>;
 
 export type TouchlineFantasyLineupAlert = Readonly<{
@@ -266,10 +269,13 @@ async function loadRankings(
 
 async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
   const teamIds = TOUCHLINE_LIVE_COACHES.map(({ coach }) => coach.teamId);
-  const { data, error } = await admin.from("football_clubs")
-    .select("id,provider_team_id,name,logo_url")
-    .eq("provider", "sportmonks")
-    .in("provider_team_id", teamIds);
+  const [{ data, error }, coachRanking] = await Promise.all([
+    admin.from("football_clubs")
+      .select("id,provider_team_id,name,logo_url")
+      .eq("provider", "sportmonks")
+      .in("provider_team_id", teamIds),
+    loadTouchLineCoachRanking(),
+  ]);
   if (error) return [];
   const clubByTeamId = new Map(rows(data).flatMap((club) => {
     const teamId = text(club.provider_team_id);
@@ -282,14 +288,43 @@ async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClien
     const clubName = text(club?.name);
     const classification = touchlineCoachClassificationForProviderId(coach.providerId);
     if (!clubId || !clubName || !classification) return [];
+    const rankingRow = coachRanking.phase === "ranked"
+      ? coachRanking.rows.find((candidate) => candidate.coachProviderId === coach.providerId) ?? null
+      : null;
+    const competition: TouchlineCoachCompetitionSnapshot | null = rankingRow
+      && coachRanking.snapshotId
+      && coachRanking.seasonId
+      && coachRanking.scoringVersion
+      ? {
+        snapshotId: coachRanking.snapshotId,
+        seasonId: coachRanking.seasonId,
+        seasonLabel: "2026-27",
+        rank: rankingRow.rank,
+        scoringVersion: coachRanking.scoringVersion,
+        home: rankingRow.home,
+        away: rankingRow.away,
+        totalTouchlinePoints: rankingRow.touchlinePoints,
+      }
+      : null;
+    const baseSlot = createTouchlineArenaCoachSlot(coach, classification.finalPosition, classification.tierKey);
     return [{
       id: coach.providerId,
       coach,
-      slot: createTouchlineArenaCoachSlot(coach, classification.finalPosition, classification.tierKey),
+      slot: competition ? {
+        ...baseSlot,
+        touchlinePoints: competition.totalTouchlinePoints,
+        status: "audited" as const,
+        scoreEvidence: {
+          provider: "sportmonks" as const,
+          providerEventIds: [...coachRanking.fixtureIds],
+          scoringVersion: competition.scoringVersion,
+        },
+      } : baseSlot,
       clubId,
       clubName,
       clubLogoUrl: text(club?.logo_url),
       countryCode3,
+      competition,
     }];
   });
 }

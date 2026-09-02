@@ -6,7 +6,7 @@ function source(relativePath: string) {
   return readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8");
 }
 
-test("ClubHub reuses the stroke-only canonical crest trace for club identity only", () => {
+test("ClubHub preserves natural crest silhouettes without decorative circles", () => {
   const traceHost = source("components/touchline/ClubHubCrestTrace.tsx");
   const profile = source("app/touchline-clubs/[club]/page.tsx");
   const lineup = source("components/touchline/ClubHubOfficialLineup.tsx");
@@ -16,9 +16,9 @@ test("ClubHub reuses the stroke-only canonical crest trace for club identity onl
   const perimeterTraceCss = source("components/touchline/TouchlineClubPerimeterTrace.module.css");
   const profileCss = profile.slice(profile.indexOf(".club-hub-logo {"), profile.indexOf(".club-hub-honours {"));
 
-  assert.match(traceHost, /TouchlineClubCrestPerimeterTrace/);
-  assert.match(traceHost, /data-club-hub-crest-trace-host="true"/);
-  assert.match(traceHost, /data-touchline-card-crest-trace-host="true"/);
+  assert.doesNotMatch(traceHost, /TouchlineClubCrestPerimeterTrace|crest-trace/);
+  assert.match(traceHost, /data-club-hub-crest-host="true"/);
+  assert.match(traceHost, /data-touchline-card-crest-host="true"/);
   assert.match(traceHost, /--touchline-club-crest-color": accent/);
   assert.match(traceHost, /draggable=\{false\}/);
   assert.doesNotMatch(traceHost, /fetch\(|create(?:Admin)?Client|supabase|providers\/sportmonks|process\.env|mask|clip-path|filter:/i);
@@ -58,11 +58,9 @@ test("ClubHub crest motion is bounded, pointer-safe and static under reduced mot
   assert.match(directoryCss, /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?\.clubCard:active \.logoWrap/);
   assert.match(perimeterTraceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.run \{ animation: none; \}/);
   assert.match(directoryCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.clubCard:active \.logoWrap[\s\S]*?transform: none !important/);
-  assert.match(cardTraceCss, /\[data-touchline-card-crest-trace="true"\][\s\S]*?pointer-events: none/);
-  assert.match(cardTraceCss, /\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: touchline-card-perimeter-trace 5\.8s/);
-  assert.match(cardTraceCss, /z-index: 0;[\s\S]*?inset: -3\.5%/);
-  assert.match(cardTraceCss, /\[data-touchline-card-crest-trace-host="true"\] > img[\s\S]*?z-index: 1/);
-  assert.match(cardTraceCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\[data-touchline-card-crest-trace-run="true"\][\s\S]*?animation: none !important/);
+  assert.doesNotMatch(cardTraceCss, /data-touchline-card-crest-trace/);
+  assert.match(cardTraceCss, /\[data-touchline-card-crest-host="true"\] > img[\s\S]*?z-index: 1/);
+  assert.doesNotMatch(directoryCss, /\.logoWrap \{[\s\S]*?border-radius:\s*50%|\.logoWrap \{[\s\S]*?radial-gradient\(circle/);
   assert.doesNotMatch(profile, /touch-action:\s*none/);
   assert.doesNotMatch(directoryCss, /touch-action:\s*none/);
 });

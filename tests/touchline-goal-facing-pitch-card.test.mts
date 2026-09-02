@@ -4,7 +4,7 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 
-test("Market and Club Hub line-up share the same attack-facing compact card", async () => {
+test("Market and Club Hub share one orientation-aware compact pitch card", async () => {
   const [wrapper, styles, market, lineup] = await Promise.all([
     readFile(new URL("components/touchline/cards/TouchlineGoalFacingPitchCard.tsx", root), "utf8"),
     readFile(new URL("components/touchline/cards/TouchlineGoalFacingPitchCard.module.css", root), "utf8"),
@@ -12,10 +12,12 @@ test("Market and Club Hub line-up share the same attack-facing compact card", as
     readFile(new URL("components/touchline/ClubHubOfficialLineup.tsx", root), "utf8"),
   ]);
 
-  assert.match(wrapper, /data-touchline-pitch-card-orientation="attack-right"/);
+  assert.match(wrapper, /orientation = "attack-right"/);
+  assert.match(wrapper, /data-touchline-pitch-card-orientation=\{orientation\}/);
   assert.match(styles, /rotate\(90deg\)/);
   assert.match(styles, /\[data-arena-match-rating="true"\][\s\S]*rotate\(-90deg\)/);
-  assert.match(market, /<TouchlineGoalFacingPitchCard className=\{styles\.playerCardZoom\}>[\s\S]*?<SquadPlayerCardZoom/);
+  assert.match(styles, /\.shellAttackUp > \*[\s\S]*?transform: translate\(-50%, -50%\);/);
+  assert.match(market, /<TouchlineGoalFacingPitchCard className=\{styles\.playerCardZoom\} orientation="attack-up">[\s\S]*?<SquadPlayerCardZoom/);
   assert.match(lineup, /<TouchlineGoalFacingPitchCard className=\{styles\.pitchCard\}>[\s\S]*?<TouchlineCardZoom/);
 });
 

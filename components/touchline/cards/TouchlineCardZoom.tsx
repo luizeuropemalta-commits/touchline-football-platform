@@ -47,6 +47,7 @@ export type TouchlineCardZoomDetails = {
   }>;
   profileHref?: string;
   profileLabel?: string;
+  profileActionKind?: "coach" | "player";
   historyHref?: string;
   historyLabel?: string;
   cardEngineHref?: string;
@@ -151,7 +152,11 @@ export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineC
       {(details.profileHref || details.historyHref || details.cardEngineHref) ? (
         <nav className={styles.detailActions} aria-label={details.title}>
           {details.profileHref ? (
-            <a className={styles.profileAction} href={details.profileHref}>
+            <a
+              className={styles.profileAction}
+              data-coach-profile-action={details.profileActionKind === "coach" ? "true" : undefined}
+              href={details.profileHref}
+            >
               {details.profileLabel ?? "View profile"}
             </a>
           ) : null}

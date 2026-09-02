@@ -24,7 +24,7 @@ test("canonical TouchLine England squad rules remain in one server-independent r
   });
 });
 
-test("the guided journey unlocks coach, Starting XI, bench and full squad in order", () => {
+test("the canonical squad model still resolves the complete internal journey", () => {
   assert.equal(resolveTouchlineSquadJourney({ hasCoach: false, hasFormation: false, starterCount: 0, benchCount: 0, contractedCount: 0 }).currentStep, "coach");
   assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: false, starterCount: 0, benchCount: 0, contractedCount: 0 }).currentStep, "formation");
   assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: true, starterCount: 10, benchCount: 0, contractedCount: 10 }).currentStep, "starting-xi");
@@ -39,12 +39,12 @@ test("the Market owns one premium squad-building stage with distinct player grou
   assert.match(source, /Monte seu time TouchLine/);
   assert.match(source, /TouchlinePitchSurface/);
   assert.match(source, /touchlineCanonicalFormationSlots\(formation, geometryRegistry\)/);
-  assert.match(source, /Banco da partida/);
-  assert.match(source, /Elenco restante/);
-  assert.match(source, /Array\.from\(\{ length: TOUCHLINE_SQUAD_RULES\.bench \}/);
+  assert.doesNotMatch(source, /Banco da partida|Matchday bench|Substitutes|Reservas/);
+  assert.doesNotMatch(source, /className=\{styles\.bench\}/);
+  assert.doesNotMatch(source, /className=\{styles\.remaining\}/);
   assert.match(source, /aria-current=\{index === currentStepIndex \? "step"/);
   assert.match(source, /Área técnica e preparação do elenco/);
-  assert.match(source, /Defina a formação, contrate atletas e leve o grupo completo para a Arena/);
+  assert.match(source, /Defina a formação e contrate os seus 11 titulares/);
   assert.match(source, /className=\{styles\.coachBrief\}/);
   assert.doesNotMatch(source, /Complete the Starting XI/);
   assert.doesNotMatch(source, /Confirm club and enter Arena/);
@@ -179,10 +179,10 @@ test("coach remains a dedicated entity outside every player slot", async () => {
   assert.match(arenaSource, /contrato encerrado sem reembolso/);
   assert.match(source, /className=\{styles\.technicalArea\}/);
   const coachCardStyles = await readFile(new URL("../components/touchline/cards/TouchlineCoachCard.module.css", import.meta.url), "utf8");
-  assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 212px; min-height: 330px;/);
-  assert.match(styles, /\.technicalArea \{[\s\S]*?width: 250px;/);
+  assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 78px; min-height: 112px;/);
+  assert.match(styles, /\.technicalArea \{[\s\S]*?width: var\(--market-technical-width\);/);
   assert.match(coachCardStyles, /width: clamp\(9px, 16cqw, 28px\)/);
-  assert.match(styles, /\.pitch \{[\s\S]*?min-height: 548px;/);
+  assert.match(styles, /\.pitch \{[\s\S]*?min-height: 0;/);
   assert.match(source, /coachProfileHref/);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);
   assert.doesNotMatch(source, /role:\s*["']coach["']/);
@@ -199,7 +199,7 @@ test("the Market keeps a recoverable contract draft but only the existing checko
   assert.match(source, /persistArenaRoster\(placement\.players, placement\.bench\)/);
 });
 
-test("matchday bench and remaining squad are disjoint views of the same authoritative roster", async () => {
+test("owned non-starters remain eligible selection inputs without rendering a Market bench", async () => {
   const source = await readFile(arenaClientPath, "utf8");
   const stage = await readFile(stagePath, "utf8");
   assert.match(source, /const matchdayBenchIds = useMemo\(\(\) => new Set\(matchdayBenchPlayers\.map/);
@@ -207,7 +207,9 @@ test("matchday bench and remaining squad are disjoint views of the same authorit
   assert.match(source, /bench=\{matchdayBenchPlayers\.map\([\s\S]*?card: benchOptionToPreviewCard/);
   assert.match(source, /remainingSquad=\{reserveVaultPlayers\.map\([\s\S]*?card: benchOptionToPreviewCard/);
   assert.match(stage, /export type TouchlineSquadBuilderBenchPlayer = \{[\s\S]*?card: TouchlineEliteExactPlayer;/);
-  assert.match(stage, /className=\{styles\.rosterCard\}[\s\S]*?<SquadPlayerCardZoom/);
+  assert.match(stage, /const squadCandidates = useMemo\([\s\S]*?\[\.\.\.bench, \.\.\.remainingSquad\]/);
+  assert.match(stage, /squadCandidates\.filter/);
+  assert.doesNotMatch(stage, /className=\{styles\.bench\}|className=\{styles\.remaining\}/);
 });
 
 test("owned squad cards remain visibly rendered in the authenticated Market builder", async () => {
@@ -215,13 +217,15 @@ test("owned squad cards remain visibly rendered in the authenticated Market buil
   const renderedCards = stage.match(/<TouchlineEliteExactCard[\s\S]*?\/>/g) ?? [];
   const sharedZoomUsages = stage.match(/<SquadPlayerCardZoom/g) ?? [];
 
-  assert.equal(sharedZoomUsages.length, 3);
+  assert.equal(sharedZoomUsages.length, 1);
   assert.equal(renderedCards.length, 3);
   assert.match(stage, /function SquadPlayerCardZoom/);
   assert.match(stage, /allowVisualInventoryPreview/);
   assert.match(stage, /showCardActions=\{false\}/);
   assert.match(stage, /showProfileAction=\{false\}/);
   assert.match(stage, /expandedContent=/);
+  assert.match(stage, /className=\{styles\.playerSlot\}[\s\S]*?<SquadPlayerCardZoom card=\{player\.card\}/);
+  assert.doesNotMatch(stage, /className=\{styles\.dugoutSeat\}/);
 });
 
 test("formation vacancies and replacements stay inside the pitch with eligible-only controls", async () => {
@@ -241,9 +245,11 @@ test("formation vacancies and replacements stay inside the pitch with eligible-o
   assert.match(arena, /function assignMarketFormationPlayer/);
   assert.match(arena, /isTouchlineFormationCandidateEligible/);
   assert.match(stage, /role="dialog" aria-modal="false"/);
-  assert.match(stage, /Only players eligible for this position/);
+  assert.match(stage, /Cards eligible for the selected position on the pitch/);
   assert.match(stage, /onAssignPlayer\(\{/);
   assert.match(stage, /window\.addEventListener\("keydown", closePicker\)/);
   assert.match(styles, /\.slotPicker \{/);
+  assert.match(styles, /\.positionPrompt \{/);
   assert.match(styles, /\.formationStatus \{/);
+  assert.doesNotMatch(stage, /Formation complete|Formação completa/);
 });

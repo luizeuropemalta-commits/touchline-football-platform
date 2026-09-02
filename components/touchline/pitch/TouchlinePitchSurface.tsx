@@ -2,12 +2,30 @@ import type { ReactNode } from "react";
 
 import styles from "./TouchlinePitchSurface.module.css";
 
+export type TouchlinePitchAdvertisingCampaign = Readonly<{
+  campaignId: string;
+  messages: readonly string[];
+}>;
+
 type TouchlinePitchSurfaceProps = Readonly<{
+  advertisingCampaign?: TouchlinePitchAdvertisingCampaign;
   ariaLabel: string;
   children?: ReactNode;
   className?: string;
   orientation?: "horizontal" | "vertical";
+  surfaceVariant?: "canonical" | "premium-stadium";
 }>;
+
+export const TOUCHLINE_MARKET_HOUSE_CAMPAIGN: TouchlinePitchAdvertisingCampaign = {
+  campaignId: "touchline-house-market-v1",
+  messages: [
+    "THIS IS NOT FANTASY. THIS IS REALITY.",
+    "FOLLOW THE GAME. FOLLOW TOUCHLINE.",
+    "FOLLOW US ON INSTAGRAM",
+    "FOLLOW US ON FACEBOOK",
+    "ADVERTISE WITH TOUCHLINE",
+  ],
+};
 
 /**
  * The one canonical TouchLine regulation football field. Its markings follow
@@ -17,19 +35,29 @@ type TouchlinePitchSurfaceProps = Readonly<{
  * ClubHub on the same broadcast-quality football surface.
  */
 export default function TouchlinePitchSurface({
+  advertisingCampaign,
   ariaLabel,
   children,
   className,
   orientation = "horizontal",
+  surfaceVariant = "canonical",
 }: TouchlinePitchSurfaceProps) {
+  const advertisingMessages = advertisingCampaign?.messages
+    .map((message) => message.trim())
+    .filter(Boolean)
+    .slice(0, 8) ?? [];
+
   return (
     <div
       className={[
         styles.surface,
         orientation === "vertical" ? styles.surfaceVertical : null,
+        surfaceVariant === "premium-stadium" ? styles.surfacePremiumStadium : null,
         className,
       ].filter(Boolean).join(" ")}
+      data-touchline-advertising-campaign-id={advertisingCampaign?.campaignId}
       data-touchline-pitch-orientation={orientation}
+      data-touchline-pitch-surface={surfaceVariant}
       role="group"
       aria-label={ariaLabel}
     >
@@ -51,6 +79,19 @@ export default function TouchlinePitchSurface({
       <span className={`${styles.cornerArc} ${styles.cornerStartBottom}`} aria-hidden="true" />
       <span className={`${styles.cornerArc} ${styles.cornerEndTop}`} aria-hidden="true" />
       <span className={`${styles.cornerArc} ${styles.cornerEndBottom}`} aria-hidden="true" />
+      {surfaceVariant === "premium-stadium" && advertisingMessages.length ? (
+        <div className={styles.ledPerimeter} aria-hidden="true">
+          <div className={styles.ledGoalBoard}>
+            <span className={styles.ledGoalScreen}>
+              <span className={styles.ledTrack}>
+                {[...advertisingMessages, ...advertisingMessages].map((message, index) => (
+                  <b key={`${message}-${index}`}>{message}</b>
+                ))}
+              </span>
+            </span>
+          </div>
+        </div>
+      ) : null}
       {children}
     </div>
   );

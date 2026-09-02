@@ -216,6 +216,234 @@
 }
 .surfaceVertical .cornerArc { width: 2.647%; }
 
+/* Market pilot for the future shared stadium surface. The grass photograph is
+   only a texture layer: regulation markings remain deterministic above it. */
+.surfacePremiumStadium.surfaceVertical {
+  --pitch-line: rgba(248, 255, 248, .9);
+  --pitch-line-soft: rgba(248, 255, 248, .78);
+  /* Five percent of grass remains behind both goal lines. The upper five
+     percent is a separate advertising apron outside the playing surface. */
+  --premium-grass-top: 5%;
+  --premium-pitch-top-runoff: 10%;
+  /* The source cutout is camera-facing. Separate shallow depths keep its post
+     feet on both goal lines while the pitch reads as an overhead view. */
+  --premium-goal-top-height: 5.2%;
+  --premium-goal-top-offset: 5.5%;
+  --premium-goal-bottom-height: var(--premium-goal-top-height);
+  --premium-goal-bottom-offset: .5%;
+  --premium-led-top: .4%;
+  --premium-led-height: 4.6%;
+  border-color: rgba(170, 255, 62, .42);
+  background:
+    linear-gradient(180deg, #020403 0 4.72%, rgba(2, 4, 3, .98) 4.88%, transparent 5.12%),
+    radial-gradient(ellipse at 50% 46%, rgba(194, 255, 144, .08), transparent 44%),
+    linear-gradient(180deg, rgba(0, 15, 8, .08), rgba(0, 8, 4, .34)),
+    url("/touchlineArena/pitch/touchline-premium-grass-clean-horizontal-v1.png") center / 100% 22% repeat-y,
+    #174f24;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .06),
+    inset 0 -100px 170px rgba(0, 0, 0, .28),
+    inset 0 0 120px rgba(0, 0, 0, .36),
+    0 24px 58px rgba(0, 0, 0, .44);
+}
+
+/* The marked rectangle is exactly proportional to 105 x 68 m: it occupies
+   85% of both axes. Equal five-percent grass runoffs sit behind each goal. */
+.surfacePremiumStadium.surfaceVertical .boundary {
+  top: var(--premium-pitch-top-runoff);
+  right: 7.5%;
+  bottom: 5%;
+  left: 7.5%;
+}
+
+.surfacePremiumStadium.surfaceVertical .halfway,
+.surfacePremiumStadium.surfaceVertical .centreCircle,
+.surfacePremiumStadium.surfaceVertical .centreSpot {
+  top: 52.5%;
+}
+
+.surfacePremiumStadium.surfaceVertical .halfway {
+  right: 7.5%;
+  left: 7.5%;
+}
+
+.surfacePremiumStadium.surfaceVertical .centreCircle,
+.surfacePremiumStadium.surfaceVertical .penaltyArc { width: 22.875%; }
+
+.surfacePremiumStadium.surfaceVertical .box {
+  left: 24.8%;
+  width: 50.4%;
+  height: 13.36%;
+}
+.surfacePremiumStadium.surfaceVertical .boxStart { top: var(--premium-pitch-top-runoff); }
+.surfacePremiumStadium.surfaceVertical .boxEnd { bottom: 5%; }
+.surfacePremiumStadium.surfaceVertical .sixYardBox {
+  left: 38.55%;
+  width: 22.9%;
+  height: 4.45%;
+}
+.surfacePremiumStadium.surfaceVertical .sixYardBoxStart { top: var(--premium-pitch-top-runoff); }
+.surfacePremiumStadium.surfaceVertical .sixYardBoxEnd { bottom: 5%; }
+.surfacePremiumStadium.surfaceVertical .spotStart,
+.surfacePremiumStadium.surfaceVertical .penaltyArcStart { top: 18.905%; }
+.surfacePremiumStadium.surfaceVertical .spotEnd { top: 86.095%; }
+.surfacePremiumStadium.surfaceVertical .penaltyArcEnd { bottom: 13.905%; }
+.surfacePremiumStadium.surfaceVertical .cornerArc { width: 1.25%; }
+.surfacePremiumStadium.surfaceVertical .cornerStartTop,
+.surfacePremiumStadium.surfaceVertical .cornerEndTop { top: var(--premium-pitch-top-runoff); }
+.surfacePremiumStadium.surfaceVertical .cornerStartTop,
+.surfacePremiumStadium.surfaceVertical .cornerStartBottom { left: 7.5%; }
+.surfacePremiumStadium.surfaceVertical .cornerEndTop,
+.surfacePremiumStadium.surfaceVertical .cornerEndBottom { right: 7.5%; }
+
+.surfacePremiumStadium::before {
+  z-index: 2;
+  background:
+    radial-gradient(ellipse at 50% 8%, rgba(218, 255, 205, .09), transparent 30%),
+    radial-gradient(ellipse at 50% 92%, rgba(218, 255, 205, .07), transparent 28%),
+    linear-gradient(90deg, rgba(0, 0, 0, .18), transparent 10% 90%, rgba(0, 0, 0, .18));
+  mix-blend-mode: screen;
+}
+
+.surfacePremiumStadium .boundary,
+.surfacePremiumStadium .halfway,
+.surfacePremiumStadium .centreCircle,
+.surfacePremiumStadium .centreSpot,
+.surfacePremiumStadium .box,
+.surfacePremiumStadium .sixYardBox,
+.surfacePremiumStadium .spot,
+.surfacePremiumStadium .penaltyArc,
+.surfacePremiumStadium .cornerArc {
+  z-index: 3;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .34));
+}
+
+/* A real isolated goal-and-net cutout replaces the schematic goal only in the
+   Market pilot. The shared canonical geometry still owns its exact position. */
+.surfacePremiumStadium.surfaceVertical .goal {
+  z-index: 5;
+  left: 42.75%;
+  width: 14.5%;
+  border: 0;
+  background: url("/touchlineArena/pitch/touchline-premium-goal-net-v1.png") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .56));
+}
+
+.surfacePremiumStadium.surfaceVertical .goalStart {
+  /* A light flattening preserves the premium net while matching the overhead
+     pitch camera. The post feet remain on the upper 10% goal line. */
+  top: var(--premium-goal-top-offset);
+  height: var(--premium-goal-top-height);
+  transform: rotate(0deg);
+}
+
+.surfacePremiumStadium.surfaceVertical .goalEnd {
+  /* Exact vertical mirror of the upper goal around the 52.5% pitch centre:
+     keep the same left/right lighting and only reverse its field direction. */
+  right: auto;
+  bottom: var(--premium-goal-bottom-offset);
+  height: var(--premium-goal-bottom-height);
+  transform: scaleY(-1);
+}
+
+.ledPerimeter {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ledGoalBoard {
+  position: absolute;
+  z-index: 1;
+  top: var(--premium-led-top, .4%);
+  right: .4%;
+  left: .4%;
+  height: var(--premium-led-height, 4.6%);
+  overflow: visible;
+  border: clamp(3px, .3vw, 6px) solid #030403;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #171a18 0 10%, #050706 22% 76%, #111512 90%, #020302);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .16),
+    inset 0 -2px rgba(0, 0, 0, .92);
+  transform: none;
+}
+
+.ledGoalScreen {
+  position: absolute;
+  inset: 2px;
+  overflow: hidden;
+  border: 1px solid #000;
+  border-radius: 2px;
+  background:
+    radial-gradient(circle, rgba(194, 255, 162, .18) 0 .32px, rgba(4, 7, 5, .78) .48px 1px, transparent 1.1px) 0 0 / 2px 2px,
+    linear-gradient(180deg, #111512, #030504 54%, #000);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .08), inset 0 -4px 6px rgba(0, 0, 0, .7);
+  contain: paint;
+}
+
+.ledTrack {
+  position: absolute;
+  z-index: 2;
+  inset: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 3vw, 50px);
+  width: max-content;
+  min-width: 210%;
+  padding-inline: 2%;
+  white-space: nowrap;
+  animation: touchlineLedMarquee 20s linear infinite;
+  backface-visibility: hidden;
+  will-change: translate;
+}
+
+.ledTrack b {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: .2em .45em;
+  color: #f7fff3;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-size: clamp(8px, .9vw, 13px);
+  font-weight: 900;
+  letter-spacing: .09em;
+  line-height: 1;
+  text-rendering: geometricPrecision;
+  text-shadow: 0 0 3px rgba(150, 255, 77, .54);
+  -webkit-font-smoothing: antialiased;
+}
+
+.ledTrack b:nth-child(3n + 2) {
+  color: #8bf2ff;
+  text-shadow: 0 0 3px rgba(89, 223, 255, .58);
+}
+
+.ledTrack b:nth-child(3n) {
+  color: #b8ff48;
+  text-shadow: 0 0 3px rgba(156, 255, 49, .58);
+}
+
+.ledTrack b::before {
+  content: "";
+  width: 1.25em;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  background: url("/touchlineArena/brand/tl-shield-lime.svg") center / contain no-repeat;
+  filter: drop-shadow(0 0 2px rgba(174, 255, 72, .7));
+}
+
+@keyframes touchlineLedMarquee {
+  from { translate: 0 0; }
+  to { translate: -50% 0; }
+}
+
 @media (max-width: 760px) {
   .surface { border-radius: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ledTrack { animation: none; }
 }

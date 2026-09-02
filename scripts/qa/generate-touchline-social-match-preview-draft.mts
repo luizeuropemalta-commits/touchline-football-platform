@@ -98,11 +98,10 @@ try {
     const metadata = await canvas.evaluate((node) => {
       const element = node as HTMLElement;
       const box = element.getBoundingClientRect();
-      const contenders = [...element.querySelectorAll<HTMLElement>("[data-preview-player-id]")];
+      const contenders = [...element.querySelectorAll<HTMLElement>('[data-preview-contender="true"]')];
       const images = [...element.querySelectorAll<HTMLImageElement>("img")];
       const shirtNames = [...element.querySelectorAll<HTMLElement>("[data-shirt-name]")];
       return {
-        fixtureId: element.dataset.fixtureId,
         contentType: element.dataset.contentType,
         templateVersion: element.dataset.templateVersion,
         sourceVersion: element.dataset.sourceVersion,
@@ -111,13 +110,13 @@ try {
         sourceSnapshotAt: element.dataset.sourceSnapshotAt,
         startsAt: element.dataset.startsAt,
         caption: element.dataset.caption,
-        homeTeamId: element.dataset.homeTeamId,
-        awayTeamId: element.dataset.awayTeamId,
+        homeTeamKey: element.dataset.homeTeamKey,
+        awayTeamKey: element.dataset.awayTeamKey,
         lineupFields: element.dataset.lineupFields,
         width: box.width,
         height: box.height,
         contenderCount: contenders.length,
-        uniquePlayers: new Set(contenders.map((item) => item.dataset.previewCanonicalPlayerId)).size,
+        uniquePlayers: new Set(contenders.map((item) => item.dataset.previewPlayerKey)).size,
         upright: contenders.every((item) => item.dataset.previewCardAxis === "0deg"),
         namesComplete: shirtNames.length === 2 && shirtNames.every((item) => {
           const mask = item.parentElement;
@@ -133,7 +132,7 @@ try {
         overflow: element.scrollWidth > element.clientWidth || element.scrollHeight > element.clientHeight,
       };
     });
-    if (metadata.fixtureId !== fixtureId || metadata.contentType !== "MATCH_PREVIEW"
+    if (metadata.contentType !== "MATCH_PREVIEW"
       || metadata.templateVersion !== TOUCHLINE_MATCH_PREVIEW_TEMPLATE_VERSION
       || metadata.sourceChecksum !== expectedInputChecksum
       || metadata.sourceRevisionChecksum !== expectedSourceRevisionChecksum
@@ -141,9 +140,9 @@ try {
       || !Number.isFinite(Date.parse(metadata.sourceSnapshotAt ?? ""))
       || !Number.isFinite(Date.parse(metadata.startsAt ?? ""))
       || metadata.startsAt !== queuedStartsAt
-      || metadata.homeTeamId === metadata.awayTeamId
-      || !/^[1-9]\d{0,19}$/.test(metadata.homeTeamId ?? "")
-      || !/^[1-9]\d{0,19}$/.test(metadata.awayTeamId ?? "")
+      || metadata.homeTeamKey === metadata.awayTeamKey
+      || !/^[A-Z]{2,5}$/.test(metadata.homeTeamKey ?? "")
+      || !/^[A-Z]{2,5}$/.test(metadata.awayTeamKey ?? "")
       || metadata.lineupFields !== "absent" || metadata.width !== 1080 || metadata.height !== 1350
       || metadata.contenderCount !== 2 || metadata.uniquePlayers !== 2 || !metadata.upright
       || !metadata.namesComplete || !metadata.imagesReady || metadata.overflow) {

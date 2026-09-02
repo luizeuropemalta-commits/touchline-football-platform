@@ -8,6 +8,7 @@ import { isOwnerEmail } from "@/lib/admin/owner";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeTouchLineAuthLocale, touchLineAuthEntryHref, touchLineAuthHref } from "@/lib/touchlineArena/auth-i18n";
+import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
 
 export const dynamic = "force-dynamic";
 
@@ -78,12 +79,24 @@ export default async function AdminCardsPage({
     );
   }
 
-  const { data, error } = await admin
-    .from("touchline_card_inventory")
-    .select("id, player_name, club_name, frame_color, frame_url, card_template_url, avatar_image_url, art_status, card_status, sale_status, published_at, reserved_at, sold_at, updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(120)
-    .returns<CardInventoryRow[]>();
+  const [inventoryResult, publicationCountResult, playerIdsResult] = await Promise.all([
+    admin
+      .from("touchline_card_inventory")
+      .select("id, player_name, club_name, frame_color, frame_url, card_template_url, avatar_image_url, art_status, card_status, sale_status, published_at, reserved_at, sold_at, updated_at", { count: "exact" })
+      .order("updated_at", { ascending: false })
+      .limit(120)
+      .returns<CardInventoryRow[]>(),
+    admin
+      .from("touchline_card_publications")
+      .select("player_id", { count: "exact", head: true })
+      .eq("publication_status", "published"),
+    admin
+      .from("football_players")
+      .select("id")
+      .limit(750)
+      .returns<Array<{ id: string }>>(),
+  ]);
+  const { data, error, count: inventoryTotal } = inventoryResult;
 
   if (error) {
     const migrationPending = isMissingInventoryTable(error.message);
@@ -100,11 +113,28 @@ export default async function AdminCardsPage({
     );
   }
 
+  if (publicationCountResult.error || playerIdsResult.error) {
+    return (
+      <GamePanel className="p-8">
+        <LivePill>Canonical publication audit unavailable</LivePill>
+        <h1 className="mt-5 text-4xl font-black italic text-white">Card Inventory</h1>
+        <p className="mt-3 max-w-2xl text-sm text-slate-400">The protected publication gate could not be reconciled. No readiness count is being inferred from legacy inventory fields.</p>
+      </GamePanel>
+    );
+  }
+
   const rows = data ?? [];
+  const canonicalPublications = await loadTouchlinePublishedCardPresentations({
+    playerIds: (playerIdsResult.data ?? []).map((player) => player.id),
+    providedAdmin: admin,
+  });
+  const publishedLifecycleRows = publicationCountResult.count ?? 0;
+  const publiclyEligibleCards = canonicalPublications.size;
+  const reviewRequiredCards = Math.max(0, publishedLifecycleRows - publiclyEligibleCards);
   const byStatus = countBy(rows, "card_status");
   const byClub = countBy(rows, "club_name");
   const byFrame = countBy(rows, "frame_color");
-  const missingAssets = rows.filter(missingAsset);
+  const legacyRowsWithoutAssetUrls = rows.filter(missingAsset);
 
   return (
     <div className="space-y-6">
@@ -117,7 +147,7 @@ export default async function AdminCardsPage({
               Card Inventory
             </h1>
             <p className="mt-5 max-w-3xl text-sm leading-6 text-slate-300/75">
-              Manage card readiness, publication, reservation and sale state from the database. Every edit is written through the protected owner API and logged in history.
+              Legacy stock rows and canonical publication readiness are shown separately. A lifecycle row is never treated as publicly eligible unless the server-owned publication gate validates its identity, membership, season and editorial data.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <SyncCardInventoryButton />
@@ -130,11 +160,11 @@ export default async function AdminCardsPage({
             <p className="text-[9px] font-black text-cyan-300">Inventory health</p>
             <div className="mt-5 space-y-4">
               {[
-                ["Ready", byStatus.ready ?? 0],
-                ["Published", byStatus.published ?? 0],
-                ["Reserved", byStatus.reserved ?? 0],
-                ["Sold", byStatus.sold ?? 0],
-                ["Missing art/files", missingAssets.length],
+                ["Legacy inventory rows", inventoryTotal ?? rows.length],
+                ["Canonical lifecycle rows", publishedLifecycleRows],
+                ["Publicly eligible", publiclyEligibleCards],
+                ["Review required", reviewRequiredCards],
+                ["Sample rows without legacy URLs", legacyRowsWithoutAssetUrls.length],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between gap-4 border-b border-white/[.06] pb-3">
                   <span className="text-[10px] font-bold text-slate-500">{label}</span>
@@ -147,12 +177,12 @@ export default async function AdminCardsPage({
       </GamePanel>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <StatTile icon={Boxes} label="Total" value={String(rows.length)} delta="database cards" accent="cyan" />
-        <StatTile icon={CheckCircle2} label="Ready" value={String(byStatus.ready ?? 0)} delta="card_status" accent="lime" />
-        <StatTile icon={ShoppingBag} label="Published" value={String(byStatus.published ?? 0)} delta="public sale" accent="gold" />
+        <StatTile icon={Boxes} label="Legacy inventory" value={String(inventoryTotal ?? rows.length)} delta={`showing latest ${rows.length}`} accent="cyan" />
+        <StatTile icon={CheckCircle2} label="Public eligible" value={String(publiclyEligibleCards)} delta="canonical gate" accent="lime" />
+        <StatTile icon={ShoppingBag} label="Lifecycle published" value={String(publishedLifecycleRows)} delta="not sufficient alone" accent="gold" />
         <StatTile icon={Layers3} label="Reserved" value={String(byStatus.reserved ?? 0)} delta="held stock" accent="rose" />
         <StatTile icon={ShoppingBag} label="Sold" value={String(byStatus.sold ?? 0)} delta="completed" accent="gold" />
-        <StatTile icon={AlertTriangle} label="Missing" value={String(missingAssets.length)} delta="art/files" accent={missingAssets.length ? "rose" : "lime"} />
+        <StatTile icon={AlertTriangle} label="Review required" value={String(reviewRequiredCards)} delta="blocked from public read model" accent={reviewRequiredCards ? "rose" : "lime"} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[.7fr_1.3fr]">
@@ -198,7 +228,7 @@ export default async function AdminCardsPage({
                     <p className="mt-1 text-[9px] font-bold text-slate-600">{card.club_name ?? "No club"} / {card.frame_color} / {card.art_status}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {[card.card_status, card.sale_status, missingAsset(card) ? "asset missing" : "assets ready"].map((tag) => (
+                    {[`legacy ${card.card_status}`, card.sale_status, missingAsset(card) ? "legacy URLs absent" : "legacy URLs present"].map((tag) => (
                       <span key={tag} className="rounded-lg border border-cyan-300/15 bg-cyan-300/[.06] px-2 py-1 text-[8px] font-black text-cyan-100">{tag}</span>
                     ))}
                   </div>

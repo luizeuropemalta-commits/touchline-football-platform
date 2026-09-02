@@ -15,7 +15,6 @@ import { normalizeTouchlineCountryCode3, touchlineCountryFlagUrl } from "@/lib/t
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineShirtNumberPaletteForClub } from "@/lib/touchlineArena/shirt-number-colors";
-import { TouchlineClubCrestPerimeterTrace } from "@/components/touchline/cards/TouchlineClubCrestPerimeterTrace";
 import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/TouchlineCardPerimeterTrace";
 import { TouchlineShirtNumber } from "@/components/touchline/cards/TouchlineShirtNumber";
 import {
@@ -835,6 +834,12 @@ export function TouchlineEliteExactCard({
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useLayoutEffect(() => {
+    // Export/social surfaces pass an explicit scale that belongs to the
+    // canonical 430×691 card canvas. Measuring getBoundingClientRect here
+    // would include any parent preview transform and apply that scale twice,
+    // leaving the perimeter trace larger than the rendered card.
+    if (hasStaticRenderScale) return;
+
     const element = shellRef.current;
     if (!element) return;
 
@@ -847,7 +852,7 @@ export function TouchlineEliteExactCard({
     const observer = new ResizeObserver(resize);
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [hasStaticRenderScale]);
 
   useLayoutEffect(() => {
     if (!shouldUseStoredLayout || !startUnlocked || !layoutStorageKey || typeof window === "undefined") return;
@@ -1106,8 +1111,7 @@ export function TouchlineEliteExactCard({
     } as const;
 
     return (
-      <span data-touchline-card-crest-trace-host="true">
-        <TouchlineClubCrestPerimeterTrace />
+      <span data-touchline-card-crest-host="true">
         <img
           src={resolvedClubLogoUrl}
           alt={`${player.clubName} crest`}
