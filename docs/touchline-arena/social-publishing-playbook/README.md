@@ -23,6 +23,8 @@ When text and executable behaviour disagree, stop fail-closed and record the gap
 - [Multichannel destination roadmap](MULTICHANNEL_DESTINATION_ROADMAP.md) — Instagram active priority, Facebook Page next, all other destinations documented/disabled
 - [Content types and triggers](CONTENT_TYPES_AND_TRIGGERS.md)
 - [Automatic social module registry](AUTOMATIC_SOCIAL_MODULE_REGISTRY.md)
+- [043 Goal artwork — approved Hat-trick composition](043_GOAL_HAT_LAYOUT_OWNER_ART_APPROVAL.md)
+- [043 Hat-trick owner art approval](043_HAT_TRICK_OWNER_ART_APPROVAL.md)
 - [Visual standard](VISUAL_STANDARD.md)
 - [British English copy and hashtags](COPY_AND_HASHTAGS.md)
 - [Canonical Social Icon Lexicon](CANONICAL_SOCIAL_ICON_LEXICON.md)
@@ -34,6 +36,7 @@ When text and executable behaviour disagree, stop fail-closed and record the gap
 - [Automatic social family — threat review](AUTOMATIC_SOCIAL_FAMILY_THREAT_REVIEW.md)
 - [Template policy 046 — local threat review](SOCIAL_TEMPLATE_POLICY_046_THREAT_REVIEW.md)
 - [Club Social Feed 045 — local threat review](CLUB_SOCIAL_FEED_QA_THREAT_REVIEW.md)
+- [Social automation candidate readiness — 039 to 046](CANDIDATE_READINESS_039_046.md)
 - [Data and fail-closed policy](DATA_AND_FAIL_CLOSED.md)
 - [Formats, limits and cadence](FORMATS_LIMITS_AND_CADENCE.md)
 - [Audit and rollback](AUDIT_AND_ROLLBACK.md)

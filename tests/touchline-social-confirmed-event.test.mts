@@ -45,6 +45,17 @@ test("goal classifier accepts only scored goals and rejects every VAR or pending
   assert.equal(classifyTouchlineConfirmedMatchEvent({ type: "GOAL", status: "recorded", info: null, addition: "pending" }), null);
 });
 
+test("own goal reuses 043 and is visibly distinguished from a standard goal", () => {
+  const renderer = readFileSync(new URL("../components/touchline/social/TouchlineSocialConfirmedEventDraft.tsx", import.meta.url), "utf8");
+  const preview = readFileSync(new URL("../app/visual-qa/social-confirmed-event/preview-draft.ts", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/visual-qa/social-confirmed-event/page.tsx", import.meta.url), "utf8");
+  assert.match(renderer, /draft\.event\.kind === "own-goal" \? "OWN GOAL"/);
+  assert.match(preview, /scoringTeamId: draft\.away\.club\.teamId/);
+  assert.match(preview, /playerTeamId: draft\.home\.club\.teamId/);
+  assert.match(page, /design === "own-goal"/);
+  assert.equal(classifyTouchlineConfirmedMatchEvent({ type: "OWNGOAL", status: "recorded", info: null, addition: null }), "own-goal");
+});
+
 test("red-card classifier requires an explicit canonical dismissal type", () => {
   assert.equal(classifyTouchlineConfirmedMatchEvent({ type: "REDCARD", status: "recorded", info: "Serious foul play", addition: null }), "red-card");
   assert.equal(classifyTouchlineConfirmedMatchEvent({ type: "YELLOWREDCARD", status: "recorded", info: null, addition: null }), "second-yellow-red");
@@ -68,6 +79,7 @@ test("043 British-English captions are event-specific and source-neutral", () =>
     awayName: "Arsenal FC",
     score: { home: 1, away: 0 },
     playerName: "Ollie Watkins",
+    eventTeam: "home",
     minute: 40,
     extraMinute: null,
     eventKind: "goal",
@@ -78,9 +90,9 @@ test("043 British-English captions are event-specific and source-neutral", () =>
   });
   assert.equal(goal.ok, true);
   if (goal.ok) {
-    assert.match(goal.caption, /Goal confirmed ⚽/);
+    assert.match(goal.caption, /GOALLLLLLL ⚽/);
     assert.match(goal.caption, /Aston Villa 1–0 Arsenal FC/);
-    assert.match(goal.caption, /Ollie Watkins 40'/);
+    assert.match(goal.caption, /Ollie Watkins puts Aston Villa in front at 40'/);
     assert.match(goal.caption, /Total Rating 14\.22/);
     assert.match(goal.caption, /Match Rating 8\.10/);
     assert.match(goal.caption, /TouchLine Points \+5/);
@@ -94,6 +106,7 @@ test("043 British-English captions are event-specific and source-neutral", () =>
     awayName: "Arsenal FC",
     score: { home: 1, away: 1 },
     playerName: "Example Player",
+    eventTeam: "away",
     minute: 72,
     extraMinute: null,
     eventKind: "second-yellow-red",
@@ -133,11 +146,16 @@ test("043 source and migration preserve prior modules and keep outbound blocked"
   const reader = readFileSync(new URL("../lib/touchlineArena/social-confirmed-event-draft-server.ts", import.meta.url), "utf8");
   const candidates = readFileSync(new URL("../scripts/qa/touchline-social-confirmed-event-candidates.mts", import.meta.url), "utf8");
   const component = readFileSync(new URL("../components/touchline/social/TouchlineSocialConfirmedEventDraft.tsx", import.meta.url), "utf8");
+  const scoreboard = readFileSync(new URL("../components/touchline/social/TouchlineSocialFixtureScoreboard.tsx", import.meta.url), "utf8");
+  const scoreboardStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocialFixtureScoreboard.module.css", import.meta.url), "utf8");
   const migration = readFileSync(new URL("../supabase/qa/043_touchline_qa_social_confirmed_events.sql", import.meta.url), "utf8");
   const rollback = readFileSync(new URL("../supabase/qa/043_touchline_qa_social_confirmed_events_rollback.sql", import.meta.url), "utf8");
   assert.match(reader, /football_fixture_events/);
   assert.match(reader, /touchline_player_fixture_score_settlements/);
   assert.match(reader, /readPublicSeasonPlayerPoints/);
+  assert.match(reader, /String\(row\.ruleCode \?\? ""\) === "sportmonks-rating"/);
+  assert.match(reader, /ratingContributionMatches/);
+  assert.doesNotMatch(reader, /function eventContributionPresent/);
   assert.match(reader, /event-status-not-confirmed|event-fact-not-stable|event-score-conflict/);
   assert.match(reader, /touchlineFixtureState\(\{ startsAt, status:/);
   assert.doesNotMatch(reader, /fetch\s*\(/);
@@ -147,6 +165,18 @@ test("043 source and migration preserve prior modules and keep outbound blocked"
   assert.match(candidates, /confirmedFactByIdentity/);
   assert.match(component, /import \{ Goal, ShieldCheck \} from "lucide-react"/);
   assert.match(component, /styles\.redCardIcon/);
+  assert.match(component, /draft\.event\.kind === "own-goal" \? "OWN GOALLLLLL" : "GOALLLLLLL"/);
+  assert.match(component, /className=\{goal \? styles\.celebrationWord : undefined\}/);
+  assert.match(component, /data-word=\{goal \?/);
+  assert.match(component, /<h2>\{draft\.event\.playerName\}<\/h2>/);
+  assert.match(component, /<strong className=\{styles\.eventLabel\}>/);
+  assert.match(component, /<dl className=\{styles\.metrics\}>/);
+  assert.match(component, /TouchlineSocialFixtureScoreboard/);
+  assert.match(component, /mode="score"/);
+  assert.match(scoreboard, /<i>\{props\.homeScore\}<\/i><em>-<\/em><i>\{props\.awayScore\}<\/i>/);
+  assert.match(scoreboardStyles, /\.event \.clubIdentity img \{ width: 65px; height: 65px; \}/);
+  assert.match(component, /draft\.home\.logoUrl/);
+  assert.match(component, /draft\.away\.logoUrl/);
   assert.doesNotMatch(component, /⚽|🟥/);
   assert.match(migration, /content_type in \('GOAL_CONFIRMED', 'RED_CARD_CONFIRMED'\)/);
   assert.match(migration, /event_provider_id/);
@@ -159,4 +189,70 @@ test("043 source and migration preserve prior modules and keep outbound blocked"
   assert.match(rollback, /MATCH_PREVIEW/);
   assert.match(rollback, /FULL_TIME/);
   assert.match(rollback, /FINAL_SCORE/);
+});
+
+test("043 owner visual proof is local-only and cannot weaken the canonical reader", () => {
+  const page = readFileSync(new URL("../app/visual-qa/social-confirmed-event/page.tsx", import.meta.url), "utf8");
+  const preview = readFileSync(new URL("../app/visual-qa/social-confirmed-event/preview-draft.ts", import.meta.url), "utf8");
+  const component = readFileSync(new URL("../components/touchline/social/TouchlineSocialConfirmedEventDraft.tsx", import.meta.url), "utf8");
+  assert.match(page, /process\.env\.VERCEL_ENV === "production"\) notFound\(\)/);
+  assert.match(page, /params\.design === "goal"/);
+  assert.match(page, /data-confirmed-event-visual-qa="non-publishable"/);
+  assert.match(page, /draft=\{preview\} placement="feed"/);
+  assert.match(preview, /LOCAL_NON_PUBLISHABLE_VISUAL_QA/);
+  assert.match(preview, /LOCAL VISUAL QA ONLY/);
+  assert.doesNotMatch(preview, /createAdminClient|fetch\s*\(|touchline_social_publication_queue/);
+  assert.match(component, /data-source-provenance/);
+  assert.match(component, /LOCAL VISUAL QA · NON-PUBLISHABLE/);
+  assert.match(component, /OUTBOUND DISABLED/);
+});
+
+test("043 offers an isolated João Pedro goal demo in the approved Hat-trick composition", () => {
+  const page = readFileSync(new URL("../app/visual-qa/social-confirmed-event/page.tsx", import.meta.url), "utf8");
+  const preview = readFileSync(new URL("../app/visual-qa/social-confirmed-event/preview-draft.ts", import.meta.url), "utf8");
+  const demo = readFileSync(new URL("../components/touchline/social/TouchlineSocialGoalHatLayoutDemo.tsx", import.meta.url), "utf8");
+  const snapshot = JSON.parse(readFileSync(new URL("../app/visual-qa/social-confirmed-event/joao-pedro-brighton-canonical-snapshot.json", import.meta.url), "utf8"));
+
+  assert.match(page, /params\.design === "goal-hat-layout"/);
+  assert.match(page, /TouchlineSocialGoalHatLayoutDemo/);
+  assert.match(preview, /readTouchlineGoalHatLayoutVisualQaPreview/);
+  assert.match(preview, /joaoPedroBrighton\.event\.scoreAfterEvent/);
+  assert.match(preview, /candidate\.homeTeamProviderId === joaoPedroBrighton\.fixture\.homeTeamId/);
+  assert.match(preview, /seasonStats: joaoPedroBrighton\.settlement\.seasonStats/);
+  assert.equal(snapshot.source.provider, "sportmonks");
+  assert.equal(snapshot.fixture.providerFixtureId, "19722191");
+  assert.equal(snapshot.fixture.homeTeamId, "18");
+  assert.equal(snapshot.fixture.awayTeamId, "78");
+  assert.deepEqual(snapshot.event.scoreAfterEvent, { home: 3, away: 0 });
+  assert.equal(snapshot.event.playerProviderId, "28931574");
+  assert.equal(snapshot.event.minute, 32);
+  assert.equal(snapshot.settlement.matchRating, 8.24);
+  assert.equal(snapshot.settlement.totalRating, 16.45);
+  assert.match(demo, /rankingStyles\.hatTrickCanvas/);
+  assert.match(demo, />GOAAAALLLLL</);
+  assert.match(demo, />GOALLLLLL</);
+  assert.match(demo, /localStyles\.celebrationWord/);
+  assert.match(demo, /data-word="GOAAAALLLLL"/);
+  assert.match(demo, /draft\.event\.playerName/);
+  assert.doesNotMatch(demo, />GOAL CONFIRMED</);
+  assert.match(demo, /LOCAL VISUAL QA · NON-PUBLISHABLE/);
+});
+
+test("goal celebration builds on the website but exports as a complete static word", () => {
+  const goalCss = readFileSync(new URL("../components/touchline/social/TouchlineSocialGoalHatLayoutDemo.module.css", import.meta.url), "utf8");
+  const eventCss = readFileSync(new URL("../components/touchline/social/TouchlineSocialConfirmedEventDraft.module.css", import.meta.url), "utf8");
+  const rankingCss = readFileSync(new URL("../components/touchline/social/TouchlineSocialRankingDraft.module.css", import.meta.url), "utf8");
+  const eventExporter = readFileSync(new URL("../scripts/qa/generate-touchline-social-confirmed-event-draft.mts", import.meta.url), "utf8");
+  const rankingExporter = readFileSync(new URL("../scripts/qa/generate-touchline-social-ranking-draft.mts", import.meta.url), "utf8");
+
+  assert.match(goalCss, /@keyframes touchline-goal-word-build/);
+  assert.match(goalCss, /steps\(11, end\) infinite/);
+  assert.match(eventCss, /@keyframes touchline-goal-word-build/);
+  assert.match(rankingCss, /@keyframes touchline-celebration-word-build/);
+  for (const css of [goalCss, eventCss, rankingCss]) {
+    assert.match(css, /data-static-export="true"/);
+    assert.match(css, /prefers-reduced-motion: reduce/);
+  }
+  assert.match(eventExporter, /setAttribute\("data-static-export", "true"\)/);
+  assert.match(rankingExporter, /setAttribute\("data-static-export", "true"\)/);
 });

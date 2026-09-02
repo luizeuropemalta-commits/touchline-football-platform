@@ -1,5 +1,25 @@
 # TouchLine Current State
 
+## GOAL / HAT LAYOUT 043 artwork — OWNER APPROVED / LOCAL GREEN
+
+- On 2 September 2026 Luiz approved the GOAAAALLLLL presentation derived from the approved Hat-trick composition. The local demonstration is bound to the real João Pedro event in Chelsea `3–0` Brighton at `32'`, with Stamford Bridge as the home venue, Match Rating `8.24`, Total Rating `16.45` and TouchLine Points `+5`. The visible treatment does not say `Goal confirmed`, keeps the event-time score rather than the final result and enlarges the fixture header for mobile legibility.
+- The checked-in canonical snapshot and server draft validate the exact fixture, player, home/away identities, goal event, event-time score and `player_scoring_v3` rating contribution. Missing or mismatched provider/TouchLine facts fail closed; no goal-points rule, score, stadium, rating, card value or player fact is invented. The website may progressively reveal the complete goal word; static exports and reduced-motion mode render the full word immediately.
+- Owner approvals are recorded in `043_GOAL_HAT_LAYOUT_OWNER_ART_APPROVAL.md` and the revised `043_HAT_TRICK_OWNER_ART_APPROVAL.md`. The approved Hat visual identity is checksum-locked; any covered visual-source change requires a new owner review. The later per-letter white/yellow zoom concept is queued and is not part of this completed revision.
+- Verification passed focused `22/22`, full `1572/1572`, TypeScript, scoped ESLint with zero errors, `git diff --check`, mission governance, release-readiness local check and the complete Next build with `139/139` pages. Browser inspection at the native `1080×1350` canvas confirmed no canvas overflow, decoded imagery, exact facts, `54px` score numerals, `16px` event minute and an empty console/error log.
+- This is a local owner-approved candidate only. No push, QA deployment, shared-QA mutation, Production change or Instagram/Facebook dispatch occurred.
+
+## HAT_TRICK_HERO artwork — OWNER APPROVED / 043 RECLASSIFICATION REQUIRED
+
+- On 2 September 2026 Luiz approved the 1080×1350 Hat-trick artwork at `/visual-qa/social-ranking-catalogue?focus=hat-trick-hero`. The complete visual source manifest is locked by `sha256:17a6f218fa7e007dbebe0473ae95d408e5518532c0ad7c9fd5e3e9c7a35a9e2d`; an executable regression test fails if any approved source byte changes.
+- Owner classification is definitive: Hat-trick is a 043 confirmed-goal event, because it exists only after the third accepted goal by the same player in one canonical fixture. Module 044 remains for rankings and periodic highlights. The present local Hat-trick reader still lives in the 044 implementation, so a forward source/trigger migration is required before shared QA or Production activation.
+- This approval locks artwork only. Caption approval, 043 migration, database work, deployment and Instagram/Facebook delivery remain separately gated and fail-closed.
+
+## FULL_TIME 042 artwork — OWNER APPROVED LOCAL / COPY AND OUTBOUND STILL GATED
+
+- On 2 September 2026 Luiz approved the 1080×1350 `touchline-full-time-feed-v1` artwork after the final score panel was refined to use clean unboxed numbers, a short centred separator, the small vector TouchLine shield and a thin deterministic TouchLine-green neon trace around the score panel. Stadium/Arena identity remains visible through controlled translucent panels; club crests have no circles; the verified Top Match Card retains the editorial spotlight.
+- The approved visual checksum is `sha256:22adfd36e36a669af67202def3432c75b16e2a4c66f2d71095ed2d006d6fb325`. Any visual source change changes the template identity and requires fresh OWNER review. The local sample is explicitly non-publishable and never enters the canonical reader, approval or outbound queues.
+- Caption approval remains separate and pending. Runtime eligibility remains fail-closed until canonical `FINISHED`, exact score/accepted-goal reconciliation and final Match Rating/Card gates pass. Once operationally authorised, one canonical approved revision fans out idempotently to both fixture ClubHubs first and only then to TouchLine social destinations. No remote migration, deployment, database write, Meta delivery or Production action is authorised by this visual approval.
+
 ## QA Markt + ClubHub + Social 041 approved candidate — LOCAL/SHADOW GREEN, QA DEPLOY PENDING
 
 - The user-approved candidate combines the premium vertical Markt pitch and internal player chooser, the Arsenal-based reusable ClubHub model, the two-club-leader duel artwork, and MATCH_PREVIEW module 041. Public coming-soon presentation is removed while authentication, OWNER-only Admin/visual-QA access and account-backed operation guards remain intact.

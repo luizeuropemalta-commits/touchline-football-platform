@@ -15,12 +15,36 @@ function signedPoints(value: number) {
   return value > 0 ? `+${value}` : String(value);
 }
 
+function goalImpactLine(input: Readonly<{
+  eventKind: TouchlineConfirmedEventKind;
+  eventTeam: "home" | "away";
+  homeName: string;
+  awayName: string;
+  score: Readonly<{ home: number; away: number }>;
+  playerName: string;
+  minute: string;
+}>) {
+  if (input.eventKind === "penalty") return `${input.playerName} converts from the spot at ${input.minute}.`;
+  if (input.eventKind === "own-goal") return `Own goal by ${input.playerName} at ${input.minute}.`;
+  const clubName = input.eventTeam === "home" ? input.homeName : input.awayName;
+  const clubScore = input.eventTeam === "home" ? input.score.home : input.score.away;
+  const opponentScore = input.eventTeam === "home" ? input.score.away : input.score.home;
+  const previousClubScore = clubScore - 1;
+  if (clubScore === opponentScore) return `${input.playerName} draws ${clubName} level at ${input.minute}.`;
+  if (clubScore > opponentScore && previousClubScore <= opponentScore) {
+    return `${input.playerName} puts ${clubName} in front at ${input.minute}.`;
+  }
+  if (clubScore > opponentScore) return `${input.playerName} extends ${clubName}'s lead at ${input.minute}.`;
+  return `${input.playerName} pulls one back for ${clubName} at ${input.minute}.`;
+}
+
 export function buildTouchlineConfirmedEventCaption(input: Readonly<{
   contentType: "GOAL_CONFIRMED" | "RED_CARD_CONFIRMED";
   homeName: string;
   awayName: string;
   score: Readonly<{ home: number; away: number }>;
   playerName: string;
+  eventTeam: "home" | "away";
   minute: number;
   extraMinute: number | null;
   eventKind: TouchlineConfirmedEventKind;
@@ -50,11 +74,15 @@ export function buildTouchlineConfirmedEventCaption(input: Readonly<{
     ? `${playerName} is sent off for a second yellow at ${minute}.`
     : input.eventKind === "red-card"
       ? `${playerName} is sent off at ${minute}.`
-      : input.eventKind === "own-goal"
-        ? `${playerName} ${minute} OG`
-        : input.eventKind === "penalty"
-          ? `${playerName} ${minute} PEN`
-          : `${playerName} ${minute}`;
+      : goalImpactLine({
+        eventKind: input.eventKind,
+        eventTeam: input.eventTeam,
+        homeName,
+        awayName,
+        score: input.score,
+        playerName,
+        minute,
+      });
   const hashtags = [
     "#TouchLine",
     clubHashtag(homeName),
@@ -71,12 +99,10 @@ export function buildTouchlineConfirmedEventCaption(input: Readonly<{
     `TouchLine Points ${signedPoints(input.touchlinePoints)}`,
   ].join(" · ");
   const caption = [
-    input.contentType === "GOAL_CONFIRMED" ? "Goal confirmed ⚽" : "Red card confirmed 🟥",
-    "",
-    `${homeName} ${input.score.home}–${input.score.away} ${awayName}`,
+    input.contentType === "GOAL_CONFIRMED" ? "GOALLLLLLL ⚽" : "Red card confirmed 🟥",
+    `${homeName} ${input.score.home}–${input.score.away} ${awayName} · ${minute}`,
     eventLabel,
     ratingLine,
-    input.contentType === "GOAL_CONFIRMED" ? "How does this change the match?" : "How decisive will this moment be?",
     "",
     "TouchLine Verified Match Data",
     DISCLOSURE,

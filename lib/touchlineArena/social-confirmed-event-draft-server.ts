@@ -125,17 +125,17 @@ function scoreDelta(previous: Score, current: Score) {
   return null;
 }
 
-function eventContributionPresent(value: unknown, eventId: string, kind: TouchlineConfirmedEventKind) {
-  if (!Array.isArray(value)) return false;
-  const expectedRule = kind === "red-card" || kind === "second-yellow-red"
-    ? "red-card"
-    : kind === "own-goal" ? "own-goal" : "goal";
+function ratingContributionMatches(value: unknown, rating: unknown, points: unknown) {
+  const expectedRating = finite(rating);
+  const expectedPoints = finite(points);
+  if (!Array.isArray(value) || expectedRating === null || expectedPoints === null) return false;
   return value.some((entry) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
     const row = entry as Record<string, unknown>;
-    return String(row.providerEventId ?? "") === eventId
-      && String(row.ruleCode ?? "") === expectedRule
-      && Number.isFinite(Number(row.points));
+    return String(row.providerEventId ?? "") === `rating:${expectedRating}`
+      && String(row.ruleCode ?? "") === "sportmonks-rating"
+      && finite(row.factValue) === expectedRating
+      && finite(row.points) === expectedPoints;
   });
 }
 
@@ -143,7 +143,9 @@ function eventContributionPresent(value: unknown, eventId: string, kind: Touchli
  * Server-only, persisted-source reader for one event Story. It never contacts
  * the upstream provider. The canonical event must be recorded, semantically
  * stable in the 043 attestation table, score-reconciled (for goals), linked to
- * a published card and reflected by the current player_scoring_v3 settlement.
+ * a published card and reflected by the current rating-only player_scoring_v3
+ * settlement. Goal/card events provide editorial context; they never create a
+ * second TouchLine points contribution.
  */
 export async function readTouchlineSocialConfirmedEventDraft(
   fixtureIdInput: string,
@@ -287,7 +289,11 @@ export async function readTouchlineSocialConfirmedEventDraft(
   if (settlementResult.error || !settlement
     || !["provisional", "final"].includes(String(settlement.settlement_status ?? ""))
     || finite(settlement.touchline_points) === null
-    || !eventContributionPresent(settlement.touchline_points_breakdown, eventId, kind)) {
+    || !ratingContributionMatches(
+      settlement.touchline_points_breakdown,
+      settlement.rating,
+      settlement.touchline_points,
+    )) {
     return { ok: false, reason: "player-scoring-v3-event-not-current" };
   }
   if (squadResult.status !== 200 || squadResult.body.ok === false) {
@@ -314,7 +320,9 @@ export async function readTouchlineSocialConfirmedEventDraft(
   const touchlinePoints = finite(settlement.touchline_points)!;
   const caption = buildTouchlineConfirmedEventCaption({
     contentType, homeName: home.name, awayName: away.name, score, playerName,
-    minute, extraMinute, eventKind: kind, totalRating: decorated.seasonTotalRating!,
+    minute, extraMinute, eventKind: kind,
+    eventTeam: (contentType === "GOAL_CONFIRMED" ? scoringTeamId : playerTeamId) === homeTeamId ? "home" : "away",
+    totalRating: decorated.seasonTotalRating!,
     matchRating, touchlinePoints, gameweekNumber,
   });
   if (!caption.ok) return { ok: false, reason: `caption-${caption.reason.toLowerCase()}` };

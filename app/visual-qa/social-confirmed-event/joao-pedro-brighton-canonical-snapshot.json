@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "touchline-confirmed-event-visual-qa-snapshot-v1",
+  "source": {
+    "provider": "sportmonks",
+    "readModel": "persisted-touchline-canonical",
+    "capturedAt": "2026-09-02T19:11:10.102053+00:00"
+  },
+  "fixture": {
+    "canonicalId": "a11687cc-e850-4d27-8400-c587e5fef862",
+    "providerFixtureId": "19722191",
+    "startsAt": "2026-08-30T13:00:00+00:00",
+    "status": "Full Time",
+    "gameweekNumber": 2,
+    "homeTeamId": "18",
+    "awayTeamId": "78",
+    "finalScore": { "home": 4, "away": 3 },
+    "sourceSyncedAt": "2026-08-30T18:35:03.179+00:00"
+  },
+  "event": {
+    "providerEventId": "157709453",
+    "kind": "goal",
+    "playerCanonicalId": "c2c119c3-3394-4e54-8388-bdc0e1ece6c0",
+    "playerProviderId": "28931574",
+    "playerName": "João Pedro",
+    "playerTeamId": "18",
+    "scoringTeamId": "18",
+    "minute": 32,
+    "extraMinute": null,
+    "scoreAfterEvent": { "home": 3, "away": 0 },
+    "result": "3-0",
+    "sourceSyncedAt": "2026-08-30T15:14:03.481+00:00"
+  },
+  "settlement": {
+    "scoringVersion": "player_scoring_v3",
+    "status": "final",
+    "matchRating": 8.24,
+    "touchlinePoints": 5,
+    "totalRating": 16.45,
+    "seasonStats": {
+      "goals": 2,
+      "assists": 2,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    "sourceSyncedAt": "2026-08-30T15:14:03.481+00:00"
+  }
+}

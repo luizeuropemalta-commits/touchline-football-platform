@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import type { TouchlineRankedPlayer } from "../lib/touchlineArena/card-ranking.ts";
@@ -77,6 +78,82 @@ test("044 registry and render identity cover every Feed product", () => {
     contentType: "GAMEWEEK_HERO", fixtureId: "19722192", teamId: null,
     scopeId: "244001", playerId: "1000", locale: "en-GB", revision: 1,
   }), "/visual-qa/social-ranking?contentType=GAMEWEEK_HERO&fixtureId=19722192&scopeId=244001&playerId=1000&locale=en-GB&revision=1");
+});
+
+test("044 local review catalogue renders every candidate without enabling outbound", () => {
+  const preview = readFileSync(new URL("../app/visual-qa/social-next-three/preview-drafts.ts", import.meta.url), "utf8");
+  const firstBoard = readFileSync(new URL("../app/visual-qa/social-next-three/page.tsx", import.meta.url), "utf8");
+  const remainingBoard = readFileSync(new URL("../app/visual-qa/social-ranking-catalogue/page.tsx", import.meta.url), "utf8");
+  const reviewCss = readFileSync(new URL("../app/visual-qa/social-next-three/review.module.css", import.meta.url), "utf8");
+  const renderer = readFileSync(new URL("../components/touchline/social/TouchlineSocialRankingDraft.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../components/touchline/social/TouchlineSocialRankingDraft.module.css", import.meta.url), "utf8");
+  const draftServer = readFileSync(new URL("../lib/touchlineArena/social-ranking-family-draft-server.ts", import.meta.url), "utf8");
+  const tokens = readFileSync(new URL("../lib/touchlineArena/social-ranking-visual-tokens.ts", import.meta.url), "utf8");
+  const visualStandard = readFileSync(new URL("../docs/touchline-arena/social-publishing-playbook/VISUAL_STANDARD.md", import.meta.url), "utf8");
+  for (const contentType of ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
+    "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"]) {
+    assert.match(`${preview}\n${firstBoard}\n${remainingBoard}`, new RegExp(contentType));
+  }
+  assert.match(preview, /LOCAL_NON_PUBLISHABLE_VISUAL_QA/);
+  assert.match(renderer, /OUTBOUND DISABLED/);
+  assert.match(css, /\.header \{ grid-row: 1; \}/);
+  assert.match(css, /\.cards \{ grid-row: 4; \}/);
+  assert.match(css, /width: calc\(430px \* var\(--ranking-card-scale\)\)/);
+  assert.match(css, /\.header, \.hero, \.scoreboard, \.cards, \.achievement, \.footer \{[\s\S]*?background: var\(--touchline-social-glass-isolated-panel\)/);
+  assert.match(css, /\.card \{[\s\S]*?background: transparent;/);
+  assert.match(css, /background: var\(--touchline-social-glass-isolated-panel\)/);
+  assert.match(css, /\.metrics div/);
+  assert.match(renderer, /styles\.hatTrickCanvas/);
+  assert.match(renderer, /draft\.confirmedGoalMoments\.map/);
+  assert.match(renderer, /styles\.hatGoalMoments/);
+  assert.match(renderer, /styles\.hatMetrics/);
+  assert.match(renderer, /styles\.hatRank/);
+  assert.match(renderer, /styles\.hatVenue/);
+  assert.match(renderer, /OFFICIAL MATCH VENUE/);
+  assert.match(renderer, /data-venue-name=\{draft\.venueName\}/);
+  assert.match(renderer, /styles\.hatNeonFrame/);
+  assert.match(renderer, /styles\.hatNeonTrace/);
+  assert.match(renderer, /touchline-england-league-trophy-lion-cup-candidate-v4-text\.png/);
+  assert.doesNotMatch(renderer, /<b>#\{entry\.overallRank\}<\/b>/);
+  assert.match(renderer, /formatOverallRankingPosition\(entry\.overallRank\)/);
+  assert.match(renderer, /1 \? "ST"/);
+  assert.match(css, /\.hatRank \.hatRankPosition \{/);
+  assert.match(css, /\.hatScoreboard img \{[\s\S]*?width: 80px !important;/);
+  assert.match(css, /grid-template-columns: 96px 150px 96px !important/);
+  assert.match(css, /\.hatScoreboard span,[\s\S]*?font-size: 16px !important;/);
+  assert.match(css, /\.hatScoreboard i \{[\s\S]*?font-size: 54px !important;/);
+  assert.match(css, /\.hatScoreboard strong \{[\s\S]*?display: none !important;/);
+  assert.match(css, /\.hatVenue \{[\s\S]*?min-height: 170px/);
+  assert.match(css, /background-image: var\(--ranking-arena\)/);
+  assert.match(css, /\.hatTrickCanvas:hover \{[\s\S]*?scale\(1\.006\)/);
+  assert.match(css, /\.hatNeonTrace \{[\s\S]*?stroke-dasharray: 5 95/);
+  assert.match(css, /@keyframes hat-neon-perimeter/);
+  assert.match(renderer, /TouchlineSocialFixtureScoreboard[\s\S]*?mode="score"/);
+  assert.match(renderer, /minute="FULL TIME"[\s\S]*?footer=""/);
+  assert.match(css, /\.hatTrickCanvas \{/);
+  assert.match(css, /\.hatStory \{/);
+  assert.match(css, /\.hatCopy h1 strong \{[\s\S]*?color: #f6d45f/);
+  assert.match(css, /\.hatCardFrame \{[\s\S]*?grid-column: 2/);
+  assert.match(preview, /Manchester United/);
+  assert.match(preview, /Ipswich Town/);
+  assert.match(preview, /marketValueSource: "verified-cache"/);
+  assert.match(preview, /marketValueState: "verified"/);
+  assert.match(preview, /matchRating: 10/);
+  assert.match(preview, /seasonStats: \{ goals: 3, assists: 0, defense: 7, cleanSheets: 0, yellowCards: 0, redCards: 0 \}/);
+  assert.match(preview, /officialMatchRating: 10/);
+  assert.match(renderer, /"--ranking-card-scale": 1\.08/);
+  assert.match(renderer, /forceNeonActive/);
+  assert.match(preview, /16-manchester-united-old-trafford-interior\.webp/);
+  assert.match(preview, /venueName = contentType === "HAT_TRICK_HERO" \? "Old Trafford"/);
+  assert.match(draftServer, /venueName: string \| null/);
+  assert.match(draftServer, /venueName = finalResult\.data\.venue\.name/);
+  assert.match(visualStandard, /canonical fixture venue/);
+  assert.match(visualStandard, /audited\s+Sportmonks card catalogue/);
+  assert.match(tokens, /opacity: 0\.4/);
+  assert.match(visualStandard, /40% opacity \(60% transparent\)/);
+  assert.match(visualStandard, /player card must appear without an extra\s+rectangular backing tile/);
+  assert.match(reviewCss, /\.board > article \{/);
+  assert.doesNotMatch(reviewCss, /\.board article \{/);
 });
 
 test("Top 3 uses the canonical rating/minutes/provider tie-break and published cards only", () => {
@@ -166,12 +243,15 @@ test("044 copy is British English, provisional when open and source-neutral", ()
   }
 });
 
-test("semantic ranking checksum ignores observation timestamps but not rankings", () => {
-  const base = { contentType: "GAMEWEEK_RANKING_PREVIEW", scopeId: "244001", firstObservedAt: "2026-08-31T10:00:00Z", cards: [{ id: "1000", totalRating: 17.16 }] };
+test("semantic ranking checksum ignores observation timestamps but binds rankings and venue", () => {
+  const base = { contentType: "GAMEWEEK_RANKING_PREVIEW", scopeId: "244001", firstObservedAt: "2026-08-31T10:00:00Z", venueName: "Old Trafford", cards: [{ id: "1000", totalRating: 17.16 }] };
   assert.equal(checksumTouchlineRankingFamilyRenderSource(base), checksumTouchlineRankingFamilyRenderSource({
     ...base, firstObservedAt: "2026-08-31T10:02:00Z", sourceSnapshotAt: "2026-08-31T10:02:00Z",
   }));
   assert.notEqual(checksumTouchlineRankingFamilyRenderSource(base), checksumTouchlineRankingFamilyRenderSource({
     ...base, cards: [{ id: "1000", totalRating: 17.17 }],
+  }));
+  assert.notEqual(checksumTouchlineRankingFamilyRenderSource(base), checksumTouchlineRankingFamilyRenderSource({
+    ...base, venueName: "Emirates Stadium",
   }));
 });

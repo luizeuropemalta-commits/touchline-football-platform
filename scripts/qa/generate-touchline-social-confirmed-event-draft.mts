@@ -92,6 +92,7 @@ try {
       new Promise((_, reject) => setTimeout(() => reject(new Error("TL_CONFIRMED_EVENT_FONT_TIMEOUT")), 15_000))]);
     const canvas = page.locator('[data-social-art="touchline-confirmed-event"]');
     if (await canvas.count() !== 1) throw new Error("TL_CONFIRMED_EVENT_RENDER_NOT_READY");
+    await canvas.evaluate((node) => node.setAttribute("data-static-export", "true"));
     const metadata = await canvas.evaluate((node) => {
       const element = node as HTMLElement;
       const box = element.getBoundingClientRect();

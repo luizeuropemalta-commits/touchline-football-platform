@@ -1,0 +1,35 @@
+.fixture {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 228px minmax(0,1fr);
+  align-items: center;
+  border: 1px solid rgba(184,255,81,.22);
+  border-radius: 24px;
+  padding: 18px 32px;
+  background: linear-gradient(145deg, rgba(2,18,14,.82), rgba(0,8,7,.72));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.035), 0 20px 60px rgba(0,0,0,.25);
+  backdrop-filter: blur(14px);
+}
+
+.clubIdentity { min-width: 0; display: flex; align-items: center; justify-content: center; gap: 16px; }
+.clubIdentity img { width: 112px; height: 112px; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.42)); }
+.clubIdentity strong { max-width: 190px; color: #f8fff0; font-size: 25px; font-weight: 1000; line-height: 1.02; text-align: center; text-transform: uppercase; }
+.fixtureCore { display: grid; justify-items: center; gap: 5px; text-align: center; }
+.fixtureCore span { color: #dfffc0; font-size: 15px; font-weight: 950; letter-spacing: .1em; text-transform: uppercase; }
+.versus { color: #b6ff4f; font-size: 56px; font-weight: 1000; line-height: .9; text-shadow: 0 0 24px rgba(182,255,79,.48); }
+.fixtureCore small { color: rgba(255,255,255,.66); font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.scoreline { display: inline-grid; grid-template-columns: 48px 24px 48px; align-items: center; color: #fff; font-size: 56px; font-weight: 1000; line-height: .9; letter-spacing: -.06em; text-shadow: 0 0 24px rgba(182,255,79,.22); }
+.scoreline i { font-style: normal; text-align: center; }
+.scoreline em { align-self: center; justify-self: center; color: rgba(255,255,255,.7); font-size: 22px; font-style: normal; font-weight: 800; line-height: 1; letter-spacing: 0; transform: translateY(-1px); }
+
+.event {
+  grid-template-columns: minmax(0,1fr) 210px minmax(0,1fr);
+  padding: 14px 26px;
+  overflow: hidden;
+}
+.event .clubIdentity { gap: 12px; }
+.event .clubIdentity img { width: 65px; height: 65px; }
+.event .clubIdentity strong { font-size: 16px; letter-spacing: .1em; }
+.event .fixtureCore span { font-size: 10px; }
+.event .scoreline { grid-template-columns: 52px 26px 52px; font-size: 58px; }
+.event .scoreline em { font-size: 23px; }
+.event .fixtureCore small { font-size: 10px; }

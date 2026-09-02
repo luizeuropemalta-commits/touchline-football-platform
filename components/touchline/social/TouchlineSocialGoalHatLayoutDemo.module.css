@@ -1,0 +1,66 @@
+.goalTitle {
+  font-size: 58px !important;
+  letter-spacing: -.06em !important;
+}
+
+.goalTitle strong {
+  font-size: 1.2em;
+}
+
+.celebrationWord {
+  position: relative;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  color: rgba(255, 255, 255, .16) !important;
+}
+
+.celebrationWord::after {
+  content: attr(data-word);
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  width: 100%;
+  color: #fff;
+  clip-path: inset(0 100% 0 0);
+  animation: touchline-goal-word-build 2.35s steps(11, end) infinite;
+}
+
+.celebrationWordGold {
+  color: rgba(246, 212, 95, .16) !important;
+}
+
+.celebrationWordGold::after {
+  color: #f6d45f;
+  animation-delay: .12s;
+}
+
+@keyframes touchline-goal-word-build {
+  0% { clip-path: inset(0 100% 0 0); }
+  54%, 86% { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(0 100% 0 0); }
+}
+
+:global([data-static-export="true"]) .celebrationWord { color: #fff !important; }
+:global([data-static-export="true"]) .celebrationWordGold { color: #f6d45f !important; }
+
+:global([data-static-export="true"]) .celebrationWord::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebrationWord { color: #fff !important; }
+  .celebrationWordGold { color: #f6d45f !important; }
+  .celebrationWord::after { display: none; }
+}
+
+.singleGoalMoment {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.goalMark {
+  width: 49px;
+  height: 49px;
+  color: #b6ff4f;
+  filter: drop-shadow(0 0 12px rgba(182, 255, 79, .32));
+}
