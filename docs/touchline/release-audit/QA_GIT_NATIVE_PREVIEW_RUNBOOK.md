@@ -51,14 +51,33 @@ closed on missing, mismatched or extra application configuration.
 3. Run focused tests, the complete local suite, TypeScript, ESLint,
    `git diff --check`, mission governance and release readiness. Exclude
    generated files, local `.env*` files and secrets from the commit.
-4. Push the reviewed commits to `origin/qa` normally.
-5. Wait for the Git-triggered Preview. Before opening it, prove `READY`,
+4. Run `pnpm run check:vercel-input`. This fails locally if a build/test source
+   references a documentation input that `.vercelignore` would remove.
+5. Confirm the Preview/`qa` environment-variable names and branch scopes from
+   Vercel metadata, without printing values. Do not deploy a feature branch as
+   a substitute for `qa`.
+6. Query deployments and require zero `QUEUED` or `BUILDING` deployment for the
+   target. Confirm the exact SHA has never already been deployed.
+7. Push the reviewed commits once to `origin/qa` normally. Do not run
+   `vercel deploy`, Deploy Hook or dashboard Redeploy for the same candidate.
+8. Wait for the Git-triggered Preview. Before opening it, prove `READY`,
    `source=git`, `githubCommitRef=qa` and the expected exact SHA. Build logs
    must show governance/build success and no configuration diagnostic.
-6. Validate the exact deployment URL first. Confirm the stable QA alias points
+9. Validate the exact deployment URL first. Confirm the stable QA alias points
    to that same deployment only after the exact deployment passes.
-7. Run browser, responsive, accessibility, console/network and affected-flow
+10. Run browser, responsive, accessibility, console/network and affected-flow
    regressions. Scope runtime-log review to the exact deployment.
+
+Official Vercel basis:
+
+- Git pushes create Preview deployments for non-Production branches:
+  <https://vercel.com/docs/git>
+- Preview variables may be scoped to a specific Git branch:
+  <https://vercel.com/docs/environment-variables/manage-across-environments>
+- `.vercelignore` controls deployment inputs and supports explicit allowlists:
+  <https://vercel.com/docs/deployments/vercel-ignore>
+- Preview is pre-production and does not change the Production environment:
+  <https://vercel.com/docs/deployments/environments>
 
 ## Failure and rollback
 

@@ -20,7 +20,10 @@ This policy does not itself authorize a commit, push, deployment, database chang
 
 Official references:
 
-- <https://vercel.com/docs/builds/managing-builds>
+- <https://vercel.com/docs/git>
+- <https://vercel.com/docs/deployments/environments>
+- <https://vercel.com/docs/environment-variables/manage-across-environments>
+- <https://vercel.com/docs/deployments/vercel-ignore>
 - <https://vercel.com/docs/project-configuration/project-settings#ignored-build-step>
 - <https://vercel.com/docs/pricing/manage-and-optimize-usage>
 
@@ -48,6 +51,9 @@ Official references:
 - Run TypeScript, ESLint and `git diff --check`.
 - Run the proportional/full suite required by the mission risk.
 - For a release candidate, run the complete release verification and a local production build before committing/deploying.
+- Run `pnpm run check:vercel-input`; every documentation input used by the
+  remote release suite or runtime must exist and be explicitly included by
+  `.vercelignore`.
 - Review failures; do not commit with a known failing required gate.
 
 Recommended local baseline:
@@ -67,11 +73,17 @@ pnpm run build
 - Re-run from the canonical repository, never a cache, temporary directory or stale checkpoint.
 - Require a clean worktree and an immutable committed SHA.
 - Record the exact target: isolated Preview, functional QA or Production.
+- For functional QA, require Git ref `qa` and inspect name/scope metadata for
+  every required Preview/`qa` environment variable. A feature branch is not an
+  equivalent target, even when it contains the same SHA.
 - Record the exact file manifest, test counts, build result, flags and rollback target.
 - Confirm the candidate SHA is not already `QUEUED`, `BUILDING` or `READY` for the same target.
 - Confirm no second automation, deploy hook or CLI command will deploy the same SHA.
 - Confirm the owner-authorized build budget has not been consumed.
 - Use Git-native deployment. Do not use `--force` or **Start Building Now**.
+- Never combine the Git push with `vercel deploy`, a Deploy Hook or dashboard
+  Redeploy. Vercel creates a deployment for a new Git commit; one candidate has
+  one trigger.
 - Keep feature gates OFF/fail-closed for the first remote smoke when applicable.
 
 If any item is unknown, the release is `NO-GO` and no Vercel build is started.

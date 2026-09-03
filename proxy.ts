@@ -32,10 +32,13 @@ import {
   TOUCHLINE_ISOLATED_PREVIEW_HEADER,
   type TouchlineIsolatedPreviewRoutePolicy,
 } from "@/lib/touchlinePreview/isolation";
+import {
+  isTouchlineQaAuthenticatedVisualReviewRoute,
+  TOUCHLINE_STABLE_QA_HOST,
+} from "@/lib/touchlinePreview/qa-visual-review";
 
 const siteOffline = process.env.TOUCHLINE_SITE_OFFLINE === "true";
 const localDevHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-const stableQaHost = "touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app";
 const authPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/auth/callback"] as const;
 const authEntryPaths = ["/login", "/register", "/forgot-password"] as const;
 // The Arena itself is the public product entrance. Account-backed operations
@@ -58,7 +61,7 @@ async function hasQaSocialRenderBearer(request: NextRequest, hostname: string) {
     "/api/admin/social-publications/source",
   ]);
   if (process.env.VERCEL_ENV === "production"
-    || hostname !== stableQaHost
+    || hostname !== TOUCHLINE_STABLE_QA_HOST
     || !internalSocialPaths.has(request.nextUrl.pathname)) return false;
   const secret = process.env.TOUCHLINE_LIVE_SYNC_SECRET?.trim() ?? "";
   const provided = request.cookies.get("tl-social-render")?.value?.trim() ?? "";
@@ -501,7 +504,12 @@ async function handleTouchLineRequest(request: NextRequest) {
   const isAuth = authPaths.some((path) => matchesRoute(pathname, path));
   const isAuthEntry = authEntryPaths.some((path) => matchesRoute(pathname, path));
   const isProtectedArenaRoute = protectedArenaPaths.some((path) => matchesRoute(pathname, path));
-  const isAdminOnlyArenaRoute = adminOnlyArenaPaths.some((path) => matchesRoute(pathname, path));
+  const isQaAuthenticatedVisualReviewRoute = isTouchlineQaAuthenticatedVisualReviewRoute({
+    pathname,
+    hostname,
+  });
+  const isAdminOnlyArenaRoute = adminOnlyArenaPaths.some((path) => matchesRoute(pathname, path))
+    && !isQaAuthenticatedVisualReviewRoute;
   const isEmergencyOffline = siteOffline && !isVercelHost;
 
   if (isEmergencyOffline && !isProtectedArenaRoute && !isAuth) {
@@ -587,6 +595,11 @@ async function handleTouchLineRequest(request: NextRequest) {
     const returnTo = normalizeTouchLineAuthReturnTo(request.nextUrl.searchParams.get("returnTo"));
     const destination = touchLinePostAuthHref(returnTo, lang);
     return redirectWithSupabaseCookies(new URL(destination, request.url), response);
+  }
+  if (isQaAuthenticatedVisualReviewRoute) {
+    response.headers.set("cache-control", "private, no-store");
+    response.headers.set("x-robots-tag", "noindex, nofollow, noarchive, nosnippet");
+    response.headers.set("x-touchline-qa-review", "authenticated");
   }
   return response;
 }
