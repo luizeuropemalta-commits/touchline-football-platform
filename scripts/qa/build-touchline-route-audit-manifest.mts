@@ -112,6 +112,8 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "GET /api/touchline-arena/roster": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_ROSTER", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/touchline-arena/rumours": { auth: "PUBLIC", role: "ANY", data: "STATIC_RUMOURS", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/touchline-arena/state": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_ARENA_STATE", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /api/touchline-qa/read/clubhub/[teamId]": { auth: "QA_PREVIEW_ONLY", role: "LOCAL_READ_MIRROR", data: "SANITIZED_VERSIONED_PUBLIC_CLUBHUB_READ_MODEL", browser: "HTTP_CONTRACT", status: "QA_DEPLOY_REQUIRED" },
+  "GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]": { auth: "QA_PREVIEW_ONLY", role: "LOCAL_READ_MIRROR", data: "BOUNDED_PUBLISHED_CLUB_FEED_ARTWORK_PROXY", browser: "MEDIA_HTTP_CONTRACT", status: "QA_DEPLOY_REQUIRED" },
   "PUT /api/touchline-arena/state": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_ARENA_STATE", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-arena/stripe-test/webhook": { auth: "WEBHOOK_SIGNATURE", role: "STRIPE_TEST", data: "STRIPE_TEST_EVENT", browser: "WEBHOOK_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-central/inbox/read": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_INBOX_RECEIPT", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },

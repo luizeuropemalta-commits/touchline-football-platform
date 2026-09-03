@@ -10,6 +10,7 @@ import {
   TOUCHLINE_ISOLATED_PREVIEW_HEADER,
 } from "@/lib/touchlinePreview/isolation";
 import { TOUCHLINE_PUBLIC_ORIGIN } from "@/lib/touchlineArena/public-origin";
+import { resolveTouchlineDataSource } from "@/lib/touchlineMirror/runtime";
 import {
   resolveTouchLinePresentationLocale,
   touchlineDocumentDirection,
@@ -66,6 +67,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const isIsolatedPreview = isTouchlineIsolatedPreviewRequest(
     requestHeaders.get(TOUCHLINE_ISOLATED_PREVIEW_HEADER),
   );
+  const dataSource = resolveTouchlineDataSource();
   const skipLabel = locale === "pt-BR" ? "Pular para o conteúdo principal" : "Skip to main content";
 
   return (
@@ -74,7 +76,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         {!isIsolatedPreview ? (
           <Suspense fallback={null}>
             <DocumentLocaleSync initialLocale={locale} />
-            <TouchlineActivityTracker />
+            {dataSource === "direct" ? <TouchlineActivityTracker /> : null}
           </Suspense>
         ) : null}
         {/*

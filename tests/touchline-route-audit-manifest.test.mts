@@ -16,7 +16,7 @@ function row(route: string) {
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 70);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 69);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 71);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -80,6 +80,14 @@ test("distinguishes read methods, disabled ingestion, local editors, user writes
   assert.equal(row("GET /api/admin/social-publications/source").data, "CURRENT_VERIFIED_SOCIAL_RENDER_SOURCE");
   assert.equal(row("POST /api/admin/social-publications/template-policy").auth, "ADMIN_SAME_ORIGIN");
   assert.equal(row("POST /api/admin/social-publications/template-policy").data, "SUPABASE_SOCIAL_TEMPLATE_VERSION_POLICY");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").auth, "QA_PREVIEW_ONLY");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").role, "LOCAL_READ_MIRROR");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").data, "SANITIZED_VERSIONED_PUBLIC_CLUBHUB_READ_MODEL");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]").status, "QA_DEPLOY_REQUIRED");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").auth, "QA_PREVIEW_ONLY");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").role, "LOCAL_READ_MIRROR");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").data, "BOUNDED_PUBLISHED_CLUB_FEED_ARTWORK_PROXY");
+  assert.equal(row("GET /api/touchline-qa/read/clubhub/[teamId]/feed-art/[publicId]").browser, "MEDIA_HTTP_CONTRACT");
 });
 
 test("does not claim browser PASS before observed page-by-page QA", () => {

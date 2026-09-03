@@ -16,7 +16,7 @@ import ClubHubNextFixtureCard from "@/components/touchline/club-hub/ClubHubNextF
 import ClubHubSectionNavigation from "@/components/touchline/club-hub/ClubHubSectionNavigation";
 import premiumStyles from "@/components/touchline/club-hub/ClubHubPremiumPrototype.module.css";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
-import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
+import type { TouchlinePublicFixture, TouchlinePublicTeam } from "@/lib/football-data/public-fixture";
 import { toPublicTouchlineFixture } from "@/lib/football-data/public-fixture";
 import {
   TOUCHLINE_ENGLAND_CLUBS,
@@ -55,12 +55,24 @@ import {
 } from "@/lib/football-data/public-premier-squad-server";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
+import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY } from "@/lib/touchlineArena/formation-geometry";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
 import { readTouchlineClubSocialFeed } from "@/lib/touchlineArena/club-social-feed-server";
+import { TOUCHLINE_PRESEASON_RANKING_STATE } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
 import { TOUCHLINE_STADIUM_CATALOG } from "@/lib/touchlineArena/stadium-catalog";
+import {
+  resolveTouchlineClubHubDataSource,
+  type TouchlineQaClubHubMirrorReadResult,
+} from "@/lib/touchlineMirror/qa-clubhub-mirror";
+import {
+  loadTouchlineQaClubHubMirror,
+  loadTouchlineQaMirroredLeagueTable,
+  loadTouchlineQaMirroredSocialFeed,
+  mirrorDtoToPublicFixture,
+} from "@/lib/touchlineMirror/qa-clubhub-mirror-server";
 
 export const dynamic = "force-dynamic";
 
@@ -180,6 +192,31 @@ function previewTeamFromClub(club: NonNullable<ReturnType<typeof findTouchLineCl
   };
 }
 
+function previewTeamFromPublicTeam(
+  team: TouchlinePublicTeam | undefined,
+  currentClub: NonNullable<ReturnType<typeof findTouchLineClub>>,
+  locale: TouchLineLocale,
+): TouchlineClubMatchPreviewTeam {
+  const canonical = findTouchLineClub(team?.providerId)
+    ?? findTouchLineClub(team?.name)
+    ?? findTouchLineClub(team?.shortCode);
+  if (canonical) {
+    return {
+      accent: canonical.accent,
+      name: team?.name ?? canonical.name,
+      shortCode: team?.shortCode ?? canonical.shortCode,
+      logoUrl: canonical.logoUrl,
+    };
+  }
+  const pending = touchLineT(locale, "opponentToBeConfirmed");
+  if (team?.providerId === currentClub.teamId) return previewTeamFromClub(currentClub);
+  return {
+    name: team?.name ?? pending,
+    shortCode: team?.shortCode ?? pending,
+    logoUrl: team?.logoUrl,
+  };
+}
+
 function fixtureHasClub(fixture: TouchlineFixture, club: NonNullable<ReturnType<typeof findTouchLineClub>>) {
   return [fixture.homeTeam?.providerId, fixture.awayTeam?.providerId, fixture.homeTeam?.name, fixture.awayTeam?.name, fixture.homeTeam?.shortCode, fixture.awayTeam?.shortCode]
     .filter(Boolean)
@@ -243,6 +280,8 @@ function selectPublicClubScoringFixture(
 async function loadClubMatchSnapshot(
   club: NonNullable<ReturnType<typeof findTouchLineClub>>,
   locale: TouchLineLocale,
+  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
+  mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null,
 ): Promise<ClubMatchSnapshot> {
   const empty = {
     preview: fallbackClubMatch(club, locale),
@@ -254,6 +293,30 @@ async function loadClubMatchSnapshot(
     publicFixture: null,
     playerStatistics: [],
   };
+
+  if (dataSource !== "direct") {
+    const mirrorResult = mirrorResultPromise ? await mirrorResultPromise : null;
+    if (mirrorResult?.state !== "ready") return empty;
+    const fixture = mirrorDtoToPublicFixture(mirrorResult.data);
+    const startsAt = fixture?.startsAt;
+    if (!fixture || !startsAt) return empty;
+    return {
+      preview: {
+        home: previewTeamFromPublicTeam(fixture.homeTeam, club, locale),
+        away: previewTeamFromPublicTeam(fixture.awayTeam, club, locale),
+        status: fixture.status ?? "TouchLine England",
+        startsAt: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(startsAt)),
+        source: touchLineT(locale, "dataCache"),
+      },
+      previewFixtureId: null,
+      fixtureId: null,
+      lineups: [],
+      formation: null,
+      coach: null,
+      publicFixture: fixture,
+      playerStatistics: [],
+    };
+  }
 
   try {
     const [persistedFeeds, scheduledFixtures] = await Promise.all([
@@ -332,7 +395,11 @@ async function traceClubHubLoader<T>(
   }
 }
 
-async function loadClubHubViewerAccess(clubSlug: string) {
+async function loadClubHubViewerAccess(
+  clubSlug: string,
+  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
+) {
+  if (dataSource !== "direct") return { userId: null, canEditCardEngine: false };
   return traceClubHubLoader(clubSlug, "viewer-access", async () => {
     const supabase = await createClient();
     const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
@@ -346,9 +413,45 @@ async function loadClubHubViewerAccess(clubSlug: string) {
 async function loadClubHubPresentation(
   club: NonNullable<ReturnType<typeof findTouchLineClub>>,
   locale: TouchLineLocale,
+  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
+  mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null,
 ) {
+  if (dataSource !== "direct") {
+    const matchSnapshot = await traceClubHubLoader(
+      club.slug,
+      "match-snapshot",
+      () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise),
+    );
+    const squadLoad = {
+      cards: [] as ClubOwnerSquadCard[],
+      status: locale === "pt-BR" ? "Elenco temporariamente indisponível" : "Squad temporarily unavailable",
+      source: locale === "pt-BR" ? "Fonte indisponível" : "Source unavailable",
+      state: "unavailable" as const,
+    };
+    const matchdayPresentation = buildTouchLineClubMatchdayPresentation({
+      club,
+      squadCards: [],
+      officialLineup: [],
+      formation: null,
+      fixtureId: null,
+      officialCoach: null,
+      formationGeometryRegistry: TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY,
+    });
+    return {
+      squadLoad,
+      matchSnapshot,
+      matchdayPresentation,
+      outsideMatchdayCards: [] as ClubOwnerSquadCard[],
+      clubCards: [] as ClubOwnerSquadCard[],
+    };
+  }
+
   const squadLoadPromise = traceClubHubLoader(club.slug, "squad", () => loadClubSquadCards(club, locale));
-  const matchSnapshotPromise = traceClubHubLoader(club.slug, "match-snapshot", () => loadClubMatchSnapshot(club, locale));
+  const matchSnapshotPromise = traceClubHubLoader(
+    club.slug,
+    "match-snapshot",
+    () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise),
+  );
   const formationGeometryPromise = traceClubHubLoader(club.slug, "formation-geometry", () => readTouchlineFormationGeometryRegistry());
   const seasonPointsPromise = squadLoadPromise.then((squadLoad) => traceClubHubLoader(
     club.slug,
@@ -387,6 +490,22 @@ async function loadClubHubPresentation(
     outsideMatchdayCards,
     clubCards,
   };
+}
+
+async function loadClubHubLeagueTable(
+  club: NonNullable<ReturnType<typeof findTouchLineClub>>,
+  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
+  mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null,
+) {
+  if (dataSource === "qa-mirror") {
+    return loadTouchlineQaMirroredLeagueTable(club.teamId, mirrorResultPromise ?? undefined);
+  }
+  if (dataSource === "invalid") {
+    // A requested but malformed mirror must fail closed instead of reading a
+    // local database, SportMonks or demonstration standings.
+    return loadTouchlineQaMirroredLeagueTable(club.teamId, mirrorResultPromise ?? undefined);
+  }
+  return loadTouchlineOfficialLeagueTable();
 }
 
 function ClubHubDeferredSection({ label, size }: { label: string; size: "lineup" | "panel" | "table" | "cards" }) {
@@ -450,12 +569,14 @@ async function ClubHubTechnicalSections({
   cardLabels,
   presentationPromise,
   viewerAccessPromise,
+  dataSource,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   cardLabels: ClubHubCardLabels;
   presentationPromise: Promise<ClubHubPresentation>;
   viewerAccessPromise: Promise<ClubHubViewerAccess>;
+  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
 }) {
   const [presentation, viewerAccess] = await Promise.all([presentationPromise, viewerAccessPromise]);
   const { outsideMatchdayCards } = presentation;
@@ -467,7 +588,7 @@ async function ClubHubTechnicalSections({
         locale={locale}
         labels={cardLabels}
         canEditCardEngine={viewerAccess.canEditCardEngine}
-        coachCard={(
+        coachCard={dataSource === "direct" ? (
           <ClubHubCanonicalCoachPanel
             teamId={club.teamId}
             clubName={club.name}
@@ -477,7 +598,7 @@ async function ClubHubTechnicalSections({
             userId={viewerAccess.userId}
             presentation="technical"
           />
-        )}
+        ) : null}
       />
       <ClubHubOutsideMatchRoster
         clubName={club.name}
@@ -495,7 +616,7 @@ async function ClubHubLeagueTableSection({
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
-  tablePromise: ReturnType<typeof loadTouchlineOfficialLeagueTable>;
+  tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
 }) {
   const table = await tablePromise;
   return <TouchlineOfficialLeagueTable table={table} locale={locale} variant="profile" currentTeamId={club.teamId} />;
@@ -561,16 +682,22 @@ async function ClubHubSocialFeedSection({
   club,
   locale,
   cursor,
+  dataSource,
+  mirrorResultPromise,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   cursor: string | null;
+  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
+  mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null;
 }) {
-  const page = await readTouchlineClubSocialFeed({
-    providerTeamId: club.teamId,
-    limit: 6,
-    cursor,
-  });
+  const page = dataSource === "direct"
+    ? await readTouchlineClubSocialFeed({
+      providerTeamId: club.teamId,
+      limit: 6,
+      cursor,
+    })
+    : await loadTouchlineQaMirroredSocialFeed(club.teamId, mirrorResultPromise ?? undefined);
   return (
     <TouchlineClubSocialFeed
       clubName={club.name}
@@ -591,18 +718,20 @@ async function ClubHubPremiumOverviewSection({
   presentationPromise,
   viewerAccessPromise,
   tablePromise,
+  dataSource,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   presentationPromise: Promise<ClubHubPresentation>;
   viewerAccessPromise: Promise<ClubHubViewerAccess>;
-  tablePromise: ReturnType<typeof loadTouchlineOfficialLeagueTable>;
+  tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
+  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
 }) {
   const [presentation, viewerAccess, table, activeRanking] = await Promise.all([
     presentationPromise,
     viewerAccessPromise,
     tablePromise,
-    loadTouchLineActiveRanking(),
+    dataSource === "direct" ? loadTouchLineActiveRanking() : Promise.resolve(TOUCHLINE_PRESEASON_RANKING_STATE),
   ]);
   const portuguese = locale === "pt-BR";
   const fixture = presentation.matchSnapshot.publicFixture;
@@ -666,7 +795,7 @@ async function ClubHubPremiumOverviewSection({
     overallRank: null,
     positionRank: null,
   } : null);
-  const coach = touchlineLiveCoachForTeam(club.teamId);
+  const coach = dataSource === "direct" ? touchlineLiveCoachForTeam(club.teamId) : null;
   const hasVerifiedFixture = Boolean(
     fixture?.startsAt
     && homeClub?.logoUrl
@@ -771,10 +900,16 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   if (!club) notFound();
 
   const clubHonours = loadClubTrophyAssets(club);
+  const dataSource = resolveTouchlineClubHubDataSource();
+  const mirrorResultPromise = dataSource === "direct" ? null : loadTouchlineQaClubHubMirror(club.teamId);
   const homeStadium = TOUCHLINE_STADIUM_CATALOG.find((stadium) => stadium.homeTeamProviderId === club.teamId) ?? null;
-  const presentationPromise = loadClubHubPresentation(club, locale);
-  const viewerAccessPromise = loadClubHubViewerAccess(club.slug);
-  const tablePromise = traceClubHubLoader(club.slug, "league-table", () => loadTouchlineOfficialLeagueTable());
+  const presentationPromise = loadClubHubPresentation(club, locale, dataSource, mirrorResultPromise);
+  const viewerAccessPromise = loadClubHubViewerAccess(club.slug, dataSource);
+  const tablePromise = traceClubHubLoader(
+    club.slug,
+    "league-table",
+    () => loadClubHubLeagueTable(club, dataSource, mirrorResultPromise),
+  );
   return (
     <main className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent, "--clubhub-accent": club.accent } as CSSProperties}>
       <span id="club-hub-top" className="club-hub-top-anchor" aria-hidden="true" />
@@ -856,6 +991,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               presentationPromise={presentationPromise}
               viewerAccessPromise={viewerAccessPromise}
               tablePromise={tablePromise}
+              dataSource={dataSource}
             />
           </Suspense>
         </div>
@@ -867,7 +1003,13 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             note={locale === "pt-BR" ? "Publicações verificadas mais recentes" : "Latest verified publications"}
           />
           <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando atualizações do clube" : "Preparing club updates"} />}>
-            <ClubHubSocialFeedSection club={club} locale={locale} cursor={feedCursor ?? null} />
+            <ClubHubSocialFeedSection
+              club={club}
+              locale={locale}
+              cursor={feedCursor ?? null}
+              dataSource={dataSource}
+              mirrorResultPromise={mirrorResultPromise}
+            />
           </Suspense>
         </div>
 
@@ -895,6 +1037,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                 cardLabels={cardLabels}
                 presentationPromise={presentationPromise}
                 viewerAccessPromise={viewerAccessPromise}
+                dataSource={dataSource}
               />
             </Suspense>
           </div>
