@@ -65,8 +65,8 @@ test("one local FULL_TIME artifact proves exact two-club fan-out without duplica
 test("next fixture owns both league positions and links to the post preview", () => {
   assert.match(component, /homePosition=\{nextFixture\.homePosition\}/);
   assert.match(component, /awayPosition=\{nextFixture\.awayPosition\}/);
-  assert.match(nextFixture, /positionLabel\(homePosition\)/);
-  assert.match(nextFixture, /positionLabel\(awayPosition\)/);
+  assert.match(nextFixture, /positionLabel\(homePosition, locale\)/);
+  assert.match(nextFixture, /positionLabel\(awayPosition, locale\)/);
   assert.match(nextFixture, /clubhub-next-fixture-post/);
   assert.match(nextFixture, /height=\{54\}/);
   assert.match(component, /leagueTable=\{table\}/);

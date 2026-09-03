@@ -68,3 +68,15 @@ test("the official league table remains server-owned and separate from TouchLine
   assert.match(page, /<TouchlineOfficialLeagueTable[\s\S]*?variant="profile"/);
   assert.match(page, /className="club-hub-touchline"/);
 });
+
+test("the functional ClubHub uses the approved premium overview with canonical data only", () => {
+  assert.match(page, /ClubHubPremiumOverviewSection/);
+  assert.match(page, /TOUCHLINE_STADIUM_CATALOG\.find/);
+  assert.match(page, /loadTouchLineActiveRanking\(\)/);
+  assert.match(page, /<ClubHubNextFixtureCard/);
+  assert.match(page, /previewHref=\{null\}/);
+  assert.match(page, /<ClubHubCanonicalCoachPanel[\s\S]*?presentation="technical"/);
+  assert.match(page, /<TouchlineGameweekCard card=\{clubLeader\.card\}/);
+  assert.match(page, /normalizeTouchlineMatchCentreTimeZone/);
+  assert.doesNotMatch(page, /qa-canonical-snapshot|NOT A FOOTBALL CLAIM|LOCAL DRAFT/);
+});

@@ -42,7 +42,7 @@
   padding: 9px 13px;
   color: #dfff9b;
   background: rgba(8, 25, 18, .66);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 950;
   letter-spacing: .1em;
   text-transform: uppercase;
@@ -97,6 +97,42 @@
   font-weight: 720;
   line-height: 1.55;
   white-space: pre-line;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(163, 255, 18, .25);
+  border-radius: 12px;
+  padding: 0 12px;
+  color: #efffdf;
+  background: rgba(163, 255, 18, .055);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.actions button:hover,
+.actions button:focus-visible {
+  border-color: rgba(163, 255, 18, .58);
+  outline: 2px solid rgba(163, 255, 18, .16);
+  outline-offset: 2px;
+}
+
+.actions button svg {
+  width: 15px;
+  height: 15px;
 }
 
 .empty {

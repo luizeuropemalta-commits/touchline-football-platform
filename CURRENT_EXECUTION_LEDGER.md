@@ -13,6 +13,14 @@ After material work:
 2. append dated evidence to the long ledger;
 3. mark superseded decisions explicitly rather than deleting them.
 
+# 2026-09-03 — Consolidated functional QA candidate and premium ClubHub integration
+
+- Audited the current Mac candidate against the functional `qa` baseline. Approved committed Markt, Arena, ClubHub and social-artwork work is present in the same `139`-route application candidate; historical dirty worktrees remain preserved and were not blindly merged.
+- Connected the approved premium ClubHub composition to `/touchline-clubs/[club]` for all twenty canonical clubs. The real route now owns the verified stadium hero, section navigation, compact next-fixture/table surface, canonical coach card, active club-leading card, permanent official table, weekly feed and squad while retaining the existing lineup and technical area.
+- Football facts remain fail-closed. No visual-QA snapshot, sample score, provisional ranking or provider-branded claim is allowed into the functional ClubHub. Local Like and native Share controls do not imply automatic Meta delivery; Instagram/Facebook outbound remains disabled and no public post was sent.
+- Local release evidence before the single authorised QA build: real Arsenal and Chelsea routes HTTP `200`; desktop and phone-landscape browser render PASS; existing portrait rotation gate PASS; focused `32/32`; complete `1582/1582`; TypeScript PASS; ESLint `0` errors with seven unrelated established warnings; diff check PASS; production build `139/139` pages PASS. One initial lint read hit the known macOS/iCloud `ETIMEDOUT` environment limitation; the identical retry passed without a code diagnostic.
+- Deployment budget is exactly one new Git-native build for the functional Vercel Preview branch `qa`, contingent on the remaining governance, exact-file-manifest, clean-worktree and duplicate-build checks. Production, Supabase migrations/data and external social delivery are excluded.
+
 # 2026-09-02 — Vercel cost-safe commit/deploy governance
 
 - Added the mandatory canonical policy at `docs/touchline/release-audit/VERCEL_COST_SAFE_COMMIT_AND_DEPLOY_POLICY.md` and linked it from `AGENTS.md` and `RELEASE_CHECKLIST.md`.

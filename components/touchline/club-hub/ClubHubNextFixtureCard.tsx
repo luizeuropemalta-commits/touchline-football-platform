@@ -7,6 +7,7 @@ import { useMemo, useSyncExternalStore } from "react";
 
 import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
+import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 
 import styles from "./ClubHubPremiumPrototype.module.css";
 
@@ -35,6 +36,8 @@ type Props = Readonly<{
   }>;
   roundName: string;
   startsAt: string;
+  locale?: TouchLineLocale;
+  previewHref?: string | null;
 }>;
 
 const subscribeToBrowserTimeZone = () => () => undefined;
@@ -45,8 +48,11 @@ function readBrowserTimeZone() {
   );
 }
 
-function positionLabel(position: number | null) {
-  if (!position || !Number.isInteger(position) || position < 1) return "Table pending";
+function positionLabel(position: number | null, locale: TouchLineLocale) {
+  if (!position || !Number.isInteger(position) || position < 1) {
+    return locale === "pt-BR" ? "Tabela pendente" : "Table pending";
+  }
+  if (locale === "pt-BR") return `${position}º na liga`;
   const mod100 = position % 100;
   const suffix = mod100 >= 11 && mod100 <= 13
     ? "th"
@@ -54,7 +60,20 @@ function positionLabel(position: number | null) {
   return `${position}${suffix} in league`;
 }
 
-export default function ClubHubNextFixtureCard({ awayTeam, awayPosition, currentClubTeamId, homeTeam, homePosition, initialTimeZone, leagueTable, roundName, startsAt }: Props) {
+export default function ClubHubNextFixtureCard({
+  awayTeam,
+  awayPosition,
+  currentClubTeamId,
+  homeTeam,
+  homePosition,
+  initialTimeZone,
+  leagueTable,
+  locale = "en-GB",
+  previewHref = "/visual-qa/clubhub-next-fixture-post",
+  roundName,
+  startsAt,
+}: Props) {
+  const portuguese = locale === "pt-BR";
   const timeZone = useSyncExternalStore(
     subscribeToBrowserTimeZone,
     readBrowserTimeZone,
@@ -72,29 +91,29 @@ export default function ClubHubNextFixtureCard({ awayTeam, awayPosition, current
     <article className={styles.nextFixtureCard}>
       <div className={styles.nextFixtureHeading}>
         <CalendarDays aria-hidden="true" />
-        <span>Next fixture · {roundName}</span>
+        <span>{portuguese ? "Próximo confronto" : "Next fixture"} · {roundName}</span>
       </div>
       <div className={styles.nextFixtureTeams}>
         <span className={styles.nextFixtureClub}>
           <Image alt={`${homeTeam.name} crest`} height={54} src={homeTeam.logoUrl} width={54} />
           <b>{homeTeam.name}</b>
-          <small>{positionLabel(homePosition)}</small>
+          <small>{positionLabel(homePosition, locale)}</small>
         </span>
         <em>VS</em>
         <span className={styles.nextFixtureClub}>
           <Image alt={`${awayTeam.name} crest`} height={54} src={awayTeam.logoUrl} width={54} />
           <b>{awayTeam.name}</b>
-          <small>{positionLabel(awayPosition)}</small>
+          <small>{positionLabel(awayPosition, locale)}</small>
         </span>
       </div>
       <div className={styles.nextFixtureKickoff}>
         <time dateTime={startsAt}>{localKickoff.date} · {localKickoff.time}</time>
-        <small>Your local time · {localKickoff.zoneName}</small>
+        <small>{portuguese ? "Seu horário local" : "Your local time"} · {localKickoff.zoneName}</small>
       </div>
       <section className={styles.nextFixtureTable} aria-label="Premier League table">
         <header>
-          <strong>League table</strong>
-          <span>{leagueTable.state === "ready" || leagueTable.state === "pending_no_final" ? "TouchLine Verified" : "Awaiting verified table"}</span>
+          <strong>{portuguese ? "Tabela da liga" : "League table"}</strong>
+          <span>{leagueTable.state === "ready" || leagueTable.state === "pending_no_final" ? "TouchLine Verified" : (portuguese ? "Aguardando tabela verificada" : "Awaiting verified table")}</span>
         </header>
         <div className={styles.nextFixtureTableHead} aria-hidden="true">
           <span>Pos</span><span>Club</span><span>P</span><span>Pts</span>
@@ -102,7 +121,7 @@ export default function ClubHubNextFixtureCard({ awayTeam, awayPosition, current
         <div
           className={styles.nextFixtureTableScroller}
           tabIndex={0}
-          aria-label="Scrollable Premier League table, 20 clubs"
+          aria-label={portuguese ? "Tabela da Premier League com rolagem, 20 clubes" : "Scrollable Premier League table, 20 clubs"}
           onKeyDown={(event) => {
             const distances: Readonly<Record<string, number>> = {
               ArrowDown: 30,
@@ -138,9 +157,11 @@ export default function ClubHubNextFixtureCard({ awayTeam, awayPosition, current
           })}
         </div>
       </section>
-      <Link className={styles.nextFixturePreviewLink} href="/visual-qa/clubhub-next-fixture-post">
-        View next-match post preview
-      </Link>
+      {previewHref ? (
+        <Link className={styles.nextFixturePreviewLink} href={previewHref}>
+          {portuguese ? "Ver prévia da arte da partida" : "View next-match post preview"}
+        </Link>
+      ) : null}
     </article>
   );
 }

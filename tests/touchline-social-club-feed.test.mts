@@ -107,10 +107,11 @@ test("045 migration enforces RLS, 14-day lifecycle, bounded reads and no outboun
   assert.match(rollback, /TL_SOCIAL_045_ROLLBACK_NONEMPTY/);
 });
 
-test("ClubHub UI exposes only the bounded server reader and keeps interactions disabled", () => {
+test("ClubHub UI exposes the bounded server reader with local like and native share actions", () => {
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   const adminPage = readFileSync(new URL("../app/(app)/admin/social-publications/page.tsx", import.meta.url), "utf8");
   const component = readFileSync(new URL("../components/touchline/club-social/TouchlineClubSocialFeed.tsx", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../components/touchline/club-social/TouchlineClubSocialFeed.module.css", import.meta.url), "utf8");
   const reader = readFileSync(new URL("../lib/touchlineArena/club-social-feed-server.ts", import.meta.url), "utf8");
   assert.match(page, /readTouchlineClubSocialFeed/);
   assert.match(page, /TouchlineClubSocialFeed/);
@@ -118,5 +119,9 @@ test("ClubHub UI exposes only the bounded server reader and keeps interactions d
   assert.match(adminPage, /touchline_social_045_admin_status/);
   assert.doesNotMatch(adminPage, /\.from\("touchline_club_social_(?:executor_cycles|fanout_jobs|posts|tombstones)"\)/);
   assert.match(component, /TouchLine Verified/);
+  assert.match(component, /<ClubHubLikeButton/);
+  assert.match(component, /<ClubHubShareButton/);
+  assert.match(component, /Post actions/);
+  assert.match(styles, /\.actions button\s*\{[\s\S]*?font-size:\s*12px/);
   assert.doesNotMatch(component, /comment|reaction|SportMonks|provider|API/i);
 });

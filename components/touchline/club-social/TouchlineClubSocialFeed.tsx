@@ -3,13 +3,15 @@ import Link from "next/link";
 
 import type { TouchlineClubSocialFeedPage } from "@/lib/touchlineArena/club-social-feed-server";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import ClubHubLikeButton from "@/components/touchline/club-hub/ClubHubLikeButton";
+import ClubHubShareButton from "@/components/touchline/club-hub/ClubHubShareButton";
 
 import styles from "./TouchlineClubSocialFeed.module.css";
 
 const LABELS: Readonly<Record<string, Readonly<{ en: string; pt: string }>>> = Object.freeze({
   LINEUP: { en: "Official line-up", pt: "Escalação oficial" },
   FULL_TIME: { en: "Full Time", pt: "Fim de jogo" },
-  GOAL_CONFIRMED: { en: "Goal confirmed", pt: "Gol confirmado" },
+  GOAL_CONFIRMED: { en: "Goal", pt: "Gol" },
   RED_CARD_CONFIRMED: { en: "Red card confirmed", pt: "Cartão vermelho confirmado" },
   GAMEWEEK_RANKING_PREVIEW: { en: "Gameweek ranking", pt: "Ranking da Gameweek" },
   GAMEWEEK_RANKING_FINAL: { en: "Gameweek final ranking", pt: "Ranking final da Gameweek" },
@@ -69,6 +71,13 @@ export default function TouchlineClubSocialFeed({
                     timeZone: "Europe/Malta",
                   }).format(new Date(item.publishedAt))}
                 </time>
+                <div className={styles.actions} aria-label={pt ? "Ações da publicação" : "Post actions"}>
+                  <ClubHubLikeButton />
+                  <ClubHubShareButton
+                    title={`${clubName} · ${contentLabel(item.contentType, locale)}`}
+                    text={item.copy}
+                  />
+                </div>
               </div>
             </article>
           ))}

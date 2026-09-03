@@ -1,5 +1,13 @@
 # TouchLine Current State
 
+## Consolidated QA candidate + functional premium ClubHub — LOCAL GREEN / SINGLE QA DEPLOY AUTHORIZED
+
+- The current `qa` candidate already contains the approved Markt, Arena, ClubHub and social-artwork work represented by all `139` application routes. The premium ClubHub presentation is now connected to the functional `/touchline-clubs/[club]` route for every one of the twenty canonical clubs instead of remaining only in `/visual-qa`.
+- The functional ClubHub keeps one canonical read path. Its stadium hero is selected from the verified home-ground catalog; the compact status rail reads the persisted next fixture and official league table, the canonical current coach and the active published card ranking. Missing fixture, standings, squad, feed or ranking evidence stays explicitly unavailable and never becomes sample or invented football data.
+- Kick-off time is initially server-safe and then follows the visitor's browser time zone. The twenty-club table remains inside its own bounded scroll surface. The existing official lineup, technical area, complete table, weekly feed and squad remain present below the premium overview. Club-feed posts expose local Like and native Share controls; TouchLine still does not control or claim Instagram/Facebook delivery.
+- Fresh local evidence: Arsenal and Chelsea returned HTTP `200` through the real route; desktop `1280×720` and phone-landscape `844×390` rendered the new model, while phone portrait preserved the existing rotate-to-landscape gate. Focused ClubHub/social coverage passed `32/32`; the complete suite passed `1582/1582`; TypeScript passed; ESLint passed with `0` errors and seven established unrelated warnings; `git diff --check` passed; the Next.js production build compiled and generated `139/139` pages.
+- The first full-lint attempt encountered the documented macOS/iCloud `ETIMEDOUT` read limitation; the identical retry passed and no code diagnostic was emitted. No remote build was used for diagnosis. The owner authorised one Git-native deployment to the functional Vercel Preview branch `qa` after the remaining governance gate and exact-SHA checks pass. No migration, database write, Production deployment or external social publication is included.
+
 ## Vercel cost-safe commit/deploy governance — ACTIVE / LOCAL
 
 - On 2 September 2026 the owner required a permanent cost-control and defect-prevention gate for every future TouchLine commit and deployment. `docs/touchline/release-audit/VERCEL_COST_SAFE_COMMIT_AND_DEPLOY_POLICY.md` is now the canonical policy and is mandatory through `AGENTS.md`, `RELEASE_CHECKLIST.md` and both synchronized copies of the TouchLine Mission Completion Gate.
