@@ -594,8 +594,10 @@ async function ClubHubPremiumOverviewSection({
   ]);
   const portuguese = locale === "pt-BR";
   const fixture = presentation.matchSnapshot.publicFixture;
-  const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId ?? fixture?.homeTeam?.name);
-  const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId ?? fixture?.awayTeam?.name);
+  const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
+    ?? findTouchLineClub(fixture?.homeTeam?.name);
+  const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
+    ?? findTouchLineClub(fixture?.awayTeam?.name);
   const tableView = {
     state: table.state,
     rows: table.rows.map((row) => ({

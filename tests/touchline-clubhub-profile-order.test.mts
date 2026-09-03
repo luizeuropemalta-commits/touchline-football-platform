@@ -73,6 +73,8 @@ test("the functional ClubHub uses the approved premium overview with canonical d
   assert.match(page, /ClubHubPremiumOverviewSection/);
   assert.match(page, /TOUCHLINE_STADIUM_CATALOG\.find/);
   assert.match(page, /loadTouchLineActiveRanking\(\)/);
+  assert.match(page, /const homeClub = findTouchLineClub\(fixture\?\.homeTeam\?\.providerId\)/);
+  assert.match(page, /const awayClub = findTouchLineClub\(fixture\?\.awayTeam\?\.providerId\)/);
   assert.match(page, /<ClubHubNextFixtureCard/);
   assert.match(page, /previewHref=\{null\}/);
   assert.match(page, /<ClubHubCanonicalCoachPanel[\s\S]*?presentation="technical"/);

@@ -232,7 +232,7 @@ export function normalizeTouchLineClubKey(value?: string | null) {
 export function findTouchLineClub(value?: string | null) {
   const key = normalizeTouchLineClubKey(value);
   return TOUCHLINE_ENGLAND_CLUBS.find((club) => {
-    if (club.slug === key || normalizeTouchLineClubKey(club.name) === key || normalizeTouchLineClubKey(club.shortCode) === key) return true;
+    if (club.teamId === key || club.slug === key || normalizeTouchLineClubKey(club.name) === key || normalizeTouchLineClubKey(club.shortCode) === key) return true;
     return club.aliases.some((alias) => normalizeTouchLineClubKey(alias) === key);
   });
 }

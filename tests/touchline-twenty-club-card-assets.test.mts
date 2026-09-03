@@ -8,7 +8,7 @@ import {
   TOUCHLINE_CARD_TIER_PALETTES,
   touchlineArenaClubTemplateForTierPreview,
 } from "../lib/touchlineArena/card-rules.ts";
-import { TOUCHLINE_ENGLAND_CLUBS } from "../lib/touchlineArena/demo-data.ts";
+import { findTouchLineClub, TOUCHLINE_ENGLAND_CLUBS } from "../lib/touchlineArena/demo-data.ts";
 
 function localPublicPath(assetPath: string) {
   return path.join(process.cwd(), "public", decodeURIComponent(assetPath));
@@ -38,5 +38,11 @@ test("all seven tier palettes supply a canonical neon edge colour", () => {
   for (const tier of TOUCHLINE_CARD_TIER_KEYS) {
     assert.match(TOUCHLINE_CARD_TIER_PALETTES[tier].accent, /^#[0-9a-f]{6}$/i);
     assert.match(TOUCHLINE_CARD_TIER_PALETTES[tier].secondary, /^#[0-9a-f]{6}$/i);
+  }
+});
+
+test("every canonical club resolves from its provider team identity", () => {
+  for (const club of TOUCHLINE_ENGLAND_CLUBS) {
+    assert.equal(findTouchLineClub(club.teamId)?.slug, club.slug);
   }
 });
