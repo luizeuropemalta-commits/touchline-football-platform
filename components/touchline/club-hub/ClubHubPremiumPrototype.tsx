@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import {
   ArrowUpRight,
   Clock3,
@@ -10,6 +11,8 @@ import {
 
 import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
+import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
+import type { TouchlineOfficialLeagueTable as OfficialLeagueTable } from "@/lib/football-data/official-league-table";
 import type { TouchlineCoach } from "@/lib/football-data/types";
 import type { TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import type { TouchlineClubSocialFeedPage } from "@/lib/touchlineArena/club-social-feed-server";
@@ -26,15 +29,11 @@ import ClubHubLikeButton from "./ClubHubLikeButton";
 import ClubHubShareButton from "./ClubHubShareButton";
 
 const navigation = [
+  ["rankings", "Rankings"],
   ["timeline", "Feed"],
   ["matchday", "Matchday"],
-  ["rankings", "Rankings"],
   ["squad", "Squad"],
 ] as const;
-
-const fixedTableRows = Array.from({ length: 20 }, (_, index) =>
-  index + 1,
-);
 
 const squadGroups = [
   ["Goalkeepers", "GK"],
@@ -105,17 +104,7 @@ type ClubHubPremiumPrototypeProps = Readonly<{
       shirtNumber: number | null;
     }>[];
   }>;
-  table: Readonly<{
-    state: string;
-    asOf: string | null;
-    rows: readonly Readonly<{
-      displayPosition: number | null;
-      team: Readonly<{ teamId: string; name: string; logoUrl: string | null }>;
-      played: number;
-      goalDifference: number;
-      points: number;
-    }>[];
-  }>;
+  table: OfficialLeagueTable;
 }>;
 
 function feedLabel(contentType: string) {
@@ -134,14 +123,13 @@ function publicProfileSlug(value: string) {
 
 export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, feed, fullTimePost, featuredPost, initialTimeZone, nextFixture, snapshotMode, squad, table }: ClubHubPremiumPrototypeProps) {
   const verifiedSquad = squad.players;
-  const currentClubTableRow = table.rows.find((row) => row.team.teamId === club.teamId) ?? null;
   const clubDisplayName = club.name.replace(/ FC$/i, "");
   const squadCapturedAt = squad.capturedAt
     ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Europe/Malta" }).format(new Date(squad.capturedAt))
     : null;
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} style={{ "--club-accent": club.accent } as CSSProperties}>
       <section className={styles.shell}>
         <header className={styles.hero}>
           <Image alt="" className={styles.heroImage} fill priority sizes="100vw" src={club.heroImageUrl} />
@@ -169,14 +157,20 @@ export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, f
           </nav>
         </header>
 
+        <TouchlineOfficialLeagueTable
+          currentTeamId={club.teamId}
+          id="rankings"
+          locale="en-GB"
+          table={table}
+          variant="profile"
+        />
+
         <section className={styles.statusRail} aria-label="ClubHub status">
           <ClubHubNextFixtureCard
             awayTeam={nextFixture.awayTeam}
-            currentClubTeamId={club.teamId}
             homeTeam={nextFixture.homeTeam}
             homePosition={nextFixture.homePosition}
             initialTimeZone={initialTimeZone}
-            leagueTable={table}
             roundName={nextFixture.roundName}
             startsAt={nextFixture.startsAt}
             awayPosition={nextFixture.awayPosition}
@@ -338,34 +332,6 @@ export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, f
                 <p>The page loads at most twelve verified posts at a time. Older active posts load only when requested; expired Timeline content is removed while checksum, timestamps and retention reason remain in the audit tombstone.</p>
               </div>
             </footer>
-
-            <section className={styles.standardModule} id="rankings" aria-labelledby="club-table-title">
-              <header className={styles.moduleHeader}>
-                <div>
-                  <span className={styles.eyebrow}>Permanent TouchLine module</span>
-                  <h2 id="club-table-title">League table</h2>
-                </div>
-                <span className={styles.moduleState}>{table.state === "ready" || table.state === "pending_no_final" ? "TouchLine Verified" : "Awaiting verified table"}</span>
-              </header>
-              <p className={styles.moduleIntro}>
-                The league table keeps the same structure in every ClubHub. Positions and points appear only after canonical reconciliation.
-              </p>
-              <div className={styles.fullTable} role="table" aria-label="Verified league table">
-                <div className={styles.fullTableHead} role="row">
-                  <span role="columnheader">Pos</span><span role="columnheader">Club</span><span role="columnheader">P</span><span role="columnheader">GD</span><span role="columnheader">Pts</span>
-                </div>
-                {fixedTableRows.map((slot) => {
-                  const row = table.rows.find((candidate) => candidate.displayPosition === slot) ?? null;
-                  return (
-                    <div className={row === currentClubTableRow ? `${styles.fullTableRow} ${styles.currentTableRow}` : styles.fullTableRow} role="row" key={slot}>
-                      <span role="cell">{row?.displayPosition ? String(row.displayPosition).padStart(2, "0") : "—"}</span>
-                      <span role="cell">{row?.team.logoUrl ? <Image alt="" height={22} src={row.team.logoUrl} width={22} /> : <i />} {row?.team.name ?? "Awaiting canonical club"}</span>
-                      <span role="cell">{row?.played ?? "—"}</span><span role="cell">{row?.goalDifference ?? "—"}</span><span role="cell">{row?.points ?? "—"}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
 
             <section className={styles.standardModule} id="squad" aria-labelledby="club-squad-title">
               <header className={styles.moduleHeader}>

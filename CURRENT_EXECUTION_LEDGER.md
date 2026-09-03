@@ -13,6 +13,14 @@ After material work:
 2. append dated evidence to the long ledger;
 3. mark superseded decisions explicitly rather than deleting them.
 
+# 2026-09-03 — Functional ClubHub table-first QA candidate
+
+- Preserved the approved club hero and trophy cabinet. The functional table is now the first module immediately below the ClubHub section controls, with the fixture/coach/card overview after it; the same server-owned template continues to serve every canonical club.
+- Reused the canonical `TouchlineGlobalNavigation` link style for Rankings, Feed, Matchday, Squad and Back to top. Local ClubHub CSS owns placement/scroll/visibility only, and `AGENTS.md` now records the owner-mandated one-button-system rule.
+- Removed the two newly introduced explanatory chapter markers around the table and overview, and omitted the general explanatory table paragraph in the compact profile variant. Canonical unavailable/integrity states remain visible and no football fact is fabricated.
+- Browser smoke of the production bundle exposed and then closed one deterministic hydration defect in the isolated preview: Node rendered the English short month as `Sept` while Safari rendered `Sep`. The shared local-kickoff formatter now owns fixed EN/PT short-month labels, and the browser renders `6 Sep · 17:30` without a React error overlay.
+- Focused regression coverage passed `40/40`; complete coverage passed `1586/1586`; the canonical release suite passed `1558/1558`; TypeScript, ESLint with zero errors and seven established warnings, `git diff --check` and the local Next production build of `139/139` routes passed. The functional Arsenal route rendered the exact shared CSS class on all four section controls, showed the table directly below them, retained the approved active hero neon and had no horizontal document overflow. This remains a release candidate pending a clean commit and the single owner-authorised Git-native `qa` deployment. Production was not touched.
+
 # 2026-09-03 — Consolidated functional QA candidate and premium ClubHub integration
 
 - Audited the current Mac candidate against the functional `qa` baseline. Approved committed Markt, Arena, ClubHub and social-artwork work is present in the same `139`-route application candidate; historical dirty worktrees remain preserved and were not blindly merged.

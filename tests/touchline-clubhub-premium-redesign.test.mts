@@ -6,6 +6,8 @@ import { formatTouchlineLocalKickoff } from "../lib/touchlineArena/local-kickoff
 
 const component = readFileSync(new URL("../components/touchline/club-hub/ClubHubPremiumPrototype.tsx", import.meta.url), "utf8");
 const nextFixture = readFileSync(new URL("../components/touchline/club-hub/ClubHubNextFixtureCard.tsx", import.meta.url), "utf8");
+const leagueTable = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.tsx", import.meta.url), "utf8");
+const leagueTableStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../components/touchline/club-hub/ClubHubPremiumPrototype.module.css", import.meta.url), "utf8");
 const shareButton = readFileSync(new URL("../components/touchline/club-hub/ClubHubShareButton.tsx", import.meta.url), "utf8");
 const likeButton = readFileSync(new URL("../components/touchline/club-hub/ClubHubLikeButton.tsx", import.meta.url), "utf8");
@@ -62,21 +64,16 @@ test("one local FULL_TIME artifact proves exact two-club fan-out without duplica
   assert.match(page, /Positions may change as the remaining Gameweek fixtures are completed/);
 });
 
-test("next fixture owns both league positions and links to the post preview", () => {
+test("next fixture keeps the two league positions without duplicating the league table", () => {
   assert.match(component, /homePosition=\{nextFixture\.homePosition\}/);
   assert.match(component, /awayPosition=\{nextFixture\.awayPosition\}/);
   assert.match(nextFixture, /positionLabel\(homePosition, locale\)/);
   assert.match(nextFixture, /positionLabel\(awayPosition, locale\)/);
   assert.match(nextFixture, /clubhub-next-fixture-post/);
   assert.match(nextFixture, /height=\{54\}/);
-  assert.match(component, /leagueTable=\{table\}/);
-  assert.match(nextFixture, /Scrollable Premier League table, 20 clubs/);
-  assert.match(nextFixture, /leagueTable\.rows\.map/);
-  assert.match(nextFixture, /row\.team\.teamId === currentClubTeamId/);
-  assert.match(nextFixture, /event\.currentTarget\.scrollBy/);
-  assert.match(nextFixture, /event\.currentTarget\.scrollTo/);
-  assert.match(styles, /\.nextFixtureTableScroller[\s\S]*?height: 118px;[\s\S]*?overflow-y: auto;/);
-  assert.match(styles, /touch-action: pan-y/);
+  assert.doesNotMatch(component, /leagueTable=\{table\}/);
+  assert.doesNotMatch(nextFixture, /Scrollable Premier League table/);
+  assert.doesNotMatch(nextFixture, /leagueTable\.rows\.map/);
 });
 
 test("status rail uses verified coach and club-leading card instead of duplicating latest post", () => {
@@ -131,8 +128,9 @@ test("ClubHub prototype fails closed instead of inventing football facts", () =>
   assert.match(nextFixture, /awayTeam\.logoUrl/);
   assert.match(page, /x-vercel-ip-timezone/);
   assert.match(page, /nextFixture=\{\{ \.\.\.qaSnapshot\.nextFixture, homePosition: arsenalPosition, awayPosition: chelseaPosition \}\}/);
-  assert.match(component, /Awaiting verified table/);
-  assert.match(component, /Positions and points appear only after canonical reconciliation/);
+  assert.match(component, /<TouchlineOfficialLeagueTable/);
+  assert.match(leagueTable, /Official standings are temporarily unavailable/);
+  assert.match(leagueTable, /No league position is shown until TouchLine can verify/);
   assert.match(component, /No draft, simulated result or unverified message is substituted/);
   assert.doesNotMatch(component, /SportMonks|API\/provider|provider wording/i);
 });
@@ -140,15 +138,20 @@ test("ClubHub prototype fails closed instead of inventing football facts", () =>
 test("next fixture kick-off follows the visitor time zone", () => {
   const startsAt = "2026-09-06T15:30:00+00:00";
   assert.equal(formatTouchlineLocalKickoff(startsAt, "Europe/Malta")?.time, "17:30");
+  assert.equal(formatTouchlineLocalKickoff(startsAt, "Europe/Malta")?.date, "6 Sep");
+  assert.equal(formatTouchlineLocalKickoff(startsAt, "Europe/Malta", "pt-BR")?.date, "6 set");
   assert.equal(formatTouchlineLocalKickoff(startsAt, "America/Sao_Paulo")?.time, "12:30");
   assert.equal(formatTouchlineLocalKickoff("not-a-date", "America/Sao_Paulo"), null);
 });
 
-test("every ClubHub keeps the same permanent table and squad modules", () => {
+test("every ClubHub keeps the same compact official table and squad modules", () => {
   assert.match(component, /Permanent TouchLine module/);
-  assert.match(component, /League table/);
-  assert.match(component, /Array\.from\(\{ length: 20 \}/);
-  assert.match(component, /Awaiting verified table/);
+  assert.match(component, /<TouchlineOfficialLeagueTable/);
+  assert.match(component, /variant="profile"/);
+  assert.match(component, /currentTeamId=\{club\.teamId\}/);
+  assert.match(leagueTable, /Official League Table/);
+  assert.match(leagueTable, /Scrollable league table, 20 clubs/);
+  assert.match(leagueTableStyles, /\.profile \.tableWrap\s*\{[\s\S]*?max-height:[\s\S]*?overflow-y: auto/);
   assert.match(component, /Official squad/);
   assert.match(component, /Goalkeepers/);
   assert.match(component, /Defenders/);
@@ -161,6 +164,17 @@ test("every ClubHub keeps the same permanent table and squad modules", () => {
   assert.match(page, /qa-canonical-snapshot\.json/);
   assert.match(component, /QA READ-ONLY SNAPSHOT/);
   assert.match(component, /Last verified/);
+});
+
+test("the compact table is the first module directly below the ClubHub navigation", () => {
+  const navigationEnd = component.indexOf("</header>");
+  const tableStart = component.indexOf("<TouchlineOfficialLeagueTable", navigationEnd);
+  const statusStart = component.indexOf("<section className={styles.statusRail}", navigationEnd);
+  const timelineStart = component.indexOf("<section className={styles.timeline}", navigationEnd);
+
+  assert.ok(navigationEnd >= 0 && tableStart > navigationEnd);
+  assert.ok(tableStart < statusStart && tableStart < timelineStart);
+  assert.equal((component.match(/<TouchlineOfficialLeagueTable/g) ?? []).length, 1);
 });
 
 test("the live feed stays light without deleting its audit history", () => {

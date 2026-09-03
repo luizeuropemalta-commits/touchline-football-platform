@@ -10,7 +10,7 @@ type Props = Readonly<{
   locale: string;
 }>;
 
-const SECTION_TARGETS = ["club-feed", "touchline-club-lineup", "club-table", "club-squad"] as const;
+const SECTION_TARGETS = ["club-table", "club-feed", "touchline-club-lineup", "club-squad"] as const;
 
 export default function ClubHubSectionNavigation({ locale }: Props) {
   const portuguese = locale === "pt-BR";
@@ -18,9 +18,9 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
   const [activeTarget, setActiveTarget] = useState<string | null>(null);
 
   const items = [
+    { target: "club-table", label: portuguese ? "Classificação" : "Rankings", icon: Trophy },
     { target: "club-feed", label: "Feed", icon: Newspaper },
     { target: "touchline-club-lineup", label: portuguese ? "Dia de jogo" : "Matchday", icon: CalendarDays },
-    { target: "club-table", label: portuguese ? "Classificação" : "Rankings", icon: Trophy },
     { target: "club-squad", label: portuguese ? "Elenco" : "Squad", icon: UsersRound },
   ] as const;
 
@@ -71,7 +71,7 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
     };
   }, []);
 
-  const sharedLinkClassName = `${globalNavigationStyles.link} ${styles.sectionLink}`;
+  const sharedLinkClassName = globalNavigationStyles.link;
 
   return (
     <nav className={styles.navigation} aria-label={portuguese ? "Seções do ClubHub" : "ClubHub sections"}>
@@ -79,7 +79,6 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
         <a
           aria-current={activeTarget === target ? "location" : undefined}
           className={sharedLinkClassName}
-          data-active={activeTarget === target ? "true" : undefined}
           href={`#${target}`}
           key={target}
         >

@@ -3,8 +3,11 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+const leagueTable = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.tsx", import.meta.url), "utf8");
+const leagueTableStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
 const sectionNavigation = readFileSync(new URL("../components/touchline/club-hub/ClubHubSectionNavigation.tsx", import.meta.url), "utf8");
 const sectionNavigationStyles = readFileSync(new URL("../components/touchline/club-hub/ClubHubSectionNavigation.module.css", import.meta.url), "utf8");
+const globalNavigationStyles = readFileSync(new URL("../components/touchline/TouchlineGlobalNavigation.module.css", import.meta.url), "utf8");
 const trophyCarousel = readFileSync(new URL("../components/touchline/ClubTrophyCarousel.tsx", import.meta.url), "utf8");
 const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
 const technicalStyles = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.module.css", import.meta.url), "utf8");
@@ -20,27 +23,30 @@ function indexOfRequired(source: string, token: string) {
 
 test("ClubHub places identity and honours before the matchday surface, where the match-up now lives", () => {
   const heroStart = indexOfRequired(page, '<header className="club-hub-hero">');
+  const tableStart = page.indexOf("<ClubHubLeagueTableSection", heroStart);
+  const overviewStart = page.indexOf("<ClubHubPremiumOverviewSection", tableStart);
   const feedStart = page.indexOf('id="club-feed"', heroStart);
   const lineupStart = page.indexOf("<ClubHubLineupSection", heroStart);
   const technicalStart = page.indexOf("<ClubHubTechnicalSections", lineupStart);
-  const tableStart = page.indexOf("<ClubHubLeagueTableSection", technicalStart);
   const touchlineCardsStart = page.indexOf("<ClubHubCardsSection", tableStart);
   const lineupHelperStart = indexOfRequired(page, "async function ClubHubLineupSection");
   const lineupHelperEnd = indexOfRequired(page, "async function ClubHubTechnicalSections");
   const hero = page.slice(heroStart, lineupStart);
   const lineupSection = page.slice(lineupHelperStart, lineupHelperEnd);
 
-  assert.ok(feedStart >= 0 && lineupStart >= 0 && technicalStart >= 0 && tableStart >= 0 && touchlineCardsStart >= 0);
+  assert.ok(tableStart >= 0 && overviewStart >= 0 && feedStart >= 0 && lineupStart >= 0 && technicalStart >= 0 && touchlineCardsStart >= 0);
   assert.match(hero, /<ClubTrophyCarousel/);
   assert.doesNotMatch(hero, /club-hub-next-match|ClubHubLiveFixtureScore/);
   assert.match(lineupSection, /matchup=\{\{/);
   assert.match(lineupSection, /fixtureId: matchSnapshot\.previewFixtureId/);
+  assert.ok(heroStart < tableStart);
+  assert.ok(tableStart < overviewStart);
+  assert.ok(overviewStart < feedStart);
   assert.ok(heroStart < lineupStart);
   assert.ok(heroStart < feedStart);
   assert.ok(feedStart < lineupStart);
   assert.ok(lineupStart < technicalStart);
-  assert.ok(technicalStart < tableStart);
-  assert.ok(tableStart < touchlineCardsStart);
+  assert.ok(technicalStart < touchlineCardsStart);
   assert.doesNotMatch(hero, /Official club value|Valor oficial do clube|marketValuePending|formatCompactEuro/);
   assert.doesNotMatch(hero, /touchlineCards|touchlinePoints|squadSource|club-hub-metrics/);
   assert.doesNotMatch(hero, /market-transfer/);
@@ -56,15 +62,18 @@ test("ClubHub gives the reusable club hero premium motion without sacrificing na
   assert.doesNotMatch(trophyCarousel, /<small title=\{honour\.label\}>/);
   assert.match(page, /<ClubHubSectionNavigation locale=\{locale\}/);
   assert.match(sectionNavigation, /TouchlineGlobalNavigation\.module\.css/);
-  assert.match(sectionNavigation, /icon: Newspaper[\s\S]*?icon: CalendarDays[\s\S]*?icon: Trophy[\s\S]*?icon: UsersRound/);
+  assert.match(sectionNavigation, /icon: Trophy[\s\S]*?icon: Newspaper[\s\S]*?icon: CalendarDays[\s\S]*?icon: UsersRound/);
   assert.match(sectionNavigation, /IntersectionObserver/);
   assert.match(sectionNavigation, /activeTarget/);
   assert.match(sectionNavigation, /aria-current=\{activeTarget === target \? "location" : undefined\}/);
-  assert.match(sectionNavigationStyles, /\.sectionLink\[data-active="true"\]/);
+  assert.match(sectionNavigation, /className=\{sharedLinkClassName\}/);
+  assert.doesNotMatch(sectionNavigationStyles, /\.sectionLink\[data-active="true"\]/);
+  assert.doesNotMatch(sectionNavigationStyles, /\.sectionLink\s*\{/);
+  assert.match(globalNavigationStyles, /\.link\[aria-current="location"\]/);
   assert.match(sectionNavigation, /data-visible=\{showBackToTop\}/);
   assert.match(sectionNavigation, /window\.scrollTo\(\{ top: 0, left: 0, behavior: "instant" as ScrollBehavior \}\)/);
   assert.match(page, /id="club-hub-top" className="club-hub-top-anchor"/);
-  assert.match(page, /index="01"[\s\S]*?index="02"[\s\S]*?index="03"[\s\S]*?index="04"/);
+  assert.match(page, /index="01"[\s\S]*?index="02"[\s\S]*?index="03"/);
   assert.match(sectionNavigationStyles, /\.navigation \{[\s\S]*?position: sticky[\s\S]*?width: max-content;[\s\S]*?margin: 0 auto/);
   assert.match(sectionNavigationStyles, /\.backToTop\[data-visible="true"\]/);
   assert.match(page, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?animation: none !important/);
@@ -103,6 +112,23 @@ test("the official league table remains server-owned and separate from TouchLine
   assert.match(page, /loadTouchlineOfficialLeagueTable\(\)/);
   assert.match(page, /<TouchlineOfficialLeagueTable[\s\S]*?variant="profile"/);
   assert.match(page, /className="club-hub-touchline"/);
+});
+
+test("the league table is the first compact chapter below navigation and owns its internal scroll", () => {
+  const navigationStart = indexOfRequired(page, "<ClubHubSectionNavigation");
+  const tableStart = page.indexOf('id="club-table"', navigationStart);
+  const overviewStart = page.indexOf("<ClubHubPremiumOverviewSection", navigationStart);
+
+  assert.ok(navigationStart < tableStart && tableStart < overviewStart);
+  assert.match(page.slice(navigationStart, overviewStart), /ClubHubLeagueTableSection/);
+  assert.doesNotMatch(page.slice(navigationStart, overviewStart), /League pulse|Pulso da liga|Official 20-club standings|Classificação oficial dos 20 clubes/);
+  assert.match(leagueTable, /tabIndex=\{variant === "profile" \? 0 : undefined\}/);
+  assert.match(leagueTable, /Scrollable league table, 20 clubs/);
+  assert.match(leagueTableStyles, /\.profile\s*\{[\s\S]*?grid-template-columns:/);
+  assert.match(leagueTableStyles, /\.profile \.tableWrap\s*\{[\s\S]*?max-height:[\s\S]*?overflow-y: auto/);
+  assert.match(leagueTableStyles, /\.profile \.tableWrap thead\s*\{[\s\S]*?position: sticky/);
+  assert.match(leagueTableStyles, /@media \(max-width: 560px\)[\s\S]*?\.profile \.tableWrap table \{ min-width: 100%; \}/);
+  assert.match(leagueTableStyles, /\.profile \.tableWrap th:nth-child\(7\)[\s\S]*?display: none/);
 });
 
 test("the functional ClubHub uses the approved premium overview with canonical data only", () => {

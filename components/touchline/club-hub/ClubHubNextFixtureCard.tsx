@@ -21,19 +21,9 @@ type FixtureTeam = Readonly<{
 type Props = Readonly<{
   awayTeam: FixtureTeam;
   awayPosition: number | null;
-  currentClubTeamId: string;
   homeTeam: FixtureTeam;
   homePosition: number | null;
   initialTimeZone: string;
-  leagueTable: Readonly<{
-    state: string;
-    rows: readonly Readonly<{
-      displayPosition: number | null;
-      team: Readonly<{ teamId: string; name: string; logoUrl: string | null }>;
-      played: number;
-      points: number;
-    }>[];
-  }>;
   roundName: string;
   startsAt: string;
   locale?: TouchLineLocale;
@@ -63,11 +53,9 @@ function positionLabel(position: number | null, locale: TouchLineLocale) {
 export default function ClubHubNextFixtureCard({
   awayTeam,
   awayPosition,
-  currentClubTeamId,
   homeTeam,
   homePosition,
   initialTimeZone,
-  leagueTable,
   locale = "en-GB",
   previewHref = "/visual-qa/clubhub-next-fixture-post",
   roundName,
@@ -81,8 +69,8 @@ export default function ClubHubNextFixtureCard({
   );
 
   const localKickoff = useMemo(
-    () => formatTouchlineLocalKickoff(startsAt, timeZone),
-    [startsAt, timeZone],
+    () => formatTouchlineLocalKickoff(startsAt, timeZone, locale),
+    [locale, startsAt, timeZone],
   );
 
   if (!localKickoff) return null;
@@ -110,53 +98,6 @@ export default function ClubHubNextFixtureCard({
         <time dateTime={startsAt}>{localKickoff.date} · {localKickoff.time}</time>
         <small>{portuguese ? "Seu horário local" : "Your local time"} · {localKickoff.zoneName}</small>
       </div>
-      <section className={styles.nextFixtureTable} aria-label="Premier League table">
-        <header>
-          <strong>{portuguese ? "Tabela da liga" : "League table"}</strong>
-          <span>{leagueTable.state === "ready" || leagueTable.state === "pending_no_final" ? "TouchLine Verified" : (portuguese ? "Aguardando tabela verificada" : "Awaiting verified table")}</span>
-        </header>
-        <div className={styles.nextFixtureTableHead} aria-hidden="true">
-          <span>Pos</span><span>Club</span><span>P</span><span>Pts</span>
-        </div>
-        <div
-          className={styles.nextFixtureTableScroller}
-          tabIndex={0}
-          aria-label={portuguese ? "Tabela da Premier League com rolagem, 20 clubes" : "Scrollable Premier League table, 20 clubs"}
-          onKeyDown={(event) => {
-            const distances: Readonly<Record<string, number>> = {
-              ArrowDown: 30,
-              ArrowUp: -30,
-              PageDown: 112,
-              PageUp: -112,
-            };
-            if (event.key === "Home" || event.key === "End") {
-              event.preventDefault();
-              event.currentTarget.scrollTo({ top: event.key === "Home" ? 0 : event.currentTarget.scrollHeight, behavior: "smooth" });
-              return;
-            }
-            const top = distances[event.key];
-            if (!top) return;
-            event.preventDefault();
-            event.currentTarget.scrollBy({ top, behavior: "smooth" });
-          }}
-        >
-          {leagueTable.rows.map((row) => {
-            const fixtureClub = row.team.teamId === homeTeam.teamId || row.team.teamId === awayTeam.teamId;
-            const currentClub = row.team.teamId === currentClubTeamId;
-            return (
-              <div
-                className={`${styles.nextFixtureTableRow}${fixtureClub ? ` ${styles.nextFixtureTableFixtureClub}` : ""}${currentClub ? ` ${styles.nextFixtureTableCurrentClub}` : ""}`}
-                key={row.team.teamId}
-              >
-                <span>{row.displayPosition ?? "—"}</span>
-                <span>{row.team.logoUrl ? <Image alt="" height={17} src={row.team.logoUrl} width={17} /> : <i />}<b>{row.team.name}</b></span>
-                <span>{row.played}</span>
-                <strong>{row.points}</strong>
-              </div>
-            );
-          })}
-        </div>
-      </section>
       {previewHref ? (
         <Link className={styles.nextFixturePreviewLink} href={previewHref}>
           {portuguese ? "Ver prévia da arte da partida" : "View next-match post preview"}

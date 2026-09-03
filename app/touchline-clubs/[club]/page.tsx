@@ -683,11 +683,9 @@ async function ClubHubPremiumOverviewSection({
         <ClubHubNextFixtureCard
           awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
           awayPosition={awayPosition}
-          currentClubTeamId={club.teamId}
           homeTeam={{ teamId: homeClub.teamId, name: fixture.homeTeam?.name ?? homeClub.name, shortCode: homeClub.shortCode, logoUrl: homeClub.logoUrl }}
           homePosition={homePosition}
           initialTimeZone={initialTimeZone}
-          leagueTable={tableView}
           locale={locale}
           previewHref={null}
           roundName={fixture.roundName ?? (portuguese ? "Rodada pendente" : "Round pending")}
@@ -844,15 +842,23 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         </header>
         <ClubHubSectionNavigation locale={locale} />
 
-        <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando visão geral do clube" : "Preparing club overview"} />}>
-          <ClubHubPremiumOverviewSection
-            club={club}
-            locale={locale}
-            presentationPromise={presentationPromise}
-            viewerAccessPromise={viewerAccessPromise}
-            tablePromise={tablePromise}
-          />
-        </Suspense>
+        <div className="club-hub-chapter club-hub-table-chapter" id="club-table">
+          <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando classificação" : "Updating standings"} />}>
+            <ClubHubLeagueTableSection club={club} locale={locale} tablePromise={tablePromise} />
+          </Suspense>
+        </div>
+
+        <div className="club-hub-chapter club-hub-overview-chapter">
+          <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando visão geral do clube" : "Preparing club overview"} />}>
+            <ClubHubPremiumOverviewSection
+              club={club}
+              locale={locale}
+              presentationPromise={presentationPromise}
+              viewerAccessPromise={viewerAccessPromise}
+              tablePromise={tablePromise}
+            />
+          </Suspense>
+        </div>
 
         <div className="club-hub-chapter" id="club-feed">
           <ClubHubChapterMarker
@@ -894,20 +900,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           </div>
         </div>
 
-        <div className="club-hub-chapter" id="club-table">
-          <ClubHubChapterMarker
-            index="03"
-            label={locale === "pt-BR" ? "Classificação" : "Rankings"}
-            note={locale === "pt-BR" ? "Tabela oficial da competição" : "Official competition table"}
-          />
-          <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando classificação" : "Updating standings"} />}>
-            <ClubHubLeagueTableSection club={club} locale={locale} tablePromise={tablePromise} />
-          </Suspense>
-        </div>
-
         <div className="club-hub-chapter" id="club-squad">
           <ClubHubChapterMarker
-            index="04"
+            index="03"
             label={locale === "pt-BR" ? "Elenco" : "Squad"}
             note={locale === "pt-BR" ? "Cards e perfis oficiais do clube" : "Official club cards and profiles"}
           />

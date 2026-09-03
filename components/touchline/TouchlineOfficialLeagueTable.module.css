@@ -11,7 +11,115 @@
 }
 
 .directory {}
-.profile {}
+
+.profile {
+  display: grid;
+  grid-template-columns: minmax(220px, .48fr) minmax(0, 1.52fr);
+  align-items: stretch;
+  gap: clamp(16px, 2.2vw, 30px);
+  min-height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  border-color: rgba(163, 255, 18, .38);
+  padding: clamp(16px, 2vw, 24px);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--club-accent, #b5ff4b) 12%, rgba(3, 15, 11, .96)), rgba(1, 9, 7, .96) 44%),
+    rgba(1, 9, 7, .96);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .3), 0 0 28px rgba(163, 255, 18, .035), inset 0 1px rgba(255, 255, 255, .045);
+}
+
+.profile .header {
+  grid-column: 1;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 6px 4px;
+}
+
+.profile .header h2 {
+  max-width: 9ch;
+  font-size: clamp(27px, 3vw, 42px);
+}
+
+.profile .header p {
+  max-width: 32ch;
+  font-size: 11px;
+}
+
+.profile .headerActions {
+  width: 100%;
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.profile .seasonStatus,
+.profile .source {
+  border-radius: 10px;
+}
+
+.profile .source {
+  width: 100%;
+  border-radius: 10px;
+  padding: 8px 10px;
+  white-space: normal;
+}
+
+.profile .notice,
+.profile .status {
+  grid-column: 2;
+  margin-top: 0;
+}
+
+.profile .tableWrap {
+  grid-column: 2;
+  max-height: 292px;
+  margin-top: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(163, 255, 18, .72) rgba(255, 255, 255, .035);
+  scrollbar-width: thin;
+  touch-action: pan-y;
+}
+
+.profile .tableWrap:focus-visible {
+  outline: 2px solid rgba(187, 255, 87, .92);
+  outline-offset: -3px;
+}
+
+.profile .tableWrap table {
+  min-width: 660px;
+}
+
+.profile .tableWrap thead {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  background: rgba(3, 16, 12, .98);
+  box-shadow: 0 1px rgba(255, 255, 255, .08), 0 10px 24px rgba(0, 0, 0, .24);
+}
+
+.profile .tableWrap th,
+.profile .tableWrap td {
+  padding-block: 5px;
+  font-size: 10px;
+}
+
+.profile .tableWrap thead th {
+  font-size: 8px;
+}
+
+.profile .tableWrap tbody th a {
+  min-height: 36px;
+  font-size: 11px;
+}
+
+.profile .tableWrap tbody th img {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+}
 
 .header {
   display: flex;
@@ -340,6 +448,10 @@
   .source { max-width: 100%; white-space: normal; }
   .tableWrap table { min-width: 660px; }
   .form { display: none; }
+  .profile { grid-template-columns: minmax(190px, .58fr) minmax(0, 1.42fr); }
+  .profile .header h2 { font-size: 29px; }
+  .profile .header p { font-size: 10px; }
+  .profile .tableWrap { max-height: 250px; }
 }
 
 @media (max-width: 560px) {
@@ -363,4 +475,20 @@
   .tableWrap thead th:nth-child(10) { width: 34px; }
   .tableWrap tbody th a { min-height: 44px; gap: 7px; padding: 5px 4px; font-size: 11px; }
   .tableWrap tbody th img { width: 28px; height: 28px; flex-basis: 28px; }
+  .profile { display: block; }
+  .profile .header { padding: 0 0 14px; }
+  .profile .header h2 { max-width: none; }
+  .profile .header p { max-width: 52ch; }
+  .profile .headerActions { display: grid; grid-template-columns: 1fr 1fr; }
+  .profile .tableWrap { max-height: 246px; }
+  .profile .tableWrap table { min-width: 100%; }
+  .profile .tableWrap th:nth-child(7),
+  .profile .tableWrap td:nth-child(7),
+  .profile .tableWrap th:nth-child(8),
+  .profile .tableWrap td:nth-child(8) { display: none; }
+  .profile .tableWrap thead th:nth-child(1) { width: 34px; }
+  .profile .tableWrap thead th:nth-child(3),
+  .profile .tableWrap thead th:nth-child(9),
+  .profile .tableWrap thead th:nth-child(10) { width: 32px; }
+  .profile .tableWrap tbody th img { width: 24px; height: 24px; flex-basis: 24px; }
 }

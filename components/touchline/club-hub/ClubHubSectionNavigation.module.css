@@ -16,24 +16,8 @@
 
 .navigation::-webkit-scrollbar { display: none; }
 
-.sectionLink,
 .backToTop {
   flex: 0 0 auto;
-  background: rgba(3, 12, 9, .9);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, .3), inset 0 1px rgba(255, 255, 255, .035);
-  backdrop-filter: blur(18px);
-}
-
-.sectionLink { padding-inline: 14px; }
-
-.sectionLink[data-active="true"] {
-  border-color: rgba(163, 255, 18, .88);
-  color: #071005;
-  background: #a3ff12;
-  box-shadow:
-    0 12px 28px rgba(0, 0, 0, .3),
-    0 0 18px rgba(163, 255, 18, .2),
-    inset 0 1px rgba(255, 255, 255, .32);
 }
 
 .backToTop {
@@ -70,14 +54,6 @@
     margin-top: 0;
   }
 
-  .sectionLink {
-    min-height: 44px;
-    gap: 5px;
-    padding-inline: 10px;
-    font-size: 9px;
-  }
-
-  .sectionLink svg { width: 13px; height: 13px; }
 }
 
 @media (orientation: landscape) and (max-width: 1100px) and (max-height: 520px) {
@@ -88,7 +64,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sectionLink,
   .backToTop {
     transition: none !important;
   }

@@ -182,7 +182,7 @@ export default function TouchlineOfficialLeagueTable({
         <div>
           <span className={styles.eyebrow}>{dictionary.eyebrow}</span>
           <h2 id={id ? `${id}-title` : undefined}>{dictionary.title}</h2>
-          <p>{dictionary.description}</p>
+          {variant === "directory" ? <p>{dictionary.description}</p> : null}
         </div>
         <div className={styles.headerActions}>
           {action ? <Link className={styles.action} href={action.href}>{action.label}</Link> : null}
@@ -215,7 +215,11 @@ export default function TouchlineOfficialLeagueTable({
               <p>{status.description}</p>
             </div>
           ) : null}
-          <div className={styles.tableWrap}>
+          <div
+            className={styles.tableWrap}
+            tabIndex={variant === "profile" ? 0 : undefined}
+            aria-label={variant === "profile" ? (effectiveLocale === "pt-BR" ? "Tabela rolável da liga, 20 clubes" : "Scrollable league table, 20 clubs") : undefined}
+          >
             <table>
               <caption>{dictionary.caption}</caption>
               <thead>

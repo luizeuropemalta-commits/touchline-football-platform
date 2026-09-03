@@ -1,5 +1,9 @@
 import ClubHubPremiumPrototype from "@/components/touchline/club-hub/ClubHubPremiumPrototype";
 import { headers } from "next/headers";
+import {
+  TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID,
+  type TouchlineOfficialLeagueTable,
+} from "@/lib/football-data/official-league-table";
 import { loadTouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table-server";
 import { readPublicPremierSquad } from "@/lib/football-data/public-premier-squad-server";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
@@ -46,31 +50,58 @@ export default async function ClubHubPremiumRedesignPage({
     readTouchlineFullTimeVisualQaPreview(),
   ]);
 
-  const tableView = table?.rows.length === 20 ? {
-    state: table.state,
-    asOf: table.asOf,
-    rows: table.rows.map((row) => ({
+  const snapshotRows = qaSnapshot.table.rows.map((row) => {
+    const tiedRows = qaSnapshot.table.rows.filter((candidate) => (
+      candidate.points === row.points
+      && candidate.goalDifference === row.goalDifference
+      && candidate.goalsFor === row.goalsFor
+    ));
+    const betterRows = qaSnapshot.table.rows.filter((candidate) => (
+      candidate.points > row.points
+      || (candidate.points === row.points && candidate.goalDifference > row.goalDifference)
+      || (
+        candidate.points === row.points
+        && candidate.goalDifference === row.goalDifference
+        && candidate.goalsFor > row.goalsFor
+      )
+    ));
+    return {
+      sportsRank: betterRows.length + 1,
+      isTied: tiedRows.length > 1,
       displayPosition: row.displayPosition,
       team: {
-        teamId: row.team.providerTeamId,
+        providerTeamId: row.team.teamId,
         name: row.team.name,
+        shortCode: row.team.shortCode,
+        slug: row.team.slug,
         logoUrl: row.team.logoUrl,
       },
       played: row.played,
+      won: row.won,
+      drawn: row.drawn,
+      lost: row.lost,
+      goalsFor: row.goalsFor,
+      goalsAgainst: row.goalsAgainst,
       goalDifference: row.goalDifference,
       points: row.points,
-    })),
-  } : {
-    state: qaSnapshot.table.state,
+      form: row.form.filter((result): result is "W" | "D" | "L" => (
+        result === "W" || result === "D" || result === "L"
+      )),
+      liveFixture: null,
+    };
+  });
+  const snapshotTable: TouchlineOfficialLeagueTable = {
+    state: qaSnapshot.table.state === "ready" ? "ready" : "unavailable",
+    competitionProviderId: TOUCHLINE_ENGLAND_OFFICIAL_COMPETITION_PROVIDER_ID,
+    season: null,
     asOf: qaSnapshot.table.asOf,
-    rows: qaSnapshot.table.rows.map((row) => ({
-      displayPosition: row.displayPosition,
-      team: { teamId: row.team.teamId, name: row.team.name, logoUrl: row.team.logoUrl },
-      played: row.played,
-      goalDifference: row.goalDifference,
-      points: row.points,
-    })),
+    coverage: qaSnapshot.table.coverage,
+    rows: snapshotRows,
+    reason: null,
   };
+  const tableView: TouchlineOfficialLeagueTable = table?.rows.length === 20
+    ? table
+    : snapshotTable;
 
   const squadView = squad?.status === 200 && squad.body.ok ? {
     state: squad.body.dataQuality.canonicalProjectionState,
@@ -93,8 +124,8 @@ export default async function ClubHubPremiumRedesignPage({
   const feedView = !feed || feed.state === "unavailable"
     ? { state: "empty" as const, items: [], nextCursor: null }
     : feed;
-  const arsenalPosition = tableView.rows.find((row) => row.team.teamId === qaSnapshot.nextFixture.homeTeam.teamId)?.displayPosition ?? null;
-  const chelseaPosition = tableView.rows.find((row) => row.team.teamId === qaSnapshot.nextFixture.awayTeam.teamId)?.displayPosition ?? null;
+  const arsenalPosition = tableView.rows.find((row) => row.team.providerTeamId === qaSnapshot.nextFixture.homeTeam.teamId)?.displayPosition ?? null;
+  const chelseaPosition = tableView.rows.find((row) => row.team.providerTeamId === qaSnapshot.nextFixture.awayTeam.teamId)?.displayPosition ?? null;
   const selectedLeader = qaSnapshot.ranking.leaders.find((leader) => leader.teamId === club.teamId) ?? null;
   const canonicalCoach = touchlineLiveCoachForTeam(club.teamId);
   const coachClassification = canonicalCoach

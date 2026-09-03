@@ -51,6 +51,7 @@
 ## UX and documentation
 
 - User-facing work requires actual rendered human inspection on desktop and mobile. Do not claim visual PASS from source or tests alone.
+- The shared TouchLine button system is the design authority across the product. Reuse the canonical component or shared style for shape, height, border, typography, colour, hover, focus and motion; page-level CSS may control placement and responsive flow only. A new visual button family requires explicit owner approval.
 - Update `CURRENT_STATE.md` and the authoritative execution ledger after material work.
 - Mark obsolete rules `SUPERSEDED`; preserve historical evidence.
 - Use the smallest sufficient mode: DAILY for focused work, CRITICAL ENGINEERING for data/security/architecture, RELEASE for promotion gates, and AUDIT as read-only first.
