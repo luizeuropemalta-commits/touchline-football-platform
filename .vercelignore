@@ -26,6 +26,10 @@ docs/touchline-arena/*
 !docs/touchline-arena/social-publishing-playbook
 docs/touchline-arena/social-publishing-playbook/*
 !docs/touchline-arena/social-publishing-playbook/CANONICAL_SOCIAL_ICON_LEXICON.md
+!docs/touchline-arena/social-publishing-playbook/042_FULL_TIME_OWNER_ART_APPROVAL.md
+!docs/touchline-arena/social-publishing-playbook/043_HAT_TRICK_OWNER_ART_APPROVAL.md
+!docs/touchline-arena/social-publishing-playbook/TEMPLATE_IMPLEMENTATION_STATUS.md
+!docs/touchline-arena/social-publishing-playbook/VISUAL_STANDARD.md
 exports
 TOUCHLINE_VISUAL_AUDIT_2026-07-31
 TOUCHLINE_VISUAL_AUDIT_2026-07-31 2
