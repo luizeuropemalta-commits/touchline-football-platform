@@ -1,5 +1,12 @@
 # TouchLine Current State
 
+## Functional ClubHub content architecture — LOCAL PREMIUM REVIEW
+
+- On 3 September 2026 the functional `/touchline-clubs/[club]` template was reorganised below the approved club hero without creating twenty separate pages or changing any football authority. The shared order is now premium overview, `01 Official channel`, `02 Matchday`, `03 Rankings` and `04 Squad`; Arsenal remains the visual example while every canonical club receives its own verified data through the same route.
+- The persistent section control now identifies the active chapter, retains keyboard-accessible anchors and exposes the existing return-to-top action only after the hero leaves view. Feed is promoted ahead of Matchday, while the official pitch, technical staff, bench and outside-match roster form one coherent Matchday chapter. Technical and roster surfaces now use the TouchLine green system instead of a competing cyan treatment.
+- Missing next-fixture or card-ranking evidence receives an intentional, compact verification state with the real club crest and no invented opponent, score, position or player. The existing trophy cards no longer expose a browser tooltip or any trophy hover treatment. Desktop and `390×844` browser inspection confirmed chapter activation, responsive stacking and zero horizontal document overflow.
+- Focused ClubHub/table/feed coverage passes `96/96`; TypeScript, scoped ESLint and `git diff --check` pass. This is a local review candidate awaiting owner visual approval. No commit, push, deployment, database write, Production change or social dispatch occurred.
+
 ## Consolidated QA candidate + functional premium ClubHub — LOCAL GREEN / SINGLE QA DEPLOY AUTHORIZED
 
 - The current `qa` candidate already contains the approved Markt, Arena, ClubHub and social-artwork work represented by all `139` application routes. The premium ClubHub presentation is now connected to the functional `/touchline-clubs/[club]` route for every one of the twenty canonical clubs instead of remaining only in `/visual-qa`.

@@ -212,7 +212,7 @@ export default function ClubTrophyCarousel({
                   <TrophyArtwork honour={honour} />
                 </div>
                 <strong>{honour.count}</strong>
-                <small title={honour.label}>{honour.label}</small>
+                <small>{honour.label}</small>
               </article>
             ))}
           </div>

@@ -188,6 +188,96 @@
   box-shadow: inset 0 1px rgba(255,255,255,.04), 0 16px 35px rgba(0,0,0,.22);
 }
 
+.statusRail .nextFixtureCard[data-state="awaiting"] {
+  align-content: start;
+}
+
+.awaitingFixture {
+  display: grid;
+  min-height: 286px;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.awaitingFixtureTeams {
+  display: grid;
+  grid-template-columns: 66px 36px 66px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.awaitingFixtureTeams > img {
+  justify-self: center;
+  object-fit: contain;
+  filter: drop-shadow(0 9px 14px rgba(0,0,0,.42));
+}
+
+.awaitingFixtureTeams > b {
+  color: #a3ff12;
+  font-size: 11px;
+  letter-spacing: .12em;
+}
+
+.awaitingFixtureTeams > span {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  justify-self: center;
+  border: 1px dashed rgba(163,255,18,.3);
+  border-radius: 50%;
+  color: rgba(223,255,174,.7);
+  background: rgba(163,255,18,.035);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.awaitingFixture > strong,
+.awaitingRanking > strong {
+  color: #f3ffed;
+  font-size: 13px;
+}
+
+.awaitingFixture > p,
+.awaitingRanking > p {
+  max-width: 300px;
+  margin: 0;
+  color: rgba(241,255,234,.48);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.awaitingRanking {
+  display: grid;
+  min-height: 236px;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.awaitingRanking > span {
+  display: grid;
+  width: 78px;
+  height: 96px;
+  place-items: center;
+  margin-bottom: 5px;
+  border: 1px solid rgba(163,255,18,.16);
+  border-radius: 18px;
+  color: rgba(163,255,18,.7);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(163,255,18,.11), transparent 56%),
+    rgba(0,0,0,.2);
+  box-shadow: inset 0 1px rgba(255,255,255,.05), 0 16px 32px rgba(0,0,0,.22);
+  font-size: 26px;
+  font-weight: 800;
+}
+
 .nextFixtureHeading { display: flex; align-items: center; gap: 8px; }
 .nextFixtureHeading svg { width: 16px; }
 .nextFixtureHeading > span { color: rgba(241,255,234,.48); font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }

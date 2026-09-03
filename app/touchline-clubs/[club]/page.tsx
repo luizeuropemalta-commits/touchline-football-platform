@@ -13,6 +13,7 @@ import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNav
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
 import ClubHubNextFixtureCard from "@/components/touchline/club-hub/ClubHubNextFixtureCard";
+import ClubHubSectionNavigation from "@/components/touchline/club-hub/ClubHubSectionNavigation";
 import premiumStyles from "@/components/touchline/club-hub/ClubHubPremiumPrototype.module.css";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
@@ -397,6 +398,17 @@ function ClubHubDeferredSection({ label, size }: { label: string; size: "lineup"
   );
 }
 
+function ClubHubChapterMarker({ index, label, note }: { index: string; label: string; note: string }) {
+  return (
+    <div className="club-hub-chapter-marker" aria-hidden="true">
+      <span>{index}</span>
+      <i />
+      <strong>{label}</strong>
+      <small>{note}</small>
+    </div>
+  );
+}
+
 async function ClubHubLineupSection({
   club,
   locale,
@@ -682,11 +694,19 @@ async function ClubHubPremiumOverviewSection({
           startsAt={fixture.startsAt}
         />
       ) : (
-        <article className={premiumStyles.nextFixtureCard} role="status">
+        <article className={premiumStyles.nextFixtureCard} data-state="awaiting" role="status">
           <div className={premiumStyles.nextFixtureHeading}>
             <span>{portuguese ? "Próximo confronto" : "Next fixture"}</span>
           </div>
-          <p>{portuguese ? "Aguardando a próxima partida verificada." : "Awaiting the next verified fixture."}</p>
+          <div className={premiumStyles.awaitingFixture}>
+            <div className={premiumStyles.awaitingFixtureTeams} aria-hidden="true">
+              {club.logoUrl ? <Image alt="" height={58} src={club.logoUrl} width={58} /> : <span>{club.shortCode}</span>}
+              <b>VS</b>
+              <span>?</span>
+            </div>
+            <strong>{portuguese ? "Próxima partida em verificação" : "Next match under verification"}</strong>
+            <p>{portuguese ? "O confronto aparecerá quando a fonte oficial estiver confirmada." : "The match-up will appear when the official source is confirmed."}</p>
+          </div>
         </article>
       )}
 
@@ -720,7 +740,13 @@ async function ClubHubPremiumOverviewSection({
           <div className={premiumStyles.playerCardVisual}>
             <TouchlineGameweekCard card={clubLeader.card} locale={locale} displayWidth={164} />
           </div>
-        ) : <p>{portuguese ? "Nenhuma pontuação provisória é exibida." : "No provisional score is shown."}</p>}
+        ) : (
+          <div className={premiumStyles.awaitingRanking} role="status">
+            <span aria-hidden="true">—</span>
+            <strong>{portuguese ? "Ranking em verificação" : "Ranking under verification"}</strong>
+            <p>{portuguese ? "Nenhuma pontuação provisória é exibida." : "No provisional score is shown."}</p>
+          </div>
+        )}
         <small>{clubLeader ? [
           `${clubLeader.totalRating.toFixed(2)} Total Rating`,
           clubLeader.overallRank ? `#${clubLeader.overallRank} ${portuguese ? "geral" : "overall"}` : null,
@@ -753,6 +779,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const tablePromise = traceClubHubLoader(club.slug, "league-table", () => loadTouchlineOfficialLeagueTable());
   return (
     <main className="club-hub" style={{ "--club-accent": club.accent, "--club-secondary": club.secondaryAccent, "--clubhub-accent": club.accent } as CSSProperties}>
+      <span id="club-hub-top" className="club-hub-top-anchor" aria-hidden="true" />
       <TouchlineGlobalNavigation
         locale={locale}
         currentRoute="clubProfile"
@@ -767,6 +794,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
       />
       <section className="club-hub-shell">
         <header className="club-hub-hero">
+          <svg className="club-hub-neon-frame" aria-hidden="true" focusable="false">
+            <rect className="club-hub-neon-trace" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="23" pathLength="100" />
+          </svg>
           {homeStadium?.interiorImageUrl ? (
             <Image
               alt=""
@@ -811,13 +841,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               )}
             </div>
           </div>
-          <nav className="club-hub-navigation" aria-label={locale === "pt-BR" ? "Seções do ClubHub" : "ClubHub sections"}>
-            <a href="#club-feed">{locale === "pt-BR" ? "Feed" : "Feed"}</a>
-            <a href="#touchline-club-lineup">{locale === "pt-BR" ? "Dia de jogo" : "Matchday"}</a>
-            <a href="#club-table">{locale === "pt-BR" ? "Classificação" : "Rankings"}</a>
-            <a href="#club-squad">{locale === "pt-BR" ? "Elenco" : "Squad"}</a>
-          </nav>
         </header>
+        <ClubHubSectionNavigation locale={locale} />
 
         <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando visão geral do clube" : "Preparing club overview"} />}>
           <ClubHubPremiumOverviewSection
@@ -829,39 +854,63 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           />
         </Suspense>
 
-        <Suspense fallback={<ClubHubDeferredSection size="lineup" label={locale === "pt-BR" ? "Preparando escalação oficial" : "Preparing official line-up"} />}>
-          <ClubHubLineupSection
-            club={club}
-            locale={locale}
-            cardLabels={cardLabels}
-            presentationPromise={presentationPromise}
-            viewerAccessPromise={viewerAccessPromise}
+        <div className="club-hub-chapter" id="club-feed">
+          <ClubHubChapterMarker
+            index="01"
+            label={locale === "pt-BR" ? "Canal oficial" : "Official channel"}
+            note={locale === "pt-BR" ? "Publicações verificadas mais recentes" : "Latest verified publications"}
           />
-        </Suspense>
-
-        <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando área técnica" : "Preparing technical area"} />}>
-          <ClubHubTechnicalSections
-            club={club}
-            locale={locale}
-            cardLabels={cardLabels}
-            presentationPromise={presentationPromise}
-            viewerAccessPromise={viewerAccessPromise}
-          />
-        </Suspense>
-
-        <div id="club-table">
-          <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando classificação" : "Updating standings"} />}>
-            <ClubHubLeagueTableSection club={club} locale={locale} tablePromise={tablePromise} />
-          </Suspense>
-        </div>
-
-        <div id="club-feed">
           <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando atualizações do clube" : "Preparing club updates"} />}>
             <ClubHubSocialFeedSection club={club} locale={locale} cursor={feedCursor ?? null} />
           </Suspense>
         </div>
 
-        <div id="club-squad">
+        <div className="club-hub-chapter club-hub-matchday-chapter">
+          <ClubHubChapterMarker
+            index="02"
+            label={locale === "pt-BR" ? "Dia de jogo" : "Matchday"}
+            note={locale === "pt-BR" ? "Escalação, treinador e banco" : "Line-up, coach and bench"}
+          />
+          <Suspense fallback={<ClubHubDeferredSection size="lineup" label={locale === "pt-BR" ? "Preparando escalação oficial" : "Preparing official line-up"} />}>
+            <ClubHubLineupSection
+              club={club}
+              locale={locale}
+              cardLabels={cardLabels}
+              presentationPromise={presentationPromise}
+              viewerAccessPromise={viewerAccessPromise}
+            />
+          </Suspense>
+
+          <div className="club-hub-matchday-support">
+            <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando área técnica" : "Preparing technical area"} />}>
+              <ClubHubTechnicalSections
+                club={club}
+                locale={locale}
+                cardLabels={cardLabels}
+                presentationPromise={presentationPromise}
+                viewerAccessPromise={viewerAccessPromise}
+              />
+            </Suspense>
+          </div>
+        </div>
+
+        <div className="club-hub-chapter" id="club-table">
+          <ClubHubChapterMarker
+            index="03"
+            label={locale === "pt-BR" ? "Classificação" : "Rankings"}
+            note={locale === "pt-BR" ? "Tabela oficial da competição" : "Official competition table"}
+          />
+          <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando classificação" : "Updating standings"} />}>
+            <ClubHubLeagueTableSection club={club} locale={locale} tablePromise={tablePromise} />
+          </Suspense>
+        </div>
+
+        <div className="club-hub-chapter" id="club-squad">
+          <ClubHubChapterMarker
+            index="04"
+            label={locale === "pt-BR" ? "Elenco" : "Squad"}
+            note={locale === "pt-BR" ? "Cards e perfis oficiais do clube" : "Official club cards and profiles"}
+          />
           <Suspense fallback={<ClubHubDeferredSection size="cards" label={locale === "pt-BR" ? "Preparando cards do elenco" : "Preparing squad cards"} />}>
             <ClubHubCardsSection
               club={club}
@@ -968,6 +1017,71 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           min-width: 0;
           max-width: 100%;
         }
+        .club-hub-chapter {
+          min-width: 0;
+          display: grid;
+          gap: 12px;
+          scroll-margin-top: 132px;
+        }
+        .club-hub-chapter > section {
+          margin-top: 0;
+        }
+        .club-hub-matchday-chapter {
+          gap: 14px;
+        }
+        .club-hub-matchday-support {
+          min-width: 0;
+          display: grid;
+          gap: 14px;
+        }
+        .club-hub-chapter-marker {
+          min-width: 0;
+          display: grid;
+          grid-template-columns: 38px minmax(40px, 1fr) auto auto;
+          align-items: center;
+          gap: 12px;
+          padding: 4px 8px;
+        }
+        .club-hub-chapter-marker > span {
+          display: grid;
+          width: 34px;
+          height: 34px;
+          place-items: center;
+          border: 1px solid rgba(163,255,18,.34);
+          border-radius: 50%;
+          color: #cfff89;
+          background: rgba(163,255,18,.055);
+          box-shadow: inset 0 1px rgba(255,255,255,.05), 0 0 16px rgba(163,255,18,.07);
+          font-size: 9px;
+          font-weight: 1000;
+          letter-spacing: .08em;
+        }
+        .club-hub-chapter-marker > i {
+          height: 1px;
+          overflow: visible;
+          background: linear-gradient(90deg, rgba(163,255,18,.52), rgba(163,255,18,.08));
+          box-shadow: 0 0 8px rgba(163,255,18,.18);
+        }
+        .club-hub-chapter-marker > strong {
+          color: #efffe6;
+          font-size: 10px;
+          font-weight: 950;
+          letter-spacing: .11em;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+        .club-hub-chapter-marker > small {
+          color: rgba(241,255,234,.42);
+          font-size: 9px;
+          font-weight: 750;
+          white-space: nowrap;
+        }
+        .club-hub-top-anchor {
+          display: block;
+          width: 0;
+          height: 0;
+          pointer-events: none;
+        }
         .club-hub-hero,
         .club-hub-board,
         .club-hub-touchline {
@@ -978,25 +1092,32 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           backdrop-filter: blur(18px);
         }
         .club-hub-hero {
-          min-height: 440px;
-          padding: clamp(24px, 4vw, 52px) clamp(24px, 4vw, 52px) 88px;
+          min-height: 456px;
+          padding: clamp(24px, 4vw, 52px) clamp(24px, 4vw, 52px) 94px;
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
           gap: 24px;
           overflow: hidden;
           position: relative;
-          border-color: color-mix(in srgb, var(--club-accent) 34%, rgba(255,255,255,.12));
+          isolation: isolate;
+          border-radius: 24px;
+          border-color: rgba(163,255,18,.34);
           background:
             radial-gradient(ellipse at 16% 48%, color-mix(in srgb, var(--club-accent) 52%, transparent) 0%, color-mix(in srgb, var(--club-accent) 22%, transparent) 30%, transparent 57%),
             radial-gradient(ellipse at 76% 22%, color-mix(in srgb, var(--club-secondary) 24%, transparent), transparent 48%),
             linear-gradient(105deg, color-mix(in srgb, var(--club-accent) 14%, #020a0b) 0%, rgba(3,13,12,.86) 48%, color-mix(in srgb, var(--club-secondary) 12%, #03100d) 100%);
-          box-shadow: 0 28px 78px color-mix(in srgb, var(--club-accent) 15%, rgba(0,0,0,.42));
+          box-shadow:
+            0 28px 78px color-mix(in srgb, var(--club-accent) 15%, rgba(0,0,0,.42)),
+            inset 0 1px 0 rgba(255,255,255,.13);
         }
         .club-hub-hero-image {
           z-index: 0;
           object-fit: cover;
           object-position: center 48%;
+          transform: scale(1.012);
+          animation: club-hub-stadium-breathe 18s ease-in-out infinite alternate;
+          will-change: transform;
         }
         .club-hub-hero-shade {
           position: absolute;
@@ -1004,48 +1125,34 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           inset: 0;
           pointer-events: none;
           background:
-            linear-gradient(90deg, rgba(2,8,6,.96) 0%, rgba(2,8,6,.78) 43%, rgba(2,8,6,.28) 78%),
-            linear-gradient(0deg, rgba(2,8,6,.97) 0%, transparent 58%);
-        }
-        .club-hub-navigation {
-          position: absolute;
-          z-index: 2;
-          right: 28px;
-          bottom: 22px;
-          left: 28px;
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
-          border: 1px solid rgba(255,255,255,.1);
-          border-radius: 20px;
-          padding: 7px;
-          background: rgba(2,10,8,.8);
-          backdrop-filter: blur(18px);
-          scrollbar-width: none;
-        }
-        .club-hub-navigation::-webkit-scrollbar { display: none; }
-        .club-hub-navigation a {
-          min-width: max-content;
-          border-radius: 14px;
-          padding: 12px 20px;
-          color: rgba(244,255,238,.7);
-          text-decoration: none;
-          font-size: 11px;
-          font-weight: 900;
-        }
-        .club-hub-navigation a:first-child,
-        .club-hub-navigation a:hover,
-        .club-hub-navigation a:focus-visible {
-          color: #071005;
-          background: #a3ff12;
-          outline: none;
+            radial-gradient(circle at 18% 48%, color-mix(in srgb, var(--club-accent) 22%, transparent), transparent 34%),
+            linear-gradient(90deg, rgba(2,8,6,.94) 0%, rgba(2,8,6,.74) 43%, rgba(2,8,6,.24) 78%),
+            linear-gradient(0deg, rgba(2,8,6,.96) 0%, transparent 62%);
         }
         #club-feed,
         #club-table,
         #club-squad,
         #touchline-club-lineup { scroll-margin-top: 84px; }
-        .club-hub-hero::after {
-          display: none;
+        .club-hub-neon-frame {
+          position: absolute;
+          z-index: 4;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          overflow: visible;
+          pointer-events: none;
+        }
+        .club-hub-neon-trace {
+          fill: none;
+          stroke: #a3ff12;
+          stroke-width: 1.35;
+          stroke-linecap: round;
+          stroke-dasharray: 5 95;
+          vector-effect: non-scaling-stroke;
+          filter:
+            drop-shadow(0 0 2px rgba(163,255,18,.98))
+            drop-shadow(0 0 7px rgba(163,255,18,.72));
+          animation: club-hub-border-sweep 8s linear infinite;
         }
         .club-hub-identity {
           position: relative;
@@ -1053,7 +1160,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         }
         .club-hub-identity {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: clamp(34px, 5vw, 78px);
           flex: 1;
           min-width: 0;
@@ -1061,9 +1168,10 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         .club-hub-title-block {
           min-width: 0;
           flex: 1;
+          animation: club-hub-content-rise .72s cubic-bezier(.2,.8,.2,1) .12s both;
         }
         .club-hub-logo {
-          width: clamp(190px, 22vw, 330px);
+          width: clamp(180px, 20vw, 298px);
           aspect-ratio: 1;
           display: grid;
           place-items: center;
@@ -1073,12 +1181,26 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           overflow: visible;
           isolation: isolate;
           transform: translateZ(0);
-          transition: transform 180ms ease;
+          transition: transform 240ms cubic-bezier(.2,.8,.2,1), filter 240ms ease;
         }
         .club-hub-logo-stack {
+          position: relative;
           display: grid;
           justify-items: center;
           flex: 0 0 auto;
+          isolation: isolate;
+          animation: club-hub-crest-arrive .78s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .club-hub-logo-stack::before {
+          content: "";
+          position: absolute;
+          z-index: -1;
+          inset: 10% 4%;
+          pointer-events: none;
+          background: radial-gradient(circle, color-mix(in srgb, var(--club-accent) 48%, transparent), transparent 68%);
+          filter: blur(26px);
+          opacity: .52;
+          animation: club-hub-crest-aura 4.8s ease-in-out infinite alternate;
         }
         .club-hub-logo img {
           width: 96%;
@@ -1089,11 +1211,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           background: transparent;
           border: 0;
           box-shadow: none;
-          filter: none;
+          filter: drop-shadow(0 22px 34px rgba(0,0,0,.46));
         }
         .club-hub-honours {
           width: min(760px, 100%);
-          margin-top: 26px;
+          margin-top: 22px;
           padding: 0;
           background: transparent;
           overflow: hidden;
@@ -1197,16 +1319,20 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           right: 2px;
         }
         .club-hub-honour {
+          position: relative;
           min-width: 0;
           border: 1px solid rgba(255,255,255,.13);
-          border-radius: 8px;
+          border-radius: 12px;
           padding: 10px 7px 9px;
           display: grid;
           place-items: center;
           gap: 4px;
+          overflow: hidden;
           text-align: center;
-          background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.2));
-          box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 14px 28px rgba(0,0,0,.22);
+          background:
+            linear-gradient(180deg, rgba(255,255,255,.1), rgba(0,0,0,.18)),
+            rgba(2,10,8,.54);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 14px 28px rgba(0,0,0,.22);
         }
         .club-hub-honour-avatar {
           width: 58px;
@@ -1239,20 +1365,47 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           color: rgba(255,255,255,.64);
-          font-size: 9px;
-          line-height: 1.15;
+          font-size: 10px;
+          line-height: 1.2;
           font-weight: 950;                  }
         .club-hub-identity span,
         .club-hub-board span,
         .club-hub-section-head span,
         .club-hub-next-match > span {
           color: #b6ff4d;
-                    font-size: 11px;
-          font-weight: 950;        }
+          font-size: 11px;
+          font-weight: 950;
+          letter-spacing: .12em;
+          text-transform: uppercase;
+        }
         .club-hub-identity h1 {
           margin: 12px 0 14px;
-          font-size: clamp(42px, 5.4vw, 86px);
-          line-height: .94;        }
+          max-width: 12ch;
+          font-size: clamp(42px, 5vw, 76px);
+          line-height: .92;
+          letter-spacing: -.045em;
+          text-wrap: balance;
+          text-shadow: 0 18px 38px rgba(0,0,0,.42);
+        }
+        @keyframes club-hub-stadium-breathe {
+          from { transform: scale(1.012); }
+          to { transform: scale(1.035); }
+        }
+        @keyframes club-hub-border-sweep {
+          to { stroke-dashoffset: -100; }
+        }
+        @keyframes club-hub-crest-arrive {
+          from { opacity: 0; transform: translate3d(-18px, 8px, 0) scale(.96); }
+          to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes club-hub-content-rise {
+          from { opacity: 0; transform: translate3d(0, 16px, 0); }
+          to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        @keyframes club-hub-crest-aura {
+          from { opacity: .34; transform: scale(.96); }
+          to { opacity: .62; transform: scale(1.05); }
+        }
         .club-hub-identity p,
         .club-hub-board p,
         .club-hub-next-match p,
@@ -1705,6 +1858,12 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             gap: 8px;
             padding-inline: 8px;
           }
+          .club-hub-chapter-marker {
+            grid-template-columns: 34px minmax(20px, 1fr) auto;
+            gap: 8px;
+            padding-inline: 2px;
+          }
+          .club-hub-chapter-marker > small { display: none; }
           .club-hub-shell {
             margin-top: 24px;
             gap: 12px;
@@ -1713,8 +1872,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             min-height: 0;
             padding: 22px 16px 82px;
           }
-          .club-hub-navigation { right: 10px; bottom: 10px; left: 10px; border-radius: 16px; }
-          .club-hub-navigation a { padding: 11px 15px; }
           .club-hub-identity { gap: 20px; }
           .club-hub-logo-stack { width: 100%; }
           .club-hub-logo { width: min(190px, 58vw); }
@@ -1780,8 +1937,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             min-height: 0;
             padding: 16px 20px 68px;
           }
-          .club-hub-navigation { right: 12px; bottom: 8px; left: 12px; }
-          .club-hub-navigation a { padding: 9px 14px; font-size: 9px; }
           .club-hub-identity {
             gap: 24px;
           }
@@ -1825,6 +1980,17 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           }
         }
         @media (prefers-reduced-motion: reduce) {
+          .club-hub-hero-image,
+          .club-hub-neon-trace,
+          .club-hub-logo-stack,
+          .club-hub-logo-stack::before,
+          .club-hub-title-block,
+          .club-hub-honour {
+            animation: none !important;
+            transition: none !important;
+          }
+          .club-hub-title-block,
+          .club-hub-logo-stack { opacity: 1; transform: none; }
           .club-hub-deferred > i::after { animation: none; transform: scaleX(1); }
         }
       `}</style>
