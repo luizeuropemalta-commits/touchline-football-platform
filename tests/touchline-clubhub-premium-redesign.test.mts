@@ -35,8 +35,8 @@ test("ClubHub redesign gives the canonical timeline the primary content position
 });
 
 test("every ClubHub post exposes like and native sharing without controlling automatic delivery", () => {
-  assert.equal((component.match(/<ClubHubShareButton/g) ?? []).length, 2);
-  assert.equal((component.match(/<ClubHubLikeButton/g) ?? []).length, 2);
+  assert.equal((component.match(/<ClubHubShareButton/g) ?? []).length, 3);
+  assert.equal((component.match(/<ClubHubLikeButton/g) ?? []).length, 3);
   assert.match(component, /feed\.items\.map/);
   assert.match(component, /aria-label="Post actions"/);
   assert.match(shareButton, /navigator\.share/);
@@ -48,6 +48,18 @@ test("every ClubHub post exposes like and native sharing without controlling aut
   assert.match(likeButton, /Unlike post/);
   assert.match(likeButton, /Like post/);
   assert.doesNotMatch(component, /Open discussion preview/);
+});
+
+test("one local FULL_TIME artifact proves exact two-club fan-out without duplication", () => {
+  assert.match(page, /readTouchlineFullTimeVisualQaPreview/);
+  assert.match(page, /requestedClub === "chelsea"/);
+  assert.match(component, /data-clubhub-preview="full-time"/);
+  assert.match(component, /data-fanout-targets/);
+  assert.match(component, /SAME CANONICAL POST/);
+  assert.match(component, /fullTimePost\.draft\.home\.name\} ClubHub/);
+  assert.match(component, /fullTimePost\.draft\.away\.name\} ClubHub/);
+  assert.match(page, /NOT A FOOTBALL CLAIM/);
+  assert.match(page, /Positions may change as the remaining Gameweek fixtures are completed/);
 });
 
 test("next fixture owns both league positions and links to the post preview", () => {
@@ -82,7 +94,7 @@ test("status rail uses verified coach and club-leading card instead of duplicati
   assert.match(page, /touchlineLiveCoachForTeam\(club\.teamId\)/);
   assert.match(page, /createTouchlineArenaCoachSlot\(canonicalCoach\.coach, null, coachClassification\.tierKey\)/);
   assert.match(page, /canonicalCoach\.coach\.displayName === qaSnapshot\.coach\.name/);
-  assert.match(page, /featuredPost\.draft\.home\.leader\.card\.canonicalPlayerId === arsenalLeader\?\.canonicalPlayerId/);
+  assert.match(page, /previewLeader && selectedLeader[\s\S]*previewLeader\.card\.canonicalPlayerId === selectedLeader\.canonicalPlayerId/);
   assert.doesNotMatch(component, /<span>Latest club post<\/span>/);
   assert.match(snapshot, /"name": "Mikel Arteta"/);
   assert.match(snapshot, /"name": "Bukayo Saka"/);

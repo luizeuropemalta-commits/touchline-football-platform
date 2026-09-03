@@ -1,6 +1,7 @@
 import {
   formatTouchlineConfirmedEventMinute,
   type TouchlineConfirmedEventKind,
+  type TouchlineSocialConfirmedEventContentType,
 } from "./social-confirmed-event-contract.ts";
 
 const DISCLOSURE = "COMING SOON • CURRENTLY IN TESTING";
@@ -39,7 +40,7 @@ function goalImpactLine(input: Readonly<{
 }
 
 export function buildTouchlineConfirmedEventCaption(input: Readonly<{
-  contentType: "GOAL_CONFIRMED" | "RED_CARD_CONFIRMED";
+  contentType: TouchlineSocialConfirmedEventContentType;
   homeName: string;
   awayName: string;
   score: Readonly<{ home: number; away: number }>;
@@ -52,6 +53,13 @@ export function buildTouchlineConfirmedEventCaption(input: Readonly<{
   matchRating: number | null;
   touchlinePoints: number;
   gameweekNumber: number;
+  confirmedGoalMoments?: readonly Readonly<{
+    eventId: string;
+    kind: "goal" | "penalty";
+    minute: number;
+    extraMinute: number | null;
+    score: Readonly<{ home: number; away: number }>;
+  }>[];
 }>) {
   const homeName = input.homeName.trim();
   const awayName = input.awayName.trim();
@@ -66,7 +74,15 @@ export function buildTouchlineConfirmedEventCaption(input: Readonly<{
     || (input.matchRating !== null && (!Number.isFinite(input.matchRating) || input.matchRating < 0))
     || !Number.isFinite(input.touchlinePoints)
     || !Number.isSafeInteger(input.gameweekNumber) || input.gameweekNumber < 1
-    || (input.contentType === "RED_CARD_CONFIRMED") !== redCard) {
+    || (input.contentType === "RED_CARD_CONFIRMED") !== redCard
+    || (input.contentType === "HAT_TRICK_HERO" && (
+      input.eventKind === "own-goal"
+      || input.confirmedGoalMoments?.length !== 3
+      || input.confirmedGoalMoments.some((moment) => (
+        !Number.isSafeInteger(moment.minute) || moment.minute < 0
+        || (moment.extraMinute !== null && (!Number.isSafeInteger(moment.extraMinute) || moment.extraMinute < 1))
+      ))
+    ))) {
     return { ok: false, reason: "CONFIRMED_EVENT_CONTEXT_INVALID" } as const;
   }
   const minute = formatTouchlineConfirmedEventMinute(input.minute, input.extraMinute);
@@ -99,9 +115,13 @@ export function buildTouchlineConfirmedEventCaption(input: Readonly<{
     `TouchLine Points ${signedPoints(input.touchlinePoints)}`,
   ].join(" · ");
   const caption = [
-    input.contentType === "GOAL_CONFIRMED" ? "GOALLLLLLL ⚽" : "Red card confirmed 🟥",
+    input.contentType === "HAT_TRICK_HERO"
+      ? "HAT-TRICK HERO ⚽⚽⚽"
+      : input.contentType === "GOAL_CONFIRMED" ? "GOALLLLLLL ⚽" : "Red card confirmed 🟥",
     `${homeName} ${input.score.home}–${input.score.away} ${awayName} · ${minute}`,
-    eventLabel,
+    input.contentType === "HAT_TRICK_HERO"
+      ? `${playerName} completes a verified hat-trick at ${minute}. Goals: ${input.confirmedGoalMoments!.map((moment) => formatTouchlineConfirmedEventMinute(moment.minute, moment.extraMinute)).join(", ")}.`
+      : eventLabel,
     ratingLine,
     "",
     "TouchLine Verified Match Data",

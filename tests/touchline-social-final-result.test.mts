@@ -10,6 +10,7 @@ import {
 } from "../lib/touchlineArena/social-final-score-events.ts";
 import { touchlineSocialContentDefinition } from "../lib/touchlineArena/social-content-registry.ts";
 import { touchlineSocialRenderPath } from "../lib/touchlineArena/social-publication-contract.ts";
+import { readTouchlineSocialTemplateRegistry } from "../lib/touchlineArena/social-template-policy-server.ts";
 
 test("042 registry keeps Feed and Story as separate immutable products", () => {
   assert.deepEqual(touchlineSocialContentDefinition("FULL_TIME"), {
@@ -92,4 +93,39 @@ test("042 SQL preserves 039/040/041, exact identities, owner boundary and outbou
   assert.match(rollback, /touchline_social_041_assert_approval_gate/);
   assert.doesNotMatch(component, /FIXTURE \{draft\.fixtureId\}/);
   assert.match(component, /GAMEWEEK \{draft\.gameweekNumber\}/);
+});
+
+test("042 owner visual review is non-publishable and does not weaken the canonical reader", () => {
+  const page = readFileSync(new URL("../app/visual-qa/social-full-time/page.tsx", import.meta.url), "utf8");
+  const preview = readFileSync(new URL("../app/visual-qa/social-full-time/preview-draft.ts", import.meta.url), "utf8");
+  const component = readFileSync(new URL("../components/touchline/social/TouchlineSocialFinalScoreDraft.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../components/touchline/social/TouchlineSocialFinalScoreDraft.module.css", import.meta.url), "utf8");
+  assert.match(page, /VERCEL_ENV === "production"/);
+  assert.match(page, /LOCAL VISUAL QA · SAMPLE DATA · NOT PUBLISHED/);
+  assert.match(page, /readTouchlineSocialFinalScoreDraft/);
+  assert.match(preview, /LOCAL_NON_PUBLISHABLE_VISUAL_QA/);
+  assert.match(preview, /readClubHubNextFixturePreview/);
+  assert.match(preview, /never enter[\s\S]*canonical 042 reader[\s\S]*outbound queue/);
+  assert.match(component, /data-source-provenance/);
+  assert.match(component, /Final wording will be generated only from the verified 042 reader/);
+  assert.match(component, /OUTBOUND DISABLED/);
+  assert.match(component, /className=\{styles\.scoreline\}/);
+  assert.match(component, /tl-shield-lime\.svg/);
+  assert.doesNotMatch(component, /SAMPLE RESULT/);
+  assert.doesNotMatch(component, /<i>—<\/i>/);
+  assert.match(css, /touchline-score-neon-orbit/);
+  assert.match(css, /mask-composite:\s*exclude/);
+  assert.match(css, /\.scoreline i[\s\S]*justify-self:\s*center/);
+  assert.doesNotMatch(css, /\.scoreline b[^}]*background/);
+  assert.doesNotMatch(css, /\.club > div[^}]*border-radius:\s*50%/);
+});
+
+test("042 approved artwork is locked to the reviewed local template checksum", async () => {
+  const approval = readFileSync(new URL("../docs/touchline-arena/social-publishing-playbook/042_FULL_TIME_OWNER_ART_APPROVAL.md", import.meta.url), "utf8");
+  const registry = await readTouchlineSocialTemplateRegistry(new URL("..", import.meta.url).pathname);
+  const fullTime = registry.find((row) => row.templateVersion === "touchline-full-time-feed-v1");
+  assert.ok(fullTime);
+  assert.match(approval, new RegExp(fullTime.visualTemplateChecksum.replace(":", "\\:")));
+  assert.match(approval, /Caption approval: \*\*PENDING/);
+  assert.match(approval, /Outbound: \*\*DISABLED/);
 });

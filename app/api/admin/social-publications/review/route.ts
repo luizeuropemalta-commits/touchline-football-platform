@@ -9,6 +9,7 @@ import { readTouchlineSocialLineupDraft } from "@/lib/touchlineArena/social-line
 import { readTouchlineSocialMatchPreviewDraft } from "@/lib/touchlineArena/social-match-preview-draft-server";
 import { readTouchlineSocialFinalScoreDraft } from "@/lib/touchlineArena/social-final-score-draft-server";
 import { readTouchlineSocialConfirmedEventDraft } from "@/lib/touchlineArena/social-confirmed-event-draft-server";
+import { TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES, type TouchlineSocialConfirmedEventContentType } from "@/lib/touchlineArena/social-confirmed-event-contract";
 import { readTouchlineSocialRankingFamilyDraft } from "@/lib/touchlineArena/social-ranking-family-draft-server";
 import {
   assertTouchlineSocialQaRuntime,
@@ -20,7 +21,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const SHA256 = /^sha256:[0-9a-f]{64}$/;
 const RANKING_CONTENT_TYPES = [
   "GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
-  "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO",
+  "GAMEWEEK_HERO", "TOP_PERFORMER",
 ] as const;
 
 function response(body: Record<string, unknown>, status = 200) {
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
   const currentState = artwork ? draft.artwork_approval_state : draft.caption_approval_state;
   if (currentChecksum !== expectedChecksum) return response({ error: "The reviewed content changed; review the current revision again." }, 409);
   if (currentState === "APPROVED") return response({ error: artwork ? "Artwork is already approved." : "Caption is already approved." }, 409);
-  if (!["LINEUP", "MATCH_PREVIEW", "FULL_TIME", "FINAL_SCORE", "GOAL_CONFIRMED", "RED_CARD_CONFIRMED",
+  if (!["LINEUP", "MATCH_PREVIEW", "FULL_TIME", "FINAL_SCORE", "GOAL_CONFIRMED", "RED_CARD_CONFIRMED", "HAT_TRICK_HERO",
     ...RANKING_CONTENT_TYPES].includes(String(draft.content_type))) {
     return response({ error: "This content type is not enabled for approval yet." }, 409);
   }
@@ -96,10 +97,11 @@ export async function POST(request: NextRequest) {
       })
       : draft.content_type === "MATCH_PREVIEW"
       ? await readTouchlineSocialMatchPreviewDraft({ fixtureId: draft.fixture_provider_id })
-      : draft.content_type === "GOAL_CONFIRMED" || draft.content_type === "RED_CARD_CONFIRMED"
+      : TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES.includes(draft.content_type as TouchlineSocialConfirmedEventContentType)
         ? await readTouchlineSocialConfirmedEventDraft(
           draft.fixture_provider_id,
           String(draft.event_provider_id ?? ""),
+          draft.content_type as TouchlineSocialConfirmedEventContentType,
         )
       : draft.content_type === "FULL_TIME" || draft.content_type === "FINAL_SCORE"
         ? await readTouchlineSocialFinalScoreDraft(draft.fixture_provider_id)
@@ -223,7 +225,7 @@ export async function POST(request: NextRequest) {
     ? "touchline_social_041_issue_review_intent"
     : RANKING_CONTENT_TYPES.includes(draft.content_type as typeof RANKING_CONTENT_TYPES[number])
       ? "touchline_social_044_issue_review_intent"
-    : draft.content_type === "GOAL_CONFIRMED" || draft.content_type === "RED_CARD_CONFIRMED"
+    : TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES.includes(draft.content_type as TouchlineSocialConfirmedEventContentType)
       ? "touchline_social_043_issue_review_intent"
     : draft.content_type === "FULL_TIME" || draft.content_type === "FINAL_SCORE"
       ? "touchline_social_042_issue_review_intent"
@@ -248,13 +250,13 @@ export async function POST(request: NextRequest) {
 
   const independentApproval = draft.content_type === "MATCH_PREVIEW"
     || draft.content_type === "FULL_TIME" || draft.content_type === "FINAL_SCORE"
-    || draft.content_type === "GOAL_CONFIRMED" || draft.content_type === "RED_CARD_CONFIRMED"
+    || TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES.includes(draft.content_type as TouchlineSocialConfirmedEventContentType)
     || RANKING_CONTENT_TYPES.includes(draft.content_type as typeof RANKING_CONTENT_TYPES[number]);
   const rpcName = draft.content_type === "MATCH_PREVIEW"
     ? "touchline_social_041_approve"
     : RANKING_CONTENT_TYPES.includes(draft.content_type as typeof RANKING_CONTENT_TYPES[number])
       ? "touchline_social_044_approve"
-    : draft.content_type === "GOAL_CONFIRMED" || draft.content_type === "RED_CARD_CONFIRMED"
+    : TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES.includes(draft.content_type as TouchlineSocialConfirmedEventContentType)
       ? "touchline_social_043_approve"
     : draft.content_type === "FULL_TIME" || draft.content_type === "FINAL_SCORE"
       ? "touchline_social_042_approve"

@@ -134,6 +134,12 @@ Quando houver alteração:
 
 ## 10. QA remoto
 
+- política obrigatória `docs/touchline/release-audit/VERCEL_COST_SAFE_COMMIT_AND_DEPLOY_POLICY.md` relida;
+- autorização explícita, ambiente-alvo e orçamento de builds remotos registrados;
+- mudanças relacionadas agrupadas e validadas localmente antes de consumir build remoto;
+- SHA exato não está já em fila, compilando ou publicado no mesmo alvo;
+- somente um caminho Git nativo; nenhum CLI/redeploy/deploy hook duplicado;
+- um build ativo por branch; sem `--force`, **Start Building Now** ou aumento de máquina/concorrência sem autorização;
 - push somente para `qa`;
 - deployment Git nativo;
 - Vercel `READY`;
@@ -166,6 +172,7 @@ Entregar:
 **QA BRANCH:**  
 **QA COMMIT:**  
 **QA DEPLOYMENT:**  
+**REMOTE BUILD BUDGET / CONSUMED:**
 **STABLE QA URL:**  
 **FILES CHANGED:**  
 **FUNCTIONAL RESULT:**  

@@ -43,6 +43,12 @@ export type TouchlineSocialRankingDraftCard = TouchlineSocialRankingCard & Reado
   officialMatchRating: number | null;
 }>;
 
+export type TouchlineSocialRankingGoalMoment = Readonly<{
+  kind: "goal" | "penalty";
+  minute: number;
+  extraMinute: number | null;
+}>;
+
 export type TouchlineSocialRankingFamilyDraft = Readonly<{
   sourceProvenance: "PERSISTED_VERIFIED_RANKING_FAMILY";
   contentType: TouchlineSocialRankingContentType;
@@ -58,12 +64,15 @@ export type TouchlineSocialRankingFamilyDraft = Readonly<{
   gameweekNumber: number;
   gameweekOpen: boolean;
   arenaImageUrl: string;
+  venueName: string | null;
   caption: string;
   rankingSnapshotId: string;
-  home: Readonly<{ teamId: string; name: string; logoUrl: string }> | null;
-  away: Readonly<{ teamId: string; name: string; logoUrl: string }> | null;
+  home: Readonly<{ teamId: string; name: string; shortCode: string; logoUrl: string }> | null;
+  away: Readonly<{ teamId: string; name: string; shortCode: string; logoUrl: string }> | null;
+  fixtureScore: Readonly<{ home: number; away: number }> | null;
   cards: readonly TouchlineSocialRankingDraftCard[];
   confirmedGoals: number | null;
+  confirmedGoalMoments: readonly TouchlineSocialRankingGoalMoment[] | null;
 }>;
 
 export type TouchlineSocialRankingFamilyDraftResult =
@@ -77,6 +86,11 @@ function text(value: unknown) {
 function timestamp(value: unknown) {
   const candidate = text(value);
   return candidate && Number.isFinite(Date.parse(candidate)) ? candidate : null;
+}
+
+function integer(value: unknown) {
+  const number = Number(value);
+  return Number.isInteger(number) ? number : null;
 }
 
 async function readActiveRankingBundle(admin: Admin) {
@@ -191,10 +205,13 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
   let gameweekNumber = 0;
   let gameweekOpen = true;
   let arenaImageUrl = "";
+  let venueName: string | null = null;
   let home: TouchlineSocialRankingFamilyDraft["home"] = null;
   let away: TouchlineSocialRankingFamilyDraft["away"] = null;
   let cards: TouchlineSocialRankingDraftCard[] = [];
   let confirmedGoals: number | null = null;
+  let confirmedGoalMoments: TouchlineSocialRankingGoalMoment[] | null = null;
+  let fixtureScore: TouchlineSocialRankingFamilyDraft["fixtureScore"] = null;
   const sourceKeys = new Set<string>(["card-ranking:touchline-england"]);
   const timestamps = [ranking.publishedAt];
 
@@ -245,13 +262,15 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
     const publicAnchor = await readPublicCompetitionFixtureByProviderId(anchorFixtureId, { providedAdmin: admin });
     const venue = publicAnchor ? resolveTouchlineFixtureVenue(publicAnchor) : null;
     arenaImageUrl = venue?.interiorImageUrl ?? "";
+    venueName = venue?.name ?? null;
   } else if (input.contentType === "PLAYER_DUEL") {
     const preview = await readTouchlineSocialMatchPreviewDraft({ fixtureId, now });
     if (!preview.ok) return { ok: false, reason: `player-duel-${preview.reason}` };
     gameweekNumber = preview.data.gameweekNumber;
     arenaImageUrl = preview.data.venue.interiorImageUrl;
-    home = { teamId: preview.data.home.club.teamId, name: preview.data.home.club.name, logoUrl: preview.data.home.club.logoUrl };
-    away = { teamId: preview.data.away.club.teamId, name: preview.data.away.club.name, logoUrl: preview.data.away.club.logoUrl };
+    venueName = preview.data.venue.name;
+    home = { teamId: preview.data.home.club.teamId, name: preview.data.home.club.name, shortCode: preview.data.home.club.shortCode, logoUrl: preview.data.home.club.logoUrl };
+    away = { teamId: preview.data.away.club.teamId, name: preview.data.away.club.name, shortCode: preview.data.away.club.shortCode, logoUrl: preview.data.away.club.logoUrl };
     cards = [cardWithRating(preview.data.home.leader), cardWithRating(preview.data.away.leader)];
     Object.keys(preview.data.sourceRevisionManifest).forEach((key) => sourceKeys.add(key));
     timestamps.push(preview.data.sourceSnapshotAt);
@@ -261,8 +280,10 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
     gameweekNumber = finalResult.data.gameweekNumber;
     gameweekOpen = false;
     arenaImageUrl = finalResult.data.venue.interiorImageUrl;
-    home = { teamId: finalResult.data.home.teamId, name: finalResult.data.home.name, logoUrl: finalResult.data.home.logoUrl };
-    away = { teamId: finalResult.data.away.teamId, name: finalResult.data.away.name, logoUrl: finalResult.data.away.logoUrl };
+    venueName = finalResult.data.venue.name;
+    home = { teamId: finalResult.data.home.teamId, name: finalResult.data.home.name, shortCode: finalResult.data.home.shortCode, logoUrl: finalResult.data.home.logoUrl };
+    away = { teamId: finalResult.data.away.teamId, name: finalResult.data.away.name, shortCode: finalResult.data.away.shortCode, logoUrl: finalResult.data.away.logoUrl };
+    fixtureScore = finalResult.data.score;
     Object.keys(finalResult.data.sourceRevisionManifest).forEach((key) => sourceKeys.add(key));
     timestamps.push(finalResult.data.sourceSnapshotAt);
     const canonical = await admin.from("football_fixtures").select("id")
@@ -301,8 +322,9 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
         return { ok: false, reason: "hat-trick-card-unavailable" };
       }
       const events = await admin.from("football_fixture_events")
-        .select("provider_player_id,event_type,event_status,info,addition")
-        .eq("fixture_id", canonicalFixtureId).eq("provider", "sportmonks");
+        .select("provider_player_id,provider_sort_order,minute,extra_minute,event_type,event_status,info,addition")
+        .eq("fixture_id", canonicalFixtureId).eq("provider", "sportmonks")
+        .order("provider_sort_order", { ascending: true }).limit(64);
       if (events.error || !Array.isArray(events.data)) return { ok: false, reason: "hat-trick-events-unavailable" };
       const goalFacts = events.data.flatMap((row) => {
         const fact = touchlineConfirmedHatTrickGoalFact({
@@ -312,10 +334,17 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
           info: String(row.info ?? ""),
           addition: String(row.addition ?? ""),
         });
-        return fact ? [fact] : [];
+        const minute = integer(row.minute);
+        const extraMinute = row.extra_minute === null ? null : integer(row.extra_minute);
+        return fact && minute !== null && minute >= 0
+          && (row.extra_minute === null || (extraMinute !== null && extraMinute >= 1))
+          ? [{ ...fact, minute, extraMinute }] : [];
       });
       confirmedGoals = countTouchlineConfirmedHatTrickGoals(goalFacts, playerId!);
       if (confirmedGoals < 3) return { ok: false, reason: "hat-trick-not-confirmed" };
+      confirmedGoalMoments = goalFacts
+        .filter((event) => event.playerId === playerId)
+        .map(({ kind, minute, extraMinute }) => ({ kind, minute, extraMinute }));
       cards = [cardWithRating({
         card: heroCard,
         totalRating: Number(ranked.totalRating),
@@ -358,12 +387,15 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
     gameweekNumber,
     gameweekOpen,
     arenaImageUrl,
+    venueName,
     caption: caption.caption,
     rankingSnapshotId: ranking.state.snapshotId!,
     home,
     away,
+    fixtureScore,
     cards,
     confirmedGoals,
+    confirmedGoalMoments,
   } as const;
   const sourceChecksum = checksumTouchlineRankingFamilyRenderSource(baseSource);
   if (!SHA256.test(sourceChecksum)) return { ok: false, reason: "source-checksum-invalid" };

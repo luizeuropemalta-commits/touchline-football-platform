@@ -247,12 +247,17 @@ export function touchlineSocialRenderPath(input: Readonly<{
   locale: "pt-BR" | "en-GB";
   revision: number;
 }>) {
+  const confirmedEvent = input.contentType === "GOAL_CONFIRMED"
+    || input.contentType === "RED_CARD_CONFIRMED"
+    || input.contentType === "HAT_TRICK_HERO";
   const rankingFamily = ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
-    "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(input.contentType);
+    "GAMEWEEK_HERO", "TOP_PERFORMER"].includes(input.contentType);
   const base = rankingFamily
     ? `/visual-qa/social-ranking?contentType=${input.contentType}&fixtureId=${input.fixtureId}`
       + `${input.scopeId ? `&scopeId=${input.scopeId}` : ""}`
       + `${input.playerId ? `&playerId=${input.playerId}` : ""}`
+    : confirmedEvent
+      ? `/visual-qa/social-confirmed-event?contentType=${input.contentType}&fixtureId=${input.fixtureId}&eventId=${input.eventId}`
     : input.contentType === "LINEUP"
     ? `/visual-qa/social-lineup?fixtureId=${input.fixtureId}&teamId=${input.teamId}`
     : input.contentType === "MATCH_PREVIEW"
@@ -313,15 +318,17 @@ export async function createTouchlineSocialPublicationDraft(input: Readonly<{
   }
   if (teamId && !NUMERIC_ID.test(teamId)) return { ok: false, reason: "INVALID_TEAM_ID" } as const;
   const rankingFamily = ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
-    "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(input.contentType);
+    "GAMEWEEK_HERO", "TOP_PERFORMER"].includes(input.contentType);
   const gameweekScoped = ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "GAMEWEEK_HERO"].includes(input.contentType);
-  const playerScoped = ["GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(input.contentType);
+  const playerScoped = ["GAMEWEEK_HERO", "TOP_PERFORMER"].includes(input.contentType);
   if (["MATCH_PREVIEW", "FULL_TIME", "FINAL_SCORE", "GOAL_CONFIRMED", "RED_CARD_CONFIRMED",
     "GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL", "GAMEWEEK_HERO",
     "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(input.contentType) && teamId) {
     return { ok: false, reason: `${input.contentType}_TEAM_ID_FORBIDDEN` } as const;
   }
-  const confirmedEvent = input.contentType === "GOAL_CONFIRMED" || input.contentType === "RED_CARD_CONFIRMED";
+  const confirmedEvent = input.contentType === "GOAL_CONFIRMED"
+    || input.contentType === "RED_CARD_CONFIRMED"
+    || input.contentType === "HAT_TRICK_HERO";
   if (confirmedEvent && (!eventId || !NUMERIC_ID.test(eventId))) {
     return { ok: false, reason: "CONFIRMED_EVENT_ID_REQUIRED" } as const;
   }
@@ -342,8 +349,12 @@ export async function createTouchlineSocialPublicationDraft(input: Readonly<{
   if (input.contentType === "FINAL_SCORE" && input.placement !== "INSTAGRAM_STORY") {
     return { ok: false, reason: "FINAL_SCORE_STORY_REQUIRED" } as const;
   }
-  if (confirmedEvent && input.placement !== "INSTAGRAM_STORY") {
+  if (input.contentType === "RED_CARD_CONFIRMED" && input.placement !== "INSTAGRAM_STORY") {
     return { ok: false, reason: "CONFIRMED_EVENT_STORY_REQUIRED" } as const;
+  }
+  if ((input.contentType === "GOAL_CONFIRMED" || input.contentType === "HAT_TRICK_HERO")
+    && input.placement !== "INSTAGRAM_FEED") {
+    return { ok: false, reason: "GOAL_FAMILY_FEED_REQUIRED" } as const;
   }
   if (rankingFamily && input.placement !== "INSTAGRAM_FEED") {
     return { ok: false, reason: "RANKING_FAMILY_FEED_REQUIRED" } as const;

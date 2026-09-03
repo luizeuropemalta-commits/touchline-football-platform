@@ -40,11 +40,21 @@ publication queue and does not replace the live canonical reader.
 
 ## Motion and export rule
 
-The website may progressively reveal the goal word and repeat the celebration.
+The website animates each letter independently: the white top line progresses
+from `G` to its final `L`, then the yellow lower line follows. The lower line
+uses the same `#f6d45f` gold as the points/rating figures. The loop repeats
+without moving the artwork canvas or changing any football fact.
 `prefers-reduced-motion` renders the complete word without animation. Before a
 PNG is captured, the exporter applies `data-static-export="true"`; Instagram,
 Facebook and other static destinations therefore always receive the complete
 headline, never an intermediate animation frame.
+
+## Club-colour perimeter rule
+
+The thin travelling perimeter neon uses the scorer club's exact canonical
+primary accent. Chelsea therefore uses canonical Chelsea blue; Manchester
+United uses canonical Manchester United red. A renderer must not choose an
+approximate colour, infer one from the stadium, or alter the canonical tone.
 
 ## Safety state
 

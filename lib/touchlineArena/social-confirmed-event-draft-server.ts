@@ -21,6 +21,7 @@ import {
   parseTouchlineEventScore,
   touchlineConfirmedEventContentType,
   type TouchlineConfirmedEventKind,
+  type TouchlineSocialConfirmedEventContentType,
 } from "@/lib/touchlineArena/social-confirmed-event-contract";
 import {
   checksumTouchlineConfirmedEventFact,
@@ -33,8 +34,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const COMPETITION_PROVIDER_ID = "8";
 const SOURCE_VERSION = "touchline-confirmed-event-v1";
-export const TOUCHLINE_GOAL_CONFIRMED_TEMPLATE_VERSION = "touchline-goal-confirmed-story-v1";
+export const TOUCHLINE_GOAL_CONFIRMED_TEMPLATE_VERSION = "touchline-goal-event-feed-v1";
 export const TOUCHLINE_RED_CARD_CONFIRMED_TEMPLATE_VERSION = "touchline-red-card-confirmed-story-v1";
+export const TOUCHLINE_HAT_TRICK_TEMPLATE_VERSION = "touchline-hat-trick-feed-v1";
 
 type EventRow = Readonly<{
   provider_event_id?: unknown;
@@ -57,7 +59,7 @@ type Score = Readonly<{ home: number; away: number }>;
 
 export type TouchlineSocialConfirmedEventDraft = Readonly<{
   sourceProvenance: "PERSISTED_VERIFIED_CONFIRMED_EVENT";
-  contentType: "GOAL_CONFIRMED" | "RED_CARD_CONFIRMED";
+  contentType: TouchlineSocialConfirmedEventContentType;
   fixtureId: string;
   eventId: string;
   capturedAt: string;
@@ -86,6 +88,13 @@ export type TouchlineSocialConfirmedEventDraft = Readonly<{
     minute: number;
     extraMinute: number | null;
   }>;
+  confirmedGoalMoments?: readonly Readonly<{
+    eventId: string;
+    kind: "goal" | "penalty";
+    minute: number;
+    extraMinute: number | null;
+    score: Score;
+  }>[];
   playerCard: ClubOwnerSquadCard;
   totalRating: number;
   matchRating: number | null;
@@ -150,6 +159,7 @@ function ratingContributionMatches(value: unknown, rating: unknown, points: unkn
 export async function readTouchlineSocialConfirmedEventDraft(
   fixtureIdInput: string,
   eventIdInput: string,
+  requestedContentType?: TouchlineSocialConfirmedEventContentType,
 ): Promise<TouchlineSocialConfirmedEventDraftResult> {
   const fixtureId = fixtureIdInput.trim();
   const eventId = eventIdInput.trim();
@@ -204,7 +214,14 @@ export async function readTouchlineSocialConfirmedEventDraft(
     addition: row.addition === null ? null : String(row.addition ?? ""),
   });
   if (!kind) return { ok: false, reason: "event-status-not-confirmed" };
-  const contentType = touchlineConfirmedEventContentType(kind);
+  const baseContentType = touchlineConfirmedEventContentType(kind);
+  const contentType = requestedContentType ?? baseContentType;
+  if (contentType === "HAT_TRICK_HERO" && kind !== "goal" && kind !== "penalty") {
+    return { ok: false, reason: "hat-trick-terminal-event-invalid" };
+  }
+  if (contentType !== "HAT_TRICK_HERO" && contentType !== baseContentType) {
+    return { ok: false, reason: "confirmed-event-content-type-mismatch" };
+  }
   const rawMinute = integer(row.minute);
   const rawExtraMinute = row.extra_minute === null ? null : integer(row.extra_minute);
   if (rawMinute === null || (row.extra_minute !== null && rawExtraMinute === null)) {
@@ -240,7 +257,7 @@ export async function readTouchlineSocialConfirmedEventDraft(
 
   let score: Score;
   let scoringTeamId: string | null = null;
-  if (contentType === "GOAL_CONFIRMED") {
+  if (contentType === "GOAL_CONFIRMED" || contentType === "HAT_TRICK_HERO") {
     const current = parseTouchlineEventScore(String(row.result ?? ""));
     const eventIndex = events.indexOf(row);
     const previousGoal = events.slice(0, eventIndex).reverse().find((candidate) => (
@@ -276,6 +293,57 @@ export async function readTouchlineSocialConfirmedEventDraft(
     const eventScore = previousGoal ? parseTouchlineEventScore(String(previousGoal.result ?? "")) : { home: 0, away: 0 };
     if (!eventScore) return { ok: false, reason: "event-score-conflict" };
     score = eventScore;
+  }
+
+  const confirmedGoalMoments = contentType === "HAT_TRICK_HERO"
+    ? events.slice(0, events.indexOf(row) + 1).flatMap((candidate) => {
+      const candidateKind = classifyTouchlineConfirmedMatchEvent({
+        type: String(candidate.event_type ?? ""), status: String(candidate.event_status ?? ""),
+        info: candidate.info === null ? null : String(candidate.info ?? ""),
+        addition: candidate.addition === null ? null : String(candidate.addition ?? ""),
+      });
+      const candidatePlayerId = String(candidate.provider_player_id ?? "");
+      const candidateEventId = String(candidate.provider_event_id ?? "");
+      const candidateMinute = integer(candidate.minute);
+      const candidateExtraMinute = candidate.extra_minute === null ? null : integer(candidate.extra_minute);
+      const candidateScore = parseTouchlineEventScore(String(candidate.result ?? ""));
+      return candidatePlayerId === playerProviderId && (candidateKind === "goal" || candidateKind === "penalty")
+        && NUMERIC_ID.test(candidateEventId) && candidateMinute !== null
+        && (candidate.extra_minute === null || candidateExtraMinute !== null) && candidateScore
+        ? [{ eventId: candidateEventId, kind: candidateKind, minute: candidateMinute,
+          extraMinute: candidateExtraMinute, score: candidateScore } as const]
+        : [];
+    })
+    : undefined;
+  if (contentType === "HAT_TRICK_HERO" && confirmedGoalMoments?.length !== 3) {
+    return { ok: false, reason: "hat-trick-third-goal-not-confirmed" };
+  }
+  if (confirmedGoalMoments) {
+    const expectedFactChecksums = new Map(confirmedGoalMoments.map((moment) => {
+      const candidate = events.find((item) => String(item.provider_event_id ?? "") === moment.eventId)!;
+      return [moment.eventId, checksumTouchlineConfirmedEventFact({
+        fixtureId,
+        eventId: moment.eventId,
+        eventKind: moment.kind,
+        result: candidate.result === null ? null : String(candidate.result ?? ""),
+        teamId: String(candidate.provider_team_id ?? ""),
+        playerId: String(candidate.provider_player_id ?? ""),
+        minute: moment.minute,
+        extraMinute: moment.extraMinute,
+      })] as const;
+    }));
+    const goalObservations = await admin.from("touchline_social_confirmed_event_observations")
+      .select("event_provider_id,event_fact_checksum,confirmation_state,stable_observation_count")
+      .eq("fixture_provider_id", fixtureId)
+      .in("event_provider_id", confirmedGoalMoments.map((moment) => moment.eventId));
+    const confirmedIds = new Set((goalObservations.data ?? []).filter((candidate) => (
+      candidate.confirmation_state === "CONFIRMED" && Number(candidate.stable_observation_count) >= 2
+      && candidate.event_fact_checksum === expectedFactChecksums.get(String(candidate.event_provider_id ?? ""))
+    )).map((candidate) => String(candidate.event_provider_id ?? "")));
+    if (goalObservations.error || confirmedIds.size !== 3
+      || confirmedGoalMoments.some((moment) => !confirmedIds.has(moment.eventId))) {
+      return { ok: false, reason: "hat-trick-goal-facts-not-stable" };
+    }
   }
 
   const [settlementResult, squadResult] = await Promise.all([
@@ -321,9 +389,9 @@ export async function readTouchlineSocialConfirmedEventDraft(
   const caption = buildTouchlineConfirmedEventCaption({
     contentType, homeName: home.name, awayName: away.name, score, playerName,
     minute, extraMinute, eventKind: kind,
-    eventTeam: (contentType === "GOAL_CONFIRMED" ? scoringTeamId : playerTeamId) === homeTeamId ? "home" : "away",
+    eventTeam: (contentType === "RED_CARD_CONFIRMED" ? playerTeamId : scoringTeamId) === homeTeamId ? "home" : "away",
     totalRating: decorated.seasonTotalRating!,
-    matchRating, touchlinePoints, gameweekNumber,
+    matchRating, touchlinePoints, gameweekNumber, confirmedGoalMoments,
   });
   if (!caption.ok) return { ok: false, reason: `caption-${caption.reason.toLowerCase()}` };
 
@@ -343,6 +411,7 @@ export async function readTouchlineSocialConfirmedEventDraft(
     caption: caption.caption, sourceVersion: SOURCE_VERSION,
     home, away, score,
     event: { kind, scoringTeamId, playerTeamId, playerProviderId, playerName, minute, extraMinute },
+    ...(confirmedGoalMoments ? { confirmedGoalMoments } : {}),
     playerCard: decorated, totalRating: decorated.seasonTotalRating!, matchRating, touchlinePoints,
   } as const;
   const sourceChecksum = checksumTouchlineConfirmedEventRenderSource(baseSource);

@@ -1,12 +1,17 @@
 # 043 confirmed-event owner art approval
 
-Status: **OWNER-APPROVED VISUAL — LOCAL ONLY**
+Status: **SUPERSEDED OWNER-APPROVED REVISION — RETAINED AS AUDIT EVIDENCE**
 
 Approved on: 2 September 2026
 
 Approved route: `/visual-qa/social-confirmed-event?design=goal`
 
 Approved placement candidate: Feed, 1080×1350
+
+This older Goal revision remains in history, but the active owner-approved Goal
+artwork is `043_GOAL_HAT_LAYOUT_OWNER_ART_APPROVAL.md`. Operational generation
+must use `touchline-goal-event-feed-v1`; it must not silently fall back to this
+older composition.
 
 ## Locked visual decisions
 

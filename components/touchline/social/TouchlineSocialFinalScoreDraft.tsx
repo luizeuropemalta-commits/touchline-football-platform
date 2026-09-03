@@ -4,11 +4,20 @@ import type { CSSProperties } from "react";
 
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import type { TouchlineSocialFinalScoreDraft } from "@/lib/touchlineArena/social-final-score-draft-server";
+import { TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES } from "@/lib/touchlineArena/social-visual-tokens";
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
 
 import styles from "./TouchlineSocialFinalScoreDraft.module.css";
 
 const TOP_CARD_WIDTH = 286;
+
+export type TouchlineSocialFinalScoreArtworkDraft = Omit<
+  TouchlineSocialFinalScoreDraft,
+  "sourceProvenance"
+> & Readonly<{
+  sourceProvenance: TouchlineSocialFinalScoreDraft["sourceProvenance"] | "LOCAL_NON_PUBLISHABLE_VISUAL_QA";
+  visualQa?: Readonly<{ sampleData: true; label: string }>;
+}>;
 
 function goalMinute(minute: number, extraMinute: number | null) {
   return `${minute}${extraMinute ? `+${extraMinute}` : ""}'`;
@@ -24,9 +33,10 @@ export default function TouchlineSocialFinalScoreDraftView({
   draft,
   placement = "feed",
 }: {
-  draft: TouchlineSocialFinalScoreDraft;
+  draft: TouchlineSocialFinalScoreArtworkDraft;
   placement?: "feed" | "story";
 }) {
+  const isVisualQa = draft.sourceProvenance === "LOCAL_NON_PUBLISHABLE_VISUAL_QA";
   const winner = draft.score.home === draft.score.away
     ? null
     : draft.score.home > draft.score.away ? draft.home : draft.away;
@@ -34,6 +44,7 @@ export default function TouchlineSocialFinalScoreDraftView({
     <main
       className={styles.canvas}
       style={{
+        ...TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES,
         "--final-home-accent": draft.home.accent,
         "--final-away-accent": draft.away.accent,
         "--final-winner-accent": winner?.accent ?? "#9eff2d",
@@ -50,9 +61,13 @@ export default function TouchlineSocialFinalScoreDraftView({
       data-starts-at={draft.startsAt}
       data-caption={draft.caption}
       data-score-state="finished"
+      data-source-provenance={draft.sourceProvenance}
+      data-visual-qa={isVisualQa ? "sample-data" : undefined}
     >
+      <div className={styles.stadium} aria-hidden="true" />
+      <div className={styles.atmosphere} aria-hidden="true" />
       <header className={styles.masthead}>
-        <span><ShieldCheck size={18} /> TOUCHLINE VERIFIED</span>
+        <span><ShieldCheck size={18} /> {isVisualQa ? draft.visualQa?.label : "TOUCHLINE VERIFIED"}</span>
         <strong>FULL-TIME REPORT</strong>
       </header>
 
@@ -68,8 +83,19 @@ export default function TouchlineSocialFinalScoreDraftView({
           </ol>
         </article>
         <div className={styles.score}>
-          <span>FULL TIME</span>
-          <strong>{draft.score.home} <i>—</i> {draft.score.away}</strong>
+          <div className={styles.scoreMark}>
+            <Image
+              src="/touchlineArena/brand/tl-shield-lime.svg"
+              alt="TouchLine"
+              width={46}
+              height={46}
+            />
+          </div>
+          <strong className={styles.scoreline} aria-hidden="true">
+            <b>{draft.score.home}</b>
+            <i>-</i>
+            <b>{draft.score.away}</b>
+          </strong>
           <small>GAMEWEEK {draft.gameweekNumber} · {draft.venue.name.toUpperCase()}</small>
         </div>
         <article className={styles.club}>
@@ -86,22 +112,22 @@ export default function TouchlineSocialFinalScoreDraftView({
 
       <section className={styles.resultStory}>
         <div className={styles.headline}>
-          <span>MATCH REPORT</span>
+          <span>{isVisualQa ? "MATCH REPORT SAMPLE" : "MATCH REPORT"}</span>
           <h1>{winner ? `${winner.name} claim the win` : "Honours shared at full time"}</h1>
-          <p>Verified final score and scorers from the TouchLine match centre.</p>
+          <p>{isVisualQa ? "Final wording will be generated only from the verified 042 reader." : "Verified final score and scorers from the TouchLine match centre."}</p>
         </div>
       </section>
 
       <section className={styles.topCard}>
         <div className={styles.topCardCopy}>
-          <span><Trophy size={18} /> TOP MATCH CARD</span>
+          <span><Trophy size={18} /> {isVisualQa ? "SAMPLE TOP MATCH CARD" : "TOP MATCH CARD"}</span>
           <h2>{draft.topMatchCard.card.name}</h2>
           <p>{draft.topMatchCard.team.name}</p>
           <div>
-            <small>OFFICIAL MATCH RATING</small>
+            <small>{isVisualQa ? "SAMPLE MATCH RATING" : "OFFICIAL MATCH RATING"}</small>
             <strong>{draft.topMatchCard.officialMatchRating.toFixed(2)}</strong>
           </div>
-          <em>Highest TouchLine Verified match rating · not TouchLine Points</em>
+          <em>{isVisualQa ? "Visual hierarchy proof only · not a football claim" : "Highest TouchLine Verified match rating · not TouchLine Points"}</em>
         </div>
         <div className={styles.cardFrame} data-player-card-axis="0deg">
           <TouchlineEliteExactCard
@@ -121,8 +147,8 @@ export default function TouchlineSocialFinalScoreDraftView({
       </section>
 
       <footer className={styles.footer}>
-        <span>TOUCHLINE ENGLAND · VERIFIED {new Date(draft.capturedAt).toISOString().slice(0, 16).replace("T", " ")} UTC</span>
-        <strong>COMING SOON <i>•</i> CURRENTLY IN TESTING</strong>
+        <span>{isVisualQa ? "LOCAL VISUAL QA · NON-PUBLISHABLE" : `TOUCHLINE ENGLAND · VERIFIED ${new Date(draft.capturedAt).toISOString().slice(0, 16).replace("T", " ")} UTC`}</span>
+        <strong>{isVisualQa ? "DESIGN REVIEW" : "COMING SOON"} <i>•</i> {isVisualQa ? "OUTBOUND DISABLED" : "CURRENTLY IN TESTING"}</strong>
       </footer>
     </main>
   );

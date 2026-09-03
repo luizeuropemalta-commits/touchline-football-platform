@@ -49,11 +49,21 @@ const TEMPLATE_PATHS = Object.freeze({
     ],
     copy: ["lib/touchlineArena/social-final-result-caption.ts"],
   },
-  "touchline-goal-confirmed-story-v1": {
+  "touchline-goal-event-feed-v1": {
     visual: [
       ...SHARED_VISUAL_PATHS,
-      "components/touchline/social/TouchlineSocialConfirmedEventDraft.tsx",
-      "components/touchline/social/TouchlineSocialConfirmedEventDraft.module.css",
+      "components/touchline/social/TouchlineSocialGoalHatLayoutDemo.tsx",
+      "components/touchline/social/TouchlineSocialGoalHatLayoutDemo.module.css",
+      "components/touchline/social/TouchlineSocialRankingDraft.module.css",
+    ],
+    copy: ["lib/touchlineArena/social-confirmed-event-caption.ts"],
+  },
+  "touchline-hat-trick-feed-v1": {
+    visual: [
+      ...SHARED_VISUAL_PATHS,
+      "components/touchline/social/TouchlineSocialGoalHatLayoutDemo.tsx",
+      "components/touchline/social/TouchlineSocialGoalHatLayoutDemo.module.css",
+      "components/touchline/social/TouchlineSocialRankingDraft.module.css",
     ],
     copy: ["lib/touchlineArena/social-confirmed-event-caption.ts"],
   },

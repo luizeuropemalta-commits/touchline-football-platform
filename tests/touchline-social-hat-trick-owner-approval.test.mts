@@ -6,6 +6,9 @@ import test from "node:test";
 const EXPECTED_COMBINED_HASH =
   "a0bc151bfbe5348e204bac32ad2893e27490d8c0dace7d1d82953d6b01a0ef38";
 
+const ACTIVE_043_CANDIDATE_COMBINED_HASH =
+  "35439440aee10bdb05fc968c31d978445c1eac7f41e045dbcc1de12f3fa41760";
+
 const EXPECTED_FILES = [
   ["components/touchline/social/TouchlineSocialRankingDraft.tsx", "8bf06f57e9c94ab30303eb799e0db43709844270c0cc2249de8eddef8ce2252f"],
   ["components/touchline/social/TouchlineSocialRankingDraft.module.css", "62e76dd7cb22e6099bdd7e7f8fe9d13822ca0f86746d9d471f5323ca6d78cd2e"],
@@ -18,6 +21,11 @@ const EXPECTED_FILES = [
   ["lib/touchlineArena/social-visual-tokens.ts", "354442783ed145e90643b18f03ad3af3f22a747eb877245c0cb421214f1cd3ce"],
   ["public/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png", "2ae6490be56d63b62523bdbf6eebb5889d906ec6e8de1724f57c985b9bdd372f"],
   ["public/touchlineArena/brand/tl-shield-lime.svg", "37522f0bfcab553f08df45300e22724af0292b7f620046c71c75ee91cb10fc3d"],
+] as const;
+
+const ACTIVE_043_CANDIDATE_FILES = [
+  ["components/touchline/social/TouchlineSocialGoalHatLayoutDemo.tsx", "5407eb29ac9a6867177b382dbece7130ccf97c16a967650331ec0ebc86ee68b8"],
+  ["components/touchline/social/TouchlineSocialGoalHatLayoutDemo.module.css", "6e837026b16f445343e17fbf5064730fceb8f377bb8eae14ccea650e0bc7c845"],
 ] as const;
 
 const sha256 = (value: Buffer | string) =>
@@ -35,14 +43,31 @@ test("owner-approved Hat-trick artwork remains byte-for-byte locked", async () =
   assert.equal(sha256(manifest), EXPECTED_COMBINED_HASH);
 });
 
-test("approval records Hat-trick as 043 and keeps the transition fail-closed", async () => {
+test("active 043 revision 4 review candidate remains byte-for-byte locked without claiming owner approval", async () => {
+  let manifest = "";
+
+  for (const [file, expectedHash] of ACTIVE_043_CANDIDATE_FILES) {
+    const actualHash = sha256(await readFile(file));
+    assert.equal(actualHash, expectedHash, `${file} changed during active 043 revision 4 review`);
+    manifest += `${actualHash}  ${file}\n`;
+  }
+
+  assert.equal(sha256(manifest), ACTIVE_043_CANDIDATE_COMBINED_HASH);
+});
+
+test("approval records Hat-trick as 043 and keeps the unapplied 047 candidate fail-closed", async () => {
   const approval = await readFile(
     "docs/touchline-arena/social-publishing-playbook/043_HAT_TRICK_OWNER_ART_APPROVAL.md",
     "utf8",
   );
 
   assert.match(approval, /Hat-trick is a \*\*043 confirmed-goal event\*\*/);
-  assert.match(approval, /known\s+transitional mismatch/);
+  assert.match(approval, /additive local migration candidate 047/);
+  assert.match(approval, /not been applied to\s+shared QA or Production/);
   assert.match(approval, /outbound remains fail-closed/);
   assert.match(approval, new RegExp(EXPECTED_COMBINED_HASH));
+  assert.match(approval, /REVISION 4 LEGIBILITY CANDIDATE IN LOCAL REVIEW/);
+  assert.match(approval, /not yet an OWNER-approved replacement/);
+  assert.match(approval, /5caf3cecb9783b42dca98452205aaae5d32c382833c9f49b4136da7b377440bc/);
+  assert.match(approval, new RegExp(ACTIVE_043_CANDIDATE_COMBINED_HASH));
 });

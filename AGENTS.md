@@ -36,6 +36,11 @@
 ## Git, verification, and release
 
 - Use explicit task-owned manifests for critical releases. Never force-push `main` or Production.
+- Before any commit or deployment, read and follow `docs/touchline/release-audit/VERCEL_COST_SAFE_COMMIT_AND_DEPLOY_POLICY.md`. This policy is a mandatory gate, not optional guidance.
+- Work local-first and batch approved changes. The default remote-build budget is zero until the owner authorizes a deployment, then at most one Git-native build for the exact approved SHA and target.
+- Never create duplicate remote builds for one candidate: do not combine a Git-triggered deployment with `vercel deploy`, Redeploy, a deploy hook, `--force`, or **Start Building Now**. Never retry an unchanged failed SHA before the failure is diagnosed and corrected locally.
+- Before committing, inspect the exact file manifest, exclude secrets/generated artifacts, and run proportional focused checks plus TypeScript, ESLint and `git diff --check`. Before deployment, require the complete release gate, local production build, clean-worktree proof, exact SHA/target/rollback evidence, and a check that the SHA is not already deployed or building.
+- Keep Vercel concurrency at one active build per branch and use the lowest sufficient build machine unless the owner explicitly authorizes a temporary cost increase. Passing `READY` never substitutes for remote smoke tests and logs.
 - P0/P1 release work requires clean-worktree proof.
 - Critical changes require typecheck, ESLint, focused tests, complete suite, `git diff --check`, Production build, and clean-worktree validation.
 - P0/P1 flow: implementation → tests → independent review → clean-worktree proof → release gate.

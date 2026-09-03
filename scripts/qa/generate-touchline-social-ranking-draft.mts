@@ -35,10 +35,11 @@ const fixtureId = argument("fixture-id");
 const scopeId = argument("scope-id") || null;
 const playerId = argument("player-id") || null;
 const contentType = argument("content-type") as TouchlineSocialRankingContentType;
+if (contentType === "HAT_TRICK_HERO") throw new Error("TL_SOCIAL_RANKING_HAT_TRICK_MOVED_TO_043");
 const expectedInputChecksum = argument("expected-input-checksum");
 const expectedSourceRevisionChecksum = argument("expected-source-revision-checksum");
 const gameweek = ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "GAMEWEEK_HERO"].includes(contentType);
-const player = ["GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(contentType);
+const player = ["GAMEWEEK_HERO", "TOP_PERFORMER"].includes(contentType);
 if (!NUMERIC_ID.test(fixtureId)
   || !TOUCHLINE_SOCIAL_RANKING_CONTENT_TYPES.includes(contentType)
   || gameweek !== Boolean(scopeId) || player !== Boolean(playerId)

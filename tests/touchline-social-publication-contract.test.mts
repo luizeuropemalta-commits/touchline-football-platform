@@ -40,7 +40,7 @@ async function createDraft(overrides: DraftOverrides = {}) {
   const teamId = overrides.teamId === null ? null : String(overrides.teamId ?? "9");
   const eventId = overrides.eventId === null || overrides.eventId === undefined
     ? null : String(overrides.eventId);
-  const contentType = (overrides.contentType ?? "LINEUP") as "LINEUP" | "MATCH_PREVIEW" | "FULL_TIME" | "FINAL_SCORE" | "GOAL_CONFIRMED" | "RED_CARD_CONFIRMED";
+  const contentType = (overrides.contentType ?? "LINEUP") as "LINEUP" | "MATCH_PREVIEW" | "FULL_TIME" | "FINAL_SCORE" | "GOAL_CONFIRMED" | "RED_CARD_CONFIRMED" | "HAT_TRICK_HERO";
   const placement = (overrides.placement ?? "INSTAGRAM_FEED") as "INSTAGRAM_FEED" | "INSTAGRAM_STORY";
   const locale = (overrides.locale ?? "en-GB") as "en-GB" | "pt-BR";
   const revision = Number(overrides.revision ?? 1);
@@ -83,7 +83,7 @@ async function createDraft(overrides: DraftOverrides = {}) {
           ? `/visual-qa/social-full-time?fixtureId=${fixtureId}&locale=${locale}&revision=${revision}`
           : contentType === "FINAL_SCORE"
             ? `/visual-qa/social-final-score?fixtureId=${fixtureId}&locale=${locale}&revision=${revision}`
-            : `/visual-qa/social-confirmed-event?fixtureId=${fixtureId}&eventId=${eventId}&locale=${locale}&revision=${revision}`,
+            : `/visual-qa/social-confirmed-event?contentType=${contentType}&fixtureId=${fixtureId}&eventId=${eventId}&locale=${locale}&revision=${revision}`,
     caption: "Official line-up. COMING SOON • CURRENTLY IN TESTING",
     firstObservedAt: "2026-08-28T18:30:00.000Z",
     sourceSnapshotAt: "2026-08-28T18:31:00.000Z",
@@ -217,23 +217,36 @@ test("042 Full Time Feed uses an exact fixture-scoped identity", async () => {
   assert.equal(result.draft.teamId, null);
 });
 
-test("043 confirmed event Stories require an exact immutable event identity", async () => {
+test("043 goal-family Feeds require an exact immutable event identity", async () => {
   const result = await createDraft({
-    contentType: "GOAL_CONFIRMED", placement: "INSTAGRAM_STORY", teamId: null,
-    eventId: "90001", templateVersion: "touchline-goal-confirmed-story-v1",
-    sourceVersion: "touchline-confirmed-event-v1", artifactMimeType: "image/jpeg",
-    artifactBytes: STORY_JPEG_BYTES, caption: "Goal confirmed. COMING SOON • CURRENTLY IN TESTING",
+    contentType: "GOAL_CONFIRMED", placement: "INSTAGRAM_FEED", teamId: null,
+    eventId: "90001", templateVersion: "touchline-goal-event-feed-v1",
+    sourceVersion: "touchline-confirmed-event-v1", artifactMimeType: "image/png",
+    artifactBytes: FEED_PNG_BYTES, caption: "Goal. COMING SOON • CURRENTLY IN TESTING",
   });
   assert.equal(result.ok, true);
   if (!result.ok) return;
   assert.equal(result.draft.eventId, "90001");
-  assert.equal(result.draft.height, 1920);
+  assert.equal(result.draft.height, 1350);
   assert.equal(result.draft.teamId, null);
   assert.match(result.draft.publicationKey, /GOAL_CONFIRMED:19722189:90001:/);
   assert.match(result.draft.artifactLocator.objectKey, /goal_confirmed\/19722189\/90001\//);
-  assert.deepEqual(await createDraft({ contentType: "GOAL_CONFIRMED", placement: "INSTAGRAM_STORY",
-    teamId: null, eventId: null, artifactMimeType: "image/jpeg", artifactBytes: STORY_JPEG_BYTES }),
+  assert.deepEqual(await createDraft({ contentType: "GOAL_CONFIRMED", placement: "INSTAGRAM_FEED",
+    teamId: null, eventId: null, artifactMimeType: "image/png", artifactBytes: FEED_PNG_BYTES }),
   { ok: false, reason: "CONFIRMED_EVENT_ID_REQUIRED" });
+
+  const hatTrick = await createDraft({
+    contentType: "HAT_TRICK_HERO", placement: "INSTAGRAM_FEED", teamId: null,
+    eventId: "90003", playerId: null, templateVersion: "touchline-hat-trick-feed-v1",
+    sourceVersion: "touchline-confirmed-event-v1", artifactMimeType: "image/png",
+    artifactBytes: FEED_PNG_BYTES, caption: "Hat-trick hero. COMING SOON • CURRENTLY IN TESTING",
+  });
+  assert.equal(hatTrick.ok, true);
+  if (hatTrick.ok) {
+    assert.equal(hatTrick.draft.eventId, "90003");
+    assert.equal(hatTrick.draft.playerId, null);
+    assert.match(hatTrick.draft.renderPath, /contentType=HAT_TRICK_HERO/);
+  }
 });
 
 test("draft media validation rejects signature-only, truncated, wrong-sized and MIME-swapped files", async () => {

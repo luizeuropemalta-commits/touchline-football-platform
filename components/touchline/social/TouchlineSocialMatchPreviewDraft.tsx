@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { CSSProperties } from "react";
 
 import TouchlineSocialDuelFrame from "@/components/touchline/social/TouchlineSocialDuelFrame";
+import TouchlineSocialFixtureScoreboard from "@/components/touchline/social/TouchlineSocialFixtureScoreboard";
 import type { TouchlineSocialMatchPreviewDraft } from "@/lib/touchlineArena/social-match-preview-draft-server";
 import { touchlineEnglishOrdinal } from "@/lib/touchlineArena/social-match-preview-caption";
 import { TOUCHLINE_MATCH_PREVIEW_TEMPLATE_VERSION } from "@/lib/touchlineArena/social-match-preview-draft-server";
@@ -66,21 +67,14 @@ export default function TouchlineSocialMatchPreviewDraftView({
         </div>
       </header>
 
-      <section className={styles.fixture} aria-label={`${draft.home.club.name} versus ${draft.away.club.name}`}>
-        <div className={styles.clubIdentity}>
-          <Image src={draft.home.club.logoUrl} alt={`${draft.home.club.name} crest`} width={112} height={112} priority />
-          <strong>{draft.home.club.name}</strong>
-        </div>
-        <div className={styles.fixtureCore}>
-          <span>{kickOffLabel(draft.startsAt)}</span>
-          <b>VS</b>
-          <small>{draft.venue.name.toLocaleUpperCase("en-GB")}</small>
-        </div>
-        <div className={styles.clubIdentity}>
-          <Image src={draft.away.club.logoUrl} alt={`${draft.away.club.name} crest`} width={112} height={112} priority />
-          <strong>{draft.away.club.name}</strong>
-        </div>
-      </section>
+      <TouchlineSocialFixtureScoreboard
+        className={styles.fixture}
+        mode="versus"
+        home={draft.home.club}
+        away={draft.away.club}
+        eyebrow={kickOffLabel(draft.startsAt)}
+        footer={draft.venue.name.toLocaleUpperCase("en-GB")}
+      />
 
       <div className={styles.duelHeading}>
         <span>{TOUCHLINE_SOCIAL_DUEL_FRAME.heading}</span>

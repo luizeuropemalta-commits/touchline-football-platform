@@ -4,8 +4,10 @@ import test from "node:test";
 
 import {
   classifyTouchlineConfirmedMatchEvent,
+  countTouchlineConfirmedHatTrickGoals,
   formatTouchlineConfirmedEventMinute,
   parseTouchlineEventScore,
+  touchlineConfirmedHatTrickGoalFact,
 } from "../lib/touchlineArena/social-confirmed-event-contract.ts";
 import { buildTouchlineConfirmedEventCaption } from "../lib/touchlineArena/social-confirmed-event-caption.ts";
 import { checksumTouchlineConfirmedEventRenderSource } from "../lib/touchlineArena/social-confirmed-event-render-source.ts";
@@ -14,12 +16,19 @@ import {
   touchlineSocialContentDefinition,
 } from "../lib/touchlineArena/social-content-registry.ts";
 
-test("043 registry exposes only confirmed event Stories", () => {
+test("043 registry owns the complete goal family and the dismissal Story", () => {
   assert.deepEqual(touchlineSocialContentDefinition("GOAL_CONFIRMED"), {
     module: "043",
-    placement: "INSTAGRAM_STORY",
+    placement: "INSTAGRAM_FEED",
     width: 1080,
-    height: 1920,
+    height: 1350,
+    scope: "FIXTURE_EVENT",
+  });
+  assert.deepEqual(touchlineSocialContentDefinition("HAT_TRICK_HERO"), {
+    module: "043",
+    placement: "INSTAGRAM_FEED",
+    width: 1080,
+    height: 1350,
     scope: "FIXTURE_EVENT",
   });
   assert.deepEqual(touchlineSocialContentDefinition("RED_CARD_CONFIRMED"), {
@@ -30,7 +39,29 @@ test("043 registry exposes only confirmed event Stories", () => {
     scope: "FIXTURE_EVENT",
   });
   assert.equal(isTouchlineSocialContentTypeEnabledInModule("GOAL_CONFIRMED", "043"), true);
+  assert.equal(isTouchlineSocialContentTypeEnabledInModule("HAT_TRICK_HERO", "043"), true);
   assert.equal(isTouchlineSocialContentTypeEnabledInModule("LINEUP", "043"), false);
+});
+
+test("043 hat-trick facts count only a player's confirmed goals and penalties", () => {
+  const goal = touchlineConfirmedHatTrickGoalFact({
+    playerId: "28931574", type: "GOAL", status: "recorded", info: null, addition: null,
+  });
+  const penalty = touchlineConfirmedHatTrickGoalFact({
+    playerId: "28931574", type: "PENALTY", status: "recorded", info: null, addition: null,
+  });
+  assert.deepEqual(goal, { playerId: "28931574", kind: "goal" });
+  assert.deepEqual(penalty, { playerId: "28931574", kind: "penalty" });
+  assert.equal(touchlineConfirmedHatTrickGoalFact({
+    playerId: "28931574", type: "OWNGOAL", status: "recorded", info: null, addition: null,
+  }), null);
+  assert.equal(countTouchlineConfirmedHatTrickGoals([
+    { playerId: "28931574", kind: "goal" },
+    { playerId: "28931574", kind: "penalty" },
+    { playerId: "28931574", kind: "goal" },
+    { playerId: "111", kind: "goal" },
+    { playerId: "28931574", kind: "own-goal" },
+  ], "28931574"), 3);
 });
 
 test("goal classifier accepts only scored goals and rejects every VAR or pending state", () => {
@@ -229,24 +260,28 @@ test("043 offers an isolated João Pedro goal demo in the approved Hat-trick com
   assert.equal(snapshot.settlement.matchRating, 8.24);
   assert.equal(snapshot.settlement.totalRating, 16.45);
   assert.match(demo, /rankingStyles\.hatTrickCanvas/);
-  assert.match(demo, />GOAAAALLLLL</);
-  assert.match(demo, />GOALLLLLL</);
+  assert.match(demo, /first: "GOAAAALLLLL"/);
+  assert.match(demo, /second: "GOALLLLLL"/);
   assert.match(demo, /localStyles\.celebrationWord/);
-  assert.match(demo, /data-word="GOAAAALLLLL"/);
+  assert.match(demo, /function AnimatedWord/);
   assert.match(demo, /draft\.event\.playerName/);
   assert.doesNotMatch(demo, />GOAL CONFIRMED</);
   assert.match(demo, /LOCAL VISUAL QA · NON-PUBLISHABLE/);
 });
 
-test("goal celebration builds on the website but exports as a complete static word", () => {
+test("goal celebration zooms letter by letter on the website but exports static", () => {
   const goalCss = readFileSync(new URL("../components/touchline/social/TouchlineSocialGoalHatLayoutDemo.module.css", import.meta.url), "utf8");
   const eventCss = readFileSync(new URL("../components/touchline/social/TouchlineSocialConfirmedEventDraft.module.css", import.meta.url), "utf8");
   const rankingCss = readFileSync(new URL("../components/touchline/social/TouchlineSocialRankingDraft.module.css", import.meta.url), "utf8");
   const eventExporter = readFileSync(new URL("../scripts/qa/generate-touchline-social-confirmed-event-draft.mts", import.meta.url), "utf8");
   const rankingExporter = readFileSync(new URL("../scripts/qa/generate-touchline-social-ranking-draft.mts", import.meta.url), "utf8");
 
-  assert.match(goalCss, /@keyframes touchline-goal-word-build/);
-  assert.match(goalCss, /steps\(11, end\) infinite/);
+  assert.match(goalCss, /@keyframes touchline-goal-letter-zoom/);
+  assert.match(goalCss, /--letter-index/);
+  assert.match(goalCss, /--line-delay/);
+  assert.match(goalCss, /var\(--hat-club-accent\)/);
+  assert.match(goalCss, /#f6d45f/);
+  assert.match(goalCss, /\.celebrationWordGold\s*>\s*span\s*\{[^}]*color:\s*#f6d45f\s*!important;[^}]*-webkit-text-fill-color:\s*#f6d45f\s*!important;/s);
   assert.match(eventCss, /@keyframes touchline-goal-word-build/);
   assert.match(rankingCss, /@keyframes touchline-celebration-word-build/);
   for (const css of [goalCss, eventCss, rankingCss]) {
@@ -255,4 +290,59 @@ test("goal celebration builds on the website but exports as a complete static wo
   }
   assert.match(eventExporter, /setAttribute\("data-static-export", "true"\)/);
   assert.match(rankingExporter, /setAttribute\("data-static-export", "true"\)/);
+});
+
+test("043 Hat-trick preview reuses the goal renderer without becoming publishable sample data", () => {
+  const page = readFileSync(new URL("../app/visual-qa/social-confirmed-event/page.tsx", import.meta.url), "utf8");
+  const preview = readFileSync(new URL("../app/visual-qa/social-confirmed-event/preview-draft.ts", import.meta.url), "utf8");
+  const component = readFileSync(new URL("../components/touchline/social/TouchlineSocialGoalHatLayoutDemo.tsx", import.meta.url), "utf8");
+  assert.match(page, /params\.design === "hat-trick"/);
+  assert.match(page, /FROZEN OWNER ARTWORK · OUTBOUND OFF/);
+  assert.match(preview, /createRankingVisualQaPreview\("HAT_TRICK_HERO"\)/);
+  assert.match(preview, /LOCAL_NON_PUBLISHABLE_VISUAL_QA/);
+  assert.match(preview, /touchLinePointsFromSportmonksRating\(rankingCard\?\.officialMatchRating\)/);
+  assert.match(preview, /TOUCHLINE_PLAYER_SCORING_V3_VERSION/);
+  assert.match(preview, /touchlinePoints === null/);
+  assert.match(component, /isHatTrick\s*\? \{ eyebrow:/);
+  assert.match(component, /first: "HAT-TRICK", second: ""/);
+  assert.match(component, /<AnimatedWord gold=\{isHatTrick\}>\{title\.first\}<\/AnimatedWord>/);
+  assert.match(component, /isHatTrick \? localStyles\.hatTrickTitle/);
+  assert.match(component, /isHatTrick \? localStyles\.hatTrickEyebrow/);
+  assert.match(component, /data-touchline-points-state=/);
+  assert.match(component, /VERIFIED SCORING RESULT/);
+  assert.doesNotMatch(component, /OFFICIAL MATCH RATING REWARD/);
+  assert.match(component, /<Image src=\{playerClub\.logoUrl!\}[\s\S]*?<div><strong>\{draft\.event\.playerName\}<\/strong>/);
+  assert.match(readFileSync(new URL("\.\.\/components\/touchline\/social\/TouchlineSocialGoalHatLayoutDemo\.module\.css", import.meta.url), "utf8"), /\.hatTrickTitle\s*\{[^}]*font-size:\s*82px[^}]*font-weight:\s*1000[^}]*\}/s);
+  assert.match(readFileSync(new URL("\.\.\/components\/touchline\/social\/TouchlineSocialGoalHatLayoutDemo\.module\.css", import.meta.url), "utf8"), /\.hatTrickEyebrow\s*\{[^}]*font-size:\s*17px[^}]*\}/s);
+  assert.match(readFileSync(new URL("\.\.\/components\/touchline\/social\/TouchlineSocialGoalHatLayoutDemo\.module\.css", import.meta.url), "utf8"), /\.pointsValue\s*\{[^}]*font-size:\s*52px\s*!important;/s);
+  assert.match(component, /--hat-club-accent/);
+});
+
+test("social visual standard forbids tiny primary data and duplicate facts", () => {
+  const standard = readFileSync(new URL("../docs/touchline-arena/social-publishing-playbook/VISUAL_STANDARD.md", import.meta.url), "utf8");
+  assert.match(standard, /primary event title must be at least `52px`/);
+  assert.match(standard, /decisive[\s\S]*TouchLine Points must be at[\s\S]*least `24px`/);
+  assert.match(standard, /must not repeat the already-rendered Official Match Rating/);
+  assert.match(standard, /must never[\s\S]*turn missing data into `0`/);
+  assert.match(standard, /crest[\s\S]*before the player name/);
+});
+
+test("047 moves Hat-trick generation and approval authority into event-scoped 043", () => {
+  const migration = readFileSync(new URL("../supabase/qa/047_touchline_qa_goal_family_043.sql", import.meta.url), "utf8");
+  const rollback = readFileSync(new URL("../supabase/qa/047_touchline_qa_goal_family_043_rollback.sql", import.meta.url), "utf8");
+  const confirmedRunner = readFileSync(new URL("../scripts/qa/run-touchline-social-confirmed-event-executor.mts", import.meta.url), "utf8");
+  const rankingRunner = readFileSync(new URL("../scripts/qa/run-touchline-social-ranking-executor.mts", import.meta.url), "utf8");
+  const route = readFileSync(new URL("../app/api/admin/social-publications/source/route.ts", import.meta.url), "utf8");
+  assert.match(migration, /HAT_TRICK_HERO/);
+  assert.match(migration, /touchline-hat-trick-feed-v1/);
+  assert.match(migration, /TL_SOCIAL_HAT_TRICK_MOVED_TO_043/);
+  assert.match(migration, /content_type in \('GOAL_CONFIRMED','RED_CARD_CONFIRMED','HAT_TRICK_HERO'\)/);
+  assert.match(migration, /TL_SOCIAL_GOAL_FAMILY_047_FUNCTION_PATCH_INCOMPLETE/);
+  assert.match(rollback, /TL_SOCIAL_047_ROLLBACK_NONEMPTY/);
+  assert.match(rollback, /touchline_social_drafts_044_relation_check/);
+  assert.match(rollback, /drop function if exists public\.touchline_social_047_block_hat_trick_in_044/);
+  assert.doesNotMatch(rollback, /ROLLBACK_REQUIRES_REVIEWED_FORWARD_MIGRATION/);
+  assert.match(confirmedRunner, /HAT_TRICK_HERO: "touchline-hat-trick-feed-v1"/);
+  assert.doesNotMatch(rankingRunner, /"HAT_TRICK_HERO",/);
+  assert.match(route, /TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES/);
 });

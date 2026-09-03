@@ -12,7 +12,7 @@ const EVENT_DISCOVERY_PAGE_SIZE = 200;
 const EVENT_DISCOVERY_MAX_ROWS = 2_000;
 const EVENT_FRESHNESS_MS = 15 * 60 * 1000;
 
-export type TouchlineSocialConfirmedEventContentType = "GOAL_CONFIRMED" | "RED_CARD_CONFIRMED";
+export type TouchlineSocialConfirmedEventContentType = "GOAL_CONFIRMED" | "RED_CARD_CONFIRMED" | "HAT_TRICK_HERO";
 export type TouchlineSocialConfirmedEventCandidate = Readonly<{
   contentType: TouchlineSocialConfirmedEventContentType;
   fixtureId: string;
@@ -57,6 +57,9 @@ export async function readCurrentTouchlineConfirmedEventSource(input: Readonly<{
     signal: AbortSignal.timeout(SOURCE_READ_TIMEOUT_MS),
   });
   const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+  if (response.status === 409 && payload?.ok === false) {
+    throw new Error("TL_CONFIRMED_EVENT_CURRENT_SOURCE_NOT_ELIGIBLE");
+  }
   const revision = payload ? parseSourceRevision(payload) : null;
   const startsAt = String(payload?.startsAt ?? "");
   const sourceSnapshotAt = String(payload?.sourceSnapshotAt ?? "");
@@ -158,7 +161,7 @@ export async function discoverTouchlineSocialConfirmedEventCandidates(input: Rea
   if (fixtureId && eventId && observations.data.length !== 1) {
     throw new Error("TL_CONFIRMED_EVENT_EXPLICIT_IDENTITY_NOT_ELIGIBLE");
   }
-  return Promise.all(observations.data.map(async (row) => {
+  const groups = await Promise.all(observations.data.map(async (row) => {
     const observedFixtureId = String(row.fixture_provider_id ?? "");
     const observedEventId = String(row.event_provider_id ?? "");
     const contentType = String(row.content_type ?? "") as TouchlineSocialConfirmedEventContentType;
@@ -172,6 +175,24 @@ export async function discoverTouchlineSocialConfirmedEventCandidates(input: Rea
       base: input.base, renderSecret: input.renderSecret, fixtureId: observedFixtureId,
       eventId: observedEventId, contentType,
     });
-    return { ...source, contentType, firstObservedAt };
+    const candidates: TouchlineSocialConfirmedEventCandidate[] = [
+      { ...source, contentType, firstObservedAt },
+    ];
+    if (contentType === "GOAL_CONFIRMED") {
+      try {
+        const hatTrick = await readCurrentTouchlineConfirmedEventSource({
+          base: input.base,
+          renderSecret: input.renderSecret,
+          fixtureId: observedFixtureId,
+          eventId: observedEventId,
+          contentType: "HAT_TRICK_HERO",
+        });
+        candidates.push({ ...hatTrick, contentType: "HAT_TRICK_HERO", firstObservedAt });
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== "TL_CONFIRMED_EVENT_CURRENT_SOURCE_NOT_ELIGIBLE") throw error;
+      }
+    }
+    return candidates;
   }));
+  return groups.flat();
 }

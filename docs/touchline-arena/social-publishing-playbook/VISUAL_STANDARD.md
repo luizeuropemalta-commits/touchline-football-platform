@@ -4,6 +4,23 @@
 
 Use only current canonical TouchLine cards, crests, icons, typography, match-centre components and persisted values. Do not redraw, approximate, substitute or infer a branded asset. Public wording is `TouchLine Verified` or `TouchLine Verified Match Data`; never expose internal provider/API wording.
 
+### Human legibility and information hierarchy
+
+Every 1080-wide TouchLine social artwork must remain readable when reduced to a
+normal mobile feed. The primary event title must be at least `52px`; decisive
+numeric facts such as score, minute, rating and TouchLine Points must be at
+least `24px`; essential uppercase labels must be at least `13px`; and technical
+footer copy must be at least `12px`. A primary numeric fact must be at least
+2.5 times the size of its label and use high-contrast colour. Repeating a fact
+inside the same artwork is prohibited: for example, a TouchLine Points panel
+must not repeat the already-rendered Official Match Rating.
+
+When a value has not been produced by the current verified scoring settlement,
+the renderer must show an explicit unavailable/pending state and must never
+turn missing data into `0`. Club identity rows always place the canonical crest
+before the player name so a long name grows away from the crest rather than
+covering it.
+
 The LINE-UP renderer is [`TouchlineSocialLineupDraft.tsx`](../../../components/touchline/social/TouchlineSocialLineupDraft.tsx), using the shared regulation pitch [`TouchlinePitchSurface.tsx`](../../../components/touchline/pitch/TouchlinePitchSurface.tsx). The current Feed contract is:
 
 - 1080×1350, 4:5;
@@ -62,11 +79,11 @@ fixture component with canonical crests and plain score numerals (for example,
 
 ### Hat-trick editorial composition
 
-`HAT_TRICK_HERO` is a dedicated story template, not a recoloured ranking card.
-Its locked hierarchy is: compact TouchLine masthead and canonical fixture
-scoreboard; oversized two-line `HAT-TRICK HERO` title; player and club identity;
+`HAT_TRICK_HERO` is a dedicated event template, not a recoloured ranking card.
+Its active 043 hierarchy is: compact TouchLine masthead and canonical fixture
+scoreboard; one oversized yellow `HAT-TRICK` title; player and club identity;
 the three confirmed scoring moments; official Match Rating and Total Rating
-boxes; current Gameweek rank; the official fixture venue; one enlarged unboxed
+boxes; a dominant TouchLine Points result; the official fixture venue; one enlarged unboxed
 canonical player card; and a clear provisional/final Gameweek note. The card
 occupies the right-hand hero column and the editorial facts occupy the left.
 The venue name and image must resolve from the canonical fixture venue (not an

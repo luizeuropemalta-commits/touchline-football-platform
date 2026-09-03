@@ -302,6 +302,8 @@ test("reader and template are persisted-only, revision-fenced and contain no XI 
   const fixtureStore = readFileSync(new URL("../lib/football-data/fixture-schedule-store.ts", import.meta.url), "utf8");
   const component = readFileSync(new URL("../components/touchline/social/TouchlineSocialMatchPreviewDraft.tsx", import.meta.url), "utf8");
   const componentStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocialMatchPreviewDraft.module.css", import.meta.url), "utf8");
+  const scoreboard = readFileSync(new URL("../components/touchline/social/TouchlineSocialFixtureScoreboard.tsx", import.meta.url), "utf8");
+  const scoreboardStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocialFixtureScoreboard.module.css", import.meta.url), "utf8");
   const duelFrame = readFileSync(new URL("../components/touchline/social/TouchlineSocialDuelFrame.tsx", import.meta.url), "utf8");
   const publicCard = readFileSync(new URL("../components/touchline/social/TouchlineSocialPublicExactCard.tsx", import.meta.url), "utf8");
   const duelFrameStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocialDuelFrame.module.css", import.meta.url), "utf8");
@@ -348,8 +350,12 @@ test("reader and template are persisted-only, revision-fenced and contain no XI 
   assert.match(component, /data-home-team-key=\{draft\.home\.club\.shortCode\}/);
   assert.match(component, /data-away-team-key=\{draft\.away\.club\.shortCode\}/);
   assert.doesNotMatch(component, /data-(?:home|away)-team-id/);
-  assert.match(component, /<b>VS<\/b>/);
-  assert.doesNotMatch(component, /<b>V<\/b>/);
+  assert.match(component, /TouchlineSocialFixtureScoreboard/);
+  assert.match(component, /mode="versus"/);
+  assert.match(scoreboard, /<b className=\{styles\.versus\}>VS<\/b>/);
+  assert.doesNotMatch(scoreboard, /<b[^>]*>V<\/b>/);
+  assert.match(scoreboard, /data-touchline-fixture-scoreboard="041-standard"/);
+  assert.match(scoreboardStyles, /grid-template-columns: minmax\(0,1fr\) 228px minmax\(0,1fr\)/);
   assert.match(component, /TouchlineSocialDuelFrame/);
   assert.match(duelFrame, /TouchlineSocialPublicExactCard/);
   assert.match(duelFrame, /data-preview-contender="true"/);

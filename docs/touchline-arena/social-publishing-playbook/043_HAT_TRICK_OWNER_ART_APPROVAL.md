@@ -1,18 +1,48 @@
 # 043 Hat-trick owner art approval
 
-Status: **OWNER-APPROVED VISUAL — LOCAL ONLY**
+Status: **OWNER-APPROVED VISUAL REVISION 3 PRESERVED — REVISION 4 LEGIBILITY CANDIDATE IN LOCAL REVIEW**
 
 Approved by: Luiz Lopez
 
-Approved on: 2 September 2026 (Europe/Malta)
+Approved on: 2 September 2026; revision 3 approved 3 September 2026 (Europe/Malta)
 
-Approval revision: **2 — mobile scoreboard legibility and safe website motion**
+Approval revision: **3 — byte-locked active 043 artwork plus preserved original evidence**
 
 Content type: `HAT_TRICK_HERO`
 
-Approved route: `/visual-qa/social-ranking-catalogue?focus=hat-trick-hero`
+Approved evidence route: `/visual-qa/social-ranking-catalogue?focus=hat-trick-hero`
+
+043 integration review route: `/visual-qa/social-confirmed-event?design=hat-trick`
 
 Approved placement candidate: Feed / ClubHub / ClubOwner Timeline, 1080×1350 (4:5)
+
+## 043 shared-title revision
+
+- The active 043 preview removes the generic `HERO` suffix and presents one
+  `HAT-TRICK` title in the same points yellow (`#f6d45f`) used by the approved
+  Goal-family artwork. As the primary message, it uses an `82px`, maximum-weight
+  treatment; the green player achievement line is enlarged to `17px` while
+  remaining visually subordinate.
+- On the website, its letters use the same sequential zoom cycle as Goal. A
+  static export and reduced-motion mode always show the complete word.
+- Luiz approved this active 043 revision on 3 September 2026 after the glyph
+  colour was locked directly on every letter for consistent browser rendering.
+  It does not overwrite the separately byte-locked original evidence.
+
+## Revision 4 legibility candidate — owner review required
+
+- The TouchLine Points result is now the dominant numeric fact in its panel:
+  `52px`, points yellow, high contrast, with a secondary `TOUCHLINE POINTS`
+  label. The panel no longer repeats `OFFICIAL MATCH RATING`.
+- The frozen Hat-trick replay derives `+12` from its persisted `10.00` rating
+  through the existing `player_scoring_v3` rule. A missing settlement is shown
+  as awaiting official calculation, never as an invented `0`.
+- The canonical club crest now precedes the player name. Long player names grow
+  away from the crest and may balance across lines without covering it.
+- Essential labels in this candidate are enlarged for mobile-feed reading.
+- This candidate is locally rendered and byte-locked below for review. It is
+  **not yet an OWNER-approved replacement** for revision 3 and remains outbound
+  disabled.
 
 ## Owner classification decision
 
@@ -26,11 +56,10 @@ fixture revision. The intended 043 family is:
 - `RED_CARD_CONFIRMED`, retained as a separate 043 event design.
 
 Module 044 remains the family for Gameweek ranking preview/final, player duel,
-Gameweek hero and top performer. The current local candidate still obtains the
-hat-trick visual through the 044 ranking-family reader. This is a **known
-transitional mismatch**: a forward migration must move its trigger and source
-contract into 043 before shared QA or Production activation. Until that
-migration is independently reviewed, outbound remains fail-closed.
+Gameweek hero and top performer. The additive local migration candidate 047 now
+moves Hat-trick source, trigger, event identity and approval routing into 043,
+and blocks new Hat-trick jobs in 044. This candidate has not been applied to
+shared QA or Production; outbound remains fail-closed.
 
 ## Locked visual decisions
 
@@ -38,24 +67,46 @@ migration is independently reviewed, outbound remains fail-closed.
 - Both 80 px club crests are aligned at equal distance from the score; score,
   minute and masthead copy are enlarged for mobile legibility.
 - Plain score numerals, one short centred hyphen, and `FULL TIME` only.
-- `HAT-TRICK HERO`, verified player identity and three confirmed goal moments.
-- Official Match Rating, Total Rating, official TouchLine trophy and current
-  overall rank.
+- The byte-locked original evidence contains `HAT-TRICK HERO`; the active 043
+  title revision contains only yellow `HAT-TRICK`, followed by the verified
+  player identity and three confirmed goal moments.
+- Official Match Rating, Total Rating and one dominant TouchLine Points result.
 - Canonical fixture venue name and verified home-stadium image beneath the
   trophy.
 - Enlarged upright card without an enclosing card box. Market value, ratings
   and card statistics render only when supplied by the audited source.
-- The card perimeter uses the card tier colour; the artwork uses a thin red
-  travelling perimeter trace.
+- The card perimeter uses the card tier colour; the active 043 artwork uses a
+  thin travelling perimeter trace in the scorer club's exact primary accent.
 - The website hover is a contained `1.006` scale. Static social exports do not
   include hover or motion.
-- The website title may animate progressively. Reduced-motion mode and every
-  static social export render the complete `HAT-TRICK HERO` title.
+- The 043 website renderer animates the title letter by letter with the same
+  zoom sequence used by Goal. Reduced-motion mode and every static social
+  export render the complete yellow `HAT-TRICK` title.
+- The 043 renderer's thin travelling perimeter neon inherits the scorer club's
+  exact canonical primary accent. It never approximates or changes that tone.
 - The established TouchLine smoke/fume treatment remains at 40% opacity.
 
-## Immutable visual manifest
+## Immutable visual manifests
 
-Combined visual checksum:
+Revision 4 local-review candidate combined checksum:
+`sha256:35439440aee10bdb05fc968c31d978445c1eac7f41e045dbcc1de12f3fa41760`
+
+| Revision 4 candidate visual source | SHA-256 |
+|---|---|
+| `components/touchline/social/TouchlineSocialGoalHatLayoutDemo.tsx` | `5407eb29ac9a6867177b382dbece7130ccf97c16a967650331ec0ebc86ee68b8` |
+| `components/touchline/social/TouchlineSocialGoalHatLayoutDemo.module.css` | `6e837026b16f445343e17fbf5064730fceb8f377bb8eae14ccea650e0bc7c845` |
+
+Revision 3 approved historical checksum:
+
+`sha256:5caf3cecb9783b42dca98452205aaae5d32c382833c9f49b4136da7b377440bc`
+
+| Active 043 visual source | SHA-256 |
+|---|---|
+| `components/touchline/social/TouchlineSocialGoalHatLayoutDemo.tsx` | `eab895827330eb4491804d5e55646e379c6836e12ffe1e9809e740506f5a03f5` |
+| `components/touchline/social/TouchlineSocialGoalHatLayoutDemo.module.css` | `3d796c3c0416ad8768587f2a9186d69529ad492ec2eddb12f2ec3d0485d61c70` |
+
+Preserved original artwork combined visual checksum:
+
 `sha256:a0bc151bfbe5348e204bac32ad2893e27490d8c0dace7d1d82953d6b01a0ef38`
 
 | Visual source | SHA-256 |

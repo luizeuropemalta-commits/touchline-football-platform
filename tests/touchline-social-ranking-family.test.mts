@@ -65,7 +65,7 @@ function ranked(index: number, rating: number, minutes = 90): TouchlineRankedPla
 
 test("044 registry and render identity cover every Feed product", () => {
   for (const contentType of ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
-    "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"] as const) {
+    "GAMEWEEK_HERO", "TOP_PERFORMER"] as const) {
     assert.deepEqual(touchlineSocialContentDefinition(contentType), {
       module: "044", placement: "INSTAGRAM_FEED", width: 1080, height: 1350,
       scope: ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL"].includes(contentType)
@@ -74,6 +74,9 @@ test("044 registry and render identity cover every Feed product", () => {
           : contentType === "GAMEWEEK_HERO" ? "GAMEWEEK_PLAYER" : "FIXTURE_PLAYER",
     });
   }
+  assert.deepEqual(touchlineSocialContentDefinition("HAT_TRICK_HERO"), {
+    module: "043", placement: "INSTAGRAM_FEED", width: 1080, height: 1350, scope: "FIXTURE_EVENT",
+  });
   assert.equal(touchlineSocialRenderPath({
     contentType: "GAMEWEEK_HERO", fixtureId: "19722192", teamId: null,
     scopeId: "244001", playerId: "1000", locale: "en-GB", revision: 1,

@@ -16,8 +16,9 @@ const RENEW_TIMEOUT_MS = 15_000;
 const HEARTBEAT_MS = 30_000;
 const WORKER_TIMEOUT_MS = 120_000;
 const TEMPLATE_BY_CONTENT = Object.freeze({
-  GOAL_CONFIRMED: "touchline-goal-confirmed-story-v1",
+  GOAL_CONFIRMED: "touchline-goal-event-feed-v1",
   RED_CARD_CONFIRMED: "touchline-red-card-confirmed-story-v1",
+  HAT_TRICK_HERO: "touchline-hat-trick-feed-v1",
 });
 
 function argument(name: string) {
@@ -181,7 +182,7 @@ async function claimJob(admin: SupabaseClient, runnerLeaseToken: string): Promis
   };
   if (payload?.outcome !== "claimed" || !UUID.test(job.jobId) || !UUID.test(job.leaseToken)
     || !/^[1-9]\d{0,19}$/.test(job.fixtureId) || !/^[1-9]\d{0,19}$/.test(job.eventId)
-    || !["GOAL_CONFIRMED", "RED_CARD_CONFIRMED"].includes(job.contentType)
+    || !["GOAL_CONFIRMED", "RED_CARD_CONFIRMED", "HAT_TRICK_HERO"].includes(job.contentType)
     || TEMPLATE_BY_CONTENT[job.contentType] !== job.templateVersion
     || !SHA256.test(job.inputChecksum) || !SHA256.test(job.sourceRevisionChecksum)) {
     throw new Error("TL_CONFIRMED_EVENT_RUNNER_JOB_CLAIM_INVALID");

@@ -3,7 +3,12 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import { readClubHubNextFixturePreview } from "@/app/visual-qa/clubhub-next-fixture-post/preview-draft";
+import { createRankingVisualQaPreview } from "@/app/visual-qa/social-next-three/preview-drafts";
 import type { TouchlineSocialConfirmedEventArtworkDraft } from "@/components/touchline/social/TouchlineSocialConfirmedEventDraft";
+import {
+  TOUCHLINE_PLAYER_SCORING_V3_VERSION,
+  touchLinePointsFromSportmonksRating,
+} from "@/lib/football-data/player-score-engine-v3";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import { TOUCHLINE_STADIUM_CATALOG } from "@/lib/touchlineArena/stadium-catalog";
 
@@ -132,6 +137,91 @@ export async function readTouchlineGoalHatLayoutVisualQaPreview(): Promise<Touch
     totalRating: joaoPedroBrighton.settlement.totalRating,
     matchRating: joaoPedroBrighton.settlement.matchRating,
     touchlinePoints: joaoPedroBrighton.settlement.touchlinePoints,
+  };
+}
+
+/**
+ * Replays the already owner-reviewed frozen Hat-trick artwork evidence through
+ * the operational 043 renderer. It is deliberately non-publishable: live
+ * generation must come from the confirmed-event reader after all three goals
+ * have been reconciled independently.
+ */
+export function readTouchlineHatTrickVisualQaPreview(): TouchlineSocialConfirmedEventArtworkDraft | null {
+  const ranking = createRankingVisualQaPreview("HAT_TRICK_HERO");
+  const rankingCard = ranking.cards[0];
+  const home = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === ranking.home?.teamId);
+  const away = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === ranking.away?.teamId);
+  const venue = TOUCHLINE_STADIUM_CATALOG.find((candidate) => candidate.homeTeamProviderId === home?.teamId);
+  const moments = ranking.confirmedGoalMoments;
+  const touchlinePoints = touchLinePointsFromSportmonksRating(rankingCard?.officialMatchRating);
+  if (!rankingCard || !home?.logoUrl || !away?.logoUrl || !venue?.interiorImageUrl
+    || !ranking.fixtureScore || !moments || moments.length !== 3 || touchlinePoints === null) return null;
+
+  const confirmedGoalMoments = moments.map((moment, index) => ({
+    eventId: `${ranking.fixtureId}:goal:${index + 1}`,
+    kind: moment.kind,
+    minute: moment.minute,
+    extraMinute: moment.extraMinute,
+    // The frozen 044 visual never persisted intermediate scores. Keep the
+    // field structurally present for visual QA, but never expose this replay to
+    // the canonical reader, generator or outbound queue.
+    score: ranking.fixtureScore!,
+  }));
+  const sourceChecksum = checksum({
+    ranking,
+    confirmedGoalMoments,
+    touchlinePoints,
+    scoringVersion: TOUCHLINE_PLAYER_SCORING_V3_VERSION,
+    migration: "043-visual-replay",
+  });
+  const terminalMoment = confirmedGoalMoments[2]!;
+  return {
+    sourceProvenance: "LOCAL_NON_PUBLISHABLE_VISUAL_QA",
+    visualQa: { sampleData: true, label: "FROZEN OWNER ARTWORK · OUTBOUND OFF" },
+    contentType: "HAT_TRICK_HERO",
+    fixtureId: ranking.fixtureId,
+    eventId: terminalMoment.eventId,
+    capturedAt: ranking.sourceSnapshotAt,
+    firstObservedAt: ranking.firstObservedAt,
+    confirmedAt: ranking.sourceSnapshotAt,
+    sourceSnapshotAt: ranking.sourceSnapshotAt,
+    startsAt: ranking.sourceSnapshotAt,
+    status: "VISUAL_QA_FROZEN",
+    seasonProviderId: "28083",
+    gameweekNumber: ranking.gameweekNumber,
+    venue: { name: venue.name, interiorImageUrl: venue.interiorImageUrl },
+    caption: "LOCAL VISUAL QA ONLY · LIVE COPY REQUIRES THREE VERIFIED 043 GOALS",
+    sourceVersion: "touchline-confirmed-event-v1",
+    sourceChecksum,
+    sourceRevisionManifest: {
+      frozenOwnerArtwork: 1,
+      module043Replay: 1,
+      scoringVersionV3: 1,
+    },
+    sourceRevisionChecksum: sourceChecksum,
+    home: { ...home, logoUrl: home.logoUrl },
+    away: { ...away, logoUrl: away.logoUrl },
+    score: ranking.fixtureScore,
+    event: {
+      kind: terminalMoment.kind,
+      scoringTeamId: home.teamId,
+      playerTeamId: home.teamId,
+      playerProviderId: rankingCard.card.id,
+      playerName: rankingCard.card.name,
+      minute: terminalMoment.minute,
+      extraMinute: terminalMoment.extraMinute,
+    },
+    confirmedGoalMoments,
+    playerCard: {
+      ...rankingCard.card,
+      clubName: home.name,
+      matchRating: rankingCard.officialMatchRating,
+      seasonTotalRating: rankingCard.totalRating,
+      touchlinePoints,
+    },
+    totalRating: rankingCard.totalRating,
+    matchRating: rankingCard.officialMatchRating,
+    touchlinePoints,
   };
 }
 

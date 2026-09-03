@@ -15,7 +15,7 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 68);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 70);
   assert.equal(rows.filter((item) => item.kind === "API").length, 69);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
@@ -42,12 +42,15 @@ test("separates public, authenticated, ClubOwner, Admin, audit, and isolated pre
   assert.equal(row("/visual-qa/social-match-preview").data, "QA_VERIFIED_MATCH_PREVIEW_DRAFT");
   assert.equal(row("/visual-qa/social-full-time").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-full-time").data, "QA_VERIFIED_FULL_TIME_DRAFT");
+  assert.equal(row("/visual-qa/social-full-time").status, "OWNER_ART_APPROVED_LOCAL");
   assert.equal(row("/visual-qa/social-final-score").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-final-score").data, "QA_VERIFIED_FINAL_SCORE_STORY_DRAFT");
   assert.equal(row("/visual-qa/social-confirmed-event").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-confirmed-event").data, "QA_VERIFIED_CONFIRMED_EVENT_STORY_DRAFT");
   assert.equal(row("/visual-qa/social-ranking").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-ranking").data, "QA_VERIFIED_RANKING_FAMILY_DRAFT");
+  assert.equal(row("/visual-qa/social-next-three").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-ranking-catalogue").auth, "ADMIN");
   assert.equal(row("/visual-qa/clubhub-next-fixture-post").role, "OWNER_ADMIN");
   assert.equal(row("/visual-qa/clubhub-premium-redesign").role, "OWNER_ADMIN");
   assert.equal(row("/visual-qa/market-premium-pitch").role, "OWNER_ADMIN");

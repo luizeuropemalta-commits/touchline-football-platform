@@ -6,6 +6,7 @@ import { readTouchlineSocialLineupDraft } from "@/lib/touchlineArena/social-line
 import { readTouchlineSocialMatchPreviewDraft } from "@/lib/touchlineArena/social-match-preview-draft-server";
 import { readTouchlineSocialFinalScoreDraft } from "@/lib/touchlineArena/social-final-score-draft-server";
 import { readTouchlineSocialConfirmedEventDraft } from "@/lib/touchlineArena/social-confirmed-event-draft-server";
+import { TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES, type TouchlineSocialConfirmedEventContentType } from "@/lib/touchlineArena/social-confirmed-event-contract";
 import { readTouchlineSocialRankingFamilyDraft } from "@/lib/touchlineArena/social-ranking-family-draft-server";
 import { TOUCHLINE_SOCIAL_RANKING_CONTENT_TYPES, type TouchlineSocialRankingContentType } from "@/lib/touchlineArena/social-ranking-family-contract";
 import { assertTouchlineSocialQaRuntime } from "@/lib/touchlineArena/social-artifact-storage-server";
@@ -42,16 +43,18 @@ export async function GET(request: NextRequest) {
   const scopeId = request.nextUrl.searchParams.get("scopeId")?.trim() ?? "";
   const playerId = request.nextUrl.searchParams.get("playerId")?.trim() ?? "";
   const contentType = request.nextUrl.searchParams.get("contentType")?.trim() || "LINEUP";
-  const rankingFamily = TOUCHLINE_SOCIAL_RANKING_CONTENT_TYPES.includes(contentType as TouchlineSocialRankingContentType);
+  const confirmedEvent = TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES.includes(contentType as TouchlineSocialConfirmedEventContentType);
+  const rankingFamily = TOUCHLINE_SOCIAL_RANKING_CONTENT_TYPES.includes(contentType as TouchlineSocialRankingContentType)
+    && contentType !== "HAT_TRICK_HERO";
   const gameweekScoped = ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "GAMEWEEK_HERO"].includes(contentType);
-  const playerScoped = ["GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(contentType);
+  const playerScoped = ["GAMEWEEK_HERO", "TOP_PERFORMER"].includes(contentType);
   if (!NUMERIC_ID.test(fixtureId)
     || !["LINEUP", "MATCH_PREVIEW", "FULL_TIME", "FINAL_SCORE", "GOAL_CONFIRMED", "RED_CARD_CONFIRMED",
       ...TOUCHLINE_SOCIAL_RANKING_CONTENT_TYPES].includes(contentType as never)
     || (contentType === "LINEUP" && !NUMERIC_ID.test(teamId))
     || (contentType !== "LINEUP" && teamId)
-    || (["GOAL_CONFIRMED", "RED_CARD_CONFIRMED"].includes(contentType) && !NUMERIC_ID.test(eventId))
-    || (!["GOAL_CONFIRMED", "RED_CARD_CONFIRMED"].includes(contentType) && eventId)
+    || (confirmedEvent && !NUMERIC_ID.test(eventId))
+    || (!confirmedEvent && eventId)
     || (gameweekScoped !== Boolean(scopeId)) || (scopeId && !NUMERIC_ID.test(scopeId))
     || (playerScoped !== Boolean(playerId)) || (playerId && !NUMERIC_ID.test(playerId))
     || (!rankingFamily && (scopeId || playerId))) {
@@ -108,8 +111,12 @@ export async function GET(request: NextRequest) {
       sourceSnapshotAt: current.data.sourceSnapshotAt,
     });
   }
-  if (contentType === "GOAL_CONFIRMED" || contentType === "RED_CARD_CONFIRMED") {
-    const current = await readTouchlineSocialConfirmedEventDraft(fixtureId, eventId);
+  if (confirmedEvent) {
+    const current = await readTouchlineSocialConfirmedEventDraft(
+      fixtureId,
+      eventId,
+      contentType as TouchlineSocialConfirmedEventContentType,
+    );
     if (!current.ok || current.data.contentType !== contentType) {
       return response({ ok: false, reason: current.ok ? "CONTENT_TYPE_MISMATCH" : current.reason }, 409);
     }

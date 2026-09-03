@@ -53,7 +53,7 @@ const PAGE_POLICIES: Record<string, Partial<RoutePolicy>> = {
   "/preview": { auth: "ISOLATED_PREVIEW", role: "PREVIEW_AUDITOR", data: "STATIC_ISOLATED_PREVIEW", status: "PREVIEW_CONTRACT_ONLY" },
   "/visual-qa/social-lineup": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_OFFICIAL_LINEUP_DRAFT", status: "PENDING_VISUAL_QA" },
   "/visual-qa/social-match-preview": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_MATCH_PREVIEW_DRAFT", status: "PENDING_VISUAL_QA" },
-  "/visual-qa/social-full-time": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_FULL_TIME_DRAFT", status: "PENDING_VISUAL_QA" },
+  "/visual-qa/social-full-time": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_FULL_TIME_DRAFT", status: "OWNER_ART_APPROVED_LOCAL" },
   "/visual-qa/social-final-score": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_FINAL_SCORE_STORY_DRAFT", status: "PENDING_VISUAL_QA" },
   "/visual-qa/social-confirmed-event": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_CONFIRMED_EVENT_STORY_DRAFT", status: "PENDING_VISUAL_QA" },
   "/visual-qa/social-ranking": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_RANKING_FAMILY_DRAFT", status: "PENDING_VISUAL_QA" },

@@ -3,55 +3,70 @@
   letter-spacing: -.06em !important;
 }
 
+.hatTrickTitle {
+  font-size: 82px !important;
+  font-weight: 1000 !important;
+  line-height: .84 !important;
+  letter-spacing: -.065em !important;
+}
+
+.hatTrickEyebrow {
+  font-size: 17px !important;
+  line-height: 1.22;
+  letter-spacing: .14em !important;
+}
+
+.clubAccentCanvas::before {
+  border-color: color-mix(in srgb, var(--hat-club-accent) 78%, white 8%) !important;
+  box-shadow: inset 0 0 22px color-mix(in srgb, var(--hat-club-accent) 12%, transparent), 0 0 18px color-mix(in srgb, var(--hat-club-accent) 10%, transparent) !important;
+}
+
+.clubAccentTrace {
+  stroke: color-mix(in srgb, var(--hat-club-accent) 88%, white 12%) !important;
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--hat-club-accent) 96%, white 4%)) drop-shadow(0 0 7px color-mix(in srgb, var(--hat-club-accent) 72%, transparent)) !important;
+}
+
 .goalTitle strong {
   font-size: 1.2em;
 }
 
 .celebrationWord {
-  position: relative;
-  display: block;
+  display: flex;
   width: max-content;
   max-width: 100%;
-  color: rgba(255, 255, 255, .16) !important;
+  color: #fff !important;
+  --line-delay: 0ms;
 }
 
-.celebrationWord::after {
-  content: attr(data-word);
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  width: 100%;
-  color: #fff;
-  clip-path: inset(0 100% 0 0);
-  animation: touchline-goal-word-build 2.35s steps(11, end) infinite;
+.celebrationWord > span {
+  display: inline-block;
+  transform-origin: 50% 78%;
+  animation: touchline-goal-letter-zoom 3.45s cubic-bezier(.2, .8, .2, 1) infinite;
+  animation-delay: calc(var(--line-delay) + (var(--letter-index) * 72ms));
 }
 
-.celebrationWordGold {
-  color: rgba(246, 212, 95, .16) !important;
+.celebrationWordGold,
+.celebrationWordGold > span {
+  color: #f6d45f !important;
+  -webkit-text-fill-color: #f6d45f !important;
 }
 
-.celebrationWordGold::after {
-  color: #f6d45f;
-  animation-delay: .12s;
-}
-
-@keyframes touchline-goal-word-build {
-  0% { clip-path: inset(0 100% 0 0); }
-  54%, 86% { clip-path: inset(0 0 0 0); }
-  100% { clip-path: inset(0 100% 0 0); }
+@keyframes touchline-goal-letter-zoom {
+  0%, 5% { opacity: .18; transform: scale(.72); filter: blur(1.4px); }
+  11% { opacity: 1; transform: scale(1.16); filter: blur(0); text-shadow: 0 0 20px currentColor; }
+  17%, 82% { opacity: 1; transform: scale(1); filter: blur(0); text-shadow: 0 0 6px color-mix(in srgb, currentColor 44%, transparent); }
+  96%, 100% { opacity: .18; transform: scale(.92); filter: blur(.4px); }
 }
 
 :global([data-static-export="true"]) .celebrationWord { color: #fff !important; }
 :global([data-static-export="true"]) .celebrationWordGold { color: #f6d45f !important; }
 
-:global([data-static-export="true"]) .celebrationWord::after {
-  display: none;
-}
+:global([data-static-export="true"]) .celebrationWord > span { animation: none; opacity: 1; transform: none; filter: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .celebrationWord { color: #fff !important; }
   .celebrationWordGold { color: #f6d45f !important; }
-  .celebrationWord::after { display: none; }
+  .celebrationWord > span { animation: none; opacity: 1; transform: none; filter: none; }
 }
 
 .singleGoalMoment {
@@ -63,4 +78,102 @@
   height: 49px;
   color: #b6ff4f;
   filter: drop-shadow(0 0 12px rgba(182, 255, 79, .32));
+}
+
+.legibleScoreboard strong {
+  font-size: 18px !important;
+  letter-spacing: .08em !important;
+}
+
+.legibleScoreboard span {
+  font-size: 14px !important;
+}
+
+.legibleScoreboard small {
+  font-size: 13px !important;
+}
+
+.playerIdentity {
+  justify-content: flex-start !important;
+}
+
+.playerIdentity img {
+  flex: 0 0 60px;
+}
+
+.playerIdentity div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.playerIdentity strong {
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.goalMomentLabel,
+.metricLabel,
+.venueLabel,
+.venueFixture {
+  font-size: 13px !important;
+}
+
+.pointsPanel {
+  grid-template-columns: 50px minmax(0, 1fr) !important;
+  gap: 14px !important;
+  min-height: 92px;
+  padding: 12px 18px !important;
+  border-color: rgba(246, 212, 95, .52) !important;
+  background:
+    radial-gradient(circle at 13% 50%, rgba(246, 212, 95, .17), transparent 28%),
+    linear-gradient(110deg, rgba(35, 43, 8, .72), rgba(2, 10, 7, .5)) !important;
+  box-shadow: inset 0 0 30px rgba(246, 212, 95, .04), 0 0 24px rgba(246, 212, 95, .06);
+}
+
+.pointsSpotlight {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 15px !important;
+}
+
+.pointsSpotlight > div {
+  display: grid;
+  gap: 5px;
+}
+
+.pointsSpotlight strong {
+  color: #fff;
+  font-size: 16px !important;
+  font-weight: 1000;
+  letter-spacing: .07em;
+}
+
+.pointsSpotlight > div > span {
+  color: rgba(255, 255, 255, .7);
+  font-size: 13px !important;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.pointsValue {
+  color: #f6d45f !important;
+  font-size: 52px !important;
+  font-weight: 1000 !important;
+  line-height: .86 !important;
+  letter-spacing: -.045em !important;
+  text-shadow: 0 0 20px rgba(246, 212, 95, .34);
+}
+
+.statusCopy strong {
+  font-size: 14px !important;
+}
+
+.statusCopy span {
+  font-size: 13px !important;
+}
+
+.legibleFooter span,
+.legibleFooter strong {
+  font-size: 12px !important;
 }

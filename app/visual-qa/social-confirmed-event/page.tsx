@@ -7,6 +7,7 @@ import { readTouchlineSocialConfirmedEventDraft } from "@/lib/touchlineArena/soc
 
 import {
   readTouchlineConfirmedGoalVisualQaPreview,
+  readTouchlineHatTrickVisualQaPreview,
   readTouchlineConfirmedOwnGoalVisualQaPreview,
   readTouchlineConfirmedRedCardVisualQaPreview,
   readTouchlineGoalHatLayoutVisualQaPreview,
@@ -18,9 +19,39 @@ export const metadata: Metadata = { title: "TouchLine Confirmed Event Story Draf
 
 export default async function TouchlineSocialConfirmedEventPage({
   searchParams,
-}: Readonly<{ searchParams: Promise<{ fixtureId?: string; eventId?: string; design?: string }> }>) {
+}: Readonly<{ searchParams: Promise<{ fixtureId?: string; eventId?: string; design?: string; contentType?: string }> }>) {
   if (process.env.VERCEL_ENV === "production") notFound();
   const params = await searchParams;
+  if (params.design === "hat-trick") {
+    const preview = readTouchlineHatTrickVisualQaPreview();
+    if (!preview) return <main className={styles.unavailable}>HAT-TRICK 043 VISUAL QA PREVIEW UNAVAILABLE</main>;
+    return (
+      <main className={styles.page} data-confirmed-event-visual-qa="non-publishable">
+        <header className={styles.intro}>
+          <span>LOCAL VISUAL QA · FROZEN OWNER ARTWORK · OUTBOUND OFF</span>
+          <h1>Hat-trick Hero · 043 shared goal family</h1>
+          <p>The approved Hat-trick evidence now runs through the same 043 composition and the same website letter animation as Goal. Live publication still requires three independently verified canonical goal events.</p>
+        </header>
+        <section className={styles.reviewGrid}>
+          <div className={styles.artViewport} aria-label="1080 by 1350 Hat-trick artwork preview">
+            <div className={styles.artScale}>
+              <TouchlineSocialGoalHatLayoutDemo draft={preview} />
+            </div>
+          </div>
+          <aside className={styles.reviewPanel}>
+            <span>043 · HAT_TRICK_HERO · OWNER ARTWORK REPLAY</span>
+            <h2>Same motion, event-specific editorial</h2>
+            <ul>
+              <li>Each title letter zooms in sequence on the website.</li>
+              <li>Static social export always renders the complete title.</li>
+              <li>The perimeter neon inherits the scorer club&apos;s exact primary colour.</li>
+              <li>Operational 043 fails closed unless all three goals are stable and verified.</li>
+            </ul>
+          </aside>
+        </section>
+      </main>
+    );
+  }
   if (params.design === "goal-hat-layout") {
     const preview = await readTouchlineGoalHatLayoutVisualQaPreview();
     if (!preview) return <main className={styles.unavailable}>GOAL / HAT-TRICK LAYOUT VISUAL QA PREVIEW UNAVAILABLE</main>;
@@ -101,7 +132,7 @@ export default async function TouchlineSocialConfirmedEventPage({
         <section className={styles.reviewGrid}>
           <div className={styles.artViewport} aria-label="1080 by 1350 red-card artwork preview">
             <div className={styles.artScale}>
-              <TouchlineSocialConfirmedEventDraftView draft={preview} placement="feed" />
+              <TouchlineSocialConfirmedEventDraftView draft={preview} />
             </div>
           </div>
           <aside className={styles.reviewPanel}>
@@ -131,7 +162,7 @@ export default async function TouchlineSocialConfirmedEventPage({
         <section className={styles.reviewGrid}>
           <div className={styles.artViewport} aria-label="1080 by 1350 own-goal artwork preview">
             <div className={styles.artScale}>
-              <TouchlineSocialConfirmedEventDraftView draft={preview} placement="feed" />
+              <TouchlineSocialGoalHatLayoutDemo draft={preview} />
             </div>
           </div>
           <aside className={styles.reviewPanel}>
@@ -148,7 +179,20 @@ export default async function TouchlineSocialConfirmedEventPage({
       </main>
     );
   }
-  const result = await readTouchlineSocialConfirmedEventDraft(params.fixtureId ?? "", params.eventId ?? "");
+  const requestedContentType = params.contentType === "HAT_TRICK_HERO"
+    ? "HAT_TRICK_HERO" as const
+    : params.contentType === "RED_CARD_CONFIRMED"
+      ? "RED_CARD_CONFIRMED" as const
+      : params.contentType === "GOAL_CONFIRMED"
+        ? "GOAL_CONFIRMED" as const
+        : undefined;
+  const result = await readTouchlineSocialConfirmedEventDraft(
+    params.fixtureId ?? "",
+    params.eventId ?? "",
+    requestedContentType,
+  );
   if (!result.ok) return <main style={{ width: 1080, height: 1920, display: "grid", placeItems: "center", background: "#03100b", color: "white" }}>AWAITING TOUCHLINE VERIFIED EVENT · {result.reason}</main>;
-  return <TouchlineSocialConfirmedEventDraftView draft={result.data} />;
+  return result.data.contentType === "RED_CARD_CONFIRMED"
+    ? <TouchlineSocialConfirmedEventDraftView draft={result.data} />
+    : <TouchlineSocialGoalHatLayoutDemo draft={result.data} />;
 }

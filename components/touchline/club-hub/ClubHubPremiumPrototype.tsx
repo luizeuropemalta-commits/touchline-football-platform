@@ -16,6 +16,9 @@ import type { TouchlineClubSocialFeedPage } from "@/lib/touchlineArena/club-soci
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
 import type { TouchlineSocialMatchPreviewDraft } from "@/lib/touchlineArena/social-match-preview-draft-server";
 import TouchlineSocialMatchPreviewDraftView from "@/components/touchline/social/TouchlineSocialMatchPreviewDraft";
+import TouchlineSocialFinalScoreDraftView, {
+  type TouchlineSocialFinalScoreArtworkDraft,
+} from "@/components/touchline/social/TouchlineSocialFinalScoreDraft";
 
 import styles from "./ClubHubPremiumPrototype.module.css";
 import ClubHubNextFixtureCard from "./ClubHubNextFixtureCard";
@@ -69,6 +72,10 @@ type ClubHubPremiumPrototypeProps = Readonly<{
     card: ClubOwnerSquadCard;
   }> | null;
   feed: TouchlineClubSocialFeedPage;
+  fullTimePost: Readonly<{
+    caption: string;
+    draft: TouchlineSocialFinalScoreArtworkDraft;
+  }> | null;
   featuredPost: Readonly<{
     caption: string;
     draft: TouchlineSocialMatchPreviewDraft;
@@ -125,7 +132,7 @@ function publicProfileSlug(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, feed, featuredPost, initialTimeZone, nextFixture, snapshotMode, squad, table }: ClubHubPremiumPrototypeProps) {
+export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, feed, fullTimePost, featuredPost, initialTimeZone, nextFixture, snapshotMode, squad, table }: ClubHubPremiumPrototypeProps) {
   const verifiedSquad = squad.players;
   const currentClubTableRow = table.rows.find((row) => row.team.teamId === club.teamId) ?? null;
   const clubDisplayName = club.name.replace(/ FC$/i, "");
@@ -232,6 +239,36 @@ export default function ClubHubPremiumPrototype({ club, clubCoach, clubLeader, f
                 <span>Instagram and Facebook follow only after their separate gate</span>
               </div>
             </div>
+
+            {fullTimePost ? (
+              <article
+                className={styles.featuredDraftPost}
+                data-clubhub-preview="full-time"
+                data-fanout-targets={[fullTimePost.draft.home.teamId, fullTimePost.draft.away.teamId].sort().join(",")}
+                data-source-checksum={fullTimePost.draft.sourceChecksum}
+              >
+                <div className={styles.featuredDraftArt} aria-label="ClubHub full-time artwork">
+                  <div className={styles.featuredDraftArtScale}>
+                    <TouchlineSocialFinalScoreDraftView draft={fullTimePost.draft} />
+                  </div>
+                </div>
+                <div className={styles.featuredDraftBody}>
+                  <span>LOCAL FAN-OUT PROOF · SAME CANONICAL POST</span>
+                  <h3>{fullTimePost.draft.home.name} {fullTimePost.draft.score.home}-{fullTimePost.draft.score.away} {fullTimePost.draft.away.name}</h3>
+                  <p>{fullTimePost.caption}</p>
+                  <time dateTime={fullTimePost.draft.sourceSnapshotAt}>One source revision · {fullTimePost.draft.sourceChecksum.slice(0, 20)}…</time>
+                  <div className={styles.secondaryAudience}>
+                    <b>{fullTimePost.draft.home.name} ClubHub</b>
+                    <b>{fullTimePost.draft.away.name} ClubHub</b>
+                    <b>TouchLine Social · separately gated</b>
+                  </div>
+                  <div className={styles.feedActions} aria-label="Post actions">
+                    <ClubHubLikeButton />
+                    <ClubHubShareButton title={`${fullTimePost.draft.home.name} ${fullTimePost.draft.score.home}-${fullTimePost.draft.score.away} ${fullTimePost.draft.away.name} · Full Time`} text={fullTimePost.caption} />
+                  </div>
+                </div>
+              </article>
+            ) : null}
 
             {featuredPost ? (
               <article

@@ -1,5 +1,8 @@
 # Automatic social module registry
 
+The current exact template count and per-type inventory is maintained in
+[`TEMPLATE_IMPLEMENTATION_STATUS.md`](./TEMPLATE_IMPLEMENTATION_STATUS.md).
+
 Status: **architecture contract; local QA candidates only**
 External dispatch: **disabled**
 
@@ -47,11 +50,11 @@ separate social-delivery gate. No surface rebuilds the football facts.
 The OWNER classifies `HAT_TRICK_HERO` as a 043 confirmed-goal event, not as a
 044 ranking publication. Its 1080×1350 artwork received visual approval on
 2 September 2026 and is locked by
-`sha256:17a6f218fa7e007dbebe0473ae95d408e5518532c0ad7c9fd5e3e9c7a35a9e2d`.
-The current local candidate still uses the 044 ranking-family reader, which is
-a documented transitional mismatch rather than an activation claim. A
-separately reviewed forward migration must move its source/trigger contract to
-043. Shared QA, Production and outbound remain fail-closed meanwhile.
+`sha256:a0bc151bfbe5348e204bac32ad2893e27490d8c0dace7d1d82953d6b01a0ef38`.
+The additive 047 local migration candidate moves its source/trigger contract,
+exact event identity and approval routing to 043 and explicitly rejects new
+Hat-trick jobs in 044. Shared QA, Production and outbound remain fail-closed
+until the migration receives separate release authority.
 
 Module 045 now has a **local-only candidate awaiting independent second audit**:
 one approved 039–044 DRAFT becomes one first-party post, while immutable club

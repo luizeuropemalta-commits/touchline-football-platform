@@ -33,7 +33,7 @@ test("043 executor boundary accepts only the canonical QA project and host", () 
     /QA_BOUNDARY_MISMATCH/);
 });
 
-test("scheduler binds exact fixture+event identities to Goal and Red Card jobs", async () => {
+test("scheduler binds exact fixture+event identities to Goal, Own Goal, Hat-trick and Red Card jobs", async () => {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
   const admin = { rpc(name: string, args: Record<string, unknown>) {
     calls.push({ name, args });
@@ -52,13 +52,14 @@ test("scheduler binds exact fixture+event identities to Goal and Red Card jobs",
     discover: async () => [
       { ...common, eventId: "90001", contentType: "GOAL_CONFIRMED" },
       { ...common, eventId: "90002", contentType: "RED_CARD_CONFIRMED" },
+      { ...common, eventId: "90003", contentType: "HAT_TRICK_HERO" },
     ],
   });
-  assert.deepEqual(result, { outcome: "success", processed: 2 });
+  assert.deepEqual(result, { outcome: "success", processed: 3 });
   const enqueues = calls.filter((call) => call.name === "touchline_social_043_enqueue_job");
-  assert.deepEqual(enqueues.map((call) => call.args.p_event_provider_id), ["90001", "90002"]);
+  assert.deepEqual(enqueues.map((call) => call.args.p_event_provider_id), ["90001", "90002", "90003"]);
   assert.deepEqual(enqueues.map((call) => call.args.p_template_version),
-    ["touchline-goal-confirmed-story-v1", "touchline-red-card-confirmed-story-v1"]);
+    ["touchline-goal-event-feed-v1", "touchline-red-card-confirmed-story-v1", "touchline-hat-trick-feed-v1"]);
 });
 
 test("runner transports event identity and completes only the claimed immutable draft", async () => {
@@ -68,7 +69,7 @@ test("runner transports event identity and completes only the claimed immutable 
     if (name === "touchline_social_043_claim_cycle") return rpcResult({ outcome: "claimed", leaseToken: UUID_A });
     if (name === "touchline_social_043_claim_job") return rpcResult({ outcome: "claimed", jobId: UUID_B,
       leaseToken: UUID_C, fixtureId: "19722192", eventId: "90001", contentType: "GOAL_CONFIRMED",
-      templateVersion: "touchline-goal-confirmed-story-v1", inputChecksum: SHA_A,
+      templateVersion: "touchline-goal-event-feed-v1", inputChecksum: SHA_A,
       sourceRevisionChecksum: SHA_B });
     if (name === "touchline_social_043_renew_cycle" || name === "touchline_social_043_renew_job") {
       return rpcResult({ outcome: "renewed" });

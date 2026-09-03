@@ -1,7 +1,9 @@
 # TouchLine Release Checklist
 
 Status: CURRENT
-Last reviewed: 2026-08-13
+Last reviewed: 2026-09-02
+
+Mandatory policy: [Cost-Safe Commit and Vercel Deployment Policy](docs/touchline/release-audit/VERCEL_COST_SAFE_COMMIT_AND_DEPLOY_POLICY.md)
 
 ## Candidate
 
@@ -9,6 +11,17 @@ Last reviewed: 2026-08-13
 - [ ] Exact branch, `HEAD`, baseline, and task-owned manifest recorded
 - [ ] Clean worktree; generated/cache files excluded
 - [ ] Rollback target and trigger documented
+
+## Vercel cost safety
+
+- [ ] Owner explicitly authorized this exact target; authorization has not been inferred from earlier unrelated work
+- [ ] Remote-build budget recorded; default is one Git-native build for the exact approved SHA
+- [ ] Related approved changes batched; remote deployment is not being used as the first build/test environment
+- [ ] Candidate SHA is not already queued, building or ready for the same target
+- [ ] No duplicate Git/CLI/redeploy/deploy-hook path exists for this candidate
+- [ ] One active build per branch; no `--force`, **Start Building Now**, Turbo/Enhanced or full-concurrency override
+- [ ] A failed SHA was diagnosed locally and was not blindly retried
+- [ ] Spend Management and usage-alert status recorded for release-cost review
 
 ## Verification
 
@@ -33,6 +46,7 @@ Last reviewed: 2026-08-13
 - [ ] Post-cutover smoke covers affected public/authenticated routes
 - [ ] P0 triggers rollback before further repair
 - [ ] `CURRENT_STATE.md` and execution ledger are appended with final evidence
+- [ ] Deployment ID, exact SHA, target and remote-build budget consumed are recorded
 - [ ] Observability activation never substitutes for product smoke tests or rollback readiness
 
 `pnpm run verify:release` is the local executable baseline. Passing it is necessary, not sufficient, for Production approval.

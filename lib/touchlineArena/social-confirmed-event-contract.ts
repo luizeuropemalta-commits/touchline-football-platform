@@ -9,6 +9,15 @@ export const TOUCHLINE_CONFIRMED_EVENT_KINDS = [
 export type TouchlineConfirmedEventKind =
   (typeof TOUCHLINE_CONFIRMED_EVENT_KINDS)[number];
 
+export const TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES = [
+  "GOAL_CONFIRMED",
+  "RED_CARD_CONFIRMED",
+  "HAT_TRICK_HERO",
+] as const;
+
+export type TouchlineSocialConfirmedEventContentType =
+  (typeof TOUCHLINE_SOCIAL_CONFIRMED_EVENT_CONTENT_TYPES)[number];
+
 const REJECTED_EVENT_STATE = /(?:VAR|REVIEW|PENDING|DISALLOW|CANCEL|RESCIND|OVERTURN)/i;
 
 function normalizedEventType(value: string | null | undefined) {
@@ -57,4 +66,30 @@ export function touchlineConfirmedEventContentType(kind: TouchlineConfirmedEvent
   return kind === "red-card" || kind === "second-yellow-red"
     ? "RED_CARD_CONFIRMED" as const
     : "GOAL_CONFIRMED" as const;
+}
+
+export function touchlineConfirmedHatTrickGoalFact(input: Readonly<{
+  playerId: string | null | undefined;
+  type: string | null | undefined;
+  status: string | null | undefined;
+  info: string | null | undefined;
+  addition: string | null | undefined;
+}>) {
+  const playerId = String(input.playerId ?? "").trim();
+  if (!/^[1-9][0-9]{0,19}$/.test(playerId)) return null;
+  const kind = classifyTouchlineConfirmedMatchEvent(input);
+  return kind === "goal" || kind === "penalty"
+    ? { playerId, kind } as const
+    : null;
+}
+
+export function countTouchlineConfirmedHatTrickGoals(
+  events: readonly Readonly<{ playerId: string; kind: "goal" | "penalty" | "own-goal" }>[],
+  playerId: string,
+) {
+  const identity = playerId.trim();
+  if (!/^[1-9][0-9]{0,19}$/.test(identity)) return 0;
+  return events.filter((event) => (
+    event.playerId.trim() === identity && (event.kind === "goal" || event.kind === "penalty")
+  )).length;
 }

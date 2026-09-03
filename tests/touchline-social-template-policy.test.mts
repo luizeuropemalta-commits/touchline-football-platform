@@ -16,7 +16,7 @@ const SHA_C = `sha256:${"c".repeat(64)}`;
 test("046 registry derives immutable identities from the checked-in visual, copy and lexicon sources", async () => {
   const registry = await readTouchlineSocialTemplateRegistry();
   assert.equal(registry.length, TOUCHLINE_SOCIAL_TEMPLATE_DEFINITIONS.length);
-  assert.ok(registry.length >= 12);
+  assert.equal(registry.length, 12);
   assert.equal(new Set(registry.map((item) => `${item.contentType}:${item.placement}:${item.templateVersion}`)).size,
     registry.length);
   for (const identity of registry) {
@@ -25,6 +25,18 @@ test("046 registry derives immutable identities from the checked-in visual, copy
     assert.match(identity.lexiconChecksum, /^sha256:[0-9a-f]{64}$/);
     assert.match(identity.renderedFieldsChecksum, /^sha256:[0-9a-f]{64}$/);
     assert.match(identity.templateIdentityChecksum, /^sha256:[0-9a-f]{64}$/);
+  }
+});
+
+test("social template implementation inventory stays exact and honest", () => {
+  const inventory = readFileSync(
+    "docs/touchline-arena/social-publishing-playbook/TEMPLATE_IMPLEMENTATION_STATUS.md",
+    "utf8",
+  );
+  assert.match(inventory, /## Registered templates: 12/);
+  assert.match(inventory, /12 registered locally, 0 automatically posting\s+externally/);
+  for (const definition of TOUCHLINE_SOCIAL_TEMPLATE_DEFINITIONS) {
+    assert.equal(inventory.includes(`\`${definition.contentType}\``), true);
   }
 });
 

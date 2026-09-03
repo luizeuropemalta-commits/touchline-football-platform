@@ -12,6 +12,22 @@ After material work:
 1. update `CURRENT_STATE.md` so it reflects only verified current facts;
 2. append dated evidence to the long ledger;
 3. mark superseded decisions explicitly rather than deleting them.
+
+# 2026-09-02 — Vercel cost-safe commit/deploy governance
+
+- Added the mandatory canonical policy at `docs/touchline/release-audit/VERCEL_COST_SAFE_COMMIT_AND_DEPLOY_POLICY.md` and linked it from `AGENTS.md` and `RELEASE_CHECKLIST.md`.
+- Synchronized the cost gate into both canonical Mission Completion Gate copies so future governance validation fails closed if either instruction source drifts.
+- Default remote-build budget is zero before explicit target authorization and one Git-native build for the approved exact SHA afterward. Duplicate paths, blind retries, `--force`, **Start Building Now**, full concurrency and silent build-machine upgrades are forbidden.
+- Verification: mission governance PASS, release readiness `LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL`, focused governance/readiness tests `6/6`, `git diff --check` PASS.
+- No commit, push, Vercel deployment, project/billing configuration change or Production action was performed.
+
+# 2026-09-03 — 043 Goal/Hat consolidation and exact template inventory
+
+- Consolidated `HAT_TRICK_HERO` into the 043 confirmed-goal family across the local registry, source reader, scheduler, executor, shared renderer and the additive migration 047 candidate. The migration and conservative rollback remain unapplied remotely.
+- The active Hat visual now shows only one `82px`, maximum-weight yellow `HAT-TRICK` title in the exact TouchLine points colour `#f6d45f`; `HERO` is absent. The green `Bruno Fernandes MAKES IT THREE` line is `17px`. Website letters use the shared staggered zoom while static export and reduced-motion render the complete title immediately; browser geometry confirms no clipping or horizontal overflow.
+- Added the code-backed `TEMPLATE_IMPLEMENTATION_STATUS.md` inventory and an executable exact-count guard: 12 template identities are registered locally. Penalty and own goal remain presentation variants of Goal, not duplicate identities. Instagram/Facebook outbound remains disabled, so the external automatic-posting count is 0.
+- Verification after the revision-4 candidate: focused `23/23`, complete `1578/1578`, canonical release suite `1550/1550`, TypeScript PASS, ESLint 0 errors with 7 established warnings, `git diff --check` PASS, mission governance PASS, release readiness `LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL`, and Next production build `139/139` pages PASS. Browser evidence confirmed the native `1080×1350` Hat canvas, yellow one-line title, no `HERO`, decoded imagery and empty console.
+- Luiz approved Hat revision 3 on 3 September 2026 after direct per-glyph yellow verification. A subsequent owner-requested revision 4 legibility candidate is now locally rendered: the club crest precedes the player name, long names wrap without covering it, `+12` is a `52px` primary TouchLine Points value derived from the existing `player_scoring_v3` rule for the persisted `10.00` rating, and the duplicate Match Rating explanation is removed. Revision 3 remains preserved; revision 4 is byte-locked for review and is not yet labelled as its approved replacement. No database write, shared-QA/Production mutation or social dispatch occurred.
 # 2026-08-21 — QA Live real-time P0
 
 - Preserved the existing Card Engine Block 4A dirty worktree and backup `9fb94339-d9ce-4925-9d3c-59ef9b0cfe0e`; all P0 implementation is in the isolated worktree `/Users/luizlopez/Developer/touchline-qa-p0-live-20260821`.

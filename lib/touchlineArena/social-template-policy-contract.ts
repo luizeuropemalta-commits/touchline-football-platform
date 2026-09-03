@@ -57,9 +57,9 @@ export const TOUCHLINE_SOCIAL_TEMPLATE_DEFINITIONS = Object.freeze([
     renderedFields: ["awayClub", "competition", "finalScore", "gameweek", "goalEvents", "homeClub", "stadium", "topMatchCard"],
   },
   {
-    contentType: "GOAL_CONFIRMED", placement: "INSTAGRAM_STORY", locale: "en-GB",
-    width: 1080, height: 1920, templateVersion: "touchline-goal-confirmed-story-v1",
-    renderedFields: ["currentScore", "eventMinute", "eventPlayer", "eventTeam", "fixture", "playerCard", "totalRating"],
+    contentType: "GOAL_CONFIRMED", placement: "INSTAGRAM_FEED", locale: "en-GB",
+    width: 1080, height: 1350, templateVersion: "touchline-goal-event-feed-v1",
+    renderedFields: ["currentScore", "eventMinute", "eventPlayer", "eventTeam", "fixture", "homeStadium", "matchRating", "playerCard", "totalRating", "touchlinePoints"],
   },
   {
     contentType: "RED_CARD_CONFIRMED", placement: "INSTAGRAM_STORY", locale: "en-GB",
@@ -68,7 +68,7 @@ export const TOUCHLINE_SOCIAL_TEMPLATE_DEFINITIONS = Object.freeze([
   },
   ...([
     "GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
-    "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO",
+    "GAMEWEEK_HERO", "TOP_PERFORMER",
   ] as const).map((contentType) => ({
     contentType, placement: "INSTAGRAM_FEED" as const, locale: "en-GB" as const,
     width: 1080 as const, height: 1350 as const,
@@ -77,6 +77,11 @@ export const TOUCHLINE_SOCIAL_TEMPLATE_DEFINITIONS = Object.freeze([
       ? ["awayLeader", "fixture", "homeLeader", "rankingSnapshot", "totalRatings"]
       : ["fixtureOrGameweek", "rankingSnapshot", "rankedCards", "totalRatings"],
   })),
+  {
+    contentType: "HAT_TRICK_HERO", placement: "INSTAGRAM_FEED", locale: "en-GB",
+    width: 1080, height: 1350, templateVersion: "touchline-hat-trick-feed-v1",
+    renderedFields: ["currentScore", "eventPlayer", "eventTeam", "fixture", "goalMoments", "homeStadium", "matchRating", "playerCard", "totalRating", "touchlinePoints"],
+  },
 ] satisfies readonly Omit<TouchlineSocialTemplateDescriptor,
   "visualTemplateChecksum" | "baseCopyChecksum" | "lexiconChecksum">[]);
 

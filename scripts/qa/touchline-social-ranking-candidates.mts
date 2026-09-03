@@ -1,10 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { compareTouchlineRankingPlayers } from "../../lib/touchlineArena/card-ranking.ts";
-import {
-  touchlineConfirmedHatTrickGoalFact,
-  type TouchlineSocialRankingContentType,
-} from "../../lib/touchlineArena/social-ranking-family-contract.ts";
+import type { TouchlineSocialRankingContentType } from "../../lib/touchlineArena/social-ranking-family-contract.ts";
 
 const NUMERIC_ID = /^[1-9][0-9]{0,19}$/;
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
@@ -86,9 +83,9 @@ function explicitIdentity(input: Readonly<{
   const scopeId = input.scopeId?.trim() || null;
   const playerId = input.playerId?.trim() || null;
   const allowed = ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
-    "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(contentType);
+    "GAMEWEEK_HERO", "TOP_PERFORMER"].includes(contentType);
   const gameweek = ["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "GAMEWEEK_HERO"].includes(contentType);
-  const player = ["GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(contentType);
+  const player = ["GAMEWEEK_HERO", "TOP_PERFORMER"].includes(contentType);
   if (!allowed || !NUMERIC_ID.test(fixtureId) || gameweek !== Boolean(scopeId)
     || player !== Boolean(playerId) || (scopeId && !NUMERIC_ID.test(scopeId))
     || (playerId && !NUMERIC_ID.test(playerId))) throw new Error("TL_SOCIAL_RANKING_EXPLICIT_IDENTITY_INVALID");
@@ -155,17 +152,11 @@ export async function discoverTouchlineSocialRankingCandidates(input: Readonly<{
     const finished = rows.filter((row) => String(row.status ?? "").toLowerCase() === "finished");
     if (finished.length) {
       const fixtureIds = finished.map((row) => String(row.id));
-      const [settlements, events] = await Promise.all([
-        input.admin.from("touchline_player_fixture_score_settlements")
+      const settlements = await input.admin.from("touchline_player_fixture_score_settlements")
           .select("fixture_id,football_player_id,rating,minutes_played,settlement_status,football_players!inner(provider_player_id)")
           .eq("scoring_version", "player_scoring_v3").eq("settlement_status", "final")
-          .in("fixture_id", fixtureIds).limit(2000),
-        input.admin.from("football_fixture_events")
-          .select("fixture_id,provider_player_id,event_type,event_status,info,addition")
-          .eq("provider", "sportmonks").in("fixture_id", fixtureIds).limit(2000),
-      ]);
-      if (settlements.error || !Array.isArray(settlements.data) || settlements.data.length >= 2000
-        || events.error || !Array.isArray(events.data) || events.data.length >= 2000) {
+          .in("fixture_id", fixtureIds).limit(2000);
+      if (settlements.error || !Array.isArray(settlements.data) || settlements.data.length >= 2000) {
         throw new Error("TL_SOCIAL_RANKING_SETTLEMENT_DISCOVERY_FAILED");
       }
       const byFixture = new Map<string, Record<string, unknown>[]>();
@@ -184,24 +175,6 @@ export async function discoverTouchlineSocialRankingCandidates(input: Readonly<{
         if (NUMERIC_ID.test(topPlayerId)) proposed.push({ contentType: "TOP_PERFORMER",
           fixtureId: String(fixture.provider_fixture_id), scopeId: null, playerId: topPlayerId,
           startsAt: String(fixture.starts_at) });
-        const goalsByPlayer = new Map<string, number>();
-        for (const event of events.data as Record<string, unknown>[]) {
-          if (String(event.fixture_id ?? "") !== String(fixture.id)) continue;
-          const fact = touchlineConfirmedHatTrickGoalFact({
-            playerId: String(event.provider_player_id ?? ""),
-            type: String(event.event_type ?? ""),
-            status: String(event.event_status ?? ""),
-            info: String(event.info ?? ""),
-            addition: String(event.addition ?? ""),
-          });
-          if (!fact) continue;
-          goalsByPlayer.set(fact.playerId, (goalsByPlayer.get(fact.playerId) ?? 0) + 1);
-        }
-        for (const [playerId, goals] of goalsByPlayer) {
-          if (goals < 3) continue;
-          proposed.push({ contentType: "HAT_TRICK_HERO", fixtureId: String(fixture.provider_fixture_id),
-            scopeId: null, playerId, startsAt: String(fixture.starts_at) });
-        }
       }
       const latest = finished[finished.length - 1]!;
       const latestRoundId = String(latest.round_id ?? "");

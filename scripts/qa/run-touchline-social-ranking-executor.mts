@@ -17,7 +17,7 @@ const HEARTBEAT_MS = 30_000;
 const WORKER_TIMEOUT_MS = 120_000;
 const RANKING_CONTENT_TYPES = Object.freeze([
   "GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "PLAYER_DUEL",
-  "GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO",
+  "GAMEWEEK_HERO", "TOP_PERFORMER",
 ] as const);
 const TEMPLATE_VERSION = "touchline-social-ranking-feed-v1";
 
@@ -193,7 +193,7 @@ async function claimJob(admin: SupabaseClient, runnerLeaseToken: string): Promis
     || !RANKING_CONTENT_TYPES.includes(job.contentType)
     || (["GAMEWEEK_RANKING_PREVIEW", "GAMEWEEK_RANKING_FINAL", "GAMEWEEK_HERO"].includes(job.contentType)
       !== Boolean(job.scopeId))
-    || (["GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(job.contentType)
+    || (["GAMEWEEK_HERO", "TOP_PERFORMER"].includes(job.contentType)
       !== Boolean(job.playerId))
     || (job.scopeId !== null && !/^[1-9]\d{0,19}$/.test(job.scopeId))
     || (job.playerId !== null && !/^[1-9]\d{0,19}$/.test(job.playerId))

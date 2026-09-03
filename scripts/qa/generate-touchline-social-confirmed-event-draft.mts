@@ -16,8 +16,9 @@ const STABLE_QA_HOST = "touchline-arena-official-git-qa-fifa-agent-plataform.ver
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CONFIG = Object.freeze({
-  GOAL_CONFIRMED: { templateVersion: "touchline-goal-confirmed-story-v1" },
-  RED_CARD_CONFIRMED: { templateVersion: "touchline-red-card-confirmed-story-v1" },
+  GOAL_CONFIRMED: { templateVersion: "touchline-goal-event-feed-v1", placement: "INSTAGRAM_FEED", width: 1080, height: 1350 },
+  RED_CARD_CONFIRMED: { templateVersion: "touchline-red-card-confirmed-story-v1", placement: "INSTAGRAM_STORY", width: 1080, height: 1920 },
+  HAT_TRICK_HERO: { templateVersion: "touchline-hat-trick-feed-v1", placement: "INSTAGRAM_FEED", width: 1080, height: 1350 },
 });
 
 function required(name: string) {
@@ -57,7 +58,7 @@ const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshTok
 const storage = createTouchlineSocialArtifactStorageCore({ supabaseUrl, serviceRoleKey });
 const browser = await chromium.launch({ headless: true });
 try {
-  const context = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+  const context = await browser.newContext({ viewport: { width: config.width, height: config.height }, deviceScaleFactor: 1 });
   await context.addCookies([{ name: "tl-social-render", value: renderSecret, domain: base.hostname,
     path: "/", httpOnly: true, secure: true, sameSite: "Strict" }]);
   const page = await context.newPage();
@@ -65,7 +66,7 @@ try {
     const [existing, queuedJob] = await Promise.all([
       admin.from("touchline_social_publication_drafts").select("revision")
         .eq("fixture_provider_id", fixtureId).eq("event_provider_id", eventId)
-        .eq("content_type", contentType).eq("placement", "INSTAGRAM_STORY")
+        .eq("content_type", contentType).eq("placement", config.placement)
         .eq("locale", "en-GB").eq("template_version", config.templateVersion)
         .order("revision", { ascending: false }).limit(1).maybeSingle(),
       admin.from("touchline_social_confirmed_event_generation_jobs")
@@ -109,18 +110,19 @@ try {
         publicText: element.innerText,
       };
     });
-    if (metadata.contentType !== contentType || metadata.eventId !== eventId || metadata.placement !== "story"
+    if (metadata.contentType !== contentType || metadata.eventId !== eventId
+      || metadata.placement !== (config.placement === "INSTAGRAM_FEED" ? "feed" : "story")
       || metadata.templateVersion !== config.templateVersion || metadata.sourceChecksum !== expectedInputChecksum
       || metadata.sourceRevisionChecksum !== expectedSourceRevisionChecksum || !metadata.sourceVersion || !metadata.caption
       || metadata.startsAt !== startsAt || !Number.isFinite(Date.parse(metadata.sourceSnapshotAt ?? ""))
-      || metadata.width !== 1080 || metadata.height !== 1920 || !metadata.imagesReady || metadata.overflow
+      || metadata.width !== config.width || metadata.height !== config.height || !metadata.imagesReady || metadata.overflow
       || /\b(?:sportmonks|api|provider|pipeline|settlement|fixture\s+\d+)\b/i.test(metadata.publicText ?? "")) {
       throw new Error("TL_CONFIRMED_EVENT_RENDER_CONTRACT_MISMATCH");
     }
     const artifactBytes = new Uint8Array(await canvas.screenshot({ type: "png", animations: "disabled" }));
     const artifactChecksum = checksumTouchlineSocialArtifact(artifactBytes);
     const objectKey = touchlineSocialArtifactObjectKey({ fixtureId, eventId, teamId: null,
-      contentType: contentType as TouchlineSocialContentType, placement: "INSTAGRAM_STORY", locale: "en-GB", revision,
+      contentType: contentType as TouchlineSocialContentType, placement: config.placement, locale: "en-GB", revision,
       templateVersion: config.templateVersion, sourceVersion: metadata.sourceVersion,
       artifactChecksum, artifactMimeType: "image/png" });
     let locator;
@@ -144,7 +146,7 @@ try {
       || current?.eventId !== eventId) throw new Error("TL_CONFIRMED_EVENT_SOURCE_CHANGED_DURING_RENDER");
     const generatedAt = new Date().toISOString();
     const draftResult = await createTouchlineSocialPublicationDraft({
-      fixtureId, eventId, teamId: null, contentType, placement: "INSTAGRAM_STORY", locale: "en-GB",
+      fixtureId, eventId, teamId: null, contentType, placement: config.placement, locale: "en-GB",
       revision, renderPath, caption: metadata.caption, firstObservedAt,
       sourceSnapshotAt: new Date(metadata.sourceSnapshotAt!).toISOString(),
       templateVersion: config.templateVersion, sourceVersion: metadata.sourceVersion,
