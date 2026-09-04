@@ -18,7 +18,6 @@ import officialLeagueStyles from "@/components/touchline/club-hub/ClubHubOfficia
 import premiumStyles from "@/components/touchline/club-hub/ClubHubPremiumPrototype.module.css";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
 import type { TouchlinePublicFixture, TouchlinePublicTeam } from "@/lib/football-data/public-fixture";
-import { toPublicTouchlineFixture } from "@/lib/football-data/public-fixture";
 import {
   TOUCHLINE_ENGLAND_CLUBS,
   findTouchLineClub,
@@ -63,7 +62,7 @@ import { TOUCHLINE_PRESEASON_RANKING_STATE } from "@/lib/touchlineArena/card-ran
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
-import { TOUCHLINE_STADIUM_CATALOG } from "@/lib/touchlineArena/stadium-catalog";
+import { TOUCHLINE_STADIUM_CATALOG, toTouchlineLiveFixture } from "@/lib/touchlineArena/stadium-catalog";
 import {
   resolveTouchlineClubHubDataSource,
   type TouchlineQaClubHubMirrorReadResult,
@@ -357,7 +356,7 @@ async function loadClubMatchSnapshot(
       lineups: matchdayFeed?.lineups ?? [],
       formation,
       coach: null,
-      publicFixture: toPublicTouchlineFixture(previewFixture),
+      publicFixture: toTouchlineLiveFixture(previewFixture),
       playerStatistics: matchDetail?.playerStatistics ?? [],
     };
   } catch {
