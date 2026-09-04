@@ -52,7 +52,14 @@ const admin = createClient(supabaseUrl, serviceRoleKey, {
 const storage = createTouchlineSocialArtifactStorageCore({ supabaseUrl, serviceRoleKey });
 const browser = await chromium.launch({ headless: true });
 try {
-  const context = await browser.newContext({ viewport: { width: 1080, height: 1350 }, deviceScaleFactor: 1 });
+  const context = await browser.newContext({
+    viewport: { width: 1080, height: 1350 },
+    deviceScaleFactor: 1,
+    // The QA boundary already restricts this exception to the literal
+    // localhost hostname. It lets the generator use Next's self-signed local
+    // HTTPS certificate without weakening certificate validation for Vercel.
+    ignoreHTTPSErrors: base.hostname === "localhost",
+  });
   await context.addCookies([{
     name: "tl-social-render", value: renderSecret, domain: base.hostname, path: "/",
     httpOnly: true, secure: base.protocol === "https:", sameSite: "Strict",
@@ -95,6 +102,13 @@ try {
     ]);
     const canvas = page.locator('[data-social-art="touchline-match-preview"]');
     if (await canvas.count() !== 1) throw new Error("TL_MATCH_PREVIEW_RENDER_NOT_READY");
+    await page.waitForFunction(() => {
+      const element = document.querySelector('[data-social-art="touchline-match-preview"]');
+      const images = element ? [...element.querySelectorAll<HTMLImageElement>("img")] : [];
+      return images.length > 0 && images.every((image) => image.complete && image.naturalWidth > 0);
+    }, undefined, { timeout: 15_000 }).catch(() => {
+      throw new Error("TL_MATCH_PREVIEW_IMAGE_TIMEOUT");
+    });
     const metadata = await canvas.evaluate((node) => {
       const element = node as HTMLElement;
       const box = element.getBoundingClientRect();

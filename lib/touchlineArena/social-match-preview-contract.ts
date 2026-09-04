@@ -75,7 +75,6 @@ function selectLeader(input: Readonly<{
       && ranked.totalRating !== null
       && Number.isFinite(ranked.totalRating)
       && ranked.totalRating === card.seasonTotalRating
-      && ranked.clubName === input.club.name
       && card.clubName === input.club.name
       ? [{ ranked, card }]
       : [];

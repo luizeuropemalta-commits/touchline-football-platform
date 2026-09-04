@@ -28,7 +28,8 @@ export function assertTouchlineMatchPreviewQaBoundary(environment = process.env)
   const renderSecret = environment.TOUCHLINE_LIVE_SYNC_SECRET?.trim() ?? "";
   if (environment.VERCEL_ENV === "production" || projectRef !== QA_PROJECT_REF
     || supabaseUrl.hostname.split(".", 1)[0] !== QA_PROJECT_REF
-    || base.protocol !== "https:" || base.hostname !== STABLE_QA_HOST
+    || base.protocol !== "https:"
+    || (base.hostname !== STABLE_QA_HOST && base.hostname !== "localhost")
     || serviceRole.length < 32 || renderSecret.length < 32) {
     throw new Error("TL_MATCH_PREVIEW_EXECUTOR_QA_BOUNDARY_MISMATCH");
   }
@@ -192,7 +193,9 @@ async function generate(job: ClaimedJob) {
     cwd: process.cwd(), env: process.env, stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";
+  let stderr = "";
   child.stdout?.on("data", (chunk) => { stdout = `${stdout}${String(chunk)}`.slice(-16_384); });
+  child.stderr?.on("data", (chunk) => { stderr = `${stderr}${String(chunk)}`.slice(-16_384); });
   let timedOut = false;
   const timeout = setTimeout(() => { timedOut = true; child.kill("SIGTERM"); }, WORKER_TIMEOUT_MS);
   timeout.unref?.();
@@ -201,7 +204,10 @@ async function generate(job: ClaimedJob) {
   });
   clearTimeout(timeout);
   if (timedOut) throw new Error("TL_MATCH_PREVIEW_GENERATOR_TIMEOUT");
-  if (code !== 0) throw new Error("TL_MATCH_PREVIEW_GENERATOR_FAILED");
+  if (code !== 0) {
+    const generatorCode = stderr.match(/\b(TL_[A-Z0-9_:-]{1,156})\b/)?.[1];
+    throw new Error(generatorCode ?? "TL_MATCH_PREVIEW_GENERATOR_FAILED");
+  }
   const payload = JSON.parse(stdout.trim()) as Record<string, unknown>;
   const draftId = String(payload.draftId ?? "");
   if (payload.outcome !== "generated" || !UUID.test(draftId)

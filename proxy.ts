@@ -60,8 +60,9 @@ async function hasQaSocialRenderBearer(request: NextRequest, hostname: string) {
     "/visual-qa/social-ranking",
     "/api/admin/social-publications/source",
   ]);
+  const isQaRenderHost = hostname === TOUCHLINE_STABLE_QA_HOST || hostname === "localhost";
   if (process.env.VERCEL_ENV === "production"
-    || hostname !== TOUCHLINE_STABLE_QA_HOST
+    || !isQaRenderHost
     || !internalSocialPaths.has(request.nextUrl.pathname)) return false;
   const secret = process.env.TOUCHLINE_LIVE_SYNC_SECRET?.trim() ?? "";
   const provided = request.cookies.get("tl-social-render")?.value?.trim() ?? "";

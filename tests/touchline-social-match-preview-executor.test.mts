@@ -13,12 +13,13 @@ const UUID_B = "22222222-2222-4222-8222-222222222222";
 const UUID_C = "33333333-3333-4333-8333-333333333333";
 const SHA_A = `sha256:${"a".repeat(64)}`;
 const SHA_B = `sha256:${"b".repeat(64)}`;
+const proxySource = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 
 function rpcResult(data: unknown) {
   return Promise.resolve({ data, error: null });
 }
 
-test("041 executor boundary accepts only the canonical QA project and host", () => {
+test("041 executor boundary accepts canonical QA or an exact localhost render worker", () => {
   const valid = {
     TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
     NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
@@ -28,10 +29,24 @@ test("041 executor boundary accepts only the canonical QA project and host", () 
     VERCEL_ENV: "preview",
   };
   assert.equal(assertTouchlineMatchPreviewQaBoundary(valid).projectRef, "xgxbwqxjssxxuihuwmgy");
+  assert.equal(assertTouchlineMatchPreviewQaBoundary({
+    ...valid,
+    TOUCHLINE_QA_BASE_URL: "https://localhost:4028",
+  }).base.hostname, "localhost");
   assert.throws(() => assertTouchlineMatchPreviewQaBoundary({ ...valid, VERCEL_ENV: "production" }),
     /QA_BOUNDARY_MISMATCH/);
   assert.throws(() => assertTouchlineMatchPreviewQaBoundary({ ...valid, TOUCHLINE_QA_BASE_URL: "https:\/\/touchline.com.br" }),
     /QA_BOUNDARY_MISMATCH/);
+  assert.throws(() => assertTouchlineMatchPreviewQaBoundary({ ...valid, TOUCHLINE_QA_BASE_URL: "https:\/\/127.0.0.1:4028" }),
+    /QA_BOUNDARY_MISMATCH/);
+});
+
+test("the secret-bearing social renderer permits exact localhost but not another loopback alias", () => {
+  assert.match(proxySource,
+    /hostname === TOUCHLINE_STABLE_QA_HOST \|\| hostname === "localhost"/);
+  assert.match(proxySource, /process\.env\.VERCEL_ENV === "production"/);
+  assert.doesNotMatch(proxySource, /hostname === "127\.0\.0\.1"/);
+  assert.match(proxySource, /timingSafeEqual|crypto\.subtle\.digest/);
 });
 
 test("scheduler enqueues exactly one immutable MATCH_PREVIEW candidate", async () => {

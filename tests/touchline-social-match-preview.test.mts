@@ -207,6 +207,22 @@ test("selects one verified current-club leader per side from the same complete r
   assert.equal(result.away.table.displayPosition, 9);
 });
 
+test("selects the team-scoped canonical leader when ranking and display club labels use aliases", () => {
+  const input = validInput();
+  const result = selectTouchlineMatchPreviewSides({
+    ...input,
+    rankingPlayers: input.rankingPlayers.map((player) => (
+      player.clubName === arsenal.name ? { ...player, clubName: "Arsenal" } : player
+    )),
+  });
+
+  assert.ok(result);
+  assert.equal(result.away.leader.card.canonicalPlayerId, odegaardId);
+  assert.equal(result.away.leader.card.id, "26823");
+  assert.equal(result.away.leader.card.clubName, arsenal.name);
+  assert.equal(result.away.leader.totalRating, 8.08);
+});
+
 test("fails closed for unpublished leaders, rating drift, duplicate identities and missing table identity", () => {
   const unpublished = validInput();
   assert.equal(selectTouchlineMatchPreviewSides({
@@ -396,6 +412,8 @@ test("reader and template are persisted-only, revision-fenced and contain no XI 
   assert.match(cardComponent, /data-static-name-fit=\{ensureStaticNameFit \? "true" : undefined\}/);
   assert.match(generator, /metadata\.namesComplete/);
   assert.match(generator, /item\.dataset\.staticNameFit !== "true"/);
+  assert.match(generator, /TL_MATCH_PREVIEW_IMAGE_TIMEOUT/);
+  assert.match(generator, /images\.every\(\(image\) => image\.complete && image\.naturalWidth > 0\)/);
   assert.doesNotMatch(componentStyles, /\.stadium\s*\{[^}]*transform\s*:/s);
   assert.doesNotMatch(component, /FIXTURE \{draft\.fixtureId\}/);
   assert.match(component, />TOUCHLINE VERIFIED MATCH DATA</);

@@ -37,7 +37,8 @@ function respond(response: ServerResponse, status: number, body = "") {
 test("server-only Storage adapter is create-only, content-addressed and fail-closed", async (t) => {
   const objects = new Map<string, StoredObject>();
   let authorizedRequests = 0;
-  const prefix = `/storage/v1/object/${TOUCHLINE_SOCIAL_ARTIFACT_BUCKET}/`;
+  const writePrefix = `/storage/v1/object/${TOUCHLINE_SOCIAL_ARTIFACT_BUCKET}/`;
+  const readPrefix = `/storage/v1/object/authenticated/${TOUCHLINE_SOCIAL_ARTIFACT_BUCKET}/`;
   const server = createServer(async (request, response) => {
     const token = request.headers.authorization;
     const apiKey = request.headers.apikey;
@@ -47,20 +48,16 @@ test("server-only Storage adapter is create-only, content-addressed and fail-clo
     }
     authorizedRequests += 1;
     const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
-    if (!pathname.startsWith(prefix)) {
+    const prefix = pathname.startsWith(readPrefix) ? readPrefix
+      : pathname.startsWith(writePrefix) ? writePrefix : null;
+    if (!prefix) {
       respond(response, 404);
       return;
     }
     const key = pathname.slice(prefix.length).split("/").map(decodeURIComponent).join("/");
     const existing = objects.get(key);
-    if (request.method === "HEAD") {
-      if (!existing) return respond(response, 404);
-      response.setHeader("etag", existing.etag);
-      response.setHeader("content-type", existing.contentType);
-      response.setHeader("content-length", String(existing.bytes.byteLength));
-      return respond(response, 200);
-    }
     if (request.method === "POST") {
+      if (prefix !== writePrefix) return respond(response, 405);
       if (request.headers["x-upsert"] !== "false") return respond(response, 412, "upsert forbidden");
       if (existing) return respond(response, 400, "The resource already exists");
       const contentType = request.headers["content-type"];
@@ -74,12 +71,22 @@ test("server-only Storage adapter is create-only, content-addressed and fail-clo
       return respond(response, 200, JSON.stringify({ Key: key }));
     }
     if (request.method === "GET") {
-      if (!existing) return respond(response, 404);
+      if (prefix !== readPrefix) return respond(response, 405);
+      if (!existing) return respond(response, 400, JSON.stringify({
+        statusCode: "404", error: "not_found", message: "Object not found",
+      }));
       if (request.headers["if-match"] && request.headers["if-match"] !== existing.etag) {
         return respond(response, 412, "etag changed");
       }
       response.setHeader("etag", existing.etag);
       response.setHeader("content-type", existing.contentType);
+      if (request.headers.range === "bytes=0-0") {
+        response.setHeader("content-range", `bytes 0-0/${existing.bytes.byteLength}`);
+        response.setHeader("content-length", "1");
+        response.statusCode = 206;
+        response.end(existing.bytes.subarray(0, 1));
+        return;
+      }
       response.setHeader("content-length", String(existing.bytes.byteLength));
       response.statusCode = 200;
       response.end(existing.bytes);
@@ -131,7 +138,7 @@ test("server-only Storage adapter is create-only, content-addressed and fail-clo
     /TL_SOCIAL_STORAGE_OBJECT_ALREADY_EXISTS/,
   );
 
-  const directAnon = await fetch(`${baseUrl}${prefix}${objectKey}`, {
+  const directAnon = await fetch(`${baseUrl}${readPrefix}${objectKey}`, {
     headers: { apikey: "anon", authorization: "Bearer anon" },
   });
   assert.equal(directAnon.status, 403);

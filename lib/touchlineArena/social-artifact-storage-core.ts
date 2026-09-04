@@ -53,11 +53,12 @@ function expectedChecksumFromKey(objectKey: string) {
   return `sha256:${match[1]}`;
 }
 
-function objectUrl(baseUrl: string, objectKey: string) {
+function objectUrl(baseUrl: string, objectKey: string, access: "read" | "write") {
   const path = [TOUCHLINE_SOCIAL_ARTIFACT_BUCKET, ...safeObjectKey(objectKey).split("/")]
     .map((segment) => encodeURIComponent(segment))
     .join("/");
-  return `${baseUrl}/storage/v1/object/${path}`;
+  const authenticated = access === "read" ? "authenticated/" : "";
+  return `${baseUrl}/storage/v1/object/${authenticated}${path}`;
 }
 
 function normalizedContentType(value: string | null): TouchlineSocialArtifactMimeType | null {
@@ -82,23 +83,35 @@ function storageHeaders(serviceRoleKey: string, extra: HeadersInit = {}) {
   };
 }
 
-async function headObject(input: Readonly<{
+async function isMissingObjectResponse(response: Response) {
+  if (response.status === 404) return true;
+  if (response.status !== 400) return false;
+  const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+  return String(payload?.statusCode ?? "") === "404"
+    && String(payload?.error ?? "").toLowerCase() === "not_found";
+}
+
+async function probeObject(input: Readonly<{
   fetchImpl: StorageFetch;
   url: string;
   serviceRoleKey: string;
 }>) {
   const response = await input.fetchImpl(input.url, {
-    method: "HEAD",
-    headers: storageHeaders(input.serviceRoleKey),
+    method: "GET",
+    headers: storageHeaders(input.serviceRoleKey, { range: "bytes=0-0" }),
     cache: "no-store",
     signal: AbortSignal.timeout(TOUCHLINE_SOCIAL_STORAGE_REQUEST_TIMEOUT_MS),
   });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`TL_SOCIAL_STORAGE_HEAD_FAILED:${response.status}`);
+  if (await isMissingObjectResponse(response)) return null;
+  if (!response.ok) throw new Error(`TL_SOCIAL_STORAGE_PROBE_FAILED:${response.status}`);
+  const contentRange = response.headers.get("content-range")?.match(/\/([0-9]+)$/)?.[1] ?? null;
+  const contentLength = contentRange
+    ?? (response.status === 206 ? null : response.headers.get("content-length"));
+  await response.body?.cancel().catch(() => undefined);
   return {
     etag: etag(response.headers.get("etag")),
     contentType: normalizedContentType(response.headers.get("content-type")),
-    contentLength: response.headers.get("content-length"),
+    contentLength,
   };
 }
 
@@ -120,8 +133,8 @@ export function createTouchlineSocialArtifactStorageCore(input: Readonly<{
       || locator.bucket !== TOUCHLINE_SOCIAL_ARTIFACT_BUCKET) {
       throw new Error("TL_SOCIAL_STORAGE_LOCATOR_INVALID");
     }
-    const url = objectUrl(baseUrl, locator.objectKey);
-    const head = await headObject({ fetchImpl, url, serviceRoleKey });
+    const url = objectUrl(baseUrl, locator.objectKey, "read");
+    const head = await probeObject({ fetchImpl, url, serviceRoleKey });
     if (!head) throw new Error("TL_SOCIAL_STORAGE_OBJECT_MISSING");
     if (locator.etag !== null && head.etag !== null && locator.etag !== head.etag) {
       throw new Error("TL_SOCIAL_STORAGE_ETAG_CHANGED");
@@ -133,7 +146,7 @@ export function createTouchlineSocialArtifactStorageCore(input: Readonly<{
       cache: "no-store",
       signal: AbortSignal.timeout(TOUCHLINE_SOCIAL_STORAGE_REQUEST_TIMEOUT_MS),
     });
-    if (response.status === 404) throw new Error("TL_SOCIAL_STORAGE_OBJECT_MISSING");
+    if (await isMissingObjectResponse(response)) throw new Error("TL_SOCIAL_STORAGE_OBJECT_MISSING");
     if (response.status === 412) throw new Error("TL_SOCIAL_STORAGE_ETAG_CHANGED");
     if (!response.ok) throw new Error(`TL_SOCIAL_STORAGE_GET_FAILED:${response.status}`);
     const contentType = normalizedContentType(response.headers.get("content-type")) ?? head.contentType;
@@ -165,10 +178,11 @@ export function createTouchlineSocialArtifactStorageCore(input: Readonly<{
         || checksumTouchlineSocialArtifact(upload.bytes) !== expectedChecksum) {
         throw new Error("TL_SOCIAL_STORAGE_UPLOAD_CHECKSUM_MISMATCH");
       }
-      const url = objectUrl(baseUrl, upload.objectKey);
-      if (await headObject({ fetchImpl, url, serviceRoleKey })) {
+      const readUrl = objectUrl(baseUrl, upload.objectKey, "read");
+      if (await probeObject({ fetchImpl, url: readUrl, serviceRoleKey })) {
         throw new Error("TL_SOCIAL_STORAGE_OBJECT_ALREADY_EXISTS");
       }
+      const url = objectUrl(baseUrl, upload.objectKey, "write");
       const response = await fetchImpl(url, {
         method: "POST",
         headers: storageHeaders(serviceRoleKey, {
