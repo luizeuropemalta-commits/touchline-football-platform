@@ -65,11 +65,13 @@ export function AuthForm({
   mode,
   locale = "en-GB",
   returnTo,
+  entryPath = "/login",
   initialError = null,
 }: {
   mode: Mode;
   locale?: string;
   returnTo?: string;
+  entryPath?: "/login" | "/admin/login";
   initialError?: AuthEntryError;
 }) {
   const normalizedLocale = normalizeTouchLineAuthLocale(locale);
@@ -361,6 +363,7 @@ export function AuthForm({
       className={mode === "register" ? "mt-5 space-y-3" : "mt-8 space-y-4"}
     >
       {mode === "login" ? <input type="hidden" name="return_to" value={arenaHref} /> : null}
+      {mode === "login" ? <input type="hidden" name="login_path" value={entryPath} /> : null}
       {mode === "login" ? <input type="hidden" name="locale" value={normalizedLocale} /> : null}
       {mode === "register" && <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.fullName}</span><Input required name="full_name" value={name} onChange={e=>setName(e.target.value)} placeholder={copy.fullNamePlaceholder} autoComplete="name"/></label>}
       <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.email}</span><Input required name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={copy.emailPlaceholder} autoComplete="email"/></label>

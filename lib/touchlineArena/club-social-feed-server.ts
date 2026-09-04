@@ -41,6 +41,19 @@ export type TouchlineClubSocialFeedPage = Readonly<{
   nextCursor: string | null;
 }>;
 
+type ShareArtworkRpcItem = Readonly<{
+  artifactBucket: string;
+  artifactKey: string;
+  artifactChecksum: string;
+  width: number;
+  height: number;
+}>;
+
+export type TouchlineShareArtwork = Readonly<{
+  signedUrl: string;
+  checksum: string;
+}>;
+
 function validItem(value: unknown): value is FeedRpcItem {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
@@ -55,6 +68,31 @@ function validItem(value: unknown): value is FeedRpcItem {
     && SHA256.test(String(item.artifactChecksum ?? ""))
     && Number(item.width) === 1080
     && [1350, 1920].includes(Number(item.height));
+}
+
+function validShareArtwork(value: unknown): value is ShareArtworkRpcItem {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const item = value as Record<string, unknown>;
+  return String(item.artifactBucket ?? "") === "touchline-social-drafts"
+    && String(item.artifactKey ?? "").length >= 32
+    && String(item.artifactKey ?? "").length <= 1_024
+    && SHA256.test(String(item.artifactChecksum ?? ""))
+    && Number(item.width) === 1080
+    && [1350, 1920].includes(Number(item.height));
+}
+
+/** Revalidates the canonical post and signs its approved artwork at click time. */
+export async function readTouchlineShareArtwork(postId: string): Promise<TouchlineShareArtwork | null> {
+  if (!UUID.test(postId)) return null;
+  const admin = createAdminClient();
+  if (!admin) return null;
+  const { data, error } = await admin.rpc("touchline_social_049_read_share_art", { p_post_id: postId });
+  if (error || !validShareArtwork(data)) return null;
+  const { data: signed, error: signedError } = await admin.storage
+    .from(data.artifactBucket)
+    .createSignedUrl(data.artifactKey, 60);
+  if (signedError || !signed?.signedUrl) return null;
+  return Object.freeze({ signedUrl: signed.signedUrl, checksum: data.artifactChecksum });
 }
 
 export async function readTouchlineClubSocialFeed(input: Readonly<{
@@ -76,6 +114,16 @@ export async function readTouchlineClubSocialFeed(input: Readonly<{
     p_before_published_at: cursor?.publishedAt ?? null,
     p_before_id: cursor?.postId ?? null,
   });
+  return signTouchlineClubSocialFeedPage(data, error, limit);
+}
+
+async function signTouchlineClubSocialFeedPage(
+  data: unknown,
+  error: unknown,
+  limit: number,
+): Promise<TouchlineClubSocialFeedPage> {
+  const admin = createAdminClient();
+  if (!admin) return { state: "unavailable", items: [], nextCursor: null };
   const payload = data as { items?: unknown[] } | null;
   if (error || !Array.isArray(payload?.items) || payload.items.some((item) => !validItem(item))) {
     return { state: "unavailable", items: [], nextCursor: null };
@@ -103,4 +151,26 @@ export async function readTouchlineClubSocialFeed(input: Readonly<{
     ? encodeTouchlineClubSocialFeedCursor({ publishedAt: last.publishedAt, postId: last.id })
     : null;
   return { state: items.length ? "ready" : "empty", items: Object.freeze(items), nextCursor };
+}
+
+/**
+ * Reads the one canonical first-party timeline shared with every ClubOwner.
+ * The database function is service-role-only and returns only current,
+ * fully-approved, non-expired posts. Storage locators never reach the client.
+ */
+export async function readTouchlineClubOwnerSocialFeed(input: Readonly<{
+  limit?: number;
+  cursor?: string | null;
+}> = {}): Promise<TouchlineClubSocialFeedPage> {
+  const admin = createAdminClient();
+  if (!admin) return { state: "unavailable", items: [], nextCursor: null };
+  const limit = touchlineClubSocialFeedPageSize(input.limit);
+  const cursor = decodeTouchlineClubSocialFeedCursor(input.cursor);
+  if (input.cursor && !cursor) return { state: "unavailable", items: [], nextCursor: null };
+  const { data, error } = await admin.rpc("touchline_social_049_read_clubowner_feed", {
+    p_limit: limit,
+    p_before_published_at: cursor?.publishedAt ?? null,
+    p_before_id: cursor?.postId ?? null,
+  });
+  return signTouchlineClubSocialFeedPage(data, error, limit);
 }

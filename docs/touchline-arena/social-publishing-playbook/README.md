@@ -23,6 +23,8 @@ When text and executable behaviour disagree, stop fail-closed and record the gap
 - [Multichannel destination roadmap](MULTICHANNEL_DESTINATION_ROADMAP.md) — Instagram active priority, Facebook Page next, all other destinations documented/disabled
 - [Content types and triggers](CONTENT_TYPES_AND_TRIGGERS.md)
 - [Automatic social module registry](AUTOMATIC_SOCIAL_MODULE_REGISTRY.md)
+- [041 Match Preview owner artwork approval](041_MATCH_PREVIEW_OWNER_ART_APPROVAL.md)
+- [042 Full Time owner artwork approval](042_FULL_TIME_OWNER_ART_APPROVAL.md)
 - [043 Goal artwork — approved Hat-trick composition](043_GOAL_HAT_LAYOUT_OWNER_ART_APPROVAL.md)
 - [043 Hat-trick owner art approval](043_HAT_TRICK_OWNER_ART_APPROVAL.md)
 - [Visual standard](VISUAL_STANDARD.md)

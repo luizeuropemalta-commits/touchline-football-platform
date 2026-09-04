@@ -8,12 +8,14 @@ import {
   Handshake,
   Heart,
   Radio,
+  Share2,
   ShieldCheck,
   Sparkles,
   UserPlus,
   Zap,
 } from "lucide-react";
 import { ClubOwnerPortraitPerimeterTrace } from "./ClubOwnerPortraitPerimeterTrace";
+import { shareTouchlinePost, type TouchlineNativeShareResult } from "@/lib/touchlineArena/social-native-share";
 import styles from "./TouchlineSocial.module.css";
 
 export type TouchlineSocialPost = {
@@ -24,6 +26,7 @@ export type TouchlineSocialPost = {
   meta: string;
   accent?: string;
   badge?: string;
+  sharePostId?: string;
   visualImageUrl?: string;
   visual?: React.ReactNode;
   visualAlt?: string;
@@ -263,6 +266,7 @@ export function TouchlineSocialFeed({
     isPortuguese ? "As atualizações oficiais aparecerão aqui." : "Official updates will appear here."
   );
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [sharedPosts, setSharedPosts] = useState<Map<string, TouchlineNativeShareResult>>(new Map());
   const [activeKind, setActiveKind] = useState<"all" | TouchlineSocialPost["kind"]>("all");
   const storagePrefix = useMemo(() => `touchline:social:likes:${entityId}:`, [entityId]);
   const availableKinds = useMemo(() => [...new Set(posts.map((post) => post.kind))], [posts]);
@@ -281,6 +285,26 @@ export function TouchlineSocialFeed({
       window.localStorage.setItem(`${storagePrefix}${postId}`, String(next.has(postId)));
       return next;
     });
+  }
+
+  async function sharePost(post: TouchlineSocialPost) {
+    const text = `${post.title}\n${post.body}`.trim();
+    const result = await shareTouchlinePost({
+      title: post.title,
+      text,
+      postId: post.sharePostId,
+      imageUrl: post.visualImageUrl,
+      pageUrl: window.location.href,
+    });
+    if (result === "cancelled") return;
+    setSharedPosts((current) => new Map(current).set(post.id, result));
+    if (result !== "unavailable") window.setTimeout(() => {
+      setSharedPosts((current) => {
+        const next = new Map(current);
+        next.delete(post.id);
+        return next;
+      });
+    }, 2_000);
   }
 
   return (
@@ -415,6 +439,16 @@ export function TouchlineSocialFeed({
                   <Heart aria-hidden="true" size={18} fill={liked ? "currentColor" : "none"} />
                   <span>{liked ? (isPortuguese ? "Curtido" : "Liked") : (isPortuguese ? "Curtir" : "Like")}</span>
                   <strong>{likeCount ? compact(likeCount, locale) : ""}</strong>
+                </button>
+                <button type="button" onClick={() => void sharePost(post)} aria-live="polite">
+                  <Share2 aria-hidden="true" size={18} />
+                  <span>{sharedPosts.get(post.id) === "shared"
+                    ? (isPortuguese ? "Compartilhado" : "Shared")
+                    : sharedPosts.get(post.id) === "copied"
+                      ? (isPortuguese ? "Link copiado" : "Post copied")
+                      : sharedPosts.get(post.id) === "unavailable"
+                        ? (isPortuguese ? "Indisponível" : "Unavailable")
+                        : (isPortuguese ? "Compartilhar" : "Share")}</span>
                 </button>
                 {actionHref && actionLabel ? (
                   <a href={actionHref}>

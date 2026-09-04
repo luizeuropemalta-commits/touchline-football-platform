@@ -283,6 +283,17 @@ export function normalizeTouchLineAuthReturnTo(returnTo?: string | null) {
   }
 }
 
+export function normalizeTouchLineAdminReturnTo(returnTo?: string | null) {
+  const normalized = normalizeTouchLineAuthReturnTo(returnTo);
+  if (!normalized) return "/admin";
+  const candidate = new URL(normalized, TOUCHLINE_AUTH_URL_BASE);
+  const isAdminDestination = candidate.pathname === "/admin"
+    || candidate.pathname.startsWith("/admin/")
+    || candidate.pathname === "/visual-qa"
+    || candidate.pathname.startsWith("/visual-qa/");
+  return isAdminDestination ? normalized : "/admin";
+}
+
 export function touchLinePostAuthHref(
   returnTo: string | null | undefined,
   locale?: string | null,

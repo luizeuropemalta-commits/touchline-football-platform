@@ -148,6 +148,7 @@ test("the proxy exposes the Arena entrance and protects account-backed operation
   assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
   assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return arenaRedirect\(request, response\)/);
   assert.match(proxySource, /loginUrl\.searchParams\.set\("returnTo"/);
+  assert.match(proxySource, /adminEntry \? "\/admin\/login" : "\/login"/);
   assert.match(proxySource, /sourceResponse\?\.cookies\.getAll\(\)/);
   assert.match(proxySource, /if \(isEmergencyOffline && user && !isAdmin && !isAuth\) return offlineResponse\(requestLocale\(request\)\)/);
   assert.doesNotMatch(proxySource, /isPublicArenaPreview/);

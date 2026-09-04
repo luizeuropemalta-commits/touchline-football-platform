@@ -10,6 +10,16 @@ Approved route: `/visual-qa/social-confirmed-event?design=goal-hat-layout`
 
 Placement candidate: Feed / ClubHub / ClubOwner Timeline, 1080×1350 (4:5)
 
+Runtime visual template checksum:
+`sha256:d2e1091432d6bcd26601b6338b25c4b3260cc3da9aac0a0dc5d99d6bb927f60a`
+
+Runtime template identity checksum:
+`sha256:c04b3f999cb9d7f80a8cdb8f7445e697c6bf0c441e57fbb33cd5715af49843e5`
+
+These checksums bind the approved composition to its exact executable visual,
+copy, icon lexicon and rendered-field contract. A covered change invalidates
+the approval and cannot silently replace the saved art.
+
 ## Locked editorial decisions
 
 - A normal goal reuses the approved Hat-trick editorial composition.

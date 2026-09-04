@@ -91,6 +91,7 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "POST /api/players/search-and-build-card": { auth: "AUTHENTICATED_OR_LOCAL_EDITOR", role: "ARENA_USER_OR_LOCAL_EDITOR", data: "PROVIDER_CACHE_AND_EDITORIAL_CARD_GATE", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/stripe/webhook": { auth: "WEBHOOK_SIGNATURE", role: "STRIPE", data: "STRIPE_EVENT", browser: "WEBHOOK_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-analytics": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_ANALYTICS_EVENT", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /api/touchline-social/share-art/[postId]": { auth: "PUBLIC", role: "ANY", data: "CURRENT_APPROVED_SOCIAL_ARTWORK_PROXY", browser: "MEDIA_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-fantasy/lineup": { auth: "AUTHENTICATED_SAME_ORIGIN", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_FANTASY_LINEUP_TRANSACTION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/touchline-fantasy/state": { auth: "AUTHENTICATED", role: "FANTASY_SUBSCRIBER", data: "SUPABASE_FANTASY_GAMEWEEK_STATE", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-fantasy/subscription": { auth: "AUTHENTICATED_SAME_ORIGIN", role: "ARENA_USER", data: "STRIPE_TEST_FANTASY_CHECKOUT", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },

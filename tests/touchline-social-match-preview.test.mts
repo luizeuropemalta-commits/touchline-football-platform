@@ -16,6 +16,7 @@ import {
   TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES,
   touchlineSocialArenaGlassMinimumTransmission,
 } from "../lib/touchlineArena/social-visual-tokens.ts";
+import { readTouchlineSocialTemplateRegistry } from "../lib/touchlineArena/social-template-policy-server.ts";
 
 const villa = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === "15")!;
 const arsenal = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === "19")!;
@@ -114,6 +115,20 @@ test("041 registry is isolated from frozen LINEUP and exposes only the Feed cont
   });
   assert.equal(isTouchlineSocialContentTypeEnabledInModule("MATCH_PREVIEW", "041"), true);
   assert.equal(isTouchlineSocialContentTypeEnabledInModule("LINEUP", "041"), false);
+});
+
+test("041 owner-approved artwork is locked to the executable template identity", async () => {
+  const approval = readFileSync(
+    new URL("../docs/touchline-arena/social-publishing-playbook/041_MATCH_PREVIEW_OWNER_ART_APPROVAL.md", import.meta.url),
+    "utf8",
+  );
+  const registry = await readTouchlineSocialTemplateRegistry(new URL("..", import.meta.url).pathname);
+  const matchPreview = registry.find((row) => row.templateVersion === "touchline-match-preview-feed-v1");
+  assert.ok(matchPreview);
+  assert.match(approval, new RegExp(matchPreview.visualTemplateChecksum.replace(":", "\\:")));
+  assert.match(approval, new RegExp(matchPreview.templateIdentityChecksum.replace(":", "\\:")));
+  assert.match(approval, /Caption approval: \*\*PENDING/);
+  assert.match(approval, /Outbound: \*\*DISABLED/);
 });
 
 function relativeLuminance(channel: number) {

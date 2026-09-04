@@ -15,8 +15,8 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 70);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 71);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 71);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 72);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -33,6 +33,8 @@ test("separates public, authenticated, ClubOwner, Admin, audit, and isolated pre
   assert.equal(row("/market-transfer").auth, "AUTHENTICATED");
   assert.equal(row("/club-owner/me/substitution").auth, "CLUBOWNER_SELF");
   assert.equal(row("/admin/cards").auth, "ADMIN");
+  assert.equal(row("/admin/login").auth, "ADMIN");
+  assert.equal(row("/admin/login").role, "OWNER_ADMIN");
   assert.equal(row("/visual-qa/representative-package").role, "OWNER_ADMIN");
   assert.equal(row("/visual-qa/social-lineup").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-lineup").role, "OWNER_ADMIN");
@@ -71,6 +73,8 @@ test("distinguishes read methods, disabled ingestion, local editors, user writes
   assert.equal(row("POST /api/stripe/webhook").auth, "WEBHOOK_SIGNATURE");
   assert.equal(row("POST /api/touchline-fantasy/lineup").auth, "AUTHENTICATED_SAME_ORIGIN");
   assert.equal(row("POST /api/touchline-fantasy/subscription/webhook").role, "STRIPE_TEST");
+  assert.equal(row("GET /api/touchline-social/share-art/[postId]").auth, "PUBLIC");
+  assert.equal(row("GET /api/touchline-social/share-art/[postId]").data, "CURRENT_APPROVED_SOCIAL_ARTWORK_PROXY");
   assert.equal(row("POST /api/admin/cards").auth, "ADMIN");
   assert.equal(row("POST /api/admin/card-engine").data, "SUPABASE_CARD_ENGINE_EDITORIAL_BATCH");
   assert.equal(row("PATCH /api/admin/card-engine").role, "OWNER_ADMIN");

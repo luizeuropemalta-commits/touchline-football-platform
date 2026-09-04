@@ -39,7 +39,7 @@ import {
 
 const siteOffline = process.env.TOUCHLINE_SITE_OFFLINE === "true";
 const localDevHosts = new Set(["localhost", "127.0.0.1", "::1"]);
-const authPaths = ["/login", "/register", "/forgot-password", "/reset-password", "/auth/callback"] as const;
+const authPaths = ["/login", "/admin/login", "/register", "/forgot-password", "/reset-password", "/auth/callback"] as const;
 const authEntryPaths = ["/login", "/register", "/forgot-password"] as const;
 // The Arena itself is the public product entrance. Account-backed operations
 // remain protected and their APIs independently enforce the same capability.
@@ -243,7 +243,9 @@ function redirectWithSupabaseCookies(url: URL, sourceResponse?: NextResponse) {
 }
 
 function loginRedirect(request: NextRequest, sourceResponse?: NextResponse) {
-  const loginUrl = new URL("/login", request.url);
+  const adminEntry = matchesRoute(request.nextUrl.pathname, "/admin")
+    || matchesRoute(request.nextUrl.pathname, "/visual-qa");
+  const loginUrl = new URL(adminEntry ? "/admin/login" : "/login", request.url);
   const lang = request.nextUrl.searchParams.get("lang");
   if (lang) loginUrl.searchParams.set("lang", lang);
   loginUrl.searchParams.set("returnTo", `${request.nextUrl.pathname}${request.nextUrl.search}`);
@@ -503,12 +505,14 @@ async function handleTouchLineRequest(request: NextRequest) {
 
   const isAuth = authPaths.some((path) => matchesRoute(pathname, path));
   const isAuthEntry = authEntryPaths.some((path) => matchesRoute(pathname, path));
-  const isProtectedArenaRoute = protectedArenaPaths.some((path) => matchesRoute(pathname, path));
+  const isProtectedArenaRoute = !isAuth
+    && protectedArenaPaths.some((path) => matchesRoute(pathname, path));
   const isQaAuthenticatedVisualReviewRoute = isTouchlineQaAuthenticatedVisualReviewRoute({
     pathname,
     hostname,
   });
-  const isAdminOnlyArenaRoute = adminOnlyArenaPaths.some((path) => matchesRoute(pathname, path))
+  const isAdminOnlyArenaRoute = !isAuth
+    && adminOnlyArenaPaths.some((path) => matchesRoute(pathname, path))
     && !isQaAuthenticatedVisualReviewRoute;
   const isEmergencyOffline = siteOffline && !isVercelHost;
 
@@ -618,7 +622,9 @@ export async function proxy(request: NextRequest) {
     // closed instead of reaching a streamed `notFound()` response with 200.
     const clubOwnerFailure = resolveClubOwnerFailureBoundary(request);
     if (clubOwnerFailure) return clubOwnerFailure;
-    const isProtectedArenaRoute = protectedArenaPaths.some((path) => matchesRoute(request.nextUrl.pathname, path));
+    const isAuth = authPaths.some((path) => matchesRoute(request.nextUrl.pathname, path));
+    const isProtectedArenaRoute = !isAuth
+      && protectedArenaPaths.some((path) => matchesRoute(request.nextUrl.pathname, path));
     return isProtectedArenaRoute ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
   }
 }

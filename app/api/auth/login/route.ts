@@ -8,6 +8,7 @@ type LoginPayload = {
   password?: unknown;
   return_to?: unknown;
   locale?: unknown;
+  login_path?: unknown;
 };
 
 type LoginError =
@@ -38,8 +39,18 @@ function safeReturnTo(request: NextRequest, value: unknown) {
   return target.origin === request.nextUrl.origin ? `${target.pathname}${target.search}` : "/arena";
 }
 
-function nativeErrorResponse(request: NextRequest, error: LoginError, returnTo: unknown, locale?: unknown) {
-  const target = new URL("/login", request.url);
+function safeLoginPath(value: unknown) {
+  return value === "/admin/login" ? "/admin/login" : "/login";
+}
+
+function nativeErrorResponse(
+  request: NextRequest,
+  error: LoginError,
+  returnTo: unknown,
+  locale?: unknown,
+  loginPath?: unknown,
+) {
+  const target = new URL(safeLoginPath(loginPath), request.url);
   target.searchParams.set("error", error);
   if (locale === "pt-BR" || locale === "en-GB") target.searchParams.set("lang", locale);
   const destination = safeReturnTo(request, returnTo);
@@ -105,6 +116,7 @@ export async function POST(request: NextRequest) {
         password: form.get("password"),
         return_to: form.get("return_to"),
         locale: form.get("locale"),
+        login_path: form.get("login_path"),
       };
     } else {
       payload = await request.json() as LoginPayload;
@@ -117,7 +129,7 @@ export async function POST(request: NextRequest) {
   const password = typeof payload.password === "string" ? payload.password : "";
   if (!email || !password) {
     return nativeFormPost
-      ? nativeErrorResponse(request, "invalid_credentials", payload.return_to, payload.locale)
+      ? nativeErrorResponse(request, "invalid_credentials", payload.return_to, payload.locale, payload.login_path)
       : invalidRequest();
   }
 
@@ -125,7 +137,7 @@ export async function POST(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
     return nativeFormPost
-      ? nativeErrorResponse(request, "auth_unavailable", payload.return_to, payload.locale)
+      ? nativeErrorResponse(request, "auth_unavailable", payload.return_to, payload.locale, payload.login_path)
       : NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
   }
 
@@ -150,7 +162,7 @@ export async function POST(request: NextRequest) {
     if (error || !data.user) {
       const safeError = safeLoginError(error);
       return nativeFormPost
-        ? nativeErrorResponse(request, safeError, payload.return_to, payload.locale)
+        ? nativeErrorResponse(request, safeError, payload.return_to, payload.locale, payload.login_path)
         : NextResponse.json({ ok: false, error: safeError }, { status: 401 });
     }
 
@@ -158,7 +170,7 @@ export async function POST(request: NextRequest) {
       await ensureTouchlineArenaAccess(data.user);
       if (!data.session?.access_token || !data.session.refresh_token) {
         return nativeFormPost
-          ? nativeErrorResponse(request, "session_cookie_failure", payload.return_to, payload.locale)
+          ? nativeErrorResponse(request, "session_cookie_failure", payload.return_to, payload.locale, payload.login_path)
           : NextResponse.json({ ok: false, error: "session_cookie_failure" }, { status: 503 });
       }
       return nativeFormPost
@@ -166,12 +178,12 @@ export async function POST(request: NextRequest) {
         : successResponse(sessionCookies);
     } catch {
       return nativeFormPost
-        ? nativeErrorResponse(request, "profile_setup_failed", payload.return_to, payload.locale)
+        ? nativeErrorResponse(request, "profile_setup_failed", payload.return_to, payload.locale, payload.login_path)
         : NextResponse.json({ ok: false, error: "profile_setup_failed" }, { status: 503 });
     }
   } catch {
     return nativeFormPost
-      ? nativeErrorResponse(request, "auth_unavailable", payload.return_to, payload.locale)
+      ? nativeErrorResponse(request, "auth_unavailable", payload.return_to, payload.locale, payload.login_path)
       : NextResponse.json({ ok: false, error: "auth_unavailable" }, { status: 503 });
   }
 }

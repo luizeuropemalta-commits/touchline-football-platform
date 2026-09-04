@@ -10,6 +10,7 @@ import styles from "./TouchlineClubSocialFeed.module.css";
 
 const LABELS: Readonly<Record<string, Readonly<{ en: string; pt: string }>>> = Object.freeze({
   LINEUP: { en: "Official line-up", pt: "Escalação oficial" },
+  MATCH_PREVIEW: { en: "Match preview", pt: "Prévia da partida" },
   FULL_TIME: { en: "Full Time", pt: "Fim de jogo" },
   GOAL_CONFIRMED: { en: "Goal", pt: "Gol" },
   RED_CARD_CONFIRMED: { en: "Red card confirmed", pt: "Cartão vermelho confirmado" },
@@ -76,6 +77,9 @@ export default function TouchlineClubSocialFeed({
                   <ClubHubShareButton
                     title={`${clubName} · ${contentLabel(item.contentType, locale)}`}
                     text={item.copy}
+                    postId={item.id}
+                    imageUrl={item.imageUrl}
+                    locale={locale}
                   />
                 </div>
               </div>

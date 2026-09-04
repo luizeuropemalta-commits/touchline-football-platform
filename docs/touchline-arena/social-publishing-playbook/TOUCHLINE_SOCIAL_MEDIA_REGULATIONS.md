@@ -76,8 +76,17 @@ TouchLine cards/assets and no public provider/API/pipeline wording.
 
 ## Mandatory routing rules
 
-- `MATCH_PREVIEW` is not duplicated in the ClubHub because the native ClubHub
-  header already presents the fixture.
+An exact approved revision is stored once. Module 045 associates that revision
+only with the relevant ClubHub team identifiers; module 049 presents the same
+canonical revision in the common ClubOwner Timeline. Both internal surfaces
+provide a user-initiated native Share action. Neither module contains an
+Instagram or Facebook credential or callable outbound adapter; external
+delivery remains a separate, fail-closed operational gate.
+
+- `MATCH_PREVIEW` uses the same immutable approved 041 revision for Instagram
+  DRAFT and for the internal Club Social Feed of the two participating clubs.
+  The ClubHub fixture header remains the compact navigation summary; the feed
+  post is the editorial artwork and never creates a second factual source.
 - `OFFICIAL_LINEUP` uses one canonical revision for the simultaneous ClubHub
   update, Club Social Feed post, configured alert and Instagram DRAFT. A partial
   failure is observable and retried idempotently; it may not create divergent
@@ -247,11 +256,14 @@ event or silently skips an eligible draft.
 | 040 | Durable `OFFICIAL_LINEUP` discovery/queue/runner | Frozen audited local candidate; not configured/applied by this regulation |
 | 041 | Shared content registry plus `MATCH_PREVIEW` pilot | Local candidate validated; independent second audit remains the gate |
 | 042 | `FULL_TIME` Feed and optional `FINAL_SCORE` Story | Local candidate validated in disposable shadow; no shared-QA write/deploy |
-| 043 | Confirmed goal/red-card Stories | Local candidate validated in disposable shadow; no shared-QA write/deploy |
+| 043 | Confirmed goal/hat-trick Feed and red-card Story | Local candidate validated in disposable shadow; no shared-QA write/deploy |
 | 044 | Ranking preview/final, duel and hero family implemented by its bounded registry | Local candidate validated in disposable shadow; broader table/coach/TOTW catalogue remains future work |
 | 045 | Club Social Feed/Timeline native fan-out | Local candidate shadow-validated; second audit and all remote activation pending |
 | 046 | Template-version approval and controlled auto-publish policy | Local candidate independently validated; internal eligibility only, with outbound hard-disabled and no connector |
-| 047+ | Push orchestration, schedule/deadline, remaining engagement/future modules | Unnumbered dependency plan; disabled until separately scoped and audited |
+| 047 | Hat-trick event-family correction | Local candidate; shared-QA apply pending |
+| 048 | Match Preview fan-out to both fixture ClubHubs | Local candidate; shared-QA apply pending |
+| 049 | Common official ClubOwner Timeline reader | Local candidate; shared-QA apply pending; same media bytes, no external connector |
+| 050+ | Push orchestration, schedule/deadline, remaining engagement/future modules | Unnumbered dependency plan; disabled until separately scoped and audited |
 
 No module may alter frozen predecessors silently. Every additive runtime module
 requires its own forward/rollback migration where needed, deterministic tests,

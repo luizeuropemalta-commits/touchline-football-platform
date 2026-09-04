@@ -43,12 +43,12 @@ test("owner-approved Hat-trick artwork remains byte-for-byte locked", async () =
   assert.equal(sha256(manifest), EXPECTED_COMBINED_HASH);
 });
 
-test("active 043 revision 4 review candidate remains byte-for-byte locked without claiming owner approval", async () => {
+test("active owner-approved 043 revision 4 remains byte-for-byte locked", async () => {
   let manifest = "";
 
   for (const [file, expectedHash] of ACTIVE_043_CANDIDATE_FILES) {
     const actualHash = sha256(await readFile(file));
-    assert.equal(actualHash, expectedHash, `${file} changed during active 043 revision 4 review`);
+    assert.equal(actualHash, expectedHash, `${file} changed after active 043 revision 4 approval`);
     manifest += `${actualHash}  ${file}\n`;
   }
 
@@ -66,8 +66,9 @@ test("approval records Hat-trick as 043 and keeps the unapplied 047 candidate fa
   assert.match(approval, /not been applied to\s+shared QA or Production/);
   assert.match(approval, /outbound remains fail-closed/);
   assert.match(approval, new RegExp(EXPECTED_COMBINED_HASH));
-  assert.match(approval, /REVISION 4 LEGIBILITY CANDIDATE IN LOCAL REVIEW/);
-  assert.match(approval, /not yet an OWNER-approved replacement/);
+  assert.match(approval, /OWNER-APPROVED VISUAL REVISION 4/);
+  assert.match(approval, /Revision 4 legibility approval/);
+  assert.match(approval, /sha256:a3506d1996740589416954038db22632d6d42b01b829cec447d972e1ab80103b/);
   assert.match(approval, /5caf3cecb9783b42dca98452205aaae5d32c382833c9f49b4136da7b377440bc/);
   assert.match(approval, new RegExp(ACTIVE_043_CANDIDATE_COMBINED_HASH));
 });

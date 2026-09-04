@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Database,
   Inbox,
+  Loader2,
   LogOut,
   Menu,
   Search,
@@ -24,6 +25,7 @@ import { Logo } from "@/components/logo";
 import { createClient } from "@/lib/supabase/client";
 import {
   normalizeTouchLineAuthLocale,
+  touchLineAuthEntryHref,
   touchLineAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { TOUCHLINE_LOCALE_STORAGE_KEY } from "@/lib/touchlineArena/i18n";
@@ -167,6 +169,7 @@ export function ArenaAdminShell({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const locale = normalizeTouchLineAuthLocale(searchParams.get("lang"));
+  const currentAdminDestination = `${pathname}${searchParams.size ? `?${searchParams.toString()}` : ""}`;
   const pt = locale === "pt-BR";
   const shellCopy = pt ? {
     arenaOperations: "Operações da Arena", touchline: "TouchLine", owner: "Administração",
@@ -174,14 +177,14 @@ export function ArenaAdminShell({
     officialAdmin: "Administração oficial da Arena", account: "Conta ClubOwner",
     openSearch: "Abrir pesquisa de futebol", openNotifications: "Abrir preferências de notificações",
     openMenu: "Abrir menu", closeMenu: "Fechar menu", closeNavigation: "Fechar navegação",
-    signingOut: "Saindo…", signOut: "Sair", authUnavailable: "O serviço de autenticação está indisponível.",
+    signingOut: "Saindo…", signOut: "Sair", switchAccount: "Trocar conta", authUnavailable: "O serviço de autenticação está indisponível.",
   } : {
     arenaOperations: "Arena operations", touchline: "TouchLine", owner: "Owner",
     ownerIdentity: "TouchLine Owner", clubOwnerIdentity: "Authenticated ClubOwner",
     officialAdmin: "Official Arena administration", account: "ClubOwner account",
     openSearch: "Open football search", openNotifications: "Open notification preferences",
     openMenu: "Open menu", closeMenu: "Close menu", closeNavigation: "Close navigation",
-    signingOut: "Signing out…", signOut: "Sign out", authUnavailable: "Authentication service is unavailable.",
+    signingOut: "Signing out…", signOut: "Sign out", switchAccount: "Switch account", authUnavailable: "Authentication service is unavailable.",
   };
   const primaryLinks = pt ? [
     { href: "/arena", label: "TouchLine Arena", description: "Voltar ao dia de jogo", icon: Trophy },
@@ -346,6 +349,21 @@ export function ArenaAdminShell({
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
+              <Link
+                href={touchLineAuthEntryHref("/admin/login", locale, currentAdminDestination)}
+                className="hidden h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[.035] px-3 text-[9px] font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100 sm:flex"
+              >
+                {shellCopy.switchAccount}
+              </Link>
+              <button
+                type="button"
+                onClick={signOut}
+                disabled={signingOut}
+                aria-label={signingOut ? shellCopy.signingOut : shellCopy.signOut}
+                className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[.035] text-slate-400 transition hover:border-rose-300/30 hover:text-rose-100 disabled:cursor-wait disabled:opacity-60"
+              >
+                {signingOut ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <LogOut size={16} aria-hidden="true" />}
+              </button>
               <Link
                 href={touchLineAuthHref("/football-search", locale)}
                 aria-label={shellCopy.openSearch}

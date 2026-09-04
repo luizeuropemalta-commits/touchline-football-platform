@@ -15,6 +15,9 @@ Outbound: **DISABLED — SEPARATE OPERATIONAL AUTHORISATION REQUIRED**
 Visual template checksum:
 `sha256:22adfd36e36a669af67202def3432c75b16e2a4c66f2d71095ed2d006d6fb325`
 
+Complete template identity checksum:
+`sha256:693f2ebf990340dc0f0321730a05dbfb06472694de0262541683063b2514490e`
+
 The approved artwork consists of clean unboxed score numerals, a short centred
 separator, the small vector TouchLine shield above the score and a thin
 TouchLine-green neon trace that follows the score-panel contour. It preserves

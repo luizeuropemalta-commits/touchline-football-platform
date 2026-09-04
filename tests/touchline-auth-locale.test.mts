@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import {
   getTouchLineAuthCopy,
+  normalizeTouchLineAdminReturnTo,
   normalizeTouchLineAuthLocale,
   normalizeTouchLineAuthReturnTo,
   touchLineAuthEntryHref,
@@ -66,6 +67,10 @@ test("authentication destinations preserve the normalized locale", () => {
     "/club-owner/new-owner/substitution?lang=en-GB",
   );
   assert.equal(normalizeTouchLineAuthReturnTo("/visual-qa/coach-card?lang=en-GB"), "/visual-qa/coach-card?lang=en-GB");
+  assert.equal(normalizeTouchLineAdminReturnTo("/admin/social-publications?lang=pt-BR"), "/admin/social-publications?lang=pt-BR");
+  assert.equal(normalizeTouchLineAdminReturnTo("/visual-qa/social-confirmed-event?design=goal"), "/visual-qa/social-confirmed-event?design=goal");
+  assert.equal(normalizeTouchLineAdminReturnTo("/arena"), "/admin");
+  assert.equal(normalizeTouchLineAdminReturnTo("https://evil.example/steal"), "/admin");
 });
 
 test("all authentication pages read lang and pass the locale to shared UI", () => {
@@ -83,6 +88,7 @@ test("all authentication pages read lang and pass the locale to shared UI", () =
 
 test("form links and authentication callbacks retain the selected language", () => {
   assert.match(formSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale\)/);
+  assert.match(formSource, /name="login_path" value=\{entryPath\}/);
   assert.match(formSource, /normalizeTouchLineAuthReturnTo\(returnTo\)/);
   assert.match(formSource, /touchLineAuthEntryHref\("\/forgot-password", normalizedLocale, normalizedReturnTo\)/);
   assert.match(formSource, /emailRedirectTo: buildTouchLineAuthCallbackUrl\(firstEntryHref\)/);

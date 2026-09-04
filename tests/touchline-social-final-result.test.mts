@@ -126,6 +126,7 @@ test("042 approved artwork is locked to the reviewed local template checksum", a
   const fullTime = registry.find((row) => row.templateVersion === "touchline-full-time-feed-v1");
   assert.ok(fullTime);
   assert.match(approval, new RegExp(fullTime.visualTemplateChecksum.replace(":", "\\:")));
+  assert.match(approval, new RegExp(fullTime.templateIdentityChecksum.replace(":", "\\:")));
   assert.match(approval, /Caption approval: \*\*PENDING/);
   assert.match(approval, /Outbound: \*\*DISABLED/);
 });

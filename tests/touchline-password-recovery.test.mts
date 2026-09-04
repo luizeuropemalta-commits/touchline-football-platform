@@ -145,7 +145,7 @@ test("reset UI is localized and preserves language after completion or an expire
 });
 
 test("proxy permits the recovery page while keeping ordinary authenticated entry redirects", () => {
-  assert.match(proxySource, /authPaths\s*=\s*\["\/login", "\/register", "\/forgot-password", "\/reset-password", "\/auth\/callback"\]/);
+  assert.match(proxySource, /authPaths\s*=\s*\["\/login", "\/admin\/login", "\/register", "\/forgot-password", "\/reset-password", "\/auth\/callback"\]/);
   assert.match(proxySource, /authEntryPaths\s*=\s*\["\/login", "\/register", "\/forgot-password"\]/);
   assert.match(proxySource, /user && !isAdmin && !isAuth/);
   assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);

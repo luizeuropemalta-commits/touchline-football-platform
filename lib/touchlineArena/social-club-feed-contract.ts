@@ -16,13 +16,14 @@ export const TOUCHLINE_CLUB_SOCIAL_FEED_COPY_VERSION = "touchline-club-social-co
 
 export type TouchlineClubSocialFeedEligibleContentType = Exclude<
   TouchlineRegisteredSocialContentType,
-  "MATCH_PREVIEW" | "FINAL_SCORE"
+  "FINAL_SCORE"
 >;
 
 export type TouchlineClubSocialFanoutInput = Readonly<{
   contentType: TouchlineRegisteredSocialContentType;
   draftTeamId?: string | null;
   fixtureTeamIds?: readonly string[];
+  eventTeamId?: string | null;
   subjectTeamId?: string | null;
   leagueTeamIds?: readonly string[];
 }>;
@@ -40,11 +41,9 @@ export function touchlineClubSocialFanoutTargets(input: TouchlineClubSocialFanou
   const fixtureTeams = exactTeamIds(input.fixtureTeamIds, 2);
   const leagueTeams = exactTeamIds(input.leagueTeamIds, 20);
   const draftTeamId = input.draftTeamId?.trim() || null;
+  const eventTeamId = input.eventTeamId?.trim() || null;
   const subjectTeamId = input.subjectTeamId?.trim() || null;
 
-  if (input.contentType === "MATCH_PREVIEW") {
-    return { ok: false, reason: "MATCH_PREVIEW_NOT_DUPLICATED_IN_CLUB_HUB" } as const;
-  }
   if (input.contentType === "FINAL_SCORE") {
     return { ok: false, reason: "FINAL_SCORE_STORY_NOT_DUPLICATED_IN_CLUB_FEED" } as const;
   }
@@ -55,7 +54,7 @@ export function touchlineClubSocialFanoutTargets(input: TouchlineClubSocialFanou
     }
     return { ok: true, teamIds: Object.freeze([draftTeamId]) } as const;
   }
-  if (["FULL_TIME", "GOAL_CONFIRMED", "RED_CARD_CONFIRMED", "PLAYER_DUEL"].includes(input.contentType)) {
+  if (["MATCH_PREVIEW", "FULL_TIME", "GOAL_CONFIRMED", "RED_CARD_CONFIRMED", "PLAYER_DUEL"].includes(input.contentType)) {
     return fixtureTeams
       ? { ok: true, teamIds: Object.freeze(fixtureTeams) } as const
       : { ok: false, reason: "FIXTURE_CLUB_SCOPE_INVALID" } as const;
@@ -65,7 +64,13 @@ export function touchlineClubSocialFanoutTargets(input: TouchlineClubSocialFanou
       ? { ok: true, teamIds: Object.freeze(leagueTeams) } as const
       : { ok: false, reason: "GAMEWEEK_CLUB_SCOPE_INVALID" } as const;
   }
-  if (["GAMEWEEK_HERO", "TOP_PERFORMER", "HAT_TRICK_HERO"].includes(input.contentType)) {
+  if (input.contentType === "HAT_TRICK_HERO") {
+    if (!eventTeamId || !NUMERIC_ID.test(eventTeamId) || !fixtureTeams?.includes(eventTeamId)) {
+      return { ok: false, reason: "EVENT_CLUB_SCOPE_INVALID" } as const;
+    }
+    return { ok: true, teamIds: Object.freeze([eventTeamId]) } as const;
+  }
+  if (["GAMEWEEK_HERO", "TOP_PERFORMER"].includes(input.contentType)) {
     if (!subjectTeamId || !NUMERIC_ID.test(subjectTeamId)) {
       return { ok: false, reason: "SUBJECT_CLUB_SCOPE_INVALID" } as const;
     }

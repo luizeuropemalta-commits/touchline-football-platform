@@ -18,6 +18,9 @@ an approved contract would create a second, unaudited authority.
 | 044 | Ranking preview/final, duel, Gameweek hero and top performer | Five ranking candidates implemented; new Hat-trick generation is explicitly rejected here | Each ranking type keeps its own ranking, fixture and settlement eligibility gate |
 | 045 | One canonical first-party post fanned out by club reference to ClubHub/ClubOwner Timeline | Implemented and locally shadow-validated | Independent RLS/privacy/performance review and shared-QA activation remain pending |
 | 046 | Template approval, auto-delivery eligibility, kill switches, quota and idempotency policy | All twelve registered template identities implemented and tested | Policy can become internally `READY`; no external adapter exists or is authorised |
+| 047 | Hat-trick event-family correction | Implemented and locally contract-validated | Shared-QA migration remains pending; no outbound destination is enabled |
+| 048 | Match Preview fan-out to the two fixture ClubHubs | Implemented and locally contract-validated | Shared-QA migration remains pending |
+| 049 | One canonical official timeline shared with every ClubOwner | Implemented and locally contract-validated | Shared-QA migration remains pending; immutable media is referenced, never copied |
 
 ## Automatic data path
 
@@ -26,8 +29,9 @@ an approved contract would create a second, unaudited authority.
 2. The matching numbered reader either returns one exact verified source or
    fails closed. It never fills a missing player, card, score, minute or rating.
 3. One immutable media/copy draft is generated with a semantic source checksum.
-4. Module 045 references the same approved post from the relevant ClubHubs and
-   ClubOwner Timeline without duplicating media bytes or factual copy.
+4. Module 045 associates the approved post with the relevant ClubHubs; module
+   049 exposes that same post in the common ClubOwner Timeline without
+   duplicating media bytes or factual copy.
 5. Module 046 evaluates the exact approved template and dynamic revision. Any
    source/template/checksum change invalidates the prior eligibility.
 6. Instagram/Facebook delivery requires a separately reviewed destination

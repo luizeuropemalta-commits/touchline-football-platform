@@ -3,38 +3,37 @@
 import { Check, Share2 } from "lucide-react";
 import { useState } from "react";
 
+import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
+import { shareTouchlinePost } from "@/lib/touchlineArena/social-native-share";
 import styles from "./ClubHubPremiumPrototype.module.css";
 
-export default function ClubHubShareButton({ title, text }: Readonly<{ title: string; text: string }>) {
-  const [state, setState] = useState<"idle" | "copied" | "unavailable">("idle");
+export default function ClubHubShareButton({
+  title,
+  text,
+  postId,
+  imageUrl,
+  locale = "en-GB",
+}: Readonly<{ title: string; text: string; postId?: string; imageUrl?: string; locale?: TouchLineLocale }>) {
+  const [state, setState] = useState<"idle" | "shared" | "copied" | "unavailable">("idle");
+  const pt = locale === "pt-BR";
 
   async function share() {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text, url });
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-      }
-    }
-    if (!navigator.clipboard?.writeText) {
-      setState("unavailable");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(`${text}\n\n${url}`);
-      setState("copied");
-      window.setTimeout(() => setState("idle"), 2_000);
-    } catch {
-      setState("unavailable");
-    }
+    const result = await shareTouchlinePost({ title, text, postId, imageUrl, pageUrl: window.location.href });
+    if (result === "cancelled") return;
+    setState(result);
+    if (result !== "unavailable") window.setTimeout(() => setState("idle"), 2_000);
   }
 
   return (
     <button className={styles.shareButton} type="button" onClick={share} aria-live="polite">
-      {state === "copied" ? <Check aria-hidden="true" /> : <Share2 aria-hidden="true" />}
-      {state === "copied" ? "Post copied" : state === "unavailable" ? "Sharing unavailable" : "Share post"}
+      {state === "copied" || state === "shared" ? <Check aria-hidden="true" /> : <Share2 aria-hidden="true" />}
+      {state === "shared"
+        ? (pt ? "Compartilhado" : "Shared")
+        : state === "copied"
+          ? (pt ? "Link copiado" : "Post copied")
+          : state === "unavailable"
+            ? (pt ? "Compartilhamento indisponível" : "Sharing unavailable")
+            : (pt ? "Compartilhar" : "Share post")}
     </button>
   );
 }

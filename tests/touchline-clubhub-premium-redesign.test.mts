@@ -10,6 +10,7 @@ const leagueTable = readFileSync(new URL("../components/touchline/TouchlineOffic
 const leagueTableStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../components/touchline/club-hub/ClubHubPremiumPrototype.module.css", import.meta.url), "utf8");
 const shareButton = readFileSync(new URL("../components/touchline/club-hub/ClubHubShareButton.tsx", import.meta.url), "utf8");
+const nativeShare = readFileSync(new URL("../lib/touchlineArena/social-native-share.ts", import.meta.url), "utf8");
 const likeButton = readFileSync(new URL("../components/touchline/club-hub/ClubHubLikeButton.tsx", import.meta.url), "utf8");
 const gameweekCard = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
 const page = readFileSync(new URL("../app/visual-qa/clubhub-premium-redesign/page.tsx", import.meta.url), "utf8");
@@ -41,9 +42,12 @@ test("every ClubHub post exposes like and native sharing without controlling aut
   assert.equal((component.match(/<ClubHubLikeButton/g) ?? []).length, 3);
   assert.match(component, /feed\.items\.map/);
   assert.match(component, /aria-label="Post actions"/);
-  assert.match(shareButton, /navigator\.share/);
-  assert.match(shareButton, /navigator\.clipboard\.writeText/);
-  assert.match(shareButton, /`\$\{text\}\\n\\n\$\{url\}`/);
+  assert.match(shareButton, /shareTouchlinePost/);
+  assert.match(nativeShare, /navigator\.share/);
+  assert.match(nativeShare, /navigator\.clipboard\.writeText/);
+  assert.match(nativeShare, /`\$\{input\.text\}\\n\\n\$\{input\.pageUrl\}`/);
+  assert.match(nativeShare, /files: \[image\]/);
+  assert.match(nativeShare, /navigator\.canShare\(filePayload\)/);
   assert.match(shareButton, /Sharing unavailable/);
   assert.match(shareButton, /Share post/);
   assert.match(likeButton, /aria-pressed=\{liked\}/);

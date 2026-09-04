@@ -1,12 +1,12 @@
 # 043 Hat-trick owner art approval
 
-Status: **OWNER-APPROVED VISUAL REVISION 3 PRESERVED — REVISION 4 LEGIBILITY CANDIDATE IN LOCAL REVIEW**
+Status: **OWNER-APPROVED VISUAL REVISION 4 — LOCAL SOURCE ONLY**
 
 Approved by: Luiz Lopez
 
-Approved on: 2 September 2026; revision 3 approved 3 September 2026 (Europe/Malta)
+Approved on: 2 September 2026; revisions 3 and 4 approved 3 September 2026 (Europe/Malta)
 
-Approval revision: **3 — byte-locked active 043 artwork plus preserved original evidence**
+Approval revision: **4 — byte-locked active 043 artwork plus preserved historical evidence**
 
 Content type: `HAT_TRICK_HERO`
 
@@ -29,7 +29,7 @@ Approved placement candidate: Feed / ClubHub / ClubOwner Timeline, 1080×1350 (4
   colour was locked directly on every letter for consistent browser rendering.
   It does not overwrite the separately byte-locked original evidence.
 
-## Revision 4 legibility candidate — owner review required
+## Revision 4 legibility approval
 
 - The TouchLine Points result is now the dominant numeric fact in its panel:
   `52px`, points yellow, high contrast, with a secondary `TOUCHLINE POINTS`
@@ -39,10 +39,11 @@ Approved placement candidate: Feed / ClubHub / ClubOwner Timeline, 1080×1350 (4
   as awaiting official calculation, never as an invented `0`.
 - The canonical club crest now precedes the player name. Long player names grow
   away from the crest and may balance across lines without covering it.
-- Essential labels in this candidate are enlarged for mobile-feed reading.
-- This candidate is locally rendered and byte-locked below for review. It is
-  **not yet an OWNER-approved replacement** for revision 3 and remains outbound
-  disabled.
+- Essential labels are enlarged for mobile-feed reading.
+- Luiz approved this revision after the points hierarchy, crest-first player
+  identity and mobile legibility corrections. It replaces revision 3 as the
+  active local visual while preserving revision 3 as historical evidence.
+  Outbound remains disabled.
 
 ## Owner classification decision
 
@@ -88,10 +89,16 @@ shared QA or Production; outbound remains fail-closed.
 
 ## Immutable visual manifests
 
-Revision 4 local-review candidate combined checksum:
+Revision 4 active owner-approved source checksum:
 `sha256:35439440aee10bdb05fc968c31d978445c1eac7f41e045dbcc1de12f3fa41760`
 
-| Revision 4 candidate visual source | SHA-256 |
+Runtime visual template checksum:
+`sha256:d2e1091432d6bcd26601b6338b25c4b3260cc3da9aac0a0dc5d99d6bb927f60a`
+
+Runtime template identity checksum:
+`sha256:a3506d1996740589416954038db22632d6d42b01b829cec447d972e1ab80103b`
+
+| Revision 4 active visual source | SHA-256 |
 |---|---|
 | `components/touchline/social/TouchlineSocialGoalHatLayoutDemo.tsx` | `5407eb29ac9a6867177b382dbece7130ccf97c16a967650331ec0ebc86ee68b8` |
 | `components/touchline/social/TouchlineSocialGoalHatLayoutDemo.module.css` | `6e837026b16f445343e17fbf5064730fceb8f377bb8eae14ccea650e0bc7c845` |

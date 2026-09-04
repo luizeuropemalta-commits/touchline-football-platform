@@ -1,6 +1,6 @@
 # TouchLine social template implementation status
 
-Status date: **3 September 2026 (Europe/Malta)**
+Status date: **4 September 2026 (Europe/Malta)**
 
 This is the exact inventory of artwork content types saved in the application
 registry. “Registered” means the code has a canonical module, placement,
@@ -43,10 +43,21 @@ because it requires three exact accepted events and its own idempotency key.
   conservative rollback and is not applied remotely.
 - Local visual QA is non-publishable, reads checked-in/canonical evidence and
   keeps outbound delivery disabled.
+- The QA-only 048 candidate routes an owner-approved 041 revision into the
+  internal Club Social Feed of the two fixture clubs. It references the same
+  immutable artifact and keeps Instagram/Facebook delivery disabled.
+- The QA-only 049 candidate exposes each approved canonical post once in the
+  common ClubOwner Timeline and adds the native user Share action. It does not
+  copy media bytes or create an external delivery path.
+- The 041, 042, Goal and Hat-trick visual approvals now record both the runtime
+  visual checksum and complete template identity checksum. The active
+  Hat-trick revision 4 is owner-approved and byte-locked; revision 3 remains
+  historical evidence.
 
 ## What is not honestly “100% live” yet
 
 - Migration 047 has not been applied to shared QA or Production.
+- Migrations 048 and 049 have not been applied to shared QA or Production.
 - The remaining candidate artworks have not all received individual owner
   artwork and caption approvals.
 - No Instagram/Facebook outbound adapter is enabled. Therefore the correct

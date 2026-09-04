@@ -9,10 +9,12 @@ export function AuthLayout({
   children,
   cinematic = false,
   locale = "en-GB",
+  showPanelHeader = true,
 }: {
   children: React.ReactNode;
   cinematic?: boolean;
   locale?: string;
+  showPanelHeader?: boolean;
 }) {
   const normalizedLocale = normalizeTouchLineAuthLocale(locale);
   const copy = getTouchLineAuthCopy(normalizedLocale).layout;
@@ -63,13 +65,13 @@ export function AuthLayout({
 
             <div className="premium-ring stadium-scoreboard order-1 w-full max-w-[430px] justify-self-center p-5 sm:p-6 xl:order-2 xl:justify-self-end">
               <div className="relative z-10">
-                <div className="mb-5 flex items-center justify-between">
+                {showPanelHeader ? <div className="mb-5 flex items-center justify-between">
                   <div>
                     <p className="text-[10px] font-black text-cyan-200">{cinematic ? copy.onboardingEyebrow : copy.accessPanelEyebrow}</p>
                     <h2 className="mt-1 text-xl font-black italic text-white">{cinematic ? copy.onboardingTitle : copy.accessPanelTitle}</h2>
                   </div>
                   <span className="grid size-12 place-items-center rounded-2xl border border-[#a3ff12]/25 bg-[#a3ff12]/10 text-[#a3ff12]"><Globe2 size={22}/></span>
-                </div>
+                </div> : null}
                 {children}
               </div>
             </div>

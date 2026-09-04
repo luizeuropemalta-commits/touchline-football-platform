@@ -85,6 +85,13 @@ try {
   await file("supabase/qa/045_touchline_qa_club_social_feed.sql");
   const frozen045 = await sql("select pg_catalog.pg_get_functiondef('public.touchline_social_045_admin_status()'::regprocedure)");
   await file("supabase/qa/046_touchline_qa_social_template_policy.sql");
+  await file("supabase/qa/047_touchline_qa_goal_family_043.sql");
+  await file("supabase/qa/048_touchline_qa_club_social_match_preview_feed.sql");
+  await file("supabase/qa/049_touchline_qa_clubowner_social_feed.sql");
+  const second048 = await file("supabase/qa/048_touchline_qa_club_social_match_preview_feed.sql", 3);
+  if (!second048.includes("TL_SOCIAL_048_SCHEMA_PRECONDITION_FAILED")) throw new Error("TL_SOCIAL_SHADOW_048_SECOND_APPLY_NOT_FAIL_CLOSED");
+  const second049 = await file("supabase/qa/049_touchline_qa_clubowner_social_feed.sql", 3);
+  if (!second049.includes("TL_SOCIAL_049_SCHEMA_PRECONDITION_FAILED")) throw new Error("TL_SOCIAL_SHADOW_049_SECOND_APPLY_NOT_FAIL_CLOSED");
   const second046 = await file("supabase/qa/046_touchline_qa_social_template_policy.sql", 3);
   if (!second046.includes("TL_SOCIAL_TEMPLATE_POLICY_046_SCHEMA_PRECONDITION_FAILED")) throw new Error("TL_SOCIAL_SHADOW_046_SECOND_APPLY_NOT_FAIL_CLOSED");
   const second = await file("supabase/qa/045_touchline_qa_club_social_feed.sql", 3);
@@ -209,6 +216,20 @@ try {
     "has_function_privilege('authenticated','public.touchline_social_045_enqueue_job(uuid,uuid,text[],text,text)','execute')::int",
   ].join(" "));
   if (security.trim() !== "0|0|0|1|1|0") throw new Error(`TL_SOCIAL_SHADOW_045_SECURITY_FAILED:${security}`);
+  const security049 = await sql([
+    "select",
+    "has_function_privilege('anon','public.touchline_social_049_read_clubowner_feed(integer,timestamptz,uuid)','execute')::int || '|' ||",
+    "has_function_privilege('authenticated','public.touchline_social_049_read_clubowner_feed(integer,timestamptz,uuid)','execute')::int || '|' ||",
+    "has_function_privilege('service_role','public.touchline_social_049_read_clubowner_feed(integer,timestamptz,uuid)','execute')::int || '|' ||",
+    "has_function_privilege('anon','public.touchline_social_049_read_share_art(uuid)','execute')::int || '|' ||",
+    "has_function_privilege('authenticated','public.touchline_social_049_read_share_art(uuid)','execute')::int || '|' ||",
+    "has_function_privilege('service_role','public.touchline_social_049_read_share_art(uuid)','execute')::int",
+  ].join(" "));
+  if (security049.trim() !== "0|0|1|0|0|1") throw new Error(`TL_SOCIAL_SHADOW_049_SECURITY_FAILED:${security049}`);
+  const ownerFeedDenied = await sql("set role authenticated; select public.touchline_social_049_read_clubowner_feed(6,null,null)",1);
+  if (!/permission denied/i.test(ownerFeedDenied)) throw new Error("TL_SOCIAL_SHADOW_049_AUTHENTICATED_READ_NOT_BLOCKED");
+  const shareArtDenied = await sql(`set role authenticated; select public.touchline_social_049_read_share_art('${draftId}'::uuid)`,1);
+  if (!/permission denied/i.test(shareArtDenied)) throw new Error("TL_SOCIAL_SHADOW_049_AUTHENTICATED_SHARE_ART_NOT_BLOCKED");
   const denied = await sql("set role authenticated; select public.touchline_social_045_read_feed('15',6,null,null)",1);
   if (!/permission denied/i.test(denied)) throw new Error("TL_SOCIAL_SHADOW_045_AUTHENTICATED_READ_NOT_BLOCKED");
   const adminDenied = await sql("set role authenticated; select public.touchline_social_045_admin_status()",1);
@@ -216,6 +237,8 @@ try {
 
   const scheduler045 = json(await sql("set role service_role; select public.touchline_social_045_claim_cycle('SCHEDULER')"));
   const scheduler045Lease = String(scheduler045.leaseToken ?? "");
+  const active048Rollback = await file("supabase/qa/048_touchline_qa_club_social_match_preview_feed_rollback.sql",3);
+  if (!active048Rollback.includes("TL_SOCIAL_048_ROLLBACK_ACTIVE_LEASE")) throw new Error("TL_SOCIAL_SHADOW_048_ACTIVE_LEASE_ROLLBACK_NOT_BLOCKED");
   const teamIds = `{${Array.from({length:20},(_,index)=>index+1).join(",")}}`;
   const enqueue = `set role service_role; select public.touchline_social_045_enqueue_job('${scheduler045Lease}'::uuid,'${draftId}'::uuid,'${teamIds}'::text[],'${TIMELINE_COPY}','${TIMELINE_COPY_CHECKSUM}')`;
   await Promise.all([sql(enqueue),sql(enqueue)]);
@@ -230,6 +253,11 @@ try {
   await sql(`set role service_role; select public.touchline_social_045_complete_cycle('RUNNER','${runner045Lease}'::uuid,'SUCCESS',null,1)`);
   const feed = json(await sql("set role service_role; select public.touchline_social_045_read_feed('15',6,null,null)"));
   if (!Array.isArray(feed.items) || feed.items.length !== 1) throw new Error("TL_SOCIAL_SHADOW_045_FEED_READ_FAILED");
+  const ownerFeed = json(await sql("set role service_role; select public.touchline_social_049_read_clubowner_feed(6,null,null)"));
+  if (!Array.isArray(ownerFeed.items) || ownerFeed.items.length !== 1
+    || ownerFeed.items[0]?.postId !== feed.items[0]?.postId) {
+    throw new Error("TL_SOCIAL_SHADOW_049_CANONICAL_REUSE_FAILED");
+  }
   const adminStatus = json(await sql("set role service_role; select public.touchline_social_045_admin_status()"));
   if (!Array.isArray(adminStatus.cycles) || adminStatus.cycles.length !== 2
     || !Array.isArray(adminStatus.jobs) || adminStatus.jobs.length !== 1
@@ -266,6 +294,113 @@ try {
   }
   await sql(`set role service_role; select public.touchline_social_045_complete_cycle('RUNNER','${recoveryRunnerLease}'::uuid,'SUCCESS',null,0)`);
 
+  const matchPreviewPublicationKey = "instagram:INSTAGRAM_FEED:MATCH_PREVIEW:19722192:fixture:en-GB:tv=touchline-match-preview-feed-v1:sv=touchline-match-preview-feed-v1:r=1";
+  const matchPreviewObjectKey = `instagram/instagram_feed/match_preview/19722192/fixture/en-GB/tv=touchline-match-preview-feed-v1/sv=touchline-match-preview-feed-v1/r=1/${"a".repeat(64)}.png`;
+  const scheduler041 = json(await sql("set role service_role; select public.touchline_social_041_claim_cycle('SCHEDULER')"));
+  const scheduler041Lease = String(scheduler041.leaseToken ?? "");
+  await sql(`set role service_role; select public.touchline_social_041_enqueue_job('${scheduler041Lease}'::uuid,
+    '19722192','touchline-match-preview-feed-v1','2026-08-31T17:00:00Z','2026-08-31T18:00:00Z',
+    '${SHA_A}','${sourceManifest}'::jsonb,'${sourceRevisionChecksum}')`);
+  await sql(`set role service_role; select public.touchline_social_041_complete_cycle('SCHEDULER',
+    '${scheduler041Lease}'::uuid,'SUCCESS',null,1)`);
+  const runner041 = json(await sql("set role service_role; select public.touchline_social_041_claim_cycle('RUNNER')"));
+  const runner041Lease = String(runner041.leaseToken ?? "");
+  const job041 = json(await sql(`set role service_role; select public.touchline_social_041_claim_job('${runner041Lease}'::uuid)`));
+  const matchPreviewPayload = JSON.stringify({publication_key:matchPreviewPublicationKey,fixture_provider_id:"19722192",
+    team_provider_id:null,event_provider_id:null,scope_provider_id:null,subject_player_provider_id:null,
+    content_type:"MATCH_PREVIEW",placement:"INSTAGRAM_FEED",locale:"en-GB",revision:1,
+    render_path:"/visual-qa/social-match-preview?fixtureId=19722192&locale=en-GB&revision=1",width:1080,height:1350,
+    caption:"Club 15 v Club 19. COMING SOON • CURRENTLY IN TESTING",first_observed_at:"2026-08-31T17:00:00Z",
+    source_snapshot_at:"2026-08-31T17:00:00Z",generated_at:"2026-08-31T17:01:00Z",
+    template_version:"touchline-match-preview-feed-v1",source_version:"touchline-match-preview-feed-v1",
+    source_checksum:SHA_A,source_revision_manifest:source.manifest,source_revision_checksum:sourceRevisionChecksum,
+    input_checksum:SHA_A,artifact_content_type:"image/png",artifact_byte_length:1000,
+    artifact_storage_provider:"SUPABASE_STORAGE",artifact_storage_bucket:"touchline-social-drafts",
+    artifact_storage_key:matchPreviewObjectKey,artifact_etag:null,manifest_checksum:SHA_C,
+    artifact_checksum:SHA_A,caption_checksum:SHA_D});
+  const matchPreviewDraft = json(await sql(`select public.touchline_social_create_draft('${matchPreviewPayload.replaceAll("'", "''")}'::jsonb)`));
+  const matchPreviewDraftId = String(matchPreviewDraft.draftId ?? "");
+  await sql(`set role service_role; select public.touchline_social_041_complete_job('${runner041Lease}'::uuid,
+    '${String(job041.jobId)}'::uuid,'${String(job041.leaseToken)}'::uuid,'COMPLETED','IMMUTABLE_DRAFT_READY',
+    '${matchPreviewDraftId}'::uuid)`);
+  await sql(`set role service_role; select public.touchline_social_041_complete_cycle('RUNNER',
+    '${runner041Lease}'::uuid,'SUCCESS',null,1)`);
+  const matchArtIntent = json(await sql(`set role service_role; select public.touchline_social_041_issue_review_intent(
+    '${matchPreviewDraftId}'::uuid,'ARTWORK','${SHA_A}','${SHA_C}','${SHA_A}','${sourceRevisionChecksum}','${OWNER_ID}'::uuid)`));
+  const matchCopyIntent = json(await sql(`set role service_role; select public.touchline_social_041_issue_review_intent(
+    '${matchPreviewDraftId}'::uuid,'CAPTION','${SHA_D}','${SHA_C}','${SHA_A}','${sourceRevisionChecksum}','${OWNER_ID}'::uuid)`));
+  await sql(`set role authenticated; set request.jwt.claim.sub='${OWNER_ID}'; select public.touchline_social_041_approve(
+    '${String(matchArtIntent.intentId)}'::uuid,'${matchPreviewDraftId}'::uuid,'ARTWORK','${SHA_A}','${SHA_C}',
+    '${SHA_A}','${sourceRevisionChecksum}','${OWNER_ID}'::uuid)`);
+  await sql(`set role authenticated; set request.jwt.claim.sub='${OWNER_ID}'; select public.touchline_social_041_approve(
+    '${String(matchCopyIntent.intentId)}'::uuid,'${matchPreviewDraftId}'::uuid,'CAPTION','${SHA_D}','${SHA_C}',
+    '${SHA_A}','${sourceRevisionChecksum}','${OWNER_ID}'::uuid)`);
+
+  const matchTimelineCopy = "Club 15 host Club 19 in the next verified fixture.";
+  const matchTimelineChecksum = `sha256:${createHash("sha256").update(
+    `touchline-club-social-copy-v1\n${matchTimelineCopy}`, "utf8",
+  ).digest("hex")}`;
+  const matchScheduler045 = json(await sql("set role service_role; select public.touchline_social_045_claim_cycle('SCHEDULER')"));
+  const matchScheduler045Lease = String(matchScheduler045.leaseToken ?? "");
+  await sql(`set role service_role; select public.touchline_social_045_enqueue_job('${matchScheduler045Lease}'::uuid,
+    '${matchPreviewDraftId}'::uuid,'{15,19}'::text[],'${matchTimelineCopy}','${matchTimelineChecksum}')`);
+  await sql(`set role service_role; select public.touchline_social_045_complete_cycle('SCHEDULER',
+    '${matchScheduler045Lease}'::uuid,'SUCCESS',null,1)`);
+  const matchRunner045 = json(await sql("set role service_role; select public.touchline_social_045_claim_cycle('RUNNER')"));
+  const matchRunner045Lease = String(matchRunner045.leaseToken ?? "");
+  const matchJob045 = json(await sql(`set role service_role; select public.touchline_social_045_claim_job('${matchRunner045Lease}'::uuid)`));
+  const matchPublished = json(await sql(`set role service_role; select public.touchline_social_045_complete_job(
+    '${matchRunner045Lease}'::uuid,'${String(matchJob045.jobId)}'::uuid,'${String(matchJob045.leaseToken)}'::uuid,
+    'PUBLISHED','CLUB_FEED_PUBLISHED')`));
+  if (matchPublished.outcome !== "published" || matchPublished.fanoutCount !== 2) {
+    throw new Error("TL_SOCIAL_SHADOW_048_MATCH_PREVIEW_PUBLISH_FAILED");
+  }
+  const matchPublishedPostId = String(matchPublished.postId ?? "");
+  await sql(`set role service_role; select public.touchline_social_045_complete_cycle('RUNNER',
+    '${matchRunner045Lease}'::uuid,'SUCCESS',null,1)`);
+  const homeMatchFeed = json(await sql("set role service_role; select public.touchline_social_045_read_feed('15',6,null,null)"));
+  const awayMatchFeed = json(await sql("set role service_role; select public.touchline_social_045_read_feed('19',6,null,null)"));
+  const globalMatchFeed = json(await sql("set role service_role; select public.touchline_social_049_read_clubowner_feed(6,null,null)"));
+  if (!Array.isArray(homeMatchFeed.items) || homeMatchFeed.items.length !== 1
+    || !Array.isArray(awayMatchFeed.items) || awayMatchFeed.items.length !== 1
+    || !Array.isArray(globalMatchFeed.items) || globalMatchFeed.items.length !== 1
+    || homeMatchFeed.items[0]?.postId !== matchPublishedPostId
+    || awayMatchFeed.items[0]?.postId !== matchPublishedPostId
+    || globalMatchFeed.items[0]?.postId !== matchPublishedPostId
+    || homeMatchFeed.items[0]?.artifactChecksum !== SHA_A
+    || awayMatchFeed.items[0]?.artifactChecksum !== SHA_A
+    || globalMatchFeed.items[0]?.artifactChecksum !== SHA_A) {
+    throw new Error("TL_SOCIAL_SHADOW_048_MATCH_PREVIEW_FANOUT_INVARIANT_FAILED");
+  }
+  const shareArtwork = json(await sql(`set role service_role; select public.touchline_social_049_read_share_art('${matchPublishedPostId}'::uuid)`));
+  if (shareArtwork.artifactChecksum !== SHA_A || shareArtwork.artifactKey !== matchPreviewObjectKey) {
+    throw new Error("TL_SOCIAL_SHADOW_049_SHARE_ART_IDENTITY_FAILED");
+  }
+  const activeMatchRollback = await file("supabase/qa/048_touchline_qa_club_social_match_preview_feed_rollback.sql",3);
+  if (!activeMatchRollback.includes("TL_SOCIAL_048_ROLLBACK_MATCH_PREVIEW_DATA_PRESENT")) {
+    throw new Error("TL_SOCIAL_SHADOW_048_LIVE_POST_ROLLBACK_NOT_BLOCKED");
+  }
+  await sql(`update public.touchline_club_social_posts set published_at=expiry_clock.now_at-interval '15 days',
+    expires_at=expiry_clock.now_at-interval '1 day' from (select clock_timestamp() as now_at) expiry_clock
+    where id='${matchPublishedPostId}'::uuid`);
+  const matchExpired = json(await sql("set role service_role; select public.touchline_social_045_expire_posts(gen_random_uuid(),100)"));
+  if (matchExpired.deleted !== 1
+    || (await sql(`select job_state||'|'||reason_code from public.touchline_club_social_fanout_jobs where source_draft_id='${matchPreviewDraftId}'::uuid`)).trim()
+      !== "ARCHIVED|RETENTION_EXPIRED") {
+    throw new Error("TL_SOCIAL_SHADOW_048_MATCH_PREVIEW_EXPIRY_FAILED");
+  }
+  const expiredShareArtwork = await sql(`set role service_role; select public.touchline_social_049_read_share_art('${matchPublishedPostId}'::uuid)`,1);
+  if (!expiredShareArtwork.includes("TL_SOCIAL_SHARE_ART_NOT_AVAILABLE")) {
+    throw new Error("TL_SOCIAL_SHADOW_049_EXPIRED_SHARE_ART_NOT_BLOCKED");
+  }
+  await file("supabase/qa/049_touchline_qa_clubowner_social_feed_rollback.sql");
+  await file("supabase/qa/048_touchline_qa_club_social_match_preview_feed_rollback.sql");
+  if ((await sql(`select job_state||'|'||reason_code from public.touchline_club_social_fanout_jobs where source_draft_id='${matchPreviewDraftId}'::uuid`)).trim()
+    !== "ARCHIVED|RETENTION_EXPIRED") {
+    throw new Error("TL_SOCIAL_SHADOW_048_HISTORICAL_AUDIT_JOB_NOT_PRESERVED");
+  }
+  await file("supabase/qa/047_touchline_qa_goal_family_043_rollback.sql");
+
   const active046 = json(await sql("set role service_role; select public.touchline_social_046_claim_cycle('EVALUATOR')"));
   const active046Rollback = await file("supabase/qa/046_touchline_qa_social_template_policy_rollback.sql",3);
   if (!active046Rollback.includes("TL_SOCIAL_046_ROLLBACK_ACTIVE_LEASE")) throw new Error("TL_SOCIAL_SHADOW_046_ACTIVE_LEASE_ROLLBACK_NOT_BLOCKED");
@@ -294,7 +429,9 @@ try {
     policyReevaluation:"PASS",killSwitchImmediate:"PASS",artifactRehash:"FAIL_CLOSED",autoCandidateIdempotency:"PASS",
     authenticatedRead:"FAIL_CLOSED",jobIdempotency:"PASS",fanoutReferences:20,mediaByteCopies:0,
     boundedRead:"PASS",adminTelemetryRpc:"PASS",retention14Days:"PASS",minimalTombstone:"PASS",jobArchive:"PASS",
-    expiredJobRecovery:"PASS",rollbackNonEmpty:"FAIL_CLOSED",
+    expiredJobRecovery:"PASS",rollbackNonEmpty:"FAIL_CLOSED",matchPreviewFanoutMigration:"PASS",
+    matchPreviewApprovedFlow:"PASS",matchPreviewFanoutReferences:2,shareArtworkRefreshGate:"PASS",
+    clubOwnerCanonicalReuse:"PASS",clubOwnerAuthenticatedRead:"FAIL_CLOSED",rollback048HistoricalAudit:"PASS",
     rollbackRestores045:"PASS",rollbackRestores044:"PASS",outbound:"DISABLED",sharedQaWrites:0,productionWrites:0})}\n`);
 } finally {
   if (started) await command(pgCtl,["-D",data,"-m","immediate","stop"]).catch(()=>undefined);

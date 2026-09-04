@@ -59,6 +59,7 @@ import {
 } from "@/components/touchline/social/TouchlineSocial";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
+import { readTouchlineClubOwnerSocialFeed } from "@/lib/touchlineArena/club-social-feed-server";
 
 const TOUCHLINE_ENGLAND_TROPHY =
   "/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png";
@@ -227,11 +228,17 @@ export default async function ClubOwnerProfileRenderer({
   const fantasySnapshotRead = activeClubOwnerUser
     ? resolveServerReadWithin(loadTouchlineFantasySnapshot(activeClubOwnerUser), null, CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS)
     : Promise.resolve(null);
-  const [activeRanking, authoritativeRoster, walletEntriesResponse, fantasySnapshot] = await Promise.all([
+  const officialTimelineRead = resolveServerReadWithin(
+    readTouchlineClubOwnerSocialFeed({ limit: 6 }),
+    { state: "unavailable" as const, items: [], nextCursor: null },
+    CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
+  );
+  const [activeRanking, authoritativeRoster, walletEntriesResponse, fantasySnapshot, officialTimeline] = await Promise.all([
     activeRankingRead,
     authoritativeRosterRead,
     walletEntriesRead,
     fantasySnapshotRead,
+    officialTimelineRead,
   ]);
   const publicRosterCookieValue = activeClubOwnerUser
     ? null
@@ -330,7 +337,20 @@ export default async function ClubOwnerProfileRenderer({
     cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
   };
   const ownerPositionLabel = locale === "pt-BR" ? "Posição do ClubOwner" : "Club Owner position";
-  const socialPosts: TouchlineSocialPost[] = publishedClubOwnerSquadCards.slice(0, 4).map((card) => {
+  const officialTimelinePosts: TouchlineSocialPost[] = officialTimeline.items.map((item) => ({
+    id: `touchline-official-${item.id}`,
+    kind: "official",
+    title: item.contentType.replaceAll("_", " ").toLocaleLowerCase(locale).replace(/^./u, (letter) => letter.toLocaleUpperCase(locale)),
+    body: item.copy,
+    meta: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Malta" })
+      .format(new Date(item.publishedAt)),
+    accent: CLUB_OWNER_TOUCHLINE_NEON,
+    sharePostId: item.id,
+    visualImageUrl: item.imageUrl,
+    visualAlt: `${item.contentType.replaceAll("_", " ")} · TouchLine`,
+    visualTheme: item.contentType.includes("GOAL") || item.contentType.includes("HAT_TRICK") ? "goal" : "match",
+  }));
+  const squadTimelinePosts: TouchlineSocialPost[] = publishedClubOwnerSquadCards.slice(0, 4).map((card) => {
     const club = TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.name === card.clubName);
     const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
     const priceLabel = publicCardProfilePriceLabel(card, locale);
@@ -400,6 +420,7 @@ export default async function ClubOwnerProfileRenderer({
       actionLabel: isPortuguese ? "Abrir card" : "Open card",
     };
   });
+  const socialPosts: TouchlineSocialPost[] = [...officialTimelinePosts, ...squadTimelinePosts];
 
   return (
     <main
