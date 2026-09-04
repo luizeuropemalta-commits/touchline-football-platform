@@ -148,6 +148,35 @@ test("QA ClubHub mirror serializes only the versioned public allowlist", () => {
   assert.doesNotMatch(serialized, /service.?role|authorization|cookie|password|secret|token|artifactBucket|artifactKey|ownerId|userId/i);
 });
 
+test("QA ClubHub mirror replaces provider fixture crests with canonical TouchLine assets", () => {
+  const dto = createTouchlineQaClubHubMirrorDto({
+    club,
+    table,
+    nextFixture: {
+      ...nextFixture,
+      homeTeam: {
+        ...nextFixture.homeTeam!,
+        logoUrl: "https://cdn.sportmonks.com/images/soccer/teams/19/19.png",
+      },
+      awayTeam: {
+        ...nextFixture.awayTeam!,
+        logoUrl: "https://cdn.sportmonks.com/images/soccer/teams/18/18.png",
+      },
+    },
+    homeVenue,
+    feed: { state: "empty", items: [] },
+    generatedAt: new Date(NOW).toISOString(),
+  });
+
+  assert.ok(dto);
+  assert.equal(dto.nextFixture?.homeTeam.logoUrl, club.logoUrl);
+  assert.equal(
+    dto.nextFixture?.awayTeam.logoUrl,
+    "/touchlineArena/shared/club-logos/2026-27/ui-512/chelsea.png",
+  );
+  assert.doesNotMatch(JSON.stringify(dto), /cdn\.sportmonks\.com/i);
+});
+
 test("QA ClubHub mirror parser rejects additions, leaked fields, mismatched shape and stale payloads", () => {
   const dto = mirrorDto();
   const fixture = dto.nextFixture;

@@ -291,6 +291,10 @@
 .nextFixtureKickoff { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(255,255,255,.07); padding-top: 9px; }
 .nextFixtureKickoff time { color: #efffe8; font-size: 11px; font-weight: 900; }
 .nextFixtureKickoff small { color: rgba(241,255,234,.48); font-size: 8px; font-weight: 800; white-space: nowrap; }
+.nextFixtureVenue { display: flex; min-width: 0; align-items: center; gap: 7px; color: rgba(241,255,234,.68); font-size: 9px; font-weight: 800; }
+.nextFixtureVenue svg { width: 13px; height: 13px; flex: 0 0 auto; color: #a3ff12; }
+.nextFixtureVenue span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nextFixtureVenue[data-state="pending"] { color: rgba(241,255,234,.46); }
 .nextFixturePreviewLink { justify-self: start; color: #dfffad; font-size: 8px; font-weight: 900; letter-spacing: .08em; text-decoration: none; text-transform: uppercase; }
 .nextFixturePreviewLink:hover,
 .nextFixturePreviewLink:focus-visible { color: #fff; outline: 2px solid rgba(163,255,18,.35); outline-offset: 3px; }

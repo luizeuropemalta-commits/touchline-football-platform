@@ -123,6 +123,7 @@ test("the official league area is the first chapter below navigation with a 70/3
   assert.match(page, /data-clubhub-official-league="true"/);
   assert.match(page, /className=\{officialLeagueStyles\.feed\} id="club-feed"/);
   assert.match(page, /className=\{officialLeagueStyles\.rail\}[\s\S]*?<ClubHubNextFixtureCard[\s\S]*?<TouchlineOfficialLeagueTable/);
+  assert.match(page, /venueName=\{fixture\.venue\?\.name \?\? null\}/);
   assert.match(page, /id="club-table"[\s\S]*?variant="clubHubRail"/);
   assert.doesNotMatch(page.slice(navigationStart, overviewStart), /League pulse|Pulso da liga|Official 20-club standings|Classificação oficial dos 20 clubes/);
   assert.match(officialLeagueStyles, /grid-template-columns: minmax\(0, 7fr\) minmax\(340px, 3fr\)/);

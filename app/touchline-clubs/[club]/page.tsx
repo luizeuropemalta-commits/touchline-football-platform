@@ -741,6 +741,7 @@ async function ClubHubOfficialLeagueSection({
             previewHref={null}
             roundName={fixture.roundName ?? (portuguese ? "Rodada pendente" : "Round pending")}
             startsAt={fixture.startsAt}
+            venueName={fixture.venue?.name ?? null}
           />
         ) : (
           <article className={`${premiumStyles.nextFixtureCard} ${officialLeagueStyles.fixture}`} data-state="awaiting" role="status">

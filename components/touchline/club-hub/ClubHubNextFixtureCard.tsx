@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, MapPin } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 
 import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff";
@@ -29,6 +29,7 @@ type Props = Readonly<{
   locale?: TouchLineLocale;
   previewHref?: string | null;
   className?: string;
+  venueName?: string | null;
 }>;
 
 const subscribeToBrowserTimeZone = () => () => undefined;
@@ -62,6 +63,7 @@ export default function ClubHubNextFixtureCard({
   className = "",
   roundName,
   startsAt,
+  venueName = null,
 }: Props) {
   const portuguese = locale === "pt-BR";
   const timeZone = useSyncExternalStore(
@@ -99,6 +101,10 @@ export default function ClubHubNextFixtureCard({
       <div className={styles.nextFixtureKickoff}>
         <time dateTime={startsAt}>{localKickoff.date} · {localKickoff.time}</time>
         <small>{portuguese ? "Seu horário local" : "Your local time"} · {localKickoff.zoneName}</small>
+      </div>
+      <div className={styles.nextFixtureVenue} data-state={venueName ? "verified" : "pending"}>
+        <MapPin aria-hidden="true" />
+        <span>{venueName ?? (portuguese ? "Estádio em verificação" : "Venue under verification")}</span>
       </div>
       {previewHref ? (
         <Link className={styles.nextFixturePreviewLink} href={previewHref}>

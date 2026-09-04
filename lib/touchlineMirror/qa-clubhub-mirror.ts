@@ -3,7 +3,7 @@ import {
   type TouchlineOfficialLeagueTable,
 } from "../football-data/official-league-table.ts";
 import type { TouchlinePublicFixture, TouchlinePublicVenue } from "../football-data/public-fixture.ts";
-import type { TouchLineClubVisual } from "../touchlineArena/demo-data.ts";
+import { findTouchLineClub, type TouchLineClubVisual } from "../touchlineArena/demo-data.ts";
 import {
   resolveTouchlineDataSource,
   resolveTouchlineQaReadOrigin,
@@ -470,25 +470,30 @@ function serializeVenue(venue: TouchlinePublicVenue | null | undefined): MirrorV
   };
 }
 
+function serializeFixtureTeam(team: TouchlinePublicFixture["homeTeam"]): MirrorFixtureTeam | null {
+  if (!team?.providerId) return null;
+  const presentation = findTouchLineClub(team.providerId);
+  if (!presentation || presentation.teamId !== team.providerId || !presentation.logoUrl) return null;
+  return {
+    teamId: presentation.teamId,
+    name: team.name,
+    shortCode: team.shortCode ?? presentation.shortCode,
+    logoUrl: presentation.logoUrl,
+  };
+}
+
 function serializeNextFixture(fixture: TouchlinePublicFixture | null | undefined) {
   if (!fixture?.providerId || !fixture.startsAt || !fixture.homeTeam || !fixture.awayTeam) return null;
+  const homeTeam = serializeFixtureTeam(fixture.homeTeam);
+  const awayTeam = serializeFixtureTeam(fixture.awayTeam);
+  if (!homeTeam || !awayTeam) return null;
   return {
     fixtureId: fixture.providerId,
     startsAt: fixture.startsAt,
     status: fixture.status ?? null,
     roundName: fixture.roundName ?? null,
-    homeTeam: {
-      teamId: fixture.homeTeam.providerId,
-      name: fixture.homeTeam.name,
-      shortCode: fixture.homeTeam.shortCode ?? null,
-      logoUrl: fixture.homeTeam.logoUrl ?? null,
-    },
-    awayTeam: {
-      teamId: fixture.awayTeam.providerId,
-      name: fixture.awayTeam.name,
-      shortCode: fixture.awayTeam.shortCode ?? null,
-      logoUrl: fixture.awayTeam.logoUrl ?? null,
-    },
+    homeTeam,
+    awayTeam,
     venue: serializeVenue(fixture.venue),
     homeScore: fixture.homeScore ?? null,
     awayScore: fixture.awayScore ?? null,

@@ -126,6 +126,8 @@ test("ClubHub prototype fails closed instead of inventing football facts", () =>
   assert.match(nextFixture, /Your local time/);
   assert.match(nextFixture, /homeTeam\.logoUrl/);
   assert.match(nextFixture, /awayTeam\.logoUrl/);
+  assert.match(nextFixture, /venueName \?\? \(portuguese \? "Estádio em verificação" : "Venue under verification"\)/);
+  assert.match(nextFixture, /data-state=\{venueName \? "verified" : "pending"\}/);
   assert.match(page, /x-vercel-ip-timezone/);
   assert.match(page, /nextFixture=\{\{ \.\.\.qaSnapshot\.nextFixture, homePosition: arsenalPosition, awayPosition: chelseaPosition \}\}/);
   assert.match(component, /<TouchlineOfficialLeagueTable/);
