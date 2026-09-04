@@ -14,6 +14,7 @@ import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOffici
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
 import ClubHubNextFixtureCard from "@/components/touchline/club-hub/ClubHubNextFixtureCard";
 import ClubHubSectionNavigation from "@/components/touchline/club-hub/ClubHubSectionNavigation";
+import officialLeagueStyles from "@/components/touchline/club-hub/ClubHubOfficialLeague.module.css";
 import premiumStyles from "@/components/touchline/club-hub/ClubHubPremiumPrototype.module.css";
 import type { TouchlineFantasyLineupMember, TouchlineFixture } from "@/lib/football-data/types";
 import type { TouchlinePublicFixture, TouchlinePublicTeam } from "@/lib/football-data/public-fixture";
@@ -609,19 +610,6 @@ async function ClubHubTechnicalSections({
   );
 }
 
-async function ClubHubLeagueTableSection({
-  club,
-  locale,
-  tablePromise,
-}: {
-  club: NonNullable<ReturnType<typeof findTouchLineClub>>;
-  locale: TouchLineLocale;
-  tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
-}) {
-  const table = await tablePromise;
-  return <TouchlineOfficialLeagueTable table={table} locale={locale} variant="profile" currentTeamId={club.teamId} />;
-}
-
 async function ClubHubCardsSection({
   club,
   locale,
@@ -678,33 +666,109 @@ async function ClubHubCardsSection({
   );
 }
 
-async function ClubHubSocialFeedSection({
+async function ClubHubOfficialLeagueSection({
   club,
   locale,
   cursor,
+  presentationPromise,
+  tablePromise,
   dataSource,
   mirrorResultPromise,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   cursor: string | null;
+  presentationPromise: Promise<ClubHubPresentation>;
+  tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
   mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null;
 }) {
-  const page = dataSource === "direct"
-    ? await readTouchlineClubSocialFeed({
+  const feedPromise = dataSource === "direct"
+    ? readTouchlineClubSocialFeed({
       providerTeamId: club.teamId,
       limit: 6,
       cursor,
     })
-    : await loadTouchlineQaMirroredSocialFeed(club.teamId, mirrorResultPromise ?? undefined);
+    : loadTouchlineQaMirroredSocialFeed(club.teamId, mirrorResultPromise ?? undefined);
+  const [presentation, table, feedPage] = await Promise.all([
+    presentationPromise,
+    tablePromise,
+    feedPromise,
+  ]);
+  const fixture = presentation.matchSnapshot.publicFixture;
+  const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
+    ?? findTouchLineClub(fixture?.homeTeam?.name);
+  const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
+    ?? findTouchLineClub(fixture?.awayTeam?.name);
+  const homePosition = homeClub
+    ? table.rows.find((row) => row.team.providerTeamId === homeClub.teamId)?.displayPosition ?? null
+    : null;
+  const awayPosition = awayClub
+    ? table.rows.find((row) => row.team.providerTeamId === awayClub.teamId)?.displayPosition ?? null
+    : null;
+  const portuguese = locale === "pt-BR";
+  const hasVerifiedFixture = Boolean(
+    fixture?.startsAt
+    && homeClub?.logoUrl
+    && awayClub?.logoUrl,
+  );
+
   return (
-    <TouchlineClubSocialFeed
-      clubName={club.name}
-      clubSlug={club.slug}
-      locale={locale}
-      page={page}
-    />
+    <section
+      className={officialLeagueStyles.layout}
+      aria-label={portuguese ? "Liga oficial e canal do clube" : "Official league and club channel"}
+      data-clubhub-official-league="true"
+    >
+      <div className={officialLeagueStyles.feed} id="club-feed">
+        <TouchlineClubSocialFeed
+          clubName={club.name}
+          clubSlug={club.slug}
+          locale={locale}
+          page={feedPage}
+        />
+      </div>
+
+      <aside className={officialLeagueStyles.rail} aria-label={portuguese ? "Próximo jogo e tabela oficial" : "Next match and official table"}>
+        {hasVerifiedFixture && fixture?.startsAt && homeClub?.logoUrl && awayClub?.logoUrl ? (
+          <ClubHubNextFixtureCard
+            awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
+            awayPosition={awayPosition}
+            className={officialLeagueStyles.fixture}
+            homeTeam={{ teamId: homeClub.teamId, name: fixture.homeTeam?.name ?? homeClub.name, shortCode: homeClub.shortCode, logoUrl: homeClub.logoUrl }}
+            homePosition={homePosition}
+            initialTimeZone={normalizeTouchlineMatchCentreTimeZone("Europe/Malta")}
+            locale={locale}
+            previewHref={null}
+            roundName={fixture.roundName ?? (portuguese ? "Rodada pendente" : "Round pending")}
+            startsAt={fixture.startsAt}
+          />
+        ) : (
+          <article className={`${premiumStyles.nextFixtureCard} ${officialLeagueStyles.fixture}`} data-state="awaiting" role="status">
+            <div className={premiumStyles.nextFixtureHeading}>
+              <span>{portuguese ? "Próximo confronto" : "Next fixture"}</span>
+            </div>
+            <div className={premiumStyles.awaitingFixture}>
+              <div className={premiumStyles.awaitingFixtureTeams} aria-hidden="true">
+                {club.logoUrl ? <Image alt="" height={58} src={club.logoUrl} width={58} /> : <span>{club.shortCode}</span>}
+                <b>VS</b>
+                <span>?</span>
+              </div>
+              <strong>{portuguese ? "Próxima partida em verificação" : "Next match under verification"}</strong>
+              <p>{portuguese ? "O confronto aparecerá quando a fonte oficial estiver confirmada." : "The match-up will appear when the official source is confirmed."}</p>
+            </div>
+          </article>
+        )}
+
+        <TouchlineOfficialLeagueTable
+          className={officialLeagueStyles.table}
+          currentTeamId={club.teamId}
+          id="club-table"
+          locale={locale}
+          table={table}
+          variant="clubHubRail"
+        />
+      </aside>
+    </section>
   );
 }
 
@@ -717,50 +781,20 @@ async function ClubHubPremiumOverviewSection({
   locale,
   presentationPromise,
   viewerAccessPromise,
-  tablePromise,
   dataSource,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   presentationPromise: Promise<ClubHubPresentation>;
   viewerAccessPromise: Promise<ClubHubViewerAccess>;
-  tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
 }) {
-  const [presentation, viewerAccess, table, activeRanking] = await Promise.all([
+  const [presentation, viewerAccess, activeRanking] = await Promise.all([
     presentationPromise,
     viewerAccessPromise,
-    tablePromise,
     dataSource === "direct" ? loadTouchLineActiveRanking() : Promise.resolve(TOUCHLINE_PRESEASON_RANKING_STATE),
   ]);
   const portuguese = locale === "pt-BR";
-  const fixture = presentation.matchSnapshot.publicFixture;
-  const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
-    ?? findTouchLineClub(fixture?.homeTeam?.name);
-  const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
-    ?? findTouchLineClub(fixture?.awayTeam?.name);
-  const tableView = {
-    state: table.state,
-    rows: table.rows.map((row) => ({
-      displayPosition: row.displayPosition,
-      team: {
-        teamId: row.team.providerTeamId,
-        name: row.team.name,
-        logoUrl: row.team.logoUrl,
-      },
-      played: row.played,
-      points: row.points,
-    })),
-  };
-  const homePosition = homeClub
-    ? tableView.rows.find((row) => row.team.teamId === homeClub.teamId)?.displayPosition ?? null
-    : null;
-  const awayPosition = awayClub
-    ? tableView.rows.find((row) => row.team.teamId === awayClub.teamId)?.displayPosition ?? null
-    : null;
-  const initialTimeZone = normalizeTouchlineMatchCentreTimeZone(
-    "Europe/Malta",
-  );
   const overallRanking = activeRanking.phase === "ranked"
     ? [...activeRanking.players]
       .filter((player) => player.totalRating !== null)
@@ -796,47 +830,12 @@ async function ClubHubPremiumOverviewSection({
     positionRank: null,
   } : null);
   const coach = dataSource === "direct" ? touchlineLiveCoachForTeam(club.teamId) : null;
-  const hasVerifiedFixture = Boolean(
-    fixture?.startsAt
-    && homeClub?.logoUrl
-    && awayClub?.logoUrl,
-  );
-
   return (
     <section
       className={premiumStyles.statusRail}
       aria-label={portuguese ? "Visão geral oficial do clube" : "Official club overview"}
       style={{ "--clubhub-accent": club.accent } as CSSProperties}
     >
-      {hasVerifiedFixture && fixture?.startsAt && homeClub?.logoUrl && awayClub?.logoUrl ? (
-        <ClubHubNextFixtureCard
-          awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
-          awayPosition={awayPosition}
-          homeTeam={{ teamId: homeClub.teamId, name: fixture.homeTeam?.name ?? homeClub.name, shortCode: homeClub.shortCode, logoUrl: homeClub.logoUrl }}
-          homePosition={homePosition}
-          initialTimeZone={initialTimeZone}
-          locale={locale}
-          previewHref={null}
-          roundName={fixture.roundName ?? (portuguese ? "Rodada pendente" : "Round pending")}
-          startsAt={fixture.startsAt}
-        />
-      ) : (
-        <article className={premiumStyles.nextFixtureCard} data-state="awaiting" role="status">
-          <div className={premiumStyles.nextFixtureHeading}>
-            <span>{portuguese ? "Próximo confronto" : "Next fixture"}</span>
-          </div>
-          <div className={premiumStyles.awaitingFixture}>
-            <div className={premiumStyles.awaitingFixtureTeams} aria-hidden="true">
-              {club.logoUrl ? <Image alt="" height={58} src={club.logoUrl} width={58} /> : <span>{club.shortCode}</span>}
-              <b>VS</b>
-              <span>?</span>
-            </div>
-            <strong>{portuguese ? "Próxima partida em verificação" : "Next match under verification"}</strong>
-            <p>{portuguese ? "O confronto aparecerá quando a fonte oficial estiver confirmada." : "The match-up will appear when the official source is confirmed."}</p>
-          </div>
-        </article>
-      )}
-
       <article className={premiumStyles.spotlightCard} data-clubhub-card-spotlight="coach">
         <header>
           <span>{portuguese ? "Treinador verificado" : "Current verified coach"}</span>
@@ -928,7 +927,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
       <section className="club-hub-shell">
         <header className="club-hub-hero">
           <svg className="club-hub-neon-frame" aria-hidden="true" focusable="false">
-            <rect className="club-hub-neon-trace" x="1" y="1" width="calc(100% - 2px)" height="calc(100% - 2px)" rx="23" pathLength="100" />
+            <rect className="club-hub-neon-trace" x="0" y="0" width="100%" height="100%" rx="23" pathLength="100" />
           </svg>
           {homeStadium?.interiorImageUrl ? (
             <Image
@@ -977,9 +976,17 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         </header>
         <ClubHubSectionNavigation locale={locale} />
 
-        <div className="club-hub-chapter club-hub-table-chapter" id="club-table">
-          <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando classificação" : "Updating standings"} />}>
-            <ClubHubLeagueTableSection club={club} locale={locale} tablePromise={tablePromise} />
+        <div className="club-hub-chapter club-hub-official-league-chapter">
+          <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando liga oficial" : "Updating official league"} />}>
+            <ClubHubOfficialLeagueSection
+              club={club}
+              locale={locale}
+              cursor={feedCursor ?? null}
+              presentationPromise={presentationPromise}
+              tablePromise={tablePromise}
+              dataSource={dataSource}
+              mirrorResultPromise={mirrorResultPromise}
+            />
           </Suspense>
         </div>
 
@@ -990,32 +997,14 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               locale={locale}
               presentationPromise={presentationPromise}
               viewerAccessPromise={viewerAccessPromise}
-              tablePromise={tablePromise}
               dataSource={dataSource}
-            />
-          </Suspense>
-        </div>
-
-        <div className="club-hub-chapter" id="club-feed">
-          <ClubHubChapterMarker
-            index="01"
-            label={locale === "pt-BR" ? "Canal oficial" : "Official channel"}
-            note={locale === "pt-BR" ? "Publicações verificadas mais recentes" : "Latest verified publications"}
-          />
-          <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando atualizações do clube" : "Preparing club updates"} />}>
-            <ClubHubSocialFeedSection
-              club={club}
-              locale={locale}
-              cursor={feedCursor ?? null}
-              dataSource={dataSource}
-              mirrorResultPromise={mirrorResultPromise}
             />
           </Suspense>
         </div>
 
         <div className="club-hub-chapter club-hub-matchday-chapter">
           <ClubHubChapterMarker
-            index="02"
+            index="01"
             label={locale === "pt-BR" ? "Dia de jogo" : "Matchday"}
             note={locale === "pt-BR" ? "Escalação, treinador e banco" : "Line-up, coach and bench"}
           />
@@ -1045,7 +1034,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
 
         <div className="club-hub-chapter" id="club-squad">
           <ClubHubChapterMarker
-            index="03"
+            index="02"
             label={locale === "pt-BR" ? "Elenco" : "Squad"}
             note={locale === "pt-BR" ? "Cards e perfis oficiais do clube" : "Official club cards and profiles"}
           />

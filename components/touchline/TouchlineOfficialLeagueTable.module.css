@@ -121,6 +121,101 @@
   flex-basis: 24px;
 }
 
+.clubHubRail {
+  display: block;
+  margin: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  padding: clamp(18px, 2vw, 24px);
+  background: transparent;
+  box-shadow: none;
+}
+
+.clubHubRail .header {
+  align-items: start;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.clubHubRail .header h2 {
+  margin-block: 6px 0;
+  font-size: clamp(24px, 2vw, 31px);
+  line-height: 1;
+}
+
+.clubHubRail .headerActions {
+  width: 100%;
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.clubHubRail .seasonStatus,
+.clubHubRail .source {
+  width: 100%;
+  border-radius: 11px;
+  white-space: normal;
+}
+
+.clubHubRail .tableWrap {
+  margin-top: 15px;
+  overflow: visible;
+  border-radius: 14px;
+}
+
+.clubHubRail .tableWrap table {
+  min-width: 0;
+}
+
+.clubHubRail .optional,
+.clubHubRail .form,
+.clubHubRail .tableWrap th:nth-child(7),
+.clubHubRail .tableWrap td:nth-child(7),
+.clubHubRail .tableWrap th:nth-child(8),
+.clubHubRail .tableWrap td:nth-child(8) {
+  display: none;
+}
+
+.clubHubRail .tableWrap thead th:nth-child(1) { width: 31px; }
+.clubHubRail .tableWrap thead th:nth-child(2) { width: auto; }
+.clubHubRail .tableWrap thead th:nth-child(3),
+.clubHubRail .tableWrap thead th:nth-child(9),
+.clubHubRail .tableWrap thead th:nth-child(10) { width: 31px; }
+
+.clubHubRail .tableWrap th,
+.clubHubRail .tableWrap td {
+  padding: 4px 3px;
+  font-size: 11px;
+}
+
+.clubHubRail .tableWrap thead th {
+  font-size: 9px;
+}
+
+.clubHubRail .tableWrap tbody th a {
+  min-height: 36px;
+  gap: 7px;
+  padding: 4px 3px;
+  font-size: 11px;
+}
+
+.clubHubRail .tableWrap tbody th img {
+  width: 23px;
+  height: 23px;
+  flex-basis: 23px;
+}
+
+.clubHubRail .tableWrap tbody th .liveScore {
+  padding: 2px 4px;
+  font-size: 8px;
+}
+
+.clubHubRail .notice,
+.clubHubRail .status {
+  margin-top: 14px;
+  padding: 14px;
+}
+
 .header {
   display: flex;
   align-items: end;

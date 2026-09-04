@@ -12,7 +12,7 @@ import styles from "./TouchlineOfficialLeagueTable.module.css";
 type Props = Readonly<{
   table: TouchlineOfficialLeagueTable;
   locale: string;
-  variant: "directory" | "profile";
+  variant: "directory" | "profile" | "clubHubRail";
   currentTeamId?: string | null;
   action?: Readonly<{ href: string; label: string }> | null;
   id?: string;

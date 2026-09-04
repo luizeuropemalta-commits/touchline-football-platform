@@ -1,0 +1,79 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(340px, 3fr);
+  align-items: start;
+  gap: clamp(14px, 1.6vw, 24px);
+}
+
+.feed {
+  min-width: 0;
+  scroll-margin-top: 96px;
+}
+
+.feed > section {
+  margin: 0;
+}
+
+.rail {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--club-accent, #a3ff12) 42%, rgba(255, 255, 255, .12));
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 18% 4%, color-mix(in srgb, var(--club-accent, #a3ff12) 16%, transparent), transparent 31%),
+    linear-gradient(155deg, rgba(4, 19, 14, .96), rgba(1, 8, 7, .98));
+  box-shadow:
+    0 24px 72px rgba(0, 0, 0, .32),
+    inset 0 1px rgba(255, 255, 255, .05);
+}
+
+.fixture {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-bottom: 1px solid rgba(163, 255, 18, .2);
+  border-radius: 0;
+  padding: clamp(20px, 2vw, 28px);
+  background: transparent;
+  box-shadow: none;
+}
+
+.fixture[data-state="awaiting"] {
+  align-content: start;
+}
+
+.fixture[data-state="awaiting"] > div:last-child {
+  min-height: 214px;
+}
+
+.table {
+  margin: 0;
+}
+
+@media (max-width: 1120px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .feed,
+  .rail {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .layout {
+    gap: 12px;
+  }
+
+  .rail {
+    border-radius: 22px;
+  }
+
+  .fixture {
+    padding: 18px 16px;
+  }
+}

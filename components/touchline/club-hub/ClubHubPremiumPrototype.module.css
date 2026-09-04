@@ -136,7 +136,7 @@
 
 .statusRail {
   display: grid;
-  grid-template-columns: minmax(360px, 1.35fr) repeat(2, minmax(230px, .82fr));
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
   align-items: stretch;
   gap: 12px;
   margin: 16px 0;

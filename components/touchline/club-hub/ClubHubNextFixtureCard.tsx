@@ -28,6 +28,7 @@ type Props = Readonly<{
   startsAt: string;
   locale?: TouchLineLocale;
   previewHref?: string | null;
+  className?: string;
 }>;
 
 const subscribeToBrowserTimeZone = () => () => undefined;
@@ -58,6 +59,7 @@ export default function ClubHubNextFixtureCard({
   initialTimeZone,
   locale = "en-GB",
   previewHref = "/visual-qa/clubhub-next-fixture-post",
+  className = "",
   roundName,
   startsAt,
 }: Props) {
@@ -76,7 +78,7 @@ export default function ClubHubNextFixtureCard({
   if (!localKickoff) return null;
 
   return (
-    <article className={styles.nextFixtureCard}>
+    <article className={`${styles.nextFixtureCard} ${className}`}>
       <div className={styles.nextFixtureHeading}>
         <CalendarDays aria-hidden="true" />
         <span>{portuguese ? "Próximo confronto" : "Next fixture"} · {roundName}</span>

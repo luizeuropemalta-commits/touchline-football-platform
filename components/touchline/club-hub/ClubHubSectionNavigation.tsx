@@ -10,7 +10,7 @@ type Props = Readonly<{
   locale: string;
 }>;
 
-const SECTION_TARGETS = ["club-table", "club-feed", "touchline-club-lineup", "club-squad"] as const;
+const SECTION_TARGETS = ["club-feed", "club-table", "touchline-club-lineup", "club-squad"] as const;
 
 export default function ClubHubSectionNavigation({ locale }: Props) {
   const portuguese = locale === "pt-BR";
@@ -50,8 +50,8 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
         setActiveTarget(targets.at(-1)?.id ?? null);
         return;
       }
-      // Section headings intentionally stop below the sticky ClubHub controls.
-      // Keep the activation line aligned with that visual landing position.
+      // Keep section highlighting aligned with the reading area without pinning
+      // the internal navigation over ClubHub content.
       const anchor = Math.max(140, window.innerHeight * 0.35);
       const active = targets.filter((target) => target.getBoundingClientRect().top <= anchor).at(-1);
       setActiveTarget(active?.id ?? null);

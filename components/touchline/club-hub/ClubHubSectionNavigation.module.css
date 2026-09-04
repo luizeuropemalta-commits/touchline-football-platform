@@ -1,7 +1,6 @@
 .navigation {
-  position: sticky;
-  z-index: 20;
-  top: 74px;
+  position: relative;
+  z-index: 10;
   display: flex;
   width: max-content;
   max-width: calc(100% - 40px);
@@ -21,6 +20,10 @@
 }
 
 .backToTop {
+  position: fixed;
+  z-index: 30;
+  right: 24px;
+  bottom: 24px;
   width: 44px;
   padding: 0;
   opacity: 0;
@@ -48,17 +51,20 @@
 
 @media (max-width: 720px) {
   .navigation {
-    top: 64px;
     max-width: calc(100% - 20px);
     gap: 4px;
     margin-top: 0;
+  }
+
+  .backToTop {
+    right: 12px;
+    bottom: 12px;
   }
 
 }
 
 @media (orientation: landscape) and (max-width: 1100px) and (max-height: 520px) {
   .navigation {
-    top: 58px;
     margin-top: 0;
   }
 }
