@@ -188,3 +188,32 @@ test("049 reuses approved canonical posts for the shared ClubOwner official time
   assert.match(nativeShare, /navigator\.canShare\(filePayload\)/);
   assert.match(nativeShare, /await navigator\.share\(filePayload\)/);
 });
+
+test("050 hides and refuses to sign a published post whose revision no longer matches its current draft", () => {
+  const sql = readFileSync(new URL("../supabase/qa/050_touchline_qa_club_social_reader_revision_fence.sql", import.meta.url), "utf8");
+  const rollback = readFileSync(new URL("../supabase/qa/050_touchline_qa_club_social_reader_revision_fence_rollback.sql", import.meta.url), "utf8");
+  const clubHubStart = sql.indexOf("create or replace function public.touchline_social_045_read_feed");
+  const ownerStart = sql.indexOf("create or replace function public.touchline_social_049_read_clubowner_feed");
+  const shareStart = sql.indexOf("create or replace function public.touchline_social_049_read_share_art");
+  const grantsStart = sql.indexOf("revoke all on function public.touchline_social_045_read_feed");
+  assert.ok(clubHubStart >= 0 && ownerStart > clubHubStart && shareStart > ownerStart && grantsStart > shareStart);
+  const clubHubReader = sql.slice(clubHubStart, ownerStart);
+  const ownerReader = sql.slice(ownerStart, shareStart);
+  const shareReader = sql.slice(shareStart, grantsStart);
+  for (const reader of [clubHubReader, ownerReader, shareReader]) {
+    assert.match(reader, /post\.source_checksum=draft\.source_checksum/);
+    assert.match(reader, /post\.source_revision_checksum=draft\.source_revision_checksum/);
+    assert.match(reader, /post\.manifest_checksum=draft\.manifest_checksum/);
+    assert.match(reader, /post\.artifact_checksum=draft\.artifact_checksum/);
+    assert.match(reader, /draft\.approved_artifact_checksum=draft\.artifact_checksum/);
+    assert.match(reader, /draft\.approved_caption_checksum=draft\.caption_checksum/);
+    assert.match(reader, /draft\.approved_manifest_checksum=draft\.manifest_checksum/);
+    assert.match(reader, /touchline_social_source_revision_is_current/);
+  }
+  assert.match(clubHubReader, /ref\.source_checksum=post\.source_checksum/);
+  assert.match(sql, /set search_path = ''/g);
+  assert.match(rollback, /TL_SOCIAL_050_CLUB_FEED_DISABLED/);
+  assert.match(rollback, /TL_SOCIAL_050_CLUBOWNER_FEED_DISABLED/);
+  assert.match(rollback, /TL_SOCIAL_050_SHARE_ART_DISABLED/);
+  assert.doesNotMatch(sql, /graph\.facebook|graph\.instagram|access[_-]?token|client[_-]?secret/i);
+});
