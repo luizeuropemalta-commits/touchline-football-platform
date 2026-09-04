@@ -12,8 +12,10 @@ test("ClubOwner private controls localize their visible operational copy", () =>
   assert.match(renderer, /clubDirection: "Direção do clube"/);
   assert.match(renderer, /clubDirection: "Club direction"/);
   assert.match(renderer, /paymentPending: "Secure payment pending integration"/);
-  assert.match(renderer, /is part of \$\{ownerIdentity\.name\}'s squad/);
-  assert.match(renderer, /"Official squad"/);
+  assert.match(renderer, /"Timeline oficial TouchLine"/);
+  assert.match(renderer, /"TouchLine official timeline"/);
+  assert.match(renderer, /"Notícias oficiais primeiro"/);
+  assert.match(renderer, /"Official news first"/);
   assert.match(renderer, /"View full collection"/);
   assert.match(renderer, /\{clubCopy\.manageMarket\}/);
   assert.doesNotMatch(renderer, />Gerir no Mercado de Cards</);

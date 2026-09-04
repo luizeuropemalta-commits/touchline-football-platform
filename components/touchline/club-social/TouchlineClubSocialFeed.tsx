@@ -32,19 +32,30 @@ export default function TouchlineClubSocialFeed({
   clubSlug,
   locale,
   page,
+  channelEyebrow,
+  channelTitle,
+  paginationPath,
 }: Readonly<{
   clubName: string;
   clubSlug: string;
   locale: TouchLineLocale;
   page: TouchlineClubSocialFeedPage;
+  channelEyebrow?: string;
+  channelTitle?: string;
+  paginationPath?: string;
 }>) {
   const pt = locale === "pt-BR";
+  const feedPath = paginationPath ?? `/touchline-clubs/${clubSlug}`;
   return (
     <section className={styles.shell} aria-labelledby="club-social-feed-title">
       <header className={styles.header}>
         <div>
-          <span className={styles.eyebrow}>{pt ? "Canal oficial do clube" : "Official club channel"}</span>
-          <h2 className={styles.title} id="club-social-feed-title">{clubName} · TouchLine</h2>
+          <span className={styles.eyebrow}>
+            {channelEyebrow ?? (pt ? "Canal oficial do clube" : "Official club channel")}
+          </span>
+          <h2 className={styles.title} id="club-social-feed-title">
+            {channelTitle ?? `${clubName} · TouchLine`}
+          </h2>
         </div>
         <span className={styles.verified}>TouchLine Verified</span>
       </header>
@@ -97,7 +108,7 @@ export default function TouchlineClubSocialFeed({
       {page.nextCursor ? (
         <Link
           className={styles.more}
-          href={`/touchline-clubs/${clubSlug}?lang=${encodeURIComponent(locale)}&feedCursor=${encodeURIComponent(page.nextCursor)}`}
+          href={`${feedPath}?lang=${encodeURIComponent(locale)}&feedCursor=${encodeURIComponent(page.nextCursor)}`}
         >
           {pt ? "Ver atualizações anteriores" : "View earlier updates"}
         </Link>

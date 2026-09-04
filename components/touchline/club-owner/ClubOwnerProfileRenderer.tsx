@@ -52,11 +52,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import {
-  TouchlineSocialFeed,
   TouchlineSocialProfileActions,
   TouchlineSocialProfileHeader,
-  type TouchlineSocialPost,
 } from "@/components/touchline/social/TouchlineSocial";
+import TouchlineClubSocialFeed from "@/components/touchline/club-social/TouchlineClubSocialFeed";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 import { readTouchlineClubOwnerSocialFeed } from "@/lib/touchlineArena/club-social-feed-server";
@@ -165,7 +164,7 @@ function clubOwnerCardZoomDetails(
   });
 }
 
-export type ClubOwnerProfileSearchParams = Promise<{ lang?: string }>;
+export type ClubOwnerProfileSearchParams = Promise<{ lang?: string; feedCursor?: string }>;
 
 export default async function ClubOwnerProfileRenderer({
   searchParams,
@@ -229,7 +228,7 @@ export default async function ClubOwnerProfileRenderer({
     ? resolveServerReadWithin(loadTouchlineFantasySnapshot(activeClubOwnerUser), null, CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS)
     : Promise.resolve(null);
   const officialTimelineRead = resolveServerReadWithin(
-    readTouchlineClubOwnerSocialFeed({ limit: 6 }),
+    readTouchlineClubOwnerSocialFeed({ limit: 6, cursor: params.feedCursor ?? null }),
     { state: "unavailable" as const, items: [], nextCursor: null },
     CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
   );
@@ -337,91 +336,6 @@ export default async function ClubOwnerProfileRenderer({
     cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
   };
   const ownerPositionLabel = locale === "pt-BR" ? "Posição do ClubOwner" : "Club Owner position";
-  const officialTimelinePosts: TouchlineSocialPost[] = officialTimeline.items.map((item) => ({
-    id: `touchline-official-${item.id}`,
-    kind: "official",
-    title: item.contentType.replaceAll("_", " ").toLocaleLowerCase(locale).replace(/^./u, (letter) => letter.toLocaleUpperCase(locale)),
-    body: item.copy,
-    meta: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Malta" })
-      .format(new Date(item.publishedAt)),
-    accent: CLUB_OWNER_TOUCHLINE_NEON,
-    sharePostId: item.id,
-    visualImageUrl: item.imageUrl,
-    visualAlt: `${item.contentType.replaceAll("_", " ")} · TouchLine`,
-    visualTheme: item.contentType.includes("GOAL") || item.contentType.includes("HAT_TRICK") ? "goal" : "match",
-  }));
-  const squadTimelinePosts: TouchlineSocialPost[] = publishedClubOwnerSquadCards.slice(0, 4).map((card) => {
-    const club = TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.name === card.clubName);
-    const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
-    const priceLabel = publicCardProfilePriceLabel(card, locale);
-    const tierKey = publicCardProfileTier(card);
-    return {
-      id: `owned-card-${card.id}`,
-      kind: "official",
-      title: isPortuguese
-        ? `${card.name} integra o elenco de ${ownerIdentity.name}`
-        : `${card.name} is part of ${ownerIdentity.name}'s squad`,
-      body: isPortuguese
-        ? "Atualização automática baseada no contrato deste card. Nenhuma escalação, posição no campo ou estratégia foi publicada."
-        : "Automatic update based on this card contract. No line-up, field position or strategy has been published.",
-      meta: isPortuguese ? "Elenco oficial" : "Official squad",
-      accent: touchlineCardTierPalette(tierKey).accent,
-      badge: priceLabel
-        ? `${card.seasonTotalRating ?? "—"} ${isPortuguese ? "nota total" : "total rating"} · ${priceLabel}`
-        : `${card.seasonTotalRating ?? "—"} ${isPortuguese ? "nota total" : "total rating"}`,
-      visual: (
-        <TouchlineCardZoom
-          ariaLabel={`${locale === "pt-BR" ? "Ampliar card de" : "Open card for"} ${card.name}`}
-          contractHref={card.cardPriceAuthority === "active-contract"
-            ? touchlineArenaContractHref({
-              locale,
-              playerId: card.id,
-              playerName: card.name,
-              clubId: club?.teamId,
-            })
-            : undefined}
-          contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
-          contractValue={card.cardPriceAuthority === "active-contract" ? activeContractCardPriceLabel(card, locale) ?? undefined : undefined}
-          contractTermLabel={card.cardPriceAuthority === "active-contract" ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
-          tierAccent={touchlineCardTierPalette(tierKey).accent}
-          tierLabel={tierKey ? touchlineCardTierName(tierKey, locale) : undefined}
-          details={clubOwnerCardZoomDetails(card, locale, canEditCardEngine)}
-          expandedContent={(
-            <TouchlineEliteExactCard
-              player={player}
-              labels={cardLabels}
-              layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
-              rankingMode="preview"
-              imageLoading="lazy"
-              showCardActions
-              showProfileAction
-              forceNeonActive
-            />
-          )}
-        >
-          <TouchlineEliteExactCard
-            player={player}
-            labels={cardLabels}
-            layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
-            rankingMode="preview"
-            imageLoading="lazy"
-            showProfileAction={false}
-            showSocialMetrics={false}
-          />
-        </TouchlineCardZoom>
-      ),
-      visualTheme: "squad",
-      metrics: [
-        { label: isPortuguese ? "Clube" : "Club", value: club?.shortCode ?? card.clubName },
-        { label: isPortuguese ? "Nota total" : "Total rating", value: String(card.seasonTotalRating ?? "—") },
-        ...(priceLabel ? [{ label: isPortuguese ? "Preço" : "Price", value: priceLabel }] : []),
-      ],
-      actionHref: touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier }),
-      actionLabel: isPortuguese ? "Abrir card" : "Open card",
-    };
-  });
-  const socialPosts: TouchlineSocialPost[] = [...officialTimelinePosts, ...squadTimelinePosts];
-
   return (
     <main
       className="club-owner-profile"
@@ -528,6 +442,18 @@ export default async function ClubOwnerProfileRenderer({
               {showPrivateClubControl ? <ClubOwnerAvatarUpload locale={locale} /> : null}
             </div>
           </TouchlineSocialProfileHeader>
+
+          <TouchlineClubSocialFeed
+            clubName="TouchLine England"
+            clubSlug=""
+            locale={locale}
+            page={officialTimeline}
+            channelEyebrow={isPortuguese ? "Timeline oficial TouchLine" : "TouchLine official timeline"}
+            channelTitle={isPortuguese ? "Notícias oficiais primeiro" : "Official news first"}
+            paginationPath={ownerIdentity.isAuthenticatedClubOwner
+              ? "/club-owner/me"
+              : `/club-owner/${ownerIdentity.slug}`}
+          />
 
           <section className="club-owner-rank-deck" aria-label={t("rankings")}>
             <div className="club-owner-rank-title">
@@ -650,16 +576,6 @@ export default async function ClubOwnerProfileRenderer({
             </section>
           ) : null}
 
-          <TouchlineSocialFeed
-            entityId={ownerIdentity.entityId}
-            entityName={ownerIdentity.name}
-            entityImageUrl={ownerIdentity.avatarUrl}
-            entityImageAlt={ownerIdentity.name}
-            entityRole="ClubOwner · TouchLine England"
-            posts={socialPosts}
-            accent={CLUB_OWNER_TOUCHLINE_NEON}
-            locale={locale}
-          />
           <section className="club-owner-profile-trophy-gallery" id="club-owner-trophies" aria-label={isPortuguese ? "Galeria de troféus do ClubOwner" : "ClubOwner trophy gallery"}>
             <div className="club-owner-profile-gallery-heading">
               <span>{t("trophyGallery")}</span>

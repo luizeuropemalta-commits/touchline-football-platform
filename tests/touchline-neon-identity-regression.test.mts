@@ -283,18 +283,14 @@ test("dedicated player-card ranking reuses the shared zoom and keeps compact car
   assert.doesNotMatch(rankingsSource, /resolveTouchlineVerifiedPlayerEconomy|Market value|market value pending/);
 });
 
-test("ClubOwner feed promotes the owned card and keeps compact controls outside it", () => {
-  const socialSource = source("components/touchline/social/TouchlineSocial.tsx");
-  const socialStyles = source("components/touchline/social/TouchlineSocial.module.css");
+test("ClubOwner reuses the canonical official feed without inventing a club-scoped copy", () => {
   const ownerSource = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
 
-  assert.match(socialSource, /visual\?: React\.ReactNode/);
-  assert.match(socialSource, /post\.visual \|\| post\.visualValue \|\| post\.visualImageUrl/);
-  assert.match(socialSource, /styles\.postCardVisual/);
-  assert.match(socialStyles, /\.postVisualCore \{[^}]*width: 100%/);
-  assert.match(ownerSource, /visual:\s*\(\s*<TouchlineCardZoom/);
-  assert.match(ownerSource, /showProfileAction=\{false\}[\s\S]*showSocialMetrics=\{false\}/);
-  assert.doesNotMatch(ownerSource, /visualImageUrl:\s*club\?\.logoUrl/);
+  assert.match(ownerSource, /import TouchlineClubSocialFeed/);
+  assert.match(ownerSource, /readTouchlineClubOwnerSocialFeed/);
+  assert.equal((ownerSource.match(/<TouchlineClubSocialFeed/g) ?? []).length, 1);
+  assert.match(ownerSource, /<TouchlineSocialProfileHeader[\s\S]*?<TouchlineClubSocialFeed/);
+  assert.doesNotMatch(ownerSource, /providerTeamId|ownerClub|visualImageUrl:\s*club\?\.logoUrl/);
 });
 
 test("ClubOwner showcase cards reuse zoom and keep profile navigation outside the card", () => {

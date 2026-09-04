@@ -54,6 +54,8 @@ export type TouchlineShareArtwork = Readonly<{
   checksum: string;
 }>;
 
+const inFlightShareArtworkReads = new Map<string, Promise<TouchlineShareArtwork | null>>();
+
 function validItem(value: unknown): value is FeedRpcItem {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const item = value as Record<string, unknown>;
@@ -82,17 +84,25 @@ function validShareArtwork(value: unknown): value is ShareArtworkRpcItem {
 }
 
 /** Revalidates the canonical post and signs its approved artwork at click time. */
-export async function readTouchlineShareArtwork(postId: string): Promise<TouchlineShareArtwork | null> {
-  if (!UUID.test(postId)) return null;
-  const admin = createAdminClient();
-  if (!admin) return null;
-  const { data, error } = await admin.rpc("touchline_social_049_read_share_art", { p_post_id: postId });
-  if (error || !validShareArtwork(data)) return null;
-  const { data: signed, error: signedError } = await admin.storage
-    .from(data.artifactBucket)
-    .createSignedUrl(data.artifactKey, 60);
-  if (signedError || !signed?.signedUrl) return null;
-  return Object.freeze({ signedUrl: signed.signedUrl, checksum: data.artifactChecksum });
+export function readTouchlineShareArtwork(postId: string): Promise<TouchlineShareArtwork | null> {
+  if (!UUID.test(postId)) return Promise.resolve(null);
+  const existing = inFlightShareArtworkReads.get(postId);
+  if (existing) return existing;
+  const request = (async () => {
+    const admin = createAdminClient();
+    if (!admin) return null;
+    const { data, error } = await admin.rpc("touchline_social_049_read_share_art", { p_post_id: postId });
+    if (error || !validShareArtwork(data)) return null;
+    const { data: signed, error: signedError } = await admin.storage
+      .from(data.artifactBucket)
+      .createSignedUrl(data.artifactKey, 60);
+    if (signedError || !signed?.signedUrl) return null;
+    return Object.freeze({ signedUrl: signed.signedUrl, checksum: data.artifactChecksum });
+  })().finally(() => {
+    inFlightShareArtworkReads.delete(postId);
+  });
+  inFlightShareArtworkReads.set(postId, request);
+  return request;
 }
 
 export async function readTouchlineClubSocialFeed(input: Readonly<{

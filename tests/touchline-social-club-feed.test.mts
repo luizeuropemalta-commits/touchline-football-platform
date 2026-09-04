@@ -144,12 +144,16 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.match(component, /Post actions/);
   assert.match(reader, /touchline_social_049_read_share_art/);
   assert.match(shareRoute, /readTouchlineShareArtwork\(postId\)/);
-  assert.match(shareRoute, /checksum !== shareArt\.checksum/);
+  assert.match(shareRoute, /acquireShareCapacity\(request\)/);
+  assert.ok(shareRoute.indexOf("acquireShareCapacity(request)") < shareRoute.indexOf("readTouchlineShareArtwork(postId)"));
+  assert.match(shareRoute, /SHARE_RATE_LIMIT = 12/);
+  assert.match(shareRoute, /SHARE_MAX_CONCURRENT = 8/);
+  assert.doesNotMatch(shareRoute, /artwork\.arrayBuffer|new Response\(body/);
   assert.match(styles, /\.actions button\s*\{[\s\S]*?font-size:\s*12px/);
   assert.doesNotMatch(component, /comment|reaction|SportMonks|provider|API/i);
 });
 
-test("049 reuses approved canonical posts for every ClubOwner Timeline and keeps external delivery disabled", () => {
+test("049 reuses approved canonical posts for the shared ClubOwner official timeline and keeps external delivery disabled", () => {
   const sql = readFileSync(new URL("../supabase/qa/049_touchline_qa_clubowner_social_feed.sql", import.meta.url), "utf8");
   const rollback = readFileSync(new URL("../supabase/qa/049_touchline_qa_clubowner_social_feed_rollback.sql", import.meta.url), "utf8");
   const reader = readFileSync(new URL("../lib/touchlineArena/club-social-feed-server.ts", import.meta.url), "utf8");
@@ -171,13 +175,16 @@ test("049 reuses approved canonical posts for every ClubOwner Timeline and keeps
   assert.doesNotMatch(sql, /graph\.facebook|graph\.instagram|access[_-]?token|client[_-]?secret/i);
   assert.match(rollback, /drop function if exists public\.touchline_social_049_read_clubowner_feed/);
   assert.match(reader, /readTouchlineClubOwnerSocialFeed/);
-  assert.match(owner, /officialTimelinePosts/);
-  assert.match(owner, /sharePostId: item\.id/);
+  assert.match(owner, /<TouchlineClubSocialFeed/);
+  assert.equal((owner.match(/<TouchlineClubSocialFeed/g) ?? []).length, 1);
+  assert.doesNotMatch(owner, /<TouchlineSocialFeed/);
+  assert.ok(owner.indexOf("<TouchlineClubSocialFeed") < owner.indexOf("club-owner-rank-deck"));
+  assert.match(owner, /channelTitle=\{isPortuguese \? "Notícias oficiais primeiro" : "Official news first"\}/);
+  assert.doesNotMatch(owner, /providerTeamId|club_provider_team_id/);
   assert.match(social, /shareTouchlinePost/);
-  assert.match(social, /post\.visualImageUrl/);
-  assert.match(social, /Compartilhar/);
   assert.match(nativeShare, /navigator\.share/);
   assert.match(nativeShare, /\/api\/touchline-social\/share-art/);
+  assert.match(nativeShare, /blobSha256\(blob\) !== manifest\.checksum/);
   assert.match(nativeShare, /navigator\.canShare\(filePayload\)/);
   assert.match(nativeShare, /await navigator\.share\(filePayload\)/);
 });

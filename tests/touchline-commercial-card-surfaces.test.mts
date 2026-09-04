@@ -62,7 +62,8 @@ test("ClubOwner keeps card assets separate from the TC wallet and can present ed
   assert.match(clubOwner, /loadTouchlineFantasySnapshot\(activeClubOwnerUser\)/);
   assert.match(clubOwner, /<TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}/);
   assert.doesNotMatch(clubOwner, /selectSavedArenaStartingXi|partitionClubOwnerRoster/);
-  assert.match(clubOwner, /publishedClubOwnerSquadCards\.slice\(0, 4\)/);
+  assert.match(clubOwner, /const startingShowcaseCards = publishedClubOwnerSquadCards\.slice\(0, 6\)/);
+  assert.match(clubOwner, /startingShowcaseCards\.map\(\(card, index\) =>/);
   assert.match(clubOwner, /publishedClubOwnerSquadCards\.map\(\(card, index\) =>/);
   assert.doesNotMatch(clubOwner, /card\.editorialCard\?\.tierKey\s*\?\? \(card\.cardPriceAuthority === "active-contract"/);
   assert.doesNotMatch(clubOwner, /formatTouchlineVerifiedCommercialCardPrice/);

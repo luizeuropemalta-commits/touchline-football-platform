@@ -1,5 +1,9 @@
 export type TouchlineNativeShareResult = "shared" | "copied" | "cancelled" | "unavailable";
 
+const SHARE_SHA256 = /^sha256:[0-9a-f]{64}$/;
+const SHARE_MAX_ARTWORK_BYTES = 8_000_000;
+const SHARE_MEDIA_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 function safeShareFilename(title: string, mimeType: string) {
   const stem = title
     .normalize("NFKD")
@@ -11,20 +15,45 @@ function safeShareFilename(title: string, mimeType: string) {
   return `${stem}.${extension}`;
 }
 
-async function readShareableImage(postId: string | undefined, imageUrl: string | undefined, title: string) {
-  const sourceUrl = postId
-    ? `/api/touchline-social/share-art/${encodeURIComponent(postId)}`
-    : imageUrl;
-  if (!sourceUrl) return null;
+async function blobSha256(blob: Blob) {
+  if (!globalThis.crypto?.subtle) return null;
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+  return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+async function readCanonicalShareManifest(postId: string) {
+  const response = await fetch(`/api/touchline-social/share-art/${encodeURIComponent(postId)}`, {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  const manifest = await response.json().catch(() => null) as Record<string, unknown> | null;
+  if (!manifest || manifest.ok !== true || typeof manifest.signedUrl !== "string"
+    || typeof manifest.checksum !== "string" || !SHARE_SHA256.test(manifest.checksum)) return null;
   try {
+    const signedUrl = new URL(manifest.signedUrl);
+    if (signedUrl.protocol !== "https:" || signedUrl.username || signedUrl.password) return null;
+    return { signedUrl: signedUrl.toString(), checksum: manifest.checksum } as const;
+  } catch {
+    return null;
+  }
+}
+
+async function readShareableImage(postId: string | undefined, imageUrl: string | undefined, title: string) {
+  try {
+    const manifest = postId ? await readCanonicalShareManifest(postId) : null;
+    const sourceUrl = manifest?.signedUrl ?? (postId ? null : imageUrl);
+    if (!sourceUrl) return null;
     const response = await fetch(sourceUrl, {
-      credentials: postId ? "same-origin" : "omit",
+      credentials: "omit",
       cache: "no-store",
+      referrerPolicy: "no-referrer",
     });
     if (!response.ok) return null;
     const blob = await response.blob();
     const mimeType = blob.type.toLowerCase();
-    if (!mimeType.startsWith("image/") || blob.size < 1) return null;
+    if (!SHARE_MEDIA_TYPES.has(mimeType) || blob.size < 1 || blob.size > SHARE_MAX_ARTWORK_BYTES) return null;
+    if (manifest && await blobSha256(blob) !== manifest.checksum) return null;
     return new File([blob], safeShareFilename(title, mimeType), { type: mimeType });
   } catch {
     return null;
