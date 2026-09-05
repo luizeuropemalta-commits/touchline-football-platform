@@ -130,14 +130,15 @@ export default function ClubHubNextFixtureCard({
             alt=""
             aria-hidden="true"
             className={styles.nextFixtureVenueImage}
-            height={72}
-            sizes="72px"
+            height={variant === "hero" ? 112 : 96}
+            sizes={variant === "hero" ? "96px" : "80px"}
             src={venueImageUrl}
-            width={72}
+            width={variant === "hero" ? 112 : 96}
           />
         ) : null}
         <span className={styles.nextFixtureVenueCopy}>
           <MapPin aria-hidden="true" />
+          {variant === "hero" ? <small>{portuguese ? "ESTÁDIO" : "STADIUM"}</small> : null}
           <span>{venueName ?? (portuguese ? "Estádio em verificação" : "Venue under verification")}</span>
         </span>
       </div>

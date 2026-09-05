@@ -148,7 +148,7 @@ test("the functional ClubHub places canonical positional leaders beside the matc
   assert.match(page, /<ClubHubCanonicalCoachPanel[\s\S]*?presentation="technical"/);
   assert.match(page, /<TouchlineGameweekCard card=\{leader\.card\}/);
   assert.match(page, /leaderCards=\{\(/);
-  assert.match(page, /displayWidth=\{128\}/);
+  assert.match(page, /displayWidth=\{112\}/);
   assert.match(page, /const clubPositionLeaders = CLUB_POSITION_LEADER_GROUPS\.map/);
   assert.match(page, /ranking\.positionGroup/);
   assert.doesNotMatch(page, /fallbackLeaderCard/);

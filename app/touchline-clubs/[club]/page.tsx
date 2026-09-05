@@ -615,7 +615,7 @@ async function ClubHubLineupSection({
               </header>
               {leader ? (
                 <div className={premiumStyles.lineupLeaderVisual}>
-                  <TouchlineGameweekCard card={leader.card} locale={locale} displayWidth={128} />
+                  <TouchlineGameweekCard card={leader.card} locale={locale} displayWidth={112} />
                 </div>
               ) : (
                 <div className={premiumStyles.lineupLeaderAwaiting} role="status">—</div>
@@ -1263,7 +1263,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         .club-hub-identity {
           display: flex;
           align-items: center;
-          gap: clamp(34px, 5vw, 78px);
+          gap: clamp(22px, 3vw, 42px);
           flex: 1;
           min-width: 0;
           transform: translateY(16px);
@@ -1278,7 +1278,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           z-index: 2;
           top: clamp(26px, 3vw, 46px);
           right: clamp(22px, 3vw, 48px);
-          width: min(318px, 27vw);
+          width: min(420px, 31vw);
         }
         .club-hub-hero-next-match-awaiting {
           display: grid;
@@ -1505,10 +1505,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           z-index: 1;
           right: clamp(300px, 27vw, 430px);
           bottom: 20px;
-          left: clamp(250px, 25vw, 490px);
+          left: clamp(230px, 21vw, 410px);
           min-width: 0;
         }
         .club-hub-identity span,
+        .club-hub-honours > span,
         .club-hub-board span,
         .club-hub-section-head span,
         .club-hub-next-match > span {

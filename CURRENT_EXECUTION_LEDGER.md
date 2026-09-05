@@ -186,3 +186,15 @@ After material work:
   surface, including the localized retry link. Focused verification is `39/39`
   and the complete release suite is `1602/1602`; the follow-up QA commit is
   queued after local build confirmation. Production remains untouched.
+
+- **Current uncommitted refinement:** the hero reduces the excessive
+  crest-to-name distance, preserves green `Official club profile` and `Club
+  Honours`, and makes the fixture symmetric (crest / score-or-VS / crest).
+  The stadium remains a separate Live-style verified image card with label and
+  name, never a background.
+- **Current uncommitted line-up refinement:** four positional leader cards
+  use a smaller live-card width and matched visible containers to prevent
+  clipping. The heading is now `Line-up` before T−24h, `Squad Preview` within
+  that window, and `Line-up confirmed` only after an official sheet. This
+  batch is local only; TypeScript and diff hygiene have passed. The QA alias,
+  Production, football data and external social delivery are untouched.

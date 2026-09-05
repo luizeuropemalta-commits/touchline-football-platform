@@ -237,7 +237,8 @@ test("ClubHub uses Squad Preview only in the 24 hours before kick-off and never 
   assert.match(source, /startsAtIso/);
   assert.match(source, /const showPreviewContext = !confirmed && squadPreviewWindow/);
   assert.match(source, /Line-up confirmed/);
-  assert.match(source, /confirmed \? \(isPortuguese \? "Escalação" : "Line-up"\) : \(isPortuguese \? "Formação" : "Formation"\)/);
+  assert.match(source, /showPreviewContext\n\s*\? \(isPortuguese \? "Prévia do elenco" : "Squad Preview"\)\n\s*:\s*\(isPortuguese \? "Escalação" : "Line-up"\)/);
+  assert.match(source, /isPortuguese \? "Formação" : "Formation"/);
   assert.match(source, /showPreviewContext \? \(/);
   assert.doesNotMatch(source, /Predicted line-up/);
 });
@@ -268,11 +269,11 @@ test("ClubHub places the four canonical positional leaders beside the pitch and 
   const styles = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 
   assert.match(page, /leaderCards=\{\(/);
-  assert.match(page, /displayWidth=\{128\}/);
+  assert.match(page, /displayWidth=\{112\}/);
   assert.doesNotMatch(page, /ClubHubPremiumOverviewSection/);
   assert.match(lineup, /className=\{styles\.pitchAndLeaders\}/);
   assert.match(lineup, /className=\{styles\.positionLeaders\}/);
-  assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) minmax\(292px, 420px\)/);
+  assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) minmax\(340px, 390px\)/);
   assert.match(technical, /<p aria-hidden="true"\s*\/>/);
   assert.doesNotMatch(technical, /9 cards from the available squad/);
 });
@@ -285,7 +286,7 @@ test("ClubHub preserves the canonical Market formation on a regulation landscape
   assert.match(source, /orientation="horizontal"/);
   assert.match(source, /surfaceVariant="premium-stadium"/);
   assert.match(source, /orientation="upright"/);
-  assert.match(styles, /width: min\(100%, 960px\)/);
+  assert.match(styles, /width: min\(100%, 1152px\)/);
   const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
   assert.match(technical, /<TouchlineClubPerimeterTrace accent="#a3ff12"/);
 });

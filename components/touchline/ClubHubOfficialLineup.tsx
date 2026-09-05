@@ -69,8 +69,10 @@ export default function ClubHubOfficialLineup({
   const showPreviewContext = !confirmed && squadPreviewWindow;
   const title = confirmed
     ? (isPortuguese ? "Escalação confirmada" : "Line-up confirmed")
-    : (showPreviewContext ? (isPortuguese ? "Prévia do elenco" : "Squad Preview") : null);
-  const accessibleTitle = title ?? (isPortuguese ? "Escalação da partida" : "Matchday line-up");
+    : (showPreviewContext
+      ? (isPortuguese ? "Prévia do elenco" : "Squad Preview")
+      : (isPortuguese ? "Escalação" : "Line-up"));
+  const accessibleTitle = title;
 
   // The Market formation is stored on a horizontal 105×68 coordinate plane:
   // goalkeeper at the left, attack at the right. Club Hub uses that same
@@ -92,7 +94,12 @@ export default function ClubHubOfficialLineup({
             <h2>{title}</h2>
             <p>{isPortuguese ? "A prévia pode mudar até a escalação oficial TouchLine ser confirmada." : "This preview can change until the official TouchLine line-up is confirmed."}</p>
           </div>
-        ) : <div aria-hidden="true" />}
+        ) : (
+          <div>
+            <span className={styles.eyebrow}>{isPortuguese ? "Escalação da partida" : "Matchday line-up"}</span>
+            <h2>{title}</h2>
+          </div>
+        )}
         <div className={styles.statusPanel}>
           {matchup ? (
             <aside className={styles.matchup} aria-label={isPortuguese ? "Confronto da partida" : "Match-up"}>
@@ -112,14 +119,12 @@ export default function ClubHubOfficialLineup({
             </aside>
           ) : null}
           <div className={styles.formationPanel}>
-          {!confirmed ? (
-            <span className={styles.status}>
-              {showPreviewContext ? (isPortuguese ? "Prévia do elenco" : "Squad Preview") : (isPortuguese ? "Escalação" : "Line-up")}
-            </span>
-          ) : null}
-          <span className={styles.syncLabel}>
-            {confirmed ? (isPortuguese ? "Escalação" : "Line-up") : (isPortuguese ? "Formação" : "Formation")}
+          <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`}>
+            {confirmed
+              ? (isPortuguese ? "Escalação confirmada" : "Line-up confirmed")
+              : (showPreviewContext ? (isPortuguese ? "Prévia do elenco" : "Squad Preview") : (isPortuguese ? "Escalação" : "Line-up"))}
           </span>
+          <span className={styles.syncLabel}>{isPortuguese ? "Formação" : "Formation"}</span>
           <strong className={styles.formation}>{lineup.formation}</strong>
           </div>
         </div>

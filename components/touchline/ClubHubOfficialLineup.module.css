@@ -180,7 +180,7 @@
 
 .pitchAndLeaders {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(292px, 420px);
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
   align-items: start;
   gap: clamp(14px, 2vw, 24px);
   margin-top: 18px;
@@ -204,7 +204,7 @@
 .positionLeaders {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -212,7 +212,7 @@
   position: relative;
   /* A regulation 105×68 landscape pitch. The max width fills the ClubHub
      content column on desktop while width:100% keeps it inside every page. */
-  width: min(100%, 960px);
+  width: min(100%, 1152px);
   min-width: 0;
   --lineup-safe-top-inset: 0px;
   min-height: 0;

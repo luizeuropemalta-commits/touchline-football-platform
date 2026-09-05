@@ -162,7 +162,7 @@ test("ClubHub line-up contains its regulation landscape pitch and fits every pla
   assert.match(clubHubPage, /\.club-hub-shell \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
   assert.match(clubHubPage, /\.club-hub-shell > \* \{[\s\S]*?min-width: 0/);
   assert.match(lineupCss, /\.pitchViewport \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
-  assert.match(lineupCss, /\.pitch \{[\s\S]*?width: min\(100%, 960px\);[\s\S]*?min-width: 0/);
+  assert.match(lineupCss, /\.pitch \{[\s\S]*?width: min\(100%, 1152px\);[\s\S]*?min-width: 0/);
   assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitch \{ width: 100%; \}/);
   assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.player \{[\s\S]*?width: clamp\(48px, 17vw, 70px\);[\s\S]*?--touchline-card-static-scale: \.1348837209/);
   assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitchCard \{ --touchline-attack-card-long-edge: 94px; \}/);

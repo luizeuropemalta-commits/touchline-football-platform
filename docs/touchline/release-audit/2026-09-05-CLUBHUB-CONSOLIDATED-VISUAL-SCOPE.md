@@ -197,3 +197,23 @@ build local, SHA imutável e gate novo do Fiscal antes de um único deploy QA.
   Fiscal nem deploy em QA/Production.
 - Estado: implementado localmente, verificação funcional concluída; inspeção
   visual renderizada em desktop e mobile ainda pendente. Sem commit/deploy.
+
+## Follow-up visual — topo, confronto e estádio (todos os clubes)
+
+- Aproximar o nome do clube do seu escudo; manter `Official club profile` e
+  `Club Honours` em verde TouchLine e o nome principal em branco.
+- O próximo jogo deve sempre usar escudo / placar ou VS / escudo, com o
+  elemento central no centro geométrico e os escudos com a mesma escala.
+- Estádio não é fundo: imagem interior verificada em quadrado premium, com
+  `STADIUM` e nome fora da imagem no padrão Live.
+
+## Follow-up visual — arena de line-up e líderes por posição
+
+- Os quatro líderes (zagueiro, lateral, meio incluindo volante e atacante)
+  são cards vivos TouchLine com neon, zoom e perfil — nunca PNG estático — e
+  precisam aparecer completos, sem corte.
+- Sem line-up oficial, o título é `Line-up` até a janela final de 24h; dentro
+  da janela vira `Squad Preview`; após a confirmação oficial vira `Line-up
+  confirmed`. A explicação existe somente no estado Preview.
+- Captura pré-QA deve usar dados isolados de QA; credenciais de produção não
+  podem ser reutilizadas para construir uma visualização local.
