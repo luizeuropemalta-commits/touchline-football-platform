@@ -150,6 +150,9 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.match(shareRoute, /SHARE_MAX_CONCURRENT = 8/);
   assert.doesNotMatch(shareRoute, /artwork\.arrayBuffer|new Response\(body/);
   assert.match(styles, /\.actions button\s*\{[\s\S]*?font-size:\s*12px/);
+  assert.match(styles, /\.grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)[\s\S]*?justify-items:\s*center/);
+  assert.match(styles, /\.card\s*\{[\s\S]*?width:\s*min\(100%, 540px\)/);
+  assert.match(styles, /\.media img\s*\{[\s\S]*?object-fit:\s*contain/);
   assert.doesNotMatch(component, /comment|reaction|SportMonks|provider|API/i);
 });
 

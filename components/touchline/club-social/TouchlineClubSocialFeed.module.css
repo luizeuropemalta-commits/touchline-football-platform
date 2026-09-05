@@ -50,12 +50,14 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
   gap: 14px;
   margin-top: 22px;
 }
 
 .card {
+  width: min(100%, 540px);
   min-width: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, .1);
@@ -71,7 +73,7 @@
 }
 
 .media img {
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .body {
@@ -168,18 +170,12 @@
   outline-offset: 3px;
 }
 
-@media (max-width: 960px) {
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
 @media (max-width: 620px) {
   .header { align-items: start; flex-direction: column; }
-  .grid { grid-template-columns: 1fr; }
 }
 
 @media (orientation: landscape) and (max-height: 520px) {
   .shell { padding: 16px; }
-  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .body { padding: 12px; }
 }
 
