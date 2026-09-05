@@ -27,6 +27,13 @@ test("ClubHub bounds squad loading and distinguishes unavailable data from a nor
   assert.match(outsideMatchRosterSource, /role="status"/);
 });
 
+test("ClubHub fails closed on a slow optional viewer-auth lookup without delaying public data", () => {
+  assert.match(source, /const CLUB_HUB_VIEWER_ACCESS_TIMEOUT_MS = 1_800/);
+  assert.match(source, /return Promise\.race\(\[/);
+  assert.match(source, /viewerAccess\.catch\(\(\) => CLUB_HUB_PUBLIC_VIEWER_ACCESS\)/);
+  assert.match(source, /setTimeout\(\(\) => resolve\(CLUB_HUB_PUBLIC_VIEWER_ACCESS\), CLUB_HUB_VIEWER_ACCESS_TIMEOUT_MS\)/);
+});
+
 test("ClubHub defers below-the-fold squad artwork while eagerly revealing its visible technical coach card", () => {
   assert.match(squadGridSource, /imageLoading="lazy"/);
   assert.doesNotMatch(squadGridSource, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);

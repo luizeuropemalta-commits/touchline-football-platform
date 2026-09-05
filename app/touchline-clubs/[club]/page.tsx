@@ -380,6 +380,8 @@ type ClubHubCardLabels = Readonly<{
 
 type ClubHubPresentation = Awaited<ReturnType<typeof loadClubHubPresentation>>;
 type ClubHubViewerAccess = Awaited<ReturnType<typeof loadClubHubViewerAccess>>;
+const CLUB_HUB_VIEWER_ACCESS_TIMEOUT_MS = 1_800;
+const CLUB_HUB_PUBLIC_VIEWER_ACCESS = { userId: null, canEditCardEngine: false } as const;
 
 async function traceClubHubLoader<T>(
   clubSlug: string,
@@ -405,8 +407,8 @@ async function loadClubHubViewerAccess(
   clubSlug: string,
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
 ) {
-  if (dataSource !== "direct") return { userId: null, canEditCardEngine: false };
-  return traceClubHubLoader(clubSlug, "viewer-access", async () => {
+  if (dataSource !== "direct") return CLUB_HUB_PUBLIC_VIEWER_ACCESS;
+  const viewerAccess = traceClubHubLoader(clubSlug, "viewer-access", async () => {
     const supabase = await createClient();
     const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
     return {
@@ -414,6 +416,14 @@ async function loadClubHubViewerAccess(
       canEditCardEngine: Boolean(user && isOwnerEmail(user.email)),
     };
   });
+  // Authentication is optional on this public profile. Never allow an Auth
+  // outage or a stale refresh token to hold the official ClubHub data hostage.
+  return Promise.race([
+    viewerAccess.catch(() => CLUB_HUB_PUBLIC_VIEWER_ACCESS),
+    new Promise<typeof CLUB_HUB_PUBLIC_VIEWER_ACCESS>((resolve) => {
+      setTimeout(() => resolve(CLUB_HUB_PUBLIC_VIEWER_ACCESS), CLUB_HUB_VIEWER_ACCESS_TIMEOUT_MS);
+    }),
+  ]);
 }
 
 async function loadClubHubPresentation(
