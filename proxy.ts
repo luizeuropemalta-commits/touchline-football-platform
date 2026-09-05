@@ -515,6 +515,13 @@ async function handleTouchLineRequest(request: NextRequest) {
   const isAdminOnlyArenaRoute = !isAuth
     && adminOnlyArenaPaths.some((path) => matchesRoute(pathname, path))
     && !isQaAuthenticatedVisualReviewRoute;
+  // Public product pages must never make Auth a dependency of rendering.  In
+  // particular, a visitor with an expired browser session must not cause every
+  // public navigation to refresh a Supabase token at the edge.  That pattern
+  // amplifies into concurrent refreshes for HTML and assets and can exhaust
+  // the middleware execution budget.  ClubOwner remains here because its
+  // private self and management routes are authorized by this proxy.
+  const requiresIdentityLookup = isProtectedArenaRoute || pathname.startsWith("/club-owner/");
   const isEmergencyOffline = siteOffline && !isVercelHost;
 
   if (isEmergencyOffline && !isProtectedArenaRoute && !isAuth) {
@@ -530,6 +537,8 @@ async function handleTouchLineRequest(request: NextRequest) {
   }
 
   let response = nextResponseWithPresentationLocale(request);
+  if (!requiresIdentityLookup) return response;
+
   let user: {
     id?: string;
     email?: string | null;
@@ -633,5 +642,5 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // API traffic is intentionally included: an audit deployment must reject it
   // before any route handler has a chance to read or mutate external state.
-  matcher: ["/((?!_next/static|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|woff2?)$).*)"],
+  matcher: ["/((?!_next/static|.*\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|css|js|map|woff|woff2?|ttf|otf|eot|mp4|webm|mp3|wav|pdf)$).*)"],
 };
