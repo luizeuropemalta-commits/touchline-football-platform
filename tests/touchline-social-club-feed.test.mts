@@ -163,11 +163,17 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.match(leagueLayoutStyles, /\.layout\s*\{[\s\S]*?height:\s*clamp\([\s\S]*?align-items:\s*stretch/);
   assert.match(leagueLayoutStyles, /\.feed\s*\{[\s\S]*?height:\s*100%/);
   assert.match(leagueLayoutStyles, /\.rail\s*\{[\s\S]*?height:\s*100%[\s\S]*?overflow:\s*hidden/);
+  assert.match(leagueLayoutStyles, /\.rail\s*\{[\s\S]*?display:\s*flex[\s\S]*?flex-direction:\s*column/);
+  assert.match(leagueLayoutStyles, /\.fixture\s*\{[\s\S]*?flex:\s*0 0 auto/);
+  assert.match(leagueLayoutStyles, /\.table\s*\{[\s\S]*?min-height:\s*0[\s\S]*?flex:\s*1 1 auto/);
   assert.match(leagueLayoutStyles, /\.feed > section\s*\{[\s\S]*?height:\s*100%[\s\S]*?max-height:\s*100%/);
   assert.match(leagueLayoutStyles, /\.feed > section\[data-scrollable="true"\]\s*\{[\s\S]*?height:\s*clamp\(/);
   const tableStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
+  const tableComponent = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.tsx", import.meta.url), "utf8");
   assert.match(tableStyles, /\.clubHubRail\s*\{[\s\S]*?display:\s*flex[\s\S]*?overflow:\s*hidden/);
   assert.match(tableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?max-height:\s*620px[\s\S]*?overflow-y:\s*auto[\s\S]*?touch-action:\s*pan-y/);
+  assert.match(tableComponent, /data-club-table-scroll-region=\{variant === "clubHubRail" \? "true" : undefined\}/);
+  assert.match(tableComponent, /tabIndex=\{hasScrollableViewport \? 0 : undefined\}/);
   assert.doesNotMatch(component, /comment|reaction|SportMonks|provider|API/i);
 });
 

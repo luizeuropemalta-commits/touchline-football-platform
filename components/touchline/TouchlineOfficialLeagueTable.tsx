@@ -164,6 +164,10 @@ export default function TouchlineOfficialLeagueTable({
   const router = useRouter();
   const hasLiveFixture = table.rows.some((row) => Boolean(row.liveFixture));
   const seasonStatus = seasonStatusCopy(table.state, hasLiveFixture, dictionary);
+  const hasScrollableViewport = variant === "profile" || variant === "clubHubRail";
+  const scrollLabel = effectiveLocale === "pt-BR"
+    ? "Tabela rolável da liga, 20 clubes"
+    : "Scrollable league table, 20 clubs";
 
   useEffect(() => {
     if (!hasLiveFixture) return;
@@ -217,8 +221,9 @@ export default function TouchlineOfficialLeagueTable({
           ) : null}
           <div
             className={styles.tableWrap}
-            tabIndex={variant === "profile" ? 0 : undefined}
-            aria-label={variant === "profile" ? (effectiveLocale === "pt-BR" ? "Tabela rolável da liga, 20 clubes" : "Scrollable league table, 20 clubs") : undefined}
+            aria-label={hasScrollableViewport ? scrollLabel : undefined}
+            data-club-table-scroll-region={variant === "clubHubRail" ? "true" : undefined}
+            tabIndex={hasScrollableViewport ? 0 : undefined}
           >
             <table>
               <caption>{dictionary.caption}</caption>
