@@ -9,6 +9,10 @@ const layoutCss = readFileSync(
   new URL("../../components/touchline/club-hub/ClubHubOfficialLeague.module.css", import.meta.url),
   "utf8",
 );
+const tableCss = readFileSync(
+  new URL("../../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url),
+  "utf8",
+);
 
 function cards(count: number) {
   return Array.from({ length: count }, (_, index) => `
@@ -25,7 +29,7 @@ function cards(count: number) {
 
 function rows(count: number) {
   return Array.from({ length: count }, (_, index) => `
-    <tr><td>${index + 1}</td><th>Club ${index + 1}</th><td>0</td><td>0</td><td>0</td></tr>
+    <tr><td>${index + 1}</td><th><a href="#club-${index + 1}"><span>Club ${index + 1}</span></a></th><td>0</td><td>0</td><td>0</td></tr>
   `).join("");
 }
 
@@ -89,4 +93,30 @@ test("six ClubHub posts stay inside a dedicated wheel, keyboard and touch scroll
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(documentWidth.scrollWidth).toBeLessThanOrEqual(documentWidth.clientWidth);
+});
+
+test("the compact 20-club table remains contained in the companion rail", async ({ page }) => {
+  await page.setContent(`
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 24px; background: #020907; color: white; }
+      ${tableCss}
+    </style>
+    <section class="clubHubRail" style="height:640px;--club-accent:#a3ff12">
+      <header class="header"><div><span class="eyebrow">TouchLine England</span><h2>Official League Table</h2></div></header>
+      <div class="tableWrap" data-club-table-scroll-region="true">
+        <table><tbody>${rows(20)}</tbody></table>
+      </div>
+    </section>
+  `);
+
+  const tableRegion = page.locator("[data-club-table-scroll-region=true]");
+  await expect(tableRegion).toHaveCSS("overflow-y", "auto");
+  await expect(tableRegion).toHaveCSS("touch-action", "pan-y");
+  expect(await tableRegion.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+
+  await tableRegion.hover();
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => tableRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 });
