@@ -1,16 +1,20 @@
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(340px, 3fr);
-  align-items: start;
+  align-items: stretch;
   gap: clamp(14px, 1.6vw, 24px);
 }
 
 .feed {
   min-width: 0;
+  min-height: 0;
+  contain: size;
   scroll-margin-top: 96px;
 }
 
 .feed > section {
+  height: 100%;
+  max-height: 100%;
   margin: 0;
 }
 
@@ -55,12 +59,27 @@
 
 @media (max-width: 1120px) {
   .layout {
+    align-items: start;
     grid-template-columns: 1fr;
   }
 
   .feed,
   .rail {
     width: 100%;
+  }
+
+  .feed {
+    contain: none;
+  }
+
+  .feed > section {
+    height: auto;
+    max-height: none;
+  }
+
+  .feed > section[data-scrollable="true"] {
+    height: clamp(640px, calc(100dvh - 32px), 980px);
+    max-height: 980px;
   }
 }
 
@@ -75,5 +94,9 @@
 
   .fixture {
     padding: 18px 16px;
+  }
+
+  .feed > section[data-scrollable="true"] {
+    height: clamp(560px, calc(100dvh - 24px), 840px);
   }
 }

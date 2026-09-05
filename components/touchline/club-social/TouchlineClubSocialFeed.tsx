@@ -47,7 +47,11 @@ export default function TouchlineClubSocialFeed({
   const pt = locale === "pt-BR";
   const feedPath = paginationPath ?? `/touchline-clubs/${clubSlug}`;
   return (
-    <section className={styles.shell} aria-labelledby="club-social-feed-title">
+    <section
+      className={styles.shell}
+      aria-labelledby="club-social-feed-title"
+      data-scrollable={page.state === "ready" ? "true" : undefined}
+    >
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>
@@ -61,7 +65,12 @@ export default function TouchlineClubSocialFeed({
       </header>
 
       {page.state === "ready" ? (
-        <div className={styles.grid}>
+        <div
+          className={styles.grid}
+          aria-label={pt ? "Publicações roláveis do clube" : "Scrollable club posts"}
+          data-club-feed-scroll-region="true"
+          tabIndex={0}
+        >
           {page.items.map((item) => (
             <article className={styles.card} key={item.id}>
               <div className={styles.media}>

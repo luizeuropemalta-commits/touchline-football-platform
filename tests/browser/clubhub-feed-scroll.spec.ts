@@ -1,0 +1,92 @@
+import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+
+const feedCss = readFileSync(
+  new URL("../../components/touchline/club-social/TouchlineClubSocialFeed.module.css", import.meta.url),
+  "utf8",
+);
+const layoutCss = readFileSync(
+  new URL("../../components/touchline/club-hub/ClubHubOfficialLeague.module.css", import.meta.url),
+  "utf8",
+);
+
+function cards(count: number) {
+  return Array.from({ length: count }, (_, index) => `
+    <article class="card">
+      <div class="media"></div>
+      <div class="body">
+        <span class="kind">TouchLine post ${index + 1}</span>
+        <p class="copy">Verified publication layout contract.</p>
+        <time class="date">5 Sep 2026</time>
+      </div>
+    </article>
+  `).join("");
+}
+
+function rows(count: number) {
+  return Array.from({ length: count }, (_, index) => `
+    <tr><td>${index + 1}</td><th>Club ${index + 1}</th><td>0</td><td>0</td><td>0</td></tr>
+  `).join("");
+}
+
+test("six ClubHub posts stay inside a dedicated wheel, keyboard and touch scroll region", async ({ page }) => {
+  await page.setContent(`
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 24px; background: #020907; color: white; }
+      ${feedCss}
+      ${layoutCss}
+      .fixture { min-height: 250px; }
+      .tableWrap table { width: 100%; border-collapse: collapse; }
+      .tableWrap th, .tableWrap td { height: 40px; border-bottom: 1px solid #29482d; }
+    </style>
+    <main class="layout" style="--club-accent:#a3ff12">
+      <div class="feed">
+        <section class="shell" data-scrollable="true">
+          <header class="header"><div><span class="eyebrow">Official club channel</span><h2 class="title">Club · TouchLine</h2></div></header>
+          <div class="grid" data-club-feed-scroll-region="true" tabindex="0">${cards(6)}</div>
+        </section>
+      </div>
+      <aside class="rail">
+        <section class="fixture">Next fixture</section>
+        <section class="table"><div class="tableWrap"><table><tbody>${rows(20)}</tbody></table></div></section>
+      </aside>
+    </main>
+  `);
+
+  const feed = page.locator(".feed");
+  const rail = page.locator(".rail");
+  const scrollRegion = page.locator("[data-club-feed-scroll-region=true]");
+  const viewport = page.viewportSize();
+
+  await expect(scrollRegion).toHaveCSS("overflow-y", "auto");
+  await expect(scrollRegion).toHaveCSS("touch-action", "pan-y");
+  const scrollMetrics = await scrollRegion.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    shellHeight: element.parentElement?.getBoundingClientRect().height ?? 0,
+  }));
+  expect(scrollMetrics.scrollHeight, JSON.stringify(scrollMetrics)).toBeGreaterThan(scrollMetrics.clientHeight);
+
+  if (viewport && viewport.width > 1120) {
+    const [feedBox, railBox] = await Promise.all([feed.boundingBox(), rail.boundingBox()]);
+    expect(feedBox).not.toBeNull();
+    expect(railBox).not.toBeNull();
+    expect(Math.abs((feedBox?.height ?? 0) - (railBox?.height ?? 0))).toBeLessThanOrEqual(1);
+  }
+
+  await scrollRegion.hover();
+  await page.mouse.wheel(0, 700);
+  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+
+  await scrollRegion.focus();
+  await page.keyboard.press("End");
+  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollTop)).toBeGreaterThan(700);
+
+  const documentWidth = await page.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(documentWidth.scrollWidth).toBeLessThanOrEqual(documentWidth.clientWidth);
+});
