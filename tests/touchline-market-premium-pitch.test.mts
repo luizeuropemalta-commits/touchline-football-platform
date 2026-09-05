@@ -74,7 +74,7 @@ test("Market formation rotates attack-right coordinates upwards and keeps every 
   assert.match(stage, /function verticalPitchPosition/);
   assert.match(stage, /100 - slot\.x/);
   assert.match(stage, /orientation="attack-up"/);
-  assert.match(orientation, /"attack-right" \| "attack-up"/);
+  assert.match(orientation, /"attack-right" \| "attack-up" \| "upright"/);
   assert.match(orientationStyles, /\.shellAttackUp > \*/);
   assert.match(orientationStyles, /transform:\s*translate\(-50%, -50%\);/);
 });

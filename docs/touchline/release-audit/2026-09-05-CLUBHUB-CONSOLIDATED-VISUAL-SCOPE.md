@@ -60,8 +60,9 @@ parecer do Fiscal.
 
 - `Squad Preview` torna-se `Official Line-up` apenas quando a escalação oficial
   persistida existir; antes disso mantém caráter de prévia.
-- Campo vertical premium, apontando para cima, aproximadamente 60% mais compacto
-  que a versão anterior; jogadores também orientados para o ataque.
+- Campo premium horizontal, na proporção oficial 105×68 e grande dentro da
+  coluna do ClubHub, sem atravessar nem cortar a página; os cards dos jogadores
+  permanecem em pé e legíveis.
 - Reutilizar a mesma formação canônica do Market, sem duplicar ou alterar dados.
 - Exibir treinador na composição e os 9 reservas confirmados abaixo.
 - Aplicar o padrão de moldura/neon ao componente do campo e seus painéis.
@@ -113,3 +114,11 @@ Ainda obrigatório antes de solicitar o parecer do Fiscal:
 4. O layout permanece legível em desktop e mobile, sem sobreposição de cards.
 5. A página não duplica os 11 atletas fora do matchday.
 6. Todos os gates de release passam e o Fiscal aprova o SHA exato antes do deploy.
+
+## Follow-up visual — campo em paisagem
+
+Após a revisão em QA, o campo foi devolvido ao formato horizontal. A formação
+canônica do Market é mostrada diretamente no plano 105×68 (goleiro à esquerda,
+ataque à direita); o campo preenche apenas o container disponível e os cards
+nunca rotacionam. Esta alteração segue o mesmo processo de validação: testes,
+build local, SHA imutável e gate novo do Fiscal antes de um único deploy QA.

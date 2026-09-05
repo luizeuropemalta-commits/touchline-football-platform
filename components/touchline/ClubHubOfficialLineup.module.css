@@ -181,7 +181,9 @@
 
 .pitch {
   position: relative;
-  width: min(100%, 432px);
+  /* A regulation 105×68 landscape pitch. The max width fills the ClubHub
+     content column on desktop while width:100% keeps it inside every page. */
+  width: min(100%, 960px);
   min-width: 0;
   --lineup-safe-top-inset: 0px;
   min-height: 0;
@@ -197,7 +199,7 @@
   z-index: 3;
   left: var(--lineup-x);
   top: var(--lineup-y);
-  width: 94px;
+  width: clamp(62px, 7.6vw, 94px);
   --touchline-card-static-scale: .1348837209;
   display: grid;
   justify-items: center;
@@ -307,13 +309,13 @@
   .statusPanel { min-width: 0; justify-items: start; }
   .formationPanel { justify-items: start; }
   .matchup { width: min(100%, 330px); }
-  .pitch { width: min(100%, 388px); }
+  .pitch { width: min(100%, 760px); }
 
   .pendingCard { min-height: 86px; }
 }
 
 @media (min-width: 981px) and (max-width: 1199px) {
-  .pitch { width: min(100%, 406px); }
+  .pitch { width: min(100%, 860px); }
 }
 
 @media (max-width: 720px) {
@@ -364,12 +366,10 @@
     padding-bottom: 0;
   }
 
-  .pitch {
-    width: min(100%, 310px);
-  }
+  .pitch { width: 100%; }
 
   .player {
-    width: 94px;
+    width: clamp(48px, 17vw, 70px);
     --touchline-card-static-scale: .1348837209;
   }
 
@@ -443,12 +443,10 @@
     padding-bottom: 0;
   }
 
-  .pitch {
-    width: min(100%, 300px);
-  }
+  .pitch { width: 100%; }
 
   .player {
-    width: 94px;
+    width: clamp(44px, 13vw, 66px);
     --touchline-card-static-scale: .1348837209;
   }
 

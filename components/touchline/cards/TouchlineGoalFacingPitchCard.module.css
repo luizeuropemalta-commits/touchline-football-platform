@@ -29,17 +29,20 @@
 
 /* Vertical tactical surfaces point towards the top goal. The canonical card
    remains fully upright; neither the card nor its Match Rating is rotated. */
-.shellAttackUp {
+.shellAttackUp,
+.shellUpright {
   width: calc(var(--touchline-attack-card-long-edge, 94px) * .622286541);
   aspect-ratio: 430 / 691;
 }
 
-.shellAttackUp > * {
+.shellAttackUp > *,
+.shellUpright > * {
   width: 100%;
   transform: translate(-50%, -50%);
 }
 
-.shellAttackUp :global([data-arena-match-rating="true"]) {
+.shellAttackUp :global([data-arena-match-rating="true"]),
+.shellUpright :global([data-arena-match-rating="true"]) {
   transform: translateX(-50%) !important;
 }
 

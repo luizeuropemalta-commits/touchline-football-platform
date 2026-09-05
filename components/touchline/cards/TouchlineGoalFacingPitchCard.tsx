@@ -5,7 +5,7 @@ import styles from "./TouchlineGoalFacingPitchCard.module.css";
 type Props = Readonly<{
   children: ReactNode;
   className?: string;
-  orientation?: "attack-right" | "attack-up";
+  orientation?: "attack-right" | "attack-up" | "upright";
 }>;
 
 /**
@@ -19,6 +19,7 @@ export default function TouchlineGoalFacingPitchCard({ children, className, orie
       className={[
         styles.shell,
         orientation === "attack-up" ? styles.shellAttackUp : null,
+        orientation === "upright" ? styles.shellUpright : null,
         className,
       ].filter(Boolean).join(" ")}
       data-touchline-pitch-card-orientation={orientation}

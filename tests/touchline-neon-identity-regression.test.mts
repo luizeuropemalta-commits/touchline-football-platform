@@ -152,7 +152,7 @@ test("ClubOwner keeps a clean identity layout on every device and scales its fea
   assert.match(socialCss, /\.socialIdentity\.hasFeaturedVisual \.socialAvatar \{[\s\S]*?width: 112px;[\s\S]*?height: 112px/);
 });
 
-test("ClubHub line-up contains its compact portrait pitch and fits every player on mobile", () => {
+test("ClubHub line-up contains its regulation landscape pitch and fits every player on mobile", () => {
   const clubHubPage = source("app/touchline-clubs/[club]/page.tsx");
   const squadGrid = source("components/touchline/ClubHubSquadGrid.tsx");
   const lineupComponent = source("components/touchline/ClubHubOfficialLineup.tsx");
@@ -162,13 +162,13 @@ test("ClubHub line-up contains its compact portrait pitch and fits every player 
   assert.match(clubHubPage, /\.club-hub-shell \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
   assert.match(clubHubPage, /\.club-hub-shell > \* \{[\s\S]*?min-width: 0/);
   assert.match(lineupCss, /\.pitchViewport \{[\s\S]*?min-width: 0;[\s\S]*?max-width: 100%/);
-  assert.match(lineupCss, /\.pitch \{[\s\S]*?width: min\(100%, 432px\);[\s\S]*?min-width: 0/);
-  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitch \{[\s\S]*?width: min\(100%, 310px\)/);
-  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.player \{[\s\S]*?width: 94px;[\s\S]*?--touchline-card-static-scale: \.1348837209/);
+  assert.match(lineupCss, /\.pitch \{[\s\S]*?width: min\(100%, 960px\);[\s\S]*?min-width: 0/);
+  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitch \{ width: 100%; \}/);
+  assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.player \{[\s\S]*?width: clamp\(48px, 17vw, 70px\);[\s\S]*?--touchline-card-static-scale: \.1348837209/);
   assert.match(lineupCss, /@media \(max-width: 720px\)[\s\S]*?\.pitchCard \{ --touchline-attack-card-long-edge: 94px; \}/);
   assert.match(lineupCss, /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)/);
   assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitchViewport \{[\s\S]*?overflow: hidden/);
-  assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitch \{[\s\S]*?width: min\(100%, 300px\)/);
+  assert.match(lineupCss, /max-height: 520px\)[\s\S]*?\.pitch \{ width: 100%; \}/);
   assert.match(squadGrid, /<TouchlineCardZoom/);
   assert.match(lineupComponent, /<TouchlineCardZoom/);
   assert.match(lineupComponent, /showSocialMetrics=\{false\}/);

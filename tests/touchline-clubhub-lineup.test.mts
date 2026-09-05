@@ -235,15 +235,15 @@ test("ClubHub calls an unconfirmed eleven a Squad Preview, never an expected lin
   assert.doesNotMatch(source, /Predicted line-up/);
 });
 
-test("ClubHub rotates the canonical Market formation into a compact portrait pitch", () => {
+test("ClubHub preserves the canonical Market formation on a regulation landscape pitch", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const styles = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 
-  assert.match(source, /const portraitPitchPosition = \(x: number, y: number\) => \(\{[\s\S]*?x: y,[\s\S]*?y: 100 - x,/);
-  assert.match(source, /orientation="vertical"/);
+  assert.match(source, /const horizontalPitchPosition = \(x: number, y: number\) => \(\{ x, y \}\)/);
+  assert.match(source, /orientation="horizontal"/);
   assert.match(source, /surfaceVariant="premium-stadium"/);
-  assert.match(source, /orientation="attack-up"/);
-  assert.match(styles, /width: min\(100%, 432px\)/);
+  assert.match(source, /orientation="upright"/);
+  assert.match(styles, /width: min\(100%, 960px\)/);
   const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
   assert.match(technical, /<TouchlineClubPerimeterTrace accent="#a3ff12"/);
 });

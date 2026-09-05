@@ -18,7 +18,7 @@ test("Market and Club Hub share one orientation-aware compact pitch card", async
   assert.match(styles, /\[data-arena-match-rating="true"\][\s\S]*rotate\(-90deg\)/);
   assert.match(styles, /\.shellAttackUp > \*[\s\S]*?transform: translate\(-50%, -50%\);/);
   assert.match(market, /<TouchlineGoalFacingPitchCard className=\{styles\.playerCardZoom\} orientation="attack-up">[\s\S]*?<SquadPlayerCardZoom/);
-  assert.match(lineup, /<TouchlineGoalFacingPitchCard className=\{styles\.pitchCard\} orientation="attack-up">[\s\S]*?<TouchlineCardZoom/);
+  assert.match(lineup, /<TouchlineGoalFacingPitchCard className=\{styles\.pitchCard\} orientation="upright">[\s\S]*?<TouchlineCardZoom/);
 });
 
 test("pitch labels stay outside the rotated card and expanded cards remain upright", async () => {

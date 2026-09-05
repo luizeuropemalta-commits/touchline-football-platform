@@ -62,14 +62,11 @@ export default function ClubHubOfficialLineup({
     ? (isPortuguese ? "Escalação confirmada" : "Confirmed line-up")
     : (isPortuguese ? "Prévia do elenco" : "Squad Preview");
 
-  // The Market formation is stored on a horizontal 105×68 coordinate plane
-  // (goalkeeper at the left, attack at the right).  Club Hub presents the
-  // same canonical formation on a portrait broadcast pitch: the team attacks
-  // upward, so no second set of football positions is introduced here.
-  const portraitPitchPosition = (x: number, y: number) => ({
-    x: y,
-    y: 100 - x,
-  });
+  // The Market formation is stored on a horizontal 105×68 coordinate plane:
+  // goalkeeper at the left, attack at the right. Club Hub uses that same
+  // canonical geometry on a regulation landscape field; the player cards
+  // remain upright so names and artwork are naturally readable.
+  const horizontalPitchPosition = (x: number, y: number) => ({ x, y });
 
   return (
     <section id="touchline-club-lineup" className={styles.shell} aria-label={`${clubName} ${title}`}>
@@ -115,13 +112,13 @@ export default function ClubHubOfficialLineup({
       <div className={styles.pitchViewport}>
         <TouchlinePitchSurface
           className={styles.pitch}
-          orientation="vertical"
+          orientation="horizontal"
           surfaceVariant="premium-stadium"
           ariaLabel={`${clubName} ${isPortuguese ? "campo de escalação" : "line-up pitch"}`}
         >
           <div className={styles.geometryLayer}>
             {lineup.players.length ? lineup.players.map(({ card, x, y }) => {
-            const pitchPosition = portraitPitchPosition(x, y);
+            const pitchPosition = horizontalPitchPosition(x, y);
             const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
               displayName: card.name,
               shirtNumber: card.shirtNumber,
@@ -152,7 +149,7 @@ export default function ClubHubOfficialLineup({
                 style={{ "--lineup-x": `${pitchPosition.x}%`, "--lineup-y": `${pitchPosition.y}%` } as CSSProperties}
               >
                 <span className={styles.playerName}>{card.name}</span>
-                <TouchlineGoalFacingPitchCard className={styles.pitchCard} orientation="attack-up">
+                <TouchlineGoalFacingPitchCard className={styles.pitchCard} orientation="upright">
                   <TouchlineCardZoom
                     ariaLabel={`${isPortuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}
                     contractHref={undefined}
