@@ -11,6 +11,7 @@ import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import TouchlineClubSocialFeed from "@/components/touchline/club-social/TouchlineClubSocialFeed";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
 import ClubHubNextFixtureCard from "@/components/touchline/club-hub/ClubHubNextFixtureCard";
 import ClubHubSectionNavigation from "@/components/touchline/club-hub/ClubHubSectionNavigation";
@@ -103,6 +104,7 @@ type ClubMatchSnapshot = {
   /** No persisted matchday-coach DTO exists yet. Never infer a coach by club. */
   coach: null;
   publicFixture: TouchlinePublicFixture | null;
+  railFixture: TouchlinePublicFixture | null;
   playerStatistics: TouchlinePublicFixturePlayerStatistics[];
 };
 
@@ -291,6 +293,7 @@ async function loadClubMatchSnapshot(
     formation: null as string | null,
     coach: null,
     publicFixture: null,
+    railFixture: null,
     playerStatistics: [],
   };
 
@@ -314,6 +317,7 @@ async function loadClubMatchSnapshot(
       formation: null,
       coach: null,
       publicFixture: fixture,
+      railFixture: fixture,
       playerStatistics: [],
     };
   }
@@ -357,6 +361,10 @@ async function loadClubMatchSnapshot(
       formation,
       coach: null,
       publicFixture: toTouchlineLiveFixture(previewFixture),
+      // The rail is a match-state surface: retain a live or final fixture in
+      // preference to the next scheduled fixture so it can say LIVE and FULL
+      // TIME at the correct moment.
+      railFixture: toTouchlineLiveFixture(scoringFixture ?? fixture ?? previewFixture),
       playerStatistics: matchDetail?.playerStatistics ?? [],
     };
   } catch {
@@ -542,6 +550,7 @@ async function ClubHubLineupSection({
   viewerAccessPromise: Promise<ClubHubViewerAccess>;
 }) {
   const [presentation, viewerAccess] = await Promise.all([presentationPromise, viewerAccessPromise]);
+  const { outsideMatchdayCards } = presentation;
   const { matchSnapshot, matchdayPresentation } = presentation;
   const matchPreview = matchSnapshot.preview;
   return (
@@ -579,7 +588,7 @@ async function ClubHubTechnicalSections({
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
 }) {
   const [presentation, viewerAccess] = await Promise.all([presentationPromise, viewerAccessPromise]);
-  const { outsideMatchdayCards } = presentation;
+  const outsideMatchdayCards = presentation.outsideMatchdayCards;
   return (
     <>
       <ClubHubMatchdayTechnicalArea
@@ -604,6 +613,7 @@ async function ClubHubTechnicalSections({
         clubName={club.name}
         cards={outsideMatchdayCards}
         locale={locale}
+        labels={cardLabels}
       />
     </>
   );
@@ -694,7 +704,7 @@ async function ClubHubOfficialLeagueSection({
     tablePromise,
     feedPromise,
   ]);
-  const fixture = presentation.matchSnapshot.publicFixture;
+  const fixture = presentation.matchSnapshot.railFixture;
   const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
     ?? findTouchLineClub(fixture?.homeTeam?.name);
   const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
@@ -719,6 +729,7 @@ async function ClubHubOfficialLeagueSection({
       data-clubhub-official-league="true"
     >
       <div className={officialLeagueStyles.feed} id="club-feed">
+        <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         <TouchlineClubSocialFeed
           clubName={club.name}
           clubSlug={club.slug}
@@ -728,6 +739,7 @@ async function ClubHubOfficialLeagueSection({
       </div>
 
       <aside className={officialLeagueStyles.rail} aria-label={portuguese ? "Próximo jogo e tabela oficial" : "Next match and official table"}>
+        <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         {hasVerifiedFixture && fixture?.startsAt && homeClub?.logoUrl && awayClub?.logoUrl ? (
           <ClubHubNextFixtureCard
             awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
@@ -740,7 +752,12 @@ async function ClubHubOfficialLeagueSection({
             previewHref={null}
             roundName={fixture.roundName ?? (portuguese ? "Rodada pendente" : "Round pending")}
             startsAt={fixture.startsAt}
+            status={fixture.status}
+            homeScore={fixture.homeScore}
+            awayScore={fixture.awayScore}
+            liveMinute={fixture.liveMinute}
             venueName={fixture.venue?.name ?? null}
+            venueImageUrl={fixture.venue?.interiorImageUrl ?? fixture.venue?.imageUrl ?? null}
           />
         ) : (
           <article className={`${premiumStyles.nextFixtureCard} ${officialLeagueStyles.fixture}`} data-state="awaiting" role="status">
@@ -769,6 +786,58 @@ async function ClubHubOfficialLeagueSection({
         />
       </aside>
     </section>
+  );
+}
+
+async function ClubHubHeroNextMatch({
+  club,
+  locale,
+  presentationPromise,
+}: {
+  club: NonNullable<ReturnType<typeof findTouchLineClub>>;
+  locale: TouchLineLocale;
+  presentationPromise: Promise<ClubHubPresentation>;
+}) {
+  const presentation = await presentationPromise;
+  // The profile hero deliberately represents the next scheduled fixture. The
+  // match-state rail below can retain a live or final fixture when appropriate.
+  const fixture = presentation.matchSnapshot.publicFixture;
+  const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
+    ?? findTouchLineClub(fixture?.homeTeam?.name);
+  const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
+    ?? findTouchLineClub(fixture?.awayTeam?.name);
+  const portuguese = locale === "pt-BR";
+
+  if (!fixture?.startsAt || !homeClub?.logoUrl || !awayClub?.logoUrl) {
+    return (
+      <aside className="club-hub-hero-next-match club-hub-hero-next-match-awaiting" role="status">
+        <span>{portuguese ? "Próximo jogo" : "Next match"}</span>
+        <strong>{portuguese ? "Confronto em verificação" : "Fixture under verification"}</strong>
+      </aside>
+    );
+  }
+
+  return (
+    <ClubHubNextFixtureCard
+      awayTeam={{ teamId: awayClub.teamId, name: fixture.awayTeam?.name ?? awayClub.name, shortCode: awayClub.shortCode, logoUrl: awayClub.logoUrl }}
+      awayPosition={null}
+      className="club-hub-hero-next-match"
+      homeTeam={{ teamId: homeClub.teamId, name: fixture.homeTeam?.name ?? homeClub.name, shortCode: homeClub.shortCode, logoUrl: homeClub.logoUrl }}
+      homePosition={null}
+      initialTimeZone={normalizeTouchlineMatchCentreTimeZone("Europe/Malta")}
+      locale={locale}
+      previewHref={null}
+      roundName={fixture.roundName ?? (portuguese ? "Rodada" : "Matchday")}
+      showPositions={false}
+      startsAt={fixture.startsAt}
+      status={fixture.status}
+      homeScore={fixture.homeScore}
+      awayScore={fixture.awayScore}
+      liveMinute={fixture.liveMinute}
+      variant="hero"
+      venueName={fixture.venue?.name ?? null}
+      venueImageUrl={fixture.venue?.interiorImageUrl ?? fixture.venue?.imageUrl ?? null}
+    />
   );
 }
 
@@ -837,6 +906,7 @@ async function ClubHubPremiumOverviewSection({
       style={{ "--clubhub-accent": club.accent } as CSSProperties}
     >
       <article className={premiumStyles.spotlightCard} data-clubhub-card-spotlight="coach">
+        <TouchlineClubPerimeterTrace accent="#a3ff12" className={premiumStyles.spotlightTrace} />
         <header>
           <span>{portuguese ? "Treinador verificado" : "Current verified coach"}</span>
           <strong>{coach?.coach.displayName ?? (portuguese ? "Aguardando treinador" : "Awaiting verified coach")}</strong>
@@ -858,6 +928,7 @@ async function ClubHubPremiumOverviewSection({
       </article>
 
       <article className={premiumStyles.spotlightCard} data-clubhub-card-spotlight="club-leader">
+        <TouchlineClubPerimeterTrace accent="#a3ff12" className={premiumStyles.spotlightTrace} />
         <header>
           <span>{portuguese ? "Melhor card do clube" : "Club-leading TouchLine card"}</span>
           <strong>{clubLeader?.card.name ?? (portuguese ? "Aguardando ranking verificado" : "Awaiting verified ranking")}</strong>
@@ -940,6 +1011,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             />
           ) : null}
           <div className="club-hub-hero-shade" aria-hidden="true" />
+          <Suspense fallback={<div className="club-hub-hero-next-match club-hub-hero-next-match-awaiting" aria-hidden="true" />}>
+            <ClubHubHeroNextMatch club={club} locale={locale} presentationPromise={presentationPromise} />
+          </Suspense>
           <div className="club-hub-identity">
             <div className="club-hub-logo-stack">
               {club.logoUrl ? (
@@ -955,23 +1029,25 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             <div className="club-hub-title-block">
               <span>{locale === "pt-BR" ? "Perfil oficial do clube" : "Official club profile"}</span>
               <h1>{club.name}</h1>
-              {clubHonours.length ? (
-                <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
-                  <span>{t("clubHonours")}</span>
-                  <ClubTrophyCarousel
-                    ariaLabel={`${club.name} trophy carousel`}
-                    honours={clubHonours}
-                    previousLabel={t("previousTrophy")}
-                    nextLabel={t("nextTrophy")}
-                  />
-                </div>
-              ) : (
-                <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
-                  <span>{t("clubHonours")}</span>
-                  <p className="club-hub-honours-empty" role="status">{t("clubHonoursUnavailable")}</p>
-                </div>
-              )}
             </div>
+          </div>
+          <div className="club-hub-hero-footer">
+            {clubHonours.length ? (
+              <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
+                <span>{t("clubHonours")}</span>
+                <ClubTrophyCarousel
+                  ariaLabel={`${club.name} trophy carousel`}
+                  honours={clubHonours}
+                  previousLabel={t("previousTrophy")}
+                  nextLabel={t("nextTrophy")}
+                />
+              </div>
+            ) : (
+              <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
+                <span>{t("clubHonours")}</span>
+                <p className="club-hub-honours-empty" role="status">{t("clubHonoursUnavailable")}</p>
+              </div>
+            )}
           </div>
         </header>
         <ClubHubSectionNavigation locale={locale} />
@@ -1032,23 +1108,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           </div>
         </div>
 
-        <div className="club-hub-chapter" id="club-squad">
-          <ClubHubChapterMarker
-            index="02"
-            label={locale === "pt-BR" ? "Elenco" : "Squad"}
-            note={locale === "pt-BR" ? "Cards e perfis oficiais do clube" : "Official club cards and profiles"}
-          />
-          <Suspense fallback={<ClubHubDeferredSection size="cards" label={locale === "pt-BR" ? "Preparando cards do elenco" : "Preparing squad cards"} />}>
-            <ClubHubCardsSection
-              club={club}
-              locale={locale}
-              localeQuery={localeQuery}
-              cardLabels={cardLabels}
-              presentationPromise={presentationPromise}
-              viewerAccessPromise={viewerAccessPromise}
-            />
-          </Suspense>
-        </div>
       </section>
 
       <style>{`
@@ -1219,8 +1278,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           backdrop-filter: blur(18px);
         }
         .club-hub-hero {
-          min-height: 456px;
-          padding: clamp(24px, 4vw, 52px) clamp(24px, 4vw, 52px) 94px;
+          min-height: 492px;
+          padding: clamp(24px, 4vw, 52px) clamp(24px, 4vw, 52px) 126px;
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
@@ -1291,11 +1350,41 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           gap: clamp(34px, 5vw, 78px);
           flex: 1;
           min-width: 0;
+          transform: translateY(16px);
         }
         .club-hub-title-block {
           min-width: 0;
           flex: 1;
           animation: club-hub-content-rise .72s cubic-bezier(.2,.8,.2,1) .12s both;
+        }
+        .club-hub-hero-next-match {
+          position: absolute;
+          z-index: 2;
+          top: clamp(26px, 3vw, 46px);
+          right: clamp(22px, 3vw, 48px);
+          width: min(318px, 27vw);
+        }
+        .club-hub-hero-next-match-awaiting {
+          display: grid;
+          min-height: 84px;
+          align-content: center;
+          gap: 6px;
+          border: 1px solid rgba(163,255,18,.24);
+          border-radius: 14px;
+          padding: 12px;
+          background: rgba(2,12,8,.76);
+          box-shadow: inset 0 1px rgba(255,255,255,.06), 0 18px 42px rgba(0,0,0,.25);
+        }
+        .club-hub-hero-next-match-awaiting span {
+          color: #dfffad;
+          font-size: 8px;
+          font-weight: 950;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+        }
+        .club-hub-hero-next-match-awaiting strong {
+          color: rgba(247,255,242,.7);
+          font-size: 10px;
         }
         .club-hub-logo {
           width: clamp(180px, 20vw, 298px);
@@ -1341,8 +1430,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           filter: drop-shadow(0 22px 34px rgba(0,0,0,.46));
         }
         .club-hub-honours {
-          width: min(760px, 100%);
-          margin-top: 22px;
+          width: 100%;
+          margin-top: 6px;
           padding: 0;
           background: transparent;
           overflow: hidden;
@@ -1363,8 +1452,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           display: block;
           position: relative;
           margin-top: 10px;
-          min-height: 164px;
-          padding: 2px 0 10px;
+          min-height: 116px;
+          padding: 2px 0 6px;
           overflow: hidden;
           overscroll-behavior-x: contain;
         }
@@ -1375,10 +1464,10 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         }
         .club-hub-honour-page {
           display: grid;
-          grid-template-columns: repeat(var(--club-hub-trophy-page-columns), minmax(0, 112px));
+          grid-template-columns: repeat(var(--club-hub-trophy-page-columns), minmax(0, 78px));
           justify-content: center;
-          gap: 12px;
-          padding-inline: 12px;
+          gap: 9px;
+          padding-inline: 8px;
           opacity: 1;
           transform: translate3d(0, 0, 0);
           transition: opacity .22s ease, transform .22s ease;
@@ -1400,8 +1489,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           position: absolute;
           z-index: 3;
           top: 50%;
-          width: 52px;
-          height: 58px;
+          width: 38px;
+          height: 46px;
           display: grid;
           place-items: center;
           transform: translateY(-50%);
@@ -1449,8 +1538,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           position: relative;
           min-width: 0;
           border: 1px solid rgba(255,255,255,.13);
-          border-radius: 12px;
-          padding: 10px 7px 9px;
+          border-radius: 10px;
+          padding: 7px 5px 6px;
           display: grid;
           place-items: center;
           gap: 4px;
@@ -1462,8 +1551,8 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 14px 28px rgba(0,0,0,.22);
         }
         .club-hub-honour-avatar {
-          width: 58px;
-          height: 62px;
+          width: 41px;
+          height: 44px;
           position: relative;
           display: grid;
           place-items: center;
@@ -1481,7 +1570,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           place-items: center;
         }
         .club-hub-honour strong {
-          font-size: 20px;
+          font-size: 15px;
           line-height: 1;
         }
         .club-hub-honour small {
@@ -1492,9 +1581,17 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           color: rgba(255,255,255,.64);
-          font-size: 10px;
+          font-size: 7px;
           line-height: 1.2;
           font-weight: 950;                  }
+        .club-hub-hero-footer {
+          position: absolute;
+          z-index: 1;
+          right: clamp(300px, 27vw, 430px);
+          bottom: 20px;
+          left: clamp(250px, 25vw, 490px);
+          min-width: 0;
+        }
         .club-hub-identity span,
         .club-hub-board span,
         .club-hub-section-head span,
@@ -1944,6 +2041,27 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           .club-hub-honours {
             width: 100%;
           }
+          .club-hub-hero-next-match {
+            position: relative;
+            top: auto;
+            right: auto;
+            order: 1;
+            width: min(100%, 360px);
+            margin: 0 auto;
+          }
+          .club-hub-identity {
+            order: 2;
+            transform: translateY(0);
+          }
+          .club-hub-hero-footer {
+            position: relative;
+            right: auto;
+            bottom: auto;
+            left: auto;
+            order: 3;
+            width: 100%;
+            margin-top: 4px;
+          }
           .club-hub-logo-stack {
             justify-items: center;
           }
@@ -1997,13 +2115,13 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           }
           .club-hub-hero {
             min-height: 0;
-            padding: 22px 16px 82px;
+            padding: 22px 16px 26px;
           }
           .club-hub-identity { gap: 20px; }
           .club-hub-logo-stack { width: 100%; }
           .club-hub-logo { width: min(190px, 58vw); }
           .club-hub-identity h1 {
-            margin-top: 10px;
+            margin-top: 17px;
             font-size: clamp(38px, 13vw, 56px);
           }
           .club-hub-identity p,

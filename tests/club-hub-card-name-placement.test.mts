@@ -14,10 +14,8 @@ test("ClubHub keeps the player name inside the official card and never repeats i
 });
 
 test("ClubHub compact cards reserve enough width for a readable official shirt name", () => {
-  assert.match(clubHubPage, /minmax\(218px, 1fr\)/);
-  assert.match(clubHubPage, /width: min\(100%, 180px\) !important/);
-  assert.match(clubHubPage, /width: min\(100%, 190px\) !important/);
-  assert.match(clubHubSquadGrid, /staticRenderScale=\{180 \/ 430\}/);
+  assert.match(clubHubSquadGrid, /cardRenderScale = 180 \/ 430/);
+  assert.match(clubHubSquadGrid, /staticRenderScale=\{cardRenderScale\}/);
   assert.doesNotMatch(clubHubSquadGrid, /initialRenderScale=/);
   assert.match(clubHubSquadGrid, /imageLoading="lazy"/);
   assert.doesNotMatch(clubHubSquadGrid, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);

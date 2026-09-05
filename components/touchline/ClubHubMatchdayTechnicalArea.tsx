@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchLineClubMatchdayPresentation } from "@/lib/touchlineArena/club-lineup";
 import { squadCardToExactPlayer, findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
@@ -58,6 +59,7 @@ export default function ClubHubMatchdayTechnicalArea({
       data-matchday-sheet={confirmed ? "confirmed" : "preview"}
       aria-label={`${clubName} ${portuguese ? "área técnica da partida" : "matchday technical area"}`}
     >
+      <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.perimeterTrace} />
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>{portuguese ? "EQUIPE TÉCNICA" : "TECHNICAL STAFF"}</span>

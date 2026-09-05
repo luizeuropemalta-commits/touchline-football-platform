@@ -28,15 +28,16 @@ test("ClubHub places identity and honours before the official league area and ma
   const overviewStart = page.indexOf("<ClubHubPremiumOverviewSection", officialLeagueStart);
   const lineupStart = page.indexOf("<ClubHubLineupSection", heroStart);
   const technicalStart = page.indexOf("<ClubHubTechnicalSections", lineupStart);
-  const touchlineCardsStart = page.indexOf("<ClubHubCardsSection", officialLeagueStart);
+  const outsideRosterStart = page.indexOf("<ClubHubOutsideMatchRoster");
   const lineupHelperStart = indexOfRequired(page, "async function ClubHubLineupSection");
   const lineupHelperEnd = indexOfRequired(page, "async function ClubHubTechnicalSections");
   const hero = page.slice(heroStart, lineupStart);
   const lineupSection = page.slice(lineupHelperStart, lineupHelperEnd);
 
-  assert.ok(officialLeagueStart >= 0 && overviewStart >= 0 && lineupStart >= 0 && technicalStart >= 0 && touchlineCardsStart >= 0);
+  assert.ok(officialLeagueStart >= 0 && overviewStart >= 0 && lineupStart >= 0 && technicalStart >= 0 && outsideRosterStart >= 0);
   assert.match(hero, /<ClubTrophyCarousel/);
-  assert.doesNotMatch(hero, /club-hub-next-match|ClubHubLiveFixtureScore/);
+  assert.match(hero, /<ClubHubHeroNextMatch/);
+  assert.doesNotMatch(hero, /ClubHubLiveFixtureScore/);
   assert.match(lineupSection, /matchup=\{\{/);
   assert.match(lineupSection, /fixtureId: matchSnapshot\.previewFixtureId/);
   assert.ok(heroStart < officialLeagueStart);
@@ -44,7 +45,7 @@ test("ClubHub places identity and honours before the official league area and ma
   assert.ok(heroStart < lineupStart);
   assert.ok(officialLeagueStart < lineupStart);
   assert.ok(lineupStart < technicalStart);
-  assert.ok(technicalStart < touchlineCardsStart);
+  assert.ok(lineupStart < technicalStart);
   assert.doesNotMatch(hero, /Official club value|Valor oficial do clube|marketValuePending|formatCompactEuro/);
   assert.doesNotMatch(hero, /touchlineCards|touchlinePoints|squadSource|club-hub-metrics/);
   assert.doesNotMatch(hero, /market-transfer/);
@@ -60,7 +61,8 @@ test("ClubHub gives the reusable club hero premium motion without sacrificing na
   assert.doesNotMatch(trophyCarousel, /<small title=\{honour\.label\}>/);
   assert.match(page, /<ClubHubSectionNavigation locale=\{locale\}/);
   assert.match(sectionNavigation, /TouchlineGlobalNavigation\.module\.css/);
-  assert.match(sectionNavigation, /icon: Trophy[\s\S]*?icon: Newspaper[\s\S]*?icon: CalendarDays[\s\S]*?icon: UsersRound/);
+  assert.match(sectionNavigation, /icon: Newspaper[\s\S]*?icon: CalendarDays[\s\S]*?icon: UsersRound/);
+  assert.doesNotMatch(sectionNavigation, /target: "club-table"/);
   assert.match(sectionNavigation, /IntersectionObserver/);
   assert.match(sectionNavigation, /activeTarget/);
   assert.match(sectionNavigation, /aria-current=\{activeTarget === target \? "location" : undefined\}/);
@@ -71,7 +73,7 @@ test("ClubHub gives the reusable club hero premium motion without sacrificing na
   assert.match(sectionNavigation, /data-visible=\{showBackToTop\}/);
   assert.match(sectionNavigation, /window\.scrollTo\(\{ top: 0, left: 0, behavior: "instant" as ScrollBehavior \}\)/);
   assert.match(page, /id="club-hub-top" className="club-hub-top-anchor"/);
-  assert.match(page, /index="01"[\s\S]*?index="02"/);
+  assert.match(page, /index="01"/);
   assert.match(sectionNavigationStyles, /\.navigation \{[\s\S]*?position: relative[\s\S]*?width: max-content;[\s\S]*?margin: 0 auto/);
   assert.doesNotMatch(sectionNavigationStyles, /\.navigation \{[\s\S]*?position: sticky/);
   assert.match(sectionNavigationStyles, /\.backToTop \{[\s\S]*?position: fixed/);
@@ -79,13 +81,14 @@ test("ClubHub gives the reusable club hero premium motion without sacrificing na
   assert.match(page, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?animation: none !important/);
 });
 
-test("ClubHub partitions the displayed XI, official bench, and plain outside-match roster", () => {
+test("ClubHub partitions the displayed XI, official bench, and a compact linked outside-match roster", () => {
   assert.match(page, /const displayedMatchdayPlayerIds = new Set\(matchdayPresentation\.displayedPlayerIds\.map\(String\)\)/);
   assert.match(page, /const outsideMatchdayCards = clubCards\.filter\(\(card\) => !displayedMatchdayPlayerIds\.has\(String\(card\.id\)\)\)/);
   assert.match(page, /<ClubHubOutsideMatchRoster[\s\S]*?cards=\{outsideMatchdayCards\}/);
-  assert.match(page, /<ClubHubSquadGrid[\s\S]*?cards=\{outsideMatchdayCards\}/);
-  assert.match(outsideRoster, /Plain public roster/);
-  assert.doesNotMatch(outsideRoster, /marketValue|cardTier|cardPrice|touchlinePoints|ranking|href=|fetch\(/i);
+  assert.match(outsideRoster, /<ClubHubSquadGrid[\s\S]*?cards=\{\[\.\.\.cards\]\}/);
+  assert.match(outsideRoster, /Premium compact roster/);
+  assert.match(outsideRoster, /initialCardCount=\{12\}/);
+  assert.match(outsideRoster, /cardRenderScale=\{124 \/ 430\}/);
 });
 
 test("technical area keeps a nine-card preview distinct from the official bench and embeds the coach card", () => {

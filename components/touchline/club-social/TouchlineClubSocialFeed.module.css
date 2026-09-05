@@ -7,11 +7,11 @@
   box-sizing: border-box;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--club-accent) 34%, rgba(255, 255, 255, .12));
+  border: 1px solid rgba(163, 255, 18, .34);
   border-radius: 28px;
   padding: clamp(18px, 3vw, 32px);
   background:
-    radial-gradient(circle at 10% 0, color-mix(in srgb, var(--club-accent) 14%, transparent), transparent 38%),
+    radial-gradient(circle at 10% 0, rgba(163, 255, 18, .1), transparent 38%),
     linear-gradient(145deg, rgba(3, 17, 13, .83), rgba(2, 9, 8, .91));
   box-shadow: 0 24px 72px rgba(0, 0, 0, .32);
   backdrop-filter: blur(18px);
@@ -26,7 +26,7 @@
 
 .eyebrow {
   display: block;
-  color: color-mix(in srgb, var(--club-accent) 74%, #dcff9d);
+  color: #cfff89;
   font-size: 10px;
   font-weight: 950;
   letter-spacing: .14em;
@@ -69,7 +69,7 @@
   overscroll-behavior: contain;
   padding: 2px clamp(6px, 1vw, 12px) 12px 2px;
   scroll-behavior: smooth;
-  scrollbar-color: color-mix(in srgb, var(--club-accent) 72%, #ecffc8) rgba(255, 255, 255, .06);
+  scrollbar-color: #a3ff12 rgba(255, 255, 255, .06);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   touch-action: pan-y;
@@ -88,12 +88,12 @@
 .grid::-webkit-scrollbar-thumb {
   border: 1px solid rgba(0, 10, 7, .7);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--club-accent) 72%, #ecffc8);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--club-accent) 34%, transparent);
+  background: #a3ff12;
+  box-shadow: 0 0 12px rgba(163, 255, 18, .34);
 }
 
 .grid:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--club-accent) 64%, #ecffc8);
+  outline: 2px solid #a3ff12;
   outline-offset: 4px;
 }
 

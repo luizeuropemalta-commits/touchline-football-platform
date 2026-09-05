@@ -1,5 +1,6 @@
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
-import { formatTouchlinePublicShirtNumber } from "@/lib/touchlineArena/editorial-card-profile";
+import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 
 import styles from "./ClubHubOutsideMatchRoster.module.css";
 
@@ -7,25 +8,25 @@ type ClubHubOutsideMatchRosterProps = {
   clubName: string;
   cards: readonly ClubOwnerSquadCard[];
   locale: string;
+  labels: { nationality: string; points: string; totalPoints: string; cardPrice: string; currentClub: string };
 };
 
 /**
- * Plain public roster for players outside the displayed matchday group.
- * This intentionally exposes only club roster facts—never card economy,
- * contracts, ranks, scores, or player-profile actions.
+ * Premium compact roster for players outside the displayed matchday group.
+ * The canonical player cards remain linked and are rendered once, in this
+ * surface, rather than duplicated in a second roster below.
  */
 export default function ClubHubOutsideMatchRoster({
   clubName,
   cards,
   locale,
+  labels,
 }: ClubHubOutsideMatchRosterProps) {
   const portuguese = locale === "pt-BR";
   const title = portuguese ? "Elenco fora da partida" : "Outside the matchday squad";
   const description = portuguese
     ? "Jogadores que não aparecem na escalação nem no banco confirmado."
     : "Players not displayed in the line-up or confirmed bench.";
-  const shirtNumberLabel = portuguese ? "Número" : "Shirt number";
-  const noShirtNumber = portuguese ? "Sem número de camisa" : "No shirt number";
   const emptyTitle = portuguese
     ? "Nenhum jogador fora da partida"
     : "No players outside the matchday group";
@@ -35,6 +36,7 @@ export default function ClubHubOutsideMatchRoster({
 
   return (
     <section className={styles.shell} aria-label={`${clubName} ${title}`}>
+      <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.perimeterTrace} />
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>{portuguese ? "ELENCO DO CLUBE" : "CLUB SQUAD"}</span>
@@ -47,21 +49,17 @@ export default function ClubHubOutsideMatchRoster({
       </header>
 
       {cards.length ? (
-        <ul className={styles.list}>
-          {cards.map((card) => {
-            const displayedShirtNumber = formatTouchlinePublicShirtNumber(card.shirtNumber);
-            return <li key={card.id} className={styles.player}>
-              <span
-                className={styles.shirtNumber}
-                aria-label={displayedShirtNumber === null ? noShirtNumber : `${shirtNumberLabel} ${displayedShirtNumber}`}
-              >
-                {displayedShirtNumber ?? "—"}
-              </span>
-              <strong>{card.name}</strong>
-              <span className={styles.position}>{card.position}</span>
-            </li>;
-          })}
-        </ul>
+        <div className={styles.cards}>
+          <ClubHubSquadGrid
+            cards={[...cards]}
+            locale={locale as "en-GB" | "pt-BR"}
+            labels={labels}
+            openProfileLabel={portuguese ? "Abrir card do jogador" : "Open player card"}
+            initialCardCount={12}
+            cardRenderScale={124 / 430}
+            className={styles.cardGrid}
+          />
+        </div>
       ) : (
         <div className={styles.empty} role="status">
           <strong>{emptyTitle}</strong>

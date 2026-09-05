@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchlineOfficialLeagueTable } from "@/lib/football-data/official-league-table";
 
 import styles from "./TouchlineOfficialLeagueTable.module.css";
@@ -163,7 +164,9 @@ export default function TouchlineOfficialLeagueTable({
   const localeQuery = encodeURIComponent(locale);
   const router = useRouter();
   const hasLiveFixture = table.rows.some((row) => Boolean(row.liveFixture));
-  const seasonStatus = seasonStatusCopy(table.state, hasLiveFixture, dictionary);
+  const seasonStatus = variant === "clubHubRail"
+    ? null
+    : seasonStatusCopy(table.state, hasLiveFixture, dictionary);
   const hasScrollableViewport = variant === "profile" || variant === "clubHubRail";
   const scrollLabel = effectiveLocale === "pt-BR"
     ? "Tabela rolável da liga, 20 clubes"
@@ -190,17 +193,21 @@ export default function TouchlineOfficialLeagueTable({
         </div>
         <div className={styles.headerActions}>
           {action ? <Link className={styles.action} href={action.href}>{action.label}</Link> : null}
-          <span
-            className={styles.seasonStatus}
-            aria-label={`${dictionary.seasonStatus}: ${seasonStatus}`}
-          >
-            <span>{dictionary.seasonStatus}</span>
-            <strong>{seasonStatus}</strong>
-            {table.season?.name ? <small>{table.season.name}</small> : null}
-          </span>
-          <small className={styles.source}>
-            {table.coverage.completedFixtures} {dictionary.finalResults}
-          </small>
+          {variant !== "clubHubRail" ? (
+            <>
+              <span
+                className={styles.seasonStatus}
+                aria-label={`${dictionary.seasonStatus}: ${seasonStatus}`}
+              >
+                <span>{dictionary.seasonStatus}</span>
+                <strong>{seasonStatus}</strong>
+                {table.season?.name ? <small>{table.season.name}</small> : null}
+              </span>
+              <small className={styles.source}>
+                {table.coverage.completedFixtures} {dictionary.finalResults}
+              </small>
+            </>
+          ) : null}
         </div>
       </header>
 
@@ -219,13 +226,15 @@ export default function TouchlineOfficialLeagueTable({
               <p>{status.description}</p>
             </div>
           ) : null}
-          <div
-            className={styles.tableWrap}
-            aria-label={hasScrollableViewport ? scrollLabel : undefined}
-            data-club-table-scroll-region={variant === "clubHubRail" ? "true" : undefined}
-            tabIndex={hasScrollableViewport ? 0 : undefined}
-          >
-            <table>
+          <div className={variant === "clubHubRail" ? styles.clubHubTableFrame : undefined}>
+            {variant === "clubHubRail" ? <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.clubHubTableTrace} /> : null}
+            <div
+              className={styles.tableWrap}
+              aria-label={hasScrollableViewport ? scrollLabel : undefined}
+              data-club-table-scroll-region={variant === "clubHubRail" ? "true" : undefined}
+              tabIndex={hasScrollableViewport ? 0 : undefined}
+            >
+              <table>
               <caption>{dictionary.caption}</caption>
               <thead>
                 <tr>
@@ -287,7 +296,8 @@ export default function TouchlineOfficialLeagueTable({
                   );
                 })}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
         </>
       ) : null}

@@ -1,4 +1,7 @@
 .shell {
+  --touchline-perimeter-radius: 18px;
+  position: relative;
+  isolation: isolate;
   width: 100%;
   overflow: hidden;
   border: 1px solid rgba(163, 255, 18, .18);
@@ -7,6 +10,20 @@
     linear-gradient(135deg, rgba(163, 255, 18, .07), transparent 38%),
     rgba(3, 13, 9, .94);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 22px 58px rgba(0, 0, 0, .2);
+}
+
+.perimeterTrace {
+  --touchline-perimeter-radius: 18px;
+  --touchline-perimeter-z-index: 4;
+  --touchline-perimeter-run-color: #a3ff12;
+  --touchline-perimeter-run-width: .9px;
+  --touchline-perimeter-glow: 3px;
+  --touchline-perimeter-speed: 8s;
+}
+
+.shell > :not(.perimeterTrace) {
+  position: relative;
+  z-index: 1;
 }
 
 .header {
@@ -54,6 +71,13 @@
   font-weight: 950;
 }
 
+.cards { padding: 16px; }
+.cards :global(.club-hub-card-grid) { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.cards :global(.club-hub-card) { min-width: 0; }
+.cards :global(.club-hub-card-meta) { gap: 4px; font-size: 8px; }
+.cards :global(.club-hub-card-meta small) { font-size: 8px; }
+.cards :global(.club-hub-progressive-controls) { display: none; }
+
 .list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -65,13 +89,33 @@
 }
 
 .player {
+  min-width: 0;
+  background: rgba(2, 11, 8, .92);
+}
+
+.playerLink {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   min-height: 54px;
   padding: 10px 13px;
-  background: rgba(2, 11, 8, .92);
+  color: inherit;
+  text-decoration: none;
+  transition: background .18s ease, box-shadow .18s ease;
+}
+
+.playerLink:hover,
+.playerLink:focus-visible {
+  background: linear-gradient(90deg, rgba(163,255,18,.14), rgba(163,255,18,.025));
+  box-shadow: inset 3px 0 0 #a3ff12;
+  outline: none;
+}
+
+.playerLink:hover .shirtNumber,
+.playerLink:focus-visible .shirtNumber {
+  border-color: rgba(163,255,18,.76);
+  box-shadow: 0 0 18px rgba(163,255,18,.18);
 }
 
 .shirtNumber {
@@ -132,6 +176,9 @@
   .player {
     padding: 10px 12px;
   }
+
+  .cards { padding: 12px; }
+  .cards :global(.club-hub-card-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 390px) {

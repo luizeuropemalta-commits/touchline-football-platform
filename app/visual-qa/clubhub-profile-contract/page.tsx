@@ -171,7 +171,7 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
       playerContent: "O conteúdo de cards TouchLine começa abaixo da tabela oficial.",
       mobileSheet: "390PX MOBILE · FICHA DE JOGO PENDENTE",
       mobileTitle: "Ficha pendente do perfil ClubHub em viewport de 390 pixels",
-      labels: { nationality: "Nacionalidade", points: "Pontos", totalPoints: "Pontos TouchLine", cardPrice: "Preço do card" },
+      labels: { nationality: "Nacionalidade", points: "Pontos", totalPoints: "Pontos TouchLine", cardPrice: "Preço do card", currentClub: "Clube atual" },
     }
     : {
       title: "ClubHub profile contract",
@@ -180,7 +180,7 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
       playerContent: "TouchLine player-card content begins below the official table.",
       mobileSheet: "390PX MOBILE · PENDING MATCHDAY SHEET",
       mobileTitle: "ClubHub profile pending matchday sheet at 390 pixel viewport",
-      labels: { nationality: "Nationality", points: "Points", totalPoints: "TouchLine points", cardPrice: "Card price" },
+      labels: { nationality: "Nationality", points: "Points", totalPoints: "TouchLine points", cardPrice: "Card price", currentClub: "Current club" },
     };
   const localizedPresentation = pending
     ? presentation
@@ -241,6 +241,7 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
           clubName={staticClub.name}
           cards={outsideMatchdayCards}
           locale={locale}
+          labels={copy.labels}
         />
         <TouchlineOfficialLeagueTable
           table={initialTable}

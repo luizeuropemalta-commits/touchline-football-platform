@@ -1,28 +1,41 @@
 .shell {
+  --touchline-perimeter-radius: 18px;
   position: relative;
+  isolation: isolate;
   scroll-margin-top: 24px;
   width: 100%;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--club-accent) 42%, rgba(255,255,255,.12));
-  border-radius: 12px;
+  border: 1px solid rgba(163, 255, 18, .34);
+  border-radius: 18px;
   background:
-    radial-gradient(circle at 12% 16%, color-mix(in srgb, var(--club-accent) 24%, transparent), transparent 33%),
-    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--club-secondary) 18%, transparent), transparent 30%),
+    radial-gradient(circle at 12% 16%, rgba(163, 255, 18, .13), transparent 33%),
+    radial-gradient(circle at 88% 18%, rgba(113, 255, 91, .09), transparent 30%),
     linear-gradient(145deg, rgba(4,14,12,.96), rgba(2,7,7,.92));
   box-shadow: 0 34px 100px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,255,255,.035);
   padding: 24px;
 }
 
+.perimeterTrace {
+  --touchline-perimeter-radius: 18px;
+  --touchline-perimeter-z-index: 4;
+  --touchline-perimeter-run-color: #a3ff12;
+  --touchline-perimeter-run-width: .9px;
+  --touchline-perimeter-glow: 3px;
+  --touchline-perimeter-speed: 8s;
+}
+
 .header {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: 24px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid rgba(255,255,255,.1);
+  padding: 4px 0 20px;
+  border-bottom: 1px solid rgba(163, 255, 18, .24);
 }
 
 .eyebrow,
@@ -39,6 +52,7 @@
   color: white;
   font-size: clamp(30px, 4vw, 58px);
   line-height: .95;
+  text-shadow: 0 10px 32px rgba(0,0,0,.48);
 }
 
 .header p {
@@ -54,23 +68,30 @@
   min-width: min(100%, 300px);
   display: grid;
   justify-items: end;
-  gap: 14px;
+  gap: 10px;
 }
 
 .formationPanel {
   display: grid;
   justify-items: end;
   gap: 9px;
+  min-width: 190px;
+  border: 1px solid rgba(163, 255, 18, .2);
+  border-radius: 12px;
+  padding: 10px 13px;
+  background: linear-gradient(135deg, rgba(163,255,18,.1), rgba(0,0,0,.18));
+  box-shadow: inset 0 1px rgba(255,255,255,.055);
 }
 
 .matchup {
   width: min(100%, 300px);
   display: grid;
   gap: 8px;
-  border: 1px solid rgba(181,255,75,.22);
-  border-radius: 10px;
+  border: 1px solid rgba(163,255,18,.3);
+  border-radius: 12px;
   padding: 10px 12px;
-  background: linear-gradient(135deg, rgba(181,255,75,.08), rgba(0,0,0,.22));
+  background: linear-gradient(135deg, rgba(163,255,18,.12), rgba(0,0,0,.22));
+  box-shadow: inset 0 1px rgba(255,255,255,.055), 0 8px 28px rgba(0,0,0,.18);
   color: rgba(255,255,255,.7);
   text-align: center;
 }
@@ -144,24 +165,31 @@
 }
 
 .pitchViewport {
+  position: relative;
+  z-index: 1;
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  display: grid;
+  place-items: center;
+  margin-top: 18px;
+  border: 1px solid rgba(163,255,18,.16);
+  border-radius: 14px;
+  padding: 5px;
+  background: linear-gradient(180deg, rgba(163,255,18,.045), transparent 18%);
 }
 
 .pitch {
   position: relative;
-  min-width: 900px;
-  --lineup-safe-top-inset: clamp(42px, 4.4vw, 62px);
-  --lineup-pitch-core-height: 660px;
-  min-height: calc(var(--lineup-pitch-core-height) + var(--lineup-safe-top-inset));
+  width: min(100%, 432px);
+  min-width: 0;
+  --lineup-safe-top-inset: 0px;
+  min-height: 0;
 }
 
 .geometryLayer {
   position: absolute;
-  inset: var(--lineup-safe-top-inset) 0 0;
+  inset: 0;
 }
 
 .player {
@@ -169,15 +197,15 @@
   z-index: 3;
   left: var(--lineup-x);
   top: var(--lineup-y);
-  width: 129px;
-  --touchline-card-static-scale: .1860465116;
+  width: 94px;
+  --touchline-card-static-scale: .1348837209;
   display: grid;
   justify-items: center;
   overflow: visible;
   transform: translate(-50%, -50%);
 }
 
-.pitchCard { --touchline-attack-card-long-edge: 129px; }
+.pitchCard { --touchline-attack-card-long-edge: 94px; }
 
 /* The name belongs to the pitch, not to the card artwork.  Keeping this as a
    sibling of the zoom trigger means it has one stable anchor at every card
@@ -279,23 +307,13 @@
   .statusPanel { min-width: 0; justify-items: start; }
   .formationPanel { justify-items: start; }
   .matchup { width: min(100%, 330px); }
-  .player {
-    width: 94px;
-    --touchline-card-static-scale: .1348837209;
-  }
-
-  .pitchCard { --touchline-attack-card-long-edge: 94px; }
+  .pitch { width: min(100%, 388px); }
 
   .pendingCard { min-height: 86px; }
 }
 
 @media (min-width: 981px) and (max-width: 1199px) {
-  .player {
-    width: 109px;
-    --touchline-card-static-scale: .1581395349;
-  }
-
-  .pitchCard { --touchline-attack-card-long-edge: 109px; }
+  .pitch { width: min(100%, 406px); }
 }
 
 @media (max-width: 720px) {
@@ -347,11 +365,7 @@
   }
 
   .pitch {
-    width: 100%;
-    min-width: 0;
-    --lineup-safe-top-inset: clamp(36px, 10vw, 46px);
-    --lineup-pitch-core-height: clamp(610px, 154vw, 720px);
-    min-height: calc(var(--lineup-pitch-core-height) + var(--lineup-safe-top-inset));
+    width: min(100%, 310px);
   }
 
   .player {
@@ -430,11 +444,7 @@
   }
 
   .pitch {
-    width: 100%;
-    min-width: 0;
-    --lineup-safe-top-inset: 32px;
-    --lineup-pitch-core-height: 540px;
-    min-height: calc(var(--lineup-pitch-core-height) + var(--lineup-safe-top-inset));
+    width: min(100%, 300px);
   }
 
   .player {
@@ -460,8 +470,7 @@
   }
 
   .pitch {
-    width: 100%;
-    min-width: 0;
+    width: min(100%, 360px);
   }
 
   .player {

@@ -48,8 +48,8 @@ function TrophyArtwork({ honour }: { honour: ClubTrophyCarouselItem }) {
 
   return (
     <picture>
-      <source srcSet={`${honour.imageSources.avif} 256w`} sizes="98px" type="image/avif" />
-      <source srcSet={`${honour.imageSources.webp} 256w`} sizes="98px" type="image/webp" />
+      <source srcSet={`${honour.imageSources.avif} 256w`} sizes="42px" type="image/avif" />
+      <source srcSet={`${honour.imageSources.webp} 256w`} sizes="42px" type="image/webp" />
       <img
         src={honour.imageUrl}
         alt=""
@@ -66,9 +66,9 @@ function TrophyArtwork({ honour }: { honour: ClubTrophyCarouselItem }) {
 }
 
 function pageSizeForWidth(width: number, itemCount: number) {
-  const cardWidth = 98;
-  const gap = 12;
-  const horizontalPadding = 24;
+  const cardWidth = 78;
+  const gap = 9;
+  const horizontalPadding = 16;
   const capacity = Math.max(1, Math.floor((width - horizontalPadding + gap) / (cardWidth + gap)));
   const pageCount = Math.max(1, Math.ceil(itemCount / capacity));
   return Math.max(1, Math.ceil(itemCount / pageCount));

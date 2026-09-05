@@ -235,6 +235,19 @@ test("ClubHub calls an unconfirmed eleven a Squad Preview, never an expected lin
   assert.doesNotMatch(source, /Predicted line-up/);
 });
 
+test("ClubHub rotates the canonical Market formation into a compact portrait pitch", () => {
+  const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
+
+  assert.match(source, /const portraitPitchPosition = \(x: number, y: number\) => \(\{[\s\S]*?x: y,[\s\S]*?y: 100 - x,/);
+  assert.match(source, /orientation="vertical"/);
+  assert.match(source, /surfaceVariant="premium-stadium"/);
+  assert.match(source, /orientation="attack-up"/);
+  assert.match(styles, /width: min\(100%, 432px\)/);
+  const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
+  assert.match(technical, /<TouchlineClubPerimeterTrace accent="#a3ff12"/);
+});
+
 test("the persisted-squad API preserves every canonical roster player for Club Hub", () => {
   const source = readFileSync(new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");

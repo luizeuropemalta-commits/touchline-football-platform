@@ -1,4 +1,5 @@
 .shell {
+  --touchline-perimeter-radius: 18px;
   position: relative;
   width: 100%;
   overflow: hidden;
@@ -8,6 +9,15 @@
     radial-gradient(circle at 16% 0, rgba(163, 255, 18, .1), transparent 30%),
     linear-gradient(145deg, rgba(3, 18, 12, .96), rgba(2, 9, 8, .98));
   box-shadow: inset 0 1px 0 rgba(235, 255, 218, .1), 0 24px 70px rgba(0, 0, 0, .26), 0 0 24px rgba(163, 255, 18, .035);
+}
+
+.perimeterTrace {
+  --touchline-perimeter-radius: 18px;
+  --touchline-perimeter-z-index: 3;
+  --touchline-perimeter-run-color: #a3ff12;
+  --touchline-perimeter-run-width: .9px;
+  --touchline-perimeter-glow: 3px;
+  --touchline-perimeter-speed: 8s;
 }
 
 .header { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 18px 20px 15px; border-bottom: 1px solid rgba(163, 255, 18, .12); }

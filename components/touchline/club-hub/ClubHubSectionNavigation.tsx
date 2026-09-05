@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, CalendarDays, Newspaper, Trophy, UsersRound } from "lucide-react";
+import { ArrowUp, CalendarDays, Newspaper, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import globalNavigationStyles from "../TouchlineGlobalNavigation.module.css";
@@ -10,7 +10,7 @@ type Props = Readonly<{
   locale: string;
 }>;
 
-const SECTION_TARGETS = ["club-feed", "club-table", "touchline-club-lineup", "club-squad"] as const;
+const SECTION_TARGETS = ["club-feed", "touchline-club-lineup", "club-squad"] as const;
 
 export default function ClubHubSectionNavigation({ locale }: Props) {
   const portuguese = locale === "pt-BR";
@@ -18,7 +18,6 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
   const [activeTarget, setActiveTarget] = useState<string | null>(null);
 
   const items = [
-    { target: "club-table", label: portuguese ? "Classificação" : "Rankings", icon: Trophy },
     { target: "club-feed", label: "Feed", icon: Newspaper },
     { target: "touchline-club-lineup", label: portuguese ? "Dia de jogo" : "Matchday", icon: CalendarDays },
     { target: "club-squad", label: portuguese ? "Elenco" : "Squad", icon: UsersRound },

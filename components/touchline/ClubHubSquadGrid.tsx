@@ -49,6 +49,9 @@ type ClubHubSquadGridProps = {
   };
   openProfileLabel: string;
   canEditCardEngine?: boolean;
+  initialCardCount?: number;
+  cardRenderScale?: number;
+  className?: string;
 };
 
 /**
@@ -57,8 +60,8 @@ type ClubHubSquadGridProps = {
  * them. This preserves the canonical card component without hydrating 25–30
  * heavy products during the first mobile render.
  */
-export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel, canEditCardEngine = false }: ClubHubSquadGridProps) {
-  const [visibleCount, setVisibleCount] = useState(INITIAL_CARD_COUNT);
+export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLabel, canEditCardEngine = false, initialCardCount = INITIAL_CARD_COUNT, cardRenderScale = 180 / 430, className }: ClubHubSquadGridProps) {
+  const [visibleCount, setVisibleCount] = useState(initialCardCount);
   // The footballer remains present on every Club Hub surface. Published
   // profiles render in colour; incomplete editorial inputs use the same
   // premium grayscale card instead of silently removing the real player.
@@ -68,7 +71,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
 
   return (
     <>
-      <div className="club-hub-card-grid" aria-live="polite">
+      <div className={["club-hub-card-grid", className].filter(Boolean).join(" ")} aria-live="polite">
         {visibleCards.map((card, index) => {
           const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
             displayName: card.name,
@@ -152,7 +155,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                   player={exactPlayer}
                   labels={labels}
                   imageLoading="lazy"
-                  staticRenderScale={180 / 430}
+                  staticRenderScale={cardRenderScale}
                   layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                   playerProfileHref={profileHref}
                   showProfileAction={false}

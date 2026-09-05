@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin } from "lucide-react";
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 
 import { formatTouchlineLocalKickoff } from "@/lib/touchlineArena/local-kickoff";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
+import { clubHubFixtureRailRefreshMs, resolveClubHubFixtureRail } from "@/lib/touchlineArena/club-hub-fixture-rail";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 
 import styles from "./ClubHubPremiumPrototype.module.css";
@@ -26,10 +28,17 @@ type Props = Readonly<{
   initialTimeZone: string;
   roundName: string;
   startsAt: string;
+  status?: string;
+  homeScore?: number;
+  awayScore?: number;
+  liveMinute?: number;
   locale?: TouchLineLocale;
   previewHref?: string | null;
   className?: string;
   venueName?: string | null;
+  venueImageUrl?: string | null;
+  variant?: "rail" | "hero";
+  showPositions?: boolean;
 }>;
 
 const subscribeToBrowserTimeZone = () => () => undefined;
@@ -63,9 +72,17 @@ export default function ClubHubNextFixtureCard({
   className = "",
   roundName,
   startsAt,
+  status,
+  homeScore,
+  awayScore,
+  liveMinute,
   venueName = null,
+  venueImageUrl = null,
+  variant = "rail",
+  showPositions = true,
 }: Props) {
   const portuguese = locale === "pt-BR";
+  const router = useRouter();
   const timeZone = useSyncExternalStore(
     subscribeToBrowserTimeZone,
     readBrowserTimeZone,
@@ -76,31 +93,56 @@ export default function ClubHubNextFixtureCard({
     () => formatTouchlineLocalKickoff(startsAt, timeZone, locale),
     [locale, startsAt, timeZone],
   );
+  const rail = useMemo(
+    () => resolveClubHubFixtureRail({ startsAt, status, homeScore, awayScore, liveMinute }, locale),
+    [awayScore, homeScore, liveMinute, locale, startsAt, status],
+  );
+  const refreshMs = clubHubFixtureRailRefreshMs(rail, startsAt);
+
+  useEffect(() => {
+    if (!refreshMs) return undefined;
+    const refresh = window.setTimeout(() => router.refresh(), refreshMs);
+    return () => window.clearTimeout(refresh);
+  }, [refreshMs, router]);
 
   if (!localKickoff) return null;
 
   return (
-    <article className={`${styles.nextFixtureCard} ${className}`}>
+    <article className={`${styles.nextFixtureCard} ${variant === "hero" ? styles.heroCompact : ""} ${className}`} data-state={rail.state}>
+      {venueImageUrl ? (
+        <Image
+          alt=""
+          aria-hidden="true"
+          className={styles.nextFixtureVenueBackdrop}
+          fill
+          sizes="(max-width: 760px) 100vw, 31vw"
+          src={venueImageUrl}
+        />
+      ) : null}
       <div className={styles.nextFixtureHeading}>
         <CalendarDays aria-hidden="true" />
-        <span>{portuguese ? "Próximo confronto" : "Next fixture"} · {roundName}</span>
+        <span>{rail.heading} · {roundName}</span>
       </div>
       <div className={styles.nextFixtureTeams}>
         <span className={styles.nextFixtureClub}>
           <Image alt={`${homeTeam.name} crest`} height={54} src={homeTeam.logoUrl} width={54} />
           <b>{homeTeam.name}</b>
-          <small>{positionLabel(homePosition, locale)}</small>
+          {showPositions ? <small>{positionLabel(homePosition, locale)}</small> : null}
         </span>
-        <em>VS</em>
+        <em data-score={rail.score ? "verified" : undefined}>{rail.score ?? "VS"}</em>
         <span className={styles.nextFixtureClub}>
           <Image alt={`${awayTeam.name} crest`} height={54} src={awayTeam.logoUrl} width={54} />
           <b>{awayTeam.name}</b>
-          <small>{positionLabel(awayPosition, locale)}</small>
+          {showPositions ? <small>{positionLabel(awayPosition, locale)}</small> : null}
         </span>
       </div>
       <div className={styles.nextFixtureKickoff}>
-        <time dateTime={startsAt}>{localKickoff.date} · {localKickoff.time}</time>
-        <small>{portuguese ? "Seu horário local" : "Your local time"} · {localKickoff.zoneName}</small>
+        <time dateTime={startsAt}>{rail.liveMinute ?? (rail.state === "finished" ? rail.heading : `${localKickoff.date} · ${localKickoff.time}`)}</time>
+        <small>{rail.state === "upcoming"
+          ? `${portuguese ? "Seu horário local" : "Your local time"} · ${localKickoff.zoneName}`
+          : rail.state === "live"
+            ? (portuguese ? "Placar verificado" : "Verified score")
+            : (portuguese ? "Resultado verificado" : "Verified result")}</small>
       </div>
       <div className={styles.nextFixtureVenue} data-state={venueName ? "verified" : "pending"}>
         <MapPin aria-hidden="true" />

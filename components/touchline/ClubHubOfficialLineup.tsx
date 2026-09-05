@@ -6,6 +6,7 @@ import TouchlineGoalFacingPitchCard from "@/components/touchline/cards/Touchline
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
 import type { TouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
 import type { TouchlineClubMatchPreviewTeam } from "@/lib/touchlineArena/club-match-preview";
@@ -61,8 +62,18 @@ export default function ClubHubOfficialLineup({
     ? (isPortuguese ? "Escalação confirmada" : "Confirmed line-up")
     : (isPortuguese ? "Prévia do elenco" : "Squad Preview");
 
+  // The Market formation is stored on a horizontal 105×68 coordinate plane
+  // (goalkeeper at the left, attack at the right).  Club Hub presents the
+  // same canonical formation on a portrait broadcast pitch: the team attacks
+  // upward, so no second set of football positions is introduced here.
+  const portraitPitchPosition = (x: number, y: number) => ({
+    x: y,
+    y: 100 - x,
+  });
+
   return (
     <section id="touchline-club-lineup" className={styles.shell} aria-label={`${clubName} ${title}`}>
+      <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.perimeterTrace} />
       <header className={styles.header}>
         <div>
           <span className={styles.eyebrow}>{isPortuguese ? "Escalação da partida" : "Matchday line-up"}</span>
@@ -102,9 +113,15 @@ export default function ClubHubOfficialLineup({
       </header>
 
       <div className={styles.pitchViewport}>
-        <TouchlinePitchSurface className={styles.pitch} ariaLabel={`${clubName} ${isPortuguese ? "campo de escalação" : "line-up pitch"}`}>
+        <TouchlinePitchSurface
+          className={styles.pitch}
+          orientation="vertical"
+          surfaceVariant="premium-stadium"
+          ariaLabel={`${clubName} ${isPortuguese ? "campo de escalação" : "line-up pitch"}`}
+        >
           <div className={styles.geometryLayer}>
             {lineup.players.length ? lineup.players.map(({ card, x, y }) => {
+            const pitchPosition = portraitPitchPosition(x, y);
             const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
               displayName: card.name,
               shirtNumber: card.shirtNumber,
@@ -131,11 +148,11 @@ export default function ClubHubOfficialLineup({
               <article
                 key={card.id}
                 className={styles.player}
-                data-lineup-edge={x <= 8 ? "left" : x >= 92 ? "right" : undefined}
-                style={{ "--lineup-x": `${x}%`, "--lineup-y": `${y}%` } as CSSProperties}
+                data-lineup-edge={pitchPosition.x <= 8 ? "left" : pitchPosition.x >= 92 ? "right" : undefined}
+                style={{ "--lineup-x": `${pitchPosition.x}%`, "--lineup-y": `${pitchPosition.y}%` } as CSSProperties}
               >
                 <span className={styles.playerName}>{card.name}</span>
-                <TouchlineGoalFacingPitchCard className={styles.pitchCard}>
+                <TouchlineGoalFacingPitchCard className={styles.pitchCard} orientation="attack-up">
                   <TouchlineCardZoom
                     ariaLabel={`${isPortuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}
                     contractHref={undefined}

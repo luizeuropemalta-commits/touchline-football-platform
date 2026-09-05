@@ -65,28 +65,29 @@ test("ClubHub formation keeps player names legible above cards without ellipses 
   assert.doesNotMatch(clubHubLineupCss, /\.playerLink/);
 });
 
-test("ClubHub keeps the geometry inside a compensated pitch core on desktop and mobile", () => {
-  assert.match(clubHubLineupCss, /\.pitch[\s\S]*?--lineup-safe-top-inset: clamp\(42px, 4\.4vw, 62px\)/);
+test("ClubHub keeps the geometry inside its compact portrait pitch on desktop and mobile", () => {
+  assert.match(clubHubLineupCss, /\.pitch[\s\S]*?width: min\(100%, 432px\)/);
   assert.match(clubHubLineup, /<div className=\{styles\.geometryLayer\}>/);
-  assert.match(clubHubLineupCss, /\.geometryLayer[\s\S]*?inset: var\(--lineup-safe-top-inset\) 0 0/);
+  assert.match(clubHubLineupCss, /\.geometryLayer[\s\S]*?inset: 0/);
   assert.match(clubHubLineupCss, /\.player[\s\S]*?top: var\(--lineup-y\)/);
   assert.doesNotMatch(clubHubLineupCss, /top: calc\(var\(--lineup-y\) \+ var\(--lineup-safe-top-inset\)\)/);
   assert.match(
     clubHubLineupCss,
-    /@media \(max-width: 720px\)[\s\S]*?--lineup-safe-top-inset: clamp\(36px, 10vw, 46px\)[\s\S]*?min-height: calc\(var\(--lineup-pitch-core-height\) \+ var\(--lineup-safe-top-inset\)\)/,
+    /@media \(max-width: 720px\)[\s\S]*?\.pitch \{[\s\S]*?width: min\(100%, 310px\)/,
   );
   assert.match(
     clubHubLineupCss,
-    /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)[\s\S]*?--lineup-safe-top-inset: 32px[\s\S]*?min-height: calc\(var\(--lineup-pitch-core-height\) \+ var\(--lineup-safe-top-inset\)\)/,
+    /@media \(orientation: landscape\) and \(max-width: 1100px\) and \(max-height: 520px\)[\s\S]*?\.pitch \{[\s\S]*?width: min\(100%, 300px\)/,
   );
 });
 
 test("ClubHub preserves canonical player coordinates without local role refinements", () => {
   assert.doesNotMatch(clubHubLineup, /CLUB_HUB_DEFENDER_Y_REFINEMENT/);
   assert.doesNotMatch(clubHubLineup, /resolveClubHubLineupY\(/);
-  assert.match(clubHubLineup, /"--lineup-x": `\$\{x\}%`, "--lineup-y": `\$\{y\}%`/);
-  assert.match(clubHubLineup, /x <= 8 \? "left"/);
-  assert.match(clubHubLineup, /x >= 92 \? "right"/);
+  assert.match(clubHubLineup, /const portraitPitchPosition = \(x: number, y: number\)/);
+  assert.match(clubHubLineup, /"--lineup-x": `\$\{pitchPosition\.x\}%`, "--lineup-y": `\$\{pitchPosition\.y\}%`/);
+  assert.match(clubHubLineup, /pitchPosition\.x <= 8 \? "left"/);
+  assert.match(clubHubLineup, /pitchPosition\.x >= 92 \? "right"/);
 });
 
 test("ClubHub makes an unscheduled opponent explicit without pretending TouchLine is a club", () => {
