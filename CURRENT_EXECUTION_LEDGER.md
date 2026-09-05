@@ -17,6 +17,30 @@ After material work:
 
 # 2026-09-05 — ClubHub visual refinement candidate 042
 
+- Follow-up requested after QA inspection: remove the stadium image from the
+  fixture-rail background. The local implementation renders it only as a small
+  bounded thumbnail beside the verified stadium name, preserving the exact
+  venue source and fail-closed pending label. Focused fixture-rail coverage
+  passes `5/5`; this uncommitted local change is being batched with further
+  owner visual requests and is explicitly not authorised for deployment yet.
+
+- Added to the same local-only batch: four larger club-only leader cards for
+  centre-back, full-back, midfielder and attacker. Selection is based strictly
+  on canonical active-ranking `totalRating` and position groups; winger and
+  striker form the attacker category, while missing evidence remains pending.
+  The fixture rail now reserves equal grid columns for both crests and an exact
+  centre column for `VS`/score. The table rail eyebrow/title contrast is now
+  TouchLine green/white. Focused contracts passed `12/12`; no commit, push,
+  Vercel build, data write or deployment was made.
+
+- Matchday pitch refinement: removed the floating match-rating badge above
+  each player card, reduced player-name typography by 20%, and changed the
+  black name plate from a fixed wide box to content width plus a small,
+  consistent margin. `Squad Preview` is emitted only in the final 24 hours
+  before a valid kickoff; confirmed XI remains Line-up. Focused lineup/rail/
+  profile contracts passed `27/27`, TypeScript and `git diff --check` passed.
+  No remote action occurred.
+
 - Owner requested that fixture rails display only club names with larger crests
   and a plain centered white score; final state shows `FULL TIME` once only.
   The fixture rail now uses the exact verified fixture venue image, with a
@@ -129,3 +153,29 @@ After material work:
 - Read-only schema comparison confirmed Production lacks the canonical Fantasy config/Gameweek tables and RPC, the analytics recording RPC and the published formation registry that exist in QA. API logs showed the corresponding `404` calls. This is not a web-code crash and cannot be corrected safely by another Vercel build.
 - The deployment was rolled back immediately to gated deployment `dpl_wPGLJpo7AmgRHPF7ZtQobtBQrhDS`; `touchline.com.br` again serves the premium construction gate on protected product routes. The Production launch flag was restored to fail-closed for future builds. The exact temporary Vercel link directory and its short-lived local credentials were deleted after verification.
 - Required next gate: independently review and authorize a selective Production data/schema cutover plus canonical foundation/fixture/statistics/ranking backfill. Social migrations/outbound remain excluded. Do not reopen the public product until the full functional matrix passes against Production data.
+# 2026-09-05 — ClubHub visual queue 042 (LOCAL / NO DEPLOY)
+
+- **Queue rule:** every owner request is first recorded, then worked through
+  sequentially; no in-flight visual change is discarded when a subsequent
+  request arrives. Deployment remains explicitly excluded while the batch is
+  growing.
+- **Completed locally, awaiting rendered inspection:** 10% increase to the
+  small ClubHub type scale; remove the redundant overview row; relocate the
+  four canonical club-position leaders into a premium 2×2 panel to the right
+  of the horizontal line-up pitch; and suppress the `9 cards from the
+  available squad` / Portuguese counterpart beneath `Bench`.
+- **Evidence:** focused ClubHub tests `28/28`, TypeScript `--noEmit` and
+  `git diff --check` passed. No commit, push, remote build, QA alias change,
+  Production action, data write or authenticated-session change occurred.
+- **Latest queued header rule, implemented locally:** Matchday eyebrow, Squad
+  Preview and its explanation appear only in the verified final 24 hours
+  before kickoff. A confirmed official team sheet shows only the large
+  `Line-up confirmed` heading; its compact formation panel says `Line-up`.
+  The new positional-leader labels and metadata also follow the requested
+  10% auxiliary-type increase. Social buttons still await the two official
+  outbound URLs and no destination has been guessed.
+- **Rendered local check:** at `1280×720`, the pitch is `658×430` beside a
+  `420px` leader rail of four `205×249` cards; at `390×844`, it becomes a
+  `348px` pitch followed by a `348px` 2×2 leader rail with `169×249` cards.
+  Both report zero horizontal overflow. This does not constitute a deploy or
+  a Fiscal approval.

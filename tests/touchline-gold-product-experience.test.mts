@@ -26,12 +26,14 @@ test("Portuguese Notifications and Football Search use first-party localized cop
   assert.match(shell, /Pesquisa de Futebol/);
 });
 
-test("ClubHub mounts its heavy squad cards progressively", async () => {
-  const [page, grid] = await Promise.all([
+test("ClubHub mounts its heavy outside-matchday squad cards progressively", async () => {
+  const [page, outsideRoster, grid] = await Promise.all([
     read("app/touchline-clubs/[club]/page.tsx"),
+    read("components/touchline/ClubHubOutsideMatchRoster.tsx"),
     read("components/touchline/ClubHubSquadGrid.tsx"),
   ]);
-  assert.match(page, /<ClubHubSquadGrid/);
+  assert.match(page, /<ClubHubOutsideMatchRoster/);
+  assert.match(outsideRoster, /<ClubHubSquadGrid/);
   assert.match(grid, /const INITIAL_CARD_COUNT = 8/);
   assert.match(grid, /cards\.slice\(0, visibleCount\)/);
   assert.match(grid, /View.*more/);

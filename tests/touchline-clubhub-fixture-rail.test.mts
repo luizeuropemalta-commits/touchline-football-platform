@@ -51,11 +51,17 @@ test("the shared ClubHub rail refreshes close to kick-off, while live, and wakes
   );
 });
 
-test("the shared rail renders only a verified venue image behind the match facts", () => {
+test("the shared rail renders a verified stadium image in a compact card beside the venue name", () => {
   const component = readFileSync(new URL("../components/touchline/club-hub/ClubHubNextFixtureCard.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
-  assert.match(component, /venueImageUrl \? \(/);
+  const styles = readFileSync(new URL("../components/touchline/club-hub/ClubHubPremiumPrototype.module.css", import.meta.url), "utf8");
+  assert.match(component, /className=\{styles\.nextFixtureVenueImage\}/);
   assert.match(component, /src=\{venueImageUrl\}/);
+  assert.match(component, /className=\{styles\.nextFixtureVenueCopy\}/);
+  assert.doesNotMatch(component, /nextFixtureVenueBackdrop/);
+  assert.match(styles, /\.nextFixtureVenueImage \{[\s\S]*?object-fit: cover/);
+  assert.match(styles, /\.nextFixtureVenue \{[\s\S]*?grid-template-columns: auto minmax\(0, 1fr\)/);
+  assert.doesNotMatch(styles, /\.nextFixtureVenueBackdrop/);
   assert.match(page, /TOUCHLINE_STADIUM_CATALOG\.find\(\(stadium\) => stadium\.homeTeamProviderId === fixture\.homeTeam\?\.providerId\)/);
 });
 
@@ -74,6 +80,10 @@ test("ClubHub outer frames use the standard TouchLine neon, not club-blue accent
   assert.match(lineupCss, /--touchline-perimeter-run-color:\s*#a3ff12/);
   assert.match(officialTable, /variant === "clubHubRail" \? <TouchlineClubPerimeterTrace accent="#a3ff12"/);
   assert.match(officialTableCss, /\.clubHubTableTrace\s*\{[\s\S]*?--touchline-perimeter-run-color:\s*#a3ff12/);
-  assert.match(page, /data-clubhub-card-spotlight="coach"[\s\S]*?<TouchlineClubPerimeterTrace accent="#a3ff12"/);
-  assert.match(page, /data-clubhub-card-spotlight="club-leader"[\s\S]*?<TouchlineClubPerimeterTrace accent="#a3ff12"/);
+  assert.match(page, /data-clubhub-card-spotlight=\{`position-\$\{key\}`\}[\s\S]*?<TouchlineClubPerimeterTrace accent="#a3ff12"/);
+  assert.match(page, /CLUB_POSITION_LEADER_GROUPS/);
+  assert.match(page, /positionGroups: \["centre-back"\]/);
+  assert.match(page, /positionGroups: \["full-back"\]/);
+  assert.match(page, /positionGroups: \["midfielder"\]/);
+  assert.match(page, /positionGroups: \["winger", "striker"\]/);
 });

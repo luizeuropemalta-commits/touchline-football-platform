@@ -136,7 +136,7 @@
 
 .statusRail {
   display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
   align-items: stretch;
   gap: 12px;
   margin: 16px 0;
@@ -157,7 +157,7 @@
   --touchline-perimeter-radius: 20px;
   position: relative;
   display: grid;
-  min-height: 368px;
+  min-height: 404px;
   align-content: start;
   justify-items: center;
   gap: 10px;
@@ -181,8 +181,32 @@
 .statusRail .spotlightCard > header strong { color: #f3ffed; font-size: 15px; letter-spacing: -.02em; }
 .statusRail .spotlightCard > small { color: rgba(241,255,234,.58); font-size: 8px; font-weight: 800; line-height: 1.45; text-align: center; }
 .statusRail .spotlightCard > p { margin: auto 0; color: rgba(241,255,234,.5); font-size: 9px; font-weight: 750; text-align: center; }
-.coachCardVisual { width: 162px; }
-.playerCardVisual { display: grid !important; width: 176px; min-height: 246px; place-items: center; }
+.playerCardVisual { display: grid !important; width: 196px; min-height: 270px; place-items: center; }
+
+/* Four canonical positional leaders live beside the line-up pitch. Their
+   smaller 2×2 treatment keeps the field as the primary matchday surface. */
+.lineupLeaderCard {
+  --touchline-perimeter-radius: 15px;
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 242px;
+  align-content: start;
+  justify-items: center;
+  gap: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(163,255,18,.24);
+  border-radius: 15px;
+  padding: 11px 8px 9px;
+  background: radial-gradient(circle at 50% 25%, rgba(163,255,18,.12), transparent 48%), linear-gradient(145deg, rgba(5,20,14,.94), rgba(1,10,8,.98));
+}
+.lineupLeaderTrace { --touchline-perimeter-radius: 15px; --touchline-perimeter-z-index: 2; --touchline-perimeter-run-color: #a3ff12; --touchline-perimeter-run-width: .8px; --touchline-perimeter-glow: 2px; --touchline-perimeter-speed: 8s; }
+.lineupLeaderCard > header { display: grid; width: 100%; gap: 2px; text-align: center; }
+.lineupLeaderCard > header span { color: #a3ff12; font-size: 8.8px; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
+.lineupLeaderCard > header strong { overflow: hidden; color: #f3ffed; font-size: 11px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.lineupLeaderVisual { display: grid; min-height: 172px; place-items: center; }
+.lineupLeaderCard > small { color: rgba(241,255,234,.62); font-size: 8.8px; font-weight: 800; text-align: center; }
+.lineupLeaderAwaiting { display: grid; min-height: 172px; place-items: center; color: rgba(163,255,18,.62); font-size: 22px; }
 
 .statusRail .nextFixtureCard {
   position: relative;
@@ -196,9 +220,11 @@
     linear-gradient(145deg, rgba(5, 20, 14, .94), rgba(1, 10, 8, .96));
   box-shadow: inset 0 1px rgba(255,255,255,.04), 0 16px 35px rgba(0,0,0,.22);
 }
-.nextFixtureVenueBackdrop { position: absolute !important; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 58%; opacity: .44; filter: saturate(.9) contrast(1.1); pointer-events: none; }
-.nextFixtureCard > :not(.nextFixtureVenueBackdrop) { position: relative; z-index: 1; }
-.nextFixtureCard::after { position: absolute; z-index: 0; inset: 0; content: ""; background: linear-gradient(104deg, rgba(2,12,8,.9), rgba(2,12,8,.5) 54%, rgba(3,19,12,.72)); pointer-events: none; }
+.nextFixtureVenue { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; min-height: 58px; }
+.nextFixtureVenueImage { width: 58px; height: 58px; border: 1px solid rgba(163,255,18,.32); border-radius: 10px; object-fit: cover; box-shadow: 0 8px 18px rgba(0,0,0,.28); }
+.nextFixtureVenueCopy { display: grid; min-width: 0; gap: 3px; color: #efffe8; font-size: 10px; font-weight: 850; line-height: 1.2; }
+.nextFixtureVenueCopy svg { width: 14px; height: 14px; color: #a3ff12; }
+.nextFixtureVenueCopy > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .statusRail .nextFixtureCard[data-state="awaiting"] {
   align-content: start;
@@ -241,7 +267,9 @@
 .heroCompact .nextFixtureKickoff { padding-top: 7px; }
 .heroCompact .nextFixtureKickoff time { font-size: 9px; }
 .heroCompact .nextFixtureKickoff small { font-size: 7px; }
-.heroCompact .nextFixtureVenue { font-size: 8px; }
+.heroCompact .nextFixtureVenue { min-height: 44px; gap: 7px; }
+.heroCompact .nextFixtureVenueImage { width: 44px; height: 44px; border-radius: 8px; }
+.heroCompact .nextFixtureVenueCopy { font-size: 8px; }
 
 .heroCompact[data-state="live"] { border-color: rgba(163,255,18,.68); box-shadow: inset 0 1px rgba(255,255,255,.08), 0 0 26px rgba(163,255,18,.15), 0 18px 42px rgba(0,0,0,.3); }
 
@@ -336,12 +364,12 @@
 .nextFixtureHeading > span { color: rgba(241,255,234,.48); font-size: 9px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
 .nextFixtureCard[data-state="live"] .nextFixtureHeading > span { color: #baff45; text-shadow: 0 0 12px rgba(163,255,18,.45); }
 .nextFixtureCard[data-state="finished"] .nextFixtureHeading > span { color: #dfffad; }
-.nextFixtureTeams { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); width: min(300px, 100%); align-items: center; justify-self: center; gap: 14px; }
-.statusRail .nextFixtureClub { display: flex; min-width: 0; align-items: center; flex-direction: column; gap: 4px; color: #f7fff2; letter-spacing: 0; text-align: center; text-transform: none; }
+.nextFixtureTeams { display: grid; grid-template-columns: minmax(0,1fr) minmax(42px, auto) minmax(0,1fr); width: min(320px, 100%); align-items: center; justify-self: center; gap: 14px; }
+.statusRail .nextFixtureClub { display: flex; min-width: 0; align-items: center; justify-content: center; flex-direction: column; gap: 4px; color: #f7fff2; letter-spacing: 0; text-align: center; text-transform: none; }
 .nextFixtureClub:last-child { justify-content: center; text-align: center; }
 .nextFixtureClub img { flex: 0 0 auto; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
 .nextFixtureClub img { width: 64px; height: 64px; }
-.nextFixtureClub b { color: #f7fff2; font-size: 10px; white-space: nowrap; }
+.nextFixtureClub b { overflow: hidden; max-width: 100%; color: #f7fff2; font-size: 10px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .statusRail .nextFixtureClub small { color: #a3ff12; font-size: 7px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
 .nextFixtureTeams em { color: #a3ff12; font-size: 9px; font-style: normal; font-weight: 950; letter-spacing: .12em; }
 .nextFixtureTeams em[data-score="verified"] { min-width: 0; padding: 0; border: 0; border-radius: 0; color: #fff; background: transparent; box-shadow: none; font-size: 20px; letter-spacing: .03em; line-height: 1; text-align: center; text-shadow: 0 2px 12px rgba(0,0,0,.68); }
@@ -645,6 +673,7 @@
 @media (max-width: 1050px) {
   .contentGrid { grid-template-columns: 1fr; }
   .sidebar { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .statusRail { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
 }
 
 @media (max-width: 780px) {

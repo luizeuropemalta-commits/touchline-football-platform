@@ -2,6 +2,44 @@
 
 ## ClubHub visual refinement 042 — LOCAL CORRECTION / QA RE-GATE REQUIRED
 
+- New local-only visual follow-up: the fixture rail must not use stadium
+  imagery as a card background. Its verified stadium image is now a small,
+  bounded thumbnail with the stadium name outside the thumbnail, matching the
+  Live information-card composition. This pending change is deliberately not
+  committed or deployed while the owner batches further visual requests.
+- The same local batch now replaces the coach/single-leader pair with four
+  club-only player leaders: centre-back, full-back, midfielder and attacker.
+  Each card is chosen only from the canonical ranked data for that club;
+  absent verified ranking evidence stays visibly pending. The rail table uses
+  a fully legible TouchLine-green eyebrow and white title, and fixture crests
+  remain symmetric around an exact central `VS` or score.
+- In the landscape matchday pitch, player name bars now fit their text with a
+  small, consistent edge margin and use typography 20% smaller. The floating
+  match-rating badge is absent. `Squad Preview` is now reserved for the final
+  24-hour pre-kickoff window; an actual confirmed line-up remains a line-up.
+- Active visual queue, preserved locally without deploy: (1) increase ClubHub
+  auxiliary text by 10% for legibility, including the pitch/bench labels;
+  (2) remove the former four-card overview so Matchday follows the official
+  league area immediately; (3) render the same four canonical positional
+  leaders in a compact premium 2×2 grid beside the landscape pitch; and (4)
+  leave the Bench subtitle blank while retaining the verified bench count.
+  These code changes have focused regression coverage and TypeScript/diff
+  checks, but still require rendered desktop/mobile inspection before visual
+  acceptance. They remain local-only and uncommitted.
+- Footer request is in execution: a single localized professional rights line
+  now closes the ClubHub. Instagram/Facebook outbound links are queued but
+  blocked on the owner supplying the two authoritative public destination
+  URLs; no social handle is guessed or invented.
+- Header rule added to the local batch: the Matchday eyebrow, `Squad Preview`
+  title and explanatory copy render only during the verified final 24-hour
+  window before kickoff. Once the official line-up is confirmed, only the
+  large `Line-up confirmed` heading remains; the compact formation panel uses
+  the shorter `Line-up` label above the formation.
+- Rendered local inspection completed at desktop `1280×720` and mobile
+  `390×844`: the four leader cards render beside the pitch on desktop and
+  beneath it on mobile; both views have no horizontal overflow and the footer
+  is present. This is local candidate evidence only, not a QA or Production
+  deployment.
 - Owner-authorized target: exactly one Git-native deployment to functional QA,
   only after the Fiscal Vercel approves the immutable candidate SHA. Production,
   data writes, billing and social delivery remain excluded.

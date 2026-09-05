@@ -135,3 +135,65 @@ canônica do Market é mostrada diretamente no plano 105×68 (goleiro à esquerd
 ataque à direita); o campo preenche apenas o container disponível e os cards
 nunca rotacionam. Esta alteração segue o mesmo processo de validação: testes,
 build local, SHA imutável e gate novo do Fiscal antes de um único deploy QA.
+
+## Follow-up visual — estádio no rail de fixture
+
+- O estádio não pode mais ocupar o fundo do card de fixture nem vazar para a
+  tabela ao lado.
+- Reutilizar a composição visual do Live: imagem do estádio em um quadrado
+  pequeno, com o nome do estádio fora da imagem e ao lado dela.
+- A miniatura usa somente a mesma fonte de estádio verificada já aceita pelo
+  fixture. Sem imagem verificável, não há fallback inventado: permanece o
+  estado textual de estádio em verificação.
+- Implementado somente localmente e mantido fora de deploy até o proprietário
+  finalizar a próxima sequência de ajustes visuais.
+
+## Follow-up visual — líderes de posição e legibilidade da tabela
+
+- Substituir os dois painéis de destaque por quatro cards maiores de atletas do
+  próprio clube: zagueiro, lateral, meio-campista (incluindo volante) e
+  atacante (ponta ou centroavante).
+- Cada escolha deve vir exclusivamente do ranking canônico já auditado, por
+  `totalRating`; sem ranking publicado para uma posição, renderizar estado de
+  verificação e não escolher um substituto por heurística.
+- No rail, `TouchLine England League` usa o verde TouchLine e `Official League
+  Table` branco integral, sem opacidade escura que prejudique leitura.
+- Implementado somente localmente, sem commit ou deploy, junto ao pacote visual
+  pendente do proprietário.
+
+## Follow-up visual — rótulo e nomes do campo
+
+- A nota/Rating flutuante não aparece acima do card do atleta no Squad Preview.
+- A barra preta do nome acompanha o texto com margem pequena e proporcional;
+  a tipografia fica 20% menor, preservando limite seguro para nomes longos.
+- Uma escalação confirmada é chamada `Line-up`. `Squad Preview` só aparece nas
+  24 horas anteriores a uma partida com horário verificável; data ausente fica
+  em estado conservador de prévia, sem alegar escalação oficial.
+
+## Fila ativa 042 — composição Matchday e legibilidade
+
+- Todo pedido visual do proprietário deve ser registrado antes de iniciar a
+  próxima alteração; o candidato permanece local e sem deploy até ele encerrar
+  a sequência de mudanças.
+- A tipografia auxiliar do ClubHub sobe 10%, sem aumentar títulos ou placares.
+- A faixa anterior dos quatro líderes é removida para que Matchday/Squad
+  Preview suba imediatamente após a área oficial da liga.
+- Os mesmos quatro líderes canônicos do clube — zagueiro, lateral,
+  meio-campista e atacante — passam para uma grade premium 2×2 à direita do
+  campo horizontal, que mantém prioridade e fica puxado à esquerda.
+- O subtítulo `9 cards from the available squad` (e equivalente em português)
+  fica em branco; `Bench` e sua contagem continuam visíveis.
+- Um rodapé profissional único fecha o ClubHub com TouchLine e os direitos
+  reservados, localizado por idioma. Botões externos premium de Instagram e
+  Facebook permanecem na fila aguardando as URLs públicas oficiais do
+  proprietário; não será inventado um perfil/destino externo.
+- No cabeçalho de Matchday, `MATCHDAY LINE-UP`, `Squad Preview` e a explicação
+  aparecem somente nas 24 horas verificáveis anteriores ao jogo. Com line-up
+  oficial confirmado, fica apenas o título grande `Line-up confirmed`; o
+  pequeno painel de formação usa apenas `Line-up` acima da formação.
+- Inspeção local renderizada: desktop `1280×720` e mobile `390×844` sem
+  overflow horizontal; os quatro líderes ficam ao lado do campo no desktop e
+  abaixo dele no mobile. Isso é evidência do candidato local, não aprovação do
+  Fiscal nem deploy em QA/Production.
+- Estado: implementado localmente, verificação funcional concluída; inspeção
+  visual renderizada em desktop e mobile ainda pendente. Sem commit/deploy.

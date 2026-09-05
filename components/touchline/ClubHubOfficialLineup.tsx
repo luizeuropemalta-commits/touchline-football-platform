@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
@@ -8,7 +8,7 @@ import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import ClubHubLiveFixtureScore from "@/components/touchline/ClubHubLiveFixtureScore";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
-import type { TouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
+import { isClubHubSquadPreviewWindow, type TouchLineClubLineup } from "@/lib/touchlineArena/club-lineup";
 import type { TouchlineClubMatchPreviewTeam } from "@/lib/touchlineArena/club-match-preview";
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
@@ -37,6 +37,8 @@ type ClubHubOfficialLineupProps = {
     cardPrice: string;
   };
   canEditCardEngine?: boolean;
+  /** Canonically ranked club leaders, rendered beside the pitch. */
+  leaderCards?: ReactNode;
   matchup?: {
     fixtureId: string | null;
     initialFixture: TouchlinePublicFixture | null;
@@ -44,6 +46,7 @@ type ClubHubOfficialLineupProps = {
     away: TouchlineClubMatchPreviewTeam;
     status: string;
     startsAt: string;
+    startsAtIso?: string | null;
   } | null;
 };
 
@@ -54,13 +57,20 @@ export default function ClubHubOfficialLineup({
   staticVisualQa = false,
   labels,
   canEditCardEngine = false,
+  leaderCards = null,
   matchup = null,
 }: ClubHubOfficialLineupProps) {
   const isPortuguese = locale === "pt-BR";
   const confirmed = lineup.status === "confirmed";
+  const squadPreviewWindow = isClubHubSquadPreviewWindow({
+    lineupStatus: lineup.status,
+    startsAt: matchup?.startsAtIso,
+  });
+  const showPreviewContext = !confirmed && squadPreviewWindow;
   const title = confirmed
-    ? (isPortuguese ? "Escalação confirmada" : "Confirmed line-up")
-    : (isPortuguese ? "Prévia do elenco" : "Squad Preview");
+    ? (isPortuguese ? "Escalação confirmada" : "Line-up confirmed")
+    : (showPreviewContext ? (isPortuguese ? "Prévia do elenco" : "Squad Preview") : null);
+  const accessibleTitle = title ?? (isPortuguese ? "Escalação da partida" : "Matchday line-up");
 
   // The Market formation is stored on a horizontal 105×68 coordinate plane:
   // goalkeeper at the left, attack at the right. Club Hub uses that same
@@ -69,18 +79,20 @@ export default function ClubHubOfficialLineup({
   const horizontalPitchPosition = (x: number, y: number) => ({ x, y });
 
   return (
-    <section id="touchline-club-lineup" className={styles.shell} aria-label={`${clubName} ${title}`}>
+    <section id="touchline-club-lineup" className={styles.shell} aria-label={`${clubName} ${accessibleTitle}`}>
       <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.perimeterTrace} />
       <header className={styles.header}>
-        <div>
-          <span className={styles.eyebrow}>{isPortuguese ? "Escalação da partida" : "Matchday line-up"}</span>
-          <h2>{title}</h2>
-          <p>
-            {confirmed
-              ? (isPortuguese ? "Titulares da súmula persistida para esta partida." : "Starting XI from the persisted team sheet for this fixture.")
-              : (isPortuguese ? "A prévia pode mudar até a escalação oficial TouchLine ser confirmada." : "This preview can change until the official TouchLine line-up is confirmed.")}
-          </p>
-        </div>
+        {confirmed ? (
+          <div className={styles.confirmedHeading}>
+            <h2>{title}</h2>
+          </div>
+        ) : showPreviewContext ? (
+          <div>
+            <span className={styles.eyebrow}>{isPortuguese ? "Escalação da partida" : "Matchday line-up"}</span>
+            <h2>{title}</h2>
+            <p>{isPortuguese ? "A prévia pode mudar até a escalação oficial TouchLine ser confirmada." : "This preview can change until the official TouchLine line-up is confirmed."}</p>
+          </div>
+        ) : <div aria-hidden="true" />}
         <div className={styles.statusPanel}>
           {matchup ? (
             <aside className={styles.matchup} aria-label={isPortuguese ? "Confronto da partida" : "Match-up"}>
@@ -100,15 +112,20 @@ export default function ClubHubOfficialLineup({
             </aside>
           ) : null}
           <div className={styles.formationPanel}>
-          <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`}>
-            {confirmed ? (isPortuguese ? "Escalação confirmada" : "Line-up confirmed") : (isPortuguese ? "Prévia do elenco" : "Squad Preview")}
+          {!confirmed ? (
+            <span className={styles.status}>
+              {showPreviewContext ? (isPortuguese ? "Prévia do elenco" : "Squad Preview") : (isPortuguese ? "Escalação" : "Line-up")}
+            </span>
+          ) : null}
+          <span className={styles.syncLabel}>
+            {confirmed ? (isPortuguese ? "Escalação" : "Line-up") : (isPortuguese ? "Formação" : "Formation")}
           </span>
-          <span className={styles.syncLabel}>{isPortuguese ? "Formação" : "Formation"}</span>
           <strong className={styles.formation}>{lineup.formation}</strong>
           </div>
         </div>
       </header>
 
+      <div className={styles.pitchAndLeaders}>
       <div className={styles.pitchViewport}>
         <TouchlinePitchSurface
           className={styles.pitch}
@@ -215,7 +232,6 @@ export default function ClubHubOfficialLineup({
                       rankingMode={staticVisualQa ? "preview" : "live"}
                       showProfileAction={false}
                       showSocialMetrics={false}
-                      showMatchRating
                     />
                   </TouchlineCardZoom>
                 </TouchlineGoalFacingPitchCard>
@@ -226,6 +242,12 @@ export default function ClubHubOfficialLineup({
             )}
           </div>
         </TouchlinePitchSurface>
+      </div>
+      {leaderCards ? (
+        <aside className={styles.positionLeaders} aria-label={isPortuguese ? "Líderes do clube por posição" : "Club leaders by position"}>
+          {leaderCards}
+        </aside>
+      ) : null}
       </div>
     </section>
   );

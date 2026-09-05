@@ -25,7 +25,6 @@ function indexOfRequired(source: string, token: string) {
 test("ClubHub places identity and honours before the official league area and matchday surface", () => {
   const heroStart = indexOfRequired(page, '<header className="club-hub-hero">');
   const officialLeagueStart = page.indexOf("<ClubHubOfficialLeagueSection", heroStart);
-  const overviewStart = page.indexOf("<ClubHubPremiumOverviewSection", officialLeagueStart);
   const lineupStart = page.indexOf("<ClubHubLineupSection", heroStart);
   const technicalStart = page.indexOf("<ClubHubTechnicalSections", lineupStart);
   const outsideRosterStart = page.indexOf("<ClubHubOutsideMatchRoster");
@@ -34,14 +33,13 @@ test("ClubHub places identity and honours before the official league area and ma
   const hero = page.slice(heroStart, lineupStart);
   const lineupSection = page.slice(lineupHelperStart, lineupHelperEnd);
 
-  assert.ok(officialLeagueStart >= 0 && overviewStart >= 0 && lineupStart >= 0 && technicalStart >= 0 && outsideRosterStart >= 0);
+  assert.ok(officialLeagueStart >= 0 && lineupStart >= 0 && technicalStart >= 0 && outsideRosterStart >= 0);
   assert.match(hero, /<ClubTrophyCarousel/);
   assert.match(hero, /<ClubHubHeroNextMatch/);
   assert.doesNotMatch(hero, /ClubHubLiveFixtureScore/);
   assert.match(lineupSection, /matchup=\{\{/);
   assert.match(lineupSection, /fixtureId: matchSnapshot\.previewFixtureId/);
   assert.ok(heroStart < officialLeagueStart);
-  assert.ok(officialLeagueStart < overviewStart);
   assert.ok(heroStart < lineupStart);
   assert.ok(officialLeagueStart < lineupStart);
   assert.ok(lineupStart < technicalStart);
@@ -114,15 +112,15 @@ test("technical area keeps a nine-card preview distinct from the official bench 
 test("the official league table remains server-owned and separate from TouchLine-card content", () => {
   assert.match(page, /loadTouchlineOfficialLeagueTable\(\)/);
   assert.match(page, /<TouchlineOfficialLeagueTable[\s\S]*?variant="clubHubRail"/);
-  assert.match(page, /className="club-hub-touchline"/);
+  assert.doesNotMatch(page, /ClubHubCardsSection/);
 });
 
 test("the official league area is the first chapter below navigation with a 70/30 feed and contained 20-club rail", () => {
   const navigationStart = indexOfRequired(page, "<ClubHubSectionNavigation");
   const officialLeagueStart = page.indexOf("<ClubHubOfficialLeagueSection", navigationStart);
-  const overviewStart = page.indexOf("<ClubHubPremiumOverviewSection", navigationStart);
+  const lineupStart = page.indexOf("<ClubHubLineupSection", navigationStart);
 
-  assert.ok(navigationStart < officialLeagueStart && officialLeagueStart < overviewStart);
+  assert.ok(navigationStart < officialLeagueStart && officialLeagueStart < lineupStart);
   assert.match(page, /data-clubhub-official-league="true"/);
   assert.match(page, /className=\{officialLeagueStyles\.feed\} id="club-feed"/);
   assert.match(page, /className=\{officialLeagueStyles\.rail\}[\s\S]*?<ClubHubNextFixtureCard[\s\S]*?<TouchlineOfficialLeagueTable/);
@@ -130,7 +128,7 @@ test("the official league area is the first chapter below navigation with a 70/3
   assert.match(page, /venueImageUrl=\{fixture\.venue\?\.interiorImageUrl \?\? fixture\.venue\?\.imageUrl \?\? TOUCHLINE_STADIUM_CATALOG\.find\(\(stadium\) => stadium\.homeTeamProviderId === fixture\.homeTeam\?\.providerId\)\?\.interiorImageUrl \?\? null\}/);
   assert.match(page, /toTouchlineLiveFixture\(previewFixture\)/);
   assert.match(page, /id="club-table"[\s\S]*?variant="clubHubRail"/);
-  assert.doesNotMatch(page.slice(navigationStart, overviewStart), /League pulse|Pulso da liga|Official 20-club standings|Classificação oficial dos 20 clubes/);
+  assert.doesNotMatch(page.slice(navigationStart, lineupStart), /League pulse|Pulso da liga|Official 20-club standings|Classificação oficial dos 20 clubes/);
   assert.match(officialLeagueStyles, /grid-template-columns: minmax\(0, 7fr\) minmax\(340px, 3fr\)/);
   assert.match(officialLeagueStyles, /@media \(max-width: 1120px\)[\s\S]*?grid-template-columns: 1fr/);
   assert.match(leagueTable, /variant: "directory" \| "profile" \| "clubHubRail"/);
@@ -139,8 +137,8 @@ test("the official league area is the first chapter below navigation with a 70/3
   assert.match(leagueTableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?overscroll-behavior: contain/);
 });
 
-test("the functional ClubHub uses the approved premium overview with canonical data only", () => {
-  assert.match(page, /ClubHubPremiumOverviewSection/);
+test("the functional ClubHub places canonical positional leaders beside the matchday pitch", () => {
+  assert.doesNotMatch(page, /ClubHubPremiumOverviewSection/);
   assert.match(page, /TOUCHLINE_STADIUM_CATALOG\.find/);
   assert.match(page, /loadTouchLineActiveRanking\(\)/);
   assert.match(page, /const homeClub = findTouchLineClub\(fixture\?\.homeTeam\?\.providerId\)/);
@@ -148,7 +146,20 @@ test("the functional ClubHub uses the approved premium overview with canonical d
   assert.match(page, /<ClubHubNextFixtureCard/);
   assert.match(page, /previewHref=\{null\}/);
   assert.match(page, /<ClubHubCanonicalCoachPanel[\s\S]*?presentation="technical"/);
-  assert.match(page, /<TouchlineGameweekCard card=\{clubLeader\.card\}/);
+  assert.match(page, /<TouchlineGameweekCard card=\{leader\.card\}/);
+  assert.match(page, /leaderCards=\{\(/);
+  assert.match(page, /displayWidth=\{128\}/);
+  assert.match(page, /const clubPositionLeaders = CLUB_POSITION_LEADER_GROUPS\.map/);
+  assert.match(page, /ranking\.positionGroup/);
+  assert.doesNotMatch(page, /fallbackLeaderCard/);
   assert.match(page, /normalizeTouchlineMatchCentreTimeZone/);
   assert.doesNotMatch(page, /qa-canonical-snapshot|NOT A FOOTBALL CLAIM|LOCAL DRAFT/);
+});
+
+test("ClubHub closes with a single professional localized rights footer", () => {
+  assert.match(page, /<footer className="club-hub-footer">/);
+  assert.match(page, /Todos os direitos reservados\./);
+  assert.match(page, /All rights reserved\./);
+  assert.match(page, /© \{copyrightYear\} TouchLine/);
+  assert.match(page, /\.club-hub-footer \{/);
 });

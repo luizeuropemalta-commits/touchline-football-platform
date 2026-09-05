@@ -99,16 +99,6 @@ export default function ClubHubNextFixtureCard({
 
   return (
     <article className={`${styles.nextFixtureCard} ${variant === "hero" ? styles.heroCompact : ""} ${className}`} data-state={rail.state}>
-      {venueImageUrl ? (
-        <Image
-          alt=""
-          aria-hidden="true"
-          className={styles.nextFixtureVenueBackdrop}
-          fill
-          sizes="(max-width: 760px) 100vw, 31vw"
-          src={venueImageUrl}
-        />
-      ) : null}
       <div className={styles.nextFixtureHeading}>
         <CalendarDays aria-hidden="true" />
         <span>{rail.heading} · {roundName}</span>
@@ -135,8 +125,21 @@ export default function ClubHubNextFixtureCard({
         </div>
       ) : null}
       <div className={styles.nextFixtureVenue} data-state={venueName ? "verified" : "pending"}>
-        <MapPin aria-hidden="true" />
-        <span>{venueName ?? (portuguese ? "Estádio em verificação" : "Venue under verification")}</span>
+        {venueImageUrl ? (
+          <Image
+            alt=""
+            aria-hidden="true"
+            className={styles.nextFixtureVenueImage}
+            height={72}
+            sizes="72px"
+            src={venueImageUrl}
+            width={72}
+          />
+        ) : null}
+        <span className={styles.nextFixtureVenueCopy}>
+          <MapPin aria-hidden="true" />
+          <span>{venueName ?? (portuguese ? "Estádio em verificação" : "Venue under verification")}</span>
+        </span>
       </div>
       {previewHref ? (
         <Link className={styles.nextFixturePreviewLink} href={previewHref}>

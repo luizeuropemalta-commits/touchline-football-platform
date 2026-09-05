@@ -78,9 +78,7 @@ export default function ClubHubMatchdayTechnicalArea({
           <div className={styles.benchHeader}>
             <div>
               <span className={styles.label}>{benchLabel}</span>
-              <p>{confirmed
-                ? (portuguese ? "Reservas da súmula oficial" : "Official sheet substitutes")
-                : (portuguese ? "9 cards do elenco disponível" : "9 cards from the available squad")}</p>
+              <p aria-hidden="true" />
             </div>
             <strong>{bench.length}/9</strong>
           </div>

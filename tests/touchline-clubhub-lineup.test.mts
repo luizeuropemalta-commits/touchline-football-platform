@@ -6,6 +6,7 @@ import type { TouchlineFantasyLineupMember } from "../lib/football-data/types.ts
 import {
   buildTouchLineClubLineup,
   buildTouchLineClubMatchdayPresentation,
+  isClubHubSquadPreviewWindow,
 } from "../lib/touchlineArena/club-lineup.ts";
 import { findTouchLineClub, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
 
@@ -228,11 +229,52 @@ test("ClubHub retains all eleven football slots even when a card publication is 
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation|activeContractCard: activeContract/);
 });
 
-test("ClubHub calls an unconfirmed eleven a Squad Preview, never an expected line-up", () => {
+test("ClubHub uses Squad Preview only in the 24 hours before kick-off and never calls it expected", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 
   assert.match(source, /Squad Preview/);
+  assert.match(source, /isClubHubSquadPreviewWindow/);
+  assert.match(source, /startsAtIso/);
+  assert.match(source, /const showPreviewContext = !confirmed && squadPreviewWindow/);
+  assert.match(source, /Line-up confirmed/);
+  assert.match(source, /confirmed \? \(isPortuguese \? "Escalação" : "Line-up"\) : \(isPortuguese \? "Formação" : "Formation"\)/);
+  assert.match(source, /showPreviewContext \? \(/);
   assert.doesNotMatch(source, /Predicted line-up/);
+});
+
+test("ClubHub preview window preserves a confirmed line-up and begins exactly 24 hours before kick-off", () => {
+  const kickoff = "2026-09-12T14:00:00.000Z";
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "confirmed", startsAt: kickoff, now: Date.parse("2026-09-11T13:59:59.000Z") }), false);
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Date.parse("2026-09-11T13:59:59.000Z") }), false);
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Date.parse("2026-09-11T14:00:00.000Z") }), true);
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Date.parse("2026-09-12T14:00:01.000Z") }), false);
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: null, now: Date.parse("2026-09-11T14:00:00.000Z") }), true);
+});
+
+test("ClubHub pitch shows the name only above each athlete, not a match rating", () => {
+  const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
+
+  assert.doesNotMatch(source, /showMatchRating/);
+  assert.match(styles, /width: max-content/);
+  assert.match(styles, /font-size: clamp\(7\.04px, \.671vw, 9\.68px\)/);
+  assert.match(styles, /font-size: clamp\(6\.05px, 1\.595vw, 7\.975px\)/);
+});
+
+test("ClubHub places the four canonical positional leaders beside the pitch and leaves the Bench subtitle blank", () => {
+  const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+  const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
+  const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
+
+  assert.match(page, /leaderCards=\{\(/);
+  assert.match(page, /displayWidth=\{128\}/);
+  assert.doesNotMatch(page, /ClubHubPremiumOverviewSection/);
+  assert.match(lineup, /className=\{styles\.pitchAndLeaders\}/);
+  assert.match(lineup, /className=\{styles\.positionLeaders\}/);
+  assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) minmax\(292px, 420px\)/);
+  assert.match(technical, /<p aria-hidden="true"\s*\/>/);
+  assert.doesNotMatch(technical, /9 cards from the available squad/);
 });
 
 test("ClubHub preserves the canonical Market formation on a regulation landscape pitch", () => {

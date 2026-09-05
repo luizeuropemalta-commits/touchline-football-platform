@@ -6,7 +6,6 @@ import ClubHubMatchdayTechnicalArea from "@/components/touchline/ClubHubMatchday
 import ClubHubCanonicalCoachPanel from "@/components/touchline/ClubHubCanonicalCoachPanel";
 import ClubHubOfficialLineup from "@/components/touchline/ClubHubOfficialLineup";
 import ClubHubOutsideMatchRoster from "@/components/touchline/ClubHubOutsideMatchRoster";
-import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import TouchlineClubSocialFeed from "@/components/touchline/club-social/TouchlineClubSocialFeed";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
@@ -62,7 +61,6 @@ import { readTouchlineClubSocialFeed } from "@/lib/touchlineArena/club-social-fe
 import { TOUCHLINE_PRESEASON_RANKING_STATE } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
-import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
 import { TOUCHLINE_STADIUM_CATALOG, toTouchlineLiveFixture } from "@/lib/touchlineArena/stadium-catalog";
 import {
   resolveTouchlineClubHubDataSource,
@@ -542,17 +540,53 @@ async function ClubHubLineupSection({
   cardLabels,
   presentationPromise,
   viewerAccessPromise,
+  dataSource,
 }: {
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   cardLabels: ClubHubCardLabels;
   presentationPromise: Promise<ClubHubPresentation>;
   viewerAccessPromise: Promise<ClubHubViewerAccess>;
+  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
 }) {
-  const [presentation, viewerAccess] = await Promise.all([presentationPromise, viewerAccessPromise]);
-  const { outsideMatchdayCards } = presentation;
+  const [presentation, viewerAccess, activeRanking] = await Promise.all([
+    presentationPromise,
+    viewerAccessPromise,
+    dataSource === "direct" ? loadTouchLineActiveRanking() : Promise.resolve(TOUCHLINE_PRESEASON_RANKING_STATE),
+  ]);
   const { matchSnapshot, matchdayPresentation } = presentation;
   const matchPreview = matchSnapshot.preview;
+  const portuguese = locale === "pt-BR";
+  const overallRanking = activeRanking.phase === "ranked"
+    ? [...activeRanking.players]
+      .filter((player) => player.totalRating !== null)
+      .sort((left, right) => (
+        (right.totalRating ?? Number.NEGATIVE_INFINITY) - (left.totalRating ?? Number.NEGATIVE_INFINITY)
+        || normalizedPlayerIdentity(left.playerId).localeCompare(normalizedPlayerIdentity(right.playerId))
+      ))
+    : [];
+  const rankedClubCards = presentation.clubCards.flatMap((card) => {
+    const cardIdentities = new Set([
+      normalizedPlayerIdentity(card.canonicalPlayerId),
+      normalizedPlayerIdentity(card.id),
+    ].filter(Boolean));
+    const ranking = overallRanking.find((candidate) => (
+      cardIdentities.has(normalizedPlayerIdentity(candidate.playerId))
+      || cardIdentities.has(normalizedPlayerIdentity(candidate.providerPlayerId))
+    ));
+    if (!ranking || ranking.totalRating === null) return [];
+    return [{
+      card,
+      totalRating: ranking.totalRating,
+      overallRank: overallRanking.indexOf(ranking) + 1,
+      positionRank: ranking.positionRank,
+      positionGroup: ranking.positionGroup,
+    }];
+  }).sort((left, right) => left.overallRank - right.overallRank);
+  const clubPositionLeaders = CLUB_POSITION_LEADER_GROUPS.map((group) => ({
+    ...group,
+    leader: rankedClubCards.find((candidate) => (group.positionGroups as readonly string[]).includes(candidate.positionGroup)),
+  }));
   return (
     <ClubHubOfficialLineup
       clubName={club.name}
@@ -560,6 +594,27 @@ async function ClubHubLineupSection({
       locale={locale}
       labels={cardLabels}
       canEditCardEngine={viewerAccess.canEditCardEngine}
+      leaderCards={(
+        <>
+          {clubPositionLeaders.map(({ key, en, pt, leader }) => (
+            <article className={premiumStyles.lineupLeaderCard} data-clubhub-card-spotlight={`position-${key}`} key={key}>
+              <TouchlineClubPerimeterTrace accent="#a3ff12" className={premiumStyles.lineupLeaderTrace} />
+              <header>
+                <span>{portuguese ? pt : en}</span>
+                <strong>{leader?.card.name ?? (portuguese ? "Aguardando ranking verificado" : "Awaiting verified ranking")}</strong>
+              </header>
+              {leader ? (
+                <div className={premiumStyles.lineupLeaderVisual}>
+                  <TouchlineGameweekCard card={leader.card} locale={locale} displayWidth={128} />
+                </div>
+              ) : (
+                <div className={premiumStyles.lineupLeaderAwaiting} role="status">—</div>
+              )}
+              <small>{leader ? `${leader.totalRating.toFixed(2)} · #${leader.positionRank}` : (portuguese ? "Ranking em verificação" : "Ranking under verification")}</small>
+            </article>
+          ))}
+        </>
+      )}
       matchup={{
         fixtureId: matchSnapshot.previewFixtureId,
         initialFixture: matchSnapshot.publicFixture,
@@ -567,6 +622,7 @@ async function ClubHubLineupSection({
         away: matchPreview.away,
         status: localizedFixtureStatus(matchPreview.status, locale),
         startsAt: matchPreview.startsAt,
+        startsAtIso: matchSnapshot.publicFixture?.startsAt ?? null,
       }}
     />
   );
@@ -616,62 +672,6 @@ async function ClubHubTechnicalSections({
         labels={cardLabels}
       />
     </>
-  );
-}
-
-async function ClubHubCardsSection({
-  club,
-  locale,
-  localeQuery,
-  cardLabels,
-  presentationPromise,
-  viewerAccessPromise,
-}: {
-  club: NonNullable<ReturnType<typeof findTouchLineClub>>;
-  locale: TouchLineLocale;
-  localeQuery: string;
-  cardLabels: ClubHubCardLabels;
-  presentationPromise: Promise<ClubHubPresentation>;
-  viewerAccessPromise: Promise<ClubHubViewerAccess>;
-}) {
-  const [presentation, viewerAccess] = await Promise.all([presentationPromise, viewerAccessPromise]);
-  const t = (key: Parameters<typeof touchLineT>[1]) => touchLineT(locale, key);
-  const squadUnavailable = presentation.squadLoad.state === "unavailable";
-  const recoveryCopy = locale === "pt-BR"
-    ? { title: "Não foi possível carregar o elenco agora.", action: "Tentar novamente" }
-    : { title: "The squad could not be loaded right now.", action: "Try again" };
-  const squadStatus = locale === "pt-BR"
-    ? `${presentation.clubCards.length} cards TouchLine`
-    : presentation.squadLoad.status;
-  const { outsideMatchdayCards } = presentation;
-
-  return (
-    <section className="club-hub-touchline" aria-label={`${club.name} TouchLine player cards`}>
-      <div className="club-hub-section-head">
-        <div>
-          <span>{locale === "pt-BR" ? "Cards TouchLine" : "TouchLine player cards"}</span>
-          <strong>{club.name}</strong>
-        </div>
-        <div className="club-hub-section-actions">
-          <a href={`/touchline-player-card-rankings?${localeQuery}`}>{t("playerCardsRanking")}</a>
-          <small>{locale === "pt-BR" ? `${outsideMatchdayCards.length} fora da equipe de jogo.` : `${outsideMatchdayCards.length} outside the matchday squad.`} {squadStatus}. {t("playerOrderDescription")}</small>
-        </div>
-      </div>
-      {outsideMatchdayCards.length ? (
-        <ClubHubSquadGrid
-          cards={outsideMatchdayCards}
-          locale={locale}
-          labels={cardLabels}
-          openProfileLabel={t("openSelectedPlayerProfile")}
-          canEditCardEngine={viewerAccess.canEditCardEngine}
-        />
-      ) : (
-        <div className="club-hub-empty" role={squadUnavailable ? "status" : undefined}>
-          <strong>{squadUnavailable ? recoveryCopy.title : t("cardsPending")}</strong>
-          {squadUnavailable ? <a href={`/touchline-clubs/${club.slug}?${localeQuery}`}>{recoveryCopy.action}</a> : null}
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -790,11 +790,9 @@ async function ClubHubOfficialLeagueSection({
 }
 
 async function ClubHubHeroNextMatch({
-  club,
   locale,
   presentationPromise,
 }: {
-  club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   presentationPromise: Promise<ClubHubPresentation>;
 }) {
@@ -845,120 +843,18 @@ function normalizedPlayerIdentity(value: string | number | null | undefined) {
   return String(value ?? "").trim().toLowerCase();
 }
 
-async function ClubHubPremiumOverviewSection({
-  club,
-  locale,
-  presentationPromise,
-  viewerAccessPromise,
-  dataSource,
-}: {
-  club: NonNullable<ReturnType<typeof findTouchLineClub>>;
-  locale: TouchLineLocale;
-  presentationPromise: Promise<ClubHubPresentation>;
-  viewerAccessPromise: Promise<ClubHubViewerAccess>;
-  dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
-}) {
-  const [presentation, viewerAccess, activeRanking] = await Promise.all([
-    presentationPromise,
-    viewerAccessPromise,
-    dataSource === "direct" ? loadTouchLineActiveRanking() : Promise.resolve(TOUCHLINE_PRESEASON_RANKING_STATE),
-  ]);
-  const portuguese = locale === "pt-BR";
-  const overallRanking = activeRanking.phase === "ranked"
-    ? [...activeRanking.players]
-      .filter((player) => player.totalRating !== null)
-      .sort((left, right) => (
-        (right.totalRating ?? Number.NEGATIVE_INFINITY) - (left.totalRating ?? Number.NEGATIVE_INFINITY)
-        || normalizedPlayerIdentity(left.playerId).localeCompare(normalizedPlayerIdentity(right.playerId))
-      ))
-    : [];
-  const rankedClubCards = presentation.clubCards.flatMap((card) => {
-    const cardIdentities = new Set([
-      normalizedPlayerIdentity(card.canonicalPlayerId),
-      normalizedPlayerIdentity(card.id),
-    ].filter(Boolean));
-    const ranking = overallRanking.find((candidate) => (
-      cardIdentities.has(normalizedPlayerIdentity(candidate.playerId))
-      || cardIdentities.has(normalizedPlayerIdentity(candidate.providerPlayerId))
-    ));
-    if (!ranking || ranking.totalRating === null) return [];
-    return [{
-      card,
-      totalRating: ranking.totalRating,
-      overallRank: overallRanking.indexOf(ranking) + 1,
-      positionRank: ranking.positionRank,
-    }];
-  }).sort((left, right) => left.overallRank - right.overallRank);
-  const fallbackLeaderCard = presentation.clubCards
-    .filter((card) => card.seasonTotalRating !== null && card.seasonTotalRating !== undefined)
-    .sort((left, right) => (right.seasonTotalRating ?? 0) - (left.seasonTotalRating ?? 0))[0] ?? null;
-  const clubLeader = rankedClubCards[0] ?? (fallbackLeaderCard ? {
-    card: fallbackLeaderCard,
-    totalRating: fallbackLeaderCard.seasonTotalRating!,
-    overallRank: null,
-    positionRank: null,
-  } : null);
-  const coach = dataSource === "direct" ? touchlineLiveCoachForTeam(club.teamId) : null;
-  return (
-    <section
-      className={premiumStyles.statusRail}
-      aria-label={portuguese ? "Visão geral oficial do clube" : "Official club overview"}
-      style={{ "--clubhub-accent": club.accent } as CSSProperties}
-    >
-      <article className={premiumStyles.spotlightCard} data-clubhub-card-spotlight="coach">
-        <TouchlineClubPerimeterTrace accent="#a3ff12" className={premiumStyles.spotlightTrace} />
-        <header>
-          <span>{portuguese ? "Treinador verificado" : "Current verified coach"}</span>
-          <strong>{coach?.coach.displayName ?? (portuguese ? "Aguardando treinador" : "Awaiting verified coach")}</strong>
-        </header>
-        {coach ? (
-          <div className={premiumStyles.coachCardVisual}>
-            <ClubHubCanonicalCoachPanel
-              teamId={club.teamId}
-              clubName={club.name}
-              clubLogoUrl={club.logoUrl}
-              clubAccent={club.accent}
-              locale={locale}
-              userId={viewerAccess.userId}
-              presentation="technical"
-            />
-          </div>
-        ) : <p>{portuguese ? "Nenhum substituto é inferido." : "No replacement is inferred."}</p>}
-        <small>{portuguese ? "Card oficial da área técnica" : "Official technical-area card"}</small>
-      </article>
-
-      <article className={premiumStyles.spotlightCard} data-clubhub-card-spotlight="club-leader">
-        <TouchlineClubPerimeterTrace accent="#a3ff12" className={premiumStyles.spotlightTrace} />
-        <header>
-          <span>{portuguese ? "Melhor card do clube" : "Club-leading TouchLine card"}</span>
-          <strong>{clubLeader?.card.name ?? (portuguese ? "Aguardando ranking verificado" : "Awaiting verified ranking")}</strong>
-        </header>
-        {clubLeader ? (
-          <div className={premiumStyles.playerCardVisual}>
-            <TouchlineGameweekCard card={clubLeader.card} locale={locale} displayWidth={164} />
-          </div>
-        ) : (
-          <div className={premiumStyles.awaitingRanking} role="status">
-            <span aria-hidden="true">—</span>
-            <strong>{portuguese ? "Ranking em verificação" : "Ranking under verification"}</strong>
-            <p>{portuguese ? "Nenhuma pontuação provisória é exibida." : "No provisional score is shown."}</p>
-          </div>
-        )}
-        <small>{clubLeader ? [
-          `${clubLeader.totalRating.toFixed(2)} Total Rating`,
-          clubLeader.overallRank ? `#${clubLeader.overallRank} ${portuguese ? "geral" : "overall"}` : null,
-          clubLeader.positionRank ? `#${clubLeader.positionRank} ${portuguese ? "na posição" : "in position"}` : null,
-        ].filter(Boolean).join(" · ") : (portuguese ? "Ranking canônico indisponível" : "Canonical ranking unavailable")}</small>
-      </article>
-    </section>
-  );
-}
+const CLUB_POSITION_LEADER_GROUPS = [
+  { key: "centre-back", positionGroups: ["centre-back"], en: "Top centre-back", pt: "Melhor zagueiro" },
+  { key: "full-back", positionGroups: ["full-back"], en: "Top full-back", pt: "Melhor lateral" },
+  { key: "midfielder", positionGroups: ["midfielder"], en: "Top midfielder", pt: "Melhor meio-campista" },
+  { key: "attacker", positionGroups: ["winger", "striker"], en: "Top attacker", pt: "Melhor atacante" },
+] as const;
 
 export default async function ClubHubPage({ params, searchParams }: ClubHubPageProps) {
   const [{ club: clubParam }, { lang, feedCursor }] = await Promise.all([params, searchParams]);
   const locale = normalizeTouchLineLocale(lang);
+  const copyrightYear = new Date().getUTCFullYear();
   const t = (key: Parameters<typeof touchLineT>[1]) => touchLineT(locale, key);
-  const localeQuery = `lang=${encodeURIComponent(locale)}`;
   const cardLabels = {
     nationality: t("nationalityShort"),
     points: t("points"),
@@ -1012,7 +908,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           ) : null}
           <div className="club-hub-hero-shade" aria-hidden="true" />
           <Suspense fallback={<div className="club-hub-hero-next-match club-hub-hero-next-match-awaiting" aria-hidden="true" />}>
-            <ClubHubHeroNextMatch club={club} locale={locale} presentationPromise={presentationPromise} />
+            <ClubHubHeroNextMatch locale={locale} presentationPromise={presentationPromise} />
           </Suspense>
           <div className="club-hub-identity">
             <div className="club-hub-logo-stack">
@@ -1066,18 +962,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           </Suspense>
         </div>
 
-        <div className="club-hub-chapter club-hub-overview-chapter">
-          <Suspense fallback={<ClubHubDeferredSection size="panel" label={locale === "pt-BR" ? "Preparando visão geral do clube" : "Preparing club overview"} />}>
-            <ClubHubPremiumOverviewSection
-              club={club}
-              locale={locale}
-              presentationPromise={presentationPromise}
-              viewerAccessPromise={viewerAccessPromise}
-              dataSource={dataSource}
-            />
-          </Suspense>
-        </div>
-
         <div className="club-hub-chapter club-hub-matchday-chapter">
           <ClubHubChapterMarker
             index="01"
@@ -1091,6 +975,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               cardLabels={cardLabels}
               presentationPromise={presentationPromise}
               viewerAccessPromise={viewerAccessPromise}
+              dataSource={dataSource}
             />
           </Suspense>
 
@@ -1107,6 +992,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             </Suspense>
           </div>
         </div>
+
+        <footer className="club-hub-footer">
+          <span>© {copyrightYear} TouchLine</span>
+          <span>{locale === "pt-BR" ? "Todos os direitos reservados." : "All rights reserved."}</span>
+        </footer>
 
       </section>
 
@@ -1203,6 +1093,20 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           min-width: 0;
           max-width: 100%;
         }
+        .club-hub-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-top: 10px;
+          border-top: 1px solid rgba(163,255,18,.18);
+          padding: 20px 8px 0;
+          color: rgba(241,255,234,.54);
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: .04em;
+        }
+        .club-hub-footer span:first-child { color: #dfffad; font-weight: 950; }
         .club-hub-chapter {
           min-width: 0;
           display: grid;
@@ -2153,6 +2057,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             --touchline-card-static-scale: .4418604651;
           }
           .club-hub-card-meta a { min-height: 44px; }
+          .club-hub-footer { align-items: flex-start; flex-direction: column; gap: 6px; font-size: 10px; }
           .club-hub-fixture-row { gap: 8px; }
           .club-hub-fixture-row img { height: 72px; }
           .club-hub-fixture-row .club-hub-fixture-crest { width: min(72px, 100%); }

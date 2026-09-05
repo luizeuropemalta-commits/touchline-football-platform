@@ -9,6 +9,25 @@ import {
 
 export type TouchLineClubLineupStatus = "confirmed" | "preview";
 
+export const CLUB_HUB_SQUAD_PREVIEW_WINDOW_MS = 24 * 60 * 60 * 1_000;
+
+/**
+ * A provisional XI is labelled "Squad Preview" only during the final 24 hours
+ * before its verified fixture. A confirmed XI always remains an official
+ * line-up; malformed or missing fixture timing fails closed to Preview.
+ */
+export function isClubHubSquadPreviewWindow(input: {
+  lineupStatus: TouchLineClubLineupStatus;
+  startsAt: string | null | undefined;
+  now?: number;
+}) {
+  if (input.lineupStatus === "confirmed") return false;
+  const kickoff = Date.parse(input.startsAt ?? "");
+  if (!Number.isFinite(kickoff)) return true;
+  const remainingMs = kickoff - (input.now ?? Date.now());
+  return remainingMs >= 0 && remainingMs <= CLUB_HUB_SQUAD_PREVIEW_WINDOW_MS;
+}
+
 export type TouchLineClubLineupSlot = {
   card: ClubOwnerSquadCard;
   x: number;

@@ -143,8 +143,14 @@
 
 .clubHubRail .header h2 {
   margin-block: 6px 0;
+  color: #f7fff2;
   font-size: clamp(24px, 2vw, 31px);
   line-height: 1;
+}
+
+.clubHubRail .eyebrow {
+  color: #a3ff12;
+  opacity: 1;
 }
 
 .clubHubRail .headerActions {

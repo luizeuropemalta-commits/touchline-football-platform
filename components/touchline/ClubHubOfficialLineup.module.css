@@ -41,7 +41,7 @@
 .eyebrow,
 .syncLabel {
   color: #b5ff4b;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 950;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -55,11 +55,15 @@
   text-shadow: 0 10px 32px rgba(0,0,0,.48);
 }
 
+.confirmedHeading h2 {
+  margin-bottom: 0;
+}
+
 .header p {
   max-width: 720px;
   margin: 0;
   color: rgba(255,255,255,.62);
-  font-size: 12px;
+  font-size: 13.2px;
   line-height: 1.55;
   font-weight: 780;
 }
@@ -108,7 +112,7 @@
 .matchup > span,
 .matchup small {
   color: rgba(218,255,171,.72);
-  font-size: 8px;
+  font-size: 8.8px;
   font-weight: 900;
   letter-spacing: .08em;
   line-height: 1.3;
@@ -129,8 +133,8 @@
   gap: 3px;
 }
 
-.matchupTeams strong { color: #f7fff2; font-size: 11px; letter-spacing: .08em; }
-.matchupTeamPending strong { color: rgba(255,255,255,.54); font-size: 8px; line-height: 1.15; }
+.matchupTeams strong { color: #f7fff2; font-size: 12.1px; letter-spacing: .08em; }
+.matchupTeamPending strong { color: rgba(255,255,255,.54); font-size: 8.8px; line-height: 1.15; }
 .matchupTeams > b { min-width: 54px; color: #f7fff2; font-size: 17px; font-weight: 1000; line-height: 1; text-align: center; text-shadow: 0 0 16px rgba(163,255,18,.38); white-space: nowrap; }
 .matchupCrest { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.4)); }
 
@@ -144,7 +148,7 @@
   background: rgba(0,0,0,.3);
   padding: 0 13px;
   color: rgba(255,255,255,.74);
-  font-size: 9px;
+  font-size: 9.9px;
   font-weight: 950;
 }
 
@@ -174,6 +178,14 @@
   letter-spacing: -.04em;
 }
 
+.pitchAndLeaders {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(292px, 420px);
+  align-items: start;
+  gap: clamp(14px, 2vw, 24px);
+  margin-top: 18px;
+}
+
 .pitchViewport {
   position: relative;
   z-index: 1;
@@ -182,11 +194,18 @@
   max-width: 100%;
   display: grid;
   place-items: center;
-  margin-top: 18px;
+  margin-top: 0;
   border: 1px solid rgba(163,255,18,.16);
   border-radius: 14px;
   padding: 5px;
   background: linear-gradient(180deg, rgba(163,255,18,.045), transparent 18%);
+}
+
+.positionLeaders {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
 }
 
 .pitch {
@@ -227,8 +246,8 @@
   z-index: 5;
   bottom: calc(100% + clamp(7px, .8vw, 12px));
   left: 50%;
-  width: min(196%, 172px);
-  max-width: 156px;
+  width: max-content;
+  max-width: min(196%, 160px);
   overflow: hidden;
   display: -webkit-box;
   transform: translateX(-50%);
@@ -236,11 +255,11 @@
   -webkit-line-clamp: 2;
   border: 1px solid rgba(255,255,255,.17);
   border-radius: 7px;
-  padding: 4px 6px;
+  padding: 3px 5px;
   color: #fff;
   background: linear-gradient(180deg, rgba(1,6,7,.94), rgba(1,6,7,.69));
   box-shadow: 0 5px 16px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.07);
-  font-size: clamp(8px, .76vw, 11px);
+  font-size: clamp(7.04px, .671vw, 9.68px);
   font-weight: 1000;
   line-height: 1.08;
   letter-spacing: .025em;
@@ -290,13 +309,13 @@
 
 .pendingCard span {
   color: #ffe18a;
-  font-size: 6px;
+  font-size: 6.6px;
   font-weight: 1000;
   letter-spacing: .09em;
 }
 
 .pendingCard strong { font-size: 25px; line-height: 1; }
-.pendingCard small { color: rgba(255,255,255,.64); font-size: 7px; font-weight: 900; }
+.pendingCard small { color: rgba(255,255,255,.64); font-size: 7.7px; font-weight: 900; }
 
 .player:hover .card,
 .player:focus-within .card {
@@ -318,6 +337,8 @@
   .header { grid-template-columns: 1fr; align-items: stretch; }
   .statusPanel { width: min(100%, 560px); justify-self: start; }
   .pitch { width: min(100%, 760px); }
+  .pitchAndLeaders { grid-template-columns: 1fr; }
+  .positionLeaders { width: min(100%, 620px); justify-self: center; }
 
   .pendingCard { min-height: 86px; }
 }
@@ -342,7 +363,7 @@
   }
 
   .header p {
-    font-size: 10px;
+    font-size: 11px;
     line-height: 1.48;
   }
 
@@ -359,11 +380,11 @@
     min-width: 0;
     min-height: 30px;
     padding: 0 10px;
-    font-size: 7px;
+    font-size: 7.7px;
   }
 
   .syncLabel {
-    font-size: 7px;
+    font-size: 7.7px;
   }
 
   .formation {
@@ -390,7 +411,7 @@
        compact plate keeps adjacent formation lanes from colliding. */
     width: clamp(82px, 24vw, 108px);
     max-width: 108px;
-    font-size: clamp(5.5px, 1.45vw, 7.25px);
+    font-size: clamp(6.05px, 1.595vw, 7.975px);
     letter-spacing: 0;
   }
 
@@ -418,7 +439,7 @@
 
   .header p {
     max-width: 570px;
-    font-size: 9px;
+    font-size: 9.9px;
     line-height: 1.4;
   }
 
@@ -435,12 +456,12 @@
     min-width: 0;
     min-height: 28px;
     padding: 0 9px;
-    font-size: 6.5px;
+    font-size: 7.15px;
     text-align: center;
   }
 
   .syncLabel {
-    font-size: 6.5px;
+    font-size: 7.15px;
   }
 
   .formation {
@@ -465,7 +486,7 @@
     bottom: calc(100% + 5px);
     width: clamp(76px, 12vw, 106px);
     max-width: 106px;
-    font-size: clamp(6.8px, .9vw, 8px);
+    font-size: clamp(7.48px, .99vw, 8.8px);
   }
 
 }
@@ -490,7 +511,7 @@
   .playerName {
     width: clamp(82px, 12vw, 118px);
     max-width: 118px;
-    font-size: clamp(7px, .88vw, 9px);
+    font-size: clamp(7.7px, .968vw, 9.9px);
   }
 
 }

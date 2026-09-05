@@ -103,7 +103,9 @@ test("Club Hub receives only allowlisted canonical match and season projections"
   assert.match(seasonReader, /provider_competition_id/);
   assert.match(seasonReader, /\.eq\("is_current", true\)/);
   assert.doesNotMatch(seasonReader, /\.from\("(?:touchline_card_contracts|touchline_wallet|profiles)"\)/);
-  assert.match(lineup, /showMatchRating/);
+  // The matchday pitch is a formation surface: the owner's visual contract
+  // keeps the verified rating inside the expanded card, not above the player.
+  assert.doesNotMatch(lineup, /showMatchRating/);
   assert.match(grid, /showMatchRating/);
   assert.match(grid, /seasonTotalRating/);
   assert.match(lineup, /buildTouchlineVerifiedMatchFactFields/);
