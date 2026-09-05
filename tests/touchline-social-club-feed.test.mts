@@ -142,6 +142,7 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.match(component, /<ClubHubShareButton/);
   assert.match(component, /postId=\{item\.id\}/);
   assert.match(component, /Post actions/);
+  assert.match(component, /sizes="\(max-width: 620px\) 92vw, 540px"/);
   assert.match(reader, /touchline_social_049_read_share_art/);
   assert.match(shareRoute, /readTouchlineShareArtwork\(postId\)/);
   assert.match(shareRoute, /acquireShareCapacity\(request\)/);

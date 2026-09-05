@@ -68,7 +68,7 @@ export default function TouchlineClubSocialFeed({
                 <Image
                   alt={`${contentLabel(item.contentType, locale)} · ${clubName}`}
                   fill
-                  sizes="(max-width: 620px) 92vw, (max-width: 960px) 45vw, 30vw"
+                  sizes="(max-width: 620px) 92vw, 540px"
                   src={item.imageUrl}
                   unoptimized
                 />
