@@ -179,3 +179,10 @@ After material work:
   `348px` pitch followed by a `348px` 2×2 leader rail with `169×249` cards.
   Both report zero horizontal overflow. This does not constitute a deploy or
   a Fiscal approval.
+- **QA deployment correction:** the first QA deployment for `8b6b551d` failed
+  during the remote release suite because an older resilience assertion exposed
+  a real regression: the moved outside-match roster no longer rendered the
+  unavailable-squad recovery. The recovery is now preserved in its current
+  surface, including the localized retry link. Focused verification is `39/39`
+  and the complete release suite is `1602/1602`; the follow-up QA commit is
+  queued after local build confirmation. Production remains untouched.

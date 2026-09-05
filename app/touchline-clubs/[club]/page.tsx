@@ -670,6 +670,8 @@ async function ClubHubTechnicalSections({
         cards={outsideMatchdayCards}
         locale={locale}
         labels={cardLabels}
+        squadUnavailable={presentation.squadLoad.state === "unavailable"}
+        retryHref={`/touchline-clubs/${club.slug}?lang=${encodeURIComponent(locale)}`}
       />
     </>
   );

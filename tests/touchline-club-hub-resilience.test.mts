@@ -6,6 +6,7 @@ import { fetchTouchlineInternalJson } from "../lib/server/safe-internal-fetch.ts
 
 const source = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const squadGridSource = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
+const outsideMatchRosterSource = readFileSync(new URL("../components/touchline/ClubHubOutsideMatchRoster.tsx", import.meta.url), "utf8");
 const officialLineupSource = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 const clubCoachPanelSource = readFileSync(new URL("../components/touchline/ClubHubCanonicalCoachPanel.tsx", import.meta.url), "utf8");
 const coachCardZoomSource = readFileSync(new URL("../components/touchline/cards/TouchlineCoachCardZoom.tsx", import.meta.url), "utf8");
@@ -20,9 +21,10 @@ test("ClubHub bounds squad loading and distinguishes unavailable data from a nor
   assert.match(squadReaderSource, /readPersistedSquadSnapshot\(teamId\)/);
   assert.match(source, /state: "ready" as const/);
   assert.match(source, /state: "unavailable" as const/);
-  assert.match(source, /Não foi possível carregar o elenco agora\./);
-  assert.match(source, /Tentar novamente/);
-  assert.match(source, /role=\{squadUnavailable \? "status" : undefined\}/);
+  assert.match(source, /squadUnavailable=\{presentation\.squadLoad\.state === "unavailable"\}/);
+  assert.match(outsideMatchRosterSource, /Não foi possível carregar o elenco agora\./);
+  assert.match(outsideMatchRosterSource, /Tentar novamente/);
+  assert.match(outsideMatchRosterSource, /role="status"/);
 });
 
 test("ClubHub defers below-the-fold squad artwork while eagerly revealing its visible technical coach card", () => {

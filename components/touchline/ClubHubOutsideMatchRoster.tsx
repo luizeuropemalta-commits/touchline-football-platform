@@ -1,4 +1,5 @@
 import type { ClubOwnerSquadCard } from "@/lib/touchlineArena/demo-data";
+import Link from "next/link";
 import ClubHubSquadGrid from "@/components/touchline/ClubHubSquadGrid";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 
@@ -9,6 +10,8 @@ type ClubHubOutsideMatchRosterProps = {
   cards: readonly ClubOwnerSquadCard[];
   locale: string;
   labels: { nationality: string; points: string; totalPoints: string; cardPrice: string; currentClub: string };
+  squadUnavailable?: boolean;
+  retryHref?: string;
 };
 
 /**
@@ -21,18 +24,20 @@ export default function ClubHubOutsideMatchRoster({
   cards,
   locale,
   labels,
+  squadUnavailable = false,
+  retryHref,
 }: ClubHubOutsideMatchRosterProps) {
   const portuguese = locale === "pt-BR";
   const title = portuguese ? "Elenco fora da partida" : "Outside the matchday squad";
   const description = portuguese
     ? "Jogadores que não aparecem na escalação nem no banco confirmado."
     : "Players not displayed in the line-up or confirmed bench.";
-  const emptyTitle = portuguese
-    ? "Nenhum jogador fora da partida"
-    : "No players outside the matchday group";
-  const emptyDescription = portuguese
-    ? "Todos os jogadores disponíveis estão exibidos acima."
-    : "All available squad members are shown above.";
+  const emptyTitle = squadUnavailable
+    ? (portuguese ? "Não foi possível carregar o elenco agora." : "The squad could not be loaded right now.")
+    : (portuguese ? "Nenhum jogador fora da partida" : "No players outside the matchday group");
+  const emptyDescription = squadUnavailable
+    ? (portuguese ? "Tente novamente para carregar os dados oficiais do elenco." : "Try again to load the official squad data.")
+    : (portuguese ? "Todos os jogadores disponíveis estão exibidos acima." : "All available squad members are shown above.");
 
   return (
     <section className={styles.shell} aria-label={`${clubName} ${title}`}>
@@ -64,6 +69,7 @@ export default function ClubHubOutsideMatchRoster({
         <div className={styles.empty} role="status">
           <strong>{emptyTitle}</strong>
           <p>{emptyDescription}</p>
+          {squadUnavailable && retryHref ? <Link href={retryHref}>{portuguese ? "Tentar novamente" : "Try again"}</Link> : null}
         </div>
       )}
     </section>
