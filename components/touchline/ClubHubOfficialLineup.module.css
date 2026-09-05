@@ -30,10 +30,10 @@
   position: relative;
   z-index: 1;
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(250px, .82fr) minmax(440px, 1.18fr);
   align-items: end;
-  justify-content: space-between;
-  gap: 24px;
+  gap: clamp(24px, 5vw, 72px);
   padding: 4px 0 20px;
   border-bottom: 1px solid rgba(163, 255, 18, .24);
 }
@@ -65,33 +65,42 @@
 }
 
 .statusPanel {
-  min-width: min(100%, 300px);
+  width: min(100%, 560px);
+  min-width: 0;
   display: grid;
-  justify-items: end;
-  gap: 10px;
+  grid-template-columns: minmax(270px, 1fr) minmax(154px, .48fr);
+  align-items: stretch;
+  justify-self: end;
+  gap: 12px;
 }
 
 .formationPanel {
   display: grid;
-  justify-items: end;
-  gap: 9px;
-  min-width: 190px;
-  border: 1px solid rgba(163, 255, 18, .2);
-  border-radius: 12px;
-  padding: 10px 13px;
-  background: linear-gradient(135deg, rgba(163,255,18,.1), rgba(0,0,0,.18));
-  box-shadow: inset 0 1px rgba(255,255,255,.055);
+  align-content: center;
+  justify-items: center;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid rgba(163, 255, 18, .32);
+  border-radius: 14px;
+  padding: 13px 12px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(163,255,18,.16), transparent 64%),
+    linear-gradient(135deg, rgba(163,255,18,.09), rgba(0,0,0,.35));
+  box-shadow: inset 0 1px rgba(255,255,255,.065), 0 10px 26px rgba(0,0,0,.16);
 }
 
 .matchup {
-  width: min(100%, 300px);
+  width: 100%;
   display: grid;
-  gap: 8px;
-  border: 1px solid rgba(163,255,18,.3);
-  border-radius: 12px;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, rgba(163,255,18,.12), rgba(0,0,0,.22));
-  box-shadow: inset 0 1px rgba(255,255,255,.055), 0 8px 28px rgba(0,0,0,.18);
+  align-content: center;
+  gap: 9px;
+  border: 1px solid rgba(163,255,18,.42);
+  border-radius: 14px;
+  padding: 12px 16px 11px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(163,255,18,.17), transparent 62%),
+    linear-gradient(135deg, rgba(163,255,18,.12), rgba(0,0,0,.32));
+  box-shadow: inset 0 1px rgba(255,255,255,.075), 0 10px 30px rgba(0,0,0,.2);
   color: rgba(255,255,255,.7);
   text-align: center;
 }
@@ -107,9 +116,9 @@
 
 .matchupTeams {
   display: grid;
-  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  grid-template-columns: minmax(0,1fr) minmax(54px, auto) minmax(0,1fr);
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   color: #fff;
 }
 
@@ -120,10 +129,10 @@
   gap: 3px;
 }
 
-.matchupTeams strong { font-size: 11px; }
+.matchupTeams strong { color: #f7fff2; font-size: 11px; letter-spacing: .08em; }
 .matchupTeamPending strong { color: rgba(255,255,255,.54); font-size: 8px; line-height: 1.15; }
-.matchupTeams > b { color: #dfff9b; font-size: 13px; white-space: nowrap; }
-.matchupCrest { width: 31px; height: 31px; object-fit: contain; }
+.matchupTeams > b { min-width: 54px; color: #f7fff2; font-size: 17px; font-weight: 1000; line-height: 1; text-align: center; text-shadow: 0 0 16px rgba(163,255,18,.38); white-space: nowrap; }
+.matchupCrest { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.4)); }
 
 .status {
   display: inline-flex;
@@ -160,8 +169,9 @@
 
 .formation {
   color: white;
-  font-size: 23px;
+  font-size: 27px;
   font-weight: 1000;
+  letter-spacing: -.04em;
 }
 
 .pitchViewport {
@@ -305,10 +315,8 @@
 
 @media (max-width: 980px) {
   .shell { padding: 18px; }
-  .header { align-items: stretch; flex-direction: column; }
-  .statusPanel { min-width: 0; justify-items: start; }
-  .formationPanel { justify-items: start; }
-  .matchup { width: min(100%, 330px); }
+  .header { grid-template-columns: 1fr; align-items: stretch; }
+  .statusPanel { width: min(100%, 560px); justify-self: start; }
   .pitch { width: min(100%, 760px); }
 
   .pendingCard { min-height: 86px; }
@@ -339,9 +347,10 @@
   }
 
   .statusPanel {
-    justify-items: start;
     width: 100%;
   }
+
+  .statusPanel { grid-template-columns: minmax(0, 1fr) 132px; gap: 9px; }
 
   .formationPanel { grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; row-gap: 5px; }
 

@@ -756,8 +756,8 @@ async function ClubHubOfficialLeagueSection({
             homeScore={fixture.homeScore}
             awayScore={fixture.awayScore}
             liveMinute={fixture.liveMinute}
-            venueName={fixture.venue?.name ?? null}
-            venueImageUrl={fixture.venue?.interiorImageUrl ?? fixture.venue?.imageUrl ?? null}
+            venueName={fixture.venue?.name ?? (TOUCHLINE_STADIUM_CATALOG.find((stadium) => stadium.homeTeamProviderId === fixture.homeTeam?.providerId)?.name ?? null)}
+            venueImageUrl={fixture.venue?.interiorImageUrl ?? fixture.venue?.imageUrl ?? TOUCHLINE_STADIUM_CATALOG.find((stadium) => stadium.homeTeamProviderId === fixture.homeTeam?.providerId)?.interiorImageUrl ?? null}
           />
         ) : (
           <article className={`${premiumStyles.nextFixtureCard} ${officialLeagueStyles.fixture}`} data-state="awaiting" role="status">
@@ -835,8 +835,8 @@ async function ClubHubHeroNextMatch({
       awayScore={fixture.awayScore}
       liveMinute={fixture.liveMinute}
       variant="hero"
-      venueName={fixture.venue?.name ?? null}
-      venueImageUrl={fixture.venue?.interiorImageUrl ?? fixture.venue?.imageUrl ?? null}
+      venueName={fixture.venue?.name ?? (TOUCHLINE_STADIUM_CATALOG.find((stadium) => stadium.homeTeamProviderId === fixture.homeTeam?.providerId)?.name ?? null)}
+      venueImageUrl={fixture.venue?.interiorImageUrl ?? fixture.venue?.imageUrl ?? TOUCHLINE_STADIUM_CATALOG.find((stadium) => stadium.homeTeamProviderId === fixture.homeTeam?.providerId)?.interiorImageUrl ?? null}
     />
   );
 }

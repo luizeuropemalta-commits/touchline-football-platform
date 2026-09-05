@@ -42,6 +42,13 @@ parecer do Fiscal.
   premium, dentro da foto, com adversários, data/hora e estádio.
 - O mesmo componente troca automaticamente de estado: `Next Match` antes do
   jogo, `Live` durante, e `Full Time` após o resultado final confirmado.
+- No rail de partida, mostrar somente os nomes dos clubes, escudos um pouco
+  maiores e o placar branco centralizado, sem cápsula, círculo ou posições na
+  liga. Em estado final, `Full Time` aparece somente no cabeçalho, sem repetir
+  `Verified result` abaixo.
+- O rail deve mostrar a foto interna verificada do estádio, como no Live. Se o
+  fixture já for verificado mas vier sem a imagem pública, usar somente o
+  fallback do catálogo que corresponde ao mandante verificado.
 - Aplicar a regra para os 20 clubes, usando dados reais do fixture; não usar
   estádio, placar ou status inventados.
 
@@ -55,6 +62,8 @@ parecer do Fiscal.
   acima no topo.
 - Manter a arte de feed dinâmica no site; PNG é somente a saída para social.
   O estado visual deve preservar efeitos de movimento e neon no site.
+- A etiqueta da tabela usa sempre `TouchLine England League`, legível e sem
+  baixa opacidade.
 
 ## Matchday e line-up
 
@@ -66,6 +75,10 @@ parecer do Fiscal.
 - Reutilizar a mesma formação canônica do Market, sem duplicar ou alterar dados.
 - Exibir treinador na composição e os 9 reservas confirmados abaixo.
 - Aplicar o padrão de moldura/neon ao componente do campo e seus painéis.
+- O bloco `Match-up` da escalação deve ser uma composição premium: escudos
+  maiores, simétricos e centralizados; `VS` ou placar sempre no centro
+  geométrico entre os dois escudos; e a formação integrada em painel próprio,
+  alinhado ao confronto em vez de solta no canto.
 
 ## Jogadores fora do matchday
 

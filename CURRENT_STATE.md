@@ -1,5 +1,23 @@
 # TouchLine Current State
 
+## ClubHub visual refinement 042 — LOCAL CANDIDATE / QA PENDING FISCAL
+
+- Owner-authorized target: exactly one Git-native deployment to functional QA,
+  only after the Fiscal Vercel approves the immutable candidate SHA. Production,
+  data writes, billing and social delivery remain excluded.
+- The local candidate batches the previously approved landscape line-up field
+  with the new fixture-rail and match-up refinements: readable club names,
+  larger crests, plain centered score, one `FULL TIME` label, verified stadium
+  imagery with exact-home-ground fallback, `TouchLine England League` label,
+  and a symmetric line-up matchup/formation composition.
+- Fresh local gates: focused ClubHub contracts `39/39`, full test suite,
+  governance, Vercel-input and release-readiness checks, TypeScript, ESLint,
+  diff check and local production build. Native/remote inspection and the
+  Fiscal decision are still required before deploy.
+- Rollback target for a successful QA deployment remains the currently stable
+  QA SHA `e084ec635f8331d01cb07107cdb0dee72d691e2d`; no remote build has been
+  started for this candidate.
+
 ## Functional ClubHub top and compact league table — QA RELEASE CANDIDATE
 
 - On 3 September 2026 the functional `/touchline-clubs/[club]` template was reorganised below the approved club hero without creating twenty separate pages or changing any football authority. The compact official table is now the first real module directly below the section controls, followed by the next fixture, verified coach and club-leading card. Arsenal remains the visual example while all twenty canonical clubs receive their own verified data through the same route.

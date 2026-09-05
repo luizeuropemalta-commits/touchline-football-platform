@@ -56,7 +56,7 @@ test("the shared rail renders only a verified venue image behind the match facts
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   assert.match(component, /venueImageUrl \? \(/);
   assert.match(component, /src=\{venueImageUrl\}/);
-  assert.match(page, /venueImageUrl=\{fixture\.venue\?\.interiorImageUrl \?\? fixture\.venue\?\.imageUrl \?\? null\}/);
+  assert.match(page, /TOUCHLINE_STADIUM_CATALOG\.find\(\(stadium\) => stadium\.homeTeamProviderId === fixture\.homeTeam\?\.providerId\)/);
 });
 
 test("ClubHub outer frames use the standard TouchLine neon, not club-blue accents", () => {

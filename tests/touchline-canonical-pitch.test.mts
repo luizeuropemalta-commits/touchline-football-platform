@@ -65,6 +65,14 @@ test("ClubHub formation keeps player names legible above cards without ellipses 
   assert.doesNotMatch(clubHubLineupCss, /\.playerLink/);
 });
 
+test("ClubHub matchup keeps both crests and its score in a centered premium fixture group", () => {
+  assert.match(clubHubLineup, /<ClubHubLiveFixtureScore fixtureId=\{matchup\.fixtureId\}/);
+  assert.match(clubHubLineupCss, /grid-template-columns: minmax\(270px, 1fr\) minmax\(154px, \.48fr\)/);
+  assert.match(clubHubLineupCss, /grid-template-columns: minmax\(0,1fr\) minmax\(54px, auto\) minmax\(0,1fr\)/);
+  assert.match(clubHubLineupCss, /\.matchupTeams > b \{ min-width: 54px/);
+  assert.match(clubHubLineupCss, /\.matchupCrest \{ width: 48px; height: 48px/);
+});
+
 test("ClubHub keeps the geometry inside its regulation landscape pitch on desktop and mobile", () => {
   assert.match(clubHubLineupCss, /\.pitch[\s\S]*?width: min\(100%, 960px\)/);
   assert.match(clubHubLineup, /<div className=\{styles\.geometryLayer\}>/);

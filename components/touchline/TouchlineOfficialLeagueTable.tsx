@@ -58,7 +58,7 @@ type TableCopy = Readonly<{
 
 const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
   "en-GB": {
-    eyebrow: "TouchLine England",
+    eyebrow: "TouchLine England League",
     title: "Official League Table",
     description: "The one official table combines TouchLine Verified final results with the latest persisted live scores. Live rows and positions are provisional until full time.",
     caption: "TouchLine England official league table",
@@ -93,7 +93,7 @@ const copy: Record<"en-GB" | "pt-BR", TableCopy> = {
     integrityDescription: "TouchLine found an identity or season consistency issue, so no league position is published.",
   },
   "pt-BR": {
-    eyebrow: "TouchLine England",
+    eyebrow: "TouchLine England League",
     title: "Tabela Oficial da Liga",
     description: "A única tabela oficial combina resultados finais verificados com os últimos placares ao vivo persistidos. Linhas e posições ao vivo são provisórias até o fim.",
     caption: "Tabela oficial da liga TouchLine England",

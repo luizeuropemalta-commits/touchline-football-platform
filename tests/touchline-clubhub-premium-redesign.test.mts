@@ -68,13 +68,15 @@ test("one local FULL_TIME artifact proves exact two-club fan-out without duplica
   assert.match(page, /Positions may change as the remaining Gameweek fixtures are completed/);
 });
 
-test("next fixture keeps the two league positions without duplicating the league table", () => {
+test("next fixture keeps club names and the score clean without duplicating the league table", () => {
   assert.match(component, /homePosition=\{nextFixture\.homePosition\}/);
   assert.match(component, /awayPosition=\{nextFixture\.awayPosition\}/);
-  assert.match(nextFixture, /positionLabel\(homePosition, locale\)/);
-  assert.match(nextFixture, /positionLabel\(awayPosition, locale\)/);
+  assert.match(nextFixture, /showPositions = false/);
+  assert.doesNotMatch(nextFixture, /positionLabel/);
   assert.match(nextFixture, /clubhub-next-fixture-post/);
-  assert.match(nextFixture, /height=\{54\}/);
+  assert.match(nextFixture, /height=\{64\}/);
+  assert.match(nextFixture, /rail\.state !== "finished"/);
+  assert.doesNotMatch(nextFixture, /Verified result/);
   assert.doesNotMatch(component, /leagueTable=\{table\}/);
   assert.doesNotMatch(nextFixture, /Scrollable Premier League table/);
   assert.doesNotMatch(nextFixture, /leagueTable\.rows\.map/);

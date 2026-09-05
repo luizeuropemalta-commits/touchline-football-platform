@@ -15,6 +15,23 @@ After material work:
 
 # 2026-09-03 — Functional ClubHub table-first QA candidate
 
+# 2026-09-05 — ClubHub visual refinement candidate 042
+
+- Owner requested that fixture rails display only club names with larger crests
+  and a plain centered white score; final state shows `FULL TIME` once only.
+  The fixture rail now uses the exact verified fixture venue image, with a
+  catalog fallback only when its home-team identity matches.
+- The official-table eyebrow is `TouchLine England League`. The matchday
+  matchup is now laid out as a centered three-column fixture group with
+  symmetric larger crests and a dedicated formation panel rather than a
+  detached corner card. No football facts, roster values, or persistence were
+  changed.
+- Local evidence: focused ClubHub contracts `39/39`; full suite, mission
+  governance, Vercel deployment-input, local release-readiness, TypeScript,
+  ESLint, diff check and local production build were run. Candidate remains
+  local and uncommitted at this ledger entry; Fiscal approval, immutable SHA,
+  clean-tree proof and one Git-native QA build are the next gates.
+
 - Preserved the approved club hero and trophy cabinet. The functional table is now the first module immediately below the ClubHub section controls, with the fixture/coach/card overview after it; the same server-owned template continues to serve every canonical club.
 - Reused the canonical `TouchlineGlobalNavigation` link style for Rankings, Feed, Matchday, Squad and Back to top. Local ClubHub CSS owns placement/scroll/visibility only, and `AGENTS.md` now records the owner-mandated one-button-system rule.
 - Removed the two newly introduced explanatory chapter markers around the table and overview, and omitted the general explanatory table paragraph in the compact profile variant. Canonical unavailable/integrity states remain visible and no football fact is fabricated.

@@ -49,18 +49,6 @@ function readBrowserTimeZone() {
   );
 }
 
-function positionLabel(position: number | null, locale: TouchLineLocale) {
-  if (!position || !Number.isInteger(position) || position < 1) {
-    return locale === "pt-BR" ? "Tabela pendente" : "Table pending";
-  }
-  if (locale === "pt-BR") return `${position}º na liga`;
-  const mod100 = position % 100;
-  const suffix = mod100 >= 11 && mod100 <= 13
-    ? "th"
-    : position % 10 === 1 ? "st" : position % 10 === 2 ? "nd" : position % 10 === 3 ? "rd" : "th";
-  return `${position}${suffix} in league`;
-}
-
 export default function ClubHubNextFixtureCard({
   awayTeam,
   awayPosition,
@@ -79,7 +67,9 @@ export default function ClubHubNextFixtureCard({
   venueName = null,
   venueImageUrl = null,
   variant = "rail",
-  showPositions = true,
+  // The rail has one job: make the verified fixture readable at a glance.
+  // League positions belong in the table immediately below it.
+  showPositions = false,
 }: Props) {
   const portuguese = locale === "pt-BR";
   const router = useRouter();
@@ -125,25 +115,25 @@ export default function ClubHubNextFixtureCard({
       </div>
       <div className={styles.nextFixtureTeams}>
         <span className={styles.nextFixtureClub}>
-          <Image alt={`${homeTeam.name} crest`} height={54} src={homeTeam.logoUrl} width={54} />
+          <Image alt={`${homeTeam.name} crest`} height={64} src={homeTeam.logoUrl} width={64} />
           <b>{homeTeam.name}</b>
-          {showPositions ? <small>{positionLabel(homePosition, locale)}</small> : null}
+          {showPositions ? <small>{homePosition}</small> : null}
         </span>
         <em data-score={rail.score ? "verified" : undefined}>{rail.score ?? "VS"}</em>
         <span className={styles.nextFixtureClub}>
-          <Image alt={`${awayTeam.name} crest`} height={54} src={awayTeam.logoUrl} width={54} />
+          <Image alt={`${awayTeam.name} crest`} height={64} src={awayTeam.logoUrl} width={64} />
           <b>{awayTeam.name}</b>
-          {showPositions ? <small>{positionLabel(awayPosition, locale)}</small> : null}
+          {showPositions ? <small>{awayPosition}</small> : null}
         </span>
       </div>
-      <div className={styles.nextFixtureKickoff}>
-        <time dateTime={startsAt}>{rail.liveMinute ?? (rail.state === "finished" ? rail.heading : `${localKickoff.date} · ${localKickoff.time}`)}</time>
-        <small>{rail.state === "upcoming"
-          ? `${portuguese ? "Seu horário local" : "Your local time"} · ${localKickoff.zoneName}`
-          : rail.state === "live"
-            ? (portuguese ? "Placar verificado" : "Verified score")
-            : (portuguese ? "Resultado verificado" : "Verified result")}</small>
-      </div>
+      {rail.state !== "finished" ? (
+        <div className={styles.nextFixtureKickoff}>
+          <time dateTime={startsAt}>{rail.liveMinute ?? `${localKickoff.date} · ${localKickoff.time}`}</time>
+          <small>{rail.state === "upcoming"
+            ? `${portuguese ? "Seu horário local" : "Your local time"} · ${localKickoff.zoneName}`
+            : (portuguese ? "Placar verificado" : "Verified score")}</small>
+        </div>
+      ) : null}
       <div className={styles.nextFixtureVenue} data-state={venueName ? "verified" : "pending"}>
         <MapPin aria-hidden="true" />
         <span>{venueName ?? (portuguese ? "Estádio em verificação" : "Venue under verification")}</span>
