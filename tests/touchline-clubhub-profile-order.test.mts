@@ -114,7 +114,7 @@ test("the official league table remains server-owned and separate from TouchLine
   assert.match(page, /className="club-hub-touchline"/);
 });
 
-test("the official league area is the first chapter below navigation with a 70/30 feed and non-scrolling 20-club rail", () => {
+test("the official league area is the first chapter below navigation with a 70/30 feed and contained 20-club rail", () => {
   const navigationStart = indexOfRequired(page, "<ClubHubSectionNavigation");
   const officialLeagueStart = page.indexOf("<ClubHubOfficialLeagueSection", navigationStart);
   const overviewStart = page.indexOf("<ClubHubPremiumOverviewSection", navigationStart);
@@ -130,9 +130,9 @@ test("the official league area is the first chapter below navigation with a 70/3
   assert.match(officialLeagueStyles, /grid-template-columns: minmax\(0, 7fr\) minmax\(340px, 3fr\)/);
   assert.match(officialLeagueStyles, /@media \(max-width: 1120px\)[\s\S]*?grid-template-columns: 1fr/);
   assert.match(leagueTable, /variant: "directory" \| "profile" \| "clubHubRail"/);
-  assert.match(leagueTableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?overflow: visible/);
+  assert.match(leagueTableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?overflow-y: auto/);
   assert.match(leagueTableStyles, /\.clubHubRail \.tableWrap table\s*\{[\s\S]*?min-width: 0/);
-  assert.doesNotMatch(leagueTableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?overflow-y: auto/);
+  assert.match(leagueTableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?overscroll-behavior: contain/);
 });
 
 test("the functional ClubHub uses the approved premium overview with canonical data only", () => {
