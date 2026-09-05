@@ -122,9 +122,12 @@
 }
 
 .clubHubRail {
-  display: block;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
   margin: 0;
-  overflow: visible;
+  overflow: hidden;
   border: 0;
   border-radius: 0;
   padding: clamp(18px, 2vw, 24px);
@@ -158,9 +161,19 @@
 }
 
 .clubHubRail .tableWrap {
+  min-height: 0;
+  max-height: 620px;
+  flex: 1 1 auto;
   margin-top: 15px;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-radius: 14px;
+  scrollbar-color: color-mix(in srgb, var(--club-accent, #b5ff4b) 70%, #ecffc8) rgba(255, 255, 255, .06);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .clubHubRail .tableWrap table {

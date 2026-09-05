@@ -1,14 +1,15 @@
 .layout {
   display: grid;
+  height: clamp(920px, calc(100dvh - 48px), 1080px);
   grid-template-columns: minmax(0, 7fr) minmax(340px, 3fr);
   align-items: stretch;
   gap: clamp(14px, 1.6vw, 24px);
 }
 
 .feed {
+  height: 100%;
   min-width: 0;
   min-height: 0;
-  contain: size;
   scroll-margin-top: 96px;
 }
 
@@ -19,7 +20,9 @@
 }
 
 .rail {
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--club-accent, #a3ff12) 42%, rgba(255, 255, 255, .12));
   border-radius: 28px;
@@ -59,6 +62,7 @@
 
 @media (max-width: 1120px) {
   .layout {
+    height: auto;
     align-items: start;
     grid-template-columns: 1fr;
   }
@@ -69,7 +73,7 @@
   }
 
   .feed {
-    contain: none;
+    height: auto;
   }
 
   .feed > section {

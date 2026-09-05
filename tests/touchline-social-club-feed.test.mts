@@ -160,10 +160,14 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.match(styles, /\.shell\s*\{[\s\S]*?display:\s*flex[\s\S]*?height:\s*100%[\s\S]*?overflow:\s*hidden/);
   assert.match(styles, /\.grid\s*\{[\s\S]*?align-content:\s*start[\s\S]*?grid-auto-rows:\s*max-content[\s\S]*?overflow-y:\s*auto[\s\S]*?overscroll-behavior:\s*contain[\s\S]*?scrollbar-gutter:\s*stable[\s\S]*?touch-action:\s*pan-y/);
   const leagueLayoutStyles = readFileSync(new URL("../components/touchline/club-hub/ClubHubOfficialLeague.module.css", import.meta.url), "utf8");
-  assert.match(leagueLayoutStyles, /\.layout\s*\{[\s\S]*?align-items:\s*stretch/);
-  assert.match(leagueLayoutStyles, /\.feed\s*\{[\s\S]*?contain:\s*size/);
+  assert.match(leagueLayoutStyles, /\.layout\s*\{[\s\S]*?height:\s*clamp\([\s\S]*?align-items:\s*stretch/);
+  assert.match(leagueLayoutStyles, /\.feed\s*\{[\s\S]*?height:\s*100%/);
+  assert.match(leagueLayoutStyles, /\.rail\s*\{[\s\S]*?height:\s*100%[\s\S]*?overflow:\s*hidden/);
   assert.match(leagueLayoutStyles, /\.feed > section\s*\{[\s\S]*?height:\s*100%[\s\S]*?max-height:\s*100%/);
   assert.match(leagueLayoutStyles, /\.feed > section\[data-scrollable="true"\]\s*\{[\s\S]*?height:\s*clamp\(/);
+  const tableStyles = readFileSync(new URL("../components/touchline/TouchlineOfficialLeagueTable.module.css", import.meta.url), "utf8");
+  assert.match(tableStyles, /\.clubHubRail\s*\{[\s\S]*?display:\s*flex[\s\S]*?overflow:\s*hidden/);
+  assert.match(tableStyles, /\.clubHubRail \.tableWrap\s*\{[\s\S]*?max-height:\s*620px[\s\S]*?overflow-y:\s*auto[\s\S]*?touch-action:\s*pan-y/);
   assert.doesNotMatch(component, /comment|reaction|SportMonks|provider|API/i);
 });
 
