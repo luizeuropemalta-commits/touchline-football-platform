@@ -126,7 +126,8 @@ test("the official league area is the first chapter below navigation with a 70/3
   assert.match(page, /data-clubhub-official-league="true"/);
   assert.match(page, /className=\{officialLeagueStyles\.feed\} id="club-feed"/);
   assert.match(page, /className=\{officialLeagueStyles\.rail\}[\s\S]*?<ClubHubNextFixtureCard[\s\S]*?<TouchlineOfficialLeagueTable/);
-  assert.match(page, /venueName=\{fixture\.venue\?\.name \?\? null\}/);
+  assert.match(page, /venueName=\{fixture\.venue\?\.name \?\? \(TOUCHLINE_STADIUM_CATALOG\.find\(\(stadium\) => stadium\.homeTeamProviderId === fixture\.homeTeam\?\.providerId\)\?\.name \?\? null\)\}/);
+  assert.match(page, /venueImageUrl=\{fixture\.venue\?\.interiorImageUrl \?\? fixture\.venue\?\.imageUrl \?\? TOUCHLINE_STADIUM_CATALOG\.find\(\(stadium\) => stadium\.homeTeamProviderId === fixture\.homeTeam\?\.providerId\)\?\.interiorImageUrl \?\? null\}/);
   assert.match(page, /toTouchlineLiveFixture\(previewFixture\)/);
   assert.match(page, /id="club-table"[\s\S]*?variant="clubHubRail"/);
   assert.doesNotMatch(page.slice(navigationStart, overviewStart), /League pulse|Pulso da liga|Official 20-club standings|Classificação oficial dos 20 clubes/);

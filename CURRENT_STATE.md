@@ -1,6 +1,6 @@
 # TouchLine Current State
 
-## ClubHub visual refinement 042 — LOCAL CANDIDATE / QA PENDING FISCAL
+## ClubHub visual refinement 042 — LOCAL CORRECTION / QA RE-GATE REQUIRED
 
 - Owner-authorized target: exactly one Git-native deployment to functional QA,
   only after the Fiscal Vercel approves the immutable candidate SHA. Production,
@@ -14,9 +14,16 @@
   governance, Vercel-input and release-readiness checks, TypeScript, ESLint,
   diff check and local production build. Native/remote inspection and the
   Fiscal decision are still required before deploy.
-- Rollback target for a successful QA deployment remains the currently stable
-  QA SHA `e084ec635f8331d01cb07107cdb0dee72d691e2d`; no remote build has been
-  started for this candidate.
+- The first approved candidate, `85cf2486511d0e4b3d7a50e3ef46e53daff4c626`,
+  was pushed once to `qa` and created one Vercel QA build. Vercel stopped it
+  before the application build because a source-contract assertion still
+  expected the prior `venueName` expression rather than the approved verified
+  stadium fallback. This is a release-test maintenance defect, not a UI or
+  runtime failure. No retry was attempted. The corrected local candidate must
+  pass every release gate again, obtain a fresh Fiscal decision and receive a
+  fresh single-build owner authorization before it can be pushed.
+- Rollback target remains the currently stable QA SHA
+  `e084ec635f8331d01cb07107cdb0dee72d691e2d`.
 
 ## Functional ClubHub top and compact league table — QA RELEASE CANDIDATE
 
