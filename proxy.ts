@@ -446,6 +446,9 @@ function clearInvalidSupabaseSession(request: NextRequest, response: NextRespons
 
 async function handleTouchLineRequest(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  // This exact diagnostic evaluates its own fail-closed QA configuration.
+  // Let it return only safe PASS/FAIL before locale, session or provider work.
+  if (pathname === "/api/qa/environment-precheck") return NextResponse.next();
   // The isolated Preview guard deliberately runs before host normalisation,
   // locale redirects, audit handling, auth and any Supabase import/work.
   const previewPolicy = resolveTouchlineIsolatedPreviewRoutePolicy(pathname);

@@ -218,3 +218,14 @@ After material work:
   that window, and `Line-up confirmed` only after an official sheet. This
   batch is local only; TypeScript and diff hygiene have passed. The QA alias,
   Production, football data and external social delivery are untouched.
+
+## 2026-09-06 — QA configuration-only HTTP precheck, local review
+
+Added `/api/qa/environment-precheck` on local HEAD569c using the existing pure
+verifier. Exact-path proxy bypass precedes session/locale/provider work; the
+authenticated `/api/admin/qa-environment` and verifier remain unchanged. New
+regression tests first failed because the route/bypass were absent, then four
+new plus six existing cases passed with synthetic environment values. No
+external calls, actual secrets, Live/Club Owner changes, commit or deployment.
+Final checks/status/manifest belong to the Engineering precheck handoff; local
+PASS is not binding/database/functional QA proof. Fiscal review pending.

@@ -16,7 +16,7 @@ function row(route: string) {
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 71);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 73);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 74);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -64,6 +64,9 @@ test("distinguishes read methods, disabled ingestion, local editors, user writes
   assert.equal(row("GET /api/football-data/fixture-schedule").auth, "PUBLIC");
   assert.equal(row("GET /api/touchline-arena/live-presentation-state").data, "PUBLIC_ACTIVE_RANKING_AND_FIXTURE_REVISIONS");
   assert.equal(row("GET /api/football-data/provider-diagnostic").auth, "OWNER_SESSION");
+  assert.equal(row("GET /api/qa/environment-precheck").auth, "PUBLIC");
+  assert.equal(row("GET /api/qa/environment-precheck").data, "SANITIZED_QA_CONFIGURATION_ONLY");
+  assert.equal(row("GET /api/qa/environment-precheck").status, "QA_DEPLOY_REQUIRED");
   assert.equal(row("GET /api/admin/qa-environment").auth, "QA_OWNER_SESSION");
   assert.equal(row("GET /api/admin/qa-environment").data, "SANITIZED_QA_ENVIRONMENT_AND_CREDENTIAL_COHERENCE");
   assert.equal(row("POST /api/football-data/fixture-schedule").status, "METHOD_DISABLED");

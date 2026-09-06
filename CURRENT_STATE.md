@@ -1,5 +1,24 @@
 # TouchLine Current State
 
+## QA environment HTTP precheck — LOCAL / REVIEW PENDING
+
+- Local follow-up on HEAD `569c2ea02d837c17f1f7424ce473457fd764402c` adds
+  `GET /api/qa/environment-precheck`. It reuses the existing pure configuration
+  verifier and returns only PASS/FAIL plus a safe reason, with no-store headers.
+- The exact path bypasses other proxy handling so invalid configuration also
+  reaches this diagnostic without locale/session/provider work. Other paths,
+  including `/api/admin/qa-environment`, retain their previous handling.
+- PASS means configuration coherence only, not credential validity, installed
+  database contracts, effective binding or functional QA acceptance. The
+  existing authenticated second-stage route is unchanged.
+- Four new controlled tests cover the real handler, denied effect capabilities,
+  its complete local import graph and the exact proxy path; these and the six
+  existing verifier tests pass. Remaining verification and final source hashes
+  are recorded in the Engineering `outputs/qa-environment-precheck` handoff.
+- No commit, push, build, deploy, database call, actual credential access or
+  Live/Club Owner implementation is part of this local change. Fiscal review
+  is pending; previous remote QA and rollback gates are not closed by it.
+
 ## Functional QA analytics no-write barrier — APPROVED SOURCE / LOCAL COMMIT PREPARATION
 
 - On 6 September 2026 the exact local QA candidate based on

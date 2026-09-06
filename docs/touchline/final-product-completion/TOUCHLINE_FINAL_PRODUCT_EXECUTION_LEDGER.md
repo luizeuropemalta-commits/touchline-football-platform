@@ -3261,3 +3261,14 @@ Preview, production checkpoint, or a dirty worktree.
 - **Premium truthful states:** the empty next-fixture panel uses the current club crest against an unresolved opponent marker; the leading-card panel uses a restrained ranking placeholder. Neither state creates an opponent, match, score, player, rating or rank. The technical and outside-match surfaces use TouchLine green consistently. Trophy hover/title behaviour remains removed as requested.
 - **Interaction and responsive proof:** active navigation was exercised for Feed, Matchday, Rankings and Squad, including the bottom-of-page Squad boundary. Browser inspection at the normal desktop viewport and `390×844` confirmed responsive stacking and no horizontal document overflow. The browser viewport override was reset and the local page was left open for owner review.
 - **Verification and release boundary:** the focused cross-surface suite passes `96/96`; TypeScript, scoped ESLint and `git diff --check` pass. This record is local and does not claim owner approval. No commit, push, Vercel build/deployment, database mutation, Production action or external social request occurred.
+
+## 2026-09-06 — QA configuration-only HTTP precheck, local review
+
+Added `/api/qa/environment-precheck` on local HEAD569c using the existing pure
+verifier. Exact-path proxy bypass precedes session/locale/provider work; the
+authenticated `/api/admin/qa-environment` and verifier remain unchanged. New
+regression tests first failed because the route/bypass were absent, then four
+new plus six existing cases passed with synthetic environment values. No
+external calls, actual secrets, Live/Club Owner changes, commit or deployment.
+Final checks/status/manifest belong to the Engineering precheck handoff; local
+PASS is not binding/database/functional QA proof. Fiscal review pending.
