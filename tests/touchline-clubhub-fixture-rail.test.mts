@@ -23,19 +23,31 @@ test("a future provider live flag cannot make the ClubHub rail look live", () =>
   assert.equal(resolveClubHubFixtureRail({ ...fixture, status: "LIVE" }, "pt-BR", beforeKickoff).heading, "PRÓXIMO JOGO");
 });
 
-test("the shared ClubHub rail refreshes close to kick-off, while live, and wakes an open tab at the pre-match window", () => {
+test("the shared ClubHub rail wakes exactly at T−24, stays sparse until the live window, and never schedules local timestamps", () => {
   const nextHour = Date.parse("2026-09-05T15:30:00.000Z");
   assert.equal(
     clubHubFixtureRailRefreshMs({ state: "upcoming" }, "2026-09-05T16:00:00.000Z", nextHour),
-    30_000,
+    60_000,
   );
   assert.equal(
     clubHubFixtureRailRefreshMs({ state: "live" }, "2026-09-05T16:00:00.000Z", beforeKickoff),
     10_000,
   );
   assert.equal(
+    clubHubFixtureRailRefreshMs({ state: "live" }, "2026-09-05T16:00:00.000Z", Number.NaN),
+    null,
+  );
+  assert.equal(
     clubHubFixtureRailRefreshMs({ state: "finished" }, "2026-09-05T16:00:00.000Z", beforeKickoff),
     null,
+  );
+  assert.equal(
+    clubHubFixtureRailRefreshMs({ state: "upcoming" }, "2026-09-05T16:00:00.000Z", Date.parse("2026-09-04T15:00:00.000Z")),
+    3_600_000,
+  );
+  assert.equal(
+    clubHubFixtureRailRefreshMs({ state: "upcoming" }, "2026-09-05T16:00:00.000Z", Date.parse("2026-09-04T16:00:00.000Z")),
+    82_800_000,
   );
   assert.equal(
     clubHubFixtureRailRefreshMs({ state: "upcoming" }, "2026-09-05T16:00:00.000Z", Date.parse("2026-09-05T12:00:00.000Z")),
@@ -47,6 +59,10 @@ test("the shared ClubHub rail refreshes close to kick-off, while live, and wakes
   );
   assert.equal(
     clubHubFixtureRailRefreshMs({ state: "upcoming" }, "2026-09-05T16:00:00.000Z", Date.parse("2026-09-05T16:02:01.000Z")),
+    null,
+  );
+  assert.equal(
+    clubHubFixtureRailRefreshMs({ state: "upcoming" }, "2026-09-05T16:00:00", beforeKickoff),
     null,
   );
 });

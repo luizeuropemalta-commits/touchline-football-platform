@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -12,11 +11,7 @@ import {
   touchlineLiveCoachForTeam,
 } from "../lib/touchlineArena/live-coaches.ts";
 import { TOUCHLINE_ENGLAND_CLUBS } from "../lib/touchlineArena/demo-data.ts";
-
-const arenaClientSource = readFileSync(
-  new URL("../app/arena/ArenaClient.tsx", import.meta.url),
-  "utf8",
-);
+import { TOUCHLINE_ARENA_CLUBS } from "../lib/touchlineArena/arena-club-registry-adapter.ts";
 
 const expectedCoaches = [
   ["19", "Mikel Arteta", "307", "Spain", "32", "ESP"],
@@ -142,10 +137,7 @@ test("every selectable TouchLine England club always has its own coach", () => {
 });
 
 test("the Arena club selector cannot expose a club without a coach", () => {
-  const registrySource = arenaClientSource.match(
-    /const PREMIER_CLUB_VISUALS: PremierClubVisual\[] = \[([\s\S]*?)\n\];/,
-  )?.[1] ?? "";
-  const arenaTeamIds = [...registrySource.matchAll(/teamId: "([0-9]+)"/g)].map((match) => match[1]);
+  const arenaTeamIds = TOUCHLINE_ARENA_CLUBS.map((club) => club.teamId);
 
   assert.equal(arenaTeamIds.length, 20);
   assert.equal(new Set(arenaTeamIds).size, 20);

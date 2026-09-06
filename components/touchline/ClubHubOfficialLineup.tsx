@@ -65,6 +65,7 @@ export default function ClubHubOfficialLineup({
   const squadPreviewWindow = isClubHubSquadPreviewWindow({
     lineupStatus: lineup.status,
     startsAt: matchup?.startsAtIso,
+    fixtureStatus: matchup?.initialFixture?.status,
   });
   const showPreviewContext = !confirmed && squadPreviewWindow;
   const title = confirmed
@@ -231,7 +232,6 @@ export default function ClubHubOfficialLineup({
                       labels={labels}
                       imageLoading="lazy"
                       playerProfileHref={profileHref}
-                      staticRenderScale={80 / 430}
                       subscribeToRanking={!staticVisualQa}
                       enableInteractiveNeon={!staticVisualQa}
                       rankingMode={staticVisualQa ? "preview" : "live"}

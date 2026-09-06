@@ -173,7 +173,7 @@ test("coach remains a dedicated entity outside every player slot", async () => {
   const source = await readFile(stagePath, "utf8");
   const styles = await readFile(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8");
   assert.match(arenaSource, /TOUCHLINE MARKET · PASSO 1 DE 10/);
-  assert.match(arenaSource, /club\.teamId === String\(activeArenaCoachIdentity\.coach\.teamId\)/);
+  assert.match(arenaSource, /findTouchlineArenaClub\(activeArenaCoachIdentity\.coach\.teamId\)/);
   assert.match(arenaSource, /TOUCHLINE_MARKET_POSITION_SEQUENCE/);
   assert.match(arenaSource, /Substituir contrato/);
   assert.match(arenaSource, /contrato encerrado sem reembolso/);

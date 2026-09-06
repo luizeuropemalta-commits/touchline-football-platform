@@ -74,7 +74,7 @@ test("ClubHub matchup keeps both crests and its score in a centered premium fixt
 });
 
 test("ClubHub keeps the geometry inside its regulation landscape pitch on desktop and mobile", () => {
-  assert.match(clubHubLineupCss, /\.pitch[\s\S]*?width: min\(100%, 1152px\)/);
+  assert.match(clubHubLineupCss, /\.pitch[\s\S]*?width: min\(100%, 922px\)/);
   assert.match(clubHubLineup, /<div className=\{styles\.geometryLayer\}>/);
   assert.match(clubHubLineupCss, /\.geometryLayer[\s\S]*?inset: 0/);
   assert.match(clubHubLineupCss, /\.player[\s\S]*?top: var\(--lineup-y\)/);

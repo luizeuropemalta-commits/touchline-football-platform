@@ -11,21 +11,58 @@ export type TouchLineClubLineupStatus = "confirmed" | "preview";
 
 export const CLUB_HUB_SQUAD_PREVIEW_WINDOW_MS = 24 * 60 * 60 * 1_000;
 
+const ABSOLUTE_ISO_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})$/i;
+const TERMINAL_FIXTURE_STATUS = /(?:^ft(?:_|$)|full[ -]?time|finished|after extra time|aet|after penalties|cancelled|canceled|abandoned|awarded|walkover)/i;
+
+function parseAbsoluteIsoTimestamp(value: string | null | undefined) {
+  const candidate = String(value ?? "").trim();
+  const match = candidate.match(ABSOLUTE_ISO_TIMESTAMP);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6] ?? "0");
+  const calendar = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  if (
+    calendar.getUTCFullYear() !== year
+    || calendar.getUTCMonth() !== month - 1
+    || calendar.getUTCDate() !== day
+    || calendar.getUTCHours() !== hour
+    || calendar.getUTCMinutes() !== minute
+    || calendar.getUTCSeconds() !== second
+  ) return null;
+  const timestamp = Date.parse(candidate);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function isTerminalFixtureStatus(value: string | null | undefined) {
+  return TERMINAL_FIXTURE_STATUS.test(String(value ?? "").trim());
+}
+
 /**
  * A provisional XI is labelled "Squad Preview" only during the final 24 hours
  * before its verified fixture. A confirmed XI always remains an official
- * line-up; malformed or missing fixture timing fails closed to Preview.
+ * line-up. A missing, malformed, local-time, or terminal fixture fails closed
+ * to the neutral "Line-up" label.
  */
 export function isClubHubSquadPreviewWindow(input: {
   lineupStatus: TouchLineClubLineupStatus;
   startsAt: string | null | undefined;
+  /** Raw canonical provider status; never a localized presentation label. */
+  fixtureStatus?: string | null;
   now?: number;
 }) {
   if (input.lineupStatus === "confirmed") return false;
-  const kickoff = Date.parse(input.startsAt ?? "");
-  if (!Number.isFinite(kickoff)) return true;
-  const remainingMs = kickoff - (input.now ?? Date.now());
-  return remainingMs >= 0 && remainingMs <= CLUB_HUB_SQUAD_PREVIEW_WINDOW_MS;
+  const kickoff = parseAbsoluteIsoTimestamp(input.startsAt);
+  const now = input.now ?? Date.now();
+  if (kickoff === null || !Number.isFinite(now) || isTerminalFixtureStatus(input.fixtureStatus)) return false;
+
+  // Once the final-24-hours window opens, a provisional XI remains clearly
+  // labelled until the provider confirms it or the fixture reaches a terminal
+  // state. This also covers the provider's short status lag at kick-off.
+  return now >= kickoff - CLUB_HUB_SQUAD_PREVIEW_WINDOW_MS;
 }
 
 export type TouchLineClubLineupSlot = {

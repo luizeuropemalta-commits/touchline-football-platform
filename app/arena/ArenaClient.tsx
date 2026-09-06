@@ -138,9 +138,14 @@ import {
   type TouchlineArenaPanelKey,
 } from "@/lib/touchlineArena/arena-navigation";
 import {
-  touchlineClubOwnerProfileHref,
-  touchlineClubOwnerSubstitutionHref,
-} from "@/lib/touchlineArena/club-owner-routes";
+  TOUCHLINE_ARENA_CLUBS,
+  findTouchlineArenaClub,
+  preserveTouchlineArenaFixtureSides,
+  resolveTouchlineArenaFixtureClub,
+  resolveTouchlineArenaInitialClub,
+  type TouchlineArenaClub,
+} from "@/lib/touchlineArena/arena-club-registry-adapter";
+import { touchlineClubOwnerProfileHref } from "@/lib/touchlineArena/club-owner-routes";
 import { touchlinePlayerIdentityMatches } from "@/lib/touchlineArena/player-identity";
 import { TOUCHLINE_SHIRT_DIGIT_ASSETS } from "@/lib/touchlineArena/shirt-number-art";
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
@@ -321,16 +326,6 @@ type FixtureClubSource = {
   logoUrl?: string;
 };
 
-type PremierClubVisual = {
-  teamId: string;
-  name: string;
-  shortCode: string;
-  logoUrl?: string;
-  accent: string;
-  secondaryAccent: string;
-  aliases: string[];
-};
-
 type TeamBuilderSquadPlayer = {
   id: string;
   canonicalPlayerId?: string | null;
@@ -504,62 +499,6 @@ type RumourSortMode = "recent" | "relevance";
 const DEFAULT_ARENA_PLAYERS: ArenaPlayer[] = [];
 const DEMO_LINEUP_QUERY_PARAM = "demoLineup";
 const PREMIER_COMPETITION_IDS = new Set(["8"]);
-
-const PREMIER_CLUB_VISUALS: PremierClubVisual[] = [
-  { teamId: "19", name: "Arsenal FC", shortCode: "ARS", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/arsenal.png", accent: "#e30613", secondaryAccent: "#f6d45f", aliases: ["arsenal", "arsenal fc"] },
-  { teamId: "15", name: "Aston Villa", shortCode: "AVL", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/aston-villa.png", accent: "#670e36", secondaryAccent: "#95c9ef", aliases: ["aston villa", "villa"] },
-  { teamId: "52", name: "AFC Bournemouth", shortCode: "BOU", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/bournemouth.png", accent: "#d71920", secondaryAccent: "#050505", aliases: ["bournemouth", "afc bournemouth"] },
-  { teamId: "236", name: "Brentford FC", shortCode: "BRE", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/brentford.png", accent: "#e30613", secondaryAccent: "#ffffff", aliases: ["brentford", "brentford fc"] },
-  { teamId: "78", name: "Brighton & Hove Albion", shortCode: "BHA", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/brighton.png", accent: "#0057b8", secondaryAccent: "#ffffff", aliases: ["brighton", "brighton and hove albion", "brighton & hove albion"] },
-  { teamId: "18", name: "Chelsea FC", shortCode: "CHE", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/chelsea.png", accent: "#034694", secondaryAccent: "#ffffff", aliases: ["chelsea", "chelsea fc"] },
-  { teamId: "117", name: "Coventry City", shortCode: "COV", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/coventry-city.png", accent: "#74c7ee", secondaryAccent: "#ffffff", aliases: ["coventry", "coventry city"] },
-  { teamId: "51", name: "Crystal Palace", shortCode: "CRY", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/crystal-palace.png", accent: "#1b458f", secondaryAccent: "#c4122e", aliases: ["crystal palace", "palace"] },
-  { teamId: "13", name: "Everton FC", shortCode: "EVE", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/everton.png", accent: "#003399", secondaryAccent: "#ffffff", aliases: ["everton", "everton fc"] },
-  { teamId: "11", name: "Fulham FC", shortCode: "FUL", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/fulham.png", accent: "#ffffff", secondaryAccent: "#0b0b0b", aliases: ["fulham", "fulham fc"] },
-  { teamId: "22", name: "Hull City", shortCode: "HUL", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/hull-city.png", accent: "#f28c00", secondaryAccent: "#111111", aliases: ["hull", "hull city"] },
-  { teamId: "116", name: "Ipswich Town", shortCode: "IPS", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/ipswich-town.png", accent: "#0057b8", secondaryAccent: "#ffffff", aliases: ["ipswich", "ipswich town"] },
-  { teamId: "71", name: "Leeds United", shortCode: "LEE", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/leeds-united.png", accent: "#ffffff", secondaryAccent: "#1d5dbf", aliases: ["leeds", "leeds united"] },
-  { teamId: "8", name: "Liverpool FC", shortCode: "LIV", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/liverpool.png", accent: "#c8102e", secondaryAccent: "#f6eb61", aliases: ["liverpool", "liverpool fc"] },
-  { teamId: "9", name: "Manchester City", shortCode: "MCI", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/manchester-city.png", accent: "#6cabdd", secondaryAccent: "#1c2c5b", aliases: ["manchester city", "man city", "mancity"] },
-  { teamId: "14", name: "Manchester United", shortCode: "MUN", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/manchester-united.png", accent: "#da020e", secondaryAccent: "#fbe122", aliases: ["manchester united", "man united", "man utd", "manutd"] },
-  { teamId: "20", name: "Newcastle United", shortCode: "NEW", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/newcastle-united.png", accent: "#ffffff", secondaryAccent: "#111111", aliases: ["newcastle", "newcastle united"] },
-  { teamId: "63", name: "Nottingham Forest", shortCode: "NFO", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/nottingham-forest.png", accent: "#dd0000", secondaryAccent: "#ffffff", aliases: ["nottingham forest", "forest"] },
-  { teamId: "3", name: "Sunderland AFC", shortCode: "SUN", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/sunderland.png", accent: "#e30613", secondaryAccent: "#ffffff", aliases: ["sunderland", "sunderland afc"] },
-  { teamId: "6", name: "Tottenham Hotspur", shortCode: "TOT", logoUrl: "/touchlineArena/shared/club-logos/2026-27/ui-512/tottenham-hotspur.png", accent: "#ffffff", secondaryAccent: "#132257", aliases: ["tottenham", "tottenham hotspur", "spurs"] },
-];
-
-const TEAM_BUILDER_CLUB_RANK: Record<string, number> = {
-  MCI: 1,
-  ARS: 2,
-  LIV: 3,
-  CHE: 4,
-  MUN: 5,
-  TOT: 6,
-  NEW: 7,
-  AVL: 8,
-  BHA: 9,
-  BOU: 10,
-  CRY: 11,
-  EVE: 12,
-  BRE: 13,
-  FUL: 14,
-  NFO: 15,
-  LEE: 16,
-  SUN: 17,
-  IPS: 18,
-  COV: 19,
-  HUL: 20,
-};
-
-const TEAM_BUILDER_CLUBS = [...PREMIER_CLUB_VISUALS].sort(
-  (a, b) => (TEAM_BUILDER_CLUB_RANK[a.shortCode] ?? 99) - (TEAM_BUILDER_CLUB_RANK[b.shortCode] ?? 99),
-);
-
-const PREMIER_CLUB_LOOKUP = new Map(
-  PREMIER_CLUB_VISUALS.flatMap((club) =>
-    [club.name, club.shortCode, ...club.aliases].map((alias) => [normalizeClubKey(alias), club] as const),
-  ),
-);
 
 type ArenaFormationKey = "3-4-3" | "3-5-2" | "4-3-3" | "4-4-2" | "4-5-1" | "5-2-3" | "5-3-2" | "5-4-1";
 
@@ -900,11 +839,11 @@ function hasArenaCardForHydration(player: ArenaPlayer) {
 }
 
 function clubForArenaPlayer(player: ArenaPlayer) {
-  const cardClub = player.card?.clubName ? PREMIER_CLUB_LOOKUP.get(normalizeClubKey(player.card.clubName)) : null;
+  const cardClub = player.card?.clubName ? findTouchlineArenaClub(player.card.clubName) : null;
   if (cardClub) return cardClub;
 
   const idMatch = player.id.match(/^builder-([a-z]{3})-/i);
-  if (idMatch) return PREMIER_CLUB_LOOKUP.get(normalizeClubKey(idMatch[1]));
+  if (idMatch) return findTouchlineArenaClub(idMatch[1]);
 
   return null;
 }
@@ -1704,46 +1643,16 @@ function parseFixtureClubNames(name?: string) {
     .slice(0, 2);
 }
 
-function normalizeClubKey(value?: string) {
-  return (value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/&/g, " and ")
-    .replace(/\b(?:fc|football club)\b/gi, "")
-    .replace(/[^a-z0-9]+/gi, " ")
-    .trim()
-    .toLowerCase();
-}
-
-function normalizeClubHubSlug(value?: string) {
-  return (value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/gi, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-}
-
-function clubHubHref(club: PremierClubVisual, locale: TouchLineLocale) {
-  return touchlineClubHubHref(locale, normalizeClubHubSlug(club.aliases[0] ?? club.name));
+function clubHubHref(club: TouchlineArenaClub, locale: TouchLineLocale) {
+  return touchlineClubHubHref(locale, club.slug);
 }
 
 function findPremierClubByHubParam(value?: string | null) {
-  const normalized = normalizeClubHubSlug(value ?? "");
-  if (!normalized) return null;
-
-  return PREMIER_CLUB_VISUALS.find((club) =>
-    [club.teamId, club.shortCode, club.name, ...club.aliases]
-      .map(normalizeClubHubSlug)
-      .some((candidate) => candidate === normalized),
-  ) ?? null;
+  return findTouchlineArenaClub(value);
 }
 
 function getPremierClubVisual(name?: string, shortCode?: string) {
-  const normalizedName = normalizeClubKey(name);
-  const normalizedCode = normalizeClubKey(shortCode);
-  return PREMIER_CLUB_LOOKUP.get(normalizedName) ?? PREMIER_CLUB_LOOKUP.get(normalizedCode);
+  return findTouchlineArenaClub(name, shortCode);
 }
 
 function liveOptimizedClubLogoUrl(logoUrl?: string | null) {
@@ -1759,49 +1668,45 @@ function getPremierClubVisualForFixtureSide(
   fixture: TouchlinePublicFixture,
   side: "home" | "away",
 ) {
-  const team = side === "home" ? fixture.homeTeam : fixture.awayTeam;
-  const providerTeamId = String(team?.providerId ?? "").trim();
-  if (providerTeamId) {
-    const officialClub = PREMIER_CLUB_VISUALS.find((club) => club.teamId === providerTeamId);
-    if (officialClub) return officialClub;
-  }
-
-  const match = buildFixtureClubMatches([fixture])[0] ?? null;
-  const symbol = side === "home" ? match?.home : match?.away;
-  return symbol ? getPremierClubVisual(symbol.name, symbol.shortCode) ?? null : null;
+  const source = fixtureClubSources(fixture)[side === "home" ? 0 : 1];
+  if (!source) return null;
+  const resolution = resolveTouchlineArenaFixtureClub(source);
+  return resolution.kind === "canonical" ? resolution.club : null;
 }
 
-function clubShortCode(name?: string, shortCode?: string) {
+/**
+ * A fixture that the provider did not identify as one of our twenty clubs may
+ * be rendered with only its own text. It must never borrow a canonical short
+ * code merely because its display name happens to match a TouchLine club.
+ */
+function fixtureShortCode(name?: string, shortCode?: string) {
   const officialCode = shortCode?.replace(/[^a-z0-9]/gi, "").toUpperCase();
   if (officialCode) return officialCode.slice(0, 3);
-
-  const premierVisual = getPremierClubVisual(name, shortCode);
-  if (premierVisual) return premierVisual.shortCode;
 
   const words = (name ?? "FC").split(/\s+/).filter(Boolean);
   if (words.length > 1) return words.slice(0, 3).map((word) => word[0]).join("").toUpperCase();
   return (words[0] ?? "FC").replace(/[^a-z0-9]/gi, "").slice(0, 3).toUpperCase() || "FC";
 }
 
-function fixtureClubSources(fixture: TouchlinePublicFixture): FixtureClubSource[] {
+function fixtureClubSources(fixture: TouchlinePublicFixture): readonly [FixtureClubSource | undefined, FixtureClubSource | undefined] {
   const parsedNames = parseFixtureClubNames(fixture.name);
-  const clubs: Array<FixtureClubSource | undefined> = [
+  return preserveTouchlineArenaFixtureSides(
     fixture.homeTeam ?? (parsedNames[0] ? { name: parsedNames[0] } : undefined),
     fixture.awayTeam ?? (parsedNames[1] ? { name: parsedNames[1] } : undefined),
-  ];
-  return clubs.filter((club): club is FixtureClubSource => Boolean(club?.name));
+  );
 }
 
 function fixtureClubSourceToSymbol(fixture: TouchlinePublicFixture, club: FixtureClubSource, index: number): ArenaClubSymbol {
   const name = club.name ?? `Club ${index + 1}`;
-  const visual = PREMIER_CLUB_VISUALS.find((candidate) => candidate.teamId === String(club.providerId ?? ""))
-    ?? getPremierClubVisual(name, club.shortCode);
+  const resolution = resolveTouchlineArenaFixtureClub(club);
+  const visual = resolution.kind === "canonical" ? resolution.club : null;
+  const externalSource = resolution.kind === "external" ? resolution.source : null;
   return {
     id: `${fixture.id}-${club.providerId ?? name}-${index}`,
     fixtureId: fixture.id,
-    name: visual?.name ?? name,
-    shortCode: visual?.shortCode ?? clubShortCode(name, club.shortCode),
-    logoUrl: visual?.logoUrl ?? club.logoUrl,
+    name: visual?.name ?? externalSource?.name ?? name,
+    shortCode: visual?.shortCode ?? externalSource?.shortCode ?? fixtureShortCode(name, club.shortCode),
+    logoUrl: visual?.logoUrl ?? externalSource?.logoUrl,
     accent: visual?.accent ?? "#7ae7ff",
     secondaryAccent: visual?.secondaryAccent ?? "#b5ff4b",
     status: formatFixtureScore(fixture),
@@ -1948,7 +1853,7 @@ function roleSortWeight(role: ArenaPlayer["role"]) {
 
 function normalizeLiveClubSquad(
   players: TeamBuilderSquadPlayer[],
-  club: PremierClubVisual,
+  club: TouchlineArenaClub,
   responseTeamId: string | number | null | undefined,
 ) {
   return normalizeTouchlineLiveSquad(players, club, responseTeamId);
@@ -1957,7 +1862,7 @@ function normalizeLiveClubSquad(
 function fixtureStarterPlayersForClub(
   lineups: TouchlinePublicFantasyLineupMember[],
   squad: TeamBuilderSquadPlayer[],
-  club: PremierClubVisual,
+  club: TouchlineArenaClub,
 ) {
   const squadByProviderId = new Map(
     squad.flatMap((player) => {
@@ -2004,7 +1909,7 @@ function fixtureStarterPlayersForClub(
 
 function buildVerifiedLiveLineup(
   starters: TeamBuilderSquadPlayer[],
-  club: PremierClubVisual,
+  club: TouchlineArenaClub,
   forbiddenPlayerIds: ReadonlySet<string> = new Set<string>(),
 ) {
   if (starters.length !== 11) return [] as TeamBuilderSquadPlayer[];
@@ -2267,8 +2172,8 @@ function buildLiveSimulationCardProducts({
   fixtureId: string;
   homeSquad: TeamBuilderSquadPlayer[];
   awaySquad: TeamBuilderSquadPlayer[];
-  homeClub: PremierClubVisual;
-  awayClub: PremierClubVisual;
+  homeClub: TouchlineArenaClub;
+  awayClub: TouchlineArenaClub;
 }): LiveSimulationCardProduct[] {
   if (homeSquad.length !== 11 || awaySquad.length !== 11) return [];
   const homeEleven = buildVerifiedLiveLineup(homeSquad, homeClub);
@@ -3381,7 +3286,7 @@ function filterRumourSignals(
 ) {
   const search = filters.search.trim().toLowerCase();
   const favoriteIds = new Set(filters.favorites);
-  const selectedClub = TEAM_BUILDER_CLUBS.find((club) => club.teamId === filters.clubKey);
+  const selectedClub = TOUCHLINE_ARENA_CLUBS.find((club) => club.teamId === filters.clubKey);
 
   return signals
     .filter((signal) => {
@@ -3512,9 +3417,10 @@ export default function ArenaClient({
   initialFantasyLineup = null,
 }: ArenaClientProps) {
   const standaloneExperience = standaloneMarket ? "market" : standalonePanel ?? null;
-  const initialBuilderClubKey = TEAM_BUILDER_CLUBS.some((club) => club.teamId === initialContractClubId)
-    ? initialContractClubId!
-    : TEAM_BUILDER_CLUBS[0].teamId;
+  const initialBuilderClubResolution = resolveTouchlineArenaInitialClub(initialContractClubId);
+  const initialBuilderClubKey = initialBuilderClubResolution.kind === "unavailable"
+    ? null
+    : initialBuilderClubResolution.club.teamId;
   const stageRef = useRef<HTMLElement | null>(null);
   const actionLayerRef = useRef<HTMLElement | null>(null);
   const arenaFullscreenRequestedRef = useRef(false);
@@ -3964,11 +3870,13 @@ export default function ArenaClient({
   const isSelectedBenchInMatchday = Boolean(selectedBench && quickSubstitutionInteractiveBench.some((bench) => bench.id === selectedBench.id));
   const selectedBenchFormationLocked = Boolean(selectedBench && isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, replacementTarget));
   const canSelectedBenchReplaceTarget = Boolean(selectedBench && replacementTarget && canBenchReplaceTarget(selectedBench, replacementTarget));
-  const selectedBuilderClub = PREMIER_CLUB_VISUALS.find((club) => club.teamId === selectedBuilderClubKey) ?? PREMIER_CLUB_VISUALS[0];
+  const selectedBuilderClub = findTouchlineArenaClub(selectedBuilderClubKey);
   // The Arena's general ClubHub navigation is a discovery action. It must not
   // silently inherit the builder's initial Manchester City selection.
   const allClubsHubHref = touchlineClubHubHref(siteLanguage);
-  const selectedBuilderClubHubHref = clubHubHref(selectedBuilderClub, siteLanguage);
+  const selectedBuilderClubHubHref = selectedBuilderClub
+    ? clubHubHref(selectedBuilderClub, siteLanguage)
+    : null;
   const selectedFormation = arenaFormationDefinition(arenaDisplayFormationKey);
   const spotlightPlayerCard = spotlightPlayer
     ? arenaCardToPlayer(spotlightPlayer, isDemoLineup ? touchlineDemoTierForPlayer(spotlightPlayer.id, spotlightPlayer.name) : undefined)
@@ -4047,7 +3955,7 @@ export default function ArenaClient({
       ? { coach: TOUCHLINE_DEMO_COACH, countryCode3: "ITA" }
       : null);
   const ownerCoachClub = activeArenaCoachIdentity?.coach.teamId
-    ? PREMIER_CLUB_VISUALS.find((club) => club.teamId === String(activeArenaCoachIdentity.coach.teamId)) ?? null
+    ? findTouchlineArenaClub(activeArenaCoachIdentity.coach.teamId)
     : null;
   const ownerCoachOffer = activeArenaCoachIdentity?.coach
     ? coachOffersByProviderId[activeArenaCoachIdentity.coach.providerId] ?? null
@@ -4166,7 +4074,7 @@ export default function ArenaClient({
     () => selectedLiveHomeClub
       ? createTouchlineArenaCoachSlot(
           selectedLiveHomeCoachIdentity?.coach ?? null,
-          TEAM_BUILDER_CLUB_RANK[selectedLiveHomeClub.shortCode] ?? null,
+          selectedLiveHomeClub.touchlineRank,
         )
       : null,
     [selectedLiveHomeClub, selectedLiveHomeCoachIdentity?.coach],
@@ -4175,7 +4083,7 @@ export default function ArenaClient({
     () => selectedLiveAwayClub
       ? createTouchlineArenaCoachSlot(
           selectedLiveAwayCoachIdentity?.coach ?? null,
-          TEAM_BUILDER_CLUB_RANK[selectedLiveAwayClub.shortCode] ?? null,
+          selectedLiveAwayClub.touchlineRank,
         )
       : null,
     [selectedLiveAwayClub, selectedLiveAwayCoachIdentity?.coach],
@@ -4275,7 +4183,7 @@ export default function ArenaClient({
         competition: "england",
       });
   const rosterRatingTotal = clubOwnerRoster.reduce((sum, card) => sum + (card.seasonTotalRating ?? 0), 0);
-  const isBuilderSquadCurrent = builderSquadClubKey === selectedBuilderClub.teamId;
+  const isBuilderSquadCurrent = Boolean(selectedBuilderClub && builderSquadClubKey === selectedBuilderClub.teamId);
   const currentBuilderSquad = isBuilderSquadCurrent ? builderSquad : [];
   const sortedBuilderSquad = [...currentBuilderSquad].sort((a, b) => roleSortWeight(a.role) - roleSortWeight(b.role) || a.name.localeCompare(b.name));
   const authoritativeOwnedSquadCount = marketInventorySnapshot?.activeContractCount ?? ownedSquadCount;
@@ -4409,7 +4317,9 @@ export default function ArenaClient({
   const t = useCallback((key: Parameters<typeof touchLineT>[1]) => touchLineT(siteLanguage, key), [siteLanguage]);
   const marketUi = useMemo(() => getTouchLineMarketCopy(siteLanguage), [siteLanguage]);
   const builderStatus = builderLoadState.status === "loading"
-    ? `${marketUi.updatingClub}: ${selectedBuilderClub.name}`
+    ? selectedBuilderClub
+      ? `${marketUi.updatingClub}: ${selectedBuilderClub.name}`
+      : marketUi.genericError
     : builderLoadState.status === "ready"
       ? `${builderLoadState.playerCount ?? 0} ${t("playersLoaded")}`
       : builderLoadState.status === "error"
@@ -5023,6 +4933,7 @@ export default function ArenaClient({
     let cancelled = false;
     let settled = false;
     const teamId = selectedBuilderClubKey;
+    if (!teamId) return;
     const bootstrapKey = `${arenaPersistencePrincipal.userId}:${teamId}`;
     if (marketBootstrapAttemptRef.current === bootstrapKey) return;
     marketBootstrapAttemptRef.current = bootstrapKey;
@@ -5209,7 +5120,7 @@ export default function ArenaClient({
         players
           .filter(hasArenaCardForHydration)
           .map((player) => clubForArenaPlayer(player))
-          .filter((club): club is PremierClubVisual => Boolean(club))
+          .filter((club): club is TouchlineArenaClub => Boolean(club))
           .map((club) => [club.teamId, club] as const),
       ).values(),
     ).filter((club) => {
@@ -5474,7 +5385,7 @@ export default function ArenaClient({
       setSelectedLiveSimulationCardId(null);
     });
 
-    async function loadClubSquad(club: PremierClubVisual) {
+    async function loadClubSquad(club: TouchlineArenaClub) {
       const params = new URLSearchParams({ teamId: club.teamId });
       const { ok, payload } = await touchlineJsonRequest<
         | { ok: true; teamId: string; players: TeamBuilderSquadPlayer[] }
@@ -5599,7 +5510,21 @@ export default function ArenaClient({
     if (activeArenaPanel !== "market") return;
 
     let cancelled = false;
-    const builderClub = PREMIER_CLUB_VISUALS.find((club) => club.teamId === selectedBuilderClubKey) ?? PREMIER_CLUB_VISUALS[0];
+    const builderClub = findTouchlineArenaClub(selectedBuilderClubKey);
+    if (!builderClub) {
+      queueMicrotask(() => {
+        if (cancelled) return;
+        setMarketInventoryMode("unavailable");
+        setMarketInventorySnapshot(null);
+        setBuilderSquad([]);
+        setBuilderSquadClubKey(null);
+        setSelectedBuilderPlayerId(null);
+        setBuilderLoadState({ status: "error", message: marketUi.genericError });
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
     queueMicrotask(() => {
       if (cancelled) return;
       setMarketInventoryMode("checking");
@@ -5676,7 +5601,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [activeArenaPanel, arenaAccountSyncStatus, arenaPersistencePrincipal, marketInventoryRevision, selectedBuilderClubKey]);
+  }, [activeArenaPanel, arenaAccountSyncStatus, arenaPersistencePrincipal, marketInventoryRevision, marketUi.genericError, selectedBuilderClubKey]);
 
   useEffect(() => {
     if (activeArenaPanel !== "news") return;
@@ -7832,7 +7757,7 @@ export default function ArenaClient({
                   ) : null}
                 </div>
               ) : TOUCHLINE_LIVE_COACHES.map(({ coach, countryCode3 }) => {
-                const club = PREMIER_CLUB_VISUALS.find((candidate) => candidate.teamId === coach.teamId) ?? null;
+                const club = findTouchlineArenaClub(coach.teamId);
                 const offer = coachOffersByProviderId[coach.providerId];
                 if (!offer) return null;
                 const slot = createTouchlineArenaCoachSlot(
@@ -9437,11 +9362,11 @@ export default function ArenaClient({
                         </div>
                       </div>
                       <div className="team-builder-club-grid" role="region" tabIndex={0} aria-label={marketUi.ariaEnglandClubs}>
-                        {TEAM_BUILDER_CLUBS.map((club) => (
+                        {TOUCHLINE_ARENA_CLUBS.map((club) => (
                           <button
                             key={club.teamId}
                             type="button"
-                            className={club.teamId === selectedBuilderClub.teamId ? "is-active" : ""}
+                            className={club.teamId === selectedBuilderClub?.teamId ? "is-active" : ""}
                             onClick={() => {
                               if (club.teamId === selectedBuilderClubKey) return;
                               setSelectedBuilderPlayerId(null);
@@ -9477,19 +9402,23 @@ export default function ArenaClient({
                       </div>
                     </section>
 
-                    <section className={`team-builder-roster ${isMarketDataRefreshing ? "is-refreshing" : ""}`} data-refresh-label={marketUi.updatingClub} aria-busy={isMarketDataRefreshing} aria-label={marketUi.clubSquadAria(selectedBuilderClub.name)}>
+                    <section className={`team-builder-roster ${isMarketDataRefreshing ? "is-refreshing" : ""}`} data-refresh-label={marketUi.updatingClub} aria-busy={isMarketDataRefreshing} aria-label={marketUi.clubSquadAria(selectedBuilderClub?.name ?? "")}>
                       <div className="team-builder-roster-head">
-                        <span className="team-builder-club-logo" style={{ "--club-accent": selectedBuilderClub.accent, "--club-secondary": selectedBuilderClub.secondaryAccent } as CSSProperties}>
-                          {selectedBuilderClub.logoUrl ? <img src={selectedBuilderClub.logoUrl} alt="" draggable={false} /> : selectedBuilderClub.shortCode}
-                        </span>
+                        {selectedBuilderClub ? (
+                          <span className="team-builder-club-logo" style={{ "--club-accent": selectedBuilderClub.accent, "--club-secondary": selectedBuilderClub.secondaryAccent } as CSSProperties}>
+                            {selectedBuilderClub.logoUrl ? <img src={selectedBuilderClub.logoUrl} alt="" draggable={false} /> : selectedBuilderClub.shortCode}
+                          </span>
+                        ) : null}
                         <div>
                           <span>{builderStatus}</span>
-                          <strong>{selectedBuilderClub.name}</strong>
+                          <strong>{selectedBuilderClub?.name ?? ""}</strong>
                           <small>{t("choosePlayerPremiumCard")}</small>
                         </div>
-                        <a className="team-builder-club-hub" href={selectedBuilderClubHubHref}>
-                          {t("clubHub")}
-                        </a>
+                        {selectedBuilderClubHubHref ? (
+                          <a className="team-builder-club-hub" href={selectedBuilderClubHubHref}>
+                            {t("clubHub")}
+                          </a>
+                        ) : null}
                       </div>
 
                       <div className="team-builder-market-tools" aria-label={t("search")}>
@@ -9782,7 +9711,7 @@ export default function ArenaClient({
                       <select value={rumourClubKey} onChange={(event) => setRumourClubKey(event.target.value)}>
                         <option value="all">{t("allClubs")}</option>
                         <option value="favorites">{t("favorites")}</option>
-                        {TEAM_BUILDER_CLUBS.map((club) => (
+                        {TOUCHLINE_ARENA_CLUBS.map((club) => (
                           <option key={club.teamId} value={club.teamId}>{club.shortCode} / {club.name}</option>
                         ))}
                       </select>

@@ -180,7 +180,11 @@
 
 .pitchAndLeaders {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
+  /* Reserve a deliberate leader rail before growing the field. A 105×68
+     pitch remains the dominant surface, but it no longer consumes the rail
+     at desktop widths and forces live cards into a clipped 2×2 grid. */
+  grid-template-columns: minmax(0, min(64%, 922px)) minmax(0, 1fr);
+  justify-content: center;
   align-items: start;
   gap: clamp(14px, 2vw, 24px);
   margin-top: 18px;
@@ -204,17 +208,44 @@
 .positionLeaders {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  align-items: start;
   gap: 12px;
+  min-width: 0;
+}
+
+/* These four cards are the live ClubHub leaders, not static images. The
+   source card component owns click/keyboard zoom and the animated perimeter;
+   this surface only gives that component enough measured space to render.
+   The former host clipped the bottom of the real artwork with overflow:hidden.
+ */
+.positionLeaders > [data-clubhub-card-spotlight^="position-"] {
+  min-width: 0;
+  min-height: 0;
+  align-content: start;
+  overflow: visible;
+}
+
+.positionLeaders > [data-clubhub-card-spotlight^="position-"] > div {
+  width: min(100%, 112px);
+  min-height: 0;
+  margin-inline: auto;
+}
+
+.positionLeaders > [data-clubhub-card-spotlight^="position-"] [data-touchline-card-zoom="trigger"] {
   min-width: 0;
 }
 
 .pitch {
   position: relative;
   /* A regulation 105×68 landscape pitch. The max width fills the ClubHub
-     content column on desktop while width:100% keeps it inside every page. */
-  width: min(100%, 1152px);
+     content column on desktop while width:100% keeps it inside every page.
+     Capping the pitch at 922px reserves approximately 20% of the former
+     desktop field allocation for four complete leader cards. */
+  width: min(100%, 922px);
   min-width: 0;
   --lineup-safe-top-inset: 0px;
+  container-type: inline-size;
   min-height: 0;
 }
 
@@ -229,14 +260,18 @@
   left: var(--lineup-x);
   top: var(--lineup-y);
   width: clamp(62px, 7.6vw, 94px);
-  --touchline-card-static-scale: .1348837209;
   display: grid;
   justify-items: center;
   overflow: visible;
   transform: translate(-50%, -50%);
 }
 
-.pitchCard { --touchline-attack-card-long-edge: 94px; }
+
+
+/* The closest canonical defensive slots are 22% of pitch height apart,
+   about 14% of its width. Reserve space for the separate name plate and gap
+   before assigning the card height; its own renderer measures the width. */
+.pitchCard { --touchline-attack-card-long-edge: clamp(28px, calc(14cqw - 34px), 94px); }
 
 /* The name belongs to the pitch, not to the card artwork.  Keeping this as a
    sibling of the zoom trigger means it has one stable anchor at every card
@@ -343,8 +378,31 @@
   .pendingCard { min-height: 86px; }
 }
 
-@media (min-width: 981px) and (max-width: 1199px) {
+/* A side rail is only safe when there is room for a regulation field and two
+   full leader cards. In the middle desktop band we intentionally stack the
+   field over a four-card strip rather than shrinking/cropping the artwork. */
+@media (min-width: 981px) and (max-width: 1599px) {
+  .pitchAndLeaders {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .pitchViewport {
+    width: min(100%, 860px);
+    justify-self: center;
+  }
+
   .pitch { width: min(100%, 860px); }
+
+  .positionLeaders {
+    width: min(100%, 860px);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    justify-self: center;
+  }
+
+  .positionLeaders > [data-clubhub-card-spotlight^="position-"] > div {
+    width: min(100%, 112px);
+  }
 }
 
 @media (max-width: 720px) {
@@ -400,10 +458,9 @@
 
   .player {
     width: clamp(48px, 17vw, 70px);
-    --touchline-card-static-scale: .1348837209;
   }
 
-  .pitchCard { --touchline-attack-card-long-edge: 94px; }
+
 
   .playerName {
     bottom: calc(100% + 5px);
@@ -477,10 +534,9 @@
 
   .player {
     width: clamp(44px, 13vw, 66px);
-    --touchline-card-static-scale: .1348837209;
   }
 
-  .pitchCard { --touchline-attack-card-long-edge: 94px; }
+
 
   .playerName {
     bottom: calc(100% + 5px);
@@ -498,15 +554,14 @@
   }
 
   .pitch {
-    width: min(100%, 360px);
+    width: min(100%, 760px);
   }
 
   .player {
     width: 94px;
-    --touchline-card-static-scale: .1348837209;
   }
 
-  .pitchCard { --touchline-attack-card-long-edge: 94px; }
+
 
   .playerName {
     width: clamp(82px, 12vw, 118px);

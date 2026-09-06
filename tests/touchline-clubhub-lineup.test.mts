@@ -229,12 +229,13 @@ test("ClubHub retains all eleven football slots even when a card publication is 
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation|activeContractCard: activeContract/);
 });
 
-test("ClubHub uses Squad Preview only in the 24 hours before kick-off and never calls it expected", () => {
+test("ClubHub uses Squad Preview from T−24 until confirmation or a terminal fixture, never as an expected line-up", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 
   assert.match(source, /Squad Preview/);
   assert.match(source, /isClubHubSquadPreviewWindow/);
   assert.match(source, /startsAtIso/);
+  assert.match(source, /fixtureStatus: matchup\?\.initialFixture\?\.status/);
   assert.match(source, /const showPreviewContext = !confirmed && squadPreviewWindow/);
   assert.match(source, /Line-up confirmed/);
   assert.match(source, /showPreviewContext\n\s*\? \(isPortuguese \? "Prévia do elenco" : "Squad Preview"\)\n\s*:\s*\(isPortuguese \? "Escalação" : "Line-up"\)/);
@@ -243,13 +244,19 @@ test("ClubHub uses Squad Preview only in the 24 hours before kick-off and never 
   assert.doesNotMatch(source, /Predicted line-up/);
 });
 
-test("ClubHub preview window preserves a confirmed line-up and begins exactly 24 hours before kick-off", () => {
+test("ClubHub preview window requires an absolute fixture instant and preserves confirmed line-ups", () => {
   const kickoff = "2026-09-12T14:00:00.000Z";
   assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "confirmed", startsAt: kickoff, now: Date.parse("2026-09-11T13:59:59.000Z") }), false);
   assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Date.parse("2026-09-11T13:59:59.000Z") }), false);
   assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Date.parse("2026-09-11T14:00:00.000Z") }), true);
-  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Date.parse("2026-09-12T14:00:01.000Z") }), false);
-  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: null, now: Date.parse("2026-09-11T14:00:00.000Z") }), true);
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: "2026-09-12T16:00:00+02:00", now: Date.parse("2026-09-11T14:00:00.000Z") }), true);
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: "2026-09-12T11:00:00-03:00", now: Date.parse("2026-09-11T14:00:00.000Z") }), true);
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, fixtureStatus: "LIVE", now: Date.parse("2026-09-12T14:00:01.000Z") }), true);
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, fixtureStatus: "Full Time", now: Date.parse("2026-09-12T14:00:01.000Z") }), false);
+  for (const startsAt of [null, undefined, "", "   ", "invalid", "2026-02-30T14:00:00.000Z", "2026-09-12T14:00:00"]) {
+    assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt, now: Date.parse("2026-09-11T14:00:00.000Z") }), false);
+  }
+  assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Number.NaN }), false);
 });
 
 test("ClubHub pitch shows the name only above each athlete, not a match rating", () => {
@@ -262,7 +269,7 @@ test("ClubHub pitch shows the name only above each athlete, not a match rating",
   assert.match(styles, /font-size: clamp\(6\.05px, 1\.595vw, 7\.975px\)/);
 });
 
-test("ClubHub places the four canonical positional leaders beside the pitch and leaves the Bench subtitle blank", () => {
+test("ClubHub reserves a complete responsive surface for the four canonical positional leaders and leaves the Bench subtitle blank", () => {
   const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
   const lineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
@@ -273,7 +280,9 @@ test("ClubHub places the four canonical positional leaders beside the pitch and 
   assert.doesNotMatch(page, /ClubHubPremiumOverviewSection/);
   assert.match(lineup, /className=\{styles\.pitchAndLeaders\}/);
   assert.match(lineup, /className=\{styles\.positionLeaders\}/);
-  assert.match(styles, /grid-template-columns: minmax\(0, 1fr\) minmax\(340px, 390px\)/);
+  assert.match(styles, /grid-template-columns: minmax\(0, min\(64%, 922px\)\) minmax\(0, 1fr\)/);
+  assert.match(styles, /\[data-clubhub-card-spotlight\^="position-"\][\s\S]*?overflow: visible/);
+  assert.match(styles, /@media \(min-width: 981px\) and \(max-width: 1599px\)[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(technical, /<p aria-hidden="true"\s*\/>/);
   assert.doesNotMatch(technical, /9 cards from the available squad/);
 });
@@ -286,7 +295,7 @@ test("ClubHub preserves the canonical Market formation on a regulation landscape
   assert.match(source, /orientation="horizontal"/);
   assert.match(source, /surfaceVariant="premium-stadium"/);
   assert.match(source, /orientation="upright"/);
-  assert.match(styles, /width: min\(100%, 1152px\)/);
+  assert.match(styles, /width: min\(100%, 922px\)/);
   const technical = readFileSync(new URL("../components/touchline/ClubHubMatchdayTechnicalArea.tsx", import.meta.url), "utf8");
   assert.match(technical, /<TouchlineClubPerimeterTrace accent="#a3ff12"/);
 });
