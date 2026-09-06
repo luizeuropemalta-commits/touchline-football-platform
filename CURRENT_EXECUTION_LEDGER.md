@@ -13,6 +13,26 @@ After material work:
 2. append dated evidence to the long ledger;
 3. mark superseded decisions explicitly rather than deleting them.
 
+# 2026-09-06 — Functional QA analytics no-write barrier
+
+- Follow-up: Fiscal-approved exact source diff 0c1c4b62 retained for authorized local commit; alternative normalization/test patch not integrated. Four controlled actual-effect scenarios pass outside the commit. Release/build receipts and immutable identity belong to the closing Engineering handoff; no remote action or production authority is inferred.
+
+- Starting from exact candidate SHA
+  `955f8a272f097f40fca7e6e4d5d678fd7ae5b80f`, added one explicit
+  `qa-preview` guard to the automatic activity tracker. The guard runs before
+  authentication, storage access and the analytics POST; non-QA environments
+  retain the existing behaviour.
+- Added a regression contract proving QA is disabled, Production/local remain
+  enabled, and the tracker source orders the QA guard before both
+  `supabase.auth.getUser()` and `fetch("/api/touchline-analytics")`.
+- Evidence: red-first test failure; focused/adjacent `45/45`; complete and
+  release `1618/1618`; TypeScript PASS; ESLint `0` errors with six unrelated
+  established warnings; mission governance, deployment-input, release
+  readiness, diff hygiene and local Next production build `139/139` PASS.
+- Scope remained local and reversible. No commit, push, remote build, deploy,
+  alias change, database call or Production action was performed. Independent
+  Fiscal review is the next required gate.
+
 # 2026-09-03 — Functional ClubHub table-first QA candidate
 
 # 2026-09-05 — ClubHub visual refinement candidate 042

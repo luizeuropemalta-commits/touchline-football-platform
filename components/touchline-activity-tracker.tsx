@@ -14,6 +14,7 @@ import {
   parseTouchlineAnalyticsNextSendAt,
   TOUCHLINE_ANALYTICS_MIN_CADENCE_MS,
 } from "@/lib/touchlineArena/analytics-cadence";
+import { canStartTouchlineAnalyticsTracking } from "@/lib/touchlinePreview/isolation";
 
 const TOUCHLINE_ANALYTICS_NEXT_SEND_STORAGE_KEY = "touchline-analytics-next-send-at";
 
@@ -24,7 +25,9 @@ export function TouchlineActivityTracker() {
   const lastInteraction = useRef(0);
 
   useEffect(() => {
-    if (!area) return;
+    if (!area || !canStartTouchlineAnalyticsTracking(
+      process.env.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE,
+    )) return;
 
     let active = true;
     let timer: number | undefined;

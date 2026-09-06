@@ -12,6 +12,10 @@ import {
 import {
   getOrCreateIdentityBoundBrowserSessionId,
 } from "../lib/touchlineArena/browser-storage.ts";
+import {
+  canStartTouchlineAnalyticsTracking,
+  TOUCHLINE_QA_PREVIEW_MODE,
+} from "../lib/touchlinePreview/isolation.ts";
 
 const routeSource = fs.readFileSync(
   new URL("../app/api/touchline-analytics/route.ts", import.meta.url),
@@ -167,6 +171,20 @@ test("analytics route keeps auth, RBAC, origin and forged-session boundaries ser
   assert.match(trackerSource, /credentials:\s*"same-origin"/);
   assert.match(trackerSource, /TOUCHLINE_ANALYTICS_NEXT_SEND_STORAGE_KEY/);
   assert.match(trackerSource, /canSendTouchlineAnalyticsObservation/);
+});
+
+test("analytics tracker exits before auth and POST in QA while preserving non-QA tracking", () => {
+  assert.equal(canStartTouchlineAnalyticsTracking(TOUCHLINE_QA_PREVIEW_MODE), false);
+  assert.equal(canStartTouchlineAnalyticsTracking("production"), true);
+  assert.equal(canStartTouchlineAnalyticsTracking(undefined), true);
+
+  const qaGuard = trackerSource.indexOf("if (!area || !canStartTouchlineAnalyticsTracking(");
+  const authRead = trackerSource.indexOf("supabase.auth.getUser()");
+  const analyticsPost = trackerSource.indexOf('fetch("/api/touchline-analytics"');
+  assert.ok(qaGuard >= 0, "QA no-write guard must be explicit in the tracker");
+  assert.ok(qaGuard < authRead, "QA no-write guard must run before authentication");
+  assert.ok(qaGuard < analyticsPost, "QA no-write guard must run before analytics POST");
+  assert.match(trackerSource, /process\.env\.NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE/);
 });
 
 test("analytics database command is atomic, service-only and principal-bounded", () => {

@@ -18,6 +18,16 @@ export const TOUCHLINE_ISOLATED_PREVIEW_HEADER = "x-touchline-isolated-preview";
 export const TOUCHLINE_PREVIEW_AUTH_UNAVAILABLE_DIAGNOSTIC =
   "TL_PREVIEW_AUTH_UNAVAILABLE_NO_STAGING_CONFIGURATION" as const;
 
+/**
+ * Automatic activity analytics are disabled in functional QA so opening an
+ * audited page cannot create observations. Keep this client-safe so the
+ * tracker exits before authentication, storage or network work. Production
+ * and ordinary local development retain their current analytics behavior.
+ */
+export function canStartTouchlineAnalyticsTracking(deploymentMode: string | undefined) {
+  return deploymentMode !== TOUCHLINE_QA_PREVIEW_MODE;
+}
+
 type TouchlineEnvironment = Readonly<Record<string, string | undefined>>;
 
 export type TouchlineIsolatedPreviewEnvironment =

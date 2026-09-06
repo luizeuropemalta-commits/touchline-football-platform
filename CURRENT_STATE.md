@@ -1,5 +1,28 @@
 # TouchLine Current State
 
+## Functional QA analytics no-write barrier — APPROVED SOURCE / LOCAL COMMIT PREPARATION
+
+- On 6 September 2026 the exact local QA candidate based on
+  `955f8a272f097f40fca7e6e4d5d678fd7ae5b80f` received a client-safe analytics
+  boundary: when `NEXT_PUBLIC_TOUCHLINE_DEPLOYMENT_MODE=qa-preview`, the
+  activity tracker exits before Supabase client creation, authentication,
+  browser storage, network requests, timers and event listeners. Opening
+  `/touchline-clubs` in functional QA can therefore no longer create an
+  automatic analytics observation.
+- Production and ordinary local development preserve their prior tracking
+  behaviour. The correction is deliberately scoped to the automatic tracker;
+  it does not change the authenticated analytics API contract or any database
+  function.
+- Regression-first evidence: the new boundary test failed before the helper
+  existed and passed after implementation. Focused and adjacent coverage
+  passes `45/45`; the complete suite and canonical release suite pass
+  `1618/1618`; TypeScript, mission governance, deployment-input, release
+  readiness, `git diff --check` and the local production build of all
+  `139/139` pages pass. ESLint reports `0` errors and six established warnings
+  outside this patch.
+- Fiscal reviewed the exact three-file source diff `0c1c4b62280ab91075dc8d3d5716cad104802d9e81b4b371c259cd7b8dfee73f`. Local commit preparation preserves this source without the alternative mode-normalization patch. A controlled execution of the actual tracker effect passes four scenarios: QA has no client/auth/storage/POST/timer, non-QA initial and periodic tracking remains, and anonymous visitors do not send. This evidence is local, not a deployed-mode or binding certificate.
+- This entry precedes the authorized local commit. Final immutable identity and fresh release/build receipts are recorded in the Engineering handoff. No push, Vercel build, QA alias change, database write, Production action or external social delivery is authorized here.
+
 ## ClubHub visual refinement 042 — LOCAL CORRECTION / QA RE-GATE REQUIRED
 
 - New local-only visual follow-up: the fixture rail must not use stadium
