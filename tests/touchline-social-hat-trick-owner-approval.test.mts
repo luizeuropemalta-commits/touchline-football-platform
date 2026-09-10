@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const EXPECTED_COMBINED_HASH =
-  "a0bc151bfbe5348e204bac32ad2893e27490d8c0dace7d1d82953d6b01a0ef38";
+  "ab5388e4ad800ffe81d1912eee54126f63833f6ccee4f0ec8edbf2590ed69294";
 
 const ACTIVE_043_CANDIDATE_COMBINED_HASH =
   "35439440aee10bdb05fc968c31d978445c1eac7f41e045dbcc1de12f3fa41760";
@@ -14,7 +14,7 @@ const EXPECTED_FILES = [
   ["components/touchline/social/TouchlineSocialRankingDraft.module.css", "62e76dd7cb22e6099bdd7e7f8fe9d13822ca0f86746d9d471f5323ca6d78cd2e"],
   ["components/touchline/social/TouchlineSocialFixtureScoreboard.tsx", "09e36f2e203fef2103a08d3fa482942f192ba193b6722e8eddcbc6240921f4e2"],
   ["components/touchline/social/TouchlineSocialFixtureScoreboard.module.css", "b03c09fde61c9433098c21aa10b980dbf70757ed7f0f87d76c2cd3fb500f680c"],
-  ["components/touchline/cards/TouchlineEliteExactCard.tsx", "6cb7a2565e02f5ef18e089ede11d9fc682745a14eeb6587fbeb3e01fb8a55f9f"],
+  ["components/touchline/cards/TouchlineEliteExactCard.tsx", "1a6c386dc617d63c88fd21082d5870d811b79cd34b0f64bea6a4f0fbfe179540"],
   ["components/touchline/cards/TouchlineCardPerimeterTrace.tsx", "eac6e8b7fb59a021e205bcaf221fbf7d0b4a6f537e5e2d42304453c98e5d14a2"],
   ["public/touchlineArena/card-layouts/master-shirt-back-layout.json", "7b1b432152001e3728eb967ba9d4cdb31c6b78b4c49e54787e83d6a9529e292f"],
   ["lib/touchlineArena/social-ranking-visual-tokens.ts", "e04103f74777689205b395ed9124246253a8ce19ac2e7f237d0360243d7a27d8"],

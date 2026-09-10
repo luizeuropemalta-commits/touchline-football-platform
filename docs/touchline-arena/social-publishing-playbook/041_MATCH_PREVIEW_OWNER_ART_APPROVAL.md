@@ -1,6 +1,7 @@
 # 041 MATCH_PREVIEW owner artwork approval
 
 Decision date: **2 September 2026, Europe/Malta**
+Local source recheck: **10 September 2026, Europe/Malta**
 Authority: **Luiz Lopez, TouchLine product owner**
 Content type: **MATCH_PREVIEW**
 Placement: **ClubHub / ClubOwner Timeline / Instagram Feed candidate**
@@ -18,14 +19,19 @@ Approved evidence routes:
 ## Locked runtime identity
 
 Visual template checksum:
-`sha256:d783890f5da747381d2c0de435905fd78076494174dd9af8a13a2dd597a054be`
+`sha256:181fbf97fa849795a73a3f68f214072057dbff92d8d59902476057f74ac331da`
 
 Complete template identity checksum:
-`sha256:e8aa9bdd957ab55540f0b5c2b2bb155f4d85a945c9a739cac8c1b450a87dccb4`
+`sha256:64fd190e2d20d081b4b8a138a0cc563a23fbf82f423e01877534cc04d3fba1f4`
 
 The complete identity includes the approved visual sources, base caption source,
 canonical icon lexicon and exact rendered-field manifest. Any covered source or
 field change produces a new identity and requires a new owner review.
+
+The owner completed this local recheck on 10 September 2026 from deterministic
+non-publishable visual evidence. It refreshes this local source lock only; it
+does not approve football facts, QA runtime use, captions, outbound delivery or
+publication.
 
 ## Locked visual and data decisions
 

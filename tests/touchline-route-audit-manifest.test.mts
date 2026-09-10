@@ -15,7 +15,7 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 71);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 74);
   assert.equal(rows.filter((item) => item.kind === "API").length, 74);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
@@ -53,6 +53,16 @@ test("separates public, authenticated, ClubOwner, Admin, audit, and isolated pre
   assert.equal(row("/visual-qa/social-ranking").data, "QA_VERIFIED_RANKING_FAMILY_DRAFT");
   assert.equal(row("/visual-qa/social-next-three").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-ranking-catalogue").auth, "ADMIN");
+  for (const route of [
+    "/visual-qa/card-goalkeeper-stat-strip",
+    "/visual-qa/card-tier-component-calibration",
+    "/visual-qa/player-leader-crown",
+  ]) {
+    assert.equal(row(route).auth, "ADMIN");
+    assert.equal(row(route).role, "OWNER_ADMIN");
+    assert.equal(row(route).data, "STATIC_VISUAL_QA_FIXTURE");
+    assert.equal(row(route).status, "PENDING_VISUAL_QA");
+  }
   assert.equal(row("/visual-qa/clubhub-next-fixture-post").role, "OWNER_ADMIN");
   assert.equal(row("/visual-qa/clubhub-premium-redesign").role, "OWNER_ADMIN");
   assert.equal(row("/visual-qa/market-premium-pitch").role, "OWNER_ADMIN");
