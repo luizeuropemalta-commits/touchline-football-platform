@@ -9,6 +9,14 @@ import type {
   TouchlineRankedPlayer,
 } from "./card-ranking.ts";
 import { TOUCHLINE_POSITION_RANKING_GROUPS } from "./card-ranking.ts";
+import {
+  leadershipCrownEligibility,
+  type LeadershipDecision,
+} from "./leadership-decision.ts";
+import {
+  parsePublishedTouchlinePlayerLeadership,
+  touchlinePlayerLeadershipScope,
+} from "./player-ranking-leadership.ts";
 
 export const TOUCHLINE_ENGLAND_LEAGUE_KEY = "touchline-england";
 
@@ -39,6 +47,8 @@ export type TouchlineActiveRankingState = {
   /** Legacy immutable audit column; active presentation never reads it. */
   totalScorePoints: number | null;
   players: readonly TouchlineActiveRankingPlayer[];
+  /** Decorative metadata; absent or malformed publications fail closed. */
+  leadershipDecision?: LeadershipDecision | null;
 };
 
 export type TouchlineResolvedCardCompetition = {
@@ -66,6 +76,7 @@ export const TOUCHLINE_PRESEASON_RANKING_STATE: TouchlineActiveRankingState = Ob
   expectedFixtureIds: Object.freeze([]),
   totalScorePoints: null,
   players: Object.freeze([]),
+  leadershipDecision: null,
 });
 
 const POSITION_GROUPS = new Set<TouchlinePositionRankingGroup>(TOUCHLINE_POSITION_RANKING_GROUPS);
@@ -158,6 +169,11 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
       return null;
     }
   }
+  const leadershipDecision = parsePublishedTouchlinePlayerLeadership({
+    value: candidate.leadershipDecision,
+    snapshotId: candidate.snapshotId!,
+    playerIds: candidate.players.map((player) => player.playerId),
+  });
   return {
     phase: "ranked",
     leagueKey: candidate.leagueKey,
@@ -172,7 +188,29 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     expectedFixtureIds: candidate.expectedFixtureIds,
     totalScorePoints: candidate.totalScorePoints,
     players: candidate.players,
+    leadershipDecision,
   };
+}
+
+/**
+ * A crown is never derived from position rank or rating. It appears only when
+ * the immutable active snapshot publishes this exact TouchLine player as its
+ * unique overall leader.
+ */
+export function touchlinePlayerCrownEligibility(input: {
+  state?: TouchlineActiveRankingState | null;
+  playerId?: string | number | null;
+}) {
+  const state = parseTouchlineActiveRankingState(input.state) ?? TOUCHLINE_PRESEASON_RANKING_STATE;
+  if (state.phase !== "ranked" || !state.snapshotId) return false;
+  const playerId = normalizePlayerId(input.playerId);
+  const player = state.players.find((entry) => normalizePlayerId(entry.playerId) === playerId);
+  if (!player) return false;
+  return leadershipCrownEligibility(
+    state.leadershipDecision,
+    { subjectType: "player", subjectId: player.playerId },
+    touchlinePlayerLeadershipScope(state.snapshotId),
+  );
 }
 
 export function resolveTouchlineCardCompetition(input: {

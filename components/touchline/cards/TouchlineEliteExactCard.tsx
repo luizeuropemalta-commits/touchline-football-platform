@@ -28,6 +28,22 @@ import {
   touchlineCardStatAppliesToPosition,
   type TouchlineCardStatId,
 } from "@/lib/touchlineArena/position-aware-card-stats";
+import { useTouchlineActiveRanking } from "@/lib/touchlineArena/card-ranking-client";
+import { touchlinePlayerCrownEligibility } from "@/lib/touchlineArena/card-ranking-live";
+import {
+  resolveTouchlineCardTierComponentCalibration,
+  touchlineCardTierComponentScale,
+  type TouchlineCardCalibrationPresentation,
+  type TouchlineCardCalibratedComponent,
+} from "@/lib/touchlineArena/card-tier-component-calibration";
+import {
+  buildTouchlineCardStatPresentation,
+  type TouchlineCardStatIcon,
+} from "@/lib/touchlineArena/card-stat-presentation";
+import {
+  TOUCHLINE_PLAYER_LEADER_CROWN_ASSET,
+  touchlinePlayerLeaderCrownStyle,
+} from "@/lib/touchlineArena/player-leader-crown-presentation";
 
 const CARD_W = 430;
 const CARD_H = 691;
@@ -356,6 +372,8 @@ type Props = {
   allowVisualInventoryPreview?: boolean;
   followerCount?: number;
   likeCount?: number;
+  /** Visual-QA mode only; tokens do not select or modify card artwork. */
+  tierCalibrationPresentation?: TouchlineCardCalibrationPresentation;
 };
 
 function compactSocialCount(value: number, locale: string | null) {
@@ -541,12 +559,13 @@ function backName(playerName: string) {
   return playerName.trim().replace(/\s+/g, " ");
 }
 
-const LOOSE_STAT_FIELDS: Array<{ key: EditableBlock; label: string; statId: MatchStatId; src: string }> = [
-  { key: "statGol", label: "GOL", statId: "goals", src: "ball" },
-  { key: "statAst", label: "AST", statId: "assists", src: "boot" },
-  { key: "statDef", label: "DEF", statId: "defense", src: "defense" },
-  { key: "statCs", label: "CS", statId: "cleanSheets", src: "clean-sheet" },
-];
+const CARD_STAT_LAYOUT_KEYS = {
+  goals: "statGol",
+  assists: "statAst",
+  defense: "statDef",
+  saves: "statDef",
+  cleanSheets: "statCs",
+} as const;
 
 function FootballBallStatIcon({ size }: { size: number }) {
   return (
@@ -577,7 +596,16 @@ function CleanSheetStatIcon({ size }: { size: number }) {
   );
 }
 
-function PremiumStatIcon({ icon, label, size }: { icon: string; label: string; size: number }) {
+function GoalkeeperGloveStatIcon({ size }: { size: number }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 32 32" width={size} height={size} fill="none">
+      <path d="M9 27.1c-2.1-1.9-3.4-4.7-3.4-7.6V10a1.9 1.9 0 0 1 3.8 0v5.1-7.5a1.9 1.9 0 0 1 3.8 0v6.9-7.6a1.9 1.9 0 0 1 3.8 0v7.6-6.3a1.9 1.9 0 0 1 3.8 0v6.8l1.1-2.1a1.9 1.9 0 0 1 3.4 1.7l-2.2 5.5a9.8 9.8 0 0 1-6.9 6.1L9 27.1Z" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.4 15.1v3.2M13.2 14.5v3.8M17 14.5v3.8M20.8 15.1v3.1" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" opacity=".8" />
+    </svg>
+  );
+}
+
+function PremiumStatIcon({ icon, label, size }: { icon: TouchlineCardStatIcon; label: string; size: number }) {
   const common = {
     width: size,
     height: size,
@@ -590,6 +618,7 @@ function PremiumStatIcon({ icon, label, size }: { icon: string; label: string; s
       {icon === "ball" ? <FootballBallStatIcon size={size} /> : null}
       {icon === "boot" ? <FootballBootStatIcon size={size} /> : null}
       {icon === "defense" ? <ShieldCheck aria-hidden="true" width={size} height={size} strokeWidth={1.8} /> : null}
+      {icon === "glove" ? <GoalkeeperGloveStatIcon size={size} /> : null}
       {icon === "clean-sheet" ? <CleanSheetStatIcon size={size} /> : null}
     </span>
   );
@@ -721,6 +750,7 @@ export function TouchlineEliteExactCard({
   allowVisualInventoryPreview = false,
   followerCount,
   likeCount,
+  tierCalibrationPresentation,
 }: Props) {
   const effectiveShowMatchRating = showMatchRating || showMatchPoints;
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -750,6 +780,7 @@ export function TouchlineEliteExactCard({
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isNeonActive, setIsNeonActive] = useState(false);
+  const activeRanking = useTouchlineActiveRanking(subscribeToRanking);
   const neonInstanceId = useId();
   const didSkipInitialLayoutWriteRef = useRef(false);
   const baseFollowerCount = followerCount ?? demoSocialCount(player.sportmonksPlayerId, 12_400, 975_000);
@@ -924,6 +955,14 @@ export function TouchlineEliteExactCard({
     ? touchlineArenaTierForKey(player.cardTier)
     : null;
   const marketTier = editorialTier ?? contractedTier ?? inventoryPreviewTier;
+  const calibrationPresentation = tierCalibrationPresentation
+    ?? (optimizeForLiveCompact ? "compact" : "normal");
+  const tierComponentCalibration = resolveTouchlineCardTierComponentCalibration(marketTier?.key);
+  const isCanonicalPlayerLeader = touchlinePlayerCrownEligibility({
+    state: activeRanking,
+    playerId: player.canonicalPlayerId,
+  });
+  const playerLeaderCrownStyle = touchlinePlayerLeaderCrownStyle(scale);
   // The selected artwork is only used by a published card. An asset cannot
   // turn an unpublished football player into a game card.
   const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl);
@@ -946,6 +985,17 @@ export function TouchlineEliteExactCard({
       ? (runtimeLocale === "pt-BR" ? "PENDENTE" : "PENDING")
       : player.position;
   const preseasonMissingValue = "—";
+  const cardStatPresentation = buildTouchlineCardStatPresentation({
+    role: player.role,
+    position: player.position,
+    seasonStats: player.seasonStats,
+    matchStats: player.matchStats,
+  });
+  const renderedCardStats = cardStatPresentation.map((stat) => ({
+    ...stat,
+    key: CARD_STAT_LAYOUT_KEYS[stat.id],
+    valueText: stat.valueState === "available" ? touchlineCardMetricText(stat.value) : preseasonMissingValue,
+  }));
   const matchRatingText = player.matchRating === null || player.matchRating === undefined || player.matchRating === ""
     ? preseasonMissingValue
     : touchlineCardMetricText(player.matchRating);
@@ -964,7 +1014,7 @@ export function TouchlineEliteExactCard({
   const localPlayerFlagUrl = player.flagUrl?.startsWith("/") ? player.flagUrl : null;
   const flagImageUrl = touchlineCountryFlagUrl(countryCode3) || localPlayerFlagUrl;
   const shirtPlayerName = initialShirtPlayerName;
-  const shirtClubScale = layout.shirtClub?.scale || DEFAULT_CARD_LAYOUT.shirtClub.scale;
+  const shirtClubScale = fieldScale("shirtClub");
   const resolvedClub = useMemo(() => findTouchLineClub(player.clubName), [player.clubName]);
   const localPlayerClubLogoUrl = player.clubLogoUrl?.startsWith("/") ? player.clubLogoUrl : null;
   // An explicit local asset can be a view-specific derivative (for example,
@@ -1129,12 +1179,30 @@ export function TouchlineEliteExactCard({
   function editableStyle(key: EditableBlock, zIndex: number): React.CSSProperties {
     const position = layout[key] || DEFAULT_CARD_LAYOUT[key];
     const size = FIELD_SIZE[key];
-    const fieldScale = position.scale || 1;
+    const fieldScale = fieldScaleForKey(key);
     return { ...abs(position.x, position.y, size.width * fieldScale, size.height * fieldScale, zIndex), ...editableMarker };
   }
 
   function fieldScale(key: EditableBlock) {
-    return layout[key]?.scale || DEFAULT_CARD_LAYOUT[key].scale;
+    return fieldScaleForKey(key);
+  }
+
+  function fieldComponent(key: EditableBlock): TouchlineCardCalibratedComponent | null {
+    if (key === "backName" || key === "shirtClub" || key === "name") return "name";
+    if (key === "backNumber") return "number";
+    if (key === "clubCrest") return "crest";
+    if (key === "points" || key === "marketValue" || key === "cardPrice") return "points";
+    if (key === "profileAction" || key === "shareAction" || key === "followAction" || key === "likeAction") return "actions";
+    if (key === "touchlineLogo") return "logo";
+    return null;
+  }
+
+  function fieldScaleForKey(key: EditableBlock) {
+    const component = fieldComponent(key);
+    const tokenScale = component
+      ? touchlineCardTierComponentScale(tierComponentCalibration, calibrationPresentation, component)
+      : 1;
+    return (layout[key]?.scale || DEFAULT_CARD_LAYOUT[key].scale) * tokenScale;
   }
 
   function resolvedPlayerProfileHref() {
@@ -1330,6 +1398,8 @@ export function TouchlineEliteExactCard({
       ref={shellRef}
       className={["touchline-card-surface", className].filter(Boolean).join(" ")}
       data-card-tier={marketTier?.key ?? "neutral"}
+      data-card-tier-calibration={tierComponentCalibration?.tierKey ?? "neutral"}
+      data-card-calibration-presentation={calibrationPresentation}
       data-card-editorial-state={reviewRequired ? "review_required" : editorialCard ? "published" : "unpublished"}
       data-card-motion={isEditable ? "false" : "true"}
       data-card-neon="permanent-tier-art"
@@ -1359,6 +1429,29 @@ export function TouchlineEliteExactCard({
         "--touchline-club-crest-color": resolvedClub?.accent ?? cardTraceColor,
       } as React.CSSProperties}
     >
+      {isCanonicalPlayerLeader ? (
+        <img
+          data-touchline-player-leader-crown="true"
+          src={TOUCHLINE_PLAYER_LEADER_CROWN_ASSET}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          loading="eager"
+          decoding="sync"
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: playerLeaderCrownStyle.top,
+            width: playerLeaderCrownStyle.width,
+            height: "auto",
+            zIndex: 90,
+            transform: "translateX(-50%)",
+            transformOrigin: "bottom center",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        />
+      ) : null}
       <TouchlineCardPerimeterTrace />
       {reviewRequired ? (
         <div
@@ -1821,7 +1914,7 @@ export function TouchlineEliteExactCard({
           </>
         ) : null}
 
-        {LOOSE_STAT_FIELDS.map((stat) => (
+        {renderedCardStats.map((stat) => (
           <div
             key={stat.key}
             {...dragAttrs(stat.key)}
@@ -1835,7 +1928,7 @@ export function TouchlineEliteExactCard({
               gap: 3 * fieldScale(stat.key),
             }}
           >
-            <PremiumStatIcon icon={stat.src} label={stat.label} size={28 * fieldScale(stat.key)} />
+            <PremiumStatIcon icon={stat.icon} label={stat.label} size={28 * fieldScale(stat.key)} />
             <div
               style={{
                 minWidth: 26 * fieldScale(stat.key),
@@ -1855,7 +1948,7 @@ export function TouchlineEliteExactCard({
                 textShadow: "0 1px 6px rgba(0,0,0,.86)",
               }}
             >
-              {statCount(player, stat.statId, undefined, preseasonMissingValue)}
+              {stat.valueText}
             </div>
           </div>
         ))}

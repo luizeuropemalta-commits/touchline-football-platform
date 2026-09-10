@@ -115,6 +115,10 @@ import {
   touchlineCountryFlagUrl,
 } from "@/lib/touchlineArena/country-flags";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
+import {
+  containArenaFieldCard,
+  type ArenaFieldStage,
+} from "@/lib/touchlineArena/arena-field-containment";
 import { createTouchlineArenaCoachSlot, TOUCHLINE_DEMO_COACH } from "@/lib/touchlineArena/coach-card";
 import { TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT } from "@/lib/touchlineArena/coach-card-layout";
 import type { TouchlineCoachContractSnapshot } from "@/lib/touchlineArena/coach-scoring";
@@ -3447,6 +3451,7 @@ export default function ArenaClient({
   const initialIntroWasSkipped = Boolean(standaloneExperience) || initialIntroIntent === "skip";
   const [activeVideoIndex, setActiveVideoIndex] = useState(initialIntroWasSkipped ? 1 : 0);
   const [hasEntryVideoFinished, setHasEntryVideoFinished] = useState(initialIntroWasSkipped);
+  const [arenaFieldStage, setArenaFieldStage] = useState<ArenaFieldStage | null>(null);
   const [introExperienceMode, setIntroExperienceMode] = useState<"pending" | "hidden" | TouchlineArenaIntroLaunchMode>(initialIntroWasSkipped ? "hidden" : "pending");
   const [introExperienceRun, setIntroExperienceRun] = useState(0);
   const [isEntrySkipAvailable, setIsEntrySkipAvailable] = useState(false);
@@ -3545,6 +3550,44 @@ export default function ArenaClient({
   const [isMarketCheckoutConfirmationOpen, setIsMarketCheckoutConfirmationOpen] = useState(false);
   const [pendingMarketReplacementPlayerId, setPendingMarketReplacementPlayerId] = useState<string | null>(null);
   const [isContractReleasePending, setIsContractReleasePending] = useState(false);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const measure = () => {
+      const stageRect = stage.getBoundingClientRect();
+      const carousel = stage.querySelector<HTMLElement>("[data-testid='arena-club-symbol-carousel'], [data-testid='arena-score-rail-empty']");
+      const next: ArenaFieldStage = {
+        width: stageRect.width,
+        height: stageRect.height,
+        viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+        stageTop: stageRect.top,
+        carouselTop: carousel ? carousel.getBoundingClientRect().top : null,
+      };
+      setArenaFieldStage((current) => (
+        current
+        && current.width === next.width
+        && current.height === next.height
+        && current.viewportHeight === next.viewportHeight
+        && current.stageTop === next.stageTop
+        && current.carouselTop === next.carouselTop
+          ? current
+          : next
+      ));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    window.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
+    };
+  }, [hasEntryVideoFinished]);
 
   useEffect(() => () => {
     if (quickSubCloseTimerRef.current !== null) window.clearTimeout(quickSubCloseTimerRef.current);
@@ -7850,6 +7893,14 @@ export default function ArenaClient({
               // The canonical video layout owns the size with its coordinate.
               // Saved/editor sizes never control the protected 4-3-3 match.
               const baseHeight = fieldPosition.heightVh ?? arenaLoopCameraProfile(loopCameraIndex).cardHeightVh;
+              // Keep the QA baseline's camera slot and height contract intact.
+              // This adapter only constrains the full rendered envelope against
+              // approved wide/lower field geometry; side-sweep is rail-only.
+              const containedFieldPosition = containArenaFieldCard(
+                { ...fieldPosition, heightVh: baseHeight },
+                currentCameraId,
+                arenaFieldStage,
+              );
 
               return (
                 <div
@@ -7858,12 +7909,13 @@ export default function ArenaClient({
                   tabIndex={0}
                   className={`arena-field-player ${selectedPlayerId === player.id ? "is-selected" : ""}${!hasSyncedFantasyLineup && isQuickSubstitutionOpen && selectedBench && canBenchReplaceTarget(selectedBench, player) && !isBenchFormationLocked(selectedBench, quickSubstitutionInteractivePlayers, selectedFormationKey, player) ? " is-substitution-eligible" : ""}${!hasSyncedFantasyLineup && isQuickSubstitutionOpen && replacementTargetId === player.id ? " is-substitution-target" : ""}`}
                   data-camera={arenaLoopCameraProfile(loopCameraIndex).id}
+                  data-containment-coverage={containedFieldPosition.coverage}
                   data-editing={!hasSyncedFantasyLineup && isEditorOpen}
                   data-canonical-player-id={hasSyncedFantasyLineup ? player.card?.canonicalPlayerId ?? player.id : undefined}
                   data-substitution-target-id={!hasSyncedFantasyLineup && isQuickSubstitutionOpen ? player.id : undefined}
                   style={{
-                    left: `${fieldPosition.x}%`,
-                    top: `${fieldPosition.y}%`,
+                    left: `${containedFieldPosition.x}%`,
+                    top: `${containedFieldPosition.y}%`,
                     // `dvh` follows the current visual viewport after a Safari
                     // portrait-to-landscape rotation. Plain `vh` can retain the
                     // former portrait height and make compact cards overlap.

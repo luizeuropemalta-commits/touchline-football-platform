@@ -3,6 +3,10 @@ import type {
   TouchlineRankingAuditReport,
 } from "./card-ranking-pipeline.ts";
 import type { TouchlineSelection } from "./touchline-selection.ts";
+import {
+  parsePublishedTouchlinePlayerLeadership,
+  unavailableTouchlinePlayerLeadership,
+} from "./player-ranking-leadership.ts";
 
 export type TouchlineRankingPersistenceRecord = {
   snapshotId: string;
@@ -33,6 +37,7 @@ export function buildTouchlineRankingPersistenceRecord(input: {
   expectedPlayerCount: number;
   audit: TouchlineRankingAuditReport;
   selection: TouchlineSelection;
+  leadershipDecision?: unknown;
 }): TouchlineRankingPersistenceRecord {
   if (!input.audit.passed || !input.audit.snapshot || !input.audit.checksum) {
     throw new Error("A failed ranking audit cannot be persisted for publication.");
@@ -49,6 +54,12 @@ export function buildTouchlineRankingPersistenceRecord(input: {
   }
 
   const { snapshot: _snapshot, ...auditReport } = input.audit;
+  const leadershipDecision = parsePublishedTouchlinePlayerLeadership({
+    value: input.leadershipDecision ?? input.audit.snapshot.leadershipDecision ?? unavailableTouchlinePlayerLeadership(input.audit.snapshot.snapshotId),
+    snapshotId: input.audit.snapshot.snapshotId,
+    playerIds: input.audit.snapshot.players.map((player) => player.playerId),
+  });
+  if (!leadershipDecision) throw new Error("Player leadership decision must be explicit and bound to the persisted snapshot.");
 
   return {
     snapshotId: input.audit.snapshot.snapshotId,
@@ -68,7 +79,7 @@ export function buildTouchlineRankingPersistenceRecord(input: {
     checksum: input.audit.checksum,
     expectedPlayerCount: input.expectedPlayerCount,
     actualPlayerCount: input.audit.snapshot.players.length,
-    rankingPayload: input.audit.snapshot,
+    rankingPayload: { ...input.audit.snapshot, leadershipDecision },
     selectionVersion: input.selection.version,
     selectionPayload: input.selection,
     auditReport,

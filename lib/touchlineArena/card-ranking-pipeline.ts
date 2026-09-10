@@ -8,6 +8,11 @@ import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   touchlineArenaTierForKey,
 } from "./card-rules.ts";
+import type { LeadershipDecision } from "./leadership-decision.ts";
+import {
+  parsePublishedTouchlinePlayerLeadership,
+  unavailableTouchlinePlayerLeadership,
+} from "./player-ranking-leadership.ts";
 
 export type TouchlineSportmonksRankingPlayer = TouchlineRankingPlayerInput & {
   provider: "sportmonks";
@@ -54,11 +59,14 @@ export type TouchlineAuditedRankingSnapshot = TouchlineRankingSnapshot & {
   auditedAt: string;
   priceTableVersion: string;
   checksum: string;
+  /** Explicit, snapshot-bound leadership publication. Never inferred from rank. */
+  leadershipDecision?: LeadershipDecision;
 };
 
 export type TouchlinePublishedRankingSnapshot = Omit<TouchlineAuditedRankingSnapshot, "status"> & {
   status: "published";
   publishedAt: string;
+  leadershipDecision: LeadershipDecision;
 };
 
 export type TouchlineRankingAuditReport = {
@@ -284,6 +292,7 @@ export function auditTouchlineRankingDraft(
 export function publishTouchlineRankingSnapshot(
   report: TouchlineRankingAuditReport,
   publishedAt: string,
+  leadershipDecision?: unknown,
 ): TouchlinePublishedRankingSnapshot {
   if (!report.passed || !report.snapshot) throw new Error("Only a passed ranking audit can be published.");
   if (!validIsoDate(publishedAt)) throw new Error("publishedAt must be a valid ISO date.");
@@ -291,12 +300,20 @@ export function publishTouchlineRankingSnapshot(
     throw new Error("A ranking cannot be published before it is audited.");
   }
 
+  const publishedLeadership = parsePublishedTouchlinePlayerLeadership({
+    value: leadershipDecision ?? report.snapshot.leadershipDecision ?? unavailableTouchlinePlayerLeadership(report.snapshot.snapshotId),
+    snapshotId: report.snapshot.snapshotId,
+    playerIds: report.snapshot.players.map((player) => player.playerId),
+  });
+  if (!publishedLeadership) throw new Error("Player leadership decision must be explicit and bound to the published snapshot.");
+
   return {
     ...report.snapshot,
     status: "published",
     positions: report.snapshot.positions.map((position) => ({ ...position, players: position.players.map((player) => ({ ...player })) })),
     players: report.snapshot.players.map((player) => ({ ...player })),
     publishedAt,
+    leadershipDecision: publishedLeadership,
   };
 }
 

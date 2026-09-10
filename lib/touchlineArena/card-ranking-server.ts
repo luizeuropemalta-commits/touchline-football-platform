@@ -46,6 +46,7 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
     fixtureIds: Array.isArray(record.fixture_ids) ? record.fixture_ids : [],
     expectedFixtureIds: Array.isArray(record.expected_fixture_ids) ? record.expected_fixture_ids : [],
     totalScorePoints: record.total_score_points,
+    leadershipDecision: payload?.leadershipDecision,
     players: Array.isArray(payload?.players) ? payload.players.map((player) => ({
       playerId: player.playerId,
       providerPlayerId: player.providerPlayerId,
