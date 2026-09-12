@@ -21,7 +21,7 @@ alter table public.touchline_club_social_posts
   add constraint touchline_club_social_posts_published_presentation_check check (
     published_presentation is null
     or (jsonb_typeof(published_presentation) = 'object'
-      and jsonb_object_length(published_presentation) > 0)
+      and published_presentation <> '{}'::jsonb)
   );
 
 create or replace function public.touchline_social_045_read_feed(
