@@ -21,14 +21,15 @@ test("Market and Club Hub share one orientation-aware compact pitch card", async
   assert.match(lineup, /<TouchlineGoalFacingPitchCard className=\{styles\.pitchCard\} orientation="upright">[\s\S]*?<TouchlineCardZoom/);
 });
 
-test("pitch labels stay outside the rotated card and expanded cards remain upright", async () => {
+test("pitch cards open upright without a second floating player-name box", async () => {
   const [market, lineup] = await Promise.all([
     readFile(new URL("components/touchline/market/TouchlineSquadBuilderStage.tsx", root), "utf8"),
     readFile(new URL("components/touchline/ClubHubOfficialLineup.tsx", root), "utf8"),
   ]);
 
   assert.match(market, /<\/TouchlineGoalFacingPitchCard>[\s\S]*?<strong>\{player\.shortName\}<\/strong>/);
-  assert.match(lineup, /<span className=\{styles\.playerName\}>\{card\.name\}<\/span>[\s\S]*?<TouchlineGoalFacingPitchCard/);
+  assert.doesNotMatch(lineup, /styles\.playerName/);
+  assert.match(lineup, /ariaLabel=\{`\$\{isPortuguese \? "Ampliar card de"/);
   assert.match(market, /expandedContent=\{\([\s\S]*?<TouchlineEliteExactCard/);
   assert.match(lineup, /expandedContent=\{\([\s\S]*?<TouchlineEliteExactCard/);
 });

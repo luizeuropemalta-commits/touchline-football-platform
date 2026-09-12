@@ -318,6 +318,20 @@ test("043 Hat-trick preview reuses the goal renderer without becoming publishabl
   assert.match(component, /--hat-club-accent/);
 });
 
+test("043 approved goal and Hat-trick runtime use the frozen card and renderer snapshots", () => {
+  const policy = readFileSync(new URL("../lib/touchlineArena/social-template-policy-server.ts", import.meta.url), "utf8");
+  const page = readFileSync(new URL("../app/visual-qa/social-confirmed-event/page.tsx", import.meta.url), "utf8");
+  const frozenRenderer = readFileSync(
+    new URL("../components/touchline/social/TouchlineSocialApprovedGoalHatLayoutDemo.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(policy, /TouchlineSocialApprovedGoalHatLayoutDemo/);
+  assert.match(policy, /restoreApprovedGoalHatRendererImport/);
+  assert.match(page, /TouchlineSocialApprovedGoalHatLayoutDemo/);
+  assert.match(frozenRenderer, /TouchlineSocialApprovedExactCard/);
+  assert.doesNotMatch(frozenRenderer, /@\/components\/touchline\/cards\/TouchlineEliteExactCard/);
+});
+
 test("social visual standard forbids tiny primary data and duplicate facts", () => {
   const standard = readFileSync(new URL("../docs/touchline-arena/social-publishing-playbook/VISUAL_STANDARD.md", import.meta.url), "utf8");
   assert.match(standard, /primary event title must be at least `52px`/);

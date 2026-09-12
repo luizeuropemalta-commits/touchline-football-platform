@@ -34,6 +34,45 @@ export function unavailableTouchlinePlayerLeadership(snapshotId: string): Leader
   };
 }
 
+const CANONICAL_PLAYER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Publication-side classification for the immutable decision writer. Public
+ * consumers still read only the persisted decision, never this calculation.
+ * This mirrors the SQL writer's strict JSONB input contract: a missing,
+ * non-array, empty, or malformed `players` value publishes `unavailable`.
+ */
+export function classifyTouchlinePlayerLeadershipPublication(input: {
+  snapshotId: string;
+  rankingPayload: unknown;
+}): LeadershipDecision {
+  const scope = touchlinePlayerLeadershipScope(input.snapshotId);
+  const payload = input.rankingPayload && typeof input.rankingPayload === "object"
+    ? input.rankingPayload as { players?: unknown }
+    : null;
+  const rawPlayers = Array.isArray(payload?.players) ? payload.players : [];
+  const candidates = rawPlayers.flatMap((value) => {
+    if (!value || typeof value !== "object") return [];
+    const player = value as { playerId?: unknown; totalRating?: unknown };
+    const playerId = normalizedIdentifier(player.playerId);
+    return CANONICAL_PLAYER_UUID.test(playerId) && typeof player.totalRating === "number" && Number.isFinite(player.totalRating)
+      ? [{ playerId, totalRating: player.totalRating }]
+      : [];
+  });
+  if (!candidates.length) return unavailableTouchlinePlayerLeadership(input.snapshotId);
+
+  const maxRating = Math.max(...candidates.map((candidate) => candidate.totalRating));
+  const leaders = candidates.filter((candidate) => candidate.totalRating === maxRating);
+  if (leaders.length === 1) {
+    return { status: "unique-leader", scope, leader: { subjectType: "player", subjectId: leaders[0]!.playerId } };
+  }
+  return {
+    status: "tied",
+    scope,
+    contenders: leaders.map((leader) => ({ subjectType: "player", subjectId: leader.playerId })),
+  };
+}
+
 function hasExactScope(value: unknown, scope: TouchlineLeadershipScope) {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<TouchlineLeadershipScope>;
@@ -92,4 +131,31 @@ export function parsePublishedTouchlinePlayerLeadership(input: {
   }
 
   return null;
+}
+
+/** Decodes the immutable server-side decision row used by public read models. */
+export function parsePersistedTouchlinePlayerLeadership(input: {
+  value: unknown;
+  snapshotId: string;
+  playerIds: readonly string[];
+}): LeadershipDecision | null {
+  if (!input.value || typeof input.value !== "object") return null;
+  const row = input.value as Record<string, unknown>;
+  const scope = touchlinePlayerLeadershipScope(input.snapshotId);
+  if (row.ranking_id !== scope.rankingId) return null;
+  if (row.status === "unique-leader") {
+    return parsePublishedTouchlinePlayerLeadership({
+      snapshotId: input.snapshotId,
+      playerIds: input.playerIds,
+      value: { status: "unique-leader", scope, leader: { subjectType: "player", subjectId: row.leader_player_id } },
+    });
+  }
+  if (row.status === "tied") {
+    return parsePublishedTouchlinePlayerLeadership({
+      snapshotId: input.snapshotId,
+      playerIds: input.playerIds,
+      value: { status: "tied", scope, contenders: Array.isArray(row.contender_player_ids) ? row.contender_player_ids.map((subjectId) => ({ subjectType: "player", subjectId })) : null },
+    });
+  }
+  return row.status === "unavailable" ? unavailableTouchlinePlayerLeadership(input.snapshotId) : null;
 }

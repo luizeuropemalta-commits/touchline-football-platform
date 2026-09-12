@@ -151,6 +151,7 @@ export default async function TouchlineCoachProfilePage({
           locale={locale}
           forceNeonActive
           enableInteractiveNeon={false}
+          showLeadershipCrown={coachRankingRow?.rank === 1}
         /></div>
       </section>
       <section className="coach-profile-grid">

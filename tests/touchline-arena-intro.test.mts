@@ -293,7 +293,7 @@ test("Arena relies on the global landscape boundary, reveals first access quickl
   assert.match(arena, /preload=\{isEntrySkipAvailable \? "auto" : "metadata"\}/);
   assert.match(arena, /onEnded=\{startCardLoopVideo\}/);
   assert.match(arena, /onError=\{startCardLoopVideo\}/);
-  assert.match(arena, /inert=\{isArenaFunctionalReady \? undefined : true\}/);
+  assert.match(arena, /inert=\{isArenaFunctionalReady && !isQaReadOnly \? undefined : true\}/);
   assert.match(arena, /aria-hidden=\{!isArenaFunctionalReady\}/);
   assert.match(arena, /if \(reducedMotion\) \{[\s\S]*?loopVideo\.pause\(\)[\s\S]*?setIsArenaVideoPaused\(true\)/);
   assert.ok(revealStart >= 0 && revealEnd > revealStart);

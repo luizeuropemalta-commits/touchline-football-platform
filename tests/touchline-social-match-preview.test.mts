@@ -17,6 +17,7 @@ import {
   touchlineSocialArenaGlassMinimumTransmission,
 } from "../lib/touchlineArena/social-visual-tokens.ts";
 import { readTouchlineSocialTemplateRegistry } from "../lib/touchlineArena/social-template-policy-server.ts";
+import { assessTouchlineTemplateApprovalLock } from "../lib/touchlineArena/social-template-approval-lock.ts";
 
 const villa = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === "15")!;
 const arsenal = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === "19")!;
@@ -117,7 +118,7 @@ test("041 registry is isolated from frozen LINEUP and exposes only the Feed cont
   assert.equal(isTouchlineSocialContentTypeEnabledInModule("LINEUP", "041"), false);
 });
 
-test("041 owner-approved artwork is locked to the executable template identity", async () => {
+test("041 standalone snapshot cannot inherit a historical visual approval by checksum substitution", async () => {
   const approval = readFileSync(
     new URL("../docs/touchline-arena/social-publishing-playbook/041_MATCH_PREVIEW_OWNER_ART_APPROVAL.md", import.meta.url),
     "utf8",
@@ -125,8 +126,9 @@ test("041 owner-approved artwork is locked to the executable template identity",
   const registry = await readTouchlineSocialTemplateRegistry(new URL("..", import.meta.url).pathname);
   const matchPreview = registry.find((row) => row.templateVersion === "touchline-match-preview-feed-v1");
   assert.ok(matchPreview);
-  assert.match(approval, new RegExp(matchPreview.visualTemplateChecksum.replace(":", "\\:")));
-  assert.match(approval, new RegExp(matchPreview.templateIdentityChecksum.replace(":", "\\:")));
+  const assessment = assessTouchlineTemplateApprovalLock(matchPreview);
+  assert.equal(assessment.state, "unavailable");
+  assert.match(approval, /Any covered source or\s+field change produces a new identity and requires a new owner review/);
   assert.match(approval, /Caption approval: \*\*PENDING/);
   assert.match(approval, /Outbound: \*\*DISABLED/);
 });
@@ -337,6 +339,7 @@ test("reader and template are persisted-only, revision-fenced and contain no XI 
   const scoreboardStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocialFixtureScoreboard.module.css", import.meta.url), "utf8");
   const duelFrame = readFileSync(new URL("../components/touchline/social/TouchlineSocialDuelFrame.tsx", import.meta.url), "utf8");
   const publicCard = readFileSync(new URL("../components/touchline/social/TouchlineSocialPublicExactCard.tsx", import.meta.url), "utf8");
+  const templateRegistry = readFileSync(new URL("../lib/touchlineArena/social-template-policy-server.ts", import.meta.url), "utf8");
   const duelFrameStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocialDuelFrame.module.css", import.meta.url), "utf8");
   const cardComponent = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx", import.meta.url), "utf8");
   const page = readFileSync(new URL("../app/visual-qa/social-match-preview/page.tsx", import.meta.url), "utf8");
@@ -399,6 +402,9 @@ test("reader and template are persisted-only, revision-fenced and contain no XI 
   assert.match(duelFrame, /player=\{publicPresentationPlayer\(side\)\}/);
   assert.doesNotMatch(duelFrame, /player=\{squadCardToExactPlayer\(side\.card/);
   assert.match(publicCard, /^"use client";/);
+  assert.match(publicCard, /TouchlineSocialApprovedExactCard/);
+  assert.doesNotMatch(publicCard, /components\/touchline\/cards\/TouchlineEliteExactCard/);
+  assert.match(templateRegistry, /TouchlineSocialApprovedExactCard\.tsx/);
   assert.match(publicCard, /"sportmonksPlayerId" \| "canonicalPlayerId" \| "formationPlayerId"/);
   assert.match(publicCard, /sportmonksPlayerId: `public:\$\{player\.clubName\}:\$\{player\.name\}`/);
   assert.match(publicCard, /ensureStaticNameFit/);

@@ -15,8 +15,8 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 74);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 74);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 75);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 75);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -53,6 +53,10 @@ test("separates public, authenticated, ClubOwner, Admin, audit, and isolated pre
   assert.equal(row("/visual-qa/social-ranking").data, "QA_VERIFIED_RANKING_FAMILY_DRAFT");
   assert.equal(row("/visual-qa/social-next-three").auth, "ADMIN");
   assert.equal(row("/visual-qa/social-ranking-catalogue").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-approved-snapshots").auth, "ADMIN");
+  assert.equal(row("/visual-qa/social-approved-snapshots").role, "OWNER_ADMIN");
+  assert.equal(row("/visual-qa/social-approved-snapshots").data, "STATIC_VISUAL_QA_FIXTURE");
+  assert.equal(row("/visual-qa/social-approved-snapshots").status, "PENDING_VISUAL_QA");
   for (const route of [
     "/visual-qa/card-goalkeeper-stat-strip",
     "/visual-qa/card-tier-component-calibration",
@@ -82,6 +86,11 @@ test("distinguishes read methods, disabled ingestion, local editors, user writes
   assert.equal(row("POST /api/football-data/fixture-schedule").status, "METHOD_DISABLED");
   assert.equal(row("GET /api/football-data/live-sync").status, "METHOD_DISABLED");
   assert.equal(row("POST /api/football-data/live-sync").auth, "QA_SCHEDULER_SECRET");
+  assert.equal(row("PUT /api/notifications/devices").auth, "AUTHENTICATED_ARENA_ACCESS");
+  assert.equal(row("PUT /api/notifications/devices").role, "ARENA_USER");
+  assert.equal(row("PUT /api/notifications/devices").data, "SUPABASE_SELF_SCOPED_VALIDATED_PUSH_DEVICE_REGISTRATION");
+  assert.equal(row("PUT /api/notifications/devices").browser, "HTTP_CONTRACT");
+  assert.equal(row("PUT /api/notifications/devices").status, "PENDING_AUTHENTICATED_DEVICE_QA");
   assert.equal(row("POST /api/touchline-arena/formation-locks").auth, "LOCAL_EDITOR");
   assert.equal(row("POST /api/touchline-arena/market/checkout").auth, "AUTHENTICATED");
   assert.equal(row("DELETE /api/touchline-arena/coach").auth, "AUTHENTICATED_SAME_ORIGIN");

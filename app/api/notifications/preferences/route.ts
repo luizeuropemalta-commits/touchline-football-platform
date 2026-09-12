@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
+import { parseTouchlineDeviceRegistration } from "@/lib/touchlineArena/push-device-contract";
+import { hasTouchlineServerPushConfiguration, resolveTouchlinePushPreference } from "@/lib/touchlineArena/push-preference-contract";
 
 const DEFAULT_NOTIFICATION_SETTINGS = {
   playerRumours: true,
@@ -76,6 +78,23 @@ async function currentUser() {
   return { supabase, user: hasTouchLineArenaAccess(user) ? user : null };
 }
 
+async function userHasRegisteredPushDevice(supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>, userId: string) {
+  const { data, error } = await supabase
+    .from("notification_devices")
+    .select("installation_id, permission, push_subscription")
+    .eq("user_id", userId)
+    .eq("permission", "granted")
+    .not("push_subscription", "is", null)
+    .limit(1);
+
+  if (error) return false;
+  return Boolean(data?.some((device) => parseTouchlineDeviceRegistration({
+    installationId: device.installation_id,
+    permission: device.permission,
+    subscription: device.push_subscription,
+  })));
+}
+
 export async function GET() {
   const { supabase, user } = await currentUser();
   if (!supabase || !user) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401 });
@@ -111,6 +130,19 @@ export async function PUT(request: NextRequest) {
   const quietHours = normalizeQuietHours(payload.quietHours);
   const frequency = FREQUENCIES.has(payload.frequency) ? payload.frequency : "realtime";
   const hasConsent = Boolean(payload.explicitConsent);
+
+  // Preferences are user-controlled, but remote delivery capability is
+  // server-owned. Do not allow a direct authenticated PUT to claim that push
+  // is active unless VAPID is complete and a real device registration exists.
+  const pushRequested = channels.push;
+  const hasRegisteredDevice = pushRequested
+    ? await userHasRegisteredPushDevice(supabase, user.id)
+    : false;
+  channels.push = resolveTouchlinePushPreference({
+    requested: pushRequested,
+    serverConfigured: hasTouchlineServerPushConfiguration(),
+    hasRegisteredDevice,
+  });
 
   if (!channels.in_app && !channels.push && !channels.email) {
     return NextResponse.json({ ok: false, error: "At least one notification channel must stay enabled." }, { status: 400 });

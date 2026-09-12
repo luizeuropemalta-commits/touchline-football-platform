@@ -29,6 +29,7 @@ export default async function ArenaPage({
     skipIntro?: string | string[];
     lang?: string | string[];
     qaEditor?: string | string[];
+    qaReadOnly?: string | string[];
   }>;
 }) {
   const params = await searchParams;
@@ -37,8 +38,13 @@ export default async function ArenaPage({
   // This route is intentionally reachable only on the exact stable QA host.
   // The client applies a second authenticated-persona check before edits/save.
   const requestHost = (await headers()).get("host")?.split(":")[0]?.toLowerCase();
-  const initialQaVisualEditor = firstValue(params.qaEditor) === "1"
+  // This is a validation-only surface. It is deliberately available only on
+  // the stable QA alias and never enables the editor or a save path.
+  const initialQaReadOnly = firstValue(params.qaReadOnly) === "1"
     && requestHost === TOUCHLINE_QA_HOSTNAME;
+  const initialQaVisualEditor = firstValue(params.qaEditor) === "1"
+    && requestHost === TOUCHLINE_QA_HOSTNAME
+    && !initialQaReadOnly;
   if (initialPanel && initialPanel !== "bench" && !initialQaVisualEditor) {
     const marketParams = new URLSearchParams();
     const lang = firstValue(params.lang);
@@ -88,6 +94,7 @@ export default async function ArenaPage({
         skipIntro: firstValue(params.skipIntro),
       })}
       initialQaVisualEditor={initialQaVisualEditor}
+      initialQaReadOnly={initialQaReadOnly}
       canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
       initialTwoDimensionalFormationRegistry={initialTwoDimensionalFormationRegistry}
       initialFantasyLineup={fantasyArenaLineup}

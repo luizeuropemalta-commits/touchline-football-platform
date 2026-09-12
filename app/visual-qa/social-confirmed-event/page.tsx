@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import TouchlineSocialConfirmedEventDraftView from "@/components/touchline/social/TouchlineSocialConfirmedEventDraft";
-import TouchlineSocialGoalHatLayoutDemo from "@/components/touchline/social/TouchlineSocialGoalHatLayoutDemo";
+import TouchlineSocialGoalHatLayoutDemo from "@/components/touchline/social/TouchlineSocialApprovedGoalHatLayoutDemo";
 import { readTouchlineSocialConfirmedEventDraft } from "@/lib/touchlineArena/social-confirmed-event-draft-server";
 
 import {

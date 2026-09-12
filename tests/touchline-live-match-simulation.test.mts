@@ -66,6 +66,7 @@ test("Live renders an XI only when each club has eleven verified Sportmonks star
 
 test("Live mini cards open one shared central zoom and can return to the pitch", () => {
   assert.match(arenaClientSource, /function LiveAtomicCardShell\(/);
+  assert.doesNotMatch(arenaClientSource, /title=\{playerName\}/);
   assert.match(
     arenaClientSource,
     /const openLiveSimulationCard = useCallback\(\(playerId: string\) => \{[\s\S]*?setSelectedLiveSimulationCardId\(playerId\);[\s\S]*?\}, \[\]\)/,

@@ -17,7 +17,7 @@ function project(point: { x: number; y: number }) {
   const scale = Math.max(stage.width / 1280, stage.height / 720);
   return { x: point.x * scale - ((1280 * scale - stage.width) / 2), y: point.y * scale - ((720 * scale - stage.height) / 2) };
 }
-function assertFullEnvelopeInside(slot: ArenaFieldSlot, perspective: "wide-touchline" | "lower-stand") {
+function assertFullEnvelopeInside(slot: ArenaFieldSlot, perspective: "wide-touchline" | "lower-stand" | "side-sweep") {
   const result = containArenaFieldCard(slot, perspective, stage);
   const calibration = ARENA_PERSPECTIVE_CALIBRATIONS[perspective];
   assert.equal(hasFourLineGrassPolygon(calibration), true);
@@ -37,18 +37,45 @@ const supportedFormationSamples: readonly ArenaFieldSlot[] = [
   { x: 70.1, y: 62.5, heightVh: 9.2 }, { x: 70.1, y: 75.5, heightVh: 9.2 },
 ];
 
-test("wide and lower contain the full card envelope for both supported formation samples", () => {
-  for (const perspective of ["wide-touchline", "lower-stand"] as const) for (const slot of supportedFormationSamples) assertFullEnvelopeInside(slot, perspective);
+test("every loop contains the full card envelope for both supported formation samples", () => {
+  for (const perspective of ["wide-touchline", "lower-stand", "side-sweep"] as const) for (const slot of supportedFormationSamples) assertFullEnvelopeInside(slot, perspective);
 });
-test("side-sweep is rail-only and clamps the full card bottom above the live carousel rail", () => {
-  for (const slot of supportedFormationSamples) {
-    const result = containArenaFieldCard({ ...slot, y: 94 }, "side-sweep", stage);
-    assert.equal(result.coverage, "rail-only");
-    assert.ok(result.envelope.bottom <= 800);
+test("the compact camera-card size remains fully contained across every formation row", () => {
+  // The eight supported formations are all composed from these one-to-five
+  // player rows. Test their outermost tactical slots at the largest cinematic
+  // card height used by the third camera, rather than assuming 4-3-3 covers
+  // 4-5-1 or five-defender arrangements.
+  const formationRowExtremes: readonly ArenaFieldSlot[] = [
+    { x: 15, y: 52, heightVh: 12.4 },
+    { x: 20, y: 32, heightVh: 12.4 }, { x: 38, y: 72, heightVh: 12.4 },
+    { x: 37, y: 30, heightVh: 12.4 }, { x: 58, y: 74, heightVh: 12.4 },
+    { x: 57, y: 32, heightVh: 12.4 }, { x: 78, y: 72, heightVh: 12.4 },
+  ];
+  for (const perspective of ["wide-touchline", "lower-stand", "side-sweep"] as const) {
+    for (const slot of formationRowExtremes) assertFullEnvelopeInside(slot, perspective);
   }
-  assert.equal(hasFourLineGrassPolygon(ARENA_PERSPECTIVE_CALIBRATIONS["side-sweep"]), false);
 });
-test("side-sweep does not invent a polygon when the live rail cannot be measured", () => {
+test("side-sweep remains contained even when the lower carousel is not mounted", () => {
   const result = containArenaFieldCard({ x: 75, y: 94, heightVh: 9.2 }, "side-sweep", { ...stage, carouselTop: null });
-  assert.equal(result.coverage, "unmeasured");
+  assertFullEnvelopeInside({ x: result.x, y: result.y, heightVh: 9.2 }, "side-sweep");
+  assert.equal(result.coverage, "four-line-polygon");
+});
+
+test("side-sweep reserves a rendered-pixel gutter at the diagonal touchline", () => {
+  // This is the exact 1440×900 envelope that previously rounded just outside
+  // the left diagonal in a real browser at 17.3s. The input is deliberately
+  // the former display position, not a synthetic centre-point calculation.
+  const result = containArenaFieldCard(
+    { x: 14.0554, y: 80.7354, heightVh: 6.7 },
+    "side-sweep",
+    stage,
+  );
+
+  assert.equal(result.coverage, "four-line-polygon");
+  assert.equal(result.adjusted, true);
+  assertFullEnvelopeInside({ x: result.x, y: result.y, heightVh: 6.7 }, "side-sweep");
+  // Keep a material rounding margin from the old 183.63px left edge rather
+  // than accepting a mathematically exact boundary that can escape by a
+  // subpixel after CSS percentage layout.
+  assert.ok(result.envelope.left >= 184.9);
 });

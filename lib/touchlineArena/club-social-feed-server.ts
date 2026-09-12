@@ -6,6 +6,10 @@ import {
   encodeTouchlineClubSocialFeedCursor,
   touchlineClubSocialFeedPageSize,
 } from "@/lib/touchlineArena/social-club-feed-contract";
+import {
+  readTouchlinePublishedFeedPresentation,
+  type TouchlinePublishedFeedPresentation,
+} from "@/lib/touchlineArena/social-feed-presentation";
 
 const NUMERIC_ID = /^[1-9][0-9]{0,19}$/;
 const SHA256 = /^sha256:[0-9a-f]{64}$/;
@@ -23,6 +27,7 @@ type FeedRpcItem = Readonly<{
   artifactChecksum: string;
   width: number;
   height: number;
+  presentation?: unknown;
 }>;
 
 export type TouchlineClubSocialFeedItem = Readonly<{
@@ -33,6 +38,7 @@ export type TouchlineClubSocialFeedItem = Readonly<{
   width: number;
   height: number;
   imageUrl: string;
+  presentation: TouchlinePublishedFeedPresentation;
 }>;
 
 export type TouchlineClubSocialFeedPage = Readonly<{
@@ -153,6 +159,7 @@ async function signTouchlineClubSocialFeedPage(
       width: item.width,
       height: item.height,
       imageUrl: signed.signedUrl,
+      presentation: readTouchlinePublishedFeedPresentation(item.presentation),
     });
   }))).filter((item): item is TouchlineClubSocialFeedItem => Boolean(item));
   if (items.length !== visible.length) return { state: "unavailable", items: [], nextCursor: null };

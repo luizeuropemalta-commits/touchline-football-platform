@@ -171,7 +171,6 @@ export default function ClubHubOfficialLineup({
                 data-lineup-edge={pitchPosition.x <= 8 ? "left" : pitchPosition.x >= 92 ? "right" : undefined}
                 style={{ "--lineup-x": `${pitchPosition.x}%`, "--lineup-y": `${pitchPosition.y}%` } as CSSProperties}
               >
-                <span className={styles.playerName}>{card.name}</span>
                 <TouchlineGoalFacingPitchCard className={styles.pitchCard} orientation="upright">
                   <TouchlineCardZoom
                     ariaLabel={`${isPortuguese ? "Ampliar card de" : "Expand card for"} ${card.name}`}

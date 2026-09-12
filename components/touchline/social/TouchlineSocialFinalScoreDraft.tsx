@@ -2,7 +2,7 @@ import { ShieldCheck, Trophy } from "lucide-react";
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
-import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
+import TouchlineEliteExactCard from "@/components/touchline/social/TouchlineSocialApprovedExactCard";
 import type { TouchlineSocialFinalScoreDraft } from "@/lib/touchlineArena/social-final-score-draft-server";
 import { TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES } from "@/lib/touchlineArena/social-visual-tokens";
 import { squadCardToExactPlayer } from "@/lib/touchlineArena/demo-data";

@@ -1,0 +1,106 @@
+{
+  "updatedAt": "2026-07-23T04:53:39.105Z",
+  "storageKey": "touchline-premier-shirt-back-card-layout-v6",
+  "layout": {
+    "backName": {
+      "x": 109,
+      "y": 337,
+      "scale": 0.99
+    },
+    "backNumber": {
+      "x": 138,
+      "y": 222,
+      "scale": 1
+    },
+    "shirtClub": {
+      "x": 74,
+      "y": 173,
+      "scale": 1.14
+    },
+    "clubCrest": {
+      "x": 294,
+      "y": 153,
+      "scale": 2.4
+    },
+    "flag": {
+      "x": 189,
+      "y": 107,
+      "scale": 0.8
+    },
+    "points": {
+      "x": 162,
+      "y": 87,
+      "scale": 1.56
+    },
+    "marketValue": {
+      "x": 59,
+      "y": 338,
+      "scale": 1.16
+    },
+    "cardPrice": {
+      "x": 251,
+      "y": 338,
+      "scale": 1.16
+    },
+    "name": {
+      "x": 35,
+      "y": 185,
+      "scale": 1.56
+    },
+    "touchlineLogo": {
+      "x": 192,
+      "y": 352,
+      "scale": 1.1
+    },
+    "touchlinePremier": {
+      "x": 129,
+      "y": 408,
+      "scale": 1
+    },
+    "profileAction": {
+      "x": 273,
+      "y": 300,
+      "scale": 0.76
+    },
+    "shareAction": {
+      "x": 68,
+      "y": 300,
+      "scale": 0.76
+    },
+    "followAction": {
+      "x": 58,
+      "y": 531,
+      "scale": 1
+    },
+    "likeAction": {
+      "x": 254,
+      "y": 537,
+      "scale": 1
+    },
+    "statGol": {
+      "x": 32,
+      "y": 403,
+      "scale": 1.6
+    },
+    "statAst": {
+      "x": 102,
+      "y": 403,
+      "scale": 1.6
+    },
+    "statDef": {
+      "x": 172,
+      "y": 403,
+      "scale": 1.6
+    },
+    "statCs": {
+      "x": 242,
+      "y": 403,
+      "scale": 1.6
+    },
+    "statCar": {
+      "x": 312,
+      "y": 403,
+      "scale": 1.6
+    }
+  }
+}

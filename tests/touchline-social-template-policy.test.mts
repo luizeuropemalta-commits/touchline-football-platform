@@ -7,7 +7,12 @@ import {
   buildTouchlineSocialTemplateIdentity,
   touchlineSocialAutoDeliveryIdempotencyKey,
 } from "../lib/touchlineArena/social-template-policy-contract.ts";
+import {
+  assessTouchlineTemplateApprovalLock,
+  reconcileTouchlineOwnerApprovedSnapshot,
+} from "../lib/touchlineArena/social-template-approval-lock.ts";
 import { readTouchlineSocialTemplateRegistry } from "../lib/touchlineArena/social-template-policy-server.ts";
+import { assessTouchlineApprovedSocialSnapshot } from "../lib/touchlineArena/social-approved-snapshot-manifest.ts";
 
 const SHA_A = `sha256:${"a".repeat(64)}`;
 const SHA_B = `sha256:${"b".repeat(64)}`;
@@ -70,6 +75,43 @@ test("046 changes identity for visual, copy, lexicon or rendered-field changes",
   ].map(buildTouchlineSocialTemplateIdentity);
   for (const variant of variants) assert.notEqual(variant.templateIdentityChecksum, identity.templateIdentityChecksum);
   assert.deepEqual(buildTouchlineSocialTemplateIdentity({ ...base, renderedFields: ["leaders", "fixture", "fixture"] }), identity);
+});
+
+test("046 keeps standalone 041/042 snapshots unavailable until their own visual approval exists", async () => {
+  const registry = await readTouchlineSocialTemplateRegistry();
+  for (const templateVersion of ["touchline-match-preview-feed-v1", "touchline-full-time-feed-v1"] as const) {
+    const identity = registry.find((candidate) => candidate.templateVersion === templateVersion);
+    assert.ok(identity);
+    assert.equal(assessTouchlineTemplateApprovalLock(identity).state, "unavailable");
+  }
+
+  const changed = reconcileTouchlineOwnerApprovedSnapshot({
+    contentType: "MATCH_PREVIEW" as const,
+    placement: "INSTAGRAM_FEED" as const,
+    locale: "en-GB" as const,
+    width: 1080 as const,
+    height: 1350 as const,
+    templateVersion: "touchline-match-preview-feed-v1",
+    renderedFields: ["fixture"],
+    visualTemplateChecksum: SHA_A,
+    baseCopyChecksum: SHA_B,
+    lexiconChecksum: SHA_C,
+    renderedFieldsChecksum: SHA_A,
+    templateIdentityChecksum: SHA_B,
+  }, `sha256:${"0".repeat(64)}`);
+  assert.equal(assessTouchlineTemplateApprovalLock(changed).state, "unavailable");
+});
+
+test("046 snapshot manifests fail closed when a transitive approved asset changes", async () => {
+  const template = "touchline-match-preview-feed-v1";
+  assert.equal((await assessTouchlineApprovedSocialSnapshot(template)).state, "approved");
+  const diverged = await assessTouchlineApprovedSocialSnapshot(template, process.cwd(), async (absolutePath) => {
+    const bytes = readFileSync(absolutePath);
+    return absolutePath.endsWith("TouchlineSocialApprovedExactCard.tsx")
+      ? Buffer.concat([bytes, Buffer.from("\n// test-only divergent dependency\n")])
+      : bytes;
+  });
+  assert.equal(diverged.state, "diverged");
 });
 
 test("046 item idempotency binds the exact draft, dynamic revision, template and approved bytes", () => {

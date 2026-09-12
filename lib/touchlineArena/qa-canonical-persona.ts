@@ -13,6 +13,15 @@ export const TOUCHLINE_QA_CANONICAL_USER_ID = "072900f3-27fc-41a5-9881-6913a4867
 export const TOUCHLINE_QA_CANONICAL_ALIAS =
   "https://touchline-arena-official-git-qa-fifa-agent-plataform.vercel.app";
 
+/**
+ * The sole policy predicate used by the client-side QA observation surface.
+ * Keeping it pure makes the default fail-closed behavior directly testable:
+ * a read-only QA session must never cross a persistence boundary.
+ */
+export function isTouchlineQaReadOnlyMutationBlocked(qaReadOnly: boolean) {
+  return qaReadOnly === true;
+}
+
 export type TouchlineQaPersonaEvidence = Readonly<{
   projectRef: string;
   qaAlias: string;

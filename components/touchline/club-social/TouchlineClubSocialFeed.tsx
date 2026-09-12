@@ -1,10 +1,11 @@
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 
 import type { TouchlineClubSocialFeedPage } from "@/lib/touchlineArena/club-social-feed-server";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import ClubHubLikeButton from "@/components/touchline/club-hub/ClubHubLikeButton";
 import ClubHubShareButton from "@/components/touchline/club-hub/ClubHubShareButton";
+import TouchlineClubFollowButton from "./TouchlineClubFollowButton";
 
 import styles from "./TouchlineClubSocialFeed.module.css";
 
@@ -34,10 +35,14 @@ export default function TouchlineClubSocialFeed({
   page,
   channelEyebrow,
   channelTitle,
+  clubLogoUrl,
+  clubTeamId,
   paginationPath,
 }: Readonly<{
   clubName: string;
   clubSlug: string;
+  clubLogoUrl?: string;
+  clubTeamId?: string;
   locale: TouchLineLocale;
   page: TouchlineClubSocialFeedPage;
   channelEyebrow?: string;
@@ -61,7 +66,10 @@ export default function TouchlineClubSocialFeed({
             {channelTitle ?? `${clubName} · TouchLine`}
           </h2>
         </div>
-        <span className={styles.verified}>TouchLine Verified</span>
+        <div className={styles.headerActions}>
+          <span className={styles.verified}>TouchLine Verified</span>
+          {clubTeamId ? <TouchlineClubFollowButton clubId={clubTeamId} clubName={clubName} locale={locale} /> : null}
+        </div>
       </header>
 
       {page.state === "ready" ? (
@@ -73,14 +81,20 @@ export default function TouchlineClubSocialFeed({
         >
           {page.items.map((item) => (
             <article className={styles.card} key={item.id}>
-              <div className={styles.media}>
-                <Image
-                  alt={`${contentLabel(item.contentType, locale)} · ${clubName}`}
-                  fill
-                  sizes="(max-width: 620px) 92vw, 540px"
-                  src={item.imageUrl}
-                  unoptimized
-                />
+              <div className={styles.liveMedia} data-content-type={item.contentType}>
+                {clubLogoUrl ? <Image alt="" aria-hidden="true" height={72} src={clubLogoUrl} width={72} /> : null}
+                <span>{contentLabel(item.contentType, locale)}</span>
+                <strong>{clubName}</strong>
+                <small>{pt ? "Atualização ao vivo da TouchLine" : "Live TouchLine update"}</small>
+                {item.presentation.state === "available" ? (
+                  <div className={styles.facts} aria-label={pt ? "Fatos publicados" : "Published facts"}>
+                    {item.presentation.fixture ? <strong>{item.presentation.fixture.homeName} {item.presentation.fixture.homeScore} — {item.presentation.fixture.awayScore} {item.presentation.fixture.awayName}</strong> : null}
+                    {item.presentation.points ? <span>{item.presentation.points.label}: {item.presentation.points.value}</span> : null}
+                    {item.presentation.leader ? <span>{item.presentation.leader.label}: {item.presentation.leader.name} · {item.presentation.leader.value}</span> : null}
+                    {item.presentation.card ? <span>{item.presentation.card.playerName} · {item.presentation.card.rating}</span> : null}
+                    {item.presentation.event ? <span>{item.presentation.event.kind === "GOAL" ? (pt ? "Gol" : "Goal") : (pt ? "Vermelho" : "Red card")}: {item.presentation.event.playerName} · {item.presentation.event.clubName} · {item.presentation.event.minute}&apos;</span> : null}
+                  </div>
+                ) : <span className={styles.factsUnavailable}>{pt ? "Fatos publicados indisponíveis" : "Published facts unavailable"}</span>}
               </div>
               <div className={styles.body}>
                 <span className={styles.kind}>{contentLabel(item.contentType, locale)}</span>

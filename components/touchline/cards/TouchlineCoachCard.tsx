@@ -19,6 +19,9 @@ import {
   type TouchlineCoachLayerKey,
 } from "@/lib/touchlineArena/coach-card-layout";
 import { TouchlineCardPerimeterTrace } from "@/components/touchline/cards/TouchlineCardPerimeterTrace";
+import {
+  TOUCHLINE_PLAYER_LEADER_CROWN_ASSET,
+} from "@/lib/touchlineArena/player-leader-crown-presentation";
 
 import styles from "./TouchlineCoachCard.module.css";
 
@@ -65,6 +68,10 @@ type TouchlineCoachCardProps = {
   frameDecoding?: "sync" | "async" | "auto";
   frameFetchPriority?: "high" | "low" | "auto";
   fixtureContext?: TouchlineCoachFixtureContext | null;
+  /** Only an exact published leadership source may opt into the decorative crown. */
+  showLeadershipCrown?: boolean;
+  /** Immutable Gameweek points may be displayed without borrowing season data. */
+  publishedTouchlinePoints?: number | null;
 };
 
 function CoachStatIcon({ type }: { type: "result" | "home" | "travel" | "discipline" | "points" }) {
@@ -103,6 +110,8 @@ export default function TouchlineCoachCard({
   frameDecoding,
   frameFetchPriority,
   fixtureContext = null,
+  showLeadershipCrown = false,
+  publishedTouchlinePoints = null,
 }: TouchlineCoachCardProps) {
   const [storedLayout, setStoredLayout] = useState<TouchlineCoachCardLayout>(TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT);
   const [isNeonActive, setIsNeonActive] = useState(false);
@@ -131,7 +140,11 @@ export default function TouchlineCoachCard({
   const runtimeCardTemplateUrl = optimizeForLiveCompact ? compactCardTemplateUrl : zoomCardTemplateUrl;
   const runtimeClubLogoUrl = touchlineRuntimeCoachCrestUrl(clubLogoUrl);
   const flagUrl = touchlineCountryFlagUrl(countryCode3);
-  const points = slot.status === "audited" && Number.isFinite(slot.touchlinePoints) ? String(slot.touchlinePoints) : "—";
+  const points = Number.isFinite(publishedTouchlinePoints)
+    ? String(publishedTouchlinePoints)
+    : slot.status === "audited" && Number.isFinite(slot.touchlinePoints)
+      ? String(slot.touchlinePoints)
+      : "—";
   const coachDisplayName = coach?.displayName ?? (isPortuguese ? "Aguardando treinador" : "Awaiting coach");
   const coachNameLength = coachDisplayName.replace(/\s+/g, "").length;
   const coachNameFit = coachNameLength > 22 ? "long" : coachNameLength > 15 ? "medium" : "short";
@@ -371,6 +384,7 @@ export default function TouchlineCoachCard({
       data-coach-card-art="official-coach-tier"
       data-coach-card-editable={editable ? "true" : "false"}
       data-coach-card-display={displayMode}
+      data-coach-ranking-leader={showLeadershipCrown ? "true" : "false"}
       data-coach-frame-ready={isFrameReady ? "true" : "false"}
       aria-label={`${coach?.displayName ?? (isPortuguese ? "Treinador pendente" : "Coach pending")} TouchLine coach card`}
       onClick={() => {
@@ -382,7 +396,19 @@ export default function TouchlineCoachCard({
         }
       }}
     >
-      <TouchlineCardPerimeterTrace />
+      {showLeadershipCrown ? (
+        <img
+          className={styles.leadershipCrown}
+          data-touchline-coach-leader-crown="true"
+          src={TOUCHLINE_PLAYER_LEADER_CROWN_ASSET}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          loading="eager"
+          decoding="sync"
+        />
+      ) : null}
+      <TouchlineCardPerimeterTrace tier={slot.cardTier} variant="coach" />
       <div className={styles.inner} data-coach-card-inner="true">
         <div className={styles.identity} {...editableLayerProps("nationality", "Nacionalidade")}>
           <span>{isPortuguese ? "Nacionalidade" : "Nationality"}</span>

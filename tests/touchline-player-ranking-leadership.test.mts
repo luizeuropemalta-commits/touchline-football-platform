@@ -12,7 +12,11 @@ import {
   touchlineArenaTierForKey,
 } from "../lib/touchlineArena/card-rules.ts";
 import { TOUCHLINE_POSITION_RANKING_GROUPS } from "../lib/touchlineArena/card-ranking.ts";
-import { touchlinePlayerLeadershipScope } from "../lib/touchlineArena/player-ranking-leadership.ts";
+import {
+  classifyTouchlinePlayerLeadershipPublication,
+  parsePersistedTouchlinePlayerLeadership,
+  touchlinePlayerLeadershipScope,
+} from "../lib/touchlineArena/player-ranking-leadership.ts";
 
 const snapshotId = "qa-v3-snapshot";
 const players = TOUCHLINE_POSITION_RANKING_GROUPS.map((positionGroup, index) => ({
@@ -75,4 +79,52 @@ test("ties, missing metadata and wrong scope fail closed without rejecting v3 co
   assert.equal(touchlinePlayerCrownEligibility({ state: tied, playerId: players[0]!.playerId }), false);
   assert.equal(touchlinePlayerCrownEligibility({ state: wrongScope, playerId: players[0]!.playerId }), false);
   assert.equal(wrongScope.phase, "ranked");
+});
+
+test("a persisted published overall decision crowns the leader, never a positional #1 alone", () => {
+  const decision = parsePersistedTouchlinePlayerLeadership({
+    snapshotId,
+    playerIds: players.map((player) => player.playerId),
+    value: { ranking_id: "touchline-player-overall", status: "unique-leader", leader_player_id: players[1]!.playerId, contender_player_ids: [] },
+  });
+  const active = parseTouchlineActiveRankingState(state(decision));
+  assert.ok(active);
+  assert.equal(touchlinePlayerCrownEligibility({ state: active, playerId: players[1]!.playerId }), true);
+  assert.equal(touchlinePlayerCrownEligibility({ state: active, playerId: players[0]!.playerId }), false);
+});
+
+test("publication treats unusable player payload shapes as unavailable without throwing", () => {
+  for (const playersValue of [undefined, null, {}, "players", []]) {
+    const decision = classifyTouchlinePlayerLeadershipPublication({
+      snapshotId,
+      rankingPayload: { players: playersValue },
+    });
+    assert.equal(decision.status, "unavailable");
+  }
+});
+
+test("publication makes an explicit unique leader or tie from valid overall ratings", () => {
+  const firstId = "00000000-0000-4000-8000-000000000001";
+  const secondId = "00000000-0000-4000-8000-000000000002";
+  const unique = classifyTouchlinePlayerLeadershipPublication({
+    snapshotId,
+    rankingPayload: { players: [{ playerId: firstId, totalRating: 22.73 }, { playerId: secondId, totalRating: 22.69 }] },
+  });
+  const tied = classifyTouchlinePlayerLeadershipPublication({
+    snapshotId,
+    rankingPayload: { players: [{ playerId: firstId, totalRating: 22.73 }, { playerId: secondId, totalRating: 22.73 }] },
+  });
+  assert.deepEqual(unique, {
+    status: "unique-leader",
+    scope: touchlinePlayerLeadershipScope(snapshotId),
+    leader: { subjectType: "player", subjectId: firstId },
+  });
+  assert.deepEqual(tied, {
+    status: "tied",
+    scope: touchlinePlayerLeadershipScope(snapshotId),
+    contenders: [
+      { subjectType: "player", subjectId: firstId },
+      { subjectType: "player", subjectId: secondId },
+    ],
+  });
 });

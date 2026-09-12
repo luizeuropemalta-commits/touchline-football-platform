@@ -8,6 +8,7 @@ import {
 } from "./card-ranking-live";
 import type { TouchlinePublishedRankingSnapshot } from "./card-ranking-pipeline";
 import { parseTouchlinePublishedTopEleven, type TouchlinePublishedTopEleven } from "./published-top-eleven";
+import { parsePersistedTouchlinePlayerLeadership } from "./player-ranking-leadership";
 
 export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRankingState> {
   const admin = createAdminClient();
@@ -33,6 +34,16 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
   }
 
   const payload = record.ranking_payload as TouchlinePublishedRankingSnapshot;
+  const { data: persistedLeadership, error: leadershipError } = await admin
+    .from("touchline_player_ranking_leadership_decisions")
+    .select("ranking_id,status,leader_player_id,contender_player_ids")
+    .eq("snapshot_id", record.snapshot_id)
+    .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
+    .maybeSingle();
+  const playerIds = Array.isArray(payload?.players) ? payload.players.map((player) => player.playerId) : [];
+  const leadershipDecision = leadershipError
+    ? null
+    : parsePersistedTouchlinePlayerLeadership({ value: persistedLeadership, snapshotId: record.snapshot_id, playerIds });
   const state = parseTouchlineActiveRankingState({
     phase: "ranked",
     leagueKey: record.league_key,
@@ -46,7 +57,7 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
     fixtureIds: Array.isArray(record.fixture_ids) ? record.fixture_ids : [],
     expectedFixtureIds: Array.isArray(record.expected_fixture_ids) ? record.expected_fixture_ids : [],
     totalScorePoints: record.total_score_points,
-    leadershipDecision: payload?.leadershipDecision,
+    leadershipDecision,
     players: Array.isArray(payload?.players) ? payload.players.map((player) => ({
       playerId: player.playerId,
       providerPlayerId: player.providerPlayerId,

@@ -61,7 +61,12 @@ import { readTouchlineClubSocialFeed } from "@/lib/touchlineArena/club-social-fe
 import { TOUCHLINE_PRESEASON_RANKING_STATE } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
-import { TOUCHLINE_STADIUM_CATALOG, toTouchlineLiveFixture } from "@/lib/touchlineArena/stadium-catalog";
+import {
+  TOUCHLINE_STADIUM_CATALOG,
+  resolveTouchlineClubHomeStadium,
+  toTouchlineLiveFixture,
+  type TouchlineStadiumCatalogEntry,
+} from "@/lib/touchlineArena/stadium-catalog";
 import {
   resolveTouchlineClubHubDataSource,
   type TouchlineQaClubHubMirrorReadResult,
@@ -744,7 +749,9 @@ async function ClubHubOfficialLeagueSection({
         <TouchlineClubPerimeterTrace accent="#a3ff12" className={officialLeagueStyles.surfaceTrace} />
         <TouchlineClubSocialFeed
           clubName={club.name}
+          clubLogoUrl={club.logoUrl}
           clubSlug={club.slug}
+          clubTeamId={club.teamId}
           locale={locale}
           page={feedPage}
         />
@@ -862,6 +869,56 @@ const CLUB_POSITION_LEADER_GROUPS = [
   { key: "attacker", positionGroups: ["winger", "striker"], en: "Top attacker", pt: "Melhor atacante" },
 ] as const;
 
+function ClubHubHomeStadiumPanel({
+  locale,
+  stadium,
+}: {
+  locale: TouchLineLocale;
+  stadium: TouchlineStadiumCatalogEntry;
+}) {
+  const profile = stadium.clubProfile;
+  if (!profile) return null;
+
+  const portuguese = locale === "pt-BR";
+  const primarySource = profile.sources.find((source) => source.field === "stadiumName") ?? profile.sources[0];
+  const address = [profile.address.line1, profile.address.city, profile.address.postalCode, profile.address.country]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    <aside className="club-hub-home-stadium" aria-label={portuguese ? `Estádio do ${profile.homeClubLabel}` : `${profile.homeClubLabel} home stadium`}>
+      <div className="club-hub-home-stadium-heading">
+        <span>{portuguese ? "Estádio do clube" : "Club home ground"}</span>
+        <strong>{stadium.name}</strong>
+      </div>
+      <dl>
+        <div>
+          <dt>{portuguese ? "Clube mandante" : "Home club"}</dt>
+          <dd>{profile.homeClubLabel}</dd>
+        </div>
+        {profile.capacity !== null ? (
+          <div>
+            <dt>{portuguese ? "Capacidade" : "Capacity"}</dt>
+            <dd>{new Intl.NumberFormat(portuguese ? "pt-BR" : "en-GB").format(profile.capacity)}</dd>
+          </div>
+        ) : null}
+        {profile.openedYear !== null ? (
+          <div>
+            <dt>{portuguese ? "Inaugurado" : "Opened"}</dt>
+            <dd>{profile.openedYear}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <p>{address}</p>
+      {primarySource ? (
+        <a href={primarySource.url} rel="noreferrer" target="_blank">
+          {portuguese ? `Fonte verificada: ${primarySource.publisher}` : `Verified source: ${primarySource.publisher}`}
+        </a>
+      ) : null}
+    </aside>
+  );
+}
+
 export default async function ClubHubPage({ params, searchParams }: ClubHubPageProps) {
   const [{ club: clubParam }, { lang, feedCursor }] = await Promise.all([params, searchParams]);
   const locale = normalizeTouchLineLocale(lang);
@@ -880,7 +937,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const clubHonours = loadClubTrophyAssets(club);
   const dataSource = resolveTouchlineClubHubDataSource();
   const mirrorResultPromise = dataSource === "direct" ? null : loadTouchlineQaClubHubMirror(club.teamId);
-  const homeStadium = TOUCHLINE_STADIUM_CATALOG.find((stadium) => stadium.homeTeamProviderId === club.teamId) ?? null;
+  const homeStadium = resolveTouchlineClubHomeStadium(club.teamId);
   const presentationPromise = loadClubHubPresentation(club, locale, dataSource, mirrorResultPromise);
   const viewerAccessPromise = loadClubHubViewerAccess(club.slug, dataSource);
   const tablePromise = traceClubHubLoader(
@@ -940,6 +997,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             </div>
           </div>
           <div className="club-hub-hero-footer">
+            {homeStadium ? <ClubHubHomeStadiumPanel locale={locale} stadium={homeStadium} /> : null}
             {clubHonours.length ? (
               <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
                 <span>{t("clubHonours")}</span>
@@ -1343,7 +1401,70 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           background: transparent;
           border: 0;
           box-shadow: none;
-          filter: drop-shadow(0 22px 34px rgba(0,0,0,.46));
+          filter:
+            drop-shadow(0 0 5px color-mix(in srgb, var(--club-accent) 80%, transparent))
+            drop-shadow(0 0 15px color-mix(in srgb, var(--club-accent) 46%, transparent))
+            drop-shadow(0 22px 34px rgba(0,0,0,.46));
+        }
+        .club-hub-logo-stack:hover .club-hub-logo img,
+        .club-hub-logo-stack:focus-within .club-hub-logo img {
+          filter:
+            drop-shadow(0 0 7px color-mix(in srgb, var(--club-accent) 92%, transparent))
+            drop-shadow(0 0 22px color-mix(in srgb, var(--club-accent) 66%, transparent))
+            drop-shadow(0 24px 38px rgba(0,0,0,.5));
+        }
+        .club-hub-home-stadium {
+          min-width: 0;
+          border: 1px solid color-mix(in srgb, var(--club-accent) 52%, rgba(255,255,255,.18));
+          border-radius: 13px;
+          padding: 12px 14px;
+          background: linear-gradient(135deg, color-mix(in srgb, var(--club-accent) 20%, rgba(2,12,8,.92)), rgba(2,12,8,.9));
+          box-shadow: inset 0 1px rgba(255,255,255,.09), 0 14px 34px rgba(0,0,0,.22);
+        }
+        .club-hub-home-stadium-heading { display: grid; gap: 3px; }
+        .club-hub-home-stadium-heading span,
+        .club-hub-home-stadium dt {
+          color: #b6ff4d;
+          font-size: 8px;
+          font-weight: 950;
+          letter-spacing: .11em;
+          text-transform: uppercase;
+        }
+        .club-hub-home-stadium-heading strong {
+          color: #f7fff1;
+          font-size: 16px;
+          line-height: 1.1;
+        }
+        .club-hub-home-stadium dl {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin: 11px 0 9px;
+        }
+        .club-hub-home-stadium dl > div { min-width: 0; }
+        .club-hub-home-stadium dt { margin: 0 0 3px; }
+        .club-hub-home-stadium dd {
+          margin: 0;
+          color: rgba(248,255,243,.92);
+          font-size: 10px;
+          font-weight: 900;
+          line-height: 1.25;
+        }
+        .club-hub-home-stadium p {
+          margin: 0;
+          color: rgba(248,255,243,.66);
+          font-size: 9px;
+          font-weight: 760;
+          line-height: 1.35;
+        }
+        .club-hub-home-stadium a {
+          display: inline-block;
+          margin-top: 8px;
+          color: #d8ffad;
+          font-size: 8px;
+          font-weight: 900;
+          text-decoration-color: color-mix(in srgb, var(--club-accent) 70%, #fff);
+          text-underline-offset: 3px;
         }
         .club-hub-honours {
           width: 100%;
@@ -1507,6 +1628,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           bottom: 20px;
           left: clamp(230px, 21vw, 410px);
           min-width: 0;
+          display: grid;
+          grid-template-columns: minmax(210px, .82fr) minmax(0, 1.4fr);
+          gap: 12px;
         }
         .club-hub-identity span,
         .club-hub-honours > span,
@@ -1708,14 +1832,16 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         }
         @media (hover: hover) and (pointer: fine) {
           .club-hub-logo:hover,
+          .club-hub-logo-stack:hover .club-hub-logo,
           .club-hub-fixture-crest:hover {
-            transform: translate3d(0, -2px, 0);
+            transform: translate3d(0, -2px, 0) scale(1.035);
           }
         }
         @media (hover: none), (pointer: coarse) {
           .club-hub-logo:active,
+          .club-hub-logo-stack:active .club-hub-logo,
           .club-hub-fixture-crest:active {
-            transform: translate3d(0, -1px, 0);
+            transform: translate3d(0, -1px, 0) scale(1.02);
           }
         }
         @media (prefers-reduced-motion: reduce) {
@@ -1978,6 +2104,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             order: 3;
             width: 100%;
             margin-top: 4px;
+            grid-template-columns: 1fr;
           }
           .club-hub-logo-stack {
             justify-items: center;

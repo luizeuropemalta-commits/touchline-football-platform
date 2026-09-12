@@ -3,11 +3,13 @@
  *
  * This module intentionally contains no projection, layout mutation, DOM access
  * or integration with ArenaClient. It is a versioned contract for a later
- * projection implementation. In particular, `side-sweep` is rail-only: it
- * must never be treated as a certified four-line grass polygon.
+ * projection implementation. Each camera profile is measured against the
+ * filmed grass, rather than an abstract tactical grid. The measurements are
+ * deliberately inset from the painted touchlines so a complete card frame
+ * (not just its anchor) stays on the grass.
  */
 
-export const ARENA_PERSPECTIVE_CALIBRATION_REVISION = "2026-09-10.v1" as const;
+export const ARENA_PERSPECTIVE_CALIBRATION_REVISION = "2026-09-10.v2" as const;
 
 export type ArenaPerspectiveId = "wide-touchline" | "lower-stand" | "side-sweep";
 export type ArenaCalibrationConfidence = "medium-high" | "high";
@@ -28,7 +30,7 @@ export type ArenaLoopWindow = Readonly<{
 }>;
 
 export type ArenaFourLineGrassCalibration = Readonly<{
-  perspective: "wide-touchline" | "lower-stand";
+  perspective: ArenaPerspectiveId;
   coverage: "four-line-polygon";
   confidence: "medium-high";
   sourceSha256: string;
@@ -38,30 +40,7 @@ export type ArenaFourLineGrassCalibration = Readonly<{
   grassPolygon: readonly ArenaCalibrationPoint[];
 }>;
 
-export type ArenaSideSweepRailMeasurement = Readonly<{
-  perspective: "side-sweep";
-  sourceSha256: string;
-  viewport: ArenaCalibrationViewport;
-  sampleTimeSeconds: number;
-  stageTop: number;
-  carouselTop: number;
-  railClearancePx: number;
-}>;
-
-export type ArenaSideSweepRailCalibration = Readonly<{
-  perspective: "side-sweep";
-  /**
-   * The near grass boundary is not reliably visible in side-sweep. This is an
-   * explicit lower UI exclusion zone only, not a field polygon.
-   */
-  coverage: "rail-only";
-  confidence: "high";
-  railMeasurement: ArenaSideSweepRailMeasurement;
-}>;
-
-export type ArenaPerspectiveCalibration =
-  | ArenaFourLineGrassCalibration
-  | ArenaSideSweepRailCalibration;
+export type ArenaPerspectiveCalibration = ArenaFourLineGrassCalibration;
 
 export type ArenaRenderedCardEnvelope = Readonly<{
   left: number;
@@ -73,9 +52,10 @@ export type ArenaRenderedCardEnvelope = Readonly<{
 const ARENA_LOOP_SOURCE_SHA256 = "74c24fc132e5cecbc280dd60da12542db7a7188a48156541eb396eabb599be02";
 
 /**
- * Measurements preserved from the 2026-09-10 Arena loop audit. Wide and lower
- * are first-pass visual measurements in the native 1280×720 source frame.
- * Side-sweep is a separate live browser-stage rail measurement at 1440×900.
+ * Measurements preserved from the 2026-09-10 Arena loop audit in the native
+ * 1280×720 source frame. Side-sweep was re-measured from frame 17.30s of the
+ * verified source file: all four painted boundaries are visible in that pass.
+ * The polygon is inset 6–45 source pixels from the lines as a safety gutter.
  */
 export const ARENA_PERSPECTIVE_CALIBRATIONS: Readonly<Record<ArenaPerspectiveId, ArenaPerspectiveCalibration>> = {
   "wide-touchline": {
@@ -108,17 +88,19 @@ export const ARENA_PERSPECTIVE_CALIBRATIONS: Readonly<Record<ArenaPerspectiveId,
   },
   "side-sweep": {
     perspective: "side-sweep",
-    coverage: "rail-only",
-    confidence: "high",
-    railMeasurement: {
-      perspective: "side-sweep",
-      sourceSha256: ARENA_LOOP_SOURCE_SHA256,
-      viewport: { width: 1440, height: 900 },
-      sampleTimeSeconds: 17.304558,
-      stageTop: 0,
-      carouselTop: 804,
-      railClearancePx: 4,
-    },
+    coverage: "four-line-polygon",
+    confidence: "medium-high",
+    sourceSha256: ARENA_LOOP_SOURCE_SHA256,
+    sourceViewport: { width: 1280, height: 720 },
+    loopWindowSeconds: { startSeconds: 14.7, endSeconds: 21.025 },
+    // Frame sample: 17.30 s. Coordinates trace the internal safe grass area:
+    // far touchline left/right, then near touchline right/left clockwise.
+    grassPolygon: [
+      { x: 300, y: 452 },
+      { x: 980, y: 452 },
+      { x: 1235, y: 684 },
+      { x: 45, y: 684 },
+    ],
   },
 };
 
@@ -126,39 +108,4 @@ export function hasFourLineGrassPolygon(
   calibration: ArenaPerspectiveCalibration,
 ): calibration is ArenaFourLineGrassCalibration {
   return calibration.coverage === "four-line-polygon";
-}
-
-/**
- * Derives, rather than stores, the lower safe Y coordinate from a measured
- * stage/rail relation. Callers must provide the current live measurement when
- * integrating at any viewport other than the audit sample.
- */
-export function calculateSideSweepBottomSafeY(
-  measurement: ArenaSideSweepRailMeasurement,
-): number | null {
-  const values = [
-    measurement.stageTop,
-    measurement.carouselTop,
-    measurement.railClearancePx,
-  ];
-  if (values.some((value) => !Number.isFinite(value)) || measurement.railClearancePx < 0) return null;
-
-  const bottomSafeY = measurement.carouselTop - measurement.stageTop - measurement.railClearancePx;
-  return Number.isFinite(bottomSafeY) ? bottomSafeY : null;
-}
-
-/**
- * Tests the complete visual card rectangle. A point anchor is deliberately not
- * accepted because it can remain in bounds while the card overlaps the rail.
- */
-export function cardEnvelopeClearsSideSweepRail(
-  card: ArenaRenderedCardEnvelope,
-  measurement: ArenaSideSweepRailMeasurement,
-): boolean {
-  const values = [card.left, card.top, card.right, card.bottom];
-  if (values.some((value) => !Number.isFinite(value))) return false;
-  if (card.right < card.left || card.bottom < card.top) return false;
-
-  const bottomSafeY = calculateSideSweepBottomSafeY(measurement);
-  return bottomSafeY !== null && card.bottom <= bottomSafeY;
 }

@@ -3,7 +3,7 @@
 /* The provider owns crest URLs; this preserves the canonical source without a remote-image allowlist. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { BellRing, CalendarDays, Clock3, Crown, Goal, Landmark, Radio, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
@@ -133,7 +133,10 @@ function TeamMark({ fixture, side }: { fixture: TouchlinePublicFixture; side: "h
   const team = side === "home" ? fixture.homeTeam : fixture.awayTeam;
   const canonicalClub = findTouchLineClub(team?.providerId) ?? findTouchLineClub(team?.name) ?? findTouchLineClub(team?.shortCode);
   const logoUrl = canonicalClub?.logoUrl ?? team?.logoUrl;
-  return <span className={styles.teamMark}>{logoUrl ? <img src={logoUrl} alt="" /> : <span>{team?.name?.slice(0, 2).toUpperCase() ?? "TL"}</span>}</span>;
+  // Live used a fixed green halo for every crest. Keep the visual strength
+  // appropriate to the placement in CSS, but take the hue from the club.
+  const accent = canonicalClub?.accent ?? "#a3ff12";
+  return <span className={styles.teamMark} style={{ "--team-mark-neon": accent } as CSSProperties}>{logoUrl ? <img src={logoUrl} alt="" /> : <span>{team?.name?.slice(0, 2).toUpperCase() ?? "TL"}</span>}</span>;
 }
 
 function VenueArtwork({ venue }: { venue: TouchlinePublicVenue }) {

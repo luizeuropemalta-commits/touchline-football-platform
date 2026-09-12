@@ -53,14 +53,19 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(exactCard, /--touchline-club-crest-color": resolvedClub\?\.accent \?\? cardTraceColor/);
   assert.match(coachCard, /--touchline-card-frame-color": tierPalette\.accent/);
   assert.match(coachCard, /--touchline-club-crest-color": clubAccent/);
-  assert.match(exactCard, /<TouchlineCardPerimeterTrace\s*\/>/);
-  assert.match(coachCard, /<TouchlineCardPerimeterTrace\s*\/>/);
+  assert.match(exactCard, /<TouchlineCardPerimeterTrace tier=\{marketTier\?\.key \?\? "neutral"\} \/>/);
+  assert.match(coachCard, /<TouchlineCardPerimeterTrace tier=\{slot\.cardTier\} variant="coach" \/>/);
   assert.doesNotMatch(exactCard, /TouchlineClubCrestPerimeterTrace|crest-trace/);
   assert.doesNotMatch(coachCard, /TouchlineClubCrestPerimeterTrace|crest-trace/);
   assert.match(exactCard, /data-touchline-card-crest-host="true"/);
   assert.match(coachCard, /data-touchline-card-crest-host="true"/);
   assert.match(exactCard, /data-touchline-card-crest="true"/);
   assert.match(coachCard, /data-touchline-card-crest="true"/);
+  assert.match(globalCss, /drop-shadow\(0 0 7px color-mix\(in srgb, var\(--touchline-club-crest-color\) 42%, transparent\)\)/);
+  assert.match(globalCss, /touchline-card-surface\[data-card-motion="true"\]:hover \[data-touchline-card-crest="true"\]/);
+  assert.match(globalCss, /drop-shadow\(0 0 11px color-mix\(in srgb, var\(--touchline-club-crest-color\) 68%, transparent\)\)/);
+  assert.match(coachCard, /--touchline-club-crest-color": clubAccent/);
+  assert.match(source("components\/touchline\/cards\/TouchlineCoachCard\.module\.css"), /\.shell:hover \.clubBadge \[data-touchline-card-crest-host="true"\] > img/);
   assert.doesNotMatch(globalCss, /data-touchline-card-crest-trace/);
   assert.match(globalCss, /\[data-touchline-card-crest-host="true"\][\s\S]*?place-items: center/);
   const crestCss = globalCss.slice(
@@ -91,6 +96,28 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(arenaClient, /arena-live-moving-card[\s\S]*?data-touchline-card-neon-trace-run="true"[\s\S]*?will-change: auto !important/);
 });
 
+test("the perimeter trace centres each official player and coach rail without changing its approved lower extent", () => {
+  const trace = source("components/touchline/cards/TouchlineCardPerimeterTrace.tsx");
+
+  for (const tier of [
+    "ruby-red",
+    "sapphire-blue",
+    "amethyst-purple",
+    "radiant-gold",
+    "emerald-green",
+    "clear-diamond",
+    "diamond-gold",
+  ]) {
+    assert.match(trace, new RegExp(`"${tier}": \\[`));
+  }
+
+  assert.match(trace, /const PLAYER_SIDE_CENTRES/);
+  assert.match(trace, /const COACH_SIDE_CENTRES/);
+  assert.match(trace, /viewBox=\{isCoach \? "0 0 810 1080" : "0 0 430 691"\}/);
+  assert.match(trace, /M123 18H307L\$\{right\} 98V593L307 680H123L\$\{left\} 593V98Z/);
+  assert.match(trace, /M232 28H578L\$\{right\} 153V926L578 1063H232L\$\{left\} 926V153Z/);
+});
+
 test("card controls stay inside the master safe zone and contracting stays outside the artwork", () => {
   const layout = JSON.parse(source("public/touchlineArena/card-layouts/master-shirt-back-layout.json"));
   const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
@@ -103,10 +130,13 @@ test("card controls stay inside the master safe zone and contracting stays outsi
     source("components/touchline/ClubHubOfficialLineup.tsx"),
   ].join("\n");
 
-  assert.ok(layout.layout.shareAction.x >= 58);
+  assert.deepEqual(layout.layout.shareAction, { x: 28, y: 531, scale: 1 });
+  assert.deepEqual(layout.layout.followAction, { x: 156, y: 531, scale: 1 });
+  assert.deepEqual(layout.layout.likeAction, { x: 284, y: 531, scale: 1 });
   assert.ok(layout.layout.profileAction.x + (118 * layout.layout.profileAction.scale) <= 372);
-  assert.ok(layout.layout.followAction.x >= 58);
-  assert.ok(layout.layout.likeAction.x + (118 * layout.layout.likeAction.scale) <= 372);
+  assert.ok(layout.layout.shareAction.x + (118 * layout.layout.shareAction.scale) <= layout.layout.followAction.x);
+  assert.ok(layout.layout.followAction.x + (118 * layout.layout.followAction.scale) <= layout.layout.likeAction.x);
+  assert.ok(layout.layout.likeAction.x + (118 * layout.layout.likeAction.scale) <= 402);
   assert.match(zoom, /<div className=\{styles\.expandedCard\} data-card-zoom="expanded">/);
   assert.match(zoom, /<a className=\{styles\.contractAction\} href=\{contractHref\}>/);
   assert.ok(

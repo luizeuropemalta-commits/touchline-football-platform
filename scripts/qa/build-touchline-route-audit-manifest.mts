@@ -88,6 +88,13 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "GET /api/football-data/validate": { auth: "OWNER_OR_VALIDATION_SECRET", role: "OWNER_OR_SERVER_JOB", data: "FOOTBALL_DATA_VALIDATION", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "GET /api/notifications/preferences": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_PREFERENCES", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "PUT /api/notifications/preferences": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_PREFERENCES", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "PUT /api/notifications/devices": {
+    auth: "AUTHENTICATED_ARENA_ACCESS",
+    role: "ARENA_USER",
+    data: "SUPABASE_SELF_SCOPED_VALIDATED_PUSH_DEVICE_REGISTRATION",
+    browser: "HTTP_CONTRACT",
+    status: "PENDING_AUTHENTICATED_DEVICE_QA",
+  },
   "POST /api/players/search-and-build-card": { auth: "AUTHENTICATED_OR_LOCAL_EDITOR", role: "ARENA_USER_OR_LOCAL_EDITOR", data: "PROVIDER_CACHE_AND_EDITORIAL_CARD_GATE", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/stripe/webhook": { auth: "WEBHOOK_SIGNATURE", role: "STRIPE", data: "STRIPE_EVENT", browser: "WEBHOOK_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/touchline-analytics": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_ANALYTICS_EVENT", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },

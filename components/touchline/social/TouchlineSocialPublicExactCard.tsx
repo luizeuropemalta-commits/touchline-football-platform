@@ -2,7 +2,7 @@
 
 import TouchlineEliteExactCard, {
   type TouchlineEliteExactPlayer,
-} from "@/components/touchline/cards/TouchlineEliteExactCard";
+} from "@/components/touchline/social/TouchlineSocialApprovedExactCard";
 
 type TouchlineSocialPublicPlayer = Omit<
   TouchlineEliteExactPlayer,

@@ -11,6 +11,7 @@ import {
 import { touchlineSocialContentDefinition } from "../lib/touchlineArena/social-content-registry.ts";
 import { touchlineSocialRenderPath } from "../lib/touchlineArena/social-publication-contract.ts";
 import { readTouchlineSocialTemplateRegistry } from "../lib/touchlineArena/social-template-policy-server.ts";
+import { assessTouchlineTemplateApprovalLock } from "../lib/touchlineArena/social-template-approval-lock.ts";
 
 test("042 registry keeps Feed and Story as separate immutable products", () => {
   assert.deepEqual(touchlineSocialContentDefinition("FULL_TIME"), {
@@ -99,6 +100,7 @@ test("042 owner visual review is non-publishable and does not weaken the canonic
   const page = readFileSync(new URL("../app/visual-qa/social-full-time/page.tsx", import.meta.url), "utf8");
   const preview = readFileSync(new URL("../app/visual-qa/social-full-time/preview-draft.ts", import.meta.url), "utf8");
   const component = readFileSync(new URL("../components/touchline/social/TouchlineSocialFinalScoreDraft.tsx", import.meta.url), "utf8");
+  const templateRegistry = readFileSync(new URL("../lib/touchlineArena/social-template-policy-server.ts", import.meta.url), "utf8");
   const css = readFileSync(new URL("../components/touchline/social/TouchlineSocialFinalScoreDraft.module.css", import.meta.url), "utf8");
   assert.match(page, /VERCEL_ENV === "production"/);
   assert.match(page, /LOCAL VISUAL QA · SAMPLE DATA · NOT PUBLISHED/);
@@ -111,6 +113,8 @@ test("042 owner visual review is non-publishable and does not weaken the canonic
   assert.match(component, /OUTBOUND DISABLED/);
   assert.match(component, /className=\{styles\.scoreline\}/);
   assert.match(component, /tl-shield-lime\.svg/);
+  assert.match(component, /TouchlineSocialApprovedExactCard/);
+  assert.match(templateRegistry, /TouchlineSocialApprovedFinalScoreDraft\.tsx/);
   assert.doesNotMatch(component, /SAMPLE RESULT/);
   assert.doesNotMatch(component, /<i>—<\/i>/);
   assert.match(css, /touchline-score-neon-orbit/);
@@ -120,13 +124,14 @@ test("042 owner visual review is non-publishable and does not weaken the canonic
   assert.doesNotMatch(css, /\.club > div[^}]*border-radius:\s*50%/);
 });
 
-test("042 approved artwork is locked to the reviewed local template checksum", async () => {
+test("042 standalone snapshot cannot inherit a historical visual approval by checksum substitution", async () => {
   const approval = readFileSync(new URL("../docs/touchline-arena/social-publishing-playbook/042_FULL_TIME_OWNER_ART_APPROVAL.md", import.meta.url), "utf8");
   const registry = await readTouchlineSocialTemplateRegistry(new URL("..", import.meta.url).pathname);
   const fullTime = registry.find((row) => row.templateVersion === "touchline-full-time-feed-v1");
   assert.ok(fullTime);
-  assert.match(approval, new RegExp(fullTime.visualTemplateChecksum.replace(":", "\\:")));
-  assert.match(approval, new RegExp(fullTime.templateIdentityChecksum.replace(":", "\\:")));
+  const assessment = assessTouchlineTemplateApprovalLock(fullTime);
+  assert.equal(assessment.state, "unavailable");
+  assert.match(approval, /Any change to a covered visual source changes the template identity checksum\s+and invalidates this approval/);
   assert.match(approval, /Caption approval: \*\*PENDING/);
   assert.match(approval, /Outbound: \*\*DISABLED/);
 });

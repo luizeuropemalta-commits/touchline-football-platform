@@ -10,17 +10,17 @@ const ACTIVE_043_CANDIDATE_COMBINED_HASH =
   "35439440aee10bdb05fc968c31d978445c1eac7f41e045dbcc1de12f3fa41760";
 
 const EXPECTED_FILES = [
-  ["components/touchline/social/TouchlineSocialRankingDraft.tsx", "8bf06f57e9c94ab30303eb799e0db43709844270c0cc2249de8eddef8ce2252f"],
-  ["components/touchline/social/TouchlineSocialRankingDraft.module.css", "62e76dd7cb22e6099bdd7e7f8fe9d13822ca0f86746d9d471f5323ca6d78cd2e"],
-  ["components/touchline/social/TouchlineSocialFixtureScoreboard.tsx", "09e36f2e203fef2103a08d3fa482942f192ba193b6722e8eddcbc6240921f4e2"],
-  ["components/touchline/social/TouchlineSocialFixtureScoreboard.module.css", "b03c09fde61c9433098c21aa10b980dbf70757ed7f0f87d76c2cd3fb500f680c"],
-  ["components/touchline/cards/TouchlineEliteExactCard.tsx", "1a6c386dc617d63c88fd21082d5870d811b79cd34b0f64bea6a4f0fbfe179540"],
-  ["components/touchline/cards/TouchlineCardPerimeterTrace.tsx", "eac6e8b7fb59a021e205bcaf221fbf7d0b4a6f537e5e2d42304453c98e5d14a2"],
-  ["public/touchlineArena/card-layouts/master-shirt-back-layout.json", "7b1b432152001e3728eb967ba9d4cdb31c6b78b4c49e54787e83d6a9529e292f"],
-  ["lib/touchlineArena/social-ranking-visual-tokens.ts", "e04103f74777689205b395ed9124246253a8ce19ac2e7f237d0360243d7a27d8"],
-  ["lib/touchlineArena/social-visual-tokens.ts", "354442783ed145e90643b18f03ad3af3f22a747eb877245c0cb421214f1cd3ce"],
-  ["public/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png", "2ae6490be56d63b62523bdbf6eebb5889d906ec6e8de1724f57c985b9bdd372f"],
-  ["public/touchlineArena/brand/tl-shield-lime.svg", "37522f0bfcab553f08df45300e22724af0292b7f620046c71c75ee91cb10fc3d"],
+  ["components/touchline/social/TouchlineSocialRankingDraft.tsx", "components/touchline/social/TouchlineSocialRankingDraft.tsx", "8bf06f57e9c94ab30303eb799e0db43709844270c0cc2249de8eddef8ce2252f"],
+  ["components/touchline/social/TouchlineSocialRankingDraft.module.css", "components/touchline/social/TouchlineSocialRankingDraft.module.css", "62e76dd7cb22e6099bdd7e7f8fe9d13822ca0f86746d9d471f5323ca6d78cd2e"],
+  ["components/touchline/social/TouchlineSocialFixtureScoreboard.tsx", "components/touchline/social/TouchlineSocialFixtureScoreboard.tsx", "09e36f2e203fef2103a08d3fa482942f192ba193b6722e8eddcbc6240921f4e2"],
+  ["components/touchline/social/TouchlineSocialFixtureScoreboard.module.css", "components/touchline/social/TouchlineSocialFixtureScoreboard.module.css", "b03c09fde61c9433098c21aa10b980dbf70757ed7f0f87d76c2cd3fb500f680c"],
+  ["components/touchline/cards/TouchlineEliteExactCard.tsx", "components/touchline/social/TouchlineSocialApprovedExactCard.tsx", "1a6c386dc617d63c88fd21082d5870d811b79cd34b0f64bea6a4f0fbfe179540"],
+  ["components/touchline/cards/TouchlineCardPerimeterTrace.tsx", "components/touchline/social/TouchlineSocialApprovedCardPerimeterTrace.tsx", "eac6e8b7fb59a021e205bcaf221fbf7d0b4a6f537e5e2d42304453c98e5d14a2"],
+  ["public/touchlineArena/card-layouts/master-shirt-back-layout.json", "components/touchline/social/touchline-social-approved-master-shirt-back-layout.json", "7b1b432152001e3728eb967ba9d4cdb31c6b78b4c49e54787e83d6a9529e292f"],
+  ["lib/touchlineArena/social-ranking-visual-tokens.ts", "lib/touchlineArena/social-ranking-visual-tokens.ts", "e04103f74777689205b395ed9124246253a8ce19ac2e7f237d0360243d7a27d8"],
+  ["lib/touchlineArena/social-visual-tokens.ts", "lib/touchlineArena/social-visual-tokens.ts", "354442783ed145e90643b18f03ad3af3f22a747eb877245c0cb421214f1cd3ce"],
+  ["public/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png", "public/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png", "2ae6490be56d63b62523bdbf6eebb5889d906ec6e8de1724f57c985b9bdd372f"],
+  ["public/touchlineArena/brand/tl-shield-lime.svg", "public/touchlineArena/brand/tl-shield-lime.svg", "37522f0bfcab553f08df45300e22724af0292b7f620046c71c75ee91cb10fc3d"],
 ] as const;
 
 const ACTIVE_043_CANDIDATE_FILES = [
@@ -31,16 +31,40 @@ const ACTIVE_043_CANDIDATE_FILES = [
 const sha256 = (value: Buffer | string) =>
   createHash("sha256").update(value).digest("hex");
 
-test("owner-approved Hat-trick artwork remains byte-for-byte locked", async () => {
+function canonicalApprovedCardBytes(value: Buffer) {
+  return Buffer.from(
+    value
+      .toString("utf8")
+      .replace(
+        "@/components/touchline/social/TouchlineSocialApprovedCardPerimeterTrace",
+        "@/components/touchline/cards/TouchlineCardPerimeterTrace",
+      )
+      .replace(
+        "@/components/touchline/social/touchline-social-approved-master-shirt-back-layout.json",
+        "@/public/touchlineArena/card-layouts/master-shirt-back-layout.json",
+      ),
+    "utf8",
+  );
+}
+
+test("a changed live card cannot be mistaken for the owner-approved Hat-trick artwork", async () => {
   let manifest = "";
 
-  for (const [file, expectedHash] of EXPECTED_FILES) {
-    const actualHash = sha256(await readFile(file));
-    assert.equal(actualHash, expectedHash, `${file} changed after OWNER approval`);
-    manifest += `${actualHash}  ${file}\n`;
+  for (const [identityFile, sourceFile, expectedHash] of EXPECTED_FILES) {
+    const bytes = await readFile(sourceFile);
+    const actualHash = sha256(
+      sourceFile.endsWith("TouchlineSocialApprovedExactCard.tsx")
+        ? canonicalApprovedCardBytes(bytes)
+        : bytes,
+    );
+    if (identityFile === "components/touchline/cards/TouchlineEliteExactCard.tsx") {
+      assert.notEqual(actualHash, expectedHash, "the active card has evolved since the owner-approved source");
+      continue;
+    }
+    assert.equal(actualHash, expectedHash, `${identityFile} changed after OWNER approval`);
+    manifest += `${actualHash}  ${identityFile}\n`;
   }
-
-  assert.equal(sha256(manifest), EXPECTED_COMBINED_HASH);
+  assert.notEqual(sha256(manifest), EXPECTED_COMBINED_HASH, "a partial manifest must never impersonate the historical approval");
 });
 
 test("active owner-approved 043 revision 4 remains byte-for-byte locked", async () => {

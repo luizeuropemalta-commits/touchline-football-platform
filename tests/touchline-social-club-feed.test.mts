@@ -142,7 +142,10 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.match(component, /<ClubHubShareButton/);
   assert.match(component, /postId=\{item\.id\}/);
   assert.match(component, /Post actions/);
-  assert.match(component, /sizes="\(max-width: 620px\) 92vw, 540px"/);
+  assert.match(component, /<TouchlineClubFollowButton/);
+  assert.match(component, /className=\{styles\.liveMedia\}/);
+  assert.match(component, /Atualização ao vivo da TouchLine/);
+  assert.match(component, /imageUrl=\{item\.imageUrl\}/);
   assert.match(component, /data-scrollable=\{page\.state === "ready" \? "true" : undefined\}/);
   assert.match(component, /data-club-feed-scroll-region="true"/);
   assert.match(component, /tabIndex=\{0\}/);
@@ -156,7 +159,8 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.match(styles, /\.actions button\s*\{[\s\S]*?font-size:\s*12px/);
   assert.match(styles, /\.grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)[\s\S]*?justify-items:\s*center/);
   assert.match(styles, /\.card\s*\{[\s\S]*?width:\s*min\(100%, 540px\)/);
-  assert.match(styles, /\.media img\s*\{[\s\S]*?object-fit:\s*contain/);
+  assert.match(styles, /\.liveMedia\s*\{[\s\S]*?place-content:\s*center/);
+  assert.match(styles, /\.liveMedia img\s*\{[\s\S]*?object-fit:\s*contain/);
   assert.match(styles, /\.shell\s*\{[\s\S]*?display:\s*flex[\s\S]*?height:\s*100%[\s\S]*?overflow:\s*hidden/);
   assert.match(styles, /\.grid\s*\{[\s\S]*?align-content:\s*start[\s\S]*?grid-auto-rows:\s*max-content[\s\S]*?overflow-y:\s*auto[\s\S]*?overscroll-behavior:\s*contain[\s\S]*?scrollbar-gutter:\s*stable[\s\S]*?touch-action:\s*pan-y/);
   const leagueLayoutStyles = readFileSync(new URL("../components/touchline/club-hub/ClubHubOfficialLeague.module.css", import.meta.url), "utf8");

@@ -204,7 +204,10 @@ import {
   type Arena433VideoLoopId,
   type ArenaVideoViewport,
 } from "@/lib/touchlineArena/arena-formation-video-layout";
-import { TOUCHLINE_QA_CANONICAL_USER_ID } from "@/lib/touchlineArena/qa-canonical-persona";
+import {
+  isTouchlineQaReadOnlyMutationBlocked,
+  TOUCHLINE_QA_CANONICAL_USER_ID,
+} from "@/lib/touchlineArena/qa-canonical-persona";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
 import {
@@ -1978,7 +1981,6 @@ function LiveAtomicCardShell({
   className,
   label,
   playerId,
-  playerName,
   readinessId,
   style,
   onOpen,
@@ -1987,7 +1989,6 @@ function LiveAtomicCardShell({
   className: string;
   label: string;
   playerId: string;
-  playerName: string;
   readinessId: string;
   style: CSSProperties;
   onOpen: () => void;
@@ -2000,7 +2001,6 @@ function LiveAtomicCardShell({
       aria-label={label}
       data-live-player-id={playerId}
       data-live-card-readiness-id={readinessId}
-      title={playerName}
       onClick={(event) => {
         event.stopPropagation();
         onOpen();
@@ -2057,7 +2057,6 @@ const LiveSimulationPlayerCard = memo(function LiveSimulationPlayerCard({
       className={`arena-live-moving-card is-${side}`}
       label={`${labelPrefix} ${player.name}`}
       playerId={playerId}
-      playerName={player.name}
       readinessId={readinessId}
       onOpen={() => onOpen(playerId)}
       style={{
@@ -3350,6 +3349,8 @@ type ArenaClientProps = {
   initialEmptyLineup?: boolean;
   /** Server-proven, stable-QA-only entry point for the visual calibration tool. */
   initialQaVisualEditor?: boolean;
+  /** Server-proven, stable-QA-only validation surface that cannot persist an Arena lineup. */
+  initialQaReadOnly?: boolean;
   /** Server-proven owner capability. Protected routes still enforce authority. */
   canEditCardEngine?: boolean;
   /** Published 2D geometry for Market/Club Construction only; the Arena field keeps its independent camera calibration. */
@@ -3416,6 +3417,7 @@ export default function ArenaClient({
   initialDemoLineup = false,
   initialEmptyLineup = false,
   initialQaVisualEditor = false,
+  initialQaReadOnly = false,
   canEditCardEngine = false,
   initialTwoDimensionalFormationRegistry,
   initialFantasyLineup = null,
@@ -3447,7 +3449,9 @@ export default function ArenaClient({
   const [players, setPlayers] = useState<ArenaPlayer[]>(DEFAULT_ARENA_PLAYERS);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [spotlightPlayerId, setSpotlightPlayerId] = useState<string | null>(null);
-  const [isEditorOpen, setIsEditorOpen] = useState(initialPanel === "formation" || initialQaVisualEditor);
+  const [isEditorOpen, setIsEditorOpen] = useState(
+    !initialQaReadOnly && (initialPanel === "formation" || initialQaVisualEditor),
+  );
   const initialIntroWasSkipped = Boolean(standaloneExperience) || initialIntroIntent === "skip";
   const [activeVideoIndex, setActiveVideoIndex] = useState(initialIntroWasSkipped ? 1 : 0);
   const [hasEntryVideoFinished, setHasEntryVideoFinished] = useState(initialIntroWasSkipped);
@@ -3639,7 +3643,7 @@ export default function ArenaClient({
         window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, null));
       }
       setActiveArenaPanel(panel === "live" ? null : panel);
-      setIsEditorOpen(initialQaVisualEditor || panel === "formation");
+      setIsEditorOpen(!initialQaReadOnly && (initialQaVisualEditor || panel === "formation"));
       setIsArenaNavOpen(false);
       if (panel !== "bench") setReplacementTargetId(null);
     };
@@ -3647,7 +3651,7 @@ export default function ArenaClient({
     syncArenaPanelFromUrl();
     window.addEventListener("popstate", syncArenaPanelFromUrl);
     return () => window.removeEventListener("popstate", syncArenaPanelFromUrl);
-  }, [initialFantasyLineup, initialPanel, initialQaVisualEditor, standaloneExperience]);
+  }, [initialFantasyLineup, initialPanel, initialQaReadOnly, initialQaVisualEditor, standaloneExperience]);
   const initialContractHandledRef = useRef(false);
   const [selectedFormationKey, setSelectedFormationKey] = useState<ArenaFormationKey>(() => (
     initialFantasyLineup ? parseArenaFormationKey(initialFantasyLineup.formationCode) : DEFAULT_ARENA_FORMATION_KEY
@@ -3667,7 +3671,13 @@ export default function ArenaClient({
   // arbitrary production or preview session can enter edit mode through a URL.
   const isStableQaArenaHost = typeof window !== "undefined"
     && window.location.hostname.toLowerCase() === TOUCHLINE_QA_HOSTNAME;
+  // The server already proved the exact QA host before serializing this prop.
+  // Keep that proof during SSR so the first markup is read-only as well; once
+  // hydrated, require the browser host to match again before enabling it.
+  const isQaReadOnly = initialQaReadOnly
+    && (typeof window === "undefined" || isStableQaArenaHost);
   const isQaVisualEditor = initialQaVisualEditor
+    && !isQaReadOnly
     && isStableQaArenaHost
     && arenaPersistencePrincipal?.kind === "authenticated"
     && arenaPersistencePrincipal.userId === TOUCHLINE_QA_CANONICAL_USER_ID;
@@ -3730,6 +3740,12 @@ export default function ArenaClient({
   );
 
   useEffect(() => {
+    // QA read-only is an observation surface. Do not restore a match-session
+    // draft from browser storage because a later state transition could write
+    // it back; the rendered authenticated lineup remains available below.
+    if (isQaReadOnly) {
+      return;
+    }
     if (!quickSubstitutionSessionSource || !quickSubstitutionSessionStorageKey) {
       return;
     }
@@ -3772,9 +3788,11 @@ export default function ArenaClient({
     quickSubstitutionSessionSource?.ownerId,
     quickSubstitutionSessionSource?.rosterRevision,
     quickSubstitutionSessionStorageKey,
+    isQaReadOnly,
   ]);
 
   useEffect(() => {
+    if (isQaReadOnly) return;
     if (!quickSubstitutionSession || !quickSubstitutionSessionStorageKey || !quickSubstitutionSessionSource) return;
     if (
       quickSubstitutionSession.matchId !== quickSubstitutionSessionSource.matchId
@@ -3787,6 +3805,7 @@ export default function ArenaClient({
     quickSubstitutionSessionSource?.matchId,
     quickSubstitutionSessionSource?.rosterRevision,
     quickSubstitutionSessionStorageKey,
+    isQaReadOnly,
   ]);
 
   const quickSubstitutionFieldPlayers = useMemo(() => {
@@ -4486,7 +4505,9 @@ export default function ArenaClient({
     queueMicrotask(() => {
       if (cancelled) return;
       if (launchMode === "skip") {
-        writeBrowserStorage("localStorage", TOUCHLINE_ARENA_INTRO_STORAGE_KEY, "1");
+        if (!isQaReadOnly) {
+          writeBrowserStorage("localStorage", TOUCHLINE_ARENA_INTRO_STORAGE_KEY, "1");
+        }
         setIntroExperienceMode("hidden");
         setIsEntrySkipAvailable(false);
         startCardLoopVideo();
@@ -4504,7 +4525,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [initialIntroIntent]);
+  }, [initialIntroIntent, isQaReadOnly]);
 
   useEffect(() => {
     const entryVideo = firstVideoRef.current;
@@ -4601,10 +4622,12 @@ export default function ArenaClient({
       const storedCoachProviderId = remoteCoachProviderId || readBrowserStorage("localStorage", coachStorageKey) || "";
       const restoredCoach = touchlineLiveCoachForProviderId(storedCoachProviderId);
       if (restoredCoach) {
-        writeBrowserStorage("localStorage", coachStorageKey, restoredCoach.coach.providerId);
+        if (!isQaReadOnly) {
+          writeBrowserStorage("localStorage", coachStorageKey, restoredCoach.coach.providerId);
+        }
         setOwnerCoachProviderId(restoredCoach.coach.providerId);
       } else {
-        removeBrowserStorage("localStorage", coachStorageKey);
+        if (!isQaReadOnly) removeBrowserStorage("localStorage", coachStorageKey);
         setOwnerCoachProviderId(null);
       }
       setHasLoadedOwnerCoach(true);
@@ -4618,11 +4641,13 @@ export default function ArenaClient({
       );
 
       if (remoteState?.saved_formation_layouts && typeof remoteState.saved_formation_layouts === "object") {
-        writeBrowserStorage(
-          "localStorage",
-          formationLocksStorageKey,
-          JSON.stringify(remoteState.saved_formation_layouts),
-        );
+        if (!isQaReadOnly) {
+          writeBrowserStorage(
+            "localStorage",
+            formationLocksStorageKey,
+            JSON.stringify(remoteState.saved_formation_layouts),
+          );
+        }
       }
       setLockedFormationKeys(
         Object.keys(readLockedFormationLayouts(principal)).filter(
@@ -4630,7 +4655,7 @@ export default function ArenaClient({
         ),
       );
 
-      if (requestedClub) {
+      if (requestedClub && !isQaReadOnly) {
         setSelectedBuilderClubKey(requestedClub.teamId);
         setActiveArenaPanel("market");
         window.history.replaceState(window.history.state, "", touchlineArenaPanelUrl(window.location.href, "market"));
@@ -4639,7 +4664,7 @@ export default function ArenaClient({
         setIsArenaNavOpen(false);
       }
 
-      if (params.get("clearLineup") === "1") {
+      if (params.get("clearLineup") === "1" && !isQaReadOnly) {
         setIsDemoLineup(false);
         removeBrowserStorage("localStorage", formationStorageKey);
         removeBrowserStorage("localStorage", lineupStorageKey);
@@ -4700,8 +4725,10 @@ export default function ArenaClient({
       if (remoteState && Array.isArray(remoteState.lineup)) {
         effectiveFormationKey = parseArenaFormationKey(remoteState.formation_key ?? null);
         setSelectedFormationKey(effectiveFormationKey);
-        writeBrowserStorage("localStorage", formationStorageKey, effectiveFormationKey);
-        writeBrowserStorage("localStorage", lineupStorageKey, savedLineup ?? "[]");
+        if (!isQaReadOnly) {
+          writeBrowserStorage("localStorage", formationStorageKey, effectiveFormationKey);
+          writeBrowserStorage("localStorage", lineupStorageKey, savedLineup ?? "[]");
+        }
       }
 
       // The manual QA tool calibrates the already-approved 4-3-3 only. It
@@ -4725,11 +4752,11 @@ export default function ArenaClient({
           effectiveFormationKey,
           principal,
         );
-        writeBrowserStorage("localStorage", lineupStorageKey, JSON.stringify(mergedPlayers));
+        if (!isQaReadOnly) writeBrowserStorage("localStorage", lineupStorageKey, JSON.stringify(mergedPlayers));
         setPlayers(mergedPlayers);
         setShouldRenderPlayers(mergedPlayers.length > 0 || shouldSkipIntro);
       } catch {
-        removeBrowserStorage("localStorage", lineupStorageKey);
+        if (!isQaReadOnly) removeBrowserStorage("localStorage", lineupStorageKey);
         setPlayers([]);
       } finally {
         setHasLoadedSavedLineup(true);
@@ -4745,7 +4772,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [initialDemoLineup, initialEmptyLineup, initialLocale, initialQaVisualEditor]);
+  }, [initialDemoLineup, initialEmptyLineup, initialLocale, initialQaVisualEditor, isQaReadOnly]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4758,7 +4785,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [initialPanel, standalonePanel]);
+  }, [initialPanel, isQaReadOnly, standalonePanel]);
 
   useEffect(() => {
     if (!hasRestoredLiveFixtureSelection) return;
@@ -4771,12 +4798,12 @@ export default function ArenaClient({
     queueMicrotask(() => {
       if (cancelled) return;
       setSelectedLiveFixtureId(defaultFixtureId);
-      writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, defaultFixtureId);
+      if (!isQaReadOnly) writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, defaultFixtureId);
     });
     return () => {
       cancelled = true;
     };
-  }, [hasRestoredLiveFixtureSelection, liveFixtures, selectedLiveFixtureId]);
+  }, [hasRestoredLiveFixtureSelection, isQaReadOnly, liveFixtures, selectedLiveFixtureId]);
 
   useEffect(() => {
     if (!hasLoadedSavedLineup || hasLoadedClubOwnerRoster || !arenaPersistencePrincipal) return;
@@ -4845,7 +4872,7 @@ export default function ArenaClient({
       if (isAuthoritativeRoster) setShouldRenderPlayers(reconciledPlayers.length > 0);
       setBenchPlayers(restoredBench);
       setSelectedBenchId(restoredBench[0]?.id ?? "");
-      if (isAuthoritativeRoster) {
+      if (isAuthoritativeRoster && !isQaReadOnly) {
         writeBrowserClubOwnerRoster(roster, {
           principal: arenaPersistencePrincipal,
         });
@@ -4860,7 +4887,7 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
-  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, initialQaVisualEditor, players]);
+  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, initialQaVisualEditor, isQaReadOnly, players]);
 
   useEffect(() => {
     if (
@@ -4892,7 +4919,7 @@ export default function ArenaClient({
           const refreshed = clubOwnerCardToBenchOption(canonical);
           return { ...refreshed, id: bench.id, impact: bench.impact, status: bench.status };
         }));
-        writeBrowserClubOwnerRoster(roster.cards, { principal: arenaPersistencePrincipal });
+        if (!isQaReadOnly) writeBrowserClubOwnerRoster(roster.cards, { principal: arenaPersistencePrincipal });
       } catch {
         // Keep the last verified server projection. A transient read failure
         // must not clear match points, cards or the saved formation.
@@ -4905,7 +4932,7 @@ export default function ArenaClient({
       controller.abort();
       window.clearInterval(timer);
     };
-  }, [arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster]);
+  }, [arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, isQaReadOnly]);
 
   useEffect(() => {
     let cancelled = false;
@@ -5092,7 +5119,7 @@ export default function ArenaClient({
   }, [arenaPersistencePrincipal, t]);
 
   useEffect(() => {
-    if (!hasLoadedSavedLineup || !hasLoadedClubOwnerRoster || isDemoLineup || !arenaPersistencePrincipal) return;
+    if (!hasLoadedSavedLineup || !hasLoadedClubOwnerRoster || isDemoLineup || !arenaPersistencePrincipal || isQaReadOnly) return;
     // Quick Substitution is a match-session projection, never an Arena roster
     // save. An empty lineup is likewise not a valid automatic state update:
     // `?clearLineup=1` must not silently erase the owner's remote lineup.
@@ -5139,7 +5166,7 @@ export default function ArenaClient({
     return () => {
       if (accountLineupSaveTimerRef.current) window.clearTimeout(accountLineupSaveTimerRef.current);
     };
-  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isArenaMatchdayViewActive, isDemoLineup, isQuickSubstitutionOpen, players, selectedFormationKey, t]);
+  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isArenaMatchdayViewActive, isDemoLineup, isQaReadOnly, isQuickSubstitutionOpen, players, selectedFormationKey, t]);
 
   useEffect(() => {
     if (!hasLoadedSavedLineup || !players.some(hasArenaCardForHydration)) return;
@@ -5739,12 +5766,14 @@ export default function ArenaClient({
     const draftIds = new Set(marketCartDraftIdsRef.current ?? []);
     for (const player of marketCartPlayers) draftIds.add(builderPlayerSquadContractId(player));
     marketCartDraftIdsRef.current = draftIds;
-    writeBrowserStorage(
-      "localStorage",
-      draftKey,
-      JSON.stringify([...draftIds]),
-    );
-  }, [arenaPersistencePrincipal, marketCartPlayers]);
+    if (!isQaReadOnly) {
+      writeBrowserStorage(
+        "localStorage",
+        draftKey,
+        JSON.stringify([...draftIds]),
+      );
+    }
+  }, [arenaPersistencePrincipal, isQaReadOnly, marketCartPlayers]);
 
   useEffect(() => {
     if (
@@ -6007,7 +6036,20 @@ export default function ArenaClient({
     };
   }, []);
 
+  /**
+   * One fail-closed boundary for the authenticated QA observation surface.
+   * Keep every Arena mutator behind this guard: read-only QA may render the
+   * owner's existing 4-4-2 state, but it must not change browser or project
+   * state while its evidence is collected.
+   */
+  function blockQaReadOnlyMutation() {
+    if (!isTouchlineQaReadOnlyMutationBlocked(isQaReadOnly)) return false;
+    setSaveStatus("QA read-only validation does not allow changes");
+    return true;
+  }
+
   function handleManualSave() {
+    if (blockQaReadOnlyMutation()) return;
     if (isDemoLineup) {
       setSaveStatus(t("demoLineupNotSaved"));
       return;
@@ -6023,6 +6065,7 @@ export default function ArenaClient({
   }
 
   function writeQaVisualDraft(playerId: string, patch: Partial<ArenaFieldSlot>) {
+    if (blockQaReadOnlyMutation()) return;
     const existing = fieldPlayerPositions.get(playerId);
     if (!existing) return;
     const nextSlot = constrainArenaQaFreeSlot({ ...existing, ...patch });
@@ -6036,6 +6079,7 @@ export default function ArenaClient({
   }
 
   async function saveQaVisualArenaStandard() {
+    if (blockQaReadOnlyMutation()) return;
     if (!isQaVisualEditor || !arenaPersistencePrincipal || !canPersistArenaAccountState(arenaPersistencePrincipal, arenaAccountSyncStatus)) {
       setSaveStatus("QA visual editor requires the canonical QA account");
       return;
@@ -6078,6 +6122,7 @@ export default function ArenaClient({
   }
 
   async function handleSaveFormationLock() {
+    if (blockQaReadOnlyMutation()) return;
     if (isFinalizedArenaFormation(selectedFormationKey)) {
       setSaveStatus(`${selectedFormationKey} · ${t("formationFinalized")}`);
       return;
@@ -6106,6 +6151,7 @@ export default function ArenaClient({
   }
 
   async function handleUnlockCurrentCamera() {
+    if (blockQaReadOnlyMutation()) return;
     if (isFinalizedArenaFormation(selectedFormationKey)) {
       setSaveStatus(`${selectedFormationKey} · ${t("protectedAsSaved")}`);
       return;
@@ -6128,6 +6174,7 @@ export default function ArenaClient({
   }
 
   function changeFormation(formationKey: ArenaFormationKey) {
+    if (blockQaReadOnlyMutation()) return;
     if (!isQaVisualEditor && !isFinalizedArenaFormation(formationKey)) {
       setSaveStatus(`${formationKey} · ${t("comingSoon")}`);
       return;
@@ -6143,6 +6190,7 @@ export default function ArenaClient({
   }
 
   function updateSelectedPlayerPosition(axis: "x" | "y", value: number) {
+    if (blockQaReadOnlyMutation()) return;
     if (!selectedPlayer) return;
     if (isQaVisualEditor) {
       writeQaVisualDraft(selectedPlayer.id, { [axis]: value });
@@ -6168,6 +6216,7 @@ export default function ArenaClient({
   }
 
   function updateSelectedPlayerSize(value: number) {
+    if (blockQaReadOnlyMutation()) return;
     if (!selectedPlayer) return;
     if (isQaVisualEditor) {
       const heightVh = Math.min(ARENA_CARD_MAX_HEIGHT_VH, Math.max(ARENA_CARD_MIN_HEIGHT_VH, Math.round(value * 10) / 10));
@@ -6188,6 +6237,7 @@ export default function ArenaClient({
   }
 
   function nudgeSelectedPlayer(dx: number, dy: number) {
+    if (blockQaReadOnlyMutation()) return;
     if (!selectedPlayer) return;
     if (isQaVisualEditor) {
       const slot = fieldPlayerPositions.get(selectedPlayer.id);
@@ -6262,6 +6312,7 @@ export default function ArenaClient({
   }
 
   function prepareBenchReplacement(bench: BenchOption, target?: ArenaPlayer | null) {
+    if (blockQaReadOnlyMutation()) return;
     setSelectedBenchId(bench.id);
     if (target) {
       requestQuickSubstitutionConfirmation(bench, target);
@@ -6275,6 +6326,7 @@ export default function ArenaClient({
   }
 
   function requestQuickSubstitutionConfirmation(bench: BenchOption, target: ArenaPlayer) {
+    if (blockQaReadOnlyMutation()) return;
     if (isBenchFormationLocked(bench, quickSubstitutionInteractivePlayers, selectedFormationKey, target) || !canBenchReplaceTarget(bench, target)) {
       setSaveStatus(`${bench.shortName} ${t("locked")}: ${t("choosePosition")} ${positionGroupLabel(arenaPositionGroup(target.card?.position, target.role), t)}`);
       return;
@@ -6297,6 +6349,7 @@ export default function ArenaClient({
   }
 
   function handleBenchDrop(target: ArenaPlayer, benchId: string) {
+    if (blockQaReadOnlyMutation()) return;
     const bench = quickSubstitutionInteractiveBench.find((candidate) => candidate.id === benchId);
     setDraggingBenchId(null);
     if (!bench) return;
@@ -6368,6 +6421,7 @@ export default function ArenaClient({
   }
 
   function moveFieldPlayerFromPointer(player: ArenaPlayer, clientX: number, clientY: number) {
+    if (blockQaReadOnlyMutation()) return;
     if (isFinalizedArenaFormation(selectedFormationKey) && !isQaVisualEditor) {
       setSaveStatus(`${selectedFormationKey} · ${t("protectedAsSaved")}`);
       return;
@@ -6586,7 +6640,7 @@ export default function ArenaClient({
   }
 
   function rememberCompletedOfficialIntro() {
-    writeBrowserStorage("localStorage", TOUCHLINE_ARENA_INTRO_STORAGE_KEY, "1");
+    if (!isQaReadOnly) writeBrowserStorage("localStorage", TOUCHLINE_ARENA_INTRO_STORAGE_KEY, "1");
 
     const url = new URL(window.location.href);
     if (!url.searchParams.has(TOUCHLINE_ARENA_INTRO_QUERY_PARAM)) return;
@@ -6653,6 +6707,7 @@ export default function ArenaClient({
   }
 
   async function selectOfficialArenaCoach(coachProviderId: string) {
+    if (blockQaReadOnlyMutation()) return;
     const coach = touchlineLiveCoachForProviderId(coachProviderId);
     if (!coach || !arenaPersistencePrincipal || isCoachSaving) return;
 
@@ -6721,6 +6776,7 @@ export default function ArenaClient({
   }
 
   async function endOfficialArenaCoachContract() {
+    if (blockQaReadOnlyMutation()) return;
     if (!arenaPersistencePrincipal || arenaPersistencePrincipal.kind !== "authenticated" || isCoachSaving) return;
     setIsCoachSaving(true);
     setCoachSelectionError(null);
@@ -6758,6 +6814,7 @@ export default function ArenaClient({
   }
 
   function confirmMarketFormation(formationKey: ArenaFormationKey) {
+    if (blockQaReadOnlyMutation()) return;
     if (!ownerCoachProviderId || !arenaPersistencePrincipal) {
       setSaveStatus(siteLanguage === "pt-BR" ? "Escolha o treinador antes da formação." : "Choose the coach before formation.");
       return;
@@ -6835,6 +6892,7 @@ export default function ArenaClient({
     targetPlayerId: string | null;
     candidateId: string;
   }) {
+    if (blockQaReadOnlyMutation()) return;
     if (!arenaPersistencePrincipal || !marketFormationConfirmed) return;
     const candidate = benchPlayers.find((bench) => bench.id === selection.candidateId);
     if (!candidate || !isTouchlineFormationCandidateEligible(
@@ -6956,6 +7014,7 @@ export default function ArenaClient({
   }
 
   async function toggleLineupEditor() {
+    if (blockQaReadOnlyMutation()) return;
     if (isEditorOpen) {
       setIsEditorOpen(false);
       return;
@@ -6970,6 +7029,10 @@ export default function ArenaClient({
   }
 
   function updateLiveDockVisibility(isOpen: boolean) {
+    if (isQaReadOnly) {
+      setIsLiveDockOpen(isOpen);
+      return;
+    }
     setIsLiveDockOpen(isOpen);
     writeBrowserStorage(
       "localStorage",
@@ -6981,7 +7044,7 @@ export default function ArenaClient({
   function selectCarouselFixture(fixtureId: string) {
     if (!visibleLiveFixtures.some((fixture) => fixture.id === fixtureId)) return;
     setSelectedLiveFixtureId(fixtureId);
-    writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, fixtureId);
+    if (!isQaReadOnly) writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, fixtureId);
   }
 
   function cycleCarouselFixture(direction: -1 | 1) {
@@ -7004,7 +7067,7 @@ export default function ArenaClient({
       setSelectedLiveCoachSide(null);
       setReadyLiveCardProductsSignature("");
       setSelectedLiveFixtureId(fixtureId);
-      writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, fixtureId);
+      if (!isQaReadOnly) writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, fixtureId);
       return;
     }
 
@@ -7018,10 +7081,11 @@ export default function ArenaClient({
     setReadyLiveCardProductsSignature("");
     setSelectedLiveFixtureId(fixtureId);
     setPendingLiveFixtureId(null);
-    writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, fixtureId);
+    if (!isQaReadOnly) writeBrowserStorage("localStorage", ARENA_LIVE_DOCK_FIXTURE_STORAGE_KEY, fixtureId);
   }
 
   function openArenaPanel(panel: ArenaPanelKey) {
+    if (blockQaReadOnlyMutation()) return;
     if (quickSubCloseTimerRef.current !== null) {
       window.clearTimeout(quickSubCloseTimerRef.current);
       quickSubCloseTimerRef.current = null;
@@ -7080,6 +7144,7 @@ export default function ArenaClient({
   }
 
   function confirmBenchSwap() {
+    if (blockQaReadOnlyMutation()) return;
     if (!replacementTarget || !selectedBench) return;
     if (!isSelectedBenchInMatchday) {
       setSaveStatus(`${selectedBench.shortName} ${t("outsideMatchdayBenchStatus")}`);
@@ -7194,6 +7259,7 @@ export default function ArenaClient({
   }
 
   function toggleBuilderPlayerInCart(builderPlayer: TeamBuilderSquadPlayer) {
+    if (blockQaReadOnlyMutation()) return;
     if (!ownerCoachProviderId) {
       setSaveStatus(siteLanguage === "pt-BR" ? "Escolha o treinador antes de contratar jogadores." : "Choose the coach before signing players.");
       return;
@@ -7260,6 +7326,7 @@ export default function ArenaClient({
   }
 
   async function checkoutBuilderCart() {
+    if (blockQaReadOnlyMutation()) return;
     if (!marketCartQuote.valid) {
       setSaveStatus(marketCartErrorLabel(marketCartQuote.errorCode));
       return;
@@ -7387,6 +7454,7 @@ export default function ArenaClient({
     cardId: string | null | undefined,
     releaseContext: "reserve" | "field",
   ) {
+    if (blockQaReadOnlyMutation()) return false;
     const normalizedCardId = normalizeTouchlineMarketInventoryId(cardId);
     const isExplicitLocalDemo = arenaPersistencePrincipal?.kind === "demo"
       && !normalizedCardId
@@ -7477,6 +7545,7 @@ export default function ArenaClient({
   }
 
   async function releaseMarketPositionContract(candidate: MarketPositionReplacementCandidate) {
+    if (blockQaReadOnlyMutation()) return;
     const incoming = pendingMarketReplacementPlayer;
     if (!incoming) return;
     const released = await releaseAuthoritativeContract(candidate.inventoryId, candidate.location);
@@ -7501,6 +7570,7 @@ export default function ArenaClient({
   }
 
   async function releaseSelectedBenchContract() {
+    if (blockQaReadOnlyMutation()) return;
     if (!selectedBench) return;
     const released = await releaseAuthoritativeContract(
       selectedBench.inventoryId,
@@ -7518,6 +7588,7 @@ export default function ArenaClient({
   }
 
   async function replaceAndReleaseSelectedContract() {
+    if (blockQaReadOnlyMutation()) return;
     if (!replacementTarget || !selectedBench) return;
     if (!isSelectedBenchInMatchday) {
       setSaveStatus(`${selectedBench.shortName} ${t("outsideMatchdayBenchStatus")}`);
@@ -7613,6 +7684,7 @@ export default function ArenaClient({
       className={`touchline-game fixed inset-0 overflow-hidden bg-black text-white${standaloneExperience ? ` is-panel-standalone is-${standaloneExperience}-standalone` : ""}`}
       data-account-sync-status={arenaAccountSyncStatus}
       data-roster-sync-status={arenaRosterSyncStatus}
+      data-qa-read-only={isQaReadOnly ? "true" : undefined}
     >
       <section
         ref={stageRef}
@@ -7704,7 +7776,7 @@ export default function ArenaClient({
 
         <div
           className="arena-functional-layer"
-          inert={isArenaFunctionalReady ? undefined : true}
+          inert={isArenaFunctionalReady && !isQaReadOnly ? undefined : true}
           aria-hidden={!isArenaFunctionalReady}
         >
         {!isMarketOnboardingWelcomeVisible && !isCoachSelectionBootstrapPending && !isCoachSelectionRequired ? (
@@ -7894,8 +7966,8 @@ export default function ArenaClient({
               // Saved/editor sizes never control the protected 4-3-3 match.
               const baseHeight = fieldPosition.heightVh ?? arenaLoopCameraProfile(loopCameraIndex).cardHeightVh;
               // Keep the QA baseline's camera slot and height contract intact.
-              // This adapter only constrains the full rendered envelope against
-              // approved wide/lower field geometry; side-sweep is rail-only.
+              // This adapter constrains each full rendered envelope against the
+              // independently measured four-line grass polygon for this pass.
               const containedFieldPosition = containArenaFieldCard(
                 { ...fieldPosition, heightVh: baseHeight },
                 currentCameraId,

@@ -9,6 +9,7 @@ import {
 } from "../football-data/official-league-table.ts";
 import type { TouchlinePublicFixture } from "../football-data/public-fixture.ts";
 import type { TouchlineClubSocialFeedPage } from "../touchlineArena/club-social-feed-server.ts";
+import { readTouchlinePublishedFeedPresentation } from "../touchlineArena/social-feed-presentation.ts";
 import {
   fetchTouchlineQaClubHubMirror,
   resolveTouchlineClubHubDataSource,
@@ -165,6 +166,7 @@ export function mirrorDtoToSocialFeed(
       width: item.width,
       height: item.height,
       imageUrl: new URL(item.imagePath, origin).href,
+      presentation: readTouchlinePublishedFeedPresentation(null),
     })),
     nextCursor: null,
   };

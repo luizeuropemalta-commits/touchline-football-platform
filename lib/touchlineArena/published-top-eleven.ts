@@ -13,9 +13,21 @@ export type TouchlinePublishedTopEleven = Readonly<{
   roundId: string;
   publishedAt: string;
   slots: readonly TouchlinePublishedTopElevenSlot[];
+  /** Optional and immutable: no coach is displayed until this exact Gameweek fact is published. */
+  coach: Readonly<{ coachProviderId: string; touchlinePoints: number }> | null;
 }>;
 
 function text(value: unknown) { return typeof value === "string" ? value.trim() : ""; }
+
+function parsePublishedGameweekCoach(value: unknown) {
+  if (value === undefined || value === null) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const coachProviderId = text(record.coachProviderId);
+  const touchlinePoints = record.touchlinePoints;
+  if (!coachProviderId || typeof touchlinePoints !== "number" || !Number.isFinite(touchlinePoints) || touchlinePoints < 0) return undefined;
+  return { coachProviderId, touchlinePoints } as const;
+}
 
 /** Parses only the immutable selection fields needed by the public Top 11. */
 export function parseTouchlinePublishedTopEleven(input: {
@@ -32,6 +44,8 @@ export function parseTouchlinePublishedTopEleven(input: {
     || !payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const record = payload as Record<string, unknown>;
   if (record.sourceSnapshotId !== snapshotId || record.complete !== true || record.formation !== TOUCHLINE_SELECTION_FORMATION || !Array.isArray(record.players) || record.players.length !== TOUCHLINE_SELECTION_SLOTS.length) return null;
+  const coach = parsePublishedGameweekCoach(record.coach);
+  if (coach === undefined) return null;
   const slots = record.players.map((value): TouchlinePublishedTopElevenSlot | null => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
     const entry = value as Record<string, unknown>;
@@ -43,5 +57,5 @@ export function parseTouchlinePublishedTopEleven(input: {
     return ids.length ? { id: canonical.id, label: canonical.label, x: canonical.x, y: canonical.y, playerIds: [...new Set(ids)] } : null;
   });
   if (slots.some((slot) => slot === null) || new Set(slots.map((slot) => slot?.id)).size !== TOUCHLINE_SELECTION_SLOTS.length) return null;
-  return { snapshotId, roundId, publishedAt, slots: slots as TouchlinePublishedTopElevenSlot[] };
+  return { snapshotId, roundId, publishedAt, slots: slots as TouchlinePublishedTopElevenSlot[], coach };
 }

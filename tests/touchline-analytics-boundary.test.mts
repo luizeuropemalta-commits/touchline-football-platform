@@ -178,7 +178,7 @@ test("analytics tracker exits before auth and POST in QA while preserving non-QA
   assert.equal(canStartTouchlineAnalyticsTracking("production"), true);
   assert.equal(canStartTouchlineAnalyticsTracking(undefined), true);
 
-  const qaGuard = trackerSource.indexOf("if (!area || !canStartTouchlineAnalyticsTracking(");
+  const qaGuard = trackerSource.indexOf("if (isQaReadOnly || !area || !canStartTouchlineAnalyticsTracking(");
   const authRead = trackerSource.indexOf("supabase.auth.getUser()");
   const analyticsPost = trackerSource.indexOf('fetch("/api/touchline-analytics"');
   assert.ok(qaGuard >= 0, "QA no-write guard must be explicit in the tracker");

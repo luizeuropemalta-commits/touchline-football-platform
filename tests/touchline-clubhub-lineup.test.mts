@@ -259,14 +259,14 @@ test("ClubHub preview window requires an absolute fixture instant and preserves 
   assert.equal(isClubHubSquadPreviewWindow({ lineupStatus: "preview", startsAt: kickoff, now: Number.NaN }), false);
 });
 
-test("ClubHub pitch shows the name only above each athlete, not a match rating", () => {
+test("ClubHub pitch keeps names inside the approved card artwork and never adds a floating rating label", () => {
   const source = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
   const styles = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 
   assert.doesNotMatch(source, /showMatchRating/);
-  assert.match(styles, /width: max-content/);
-  assert.match(styles, /font-size: clamp\(7\.04px, \.671vw, 9\.68px\)/);
-  assert.match(styles, /font-size: clamp\(6\.05px, 1\.595vw, 7\.975px\)/);
+  assert.doesNotMatch(source, /className=\{styles\.playerName\}/);
+  assert.doesNotMatch(styles, /\.playerName\s*\{/);
+  assert.match(styles, /keeping no second floating label prevents an extra dark box above players/);
 });
 
 test("ClubHub reserves a complete responsive surface for the four canonical positional leaders and leaves the Bench subtitle blank", () => {

@@ -161,7 +161,9 @@
   z-index: 2;
   display: grid;
   justify-items: center;
-  width: clamp(52px, 6.2vw, 88px);
+  /* The public Best XI is a dense 4-3-3.  This compact envelope leaves the
+     documented row clearance intact instead of allowing real cards to touch. */
+  width: clamp(44px, 4.5vw, 64px);
   transform: translate(-50%, -50%);
 }
 
@@ -244,7 +246,10 @@
   background: radial-gradient(circle at 50% 35%, rgba(243, 216, 107, .12), transparent 45%);
 }
 
-.topCoachCardLink { display: block; width: min(245px, 82%); color: inherit; transition: filter 180ms ease, transform 180ms ease; }
+/* A leader crown sits above the official card without touching its frame.
+   Reserve that space inside this panel so its transparent pixels can never
+   be cropped by the panel's overflow boundary. */
+.topCoachCardLink { display: block; width: min(245px, 82%); margin-top: clamp(74px, 5vw, 96px); color: inherit; transition: filter 180ms ease, transform 180ms ease; }
 .topCoachCardLink:hover { filter: drop-shadow(0 18px 24px rgba(243, 216, 107, .2)); transform: translateY(-4px) scale(1.025); }
 .topCoachCardLink:focus-visible { border-radius: 18px; outline: 2px solid var(--gold); outline-offset: 5px; }
 .topCoachCard { width: 100% !important; max-width: none !important; }
@@ -275,8 +280,8 @@
   display: grid;
   justify-items: center;
   min-width: 0;
-  padding: 18px 12px 14px;
-  overflow: hidden;
+  padding: 52px 12px 14px;
+  overflow: visible;
   border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 20px;
   background: linear-gradient(155deg, rgba(255, 255, 255, .045), rgba(0, 8, 7, .62));
@@ -289,6 +294,16 @@
 .podiumIdentity strong { max-width: 100%; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .podiumIdentity span { max-width: 100%; overflow: hidden; color: rgba(245, 248, 245, .46); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .podiumIdentity b { margin-top: 3px; color: var(--gold); font-size: 19px; }
+.gameweekCoachGate { display:flex; max-width:520px; align-items:flex-start; gap:10px; margin:18px auto 0; border:1px solid rgba(243,216,107,.28); border-radius:14px; padding:11px 13px; background:rgba(243,216,107,.055); color:rgba(245,248,245,.78); }
+.gameweekCoachGate svg { flex:0 0 auto; width:18px; color:var(--gold); }
+.gameweekCoachGate div { display:grid; gap:3px; }
+.gameweekCoachGate strong { color:#fff3b8; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+.gameweekCoachGate span { font-size:11px; line-height:1.4; }
+.gameweekCoachGate[data-gameweek-coach-state="pending"] { border-style:dashed; }
+.gameweekCoachPublished { min-width:0; flex:1; }
+.gameweekCoachCardLink { display:block; width:min(126px, 42vw); margin-top:8px; overflow:visible; border-radius:12px; outline-offset:4px; }
+.gameweekCoachCardLink:focus-visible { outline:2px solid var(--lime); }
+.gameweekCoachPublished > b { color:var(--gold); font-size:12px; }
 .coachRankingPanel { max-height: 590px; }
 
 .coachList,

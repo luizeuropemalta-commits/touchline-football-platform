@@ -63,18 +63,18 @@
       "scale": 0.76
     },
     "shareAction": {
-      "x": 68,
-      "y": 300,
-      "scale": 0.76
+      "x": 28,
+      "y": 531,
+      "scale": 1
     },
     "followAction": {
-      "x": 58,
+      "x": 156,
       "y": 531,
       "scale": 1
     },
     "likeAction": {
-      "x": 254,
-      "y": 537,
+      "x": 284,
+      "y": 531,
       "scale": 1
     },
     "statGol": {

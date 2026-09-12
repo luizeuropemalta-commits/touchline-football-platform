@@ -64,3 +64,11 @@ test("ClubHub crest motion is bounded, pointer-safe and static under reduced mot
   assert.doesNotMatch(profile, /touch-action:\s*none/);
   assert.doesNotMatch(directoryCss, /touch-action:\s*none/);
 });
+
+test("ClubHub retains an accent-colour crest glow and bounded hover zoom", () => {
+  const profile = source("app/touchline-clubs/[club]/page.tsx");
+
+  assert.match(profile, /club-hub-logo img \{[\s\S]*?drop-shadow\(0 0 15px color-mix\(in srgb, var\(--club-accent\) 46%/);
+  assert.match(profile, /club-hub-logo-stack:hover \.club-hub-logo img/);
+  assert.match(profile, /club-hub-logo-stack:hover \.club-hub-logo[\s\S]*?scale\(1\.035\)/);
+});

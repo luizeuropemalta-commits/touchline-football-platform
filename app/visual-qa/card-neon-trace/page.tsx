@@ -7,6 +7,7 @@ import {
   createTouchlineArenaCoachSlot,
 } from "@/lib/touchlineArena/coach-card";
 import { TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT } from "@/lib/touchlineArena/coach-card-layout";
+import type { TouchlineCardTierKey } from "@/lib/touchlineArena/card-rules";
 import { findTouchLineClub } from "@/lib/touchlineArena/demo-data";
 import { resolveTouchlineVisualQaLocale } from "@/lib/touchlineArena/visual-qa-locale";
 
@@ -16,6 +17,19 @@ export const metadata = {
 };
 
 const club = findTouchLineClub("manchester-city")!;
+const CARD_TIERS: readonly TouchlineCardTierKey[] = [
+  "ruby-red", "sapphire-blue", "amethyst-purple", "radiant-gold",
+  "emerald-green", "clear-diamond", "diamond-gold",
+];
+
+// This visual-QA fixture intentionally contains a complete, static editorial
+// profile. Keep it separate from `player` because that public player shape
+// correctly permits missing editorial data at runtime.
+const TRACE_EDITORIAL_CARD: NonNullable<TouchlineEliteExactPlayer["editorialCard"]> = {
+  tierKey: "radiant-gold",
+  cardPrice: { amountMinor: 1500, currency: "GBP" },
+  lastReviewedAt: "2026-08-11T00:00:00.000Z",
+};
 
 const player: TouchlineEliteExactPlayer = {
   sportmonksPlayerId: "static-neon-player",
@@ -37,11 +51,7 @@ const player: TouchlineEliteExactPlayer = {
   marketValueState: "unavailable",
   classificationState: "unavailable",
   cardTier: "radiant-gold",
-  editorialCard: {
-    tierKey: "radiant-gold",
-    cardPrice: { amountMinor: 1500, currency: "GBP" },
-    lastReviewedAt: "2026-08-11T00:00:00.000Z",
-  },
+  editorialCard: TRACE_EDITORIAL_CARD,
   cardPriceVersion: "2026-07-premier-v1",
   updatedAt: "STATIC LOCAL QA FIXTURE",
   age: "—",
@@ -59,15 +69,15 @@ const player: TouchlineEliteExactPlayer = {
   seasonStats: { goals: 0, assists: 0, defense: 0, cleanSheets: 0, yellowCards: 0, redCards: 0 },
 };
 
-const coachSlot = {
-  ...createTouchlineArenaCoachSlot(TOUCHLINE_DEMO_COACH, 12, "radiant-gold"),
-  status: "awaiting-match-evidence" as const,
-};
-
-function StaticPlayerCard({ locale }: Readonly<{ locale: "en-GB" | "pt-BR" }>) {
+function StaticPlayerCard({ locale, tier }: Readonly<{ locale: "en-GB" | "pt-BR"; tier: TouchlineCardTierKey }>) {
+  const playerForTier: TouchlineEliteExactPlayer = {
+    ...player,
+    cardTier: tier,
+    editorialCard: { ...TRACE_EDITORIAL_CARD, tierKey: tier },
+  };
   return (
     <TouchlineEliteExactCard
-      player={player}
+      player={playerForTier}
       isEditable={false}
       persistLayoutToMaster={false}
       ignoreStoredLayout={true}
@@ -86,7 +96,11 @@ function StaticPlayerCard({ locale }: Readonly<{ locale: "en-GB" | "pt-BR" }>) {
   );
 }
 
-function StaticCoachCard({ locale }: Readonly<{ locale: "en-GB" | "pt-BR" }>) {
+function StaticCoachCard({ locale, tier }: Readonly<{ locale: "en-GB" | "pt-BR"; tier: TouchlineCardTierKey }>) {
+  const coachSlot = {
+    ...createTouchlineArenaCoachSlot(TOUCHLINE_DEMO_COACH, 12, tier),
+    status: "awaiting-match-evidence" as const,
+  };
   return (
     <TouchlineCoachCard
       coach={TOUCHLINE_DEMO_COACH}
@@ -114,16 +128,16 @@ export default async function CardNeonTraceVisualQaPage({ searchParams }: Visual
     ? {
       title: "Traço perimetral canônico do card",
       description: "Um card estático de Jogador e um de Treinador exercitam o traço compartilhado pelo centro da borda, o token de tier canônico e o tratamento do escudo do clube. Não usa conta, provedor, elenco, contrato ou layout persistido.",
-      player: "JOGADOR · RADIANT GOLD · ESCUDO DO MANCHESTER CITY",
-      coach: "TREINADOR · RADIANT GOLD · ESCUDO DO MANCHESTER CITY",
+      player: "JOGADOR · 7 BORDAS OFICIAIS · ESCUDO DO MANCHESTER CITY",
+      coach: "TREINADOR · 7 BORDAS OFICIAIS · ESCUDO DO MANCHESTER CITY",
       boundary: "Apenas fixture estático. A linha viajante completa um loop calmo, descansa como borda residual suave e reinicia automaticamente; usuários com redução de movimento recebem a borda estática iluminada, sem animação. Interação, assinaturas de dados, persistência de layout e acesso a provedor estão desativados.",
       cases: "Fixtures estáticos de traço perimetral do card",
     }
     : {
       title: "Canonical card perimeter trace",
       description: "One static Player card and one static Coach card exercise the shared centre-line trace, canonical tier token and club-crest treatment. No account, provider, roster, contract or persisted-layout data is used.",
-      player: "PLAYER · RADIANT GOLD · MANCHESTER CITY CREST",
-      coach: "COACH · RADIANT GOLD · MANCHESTER CITY CREST",
+      player: "PLAYER · 7 OFFICIAL BORDERS · MANCHESTER CITY CREST",
+      coach: "COACH · 7 OFFICIAL BORDERS · MANCHESTER CITY CREST",
       boundary: "Static fixture only. The travelling line completes one calm loop, rests as a soft residual border, then restarts automatically; reduced-motion users receive the illuminated static border with no animation. Interaction, data subscriptions, layout persistence and provider access are disabled.",
       cases: "Static card perimeter trace fixtures",
     };
@@ -161,13 +175,17 @@ export default async function CardNeonTraceVisualQaPage({ searchParams }: Visual
           alignItems: "start",
         }}
       >
-        <article data-card-neon-trace-case="player" style={{ width: "min(100%, 420px)", display: "grid", justifyItems: "center", gap: 14 }}>
+        <article data-card-neon-trace-case="player" style={{ width: "min(100%, 550px)", display: "grid", justifyItems: "center", gap: 14 }}>
           <p style={{ margin: 0, color: "rgba(255,255,255,.74)", fontSize: 12, fontWeight: 850, letterSpacing: ".08em" }}>{copy.player}</p>
-          <StaticPlayerCard locale={locale} />
+          <div data-card-neon-trace-tier-grid="player" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 16, width: "100%", justifyItems: "center" }}>
+            {CARD_TIERS.map((tier) => <StaticPlayerCard key={tier} locale={locale} tier={tier} />)}
+          </div>
         </article>
-        <article data-card-neon-trace-case="coach" style={{ width: "min(100%, 420px)", display: "grid", justifyItems: "center", gap: 14 }}>
+        <article data-card-neon-trace-case="coach" style={{ width: "min(100%, 550px)", display: "grid", justifyItems: "center", gap: 14 }}>
           <p style={{ margin: 0, color: "rgba(255,255,255,.74)", fontSize: 12, fontWeight: 850, letterSpacing: ".08em" }}>{copy.coach}</p>
-          <div style={{ width: "min(330px, 100%)" }}><StaticCoachCard locale={locale} /></div>
+          <div data-card-neon-trace-tier-grid="coach" style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 16, width: "100%", justifyItems: "center" }}>
+            {CARD_TIERS.map((tier) => <div key={tier} style={{ width: "min(190px, 100%)" }}><StaticCoachCard locale={locale} tier={tier} /></div>)}
+          </div>
         </article>
       </section>
 

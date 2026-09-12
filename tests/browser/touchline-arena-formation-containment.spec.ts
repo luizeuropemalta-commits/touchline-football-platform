@@ -3,7 +3,6 @@ import type { Page } from "@playwright/test";
 
 import {
   ARENA_PERSPECTIVE_CALIBRATIONS,
-  cardEnvelopeClearsSideSweepRail,
   hasFourLineGrassPolygon,
   type ArenaCalibrationPoint,
   type ArenaPerspectiveId,
@@ -11,31 +10,30 @@ import {
 } from "../../lib/touchlineArena/arena-perspective-calibration";
 
 /**
- * Runtime visual-QA harness for the only formations supported by the official
- * state contract. It is intentionally not part of the application bundle.
+ * Runtime visual-QA harness for the public, read-only 4-3-3 candidate. It is
+ * intentionally not part of the application bundle.
  *
  * Set TOUCHLINE_ARENA_VISUAL_QA_URL to a clean, read-only candidate URL before
  * running it. The harness aborts every non-GET request and therefore cannot
  * persist a lineup, session renewal, or editor change.
  *
  * Evidence boundary:
- * - wide-touchline and lower-stand use their measured four-line polygons;
- * - side-sweep only proves clearance above the live carousel rail. It never
- *   describes side-sweep as a four-line grass-containment check.
+ * Every filmed perspective uses its own measured four-line grass polygon.
  */
 
 const candidateUrl = process.env.TOUCHLINE_ARENA_VISUAL_QA_URL;
 const evidenceProject = "chromium-desktop-1440";
 const sourceFrame = { width: 1280, height: 720 } as const;
 
-const supportedFormationMatrix = [
-  { formation: "4-3-3", camera: "wide-touchline", sampleSeconds: 4.5 },
-  { formation: "4-3-3", camera: "lower-stand", sampleSeconds: 12.5 },
-  { formation: "4-3-3", camera: "side-sweep", sampleSeconds: 17.3 },
-  { formation: "4-4-2", camera: "wide-touchline", sampleSeconds: 4.5 },
-  { formation: "4-4-2", camera: "lower-stand", sampleSeconds: 12.5 },
-  { formation: "4-4-2", camera: "side-sweep", sampleSeconds: 17.3 },
+const public433CameraMatrix = [
+  { camera: "wide-touchline", sampleSeconds: 4.5 },
+  { camera: "lower-stand", sampleSeconds: 12.5 },
+  { camera: "side-sweep", sampleSeconds: 17.3 },
 ] as const;
+
+// 4-4-2 belongs to the authenticated QA owner flow. It must be exercised
+// there with the documented customer persona; this public, non-writing
+// harness must never fake a session or substitute a demo formation for it.
 
 type Rect = ArenaRenderedCardEnvelope;
 
@@ -73,13 +71,7 @@ function projectSourcePointToVideoBox(
   };
 }
 
-async function selectFormationAndSeek(
-  page: Page,
-  formation: "4-3-3" | "4-4-2",
-  sampleSeconds: number,
-): Promise<void> {
-  const formationButton = page.getByRole("button", { name: new RegExp(`^${formation.replaceAll("-", "\\-")}$`) });
-  await formationButton.click();
+async function seekPublic433Camera(page: Page, sampleSeconds: number): Promise<void> {
   const loopVideo = page.locator(".arena-video-b");
   await expect(loopVideo).toHaveJSProperty("readyState", 4);
   await loopVideo.evaluate(async (element, seconds) => {
@@ -155,8 +147,8 @@ async function readStageEvidence(
   });
 }
 
-test.describe("Arena supported formation containment", () => {
-  test("proves all supported formation/camera cases and loop wrap without writes", async ({ page }, testInfo) => {
+test.describe("Arena public 4-3-3 containment", () => {
+  test("proves every public camera pass and loop wrap without writes", async ({ page }, testInfo) => {
     test.skip(!candidateUrl, "Set TOUCHLINE_ARENA_VISUAL_QA_URL to a clean candidate before runtime visual QA.");
     test.skip(testInfo.project.name !== evidenceProject, "Runs only at the measured 1440×900 Chromium evidence viewport.");
 
@@ -179,9 +171,9 @@ test.describe("Arena supported formation containment", () => {
     await expect(page.locator(".arena-stage")).toBeVisible();
     await expect(page.locator(".arena-field-player")).toHaveCount(11);
 
-    for (const scenario of supportedFormationMatrix) {
-      await test.step(`${scenario.formation} / ${scenario.camera}`, async () => {
-        await selectFormationAndSeek(page, scenario.formation, scenario.sampleSeconds);
+    for (const scenario of public433CameraMatrix) {
+      await test.step(`4-3-3 / ${scenario.camera}`, async () => {
+        await seekPublic433Camera(page, scenario.sampleSeconds);
         await expect(page.locator(`.arena-field-player[data-camera='${scenario.camera}']`)).toHaveCount(11);
 
         const evidence = await readStageEvidence(page);
@@ -191,20 +183,10 @@ test.describe("Arena supported formation containment", () => {
         expect(evidence.cards.every((card) => card.camera === scenario.camera)).toBe(true);
 
         const calibration = ARENA_PERSPECTIVE_CALIBRATIONS[scenario.camera];
-        if (hasFourLineGrassPolygon(calibration)) {
-          expect(evidence.cards.every((card) => card.coverage === "four-line-polygon")).toBe(true);
-          const polygon = calibration.grassPolygon.map((point) => projectSourcePointToVideoBox(point, evidence.video));
-          expect(evidence.cards.every((card) => fullRectIsInsidePolygon(card.rect, polygon))).toBe(true);
-        } else {
-          expect(hasFourLineGrassPolygon(calibration)).toBe(false);
-          expect(evidence.cards.every((card) => card.coverage === "rail-only")).toBe(true);
-          const liveRailMeasurement = {
-            ...calibration.railMeasurement,
-            stageTop: evidence.stage.top,
-            carouselTop: evidence.rail.top,
-          };
-          expect(evidence.cards.every((card) => cardEnvelopeClearsSideSweepRail(card.rect, liveRailMeasurement))).toBe(true);
-        }
+        expect(hasFourLineGrassPolygon(calibration)).toBe(true);
+        expect(evidence.cards.every((card) => card.coverage === "four-line-polygon")).toBe(true);
+        const polygon = calibration.grassPolygon.map((point) => projectSourcePointToVideoBox(point, evidence.video));
+        expect(evidence.cards.every((card) => fullRectIsInsidePolygon(card.rect, polygon))).toBe(true);
       });
     }
 
@@ -222,7 +204,7 @@ test.describe("Arena supported formation containment", () => {
 
     expect(blockedWrites).toEqual([]);
     await testInfo.attach("arena-supported-formation-matrix", {
-      body: Buffer.from(JSON.stringify(supportedFormationMatrix, null, 2)),
+      body: Buffer.from(JSON.stringify(public433CameraMatrix, null, 2)),
       contentType: "application/json",
     });
   });

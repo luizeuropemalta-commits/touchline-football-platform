@@ -331,7 +331,10 @@ test("Match Centre renders the optional home-stadium interior behind a strong re
   assert.match(component, /<HeroVenueArtwork venue=\{selected\.venue\} \/>/);
   assert.match(component, /onError=\{\(\) => setFailedInteriorImageUrl\(interiorImageUrl\)\}/);
   assert.match(styles, /\.heroVenueArtwork \{[^}]*position: absolute[^}]*object-fit: cover[^}]*pointer-events: none/);
-  assert.match(styles, /\.hero::after \{[^}]*linear-gradient\(180deg, rgba\(1,5,4,\.66\), rgba\(1,8,5,\.82\)\)[^}]*pointer-events: none/);
+  assert.match(styles, /\.hero::after \{[^}]*linear-gradient\(180deg, rgba\(1,5,4,\.22\), rgba\(1,8,5,\.56\)\)[^}]*pointer-events: none/);
+  // Club crests keep a neon that follows the verified club accent; the
+  // Match Centre must not force every club into the generic green glow.
+  assert.match(styles, /\.heroTeams \.teamMark \{[^}]*drop-shadow\(0 0 17px color-mix\(in srgb, var\(--team-mark-neon, #a3ff12\) 72%, transparent\)\)/);
 });
 
 test("Match Centre uses the provider round instead of mislabelling a season as matchweek", () => {

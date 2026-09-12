@@ -9,6 +9,24 @@
   transition: transform .2s ease;
 }
 
+/* The approved crown is deliberately above the portrait but inside the card's
+   presentation envelope. It never changes the official coach frame itself. */
+.leadershipCrown {
+  position: absolute;
+  z-index: 6;
+  /* 28.4% is the approved player-card crown scale.  With the square crown
+     asset and the coach card's 2:3 aspect ratio, -19.7% leaves an 8px
+     clearance above the top gem instead of crossing the official frame. */
+  top: -19.7%;
+  left: 50%;
+  width: 28.4%;
+  height: auto;
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+  pointer-events: none;
+  user-select: none;
+}
+
 .shell:focus-within { transform: translateY(-3px) scale(1.018); }
 
 @media (hover: hover) and (pointer: fine) {
@@ -138,7 +156,22 @@
   height: var(--coach-crest-size, 132px);
   max-width: none;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,.48));
+  /* The exact crest asset stays intact; this is the same quiet, permanent
+     club-colour neon used by player cards. */
+  filter:
+    drop-shadow(0 2px 4px rgba(0,0,0,.48))
+    drop-shadow(0 0 2px color-mix(in srgb, var(--touchline-club-crest-color) 84%, transparent))
+    drop-shadow(0 0 7px color-mix(in srgb, var(--touchline-club-crest-color) 42%, transparent));
+  transition: filter 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .shell:hover .clubBadge [data-touchline-card-crest-host="true"] > img {
+    filter:
+      drop-shadow(0 2px 4px rgba(0,0,0,.5))
+      drop-shadow(0 0 3px color-mix(in srgb, var(--touchline-club-crest-color) 96%, transparent))
+      drop-shadow(0 0 11px color-mix(in srgb, var(--touchline-club-crest-color) 68%, transparent));
+  }
 }
 
 .nameplate {

@@ -1452,7 +1452,7 @@ export function TouchlineEliteExactCard({
           }}
         />
       ) : null}
-      <TouchlineCardPerimeterTrace />
+      <TouchlineCardPerimeterTrace tier={marketTier?.key ?? "neutral"} />
       {reviewRequired ? (
         <div
           aria-label={runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required"}

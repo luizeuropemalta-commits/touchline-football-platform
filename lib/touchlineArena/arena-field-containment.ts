@@ -1,6 +1,5 @@
 import {
   ARENA_PERSPECTIVE_CALIBRATIONS,
-  calculateSideSweepBottomSafeY,
   hasFourLineGrassPolygon,
   type ArenaCalibrationPoint,
   type ArenaPerspectiveId,
@@ -10,6 +9,12 @@ import {
 /** Display-only full-card containment for the three Arena camera perspectives. */
 export const ARENA_CARD_ASPECT_RATIO = 430 / 691;
 const SOURCE_FRAME = { width: 1280, height: 720 } as const;
+// The DOM resolves percentage positioning and dvh card dimensions to device
+// pixels. Side Sweep's left touchline is diagonal enough that a mathematically
+// exact envelope can round a fraction of a pixel outside the filmed grass.
+// Reserve a tiny, display-only inset there; it does not alter the measured
+// field, card art, formation data, or the other two camera passes.
+const SIDE_SWEEP_RENDERED_ENVELOPE_GUTTER_PX = 2;
 
 export type ArenaFieldStage = Readonly<{ width: number; height: number; viewportHeight: number; stageTop: number; carouselTop: number | null }>;
 export type ArenaFieldSlot = Readonly<{ x: number; y: number; heightVh: number }>;
@@ -36,7 +41,11 @@ function projectSourcePointToStage(point: ArenaCalibrationPoint, stage: ArenaFie
 function envelopeForAnchor(anchorX: number, anchorY: number, dimensions: { width: number; height: number }): ArenaRenderedCardEnvelope {
   return { left: anchorX - dimensions.width / 2, top: anchorY - dimensions.height, right: anchorX + dimensions.width / 2, bottom: anchorY };
 }
-function polygonHalfPlanes(polygon: readonly ArenaCalibrationPoint[], dimensions: { width: number; height: number }): HalfPlane[] {
+function polygonHalfPlanes(
+  polygon: readonly ArenaCalibrationPoint[],
+  dimensions: { width: number; height: number },
+  renderedEnvelopeGutterPx = 0,
+): HalfPlane[] {
   const halfWidth = dimensions.width / 2;
   const halfHeight = dimensions.height / 2;
   return polygon.map((point, index) => {
@@ -47,7 +56,11 @@ function polygonHalfPlanes(polygon: readonly ArenaCalibrationPoint[], dimensions
     const normalY = vectorX;
     const cornerMargin = Math.abs(vectorX) * halfHeight + Math.abs(vectorY) * halfWidth;
     const edgeConstant = normalX * point.x + normalY * point.y;
-    return { normalX, normalY, minimum: edgeConstant + cornerMargin };
+    // `normal` points into the polygon. Moving the boundary inward by a CSS
+    // pixel distance therefore adds its length-scaled amount to the half-plane
+    // threshold. This preserves the full card rectangle, not only its anchor.
+    const renderedGutter = renderedEnvelopeGutterPx * Math.hypot(normalX, normalY);
+    return { normalX, normalY, minimum: edgeConstant + cornerMargin + renderedGutter };
   });
 }
 function constrainCenterToConvexPolygon(center: ArenaCalibrationPoint, planes: readonly HalfPlane[]): ArenaCalibrationPoint {
@@ -68,7 +81,7 @@ function constrainCenterToConvexPolygon(center: ArenaCalibrationPoint, planes: r
 }
 function sameCoordinate(left: number, right: number) { return Math.abs(left - right) < 0.01; }
 
-/** Wide/lower use four-line polygons; side-sweep is explicitly rail-only. */
+/** Every filmed loop uses an independently measured four-line grass polygon. */
 export function containArenaFieldCard(slot: ArenaFieldSlot, perspective: ArenaPerspectiveId, stage: ArenaFieldStage | null): ArenaContainedFieldSlot {
   if (!stage || !finitePositive(stage.width) || !finitePositive(stage.height) || !finitePositive(stage.viewportHeight)) {
     return { x: slot.x, y: slot.y, envelope: { left: Number.NaN, top: Number.NaN, right: Number.NaN, bottom: Number.NaN }, coverage: "unmeasured", adjusted: false };
@@ -79,17 +92,16 @@ export function containArenaFieldCard(slot: ArenaFieldSlot, perspective: ArenaPe
   if (hasFourLineGrassPolygon(calibration)) {
     const polygon = calibration.grassPolygon.map((point) => projectSourcePointToStage(point, stage));
     const originalCenter = { x: originalAnchor.x, y: originalAnchor.y - dimensions.height / 2 };
-    const center = constrainCenterToConvexPolygon(originalCenter, polygonHalfPlanes(polygon, dimensions));
+    const center = constrainCenterToConvexPolygon(
+      originalCenter,
+      polygonHalfPlanes(
+        polygon,
+        dimensions,
+        perspective === "side-sweep" ? SIDE_SWEEP_RENDERED_ENVELOPE_GUTTER_PX : 0,
+      ),
+    );
     const anchor = { x: center.x, y: center.y + dimensions.height / 2 };
     return { x: (anchor.x / stage.width) * 100, y: (anchor.y / stage.height) * 100, envelope: envelopeForAnchor(anchor.x, anchor.y, dimensions), coverage: "four-line-polygon", adjusted: !sameCoordinate(anchor.x, originalAnchor.x) || !sameCoordinate(anchor.y, originalAnchor.y) };
   }
-  if (stage.carouselTop === null || !Number.isFinite(stage.carouselTop)) {
-    return { x: slot.x, y: slot.y, envelope: envelopeForAnchor(originalAnchor.x, originalAnchor.y, dimensions), coverage: "unmeasured", adjusted: false };
-  }
-  const bottomSafeY = calculateSideSweepBottomSafeY({ ...calibration.railMeasurement, stageTop: stage.stageTop, carouselTop: stage.carouselTop });
-  if (bottomSafeY === null) {
-    return { x: slot.x, y: slot.y, envelope: envelopeForAnchor(originalAnchor.x, originalAnchor.y, dimensions), coverage: "unmeasured", adjusted: false };
-  }
-  const anchor = { x: originalAnchor.x, y: Math.min(originalAnchor.y, bottomSafeY) };
-  return { x: (anchor.x / stage.width) * 100, y: (anchor.y / stage.height) * 100, envelope: envelopeForAnchor(anchor.x, anchor.y, dimensions), coverage: "rail-only", adjusted: !sameCoordinate(anchor.y, originalAnchor.y) };
+  return { x: slot.x, y: slot.y, envelope: envelopeForAnchor(originalAnchor.x, originalAnchor.y, dimensions), coverage: "unmeasured", adjusted: false };
 }

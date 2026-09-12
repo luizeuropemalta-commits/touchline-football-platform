@@ -7,6 +7,9 @@ import sharp from "sharp";
 import type { TouchlineFixture } from "../lib/football-data/types.ts";
 import {
   TOUCHLINE_STADIUM_CATALOG,
+  isFieldSpecificTouchlineStadiumSource,
+  isApprovedTouchlineStadiumSourceUrl,
+  resolveTouchlineClubHomeStadium,
   toTouchlineLiveFixture,
 } from "../lib/touchlineArena/stadium-catalog.ts";
 
@@ -50,6 +53,138 @@ test("stadium catalog is deduplicated by verified venue identity", () => {
     new Set(TOUCHLINE_STADIUM_CATALOG.map((entry) => entry.id)).size,
     TOUCHLINE_STADIUM_CATALOG.length,
   );
+});
+
+test("Liverpool ClubHub profile resolves Anfield facts, never a current away-fixture venue", () => {
+  const liverpool = resolveTouchlineClubHomeStadium("8");
+  assert.ok(liverpool);
+  assert.equal(liverpool.name, "Anfield");
+  assert.deepEqual(liverpool.clubProfile?.address, {
+    line1: "Anfield Road",
+    city: "Liverpool",
+    postalCode: "L4 0TH",
+    country: "England",
+  });
+  assert.equal(liverpool.clubProfile?.homeClubLabel, "Liverpool FC");
+  assert.equal(liverpool.clubProfile?.capacity, 61_276);
+  assert.equal(liverpool.clubProfile?.openedYear, 1884);
+  assert.equal(liverpool.clubProfile?.sources.every((source) => source.url.startsWith("https://")), true);
+  const liverpoolCapacitySource = liverpool.clubProfile?.sources.find((source) => source.field === "capacity");
+  assert.deepEqual(liverpoolCapacitySource, {
+    field: "capacity",
+    publisher: "Liverpool FC",
+    url: "https://www.liverpoolfc.com/news/new-anfield-capacity-confirmed-ahead-2024-25",
+    evidence: "Liverpool FC announcement confirms Anfield capacity of 61,276.",
+    checkedAt: "2026-09-10",
+  });
+  assert.ok(
+    new Set(liverpool.clubProfile?.sources.map((source) => source.url)).size >= 2,
+    "a complete profile cannot manufacture all five proofs from one generic URL",
+  );
+  assert.equal(resolveTouchlineClubHomeStadium("116")?.name, "Portman Road");
+  assert.equal(resolveTouchlineClubHomeStadium("not-a-club"), null);
+});
+
+test("only facts with independent field-level evidence are published to ClubHub", () => {
+  const requiredFields = ["stadiumName", "homeClubLabel", "address", "capacity", "openedYear"] as const;
+  const verifiedProfiles = TOUCHLINE_STADIUM_CATALOG.filter((stadium) => stadium.clubProfile);
+
+  assert.deepEqual(verifiedProfiles.map((stadium) => stadium.id), [
+    "gtech-community-stadium",
+    "anfield",
+  ]);
+  for (const stadium of verifiedProfiles) {
+    const profile = stadium.clubProfile;
+    assert.ok(profile, `missing permanent ClubHub stadium profile for ${stadium.homeClubName}`);
+    assert.ok(profile.homeClubLabel.length > 0, `missing home-club label for ${stadium.name}`);
+    assert.ok(profile.address.city.length > 0, `missing city for ${stadium.name}`);
+    assert.ok(profile.address.country.length > 0, `missing country for ${stadium.name}`);
+    assert.ok(profile.capacity !== null && profile.capacity > 0, `missing capacity for ${stadium.name}`);
+    assert.ok(profile.openedYear !== null && profile.openedYear > 1800, `missing opening year for ${stadium.name}`);
+    assert.equal(profile.verifiedAt, "2026-09-10", `missing verification date for ${stadium.name}`);
+
+    for (const field of requiredFields) {
+      const source = profile.sources.find((candidate) => candidate.field === field);
+      assert.ok(source, `missing ${field} source for ${stadium.name}`);
+      assert.match(source.url, /^https:\/\//, `source must use HTTPS for ${stadium.name}:${field}`);
+      assert.equal(isApprovedTouchlineStadiumSourceUrl(source.url), true, `source host/path must be approved for ${stadium.name}:${field}`);
+      assert.ok(source.publisher.length > 0, `missing publisher for ${stadium.name}:${field}`);
+      assert.ok(source.evidence.length >= 24, `missing field-level source scope for ${stadium.name}:${field}`);
+      assert.equal(source.checkedAt, "2026-09-10", `missing checked date for ${stadium.name}:${field}`);
+      assert.equal(
+        isFieldSpecificTouchlineStadiumSource(stadium, source),
+        true,
+        `evidence must substantiate the displayed ${field} value for ${stadium.name}`,
+      );
+    }
+    assert.equal(
+      new Set(profile.sources.map((source) => source.evidence.trim())).size,
+      requiredFields.length,
+      `citations must not clone generic evidence across fields for ${stadium.name}`,
+    );
+  }
+
+  for (const stadium of TOUCHLINE_STADIUM_CATALOG.filter((candidate) => !candidate.clubProfile)) {
+    assert.equal(
+      stadium.clubProfile,
+      undefined,
+      `${stadium.name} must remain unavailable until each displayed fact has direct evidence`,
+    );
+  }
+});
+
+test("Arsenal and Aston Villa preserve fixture venue identity but fail closed for ClubHub facts", () => {
+  const arsenal = TOUCHLINE_STADIUM_CATALOG.find((entry) => entry.id === "emirates-stadium");
+  const villa = TOUCHLINE_STADIUM_CATALOG.find((entry) => entry.id === "villa-park");
+
+  assert.equal(arsenal?.clubProfile, undefined);
+  assert.equal(villa?.clubProfile, undefined);
+  assert.equal(toTouchlineLiveFixture(fixture("19", "204")).venue?.name, "Emirates Stadium");
+  assert.equal(toTouchlineLiveFixture(fixture("15", "5")).venue?.name, "Villa Park");
+});
+
+test("field-specific stadium verification rejects cloned or mismatched evidence", () => {
+  const anfield = TOUCHLINE_STADIUM_CATALOG.find((entry) => entry.id === "anfield");
+  assert.ok(anfield?.clubProfile);
+  const capacity = anfield.clubProfile.sources.find((source) => source.field === "capacity");
+  assert.ok(capacity);
+
+  assert.equal(
+    isFieldSpecificTouchlineStadiumSource(anfield, {
+      ...capacity,
+      evidence: "Official stadium record identifying the stadium by name.",
+    }),
+    false,
+  );
+  assert.equal(
+    isFieldSpecificTouchlineStadiumSource(anfield, {
+      ...capacity,
+      evidence: "Liverpool FC announcement confirms Anfield capacity of 60,704.",
+    }),
+    false,
+  );
+});
+
+test("stadium source policy rejects generic, stale and wrong-club citation paths", () => {
+  for (const url of [
+    "http://www.premierleague.com/en/clubs/1/arsenal/stadium",
+    "https://example.invalid/stadium",
+    "https://www.premierleague.com/clubs/1/club/stadium",
+    "https://www.premierleague.com/clubs/4/Manutd/stadium",
+    "https://www.premierleague.com/clubs/34/West-Ham/stadium",
+    "https://www.cpfc.co.uk/club/selhurst-park/",
+  ]) {
+    assert.equal(isApprovedTouchlineStadiumSourceUrl(url), false, `must reject ${url}`);
+  }
+
+  for (const url of [
+    "https://www.premierleague.com/en/clubs/1/arsenal/stadium",
+    "https://www.premierleague.com/en/clubs/94/brentford/stadium",
+    "https://www.cpfc.co.uk/selhurst-park/stadium/",
+    "https://www.liverpoolfc.com/news/new-anfield-capacity-confirmed-ahead-2024-25",
+  ]) {
+    assert.equal(isApprovedTouchlineStadiumSourceUrl(url), true, `must accept ${url}`);
+  }
 });
 
 test("all twenty home clubs use bounded aerial stadium assets", () => {

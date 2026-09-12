@@ -8,6 +8,8 @@ const client = readFileSync(new URL("../app/touchline-tables/touchline-tables-cl
 test("Top 11 never turns a simulated preseason ranking into an official selection", () => {
   assert.match(page, /loadTouchLinePublishedTopEleven/);
   assert.doesNotMatch(page, /source:\s*"simulation"/);
+  assert.match(client, /resolveTouchlinePublishedGameweekBest\(\{ selection: publishedTopEleven/);
+  assert.match(client, /gameweekBest\.phase === "ready"/);
   assert.match(client, /seasonSelectionPending/);
-  assert.match(client, /publishedTopEleven\?\.slots/);
+  assert.doesNotMatch(client, /source:\s*"simulation"/);
 });

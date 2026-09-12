@@ -269,55 +269,9 @@
 
 
 /* The closest canonical defensive slots are 22% of pitch height apart,
-   about 14% of its width. Reserve space for the separate name plate and gap
-   before assigning the card height; its own renderer measures the width. */
+   about 14% of its width. The card itself is the visible identity surface;
+   keeping no second floating label prevents an extra dark box above players. */
 .pitchCard { --touchline-attack-card-long-edge: clamp(28px, calc(14cqw - 34px), 94px); }
-
-/* The name belongs to the pitch, not to the card artwork.  Keeping this as a
-   sibling of the zoom trigger means it has one stable anchor at every card
-   size and can never reflow beneath the card while the artwork loads. */
-.playerName {
-  position: absolute;
-  z-index: 5;
-  bottom: calc(100% + clamp(7px, .8vw, 12px));
-  left: 50%;
-  width: max-content;
-  max-width: min(196%, 160px);
-  overflow: hidden;
-  display: -webkit-box;
-  transform: translateX(-50%);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  border: 1px solid rgba(255,255,255,.17);
-  border-radius: 7px;
-  padding: 3px 5px;
-  color: #fff;
-  background: linear-gradient(180deg, rgba(1,6,7,.94), rgba(1,6,7,.69));
-  box-shadow: 0 5px 16px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.07);
-  font-size: clamp(7.04px, .671vw, 9.68px);
-  font-weight: 1000;
-  line-height: 1.08;
-  letter-spacing: .025em;
-  text-align: center;
-  text-shadow: 0 2px 5px rgba(0,0,0,.96), 0 0 10px rgba(0,0,0,.78);
-  text-transform: uppercase;
-  text-overflow: clip;
-  white-space: normal;
-  pointer-events: none;
-}
-
-.player[data-lineup-edge="left"] .playerName {
-  left: 0;
-  transform: translateX(0);
-  text-align: left;
-}
-
-.player[data-lineup-edge="right"] .playerName {
-  right: 0;
-  left: auto;
-  transform: translateX(0);
-  text-align: right;
-}
 
 .card {
   width: 100% !important;
@@ -462,16 +416,6 @@
 
 
 
-  .playerName {
-    bottom: calc(100% + 5px);
-    /* At 390px the longest real names still fit in two complete lines. The
-       compact plate keeps adjacent formation lanes from colliding. */
-    width: clamp(82px, 24vw, 108px);
-    max-width: 108px;
-    font-size: clamp(6.05px, 1.595vw, 7.975px);
-    letter-spacing: 0;
-  }
-
 }
 
 /* Phones in landscape are commonly wider than the portrait breakpoint while
@@ -538,13 +482,6 @@
 
 
 
-  .playerName {
-    bottom: calc(100% + 5px);
-    width: clamp(76px, 12vw, 106px);
-    max-width: 106px;
-    font-size: clamp(7.48px, .99vw, 8.8px);
-  }
-
 }
 
 @media (min-width: 721px) and (max-width: 1100px) and (min-height: 521px) {
@@ -562,11 +499,5 @@
   }
 
 
-
-  .playerName {
-    width: clamp(82px, 12vw, 118px);
-    max-width: 118px;
-    font-size: clamp(7.7px, .968vw, 9.9px);
-  }
 
 }

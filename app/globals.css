@@ -922,7 +922,23 @@ a, button { outline: none; }
   position: relative;
   z-index: 1;
   display: block;
-  box-shadow: 0 2px 6px rgba(0,0,0,.42);
+  /* A crest has its club-colour identity even at rest.  The source artwork
+     remains untouched: this is a visual light layer only, scaled gently so
+     compact pitch cards stay legible rather than becoming bright blobs. */
+  filter:
+    drop-shadow(0 2px 5px rgba(0,0,0,.48))
+    drop-shadow(0 0 2px color-mix(in srgb, var(--touchline-club-crest-color) 84%, transparent))
+    drop-shadow(0 0 7px color-mix(in srgb, var(--touchline-club-crest-color) 42%, transparent));
+  transition: filter 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .touchline-card-surface[data-card-motion="true"]:hover [data-touchline-card-crest="true"] {
+    filter:
+      drop-shadow(0 2px 5px rgba(0,0,0,.5))
+      drop-shadow(0 0 3px color-mix(in srgb, var(--touchline-club-crest-color) 96%, transparent))
+      drop-shadow(0 0 11px color-mix(in srgb, var(--touchline-club-crest-color) 68%, transparent));
+  }
 }
 
 /* Touch screens do not have desktop hover. A tap-selected card receives the
@@ -955,7 +971,8 @@ a, button { outline: none; }
   }
 
   .touchline-card-surface[data-card-motion="true"]:hover,
-  .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest-host="true"] {
+  .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest-host="true"],
+  .touchline-card-surface[data-card-motion="true"] [data-touchline-card-crest="true"] {
     transform: none !important;
     transition: none;
   }

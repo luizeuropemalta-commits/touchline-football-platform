@@ -147,7 +147,7 @@ test("a standalone match substitution never persists or swaps the saved roster",
 });
 
 test("opening in-Arena Quick Sub or a fixture matchday view cannot auto-save a derived lineup", () => {
-  const persistenceEffectStart = arenaSource.indexOf("useEffect(() => {\n    if (!hasLoadedSavedLineup || !hasLoadedClubOwnerRoster || isDemoLineup || !arenaPersistencePrincipal) return;");
+  const persistenceEffectStart = arenaSource.indexOf("useEffect(() => {\n    if (!hasLoadedSavedLineup || !hasLoadedClubOwnerRoster || isDemoLineup || !arenaPersistencePrincipal || isQaReadOnly) return;");
   const nextEffectStart = arenaSource.indexOf("\n  useEffect(() => {", persistenceEffectStart + 1);
   const persistenceEffect = arenaSource.slice(persistenceEffectStart, nextEffectStart);
   const guardIndex = persistenceEffect.indexOf('isQuickSubstitutionOpen || isArenaMatchdayViewActive || players.length === 0');

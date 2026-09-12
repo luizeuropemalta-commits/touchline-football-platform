@@ -10,6 +10,9 @@ const clubHubLineup = readFileSync(new URL("../components/touchline/ClubHubOffic
 const clubLineupBuilder = readFileSync(new URL("../lib/touchlineArena/club-lineup.ts", import.meta.url), "utf8");
 const clubHubLineupCss = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 const clubHubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+const tablesClient = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
+const arenaClient = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+const pitchSurfaceCss = readFileSync(new URL("../components/touchline/pitch/TouchlinePitchSurface.module.css", import.meta.url), "utf8");
 
 test("ClubHub and Market use the same canonical formation geometry", () => {
   assert.equal(TOUCHLINE_CLUB_OWNER_XI_SLOTS.length, 11);
@@ -51,17 +54,20 @@ test("field art is a shared component rather than separate page drawings", () =>
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });
 
-test("ClubHub formation keeps player names legible above cards without ellipses or edge collisions", () => {
+test("static Rank, Line-up, and Club Owner fields share Market's premium grass without changing Arena's loop field", () => {
+  assert.match(tablesClient, /<TouchlinePitchSurface className=\{styles\.pitch\} ariaLabel=\{copy\.seasonSelection\} surfaceVariant="premium-stadium">/);
+  assert.match(gameweekTeamSnapshot, /surfaceVariant=\{surface === "club-owner" \? "premium-stadium" : "canonical"\}/);
+  assert.match(clubHubLineup, /orientation="horizontal"[\s\S]*?surfaceVariant="premium-stadium"/);
+  assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?touchline-premium-grass-clean-horizontal-v1\.png/);
+  assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?repeating-linear-gradient\(90deg/);
+  assert.doesNotMatch(arenaClient, /surfaceVariant="premium-stadium"/);
+});
+
+test("ClubHub formation keeps each card as the single visible player identity surface", () => {
   assert.match(clubHubLineup, /playerProfileHref=\{profileHref\}/);
-  assert.match(clubHubLineup, /<span className=\{styles\.playerName\}>\{card\.name\}<\/span>/);
-  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?bottom: calc\(100% \+/);
-  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?text-transform: uppercase/);
-  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?-webkit-line-clamp: 2/);
-  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?white-space: normal/);
-  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?text-overflow: clip/);
-  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?background: linear-gradient\(180deg, rgba\(1,6,7,/);
-  assert.match(clubHubLineupCss, /\.playerName[\s\S]*?box-shadow: 0 5px 16px rgba\(0,0,0,/);
-  assert.doesNotMatch(clubHubLineupCss, /\.playerName[\s\S]*?text-overflow: ellipsis/);
+  assert.doesNotMatch(clubHubLineup, /styles\.playerName/);
+  assert.doesNotMatch(clubHubLineupCss, /\.playerName/);
+  assert.match(clubHubLineup, /ariaLabel=\{`\$\{isPortuguese \? "Ampliar card de"/);
   assert.doesNotMatch(clubHubLineupCss, /\.playerLink/);
 });
 

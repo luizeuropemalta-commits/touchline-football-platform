@@ -247,6 +247,28 @@
     0 24px 58px rgba(0, 0, 0, .44);
 }
 
+/* The Market established the visual standard, not a fixed camera direction.
+   Keep the same real-grass texture and bright regulation markings when a
+   static formation is landscape (Rank and ClubHub line-up).  This selector is
+   deliberately limited to the explicit premium variant: the cinematic Arena
+   never opts into it and continues to own its looping video field. */
+.surfacePremiumStadium:not(.surfaceVertical) {
+  --pitch-line: rgba(248, 255, 248, .9);
+  --pitch-line-soft: rgba(248, 255, 248, .78);
+  border-color: rgba(170, 255, 62, .42);
+  background:
+    radial-gradient(ellipse at 50% 46%, rgba(194, 255, 144, .10), transparent 44%),
+    linear-gradient(180deg, rgba(0, 15, 8, .06), rgba(0, 8, 4, .30)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .022) 0 11.25%, rgba(0, 0, 0, .026) 11.25% 22.5%),
+    url("/touchlineArena/pitch/touchline-premium-grass-clean-horizontal-v1.png") center / cover no-repeat,
+    #174f24;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .06),
+    inset 0 -100px 170px rgba(0, 0, 0, .28),
+    inset 0 0 120px rgba(0, 0, 0, .36),
+    0 24px 58px rgba(0, 0, 0, .44);
+}
+
 /* The marked rectangle is exactly proportional to 105 x 68 m: it occupies
    85% of both axes. Equal five-percent grass runoffs sit behind each goal. */
 .surfacePremiumStadium.surfaceVertical .boundary {

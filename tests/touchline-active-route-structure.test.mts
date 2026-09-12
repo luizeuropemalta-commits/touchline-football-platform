@@ -17,7 +17,8 @@ test("ClubHub compact cards keep navigation outside the zoom trigger", () => {
     );
   }
   assert.match(squadGrid, /className="club-hub-card-meta"[\s\S]*?<a\s+href=\{profileHref\}/);
-  assert.match(officialLineup, /styles\.playerName/);
+  assert.doesNotMatch(officialLineup, /styles\.playerName/);
+  assert.match(officialLineup, /ariaLabel=\{`\$\{isPortuguese \? "Ampliar card de"/);
   assert.doesNotMatch(officialLineup, /styles\.playerLink/);
 });
 
