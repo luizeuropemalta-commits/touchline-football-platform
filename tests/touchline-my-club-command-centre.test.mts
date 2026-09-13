@@ -37,5 +37,8 @@ test("My Club removes the ranking strip and puts factual wallet data directly af
   assert.ok(owner.indexOf('className="club-owner-wallet"') < owner.indexOf("<FantasyGameweekClient"));
   assert.match(owner, /walletBalanceTc === null/);
   assert.match(owner, /activeContractValueKnown/);
-  assert.match(owner, /ownedContractCount === null/);
+  assert.match(owner, /clubCopy\.xiCapacity[\s\S]{0,120}\{fantasySnapshot\?\.selections\.length \?\? 0\}\/11/);
+  assert.match(owner, /ownedContractCount !== null && ownedContractCount > 11/);
+  assert.match(owner, /contratos legados permanecem preservados|legacy contracts remain preserved/);
+  assert.doesNotMatch(owner, /\$\{ownedContractCount\}\/35/);
 });
