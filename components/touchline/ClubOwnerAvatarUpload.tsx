@@ -26,7 +26,7 @@ async function compressedAvatarDataUrl(file: File) {
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 
-export default function ClubOwnerAvatarUpload({ locale }: { locale: string }) {
+export default function ClubOwnerAvatarUpload({ locale, compact = false }: { locale: string; compact?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const isPortuguese = locale === "pt-BR";
@@ -57,7 +57,7 @@ export default function ClubOwnerAvatarUpload({ locale }: { locale: string }) {
   }
 
   return (
-    <div className="club-owner-avatar-upload">
+    <div className={`club-owner-avatar-upload${compact ? " is-compact" : ""}`}>
       <input
         ref={inputRef}
         type="file"
@@ -65,11 +65,17 @@ export default function ClubOwnerAvatarUpload({ locale }: { locale: string }) {
         onChange={(event) => void selectAvatar(event.currentTarget.files?.[0])}
         aria-label={isPortuguese ? "Escolher foto de perfil" : "Choose profile photo"}
       />
-      <button type="button" onClick={() => inputRef.current?.click()} disabled={status === "saving"}>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={status === "saving"}
+        aria-label={isPortuguese ? "Alterar foto do perfil" : "Change profile photo"}
+        title={isPortuguese ? "Alterar foto" : "Change photo"}
+      >
         {status === "saving" ? <LoaderCircle className="is-spinning" aria-hidden="true" /> : <Camera aria-hidden="true" />}
-        {status === "saving"
+        <span>{status === "saving"
           ? (isPortuguese ? "Salvando…" : "Saving…")
-          : (isPortuguese ? "Alterar foto" : "Change photo")}
+          : (compact ? (isPortuguese ? "Foto" : "Photo") : (isPortuguese ? "Alterar foto" : "Change photo"))}</span>
       </button>
       {status === "error" ? (
         <small role="alert">{isPortuguese ? "Não foi possível salvar esta foto." : "This photo could not be saved."}</small>
@@ -83,6 +89,8 @@ export default function ClubOwnerAvatarUpload({ locale }: { locale: string }) {
         svg { width:14px; height:14px; color:#a3ff12; }
         small { max-width:190px; color:#ff8d8d; font:800 9px/1.35 inherit; text-align:center; }
         .is-spinning { animation:spin .8s linear infinite; }
+        .is-compact button { min-height:44px; gap:5px; border-radius:10px; padding:0 8px; font-size:8px; }
+        .is-compact button svg { width:14px; height:14px; }
         @keyframes spin { to { transform:rotate(360deg); } }
       `}</style>
     </div>
