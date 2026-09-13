@@ -6,13 +6,14 @@ import { TOUCHLINE_CLUB_OWNER_XI_SLOTS, TOUCHLINE_STANDARD_433_SLOTS, touchlineC
 
 const clubOwnerRenderer = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
 const gameweekTeamSnapshot = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx", import.meta.url), "utf8");
+const pitchSurface = readFileSync(new URL("../components/touchline/pitch/TouchlinePitchSurface.tsx", import.meta.url), "utf8");
+const pitchSurfaceCss = readFileSync(new URL("../components/touchline/pitch/TouchlinePitchSurface.module.css", import.meta.url), "utf8");
 const clubHubLineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 const clubLineupBuilder = readFileSync(new URL("../lib/touchlineArena/club-lineup.ts", import.meta.url), "utf8");
 const clubHubLineupCss = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 const clubHubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const tablesClient = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
 const arenaClient = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-const pitchSurfaceCss = readFileSync(new URL("../components/touchline/pitch/TouchlinePitchSurface.module.css", import.meta.url), "utf8");
 
 test("ClubHub and Market use the same canonical formation geometry", () => {
   assert.equal(TOUCHLINE_CLUB_OWNER_XI_SLOTS.length, 11);
@@ -61,6 +62,17 @@ test("static Rank, Line-up, and Club Owner fields share Market's premium grass w
   assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?touchline-premium-grass-clean-horizontal-v1\.png/);
   assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?repeating-linear-gradient\(90deg/);
   assert.doesNotMatch(arenaClient, /surfaceVariant="premium-stadium"/);
+});
+
+test("My Club traces only the regulation boundary in one ordered, reduced-motion-safe loop", () => {
+  assert.match(gameweekTeamSnapshot, /<TouchlinePitchSurface[\s\S]*?boundaryTrace[\s\S]*?surfaceVariant=\{surface === "club-owner" \? "premium-stadium" : "canonical"\}/);
+  assert.match(pitchSurface, /boundaryTrace\?: boolean/);
+  assert.match(pitchSurface, /<rect className=\{styles\.boundaryTraceBase\} x="5" y="5" width="90" height="90" pathLength="100" \/>/);
+  assert.match(pitchSurface, /<rect className=\{styles\.boundaryTraceRunner\} x="5" y="5" width="90" height="90" pathLength="100" \/>/);
+  assert.match(pitchSurfaceCss, /\.boundaryTraceRunner\s*\{[\s\S]*?stroke-dasharray:\s*13 87[\s\S]*?animation:\s*touchlinePitchBoundaryTrace/);
+  assert.match(pitchSurfaceCss, /@keyframes touchlinePitchBoundaryTrace\s*\{[\s\S]*?stroke-dashoffset:\s*-100/);
+  assert.match(pitchSurfaceCss, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.boundaryTraceRunner \{ animation: none; opacity: \.42; \}/);
+  assert.doesNotMatch(gameweekTeamSnapshot, /advertisingCampaign|TOUCHLINE_MARKET_HOUSE_CAMPAIGN|FOLLOW THE GAME/);
 });
 
 test("ClubHub formation keeps each card as the single visible player identity surface", () => {

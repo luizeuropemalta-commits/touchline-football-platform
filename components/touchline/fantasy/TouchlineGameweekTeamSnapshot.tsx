@@ -32,6 +32,7 @@ export default function TouchlineGameweekTeamSnapshot({ snapshot, locale, surfac
       {/* Club Owner is a static tactical page, so it shares the Market
           surface. The Arena view remains on its own loop/video surface. */}
       <TouchlinePitchSurface
+        boundaryTrace
         className={styles.pitch}
         ariaLabel={title}
         surfaceVariant={surface === "club-owner" ? "premium-stadium" : "canonical"}

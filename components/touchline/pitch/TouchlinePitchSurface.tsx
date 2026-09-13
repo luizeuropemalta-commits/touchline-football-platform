@@ -10,6 +10,8 @@ export type TouchlinePitchAdvertisingCampaign = Readonly<{
 type TouchlinePitchSurfaceProps = Readonly<{
   advertisingCampaign?: TouchlinePitchAdvertisingCampaign;
   ariaLabel: string;
+  /** Enables the restrained, ordered neon trace along the outer regulation boundary only. */
+  boundaryTrace?: boolean;
   children?: ReactNode;
   className?: string;
   orientation?: "horizontal" | "vertical";
@@ -37,6 +39,7 @@ export const TOUCHLINE_MARKET_HOUSE_CAMPAIGN: TouchlinePitchAdvertisingCampaign 
 export default function TouchlinePitchSurface({
   advertisingCampaign,
   ariaLabel,
+  boundaryTrace = false,
   children,
   className,
   orientation = "horizontal",
@@ -62,6 +65,12 @@ export default function TouchlinePitchSurface({
       aria-label={ariaLabel}
     >
       <span className={styles.boundary} aria-hidden="true" />
+      {boundaryTrace ? (
+        <svg className={styles.boundaryTrace} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <rect className={styles.boundaryTraceBase} x="5" y="5" width="90" height="90" pathLength="100" />
+          <rect className={styles.boundaryTraceRunner} x="5" y="5" width="90" height="90" pathLength="100" />
+        </svg>
+      ) : null}
       <span className={styles.halfway} aria-hidden="true" />
       <span className={styles.centreCircle} aria-hidden="true" />
       <span className={styles.centreSpot} aria-hidden="true" />
