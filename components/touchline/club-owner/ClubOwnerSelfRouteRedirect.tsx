@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
-import { touchlineClubOwnerSelfHref } from "@/lib/touchlineArena/club-owner-routes";
+import { touchlineClubOwnerSelfHref, touchlineMyClubHref } from "@/lib/touchlineArena/club-owner-routes";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import {
   resolveTouchlineClubOwnerSelfNavigation,
@@ -39,8 +39,11 @@ export async function redirectTouchlineClubOwnerSelfRoute({
   const marketTab = firstValue(params.tab) === "market";
   if (marketTab) forwarded.set("tab", "market");
   const forwardedSuffix = forwarded.size ? `&${forwarded.toString()}` : "";
-  const marketAnchor = marketTab ? "#club-owner-market" : "";
-  const destination = `${touchlineClubOwnerSelfHref(locale, area)}${forwardedSuffix}${marketAnchor}`;
+  const marketAnchor = marketTab ? "#my-club-squad" : "";
+  const canonicalAreaHref = area === "profile"
+    ? touchlineMyClubHref(locale)
+    : touchlineClubOwnerSelfHref(locale, area);
+  const destination = `${canonicalAreaHref}${forwardedSuffix}${marketAnchor}`;
   const supabase = await createClient();
   const { data: { user } } = supabase
     ? await supabase.auth.getUser()
@@ -56,5 +59,5 @@ export async function redirectTouchlineClubOwnerSelfRoute({
     redirect(touchLineAuthEntryHref("/login", locale, destination));
   }
   if (navigation.kind === "denied") notFound();
-  redirect(`${navigation.href}${forwardedSuffix}${marketAnchor}`);
+  redirect(`${area === "profile" ? touchlineMyClubHref(locale) : navigation.href}${forwardedSuffix}${marketAnchor}`);
 }

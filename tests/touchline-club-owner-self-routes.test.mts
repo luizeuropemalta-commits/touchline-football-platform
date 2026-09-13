@@ -197,13 +197,13 @@ test("private navigation is self-scoped and foreign public profiles cannot expos
   assert.doesNotMatch(profileRendererSource, /TouchlineProfileQuickNav/);
 });
 
-test("legacy Market URLs discard unused contract context while resolving the authenticated ClubOwner", () => {
+test("legacy Market URLs discard unused contract context while resolving My Club", () => {
   assert.match(legacyMarketSource, /tab: "market"/);
-  assert.match(legacyMarketSource, /redirect\(`\/club-owner\/me\?\$\{forwarded\.toString\(\)\}#club-owner-market`\)/);
+  assert.match(legacyMarketSource, /redirect\(`\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad`\)/);
   assert.doesNotMatch(legacyMarketSource, /contractPlayer|contractName|contractClub/);
   assert.match(selfRedirectSource, /const marketTab = firstValue\(params\.tab\) === "market"/);
   assert.match(selfRedirectSource, /touchLineAuthEntryHref\("\/login", locale, destination\)/);
-  assert.match(selfRedirectSource, /marketAnchor = marketTab \? "#club-owner-market"/);
+  assert.match(selfRedirectSource, /marketAnchor = marketTab \? "#my-club-squad"/);
   assert.doesNotMatch(selfRedirectSource, /contractPlayer|contractName|contractClub/);
   assert.doesNotMatch(selfRedirectSource, /ownerSlug\s*=\s*firstValue\(params/);
 });

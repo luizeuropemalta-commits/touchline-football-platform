@@ -41,7 +41,7 @@ test("card and copy counts use locale-aware singular and plural labels", () => {
   assert.equal(portuguese.copiesAvailable(2), "2 cópias disponíveis");
 });
 
-test("the compatibility route resolves lang before forwarding to the ClubOwner Market section", () => {
+test("the compatibility route resolves lang before forwarding to the My Club market section", () => {
   const marketPage = source("app/market-transfer/page.tsx");
 
   assert.match(marketPage, /lang\?: string \| string\[\]/);
@@ -49,10 +49,10 @@ test("the compatibility route resolves lang before forwarding to the ClubOwner M
   assert.match(marketPage, /marketLocale\(searchParams\)/);
   assert.match(marketPage, /locale === "pt-BR"/);
   assert.match(marketPage, /tab: "market"/);
-  assert.match(marketPage, /\/club-owner\/me/);
-  assert.match(marketPage, /#club-owner-market/);
-  assert.match(marketPage, /title: "TouchLine Markt · Equipe da rodada"/);
-  assert.match(marketPage, /title: "TouchLine Markt · Gameweek XI"/);
+  assert.match(marketPage, /\/my-club/);
+  assert.match(marketPage, /#my-club-squad/);
+  assert.match(marketPage, /title: "Meu Clube · TouchLine"/);
+  assert.match(marketPage, /title: "My Club · TouchLine"/);
 });
 
 test("shared Market Transfer navigation contains no retired product name", () => {

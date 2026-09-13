@@ -2,7 +2,7 @@ import {
   touchlineArenaHref,
   touchlineClubHubHref,
 } from "./arena-navigation.ts";
-import { touchlineClubOwnerSelfHref } from "./club-owner-routes.ts";
+import { touchlineMyClubHref } from "./club-owner-routes.ts";
 import { resolveTouchLinePresentationLocale } from "./root-locale.ts";
 
 /**
@@ -45,7 +45,7 @@ export type TouchlineGlobalNavigationItem = Readonly<{
 /**
  * A valid login and a ClubOwner identity are different capabilities. Admins
  * are authenticated but must never receive the self-scoped My Club link,
- * because the `/club-owner/me` boundary deliberately rejects administrator
+ * because the `/my-club` boundary deliberately rejects administrator
  * identities.
  */
 export function resolveTouchlineGlobalNavigationSurface(input: Readonly<{
@@ -75,7 +75,7 @@ export function resolveTouchlineGlobalNavigationItems(
   ];
 
   return surface === "authenticated"
-    ? [...generalItems, { key: "myClub", href: touchlineClubOwnerSelfHref(effectiveLocale) }]
+    ? [...generalItems, { key: "myClub", href: touchlineMyClubHref(effectiveLocale) }]
     : generalItems;
 }
 

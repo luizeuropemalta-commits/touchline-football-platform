@@ -228,13 +228,13 @@ test("ClubHub line-up preserves the pitch and responsive card sizing contract", 
   assert.match(cardZoom, /document\.body/);
 });
 
-test("ClubOwner profile keeps one source for each summary", () => {
+test("My Club profile keeps one source for each summary", () => {
   const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
 
   assert.doesNotMatch(profilePage, /stats=\{ownerStats\}/);
   assert.doesNotMatch(profilePage, /className="club-owner-profile-club-control"/);
   assert.match(profilePage, /className="club-owner-profile-collection-details"/);
-  assert.match(profilePage, /Posição do ClubOwner/);
+  assert.match(profilePage, /Posição do Meu Clube/);
 });
 
 test("Arena places the ClubOwner profile first in both menus", () => {
@@ -330,13 +330,13 @@ test("dedicated player-card ranking reuses the shared zoom and keeps compact car
   assert.doesNotMatch(rankingsSource, /resolveTouchlineVerifiedPlayerEconomy|Market value|market value pending/);
 });
 
-test("ClubOwner reuses the canonical official feed without inventing a club-scoped copy", () => {
+test("My Club keeps the profile surface focused on the squad without a public timeline", () => {
   const ownerSource = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
 
-  assert.match(ownerSource, /import TouchlineClubSocialFeed/);
-  assert.match(ownerSource, /readTouchlineClubOwnerSocialFeed/);
-  assert.equal((ownerSource.match(/<TouchlineClubSocialFeed/g) ?? []).length, 1);
-  assert.match(ownerSource, /<TouchlineSocialProfileHeader[\s\S]*?<TouchlineClubSocialFeed/);
+  assert.doesNotMatch(ownerSource, /import TouchlineClubSocialFeed/);
+  assert.doesNotMatch(ownerSource, /readTouchlineClubOwnerSocialFeed/);
+  assert.doesNotMatch(ownerSource, /<TouchlineClubSocialFeed/);
+  assert.match(ownerSource, /<TouchlineSocialProfileHeader[\s\S]*?<FantasyGameweekClient/);
   assert.doesNotMatch(ownerSource, /providerTeamId|ownerClub|visualImageUrl:\s*club\?\.logoUrl/);
 });
 
@@ -616,12 +616,12 @@ test("Arena coach uses compact typography and an isolated fullscreen spotlight",
   assert.match(arenaClient, /\.arena-stage:fullscreen \.arena-coach-spotlight[\s\S]*?z-index: 2147483646/);
 });
 
-test("ClubOwner exposes the canonical Gameweek XI without restoring the retired local Fantasy bench", () => {
+test("My Club exposes the canonical Gameweek XI without restoring the retired local Fantasy bench", () => {
   const arenaClient = source("app/arena/ArenaClient.tsx");
   const clubOwner = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
   const gameweekSnapshot = source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx");
 
-  assert.match(clubOwner, /TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}/);
+  assert.match(clubOwner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.match(gameweekSnapshot, /snapshot!?\.selections\.find/);
   assert.match(gameweekSnapshot, /Um XI titular|One Starting XI/);
   assert.doesNotMatch(gameweekSnapshot, /Nenhum banco Fantasy|No Fantasy bench/);

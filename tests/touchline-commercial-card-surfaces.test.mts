@@ -60,7 +60,7 @@ test("ClubOwner keeps card assets separate from the TC wallet and can present ed
   assert.match(clubOwner, /formatTouchlineContractedCommercialCardPrice/);
   assert.match(clubOwner, /const publishedClubOwnerSquadCards = sortedClubOwnerSquadCards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/);
   assert.match(clubOwner, /loadTouchlineFantasySnapshot\(activeClubOwnerUser\)/);
-  assert.match(clubOwner, /<TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}/);
+  assert.match(clubOwner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.doesNotMatch(clubOwner, /selectSavedArenaStartingXi|partitionClubOwnerRoster/);
   assert.match(clubOwner, /const startingShowcaseCards = publishedClubOwnerSquadCards\.slice\(0, 6\)/);
   assert.match(clubOwner, /startingShowcaseCards\.map\(\(card, index\) =>/);
@@ -69,7 +69,7 @@ test("ClubOwner keeps card assets separate from the TC wallet and can present ed
   assert.doesNotMatch(clubOwner, /formatTouchlineVerifiedCommercialCardPrice/);
   assert.doesNotMatch(clubOwner, /walletBalanceTc \+ squadValueTc/);
   assert.doesNotMatch(clubOwner, /\{squadValueTc\} TC/);
-  assert.match(clubOwner, /occupiedContractPercent/);
+  assert.match(clubOwner, /club-owner-wallet-metrics/);
   assert.doesNotMatch(arenaCopy, /Squad TC Value|Valor TC atual do elenco|preços TC atuais/);
 });
 

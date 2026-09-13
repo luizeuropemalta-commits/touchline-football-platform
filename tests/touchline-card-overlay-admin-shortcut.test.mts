@@ -49,22 +49,22 @@ test("public card pages derive Card Engine visibility from the authenticated ser
   assert.match(source("components/touchline/market/TouchlineSquadBuilderStage.tsx"), /canEditCardEngine = false/);
 });
 
-test("the retired Market route is only a safe ClubOwner Market compatibility redirect", () => {
+test("the retired Market route is only a safe My Club compatibility redirect", () => {
   const marketRoute = source("app/market-transfer/page.tsx");
   const selfRoute = source("components/touchline/club-owner/ClubOwnerSelfRouteRedirect.tsx");
 
   // It deliberately has no owner/admin branch: authentication and owner
-  // resolution occur at the ClubOwner self-route boundary after login.
+  // resolution occur at the My Club boundary after login.
   assert.doesNotMatch(marketRoute, /isOwnerEmail/);
   assert.doesNotMatch(marketRoute, /\/admin\//);
-  assert.match(marketRoute, /redirect\(`\/club-owner\/me\?\$\{forwarded\.toString\(\)\}#club-owner-market`\)/);
+  assert.match(marketRoute, /redirect\(`\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad`\)/);
   assert.match(marketRoute, /new URLSearchParams\(\{ lang: locale, tab: "market" \}\)/);
   assert.doesNotMatch(marketRoute, /contractPlayer|contractName|contractClub/, "unused legacy contract context is not carried into ClubOwner");
 
-  // A signed-out request returns through the authenticated self route, not an
-  // owner or admin shortcut, and keeps the exact Market section anchor.
+  // A signed-out request returns through the authenticated compatibility
+  // route, not an owner or admin shortcut, and keeps the exact section anchor.
   assert.match(selfRoute, /touchLineAuthEntryHref\("\/login", locale, destination\)/);
-  assert.match(selfRoute, /const marketAnchor = marketTab \? "#club-owner-market" : ""/);
+  assert.match(selfRoute, /const marketAnchor = marketTab \? "#my-club-squad" : ""/);
   assert.match(selfRoute, /isClubOwner: Boolean\(user && !isOwnerEmail\(user\.email\)\)/);
 });
 

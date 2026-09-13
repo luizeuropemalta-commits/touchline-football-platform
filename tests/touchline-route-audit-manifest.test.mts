@@ -15,7 +15,7 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 75);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 76);
   assert.equal(rows.filter((item) => item.kind === "API").length, 75);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
@@ -31,6 +31,8 @@ test("records no Server Actions instead of assuming an uninspected mutation surf
 test("separates public, authenticated, ClubOwner, Admin, audit, and isolated preview pages", () => {
   assert.equal(row("/touchline-clubs").auth, "PUBLIC");
   assert.equal(row("/market-transfer").auth, "AUTHENTICATED");
+  assert.equal(row("/my-club").auth, "AUTHENTICATED");
+  assert.equal(row("/my-club").data, "SUPABASE_OWNER_SQUAD_WALLET_AND_GAMEWEEK");
   assert.equal(row("/club-owner/me/substitution").auth, "CLUBOWNER_SELF");
   assert.equal(row("/admin/cards").auth, "ADMIN");
   assert.equal(row("/admin/login").auth, "ADMIN");

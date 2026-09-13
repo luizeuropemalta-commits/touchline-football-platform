@@ -31,7 +31,7 @@ test("authenticated navigation may add only the server-resolved My Club boundary
   const items = resolveTouchlineGlobalNavigationItems("en-GB", "authenticated");
 
   assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "rankings", "myClub"]);
-  assert.equal(items.at(-1)?.href, "/club-owner/me?lang=en-GB");
+  assert.equal(items.at(-1)?.href, "/my-club?lang=en-GB");
   assert.doesNotMatch(JSON.stringify(items), /luiz-lopez|manchester-united|manchester-city/i);
 });
 

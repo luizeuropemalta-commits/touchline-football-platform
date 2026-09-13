@@ -7,7 +7,7 @@ const proxySource = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8"
 test("public product requests do not invoke Supabase Auth in the proxy", () => {
   assert.match(
     proxySource,
-    /const requiresIdentityLookup = isProtectedArenaRoute \|\| pathname\.startsWith\("\/club-owner\/"\);/,
+    /const requiresIdentityLookup = isProtectedArenaRoute \|\| isMyClubRoute \|\| pathname\.startsWith\("\/club-owner\/"\);/,
   );
   assert.match(proxySource, /if \(!requiresIdentityLookup\) return response;/);
   assert.ok(

@@ -45,7 +45,7 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
 });
 
 test("field art is a shared component rather than separate page drawings", () => {
-  assert.match(clubOwnerRenderer, /TouchlineGameweekTeamSnapshot/);
+  assert.match(clubOwnerRenderer, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.match(gameweekTeamSnapshot, /TouchlinePitchSurface/);
   assert.match(clubHubLineup, /TouchlinePitchSurface/);
   assert.match(clubLineupBuilder, /touchlineCanonicalFormationSlots\(formation, input\.formationGeometryRegistry\)/);

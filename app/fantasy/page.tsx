@@ -7,5 +7,5 @@ export default async function FantasyAliasPage({ searchParams }: {
 }) {
   const params = await searchParams;
   const locale = normalizeTouchLineLocale(Array.isArray(params.lang) ? params.lang[0] : params.lang);
-  redirect(`/market-transfer?lang=${encodeURIComponent(locale)}`);
+  redirect(`/my-club?lang=${encodeURIComponent(locale)}&tab=market#my-club-squad`);
 }

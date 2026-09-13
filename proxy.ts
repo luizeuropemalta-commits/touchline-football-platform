@@ -511,6 +511,7 @@ async function handleTouchLineRequest(request: NextRequest) {
   const isAuthEntry = authEntryPaths.some((path) => matchesRoute(pathname, path));
   const isProtectedArenaRoute = !isAuth
     && protectedArenaPaths.some((path) => matchesRoute(pathname, path));
+  const isMyClubRoute = pathname === "/my-club";
   const isQaAuthenticatedVisualReviewRoute = isTouchlineQaAuthenticatedVisualReviewRoute({
     pathname,
     hostname,
@@ -522,9 +523,9 @@ async function handleTouchLineRequest(request: NextRequest) {
   // particular, a visitor with an expired browser session must not cause every
   // public navigation to refresh a Supabase token at the edge.  That pattern
   // amplifies into concurrent refreshes for HTML and assets and can exhaust
-  // the middleware execution budget.  ClubOwner remains here because its
-  // private self and management routes are authorized by this proxy.
-  const requiresIdentityLookup = isProtectedArenaRoute || pathname.startsWith("/club-owner/");
+  // the middleware execution budget. My Club and the legacy ClubOwner paths
+  // remain here because their private management routes are authorized here.
+  const requiresIdentityLookup = isProtectedArenaRoute || isMyClubRoute || pathname.startsWith("/club-owner/");
   const isEmergencyOffline = siteOffline && !isVercelHost;
 
   if (isEmergencyOffline && !isProtectedArenaRoute && !isAuth) {
@@ -536,7 +537,7 @@ async function handleTouchLineRequest(request: NextRequest) {
   if (!url || !key) {
     const clubOwnerFailure = resolveClubOwnerFailureBoundary(request);
     if (clubOwnerFailure) return clubOwnerFailure;
-    return isProtectedArenaRoute ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
+    return (isProtectedArenaRoute || isMyClubRoute) ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
   }
 
   let response = nextResponseWithPresentationLocale(request);
@@ -573,6 +574,16 @@ async function handleTouchLineRequest(request: NextRequest) {
   }
 
   const isAdmin = isOwnerEmail(user?.email);
+  if (isMyClubRoute && !user) return loginRedirect(request, response);
+  if (isMyClubRoute && isAdmin) return clubOwnerNotFoundResponse(request, response);
+  // `/my-club` is the single product-facing destination. Keep the previous
+  // self route alive only long enough to redirect an authenticated customer;
+  // the internal `club_owner` authorization boundary remains unchanged.
+  if (pathname === "/club-owner/me" && user && !isAdmin) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.pathname = "/my-club";
+    return redirectWithSupabaseCookies(canonicalUrl, response);
+  }
   const clubOwnerSlug = user?.id && !isAdmin
     ? touchlineClubOwnerSlugForUser({
       id: user.id,

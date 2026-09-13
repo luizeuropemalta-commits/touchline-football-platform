@@ -2,6 +2,11 @@ import { resolveTouchLinePresentationLocale } from "./root-locale.ts";
 
 export const TOUCHLINE_CLUB_OWNER_ROUTE_BASE = "/club-owner" as const;
 export const TOUCHLINE_CLUB_OWNER_SELF_SEGMENT = "me" as const;
+/**
+ * Product route: the customer-facing surface is My Club. `club_owner` stays
+ * behind the authorization and persistence boundary for compatibility.
+ */
+export const TOUCHLINE_MY_CLUB_ROUTE = "/my-club" as const;
 
 export type TouchlineClubOwnerSelfArea = "profile" | "history" | "renewals" | "substitution";
 
@@ -40,6 +45,10 @@ export function touchlineClubOwnerSelfPath(area: TouchlineClubOwnerSelfArea = "p
 
 export function touchlineClubOwnerSelfHref(locale?: string | null, area: TouchlineClubOwnerSelfArea = "profile") {
   return withLocale(touchlineClubOwnerSelfPath(area), locale);
+}
+
+export function touchlineMyClubHref(locale?: string | null) {
+  return withLocale(TOUCHLINE_MY_CLUB_ROUTE, locale);
 }
 
 export function touchlineClubOwnerProfileHref(locale?: string | null, ownerSlug?: string | null) {

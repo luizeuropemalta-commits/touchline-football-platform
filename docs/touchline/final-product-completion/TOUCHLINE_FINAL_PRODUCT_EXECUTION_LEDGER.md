@@ -3272,3 +3272,23 @@ new plus six existing cases passed with synthetic environment values. No
 external calls, actual secrets, Live/Club Owner changes, commit or deployment.
 Final checks/status/manifest belong to the Engineering precheck handoff; local
 PASS is not binding/database/functional QA proof. Fiscal review pending.
+
+## 2026-09-13 My Club canonical squad-management proposal — LOCAL REVIEW
+
+- Added the authenticated `/my-club` product route and made it the sole
+  customer-facing destination for the owner squad surface. Legacy Market,
+  Fantasy and authenticated self-profile entry paths forward safely; the
+  internal `club_owner` authorization, claims, RLS names and persistence
+  records were deliberately not renamed.
+- Replaced the old Club Owner Match Preview timeline and large Club direction
+  dashboard with a compact identity/wallet summary, then a squad-first
+  Gameweek flow. Wallet values are derived only from the ledger, authoritative
+  contracts and published contract pricing; absent facts remain `—`.
+- The default Squad View requires a concrete formation slot before browsing
+  compatible players. It preserves existing position checks, replacement and
+  removal transactions; the tactical pitch remains optional rather than the
+  primary surface.
+- Verification: complete local test suite, TypeScript, scoped ESLint and
+  `git diff --check` pass. The change remains an isolated local proposal with
+  no migration, database write, push, Vercel build/deployment, Production
+  action or external dispatch.

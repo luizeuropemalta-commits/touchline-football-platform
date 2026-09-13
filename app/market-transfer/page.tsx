@@ -20,12 +20,12 @@ export async function generateMetadata({ searchParams }: {
   const locale = await marketLocale(searchParams);
   return locale === "pt-BR"
     ? {
-        title: "TouchLine Markt · Equipe da rodada",
-        description: "Escolha treinador, formação e os 11 cards da sua equipe TouchLine para a rodada.",
+        title: "Meu Clube · TouchLine",
+        description: "Gerencie seu XI TouchLine por posição.",
       }
     : {
-        title: "TouchLine Markt · Gameweek XI",
-        description: "Choose the coach, formation and 11 cards for your TouchLine Gameweek team.",
+        title: "My Club · TouchLine",
+        description: "Manage your TouchLine XI by position.",
       };
 }
 
@@ -34,8 +34,8 @@ export default async function MarketTransferPage({ searchParams }: {
 }) {
   const locale = await marketLocale(searchParams);
   // The embedded Market has no contract-intent consumer. Do not propagate
-  // legacy query data into the ClubOwner profile where it could be mistaken
+  // legacy query data into My Club where it could be mistaken
   // for a requested state change.
   const forwarded = new URLSearchParams({ lang: locale, tab: "market" });
-  redirect(`/club-owner/me?${forwarded.toString()}#club-owner-market`);
+  redirect(`/my-club?${forwarded.toString()}#my-club-squad`);
 }

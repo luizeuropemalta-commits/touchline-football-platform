@@ -8,7 +8,7 @@ async function source(path: string) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("ClubOwner owns the one Fantasy Gameweek transaction boundary and the legacy Market route forwards safely", async () => {
+test("My Club owns the one Gameweek transaction boundary and legacy Market routes forward safely", async () => {
   const [market, owner, alias, client, route] = await Promise.all([
     source("app/market-transfer/page.tsx"),
     source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
@@ -16,11 +16,11 @@ test("ClubOwner owns the one Fantasy Gameweek transaction boundary and the legac
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("app/api/touchline-fantasy/lineup/route.ts"),
   ]);
-  assert.match(market, /redirect\(`\/club-owner\/me\?\$\{forwarded\.toString\(\)\}#club-owner-market`\)/);
+  assert.match(market, /redirect\(`\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad`\)/);
   assert.match(owner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
-  assert.match(owner, /id="club-owner-market"/);
+  assert.match(owner, /id="my-club-squad"/);
   assert.doesNotMatch(market, /standaloneMarket|<ArenaClient/);
-  assert.match(alias, /redirect\(`\/market-transfer\?lang=/);
+  assert.match(alias, /redirect\(`\/my-club\?lang=.*tab=market#my-club-squad`\)/);
   assert.match(client, /selectedCoachId/);
   assert.match(route, /p_selected_coach_id: input\.selectedCoachId/);
   assert.match(route, /MAX_LINEUP_REQUEST_BYTES = 8_192/);
@@ -29,7 +29,7 @@ test("ClubOwner owns the one Fantasy Gameweek transaction boundary and the legac
   assert.match(route, /parseTouchlineFantasyLineupRequest\(await readBoundedJson\(request\)\)/);
 });
 
-test("the classic Markt presentation keeps the guided coach-first Gameweek flow", async () => {
+test("the My Club presentation keeps the guided coach-first Gameweek flow", async () => {
   const [client, card, exactCard, styles] = await Promise.all([
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("components/touchline/fantasy/TouchlineGameweekCard.tsx"),
@@ -37,7 +37,7 @@ test("the classic Markt presentation keeps the guided coach-first Gameweek flow"
     source("app/fantasy/fantasy.module.css"),
   ]);
   assert.match(client, /const STEPS:[\s\S]*?"coach"[\s\S]*?"formation"[\s\S]*?"players"[\s\S]*?"review"[\s\S]*?"locked"/);
-  assert.match(client, /data-market-visual="classic"/);
+  assert.match(client, /data-market-visual="my-club"/);
   assert.match(client, /Monte seu time TouchLine|Build Your TouchLine Team/);
   assert.match(client, /Escolha primeiro seu treinador, depois a formação/);
   assert.match(client, /filteredCoaches = snapshot\.coaches\.filter/);
@@ -184,13 +184,14 @@ test("the Markt clock follows canonical close and reopen timestamps without inve
   });
 });
 
-test("Club Owner and Arena consume the same canonical Gameweek snapshot without a Fantasy bench", async () => {
-  const [shared, arena, arenaClient, arenaAdapter, owner] = await Promise.all([
+test("My Club and Arena consume the same canonical Gameweek snapshot without a Fantasy bench", async () => {
+  const [shared, arena, arenaClient, arenaAdapter, owner, market] = await Promise.all([
     source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx"),
     source("app/arena/page.tsx"),
     source("app/arena/ArenaClient.tsx"),
     source("lib/touchlineFantasy/arena-lineup.ts"),
     source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
+    source("app/fantasy/FantasyGameweekClient.tsx"),
   ]);
   assert.match(shared, /snapshot!?\.selections\.find/);
   assert.match(shared, /data-canonical-player-id/);
@@ -213,7 +214,10 @@ test("Club Owner and Arena consume the same canonical Gameweek snapshot without 
   assert.match(arenaClient, /const savedLayout = hasSyncedFantasyLineup[\s\S]*?\? null/);
   assert.match(arenaClient, /const isQuickSubstitutionOpen = activeArenaPanel === "bench" && !hasSyncedFantasyLineup/);
   assert.match(arenaClient, /!hasSyncedFantasyLineup \? <a[\s\S]*?touchlineArenaPanelHref\("bench"/);
-  assert.match(owner, /<TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}[\s\S]*?surface="club-owner"/);
+  assert.match(owner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
+  assert.match(market, /squadView.*"squad".*"tactical"/);
+  assert.match(market, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
+  assert.match(market, /replaceTouchlineFantasyPlayerAtSlot/);
   assert.doesNotMatch(owner, />Fazer substituição<|>Make substitution<|<div className="club-owner-unified-bench"/);
 });
 

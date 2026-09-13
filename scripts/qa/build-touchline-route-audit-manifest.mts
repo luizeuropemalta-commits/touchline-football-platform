@@ -33,6 +33,7 @@ const PAGE_POLICIES: Record<string, Partial<RoutePolicy>> = {
   "/arena/[zone]": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "LEGACY_ZONE_REDIRECT", browser: "REDIRECT_CONTRACT", status: "LEGACY_REDIRECT_CONTRACT" },
   "/arena": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_STATE_AND_PERSISTED_FIXTURES" },
   "/market-transfer": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "PUBLIC_CARD_CATALOG_AND_SUPABASE_USER_CONTRACTS" },
+  "/my-club": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_OWNER_SQUAD_WALLET_AND_GAMEWEEK" },
   "/football-search": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "PROVIDER_CACHE_AND_EDITORIAL_CATALOG" },
   "/inbox": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_MESSAGES" },
   "/notifications": { auth: "AUTHENTICATED", role: "ARENA_USER", data: "SUPABASE_USER_NOTIFICATIONS" },

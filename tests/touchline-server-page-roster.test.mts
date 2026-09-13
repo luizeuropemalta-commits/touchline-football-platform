@@ -152,6 +152,6 @@ test("the authenticated profile reads the Gameweek XI only for the server-derive
     source,
     /const fantasySnapshotRead = activeClubOwnerUser[\s\S]*?resolveServerReadWithin\(loadTouchlineFantasySnapshot\(activeClubOwnerUser\), null, CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS\)[\s\S]*?: Promise\.resolve\(null\)/,
   );
-  assert.match(source, /<TouchlineGameweekTeamSnapshot snapshot=\{fantasySnapshot\}/);
+  assert.match(source, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.doesNotMatch(source, /const arenaStateRead = activeClubOwnerUser/);
 });

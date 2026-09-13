@@ -158,8 +158,8 @@ test("the proxy exposes the Arena entrance and protects account-backed operation
   assert.doesNotMatch(proxySource, /"\/dashboard"|"\/players"|"\/agencies"|"\/deals"|"\/scouting"/);
 });
 
-test("the legacy Market Transfer route forwards to the ClubOwner-owned Gameweek builder while Arena panel state remains isolated", () => {
-  assert.match(marketPageSource, /redirect\(`\/club-owner\/me\?\$\{forwarded\.toString\(\)\}#club-owner-market`\)/);
+test("the legacy Market Transfer route forwards to the My Club Gameweek builder while Arena panel state remains isolated", () => {
+  assert.match(marketPageSource, /redirect\(`\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad`\)/);
   assert.match(marketPageSource, /tab: "market"/);
   assert.doesNotMatch(marketPageSource, /loadTouchlineFantasySnapshot\(user\)|<FantasyGameweekClient/);
   assert.doesNotMatch(marketPageSource, /standaloneMarket|<ArenaClient/);

@@ -1,5 +1,23 @@
 # TouchLine Current State
 
+## My Club canonical surface — LOCAL ISOLATED PROPOSAL / REVIEW PENDING
+
+- The dedicated local branch `codex/clubowner-market-layout-20260913` makes
+  `/my-club` the sole customer-facing squad-management route. The legacy
+  `/market-transfer`, `/fantasy`, and authenticated `/club-owner/me` paths
+  forward to it without changing the internal `club_owner` authorization or
+  database boundary.
+- The private page replaces the public Match Preview timeline and large Club
+  direction dashboard with a compact wallet using only recorded credits,
+  contracted card value when it is available, and authoritative contract-slot
+  counts. It opens on a position-first Squad View; the tactical field is an
+  explicit optional view. Existing server transaction guards still reject a
+  player that is ineligible for the selected slot.
+- Local verification passes the full test suite, TypeScript, scoped lint, and
+  whitespace checks. This is an isolated, unmerged proposal: no migration,
+  database write, push, Vercel build, QA deployment, Production action, or
+  external social delivery occurred. Review and integration are still needed.
+
 ## QA environment HTTP precheck — LOCAL / REVIEW PENDING
 
 - Local follow-up on HEAD `569c2ea02d837c17f1f7424ce473457fd764402c` adds
