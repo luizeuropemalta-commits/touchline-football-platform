@@ -378,14 +378,13 @@ export default async function ClubOwnerProfileRenderer({
             ) : undefined}
           >
             <div className="club-owner-profile-actions-stack">
-              <TouchlineSocialProfileActions
+              {showPrivateClubControl ? <ClubOwnerAvatarUpload locale={locale} /> : <TouchlineSocialProfileActions
                 entityId={ownerIdentity.entityId}
                 entityName={ownerIdentity.name}
                 followerCount={ownerIdentity.followerCount}
                 accent={CLUB_OWNER_TOUCHLINE_NEON}
                 locale={locale}
-              />
-              {showPrivateClubControl ? <ClubOwnerAvatarUpload locale={locale} /> : null}
+              />}
             </div>
           </TouchlineSocialProfileHeader>
 

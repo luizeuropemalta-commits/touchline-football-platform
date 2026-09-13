@@ -67,9 +67,9 @@ export default function ClubOwnerAvatarUpload({ locale }: { locale: string }) {
       />
       <button type="button" onClick={() => inputRef.current?.click()} disabled={status === "saving"}>
         {status === "saving" ? <LoaderCircle className="is-spinning" aria-hidden="true" /> : <Camera aria-hidden="true" />}
-        {status === "saving"
-          ? (isPortuguese ? "Salvando…" : "Saving…")
-          : (isPortuguese ? "Alterar foto" : "Change photo")}
+        <span className="sr-only">{status === "saving"
+          ? (isPortuguese ? "Salvando foto" : "Saving photo")
+          : (isPortuguese ? "Alterar foto" : "Change photo")}</span>
       </button>
       {status === "error" ? (
         <small role="alert">{isPortuguese ? "Não foi possível salvar esta foto." : "This photo could not be saved."}</small>
@@ -77,11 +77,12 @@ export default function ClubOwnerAvatarUpload({ locale }: { locale: string }) {
       <style jsx>{`
         .club-owner-avatar-upload { display:grid; justify-items:center; gap:6px; }
         input { position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; }
-        button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:34px; border:1px solid rgba(163,255,18,.42); border-radius:999px; padding:0 13px; color:#f7ffe9; background:rgba(4,12,10,.86); font:900 10px/1 inherit; cursor:pointer; }
+        button { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid rgba(163,255,18,.42); border-radius:999px; padding:0; color:#f7ffe9; background:rgba(4,12,10,.9); font:900 10px/1 inherit; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,.28); }
         button:hover { border-color:#a3ff12; box-shadow:0 0 18px rgba(163,255,18,.14); }
         button:disabled { opacity:.62; cursor:wait; }
         svg { width:14px; height:14px; color:#a3ff12; }
         small { max-width:190px; color:#ff8d8d; font:800 9px/1.35 inherit; text-align:center; }
+        .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
         .is-spinning { animation:spin .8s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
       `}</style>

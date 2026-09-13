@@ -22,11 +22,11 @@ test("My Club is the only product-facing navigation destination", () => {
   assert.match(source("proxy.ts"), /if \(isMyClubRoute && !user\) return loginRedirect\(request, response\)/);
 });
 
-test("My Club opens squad-first while preserving strict position-only replacement", () => {
+test("My Club opens pitch-first while preserving strict position-only replacement", () => {
   const market = source("app/fantasy/FantasyGameweekClient.tsx");
   const owner = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
 
-  assert.match(market, /useState<"squad" \| "tactical">\(embedded \? "squad" : "tactical"\)/);
+  assert.match(market, /useState<"squad" \| "tactical">\("tactical"\)/);
   assert.match(market, /squadView === "tactical" \? <TouchlinePitchSurface/);
   assert.match(market, /className=\{styles\.squadBoard\}/);
   assert.match(market, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
