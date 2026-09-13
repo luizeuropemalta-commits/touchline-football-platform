@@ -69,13 +69,17 @@
 .coverArt::before { content: ""; position: absolute; inset: 22% 5% auto auto; width: min(48vw, 620px); aspect-ratio: 1.8; border: 1px solid color-mix(in srgb, var(--social-accent) 22%, transparent); border-radius: 50%; box-shadow: 0 0 0 34px color-mix(in srgb, var(--social-accent) 3%, transparent), 0 0 90px color-mix(in srgb, var(--social-accent) 13%, transparent); transform: rotate(-12deg); }
 .coverArt::after { content: ""; position: absolute; inset: 0; opacity: .42; background: linear-gradient(90deg, transparent 49.85%, rgba(255,255,255,.04) 50%, transparent 50.15%), linear-gradient(0deg, transparent 49.85%, rgba(255,255,255,.025) 50%, transparent 50.15%); background-size: 120px 120px; mask-image: linear-gradient(90deg, black, transparent 78%); }
 .coverArt span { position: absolute; right: 7%; bottom: 13%; width: 9px; height: 9px; border-radius: 50%; background: var(--social-accent); box-shadow: 0 0 10px var(--social-accent), 0 0 34px var(--social-accent), -64px 32px 0 -2px color-mix(in srgb, var(--social-accent) 55%, transparent), -64px 32px 22px color-mix(in srgb, var(--social-accent) 20%, transparent); }
-.coverStadium { background: linear-gradient(90deg, rgba(2,8,7,.84), rgba(2,8,7,.26) 48%, rgba(2,8,7,.74)), linear-gradient(180deg, rgba(2,8,7,.06) 35%, rgba(2,8,7,.9)), url("/touchlineArena/live/official-live-pitch-1600.webp") center 54% / cover no-repeat, #04110b; }
+.coverStadium {
+  background:
+    linear-gradient(90deg, rgba(2,8,7,.84), rgba(2,8,7,.26) 48%, rgba(2,8,7,.74)),
+    linear-gradient(180deg, rgba(2,8,7,.06) 35%, rgba(2,8,7,.9)),
+    url("/touchlineArena/live/official-live-pitch-1600.webp") center 54% / cover no-repeat,
+    #04110b;
+}
 .coverStadium::before { inset: 0; width: auto; aspect-ratio: auto; border: 0; border-radius: 0; background: radial-gradient(ellipse at 75% 8%, color-mix(in srgb, var(--social-accent) 29%, transparent), transparent 22%), linear-gradient(90deg, transparent, rgba(255,255,255,.06) 49.8%, transparent 50.2%); box-shadow: none; transform: none; }
 .coverStadium::after { opacity: .7; background: linear-gradient(90deg, rgba(255,255,255,.07), transparent 18% 82%, rgba(255,255,255,.04)), linear-gradient(180deg, transparent 38%, rgba(2,8,7,.88)); background-size: auto; mask-image: none; }
-
-/* Authenticated My Club: a deliberately quiet command deck, never a stadium
-   hero or a literal oversized pitch. */
-.commandDeck { border-color: color-mix(in srgb, var(--social-accent) 46%, rgba(255,255,255,.11)); background: linear-gradient(145deg, #030807, #010504 64%, #061009); }
+.coverStadium span { right: 10%; bottom: 20%; box-shadow: 0 0 10px var(--social-accent), 0 0 40px color-mix(in srgb, var(--social-accent) 68%, transparent), -48px 18px 0 -2px color-mix(in srgb, var(--social-accent) 52%, transparent), -48px 18px 22px color-mix(in srgb, var(--social-accent) 24%, transparent); }
+/* Private My Club cover: a restrained black command deck, not a stadium photo. */
 .coverCommand { height: clamp(126px, 12vw, 168px); background: radial-gradient(ellipse at 82% 50%, color-mix(in srgb, var(--social-accent) 15%, transparent), transparent 32%), linear-gradient(90deg, rgba(0,0,0,.96), rgba(3,13,10,.72) 50%, rgba(0,0,0,.94)), repeating-linear-gradient(90deg, transparent 0 9.8%, rgba(184,255,199,.035) 9.9% 10%), linear-gradient(180deg, #07110c, #020706 72%); }
 .coverCommand::before { inset: 18% 12% auto auto; width: min(38vw, 520px); aspect-ratio: 3.8; border-color: color-mix(in srgb, var(--social-accent) 16%, transparent); border-radius: 50%; box-shadow: 0 0 0 14px color-mix(in srgb, var(--social-accent) 2%, transparent), 0 0 58px color-mix(in srgb, var(--social-accent) 8%, transparent); transform: rotate(-9deg); }
 .coverCommand::after { opacity: .55; background: linear-gradient(90deg, transparent 27%, rgba(192,255,210,.06) 27.08% 27.18%, transparent 27.28%), linear-gradient(0deg, transparent 49.75%, rgba(192,255,210,.055) 49.85% 50.15%, transparent 50.25%); background-size: 100% 100%; mask-image: linear-gradient(90deg, transparent, black 28%, black 72%, transparent); }
@@ -83,15 +87,6 @@
 .socialIdentity { position: relative; z-index: 2; display: grid; grid-template-columns: 190px minmax(0,1fr) auto; gap: 28px; align-items: end; padding: 0 clamp(24px, 3vw, 44px) 32px; }
 .socialIdentity.hasCardVisual { grid-template-columns: 210px minmax(0,1fr) auto; align-items: center; }
 .socialIdentity.hasFeaturedVisual { grid-template-columns: 190px minmax(0,1fr) minmax(370px, 430px); gap: clamp(28px, 3.2vw, 52px); align-items: center; }
-.commandDeck .socialIdentity { grid-template-columns: 148px minmax(0,1fr); min-height: 0; gap: clamp(20px, 2.5vw, 36px); align-items: center; padding: 20px clamp(22px, 3vw, 44px) 24px; }
-.commandDeck .identityVisualStack { gap: 10px; }
-.commandDeck .socialAvatar { width: 124px; height: 124px; margin-top: -68px; }
-.commandDeck .socialName { padding-top: 0; }
-.commandDeck .socialName h1 { margin-top: 6px; font-size: clamp(38px, 5vw, 64px); }
-.commandDeck .profileDetails { margin-top: 12px; }
-.commandDeck .profileDetails > span { min-height: 30px; padding: 4px 9px; }
-.commandDeck .avatarFooter { width: 154px; min-height: 44px; align-items: center; gap: 6px; }
-.commandDeck .avatarFooter > * { flex: 0 0 auto; }
 .identityVisualStack { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: 16px; }
 .socialAvatar { --club-owner-portrait-border-width: 7px; position: relative; width: 190px; height: 190px; margin-top: -92px; overflow: hidden; border: var(--club-owner-portrait-border-width) solid #030a0a; border-radius: 50%; background: #020606; box-shadow: 0 0 0 2px var(--social-accent), 0 0 0 8px rgba(2,9,9,.82), 0 0 0 9px color-mix(in srgb, var(--social-accent) 28%, transparent), 0 0 26px var(--social-accent), 0 0 72px color-mix(in srgb, var(--social-accent) 45%, transparent), 0 26px 44px rgba(0,0,0,.58); transition: transform 200ms cubic-bezier(.2,.8,.2,1), box-shadow 200ms ease, filter 200ms ease; }
 .socialAvatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 38%; transform: scale(1.025); }
@@ -206,17 +201,11 @@
 .profileFeatured > span { margin-bottom: 10px; color: var(--social-accent); font-size: 10px; font-weight: 950; letter-spacing: .13em; text-transform: uppercase; text-shadow: 0 0 14px color-mix(in srgb, var(--social-accent) 62%, transparent); }
 .profileFeatured > div { width: 100%; min-width: 0; }
 .socialStats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border-top: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.018); }
-.socialStats > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 20px clamp(18px, 2.5vw, 32px); border-right: 1px solid rgba(255,255,255,.08); }
-.socialStats > div:last-child { border-right: 0; }
+.socialStats div { padding: 20px clamp(18px, 2.5vw, 32px); border-right: 1px solid rgba(255,255,255,.08); }
+.socialStats div:last-child { border-right: 0; }
 .socialStats strong, .socialStats span { display: block; }
 .socialStats strong { color: white; font-size: 21px; }
 .socialStats span { margin-top: 4px; color: rgba(255,255,255,.43); font-size: 10px; font-weight: 850; text-transform: uppercase; }
-.statAction { flex: 0 0 auto; }
-.commandDeck .socialStats { grid-template-columns: repeat(3,minmax(0,1fr)); background: rgba(0,0,0,.34); }
-.commandDeck .socialStats > div { min-height: 68px; padding: 12px clamp(16px,2vw,28px); }
-.commandDeck .socialStats > div:first-child strong { color: #ffd75c; text-shadow: 0 0 18px rgba(255,215,92,.16); }
-.commandDeck .socialStats strong { font-size: 18px; line-height: 1; }
-.commandDeck .socialStats span { font-size: 8px; letter-spacing: .09em; }
 
 .profileActions button,
 .profileActions a {
@@ -243,9 +232,6 @@
 }
 
 .profileActions strong { color: var(--social-accent); }
-.profileActionsCompact { gap: 6px; }
-.profileActionsCompact button,
-.profileActionsCompact a { min-height: 44px; gap: 6px; border-radius: 9px; padding: 0 10px; font-size: 9px; }
 .avatarFooter .profileActions { justify-content: center; }
 .avatarFooter .profileActions button,
 .avatarFooter .profileActions a {

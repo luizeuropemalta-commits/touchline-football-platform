@@ -8,12 +8,14 @@ import {
   Handshake,
   Heart,
   Radio,
+  Share2,
   ShieldCheck,
   Sparkles,
   UserPlus,
   Zap,
 } from "lucide-react";
 import { ClubOwnerPortraitPerimeterTrace } from "./ClubOwnerPortraitPerimeterTrace";
+import { shareTouchlinePost, type TouchlineNativeShareResult } from "@/lib/touchlineArena/social-native-share";
 import styles from "./TouchlineSocial.module.css";
 
 export type TouchlineSocialPost = {
@@ -24,6 +26,7 @@ export type TouchlineSocialPost = {
   meta: string;
   accent?: string;
   badge?: string;
+  sharePostId?: string;
   visualImageUrl?: string;
   visual?: React.ReactNode;
   visualAlt?: string;
@@ -64,7 +67,7 @@ export function TouchlineSocialProfileHeader({
   avatarAlt?: string;
   visual?: React.ReactNode;
   accent: string;
-  stats?: Array<{ label: string; value: string; action?: React.ReactNode }>;
+  stats?: Array<{ label: string; value: string }>;
   showCover?: boolean;
   /** Opt-in cover treatment for authenticated My Club only. */
   coverVariant?: "standard" | "stadium" | "command";
@@ -77,13 +80,13 @@ export function TouchlineSocialProfileHeader({
   clubOwnerPortraitTrace?: boolean;
   /** Static local visual-QA control; product callers keep this false. */
   portraitTraceActive?: boolean;
-  /** Places compact owner controls below the portrait instead of at far right. */
+  /** Keeps private My Club controls beside the owner identity. */
   actionsPlacement?: "default" | "avatar";
   children?: React.ReactNode;
 }) {
   return (
     <section
-      className={`${styles.socialHeader} ${showCover ? "" : styles.identityOnly} ${coverVariant === "command" ? styles.commandDeck : ""}`}
+      className={`${styles.socialHeader} ${showCover ? "" : styles.identityOnly}`}
       style={{
         "--social-accent": accent,
         "--social-background-accent": backgroundAccent ?? accent,
@@ -115,7 +118,7 @@ export function TouchlineSocialProfileHeader({
               )}
             </div>
           )}
-          {(featuredVisual || actionsPlacement === "avatar") && children ? <div className={styles.avatarFooter}>{children}</div> : null}
+          {children && (featuredVisual || actionsPlacement === "avatar") ? <div className={styles.avatarFooter}>{children}</div> : null}
         </div>
         <div className={styles.socialName}>
           <span><BadgeCheck aria-hidden="true" size={15} /> {kind}</span>
@@ -137,19 +140,16 @@ export function TouchlineSocialProfileHeader({
             {featuredLabel ? <span>{featuredLabel}</span> : null}
             <div>{featuredVisual}</div>
           </aside>
-        ) : actionsPlacement !== "avatar" ? (
+        ) : actionsPlacement === "avatar" ? null : (
           <div className={styles.headerActions}>{children}</div>
-        ) : null}
+        )}
       </div>
       {stats.length ? (
         <div className={styles.socialStats}>
           {stats.map((stat) => (
             <div key={stat.label}>
-              <div>
-                <strong>{stat.value}</strong>
-                <span>{stat.label}</span>
-              </div>
-              {stat.action ? <div className={styles.statAction}>{stat.action}</div> : null}
+              <strong>{stat.value}</strong>
+              <span>{stat.label}</span>
             </div>
           ))}
         </div>
@@ -166,7 +166,6 @@ type ProfileActionsProps = {
   locale?: string;
   purchaseHref?: string | null;
   purchaseLabel?: string;
-  compact?: boolean;
 };
 
 function compact(value: number, locale = "pt-BR") {
@@ -189,7 +188,6 @@ export function TouchlineSocialProfileActions({
   locale = "pt-BR",
   purchaseHref,
   purchaseLabel = "Contratar jogador",
-  compact: isCompact = false,
 }: ProfileActionsProps) {
   const isPortuguese = locale === "pt-BR";
   const followKey = `touchline:social:following:${entityId}`;
@@ -208,8 +206,8 @@ export function TouchlineSocialProfileActions({
   }
 
   return (
-    <div className={`${styles.profileActions} ${isCompact ? styles.profileActionsCompact : ""}`} style={{ "--social-accent": accent } as React.CSSProperties}>
-      <button type="button" aria-label={isFollowing ? (isPortuguese ? "Deixar de seguir" : "Unfollow") : (isPortuguese ? "Seguir" : "Follow")} title={isFollowing ? (isPortuguese ? "Deixar de seguir" : "Unfollow") : (isPortuguese ? "Seguir" : "Follow")} aria-pressed={isFollowing} onClick={toggleFollow}>
+    <div className={styles.profileActions} style={{ "--social-accent": accent } as React.CSSProperties}>
+      <button type="button" aria-pressed={isFollowing} onClick={toggleFollow}>
         <UserPlus aria-hidden="true" size={17} />
         <span>{isFollowing ? (isPortuguese ? "Seguindo" : "Following") : (isPortuguese ? "Seguir" : "Follow")}</span>
         <strong>{compact(followerCount + (isFollowing ? 1 : 0), locale)}</strong>
@@ -274,6 +272,7 @@ export function TouchlineSocialFeed({
     isPortuguese ? "As atualizações oficiais aparecerão aqui." : "Official updates will appear here."
   );
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [sharedPosts, setSharedPosts] = useState<Map<string, TouchlineNativeShareResult>>(new Map());
   const [activeKind, setActiveKind] = useState<"all" | TouchlineSocialPost["kind"]>("all");
   const storagePrefix = useMemo(() => `touchline:social:likes:${entityId}:`, [entityId]);
   const availableKinds = useMemo(() => [...new Set(posts.map((post) => post.kind))], [posts]);
@@ -292,6 +291,26 @@ export function TouchlineSocialFeed({
       window.localStorage.setItem(`${storagePrefix}${postId}`, String(next.has(postId)));
       return next;
     });
+  }
+
+  async function sharePost(post: TouchlineSocialPost) {
+    const text = `${post.title}\n${post.body}`.trim();
+    const result = await shareTouchlinePost({
+      title: post.title,
+      text,
+      postId: post.sharePostId,
+      imageUrl: post.visualImageUrl,
+      pageUrl: window.location.href,
+    });
+    if (result === "cancelled") return;
+    setSharedPosts((current) => new Map(current).set(post.id, result));
+    if (result !== "unavailable") window.setTimeout(() => {
+      setSharedPosts((current) => {
+        const next = new Map(current);
+        next.delete(post.id);
+        return next;
+      });
+    }, 2_000);
   }
 
   return (
@@ -426,6 +445,16 @@ export function TouchlineSocialFeed({
                   <Heart aria-hidden="true" size={18} fill={liked ? "currentColor" : "none"} />
                   <span>{liked ? (isPortuguese ? "Curtido" : "Liked") : (isPortuguese ? "Curtir" : "Like")}</span>
                   <strong>{likeCount ? compact(likeCount, locale) : ""}</strong>
+                </button>
+                <button type="button" onClick={() => void sharePost(post)} aria-live="polite">
+                  <Share2 aria-hidden="true" size={18} />
+                  <span>{sharedPosts.get(post.id) === "shared"
+                    ? (isPortuguese ? "Compartilhado" : "Shared")
+                    : sharedPosts.get(post.id) === "copied"
+                      ? (isPortuguese ? "Link copiado" : "Post copied")
+                      : sharedPosts.get(post.id) === "unavailable"
+                        ? (isPortuguese ? "Indisponível" : "Unavailable")
+                        : (isPortuguese ? "Compartilhar" : "Share")}</span>
                 </button>
                 {actionHref && actionLabel ? (
                   <a href={actionHref}>

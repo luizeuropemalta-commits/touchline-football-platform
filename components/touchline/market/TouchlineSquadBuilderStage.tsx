@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, X } from "lucide-react";
 
-import TouchlinePitchSurface, { TOUCHLINE_MARKET_HOUSE_CAMPAIGN } from "@/components/touchline/pitch/TouchlinePitchSurface";
+import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineGoalFacingPitchCard from "@/components/touchline/cards/TouchlineGoalFacingPitchCard";
@@ -312,7 +312,7 @@ export default function TouchlineSquadBuilderStage({
       <div className={styles.workspace}>
         <div className={styles.pitchColumn}>
           <TouchlinePitchSurface
-            advertisingCampaign={TOUCHLINE_MARKET_HOUSE_CAMPAIGN}
+            boundaryTrace
             className={styles.pitch}
             ariaLabel={portuguese ? `Time titular ${formation}` : `${formation} Starting XI`}
             orientation="vertical"

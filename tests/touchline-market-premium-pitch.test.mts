@@ -4,7 +4,7 @@ import test from "node:test";
 
 const source = async (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Market uses the premium vertical stadium surface and an admin-ready campaign boundary", async () => {
+test("Market uses the premium vertical pitch with a real-boundary neon trace", async () => {
   const [stage, pitch] = await Promise.all([
     source("components/touchline/market/TouchlineSquadBuilderStage.tsx"),
     source("components/touchline/pitch/TouchlinePitchSurface.tsx"),
@@ -12,13 +12,9 @@ test("Market uses the premium vertical stadium surface and an admin-ready campai
 
   assert.match(stage, /orientation="vertical"/);
   assert.match(stage, /surfaceVariant="premium-stadium"/);
-  assert.match(stage, /advertisingCampaign=\{TOUCHLINE_MARKET_HOUSE_CAMPAIGN\}/);
-  assert.match(pitch, /data-touchline-advertising-campaign-id/);
-  assert.match(pitch, /THIS IS NOT FANTASY\. THIS IS REALITY\./);
-  assert.match(pitch, /FOLLOW THE GAME\. FOLLOW TOUCHLINE\./);
-  assert.match(pitch, /FOLLOW US ON INSTAGRAM/);
-  assert.match(pitch, /FOLLOW US ON FACEBOOK/);
-  assert.match(pitch, /ADVERTISE WITH TOUCHLINE/);
+  assert.match(stage, /boundaryTrace/);
+  assert.doesNotMatch(stage, /advertisingCampaign=|TOUCHLINE_MARKET_HOUSE_CAMPAIGN/);
+  assert.match(pitch, /className=\{styles\.boundaryTraceRunner\}/);
 });
 
 test("stadium pilot keeps only the original camera-facing LED board behind the goal", async () => {
