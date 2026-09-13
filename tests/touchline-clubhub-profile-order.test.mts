@@ -49,6 +49,27 @@ test("ClubHub places identity and honours before the official league area and ma
   assert.doesNotMatch(hero, /market-transfer/);
 });
 
+test("ClubHub hero keeps the next fixture and trophy cabinet while stadium identity stays outside it", () => {
+  const heroStart = indexOfRequired(page, '<header className="club-hub-hero">');
+  const heroEnd = indexOfRequired(page, '<ClubHubSectionNavigation locale={locale}');
+  const hero = page.slice(heroStart, heroEnd);
+
+  assert.match(hero, /<ClubHubHeroNextMatch/);
+  assert.match(hero, /<ClubTrophyCarousel/);
+  assert.doesNotMatch(hero, /ClubHubHomeStadiumPanel/);
+  assert.doesNotMatch(hero, /ClubHubHomeStadiumIdentity/);
+  assert.match(page, /function ClubHubHomeStadiumIdentity/);
+  assert.match(page, /<ClubHubHomeStadiumIdentity locale=\{locale\} stadium=\{homeStadium\}/);
+  assert.match(page, /club-hub-home-stadium-identity/);
+  assert.doesNotMatch(page, /profile\.capacity|profile\.openedYear|primarySource/);
+});
+
+test("trophy carousel keeps canonical-size cards and only reserves controls after overflow", () => {
+  assert.match(trophyCarousel, /const arrowReservation = 76/);
+  assert.match(trophyCarousel, /if \(itemCount <= capacity\) return itemCount/);
+  assert.doesNotMatch(trophyCarousel, /const pageCount/);
+});
+
 test("ClubHub gives the reusable club hero premium motion without sacrificing navigation or reduced motion", () => {
   assert.match(page, /\.club-hub-hero-image \{[\s\S]*?animation: club-hub-stadium-breathe/);
   assert.match(page, /<svg className="club-hub-neon-frame"[\s\S]*?<rect className="club-hub-neon-trace"/);

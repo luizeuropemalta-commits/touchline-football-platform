@@ -55,6 +55,10 @@ export function parseAuthoritativeRosterResponse(
   for (const rawCard of payload.cards) {
     const card = record(rawCard);
     const id = requiredText(card?.id);
+    // The canonical UUID identifies ownership; profile routing needs the
+    // separate official provider id. It is optional for backwards-compatible
+    // reads, but must be retained whenever the server supplies it.
+    const providerPlayerId = optionalText(card?.providerPlayerId);
     const inventoryId = normalizeTouchlineMarketInventoryId(card?.inventoryId);
     const name = requiredText(card?.name);
     const shortName = requiredText(card?.shortName);
@@ -114,6 +118,7 @@ export function parseAuthoritativeRosterResponse(
     inventoryIds.add(inventoryId);
     cards.push({
       id,
+      providerPlayerId,
       inventoryId,
       name,
       shortName,

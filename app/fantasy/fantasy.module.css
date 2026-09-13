@@ -1,4 +1,6 @@
 .shell{--lime:#aaff3e;--gold:#ffd75c;width:min(1880px,calc(100% - 24px));min-height:100vh;margin:0 auto;padding:96px 0 56px;color:#f4f8f5;background:radial-gradient(circle at 8% 10%,rgba(28,88,75,.24),transparent 30%),radial-gradient(circle at 86% 18%,rgba(113,19,18,.22),transparent 28%),linear-gradient(145deg,#102f35 0,#061612 34%,#020907 100%);font-family:var(--font-geist-sans),Arial,sans-serif}
+.shell[data-fantasy-context=club-owner]{width:100%;min-height:0;padding:20px 0 12px;background:transparent}
+.unavailable[data-fantasy-context=club-owner]{min-height:0;border:1px solid rgba(170,255,62,.22);border-radius:18px;padding:32px;color:#f4f8f5;background:rgba(3,13,9,.7)}
 
 .controlRail,.classicBuilder,.rankings,.rules{width:calc(100% - 24px);margin-inline:auto}
 

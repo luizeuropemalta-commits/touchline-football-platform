@@ -35,7 +35,6 @@ test("the shared overlay exposes the Card Engine action only when a server-appro
 test("public card pages derive Card Engine visibility from the authenticated server user", () => {
   const serverSurfaces = [
     "app/arena/page.tsx",
-    "app/market-transfer/page.tsx",
     "app/touchline-clubs/[club]/page.tsx",
     "app/touchline-player-card-rankings/page.tsx",
     "app/touchline-players/[player]/page.tsx",
@@ -48,6 +47,25 @@ test("public card pages derive Card Engine visibility from the authenticated ser
   }
   assert.match(source("app/arena/ArenaClient.tsx"), /canEditCardEngine = false/);
   assert.match(source("components/touchline/market/TouchlineSquadBuilderStage.tsx"), /canEditCardEngine = false/);
+});
+
+test("the retired Market route is only a safe ClubOwner Market compatibility redirect", () => {
+  const marketRoute = source("app/market-transfer/page.tsx");
+  const selfRoute = source("components/touchline/club-owner/ClubOwnerSelfRouteRedirect.tsx");
+
+  // It deliberately has no owner/admin branch: authentication and owner
+  // resolution occur at the ClubOwner self-route boundary after login.
+  assert.doesNotMatch(marketRoute, /isOwnerEmail/);
+  assert.doesNotMatch(marketRoute, /\/admin\//);
+  assert.match(marketRoute, /redirect\(`\/club-owner\/me\?\$\{forwarded\.toString\(\)\}#club-owner-market`\)/);
+  assert.match(marketRoute, /new URLSearchParams\(\{ lang: locale, tab: "market" \}\)/);
+  assert.doesNotMatch(marketRoute, /contractPlayer|contractName|contractClub/, "unused legacy contract context is not carried into ClubOwner");
+
+  // A signed-out request returns through the authenticated self route, not an
+  // owner or admin shortcut, and keeps the exact Market section anchor.
+  assert.match(selfRoute, /touchLineAuthEntryHref\("\/login", locale, destination\)/);
+  assert.match(selfRoute, /const marketAnchor = marketTab \? "#club-owner-market" : ""/);
+  assert.match(selfRoute, /isClubOwner: Boolean\(user && !isOwnerEmail\(user\.email\)\)/);
 });
 
 test("Market keeps card zoom on the Starting XI without rendering a substitute bench", () => {

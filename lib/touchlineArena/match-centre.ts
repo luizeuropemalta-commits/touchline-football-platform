@@ -1,4 +1,8 @@
 import type { TouchlinePublicFixture } from "@/lib/football-data/public-fixture";
+import type {
+  TouchlinePublicFantasyEvent,
+  TouchlinePublicFixturePlayerStatistics,
+} from "@/lib/football-data/public-fantasy-fixture";
 import type { TouchlineFixture } from "@/lib/football-data/types";
 import { selectArenaFixtureRound } from "./arena-fixture-round.ts";
 import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
@@ -20,6 +24,42 @@ export type TouchlineLiveReadMetadata = {
 };
 
 export const TOUCHLINE_MATCH_CENTRE_TIME_ZONE_FALLBACK = "UTC";
+
+/**
+ * The database preserves provider facts but does not guarantee their result
+ * order. The Match Centre must always read as a football timeline: earliest
+ * event first, stoppage-time second, and a stable identifier only as the
+ * final tie-breaker.
+ */
+export function orderTouchlineMatchEvents(
+  events: readonly TouchlinePublicFantasyEvent[],
+) {
+  const eventTime = (event: TouchlinePublicFantasyEvent) => {
+    const minute = Number.isFinite(event.minute) ? event.minute! : Number.POSITIVE_INFINITY;
+    const extraMinute = Number.isFinite(event.extraMinute) ? event.extraMinute! : 0;
+    return [minute, extraMinute] as const;
+  };
+
+  return events.slice().sort((left, right) => {
+    const [leftMinute, leftExtraMinute] = eventTime(left);
+    const [rightMinute, rightExtraMinute] = eventTime(right);
+    return leftMinute - rightMinute
+      || leftExtraMinute - rightExtraMinute
+      || left.id.localeCompare(right.id);
+  });
+}
+
+/** Match ratings are a leaderboard, never a database insertion order. */
+export function orderTouchlineMatchRatings(
+  statistics: readonly TouchlinePublicFixturePlayerStatistics[],
+) {
+  return statistics
+    .filter((row) => Number.isFinite(row.rating))
+    .slice()
+    .sort((left, right) => (right.rating ?? Number.NEGATIVE_INFINITY) - (left.rating ?? Number.NEGATIVE_INFINITY)
+      || left.playerName.localeCompare(right.playerName)
+      || left.playerId.localeCompare(right.playerId));
+}
 
 /**
  * Vercel supplies an IANA time-zone name for the current request. The value is

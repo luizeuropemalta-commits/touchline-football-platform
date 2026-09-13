@@ -30,6 +30,8 @@ export type TouchLineClubVisual = {
 
 export type ClubOwnerSquadCard = {
   id: string;
+  /** Official Sportmonks player identity used exclusively for public profile links. */
+  providerPlayerId?: string | null;
   /** Canonical TouchLine UUID when the persisted public roster has resolved it. */
   canonicalPlayerId?: string | null;
   name: string;
@@ -353,7 +355,7 @@ export function squadCardToExactPlayer(
   const cardTier = editorialCard?.tierKey ?? contractedTier;
 
   return {
-    sportmonksPlayerId: card.id,
+    sportmonksPlayerId: card.providerPlayerId ?? card.id,
     canonicalPlayerId: card.canonicalPlayerId ?? (/^[0-9a-f-]{36}$/i.test(card.id) ? card.id : null),
     formationPlayerId: card.id,
     overall: card.shirtNumber ?? "--",

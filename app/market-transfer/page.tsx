@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import FantasyGameweekClient from "@/app/fantasy/FantasyGameweekClient";
-import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
-import { isOwnerEmail } from "@/lib/admin/owner";
-import { createClient } from "@/lib/supabase/server";
-import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/global-navigation";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
-import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 
 export const dynamic = "force-dynamic";
 
-type MarketTransferSearchParams = Promise<{ lang?: string | string[] }>;
+type MarketTransferSearchParams = Promise<{
+  lang?: string | string[];
+}>;
 
 async function marketLocale(searchParams: MarketTransferSearchParams) {
   const params = await searchParams;
@@ -37,12 +33,9 @@ export default async function MarketTransferPage({ searchParams }: {
   searchParams: MarketTransferSearchParams;
 }) {
   const locale = await marketLocale(searchParams);
-  const supabase = await createClient();
-  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
-  if (!user) redirect(`/login?returnTo=${encodeURIComponent(`/market-transfer?lang=${locale}`)}`);
-  const snapshot = await loadTouchlineFantasySnapshot(user);
-  return <main>
-    <TouchlineGlobalNavigation locale={locale} currentRoute="market" surface={resolveTouchlineGlobalNavigationSurface({ isAuthenticated: true, isAdmin: isOwnerEmail(user.email) })} />
-    <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} />
-  </main>;
+  // The embedded Market has no contract-intent consumer. Do not propagate
+  // legacy query data into the ClubOwner profile where it could be mistaken
+  // for a requested state change.
+  const forwarded = new URLSearchParams({ lang: locale, tab: "market" });
+  redirect(`/club-owner/me?${forwarded.toString()}#club-owner-market`);
 }

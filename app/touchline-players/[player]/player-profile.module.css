@@ -88,7 +88,9 @@
   gap: clamp(36px, 6vw, 96px);
   min-height: 680px;
   padding: clamp(24px, 4vw, 58px);
-  overflow: hidden;
+  /* A published leader crown lives above the official card frame. Let the
+     reserved card stage, rather than this decorative band, define its edge. */
+  overflow: visible;
   border: 1px solid color-mix(in srgb, var(--player-accent) 24%, rgba(255,255,255,.12));
   border-radius: 20px;
   background:
@@ -127,6 +129,10 @@
   position: relative;
   width: 372px;
   max-width: 100%;
+  /* Largest approved player-leader crown at this profile presentation,
+     including its transparent asset gutter and the frame clearance. */
+  padding-top: clamp(98px, 16vw, 128px);
+  box-sizing: border-box;
   --touchline-card-static-scale: .8651162791;
   filter: drop-shadow(0 22px 22px rgba(0, 0, 0, 0.36));
 }
@@ -920,6 +926,7 @@
 
   .cardFrame {
     width: 250px;
+    padding-top: 88px;
     --touchline-card-static-scale: .5813953488;
   }
 
@@ -978,6 +985,7 @@
 
   .cardFrame {
     width: 310px;
+    padding-top: clamp(82px, 21vw, 98px);
     --touchline-card-static-scale: .7209302326;
   }
 
@@ -1065,6 +1073,7 @@
 @media (max-width: 359px) {
   .cardFrame {
     width: 250px;
+    padding-top: 82px;
     --touchline-card-static-scale: .5813953488;
   }
 }
@@ -1096,6 +1105,7 @@
 
   .cardFrame {
     width: 202px;
+    padding-top: 68px;
     --touchline-card-static-scale: .4697674419;
   }
 

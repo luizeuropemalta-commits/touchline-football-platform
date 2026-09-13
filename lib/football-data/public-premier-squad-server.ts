@@ -136,6 +136,7 @@ export function publicPremierSquadPlayerToCard(
 ): ClubOwnerSquadCard {
   return {
     id: player.providerId || player.id,
+    providerPlayerId: player.providerId || null,
     canonicalPlayerId: player.canonicalPlayerId ?? null,
     name: player.name,
     shortName: player.shortName || player.name,

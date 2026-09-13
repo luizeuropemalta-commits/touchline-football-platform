@@ -6,6 +6,7 @@ import { touchLinePlayerFixturePoints } from "../lib/football-data/player-fixtur
 import { touchLinePlayerFixtureEventStatistics } from "../lib/football-data/player-fixture-scoring.ts";
 import { buildTouchLinePlayerSeasonAggregate } from "../lib/football-data/player-season-statistics-sync.ts";
 import { isTouchLineSettledFixtureStatus } from "../lib/football-data/fixture-settlement.ts";
+import { orderTouchlineMatchEvents } from "../lib/touchlineArena/match-centre.ts";
 import type { TouchlineFantasyEvent, TouchlineFantasyLineupMember } from "../lib/football-data/types.ts";
 
 function event(input: Partial<TouchlineFantasyEvent> & Pick<TouchlineFantasyEvent, "providerId" | "type">): TouchlineFantasyEvent {
@@ -55,6 +56,40 @@ test("the 14 golden-fixture events yield only the verified scoring contributions
   assert.equal(score("97811", "Defender", {}, 6.68, 0), 1);
   assert.equal(score("37762150", "Midfielder", {}, 6.06, 3, 62), -1);
   assert.equal(score("537721", "Midfielder", {}, 6.77, 3, 28), 0);
+});
+
+test("Match Centre orders persisted provider events by minute and stoppage time", () => {
+  const unsortedEvents = [
+    GOLDEN_EVENTS[10]!,
+    GOLDEN_EVENTS[0]!,
+    GOLDEN_EVENTS[8]!,
+    GOLDEN_EVENTS[3]!,
+    {
+      ...GOLDEN_EVENTS[13]!,
+      id: "sportmonks:added-time",
+      providerId: "added-time",
+      minute: 90,
+      extraMinute: 4,
+    },
+    {
+      ...GOLDEN_EVENTS[13]!,
+      id: "sportmonks:full-time",
+      providerId: "full-time",
+      minute: 90,
+    },
+  ];
+
+  assert.deepEqual(
+    orderTouchlineMatchEvents(unsortedEvents).map((item) => [item.minute, item.extraMinute ?? 0, item.id]),
+    [
+      [15, 0, "sportmonks:157577582"],
+      [34, 0, "sportmonks:157578115"],
+      [70, 0, "sportmonks:157579284"],
+      [76, 0, "sportmonks:157579383"],
+      [90, 0, "sportmonks:full-time"],
+      [90, 4, "sportmonks:added-time"],
+    ],
+  );
 });
 
 test("Full Time is a settled result and event facts drive the verified player totals", () => {
@@ -178,7 +213,7 @@ test("Live consumes the persisted allowlisted match detail instead of a static p
   assert.match(page, /const canReadMatchDetail = hasTouchLineArenaAccess\(user\)/);
   assert.match(component, /if \(!canReadMatchDetail\) return/);
   assert.match(component, /touchline-verified-match-data/);
-  assert.match(component, /verifiedDetail\.events\.map/);
+  assert.match(component, /orderTouchlineMatchEvents\(verifiedDetail\.events\)\.map/);
   assert.match(component, /event\.relatedPlayerName/);
   assert.match(component, /statistic\?\.minutes \?\? "—"/);
   assert.match(component, /statistic\?\.rating \?\? "—"/);

@@ -8,15 +8,17 @@ async function source(path: string) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("TouchLine Markt reuses the one Fantasy Gameweek transaction boundary", async () => {
-  const [market, alias, client, route] = await Promise.all([
+test("ClubOwner owns the one Fantasy Gameweek transaction boundary and the legacy Market route forwards safely", async () => {
+  const [market, owner, alias, client, route] = await Promise.all([
     source("app/market-transfer/page.tsx"),
+    source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
     source("app/fantasy/page.tsx"),
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("app/api/touchline-fantasy/lineup/route.ts"),
   ]);
-  assert.match(market, /loadTouchlineFantasySnapshot\(user\)/);
-  assert.match(market, /<FantasyGameweekClient initialSnapshot=\{snapshot\}/);
+  assert.match(market, /redirect\(`\/club-owner\/me\?\$\{forwarded\.toString\(\)\}#club-owner-market`\)/);
+  assert.match(owner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
+  assert.match(owner, /id="club-owner-market"/);
   assert.doesNotMatch(market, /standaloneMarket|<ArenaClient/);
   assert.match(alias, /redirect\(`\/market-transfer\?lang=/);
   assert.match(client, /selectedCoachId/);

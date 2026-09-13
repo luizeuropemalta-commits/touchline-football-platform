@@ -289,6 +289,10 @@ export function mapAuthoritativeRosterRows(
     const matchRating = asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.rating);
     cards.push({
       id: playerId,
+      // Public profile routes resolve the official identity through the
+      // Sportmonks player id. Keep the canonical UUID for ownership and
+      // publication joins, but never use it as the URL's playerId.
+      providerPlayerId: asString(player.provider_player_id),
       canonicalPlayerId: playerId,
       name,
       shortName: makeArenaShortName(name),

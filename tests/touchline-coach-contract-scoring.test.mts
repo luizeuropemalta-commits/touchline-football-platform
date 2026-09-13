@@ -225,8 +225,10 @@ test("Arena exposes current contract, cancellation confirmation, and preserved h
   assert.match(arena, /TouchlineCoachPerformance contract=\{activeCoachContract\}/);
 });
 
-test("public coach profile separates real football history from the shared TouchLine competition record", () => {
-  assert.match(coachProfile, /Real football history/i);
+test("public coach profile separates official coach context from the shared TouchLine competition record", () => {
+  assert.match(coachProfile, /OFFICIAL PROFILE/);
+  assert.match(coachProfile, /Coach context/);
+  assert.match(coachProfile, /coach-profile-campaign/);
   assert.match(coachProfile, /loadTouchLineCoachRanking/);
   assert.match(coachProfile, /TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
   assert.match(coachPerformance, /data-coach-performance-source/);
@@ -266,7 +268,12 @@ test("coach zoom centres the shared card between canonical identity and verified
   assert.match(coachPerformance, /record\?\.losses/);
   assert.match(coachPerformance, /record\?\.touchlinePoints/);
   assert.match(coachPerformance, /contract\?\.totalTouchlinePoints/);
-  assert.match(coachPerformance, /Discipline data pending/);
+  assert.match(coachPerformance, /officialCardCount/);
+  assert.match(coachPerformance, /data-coach-discipline="yellow"/);
+  assert.match(coachPerformance, /data-coach-discipline="red"/);
+  assert.match(coachPerformance, /yellowCards \?\? "—"/);
+  assert.match(coachPerformance, /redCards \?\? "—"/);
+  assert.doesNotMatch(coachPerformance, /Discipline data pending/);
   assert.match(coachPerformance, /record\?\.wins \?\? "—"/);
   assert.match(coachPerformance, /No points have been invented/);
 });

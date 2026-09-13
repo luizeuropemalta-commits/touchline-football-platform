@@ -111,8 +111,22 @@ test("the perimeter trace centres each official player and coach rail without ch
     assert.match(trace, new RegExp(`"${tier}": \\[`));
   }
 
-  assert.match(trace, /const PLAYER_SIDE_CENTRES/);
-  assert.match(trace, /const COACH_SIDE_CENTRES/);
+  assert.match(trace, /TOUCHLINE_PLAYER_PERIMETER_SIDE_CENTRES/);
+  assert.match(trace, /TOUCHLINE_COACH_PERIMETER_SIDE_CENTRES/);
+  assert.match(trace, /"ruby-red": \[21, 412\]/);
+  assert.match(trace, /"sapphire-blue": \[18, 412\]/);
+  assert.match(trace, /"amethyst-purple": \[14, 417\]/);
+  assert.match(trace, /"radiant-gold": \[15, 414\]/);
+  assert.match(trace, /"emerald-green": \[25, 411\]/);
+  assert.match(trace, /"clear-diamond": \[19, 412\]/);
+  assert.match(trace, /"diamond-gold": \[29, 400\]/);
+  assert.match(trace, /"ruby-red": \[95, 711\]/);
+  assert.match(trace, /"sapphire-blue": \[79, 726\]/);
+  assert.match(trace, /"amethyst-purple": \[78, 730\]/);
+  assert.match(trace, /"radiant-gold": \[89, 715\]/);
+  assert.match(trace, /"emerald-green": \[78, 725\]/);
+  assert.match(trace, /"clear-diamond": \[76, 748\]/);
+  assert.match(trace, /"diamond-gold": \[80, 733\]/);
   assert.match(trace, /viewBox=\{isCoach \? "0 0 810 1080" : "0 0 430 691"\}/);
   assert.match(trace, /M123 18H307L\$\{right\} 98V593L307 680H123L\$\{left\} 593V98Z/);
   assert.match(trace, /M232 28H578L\$\{right\} 153V926L578 1063H232L\$\{left\} 926V153Z/);

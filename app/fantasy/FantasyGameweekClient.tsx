@@ -11,7 +11,7 @@ import { touchlineLiveOptimizedClubLogoUrl } from "@/lib/touchlineArena/club-cre
 import { findTouchLineClub, TOUCHLINE_ENGLAND_CLUBS_BY_RANK, type ClubOwnerSquadCard, type TouchLineClubVisual } from "@/lib/touchlineArena/demo-data";
 import type { TouchlineFormationGeometrySlot } from "@/lib/touchlineArena/formation-geometry";
 import { touchlineMarketPositionBucket, type TouchlineRosterRole } from "@/lib/touchlineArena/position-eligibility";
-import { assignTouchlineFantasyPlayerToFirstSlot, formatTouchlineFantasyDeadline, formatTouchlineFantasyMarketValue, resolveTouchlineFantasyBuilderStep, resolveTouchlineFantasyMarketClock, validateTouchlineFantasyLineup, type TouchlineFantasyBuilderStep, type TouchlineFantasyEligiblePlayer, type TouchlineFantasySelection } from "@/lib/touchlineFantasy/domain";
+import { assignTouchlineFantasyPlayerToFirstSlot, formatTouchlineFantasyDeadline, formatTouchlineFantasyMarketValue, removeTouchlineFantasyPlayerFromSlot, replaceTouchlineFantasyPlayerAtSlot, resolveTouchlineFantasyBuilderStep, resolveTouchlineFantasyMarketClock, touchlineFantasySlotAcceptsPlayer, validateTouchlineFantasyLineup, type TouchlineFantasyBuilderStep, type TouchlineFantasyEligiblePlayer, type TouchlineFantasySelection } from "@/lib/touchlineFantasy/domain";
 import type { TouchlineFantasyCoachView, TouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 import styles from "./fantasy.module.css";
 
@@ -139,7 +139,12 @@ function canonicalRosterRole(role: string | null | undefined): TouchlineRosterRo
 function slotAccepts(slot: TouchlineFormationGeometrySlot | null, card: ClubOwnerSquadCard) {
   if (!slot) return true;
   const bucket = touchlineMarketPositionBucket(card.position, canonicalRosterRole(card.role));
-  return bucket !== "outfield" && slot.allowedPositions.includes(bucket);
+  return bucket !== "outfield" && touchlineFantasySlotAcceptsPlayer(slot, {
+    playerId: card.canonicalPlayerId ?? card.id,
+    clubId: card.clubName,
+    marketValueEur: card.editorialCard?.marketValueEur ?? 0,
+    positionBucket: bucket,
+  });
 }
 
 function verticalPitchPosition(slot: TouchlineFormationGeometrySlot) {
@@ -149,7 +154,16 @@ function verticalPitchPosition(slot: TouchlineFormationGeometrySlot) {
   return { left: `${left}%`, top: `${top}%` };
 }
 
-export default function FantasyGameweekClient({ initialSnapshot, locale }: { initialSnapshot: TouchlineFantasySnapshot | null; locale: string }) {
+export default function FantasyGameweekClient({
+  initialSnapshot,
+  locale,
+  embedded = false,
+}: {
+  initialSnapshot: TouchlineFantasySnapshot | null;
+  locale: string;
+  /** The ClubOwner page owns the outer identity/navigation shell. */
+  embedded?: boolean;
+}) {
   const pt = locale === "pt-BR";
   const [live, setLive] = useState<LiveState | null>(initialSnapshot);
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(initialSnapshot?.userGameweek?.selectedCoachId ?? null);
@@ -201,11 +215,41 @@ export default function FantasyGameweekClient({ initialSnapshot, locale }: { ini
       window.removeEventListener("resize", synchroniseHeight);
     };
   }, []);
-  if (!snapshot) return <section className={styles.unavailable}><h1>TouchLine Markt</h1><p>{pt ? "Serviço temporariamente indisponível." : "Service temporarily unavailable."}</p></section>;
+  if (!snapshot) return <section className={styles.unavailable} data-fantasy-context={embedded ? "club-owner" : "standalone"}><h1>TouchLine Markt</h1><p>{pt ? "Serviço temporariamente indisponível." : "Service temporarily unavailable."}</p></section>;
 
   function changeFormation(nextCode: string) { const nextGeometry = snapshot!.formationRegistry[nextCode]; if (!nextGeometry || !editable) return; const remapped: TouchlineFantasySelection[] = []; for (const selection of selections) { const player = eligiblePlayers.find((entry) => entry.playerId === selection.playerId); if (!player) continue; const slotId = assignTouchlineFantasyPlayerToFirstSlot({ player, geometry: nextGeometry, selections: remapped }); if (slotId) remapped.push({ playerId: player.playerId, slotId }); } setFormationCode(nextCode); setSelections(remapped); setActiveSlotId(null); setVisibleStep("players"); setFeedback(pt ? "Formação atualizada. Salve novamente para gravar a alteração." : "Formation updated. Save again to persist the change."); }
-  function addPlayer(card: ClubOwnerSquadCard) { if (!editable || !geometry) return; const playerId = card.canonicalPlayerId ?? card.id; if (selections.some((selection) => selection.playerId === playerId)) return; const player = eligiblePlayers.find((entry) => entry.playerId === playerId); const preferred = activeSlot && player && slotAccepts(activeSlot, card) && !selections.some((entry) => entry.slotId === activeSlot.id) ? activeSlot.id : null; const slotId = preferred ?? (player ? assignTouchlineFantasyPlayerToFirstSlot({ player, geometry, selections }) : null); if (!slotId || !player) return setFeedback(pt ? "Não há vaga compatível nesta formação." : "No compatible slot remains in this formation."); const next = [...selections, { playerId, slotId }]; const nextValidation = validateTouchlineFantasyLineup({ selections: next, players: eligiblePlayers, geometry, budgetEur: snapshot.config.budgetEur, maxPlayersPerClub: snapshot.config.maxPlayersPerClub, requireComplete: false }); if (nextValidation.issues.includes("BUDGET_EXCEEDED")) return setFeedback(pt ? "Este card ultrapassa o orçamento disponível." : "This card exceeds the available budget."); setSelections(next); setActiveSlotId(geometry.slots.find((slot) => !next.some((entry) => entry.slotId === slot.id))?.id ?? null); if (next.length === 11) setVisibleStep("review"); setFeedback(null); }
-  function removePlayer(playerId: string) { if (!editable) return; const removed = selections.find((entry) => entry.playerId === playerId); setSelections((current) => current.filter((entry) => entry.playerId !== playerId)); setActiveSlotId(removed?.slotId ?? null); setVisibleStep("players"); setFeedback(pt ? "Alteração ainda não salva." : "Change not saved yet."); }
+  function addPlayer(card: ClubOwnerSquadCard) {
+    if (!editable || !geometry) return;
+    const playerId = card.canonicalPlayerId ?? card.id;
+    const player = eligiblePlayers.find((entry) => entry.playerId === playerId);
+    if (!player) return setFeedback(pt ? "Este card não está elegível nesta rodada." : "This card is not eligible for this Gameweek.");
+
+    // A selected slot is intentional: never silently put an incompatible card
+    // into some other empty position (for example, a full-back into attack).
+    if (activeSlot && !touchlineFantasySlotAcceptsPlayer(activeSlot, player)) {
+      return setFeedback(pt ? "Este card não é elegível para a vaga selecionada." : "This card is not eligible for the selected slot.");
+    }
+    const slotId = activeSlot?.id ?? assignTouchlineFantasyPlayerToFirstSlot({ player, geometry, selections });
+    const slot = slotId ? geometry.slots.find((entry) => entry.id === slotId) ?? null : null;
+    if (!slot) return setFeedback(pt ? "Não há vaga compatível nesta formação." : "No compatible slot remains in this formation.");
+    const next = replaceTouchlineFantasyPlayerAtSlot({ selections, slot, player });
+    if (!next) return setFeedback(pt ? "Este card já está em outra vaga da sua equipe." : "This card is already in another slot in your team.");
+    const nextValidation = validateTouchlineFantasyLineup({ selections: next, players: eligiblePlayers, geometry, budgetEur: snapshot.config.budgetEur, maxPlayersPerClub: snapshot.config.maxPlayersPerClub, requireComplete: false });
+    if (nextValidation.issues.includes("BUDGET_EXCEEDED")) return setFeedback(pt ? "Este card ultrapassa o orçamento disponível." : "This card exceeds the available budget.");
+    setSelections([...next]);
+    setActiveSlotId(geometry.slots.find((entry) => !next.some((selection) => selection.slotId === entry.id))?.id ?? null);
+    if (next.length === 11) setVisibleStep("review");
+    setFeedback(null);
+  }
+  function removePlayer(playerId: string) {
+    if (!editable) return;
+    const removed = selections.find((entry) => entry.playerId === playerId);
+    if (!removed) return;
+    setSelections((current) => [...removeTouchlineFantasyPlayerFromSlot(current, removed.slotId)]);
+    setActiveSlotId(removed.slotId);
+    setVisibleStep("players");
+    setFeedback(pt ? "Alteração ainda não salva." : "Change not saved yet.");
+  }
   async function loadPersistedLineup(expectedFingerprint: string, expectedState: "DRAFT" | "CONFIRMED") {
     for (const delay of [0, 300, 800]) {
       if (delay) await wait(delay);
@@ -258,14 +302,14 @@ export default function FantasyGameweekClient({ initialSnapshot, locale }: { ini
   const filteredCoaches = snapshot.coaches.filter((entry) => findTouchLineClub(entry.clubName)?.teamId === selectedCoachClub?.teamId);
   const currentAlerts = live?.lineupAlerts ?? snapshot.lineupAlerts;
 
-  return <div className={styles.shell} data-canonical-step={canonicalStep} data-market-visual="classic">
+  return <div className={styles.shell} data-canonical-step={canonicalStep} data-market-visual="classic" data-fantasy-context={embedded ? "club-owner" : "standalone"}>
     <section className={styles.controlRail}><div><CalendarClock /><span>Gameweek</span><strong>{activeGameweek?.number ?? "—"}</strong></div><div><ShieldCheck /><span>{pt ? "Estado" : "State"}</span><strong>{statusCopy(activeGameweek?.state, pt)}</strong></div><div><WalletCards /><span>{pt ? "Restante" : "Remaining"}</span><strong>{formatTouchlineFantasyMarketValue(validation?.budgetRemainingEur ?? snapshot.config.budgetEur, locale)}</strong></div><div><Crown /><span>XI</span><strong>{selections.length}/11</strong></div></section>
     <section className={styles.classicBuilder} aria-labelledby="touchline-markt-title">
       <header className={styles.hero}><div><span>{pt ? "ESCALAÇÃO DA RODADA" : "GAMEWEEK TEAM"}</span><h1 id="touchline-markt-title">{pt ? "Monte seu time TouchLine" : "Build Your TouchLine Team"}</h1><p>{pt ? "Escolha primeiro seu treinador, depois a formação e complete exatamente 11 cards para a rodada." : "Choose your coach first, then formation, and complete exactly 11 cards for the Gameweek."}</p></div><MarketWindowClock gameweeks={gameweeks} locale={locale} /></header>
     <nav className={styles.stepper} aria-label={pt ? "Etapas da escalação" : "Lineup steps"}>{STEPS.map((step, index) => { const complete = (step === "coach" && Boolean(selectedCoachId)) || (step === "formation" && Boolean(formationCode)) || (step === "players" && selections.length === 11) || (step === "review" && lineupConfirmed) || (step === "locked" && !editable); const accessible = step === "coach" || Boolean(selectedCoachId) && (step === "formation" || Boolean(formationCode)); return <button type="button" key={step} disabled={!accessible} onClick={() => setVisibleStep(step)} data-active={visibleStep === step ? "true" : undefined} data-complete={complete ? "true" : undefined}><i>{complete ? <Check /> : index + 1}</i><span>{stepLabel(step, pt)}</span><ChevronRight /></button>; })}</nav>
     {!snapshot.entitlementActive ? <section className={styles.paywall}><div><span><Sparkles />TOUCHLINE GAMEWEEK ACCESS</span><h2>{pt ? "Uma assinatura. Um XI por rodada." : "One subscription. One XI per Gameweek."}</h2><p>{pt ? "O ambiente QA usa apenas cobrança de teste." : "The QA environment uses test billing only."}</p></div><aside><strong>£29.90</strong><span>{pt ? "por mês · QA" : "per month · QA"}</span><button type="button" disabled={saving} onClick={subscribe}>{pt ? "Assinar em modo de teste" : "Subscribe in test mode"}</button></aside></section> : null}
     <main className={styles.workspace}><section className={styles.builder} ref={builderRef}><header className={styles.sectionHeading}><div><span>{pt ? "PREVIEW EM TEMPO REAL" : "REAL-TIME PREVIEW"}</span><h2>{formationCode ?? (pt ? "Escolha a formação" : "Choose formation")}</h2></div><div><b>{pt ? "Valor usado" : "Used value"}</b><strong>{formatTouchlineFantasyMarketValue(validation?.totalMarketValueEur ?? 0, locale)}</strong></div></header>
-      <TouchlinePitchSurface advertisingCampaign={TOUCHLINE_MARKET_HOUSE_CAMPAIGN} className={styles.pitch} ariaLabel={pt ? "Campo da equipe da rodada" : "Gameweek team pitch"} orientation="vertical" surfaceVariant="premium-stadium">{geometry?.slots.map((slot) => { const selection = selections.find((entry) => entry.slotId === slot.id); const card = selection ? catalogueById.get(selection.playerId) : null; const alert = selection ? currentAlerts.some((entry) => entry.playerId === selection.playerId) : false; const openSlot = () => { if (!card) { setActiveSlotId(slot.id); setVisibleStep("players"); } }; return <div className={styles.pitchSlot} role={card ? undefined : "button"} tabIndex={card || !editable ? -1 : 0} aria-label={card ? undefined : `${pt ? "Selecionar jogador para" : "Select player for"} ${slot.id}`} key={slot.id} style={verticalPitchPosition(slot)} onClick={openSlot} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && !card) { event.preventDefault(); openSlot(); } }} data-state={!editable ? "locked" : card ? (alert ? "invalid" : "selected") : activeSlot?.id === slot.id ? "active" : "empty"}>{card ? <><span className={styles.pitchCard}><TouchlineGameweekCard card={card} locale={locale} compact displayWidth={62} /></span><b>{card.shortName}</b>{editable ? <i role="button" tabIndex={0} aria-label={`${pt ? "Remover" : "Remove"} ${card.name}`} onClick={(event) => { event.stopPropagation(); removePlayer(selection!.playerId); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); removePlayer(selection!.playerId); } }}>×</i> : null}{alert ? <em><CircleAlert />{pt ? "Fora da súmula" : "Not selected"}</em> : null}</> : <><span className={styles.emptySlot}>+</span><b>{slot.id}</b></>}</div>; })}</TouchlinePitchSurface>
+      <TouchlinePitchSurface advertisingCampaign={TOUCHLINE_MARKET_HOUSE_CAMPAIGN} className={styles.pitch} ariaLabel={pt ? "Campo da equipe da rodada" : "Gameweek team pitch"} orientation="vertical" surfaceVariant="premium-stadium">{geometry?.slots.map((slot) => { const selection = selections.find((entry) => entry.slotId === slot.id); const card = selection ? catalogueById.get(selection.playerId) : null; const alert = selection ? currentAlerts.some((entry) => entry.playerId === selection.playerId) : false; const openSlot = () => { if (editable) { setActiveSlotId(slot.id); setVisibleStep("players"); } }; return <div className={styles.pitchSlot} role={editable ? "button" : undefined} tabIndex={editable ? 0 : -1} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Selecionar jogador para" : "Select player for")} ${slot.id}`} key={slot.id} style={verticalPitchPosition(slot)} onClick={openSlot} onKeyDown={(event) => { if ((event.key === "Enter" || event.key === " ") && editable) { event.preventDefault(); openSlot(); } }} data-state={!editable ? "locked" : card ? (alert ? "invalid" : "selected") : activeSlot?.id === slot.id ? "active" : "empty"}>{card ? <><span className={styles.pitchCard}><TouchlineGameweekCard card={card} locale={locale} compact displayWidth={62} /></span><b>{card.shortName}</b>{editable ? <i role="button" tabIndex={0} aria-label={`${pt ? "Remover" : "Remove"} ${card.name}`} onClick={(event) => { event.stopPropagation(); removePlayer(selection!.playerId); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); removePlayer(selection!.playerId); } }}>×</i> : null}{alert ? <em><CircleAlert />{pt ? "Fora da súmula" : "Not selected"}</em> : null}</> : <><span className={styles.emptySlot}>+</span><b>{slot.id}</b></>}</div>; })}</TouchlinePitchSurface>
       <footer className={styles.pitchFooter}><span>{selectedCoach ? `${selectedCoach.coach.displayName} · ${selectedCoach.clubName}` : (pt ? "Treinador pendente" : "Coach pending")}</span><span>{pt ? "Escolha livre de jogadores por clube" : "No per-club player limit"}</span><strong>{validation?.valid ? <><BadgeCheck />{pt ? "XI válido" : "Valid XI"}</> : `${selections.length}/11`}</strong></footer></section>
       <aside className={styles.guidePanel} ref={guidePanelRef} data-guide-step={visibleStep} tabIndex={0} aria-label={pt ? "Painel de escolha TouchLine" : "TouchLine selection panel"} onPointerDown={(event) => { if (event.target === event.currentTarget) event.currentTarget.focus({ preventScroll: true }); }}>{selectedCoach && visibleStep !== "coach" ? <section className={styles.selectedCoachSummary} aria-label={pt ? "Treinador escolhido" : "Selected coach"}><span><FantasyCoachZoom entry={selectedCoach} locale={locale} eager /></span><div className={styles.selectedCoachIdentity}><small>{pt ? "TREINADOR ESCOLHIDO" : "SELECTED COACH"}</small><b>{selectedCoach.coach.displayName}</b><CompactClubIdentity clubName={selectedCoach.clubName} clubLogoUrl={selectedCoach.clubLogoUrl} /></div><dl className={styles.coachMetrics}><div><dt><Trophy aria-hidden="true" />{pt ? "RANK" : "RANK"}</dt><dd>{selectedCoach.competition ? `#${selectedCoach.competition.rank}` : "—"}</dd></div><div><dt><House aria-hidden="true" />{pt ? "CASA" : "HOME"}</dt><dd>{selectedCoach.competition?.home.touchlinePoints ?? "—"}<small> TL</small></dd></div><div><dt><PlaneTakeoff aria-hidden="true" />{pt ? "FORA" : "AWAY"}</dt><dd>{selectedCoach.competition?.away.touchlinePoints ?? "—"}<small> TL</small></dd></div></dl><button type="button" disabled={!editable} onClick={() => setVisibleStep("coach")}>{pt ? "Trocar" : "Change"}</button></section> : null}{visibleStep === "coach" ? <section className={styles.coachStage}><header><span>STEP 1 · {pt ? "ÁREA TÉCNICA" : "TECHNICAL AREA"}</span><h2>{pt ? "Escolha seu treinador" : "Choose your coach"}</h2><p>{pt ? "Clique num clube para ver o treinador; contrate somente quando decidir." : "Select a club to preview its coach; hire only when you decide."}</p><CompactClubSelector selectedTeamId={selectedCoachClub?.teamId ?? ""} onSelect={(club) => setCoachClubTeamId(club.teamId)} locale={locale} /></header><div className={styles.coachScroller} tabIndex={0} aria-label={pt ? "Lista rolável de treinadores" : "Scrollable coach list"}><div className={styles.coachGrid}>{filteredCoaches.map((entry) => <article key={entry.id} data-selected={entry.id === selectedCoachId ? "true" : undefined}><span><FantasyCoachZoom entry={entry} locale={locale} /></span><div className={styles.coachIdentity}><small>{pt ? "TOUCHLINE VERIFIED" : "TOUCHLINE VERIFIED"}</small><b>{entry.coach.displayName}</b><CompactClubIdentity clubName={entry.clubName} clubLogoUrl={entry.clubLogoUrl} /></div><dl className={styles.coachMetrics}><div><dt><Trophy aria-hidden="true" />RANK</dt><dd>{entry.competition ? `#${entry.competition.rank}` : "—"}</dd></div><div><dt><House aria-hidden="true" />{pt ? "CASA" : "HOME"}</dt><dd>{entry.competition?.home.touchlinePoints ?? "—"}<small> TL</small></dd></div><div><dt><PlaneTakeoff aria-hidden="true" />{pt ? "FORA" : "AWAY"}</dt><dd>{entry.competition?.away.touchlinePoints ?? "—"}<small> TL</small></dd></div></dl><button type="button" disabled={!editable} onClick={() => { setSelectedCoachId(entry.id); setFeedback(pt ? "Treinador contratado. Escolha agora a formação." : "Coach hired. Choose the formation next."); setVisibleStep("formation"); }}>{pt ? "Contratar treinador" : "Hire coach"}</button></article>)}</div>{filteredCoaches.length === 0 ? <p className={styles.emptyResults}>{pt ? "Nenhum treinador canônico disponível para este clube." : "No canonical coach is available for this club."}</p> : null}</div></section> : null}
       {visibleStep === "formation" ? <><span>STEP 2</span><h2>{pt ? "Escolha a formação" : "Choose formation"}</h2><p>{pt ? "Todas as opções vêm do registro canônico calibrado." : "Every option comes from the calibrated canonical registry."}</p><div className={styles.formationGrid}>{Object.keys(snapshot.formationRegistry).map((code) => <button type="button" key={code} onClick={() => changeFormation(code)} disabled={!editable} data-selected={code === formationCode ? "true" : undefined}><b>{code}</b><small>11 {pt ? "vagas" : "slots"}</small></button>)}</div></> : null}

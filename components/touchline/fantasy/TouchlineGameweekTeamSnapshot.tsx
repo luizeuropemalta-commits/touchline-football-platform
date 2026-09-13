@@ -9,10 +9,12 @@ import { formatTouchlineFantasyDeadline } from "@/lib/touchlineFantasy/domain";
 import type { TouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 import styles from "./TouchlineGameweekTeamSnapshot.module.css";
 
-export default function TouchlineGameweekTeamSnapshot({ snapshot, locale, surface }: {
+export default function TouchlineGameweekTeamSnapshot({ snapshot, locale, surface, marketHref }: {
   snapshot: TouchlineFantasySnapshot | null;
   locale: string;
   surface: "club-owner" | "arena";
+  /** ClubOwner keeps Market in the same authenticated page. */
+  marketHref?: string;
 }) {
   const pt = locale === "pt-BR";
   const gameweek = snapshot?.activeGameweek;
@@ -35,6 +37,6 @@ export default function TouchlineGameweekTeamSnapshot({ snapshot, locale, surfac
         surfaceVariant={surface === "club-owner" ? "premium-stadium" : "canonical"}
       >{geometry.slots.map((slot) => { const selection = snapshot!.selections.find((entry) => entry.slotId === slot.id); const card = selection ? cards.get(selection.playerId) : null; return <div className={styles.slot} key={slot.id} style={{ left: `${slot.x}%`, top: `${slot.y}%` }} data-canonical-player-id={selection?.playerId ?? undefined}>{card ? <><span><TouchlineGameweekCard card={card} locale={locale} compact /></span><b>{card.shortName}</b></> : <i>{slot.id}</i>}</div>; })}</TouchlinePitchSurface>
     </div> : <div className={styles.empty}><Send /><p>{pt ? "A equipe da rodada ainda não está completa." : "The Gameweek team is not complete yet."}</p></div>}
-    <footer><div><CalendarClock /><span>{gameweek ? formatTouchlineFantasyDeadline(gameweek.locksAt, locale) : "—"}</span>{editable ? <em>{pt ? "EDIÇÃO ABERTA" : "EDITING OPEN"}</em> : <em><LockKeyhole />{pt ? "SNAPSHOT BLOQUEADO" : "LOCKED SNAPSHOT"}</em>}</div><a href={`/market-transfer?lang=${encodeURIComponent(locale)}`}>{editable ? <Pencil /> : <LockKeyhole />}{editable ? (pt ? "Editar no Markt" : "Edit in Markt") : (pt ? "Ver no Markt" : "View in Markt")}</a></footer>
+    <footer><div><CalendarClock /><span>{gameweek ? formatTouchlineFantasyDeadline(gameweek.locksAt, locale) : "—"}</span>{editable ? <em>{pt ? "EDIÇÃO ABERTA" : "EDITING OPEN"}</em> : <em><LockKeyhole />{pt ? "SNAPSHOT BLOQUEADO" : "LOCKED SNAPSHOT"}</em>}</div><a href={marketHref ?? `/market-transfer?lang=${encodeURIComponent(locale)}`}>{editable ? <Pencil /> : <LockKeyhole />}{editable ? (pt ? "Editar no Markt" : "Edit in Markt") : (pt ? "Ver no Markt" : "View in Markt")}</a></footer>
   </section>;
 }

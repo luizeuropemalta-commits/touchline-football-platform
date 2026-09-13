@@ -215,8 +215,37 @@ function slotMap(geometry: TouchlineFormationGeometry) {
   return new Map(geometry.slots.map((slot) => [slot.id, slot] as const));
 }
 
-function slotAcceptsPlayer(slot: TouchlineFormationGeometrySlot, player: TouchlineFantasyEligiblePlayer) {
+/**
+ * The formation registry is the single authority for slot eligibility.  UI
+ * consumers must use this instead of inferring a role from a display label.
+ */
+export function touchlineFantasySlotAcceptsPlayer(slot: Pick<TouchlineFormationGeometrySlot, "allowedPositions">, player: TouchlineFantasyEligiblePlayer) {
   return slot.allowedPositions.includes(player.positionBucket);
+}
+
+/**
+ * Replaces only the player assigned to the requested canonical slot.  A card
+ * already selected elsewhere is rejected so a roster never contains it twice.
+ */
+export function replaceTouchlineFantasyPlayerAtSlot(input: Readonly<{
+  selections: readonly TouchlineFantasySelection[];
+  slot: TouchlineFormationGeometrySlot;
+  player: TouchlineFantasyEligiblePlayer;
+}>): readonly TouchlineFantasySelection[] | null {
+  if (!touchlineFantasySlotAcceptsPlayer(input.slot, input.player)) return null;
+  if (input.selections.some((selection) => selection.playerId === input.player.playerId && selection.slotId !== input.slot.id)) return null;
+  return [
+    ...input.selections.filter((selection) => selection.slotId !== input.slot.id),
+    { playerId: input.player.playerId, slotId: input.slot.id },
+  ];
+}
+
+/** Removes the selection from a slot without changing budget, roster or any other slot. */
+export function removeTouchlineFantasyPlayerFromSlot(
+  selections: readonly TouchlineFantasySelection[],
+  slotId: string,
+): readonly TouchlineFantasySelection[] {
+  return selections.filter((selection) => selection.slotId !== slotId);
 }
 
 export function validateTouchlineFantasyLineup(input: Readonly<{
@@ -254,7 +283,7 @@ export function validateTouchlineFantasyLineup(input: Readonly<{
       issues.add("SLOT_INVALID");
       continue;
     }
-    if (!slotAcceptsPlayer(slot, player)) issues.add("POSITION_INVALID");
+    if (!touchlineFantasySlotAcceptsPlayer(slot, player)) issues.add("POSITION_INVALID");
     totalMarketValueEur += player.marketValueEur;
   }
 
@@ -276,7 +305,7 @@ export function assignTouchlineFantasyPlayerToFirstSlot(input: Readonly<{
 }>) {
   const occupied = new Set(input.selections.map((selection) => selection.slotId));
   return input.geometry.slots
-    .filter((slot) => !occupied.has(slot.id) && slotAcceptsPlayer(slot, input.player))
+    .filter((slot) => !occupied.has(slot.id) && touchlineFantasySlotAcceptsPlayer(slot, input.player))
     .sort((first, second) => first.priority - second.priority)[0]?.id ?? null;
 }
 

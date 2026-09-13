@@ -6,6 +6,8 @@ import {
   isTouchlineLiveReadMetadata,
   mergeTouchlineLiveFixtures,
   normalizeTouchlineMatchCentreTimeZone,
+  orderTouchlineMatchEvents,
+  orderTouchlineMatchRatings,
   selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
   touchlineFixtureRailDateLabel,
@@ -14,6 +16,10 @@ import {
   touchlineMatchCentreDisplayState,
   touchlineMatchCentreHref,
 } from "../lib/touchlineArena/match-centre.ts";
+import type {
+  TouchlinePublicFantasyEvent,
+  TouchlinePublicFixturePlayerStatistics,
+} from "../lib/football-data/public-fantasy-fixture.ts";
 import type { TouchlinePublicFixture } from "../lib/football-data/public-fixture.ts";
 import type { TouchlineFixture } from "../lib/football-data/types.ts";
 
@@ -112,6 +118,25 @@ test("Match Centre always prioritizes live, then upcoming, then finished", () =>
   assert.equal(selectTouchlineMatchCentreFixture([finished], null, liveNow)?.id, finished.id);
   assert.equal(touchlineFixtureState(live, liveNow), "live");
   assert.equal(touchlineFixtureState(live, Date.parse("2026-08-19T15:00:00Z")), "upcoming");
+});
+
+test("Match Centre renders provider events chronologically and ratings from highest to lowest", () => {
+  const events: TouchlinePublicFantasyEvent[] = [
+    { id: "third", minute: 74, type: "Goal" },
+    { id: "first", minute: 25, type: "Substitution" },
+    { id: "second", minute: 46, type: "Goal" },
+    { id: "added-time", minute: 90, extraMinute: 4, type: "Goal" },
+    { id: "final", minute: 90, type: "Goal" },
+  ];
+  const statistics: TouchlinePublicFixturePlayerStatistics[] = [
+    { playerId: "low", playerName: "Low", appearanceStatus: "started", minutes: 90, rating: 6.83, touchlinePoints: null, settlementStatus: "final", contributions: [], statistics: {} },
+    { playerId: "high", playerName: "High", appearanceStatus: "started", minutes: 90, rating: 8.04, touchlinePoints: null, settlementStatus: "final", contributions: [], statistics: {} },
+    { playerId: "middle", playerName: "Middle", appearanceStatus: "started", minutes: 90, rating: 7.53, touchlinePoints: null, settlementStatus: "final", contributions: [], statistics: {} },
+    { playerId: "missing", playerName: "Missing", appearanceStatus: "started", minutes: 90, rating: null, touchlinePoints: null, settlementStatus: "final", contributions: [], statistics: {} },
+  ];
+
+  assert.deepEqual(orderTouchlineMatchEvents(events).map((event) => event.id), ["first", "second", "third", "final", "added-time"]);
+  assert.deepEqual(orderTouchlineMatchRatings(statistics).map((row) => row.playerId), ["high", "middle", "low"]);
 });
 
 test("Match Centre preserves an explicit fixture deep link", () => {

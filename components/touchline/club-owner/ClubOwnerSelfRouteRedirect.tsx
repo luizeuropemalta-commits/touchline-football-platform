@@ -3,6 +3,8 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
+import { touchLineAuthEntryHref } from "@/lib/touchlineArena/auth-i18n";
+import { touchlineClubOwnerSelfHref } from "@/lib/touchlineArena/club-owner-routes";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import {
   resolveTouchlineClubOwnerSelfNavigation,
@@ -10,7 +12,10 @@ import {
 import type { TouchlineClubOwnerSelfArea } from "@/lib/touchlineArena/club-owner-routes";
 import { createClient } from "@/lib/supabase/server";
 
-export type ClubOwnerSelfRouteSearchParams = Promise<{ lang?: string | string[] }>;
+export type ClubOwnerSelfRouteSearchParams = Promise<{
+  lang?: string | string[];
+  tab?: string | string[];
+}>;
 
 function firstValue(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
@@ -30,6 +35,12 @@ export async function redirectTouchlineClubOwnerSelfRoute({
 }): Promise<never> {
   const params = await searchParams;
   const locale = normalizeTouchLineLocale(firstValue(params.lang));
+  const forwarded = new URLSearchParams();
+  const marketTab = firstValue(params.tab) === "market";
+  if (marketTab) forwarded.set("tab", "market");
+  const forwardedSuffix = forwarded.size ? `&${forwarded.toString()}` : "";
+  const marketAnchor = marketTab ? "#club-owner-market" : "";
+  const destination = `${touchlineClubOwnerSelfHref(locale, area)}${forwardedSuffix}${marketAnchor}`;
   const supabase = await createClient();
   const { data: { user } } = supabase
     ? await supabase.auth.getUser()
@@ -41,7 +52,9 @@ export async function redirectTouchlineClubOwnerSelfRoute({
     isClubOwner: Boolean(user && !isOwnerEmail(user.email)),
   });
 
-  if (navigation.kind === "login") redirect(navigation.href);
+  if (navigation.kind === "login") {
+    redirect(touchLineAuthEntryHref("/login", locale, destination));
+  }
   if (navigation.kind === "denied") notFound();
-  redirect(navigation.href);
+  redirect(`${navigation.href}${forwardedSuffix}${marketAnchor}`);
 }

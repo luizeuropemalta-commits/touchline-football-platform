@@ -21,6 +21,8 @@ import { touchlineLiveCoachForTeam } from "@/lib/touchlineArena/live-coaches";
 import {
   isTouchlineLiveReadMetadata,
   mergeTouchlineLiveFixtures,
+  orderTouchlineMatchEvents,
+  orderTouchlineMatchRatings,
   selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
   touchlineFixtureRailDateLabel,
@@ -207,10 +209,10 @@ function winningTeamId(fixture: TouchlinePublicFixture) {
 }
 
 function topRatedPlayers(detail: TouchlinePublicFantasyFixtureMatchDetail) {
-  return detail.playerStatistics
-    .filter((row) => Number.isFinite(row.rating) && (row.appearanceStatus === "started" || row.appearanceStatus === "substitute"))
-    .sort((left, right) => (right.rating ?? Number.NEGATIVE_INFINITY) - (left.rating ?? Number.NEGATIVE_INFINITY)
-      || left.playerName.localeCompare(right.playerName))
+  return orderTouchlineMatchRatings(detail.playerStatistics.filter((row) => (
+    Number.isFinite(row.rating)
+    && (row.appearanceStatus === "started" || row.appearanceStatus === "substitute")
+  )))
     .slice(0, 3);
 }
 
@@ -509,7 +511,7 @@ export default function TouchlineMatchCentre({
             <div className={styles.matchEvidenceGrid}>
               <section className={styles.timelinePanel}>
                 <div className={styles.panelTitle}><Goal size={17} /><div><span>{dictionary.recent}</span><strong>{fixtureLabel(selected)}</strong></div></div>
-                <ol>{verifiedDetail.events.map((event) => {
+                <ol>{orderTouchlineMatchEvents(verifiedDetail.events).map((event) => {
                   const relatedPlayerName = event.relatedPlayerName;
                   return <li key={event.id}>
                     <time>{eventMoment(event)}</time>
@@ -520,7 +522,7 @@ export default function TouchlineMatchCentre({
               </section>
               <section className={styles.pointsSummary}>
                 <div className={styles.panelTitle}><Trophy size={17} /><div><span>{dictionary.players}</span><strong>{verifiedDetail.playerStatistics.filter((row) => row.rating !== null).length} {dictionary.rating}</strong></div></div>
-                <ul>{verifiedDetail.playerStatistics.filter((row) => row.rating !== null).map((row) => <li key={row.playerId}><span><strong>{row.playerName}</strong><small>{teamName(verifiedDetail, row.teamId)}</small></span><b>{row.rating}</b></li>)}</ul>
+                <ul>{orderTouchlineMatchRatings(verifiedDetail.playerStatistics).map((row) => <li key={row.playerId}><span><strong>{row.playerName}</strong><small>{teamName(verifiedDetail, row.teamId)}</small></span><b>{row.rating}</b></li>)}</ul>
               </section>
             </div>
             <div className={styles.lineupGrid}>

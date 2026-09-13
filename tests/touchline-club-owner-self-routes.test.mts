@@ -26,6 +26,14 @@ const profileRendererSource = readFileSync(
   new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url),
   "utf8",
 );
+const selfRedirectSource = readFileSync(
+  new URL("../components/touchline/club-owner/ClubOwnerSelfRouteRedirect.tsx", import.meta.url),
+  "utf8",
+);
+const legacyMarketSource = readFileSync(
+  new URL("../app/market-transfer/page.tsx", import.meta.url),
+  "utf8",
+);
 const legacySubstitutionSource = readFileSync(
   new URL("../app/club-owner/luiz-lopez/substitution/page.tsx", import.meta.url),
   "utf8",
@@ -187,6 +195,17 @@ test("private navigation is self-scoped and foreign public profiles cannot expos
   assert.doesNotMatch(quickNavSource, /touchlineClubOwnerHistoryHref\(locale, clubOwnerSlug\)/);
   assert.match(profileRendererSource, /<TouchlineGlobalNavigation[\s\S]*?currentRoute=\{ownerIdentity\.isAuthenticatedClubOwner \? "myClub" : "clubProfile"\}[\s\S]*?surface=\{ownerIdentity\.isAuthenticatedClubOwner \? "authenticated" : "public"\}/);
   assert.doesNotMatch(profileRendererSource, /TouchlineProfileQuickNav/);
+});
+
+test("legacy Market URLs discard unused contract context while resolving the authenticated ClubOwner", () => {
+  assert.match(legacyMarketSource, /tab: "market"/);
+  assert.match(legacyMarketSource, /redirect\(`\/club-owner\/me\?\$\{forwarded\.toString\(\)\}#club-owner-market`\)/);
+  assert.doesNotMatch(legacyMarketSource, /contractPlayer|contractName|contractClub/);
+  assert.match(selfRedirectSource, /const marketTab = firstValue\(params\.tab\) === "market"/);
+  assert.match(selfRedirectSource, /touchLineAuthEntryHref\("\/login", locale, destination\)/);
+  assert.match(selfRedirectSource, /marketAnchor = marketTab \? "#club-owner-market"/);
+  assert.doesNotMatch(selfRedirectSource, /contractPlayer|contractName|contractClub/);
+  assert.doesNotMatch(selfRedirectSource, /ownerSlug\s*=\s*firstValue\(params/);
 });
 
 test("proxy authorizes ClubOwner routes before streaming and returns a real safe 404", () => {

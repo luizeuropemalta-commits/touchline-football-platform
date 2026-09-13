@@ -14,7 +14,21 @@ type TouchlineCoachPerformanceProps = {
   competition?: TouchlineCoachCompetitionSnapshot | null;
   locale?: string;
   showHistory?: boolean;
+  /**
+   * Discipline is deliberately optional: the public coach ranking snapshot does
+   * not infer bookings from player events. When a canonical provider feed adds
+   * them, pass the verified totals here; otherwise the surface must show an
+   * explicit unavailable state instead of a fabricated zero.
+   */
+  discipline?: Readonly<{
+    yellowCards?: number | null;
+    redCards?: number | null;
+  }> | null;
 };
+
+function officialCardCount(value: number | null | undefined) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
 
 function formatDate(value: string | null, locale: string) {
   if (!value) return "—";
@@ -57,6 +71,7 @@ export default function TouchlineCoachPerformance({
   competition = null,
   locale = "en-GB",
   showHistory = false,
+  discipline = null,
 }: TouchlineCoachPerformanceProps) {
   const portuguese = locale === "pt-BR";
   const home: TouchlineCoachRecord | null = competition?.home ?? contract?.home ?? null;
@@ -70,6 +85,8 @@ export default function TouchlineCoachPerformance({
     : contract
     ? (contract.status === "active" ? (portuguese ? "Contrato ativo" : "Active contract") : (portuguese ? "Contrato encerrado" : "Ended contract"))
     : (portuguese ? "Sem contrato TouchLine" : "No TouchLine contract");
+  const yellowCards = officialCardCount(discipline?.yellowCards);
+  const redCards = officialCardCount(discipline?.redCards);
 
   return (
     <section
@@ -99,12 +116,24 @@ export default function TouchlineCoachPerformance({
         <b className={styles.totalValue}>{total ?? "—"}<small>TL PTS</small></b>
       </div>
 
-      <div className={styles.discipline} aria-label={portuguese ? "Cartões do treinador" : "Coach cards"}>
-        <span className={styles.cardMarks} aria-hidden="true"><i /><i /></span>
-        <div>
-          <span>{portuguese ? "CARTÕES" : "CARDS"}</span>
-          <strong>{portuguese ? "Dados disciplinares pendentes" : "Discipline data pending"}</strong>
+      <div className={styles.discipline} aria-label={portuguese ? "Disciplina do treinador" : "Coach discipline"}>
+        <div className={styles.disciplineTitle}>
+          <span className={styles.cardMarks} aria-hidden="true"><i /><i /></span>
+          <div>
+            <span>{portuguese ? "DISCIPLINA" : "DISCIPLINE"}</span>
+            <strong>{portuguese ? "Cartões oficiais" : "Official cards"}</strong>
+          </div>
         </div>
+        <dl className={styles.disciplineCounts}>
+          <div data-coach-discipline="yellow">
+            <dt><i aria-hidden="true" />{portuguese ? "Amarelo" : "Yellow"}</dt>
+            <dd>{yellowCards ?? "—"}</dd>
+          </div>
+          <div data-coach-discipline="red">
+            <dt><i aria-hidden="true" />{portuguese ? "Vermelho" : "Red"}</dt>
+            <dd>{redCards ?? "—"}</dd>
+          </div>
+        </dl>
       </div>
 
       {competition ? (

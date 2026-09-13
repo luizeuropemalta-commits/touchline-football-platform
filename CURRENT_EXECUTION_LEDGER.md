@@ -229,3 +229,10 @@ new plus six existing cases passed with synthetic environment values. No
 external calls, actual secrets, Live/Club Owner changes, commit or deployment.
 Final checks/status/manifest belong to the Engineering precheck handoff; local
 PASS is not binding/database/functional QA proof. Fiscal review pending.
+
+## 2026-09-13 — Integrated premium correction candidate / PRE-COMMIT GREEN
+
+- **Owner-authorized target:** TouchLine QA only; one Git-native build after immutable commit. Production is not authorized.
+- **Included capabilities:** numeric Sportsmonks provider identity is separated from the internal UUID in player-card links; Match Centre orders events by minute/accrued minute and ratings descending; the seven player/coach perimeter traces centre on their real side rails; crown-safe zoom/profile envelopes reserve headroom without changing the approved crown; Coach Profile separates official facts from TouchLine Points and renders yellow/red cards individually or `—`; ClubHub hero contains Next Match only, with a discrete home-stadium identity and honours carousel; Club Owner embeds the Market with authoritative formation slot eligibility, replacement/removal and duplicate rejection.
+- **Checks:** `pnpm test` `1733/1733`; `pnpm run build` `143/143`; TypeScript pass; lint `0` errors / `5` established warnings; release readiness local checklist; Vercel input pass; diff check pass. The temporary ENOSPC build block was resolved by permanently removing only regenerable Codex/browser-test caches; project worktrees, source, user documents and QA data were preserved.
+- **Rollback / next owner:** no schema changed. On remote regression, roll QA deployment back to `f27a8780`; do not retry the same SHA. Next owner runs the QA visual/runtime checklist registered by Fiscal: public profiles, Club Owner Market, Match Centre, ClubHub, card neon/crown, Coach Profile, Arena formation/camera/loop/no-write and social snapshot visual gates.

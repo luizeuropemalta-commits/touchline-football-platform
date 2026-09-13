@@ -13,14 +13,13 @@ function source(relativePath: string) {
   return readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8");
 }
 
-test("global public navigation keeps the fixed safe order and no private destination", () => {
+test("global public navigation keeps the fixed safe order and no standalone Market destination", () => {
   const items = resolveTouchlineGlobalNavigationItems("pt-BR", "public");
 
-  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "market", "rankings"]);
+  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "rankings"]);
   assert.deepEqual(items.map((item) => item.href), [
     "/touchline-clubs?lang=pt-BR",
     "/live?lang=pt-BR",
-    "/market-transfer?lang=pt-BR",
     "/touchline-tables?lang=pt-BR",
   ]);
   assert.equal(touchlineGlobalNavigationArenaHref("pt-BR"), "/arena?lang=pt-BR");
@@ -31,7 +30,7 @@ test("global public navigation keeps the fixed safe order and no private destina
 test("authenticated navigation may add only the server-resolved My Club boundary", () => {
   const items = resolveTouchlineGlobalNavigationItems("en-GB", "authenticated");
 
-  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "market", "rankings", "myClub"]);
+  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "rankings", "myClub"]);
   assert.equal(items.at(-1)?.href, "/club-owner/me?lang=en-GB");
   assert.doesNotMatch(JSON.stringify(items), /luiz-lopez|manchester-united|manchester-city/i);
 });
@@ -49,7 +48,7 @@ test("global navigation exposes My Club only to an authenticated ClubOwner", () 
 test("global navigation exposes an honest current state only for its exact general route", () => {
   assert.equal(isTouchlineGlobalNavigationCurrent("live", "live"), true);
   assert.equal(isTouchlineGlobalNavigationCurrent("clubProfile", "clubHub"), false);
-  assert.equal(isTouchlineGlobalNavigationCurrent("notFound", "market"), false);
+  assert.equal(isTouchlineGlobalNavigationCurrent("notFound", "rankings"), false);
 });
 
 test("Club Profile, Live and 404 use the shared public navigation without duplicate Arena returns", () => {

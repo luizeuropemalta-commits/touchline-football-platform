@@ -3,7 +3,6 @@ import {
   Activity,
   BarChart3,
   Goal,
-  Handshake,
   MoreHorizontal,
   Shield,
   UserRound,
@@ -41,7 +40,6 @@ type NavigationCopy = Readonly<{
   clubHub: string;
   allClubs: string;
   live: string;
-  market: string;
   rankings: string;
   fantasy: string;
   myClub: string;
@@ -56,7 +54,6 @@ const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
     clubHub: "ClubHub",
     allClubs: "All clubs",
     live: "Live",
-    market: "Market",
     rankings: "Rankings",
     fantasy: "Fantasy",
     myClub: "My Club",
@@ -69,7 +66,6 @@ const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
     clubHub: "ClubHub",
     allClubs: "Todos os clubes",
     live: "Ao vivo",
-    market: "Mercado",
     rankings: "Rankings",
     fantasy: "Fantasy",
     myClub: "Meu Clube",
@@ -81,7 +77,6 @@ const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
 const navigationIcons: Record<TouchlineGlobalNavigationItemKey, LucideIcon> = {
   clubHub: Shield,
   live: Activity,
-  market: Handshake,
   rankings: BarChart3,
   myClub: UserRound,
 };
@@ -126,7 +121,7 @@ function NavigationLink({
 
 /**
  * Shared general navigation for public TouchLine surfaces. The prominent Arena
- * return is deliberately separate from the fixed four-item general menu.
+ * return is deliberately separate from the fixed general menu.
  */
 export default function TouchlineGlobalNavigation({
   locale,

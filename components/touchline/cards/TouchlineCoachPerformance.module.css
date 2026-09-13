@@ -197,13 +197,21 @@
 }
 
 .discipline {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 11px;
+  gap: 14px;
   border: 1px solid rgba(255,255,255,.09);
   border-radius: 14px;
   padding: 11px 13px;
   background: rgba(255,255,255,.025);
+}
+
+.disciplineTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
 }
 
 .cardMarks {
@@ -238,6 +246,52 @@
   margin-top: 2px;
   color: rgba(245, 255, 241, .76);
   font-size: 12px;
+}
+
+.disciplineCounts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(66px, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+
+.disciplineCounts > div {
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  padding: 7px 8px;
+  background: rgba(0,0,0,.2);
+}
+
+.disciplineCounts dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(229,255,203,.58);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.disciplineCounts dt i {
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  box-shadow: 0 0 8px currentColor;
+  transform: rotate(5deg);
+}
+
+.disciplineCounts [data-coach-discipline="yellow"] dt i { color: #ffe149; background: #ffe149; }
+.disciplineCounts [data-coach-discipline="red"] dt i { color: #ff4c4c; background: #ff4c4c; }
+
+.disciplineCounts dd {
+  margin: 3px 0 0;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 950;
+  line-height: 1;
 }
 
 .contractMeta {
@@ -386,6 +440,8 @@
   .header { align-items: flex-start; flex-direction: column; }
   .lifecycleList li { grid-template-columns: auto minmax(0, 1fr); }
   .lifecyclePoints { grid-column: 2; text-align: left; }
+  .discipline { grid-template-columns: 1fr; }
+  .disciplineCounts { width: 100%; }
 }
 
 @media (max-height: 520px) and (orientation: landscape) {

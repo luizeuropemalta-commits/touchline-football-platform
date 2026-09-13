@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  assignTouchlineFantasyPlayerToFirstSlot,
   formatTouchlineFantasyDeadline,
   parseTouchlineFantasyLineupRequest,
   rankTouchlineFantasyManagers,
+  removeTouchlineFantasyPlayerFromSlot,
+  replaceTouchlineFantasyPlayerAtSlot,
   resolveTouchlineFantasyBuilderStep,
   TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
   touchlineFantasyFixtureContribution,
@@ -221,4 +224,49 @@ test("the required formation matrix derives 11 position-aware slots from the can
   ]) {
     assert.equal(coveredPositions.has(required), true, `${required} must be represented`);
   }
+});
+
+test("a full-back cannot enter an attacking slot, while replacement and removal preserve the other slots", () => {
+  const geometry = resolveTouchlineFormationGeometry("4-3-3");
+  const attackingSlot = geometry.slots.find((slot) => slot.id === "ST");
+  const rightBackSlot = geometry.slots.find((slot) => slot.id === "RB");
+  assert.ok(attackingSlot);
+  assert.ok(rightBackSlot);
+
+  const fullBack = {
+    playerId: PLAYER_IDS[0],
+    clubId: "club-a",
+    marketValueEur: 10_000_000,
+    positionBucket: "right-back" as const,
+  };
+  const striker = {
+    playerId: PLAYER_IDS[1],
+    clubId: "club-b",
+    marketValueEur: 20_000_000,
+    positionBucket: "centre-forward" as const,
+  };
+  const replacementStriker = { ...striker, playerId: PLAYER_IDS[2] };
+  const selections = [
+    { playerId: fullBack.playerId, slotId: rightBackSlot.id },
+    { playerId: striker.playerId, slotId: attackingSlot.id },
+  ];
+
+  assert.equal(assignTouchlineFantasyPlayerToFirstSlot({ player: fullBack, geometry, selections: [{ playerId: striker.playerId, slotId: attackingSlot.id }] }), rightBackSlot.id);
+  assert.equal(replaceTouchlineFantasyPlayerAtSlot({ selections, slot: attackingSlot, player: fullBack }), null);
+  assert.ok(validateTouchlineFantasyLineup({
+    selections: [{ playerId: fullBack.playerId, slotId: attackingSlot.id }],
+    players: [fullBack],
+    geometry,
+    budgetEur: TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR,
+    maxPlayersPerClub: 11,
+  }).issues.includes("POSITION_INVALID"));
+
+  const replaced = replaceTouchlineFantasyPlayerAtSlot({ selections, slot: attackingSlot, player: replacementStriker });
+  assert.deepEqual(replaced, [
+    { playerId: fullBack.playerId, slotId: rightBackSlot.id },
+    { playerId: replacementStriker.playerId, slotId: attackingSlot.id },
+  ]);
+  assert.deepEqual(removeTouchlineFantasyPlayerFromSlot(replaced ?? [], attackingSlot.id), [
+    { playerId: fullBack.playerId, slotId: rightBackSlot.id },
+  ]);
 });

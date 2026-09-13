@@ -3,6 +3,7 @@
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineGameweekTeamSnapshot from "@/components/touchline/fantasy/TouchlineGameweekTeamSnapshot";
+import FantasyGameweekClient from "@/app/fantasy/FantasyGameweekClient";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import ClubOwnerAvatarUpload from "@/components/touchline/ClubOwnerAvatarUpload";
 import { Activity, ArrowRight, BarChart3, CalendarClock, Coins, Handshake, Landmark, LockKeyhole, ShieldCheck, WalletCards } from "lucide-react";
@@ -164,7 +165,11 @@ function clubOwnerCardZoomDetails(
   });
 }
 
-export type ClubOwnerProfileSearchParams = Promise<{ lang?: string; feedCursor?: string }>;
+export type ClubOwnerProfileSearchParams = Promise<{
+  lang?: string;
+  feedCursor?: string;
+  tab?: string;
+}>;
 
 export default async function ClubOwnerProfileRenderer({
   searchParams,
@@ -508,7 +513,7 @@ export default async function ClubOwnerProfileRenderer({
               <nav className="club-owner-control-nav" aria-label={clubCopy.clubDirection}>
                 <a href="#club-owner-finance"><Landmark aria-hidden="true" /><span>{clubCopy.finance}<small>{clubCopy.balanceAndBudget}</small></span></a>
                 <a href={touchlineArenaPanelHref("live", locale)}><Activity aria-hidden="true" /><span>{clubCopy.live}<small>{clubCopy.gamesAndStats}</small></span></a>
-                <a href={touchlineArenaPanelHref("market", locale)}><Handshake aria-hidden="true" /><span>{clubCopy.market}<small>{clubCopy.contractPlayers}</small></span></a>
+                <a href="#club-owner-market"><Handshake aria-hidden="true" /><span>{clubCopy.market}<small>{clubCopy.contractPlayers}</small></span></a>
                 <a href={`/touchline-tables${localeSuffix}`}><BarChart3 aria-hidden="true" /><span>{t("rankings")}<small>{clubCopy.officialTables}</small></span></a>
               </nav>
 
@@ -566,13 +571,22 @@ export default async function ClubOwnerProfileRenderer({
                     <div><strong>{openContractSlotCount ?? "—"}</strong><span>{clubCopy.slots}</span></div>
                     <div><strong>0</strong><span>{clubCopy.pending}</span></div>
                   </div>
-                  <a href={touchlineArenaPanelHref("market", locale)}>{clubCopy.manageMarket} <ArrowRight aria-hidden="true" /></a>
+                  <a href="#club-owner-market">{clubCopy.manageMarket} <ArrowRight aria-hidden="true" /></a>
                 </article>
               </div>
 
               <div id="club-owner-squad">
-                <TouchlineGameweekTeamSnapshot snapshot={fantasySnapshot} locale={locale} surface="club-owner" />
+                <TouchlineGameweekTeamSnapshot snapshot={fantasySnapshot} locale={locale} surface="club-owner" marketHref="#club-owner-market" />
               </div>
+
+              <section className="club-owner-market" id="club-owner-market" aria-label={clubCopy.market}>
+                <header className="club-owner-market-heading">
+                  <span>{isPortuguese ? "MERCADO DO CLUBOWNER" : "CLUBOWNER MARKET"}</span>
+                  <strong>{isPortuguese ? "Monte, compre e gerencie seu elenco" : "Build, buy and manage your squad"}</strong>
+                  <small>{isPortuguese ? "O mercado usa o mesmo XI, orçamento e regras oficiais desta conta." : "Market uses this account’s same XI, budget and official rules."}</small>
+                </header>
+                <FantasyGameweekClient initialSnapshot={fantasySnapshot} locale={locale} embedded />
+              </section>
             </section>
           ) : null}
 
@@ -1213,6 +1227,43 @@ export default async function ClubOwnerProfileRenderer({
           grid-template-columns: minmax(0,1.35fr) minmax(310px,.65fr);
           gap: 14px;
           padding: 18px;
+        }
+
+        .club-owner-market {
+          margin: 18px;
+          scroll-margin-top: 24px;
+          border: 1px solid rgba(163,255,18,.25);
+          border-radius: 24px;
+          background:
+            radial-gradient(circle at 12% 0, rgba(163,255,18,.12), transparent 32%),
+            linear-gradient(145deg, rgba(5,20,14,.96), rgba(2,10,8,.98));
+          box-shadow: 0 22px 46px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.04);
+          overflow: hidden;
+        }
+
+        .club-owner-market-heading {
+          display: grid;
+          gap: 6px;
+          padding: 22px 24px 4px;
+        }
+
+        .club-owner-market-heading span {
+          color: #a3ff12;
+          font-size: 9px;
+          font-weight: 1000;
+          letter-spacing: .15em;
+        }
+
+        .club-owner-market-heading strong {
+          color: #fff;
+          font-size: clamp(22px, 3vw, 36px);
+          line-height: 1;
+        }
+
+        .club-owner-market-heading small {
+          color: rgba(255,255,255,.54);
+          font-size: 11px;
+          font-weight: 700;
         }
 
         .club-owner-board-grid > article {
@@ -2078,6 +2129,15 @@ export default async function ClubOwnerProfileRenderer({
 
           .club-owner-board-grid {
             padding: 12px;
+          }
+
+          .club-owner-market {
+            margin: 12px;
+            border-radius: 18px;
+          }
+
+          .club-owner-market-heading {
+            padding: 18px 18px 2px;
           }
 
           .club-owner-squad-command { margin: 0 12px 12px; border-radius: 17px; }

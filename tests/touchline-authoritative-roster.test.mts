@@ -18,6 +18,7 @@ import {
   type ClubOwnerSquadCard,
 } from "../lib/touchlineArena/demo-data.ts";
 import { TOUCHLINE_CARD_TIER_KEYS } from "../lib/touchlineArena/card-rules.ts";
+import { touchlinePlayerProfileHref } from "../lib/touchlineArena/player-links.ts";
 
 const USER_ID = "123e4567-e89b-42d3-a456-426614174000";
 const CONTRACT_ID = "123e4567-e89b-42d3-a456-426614174001";
@@ -116,6 +117,7 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
   assert.deepEqual(result.snapshot.inventoryIds, [INVENTORY_ID]);
   assert.deepEqual(result.snapshot.cards[0], {
     id: PLAYER_ID,
+    providerPlayerId: "117",
     name: "Erling Haaland",
     shortName: "Haaland",
     role: "forward",
@@ -190,6 +192,7 @@ test("the browser accepts the exact published roster contract emitted by the ser
   if (!parsed.ok) return;
   assert.equal(parsed.cards.length, 1);
   assert.equal(parsed.cards[0].inventoryId, INVENTORY_ID);
+  assert.equal(parsed.cards[0].providerPlayerId, "117");
   assert.equal(parsed.cards[0].editorialCard?.tierKey, "emerald-green");
   assert.equal(parsed.cards[0].cardPriceAuthority, undefined);
 });
@@ -241,6 +244,7 @@ test("keeps an active contract card in the private owner roster without publishi
   assert.equal(result.snapshot.cards[0]?.cardTier, "ruby-red");
   assert.equal(result.snapshot.cards[0]?.cardPriceAuthority, "active-contract");
   assert.equal(result.snapshot.cards[0]?.cardPriceVersion, "2026-07-premier-v1");
+  assert.equal(result.snapshot.cards[0]?.providerPlayerId, "117");
 });
 
 test("keeps a published card independent from a retired inventory price-table identifier", () => {
@@ -253,6 +257,25 @@ test("keeps a published card independent from a retired inventory price-table id
   assert.equal(result.snapshot.cards[0].editorialCard?.cardPrice.amountMinor, 4_900);
   const exactCardPlayer = squadCardToExactPlayer(result.snapshot.cards[0], { useSuppliedTier: true });
   assert.equal(exactCardPlayer.editorialCard?.tierKey, "emerald-green");
+  assert.equal(exactCardPlayer.sportmonksPlayerId, "117");
+  assert.equal(exactCardPlayer.canonicalPlayerId, PLAYER_ID);
+});
+
+test("uses the official provider id for a card profile URL while retaining the canonical UUID", () => {
+  const card: ClubOwnerSquadCard = {
+    ...authoritativeCard(),
+    providerPlayerId: "117",
+    canonicalPlayerId: PLAYER_ID,
+  };
+
+  const exactCardPlayer = squadCardToExactPlayer(card, { useSuppliedTier: true });
+  assert.equal(exactCardPlayer.sportmonksPlayerId, "117");
+  assert.equal(exactCardPlayer.canonicalPlayerId, PLAYER_ID);
+  const href = touchlinePlayerProfileHref(exactCardPlayer, "en-GB");
+  assert.match(href, /playerId=117/);
+  assert.doesNotMatch(href, new RegExp(`playerId=${PLAYER_ID}`));
+  // No editorial presentation is fabricated by the identity bridge.
+  assert.equal(exactCardPlayer.editorialCard, null);
 });
 
 test("strict lineup ownership guard reports missing, foreign and duplicate cards", () => {

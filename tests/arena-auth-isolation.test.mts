@@ -158,9 +158,10 @@ test("the proxy exposes the Arena entrance and protects account-backed operation
   assert.doesNotMatch(proxySource, /"\/dashboard"|"\/players"|"\/agencies"|"\/deals"|"\/scouting"/);
 });
 
-test("the canonical Market Transfer owns the Gameweek builder while legacy Arena panel state remains isolated", () => {
-  assert.match(marketPageSource, /loadTouchlineFantasySnapshot\(user\)/);
-  assert.match(marketPageSource, /<FantasyGameweekClient initialSnapshot=\{snapshot\}/);
+test("the legacy Market Transfer route forwards to the ClubOwner-owned Gameweek builder while Arena panel state remains isolated", () => {
+  assert.match(marketPageSource, /redirect\(`\/club-owner\/me\?\$\{forwarded\.toString\(\)\}#club-owner-market`\)/);
+  assert.match(marketPageSource, /tab: "market"/);
+  assert.doesNotMatch(marketPageSource, /loadTouchlineFantasySnapshot\(user\)|<FantasyGameweekClient/);
   assert.doesNotMatch(marketPageSource, /standaloneMarket|<ArenaClient/);
   assert.match(arenaClientSource, /const standaloneExperience = standaloneMarket \? "market" : standalonePanel \?\? null/);
   assert.match(arenaClientSource, /if \(standaloneExperience\) \{[\s\S]*setActiveArenaPanel\(standaloneExperience === "live" \? null : standaloneExperience\)/);

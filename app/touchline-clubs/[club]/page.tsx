@@ -869,7 +869,12 @@ const CLUB_POSITION_LEADER_GROUPS = [
   { key: "attacker", positionGroups: ["winger", "striker"], en: "Top attacker", pt: "Melhor atacante" },
 ] as const;
 
-function ClubHubHomeStadiumPanel({
+/**
+ * The hero is reserved for the next match. The permanent club ground belongs
+ * to the page identity, but must not compete with that fixture or expose the
+ * operational stadium facts that were previously shown here.
+ */
+function ClubHubHomeStadiumIdentity({
   locale,
   stadium,
 }: {
@@ -877,44 +882,18 @@ function ClubHubHomeStadiumPanel({
   stadium: TouchlineStadiumCatalogEntry;
 }) {
   const profile = stadium.clubProfile;
-  if (!profile) return null;
-
-  const portuguese = locale === "pt-BR";
-  const primarySource = profile.sources.find((source) => source.field === "stadiumName") ?? profile.sources[0];
-  const address = [profile.address.line1, profile.address.city, profile.address.postalCode, profile.address.country]
-    .filter(Boolean)
+  const location = [profile?.address.city, profile?.address.country]
+    .filter((part): part is string => Boolean(part))
     .join(", ");
 
   return (
-    <aside className="club-hub-home-stadium" aria-label={portuguese ? `Estádio do ${profile.homeClubLabel}` : `${profile.homeClubLabel} home stadium`}>
-      <div className="club-hub-home-stadium-heading">
-        <span>{portuguese ? "Estádio do clube" : "Club home ground"}</span>
-        <strong>{stadium.name}</strong>
-      </div>
-      <dl>
-        <div>
-          <dt>{portuguese ? "Clube mandante" : "Home club"}</dt>
-          <dd>{profile.homeClubLabel}</dd>
-        </div>
-        {profile.capacity !== null ? (
-          <div>
-            <dt>{portuguese ? "Capacidade" : "Capacity"}</dt>
-            <dd>{new Intl.NumberFormat(portuguese ? "pt-BR" : "en-GB").format(profile.capacity)}</dd>
-          </div>
-        ) : null}
-        {profile.openedYear !== null ? (
-          <div>
-            <dt>{portuguese ? "Inaugurado" : "Opened"}</dt>
-            <dd>{profile.openedYear}</dd>
-          </div>
-        ) : null}
-      </dl>
-      <p>{address}</p>
-      {primarySource ? (
-        <a href={primarySource.url} rel="noreferrer" target="_blank">
-          {portuguese ? `Fonte verificada: ${primarySource.publisher}` : `Verified source: ${primarySource.publisher}`}
-        </a>
-      ) : null}
+    <aside
+      className="club-hub-home-stadium-identity"
+      aria-label={locale === "pt-BR" ? `Estádio do clube: ${stadium.name}` : `Club stadium: ${stadium.name}`}
+    >
+      <span>{locale === "pt-BR" ? "Estádio do clube" : "Club stadium"}</span>
+      <strong>{stadium.name}</strong>
+      {location ? <small>{location}</small> : null}
     </aside>
   );
 }
@@ -997,7 +976,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             </div>
           </div>
           <div className="club-hub-hero-footer">
-            {homeStadium ? <ClubHubHomeStadiumPanel locale={locale} stadium={homeStadium} /> : null}
             {clubHonours.length ? (
               <div className="club-hub-honours" aria-label={`${club.name} trophy cabinet`}>
                 <span>{t("clubHonours")}</span>
@@ -1017,6 +995,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           </div>
         </header>
         <ClubHubSectionNavigation locale={locale} />
+        {homeStadium ? <ClubHubHomeStadiumIdentity locale={locale} stadium={homeStadium} /> : null}
 
         <div className="club-hub-chapter club-hub-official-league-chapter">
           <Suspense fallback={<ClubHubDeferredSection size="table" label={locale === "pt-BR" ? "Atualizando liga oficial" : "Updating official league"} />}>
@@ -1413,65 +1392,46 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             drop-shadow(0 0 22px color-mix(in srgb, var(--club-accent) 66%, transparent))
             drop-shadow(0 24px 38px rgba(0,0,0,.5));
         }
-        .club-hub-home-stadium {
-          min-width: 0;
-          border: 1px solid color-mix(in srgb, var(--club-accent) 52%, rgba(255,255,255,.18));
-          border-radius: 13px;
-          padding: 12px 14px;
-          background: linear-gradient(135deg, color-mix(in srgb, var(--club-accent) 20%, rgba(2,12,8,.92)), rgba(2,12,8,.9));
-          box-shadow: inset 0 1px rgba(255,255,255,.09), 0 14px 34px rgba(0,0,0,.22);
-        }
-        .club-hub-home-stadium-heading { display: grid; gap: 3px; }
-        .club-hub-home-stadium-heading span,
-        .club-hub-home-stadium dt {
-          color: #b6ff4d;
-          font-size: 8px;
-          font-weight: 950;
-          letter-spacing: .11em;
-          text-transform: uppercase;
-        }
-        .club-hub-home-stadium-heading strong {
-          color: #f7fff1;
-          font-size: 16px;
-          line-height: 1.1;
-        }
-        .club-hub-home-stadium dl {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 8px;
-          margin: 11px 0 9px;
-        }
-        .club-hub-home-stadium dl > div { min-width: 0; }
-        .club-hub-home-stadium dt { margin: 0 0 3px; }
-        .club-hub-home-stadium dd {
-          margin: 0;
-          color: rgba(248,255,243,.92);
-          font-size: 10px;
-          font-weight: 900;
-          line-height: 1.25;
-        }
-        .club-hub-home-stadium p {
-          margin: 0;
-          color: rgba(248,255,243,.66);
-          font-size: 9px;
-          font-weight: 760;
-          line-height: 1.35;
-        }
-        .club-hub-home-stadium a {
-          display: inline-block;
-          margin-top: 8px;
-          color: #d8ffad;
-          font-size: 8px;
-          font-weight: 900;
-          text-decoration-color: color-mix(in srgb, var(--club-accent) 70%, #fff);
-          text-underline-offset: 3px;
-        }
         .club-hub-honours {
           width: 100%;
           margin-top: 6px;
           padding: 0;
           background: transparent;
           overflow: hidden;
+        }
+        .club-hub-home-stadium-identity {
+          width: fit-content;
+          max-width: 100%;
+          display: grid;
+          grid-template-columns: auto auto;
+          align-items: baseline;
+          column-gap: 9px;
+          row-gap: 2px;
+          margin: 18px auto 0;
+          padding: 9px 13px;
+          border: 1px solid color-mix(in srgb, var(--club-accent) 35%, rgba(255,255,255,.13));
+          border-radius: 999px;
+          background: color-mix(in srgb, var(--club-accent) 8%, rgba(2,12,8,.78));
+          box-shadow: inset 0 1px rgba(255,255,255,.06), 0 12px 24px rgba(0,0,0,.18);
+        }
+        .club-hub-home-stadium-identity span {
+          color: #b6ff4d;
+          font-size: 8px;
+          font-weight: 950;
+          letter-spacing: .11em;
+          text-transform: uppercase;
+        }
+        .club-hub-home-stadium-identity strong {
+          color: #f7fff1;
+          font-size: 13px;
+          line-height: 1.2;
+        }
+        .club-hub-home-stadium-identity small {
+          grid-column: 2;
+          color: rgba(248,255,243,.6);
+          font-size: 9px;
+          font-weight: 760;
+          line-height: 1.25;
         }
         .club-hub-honours-empty {
           margin: 10px 0 0;
@@ -1629,8 +1589,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           left: clamp(230px, 21vw, 410px);
           min-width: 0;
           display: grid;
-          grid-template-columns: minmax(210px, .82fr) minmax(0, 1.4fr);
-          gap: 12px;
+          grid-template-columns: minmax(0, 1fr);
         }
         .club-hub-identity span,
         .club-hub-honours > span,

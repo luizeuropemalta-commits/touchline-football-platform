@@ -73,7 +73,7 @@ export async function loadTouchLineRankedCardCatalog(
   if (!admin) return [];
   const playerIds = state.players.map((player) => String(player.playerId)).filter(Boolean);
   const [{ data: playerData, error: playerError }, { data: squadData, error: squadError }, { data: seasonData, error: seasonError }, { data: fixtureData, error: fixtureError }] = await Promise.all([
-    admin.from("football_players").select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds),
+    admin.from("football_players").select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds),
     admin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }),
     admin.from("football_player_season_statistics").select("football_player_id,summary_payload,position_statistics_payload").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds),
     admin.from("touchline_player_fixture_score_settlements").select("football_player_id,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds).order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
@@ -113,6 +113,7 @@ export async function loadTouchLineRankedCardCatalog(
     const match = matchByPlayerId.get(playerId);
     return [{
       id: playerId,
+      providerPlayerId: text(player.provider_player_id),
       canonicalPlayerId: playerId,
       name,
       shortName: makeArenaShortName(name),
@@ -174,7 +175,7 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
   const [playersResponse, squadsResponse, seasonStatsResponse, published] = await Promise.all([
     admin
       .from("football_players")
-      .select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
+      .select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
       .in("id", playerIds),
     admin
       .from("football_squad_members")
@@ -235,6 +236,7 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
     const season = seasonByPlayerId.get(playerId);
     return [{
       id: playerId,
+      providerPlayerId: text(player.provider_player_id),
       canonicalPlayerId: playerId,
       name,
       shortName: makeArenaShortName(name),

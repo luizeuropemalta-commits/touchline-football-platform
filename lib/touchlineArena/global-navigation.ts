@@ -8,7 +8,8 @@ import { resolveTouchLinePresentationLocale } from "./root-locale.ts";
 /**
  * The public navigation vocabulary is intentionally small and stable. Routes
  * may add contextual actions nearby, but they must not quietly turn one of
- * these links into a specific club or ClubOwner destination.
+ * these links into a specific club or ClubOwner destination. Market is part
+ * of the authenticated ClubOwner surface and intentionally has no global link.
  */
 export type TouchlineGlobalNavigationSurface = "public" | "auth" | "authenticated";
 
@@ -34,7 +35,7 @@ export type TouchlineTrustedNavigationContext = Readonly<{
   }>;
 }>;
 
-export type TouchlineGlobalNavigationItemKey = "clubHub" | "live" | "market" | "rankings" | "myClub";
+export type TouchlineGlobalNavigationItemKey = "clubHub" | "live" | "rankings" | "myClub";
 
 export type TouchlineGlobalNavigationItem = Readonly<{
   key: TouchlineGlobalNavigationItemKey;
@@ -70,7 +71,6 @@ export function resolveTouchlineGlobalNavigationItems(
   const generalItems: TouchlineGlobalNavigationItem[] = [
     { key: "clubHub", href: touchlineClubHubHref(effectiveLocale) },
     { key: "live", href: `/live?lang=${lang}` },
-    { key: "market", href: `/market-transfer?lang=${lang}` },
     { key: "rankings", href: `/touchline-tables?lang=${lang}` },
   ];
 

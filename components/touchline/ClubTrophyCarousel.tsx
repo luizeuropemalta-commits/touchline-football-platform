@@ -69,9 +69,17 @@ function pageSizeForWidth(width: number, itemCount: number) {
   const cardWidth = 78;
   const gap = 9;
   const horizontalPadding = 16;
+  const arrowReservation = 76;
   const capacity = Math.max(1, Math.floor((width - horizontalPadding + gap) / (cardWidth + gap)));
-  const pageCount = Math.max(1, Math.ceil(itemCount / capacity));
-  return Math.max(1, Math.ceil(itemCount / pageCount));
+
+  // Keep every trophy card at its readable canonical size. Controls consume
+  // space only after there are more trophies than the row can show.
+  if (itemCount <= capacity) return itemCount;
+
+  return Math.max(
+    1,
+    Math.floor((width - horizontalPadding - arrowReservation + gap) / (cardWidth + gap)),
+  );
 }
 
 function splitIntoPages<T>(items: readonly T[], pageSize: number) {
