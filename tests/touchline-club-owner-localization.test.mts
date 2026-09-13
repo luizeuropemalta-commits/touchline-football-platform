@@ -14,7 +14,9 @@ test("My Club private controls localize their visible operational copy", () => {
   assert.match(renderer, /wallet: "Carteira"/);
   assert.match(renderer, /wallet: "Wallet"/);
   assert.match(renderer, /paymentPending: "Secure payment pending integration"/);
-  assert.match(renderer, /"View full collection"/);
+  assert.match(renderer, /xiRule: "11 posições"/);
+  assert.match(renderer, /xiRule: "11 positions"/);
+  assert.doesNotMatch(renderer, /"Ver coleção completa"|"View full collection"/);
   assert.match(renderer, /\{clubCopy\.addCredits\}/);
   assert.match(renderer, /"Build your XI by position"/);
   assert.doesNotMatch(renderer, />Gerir no Mercado de Cards</);

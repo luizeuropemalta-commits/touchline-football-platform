@@ -39,17 +39,17 @@ test("Arena uses the dynamic viewport without a conflicting root minimum or view
   );
 });
 
-test("ClubOwner collection rows use the canonical player profile helper", () => {
+test("My Club removes the retired collection while its retained featured card uses canonical profile navigation", () => {
   const ownerPage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
 
   assert.match(
     ownerPage,
     /publishedClubOwnerSquadCards = sortedClubOwnerSquadCards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/,
   );
-  assert.match(
-    ownerPage,
-    /publishedClubOwnerSquadCards\.map\(\(card, index\) => \{[\s\S]*?squadCardToExactPlayer\(card, \{ useSuppliedTier: true \}\)[\s\S]*?touchlinePlayerProfileHref\(player, locale, \{ previewTier: card\.cardTier \}\)[\s\S]*?<a key=\{card\.id\} href=\{profileHref\}/,
-  );
+  assert.match(ownerPage, /featuredVisual=\{!showPrivateClubControl && bestPlayerCard \?/);
+  assert.match(ownerPage, /squadCardToExactPlayer\(bestPlayerCard, \{ useSuppliedTier: true \}\)/);
+  assert.match(ownerPage, /touchlinePlayerProfileHref\(squadCardToExactPlayer\(bestPlayerCard, \{ useSuppliedTier: true \}\), locale, \{ previewTier: bestPlayerCard\.cardTier \}\)/);
+  assert.doesNotMatch(ownerPage, /<section className="club-owner-profile-trophy-gallery"|<section className="club-owner-profile-squad"/);
   assert.doesNotMatch(ownerPage, /\/club-owner\/luiz-lopez\?player=\$\{card\.id\}/);
 });
 
