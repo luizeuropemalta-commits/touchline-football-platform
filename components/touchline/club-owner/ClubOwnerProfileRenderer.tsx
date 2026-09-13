@@ -338,7 +338,9 @@ export default async function ClubOwnerProfileRenderer({
             avatarAlt={ownerIdentity.name}
             accent={CLUB_OWNER_TOUCHLINE_NEON}
             clubOwnerPortraitTrace
-            showCover={false}
+            // Authenticated My Club uses a concise, stadium-lit identity
+            // cover. Public profiles keep the quieter identity-only surface.
+            showCover={showPrivateClubControl}
             featuredLabel={isPortuguese ? "Melhor da semana" : "Best of the Week"}
             backgroundAccent={bestPlayerPalette.accent}
             backgroundSecondary={bestPlayerPalette.secondary}
@@ -347,7 +349,7 @@ export default async function ClubOwnerProfileRenderer({
               { label: locale === "pt-BR" ? "Cidade" : "City", value: ownerIdentity.city },
               { label: locale === "pt-BR" ? "Desde" : "Since", value: ownerIdentity.since },
             ]}
-            featuredVisual={bestPlayerCard ? (
+            featuredVisual={!showPrivateClubControl && bestPlayerCard ? (
               <div className="club-owner-best-player">
                 <span className="club-owner-best-player-card">
                   <TouchlineCardZoom
@@ -421,7 +423,7 @@ export default async function ClubOwnerProfileRenderer({
             </div>
           </TouchlineSocialProfileHeader>
 
-          <section className="club-owner-rank-deck" aria-label={t("rankings")}>
+          {!showPrivateClubControl ? <section className="club-owner-rank-deck" aria-label={t("rankings")}>
             <div className="club-owner-rank-title">
               <span><BarChart3 aria-hidden="true" /> {t("rankings")}</span>
               <strong>TouchLine England · 2026/27</strong>
@@ -443,7 +445,7 @@ export default async function ClubOwnerProfileRenderer({
                 <ArrowRight aria-hidden="true" />
               </a>
             </div>
-          </section>
+          </section> : null}
 
           {showPrivateClubControl ? (
             <section className="club-owner-private" aria-label={isPortuguese ? "Meu Clube" : "My Club"}>

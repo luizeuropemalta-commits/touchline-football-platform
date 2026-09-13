@@ -169,13 +169,14 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.match(zoomUsages, /tierLabel=\{touchlineCardTierName/);
 });
 
-test("ClubOwner identity has no cover and opts into its fixed-green circular perimeter trace", () => {
+test("ClubOwner keeps a quiet public identity while authenticated My Club gets its compact stadium ambience", () => {
   const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
   const social = source("components/touchline/social/TouchlineSocial.tsx");
   const socialCss = source("components/touchline/social/TouchlineSocial.module.css");
   const trace = source("components/touchline/social/ClubOwnerPortraitPerimeterTrace.tsx");
 
-  assert.match(profilePage, /showCover=\{false\}/);
+  assert.match(profilePage, /showCover=\{showPrivateClubControl\}/);
+  assert.match(profilePage, /featuredVisual=\{!showPrivateClubControl && bestPlayerCard/);
   assert.match(profilePage, /clubOwnerPortraitTrace/);
   assert.match(social, /ClubOwnerPortraitPerimeterTrace/);
   assert.match(trace, /data-club-owner-portrait-neon-trace="true"/);
