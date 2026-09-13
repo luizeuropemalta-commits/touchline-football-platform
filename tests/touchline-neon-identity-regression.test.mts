@@ -234,7 +234,7 @@ test("My Club profile keeps one factual summary surface without the retired rank
 
   assert.doesNotMatch(profilePage, /stats=\{ownerStats\}/);
   assert.doesNotMatch(profilePage, /className="club-owner-profile-club-control"/);
-  assert.match(profilePage, /className="club-owner-profile-collection-details"/);
+  assert.doesNotMatch(profilePage, /<section className="club-owner-profile-(?:collection-details|trophy-gallery)"/);
   assert.doesNotMatch(profilePage, /Posição do Meu Clube/);
   assert.doesNotMatch(profilePage, /club-owner-rank-deck/);
   assert.match(profilePage, /className="club-owner-wallet"/);
@@ -343,17 +343,10 @@ test("My Club keeps the profile surface focused on the squad without a public ti
   assert.doesNotMatch(ownerSource, /providerTeamId|ownerClub|visualImageUrl:\s*club\?\.logoUrl/);
 });
 
-test("ClubOwner showcase cards reuse zoom and keep profile navigation outside the card", () => {
+test("My Club keeps the XI as the only post-Gameweek collection surface", () => {
   const ownerSource = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
-  const showcase = ownerSource.slice(
-    ownerSource.indexOf('className="club-owner-profile-featured-cards"'),
-    ownerSource.indexOf('className="club-owner-profile-collection-details"'),
-  );
-
-  assert.match(showcase, /<TouchlineCardZoom/);
-  assert.match(showcase, /forceNeonActive/);
-  assert.match(showcase, /<a href=\{profileHref\}>\{card\.shortName\}<\/a>/);
-  assert.doesNotMatch(showcase, /showSocialMetrics(?:\s|\/|>)/);
+  assert.match(ownerSource, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\}/);
+  assert.doesNotMatch(ownerSource, /<section className="club-owner-profile-squad"/);
 });
 
 test("social profile header protects the ClubOwner name from the featured card on tablets", () => {

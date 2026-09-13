@@ -142,16 +142,12 @@ test("rendered identity and social namespaces come from the resolved ClubOwner",
   assert.doesNotMatch(rendererSource, /entityName="Luiz Lopez"/);
 });
 
-test("My Club capacity uses all authoritative active contracts, not only renderable published cards", () => {
+test("My Club displays XI capacity while preserving any authoritative legacy contracts", () => {
   assert.match(
     rendererSource,
     /const ownedContractCount = activeClubOwnerUser[\s\S]*?authoritativeRoster\?\.ok[\s\S]*?authoritativeRoster\.snapshot\.ownedContractCount[\s\S]*?: sortedClubOwnerSquadCards\.length/,
   );
-  assert.match(rendererSource, /const openContractSlotCount = ownedContractCount === null/);
-  assert.match(rendererSource, /\$\{ownedContractCount\}\/35/);
-  assert.match(rendererSource, /\$\{openContractSlotCount\} · \$\{clubCopy\.limit35\}/);
-  assert.doesNotMatch(
-    rendererSource,
-    /clubCopy\.contractSlots[\s\S]{0,120}35 - sortedClubOwnerSquadCards\.length/,
-  );
+  assert.match(rendererSource, /clubCopy\.xiCapacity[\s\S]{0,120}\{fantasySnapshot\?\.selections\.length \?\? 0\}\/11/);
+  assert.match(rendererSource, /ownedContractCount !== null && ownedContractCount > 11/);
+  assert.doesNotMatch(rendererSource, /openContractSlotCount|clubCopy\.limit35|\$\{ownedContractCount\}\/35/);
 });

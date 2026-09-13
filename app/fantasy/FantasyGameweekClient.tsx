@@ -154,6 +154,15 @@ function verticalPitchPosition(slot: TouchlineFormationGeometrySlot) {
   return { left: `${left}%`, top: `${top}%` };
 }
 
+/** The My Club selector uses the canonical formation geometry on a wide,
+ * television-style field: goalkeepers left, forwards right. */
+function horizontalMyClubPitchPosition(slot: TouchlineFormationGeometrySlot) {
+  return {
+    left: `${Math.min(89, Math.max(11, slot.x))}%`,
+    top: `${Math.min(86, Math.max(14, slot.y))}%`,
+  };
+}
+
 export default function FantasyGameweekClient({
   initialSnapshot,
   locale,
@@ -338,9 +347,9 @@ export default function FantasyGameweekClient({
       <div className={styles.myClubCommandGrid}>
         <section className={styles.myClubSquad} aria-label={pt ? "Seu XI por linhas" : "Your XI by lines"}>
           <header><div><span>{pt ? "ELENCO TITULAR" : "STARTING XI"}</span><strong>{selectedCount}/11</strong></div><button type="button" className={styles.viewToggle} onClick={() => setSquadView((current) => current === "squad" ? "tactical" : "squad")}>{squadView === "squad" ? (pt ? "Ver visão tática" : "View tactical layout") : (pt ? "Ver cards" : "View cards")}</button></header>
-          {squadView === "tactical" ? <TouchlinePitchSurface advertisingCampaign={TOUCHLINE_MARKET_HOUSE_CAMPAIGN} className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="vertical" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
+          {squadView === "tactical" ? <TouchlinePitchSurface advertisingCampaign={TOUCHLINE_MARKET_HOUSE_CAMPAIGN} className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="horizontal" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
             const card = selection ? catalogueById.get(selection.playerId) : null;
-            return <button key={slot.id} type="button" className={styles.myClubTacticalSlot} style={verticalPitchPosition(slot)} onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add")} ${slot.id}`}><span>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={56} /> : "+"}</span><b>{slot.id}</b></button>;
+            return <button key={slot.id} type="button" className={styles.myClubTacticalSlot} style={horizontalMyClubPitchPosition(slot)} onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add")} ${slot.id}`}><span>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={46} /> : <i>+</i>}</span><b>{slot.id}</b><small>{card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add")}</small></button>;
           })}</TouchlinePitchSurface> : <div className={styles.myClubCardRows}>{selectedCards.map(({ slot, selection }) => {
             const card = selection ? catalogueById.get(selection.playerId) : null;
             const active = activeSlot?.id === slot.id;

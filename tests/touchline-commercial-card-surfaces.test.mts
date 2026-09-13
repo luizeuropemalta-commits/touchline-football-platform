@@ -56,15 +56,12 @@ test("ClubOwner keeps card assets separate from the TC wallet and can present ed
   const arenaCopy = readFileSync(new URL("../lib/touchlineArena/i18n.ts", import.meta.url), "utf8");
 
   assert.match(clubOwner, /formatTouchlineCommercialCardTotal\(\{ numericPrice: squadCardValue, competition: "england" \}\)/);
-  assert.match(clubOwner, /formatTouchlineEditorialCardPrice/);
   assert.match(clubOwner, /formatTouchlineContractedCommercialCardPrice/);
   assert.match(clubOwner, /const publishedClubOwnerSquadCards = sortedClubOwnerSquadCards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/);
   assert.match(clubOwner, /loadTouchlineFantasySnapshot\(activeClubOwnerUser\)/);
   assert.match(clubOwner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.doesNotMatch(clubOwner, /selectSavedArenaStartingXi|partitionClubOwnerRoster/);
-  assert.match(clubOwner, /const startingShowcaseCards = publishedClubOwnerSquadCards\.slice\(0, 6\)/);
-  assert.match(clubOwner, /startingShowcaseCards\.map\(\(card, index\) =>/);
-  assert.match(clubOwner, /publishedClubOwnerSquadCards\.map\(\(card, index\) =>/);
+  assert.doesNotMatch(clubOwner, /startingShowcaseCards|<section className="club-owner-profile-squad"/);
   assert.doesNotMatch(clubOwner, /card\.editorialCard\?\.tierKey\s*\?\? \(card\.cardPriceAuthority === "active-contract"/);
   assert.doesNotMatch(clubOwner, /formatTouchlineVerifiedCommercialCardPrice/);
   assert.doesNotMatch(clubOwner, /walletBalanceTc \+ squadValueTc/);

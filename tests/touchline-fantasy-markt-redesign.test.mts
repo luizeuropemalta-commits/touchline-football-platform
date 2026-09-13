@@ -95,7 +95,10 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.guidePanel\{[\s\S]*?max-height:min\(680px,72dvh\)/);
   assert.doesNotMatch(styles, /\.guidePanel\{[\s\S]*?max-height:min\(760px,calc\(100dvh - 32px\)\)/);
   assert.match(styles, /\.pitchCard\{[\s\S]*?width:62px[\s\S]*?aspect-ratio:430 \/ 691/);
-  assert.match(client, /advertisingCampaign=\{TOUCHLINE_MARKET_HOUSE_CAMPAIGN\}[\s\S]*?orientation="vertical"[\s\S]*?surfaceVariant="premium-stadium"/);
+  assert.match(client, /className=\{styles\.myClubTacticalPitch\}[\s\S]*?orientation="horizontal"[\s\S]*?surfaceVariant="premium-stadium"/);
+  assert.match(client, /function horizontalMyClubPitchPosition[\s\S]*?left:[\s\S]*?slot\.x/);
+  assert.match(styles, /\.myClubTacticalPitch\{[\s\S]*?--pitch-line:rgba\(170,255,62[\s\S]*?aspect-ratio:105\/68/);
+  assert.match(styles, /@keyframes myClubPitchTrace/);
   assert.match(client, /function verticalPitchPosition[\s\S]*?100 - slot\.x/);
   assert.match(client, /slotAccepts\(activeSlot \?\? null, card\)[\s\S]*?cardClub\?\.teamId === selectedPlayerClub\?\.teamId/);
   assert.match(client, /function canonicalRosterRole[\s\S]*?role === "goalkeeper"[\s\S]*?role === "defender"[\s\S]*?role === "midfielder"[\s\S]*?role === "forward"/);

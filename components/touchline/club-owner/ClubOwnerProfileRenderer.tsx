@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import FantasyGameweekClient from "@/app/fantasy/FantasyGameweekClient";
@@ -31,7 +29,6 @@ import {
   formatTouchlineContractedCommercialCardPrice,
   resolveTouchlineContractedCommercialCardPrice,
 } from "@/lib/touchlineArena/commercial-card-pricing";
-import { formatTouchlineEditorialCardPrice } from "@/lib/touchlineArena/editorial-card-profile";
 import { normalizeTouchLineLocale, touchLineT } from "@/lib/touchlineArena/i18n";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import {
@@ -58,23 +55,10 @@ import {
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
 import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 
-const TOUCHLINE_ENGLAND_TROPHY =
-  "/touchlineArena/trophies/touchline-england-league-trophy-lion-cup-candidate-v4-text.png";
 const CLUB_OWNER_TOUCHLINE_NEON = "#a3ff12";
 const CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS = 8_000;
 type ClubOwnerWalletEntry = { amount_cents: number | null };
 type ClubOwnerAvatarProfile = { avatar_url?: unknown };
-
-const trophyGallery = [
-  {
-    id: "touchline-england-2026",
-    league: "TouchLine England League",
-    season: "2026/27",
-    status: "In progress",
-    points: "Legacy",
-    image: TOUCHLINE_ENGLAND_TROPHY,
-  },
-];
 
 function activeContractCardNumericPrice(card: {
   cardTier?: ClubOwnerSquadCard["cardTier"];
@@ -106,13 +90,6 @@ function activeContractCardPriceLabel(
       competition: "england",
       locale,
     });
-  }
-  return null;
-}
-
-function publicCardProfilePriceLabel(card: ClubOwnerSquadCard, locale: string) {
-  if (card.editorialCard) {
-    return formatTouchlineEditorialCardPrice(card.editorialCard.cardPrice, locale);
   }
   return null;
 }
@@ -267,15 +244,11 @@ export default async function ClubOwnerProfileRenderer({
     (second.seasonTotalRating ?? -1) - (first.seasonTotalRating ?? -1) || rankClubOwnerCards(first, second)
   ))[0] ?? null;
   const bestPlayerPalette = touchlineCardTierPalette(bestPlayerCard?.cardTier);
-  const startingShowcaseCards = publishedClubOwnerSquadCards.slice(0, 6);
   const ownedContractCount = activeClubOwnerUser
     ? authoritativeRoster?.ok
       ? authoritativeRoster.snapshot.ownedContractCount
       : null
     : sortedClubOwnerSquadCards.length;
-  const openContractSlotCount = ownedContractCount === null
-    ? null
-    : Math.max(0, 35 - ownedContractCount);
   const squadCardValue = sortedClubOwnerSquadCards.reduce(
     (sum, card) => sum + (activeContractCardNumericPrice(card) ?? 0),
     0,
@@ -292,17 +265,14 @@ export default async function ClubOwnerProfileRenderer({
   const isPortuguese = locale === "pt-BR";
   const clubCopy = isPortuguese ? {
     market: "Meu elenco", contractPlayers: "Escolha por posição e ajuste seu XI",
-    wallet: "Carteira", credits: "Créditos disponíveis", squadValue: "Valor contratado", contractSlots: "Vagas de contrato", addCredits: "Adicionar TC", addClubBalance: "Adicionar saldo ao clube",
+    wallet: "Carteira", credits: "TouchLine Credits", squadValue: "Valor comprometido", xiCapacity: "Capacidade do XI", xiRule: "11 posições", addCredits: "Adicionar TC", addClubBalance: "Adicionar saldo ao clube",
     paymentHold: "O crédito real será liberado somente pelo pagamento seguro e confirmado no servidor.", paymentPending: "Pagamento seguro em integração",
-    limit35: "Limite de 35",
   } : {
     market: "My squad", contractPlayers: "Choose by position and adjust your XI",
-    wallet: "Wallet", credits: "Available credits", squadValue: "Contracted value", contractSlots: "Contract slots", addCredits: "Add TC", addClubBalance: "Add club balance",
+    wallet: "Wallet", credits: "TouchLine Credits", squadValue: "Committed value", xiCapacity: "XI capacity", xiRule: "11 positions", addCredits: "Add TC", addClubBalance: "Add club balance",
     paymentHold: "Real credit is released only after secure, server-confirmed payment.", paymentPending: "Secure payment pending integration",
-    limit35: "35 limit",
   };
   const t = (key: Parameters<typeof touchLineT>[1]) => touchLineT(locale, key);
-  const localeSuffix = `?lang=${encodeURIComponent(locale)}`;
   const cardLabels = {
     nationality: t("nationalityShort"),
     totalRating: isPortuguese ? "Nota total" : "Total rating",
@@ -335,6 +305,7 @@ export default async function ClubOwnerProfileRenderer({
             // Authenticated My Club uses a concise, stadium-lit identity
             // cover. Public profiles keep the quieter identity-only surface.
             showCover={showPrivateClubControl}
+            coverVariant={showPrivateClubControl ? "stadium" : "standard"}
             featuredLabel={isPortuguese ? "Melhor da semana" : "Best of the Week"}
             backgroundAccent={bestPlayerPalette.accent}
             backgroundSecondary={bestPlayerPalette.secondary}
@@ -427,10 +398,11 @@ export default async function ClubOwnerProfileRenderer({
                 </details>
               </div>
               <div className="club-owner-wallet-metrics">
-                <div><span>{clubCopy.credits}</span><strong>{walletBalanceTc === null ? "—" : `${walletBalanceTc} TC`}</strong></div>
+                <div className="club-owner-wallet-credit"><span>{clubCopy.credits}</span><strong>{walletBalanceTc === null ? "—" : `${walletBalanceTc} TC`}</strong></div>
                 <div><span>{clubCopy.squadValue}</span><strong>{activeContractValueKnown ? formatTouchlineCommercialCardTotal({ numericPrice: squadCardValue, competition: "england" }) : "—"}</strong></div>
-                <div><span>{clubCopy.contractSlots}</span><strong>{ownedContractCount === null ? "—" : `${ownedContractCount}/35`}</strong><small>{openContractSlotCount === null ? "—" : `${openContractSlotCount} · ${clubCopy.limit35}`}</small></div>
+                <div><span>{clubCopy.xiCapacity}</span><strong>{fantasySnapshot?.selections.length ?? 0}/11</strong><small>{clubCopy.xiRule}</small></div>
               </div>
+              {ownedContractCount !== null && ownedContractCount > 11 ? <p className="club-owner-wallet-legacy-note">{isPortuguese ? `${ownedContractCount} contratos legados permanecem preservados e não ocupam vagas do XI.` : `${ownedContractCount} legacy contracts remain preserved and do not occupy XI places.`}</p> : null}
             </section>
           ) : null}
 
@@ -459,118 +431,6 @@ export default async function ClubOwnerProfileRenderer({
             </section>
           ) : null}
 
-          <section className="club-owner-profile-trophy-gallery" id="club-owner-trophies" aria-label={isPortuguese ? "Galeria de troféus do Meu Clube" : "My Club trophy gallery"}>
-            <div className="club-owner-profile-gallery-heading">
-              <span>{t("trophyGallery")}</span>
-              <strong>{t("leagueHistory")}</strong>
-            </div>
-            <div className="club-owner-profile-trophy-grid">
-              {trophyGallery.map((trophy) => (
-                <article key={trophy.id} className="club-owner-profile-trophy">
-                  <img src={trophy.image} alt={`${trophy.league} trophy`} draggable={false} />
-                  <div>
-                    <span>{trophy.league}</span>
-                    <strong>{trophy.season}</strong>
-                    <small>{t("inProgress")} / {trophy.points}</small>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-          <section className="club-owner-profile-squad" aria-label={isPortuguese ? "Cards de jogador do Meu Clube" : "My Club player cards"}>
-            <div className="club-owner-profile-squad-heading">
-              <div>
-                <span>{t("ownedPlayerCards")}</span>
-                <strong>{t("fullSquad")}</strong>
-              </div>
-              <div className="club-owner-profile-squad-actions">
-                <a href={`/touchline-player-card-rankings${localeSuffix}`}>{t("playerCardsRanking")}</a>
-                <small>{t("playerOrderDescription")}</small>
-              </div>
-            </div>
-            <div className="club-owner-profile-featured-cards">
-              {startingShowcaseCards.map((card, index) => {
-                const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
-                const profileHref = touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier });
-                const priceLabel = publicCardProfilePriceLabel(card, locale);
-                return (
-                  <article key={card.id} className="club-owner-profile-featured-card">
-                    <span className="club-owner-profile-card-rank">#{index + 1}</span>
-                    <div className="club-owner-profile-card-preview">
-                      <TouchlineCardZoom
-                        ariaLabel={`${locale === "pt-BR" ? "Ampliar card de" : "Open card for"} ${card.name}`}
-                        contractHref={card.cardPriceAuthority === "active-contract"
-                          ? touchlineArenaContractHref({
-                            locale,
-                            playerId: card.id,
-                            playerName: card.name,
-                            clubId: TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.name === card.clubName)?.teamId,
-                          })
-                          : undefined}
-                        contractLabel={locale === "pt-BR" ? "Contratar" : "Contract player"}
-                        contractValue={activeContractCardPriceLabel(card, locale) ?? undefined}
-                        contractTermLabel={card.cardPriceAuthority === "active-contract" ? (locale === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season") : undefined}
-                        tierAccent={touchlineCardTierPalette(card.cardTier).accent}
-                        tierLabel={touchlineCardTierName(card.cardTier, locale)}
-                        details={clubOwnerCardZoomDetails(card, locale, canEditCardEngine)}
-                        expandedContent={(
-                          <TouchlineEliteExactCard
-                            className="club-owner-profile-rendered-card"
-                            player={player}
-                            labels={cardLabels}
-                            imageLoading="lazy"
-                            layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
-                            rankingMode="preview"
-                            showCardActions
-                            showProfileAction
-                            forceNeonActive
-                          />
-                        )}
-                      >
-                        <TouchlineEliteExactCard
-                          className="club-owner-profile-rendered-card"
-                          player={player}
-                          labels={cardLabels}
-                          imageLoading="lazy"
-                          layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
-                          rankingMode="preview"
-                          showProfileAction={false}
-                          showSocialMetrics={false}
-                        />
-                      </TouchlineCardZoom>
-                    </div>
-                    <div className="club-owner-profile-card-meta">
-                      <a href={profileHref}>{card.shortName}</a>
-                      <span>{card.clubName}</span>
-                      <small>{priceLabel ? `${priceLabel} / ` : ""}{isPortuguese ? "Nota total" : "Total rating"} {card.seasonTotalRating ?? "—"}</small>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-            <details className="club-owner-profile-collection-details">
-              <summary>
-                <span>{isPortuguese ? "Ver coleção completa" : "View full collection"}</span>
-                <strong>{publishedClubOwnerSquadCards.length} {isPortuguese ? "cards" : "cards"}</strong>
-              </summary>
-              <div className="club-owner-profile-squad-table" aria-label={isPortuguese ? "Ranking completo do elenco" : "Full owned squad ranking"}>
-                {publishedClubOwnerSquadCards.map((card, index) => {
-                  const player = squadCardToExactPlayer(card, { useSuppliedTier: true });
-                  const profileHref = touchlinePlayerProfileHref(player, locale, { previewTier: card.cardTier });
-                  const priceLabel = publicCardProfilePriceLabel(card, locale);
-                  return (
-                    <a key={card.id} href={profileHref} className="club-owner-profile-player-row">
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      <strong>{card.shortName}</strong>
-                      <em>{card.position}</em>
-                      <small>{card.clubName}</small>
-                      {priceLabel ? <b>{priceLabel}</b> : <span aria-hidden="true" />}
-                    </a>
-                  );
-                })}
-              </div>
-            </details>
-          </section>
         </section>
       </section>
 
@@ -1062,6 +922,8 @@ export default async function ClubOwnerProfileRenderer({
         }
 
         .club-owner-wallet-metrics strong { color: #fff; font-size: 18px; line-height: 1; }
+        .club-owner-wallet-credit strong { color: #ffd75c; text-shadow: 0 0 18px rgba(255,215,92,.22); }
+        .club-owner-wallet-legacy-note { margin: 0; color: rgba(230,239,224,.6); font-size: 9px; font-weight: 800; line-height: 1.45; }
 
         .club-owner-market {
           margin: 18px;

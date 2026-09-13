@@ -49,6 +49,7 @@ export function TouchlineSocialProfileHeader({
   accent,
   stats = [],
   showCover = true,
+  coverVariant = "standard",
   featuredVisual,
   featuredLabel,
   backgroundAccent,
@@ -67,6 +68,8 @@ export function TouchlineSocialProfileHeader({
   accent: string;
   stats?: Array<{ label: string; value: string }>;
   showCover?: boolean;
+  /** Opt-in cover treatment for authenticated My Club only. */
+  coverVariant?: "standard" | "stadium";
   featuredVisual?: React.ReactNode;
   featuredLabel?: string;
   backgroundAccent?: string;
@@ -88,7 +91,7 @@ export function TouchlineSocialProfileHeader({
       } as React.CSSProperties}
     >
       {showCover ? (
-        <div className={styles.coverArt} aria-hidden="true">
+        <div className={`${styles.coverArt} ${coverVariant === "stadium" ? styles.coverStadium : ""}`} aria-hidden="true">
           <span />
         </div>
       ) : null}
