@@ -5,7 +5,7 @@ import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import FantasyGameweekClient from "@/app/fantasy/FantasyGameweekClient";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import ClubOwnerAvatarUpload from "@/components/touchline/ClubOwnerAvatarUpload";
-import { ArrowRight, BarChart3, Coins, WalletCards } from "lucide-react";
+import { Coins, WalletCards } from "lucide-react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
@@ -280,7 +280,6 @@ export default async function ClubOwnerProfileRenderer({
     (sum, card) => sum + (activeContractCardNumericPrice(card) ?? 0),
     0,
   );
-  const squadRatingTotal = sortedClubOwnerSquadCards.reduce((sum, card) => sum + (card.seasonTotalRating ?? 0), 0);
   const walletEntries = walletEntriesResponse.data;
   const walletBalanceTc = activeClubOwnerUser && walletEntries
     ? Math.max(0, Math.floor(walletEntries.reduce(
@@ -292,15 +291,11 @@ export default async function ClubOwnerProfileRenderer({
   const locale = normalizeTouchLineLocale(params.lang);
   const isPortuguese = locale === "pt-BR";
   const clubCopy = isPortuguese ? {
-    rankingUpdated: "Classificação oficial atualizada após cada rodada auditada.",
-    awaitingRound: "Aguardando 1ª rodada", officialPoints: "Nota TouchLine", openRanking: "Ver ranking completo",
     market: "Meu elenco", contractPlayers: "Escolha por posição e ajuste seu XI",
     wallet: "Carteira", credits: "Créditos disponíveis", squadValue: "Valor contratado", contractSlots: "Vagas de contrato", addCredits: "Adicionar TC", addClubBalance: "Adicionar saldo ao clube",
     paymentHold: "O crédito real será liberado somente pelo pagamento seguro e confirmado no servidor.", paymentPending: "Pagamento seguro em integração",
     limit35: "Limite de 35",
   } : {
-    rankingUpdated: "Official standings update after every audited round.",
-    awaitingRound: "Awaiting round 1", officialPoints: "TouchLine rating", openRanking: "View full ranking",
     market: "My squad", contractPlayers: "Choose by position and adjust your XI",
     wallet: "Wallet", credits: "Available credits", squadValue: "Contracted value", contractSlots: "Contract slots", addCredits: "Add TC", addClubBalance: "Add club balance",
     paymentHold: "Real credit is released only after secure, server-confirmed payment.", paymentPending: "Secure payment pending integration",
@@ -313,7 +308,6 @@ export default async function ClubOwnerProfileRenderer({
     totalRating: isPortuguese ? "Nota total" : "Total rating",
     cardPrice: locale === "pt-BR" ? "Preço do card" : "Card price",
   };
-  const ownerPositionLabel = locale === "pt-BR" ? "Posição do Meu Clube" : "My Club position";
   return (
     <main
       className="club-owner-profile"
@@ -423,46 +417,25 @@ export default async function ClubOwnerProfileRenderer({
             </div>
           </TouchlineSocialProfileHeader>
 
-          {!showPrivateClubControl ? <section className="club-owner-rank-deck" aria-label={t("rankings")}>
-            <div className="club-owner-rank-title">
-              <span><BarChart3 aria-hidden="true" /> {t("rankings")}</span>
-              <strong>TouchLine England · 2026/27</strong>
-              <small>{clubCopy.rankingUpdated}</small>
-            </div>
-            <div className="club-owner-rank-metrics">
-              <article>
-                <span>{ownerPositionLabel}</span>
-                <strong>—</strong>
-                <small>{clubCopy.awaitingRound}</small>
-              </article>
-              <article>
-                <span>{isPortuguese ? "Soma das notas" : "Rating sum"}</span>
-                <strong>{squadRatingTotal.toFixed(2)}</strong>
-                <small>{clubCopy.officialPoints}</small>
-              </article>
-              <a href={`/touchline-player-card-rankings${localeSuffix}`}>
-                {clubCopy.openRanking}
-                <ArrowRight aria-hidden="true" />
-              </a>
-            </div>
-          </section> : null}
+          {showPrivateClubControl ? (
+            <section className="club-owner-wallet" id="club-owner-finance" aria-label={clubCopy.wallet}>
+              <div className="club-owner-wallet-heading">
+                <span><WalletCards aria-hidden="true" /> {clubCopy.wallet}</span>
+                <details className="club-owner-add-funds">
+                  <summary><Coins aria-hidden="true" /> {clubCopy.addCredits}</summary>
+                  <div><strong>{clubCopy.addClubBalance}</strong><p>{clubCopy.paymentHold}</p><button type="button" disabled>{clubCopy.paymentPending}</button></div>
+                </details>
+              </div>
+              <div className="club-owner-wallet-metrics">
+                <div><span>{clubCopy.credits}</span><strong>{walletBalanceTc === null ? "—" : `${walletBalanceTc} TC`}</strong></div>
+                <div><span>{clubCopy.squadValue}</span><strong>{activeContractValueKnown ? formatTouchlineCommercialCardTotal({ numericPrice: squadCardValue, competition: "england" }) : "—"}</strong></div>
+                <div><span>{clubCopy.contractSlots}</span><strong>{ownedContractCount === null ? "—" : `${ownedContractCount}/35`}</strong><small>{openContractSlotCount === null ? "—" : `${openContractSlotCount} · ${clubCopy.limit35}`}</small></div>
+              </div>
+            </section>
+          ) : null}
 
           {showPrivateClubControl ? (
             <section className="club-owner-private" aria-label={isPortuguese ? "Meu Clube" : "My Club"}>
-              <section className="club-owner-wallet" id="club-owner-finance" aria-label={clubCopy.wallet}>
-                <div className="club-owner-wallet-heading">
-                  <span><WalletCards aria-hidden="true" /> {clubCopy.wallet}</span>
-                  <details className="club-owner-add-funds">
-                    <summary><Coins aria-hidden="true" /> {clubCopy.addCredits}</summary>
-                    <div><strong>{clubCopy.addClubBalance}</strong><p>{clubCopy.paymentHold}</p><button type="button" disabled>{clubCopy.paymentPending}</button></div>
-                  </details>
-                </div>
-                <div className="club-owner-wallet-metrics">
-                  <div><span>{clubCopy.credits}</span><strong>{walletBalanceTc === null ? "—" : `${walletBalanceTc} TC`}</strong></div>
-                  <div><span>{clubCopy.squadValue}</span><strong>{activeContractValueKnown ? formatTouchlineCommercialCardTotal({ numericPrice: squadCardValue, competition: "england" }) : "—"}</strong></div>
-                  <div><span>{clubCopy.contractSlots}</span><strong>{ownedContractCount === null ? "—" : `${ownedContractCount}/35`}</strong><small>{openContractSlotCount === null ? "—" : `${openContractSlotCount} · ${clubCopy.limit35}`}</small></div>
-                </div>
-              </section>
               {rosterResolution.state === "unavailable" ? (
                 <p
                   role="status"
@@ -892,7 +865,6 @@ export default async function ClubOwnerProfileRenderer({
           box-shadow: 0 0 8px rgba(163,255,18,.62), 0 0 24px rgba(163,255,18,.24);
         }
 
-        .club-owner-rank-deck,
         .club-owner-private {
           margin-top: 24px;
           overflow: hidden;
@@ -905,23 +877,6 @@ export default async function ClubOwnerProfileRenderer({
           backdrop-filter: blur(22px);
         }
 
-        .club-owner-rank-deck {
-          display: grid;
-          grid-template-columns: minmax(260px,.74fr) minmax(0,1.26fr);
-          align-items: stretch;
-        }
-
-        .club-owner-rank-title {
-          display: flex;
-          min-width: 0;
-          flex-direction: column;
-          justify-content: center;
-          padding: 28px 30px;
-          border-right: 1px solid rgba(255,255,255,.08);
-          background: radial-gradient(circle at 0 50%, rgba(163,255,18,.13), transparent 58%);
-        }
-
-        .club-owner-rank-title > span,
         .club-owner-private-heading > div:first-child > span,
         .club-owner-board-card-head > div > span {
           display: inline-flex;
@@ -934,85 +889,11 @@ export default async function ClubOwnerProfileRenderer({
           text-transform: uppercase;
         }
 
-        .club-owner-rank-title > span svg,
         .club-owner-private-heading svg,
         .club-owner-board-card-head svg {
           width: 16px;
           height: 16px;
           filter: drop-shadow(0 0 8px rgba(163,255,18,.72));
-        }
-
-        .club-owner-rank-title > strong {
-          margin-top: 10px;
-          font-size: clamp(21px,2.2vw,32px);
-          line-height: 1;
-        }
-
-        .club-owner-rank-title > small {
-          margin-top: 9px;
-          color: rgba(255,255,255,.48);
-          font-size: 10px;
-          line-height: 1.5;
-        }
-
-        .club-owner-rank-metrics {
-          display: grid;
-          grid-template-columns: repeat(2,minmax(0,1fr)) auto;
-          align-items: stretch;
-        }
-
-        .club-owner-rank-metrics article,
-        .club-owner-rank-metrics > a {
-          display: flex;
-          min-width: 0;
-          flex-direction: column;
-          justify-content: center;
-          padding: 22px 20px;
-          border-right: 1px solid rgba(255,255,255,.07);
-        }
-
-        .club-owner-rank-metrics article span,
-        .club-owner-rank-metrics article small {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .club-owner-rank-metrics article span {
-          color: rgba(122,231,255,.7);
-          font-size: 8px;
-          font-weight: 950;
-          text-transform: uppercase;
-        }
-
-        .club-owner-rank-metrics article strong {
-          margin-top: 7px;
-          color: white;
-          font-size: 23px;
-          line-height: 1;
-        }
-
-        .club-owner-rank-metrics article small {
-          margin-top: 7px;
-          color: rgba(255,255,255,.4);
-          font-size: 8px;
-        }
-
-        .club-owner-rank-metrics > a {
-          align-items: center;
-          gap: 7px;
-          border-right: 0;
-          color: #efffb0;
-          background: rgba(163,255,18,.055);
-          font-size: 9px;
-          font-weight: 950;
-          text-align: center;
-          text-decoration: none;
-        }
-
-        .club-owner-rank-metrics > a svg {
-          width: 16px;
-          height: 16px;
         }
 
         .club-owner-private {
@@ -2002,15 +1883,6 @@ export default async function ClubOwnerProfileRenderer({
         }
 
         @media (max-width: 1100px) {
-          .club-owner-rank-deck {
-            grid-template-columns: 1fr;
-          }
-
-          .club-owner-rank-title {
-            border-right: 0;
-            border-bottom: 1px solid rgba(255,255,255,.08);
-          }
-
           .club-owner-control-nav {
             grid-template-columns: repeat(3,minmax(0,1fr));
           }
@@ -2050,17 +1922,8 @@ export default async function ClubOwnerProfileRenderer({
             width: min(217px, 70vw);
           }
 
-          .club-owner-rank-title,
           .club-owner-private-heading {
             padding: 22px 18px;
-          }
-
-          .club-owner-rank-metrics {
-            grid-template-columns: repeat(2,minmax(0,1fr));
-          }
-
-          .club-owner-rank-metrics > a {
-            min-height: 62px;
           }
 
           .club-owner-private-heading {

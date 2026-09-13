@@ -315,6 +315,14 @@ export default function FantasyGameweekClient({
       selection: selections.find((entry) => entry.slotId === slot.id) ?? null,
     })) ?? [];
     const selectedCount = selectedCards.filter(({ selection }) => selection).length;
+    // Selecting a slot always opens the tactical selector. The premium card
+    // board is the default overview, while the field remains the deliberate,
+    // visible way to place or replace a player by position.
+    const openTacticalSelector = (slotId: string) => {
+      setActiveSlotId(slotId);
+      setVisibleStep("players");
+      setSquadView("tactical");
+    };
     return <section className={styles.myClubCommand} data-fantasy-context="my-club" aria-label={pt ? "Central do Meu Clube" : "My Club command centre"}>
       <header className={styles.myClubCommandHeader}>
         <div>
@@ -330,14 +338,14 @@ export default function FantasyGameweekClient({
       <div className={styles.myClubCommandGrid}>
         <section className={styles.myClubSquad} aria-label={pt ? "Seu XI por linhas" : "Your XI by lines"}>
           <header><div><span>{pt ? "ELENCO TITULAR" : "STARTING XI"}</span><strong>{selectedCount}/11</strong></div><button type="button" className={styles.viewToggle} onClick={() => setSquadView((current) => current === "squad" ? "tactical" : "squad")}>{squadView === "squad" ? (pt ? "Ver visão tática" : "View tactical layout") : (pt ? "Ver cards" : "View cards")}</button></header>
-          {squadView === "tactical" ? <TouchlinePitchSurface advertisingCampaign={TOUCHLINE_MARKET_HOUSE_CAMPAIGN} className={styles.myClubTacticalPitch} ariaLabel={pt ? "Visão tática opcional" : "Optional tactical view"} orientation="vertical" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
+          {squadView === "tactical" ? <TouchlinePitchSurface advertisingCampaign={TOUCHLINE_MARKET_HOUSE_CAMPAIGN} className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="vertical" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
             const card = selection ? catalogueById.get(selection.playerId) : null;
-            return <button key={slot.id} type="button" className={styles.myClubTacticalSlot} style={verticalPitchPosition(slot)} onClick={() => { setActiveSlotId(slot.id); setVisibleStep("players"); }} disabled={!editable}><span>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={56} /> : "+"}</span><b>{slot.id}</b></button>;
+            return <button key={slot.id} type="button" className={styles.myClubTacticalSlot} style={verticalPitchPosition(slot)} onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add")} ${slot.id}`}><span>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={56} /> : "+"}</span><b>{slot.id}</b></button>;
           })}</TouchlinePitchSurface> : <div className={styles.myClubCardRows}>{selectedCards.map(({ slot, selection }) => {
             const card = selection ? catalogueById.get(selection.playerId) : null;
             const active = activeSlot?.id === slot.id;
             return <article key={slot.id} data-active={active ? "true" : undefined} data-empty={!card ? "true" : undefined}>
-              <button type="button" onClick={() => { setActiveSlotId(slot.id); setVisibleStep("players"); }} disabled={!editable} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")} ${slot.id}`}>
+              <button type="button" onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")} ${slot.id}`}>
                 <span className={styles.myClubPosition}>{slot.id}</span>
                 {card ? <span className={styles.myClubCard}><TouchlineGameweekCard card={card} locale={locale} displayWidth={116} /></span> : <span className={styles.myClubEmptyCard}>+</span>}
                 <strong>{card?.shortName ?? (pt ? "Vaga aberta" : "Open slot")}</strong>

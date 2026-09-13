@@ -229,13 +229,15 @@ test("ClubHub line-up preserves the pitch and responsive card sizing contract", 
   assert.match(cardZoom, /document\.body/);
 });
 
-test("My Club profile keeps one source for each summary", () => {
+test("My Club profile keeps one factual summary surface without the retired ranking strip", () => {
   const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
 
   assert.doesNotMatch(profilePage, /stats=\{ownerStats\}/);
   assert.doesNotMatch(profilePage, /className="club-owner-profile-club-control"/);
   assert.match(profilePage, /className="club-owner-profile-collection-details"/);
-  assert.match(profilePage, /Posição do Meu Clube/);
+  assert.doesNotMatch(profilePage, /Posição do Meu Clube/);
+  assert.doesNotMatch(profilePage, /club-owner-rank-deck/);
+  assert.match(profilePage, /className="club-owner-wallet"/);
 });
 
 test("Arena places the ClubOwner profile first in both menus", () => {
