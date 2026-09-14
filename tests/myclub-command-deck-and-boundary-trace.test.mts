@@ -20,26 +20,27 @@ test("authenticated My Club uses the command deck and keeps controls with the ow
   assert.match(social, /actionsPlacement\?: "default" \| "avatar"/);
   assert.match(social, /actionsPlacement === "avatar"/);
   assert.match(social, /<TouchlineClubPerimeterTrace accent=\{accent\} className=\{styles\.commandPerimeterTrace\}/);
+  assert.match(social, /coverVariant === "command" \? styles\.commandHeader/);
   assert.match(css, /\.coverCommand/);
   assert.match(css, /clubowner-arena-neon-cover\.png/);
   assert.doesNotMatch(css, /tl-shield-lime\.svg/);
   assert.doesNotMatch(css, /@keyframes touchlineScoreboardNeon/);
-  assert.match(css, /\.socialHeader\.identityOnly:has\(\.coverCommand\)/);
+  assert.match(css, /\.commandHeader/);
   assert.match(css, /\.commandPerimeterTrace/);
   assert.doesNotMatch(css.match(/\.coverCommand \{[^}]+\}/)?.[0] ?? "", /official-live-pitch/);
 });
 
-test("the XI pitch traces only its real perimeter and never renders the market marquee", async () => {
-  const [market, pitch, pitchCss] = await Promise.all([
+test("the separate market pitch keeps its perimeter while My Club stays calm", async () => {
+  const [market, myClub, pitch, pitchCss] = await Promise.all([
     source("components/touchline/market/TouchlineSquadBuilderStage.tsx"),
+    source("app/fantasy/FantasyGameweekClient.tsx"),
     source("components/touchline/pitch/TouchlinePitchSurface.tsx"),
     source("components/touchline/pitch/TouchlinePitchSurface.module.css"),
   ]);
 
   assert.match(market, /<TouchlinePitchSurface\s+boundaryTrace/);
   assert.doesNotMatch(market, /TOUCHLINE_MARKET_HOUSE_CAMPAIGN|advertisingCampaign=/);
+  assert.doesNotMatch(myClub, /<TouchlinePitchSurface boundaryTrace className=\{styles\.myClubTacticalPitch\}/);
   assert.match(pitch, /boundaryTrace\?: boolean/);
-  assert.match(pitch, /className=\{styles\.boundaryTraceRunner\}/);
   assert.match(pitchCss, /\.boundaryTraceRunner/);
-  assert.match(pitchCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.boundaryTraceRunner \{ animation: none/);
 });

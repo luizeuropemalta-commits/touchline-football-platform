@@ -87,7 +87,7 @@ export function TouchlineSocialProfileHeader({
 }) {
   return (
     <section
-      className={`${styles.socialHeader} ${showCover ? "" : styles.identityOnly}`}
+      className={`${styles.socialHeader} ${showCover ? "" : styles.identityOnly} ${coverVariant === "command" ? styles.commandHeader : ""}`}
       style={{
         "--social-accent": accent,
         "--social-background-accent": backgroundAccent ?? accent,

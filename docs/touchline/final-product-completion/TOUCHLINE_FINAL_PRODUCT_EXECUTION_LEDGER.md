@@ -24,7 +24,8 @@ Full Product Recovery ledger without deleting its historical evidence.
 - **Visual follow-up:** the owner rejected a duplicate blinking logo and the
   detached black identity footer. The approved Arena image remains the only
   scoreboard mark, continues through the private identity area, and receives
-  the same decorative perimeter runner used by Live/ClubHub.
+  the same decorative perimeter runner used by Live/ClubHub. The tactical
+  pitch keeps static field lines; it has no travelling neon effect.
 
 ## 2026-08-25 Player Zoom transparent information layer — QA GREEN
 

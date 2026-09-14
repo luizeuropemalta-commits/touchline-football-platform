@@ -24,15 +24,9 @@
     linear-gradient(135deg, rgba(7,19,17,.98), rgba(2,8,9,.99) 58%);
 }
 
-/* The private My Club cover is one continuous Arena scene.  The identity
-   footer intentionally inherits the stadium rather than ending in a detached
-   black panel; the low-opacity fade is only there for the owner name. */
-.socialHeader.identityOnly:has(.coverCommand) {
-  background:
-    linear-gradient(180deg, rgba(1,7,5,.06) 34%, rgba(1,7,5,.24) 72%, rgba(1,7,5,.54) 100%),
-    url("/touchlineArena/my-club/clubowner-arena-neon-cover.png") center / cover no-repeat,
-    #020706;
-}
+/* My Club uses the approved Arena photograph for the entire header.  This
+   replaces the generic black footer, not the photograph itself. */
+.commandHeader { background: url("/touchlineArena/my-club/clubowner-arena-neon-cover.png") center / cover no-repeat, #020706; }
 
 .commandPerimeterTrace {
   --touchline-perimeter-radius: 30px;
@@ -101,10 +95,9 @@
 /* Private My Club cover: the approved shared TouchLine Arena stays behind
    every owner. Its scoreboard shield is part of the artwork itself; do not
    place a second animated mark over it. */
-.coverCommand { height: clamp(300px, 24vw, 360px); isolation: isolate; background: linear-gradient(180deg, rgba(1,7,5,.1), rgba(1,7,5,.16) 56%, rgba(1,7,5,.26) 100%), linear-gradient(90deg, rgba(1,7,5,.2), transparent 50%, rgba(1,7,5,.16)); }
-.coverCommand::after { opacity: .3; background: radial-gradient(ellipse at 50% 18%, color-mix(in srgb, var(--social-accent) 18%, transparent), transparent 20%), linear-gradient(180deg, transparent 48%, rgba(1,7,5,.16) 100%); background-size: 100% 100%; mask-image: none; animation: touchlineArenaHaze 7s ease-in-out infinite; }
+.coverCommand { height: clamp(300px, 24vw, 360px); isolation: isolate; background: url("/touchlineArena/my-club/clubowner-arena-neon-cover.png") center 9% / cover no-repeat, #020706; }
+.coverCommand::after { display:none; }
 .coverCommand span { display: none; }
-@keyframes touchlineArenaHaze { 0%,100% { opacity: .32; } 50% { opacity: .58; } }
 .socialIdentity { position: relative; z-index: 2; display: grid; grid-template-columns: 190px minmax(0,1fr) auto; gap: 28px; align-items: end; padding: 0 clamp(24px, 3vw, 44px) 32px; }
 .socialIdentity.hasCardVisual { grid-template-columns: 210px minmax(0,1fr) auto; align-items: center; }
 .socialIdentity.hasFeaturedVisual { grid-template-columns: 190px minmax(0,1fr) minmax(370px, 430px); gap: clamp(28px, 3.2vw, 52px); align-items: center; }
@@ -499,7 +492,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .coverCommand::after { animation: none; }
   .socialAvatar { transition: none; }
   .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"] { transform: none !important; }
   .socialAvatar [data-club-owner-portrait-neon-trace-run="true"] { animation: none !important; opacity: 0; }

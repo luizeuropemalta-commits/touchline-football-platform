@@ -367,21 +367,17 @@
 @media(prefers-reduced-motion:reduce){.myClubTacticalSlot:not(:disabled):hover>span{transform:none}}
 
 /* My Club field and player market: a single full-width football surface comes
-   before the club-filtered position market. The field owns the only running
-   trace; the compact card trace is intentionally suppressed here because it
-   cannot be calibrated against every reduced card frame at this scale. */
+   before the club-filtered position market. The field lines remain calm; no
+   moving neon runs inside this tactical surface. */
 .myClubCommandGrid{grid-template-columns:minmax(0,1fr);gap:22px}
 .myClubTacticalPitch{--pitch-line:rgba(170,255,62,.26)!important;--pitch-line-soft:rgba(170,255,62,.1)!important;width:calc(100% - 40px);max-width:1680px;margin:20px auto;border-color:rgba(170,255,62,.28)}
 .myClubTacticalPitch::after{content:none;animation:none}
-.myClubTacticalPitch [data-touchline-pitch-boundary-base=true]{stroke:rgba(170,255,62,.08);stroke-width:.8}
-.myClubTacticalPitch [data-touchline-pitch-boundary-run=true]{stroke:#e0ffa6;stroke-width:2.7;stroke-dasharray:19 81;filter:drop-shadow(0 0 6px rgba(224,255,166,1)) drop-shadow(0 0 20px rgba(108,255,55,.96));animation:myClubBoundaryTrace 7s linear infinite}
 .myClubTacticalPitch [data-touchline-card-neon-trace=true]{display:none}
 .myClubTacticalSlot{width:88px;gap:4px}
 .myClubTacticalSlot>span{width:56px}
 .myClubTacticalSlot>span>i{width:44px;font-size:1.45rem}
 .myClubTacticalSlot>b{max-width:84px;overflow:hidden;font-size:.54rem;text-overflow:ellipsis;white-space:nowrap}
 .myClubTacticalSlot>small{font-size:.46rem}
-@keyframes myClubBoundaryTrace{to{stroke-dashoffset:-100}}
 .myClubMarket{grid-template-columns:minmax(220px,.55fr) minmax(0,1fr);gap:16px;padding:20px}
 .myClubMarket>header{grid-column:1/-1}
 .myClubMarket .clubSelector{align-content:start;grid-column:1;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:0 6px}
@@ -396,4 +392,3 @@
 .myClubMarketResults article button{justify-self:center}
 @media(max-width:900px){.myClubMarket{grid-template-columns:1fr}.myClubMarket .clubSelector{grid-column:auto;grid-template-columns:repeat(10,minmax(0,1fr));padding:0}.myClubMarketResults{grid-column:auto;grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.myClubTacticalPitch{width:calc(100% - 20px);margin:10px auto}.myClubTacticalSlot{transform:translate(-50%,-50%) scale(.82)}.myClubMarketResults{grid-template-columns:repeat(2,minmax(0,1fr))}.myClubMarket .clubSelector{grid-template-columns:repeat(5,minmax(0,1fr))}}
-@media(prefers-reduced-motion:reduce){.myClubTacticalPitch [data-touchline-pitch-boundary-run=true]{animation:none;opacity:.7}}
