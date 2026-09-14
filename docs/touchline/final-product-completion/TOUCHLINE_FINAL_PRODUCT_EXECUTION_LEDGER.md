@@ -21,6 +21,10 @@ Full Product Recovery ledger without deleting its historical evidence.
   post-deploy acceptance gate.
 - **Rollback:** preserve QA baseline `f27a8780` / deployment
   `dpl_4Uqv89xDhbyNez9cgL5VxQBbEZaw` until the new SHA is verified.
+- **Visual follow-up:** the owner rejected a duplicate blinking logo and the
+  detached black identity footer. The approved Arena image remains the only
+  scoreboard mark, continues through the private identity area, and receives
+  the same decorative perimeter runner used by Live/ClubHub.
 
 ## 2026-08-25 Player Zoom transparent information layer — QA GREEN
 

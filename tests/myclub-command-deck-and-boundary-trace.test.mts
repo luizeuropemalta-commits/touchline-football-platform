@@ -19,10 +19,13 @@ test("authenticated My Club uses the command deck and keeps controls with the ow
   assert.match(social, /coverVariant\?: "standard" \| "stadium" \| "command"/);
   assert.match(social, /actionsPlacement\?: "default" \| "avatar"/);
   assert.match(social, /actionsPlacement === "avatar"/);
+  assert.match(social, /<TouchlineClubPerimeterTrace accent=\{accent\} className=\{styles\.commandPerimeterTrace\}/);
   assert.match(css, /\.coverCommand/);
   assert.match(css, /clubowner-arena-neon-cover\.png/);
-  assert.match(css, /tl-shield-lime\.svg/);
-  assert.match(css, /@keyframes touchlineScoreboardNeon/);
+  assert.doesNotMatch(css, /tl-shield-lime\.svg/);
+  assert.doesNotMatch(css, /@keyframes touchlineScoreboardNeon/);
+  assert.match(css, /\.socialHeader\.identityOnly:has\(\.coverCommand\)/);
+  assert.match(css, /\.commandPerimeterTrace/);
   assert.doesNotMatch(css.match(/\.coverCommand \{[^}]+\}/)?.[0] ?? "", /official-live-pitch/);
 });
 

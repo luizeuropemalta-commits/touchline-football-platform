@@ -14,6 +14,7 @@ import {
   UserPlus,
   Zap,
 } from "lucide-react";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import { ClubOwnerPortraitPerimeterTrace } from "./ClubOwnerPortraitPerimeterTrace";
 import { shareTouchlinePost, type TouchlineNativeShareResult } from "@/lib/touchlineArena/social-native-share";
 import styles from "./TouchlineSocial.module.css";
@@ -93,6 +94,7 @@ export function TouchlineSocialProfileHeader({
         "--social-background-secondary": backgroundSecondary ?? accent,
       } as React.CSSProperties}
     >
+      {coverVariant === "command" ? <TouchlineClubPerimeterTrace accent={accent} className={styles.commandPerimeterTrace} /> : null}
       {showCover ? (
         <div className={`${styles.coverArt} ${coverVariant === "stadium" ? styles.coverStadium : ""} ${coverVariant === "command" ? styles.coverCommand : ""}`} aria-hidden="true">
           <span />

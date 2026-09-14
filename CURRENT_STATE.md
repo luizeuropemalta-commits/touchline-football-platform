@@ -24,6 +24,9 @@
   candidate. The owner authorised exactly one Git-native QA publication;
   remote visual and authenticated QA remain post-deployment gates.
 - Known QA rollback baseline: `f27a8780` / `dpl_4Uqv89xDhbyNez9cgL5VxQBbEZaw`.
+- Owner-approved visual follow-up removes the duplicate overlaid scoreboard
+  logo, continues the approved stadium through the identity footer, and adds
+  the shared Live/ClubHub-style perimeter trace around the full My Club cover.
 
 ## My Club canonical surface — LOCAL ISOLATED PROPOSAL / REVIEW PENDING
 
