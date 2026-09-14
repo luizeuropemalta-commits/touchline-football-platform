@@ -374,16 +374,20 @@ export default function FantasyGameweekClient({
           <header><div><span>{pt ? "ELENCO TITULAR" : "STARTING XI"}</span><strong>{selectedCount}/11</strong></div><button type="button" className={styles.viewToggle} onClick={() => setSquadView((current) => current === "squad" ? "tactical" : "squad")}>{squadView === "squad" ? (pt ? "Ver visão tática" : "View tactical layout") : (pt ? "Ver cards" : "View cards")}</button></header>
           {squadView === "tactical" ? <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="horizontal" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
             const card = selection ? catalogueById.get(selection.playerId) : null;
-            return <button key={slot.id} type="button" className={styles.myClubTacticalSlot} style={horizontalMyClubPitchPosition(slot)} onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add")} ${slot.id}`}><span>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={56} /> : <i>+</i>}</span><b>{slot.id}</b><small>{card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add")}</small></button>;
+            const action = card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add");
+            return <div key={slot.id} className={styles.myClubTacticalSlot} style={horizontalMyClubPitchPosition(slot)}>
+              <span>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={96} /> : <i>+</i>}</span>
+              <b>{slot.id}</b>
+              <button type="button" onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${action} ${slot.id}`}>{action}</button>
+            </div>;
           })}</TouchlinePitchSurface> : <div className={styles.myClubCardRows}>{selectedCards.map(({ slot, selection }) => {
             const card = selection ? catalogueById.get(selection.playerId) : null;
             const active = activeSlot?.id === slot.id;
             return <article key={slot.id} data-active={active ? "true" : undefined} data-empty={!card ? "true" : undefined}>
-              <button type="button" onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")} ${slot.id}`}>
-                <span className={styles.myClubPosition}>{slot.id}</span>
-                {card ? <span className={styles.myClubCard}><TouchlineGameweekCard card={card} locale={locale} displayWidth={116} /></span> : <span className={styles.myClubEmptyCard}>+</span>}
-                <strong>{card?.shortName ?? (pt ? "Vaga aberta" : "Open slot")}</strong>
-              </button>
+              <span className={styles.myClubPosition}>{slot.id}</span>
+              {card ? <span className={styles.myClubCard}><TouchlineGameweekCard card={card} locale={locale} displayWidth={116} /></span> : <span className={styles.myClubEmptyCard}>+</span>}
+              <strong>{card?.shortName ?? (pt ? "Vaga aberta" : "Open slot")}</strong>
+              <button type="button" className={styles.myClubSelect} onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")} ${slot.id}`}>{card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")}</button>
               {card && editable ? <button className={styles.myClubRemove} type="button" onClick={() => removePlayer(selection!.playerId)} aria-label={`${pt ? "Remover" : "Remove"} ${card.name}`}>{pt ? "Remover" : "Remove"}</button> : null}
             </article>;
           })}</div>}
@@ -392,7 +396,7 @@ export default function FantasyGameweekClient({
           <header><span>{pt ? "SELEÇÃO DE JOGADORES" : "PLAYER SELECTION"}</span><h2>{activeSlot ? `${activeSlot.id} · ${activeSlot.allowedPositions.join(" / ")}` : (pt ? "Escolha uma posição" : "Choose a position")}</h2><p>{activeSlot ? (pt ? `${filtered.length} cards elegíveis para esta vaga.` : `${filtered.length} eligible cards for this slot.`) : (pt ? "Selecione uma posição no campo. Só aparecem cards compatíveis." : "Select a position on the pitch. Only compatible cards appear here.")}</p></header>
           <label className={styles.myClubSearch}><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={pt ? "Pesquisar jogador" : "Search player"} /></label>
           <CompactClubSelector selectedTeamId={selectedPlayerClub?.teamId ?? ""} onSelect={(club) => setPlayerClubTeamId(club.teamId)} locale={locale} />
-          <div className={styles.myClubMarketResults}>{filtered.slice(0, 8).map((card) => <article key={card.canonicalPlayerId ?? card.id}><span><TouchlineGameweekCard card={card} locale={locale} displayWidth={108} /></span><div><strong>{card.name}</strong><small>{card.position} · {card.clubName}</small><button type="button" disabled={!editable} onClick={() => selectMyClubPlayer(card)}>{selections.some((entry) => entry.slotId === activeSlot?.id) ? (pt ? "Substituir" : "Replace") : (pt ? "Escolher" : "Choose")}</button></div></article>)}{filtered.length === 0 ? <p>{pt ? "Nenhum card elegível para esta posição neste clube." : "No eligible card for this position at this club."}</p> : null}</div>
+          <div className={styles.myClubMarketResults}>{filtered.slice(0, 10).map((card) => <article key={card.canonicalPlayerId ?? card.id}><span><TouchlineGameweekCard card={card} locale={locale} displayWidth={126} /></span><div><strong>{card.name}</strong><small>{card.position}</small><em>{card.clubName}</em><button type="button" disabled={!editable} onClick={() => selectMyClubPlayer(card)}>{selections.some((entry) => entry.slotId === activeSlot?.id) ? (pt ? "Substituir" : "Replace") : (pt ? "Escolher" : "Choose")}</button></div></article>)}{filtered.length === 0 ? <p>{pt ? "Nenhum card elegível para esta posição neste clube." : "No eligible card for this position at this club."}</p> : null}</div>
         </aside>
       </div>
       <footer className={styles.myClubGameweekFooter}><div><span>{pt ? "GAMEWEEK" : "GAMEWEEK"}</span><strong>{lineupConfirmed ? (pt ? "XI confirmado" : "XI confirmed") : validation?.valid ? (pt ? "Pronto para confirmar" : "Ready to confirm") : `${selectedCount}/11`}</strong></div><div><small>{hasUnsavedChanges ? (pt ? "Alterações não salvas" : "Unsaved changes") : (pt ? "Elenco sincronizado" : "Squad synced")}</small><button type="button" disabled={!editable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{pt ? "Confirmar XI" : "Confirm XI"}</button></div></footer>

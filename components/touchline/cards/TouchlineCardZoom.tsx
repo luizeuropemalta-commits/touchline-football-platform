@@ -292,6 +292,9 @@ export default function TouchlineCardZoom({
       return;
     }
     if ((event.target as HTMLElement).closest("a,button")) return;
+    // Cards often live on selectable tactical surfaces. Opening the universal
+    // card profile must not also trigger the surrounding slot replacement.
+    event.stopPropagation();
     setIsOpen(true);
   }
 
@@ -311,6 +314,7 @@ export default function TouchlineCardZoom({
   function openFromKeyboard(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
+    event.stopPropagation();
     setIsOpen(true);
   }
 

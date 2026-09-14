@@ -7,7 +7,8 @@ Full Product Recovery ledger without deleting its historical evidence.
 
 - **Scope:** one isolated candidate refines only the authenticated My Club
   presentation and navigation: shared TouchLine Arena cover, restrained live
-  shield treatment, a real field-boundary runner, a larger position pitch,
+  shield treatment, a header perimeter trace, a larger position pitch with
+  static field lines,
   below-pitch club/player selection, compatible slot filtering and the
   authoritative 24-hour market-window countdown. Public profiles, account
   authority, roster writes, credits, migrations, payments and provider reads
@@ -19,13 +20,29 @@ Full Product Recovery ledger without deleting its historical evidence.
   production publication is authorised. Browser QA on the resulting deployed
   SHA, including authenticated desktop/mobile review, remains an explicit
   post-deploy acceptance gate.
-- **Rollback:** preserve QA baseline `f27a8780` / deployment
-  `dpl_4Uqv89xDhbyNez9cgL5VxQBbEZaw` until the new SHA is verified.
+- **Rollback:** preserve QA baseline
+  `4872a4f00aab36304550b478bd6dcd6fcecbb40e` until the new SHA is verified.
 - **Visual follow-up:** the owner rejected a duplicate blinking logo and the
   detached black identity footer. The approved Arena image remains the only
   scoreboard mark, continues through the private identity area, and receives
   the same decorative perimeter runner used by Live/ClubHub. The tactical
   pitch keeps static field lines; it has no travelling neon effect.
+- **Local follow-up awaiting publication:** tactical player cards are 96px
+  instead of 56px (+71%), surrounded by a 140px safe slot envelope so the
+  labels do not collide. Card click is reserved for the shared full profile
+  zoom; a separate compact control handles replace/add. The tier-coloured
+  card frame is a subdued static glow only; its animated runner remains off.
+  The below-pitch selector places the twenty club crests in two rows of ten,
+  centres the player search, then provides a five-column candidate shelf for
+  at least ten cards. Each candidate exposes its card, name, position and
+  club independently. This is presentation-only; compatibility and selected
+  club filtering still use the existing server-authoritative rule set.
+- **Identity readability refinement:** the approved Arena photograph remains
+  completely intact. Only the lower-left ClubOwner area receives a soft
+  charcoal-to-emerald radial veil behind the portrait and facts, with an
+  explicit fade before the pitch centre. It is not a rectangular panel and
+  does not cover the crowd, stadium lighting or scoreboard; controlled text
+  shadows keep the name and secondary facts legible over the shared image.
 
 ## 2026-08-25 Player Zoom transparent information layer — QA GREEN
 

@@ -5,6 +5,7 @@ import test from "node:test";
 const client = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
 const owner = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
+const socialStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocial.module.css", import.meta.url), "utf8");
 
 test("My Club renders a pitch-first command centre instead of the Gameweek wizard", () => {
   assert.match(client, /if \(embedded\) \{/);
@@ -31,21 +32,41 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /<CompactClubSelector selectedTeamId=\{selectedPlayerClub\?\.teamId/);
   assert.match(embedded, /id="my-club-player-selection"/);
   assert.match(embedded, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
-  assert.match(embedded, /displayWidth=\{56\}/);
+  assert.match(embedded, /displayWidth=\{96\}/);
+  assert.match(embedded, /className=\{styles\.myClubTacticalSlot\}/);
+  assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} compact displayWidth=\{96\} \/>/);
+  assert.match(embedded, /<button type="button" onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(embedded, /selectMyClubPlayer\(card\)/);
+  assert.match(embedded, /filtered\.slice\(0, 10\)/);
+  assert.match(embedded, /<small>\{card\.position\}<\/small><em>\{card\.clubName\}<\/em>/);
   assert.match(styles, /\.myClubCardRows\{display:grid/);
   assert.match(styles, /\.myClubCard\{display:block/);
   assert.match(styles, /\.myClubMarket\{display:grid/);
   assert.match(styles, /\.myClubMarketResults\{grid-template-columns:repeat\(2/);
   assert.match(styles, /\.myClubCommandGrid\{display:grid/);
   assert.doesNotMatch(styles, /data-touchline-pitch-boundary-run=true/);
-  assert.match(styles, /data-touchline-card-neon-trace=true\]\{display:none/);
+  assert.match(styles, /data-touchline-card-neon-trace=true\]\{display:block;opacity:\.38/);
+  assert.match(styles, /data-touchline-card-neon-trace-run=true\]\{display:none/);
+  assert.match(styles, /\.myClubTacticalSlot>span\{width:96px\}/);
+  assert.match(styles, /\.myClubMarket \.myClubSearch\{grid-column:1\/-1;width:min\(100%,620px\);justify-self:center\}/);
+  assert.match(styles, /\.myClubMarket \.clubSelector\{align-content:start;grid-column:1\/-1;grid-template-columns:repeat\(10/);
+  assert.match(styles, /\.myClubMarketResults\{grid-column:1\/-1;grid-template-columns:repeat\(5/);
+  assert.match(styles, /\.myClubMarketResults article strong\{overflow:hidden;max-width:100%;color:#f7fff2/);
   assert.match(styles, /@media\(max-width:700px\).*?\.myClubCardRows\{grid-template-columns:repeat\(2/m);
 });
 
 test("My Club keeps ownership actions private and visitor follow controls separate", () => {
   assert.match(owner, /showPrivateClubControl \? <ClubOwnerAvatarUpload locale=\{locale\} \/> : <TouchlineSocialProfileActions/);
   assert.match(owner, /actionsPlacement=\{showPrivateClubControl \? "avatar" : "default"\}/);
+});
+
+test("My Club keeps the Arena cover visible while protecting owner identity readability", () => {
+  assert.match(socialStyles, /clubowner-arena-neon-cover\.png/);
+  assert.match(socialStyles, /\.commandHeader \.socialIdentity::before\s*\{\s*content:""; position:absolute; z-index:0/);
+  assert.match(socialStyles, /radial-gradient\(ellipse at 22% 70%,rgba\(0,4,5,\.96\)/);
+  assert.match(socialStyles, /width:min\(63%,900px\)/);
+  assert.match(socialStyles, /\.commandHeader \.socialIdentity > \* \{ position:relative; z-index:1; \}/);
+  assert.match(socialStyles, /\.commandHeader \.socialName h1 \{ text-shadow:/);
 });
 
 test("My Club removes the ranking strip and puts factual wallet data directly after identity", () => {

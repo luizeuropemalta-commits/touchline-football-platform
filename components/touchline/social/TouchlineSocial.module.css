@@ -98,6 +98,16 @@
 .coverCommand { height: clamp(300px, 24vw, 360px); isolation: isolate; background: url("/touchlineArena/my-club/clubowner-arena-neon-cover.png") center 9% / cover no-repeat, #020706; }
 .coverCommand::after { display:none; }
 .coverCommand span { display: none; }
+/* The owner identity needs a dependable reading zone without cutting a dark
+   rectangle across the shared Arena photograph. This soft lower-left veil
+   dissolves into the pitch before the image's centre, leaving the crowd,
+   stadium light and scoreboard composition visible. */
+.commandHeader .socialIdentity { isolation:isolate; }
+.commandHeader .socialIdentity::before { content:""; position:absolute; z-index:0; bottom:-40px; left:-56px; width:min(63%,900px); height:clamp(220px,19vw,300px); border-radius:0 58% 58% 0; pointer-events:none; background:radial-gradient(ellipse at 22% 70%,rgba(0,4,5,.96) 0 19%,rgba(0,5,6,.88) 41%,rgba(0,8,7,.62) 62%,rgba(0,11,8,.2) 78%,transparent 100%),linear-gradient(90deg,rgba(0,3,4,.8),transparent 82%); filter:blur(7px); }
+.commandHeader .socialIdentity > * { position:relative; z-index:1; }
+.commandHeader .socialName { text-shadow:0 2px 18px rgba(0,0,0,.9); }
+.commandHeader .socialName h1 { text-shadow:0 3px 24px rgba(0,0,0,.96),0 0 1px rgba(255,255,255,.55); }
+.commandHeader .socialName p { color:rgba(244,255,239,.78); text-shadow:0 2px 12px rgba(0,0,0,.96); }
 .socialIdentity { position: relative; z-index: 2; display: grid; grid-template-columns: 190px minmax(0,1fr) auto; gap: 28px; align-items: end; padding: 0 clamp(24px, 3vw, 44px) 32px; }
 .socialIdentity.hasCardVisual { grid-template-columns: 210px minmax(0,1fr) auto; align-items: center; }
 .socialIdentity.hasFeaturedVisual { grid-template-columns: 190px minmax(0,1fr) minmax(370px, 430px); gap: clamp(28px, 3.2vw, 52px); align-items: center; }
