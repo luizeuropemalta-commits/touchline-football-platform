@@ -66,9 +66,9 @@ export default function TouchlinePitchSurface({
     >
       <span className={styles.boundary} aria-hidden="true" />
       {boundaryTrace ? (
-        <svg className={styles.boundaryTrace} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <rect className={styles.boundaryTraceBase} x="5" y="5" width="90" height="90" pathLength="100" />
-          <rect className={styles.boundaryTraceRunner} x="5" y="5" width="90" height="90" pathLength="100" />
+        <svg className={styles.boundaryTrace} data-touchline-pitch-boundary-trace="true" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <rect className={styles.boundaryTraceBase} data-touchline-pitch-boundary-base="true" x="5" y="5" width="90" height="90" pathLength="100" />
+          <rect className={styles.boundaryTraceRunner} data-touchline-pitch-boundary-run="true" x="5" y="5" width="90" height="90" pathLength="100" />
         </svg>
       ) : null}
       <span className={styles.halfway} aria-hidden="true" />

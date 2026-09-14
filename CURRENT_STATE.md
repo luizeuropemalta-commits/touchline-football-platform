@@ -1,5 +1,30 @@
 # TouchLine Current State
 
+## My Club premium field and Arena cover — QA RELEASE CANDIDATE / LOCAL GREEN
+
+- The single customer-facing `/my-club` route now combines the private My Club
+  identity, the canonical position-first player market and the Starting XI.
+  The owner-approved shared TouchLine Arena cover has restrained scoreboard
+  shield illumination; it does not alter public ClubOwner profiles or any
+  authentication, roster, credit, transaction or database authority.
+- The My Club pitch has one real boundary trace rather than a detached card
+  outline. Base pitch lines remain subdued while the runner follows the exact
+  field perimeter. Selecting a slot moves the customer to the eligible player
+  chooser below the pitch; adding a compatible player returns to the field.
+  The existing server rules remain the authority for eleven slots and
+  position eligibility.
+- The market window clock now begins its live H:M:S countdown only in the
+  final 24 hours before a published opening or closing boundary. Outside that
+  interval it shows the next authoritative state and date instead of a
+  fabricated five-minute timer.
+- Local evidence: complete suite `1741/1741`, canonical release suite
+  `1713/1713`, TypeScript, ESLint, production build (`143/143` routes),
+  governance checks and whitespace validation pass. No migration, database
+  write, environment change, social dispatch or Production action is in this
+  candidate. The owner authorised exactly one Git-native QA publication;
+  remote visual and authenticated QA remain post-deployment gates.
+- Known QA rollback baseline: `f27a8780` / `dpl_4Uqv89xDhbyNez9cgL5VxQBbEZaw`.
+
 ## My Club canonical surface — LOCAL ISOLATED PROPOSAL / REVIEW PENDING
 
 - The dedicated local branch `codex/clubowner-market-layout-20260913` makes

@@ -3,6 +3,25 @@
 This is the sole authoritative continuation ledger. It supersedes the former
 Full Product Recovery ledger without deleting its historical evidence.
 
+## 2026-09-14 My Club premium cover and position market — QA candidate
+
+- **Scope:** one isolated candidate refines only the authenticated My Club
+  presentation and navigation: shared TouchLine Arena cover, restrained live
+  shield treatment, a real field-boundary runner, a larger position pitch,
+  below-pitch club/player selection, compatible slot filtering and the
+  authoritative 24-hour market-window countdown. Public profiles, account
+  authority, roster writes, credits, migrations, payments and provider reads
+  are not expanded.
+- **Evidence:** local complete tests `1741/1741`, canonical release tests
+  `1713/1713`, TypeScript, ESLint, production build (`143/143` routes),
+  governance checks and diff whitespace checks passed. The owner approved the
+  visual direction and authorised one Git-native publication to `qa`; no
+  production publication is authorised. Browser QA on the resulting deployed
+  SHA, including authenticated desktop/mobile review, remains an explicit
+  post-deploy acceptance gate.
+- **Rollback:** preserve QA baseline `f27a8780` / deployment
+  `dpl_4Uqv89xDhbyNez9cgL5VxQBbEZaw` until the new SHA is verified.
+
 ## 2026-08-25 Player Zoom transparent information layer — QA GREEN
 
 - **Scope:** commit `41f404c` removes only the green-tinted visual fills from the shared identity, performance and compact-stat panels. It preserves the card, backdrop, text, icon, rating, border, accessibility and full-performance contracts; no football, scoring, provider, database, Card Engine or Production boundary changed.

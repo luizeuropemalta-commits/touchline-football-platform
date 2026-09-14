@@ -30,7 +30,7 @@ test("My Club opens pitch-first while preserving strict position-only replacemen
   assert.match(market, /squadView === "tactical" \? <TouchlinePitchSurface/);
   assert.match(market, /className=\{styles\.squadBoard\}/);
   assert.match(market, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
-  assert.match(market, /return setFeedback\(pt \? "Este card não é elegível para a vaga selecionada/);
+  assert.match(market, /setFeedback\(pt \? "Este card não é elegível para a vaga selecionada/);
   assert.match(market, /replaceTouchlineFantasyPlayerAtSlot/);
   assert.match(market, /removeTouchlineFantasyPlayerFromSlot/);
   assert.match(owner, /club-owner-wallet/);

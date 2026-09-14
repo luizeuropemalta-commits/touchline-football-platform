@@ -79,11 +79,15 @@
 .coverStadium::before { inset: 0; width: auto; aspect-ratio: auto; border: 0; border-radius: 0; background: radial-gradient(ellipse at 75% 8%, color-mix(in srgb, var(--social-accent) 29%, transparent), transparent 22%), linear-gradient(90deg, transparent, rgba(255,255,255,.06) 49.8%, transparent 50.2%); box-shadow: none; transform: none; }
 .coverStadium::after { opacity: .7; background: linear-gradient(90deg, rgba(255,255,255,.07), transparent 18% 82%, rgba(255,255,255,.04)), linear-gradient(180deg, transparent 38%, rgba(2,8,7,.88)); background-size: auto; mask-image: none; }
 .coverStadium span { right: 10%; bottom: 20%; box-shadow: 0 0 10px var(--social-accent), 0 0 40px color-mix(in srgb, var(--social-accent) 68%, transparent), -48px 18px 0 -2px color-mix(in srgb, var(--social-accent) 52%, transparent), -48px 18px 22px color-mix(in srgb, var(--social-accent) 24%, transparent); }
-/* Private My Club cover: a restrained black command deck, not a stadium photo. */
-.coverCommand { height: clamp(280px, 23vw, 320px); background: radial-gradient(ellipse at 82% 50%, color-mix(in srgb, var(--social-accent) 15%, transparent), transparent 32%), linear-gradient(90deg, rgba(0,0,0,.96), rgba(3,13,10,.72) 50%, rgba(0,0,0,.94)), repeating-linear-gradient(90deg, transparent 0 9.8%, rgba(184,255,199,.035) 9.9% 10%), linear-gradient(180deg, #07110c, #020706 72%); }
-.coverCommand::before { inset: 18% 12% auto auto; width: min(38vw, 520px); aspect-ratio: 3.8; border-color: color-mix(in srgb, var(--social-accent) 16%, transparent); border-radius: 50%; box-shadow: 0 0 0 14px color-mix(in srgb, var(--social-accent) 2%, transparent), 0 0 58px color-mix(in srgb, var(--social-accent) 8%, transparent); transform: rotate(-9deg); }
-.coverCommand::after { opacity: .55; background: linear-gradient(90deg, transparent 27%, rgba(192,255,210,.06) 27.08% 27.18%, transparent 27.28%), linear-gradient(0deg, transparent 49.75%, rgba(192,255,210,.055) 49.85% 50.15%, transparent 50.25%); background-size: 100% 100%; mask-image: linear-gradient(90deg, transparent, black 28%, black 72%, transparent); }
-.coverCommand span { right: 8.5%; bottom: 27%; width: 6px; height: 6px; box-shadow: 0 0 8px var(--social-accent), 0 0 28px color-mix(in srgb, var(--social-accent) 70%, transparent), -74px 20px 0 -2px color-mix(in srgb, var(--social-accent) 60%, transparent), -74px 20px 18px color-mix(in srgb, var(--social-accent) 22%, transparent); }
+/* Private My Club cover: the shared TouchLine Arena stays behind every owner.
+   The scoreboard mark has its own restrained neon cycle, so the stadium feels
+   alive without competing with the identity area below. */
+.coverCommand { height: clamp(300px, 24vw, 360px); isolation: isolate; background: linear-gradient(180deg, rgba(1,7,5,.46), rgba(1,7,5,.66) 46%, rgba(1,7,5,.97) 100%), linear-gradient(90deg, rgba(1,7,5,.56), rgba(1,7,5,.08) 50%, rgba(1,7,5,.5)), url("/touchlineArena/my-club/clubowner-arena-neon-cover.png") center 9% / cover no-repeat, #020706; }
+.coverCommand::before { content: ""; inset: clamp(21px,2.2vw,38px) auto auto 50%; width: clamp(58px,4.4vw,84px); height: clamp(67px,5.1vw,98px); border: 0; border-radius: 0; background: url("/touchlineArena/brand/tl-shield-lime.svg") center / contain no-repeat; box-shadow: none; transform: translateX(-50%); filter: drop-shadow(0 0 3px rgba(220,255,175,.92)) drop-shadow(0 0 13px rgba(170,255,62,.82)) drop-shadow(0 0 32px rgba(76,214,43,.5)); animation: touchlineScoreboardNeon 5.8s ease-in-out infinite; }
+.coverCommand::after { opacity: .46; background: radial-gradient(ellipse at 50% 18%, color-mix(in srgb, var(--social-accent) 24%, transparent), transparent 20%), linear-gradient(180deg, transparent 40%, rgba(1,7,5,.38) 100%); background-size: 100% 100%; mask-image: none; animation: touchlineArenaHaze 7s ease-in-out infinite; }
+.coverCommand span { display: none; }
+@keyframes touchlineScoreboardNeon { 0%,100% { opacity: .52; filter: drop-shadow(0 0 2px rgba(220,255,175,.72)) drop-shadow(0 0 8px rgba(170,255,62,.48)); } 24% { opacity: 1; filter: drop-shadow(0 0 4px rgba(230,255,197,1)) drop-shadow(0 0 18px rgba(170,255,62,.96)) drop-shadow(0 0 44px rgba(76,214,43,.72)); } 61% { opacity: .42; filter: drop-shadow(0 0 2px rgba(220,255,175,.6)) drop-shadow(0 0 7px rgba(170,255,62,.36)); } 82% { opacity: .86; filter: drop-shadow(0 0 3px rgba(220,255,175,.9)) drop-shadow(0 0 14px rgba(170,255,62,.7)); } }
+@keyframes touchlineArenaHaze { 0%,100% { opacity: .32; } 50% { opacity: .58; } }
 .socialIdentity { position: relative; z-index: 2; display: grid; grid-template-columns: 190px minmax(0,1fr) auto; gap: 28px; align-items: end; padding: 0 clamp(24px, 3vw, 44px) 32px; }
 .socialIdentity.hasCardVisual { grid-template-columns: 210px minmax(0,1fr) auto; align-items: center; }
 .socialIdentity.hasFeaturedVisual { grid-template-columns: 190px minmax(0,1fr) minmax(370px, 430px); gap: clamp(28px, 3.2vw, 52px); align-items: center; }
@@ -478,6 +482,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .coverCommand::before, .coverCommand::after { animation: none; }
   .socialAvatar { transition: none; }
   .socialAvatar[data-club-owner-portrait-trace="touchline-logo-green"] { transform: none !important; }
   .socialAvatar [data-club-owner-portrait-neon-trace-run="true"] { animation: none !important; opacity: 0; }

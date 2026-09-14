@@ -119,7 +119,9 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /resolveTouchlineFantasyMarketClock/);
   assert.match(client, /Mercado fecha em|Market closes in/);
   assert.match(client, /Mercado reabre em|Market reopens in/);
-  assert.match(client, /5 min após o fim da rodada|5 min after the Gameweek ends/);
+  assert.match(client, /const countdownWindowMs = 24 \* 60 \* 60 \* 1_000/);
+  assert.match(client, /O cronômetro inicia 24h antes|The countdown starts 24 hours before/);
+  assert.match(client, /AGUARDANDO RESULTADOS|AWAITING RESULTS/);
   assert.doesNotMatch(client, /GAMEWEEK RATING/);
   assert.match(styles, /\.marketClock\{[\s\S]*?min-width:250px[\s\S]*?overflow:hidden/);
   assert.match(styles, /\.clockDigits\{[\s\S]*?font-variant-numeric:tabular-nums/);

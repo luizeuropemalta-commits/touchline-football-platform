@@ -27,12 +27,19 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(client, /setSquadView\("tactical"\)/);
   assert.match(client, /onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(client, /<TouchlinePitchSurface boundaryTrace className=\{styles\.myClubTacticalPitch\}/);
-  assert.doesNotMatch(client.slice(client.indexOf("if (embedded) {"), client.indexOf('className={styles.shell}')), /CompactClubSelector/);
+  const embedded = client.slice(client.indexOf("if (embedded) {"), client.indexOf('className={styles.shell}'));
+  assert.match(embedded, /<CompactClubSelector selectedTeamId=\{selectedPlayerClub\?\.teamId/);
+  assert.match(embedded, /id="my-club-player-selection"/);
+  assert.match(embedded, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
+  assert.match(embedded, /displayWidth=\{56\}/);
+  assert.match(embedded, /selectMyClubPlayer\(card\)/);
   assert.match(styles, /\.myClubCardRows\{display:grid/);
   assert.match(styles, /\.myClubCard\{display:block/);
   assert.match(styles, /\.myClubMarket\{display:grid/);
   assert.match(styles, /\.myClubMarketResults\{grid-template-columns:repeat\(2/);
   assert.match(styles, /\.myClubCommandGrid\{display:grid/);
+  assert.match(styles, /data-touchline-pitch-boundary-run=true/);
+  assert.match(styles, /data-touchline-card-neon-trace=true\]\{display:none/);
   assert.match(styles, /@media\(max-width:700px\).*?\.myClubCardRows\{grid-template-columns:repeat\(2/m);
 });
 
