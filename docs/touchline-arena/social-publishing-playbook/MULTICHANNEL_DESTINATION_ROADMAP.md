@@ -1,14 +1,26 @@
 # Multichannel Destination Roadmap
 
 Status: **design only; no account connection or destination adapter active**
-Authority: **Luiz Lopez, 2026-08-31, Europe/Malta**
-Current priority: **ACTIVE PRIORITY — Instagram and modules 041–046**
-Next adapter: **NEXT — Facebook Page, only after Instagram is stable and measured**
+Current authority: **Luiz Lopez, 2026-09-14, Europe/Malta — approval in Admin Social Studio**
+Current product scope: **Instagram AND Facebook required; both integrations remain disabled/unverified**
+
+The earlier 2026-08-31 order, “Instagram first; Facebook Page only after
+Instagram is stable and measured”, is **SUPERSEDED** by the owner's explicit
+14 September decision. It is retained below as historical rollout context, not
+as the current product gate. This supersession does not connect an account,
+approve an adapter, authorise OAuth, apply a migration or enable publication.
+
+The current Studio catalogue defines `allowedSurfaces` explicitly per artwork.
+Feed, Stories or both are independent owner choices per type and network; all
+plans default unselected and paused. Eligible review surfaces are not proof of
+an existing video, approval or platform support. Club Feed is available only
+for confirmed `BOTH_CLUBS` or `SUBJECT_CLUB` destinations; `PENDING` destinations
+cannot acquire an approval/plan record. ClubOwner has no feed in this scope.
 
 | Destination | Product status | Runtime work status |
 |---|---|---|
-| Instagram | `ACTIVE PRIORITY` | Complete the 041–046 family first; outbound still separately gated |
-| Facebook Page | `NEXT` | Separate adapter only after Instagram stabilisation and measurement |
+| Instagram | `CURRENT REQUIRED / DISABLED` | Approval desk required; official integration and outbound independently gated |
+| Facebook Page | `CURRENT REQUIRED / DISABLED` | Approval desk required; separate official integration not implemented or activated |
 | Threads | `DOCUMENTED / DISABLED` | No schema, OAuth, credential, API or implementation work |
 | X | `DOCUMENTED / DISABLED` | No schema, OAuth, credential, API or implementation work |
 | TikTok | `DOCUMENTED / DISABLED` | No schema, OAuth, credential, API or implementation work |
@@ -43,8 +55,9 @@ DTOs, logs, captions, artefacts or shared destination configuration.
 
 ## Rollout phases
 
-### Phase A — Instagram, then Facebook Page
+### Historical Phase A — Instagram, then Facebook Page · SUPERSEDED
 
+The following historical ordering is **SUPERSEDED**, not an active prerequisite:
 Instagram remains the first adapter and the acceptance target for modules
 041–046. Facebook Page follows only after Instagram is stable. Both receive the
 same canonical facts/checksum, with caption and placement adapted per network.
@@ -74,13 +87,20 @@ TouchLine milestones. It is not a high-frequency match-event feed and does not
 receive automatic goal/line-up noise. No implementation is queued under the
 current priority.
 
-## Binding operational order
+## Historical operational order · SUPERSEDED
 
 1. Complete the TouchLine social family and Instagram path.
 2. Stabilise it and collect measured operational evidence.
 3. Implement Facebook Page as a separate adapter with its own approval,
    template version, status, idempotency, quota, kill switch and reconciliation.
 4. Reopen any other destination only after a new explicit Luiz decision.
+
+Current order: prepare the requested Instagram and Facebook variants in the
+Admin, collect explicit per-type/per-placement choices and version approvals,
+then validate each official adapter independently under separate authority.
+Until that later integration is authorised and verified, all schedules and
+retry requests remain paused and outbound remains disabled. No other network
+was promoted from `DOCUMENTED / DISABLED` by this decision.
 
 No documented/disabled destination may add schema, OAuth, credentials, API work
 or delivery code that delays modules 041–046.

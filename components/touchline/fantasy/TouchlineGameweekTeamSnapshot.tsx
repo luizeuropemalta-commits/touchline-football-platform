@@ -2,7 +2,7 @@
 
 import { BadgeCheck, CalendarClock, Crown, LockKeyhole, Pencil, Send } from "lucide-react";
 
-import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
+import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import { formatTouchlineFantasyDeadline } from "@/lib/touchlineFantasy/domain";
@@ -28,7 +28,7 @@ export default function TouchlineGameweekTeamSnapshot({ snapshot, locale, surfac
   return <section className={styles.shell} data-gameweek-team-surface={surface}>
     <header><div><span><BadgeCheck /> TOUCHLINE GAMEWEEK XI</span><h2>{title}</h2><p>{complete ? (pt ? "Treinador, formação e 11 identidades canônicas. Um XI titular." : "Coach, formation and 11 canonical identities. One Starting XI.") : (pt ? "Monte e confirme sua equipe no TouchLine Markt." : "Build and confirm your team in TouchLine Markt.")}</p></div><aside><small>GAMEWEEK</small><strong>{gameweek?.number ?? "—"}</strong><em>{userGameweek?.formationCode ?? "—"}</em></aside></header>
     {complete && geometry ? <div className={styles.body}>
-      <div className={styles.coach}><span><Crown />{pt ? "TREINADOR" : "COACH"}</span><div><TouchlineCoachCard coach={coach!.coach} slot={coach!.slot} clubName={coach!.clubName} clubLogoUrl={coach!.clubLogoUrl} countryCode3={coach!.countryCode3} locale={locale} displayMode="compact" optimizeForLiveCompact enableInteractiveNeon={false} /></div><b>{coach!.coach.displayName}</b><small>{coach!.clubName}</small></div>
+      <div className={styles.coach}><span><Crown />{pt ? "TREINADOR" : "COACH"}</span><div><TouchlineCoachCardZoom coach={coach!.coach} slot={coach!.slot} clubName={coach!.clubName} clubLogoUrl={coach!.clubLogoUrl} countryCode3={coach!.countryCode3} locale={locale} contract={null} competition={coach!.competition} profileHref={`/touchline-coaches/${encodeURIComponent(coach!.coach.providerId)}?lang=${encodeURIComponent(locale)}`} /></div><b>{coach!.coach.displayName}</b><small>{coach!.clubName}</small></div>
       {/* Club Owner is a static tactical page, so it shares the Market
           surface. The Arena view remains on its own loop/video surface. */}
       <TouchlinePitchSurface

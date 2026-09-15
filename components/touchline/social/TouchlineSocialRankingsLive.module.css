@@ -1,0 +1,85 @@
+.canvas { box-sizing: border-box; position: relative; isolation: isolate; width: 1080px; height: var(--live-height); padding: 42px 48px 32px; display: grid; grid-template-rows: 100px 145px minmax(0,1fr) 64px; gap: 18px; overflow: hidden; color: #f8fff0; background: #08130f; font-family: Arial, Helvetica, sans-serif; }
+.canvas * { box-sizing: border-box; }
+.arena,.atmosphere { position: absolute; inset: 0; pointer-events: none; z-index: -2; }
+.arena { background: url('/touchlineArena/stadiums/interiors/01-arsenal-emirates-stadium-live.webp') center / cover; filter: brightness(.64) saturate(1.04); }
+.atmosphere { z-index: -1; background: radial-gradient(circle at 55% 48%,rgba(182,255,79,var(--live-glow)),transparent 53%),linear-gradient(180deg,rgba(0,10,8,.14),rgba(0,8,6,.4)); }
+.trace { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; fill: none; stroke: #b6ff4f; stroke-width: 2; filter: drop-shadow(0 0 5px #b6ff4f); }
+.header,.title,.spotlight,.weekly,.selection,.tablePanel,.pending,.footer { border: 1px solid rgba(184,255,81,.24); border-radius: 23px; background: var(--touchline-social-glass-isolated-panel); backdrop-filter: blur(12px); box-shadow: inset 0 0 0 1px rgba(255,255,255,.035),0 20px 55px rgba(0,0,0,.18); }
+.header { display: flex; align-items: center; justify-content: space-between; padding: 16px 23px; }
+.brand { display: flex; gap: 17px; align-items: center; letter-spacing: .06em; font-size: 26px; }
+.competition { display: grid; gap: 8px; text-align: right; }
+.competition b { color: #b6ff4f; font-size: 18px; letter-spacing: .1em; }
+.competition span { color: #e4ebdf; font-size: 16px; font-weight: 700; }
+.title { display: grid; align-content: center; text-align: center; gap: 7px; padding: 12px; }
+.title > span { color: #b6ff4f; font-size: 14px; letter-spacing: .18em; font-weight: 900; }
+.title h1 { margin: 0; font-size: 47px; line-height: 1.03; letter-spacing: -.035em; }
+.title p { margin: 0; color: #e4ebdf; font-size: 18px; }
+.spotlight { display: flex; gap: 20px; align-items: center; justify-content: space-between; padding: 30px; }
+.heroCopy { min-width: 0; flex: 1; }
+.heroCopy > span { color: #b6ff4f; font-size: 15px; font-weight: 900; letter-spacing: .12em; }
+.heroCopy h2 { margin: 18px 0 12px; font-size: 52px; line-height: .98; text-transform: uppercase; overflow-wrap: anywhere; letter-spacing: -.025em; }
+.heroCopy p { margin: 0 0 23px; font-size: 24px; color: #e0e9dc; }
+.heroCopy > strong { display: block; font-size: 93px; line-height: 1; color: #f6d45f; font-weight: 900; letter-spacing: -.05em; }
+.heroCopy > small { display: block; margin-top: 13px; color: #e0e9dc; font-size: 15px; letter-spacing: .08em; }
+.heroCard { padding-top: 75px; transform: translateY(var(--live-float)); }
+.cardFrame { flex: 0 0 auto; position: relative; width: calc(430px * var(--card-scale)); height: calc(691px * var(--card-scale)); }
+.cardFrame > :global(.touchline-card-surface) { position: absolute!important; top: 0; left: 0; width: 430px!important; max-width: none!important; height: 691px!important; margin: 0!important; transform: scale(var(--card-scale)); transform-origin: top left; }
+.crown { position: absolute; left: 50%; transform: translateX(-50%); height: auto; z-index: 6; }
+.coachFrame { flex: 0 0 auto; width: calc(430px * var(--card-scale)); height: calc(691px * var(--card-scale)); position: relative; }
+.coachFrame > * { position: absolute!important; top: 0; left: 0; width: 430px!important; max-width: none!important; transform: scale(var(--card-scale)); transform-origin: top left; }
+.coachRecord { margin-top: 25px; font-size: 15px; color: #b6ff4f; font-weight: 900; }
+.weekly { padding: 18px; display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.weekly article { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; padding: 8px; gap: 8px; text-align: center; }
+.weekly article > span { color: #b6ff4f; font-size: 14px; letter-spacing: .1em; font-weight: 900; }
+.weekly h2 { font-size: 23px; margin: 0; line-height: 1.05; }
+.weekly p { margin: 0; font-size: 15px; line-height: 1.1; color: #e0e9dc; }
+.weekly article > strong { color: #f6d45f; font-size: 29px; }
+.weekly small { font-size: 11px; color: #e0e9dc; }
+.selection { display: flex; flex-direction: column; padding: 12px; gap: 8px; }
+.pitch { position: relative; flex: 1; min-height: 0; margin: 0 7px; background: linear-gradient(rgba(6,37,24,.5),rgba(8,46,29,.5)); border: 1px solid rgba(223,255,221,.3); border-radius: 14px; }
+.pitch::before { content: ''; position: absolute; width: 19%; aspect-ratio: 1; border: 1px solid rgba(223,255,221,.3); top: 50%; left: 50%; transform: translate(-50%,-50%); border-radius: 50%; }
+.pitch::after { content: ''; position: absolute; left: 33%; right: 33%; bottom: 0; height: 13%; border: 1px solid rgba(223,255,221,.3); }
+.pitchLine { position: absolute; top: 50%; left: 0; right: 0; border-top: 1px solid rgba(223,255,221,.3); }
+.pitchPlayer { position: absolute; transform: translate(-50%,-50%); z-index: 1; width: 190px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 3px; }
+.pitchPlayer > span { color: #b6ff4f; font-size: 13px; font-weight: 900; background: rgba(0,12,8,.72); padding: 3px 8px; border-radius: 5px; }
+.pitchPlayer > strong { color: white; font-size: 15px; font-weight: 900; max-width: 188px; line-height: 1.06; padding: 3px 5px; border-radius: 5px; background: rgba(0,12,8,.72); }
+.coachStrip { height: 118px; overflow: hidden; display: flex; gap: 20px; align-items: center; padding: 6px 24px; border-top: 1px solid rgba(182,255,79,.24); }
+.coachStrip .coachFrame { align-self: flex-start; }
+.coachStrip > div:not(.coachFrame) { flex: 1; }
+.coachStrip span { color: #b6ff4f; font-size: 13px; font-weight: 900; }
+.coachStrip h2 { margin: 5px 0; font-size: 28px; }
+.coachStrip p { margin: 0; color: #e0e9dc; font-size: 17px; }
+.coachStrip > strong { color: #f6d45f; font-size: 48px; display: grid; text-align: center; }
+.coachStrip small { color: #e0e9dc; font-size: 12px; }
+.tablePanel { padding: 15px 22px; }
+.tablePanel table { width: 100%; height: 100%; border-collapse: collapse; table-layout: fixed; font-size: 19px; font-variant-numeric: tabular-nums; }
+.tablePanel th:first-child { width: 52px; }
+.tablePanel th:nth-child(2) { width: 440px; text-align: left; }
+.tablePanel thead { color: #b6ff4f; font-size: 13px; height: 28px; }
+.tablePanel td { text-align: center; }
+.tablePanel tbody tr { border-top: 1px solid rgba(255,255,255,.1); }
+.tablePanel tbody tr:nth-child(-n+4) { background: rgba(182,255,79,.055); }
+.tablePanel tbody th { text-align: left; font-size: 18px; }
+.tablePanel tbody th span { display: flex; align-items: center; gap: 12px; }
+.tablePanel tbody th img { flex: 0 0 auto; object-fit: contain; }
+.tablePanel td:last-child { color: #b6ff4f; font-weight: 900; font-size: 23px; }
+.pending { display: grid; align-content: center; justify-items: center; padding: 80px; text-align: center; }
+.pending > span { color: #f6d45f; font-size: 18px; letter-spacing: .12em; font-weight: 900; }
+.pending h2 { font-size: 68px; margin: 30px 0; letter-spacing: -.04em; line-height: 1.02; }
+.pending p { font-size: 27px; line-height: 1.35; color: #e0e9dc; }
+.footer { display: flex; align-items: center; justify-content: space-between; padding: 0 22px; }
+.footer span { color: #d4dece; font-size: 13px; }
+.footer strong { font-size: 15px; letter-spacing: .055em; }
+.footer i { color: #b6ff4f; font-style: normal; }
+.story { padding-top: 96px; padding-bottom: 105px; grid-template-rows: 110px 190px minmax(0,1fr) 74px; gap: 24px; }
+.story .title h1 { font-size: 54px; }
+.story .title p { font-size: 20px; }
+.story .weekly { gap: 30px 10px; }
+.story .weekly article { gap: 13px; }
+.story .weekly h2 { font-size: 25px; }
+.story .tablePanel { padding-top: 26px; padding-bottom: 26px; }
+.story .tablePanel tbody th { font-size: 21px; }
+.story .tablePanel tbody th img { width: 43px; height: 43px; }
+.story .coachStrip { height: 154px; }
+.story .pitchPlayer > strong { font-size: 17px; }
+@media (prefers-reduced-motion: reduce) { .heroCard { transform: none; } }

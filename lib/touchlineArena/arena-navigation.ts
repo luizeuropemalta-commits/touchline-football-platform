@@ -50,7 +50,7 @@ export function parseTouchlineArenaPanel(value?: string | string[] | null): Touc
 export function touchlineArenaPanelHref(panel: TouchlineArenaPanelKey, locale: string) {
   const effectiveLocale = resolveTouchLinePresentationLocale(locale);
   const lang = `lang=${encodeURIComponent(effectiveLocale)}`;
-  if (panel === "market") return `/market-transfer?${lang}`;
+  if (panel === "market") return `/my-club?${lang}`;
   // Quick Substitution is an Arena action: it overlays the live Arena field
   // and temporarily replaces the score rail. It is not a separate site area.
   if (panel === "bench") return `/arena?panel=bench&${lang}`;
@@ -66,15 +66,7 @@ export function touchlineArenaContractHref(input: {
   playerName: string;
   clubId?: string | number | null;
 }) {
-  const params = new URLSearchParams({
-    lang: resolveTouchLinePresentationLocale(input.locale),
-    contractPlayer: String(input.playerId),
-    contractName: input.playerName,
-  });
-  if (input.clubId !== null && input.clubId !== undefined && String(input.clubId).trim()) {
-    params.set("contractClub", String(input.clubId));
-  }
-  return `/market-transfer?${params.toString()}`;
+  return `/my-club?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(input.locale))}`;
 }
 
 export function touchlineArenaPanelUrl(currentUrl: string, panel: TouchlineArenaPanelKey | null) {

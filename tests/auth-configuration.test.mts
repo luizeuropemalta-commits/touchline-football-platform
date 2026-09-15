@@ -33,3 +33,12 @@ test("password sign-in uses one same-origin native redirect with an API compatib
   assert.match(serverClientSource, /encode: "tokens-only"/);
   assert.doesNotMatch(loginApiSource, /window\.location\.replace/);
 });
+
+test("password sign-in rejects browser cross-site and originless posts before credential exchange", () => {
+  assert.match(loginApiSource, /import \{ isAllowedLoginPost, safeReturnTo \} from "@\/lib\/server\/login-request-security"/);
+  assert.match(loginApiSource, /if \(!isAllowedLoginPost\(request\)\)\s*\{\s*return NextResponse\.json\(\{ ok: false, error: "invalid_origin" \}, \{ status: 403 \}\);\s*\}/s);
+  assert.ok(
+    loginApiSource.indexOf("if (!isAllowedLoginPost(request))") < loginApiSource.indexOf("supabase.auth.signInWithPassword"),
+    "origin enforcement must run before password verification",
+  );
+});

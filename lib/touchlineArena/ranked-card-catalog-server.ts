@@ -140,7 +140,14 @@ export async function loadTouchLineRankedCardCatalog(
       // player surfaces read the two rating fields below.
       touchlinePoints: 0,
       seasonTouchlinePoints: null,
-      seasonTotalRating: ranking.totalRating ?? number(object(seasonByPlayerId.get(playerId)?.summary_payload).totalRating),
+      seasonTotalRating: ranking.totalRating,
+      publishedRanking: state.snapshotId && state.publishedAt ? {
+        snapshotId: state.snapshotId,
+        providerPlayerId: ranking.providerPlayerId ?? null,
+        totalRating: ranking.totalRating,
+        minutesPlayed: ranking.minutesPlayed ?? null,
+        appearances: ranking.appearances ?? null,
+      } : undefined,
       matchRating: number(match?.rating),
       seasonStats: verifiedStats(seasonByPlayerId.get(playerId), position),
       matchStats: verifiedMatchStats(match, position),

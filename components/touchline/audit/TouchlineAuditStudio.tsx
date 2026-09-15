@@ -189,7 +189,7 @@ function AuditHome({ language }: { language: string }) {
   return <section className={styles.productSurface}><nav><strong>TOUCHLINE</strong><span>{pt ? "Arena" : "Arena"}</span><span>{pt ? "Mercado" : "Market"}</span><span>{pt ? "Competição" : "Competition"}</span></nav><div className={styles.landingHero}><p>{pt ? "TOUCHLINE ENGLAND" : "TOUCHLINE ENGLAND"}</p><h2>{pt ? "O seu clube. A sua jornada." : "Your club. Your journey."}</h2><span>{pt ? "Cards oficiais, clube, escalação e Arena." : "Official cards, club ownership, squad building and Arena."}</span><div><button disabled>{pt ? "Começar jornada" : "Start journey"}</button><button disabled>{pt ? "Explorar competição" : "Explore competition"}</button></div></div><section className={styles.featureTiles}>{[pt ? "Cards oficiais" : "Official cards", pt ? "ClubOwner" : "ClubOwner", pt ? "Arena ao vivo" : "Live Arena"].map((label) => <article key={label}><b>{label}</b><span>{pt ? "Estado visual de auditoria" : "Audit visual state"}</span></article>)}</section></section>;
 }
 
-function AuditClubOwnerPage({ route, language, player, coachSlot }: { route: TouchlineAuditRoute; language: string; player: TouchlineEliteExactPlayer; coachSlot: ReturnType<typeof createTouchlineArenaCoachSlot> }) {
+function AuditClubOwnerPage({ route, language, player, coachSlot: _coachSlot }: { route: TouchlineAuditRoute; language: string; player: TouchlineEliteExactPlayer; coachSlot: ReturnType<typeof createTouchlineArenaCoachSlot> }) {
   const club = findTouchLineClub("Manchester United");
   if (!club) return null;
   const lineup = buildTouchLineClubLineup({ club, squadCards: CLUB_OWNER_SQUAD_CARDS });

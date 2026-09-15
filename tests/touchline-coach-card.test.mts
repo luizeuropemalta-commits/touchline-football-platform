@@ -78,6 +78,17 @@ test("keeps a verified coach scoreless until verified match evidence arrives", (
   assert.equal(touchlineCoachScoreCanBePublished(slot), false);
 });
 
+test("coach-card discipline stays unavailable without canonical totals and never fabricates 0 / 0", () => {
+  const coachCard = fs.readFileSync("components/touchline/cards/TouchlineCoachCard.tsx", "utf8");
+
+  assert.doesNotMatch(coachCard, /<strong>0 \/ 0<\/strong>/);
+  assert.match(coachCard, /discipline\?: Readonly<\{/);
+  assert.match(coachCard, /officialCardCount\(discipline\?\.yellowCards\)/);
+  assert.match(coachCard, /officialCardCount\(discipline\?\.redCards\)/);
+  assert.match(coachCard, /yellowCards === null && redCards === null\s*\? "—"/);
+  assert.match(coachCard, /<CoachStatIcon type="discipline" \/>/);
+});
+
 test("only publishes audited points backed by provider events and a scoring version", () => {
   const slot: TouchlineArenaCoachSlot = {
     ...createTouchlineArenaCoachSlot(verifiedCoach),

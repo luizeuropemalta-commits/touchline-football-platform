@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import React, { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Heart, Share2, ShieldCheck, UserPlus, UserRound } from "lucide-react";
+import { Heart, ShieldCheck, UserPlus, UserRound } from "lucide-react";
 import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   touchlineArenaClubTemplateForTierPreview,
@@ -97,7 +97,6 @@ type EditableBlock =
   | "touchlineLogo"
   | "touchlinePremier"
   | "profileAction"
-  | "shareAction"
   | "followAction"
   | "likeAction"
   | "statGol"
@@ -137,7 +136,6 @@ const FIELD_SIZE: Record<EditableBlock, { width: number; height: number }> = {
   touchlineLogo: { width: 46, height: 46 },
   touchlinePremier: { width: 176, height: 20 },
   profileAction: { width: 118, height: 34 },
-  shareAction: { width: 118, height: 34 },
   followAction: { width: 118, height: 34 },
   likeAction: { width: 118, height: 34 },
   statGol: { width: 54, height: 104 },
@@ -158,7 +156,6 @@ const FIELD_LABELS: Partial<Record<EditableBlock, string>> = {
   touchlineLogo: "Logo TL",
   touchlinePremier: "TouchLine England League Stats",
   profileAction: "Profile button",
-  shareAction: "Share button",
   followAction: "Follow button",
   likeAction: "Like button",
   statGol: "GOL",
@@ -179,7 +176,6 @@ const FIELD_LABELS_PT_BR: Partial<Record<EditableBlock, string>> = {
   touchlineLogo: "Logo TL",
   touchlinePremier: "Estatísticas da TouchLine England League",
   profileAction: "Botão Perfil",
-  shareAction: "Botão Compartilhar",
   followAction: "Botão Seguir",
   likeAction: "Botão Curtir",
   statGol: "GOL",
@@ -277,7 +273,6 @@ export type TouchlineEliteExactCardLabels = {
   yellowCards: string;
   redCards: string;
   profileAction: string;
-  shareAction: string;
 };
 
 const DEFAULT_CARD_LABELS: TouchlineEliteExactCardLabels = {
@@ -291,7 +286,6 @@ const DEFAULT_CARD_LABELS: TouchlineEliteExactCardLabels = {
   yellowCards: "Yellow cards",
   redCards: "Red cards",
   profileAction: "Profile",
-  shareAction: "Share",
 };
 
 function localizedCardLabels(locale: string | null): TouchlineEliteExactCardLabels {
@@ -307,7 +301,6 @@ function localizedCardLabels(locale: string | null): TouchlineEliteExactCardLabe
       yellowCards: "Cartões amarelos",
       redCards: "Cartões vermelhos",
       profileAction: "Perfil",
-      shareAction: "Compartilhar",
     };
   }
 
@@ -360,7 +353,6 @@ type Props = {
   showMatchPoints?: boolean;
   rankingMode?: "live" | "preview";
   playerProfileHref?: string;
-  onShare?: () => void;
   showSocialMetrics?: boolean;
   forceNeonActive?: boolean;
   /**
@@ -370,8 +362,9 @@ type Props = {
    * a published state, and must not be used by roster/public card surfaces.
    */
   allowVisualInventoryPreview?: boolean;
-  followerCount?: number;
-  likeCount?: number;
+  /** Canonical social totals only; unknown totals render as unavailable. */
+  followerCount?: number | null;
+  likeCount?: number | null;
   /** Visual-QA mode only; tokens do not select or modify card artwork. */
   tierCalibrationPresentation?: TouchlineCardCalibrationPresentation;
 };
@@ -383,9 +376,10 @@ function compactSocialCount(value: number, locale: string | null) {
   }).format(Math.max(0, value));
 }
 
-function demoSocialCount(seed: string, minimum: number, range: number) {
-  const hash = [...seed].reduce((total, character) => ((total * 31) + character.charCodeAt(0)) >>> 0, 17);
-  return minimum + (hash % range);
+function canonicalSocialCount(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? Math.trunc(value)
+    : null;
 }
 
 function abs(left: number, top: number, width: number, height: number, zIndex = 1): React.CSSProperties {
@@ -744,7 +738,6 @@ export function TouchlineEliteExactCard({
   showMatchPoints = false,
   rankingMode = "live",
   playerProfileHref,
-  onShare,
   showSocialMetrics = true,
   forceNeonActive = false,
   allowVisualInventoryPreview = false,
@@ -783,8 +776,8 @@ export function TouchlineEliteExactCard({
   const activeRanking = useTouchlineActiveRanking(subscribeToRanking);
   const neonInstanceId = useId();
   const didSkipInitialLayoutWriteRef = useRef(false);
-  const baseFollowerCount = followerCount ?? demoSocialCount(player.sportmonksPlayerId, 12_400, 975_000);
-  const baseLikeCount = likeCount ?? demoSocialCount(`${player.sportmonksPlayerId}:card`, 840, 84_000);
+  const baseFollowerCount = canonicalSocialCount(followerCount);
+  const baseLikeCount = canonicalSocialCount(likeCount);
 
   /* eslint-disable react-hooks/set-state-in-effect -- hydrate editor-only local state after SSR without changing the public card markup. */
   useLayoutEffect(() => {
@@ -1192,7 +1185,7 @@ export function TouchlineEliteExactCard({
     if (key === "backNumber") return "number";
     if (key === "clubCrest") return "crest";
     if (key === "points" || key === "marketValue" || key === "cardPrice") return "points";
-    if (key === "profileAction" || key === "shareAction" || key === "followAction" || key === "likeAction") return "actions";
+    if (key === "profileAction" || key === "followAction" || key === "likeAction") return "actions";
     if (key === "touchlineLogo") return "logo";
     return null;
   }
@@ -1219,25 +1212,6 @@ export function TouchlineEliteExactCard({
     return runtimeLocale
       ? `${clubHubHref}?lang=${encodeURIComponent(runtimeLocale)}`
       : clubHubHref;
-  }
-
-  async function sharePlayerCard() {
-    if (typeof window === "undefined") return;
-
-    const relativeUrl = resolvedPlayerProfileHref();
-    const absoluteUrl = new URL(relativeUrl, window.location.origin).toString();
-    const shareData = {
-      title: `${player.name} | TouchLine Arena`,
-      text: `${player.name} - ${player.clubName}`,
-      url: absoluteUrl,
-    };
-
-    if (navigator.share) {
-      await navigator.share(shareData);
-      return;
-    }
-
-    await navigator.clipboard?.writeText(absoluteUrl);
   }
 
   function updateFieldScale(key: EditableBlock, nextScale: number) {
@@ -1810,53 +1784,6 @@ export function TouchlineEliteExactCard({
               </a>
             </div> : null}
 
-            <div
-              {...dragAttrs("shareAction")}
-              style={{
-                ...editableStyle("shareAction", 34),
-                borderRadius: 7,
-                border: "1px solid rgba(125,211,252,.30)",
-                background: "linear-gradient(180deg, rgba(13,28,40,.92), rgba(2,8,16,.96))",
-                boxShadow: "0 6px 18px rgba(0,0,0,.40), inset 0 1px 0 rgba(255,255,255,.08)",
-                overflow: "hidden",
-              }}
-            >
-              <button
-                type="button"
-                aria-label={`${cardLabels.shareAction}: ${player.name}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  if (isEditable) return;
-                  if (onShare) {
-                    onShare();
-                    return;
-                  }
-                  void sharePlayerCard().catch(() => undefined);
-                }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  border: 0,
-                  background: "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 7,
-                  color: "#eff6ff",
-                  padding: 0,
-                  font: "inherit",
-                  fontSize: cardLabels.shareAction.length > 8 ? 9 : 11,
-                  lineHeight: "13px",
-                  fontWeight: 950,
-                  letterSpacing: 0,
-                  textTransform: "uppercase",
-                  cursor: isEditable ? "move" : "pointer",
-                }}
-              >
-                <Share2 aria-hidden="true" size={14} strokeWidth={2.2} />
-                <span>{cardLabels.shareAction}</span>
-              </button>
-            </div>
           </>
         ) : null}
 
@@ -1883,7 +1810,7 @@ export function TouchlineEliteExactCard({
                 style={{ width: "100%", height: "100%", display: "flex", minWidth: 0, alignItems: "center", justifyContent: "center", gap: 7, border: `1px solid ${isFollowing ? tierGlow : "rgba(255,255,255,.18)"}`, background: isFollowing ? `linear-gradient(135deg, ${tierGlow}, rgba(4,9,14,.92) 72%)` : "linear-gradient(180deg, rgba(15,22,30,.88), rgba(2,6,11,.96))", boxShadow: isFollowing ? `0 0 6px ${tierGlow}, 0 0 15px ${tierGlow}, inset 0 1px 0 rgba(255,255,255,.18)` : "0 6px 14px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.08)", clipPath: "polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0 50%)", color: "#fff", cursor: isEditable ? "move" : "pointer", padding: "0 12px", fontSize: 11 * fieldScale("followAction"), fontWeight: 950 }}
               >
                 <UserPlus aria-hidden="true" size={15 * fieldScale("followAction")} strokeWidth={2.5} />
-                <span>{compactSocialCount(baseFollowerCount + (isFollowing ? 1 : 0), runtimeLocale)}</span>
+                <span>{baseFollowerCount === null ? "—" : compactSocialCount(baseFollowerCount, runtimeLocale)}</span>
               </button>
             </div>
 
@@ -1908,7 +1835,7 @@ export function TouchlineEliteExactCard({
                 style={{ width: "100%", height: "100%", display: "flex", minWidth: 0, alignItems: "center", justifyContent: "center", gap: 7, border: `1px solid ${isLiked ? tierGlow : "rgba(255,255,255,.18)"}`, background: isLiked ? `linear-gradient(135deg, ${tierGlow}, rgba(4,9,14,.92) 72%)` : "linear-gradient(180deg, rgba(15,22,30,.88), rgba(2,6,11,.96))", boxShadow: isLiked ? `0 0 6px ${tierGlow}, 0 0 15px ${tierGlow}, inset 0 1px 0 rgba(255,255,255,.18)` : "0 6px 14px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.08)", clipPath: "polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0 50%)", color: "#fff", cursor: isEditable ? "move" : "pointer", padding: "0 12px", fontSize: 11 * fieldScale("likeAction"), fontWeight: 950 }}
               >
                 <Heart aria-hidden="true" size={15 * fieldScale("likeAction")} strokeWidth={2.5} fill={isLiked ? "currentColor" : "none"} />
-                <span>{compactSocialCount(baseLikeCount + (isLiked ? 1 : 0), runtimeLocale)}</span>
+                <span>{baseLikeCount === null ? "—" : compactSocialCount(baseLikeCount, runtimeLocale)}</span>
               </button>
             </div>
           </>

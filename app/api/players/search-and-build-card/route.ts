@@ -954,6 +954,12 @@ function approvedStaticCardPortraitUrl(player: any) {
 
   if (!playerSlugs.length || !clubSlug) return "";
 
+  // Haaland's approved legacy package predates the shared cards/portrait layout.
+  // Keep this explicit exception content-addressable instead of returning a known 404.
+  if (playerSlugs[0] === "erling-haaland" && clubSlug === "man-city") {
+    return "/touchlineArena/players/haaland/man-city/v1/approved/card_portrait_transparent.png";
+  }
+
   // Do not probe the public directory at runtime. Besides doing blocking I/O,
   // a process.cwd() path makes Vercel trace the complete asset tree into this
   // server function. The card client already owns its image fallback, so a

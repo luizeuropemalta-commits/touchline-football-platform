@@ -23,6 +23,9 @@ type TouchlineCoachCardZoomProps = {
   competition?: TouchlineCoachCompetitionSnapshot | null;
   profileHref: string;
   compact?: boolean;
+  cardClassName?: string;
+  publishedTouchlinePoints?: number | null;
+  showLeadershipCrown?: boolean;
   /**
    * A coach card in the matchday technical area is immediately visible above
    * the fold. Safari can defer the two identity assets on a lazy compact card,
@@ -30,6 +33,9 @@ type TouchlineCoachCardZoomProps = {
    * into eager assets without changing the regular feed/market behaviour.
    */
   assetLoading?: "eager" | "lazy";
+  frameLoading?: "eager" | "lazy";
+  frameDecoding?: "sync" | "async" | "auto";
+  frameFetchPriority?: "high" | "low" | "auto";
 };
 
 function formatVerifiedDateOfBirth(value: string | undefined, locale: string) {
@@ -56,7 +62,13 @@ export default function TouchlineCoachCardZoom({
   competition = null,
   profileHref,
   compact = true,
+  cardClassName,
+  publishedTouchlinePoints = null,
+  showLeadershipCrown = false,
   assetLoading,
+  frameLoading,
+  frameDecoding,
+  frameFetchPriority,
 }: TouchlineCoachCardZoomProps) {
   const portuguese = locale === "pt-BR";
   const palette = touchlineCardTierPalette(slot.cardTier);
@@ -122,6 +134,7 @@ export default function TouchlineCoachCardZoom({
   };
   const card = (
     <TouchlineCoachCard
+      className={cardClassName}
       coach={coach}
       slot={slot}
       clubName={clubName}
@@ -133,7 +146,12 @@ export default function TouchlineCoachCardZoom({
       optimizeForLiveCompact={compact}
       enableInteractiveNeon={false}
       assetLoading={assetLoading ?? "lazy"}
+      frameLoading={frameLoading}
+      frameDecoding={frameDecoding}
+      frameFetchPriority={frameFetchPriority}
       fixtureContext={contract?.currentFixture?.context ?? null}
+      publishedTouchlinePoints={publishedTouchlinePoints}
+      showLeadershipCrown={showLeadershipCrown}
     />
   );
 
@@ -143,6 +161,7 @@ export default function TouchlineCoachCardZoom({
       tierAccent={palette.accent}
       expandedContent={
         <TouchlineCoachCard
+          className={cardClassName}
           coach={coach}
           slot={slot}
           clubName={clubName}
@@ -153,10 +172,12 @@ export default function TouchlineCoachCardZoom({
           forceNeonActive
           enableInteractiveNeon={false}
           assetLoading="eager"
-          frameLoading="eager"
-          frameDecoding="sync"
-          frameFetchPriority="high"
+          frameLoading={frameLoading ?? "eager"}
+          frameDecoding={frameDecoding ?? "sync"}
+          frameFetchPriority={frameFetchPriority ?? "high"}
           fixtureContext={contract?.currentFixture?.context ?? null}
+          publishedTouchlinePoints={publishedTouchlinePoints}
+          showLeadershipCrown={showLeadershipCrown}
         />
       }
       details={details}

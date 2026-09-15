@@ -14,9 +14,26 @@ const DOCS_ARTIFACT_TESTS = new Set([
   "touchline-owner-approved-market-value-binding.test.mts",
 ]);
 
+// These tests replay locally rendered Social Studio evidence kept in
+// `artifacts/`. The directory intentionally stays out of the Git/Vercel
+// deployment input: it contains private review media and large decoder
+// outputs, not product runtime inputs. The contract, source-gate, persistence
+// and rollback Social Studio tests remain in the remote gate.
+const LOCAL_ARTIFACT_REPLAY_TESTS = new Set([
+  "touchline-social-events-live-watch.test.mts",
+  "touchline-social-events-live.test.mts",
+  "touchline-social-lineup-live-editorial.test.mts",
+  "touchline-social-rankings-live-catalog.test.mts",
+  "touchline-social-rankings-live-editorial.test.mts",
+  "touchline-social-rankings-live-golden-boot.test.mts",
+  "touchline-social-rankings-live.test.mts",
+]);
+
 const testsDirectory = resolve(process.cwd(), "tests");
 const testFiles = (await readdir(testsDirectory))
-  .filter((file) => file.endsWith(".test.mts") && !DOCS_ARTIFACT_TESTS.has(file))
+  .filter((file) => file.endsWith(".test.mts")
+    && !DOCS_ARTIFACT_TESTS.has(file)
+    && !LOCAL_ARTIFACT_REPLAY_TESTS.has(file))
   .sort()
   .map((file) => resolve(testsDirectory, file));
 

@@ -41,12 +41,16 @@ function socialPitchPosition(x: number, y: number) {
   } as CSSProperties;
 }
 
-export default function TouchlineSocialLineupDraftView({ draft }: { draft: TouchlineSocialLineupDraft }) {
+export default function TouchlineSocialLineupDraftView({ draft, reviewMode = false, placement = "FEED" }: {
+  draft: TouchlineSocialLineupDraft;
+  reviewMode?: boolean;
+  placement?: "FEED" | "STORY";
+}) {
   assertTouchlineOfficialLineupPresentation(draft);
   const sideLabel = draft.side === "home" ? "HOME XI" : "AWAY XI";
   return (
     <main
-      className={styles.canvas}
+      className={`${styles.canvas} ${placement === "STORY" ? styles.storyCanvas : styles.feedCanvas}`}
       style={{
         ...TOUCHLINE_SOCIAL_ARENA_GLASS_CSS_VARIABLES,
         "--social-club-accent": draft.club.accent,
@@ -57,7 +61,7 @@ export default function TouchlineSocialLineupDraftView({ draft }: { draft: Touch
       data-fixture-kind={draft.sourceProvenance}
       data-fixture-id={draft.fixtureId}
       data-team-id={draft.club.teamId}
-      data-lineup-status="confirmed"
+      data-lineup-status={reviewMode ? "review" : "confirmed"}
       data-lineup-first-observed-at={draft.lineupAvailableAt}
       data-source-snapshot-at={draft.capturedAt}
       data-source-version={draft.sourceVersion}
@@ -69,7 +73,7 @@ export default function TouchlineSocialLineupDraftView({ draft }: { draft: Touch
       <TouchlinePitchSurface
         className={styles.pitch}
         orientation="vertical"
-        ariaLabel={`${draft.club.name} official ${draft.formation} line-up`}
+        ariaLabel={reviewMode ? `${draft.club.name} line-up review` : `${draft.club.name} official ${draft.formation} line-up`}
       >
         <div className={styles.pitchGlow} aria-hidden="true" />
         <header className={styles.header}>
@@ -78,9 +82,9 @@ export default function TouchlineSocialLineupDraftView({ draft }: { draft: Touch
               <Image src={draft.club.logoUrl!} alt={draft.club.name} width={72} height={72} priority />
             </div>
             <div>
-              <span>{sideLabel} · LINE-UP CONFIRMED</span>
+              <span>{sideLabel} · {reviewMode ? "LINE-UP REVIEW" : "LINE-UP CONFIRMED"}</span>
               <h1>{draft.club.name}</h1>
-              <p>{draft.formation} · 11 VERIFIED STARTERS</p>
+              <p>{reviewMode ? "MATCHDAY SQUAD PRESENTATION" : `${draft.formation} · 11 VERIFIED STARTERS`}</p>
             </div>
           </div>
           <div className={styles.matchup} aria-label={`${draft.home.name} versus ${draft.away.name}`}>
@@ -133,7 +137,7 @@ export default function TouchlineSocialLineupDraftView({ draft }: { draft: Touch
       >
         <header className={styles.railHeader}>
           <span>TECHNICAL AREA</span>
-          <strong>9 OFFICIAL SUBSTITUTES</strong>
+          <strong>{reviewMode ? "MATCHDAY SQUAD" : "9 OFFICIAL SUBSTITUTES"}</strong>
         </header>
         <div className={styles.benchGrid}>
           {draft.bench.map((card) => (
@@ -195,8 +199,8 @@ export default function TouchlineSocialLineupDraftView({ draft }: { draft: Touch
           </div>
         </div>
         <footer className={styles.footer}>
-          <span>TOUCHLINE VERIFIED · FIXTURE {draft.fixtureId}</span>
-          <strong>COMING SOON <i>•</i> CURRENTLY IN TESTING</strong>
+          <span>{reviewMode ? "TOUCHLINE · MATCH REWIND" : `TOUCHLINE VERIFIED · FIXTURE ${draft.fixtureId}`}</span>
+          <strong>{reviewMode ? <>YOUR CLUB <i>•</i> YOUR CARDS <i>•</i> YOUR XI</> : <>COMING SOON <i>•</i> CURRENTLY IN TESTING</>}</strong>
         </footer>
       </section>
     </main>

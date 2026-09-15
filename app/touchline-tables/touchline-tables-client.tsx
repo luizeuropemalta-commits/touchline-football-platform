@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
-import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
+import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import {
@@ -224,6 +224,21 @@ export default function TouchLineTablesClient({
     },
   } : null;
   const isPortuguese = locale === "pt-BR";
+  const topCoachCompetition = topCoachRow
+    && coachRanking.snapshotId
+    && coachRanking.seasonId
+    && coachRanking.scoringVersion
+    ? {
+        snapshotId: coachRanking.snapshotId,
+        seasonId: coachRanking.seasonId,
+        seasonLabel: isPortuguese ? "Temporada atual" : "Current season",
+        rank: topCoachRow.rank,
+        scoringVersion: coachRanking.scoringVersion,
+        home: topCoachRow.home,
+        away: topCoachRow.away,
+        totalTouchlinePoints: topCoachRow.touchlinePoints,
+      }
+    : null;
 
   return (
     <main className={styles.page}>
@@ -305,12 +320,10 @@ export default function TouchLineTablesClient({
                 <Crown aria-hidden="true" />
                 <div className={styles.gameweekCoachPublished}>
                   <div><strong>{isPortuguese ? "Treinador da Gameweek" : "Gameweek coach"}</strong><span>{isPortuguese ? "Fato congelado da Gameweek publicada." : "Frozen fact from the published Gameweek."}</span></div>
-                  <Link
+                  <div
                     className={styles.gameweekCoachCardLink}
-                    href={`/touchline-coaches/${encodeURIComponent(gameweekCoach.coachProviderId)}?lang=${encodeURIComponent(locale)}`}
-                    aria-label={`${isPortuguese ? "Abrir perfil de" : "Open profile for"} ${gameweekCoachIdentity.coach.displayName ?? gameweekCoachIdentity.coach.name}`}
                   >
-                    <TouchlineCoachCard
+                    <TouchlineCoachCardZoom
                       coach={gameweekCoachIdentity.coach}
                       slot={gameweekCoachSlot}
                       clubName={gameweekCoachClub.name}
@@ -318,12 +331,12 @@ export default function TouchLineTablesClient({
                       clubAccent={gameweekCoachClub.accent}
                       countryCode3={gameweekCoachIdentity.countryCode3}
                       locale={locale}
-                      displayMode="compact"
-                      optimizeForLiveCompact
+                      contract={null}
+                      profileHref={`/touchline-coaches/${encodeURIComponent(gameweekCoach.coachProviderId)}?lang=${encodeURIComponent(locale)}`}
                       publishedTouchlinePoints={gameweekCoach.touchlinePoints}
                       showLeadershipCrown
                     />
-                  </Link>
+                  </div>
                   <b>{gameweekCoach.touchlinePoints} {copy.pointsShort}</b>
                 </div>
               </div>
@@ -342,13 +355,11 @@ export default function TouchLineTablesClient({
             </header>
             {topCoachIdentity && topCoachClub && topCoachSlot && topCoachRow ? (
               <div className={styles.topCoachBody}>
-                <Link
+                <div
                   className={styles.topCoachCardLink}
-                  href={`/touchline-coaches/${encodeURIComponent(topCoachRow.coachProviderId)}?lang=${encodeURIComponent(locale)}`}
-                  aria-label={`${isPortuguese ? "Abrir card de" : "Open card for"} ${topCoachRow.coachName}`}
                 >
-                  <TouchlineCoachCard
-                    className={styles.topCoachCard}
+                  <TouchlineCoachCardZoom
+                    cardClassName={styles.topCoachCard}
                     coach={topCoachIdentity.coach}
                     slot={topCoachSlot}
                     clubName={topCoachClub.name}
@@ -356,14 +367,16 @@ export default function TouchLineTablesClient({
                     clubAccent={topCoachClub.accent}
                     countryCode3={topCoachIdentity.countryCode3}
                     locale={locale}
-                    displayMode="compact"
-                    optimizeForLiveCompact
+                    contract={null}
+                    competition={topCoachCompetition}
+                    profileHref={`/touchline-coaches/${encodeURIComponent(topCoachRow.coachProviderId)}?lang=${encodeURIComponent(locale)}`}
                     assetLoading="eager"
                     frameLoading="eager"
                     frameFetchPriority="high"
+                    publishedTouchlinePoints={topCoachRow.touchlinePoints}
                     showLeadershipCrown={topCoachRow.rank === 1}
                   />
-                </Link>
+                </div>
                 <div className={styles.topCoachIdentity}>
                   <span>{isPortuguese ? "LÍDER DA TEMPORADA" : "SEASON LEADER"}</span>
                   <strong>{topCoachRow.coachName}</strong>

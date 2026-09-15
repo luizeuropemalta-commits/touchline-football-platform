@@ -8,7 +8,7 @@ import type {
   TouchlinePositionRankingGroup,
   TouchlineRankedPlayer,
 } from "./card-ranking.ts";
-import { TOUCHLINE_POSITION_RANKING_GROUPS } from "./card-ranking.ts";
+import { TOUCHLINE_POSITION_RANKING_GROUPS, compareTouchlineRankingPlayers } from "./card-ranking.ts";
 import {
   leadershipCrownEligibility,
   type LeadershipDecision,
@@ -28,6 +28,8 @@ export type TouchlineActiveRankingPlayer = Pick<
   | "positionRank"
   | "groupSize"
   | "totalRating"
+  | "minutesPlayed"
+  | "appearances"
   | "tierKey"
   | "priceTc"
 >;
@@ -111,6 +113,7 @@ function isRankingPlayer(value: unknown): value is TouchlineActiveRankingPlayer 
       && (player.totalRating === null || (
         typeof player.totalRating === "number" && Number.isFinite(player.totalRating)
       ))
+      && [player.minutesPlayed, player.appearances].every(value => value == null || (typeof value === "number" && Number.isFinite(value) && value >= 0))
   );
 }
 
@@ -169,11 +172,20 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
       return null;
     }
   }
-  const leadershipDecision = parsePublishedTouchlinePlayerLeadership({
+  const publishedLeadership = parsePublishedTouchlinePlayerLeadership({
     value: candidate.leadershipDecision,
     snapshotId: candidate.snapshotId!,
     playerIds: candidate.players.map((player) => player.playerId),
   });
+  // Persisted decorative metadata cannot overrule the snapshot's canonical
+  // order. A historical rating-only decision may need remote reconciliation;
+  // keep rendering ratings but withhold the crown, never silently republish it.
+  const rankedPlayers = [...candidate.players].filter(player => player.totalRating !== null).sort(compareTouchlineRankingPlayers);
+  const ratingLeaders = rankedPlayers.filter(player => player.totalRating === rankedPlayers[0]?.totalRating);
+  const tiebreakAvailable = ratingLeaders.length <= 1 || ratingLeaders.every(player => player.minutesPlayed != null && player.appearances != null);
+  const leadershipDecision = publishedLeadership?.status === "unique-leader"
+    && (!tiebreakAvailable || rankedPlayers[0]?.playerId !== publishedLeadership.leader.subjectId)
+    ? null : publishedLeadership;
   return {
     phase: "ranked",
     leagueKey: candidate.leagueKey,

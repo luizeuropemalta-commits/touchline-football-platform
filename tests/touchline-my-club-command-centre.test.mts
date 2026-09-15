@@ -37,7 +37,12 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} compact displayWidth=\{96\} \/>/);
   assert.match(embedded, /<button type="button" onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(embedded, /selectMyClubPlayer\(card\)/);
-  assert.match(embedded, /filtered\.slice\(0, 10\)/);
+  assert.doesNotMatch(embedded, /filtered\.slice\(0, 10\)/);
+  assert.match(embedded, /data-my-club-setup="coach"/);
+  assert.match(embedded, /data-my-club-setup="formation"/);
+  assert.match(embedded, /Choose your coach|Escolha seu treinador/);
+  assert.match(embedded, /Choose formation|Escolha a formação/);
+  assert.match(embedded, /filtered\.map\(\(card\)/);
   assert.match(embedded, /<small>\{card\.position\}<\/small><em>\{card\.clubName\}<\/em>/);
   assert.match(styles, /\.myClubCardRows\{display:grid/);
   assert.match(styles, /\.myClubCard\{display:block/);

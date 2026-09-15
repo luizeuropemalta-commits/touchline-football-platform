@@ -23,7 +23,6 @@ const EDITABLE_BLOCKS = [
   "touchlineLogo",
   "touchlinePremier",
   "profileAction",
-  "shareAction",
   "followAction",
   "likeAction",
   "statGol",

@@ -42,10 +42,12 @@ test("ClubHub mounts its heavy outside-matchday squad cards progressively", asyn
 test("Arena exposes a persistent non-financial recovery journey for incomplete clubs", async () => {
   const source = await read("app/arena/ArenaClient.tsx");
   assert.match(source, /needsArenaRosterRecovery/);
-  assert.match(source, /Abrir Mercado de Treinadores/);
-  assert.match(source, /Abrir Mercado de Jogadores/);
-  assert.match(source, /Continuar Montagem do Elenco/);
+  assert.match(source, /\/my-club\?lang=/);
+  assert.match(source, /Monte seu time/);
   assert.match(source, /Ver todos os clubes/);
+  assert.doesNotMatch(source, /Abrir Mercado de Treinadores/);
+  assert.doesNotMatch(source, /Abrir Mercado de Jogadores/);
+  assert.doesNotMatch(source, /Continuar Montagem do Elenco/);
 });
 
 test("compact Arena and Market controls retain effective 44px targets", async () => {

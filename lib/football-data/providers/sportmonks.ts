@@ -206,9 +206,17 @@ export class SportmonksFootballProvider implements FootballDataProvider {
           if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
         });
 
+        const timeoutMs = footballDataTimeoutMs(timeoutProfile);
         return footballDataFetchJson<SportmonksEnvelope<T>>(url, {
           provider: this.name,
-          timeoutMs: footballDataTimeoutMs(timeoutProfile),
+          timeoutMs,
+          retry: {
+            maxAttempts: 3,
+            totalBudgetMs: timeoutMs + Math.min(timeoutMs, 1_000),
+            baseDelayMs: timeoutProfile === "live" ? 100 : 250,
+            maxDelayMs: 1_000,
+            jitterRatio: 0.2,
+          },
         });
       },
       undefined,

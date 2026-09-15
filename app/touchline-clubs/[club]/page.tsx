@@ -60,6 +60,7 @@ import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/for
 import { readTouchlineClubSocialFeed } from "@/lib/touchlineArena/club-social-feed-server";
 import { TOUCHLINE_PRESEASON_RANKING_STATE } from "@/lib/touchlineArena/card-ranking-live";
 import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
+import { compareTouchlineRankingPlayers } from "@/lib/touchlineArena/card-ranking";
 import { normalizeTouchlineMatchCentreTimeZone } from "@/lib/touchlineArena/match-centre";
 import {
   TOUCHLINE_STADIUM_CATALOG,
@@ -575,10 +576,7 @@ async function ClubHubLineupSection({
   const overallRanking = activeRanking.phase === "ranked"
     ? [...activeRanking.players]
       .filter((player) => player.totalRating !== null)
-      .sort((left, right) => (
-        (right.totalRating ?? Number.NEGATIVE_INFINITY) - (left.totalRating ?? Number.NEGATIVE_INFINITY)
-        || normalizedPlayerIdentity(left.playerId).localeCompare(normalizedPlayerIdentity(right.playerId))
-      ))
+      .sort(compareTouchlineRankingPlayers)
     : [];
   const rankedClubCards = presentation.clubCards.flatMap((card) => {
     const cardIdentities = new Set([
@@ -591,7 +589,7 @@ async function ClubHubLineupSection({
     ));
     if (!ranking || ranking.totalRating === null) return [];
     return [{
-      card,
+      card: { ...card, seasonTotalRating: ranking.totalRating },
       totalRating: ranking.totalRating,
       overallRank: overallRanking.indexOf(ranking) + 1,
       positionRank: ranking.positionRank,

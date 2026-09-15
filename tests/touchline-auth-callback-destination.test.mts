@@ -22,6 +22,11 @@ test("callback accepts only same-origin TouchLine destinations and preserves lan
   assert.equal(firstEntry.href, `${origin}/arena?lang=pt-BR&intro=first`);
   assert.equal(firstEntry.searchParams.get("intro"), "first");
 
+  for (const locale of ["pt-BR", "en-GB"] as const) {
+    const myClub = resolveTouchLineAuthCallbackDestination(`/my-club?lang=${locale}`, origin);
+    assert.equal(myClub.href, `${origin}/my-club?lang=${locale}`);
+  }
+
   const clubHeadquarters = resolveTouchLineAuthCallbackDestination("/club-owner/luiz-lopez?lang=pt-BR", origin);
   assert.equal(clubHeadquarters.href, `${origin}/club-owner/luiz-lopez?lang=pt-BR`);
 

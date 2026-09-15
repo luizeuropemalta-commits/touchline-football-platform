@@ -421,6 +421,7 @@ export default async function TouchlineSocialPublicationsAdmin({
     <GamePanel className="p-6 sm:p-8">
       <LivePill>QA · aprovação humana obrigatória</LivePill>
       <h1 className="mt-5 text-4xl font-black italic text-white sm:text-6xl">Publicações sociais</h1>
+      <Link href="/admin/social-publications/studio" className="mt-5 inline-flex text-sm font-bold text-[#b7ff45] underline underline-offset-4">Abrir Studio · catálogo, vídeos, aprovações e horários</Link>
       <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-400">Arte e legenda são aprovadas separadamente. Aprovar as duas apenas torna a revisão elegível para uma outbox futura; esta tela não publica, não despacha e não se conecta ao Instagram.</p>
       <Link href="/admin" className="mt-5 inline-flex rounded-2xl border border-white/10 px-4 py-3 text-xs font-black text-white">Voltar ao Admin</Link>
     </GamePanel>

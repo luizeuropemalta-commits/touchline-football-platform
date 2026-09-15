@@ -1,13 +1,6 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-/*
- * ArenaClient deliberately keeps legacy hand-authored memoization and media
- * callbacks while its domains are split incrementally. React Compiler reports
- * those existing boundaries as build-blocking diagnostics even though it
- * already skips optimizing them; keep that experimental analysis scoped out.
- */
-/* eslint-disable react-hooks/immutability, react-hooks/preserve-manual-memoization, react-hooks/refs */
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction, type SyntheticEvent } from "react";
 import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, RotateCw, Search, UserRound, X } from "lucide-react";
@@ -3908,7 +3901,7 @@ export default function ArenaClient({
       setupMessage: "Nenhum jogador é criado automaticamente. Complete titulares e banco no Market Transfer para liberar a substituição.",
       starters: "titulares",
       bench: "banco",
-      openMarket: "Abrir Market Transfer",
+      openMarket: "Monte seu time",
       returnClub: "Voltar ao Meu Clube",
     }
     : {
@@ -3926,7 +3919,7 @@ export default function ArenaClient({
       setupMessage: "No players are created automatically. Complete your starters and bench in Market Transfer to unlock a substitution.",
       starters: "starters",
       bench: "bench",
-      openMarket: "Open Market Transfer",
+      openMarket: "Build your team",
       returnClub: "Return to My Club",
     };
   const isSelectedBenchInMatchday = Boolean(selectedBench && quickSubstitutionInteractiveBench.some((bench) => bench.id === selectedBench.id));
@@ -4068,7 +4061,7 @@ export default function ArenaClient({
   const coachFirstLoginHref = touchLineAuthEntryHref(
     "/login",
     siteLanguage,
-    `/market-transfer?lang=${encodeURIComponent(siteLanguage)}`,
+    `/my-club?lang=${encodeURIComponent(siteLanguage)}`,
   );
   const marketOnboardingWelcomeCopy = siteLanguage === "pt-BR"
     ? {
@@ -4077,8 +4070,8 @@ export default function ArenaClient({
         titleAccent: "Arena",
         message: "Seu clube começa agora.",
         journey: "Escolha seu treinador. Monte seu elenco. Boa sorte.",
-        transition: "Abrindo o Market Transfer",
-        skip: "Ir para o Market Transfer agora",
+        transition: "Seu time começa no Meu Clube",
+        skip: "Monte seu time",
       }
     : {
         eyebrow: "TOUCHLINE ENGLAND · WELCOME",
@@ -4086,14 +4079,13 @@ export default function ArenaClient({
         titleAccent: "Arena",
         message: "Your club starts now.",
         journey: "Choose your coach. Build your squad. Good luck.",
-        transition: "Opening Market Transfer",
-        skip: "Open Market Transfer now",
+        transition: "Your team starts in My Club",
+        skip: "Build your team",
       };
 
   useEffect(() => {
-    // The first ClubOwner arrival has a short Arena welcome, then continues
-    // into the Market Transfer journey. This marker is issued only by the
-    // registration flow, so intentionally visiting Arena is never hijacked.
+    // The first ClubOwner arrival may receive a short welcome, but the Arena
+    // never redirects a customer away from the current surface.
     if (
       standaloneExperience
       || !isArenaFunctionalReady
@@ -4108,13 +4100,8 @@ export default function ArenaClient({
     // Schedule the visual state after the initial effect tick: this preserves
     // server/client hydration while still presenting the welcome immediately.
     const welcomeTimer = window.setTimeout(() => setIsMarketOnboardingWelcomeVisible(true), 0);
-    const redirectTimer = window.setTimeout(() => {
-      window.location.replace(`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`);
-    }, 6_500);
-
     return () => {
       window.clearTimeout(welcomeTimer);
-      window.clearTimeout(redirectTimer);
     };
   }, [
     activeArenaCoachIdentity?.coach,
@@ -4525,6 +4512,9 @@ export default function ArenaClient({
     return () => {
       cancelled = true;
     };
+  // This launch effect is intentionally keyed only to launch inputs; the
+  // playback helper reads current media refs and uses stable state setters.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialIntroIntent, isQaReadOnly]);
 
   useEffect(() => {
@@ -7791,12 +7781,9 @@ export default function ArenaClient({
               <p>{marketOnboardingWelcomeCopy.message}</p>
               <strong>{marketOnboardingWelcomeCopy.journey}</strong>
               <div><i aria-hidden="true" />{marketOnboardingWelcomeCopy.transition}</div>
-              <button
-                type="button"
-                onClick={() => window.location.replace(`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`)}
-              >
+              <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                 {marketOnboardingWelcomeCopy.skip}
-              </button>
+              </a>
             </div>
           </section>
         ) : null}
@@ -7806,18 +7793,14 @@ export default function ArenaClient({
             <h2>{siteLanguage === "pt-BR" ? "Prepare seu clube para a próxima rodada" : "Prepare your club for the next round"}</h2>
             <p>
               {!activeArenaCoachIdentity?.coach
-                ? (siteLanguage === "pt-BR" ? "Escolha primeiro seu treinador oficial no Market Transfer. A Arena fica livre para o dia de jogo." : "Choose your official coach first in Market Transfer. Arena stays clear for matchday.")
+                ? (siteLanguage === "pt-BR" ? "Escolha primeiro seu treinador no Meu Clube. A Arena fica livre para o dia de jogo." : "Choose your coach first in My Club. Arena stays clear for matchday.")
                 : ownedSquadCount === 0
-                  ? (siteLanguage === "pt-BR" ? "Seu treinador está salvo. Agora contrate os jogadores do seu elenco no Market Transfer." : "Your coach is saved. Now contract your squad players in Market Transfer.")
+                  ? (siteLanguage === "pt-BR" ? "Seu treinador está salvo. Agora escolha os jogadores do seu elenco no Meu Clube." : "Your coach is saved. Now choose your squad players in My Club.")
                   : (siteLanguage === "pt-BR" ? `Seu elenco tem ${ownedSquadCount} jogadores. Continue a montagem até completar a formação.` : `Your squad has ${ownedSquadCount} players. Continue building until the formation is complete.`)}
             </p>
             <div>
-              <a className="is-primary" href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
-                {!activeArenaCoachIdentity?.coach
-                  ? (siteLanguage === "pt-BR" ? "Abrir Mercado de Treinadores" : "Open Coach Market")
-                  : ownedSquadCount === 0
-                    ? (siteLanguage === "pt-BR" ? "Abrir Mercado de Jogadores" : "Open Player Market")
-                    : (siteLanguage === "pt-BR" ? "Continuar Montagem do Elenco" : "Continue Squad Building")}
+              <a className="is-primary" href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                {siteLanguage === "pt-BR" ? "Monte seu time" : "Build your team"}
               </a>
               <a href={allClubsHubHref}>{siteLanguage === "pt-BR" ? "Ver todos os clubes" : "View all clubs"}</a>
             </div>
@@ -7867,7 +7850,7 @@ export default function ArenaClient({
                   </p>
                   {coachOfferStatus === "idle" ? (
                     <a className="arena-coach-login-link" href={coachFirstLoginHref}>
-                      {siteLanguage === "pt-BR" ? "Entrar para abrir o Market Transfer" : "Sign in to open Market Transfer"}
+                      {siteLanguage === "pt-BR" ? "Entrar para montar seu time" : "Sign in to build your team"}
                     </a>
                   ) : null}
                 </div>
@@ -8093,8 +8076,8 @@ export default function ArenaClient({
                 <a href={allClubsHubHref}>
                   {t("clubHub")}
                 </a>
-                <a href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
-                  Markt
+                <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                  {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
                 </a>
                 {!hasSyncedFantasyLineup ? <a
                     href={touchlineArenaPanelHref("bench", siteLanguage)}
@@ -8941,8 +8924,8 @@ export default function ArenaClient({
                     {t("clubHub")}
                   </a>
                   {arenaOverlayPanel !== "market" ? (
-                    <a href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
-                      {t("marketTransfer")}
+                    <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                      {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
                     </a>
                   ) : null}
                   <a className={arenaOverlayPanel === "rankings" ? "is-active" : ""} href={`/touchline-tables?lang=${encodeURIComponent(siteLanguage)}`}>
@@ -8999,7 +8982,7 @@ export default function ArenaClient({
                     </div>
                     {standaloneQuickSubstitutionSessionState === "setup-required" ? (
                       <div className="arena-standalone-bench-readiness-actions">
-                        <a className="is-primary" href={`/market-transfer?lang=${encodeURIComponent(siteLanguage)}`}>
+                        <a className="is-primary" href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                           {standaloneQuickSubstitutionCopy.openMarket}
                         </a>
                         <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
@@ -9688,7 +9671,11 @@ export default function ArenaClient({
                                 className="team-builder-card-sign"
                                 onClick={() => {
                                   setSelectedBuilderPlayerId(fieldId);
-                                  isPositionLimitReached ? openMarketPositionReplacement(player) : toggleBuilderPlayerInCart(player);
+                                  if (isPositionLimitReached) {
+                                    openMarketPositionReplacement(player);
+                                  } else {
+                                    toggleBuilderPlayerInCart(player);
+                                  }
                                 }}
                                 disabled={isInventoryUnavailable || isMarketDataRefreshing || isSoldOut || !marketFormationConfirmed || (replacementAlreadyStaged && !isInField && !isInSquad) || (isMarketCartAtCapacity && !isInCart && !isInField && !isInSquad)}
                               >
@@ -10197,7 +10184,7 @@ export default function ArenaClient({
           animation: arena-market-welcome-pulse 1.35s infinite ease-out;
         }
 
-        .arena-market-welcome-copy button {
+        .arena-market-welcome-copy :is(button, a) {
           margin-top: 13px;
           border: 0;
           padding: 6px 0;
@@ -10213,8 +10200,8 @@ export default function ArenaClient({
           animation: arena-market-welcome-copy .5s 2.25s both ease-out;
         }
 
-        .arena-market-welcome-copy button:hover,
-        .arena-market-welcome-copy button:focus-visible {
+        .arena-market-welcome-copy :is(button, a):hover,
+        .arena-market-welcome-copy :is(button, a):focus-visible {
           color: #fff;
           outline: none;
         }
@@ -10663,7 +10650,7 @@ export default function ArenaClient({
           .arena-market-welcome-copy p,
           .arena-market-welcome-copy strong,
           .arena-market-welcome-copy > div,
-          .arena-market-welcome-copy button,
+          .arena-market-welcome-copy :is(button, a),
           .arena-market-welcome-copy > div i {
             animation: none;
             opacity: 1;

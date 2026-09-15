@@ -17,6 +17,19 @@
   isolation: isolate;
 }
 
+.feedCanvas { height: 1350px; }
+
+.storyCanvas {
+  height: 1920px;
+  display: block;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 18% 3%, color-mix(in srgb, var(--social-club-accent) 36%, transparent), transparent 28%),
+    radial-gradient(circle at 90% 68%, color-mix(in srgb, var(--social-club-secondary) 24%, transparent), transparent 34%),
+    linear-gradient(165deg, rgba(6,18,14,.58), rgba(2,8,7,.78) 58%, rgba(7,16,13,.72)),
+    var(--social-stadium) center / cover no-repeat;
+}
+
 .canvas::before {
   content: "";
   position: absolute;
@@ -318,6 +331,57 @@
 .footer span { color: rgba(255,255,255,.52); font-size: 9px; }
 .footer strong { color: #efffd9; font-size: 11px; letter-spacing: .09em; }
 .footer i { color: #b6ff4f; font-style: normal; }
+
+.storyCanvas .header {
+  top: 38px;
+  left: 38px;
+  right: 38px;
+  min-height: 142px;
+  padding: 18px 20px;
+}
+
+.storyCanvas .pitch {
+  position: absolute;
+  top: 80px;
+  left: 38px;
+  width: 670px;
+  height: 1035px;
+  aspect-ratio: auto;
+}
+
+.storyCanvas .technicalRail {
+  position: absolute;
+  top: 80px;
+  right: 38px;
+  width: 308px;
+  height: 1760px;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  padding: 18px 14px 16px;
+}
+
+.storyCanvas .benchGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: space-evenly;
+  gap: 12px 4px;
+}
+
+.storyCanvas .benchCard { width: 88px; height: 142px; }
+.storyCanvas .benchPlayer > strong { width: 116px; font-size: 9px; }
+.storyCanvas .benchPlayer:nth-child(9) { grid-column: 1 / -1; }
+.storyCanvas .coachPanel { grid-template-columns: 88px minmax(0, 1fr); padding: 12px; }
+.storyCanvas .coachCard { width: 88px; }
+.storyCanvas .footer { gap: 10px; }
+
+.storyCanvas .teamIdentity h1 { font-size: 27px; }
+.storyCanvas .crestFrame { width: 92px; height: 92px; }
+.storyCanvas .matchup { padding: 10px 12px; }
+.storyCanvas .player { top: calc(var(--social-lineup-y) + 5%); }
+.storyCanvas .playerName {
+  width: 108px;
+  padding-inline: 3px;
+  font-size: 7.5px;
+  letter-spacing: 0;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .canvas *, .canvas *::before, .canvas *::after { animation: none !important; transition: none !important; }

@@ -15,12 +15,33 @@ function row(route: string) {
 }
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
-  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 76);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 75);
+  assert.equal(rows.filter((item) => item.kind === "PAGE").length, 81);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 79);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
   assert.equal(new Set(rows.map((item) => item.route)).size, rows.length);
+});
+
+test("social studio and live-art routes have explicit owner policies without publication readiness", () => {
+  const studio = row("/admin/social-publications/studio");
+  assert.equal(studio.auth, "ADMIN");
+  assert.equal(studio.role, "OWNER_ADMIN");
+  assert.equal(studio.data, "PRIVATE_SOCIAL_STUDIO_PAUSED_REVIEW");
+  assert.equal(studio.status, "PENDING_ADMIN_BROWSER_QA");
+  assert.equal(row("POST /api/admin/social-publications/studio").auth, "ADMIN_SAME_ORIGIN");
+  assert.equal(row("POST /api/admin/social-publications/studio").role, "OWNER_ADMIN");
+  assert.equal(row("POST /api/admin/social-publications/studio/review").auth, "ADMIN_SAME_ORIGIN");
+  assert.equal(row("POST /api/admin/social-publications/studio/review").data, "SUPABASE_SERVER_TIMED_SOCIAL_REVIEW_EVIDENCE");
+  assert.equal(row("GET /api/admin/social-publications/studio/video").auth, "ADMIN");
+  assert.equal(row("GET /api/admin/social-publications/studio/video").role, "OWNER_ADMIN");
+  assert.equal(row("GET /api/admin/social-publications/studio/video").browser, "MEDIA_HTTP_CONTRACT");
+  for (const route of ["/visual-qa/social-events-live", "/visual-qa/social-lineup-live", "/visual-qa/social-match-preview-live", "/visual-qa/social-rankings-live", "GET /visual-qa/social-rankings-live/input"]) {
+    assert.equal(row(route).auth, "ADMIN");
+    assert.equal(row(route).role, "OWNER_ADMIN");
+    assert.equal(row(route).status, "LOCAL_ONLY");
+    assert.notEqual(row(route).data, "STATIC_VISUAL_QA_FIXTURE");
+  }
 });
 
 test("records no Server Actions instead of assuming an uninspected mutation surface", () => {

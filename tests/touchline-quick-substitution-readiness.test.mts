@@ -91,7 +91,7 @@ test("the standalone panel renders an honest readiness state instead of an empty
   assert.match(arenaSource, /resolveTouchlineQuickSubstitutionReadiness/);
   assert.match(arenaSource, /data-quick-substitution-readiness=/);
   assert.match(arenaSource, /Nenhum jogador é criado automaticamente/);
-  assert.match(arenaSource, /href=\{`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/);
+  assert.match(arenaSource, /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/);
   assert.match(arenaSource, /standaloneQuickSubstitutionSessionState && standaloneQuickSubstitutionSessionState !== "ready"/);
 });
 

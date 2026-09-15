@@ -215,6 +215,58 @@ test("a later-page rate limit preserves providerFailure semantics", async () => 
       assert.equal(result.error.retryAfterSeconds, 9);
       assert.equal(result.error.requestedEntity, "leagues");
     }
-    assert.equal(requestCount, 2);
+    assert.equal(requestCount, 4);
+  });
+});
+
+test("a retry keeps the same page URL before pagination advances", async () => {
+  const requestedPages: number[] = [];
+  let firstPageAttempts = 0;
+
+  await withMockedProvider((async (input) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    const page = Number(url.searchParams.get("page"));
+    requestedPages.push(page);
+    if (page === 1) {
+      firstPageAttempts += 1;
+      if (firstPageAttempts === 1) return jsonResponse({ message: "temporary" }, 503);
+      return jsonResponse({
+        data: [{ id: 1, display_name: "Page One" }],
+        pagination: { current_page: 1, has_more: true },
+      });
+    }
+    return jsonResponse({
+      data: [{ id: 2, display_name: "Page Two" }],
+      pagination: { current_page: 2, has_more: false },
+    });
+  }) as typeof fetch, async (provider) => {
+    const result = await provider.searchPlayers({ query: "Page", limit: 50 });
+    assert.equal(result.ok, true);
+    if (result.ok) assert.deepEqual(result.data.map((player) => player.providerId), ["1", "2"]);
+    assert.deepEqual(requestedPages, [1, 1, 2]);
+  });
+});
+
+test("retry work remains shared by inflight callers and the success is cached", async () => {
+  let calls = 0;
+
+  await withMockedProvider((async () => {
+    calls += 1;
+    if (calls === 1) return jsonResponse({ message: "temporary" }, 503);
+    return jsonResponse({
+      data: [{ id: 8, name: "Premier League" }],
+      pagination: { current_page: 1, has_more: false },
+    });
+  }) as typeof fetch, async (provider) => {
+    const [first, second] = await Promise.all([
+      provider.getCompetitions(),
+      provider.getCompetitions(),
+    ]);
+    const third = await provider.getCompetitions();
+
+    assert.equal(first.ok, true);
+    assert.equal(second.ok, true);
+    assert.equal(third.ok, true);
+    assert.equal(calls, 2);
   });
 });

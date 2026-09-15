@@ -59,6 +59,11 @@ const PAGE_POLICIES: Record<string, Partial<RoutePolicy>> = {
   "/visual-qa/social-confirmed-event": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_CONFIRMED_EVENT_STORY_DRAFT", status: "PENDING_VISUAL_QA" },
   "/visual-qa/social-ranking": { auth: "ADMIN", role: "OWNER_ADMIN", data: "QA_VERIFIED_RANKING_FAMILY_DRAFT", status: "PENDING_VISUAL_QA" },
   "/admin/social-publications": { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_SOCIAL_DRAFT_SEPARATE_APPROVAL", status: "PENDING_VISUAL_QA" },
+  "/admin/social-publications/studio": { auth: "ADMIN", role: "OWNER_ADMIN", data: "PRIVATE_SOCIAL_STUDIO_PAUSED_REVIEW", status: "PENDING_ADMIN_BROWSER_QA" },
+  "/visual-qa/social-events-live": { auth: "ADMIN", role: "OWNER_ADMIN", data: "PRIVATE_RETROSPECTIVE_EVENT_RENDER_CANDIDATE", status: "LOCAL_ONLY" },
+  "/visual-qa/social-lineup-live": { auth: "ADMIN", role: "OWNER_ADMIN", data: "PRIVATE_LINEUP_RENDER_CANDIDATE", status: "LOCAL_ONLY" },
+  "/visual-qa/social-match-preview-live": { auth: "ADMIN", role: "OWNER_ADMIN", data: "PRIVATE_UNPUBLISHED_REPLAY_PREVIEW_CANDIDATE", status: "LOCAL_ONLY" },
+  "/visual-qa/social-rankings-live": { auth: "ADMIN", role: "OWNER_ADMIN", data: "PRIVATE_UNPUBLISHED_REPLAY_RANKING_CANDIDATE", status: "LOCAL_ONLY" },
 };
 
 const API_POLICIES: Record<string, RoutePolicy> = {
@@ -143,6 +148,10 @@ const API_POLICIES: Record<string, RoutePolicy> = {
   "GET /api/admin/social-publications/source": { auth: "QA_RENDER_SECRET_COOKIE", role: "SERVER_JOB", data: "CURRENT_VERIFIED_SOCIAL_RENDER_SOURCE", browser: "SERVER_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/admin/social-publications/review": { auth: "ADMIN_SAME_ORIGIN", role: "OWNER_ADMIN", data: "SUPABASE_SOCIAL_DRAFT_SEPARATE_APPROVAL", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/admin/social-publications/template-policy": { auth: "ADMIN_SAME_ORIGIN", role: "OWNER_ADMIN", data: "SUPABASE_SOCIAL_TEMPLATE_VERSION_POLICY", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "POST /api/admin/social-publications/studio": { auth: "ADMIN_SAME_ORIGIN", role: "OWNER_ADMIN", data: "SUPABASE_SOCIAL_STUDIO_PAUSED_REVIEW_CAS", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "POST /api/admin/social-publications/studio/review": { auth: "ADMIN_SAME_ORIGIN", role: "OWNER_ADMIN", data: "SUPABASE_SERVER_TIMED_SOCIAL_REVIEW_EVIDENCE", browser: "ADMIN_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /api/admin/social-publications/studio/video": { auth: "ADMIN", role: "OWNER_ADMIN", data: "PRIVATE_VERIFIED_SOCIAL_STUDIO_VIDEO", browser: "MEDIA_HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
+  "GET /visual-qa/social-rankings-live/input": { auth: "ADMIN", role: "OWNER_ADMIN", data: "PRIVATE_UNPUBLISHED_REPLAY_RENDER_INPUT", browser: "LOCAL_HTTP_CONTRACT", status: "LOCAL_ONLY" },
 };
 
 const ROUTE_METHOD_OVERRIDES: Record<string, string[]> = {
@@ -176,7 +185,7 @@ function appRouteFromFile(root: string, file: string) {
 
 function pagePolicy(route: string): RoutePolicy {
   if (route.startsWith("/admin")) {
-    return { auth: "ADMIN", role: "OWNER_ADMIN", data: "SUPABASE_ADMIN", browser: "REQUIRED", status: "PENDING_ADMIN_BROWSER_QA" };
+    return { data: "SUPABASE_ADMIN", browser: "REQUIRED", status: "PENDING_ADMIN_BROWSER_QA", ...PAGE_POLICIES[route], auth: "ADMIN", role: "OWNER_ADMIN" };
   }
   if (route.startsWith("/visual-qa")) {
     return {

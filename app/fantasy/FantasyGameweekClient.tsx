@@ -362,14 +362,25 @@ export default function FantasyGameweekClient({
         <div>
           <span>{pt ? "MEU XI" : "MY XI"}</span>
           <h1>{formationCode ?? (pt ? "Defina sua formação" : "Set your formation")}</h1>
-          <p>{pt ? "Escolha um card para trocar ou remover. A seleção mostra apenas atletas elegíveis para a posição." : "Select a card to replace or remove it. The selection only shows players eligible for that position."}</p>
+          <p>{!selectedCoach
+            ? (pt ? "Escolha primeiro o treinador do seu clube." : "Choose your club coach first.")
+            : !formationCode
+              ? (pt ? "Agora escolha a formação antes de montar os 11 jogadores." : "Now choose a formation before building the 11 players.")
+              : (pt ? "Escolha um card para trocar ou remover. A seleção mostra apenas atletas elegíveis para a posição." : "Select a card to replace or remove it. The selection only shows players eligible for that position.")}</p>
         </div>
         <div className={styles.myClubCommandStatus}>
           <span>{pt ? "Gameweek" : "Gameweek"}</span><strong>{activeGameweek?.number ?? "—"}</strong>
           <small>{statusCopy(activeGameweek?.state, pt)}</small>
         </div>
       </header>
-      <div className={styles.myClubCommandGrid}>
+      {!selectedCoach ? <section className={styles.myClubSetup} data-my-club-setup="coach" aria-label={pt ? "Escolha de treinador" : "Coach selection"}>
+        <header><span>STEP 1</span><h2>{pt ? "Escolha seu treinador" : "Choose your coach"}</h2><p>{pt ? "Selecione um clube para ver o treinador canônico e continue para a formação." : "Select a club to see its canonical coach, then continue to formation."}</p></header>
+        <CompactClubSelector selectedTeamId={selectedCoachClub?.teamId ?? ""} onSelect={(club) => setCoachClubTeamId(club.teamId)} locale={locale} />
+        <div className={styles.myClubCoachResults}>{filteredCoaches.map((entry) => <article key={entry.id}><span><FantasyCoachZoom entry={entry} locale={locale} eager /></span><div><strong>{entry.coach.displayName}</strong><CompactClubIdentity clubName={entry.clubName} clubLogoUrl={entry.clubLogoUrl} /></div><button type="button" disabled={!editable} onClick={() => { setSelectedCoachId(entry.id); setVisibleStep("formation"); setFeedback(pt ? "Treinador escolhido. Agora escolha a formação." : "Coach chosen. Now choose a formation."); }}>{pt ? "Escolher treinador" : "Choose coach"}</button></article>)}{filteredCoaches.length === 0 ? <p>{pt ? "Nenhum treinador canônico disponível para este clube." : "No canonical coach is available for this club."}</p> : null}</div>
+      </section> : !formationCode ? <section className={styles.myClubSetup} data-my-club-setup="formation" aria-label={pt ? "Escolha de formação" : "Formation selection"}>
+        <header><span>STEP 2</span><h2>{pt ? "Escolha a formação" : "Choose formation"}</h2><p>{pt ? "A formação canônica abre as 11 vagas elegíveis para montagem." : "The canonical formation opens the 11 eligible slots for your build."}</p></header>
+        <div className={styles.formationGrid}>{Object.keys(snapshot.formationRegistry).map((code) => <button type="button" key={code} onClick={() => changeFormation(code)} disabled={!editable}><b>{code}</b><small>11 {pt ? "vagas" : "slots"}</small></button>)}</div>
+      </section> : <div className={styles.myClubCommandGrid}>
         <section className={styles.myClubSquad} id="my-club-xi-pitch" aria-label={pt ? "Seu XI por linhas" : "Your XI by lines"}>
           <header><div><span>{pt ? "ELENCO TITULAR" : "STARTING XI"}</span><strong>{selectedCount}/11</strong></div><button type="button" className={styles.viewToggle} onClick={() => setSquadView((current) => current === "squad" ? "tactical" : "squad")}>{squadView === "squad" ? (pt ? "Ver visão tática" : "View tactical layout") : (pt ? "Ver cards" : "View cards")}</button></header>
           {squadView === "tactical" ? <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="horizontal" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
@@ -396,9 +407,9 @@ export default function FantasyGameweekClient({
           <header><span>{pt ? "SELEÇÃO DE JOGADORES" : "PLAYER SELECTION"}</span><h2>{activeSlot ? `${activeSlot.id} · ${activeSlot.allowedPositions.join(" / ")}` : (pt ? "Escolha uma posição" : "Choose a position")}</h2><p>{activeSlot ? (pt ? `${filtered.length} cards elegíveis para esta vaga.` : `${filtered.length} eligible cards for this slot.`) : (pt ? "Selecione uma posição no campo. Só aparecem cards compatíveis." : "Select a position on the pitch. Only compatible cards appear here.")}</p></header>
           <label className={styles.myClubSearch}><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={pt ? "Pesquisar jogador" : "Search player"} /></label>
           <CompactClubSelector selectedTeamId={selectedPlayerClub?.teamId ?? ""} onSelect={(club) => setPlayerClubTeamId(club.teamId)} locale={locale} />
-          <div className={styles.myClubMarketResults}>{filtered.slice(0, 10).map((card) => <article key={card.canonicalPlayerId ?? card.id}><span><TouchlineGameweekCard card={card} locale={locale} displayWidth={126} /></span><div><strong>{card.name}</strong><small>{card.position}</small><em>{card.clubName}</em><button type="button" disabled={!editable} onClick={() => selectMyClubPlayer(card)}>{selections.some((entry) => entry.slotId === activeSlot?.id) ? (pt ? "Substituir" : "Replace") : (pt ? "Escolher" : "Choose")}</button></div></article>)}{filtered.length === 0 ? <p>{pt ? "Nenhum card elegível para esta posição neste clube." : "No eligible card for this position at this club."}</p> : null}</div>
+          <div className={styles.myClubMarketResults} aria-live="polite">{filtered.map((card) => <article key={card.canonicalPlayerId ?? card.id}><span><TouchlineGameweekCard card={card} locale={locale} displayWidth={126} /></span><div><strong>{card.name}</strong><small>{card.position}</small><em>{card.clubName}</em><button type="button" disabled={!editable} onClick={() => selectMyClubPlayer(card)}>{selections.some((entry) => entry.slotId === activeSlot?.id) ? (pt ? "Substituir" : "Replace") : (pt ? "Escolher" : "Choose")}</button></div></article>)}{filtered.length === 0 ? <p>{pt ? "Nenhum card elegível para esta posição neste clube." : "No eligible card for this position at this club."}</p> : null}</div>
         </aside>
-      </div>
+      </div>}
       <footer className={styles.myClubGameweekFooter}><div><span>{pt ? "GAMEWEEK" : "GAMEWEEK"}</span><strong>{lineupConfirmed ? (pt ? "XI confirmado" : "XI confirmed") : validation?.valid ? (pt ? "Pronto para confirmar" : "Ready to confirm") : `${selectedCount}/11`}</strong></div><div><small>{hasUnsavedChanges ? (pt ? "Alterações não salvas" : "Unsaved changes") : (pt ? "Elenco sincronizado" : "Squad synced")}</small><button type="button" disabled={!editable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{pt ? "Confirmar XI" : "Confirm XI"}</button></div></footer>
       {feedback ? <p className={styles.feedback} role="status">{feedback}</p> : null}
     </section>;

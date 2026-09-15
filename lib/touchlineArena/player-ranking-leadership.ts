@@ -3,6 +3,7 @@ import type {
   TouchlineLeadershipScope,
   TouchlineLeadershipSubject,
 } from "./leadership-decision.ts";
+import { compareTouchlineRankingPlayers } from "./card-ranking.ts";
 
 /**
  * The one overall Player Card ranking scope. Positional rank #1 does not
@@ -39,7 +40,7 @@ const CANONICAL_PLAYER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
 /**
  * Publication-side classification for the immutable decision writer. Public
  * consumers still read only the persisted decision, never this calculation.
- * This mirrors the SQL writer's strict JSONB input contract: a missing,
+ * This validates the publication's strict JSONB input contract: a missing,
  * non-array, empty, or malformed `players` value publishes `unavailable`.
  */
 export function classifyTouchlinePlayerLeadershipPublication(input: {
@@ -53,16 +54,25 @@ export function classifyTouchlinePlayerLeadershipPublication(input: {
   const rawPlayers = Array.isArray(payload?.players) ? payload.players : [];
   const candidates = rawPlayers.flatMap((value) => {
     if (!value || typeof value !== "object") return [];
-    const player = value as { playerId?: unknown; totalRating?: unknown };
+    const player = value as { playerId?: unknown; totalRating?: unknown; providerPlayerId?: unknown; minutesPlayed?: unknown; appearances?: unknown };
     const playerId = normalizedIdentifier(player.playerId);
     return CANONICAL_PLAYER_UUID.test(playerId) && typeof player.totalRating === "number" && Number.isFinite(player.totalRating)
-      ? [{ playerId, totalRating: player.totalRating }]
+      ? [{ playerId, totalRating: player.totalRating,
+        providerPlayerId: typeof player.providerPlayerId === "number" || typeof player.providerPlayerId === "string" ? player.providerPlayerId : null,
+        minutesPlayed: typeof player.minutesPlayed === "number" && Number.isFinite(player.minutesPlayed) && player.minutesPlayed >= 0 ? player.minutesPlayed : null,
+        appearances: typeof player.appearances === "number" && Number.isInteger(player.appearances) && player.appearances >= 0 ? player.appearances : null,
+      }]
       : [];
   });
   if (!candidates.length) return unavailableTouchlinePlayerLeadership(input.snapshotId);
 
   const maxRating = Math.max(...candidates.map((candidate) => candidate.totalRating));
-  const leaders = candidates.filter((candidate) => candidate.totalRating === maxRating);
+  const ratingLeaders = candidates.filter((candidate) => candidate.totalRating === maxRating);
+  // Legacy publications without tie evidence remain tied. Never fetch newer
+  // mutable season statistics to break a tie in this immutable snapshot.
+  const completeTiebreak = ratingLeaders.every(player => String(player.providerPlayerId ?? "").trim() && player.minutesPlayed !== null && player.appearances !== null);
+  const ordered = completeTiebreak ? [...ratingLeaders].sort(compareTouchlineRankingPlayers) : ratingLeaders;
+  const leaders = completeTiebreak ? ordered.filter(player => compareTouchlineRankingPlayers(player, ordered[0]!) === 0) : ordered;
   if (leaders.length === 1) {
     return { status: "unique-leader", scope, leader: { subjectType: "player", subjectId: leaders[0]!.playerId } };
   }

@@ -2,6 +2,7 @@ import { TOUCHLINE_CLUB_OWNER_ROUTE_BASE } from "../touchlineArena/club-owner-ro
 
 const ALLOWED_AUTH_CALLBACK_PATHS = [
   "/arena",
+  "/my-club",
   TOUCHLINE_CLUB_OWNER_ROUTE_BASE,
   "/reset-password",
   "/market-transfer",

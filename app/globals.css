@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Next watches PostCSS directory dependencies recursively, including ancestors. */
+@source not "../artifacts";
 
 :root {
   --void: #02050a;

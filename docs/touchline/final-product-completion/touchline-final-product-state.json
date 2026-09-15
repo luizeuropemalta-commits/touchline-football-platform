@@ -1,6 +1,15 @@
 {
   "goal": "TouchLine Final Product Completion — Current State",
   "overall_status": "IN_PROGRESS",
+  "current_scope_override_20260914": {
+    "status": "LOCAL_SOCIAL_SAMPLES_IN_PROGRESS",
+    "order": "Real animated social samples and professional captions for owner approval in Admin, then all interrupted product audit blocks.",
+    "historical_rules_superseded": "The historical 35-player journey below is not current: My Club uses eleven eligible XI slots. Old release and test receipts do not validate the new social overlay.",
+    "branch": "codex/myclub-header-final-20260913",
+    "base_sha": "df5d6335a4917b221f5ea008c870f7f8cf243b18",
+    "remote_actions": "No Studio migration, deployment, approval, dispatch, Production, DNS or credential change performed.",
+    "evidence": "Private artifacts/social-studio/**/HANDOFF.md; full audit matrix in the Cérebro workspace under outputs/Memoria-TouchLine/Auditorias/2026-09-14."
+  },
   "authoritative_resume_rule": "At the start of every execution, inspect git status, read HEAD, read the execution ledger, resolve the newest safe checkpoint from the current branch, then continue the first incomplete executable item. Never resume a hardcoded historical checkpoint.",
   "repository": {
     "branch": "safety/touchline-2026-06-28-wip",
@@ -72,7 +81,7 @@
       "CSV/API delivery method"
     ]
   },
-  "next_executable_action": "Run one funded controlled ClubOwner purchase/replacement journey against the published 35-player position sequence, then continue the first independent Final Zero-Defect Audit item. Keep the queued Training Centre to Arena XI preview behind the server-owned competition-engine eligibility boundary.",
+  "next_executable_action": "Generate real social MP4 samples serially, decode and visually inspect two loops, integrate private Admin review, then resume all audit blocks. Do not activate posting or substitute fake facts for unresolved data.",
   "last_validated_at": "2026-08-06T14:12:00+02:00",
   "tests": {
     "typescript": "pass",

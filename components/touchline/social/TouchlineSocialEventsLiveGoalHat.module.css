@@ -1,0 +1,13 @@
+.premiumMotion,.premiumMotion:hover{transform:none!important;transition:none!important;filter:none!important}
+.premiumMotion .neon{animation-duration:6s}
+.premiumMotion .word>span{animation:events-live-letter-zoom 6s cubic-bezier(.2,.8,.2,1) infinite;animation-delay:calc(-6000ms + var(--line-delay) + (var(--letter-index) * 72ms))}
+/* The geometry and sequential white/gold identity stay 043; equal endpoints
+   remove the old website cycle's discontinuity in a looping video export. */
+@keyframes events-live-letter-zoom{0%,100%{opacity:1;transform:scale(1);filter:blur(0);text-shadow:0 0 6px currentColor}5%{opacity:1;transform:scale(1.16);filter:blur(0);text-shadow:0 0 20px currentColor}11%,94%{opacity:1;transform:scale(1);filter:blur(0);text-shadow:0 0 6px currentColor}}
+@media(prefers-reduced-motion:reduce){.premiumMotion .word>span,.premiumMotion .neon{animation:none!important}}
+
+/* Only this 043 instance: lift the frozen card's final stats row above the
+   lower jewel. Keep the template image, club colours, card bounds and motion. */
+.cardInformation>div:last-child{left:56px!important;right:56px!important;bottom:154px!important;font-size:17px!important;line-height:1.25;gap:8px!important;padding:8px;border-radius:10px;background:rgba(1,7,6,.94);border:1px solid rgba(255,255,255,.12)}
+.cardInformation>div:last-child>span{min-width:0;border-top:0!important;padding-top:0!important}
+.cardInformation>div:last-child small{font-size:12px!important;font-weight:700;line-height:1.25;color:#d8e2de!important;margin-bottom:4px}

@@ -1,0 +1,53 @@
+export type StudioPlacement = "FEED" | "STORY" | "CLUB_FEED";
+export type StudioPlatform = "INSTAGRAM" | "FACEBOOK" | "CLUB";
+export type StudioSurfaceKey = "INSTAGRAM:FEED" | "INSTAGRAM:STORY" | "FACEBOOK:FEED" | "FACEBOOK:STORY" | "CLUB:CLUB_FEED";
+export type StudioArt = {
+  id: string; block: number; title: string; metric: string; trigger: "OFFICIAL_EVENT" | "OWNER_SCHEDULE";
+  suggestion: string; internal: "BOTH_CLUBS" | "SUBJECT_CLUB" | "PENDING"; allowedSurfaces: readonly StudioSurfaceKey[]; dependencies: string;
+};
+
+/** Eligible review surfaces, not a selected delivery plan. The owner's 14/09 decision requires
+ * Instagram + Facebook and an independent Feed/Story/both choice per type. All start unselected.
+ * Historical Feed-only compositions do not decide new Story eligibility or imply a delivered asset.
+ * CLUB_FEED is deliberately absent when internal fanout is still PENDING. */
+export const STUDIO_CATALOG: readonly StudioArt[] = [
+  { id: "MATCH_PREVIEW", block: 1, title: "Match Preview · confronto integrado", metric: "Maior pontuação acumulada elegível de cada clube, no mesmo ranking auditado", trigger: "OWNER_SCHEDULE", suggestion: "Sugestão editável: 24h antes da partida", internal: "BOTH_CLUBS", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Partida oficial, dois clubes distintos, dois cards publicados e ranking auditado. Sem card de um lado, bloquear." },
+  { id: "GOAL_CONFIRMED", block: 2, title: "Gol", metric: "Autor e clube do gol válido", trigger: "OFFICIAL_EVENT", suggestion: "Aguardando gol oficialmente confirmado", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Evento oficial confirmado; revisão, VAR e anulação bloqueiam. Identidade compartilhada com a variante gol contra." },
+  { id: "OWN_GOAL", block: 2, title: "Gol contra · variante de gol", metric: "Atleta envolvido; placar beneficia o adversário", trigger: "OFFICIAL_EVENT", suggestion: "Aguardando gol contra oficialmente confirmado", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Não contar para artilharia ou hat-trick; reconciliar correções sem duplicar o mesmo evento." },
+  { id: "HAT_TRICK_HERO", block: 2, title: "Hat-trick", metric: "Terceiro gol válido do mesmo atleta na mesma partida", trigger: "OFFICIAL_EVENT", suggestion: "Aguardando terceiro gol válido confirmado", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Excluir gols contra, anulados e disputa de pênaltis. Quarto gol não produz segundo hat-trick." },
+  { id: "RED_CARD_CONFIRMED", block: 2, title: "Cartão vermelho", metric: "Atleta e clube da expulsão", trigger: "OFFICIAL_EVENT", suggestion: "Aguardando expulsão oficialmente confirmada", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Expulsão confirmada; autor e clube canônicos. Advertência não basta." },
+  { id: "FULL_TIME", block: 2, title: "Placar final", metric: "Resultado oficial reconciliado", trigger: "OFFICIAL_EVENT", suggestion: "Aguardando fim da partida confirmado", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Apito final oficial, placar reconciliado. Destino interno multiclube aguarda escolha." },
+  { id: "OVERALL_LEADER", block: 3, title: "Líder geral · coroa", metric: "Maior acumulado do campeonato", trigger: "OWNER_SCHEDULE", suggestion: "Sugestão editável: após consolidação da rodada", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Ranking acumulado e elegibilidade canônica da coroa; não usar apenas desempenho semanal." },
+  { id: "GAMEWEEK_TOP_CARD", block: 3, title: "Top Card da rodada", metric: "Maior Total Rating somente da rodada", trigger: "OWNER_SCHEDULE", suggestion: "Sugestão editável: após consolidação da rodada", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Ranking semanal consolidado; não substituir pelo líder acumulado do campeonato." },
+  { id: "GAMEWEEK_HERO", block: 3, title: "Destaques da rodada · por posição", metric: "Pontos somente da rodada, comparados por posição", trigger: "OWNER_SCHEDULE", suggestion: "Sugestão editável: após consolidação da rodada", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Rodada encerrada, pontuação semanal por posição; quantidade e empates editoriais pendentes." },
+  { id: "SEASON_XI_COACH", block: 3, title: "11 melhores por posição + treinador", metric: "Acumulado do campeonato; treinador com pontuação própria", trigger: "OWNER_SCHEDULE", suggestion: "Sugestão editável: após consolidação da rodada", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Formação e empates canônicos/editoriais, 11 elegíveis e treinador. Destino coletivo pendente." },
+  { id: "GAMEWEEK_XI_COACH", block: 3, title: "XI da rodada + treinador", metric: "Pontuação da rodada por posição; treinador semanal canônico", trigger: "OWNER_SCHEDULE", suggestion: "Sugestão editável: após consolidação da rodada", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Rodada completa, formação válida e pontuação semanal distinta da seleção acumulada. Destino coletivo pendente." },
+  { id: "GOLDEN_BOOT", block: 3, title: "Artilheiro Premier League", metric: "Gols oficiais da competição e temporada", trigger: "OWNER_SCHEDULE", suggestion: "Frequência a escolher; sugestão: após rodada", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Artilharia oficial; preservar liderança compartilhada sem desempate oficial. Sem coroa inferida." },
+  { id: "TOP_COACH", block: 3, title: "Melhor treinador · individual", metric: "Ranking acumulado canônico do treinador", trigger: "OWNER_SCHEDULE", suggestion: "Frequência a escolher; sugestão: após rodada", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Pontuação própria do treinador. Confirmar clube de destino; sem coroa inferida." },
+  { id: "LEAGUE_TABLE_PREVIEW", block: 4, title: "Tabela · antes da rodada", metric: "Última classificação oficial consolidada", trigger: "OWNER_SCHEDULE", suggestion: "Sugestão editável: 24h antes do primeiro jogo da rodada", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Rodada seguinte identificada; não confundir tabela dos clubes com Top 3 de cards." },
+  { id: "LEAGUE_TABLE_FINAL", block: 4, title: "Tabela · final da rodada", metric: "Classificação oficial após a rodada completa", trigger: "OWNER_SCHEDULE", suggestion: "Sugestão editável: após último jogo e consolidação", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Todos os jogos relevantes encerrados. Rodada incompleta/adiada permanece bloqueada; não disparar a cada jogo." },
+  { id: "LINEUP", block: 5, title: "Escalação oficial", metric: "Escalação oficial real de um clube", trigger: "OWNER_SCHEDULE", suggestion: "Dia, hora e fuso a escolher", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Escalação oficial confirmada. Não é a seleção editorial dos 11 melhores; destino interno a confirmar." },
+  { id: "GAMEWEEK_RANKING_PREVIEW", block: 5, title: "Top 3 · prévia", metric: "Ranking canônico no escopo identificado", trigger: "OWNER_SCHEDULE", suggestion: "Dia, hora e fuso a escolher", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Candidato existente a revisar; destino multiclube e frequência a escolher." },
+  { id: "GAMEWEEK_RANKING_FINAL", block: 5, title: "Top 3 · final", metric: "Ranking consolidado no escopo identificado", trigger: "OWNER_SCHEDULE", suggestion: "Dia, hora e fuso a escolher", internal: "PENDING", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY"], dependencies: "Não equivale ao líder individual com coroa. Destino multiclube a escolher." },
+  { id: "TOP_PERFORMER", block: 5, title: "Destaque da partida", metric: "Match Rating da partida", trigger: "OWNER_SCHEDULE", suggestion: "Dia, hora e fuso a escolher", internal: "SUBJECT_CLUB", allowedSurfaces: ["INSTAGRAM:FEED", "INSTAGRAM:STORY", "FACEBOOK:FEED", "FACEBOOK:STORY", "CLUB:CLUB_FEED"], dependencies: "Partida e Match Rating consolidados; não usar ranking semanal ou acumulado." },
+];
+
+export const STUDIO_SURFACES: readonly { platform: StudioPlatform; placement: StudioPlacement; label: string }[] = [
+  { platform: "INSTAGRAM", placement: "FEED", label: "Instagram · Feed" },
+  { platform: "INSTAGRAM", placement: "STORY", label: "Instagram · Stories" },
+  { platform: "FACEBOOK", placement: "FEED", label: "Facebook · Feed" },
+  { platform: "FACEBOOK", placement: "STORY", label: "Facebook · Stories" },
+  { platform: "CLUB", placement: "CLUB_FEED", label: "Feed interno dos clubes" },
+];
+
+export function studioSurfacesForArt(art: StudioArt) {
+  return STUDIO_SURFACES.filter((surface) => art.allowedSurfaces.includes(`${surface.platform}:${surface.placement}` as StudioSurfaceKey)
+    && (surface.platform !== "CLUB" || art.internal !== "PENDING"));
+}
+
+export function studioRecordKey(artId: string, platform: StudioPlatform, placement: StudioPlacement) {
+  const art = STUDIO_CATALOG.find((item) => item.id === artId);
+  if (!art || !STUDIO_SURFACES.some((surface) => surface.platform === platform && surface.placement === placement)) throw new Error("INVALID_SURFACE");
+  if (!studioSurfacesForArt(art).some((surface) => surface.platform === platform && surface.placement === placement)) throw new Error("SURFACE_NOT_ALLOWED");
+  return `${artId}:${platform}:${placement}`;
+}

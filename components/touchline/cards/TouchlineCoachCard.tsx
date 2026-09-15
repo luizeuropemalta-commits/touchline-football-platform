@@ -72,7 +72,19 @@ type TouchlineCoachCardProps = {
   showLeadershipCrown?: boolean;
   /** Immutable Gameweek points may be displayed without borrowing season data. */
   publishedTouchlinePoints?: number | null;
+  /**
+   * Provider-backed coach discipline. It stays unavailable until a canonical
+   * source supplies it; the card must never convert missing data to zero.
+   */
+  discipline?: Readonly<{
+    yellowCards?: number | null;
+    redCards?: number | null;
+  }> | null;
 };
+
+function officialCardCount(value: number | null | undefined) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
+}
 
 function CoachStatIcon({ type }: { type: "result" | "home" | "travel" | "discipline" | "points" }) {
   if (type === "discipline") {
@@ -112,6 +124,7 @@ export default function TouchlineCoachCard({
   fixtureContext = null,
   showLeadershipCrown = false,
   publishedTouchlinePoints = null,
+  discipline = null,
 }: TouchlineCoachCardProps) {
   const [storedLayout, setStoredLayout] = useState<TouchlineCoachCardLayout>(TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT);
   const [isNeonActive, setIsNeonActive] = useState(false);
@@ -145,6 +158,11 @@ export default function TouchlineCoachCard({
     : slot.status === "audited" && Number.isFinite(slot.touchlinePoints)
       ? String(slot.touchlinePoints)
       : "—";
+  const yellowCards = officialCardCount(discipline?.yellowCards);
+  const redCards = officialCardCount(discipline?.redCards);
+  const disciplineValue = yellowCards === null && redCards === null
+    ? "—"
+    : `${yellowCards ?? "—"} / ${redCards ?? "—"}`;
   const coachDisplayName = coach?.displayName ?? (isPortuguese ? "Aguardando treinador" : "Awaiting coach");
   const coachNameLength = coachDisplayName.replace(/\s+/g, "").length;
   const coachNameFit = coachNameLength > 22 ? "long" : coachNameLength > 15 ? "medium" : "short";
@@ -443,7 +461,7 @@ export default function TouchlineCoachCard({
             <small>{isPortuguese ? "Resultado" : "Result"}</small>
             <strong>—</strong>
           </span>
-          <span className={styles.stat}><CoachStatIcon type="discipline" /><small>{isPortuguese ? "Cartões" : "Cards"}</small><strong>0 / 0</strong></span>
+          <span className={styles.stat} data-coach-discipline-source={yellowCards === null && redCards === null ? "unavailable" : "canonical"}><CoachStatIcon type="discipline" /><small>{isPortuguese ? "Cartões" : "Cards"}</small><strong>{disciplineValue}</strong></span>
           <span className={`${styles.stat} ${styles.pointsStat}`}><CoachStatIcon type="points" /><small>TL PTS</small><strong>{points}</strong></span>
         </div>
 

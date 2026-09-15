@@ -53,6 +53,17 @@ test("046 keeps the canonical lexicon in the Vercel build context", () => {
     /^!docs\/touchline-arena\/social-publishing-playbook\/CANONICAL_SOCIAL_ICON_LEXICON\.md$/m);
 });
 
+test("Vercel excludes private Social Studio replay media but retains its contract gate", () => {
+  const ignore = readFileSync(".vercelignore", "utf8");
+  const runner = readFileSync("scripts/run-vercel-release-tests.mjs", "utf8");
+  assert.match(ignore, /^artifacts$/m);
+  assert.match(runner, /LOCAL_ARTIFACT_REPLAY_TESTS/);
+  assert.match(runner, /touchline-social-events-live\.test\.mts/);
+  assert.match(runner, /touchline-social-rankings-live\.test\.mts/);
+  assert.doesNotMatch(runner, /touchline-social-studio-contract\.test\.mts/);
+  assert.doesNotMatch(runner, /touchline-social-studio-source-gate\.test\.mts/);
+});
+
 test("046 changes identity for visual, copy, lexicon or rendered-field changes", () => {
   const base = {
     contentType: "MATCH_PREVIEW" as const,

@@ -67,11 +67,12 @@ describe("TouchLine Arena navigation", () => {
     );
   });
 
-  it("opens Market Transfer as a dedicated localized page", () => {
+  it("opens My Club as the localized squad-building destination", () => {
     assert.equal(
       touchlineArenaPanelHref("market", "pt-BR"),
-      "/market-transfer?lang=pt-BR",
+      "/my-club?lang=pt-BR",
     );
+    assert.equal(touchlineArenaPanelHref("market", "en-GB"), "/my-club?lang=en-GB");
   });
 
   it("updates only the active panel in an existing Arena URL", () => {
@@ -91,10 +92,10 @@ describe("TouchLine Arena navigation", () => {
     );
   });
 
-  it("opens a player contract on the dedicated localized Market Transfer", () => {
+  it("opens a player contract in the localized My Club workspace", () => {
     assert.equal(
       touchlineArenaContractHref({ locale: "pt-BR", playerId: "adams", playerName: "Tyler Adams", clubId: 52 }),
-      "/market-transfer?lang=pt-BR&contractPlayer=adams&contractName=Tyler+Adams&contractClub=52",
+      "/my-club?lang=pt-BR",
     );
   });
 });

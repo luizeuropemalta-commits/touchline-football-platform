@@ -56,7 +56,7 @@ export default async function ArenaPage({
       if (contractPlayer) marketParams.set("contractPlayer", contractPlayer);
       if (contractName) marketParams.set("contractName", contractName);
       if (contractClub) marketParams.set("contractClub", contractClub);
-      redirect(`/market-transfer${marketParams.size ? `?${marketParams.toString()}` : ""}`);
+      redirect(`/my-club${marketParams.size ? `?${marketParams.toString()}` : ""}`);
     }
     const suffix = marketParams.size ? `?${marketParams.toString()}` : "";
     if (initialPanel === "formation") redirect(touchlineClubOwnerSubstitutionHref(lang));

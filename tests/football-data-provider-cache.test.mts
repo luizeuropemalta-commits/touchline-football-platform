@@ -31,7 +31,7 @@ test("Sportmonks retries failed responses and keeps the successful response fetc
         rate_limit: { remaining: 0, resets_in_seconds: 12, requested_entity: "players" },
       }), {
         status: 429,
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "retry-after": "30" },
       });
     }
     return new Response(JSON.stringify({ data: { id: 7, display_name: "Touchline Player" } }), {

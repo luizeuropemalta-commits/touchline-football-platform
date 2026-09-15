@@ -1,5 +1,33 @@
 # TouchLine Current State
 
+## 2026-09-14 overnight social studio — LOCAL IN PROGRESS / NOT DEPLOYED
+
+- Current source: branch `codex/myclub-header-final-20260913`, base HEAD
+  `df5d6335a4917b221f5ea008c870f7f8cf243b18`. The uncommitted social changes
+  are a coordinated task-owned overlay; no previous release PASS covers it.
+- The owner requests real, animated Feed/Story samples with professional
+  captions, private Admin review and owner-selected schedules. No approval,
+  social dispatch, Production, DNS or credential mutation is authorized by
+  this preparation. The full interrupted product audit resumes after samples.
+- Local Admin Studio catalog/persistence code exists, but the additive
+  migration is NOT applied, the video manifest remains empty, and the new
+  route is NOT deployed. Source tests are not browser/persistence acceptance.
+- Five event samples, Match Preview and ranking/table renderers are prepared.
+  Video rendering, complete decoding, two-loop visual inspection and Admin
+  integration remain pending. LINEUP and golden-boot reconciliation continue.
+- The active remote player ranking is stale (5 September). Local reproduction
+  of 40 final fixtures uses the canonical scoring rules and real settlements,
+  explicitly labelled `LOCAL_CANONICAL_REPLAY_NOT_PUBLISHED`. It does not
+  activate a snapshot or reprice published cards. Delivery remains blocked.
+- Root added an AVFoundation offline decoder (execution pending), native
+  probe acceptance with separate visual-review gating, and visible-only Admin
+  autoplay to avoid decoding the entire off-screen catalogue. Focused artifact
+  checks pass 3/3 and scoped ESLint passes; integrated checks remain pending.
+- Resume from private `artifacts/social-studio/**/HANDOFF.md` and the owner's
+  durable audit checkpoint in the Cérebro workspace:
+  `outputs/Memoria-TouchLine/Auditorias/2026-09-14/retomada-auditoria-integral-apos-artes.md`.
+  All audit blocks require fresh evidence; no blanket audit PASS is claimed.
+
 ## My Club premium field and Arena cover — QA RELEASE CANDIDATE / LOCAL GREEN
 
 - The single customer-facing `/my-club` route now combines the private My Club

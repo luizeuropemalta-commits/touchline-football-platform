@@ -95,7 +95,9 @@ function finiteNullable(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function stablePlayerKey(player: TouchlineRankingPlayerInput) {
+type TouchlineRankingOrderInput = Pick<TouchlineRankingPlayerInput, "playerId" | "providerPlayerId" | "totalRating" | "minutesPlayed" | "appearances">;
+
+function stablePlayerKey(player: TouchlineRankingOrderInput) {
   return String(player.providerPlayerId ?? player.playerId).trim().toLowerCase();
 }
 
@@ -116,8 +118,8 @@ export function touchlinePositionRankingGroupFor(
 }
 
 export function compareTouchlineRankingPlayers(
-  first: TouchlineRankingPlayerInput,
-  second: TouchlineRankingPlayerInput,
+  first: TouchlineRankingOrderInput,
+  second: TouchlineRankingOrderInput,
 ) {
   const firstRating = finiteNullable(first.totalRating);
   const secondRating = finiteNullable(second.totalRating);

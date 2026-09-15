@@ -5,6 +5,7 @@ export type TouchLineAuthLocale = "en-GB" | "pt-BR";
 const TOUCHLINE_AUTH_URL_BASE = "https://touchline.local";
 const TOUCHLINE_AUTH_RETURN_PATHS = [
   "/arena",
+  "/my-club",
   TOUCHLINE_CLUB_OWNER_ROUTE_BASE,
   "/market-transfer",
   "/admin",

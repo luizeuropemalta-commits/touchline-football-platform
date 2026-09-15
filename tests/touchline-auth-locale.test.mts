@@ -60,6 +60,14 @@ test("authentication destinations preserve the normalized locale", () => {
     touchLineAuthEntryHref("/login", "pt-BR", "/admin/finance?lang=pt-BR"),
     "/login?lang=pt-BR&returnTo=%2Fadmin%2Ffinance%3Flang%3Dpt-BR",
   );
+  for (const locale of ["pt-BR", "en-GB"] as const) {
+    assert.equal(normalizeTouchLineAuthReturnTo(`/my-club?lang=${locale}`), `/my-club?lang=${locale}`);
+    assert.equal(
+      touchLineAuthEntryHref("/login", locale, `/my-club?lang=${locale}`),
+      `/login?lang=${locale}&returnTo=%2Fmy-club%3Flang%3D${encodeURIComponent(locale)}`,
+    );
+    assert.equal(touchLinePostAuthHref(`/my-club?lang=en-GB`, locale), `/my-club?lang=${locale}`);
+  }
   assert.equal(normalizeTouchLineAuthReturnTo("https://evil.example/steal"), null);
   assert.equal(normalizeTouchLineAuthReturnTo("/login?lang=pt-BR"), null);
   assert.equal(

@@ -1,13 +1,13 @@
-const DEFAULT_OWNER_EMAIL = "luizeuropemalta@gmail.com";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function ownerEmails() {
-  return (process.env.TOUCHLINE_OWNER_EMAILS || DEFAULT_OWNER_EMAIL)
+  return [...new Set((process.env.TOUCHLINE_OWNER_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
+    .filter((email) => EMAIL_PATTERN.test(email)))];
 }
 
 export function isOwnerEmail(email?: string | null) {
   if (!email) return false;
-  return ownerEmails().includes(email.toLowerCase());
+  return ownerEmails().includes(email.trim().toLowerCase());
 }

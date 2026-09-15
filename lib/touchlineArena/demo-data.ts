@@ -3,7 +3,6 @@ import {
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   touchlineArenaClubTemplateForCard,
-  touchlineArenaCompetitionTierForCard,
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
@@ -60,6 +59,14 @@ export type ClubOwnerSquadCard = {
   seasonTouchlinePoints?: number | null;
   /** Canonical sum of valid Sportmonks ratings from started/substitute appearances. */
   seasonTotalRating?: number | null;
+  /** Immutable ranking evidence; never borrow tiebreaks from mutable season stats. */
+  publishedRanking?: Readonly<{
+    snapshotId: string;
+    providerPlayerId: string | number | null;
+    totalRating: number | null;
+    minutesPlayed: number | null;
+    appearances: number | null;
+  }>;
   /** Latest reconciled Sportmonks rating; null means provider-unavailable. */
   matchRating?: number | null;
   /** Legacy converted score retained only for technical audit compatibility. */

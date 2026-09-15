@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 import { ensureTouchlineArenaAccess } from "@/lib/server/touchline-arena-access";
+import { isAllowedLoginPost, safeReturnTo } from "@/lib/server/login-request-security";
 
 type LoginPayload = {
   email?: unknown;
@@ -31,12 +32,6 @@ function invalidRequest() {
 
 function isNativeFormRequest(request: NextRequest) {
   return request.headers.get("content-type")?.includes("application/x-www-form-urlencoded") ?? false;
-}
-
-function safeReturnTo(request: NextRequest, value: unknown) {
-  if (typeof value !== "string" || !value.startsWith("/")) return "/arena";
-  const target = new URL(value, request.url);
-  return target.origin === request.nextUrl.origin ? `${target.pathname}${target.search}` : "/arena";
 }
 
 function safeLoginPath(value: unknown) {
@@ -106,6 +101,10 @@ function nativeSessionResponse(
  * or returning the password.
  */
 export async function POST(request: NextRequest) {
+  if (!isAllowedLoginPost(request)) {
+    return NextResponse.json({ ok: false, error: "invalid_origin" }, { status: 403 });
+  }
+
   const nativeFormPost = isNativeFormRequest(request);
   let payload: LoginPayload;
   try {

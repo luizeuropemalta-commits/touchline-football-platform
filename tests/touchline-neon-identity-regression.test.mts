@@ -144,13 +144,13 @@ test("card controls stay inside the master safe zone and contracting stays outsi
     source("components/touchline/ClubHubOfficialLineup.tsx"),
   ].join("\n");
 
-  assert.deepEqual(layout.layout.shareAction, { x: 28, y: 531, scale: 1 });
-  assert.deepEqual(layout.layout.followAction, { x: 156, y: 531, scale: 1 });
-  assert.deepEqual(layout.layout.likeAction, { x: 284, y: 531, scale: 1 });
+  assert.equal(layout.layout.shareAction, undefined, "Share must stay outside the card artwork");
+  assert.deepEqual(layout.layout.followAction, { x: 92, y: 531, scale: 1 });
+  assert.deepEqual(layout.layout.likeAction, { x: 220, y: 531, scale: 1 });
   assert.ok(layout.layout.profileAction.x + (118 * layout.layout.profileAction.scale) <= 372);
-  assert.ok(layout.layout.shareAction.x + (118 * layout.layout.shareAction.scale) <= layout.layout.followAction.x);
   assert.ok(layout.layout.followAction.x + (118 * layout.layout.followAction.scale) <= layout.layout.likeAction.x);
   assert.ok(layout.layout.likeAction.x + (118 * layout.layout.likeAction.scale) <= 402);
+  assert.equal((layout.layout.followAction.x + layout.layout.likeAction.x + 118) / 2, 215);
   assert.match(zoom, /<div className=\{styles\.expandedCard\} data-card-zoom="expanded">/);
   assert.match(zoom, /<a className=\{styles\.contractAction\} href=\{contractHref\}>/);
   assert.ok(

@@ -1,0 +1,118 @@
+.presentation {
+  position: relative;
+  isolation: isolate;
+  width: 1080px;
+  overflow: hidden;
+  background: #020805;
+}
+
+.feed { height: 1350px; }
+
+.story {
+  height: 1920px;
+  display: block;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(158, 255, 45, .14), transparent 34%),
+    linear-gradient(160deg, #07190f, #020805 58%, #07120d);
+}
+
+.motionFrame {
+  position: relative;
+  width: 1080px;
+  height: 1350px;
+  overflow: hidden;
+}
+
+.story .motionFrame { height: 1920px; }
+
+/* Story is its own 9:16 composition: the two-card duel occupies the vertical
+   canvas rather than sitting above an empty continuation of the Feed art. */
+.story .motionFrame :global([data-match-preview-candidate-artwork="true"]) {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+  align-content: stretch;
+}
+
+.story .motionFrame :global([data-touchline-approved-duel="true"]) {
+  align-self: stretch;
+  align-items: center;
+}
+
+.story .motionFrame :global([data-touchline-approved-duel="true"] > article > div:first-child) {
+  transform: scale(.72) !important;
+  margin-bottom: -184px !important;
+}
+
+.motionFrame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: .18;
+  background: linear-gradient(112deg, transparent 32%, rgba(197, 255, 137, .24) 48%, transparent 64%);
+  transform: translateX(-130%);
+  mix-blend-mode: screen;
+  animation: neonSweep 6s linear infinite;
+  animation-delay: var(--match-preview-motion-delay);
+  animation-play-state: var(--match-preview-motion-play-state);
+}
+
+.motionFrame :global([data-match-preview-candidate-artwork="true"]) {
+  width: 1080px;
+  height: 1350px;
+  min-height: 1350px !important;
+  box-sizing: border-box;
+  transform-origin: 50% 50%;
+  will-change: transform, filter;
+  animation: wholeCanvasBreath 6s ease-in-out infinite;
+  animation-delay: var(--match-preview-motion-delay);
+  animation-play-state: var(--match-preview-motion-play-state);
+}
+
+.motionFrame :global([data-touchline-approved-duel="true"] > article:nth-child(odd)) {
+  will-change: transform;
+  animation: homeCardDrift 6s ease-in-out infinite;
+  animation-delay: var(--match-preview-motion-delay);
+  animation-play-state: var(--match-preview-motion-play-state);
+}
+
+.motionFrame :global([data-touchline-approved-duel="true"] > article:nth-child(even)) {
+  will-change: transform;
+  animation: awayCardDrift 6s ease-in-out infinite;
+  animation-delay: var(--match-preview-motion-delay);
+  animation-play-state: var(--match-preview-motion-play-state);
+}
+
+@keyframes wholeCanvasBreath {
+  0%, 100% { filter: saturate(1) brightness(1); transform: scale(1); }
+  33% { filter: saturate(1.05) brightness(1.03); transform: scale(1.008); }
+  67% { filter: saturate(1.02) brightness(1.01); transform: scale(1.003); }
+}
+
+@keyframes homeCardDrift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  44% { transform: translate3d(8px, -5px, 0); }
+  70% { transform: translate3d(3px, -2px, 0); }
+}
+
+@keyframes awayCardDrift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  44% { transform: translate3d(-8px, -5px, 0); }
+  70% { transform: translate3d(-3px, -2px, 0); }
+}
+
+@keyframes neonSweep {
+  0%, 14% { transform: translateX(-130%); }
+  54%, 100% { transform: translateX(130%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motionFrame::after,
+  .motionFrame :global([data-match-preview-candidate-artwork="true"]),
+  .motionFrame :global([data-touchline-approved-duel="true"] > article) {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}

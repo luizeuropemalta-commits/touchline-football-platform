@@ -1,4 +1,4 @@
-import { compareTouchlineRankingPlayers } from "./card-ranking";
+import { compareTouchlineRankingPlayers } from "./card-ranking.ts";
 import type { ClubOwnerSquadCard } from "./demo-data";
 
 function finiteNumber(value: unknown) {
@@ -10,13 +10,14 @@ function finiteNumber(value: unknown) {
 function asRankingPlayer(card: ClubOwnerSquadCard) {
   return {
     playerId: card.canonicalPlayerId ?? card.id,
+    providerPlayerId: card.publishedRanking?.providerPlayerId ?? card.providerPlayerId,
     name: card.name,
     clubName: card.clubName,
     position: card.position,
     role: card.role,
-    totalRating: card.seasonTotalRating ?? null,
-    minutesPlayed: finiteNumber(card.seasonStats?.minutes),
-    appearances: finiteNumber(card.seasonStats?.appearances),
+    totalRating: card.publishedRanking ? card.publishedRanking.totalRating : card.seasonTotalRating ?? null,
+    minutesPlayed: card.publishedRanking ? card.publishedRanking.minutesPlayed : finiteNumber(card.seasonStats?.minutes),
+    appearances: card.publishedRanking ? card.publishedRanking.appearances : finiteNumber(card.seasonStats?.appearances),
   };
 }
 

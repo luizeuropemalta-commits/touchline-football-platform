@@ -3,6 +3,35 @@
 This is the sole authoritative continuation ledger. It supersedes the former
 Full Product Recovery ledger without deleting its historical evidence.
 
+## 2026-09-14 latest owner order — SOCIAL SAMPLES THEN COMPLETE AUDIT
+
+This current order supersedes the historical 35-player journey and stale
+continuation actions below. Preserve the historical records, but do not execute
+them as current product requirements: My Club now has eleven eligible XI slots.
+
+- Phase A: prepare all requested animated social samples using real confirmed
+  facts, private provenance and professional captions; owner approves each
+  video/placement and caption in Admin. No auto-approval or real dispatch.
+- Phase B: resume every product audit block (Sportmonks, cards, My Club,
+  gameplay, onboarding, market window, Arena, pages, ClubHub/profiles, logos,
+  ranking/scoring, social delivery, code, security, performance/cost, release).
+- Current base `df5d6335a4917b221f5ea008c870f7f8cf243b18`, branch
+  `codex/myclub-header-final-20260913`. Social files are local, uncommitted,
+  not deployed. Additive Studio migration not applied; no final MP4 registered.
+- Five event inputs and ranking/Match Preview renderers exist. All need real
+  render, decode and two-loop visual inspection. LINEUP is being reconciled
+  against complete published cards; golden boot against final feed payloads.
+- Remote player ranking is stale. A read-only canonical replay prepares review
+  samples, NOT an activated ranking. Preserve published Card Engine tier/value
+  authority. Never infer “current official published” from the replay.
+- Root's native-video evidence contract tests pass 3/3 and focused lint passes.
+  Native decoder execution and integrated TypeScript/build/browser remain open.
+- Studio must load/play only visible videos, preserve independent per-destination
+  review/receipt identity, and keep publication paused. Browser proof pending.
+- Durable full audit matrix is maintained in the Cérebro workspace at
+  `outputs/Memoria-TouchLine/Auditorias/2026-09-14/retomada-auditoria-integral-apos-artes.md`.
+  Production, DNS, payment and credentials remain untouched.
+
 ## 2026-09-14 My Club premium cover and position market — QA candidate
 
 - **Scope:** one isolated candidate refines only the authenticated My Club

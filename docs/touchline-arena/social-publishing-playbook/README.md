@@ -20,7 +20,7 @@ When text and executable behaviour disagree, stop fail-closed and record the gap
 ## Index
 
 - [TouchLine Social Media Regulations](TOUCHLINE_SOCIAL_MEDIA_REGULATIONS.md) — canonical catalogue, Central TouchLine architecture, destinations, priorities and approval policy
-- [Multichannel destination roadmap](MULTICHANNEL_DESTINATION_ROADMAP.md) — Instagram active priority, Facebook Page next, all other destinations documented/disabled
+- [Multichannel destination roadmap](MULTICHANNEL_DESTINATION_ROADMAP.md) — Instagram and Facebook required by the 14/09 owner decision, both integrations disabled; the older Facebook-next order is SUPERSEDED; other destinations remain documented/disabled
 - [Content types and triggers](CONTENT_TYPES_AND_TRIGGERS.md)
 - [Automatic social module registry](AUTOMATIC_SOCIAL_MODULE_REGISTRY.md)
 - [041 Match Preview owner artwork approval](041_MATCH_PREVIEW_OWNER_ART_APPROVAL.md)

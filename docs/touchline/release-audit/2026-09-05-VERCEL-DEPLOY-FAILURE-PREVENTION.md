@@ -1,12 +1,12 @@
 # TouchLine — Vercel deployment-failure prevention review
 
-**Date:** 2026-09-05  
-**Scope:** QA branch only (`qa`)  
+**Date:** 2026-09-05
+**Scope:** QA branch only (`qa`)
 **Production:** not changed
 
 ## Evidence reviewed in Vercel
 
-Project: `touchline-arena-official` (`prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM`)  
+Project: `touchline-arena-official` (`prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM`)
 Team: `fifa-agent-plataform`
 
 The review used Vercel deployment metadata, failed-build logs, and Preview runtime logs.
@@ -45,4 +45,3 @@ No QA deploy is allowed unless every item is green:
 ## Ownership rule
 
 Every change must update its applicable source contract and its visual/resilience test in the same batch. A failed Vercel build is a blocking result, not a candidate for manual approval.
-

@@ -93,7 +93,7 @@ test("Arena keeps an incomplete canonical round intact instead of borrowing a ma
   assert.equal(selected.length, 9);
 });
 
-test("Market Transfer keeps production coach identity out of the demo fallback and owns persistent coach-first selection", () => {
+test("My Club keeps production coach identity out of the demo fallback and owns persistent coach-first selection", () => {
   const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const coachRoute = readFileSync(new URL("../app/api/touchline-arena/coach/route.ts", import.meta.url), "utf8");
   const stateRoute = readFileSync(new URL("../app/api/touchline-arena/state/route.ts", import.meta.url), "utf8");
@@ -122,14 +122,15 @@ test("Market Transfer keeps production coach identity out of the demo fallback a
   assert.match(arena, /signal: controller\.signal/);
   assert.match(arena, /window\.clearTimeout\(requestTimeout\)/);
   assert.match(arena, /coachOfferStatus === "idle"[\s\S]*?Entre na sua conta para carregar as ofertas oficiais dos treinadores/);
-  assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?\/market-transfer\?lang=/);
+  assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?\/my-club\?lang=/);
   assert.match(arena, /className="arena-coach-login-link" href=\{coachFirstLoginHref\}/);
   assert.match(arena, /TOUCHLINE MARKET · PASSO 1 DE 10/);
   assert.match(arena, /<TouchlineSquadBuilderStage/);
   assert.match(arena, /data-testid="arena-coach-bootstrap"/);
-  assert.match(arena, /params\.get\("onboarding"\) !== "market"/);
-  assert.match(arena, /window\.location\.replace\(`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\)/);
-  assert.match(arena, /\}, 6_500\);/);
+  assert.doesNotMatch(arena, /window\.location\.replace\(`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\)/);
+  assert.match(arena, /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/);
+  assert.match(arena, /Monte seu time|Build your team/);
+  assert.doesNotMatch(arena, /Open Coach Market|Abrir Mercado de Treinadores/);
   assert.match(arena, /className="arena-market-welcome"/);
   assert.match(arena, /arena-market-welcome-title/);
   assert.match(arena, /const mustPersistForClubOwner = canPersistArenaAccountState/);
@@ -188,7 +189,7 @@ test("the intro action remains an explicit top-right control", () => {
   assert.match(arena, /\.arena-intro-actions \{[\s\S]*?right: max\(18px, env\(safe-area-inset-right\)\)/);
 });
 
-test("the Arena quick menu exposes the canonical localized TouchLine Markt", () => {
+test("the Arena quick menu sends squad building directly to localized My Club", () => {
   const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const menuStart = arena.indexOf('<nav ref={arenaNavRef} className={`arena-quick-dock');
   const menuEnd = arena.indexOf("</nav>", menuStart);
@@ -197,7 +198,15 @@ test("the Arena quick menu exposes the canonical localized TouchLine Markt", () 
   assert.ok(menuStart >= 0 && menuEnd > menuStart);
   assert.match(
     quickMenu,
-    /href=\{`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/,
+    /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/,
   );
-  assert.match(quickMenu, />\s*Markt\s*<\/a>/);
+  assert.doesNotMatch(quickMenu, /market-transfer/);
+});
+
+test("Arena market panel routes directly to the canonical My Club workspace", () => {
+  const arenaPage = readFileSync(new URL("../app/arena/page.tsx", import.meta.url), "utf8");
+
+  assert.match(arenaPage, /if \(initialPanel === "market"\)[\s\S]*?redirect\(`\/my-club/);
+  assert.doesNotMatch(arenaPage, /if \(initialPanel === "market"\)[\s\S]*?redirect\(`\/market-transfer/);
+  assert.doesNotMatch(arenaPage, /#my-club-squad/);
 });

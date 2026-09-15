@@ -441,7 +441,7 @@ function playerFollowerCount(playerId: string) {
   return 24_000 + (hash % 940_000);
 }
 
-function seasonSummaryEntries(statistics: TouchLinePlayerSeasonStatistics, text: typeof copy.en | typeof copy.pt) {
+function seasonSummaryEntries(statistics: TouchLinePlayerSeasonStatistics, text: typeof copy.en | typeof copy.pt, publishedTotalRating?: number | null) {
   return [
     [text.appearances, statistics.summary.appearances],
     [text.starts, statistics.summary.starts],
@@ -450,7 +450,7 @@ function seasonSummaryEntries(statistics: TouchLinePlayerSeasonStatistics, text:
     [text.goals, statistics.summary.goals],
     [text.assists, statistics.summary.assists],
     [text.rating, statistics.summary.rating],
-    [text.totalRating, statistics.summary.totalRating],
+    [text.totalRating, publishedTotalRating === undefined ? statistics.summary.totalRating : publishedTotalRating],
     [text.ratedAppearances, statistics.summary.ratedAppearances],
     [text.yellowCards, statistics.summary.yellowCards],
     [text.redCards, statistics.summary.redCards],
@@ -461,13 +461,15 @@ function SeasonStatisticsPanel({
   title,
   statistics,
   text,
+  publishedTotalRating,
 }: {
   title: string;
   statistics: TouchLinePlayerSeasonStatistics;
   text: typeof copy.en | typeof copy.pt;
+  publishedTotalRating?: number | null;
 }) {
   const coverageMessage = touchLinePlayerSeasonCoverageMessage(statistics);
-  const entries = seasonSummaryEntries(statistics, text);
+  const entries = seasonSummaryEntries(statistics, text, publishedTotalRating);
   const hasStatistics = entries.some(([, value]) => value !== null)
     || Object.keys(statistics.positionStatistics).length > 0;
 
@@ -676,7 +678,7 @@ export default async function TouchLinePlayerProfilePage({
       : "verified";
   const rankingCompetition = resolveTouchlineCardCompetition({
     state: activeRanking,
-    playerId: card.id,
+    playerId: canonicalPlayerId ?? card.id,
     providerPlayerId: canonicalProviderPlayerId,
   });
   const competition = rankingCompetition;
@@ -706,7 +708,9 @@ export default async function TouchLinePlayerProfilePage({
       kind: "history" as const,
     };
   });
-  const totalRatingText = playerStatistics.currentSeason.summary.totalRating ?? competition.totalRating;
+  // One immutable published authority for the profile, card, zoom and ranking.
+  // A null publication stays unavailable even if the mutable season is newer.
+  const totalRatingText = competition.totalRating;
   const cumulativeRatingText = totalRatingText === null
     ? text.unavailable
     : String(totalRatingText);
@@ -868,9 +872,7 @@ export default async function TouchLinePlayerProfilePage({
           },
           {
             label: text.totalRating,
-            value: playerStatistics.currentSeason.summary.totalRating === null
-              ? "—"
-              : String(playerStatistics.currentSeason.summary.totalRating),
+            value: cumulativeRatingText,
             accent: true,
             kind: "rating-total",
           },
@@ -1223,7 +1225,7 @@ export default async function TouchLinePlayerProfilePage({
           </div>
           <div className={styles.officialGroups}>
             <SeasonStatisticsPanel title={text.latestSeason} statistics={playerStatistics.previousCompletedSeason} text={text} />
-            <SeasonStatisticsPanel title={text.currentSeason} statistics={playerStatistics.currentSeason} text={text} />
+            <SeasonStatisticsPanel title={text.currentSeason} statistics={playerStatistics.currentSeason} text={text} publishedTotalRating={totalRatingText} />
           </div>
           <FixtureStatisticsPanel
             model={playerStatistics}

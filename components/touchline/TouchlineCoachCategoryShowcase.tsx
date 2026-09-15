@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
-import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
+import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import { TOUCHLINE_COACH_TIER_GALLERY } from "@/lib/touchlineArena/coach-tier-gallery";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import {
@@ -181,9 +181,9 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards }: 
             return (
               <li key={tierKey} className={styles.card} style={tierStyle(tierKey)} data-tier={tierKey}>
                 {snapshot && classification && coachHref && cardSlot ? (
-                  <Link className={styles.cardLink} href={coachHref} aria-label={`${dictionary.openCoach}: ${snapshot.coach.displayName}`}>
+                  <div className={styles.cardLink}>
                     <span className={styles.coachCardVisual}>
-                      <TouchlineCoachCard
+                      <TouchlineCoachCardZoom
                         coach={snapshot.coach}
                         slot={cardSlot}
                         clubName={club?.name ?? classification.sourceClub ?? "TouchLine England"}
@@ -191,20 +191,19 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards }: 
                         clubAccent={club?.accent}
                         countryCode3={snapshot.countryCode3}
                         locale={effectiveLocale}
-                        displayMode="compact"
-                        optimizeForLiveCompact
-                        enableInteractiveNeon={false}
+                        contract={null}
+                        profileHref={coachHref}
                         assetLoading="eager"
                         frameLoading="eager"
                       />
                     </span>
-                    <span className={styles.identity}>
+                    <Link className={styles.identity} href={coachHref} aria-label={`${dictionary.openCoach}: ${snapshot.coach.displayName}`}>
                       <small>{tierLabel}</small>
                       <strong>{snapshot.coach.displayName}</strong>
                       <span>{club?.name ?? classification.sourceClub ?? "TouchLine England"}</span>
                       <em>{coachEvidenceLabel(classification, dictionary)}</em>
-                    </span>
-                  </Link>
+                    </Link>
+                  </div>
                 ) : (
                   <div className={styles.pendingCard}>
                     {gallery ? <img src={gallery.compactArtUrl} alt="" aria-hidden="true" /> : null}

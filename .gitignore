@@ -13,3 +13,4 @@ ENV_LOCAL_ATALHO_VISIVEL
 *.tsbuildinfo
 playwright-report/
 test-results/
+artifacts/

@@ -10,6 +10,9 @@ project-quarantine
 # Local package cache and audit deliveries are never runtime inputs. Excluding
 # them keeps Vercel deployments limited to the executable TouchLine product.
 .pnpm-store
+# Local review renders are preserved on this Mac but never uploaded as part of
+# the application bundle. Approved media must use its dedicated storage path.
+artifacts
 # Documentation remains excluded from deployments, except for the two small
 # canonical governance inputs required by the release preflight itself.
 docs/*
@@ -31,6 +34,7 @@ docs/touchline-arena/social-publishing-playbook/*
 !docs/touchline-arena/social-publishing-playbook/043_HAT_TRICK_OWNER_ART_APPROVAL.md
 !docs/touchline-arena/social-publishing-playbook/TEMPLATE_IMPLEMENTATION_STATUS.md
 !docs/touchline-arena/social-publishing-playbook/VISUAL_STANDARD.md
+!docs/touchline-arena/social-publishing-playbook/MULTICHANNEL_DESTINATION_ROADMAP.md
 exports
 TOUCHLINE_VISUAL_AUDIT_2026-07-31
 TOUCHLINE_VISUAL_AUDIT_2026-07-31 2

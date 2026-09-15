@@ -1,0 +1,12 @@
+.review{width:1080px;position:relative;overflow:hidden;isolation:isolate;background:#020805;color:#f8fff0;font-family:Arial,sans-serif}
+.feed{height:1350px}.story{height:1920px;background:radial-gradient(circle at 50% 35%,#173422,#020805 65%)}
+.composition{width:1080px;height:100%;position:relative;overflow:hidden}
+.composition :global([data-social-art="touchline-official-lineup"]){box-sizing:border-box}
+.reviewDate{position:absolute;left:50px;bottom:55px;width:725px;z-index:9;display:grid;gap:7px;padding:12px 18px;border:1px solid #b6ff4f66;border-radius:14px;background:#02110feb;font-size:14px;letter-spacing:.06em;text-align:center}
+.reviewDate span{font-size:12px;color:#cbd8cf;letter-spacing:.015em}
+.story .reviewDate{left:72px;top:1375px;bottom:auto;width:596px;min-height:250px;align-content:center;gap:18px;padding:34px 38px;border-radius:26px;background:linear-gradient(145deg,#02110ff2,#061b13df);box-shadow:0 28px 70px #0009;text-align:left}
+.story .reviewDate strong{font-size:38px;letter-spacing:.02em}
+.story .reviewDate span{font-size:18px;letter-spacing:.1em}
+.perimeter{position:absolute;inset:0;width:1080px;height:100%;pointer-events:none;z-index:10}.perimeter rect{fill:none;stroke:#b6ff4f;stroke-width:3;stroke-dasharray:16 84;animation:lineupTrace 6s linear infinite;filter:drop-shadow(0 0 7px #b6ff4f)}
+@keyframes lineupTrace{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}
+@media(prefers-reduced-motion:reduce){.perimeter rect{animation:none!important}}

@@ -53,11 +53,11 @@ test("only one explicitly published overall v3 leader receives a crown", () => {
   const active = parseTouchlineActiveRankingState(state({
     status: "unique-leader",
     scope: touchlinePlayerLeadershipScope(snapshotId),
-    leader: { subjectType: "player", subjectId: players[0]!.playerId },
+    leader: { subjectType: "player", subjectId: players[5]!.playerId },
   }));
 
   assert.ok(active);
-  assert.equal(touchlinePlayerCrownEligibility({ state: active, playerId: players[0]!.playerId }), true);
+  assert.equal(touchlinePlayerCrownEligibility({ state: active, playerId: players[5]!.playerId }), true);
   assert.equal(touchlinePlayerCrownEligibility({ state: active, playerId: players[1]!.playerId }), false);
 });
 
@@ -85,11 +85,11 @@ test("a persisted published overall decision crowns the leader, never a position
   const decision = parsePersistedTouchlinePlayerLeadership({
     snapshotId,
     playerIds: players.map((player) => player.playerId),
-    value: { ranking_id: "touchline-player-overall", status: "unique-leader", leader_player_id: players[1]!.playerId, contender_player_ids: [] },
+    value: { ranking_id: "touchline-player-overall", status: "unique-leader", leader_player_id: players[5]!.playerId, contender_player_ids: [] },
   });
   const active = parseTouchlineActiveRankingState(state(decision));
   assert.ok(active);
-  assert.equal(touchlinePlayerCrownEligibility({ state: active, playerId: players[1]!.playerId }), true);
+  assert.equal(touchlinePlayerCrownEligibility({ state: active, playerId: players[5]!.playerId }), true);
   assert.equal(touchlinePlayerCrownEligibility({ state: active, playerId: players[0]!.playerId }), false);
 });
 
@@ -127,4 +127,13 @@ test("publication makes an explicit unique leader or tie from valid overall rati
       { subjectType: "player", subjectId: secondId },
     ],
   });
+});
+
+test("a persisted decision that contradicts the immutable canonical tiebreak cannot crown", () => {
+  const tiedPlayers = players.map((player, index) => ({ ...player, totalRating: index < 2 ? 20 : player.totalRating, minutesPlayed: index === 0 ? 90 : 180, appearances: 2 }));
+  const decision = (playerId: string) => ({ status: "unique-leader", scope: touchlinePlayerLeadershipScope(snapshotId), leader: { subjectType: "player", subjectId: playerId } });
+  assert.equal(touchlinePlayerCrownEligibility({ state: { ...state(decision(players[0]!.playerId)), players: tiedPlayers }, playerId: players[0]!.playerId }), false);
+  assert.equal(touchlinePlayerCrownEligibility({ state: { ...state(decision(players[1]!.playerId)), players: tiedPlayers }, playerId: players[1]!.playerId }), true);
+  const missingMinutes = tiedPlayers.map(({ minutesPlayed: _minutes, ...player }) => player);
+  assert.equal(touchlinePlayerCrownEligibility({ state: { ...state(decision(players[1]!.playerId)), players: missingMinutes }, playerId: players[1]!.playerId }), false);
 });

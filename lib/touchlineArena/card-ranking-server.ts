@@ -65,6 +65,8 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
       positionRank: player.positionRank,
       groupSize: player.groupSize,
       totalRating: player.totalRating,
+      minutesPlayed: player.minutesPlayed,
+      appearances: player.appearances,
       tierKey: player.tierKey,
       priceTc: player.priceTc,
     })) : [],

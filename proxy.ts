@@ -472,7 +472,11 @@ async function handleTouchLineRequest(request: NextRequest) {
   const localeRedirect = canonicalPresentationLocaleRedirect(request);
   if (localeRedirect) return localeRedirect;
   const isLocalDev = localDevHosts.has(hostname);
-  if (isLocalDev) return nextResponseWithPresentationLocale(request);
+  const isMyClubRoute = pathname === "/my-club";
+  // My Club is account-backed even on localhost. Let it pass through the same
+  // customer-only identity gate used by QA so an absent or Admin session can
+  // never render the public fallback in place of the authenticated cover.
+  if (isLocalDev && !isMyClubRoute) return nextResponseWithPresentationLocale(request);
   if (await hasQaSocialRenderBearer(request, hostname)) {
     const response = nextResponseWithPresentationLocale(request);
     response.headers.set("cache-control", "private, no-store");
@@ -511,7 +515,6 @@ async function handleTouchLineRequest(request: NextRequest) {
   const isAuthEntry = authEntryPaths.some((path) => matchesRoute(pathname, path));
   const isProtectedArenaRoute = !isAuth
     && protectedArenaPaths.some((path) => matchesRoute(pathname, path));
-  const isMyClubRoute = pathname === "/my-club";
   const isQaAuthenticatedVisualReviewRoute = isTouchlineQaAuthenticatedVisualReviewRoute({
     pathname,
     hostname,
