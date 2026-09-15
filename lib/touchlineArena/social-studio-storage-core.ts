@@ -107,6 +107,15 @@ export function createStudioReviewStorageCore(input: Readonly<{
       signal: AbortSignal.timeout(10_000),
     });
     if (response.status === 404) return false;
+    // Supabase Storage can return HTTP 400 for a missing private object while
+    // encoding the canonical NoSuchKey / 404 inside its JSON response. Treat
+    // only that exact, provider-documented shape as absent; every other 400
+    // stays a hard failure so a bad request can never be mistaken for a clean
+    // create-only upload slot.
+    if (response.status === 400) {
+      const payload = await response.clone().json().catch(() => null) as { statusCode?: string | number; code?: string } | null;
+      if (payload?.code === "NoSuchKey" && String(payload.statusCode) === "404") return false;
+    }
     if (!response.ok || ![200, 206].includes(response.status)) throw new Error(`TL_STUDIO_STORAGE_PROBE_FAILED:${response.status}`);
     const etag = readResponseMetadata(response, media);
     await response.body?.cancel().catch(() => undefined);

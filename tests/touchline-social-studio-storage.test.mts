@@ -59,6 +59,24 @@ test("missing objects, public or widened buckets, foreign signed URLs and manife
   await assert.rejects(build().probeExact({ ...media, objectKey: `v1/MATCH_PREVIEW/FEED/${"c".repeat(64)}.mp4` }), /INVALID_VIDEO_MANIFEST/);
 });
 
+test("Supabase's wrapped NoSuchKey response is absent, but any other 400 remains a hard failure", async () => {
+  const wrappedMissing: typeof fetch = async () => new Response(JSON.stringify({ statusCode: "404", code: "NoSuchKey" }), {
+    status: 400, headers: { "content-type": "application/json" },
+  });
+  const missing = createStudioReviewStorageCore({
+    supabaseUrl: "https://qa-ref.supabase.co", serviceRoleKey: "server-secret", getBucket: async () => bucket,
+    fetchImpl: wrappedMissing, createSignedUrl: async () => assert.fail("missing object never signs"),
+  });
+  await assert.rejects(missing.createSignedPreview(media), /OBJECT_MISSING/);
+
+  const malformed = createStudioReviewStorageCore({
+    supabaseUrl: "https://qa-ref.supabase.co", serviceRoleKey: "server-secret", getBucket: async () => bucket,
+    fetchImpl: async () => new Response(JSON.stringify({ statusCode: "400", code: "BadRequest" }), { status: 400 }),
+    createSignedUrl: async () => assert.fail("malformed request never signs"),
+  });
+  await assert.rejects(malformed.createSignedPreview(media), /PROBE_FAILED:400/);
+});
+
 test("create-only upload validates bytes before I/O and re-hashes the stored MP4", async () => {
   let calls = 0;
   const storage = createStudioReviewStorageCore({
