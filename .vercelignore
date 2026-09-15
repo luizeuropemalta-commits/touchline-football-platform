@@ -12,7 +12,18 @@ project-quarantine
 .pnpm-store
 # Local review renders are preserved on this Mac but never uploaded as part of
 # the application bundle. Approved media must use its dedicated storage path.
+# Keep local render outputs out of Vercel. The three factual replay records below
+# are not media: they are the checked-in, fail-closed inputs required by the
+# approval-only Match Preview contract test during a production build.
 artifacts
+!artifacts/
+!artifacts/social-studio/
+artifacts/social-studio/*
+!artifacts/social-studio/rankings/
+!artifacts/social-studio/rankings/match-preview-leaders-20260914.json
+!artifacts/social-studio/rankings/match-preview-card-revalidation-20260915.json
+!artifacts/social-studio/match-preview/
+!artifacts/social-studio/match-preview/2026-09-14-brentford-chelsea-factual-capture.json
 # Documentation remains excluded from deployments, except for the two small
 # canonical governance inputs required by the release preflight itself.
 docs/*

@@ -57,6 +57,11 @@ test("Vercel excludes private Social Studio replay media but retains its contrac
   const ignore = readFileSync(".vercelignore", "utf8");
   const runner = readFileSync("scripts/run-vercel-release-tests.mjs", "utf8");
   assert.match(ignore, /^artifacts$/m);
+  assert.match(ignore, /^!artifacts\/$/m);
+  assert.match(ignore, /^artifacts\/social-studio\/\*$/m);
+  assert.match(ignore, /^!artifacts\/social-studio\/rankings\/match-preview-leaders-20260914\.json$/m);
+  assert.match(ignore, /^!artifacts\/social-studio\/rankings\/match-preview-card-revalidation-20260915\.json$/m);
+  assert.match(ignore, /^!artifacts\/social-studio\/match-preview\/2026-09-14-brentford-chelsea-factual-capture\.json$/m);
   assert.match(runner, /LOCAL_ARTIFACT_REPLAY_TESTS/);
   assert.match(runner, /touchline-social-events-live\.test\.mts/);
   assert.match(runner, /touchline-social-rankings-live\.test\.mts/);
