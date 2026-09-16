@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   ArrowRight,
   Activity,
@@ -24,6 +25,7 @@ import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import {
   resolveTouchLinePlayerProfile,
   resolveTouchLineUnavailableOfficialProfile,
+  isTouchLineSupportedPlayerProfile,
   type TouchLinePlayerProfileSearchParams,
 } from "@/lib/touchlineArena/player-profile";
 import {
@@ -586,6 +588,11 @@ export default async function TouchLinePlayerProfilePage({
   );
   const text = locale === "pt-BR" ? copy.pt : copy.en;
   const isPortuguese = locale === "pt-BR";
+  // Never turn an arbitrary URL into a synthetic footballer. A player page
+  // begins only from a known TouchLine card or a numeric provider identity;
+  // the latter still renders as unavailable if its canonical projection is
+  // not ready.
+  if (!isTouchLineSupportedPlayerProfile(playerKey, query)) notFound();
   const supabase = await createClient();
   const currentUserPromise = supabase
     ? supabase.auth.getUser().then(({ data }) => data.user)

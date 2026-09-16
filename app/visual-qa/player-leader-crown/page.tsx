@@ -13,6 +13,10 @@ const reviewedAt = "2026-09-10T00:00:00.000Z";
 const player: TouchlineEliteExactPlayer = {
   sportmonksPlayerId: "visual-player-leader-provider",
   formationPlayerId: "visual-player-leader",
+  // This is deliberately the same canonical subject used by the mocked
+  // published leadership decision in the browser proof. Without it, the QA
+  // card could never exercise the real crown eligibility path.
+  canonicalPlayerId: "visual-player-leader",
   overall: 94,
   shirtNumber: 10,
   role: "midfielder",

@@ -95,16 +95,16 @@ test("the standalone panel renders an honest readiness state instead of an empty
   assert.match(arenaSource, /standaloneQuickSubstitutionSessionState && standaloneQuickSubstitutionSessionState !== "ready"/);
 });
 
-test("the authenticated self route skips the opaque redirect handoff and both substitution routes have a local loader", () => {
-  assert.match(proxySource, /clubOwnerCanonicalSubstitutionRedirect/);
+test("the authenticated self route bypasses the retired bench and both historical routes have a local loader", () => {
+  assert.match(proxySource, /clubOwnerSubstitutionToMyClubRedirect/);
   assert.match(proxySource, /pathname === "\/club-owner\/me\/substitution"/);
   assert.match(selfLoadingSource, /ClubOwnerSubstitutionLoading/);
   assert.match(dynamicLoadingSource, /ClubOwnerSubstitutionLoading/);
 });
 
-test("the private substitution route opens Quick Sub inside the Arena instead of a standalone blank surface", () => {
-  assert.match(substitutionRendererSource, /redirect\(`\/arena\?panel=bench&lang=\$\{encodeURIComponent\(lang\)\}`\)/);
-  assert.doesNotMatch(substitutionRendererSource, /standalonePanel="bench"/);
+test("the private legacy substitution route enters the canonical My Club XI workspace", () => {
+  assert.match(substitutionRendererSource, /redirect\(`\/my-club\?lang=\$\{encodeURIComponent\(lang\)\}#my-club-squad`\)/);
+  assert.doesNotMatch(substitutionRendererSource, /panel=bench/);
 });
 
 test("the local Quick Sub visual fixture uses the actual in-Arena rail with deterministic demo data", () => {

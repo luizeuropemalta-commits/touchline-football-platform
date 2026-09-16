@@ -24,7 +24,11 @@ test("captures the no-write mobile Arena fixture without promoting desktop geome
   await page.goto(url.toString(), { waitUntil: "networkidle" });
   await expect(page.locator(".arena-stage")).toBeVisible();
   await expect(page.locator(".arena-field-player")).toHaveCount(11);
-  await expect(page.locator(".arena-field-player")).toHaveAttribute("data-containment-coverage", /four-line-polygon|rail-only|unmeasured/);
+  await expect.poll(() => page.locator(".arena-field-player").evaluateAll((players) => (
+    players.every((player) => /^(four-line-polygon|rail-only|unmeasured)$/.test(
+      player.getAttribute("data-containment-coverage") ?? "",
+    ))
+  ))).toBe(true);
   await testInfo.attach("arena-mobile-fixture", { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
   expect(blockedWrites).toEqual([]);
 });

@@ -38,9 +38,9 @@ const finalDraft = {
   topMatchCard: {
     card: {
       id: "5141", providerPlayerId: "5141", canonicalPlayerId: id(6), name: "Dominic Calvert-Lewin",
-      clubName: "Leeds United", shirtNumber: 9, cardTier: "diamond-gold",
-      editorialCard: { tierKey: "diamond-gold" }, marketValue: "€55m", seasonTotalRating: 20.85,
-      seasonStats: { goals: 4, assists: 1, defense: 0, yellowcards: 0 },
+      clubName: "Leeds United", shirtNumber: 9, role: "attacker", position: "Centre Forward", countryCode3: "ENG", cardTier: "diamond-gold",
+      editorialCard: { tierKey: "diamond-gold", cardPrice: { amountMinor: 400, currency: "GBP" }, marketValueEur: 55000000, marketValueState: "verified", shirtNumber: 9, shirtNumberState: "verified", lastReviewedAt: "2026-09-14T15:00:00.000Z" }, marketValue: "€55m", seasonTotalRating: 20.85,
+      seasonStats: { goals: 4, assists: 1, defense: 0, cleanSheets: 0, yellowCards: 0, redCards: 0 },
     },
     team: { teamId: "71", name: "Leeds United" },
     officialMatchRating: 7.68,
@@ -66,6 +66,9 @@ const graph = (): StudioFullTimeIdentityGraph => ({
 test("FULL_TIME proof binds exact canonical identities, publication and active membership", () => {
   const proof = buildStudioFullTimePublishedSourceProof({ media, snapshot, finalDraft, graph: graph(), now });
   assert.ok(proof);
+  assert.equal(projected.featured.card.clubName, "Leeds United");
+  assert.equal(projected.featured.card.shirtNumber, 9);
+  assert.equal(projected.featured.card.position, "Centre Forward");
   assert.equal(proof.providerIds[id(3)], "19722168");
   assert.deepEqual(proof.publishedPlayerIds, [id(6)]);
   assert.equal(proof.activePlayerClubs[id(6)], id(4));
@@ -114,4 +117,20 @@ test("FULL_TIME proof rejects broader manifests and expired source leases", () =
     graph: graph(),
     now: Date.parse(media.provenance.validUntil),
   }), null);
+});
+
+test("FULL_TIME rendering refuses a card whose club presentation does not match the featured team", () => {
+  const wrongClub = structuredClone(finalDraft);
+  wrongClub.topMatchCard.card.clubName = "Newcastle United";
+  assert.equal(projectStudioFullTimeRenderedFactsV1(wrongClub), null);
+});
+
+test("FULL_TIME rendering refuses a featured team outside the fixture and an impossible match rating", () => {
+  const foreignTeam = structuredClone(finalDraft);
+  foreignTeam.topMatchCard.team.teamId = "999";
+  assert.equal(projectStudioFullTimeRenderedFactsV1(foreignTeam), null);
+
+  const impossibleRating = structuredClone(finalDraft);
+  impossibleRating.topMatchCard.officialMatchRating = 10.01;
+  assert.equal(projectStudioFullTimeRenderedFactsV1(impossibleRating), null);
 });

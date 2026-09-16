@@ -335,18 +335,17 @@ function clubOwnerSelfRedirect(
 }
 
 /**
- * Avoid streaming the generic global loading screen while `/me/substitution`
- * performs a second server-side auth redirect. The edge already has the
- * authenticated ClubOwner slug, so this narrow redirect is equivalent to the
- * self route while preserving its locale and cookies.
+ * Historical substitution URLs must not reopen the retired 9-player bench.
+ * Once the edge has authenticated the ClubOwner, send the route straight to
+ * the single position-led XI workspace while preserving locale and cookies.
  */
-function clubOwnerCanonicalSubstitutionRedirect(
+function clubOwnerSubstitutionToMyClubRedirect(
   request: NextRequest,
-  ownerSlug: string,
   sourceResponse?: NextResponse,
 ) {
   const canonicalUrl = request.nextUrl.clone();
-  canonicalUrl.pathname = `/club-owner/${encodeURIComponent(ownerSlug)}/substitution`;
+  canonicalUrl.pathname = "/my-club";
+  canonicalUrl.hash = "my-club-squad";
   return redirectWithSupabaseCookies(canonicalUrl, sourceResponse);
 }
 
@@ -608,10 +607,9 @@ async function handleTouchLineRequest(request: NextRequest) {
   if (
     clubOwnerAccess?.action === "allow"
     && clubOwnerAccess.kind === "self"
-    && clubOwnerSlug
     && pathname === "/club-owner/me/substitution"
   ) {
-    return clubOwnerCanonicalSubstitutionRedirect(request, clubOwnerSlug, response);
+    return clubOwnerSubstitutionToMyClubRedirect(request, response);
   }
   if (clubOwnerAccess?.action === "not-found") {
     return clubOwnerNotFoundResponse(request, response);

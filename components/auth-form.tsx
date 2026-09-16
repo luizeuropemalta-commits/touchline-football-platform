@@ -120,7 +120,8 @@ export function AuthForm({
   const enabledSocialProviders = socialProviders.filter(({ enabled }) => enabled);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<SocialAuthProvider | null>(null);
@@ -168,12 +169,19 @@ export function AuthForm({
     const submittedFields = new FormData(e.currentTarget);
     const submittedEmail = submittedFields.get("email");
     const submittedPassword = submittedFields.get("password");
-    const submittedName = submittedFields.get("full_name");
+    const submittedFirstName = submittedFields.get("first_name");
+    const submittedLastName = submittedFields.get("last_name");
     const normalizedEmail = typeof submittedEmail === "string"
       ? submittedEmail.trim().toLowerCase()
       : email.trim().toLowerCase();
     const effectivePassword = typeof submittedPassword === "string" ? submittedPassword : password;
-    const effectiveName = typeof submittedName === "string" ? submittedName : name;
+    const effectiveFirstName = typeof submittedFirstName === "string"
+      ? submittedFirstName.trim()
+      : firstName.trim();
+    const effectiveLastName = typeof submittedLastName === "string"
+      ? submittedLastName.trim()
+      : lastName.trim();
+    const effectiveName = [effectiveFirstName, effectiveLastName].filter(Boolean).join(" ");
     setLoading(true); setMessage(""); setMessageTone(null);
     const supabase = createClient();
     if (!supabase) {
@@ -188,7 +196,14 @@ export function AuthForm({
           email: normalizedEmail,
           password: effectivePassword,
           options: {
-            data: { full_name: effectiveName },
+            // Keep `full_name` as the canonical display name used by current
+            // ClubOwner records, while preserving the real registration
+            // fields for onboarding and future profile editing.
+            data: {
+              full_name: effectiveName,
+              first_name: effectiveFirstName,
+              last_name: effectiveLastName,
+            },
             emailRedirectTo: buildTouchLineAuthCallbackUrl(firstEntryHref),
           },
         });
@@ -365,7 +380,12 @@ export function AuthForm({
       {mode === "login" ? <input type="hidden" name="return_to" value={arenaHref} /> : null}
       {mode === "login" ? <input type="hidden" name="login_path" value={entryPath} /> : null}
       {mode === "login" ? <input type="hidden" name="locale" value={normalizedLocale} /> : null}
-      {mode === "register" && <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.fullName}</span><Input required name="full_name" value={name} onChange={e=>setName(e.target.value)} placeholder={copy.fullNamePlaceholder} autoComplete="name"/></label>}
+      {mode === "register" ? (
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.firstName}</span><Input required name="first_name" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder={copy.firstNamePlaceholder} autoComplete="given-name" /></label>
+          <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.lastName}</span><Input required name="last_name" value={lastName} onChange={e => setLastName(e.target.value)} placeholder={copy.lastNamePlaceholder} autoComplete="family-name" /></label>
+        </div>
+      ) : null}
       <label className="block"><span className="mb-2 block text-xs font-semibold">{copy.email}</span><Input required name="email" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder={copy.emailPlaceholder} autoComplete="email"/></label>
       {mode !== "forgot" && (
         <div className="block">

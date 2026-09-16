@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { parseTouchlineArenaPanel } from "@/lib/touchlineArena/arena-navigation";
 import { parseTouchlineArenaIntroIntent } from "@/lib/touchlineArena/arena-intro";
-import { touchlineClubOwnerProfileHref, touchlineClubOwnerSubstitutionHref } from "@/lib/touchlineArena/club-owner-routes";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
 import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
@@ -45,7 +44,7 @@ export default async function ArenaPage({
   const initialQaVisualEditor = firstValue(params.qaEditor) === "1"
     && requestHost === TOUCHLINE_QA_HOSTNAME
     && !initialQaReadOnly;
-  if (initialPanel && initialPanel !== "bench" && !initialQaVisualEditor) {
+  if (initialPanel && !initialQaVisualEditor) {
     const marketParams = new URLSearchParams();
     const lang = firstValue(params.lang);
     const contractPlayer = firstValue(params.contractPlayer);
@@ -59,10 +58,12 @@ export default async function ArenaPage({
       redirect(`/my-club${marketParams.size ? `?${marketParams.toString()}` : ""}`);
     }
     const suffix = marketParams.size ? `?${marketParams.toString()}` : "";
-    if (initialPanel === "formation") redirect(touchlineClubOwnerSubstitutionHref(lang));
+    if (initialPanel === "bench" || initialPanel === "formation") {
+      redirect(`/my-club${suffix}#my-club-squad`);
+    }
     if (initialPanel === "live" || initialPanel === "watch") redirect(`/live${suffix}`);
     if (initialPanel === "rankings") redirect(`/touchline-tables${suffix}`);
-    redirect(touchlineClubOwnerProfileHref(lang));
+    redirect(`/arena${suffix}`);
   }
 
   const [supabase, initialTwoDimensionalFormationRegistry] = await Promise.all([

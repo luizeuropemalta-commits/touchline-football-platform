@@ -124,6 +124,11 @@ test("042 owner visual review is non-publishable and does not weaken the canonic
   assert.doesNotMatch(css, /\.club > div[^}]*border-radius:\s*50%/);
 });
 
+test("full-time source scopes cumulative card facts to the fixture's canonical competition and season", () => {
+  const source = readFileSync(new URL("../lib/touchlineArena/social-final-score-draft-server.ts", import.meta.url), "utf8");
+  assert.match(source, /readPublicSeasonPlayerPoints\([\s\S]*competitionId: String\(canonicalFixture\.competition_id\)\.toLowerCase\(\)[\s\S]*seasonId: String\(canonicalFixture\.season_id\)\.toLowerCase\(\)[\s\S]*providedAdmin: admin/);
+});
+
 test("042 standalone snapshot cannot inherit a historical visual approval by checksum substitution", async () => {
   const approval = readFileSync(new URL("../docs/touchline-arena/social-publishing-playbook/042_FULL_TIME_OWNER_ART_APPROVAL.md", import.meta.url), "utf8");
   const registry = await readTouchlineSocialTemplateRegistry(new URL("..", import.meta.url).pathname);

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  hasTouchlineMatchCentreFixture,
   isTouchlineLiveReadMetadata,
   mergeTouchlineLiveFixtures,
   normalizeTouchlineMatchCentreTimeZone,
@@ -146,6 +147,14 @@ test("Match Centre preserves an explicit fixture deep link", () => {
   assert.equal(touchlineMatchCentreHref(target, "pt-BR"), "/live?fixture=sportmonks%3A20&lang=pt-BR");
 });
 
+test("Match Centre recognizes only a fixture that is actually visible in the current schedule", () => {
+  const current = fixture("20", "2026-08-22T14:00:00Z", "Not Started");
+  assert.equal(hasTouchlineMatchCentreFixture([current], current.id), true);
+  assert.equal(hasTouchlineMatchCentreFixture([current], current.providerId), true);
+  assert.equal(hasTouchlineMatchCentreFixture([current], "not-a-fixture"), false);
+  assert.equal(hasTouchlineMatchCentreFixture([current], null), false);
+});
+
 test("fixture status labels are rendered in the selected locale without changing the provider fact", () => {
   assert.equal(touchlineFixtureStatusLabel("2nd Half", "en-GB"), "2nd Half");
   assert.equal(touchlineFixtureStatusLabel("2nd Half", "pt-BR"), "2º tempo");
@@ -231,7 +240,7 @@ test("Match Centre never invents a zero score when only one side is present", ()
   assert.doesNotMatch(scoreFunction, /\?\? 0/);
 });
 
-test("Match Centre keeps kickoff time only in the lower line and exposes AO VIVO only for canonical live state", () => {
+test("Match Centre keeps kickoff time only in the lower line and localizes the live state", () => {
   const source = readFileSync(
     new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
     "utf8",
@@ -242,7 +251,7 @@ test("Match Centre keeps kickoff time only in the lower line and exposes AO VIVO
   );
 
   assert.match(source, /selectedDisplayState === "live" \? <span className=\{styles\.statusPill\} role="status" aria-live="polite" aria-atomic="true">/);
-  assert.match(source, /copy\["pt-BR"\]\.liveNow/);
+  assert.match(source, /\{dictionary\.liveNow\}/);
   assert.match(source, /<time className=\{styles\.heroKickoff\}[\s\S]*?hour: "2-digit", minute: "2-digit"/);
   assert.match(source, /score\(selected, selectedDisplayState\)/);
   assert.doesNotMatch(source, /<span className=\{styles\.statusPill\}>\{status\(/);
@@ -251,7 +260,7 @@ test("Match Centre keeps kickoff time only in the lower line and exposes AO VIVO
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.statusPill \{ animation: none; \}/);
 });
 
-test("Manchester United home hero exposes an honest verified-lineup call to action", () => {
+test("every canonical home hero exposes the same honest verified-lineup call to action", () => {
   const source = readFileSync(
     new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
     "utf8",
@@ -265,13 +274,16 @@ test("Manchester United home hero exposes an honest verified-lineup call to acti
     "utf8",
   );
 
-  assert.match(source, /selected\?\.homeTeam\?\.providerId === "14" && selected\?\.venue\?\.id === "old-trafford"/);
+  assert.match(source, /const showHomeLineupCallout = Boolean\([\s\S]*?homeLineupHref[\s\S]*?selectedCanonicalState === "live" \|\| selectedCanonicalState === "finished"/);
   assert.match(source, /verifiedDetail\?\.lineupAvailableAt[\s\S]*?verifiedDetail\.lineups\.some\(\(member\) => member\.teamId === selected\?\.homeTeam\?\.providerId\)/);
   assert.match(source, /selectedCanonicalState === "live" \|\| selectedCanonicalState === "finished"/);
-  assert.match(source, /Escalação oficial ainda não disponível/);
-  assert.match(source, /A TouchLine avisará assim que os dados oficiais chegarem\./);
-  assert.match(source, /VER ESCALAÇÃO/);
-  assert.match(source, /\/touchline-clubs\/manchester-united\?lang=pt-BR#touchline-club-lineup/);
+  assert.match(source, /viewLineup: "VER ESCALAÇÃO"/);
+  assert.match(source, /viewLineup: "VIEW LINE-UP"/);
+  assert.match(source, /lineupPending: "Escalação oficial ainda não disponível"/);
+  assert.match(source, /lineupPendingCopy: "A TouchLine avisará assim que os dados oficiais chegarem\./);
+  assert.match(source, /`\/touchline-clubs\/\$\{selectedHomeClub\.slug\}\?lang=\$\{language\}#touchline-club-lineup`/);
+  assert.doesNotMatch(source, /\/touchline-clubs\/manchester-united\?lang=pt-BR#touchline-club-lineup/);
+  assert.doesNotMatch(source, /isManchesterUnitedHome/);
   assert.doesNotMatch(source, /lineup[^\n]*(?:60|90)\s*\*\s*60_000/i);
   assert.match(styles, /\.homeLineupCallout \{[^}]*border-radius:[^}]*backdrop-filter:/);
   assert.match(styles, /\.homeLineupLink:focus-visible/);

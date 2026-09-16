@@ -30,7 +30,12 @@ export type StudioFullTimeRenderedFactsV1 = Readonly<{
       name: string;
       shirtNumber: number | null;
       clubName: string;
+      role: string;
+      position: string;
+      countryCode3: string;
       tierKey: string;
+      cardPrice: Readonly<{ amountMinor: number; currency: "TC" | "GBP" | "EUR" }>;
+      marketValueEur: number | null;
       cardTemplateUrl: string;
       marketValue: string | null;
       seasonTotalRating: number | null;
@@ -38,13 +43,17 @@ export type StudioFullTimeRenderedFactsV1 = Readonly<{
         goals: string | number | null;
         assists: string | number | null;
         defense: string | number | null;
-        yellowcards: string | number | null;
+        cleanSheets: string | number | null;
+        saves: string | number | null;
+        yellowCards: string | number | null;
+        redCards: string | number | null;
       }>;
     }>;
   }>;
 }>;
 
 const fullTime = (status: string) => /^(?:FT|FINISHED|FULL[ _-]?TIME)$/i.test(status.trim());
+const identity = (value: string) => value.trim().toLocaleLowerCase("en-US").replace(/[^a-z0-9]+/g, "");
 
 /**
  * The sole persisted fact surface for a FULL_TIME social candidate. Both the
@@ -60,12 +69,20 @@ export function projectStudioFullTimeRenderedFactsV1(
   const providerPlayerId = String(card.providerPlayerId ?? card.id ?? "").trim();
   const tierKey = String(card.editorialCard?.tierKey ?? card.cardTier ?? "").trim();
   const cardTemplateUrl = touchlineArenaClubTemplateForCard(card.clubName, null, card.editorialCard?.tierKey ?? card.cardTier) ?? "";
+  const role = String(card.role ?? "").trim();
+  const position = String(card.position ?? "").trim();
+  const countryCode3 = String(card.countryCode3 ?? "").trim().toUpperCase();
+  const editorialCard = card.editorialCard;
+  const officialMatchRating = draft.topMatchCard.officialMatchRating;
+  const featuredTeamIsInFixture = team.teamId === draft.home.teamId || team.teamId === draft.away.teamId;
   if (!Number.isFinite(Date.parse(draft.startsAt))) return null;
   const displayDate = new Intl.DateTimeFormat("en-GB", {
     day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/London",
   }).format(new Date(draft.startsAt));
   if (!fullTime(draft.status) || !canonicalPlayerId || !providerPlayerId || !tierKey || !cardTemplateUrl
-    || !Number.isFinite(draft.topMatchCard.officialMatchRating) || !Number.isFinite(draft.gameweekNumber)
+    || !featuredTeamIsInFixture || identity(card.clubName) !== identity(team.name) || !role || !position || !/^[A-Z]{3}$/.test(countryCode3)
+    || !editorialCard || !Number.isSafeInteger(editorialCard.cardPrice.amountMinor) || editorialCard.cardPrice.amountMinor < 0
+    || !Number.isFinite(officialMatchRating) || officialMatchRating < 0 || officialMatchRating > 10 || !Number.isFinite(draft.gameweekNumber)
     || !draft.home.logoUrl || !draft.away.logoUrl || !draft.venue.name || !draft.venue.interiorImageUrl
     ) return null;
   const goals = draft.goals.map((goal) => ({
@@ -94,12 +111,17 @@ export function projectStudioFullTimeRenderedFactsV1(
       canonicalPlayerId,
       providerPlayerId,
       providerTeamId: team.teamId,
-      officialMatchRating: draft.topMatchCard.officialMatchRating,
+      officialMatchRating,
       card: {
         name: card.name,
         shirtNumber: card.shirtNumber,
         clubName: card.clubName,
+        role,
+        position,
+        countryCode3,
         tierKey,
+        cardPrice: editorialCard.cardPrice,
+        marketValueEur: editorialCard.marketValueEur ?? null,
         cardTemplateUrl,
         marketValue: card.marketValue || null,
         seasonTotalRating: card.seasonTotalRating ?? null,
@@ -107,7 +129,10 @@ export function projectStudioFullTimeRenderedFactsV1(
           goals: card.seasonStats?.goals ?? null,
           assists: card.seasonStats?.assists ?? null,
           defense: card.seasonStats?.defense ?? null,
-          yellowcards: card.seasonStats?.yellowCards ?? null,
+          cleanSheets: card.seasonStats?.cleanSheets ?? null,
+          saves: card.seasonStats?.saves ?? null,
+          yellowCards: card.seasonStats?.yellowCards ?? null,
+          redCards: card.seasonStats?.redCards ?? null,
         },
       },
     },

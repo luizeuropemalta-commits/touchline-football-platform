@@ -6,9 +6,14 @@
 }
 
 .trigger {
+  /* Establish a local formatting context so the normal-card crown envelope
+     participates in the trigger's measured height instead of collapsing into
+     a clipped parent on mobile, tablet, desktop or TV surfaces. */
+  display: flow-root;
   width: 100%;
   cursor: zoom-in;
   touch-action: pan-x pan-y;
+  overflow: visible;
 }
 
 .trigger:focus-visible {
@@ -86,6 +91,13 @@
      than the standard card. All ranking, market and feed cards retain their
      authored size. */
   --touchline-card-static-scale: .85;
+}
+
+/* The modal card column already owns an explicit crown-safe stage. Avoid
+   applying the normal-surface envelope twice in the zoom presentation. */
+.expandedCard > [data-card-leadership-crown="true"],
+.expandedCard > [data-coach-ranking-leader="true"] {
+  margin-top: 0 !important;
 }
 
 .close {

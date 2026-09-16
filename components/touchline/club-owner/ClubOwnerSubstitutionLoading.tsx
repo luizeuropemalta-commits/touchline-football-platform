@@ -1,14 +1,14 @@
 /**
- * Route-local handoff for the authenticated Quick Substitution route.
- * It replaces the opaque global black loader while the canonical ClubOwner
- * route is resolved. It reads no session, roster, or market data.
+ * Route-local handoff for a historical substitution URL. It replaces the
+ * opaque global black loader while the visitor is sent to the canonical
+ * position-led My Club workspace. It reads no session, roster, or market data.
  */
 export default function ClubOwnerSubstitutionLoading() {
   return (
     <main
       role="status"
       aria-live="polite"
-      aria-label="Preparing Quick Substitution"
+      aria-label="Opening My Club"
       data-quick-substitution-route-loading="true"
       style={{
         minHeight: "100dvh",
@@ -35,9 +35,9 @@ export default function ClubOwnerSubstitutionLoading() {
         }}
       >
         <span style={{ width: 34, height: 34, border: "3px solid rgba(181,255,75,.25)", borderTopColor: "#b5ff4b", borderRadius: "50%", animation: "touchline-quick-sub-loading-spin .8s linear infinite" }} />
-        <strong style={{ color: "#caff72", fontSize: 11, letterSpacing: ".14em" }}>SUBSTITUIÇÃO RÁPIDA</strong>
-        <h1 style={{ margin: 0, fontSize: "clamp(30px, 6vw, 48px)", lineHeight: 1, letterSpacing: "-.045em" }}>Preparando sua escalação</h1>
-        <p style={{ maxWidth: 360, margin: 0, color: "rgba(245,255,240,.72)", lineHeight: 1.6 }}>Confirmando o seu XI e banco antes de abrir a troca.</p>
+        <strong style={{ color: "#caff72", fontSize: 11, letterSpacing: ".14em" }}>MEU CLUBE</strong>
+        <h1 style={{ margin: 0, fontSize: "clamp(30px, 6vw, 48px)", lineHeight: 1, letterSpacing: "-.045em" }}>Abrindo seu XI</h1>
+        <p style={{ maxWidth: 360, margin: 0, color: "rgba(245,255,240,.72)", lineHeight: 1.6 }}>Você escolhe, remove ou substitui cada atleta pela posição correta.</p>
       </section>
       <style>{`@keyframes touchline-quick-sub-loading-spin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { [data-quick-substitution-route-loading] span { animation: none !important; } }`}</style>
     </main>

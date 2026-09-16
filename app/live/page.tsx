@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import TouchlineMatchCentre from "@/components/touchline/match-centre/TouchlineMatchCentre";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
@@ -11,6 +12,7 @@ import {
   normalizeTouchLineLocale,
 } from "@/lib/touchlineArena/i18n";
 import {
+  hasTouchlineMatchCentreFixture,
   normalizeTouchlineMatchCentreTimeZone,
   selectTouchlineMatchCentreSchedule,
   selectTouchlineMatchCentreFixture,
@@ -54,6 +56,11 @@ export default async function TouchLineLivePage({
     ...initialSchedule.recentResults,
   ];
   const initiallySelected = selectTouchlineMatchCentreFixture(initiallyVisibleFixtures, requestedFixture, initialNow);
+  if (requestedFixture && !hasTouchlineMatchCentreFixture(initiallyVisibleFixtures, requestedFixture)) {
+    const canonical = new URLSearchParams({ lang: normalizedLanguage });
+    if (initiallySelected) canonical.set("fixture", initiallySelected.id);
+    redirect(`/live?${canonical.toString()}`);
+  }
   const supabase = await createClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   const canReadMatchDetail = hasTouchLineArenaAccess(user);

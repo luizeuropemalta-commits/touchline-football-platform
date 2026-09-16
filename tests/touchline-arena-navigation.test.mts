@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   parseTouchlineArenaPanel,
@@ -9,10 +10,11 @@ import {
   touchlineArenaPanelUrl,
   touchlineClubHubHref,
 } from "../lib/touchlineArena/arena-navigation.ts";
-import {
-  touchlineClubOwnerProfileHref,
-  touchlineClubOwnerSubstitutionHref,
-} from "../lib/touchlineArena/club-owner-routes.ts";
+
+const arenaClientSource = readFileSync(
+  new URL("../app/arena/ArenaClient.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("TouchLine Arena navigation", () => {
   it("keeps the official game URL clean and the demo URL explicit", () => {
@@ -43,28 +45,16 @@ describe("TouchLine Arena navigation", () => {
     assert.equal(parseTouchlineArenaPanel(undefined), null);
   });
 
-  it("keeps Quick Substitution in the Arena and routes former panels deliberately", () => {
+  it("routes former bench and formation panels to the one position-led My Club workspace", () => {
     assert.equal(
       touchlineArenaPanelHref("formation", "pt-BR"),
-      "/club-owner/me/substitution?lang=pt-BR",
+      "/my-club?lang=pt-BR#my-club-squad",
     );
-    assert.equal(touchlineArenaPanelHref("bench", "pt-BR"), "/arena?panel=bench&lang=pt-BR");
+    assert.equal(touchlineArenaPanelHref("bench", "pt-BR"), "/my-club?lang=pt-BR#my-club-squad");
     assert.equal(touchlineArenaPanelHref("live", "pt-BR"), "/live?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("watch", "pt-BR"), "/live?lang=pt-BR");
     assert.equal(touchlineArenaPanelHref("rankings", "pt-BR"), "/touchline-tables?lang=pt-BR");
-    assert.equal(touchlineArenaPanelHref("news", "pt-BR"), "/club-owner/me?lang=pt-BR");
-  });
-
-  it("keeps ClubOwner links centralized while allowing future owner slugs", () => {
-    assert.equal(touchlineClubOwnerProfileHref("pt-BR"), "/club-owner/me?lang=pt-BR");
-    assert.equal(
-      touchlineClubOwnerProfileHref("en-GB", "ana-silva"),
-      "/club-owner/ana-silva?lang=en-GB",
-    );
-    assert.equal(
-      touchlineClubOwnerSubstitutionHref("pt-BR", "ana-silva"),
-      "/club-owner/ana-silva/substitution?lang=pt-BR",
-    );
+    assert.equal(touchlineArenaPanelHref("news", "pt-BR"), "/arena?lang=pt-BR");
   });
 
   it("opens My Club as the localized squad-building destination", () => {
@@ -73,6 +63,32 @@ describe("TouchLine Arena navigation", () => {
       "/my-club?lang=pt-BR",
     );
     assert.equal(touchlineArenaPanelHref("market", "en-GB"), "/my-club?lang=en-GB");
+  });
+
+  it("keeps My Club as the only owner-facing Arena destination", () => {
+    assert.doesNotMatch(arenaClientSource, /touchlineClubOwnerProfileHref/);
+    assert.match(
+      arenaClientSource,
+      /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/,
+    );
+    assert.match(
+      arenaClientSource,
+      /if \(\(panel === "bench" \|\| panel === "formation"\) && !initialQaVisualEditor\) \{\s*window\.location\.assign\(touchlineArenaPanelHref\(panel, siteLanguage\)\);/,
+    );
+    assert.match(arenaClientSource, /\{siteLanguage === "pt-BR" \? "Montar meu XI" : "Build my XI"\}/);
+  });
+
+  it("anchors the Arena score carousel to one safe viewport edge", () => {
+    const carouselRuleBodies = [
+      ...arenaClientSource.matchAll(/\.club-symbol-carousel\s*\{([\s\S]*?)\n\s*\}/g),
+    ].map((match) => match[1]);
+    const carouselBottomDeclarations = carouselRuleBodies.filter((body) => /\bbottom\s*:/.test(body));
+
+    assert.equal(carouselBottomDeclarations.length, 1);
+    assert.match(
+      carouselBottomDeclarations[0] ?? "",
+      /bottom:\s*env\(safe-area-inset-bottom, 0px\);/,
+    );
   });
 
   it("updates only the active panel in an existing Arena URL", () => {

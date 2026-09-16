@@ -165,9 +165,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
               </TouchlineCardZoom>
               <div className="club-hub-card-meta">
                 <a href={profileHref} aria-label={`${openProfileLabel}: ${card.name}`}>{openProfileLabel}</a>
-                <small>
-                  {localizedPosition(card.position, pt)} / {pt ? "Nota total" : "Total rating"} {card.seasonTotalRating ?? "—"}
-                </small>
+                <small>{localizedPosition(card.position, pt)}</small>
               </div>
             </article>
           );

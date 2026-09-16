@@ -32,6 +32,53 @@ them as current product requirements: My Club now has eleven eligible XI slots.
   `outputs/Memoria-TouchLine/Auditorias/2026-09-14/retomada-auditoria-integral-apos-artes.md`.
   Production, DNS, payment and credentials remain untouched.
 
+## 2026-09-16 responsive-card safety correction — LOCAL VERIFIED / QA & PRODUCTION NOT TOUCHED
+
+- **Owner requirement:** player and coach leadership crowns must remain fully
+  visible on phone, tablet, desktop and TV; no global mechanism may hide the
+  product in portrait. Card totals remain inside the canonical card, its zoom
+  and profile only.
+- **Root cause:** the root layout shipped a global phone/tablet portrait gate
+  that made the entire application inert and requested a landscape lock. The
+  player-ranking feature host also clipped its child overflow, which cut the
+  top of a crowned card despite the card art itself being correct.
+- **Correction:** `TouchlineLandscapeBoundary` is now only the shared skip
+  target. It has no orientation detection, `inert`, `aria-hidden`, forced
+  scroll, overlay or `screen.orientation.lock`. The PWA manifest no longer
+  requests landscape. Each surface remains responsible for its responsive
+  arrangement. Player and coach cards reserve a real crown envelope in normal
+  layout, while zoom and profile hosts use their own safe envelope. The player
+  ranking feature host allows that envelope to be visible.
+- **Fresh local evidence:** TypeScript and `git diff --check` passed; focused
+  crown/layout tests passed `12/12`; Playwright passed crown checks at 390,
+  768, 1280 and 1920 widths (`8/8`), and Arena interaction without the
+  rotation gate at phone, tablet, desktop and TV sizes (`16/16`). The 390px
+  screenshot shows the full crown, frame and card without clipping.
+- **Outstanding acceptance:** native Safari visual inspection is required
+  after the Mac is unlocked, then the remaining authenticated and whole-site
+  audit findings must be resolved before one clean QA candidate is assembled.
+  No remote build, QA alias, domain alias, DNS, social dispatch or Production
+  change was made by this correction.
+
+## 2026-09-16 candidate close-out — LOCAL GREEN / REMOTE GATE STILL OPEN
+
+- **Current local verification:** the complete executable suite passed
+  **1903/1903** (12 environment-dependent SQL checks remain intentionally
+  skipped), TypeScript passed, ESLint passed, production build completed and
+  `git diff --check` passed.
+- **Crown matrix:** the published-leader/tied-leader visual contract passed at
+  390px phone, 768px tablet, 1280px desktop and 1920px TV (`8/8`). The card
+  surface reserves a real crown envelope rather than cropping artwork inside a
+  tile; a tied leader never receives a crown.
+- **Product journey:** legacy Arena `bench` and `formation` entry points now
+  route to `My Club#my-club-squad`. Normal Arena navigation labels that action
+  “Build my XI”/“Montar meu XI”; the retired local Quick Sub view is retained
+  only behind the isolated visual-QA editor, never as a customer path.
+- **Remote acceptance still required:** the current QA deployment was observed
+  without the new crown marker. It must be replaced by an immutable candidate
+  SHA, then retested against real QA data and in native Safari after the Mac is
+  unlocked. Production alias/DNS and outbound social delivery remain untouched.
+
 ## 2026-09-14 My Club premium cover and position market — QA candidate
 
 - **Scope:** one isolated candidate refines only the authenticated My Club

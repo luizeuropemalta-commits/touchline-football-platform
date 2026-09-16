@@ -80,7 +80,7 @@ test("TV-size browser exposes a visible keyboard and remote-control focus target
   await context.close();
 });
 
-test("touch portrait exposes only the canonical rotation boundary", async ({ browser, browserName }) => {
+test("touch portrait keeps the product interactive instead of forcing a rotation gate", async ({ browser, browserName }) => {
   test.skip(browserName === "webkit", "Playwright WebKit desktop does not emulate a mobile user agent in a nested context.");
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -90,11 +90,12 @@ test("touch portrait exposes only the canonical rotation boundary", async ({ bro
   const page = await context.newPage();
   await page.goto(`${baseURL}/arena?lang=pt-BR`, { waitUntil: "domcontentloaded" });
 
-  const rotationGate = page.getByRole("dialog", { name: "Gire para o modo horizontal" });
-  await expect(rotationGate).toBeVisible();
-  const protectedContent = page.locator("[data-touchline-main-content-fallback]");
-  await expect(protectedContent).toHaveAttribute("aria-hidden", "true");
-  expect(await protectedContent.evaluate((node) => (node as HTMLElement).inert)).toBe(true);
+  await expect(page.getByTestId("touchline-arena-intro")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Gire para o modo horizontal" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Pular intro" }).click();
+  await expect(page.locator("main.touchline-game")).toBeVisible();
+  await expect(page.getByText(/Prepare seu clube para a próxima rodada/i)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.dataset.touchlineOrientation)).toBeUndefined();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await context.close();
 });

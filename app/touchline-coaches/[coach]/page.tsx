@@ -223,6 +223,7 @@ export default async function TouchlineCoachProfilePage({
         /* Keep the official leader crown fully inside the profile composition
            while leaving its approved art and frame clearance untouched. */
         .coach-profile-card { width:min(100%,410px); justify-self:center; padding-top:128px; box-sizing:border-box; overflow:visible; }
+        .coach-profile-card > [data-coach-ranking-leader="true"] { margin-top:0 !important; }
         .coach-profile-offer-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
         .coach-profile-offer-grid > div { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:10px; border:1px solid rgba(181,255,75,.13); border-radius:14px; padding:12px; background:rgba(0,0,0,.2); }
         .coach-profile-offer-grid svg { width:21px; height:21px; color:#b5ff4b; }

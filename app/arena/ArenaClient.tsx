@@ -142,7 +142,6 @@ import {
   resolveTouchlineArenaInitialClub,
   type TouchlineArenaClub,
 } from "@/lib/touchlineArena/arena-club-registry-adapter";
-import { touchlineClubOwnerProfileHref } from "@/lib/touchlineArena/club-owner-routes";
 import { touchlinePlayerIdentityMatches } from "@/lib/touchlineArena/player-identity";
 import { TOUCHLINE_SHIRT_DIGIT_ASSETS } from "@/lib/touchlineArena/shirt-number-art";
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
@@ -7076,6 +7075,14 @@ export default function ArenaClient({
 
   function openArenaPanel(panel: ArenaPanelKey) {
     if (blockQaReadOnlyMutation()) return;
+    // The public owner journey has one squad workspace: My Club.  Do not
+    // retain a client-side escape hatch to the retired 20-player/Quick Sub
+    // experience after the server has redirected the legacy URL.  The QA
+    // visual fixture remains explicitly isolated behind its QA editor flag.
+    if ((panel === "bench" || panel === "formation") && !initialQaVisualEditor) {
+      window.location.assign(touchlineArenaPanelHref(panel, siteLanguage));
+      return;
+    }
     if (quickSubCloseTimerRef.current !== null) {
       window.clearTimeout(quickSubCloseTimerRef.current);
       quickSubCloseTimerRef.current = null;
@@ -8070,23 +8077,14 @@ export default function ArenaClient({
                 // navigation action over the Arena.
                 inert={!isArenaNavOpen ? true : undefined}
               >
-                <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
-                  ClubOwner
-                </a>
                 <a href={allClubsHubHref}>
                   {t("clubHub")}
                 </a>
                 <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                   {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
                 </a>
-                {!hasSyncedFantasyLineup ? <a
-                    href={touchlineArenaPanelHref("bench", siteLanguage)}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openArenaPanel("bench");
-                    }}
-                  >
-                    {t("quickSubstitution")}
+                {!hasSyncedFantasyLineup ? <a href={touchlineArenaPanelHref("bench", siteLanguage)}>
+                    {siteLanguage === "pt-BR" ? "Montar meu XI" : "Build my XI"}
                   </a> : null}
                 {hasEntryVideoFinished ? (
                   <button type="button" onClick={replayEntryVideo}>
@@ -8917,8 +8915,8 @@ export default function ArenaClient({
 
               {["market", "rankings"].includes(arenaOverlayPanel) ? (
                 <nav className="arena-club-sections" data-panel={arenaOverlayPanel} aria-label={t("clubControl")}>
-                  <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
-                    {t("profile")}
+                  <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                    {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
                   </a>
                   <a href={allClubsHubHref}>
                     {t("clubHub")}
@@ -8985,8 +8983,8 @@ export default function ArenaClient({
                         <a className="is-primary" href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                           {standaloneQuickSubstitutionCopy.openMarket}
                         </a>
-                        <a href={touchlineClubOwnerProfileHref(siteLanguage)}>
-                          {standaloneQuickSubstitutionCopy.returnClub}
+                        <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                          {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
                         </a>
                       </div>
                     ) : null}
@@ -9790,7 +9788,7 @@ export default function ArenaClient({
                           <TouchlineEliteExactCard className="arena-ranking-card-render" player={squadCardToExactPlayer(card)} layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY} labels={cardLabels} />
                           <div>
                             <strong>{card.shortName}</strong>
-                            <small>{[card.clubName, cardPrice, `${card.seasonTotalRating?.toFixed(2) ?? "—"} ${siteLanguage === "pt-BR" ? "nota total" : "total rating"}`].filter(Boolean).join(" / ")}</small>
+                            <small>{[card.clubName, cardPrice].filter(Boolean).join(" / ")}</small>
                           </div>
                         </article>
                       );
@@ -11484,10 +11482,6 @@ export default function ArenaClient({
           .arena-quick-sub-coach { min-height: 104px; }
           .arena-quick-sub-coach > span { height: 82px; }
 
-          .club-symbol-carousel {
-            bottom: max(4px, calc(env(safe-area-inset-bottom) + 4px));
-          }
-
           .club-symbol-open {
             grid-template-columns: auto 44px minmax(0, 1fr) 44px 44px;
             padding-block: 4px;
@@ -12153,7 +12147,10 @@ export default function ArenaClient({
           z-index: 110;
           left: max(12px, env(safe-area-inset-left));
           right: max(12px, env(safe-area-inset-right));
-          bottom: max(34px, calc(env(safe-area-inset-bottom) + 34px));
+          /* The score carousel belongs to the Arena viewport edge. Every
+             breakpoint shares this anchor so a smaller screen never floats it
+             above the bottom of the pitch. */
+          bottom: env(safe-area-inset-bottom, 0px);
           pointer-events: none;
           transition: opacity .72s ease, transform .72s ease;
         }
@@ -17576,7 +17573,6 @@ export default function ArenaClient({
           .club-symbol-carousel {
             left: max(10px, env(safe-area-inset-left));
             right: max(10px, env(safe-area-inset-right));
-            bottom: max(24px, calc(env(safe-area-inset-bottom) + 24px));
           }
 
           .club-symbol-open {
@@ -18169,7 +18165,6 @@ export default function ArenaClient({
           .club-symbol-carousel {
             left: max(6px, env(safe-area-inset-left));
             right: max(6px, env(safe-area-inset-right));
-            bottom: max(8px, calc(env(safe-area-inset-bottom) + 8px));
           }
 
           .club-symbol-open {
@@ -20650,7 +20645,6 @@ export default function ArenaClient({
           .club-symbol-carousel {
             left: max(4px, env(safe-area-inset-left));
             right: max(4px, env(safe-area-inset-right));
-            bottom: max(4px, calc(env(safe-area-inset-bottom) + 4px));
           }
 
           .club-symbol-open {

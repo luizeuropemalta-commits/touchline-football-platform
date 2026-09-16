@@ -15,6 +15,8 @@ test("the shared card zoom reserves a leader-crown safe zone without changing cr
   assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: clamp\(98px, 16vw, 128px\)/);
   assert.match(zoomCss, /\.cardColumn \{[\s\S]*?padding-top: var\(--touchline-card-zoom-crown-safe-top\)/);
   assert.match(zoomCss, /\.cardColumn \{[\s\S]*?overflow: visible/);
+  assert.match(zoomCss, /\.trigger \{[\s\S]*?display: flow-root[\s\S]*?overflow: visible/);
+  assert.match(zoomCss, /\.expandedCard > \[data-card-leadership-crown="true"\],[\s\S]*?margin-top: 0 !important/);
   assert.match(zoomCss, /100dvh - 72px - var\(--touchline-card-zoom-crown-safe-top\)/);
   assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: clamp\(82px, 21vw, 98px\)/);
   assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: clamp\(68px, 13vw, 94px\)/);
@@ -29,7 +31,9 @@ test("player and coach profiles reserve the same uncropped leader-crown envelope
 
   assert.match(playerProfile, /\.identityBand \{[\s\S]*?overflow: visible/);
   assert.match(playerProfile, /\.cardFrame \{[\s\S]*?padding-top: clamp\(98px, 16vw, 128px\)/);
+  assert.match(playerProfile, /\.cardFrame > \[data-card-leadership-crown="true"\] \{[\s\S]*?margin-top: 0 !important/);
   assert.match(playerProfile, /width: 310px;[\s\S]*?padding-top: clamp\(82px, 21vw, 98px\)/);
   assert.match(coachProfile, /\.coach-profile-card \{ width:min\(100%,410px\); justify-self:center; padding-top:128px; box-sizing:border-box; overflow:visible; \}/);
+  assert.match(coachProfile, /\.coach-profile-card > \[data-coach-ranking-leader="true"\] \{ margin-top:0 !important; \}/);
   assert.match(coachProfile, /width:min\(100%,330px\); padding-top:98px/);
 });

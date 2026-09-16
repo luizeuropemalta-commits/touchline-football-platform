@@ -210,7 +210,15 @@ export async function readTouchlineSocialFinalScoreDraft(
   if (!topCard?.editorialCard || !topCard.cardTier || !UUID.test(String(topCard.canonicalPlayerId ?? ""))) {
     return { ok: false, reason: "top-match-card-unpublished" };
   }
-  const seasonPoints = await readPublicSeasonPlayerPoints([topCard.canonicalPlayerId!], { providedAdmin: admin });
+  // The social card must receive the same season-total/rule-filtered facts as
+  // the live product card.  A global "current season" read can legitimately
+  // be between markers while a finished fixture is already canonical, which
+  // would otherwise turn valid card fields into visual placeholders.
+  const seasonPoints = await readPublicSeasonPlayerPoints([topCard.canonicalPlayerId!], {
+    competitionId: String(canonicalFixture.competition_id).toLowerCase(),
+    seasonId: String(canonicalFixture.season_id).toLowerCase(),
+    providedAdmin: admin,
+  });
   const decoratedCard = applyTouchlineSeasonPoints([topCard], seasonPoints)[0];
   if (!decoratedCard) return { ok: false, reason: "top-match-card-unavailable" };
 

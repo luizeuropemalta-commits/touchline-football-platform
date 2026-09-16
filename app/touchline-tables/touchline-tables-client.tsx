@@ -56,6 +56,7 @@ type TouchLineTablesClientProps = {
   coachRanking: TouchLineCoachRankingState;
   copy: RankingsCopy;
   currentProviderRoundName: string | null;
+  providerRoundNamesById: Record<string, string>;
   locale: TouchLineLocale;
   navigationSurface: TouchlineGlobalNavigationSurface;
   rankMode: string;
@@ -173,6 +174,7 @@ export default function TouchLineTablesClient({
   coachRanking,
   copy,
   currentProviderRoundName,
+  providerRoundNamesById,
   locale,
   navigationSurface,
   rankMode,
@@ -185,6 +187,9 @@ export default function TouchLineTablesClient({
   const publishedRosterCards = rosterCards.filter((card) => Boolean(card.editorialCard));
   const gameweekBest = resolveTouchlinePublishedGameweekBest({ selection: publishedTopEleven, cards: publishedRosterCards });
   const selection = gameweekBest.phase === "ready" ? gameweekBest.slots : null;
+  const gameweekBestRoundName = gameweekBest.phase === "ready"
+    ? providerRoundNamesById[gameweekBest.roundId] ?? null
+    : null;
   const gameweekCoach = resolveTouchlinePublishedGameweekCoach(publishedTopEleven);
   const gameweekCoachIdentity = gameweekCoach.phase === "ready"
     ? touchlineLiveCoachForProviderId(gameweekCoach.coachProviderId)
@@ -279,7 +284,7 @@ export default function TouchLineTablesClient({
                 <h2>{isPortuguese ? "Melhores da Gameweek" : "Gameweek Best XI"}</h2>
               </div>
               <span>{gameweekBest.phase === "ready"
-                ? `${isPortuguese ? "Rodada" : "Gameweek"} ${gameweekBest.roundId} · 11 ${isPortuguese ? "posições verificadas" : "verified positions"}`
+                ? `${gameweekBestRoundName ? `${isPortuguese ? "Rodada" : "Gameweek"} ${gameweekBestRoundName} · ` : ""}11 ${isPortuguese ? "posições verificadas" : "verified positions"}`
                 : copy.seasonSelectionRule}</span>
             </div>
 
@@ -304,7 +309,6 @@ export default function TouchLineTablesClient({
                     </div>
                     <div className={styles.pitchIdentity}>
                       <strong>{card.shortName}</strong>
-                      <span>{card.seasonTotalRating?.toFixed(2) ?? "—"}</span>
                     </div>
                   </article>
                 );
@@ -409,7 +413,6 @@ export default function TouchLineTablesClient({
                   <div className={styles.podiumIdentity}>
                     <strong>{card.shortName}</strong>
                     <span>{card.clubName} · {card.position}</span>
-                    <b>{card.seasonTotalRating?.toFixed(2) ?? "—"}</b>
                   </div>
                 </li>
               ))}

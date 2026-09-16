@@ -143,6 +143,8 @@ export type ClubOwnerProfileSearchParams = Promise<{
   lang?: string;
   feedCursor?: string;
   tab?: string;
+  /** Public ranking/ClubHub hand-off. Resolved only against the 20 canonical clubs. */
+  club?: string;
 }>;
 
 export default async function ClubOwnerProfileRenderer({
@@ -153,6 +155,7 @@ export default async function ClubOwnerProfileRenderer({
   ownerSlug?: string | null;
 }) {
   const params = await searchParams;
+  const initialPlayerClubTeamId = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.slug === params.club)?.teamId ?? null;
   const supabase = await createClient();
   const admin = createAdminClient();
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
@@ -244,11 +247,6 @@ export default async function ClubOwnerProfileRenderer({
     (second.seasonTotalRating ?? -1) - (first.seasonTotalRating ?? -1) || rankClubOwnerCards(first, second)
   ))[0] ?? null;
   const bestPlayerPalette = touchlineCardTierPalette(bestPlayerCard?.cardTier);
-  const ownedContractCount = activeClubOwnerUser
-    ? authoritativeRoster?.ok
-      ? authoritativeRoster.snapshot.ownedContractCount
-      : null
-    : sortedClubOwnerSquadCards.length;
   const squadCardValue = sortedClubOwnerSquadCards.reduce(
     (sum, card) => sum + (activeContractCardNumericPrice(card) ?? 0),
     0,
@@ -362,9 +360,7 @@ export default async function ClubOwnerProfileRenderer({
                 </span>
                 <span className="club-owner-best-player-copy">
                   <strong>{bestPlayerCard.shortName}</strong>
-                  <small>
-                    {locale === "pt-BR" ? "Nota total" : "Total rating"} {bestPlayerCard.seasonTotalRating ?? "—"}
-                  </small>
+                  <small>{locale === "pt-BR" ? "Card líder da temporada" : "Season-leading card"}</small>
                   <em>
                     {locale === "pt-BR"
                       ? "Maior nota acumulada entre os cards publicados"
@@ -402,7 +398,6 @@ export default async function ClubOwnerProfileRenderer({
                 <div><span>{clubCopy.squadValue}</span><strong>{activeContractValueKnown ? formatTouchlineCommercialCardTotal({ numericPrice: squadCardValue, competition: "england" }) : "—"}</strong></div>
                 <div><span>{clubCopy.xiCapacity}</span><strong>{fantasySnapshot?.selections.length ?? 0}/11</strong><small>{clubCopy.xiRule}</small></div>
               </div>
-              {ownedContractCount !== null && ownedContractCount > 11 ? <p className="club-owner-wallet-legacy-note">{isPortuguese ? `${ownedContractCount} contratos legados permanecem preservados e não ocupam vagas do XI.` : `${ownedContractCount} legacy contracts remain preserved and do not occupy XI places.`}</p> : null}
             </section>
           ) : null}
 
@@ -426,7 +421,7 @@ export default async function ClubOwnerProfileRenderer({
                   <strong>{isPortuguese ? "Monte seu XI por posição" : "Build your XI by position"}</strong>
                   <small>{isPortuguese ? "Escolha uma vaga. Veja somente atletas elegíveis. Troque ou remova sem mover ninguém de posição." : "Choose a slot. Browse only eligible players. Replace or remove without moving anyone out of position."}</small>
                 </header>
-                <FantasyGameweekClient initialSnapshot={fantasySnapshot} locale={locale} embedded />
+                <FantasyGameweekClient key={`my-club-player-filter-${initialPlayerClubTeamId ?? "default"}`} initialSnapshot={fantasySnapshot} locale={locale} embedded initialPlayerClubTeamId={initialPlayerClubTeamId} />
               </section>
             </section>
           ) : null}
@@ -923,7 +918,6 @@ export default async function ClubOwnerProfileRenderer({
 
         .club-owner-wallet-metrics strong { color: #fff; font-size: 18px; line-height: 1; }
         .club-owner-wallet-credit strong { color: #ffd75c; text-shadow: 0 0 18px rgba(255,215,92,.22); }
-        .club-owner-wallet-legacy-note { margin: 0; color: rgba(230,239,224,.6); font-size: 9px; font-weight: 800; line-height: 1.45; }
 
         .club-owner-market {
           margin: 18px;

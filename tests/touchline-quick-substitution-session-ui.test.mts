@@ -99,11 +99,9 @@ test("Quick Sub keeps the coach only in the central reserve rail", () => {
   );
 });
 
-test("in-Arena Quick Sub opens without reloading the Arena document", () => {
-  assert.match(
-    arenaSource,
-    /href=\{touchlineArenaPanelHref\("bench", siteLanguage\)\}[\s\S]{0,360}?event\.preventDefault\(\);[\s\S]{0,120}?openArenaPanel\("bench"\)/,
-  );
+test("Arena sends squad building to My Club instead of exposing retired Quick Sub", () => {
+  assert.match(arenaSource, /href=\{touchlineArenaPanelHref\("bench", siteLanguage\)\}[\s\S]{0,180}?(?:Montar meu XI|Build my XI)/);
+  assert.match(arenaSource, /if \(\(panel === "bench" \|\| panel === "formation"\) && !initialQaVisualEditor\)[\s\S]{0,240}?window\.location\.assign\(touchlineArenaPanelHref\(panel, siteLanguage\)\)/);
 });
 
 test("Quick Sub enters and exits as a low-motion-safe HUD without replacing the Arena document", () => {

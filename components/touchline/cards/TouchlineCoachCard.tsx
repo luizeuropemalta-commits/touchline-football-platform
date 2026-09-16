@@ -314,6 +314,10 @@ export default function TouchlineCoachCard({
     "--coach-neon-alpha": String(Math.min(.92, .2 + layout.neonStrength * .3)),
     "--coach-neon-soft-alpha": String(Math.min(.88, .18 + layout.neonStrength * .3)),
     "--coach-art-scale": "1",
+    // Coach crowns use the same approved artwork, but its portrait card is
+    // 2:3. Reserving 29.55% of its width equals the calibrated 19.7% of card
+    // height, preventing a host from cutting the crown on small or large UI.
+    marginTop: showLeadershipCrown ? "29.55%" : undefined,
   } as CSSProperties;
 
   function handleLayerPointerDown(key: TouchlineCoachLayerKey, event: ReactPointerEvent<HTMLElement>) {

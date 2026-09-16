@@ -208,5 +208,5 @@ test("Arena market panel routes directly to the canonical My Club workspace", ()
 
   assert.match(arenaPage, /if \(initialPanel === "market"\)[\s\S]*?redirect\(`\/my-club/);
   assert.doesNotMatch(arenaPage, /if \(initialPanel === "market"\)[\s\S]*?redirect\(`\/market-transfer/);
-  assert.doesNotMatch(arenaPage, /#my-club-squad/);
+  assert.match(arenaPage, /if \(initialPanel === "bench" \|\| initialPanel === "formation"\)[\s\S]*?#my-club-squad/);
 });

@@ -4,7 +4,13 @@ const opaqueBottomRatio = 1153 / 1254;
 
 const visualQaBaseUrl = process.env.TOUCHLINE_VISUAL_QA_BASE_URL ?? "http://127.0.0.1:3123";
 const visualQaPath = "/visual-qa/player-leader-crown?lang=en-GB";
-const supportedProjects = new Set(["chromium-desktop-1280", "chromium-phone-390"]);
+const supportedProjects = new Set([
+  "chromium-phone-390",
+  "chromium-tablet-768",
+  "chromium-desktop-1280",
+  "chromium-desktop-1440",
+  "chromium-tv-1920",
+]);
 
 const priceTableVersion = "2026-07-premier-v1";
 const snapshotId = "visual-player-leader-snapshot";
@@ -25,14 +31,21 @@ function activeRankingPayload(status: "unique-leader" | "tied") {
     roundId: "visual-round-1",
     publishedAt: "2026-09-10T12:00:00.000Z",
     priceTableVersion,
+    scoringVersion: "player_scoring_v3",
+    coverageStatus: "complete",
+    seasonId: "2026-27",
+    fixtureIds: ["visual-fixture-1"],
+    expectedFixtureIds: ["visual-fixture-1"],
+    totalScorePoints: 0,
     players: positions.map(([positionGroup, playerId, providerPlayerId]) => ({
       playerId,
       providerPlayerId,
       positionGroup,
       positionRank: 1,
       groupSize: 1,
-      touchlinePoints: 10,
-      roundPoints: 3,
+      totalRating: playerId === "visual-player-leader" ? 25 : 10,
+      minutesPlayed: 90,
+      appearances: 1,
       tierKey: "diamond-gold",
       priceTc: 15,
     })),
@@ -70,12 +83,14 @@ test("renders the approved crown only for the published unique player leader on 
     const card = image.parentElement!;
     const cardRect = card.getBoundingClientRect();
     return {
+      crownTop: crownRect.top,
       visibleCrownBottom: crownRect.top + (crownRect.height * alphaBottomRatio),
       cardTop: cardRect.top,
       crownWidth: crownRect.width,
     };
   }, opaqueBottomRatio);
   expect(geometry.crownWidth).toBeGreaterThan(0);
+  expect(geometry.crownTop).toBeGreaterThanOrEqual(0);
   expect(geometry.visibleCrownBottom).toBeLessThan(geometry.cardTop);
 
   await page.screenshot({ path: testInfo.outputPath("player-leader-crown.png"), fullPage: true });

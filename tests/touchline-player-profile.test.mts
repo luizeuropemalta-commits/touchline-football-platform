@@ -5,7 +5,10 @@ import {
   normalizeTouchLinePlayerKey,
   touchlinePlayerProfileHref,
 } from "../lib/touchlineArena/player-links.ts";
-import { resolveTouchLinePlayerProfile } from "../lib/touchlineArena/player-profile.ts";
+import {
+  isTouchLineSupportedPlayerProfile,
+  resolveTouchLinePlayerProfile,
+} from "../lib/touchlineArena/player-profile.ts";
 import { touchlineDemoTierForPlayer } from "../lib/touchlineArena/demo-card-tier.ts";
 
 describe("TouchLine player profile links", () => {
@@ -58,6 +61,14 @@ describe("TouchLine player profile links", () => {
 });
 
 describe("TouchLine player profile resolution", () => {
+  it("only accepts a known TouchLine card or a numeric provider identity as a public profile route", () => {
+    assert.equal(isTouchLineSupportedPlayerProfile("haaland"), true);
+    assert.equal(isTouchLineSupportedPlayerProfile("erling-haaland"), true);
+    assert.equal(isTouchLineSupportedPlayerProfile("not-a-player"), false);
+    assert.equal(isTouchLineSupportedPlayerProfile("not-a-player", { playerId: "invalid" }), false);
+    assert.equal(isTouchLineSupportedPlayerProfile("not-a-player", { playerId: "sportmonks:129820" }), true);
+  });
+
   it("keeps one demo tier for the same player across id and name variants", () => {
     assert.equal(touchlineDemoTierForPlayer("demo-sven-botman"), "sapphire-blue");
     assert.equal(touchlineDemoTierForPlayer("botman", "Sven Botman"), "sapphire-blue");

@@ -6,6 +6,13 @@ import { assessEventsLiveSeam, assertEventsLiveDecode, compareEventsLivePixels }
 
 const inputs = JSON.parse(await readFile(new URL("../artifacts/social-studio/events/render-inputs-20260915.json", import.meta.url), "utf8")) as (EventsLivePackageInput & { caption: string })[];
 const candidate = (artId: string) => structuredClone(inputs.find(input => input.artId === artId)!.evidence);
+// These are dated, archived factual packages. Validate their integrity at the
+// point they were still valid instead of allowing wall-clock time to turn every
+// provenance assertion into an expiry assertion.
+const reviewTime = (input: EventsLivePackageInput) => Math.min(
+  Date.parse(input.validUntil) - 1,
+  Math.max(Date.parse(input.asOf), Date.parse(input.fetchedAt), Date.parse(input.evidence.finalizedAt)),
+);
 
 test("all five dated real match snapshots reconcile without granting automation", () => {
   for (const input of inputs) {
@@ -61,24 +68,24 @@ test("rendered score cannot diverge from the goal-time score in the snapshot", (
 });
 
 test("fresh packages bind both social destinations, card and match settlement", () => {
-  for (const input of inputs) assert.equal(assessEventsLivePackage(input, Date.now()).reviewable, true, input.artId);
+  for (const input of inputs) assert.equal(assessEventsLivePackage(input, reviewTime(input)).reviewable, true, input.artId);
   const drift = structuredClone(inputs[0]!);
   drift.matchRating += 1;
-  assert.equal(assessEventsLivePackage(drift, Date.now()).reason, "CARD_OR_METRIC_PROVENANCE_CONFLICT");
+  assert.equal(assessEventsLivePackage(drift, reviewTime(drift)).reason, "CARD_OR_METRIC_PROVENANCE_CONFLICT");
 });
 test("wrong scorer attribution and own-goal beneficiary cannot pass", () => {
   const drift = structuredClone(inputs.find(input => input.artId === "FULL_TIME")!);
   drift.goals[1]!.playerName = "Dominic Calvert-Lewin";
-  assert.equal(assessEventsLivePackage(drift, Date.now()).reason, "SCORER_LIST_CONFLICT");
+  assert.equal(assessEventsLivePackage(drift, reviewTime(drift)).reason, "SCORER_LIST_CONFLICT");
   const own = structuredClone(inputs.find(input => input.artId === "OWN_GOAL")!);
   own.destinations[0]!.beneficiaryProviderTeamId = "20";
-  assert.equal(assessEventsLivePackage(own, Date.now()).reason, "DESTINATION_IDENTITY_CONFLICT");
+  assert.equal(assessEventsLivePackage(own, reviewTime(own)).reason, "DESTINATION_IDENTITY_CONFLICT");
 });
 test("expired review and duplicate placement require fresh evidence", () => {
   const drift = structuredClone(inputs[0]!);
   assert.equal(assessEventsLivePackage(drift, Date.parse(drift.validUntil)).reason, "FACTUAL_REVIEW_EXPIRED");
   drift.destinations[1] = drift.destinations[0]!;
-  assert.equal(assessEventsLivePackage(drift, Date.now()).reason, "DESTINATION_IDENTITY_CONFLICT");
+  assert.equal(assessEventsLivePackage(drift, reviewTime(drift)).reason, "DESTINATION_IDENTITY_CONFLICT");
 });
 test("a 0.166s partial video cannot pass a requested six-second render", () => {
   const expected = { sha256: "sha256:test", width: 1080, height: 1350, fps: 12, seconds: 6 };

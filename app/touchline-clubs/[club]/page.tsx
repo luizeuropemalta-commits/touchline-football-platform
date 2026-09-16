@@ -623,7 +623,7 @@ async function ClubHubLineupSection({
               ) : (
                 <div className={premiumStyles.lineupLeaderAwaiting} role="status">—</div>
               )}
-              <small>{leader ? `${leader.totalRating.toFixed(2)} · #${leader.positionRank}` : (portuguese ? "Ranking em verificação" : "Ranking under verification")}</small>
+              <small>{leader ? `#${leader.positionRank}` : (portuguese ? "Ranking em verificação" : "Ranking under verification")}</small>
             </article>
           ))}
         </>

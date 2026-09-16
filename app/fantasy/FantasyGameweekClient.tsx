@@ -172,11 +172,14 @@ export default function FantasyGameweekClient({
   initialSnapshot,
   locale,
   embedded = false,
+  initialPlayerClubTeamId,
 }: {
   initialSnapshot: TouchlineFantasySnapshot | null;
   locale: string;
   /** The ClubOwner page owns the outer identity/navigation shell. */
   embedded?: boolean;
+  /** A validated ClubHub/Ranking hand-off opens that club in the XI selector. */
+  initialPlayerClubTeamId?: string | null;
 }) {
   const pt = locale === "pt-BR";
   const [live, setLive] = useState<LiveState | null>(initialSnapshot);
@@ -192,7 +195,11 @@ export default function FantasyGameweekClient({
   const [squadView, setSquadView] = useState<"squad" | "tactical">("tactical");
   const [visibleStep, setVisibleStep] = useState<TouchlineFantasyBuilderStep>(selectedCoachId ? (formationCode ? "players" : "formation") : "coach");
   const [query, setQuery] = useState("");
-  const [playerClubTeamId, setPlayerClubTeamId] = useState(TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "");
+  const [playerClubTeamId, setPlayerClubTeamId] = useState(() => (
+    TOUCHLINE_ENGLAND_CLUBS_BY_RANK.some((club) => club.teamId === initialPlayerClubTeamId)
+      ? initialPlayerClubTeamId!
+      : TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? ""
+  ));
   const [coachClubTeamId, setCoachClubTeamId] = useState(TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "");
   const [feedback, setFeedback] = useState<string | null>(null); const [saving, setSaving] = useState(false);
   const [deadlineReachedFor, setDeadlineReachedFor] = useState<string | null>(null);
@@ -383,15 +390,27 @@ export default function FantasyGameweekClient({
       </section> : <div className={styles.myClubCommandGrid}>
         <section className={styles.myClubSquad} id="my-club-xi-pitch" aria-label={pt ? "Seu XI por linhas" : "Your XI by lines"}>
           <header><div><span>{pt ? "ELENCO TITULAR" : "STARTING XI"}</span><strong>{selectedCount}/11</strong></div><button type="button" className={styles.viewToggle} onClick={() => setSquadView((current) => current === "squad" ? "tactical" : "squad")}>{squadView === "squad" ? (pt ? "Ver visão tática" : "View tactical layout") : (pt ? "Ver cards" : "View cards")}</button></header>
-          {squadView === "tactical" ? <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="horizontal" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
-            const card = selection ? catalogueById.get(selection.playerId) : null;
-            const action = card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add");
-            return <div key={slot.id} className={styles.myClubTacticalSlot} style={horizontalMyClubPitchPosition(slot)}>
-              <span>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={96} /> : <i>+</i>}</span>
-              <b>{slot.id}</b>
-              <button type="button" onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${action} ${slot.id}`}>{action}</button>
-            </div>;
-          })}</TouchlinePitchSurface> : <div className={styles.myClubCardRows}>{selectedCards.map(({ slot, selection }) => {
+          {squadView === "tactical" ? <>
+            <div className={styles.myClubPitchViewport}>
+              <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="horizontal" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
+                const card = selection ? catalogueById.get(selection.playerId) : null;
+                const action = card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add");
+                return <div key={slot.id} className={styles.myClubTacticalSlot} data-pitch-edge={slot.x >= 75 ? "end" : undefined} style={horizontalMyClubPitchPosition(slot)}>
+                  <span>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={96} /> : <i>+</i>}</span>
+                  <b>{slot.id}</b>
+                  <button type="button" data-slot-action={card ? "replace" : "add"} onClick={() => openTacticalSelector(slot.id)} disabled={!editable} aria-label={`${action} ${slot.id}`}>{action}</button>
+                </div>;
+              })}</TouchlinePitchSurface>
+            </div>
+            <nav className={styles.myClubMobileSlotNav} aria-label={pt ? "Escolha uma posição para alterar" : "Choose a position to change"}>
+              {selectedCards.map(({ slot, selection }) => {
+                const card = selection ? catalogueById.get(selection.playerId) : null;
+                return <button type="button" key={slot.id} onClick={() => openTacticalSelector(slot.id)} disabled={!editable} data-active={activeSlot?.id === slot.id ? "true" : undefined}>
+                  <b>{slot.id}</b><span>{card?.shortName ?? (pt ? "Vaga" : "Open")}</span>
+                </button>;
+              })}
+            </nav>
+          </> : <div className={styles.myClubCardRows}>{selectedCards.map(({ slot, selection }) => {
             const card = selection ? catalogueById.get(selection.playerId) : null;
             const active = activeSlot?.id === slot.id;
             return <article key={slot.id} data-active={active ? "true" : undefined} data-empty={!card ? "true" : undefined}>

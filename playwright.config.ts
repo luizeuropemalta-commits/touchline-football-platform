@@ -29,6 +29,12 @@ export default defineConfig({
       use: { browserName: "chromium", viewport: { width: 1440, height: 900 } },
     },
     {
+      // Large living-room display / TV browser: cards must preserve the same
+      // complete leadership crown instead of relying on a desktop-only crop.
+      name: "chromium-tv-1920",
+      use: { browserName: "chromium", viewport: { width: 1920, height: 1080 } },
+    },
+    {
       name: "webkit-desktop-1280",
       use: { browserName: "webkit", viewport: { width: 1280, height: 900 } },
     },

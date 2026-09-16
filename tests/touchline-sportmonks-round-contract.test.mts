@@ -49,6 +49,9 @@ test("Live and Tables render the same provider-backed round with a safe pending 
   assert.match(tablesPage, /selectArenaFixtureRound\(publicFixtures\)/);
   assert.match(tablesPage, /fixture\.roundName\?\.trim\(\)/);
   assert.match(tablesClient, /currentProviderRoundName/);
+  assert.match(tablesPage, /providerRoundNamesById/);
+  assert.match(tablesClient, /providerRoundNamesById\[gameweekBest\.roundId\] \?\? null/);
+  assert.doesNotMatch(tablesClient, /\$\{isPortuguese \? "Rodada" : "Gameweek"\} \$\{gameweekBest\.roundId\}/);
   assert.match(tablesClient, /Matchweek awaiting provider/);
   assert.doesNotMatch(`${matchCentre}\n${tablesPage}\n${tablesClient}`, /Matchweek 1|Rodada 1/);
 });

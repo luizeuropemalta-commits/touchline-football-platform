@@ -96,6 +96,9 @@ export default async function ClubHubCanonicalCoachPanel({
       competition={competition}
       profileHref={profileHref}
       assetLoading={presentation === "technical" ? "eager" : "lazy"}
+      // Crown ownership is derived solely from the published coach ranking.
+      // A ClubHub card must not disagree with the coach profile or standings.
+      showLeadershipCrown={coachRankingRow?.rank === 1}
     />
   );
 

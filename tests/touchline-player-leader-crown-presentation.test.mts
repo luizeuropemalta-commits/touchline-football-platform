@@ -38,6 +38,9 @@ test("player leader crown is a non-interactive overlay with a calibrated frame g
 test("only the canonical player leadership decision may render the approved crown", () => {
   assert.match(cardSource, /touchlinePlayerCrownEligibility\(\{\s*state:\s*activeRanking,\s*playerId:\s*player\.canonicalPlayerId/s);
   assert.match(cardSource, /data-touchline-player-leader-crown="true"/);
+  assert.match(cardSource, /data-card-leadership-crown=\{isCanonicalPlayerLeader \? "true" : "false"\}/);
+  assert.match(cardSource, /const leadershipCrownEnvelope = isCanonicalPlayerLeader[\s\S]*?Math\.max\(0, -playerLeaderCrownStyle\.top\)/);
+  assert.match(cardSource, /margin: isCanonicalPlayerLeader \? `\$\{leadershipCrownEnvelope\}px auto 0` : "0 auto"/);
   assert.match(cardSource, /pointerEvents:\s*"none"/);
   assert.match(cardSource, /top:\s*playerLeaderCrownStyle\.top/);
   assert.match(cardSource, /src=\{TOUCHLINE_PLAYER_LEADER_CROWN_ASSET\}/);

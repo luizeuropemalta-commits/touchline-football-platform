@@ -36,6 +36,16 @@ export default async function TouchLineTablesPage({
     .map((fixture) => fixture.roundName?.trim())
     .filter((name): name is string => Boolean(name)))];
   const currentProviderRoundName = providerRoundNames.length === 1 ? providerRoundNames[0] : null;
+  // Provider round IDs are database identities, never public-facing labels.
+  // Retain the verified display name for every available round so historical
+  // Best XI records can be rendered without leaking an internal ID.
+  const providerRoundNamesById = Object.fromEntries(
+    publicFixtures.flatMap((fixture) => (
+      fixture.roundId?.trim() && fixture.roundName?.trim()
+        ? [[fixture.roundId.trim(), fixture.roundName.trim()] as const]
+        : []
+    )),
+  );
   // No fabricated ClubOwner table may be presented as a published competition
   // ranking. It remains empty until its audited sporting snapshot is available.
   const touchLineEnglandTable: never[] = [];
@@ -52,6 +62,7 @@ export default async function TouchLineTablesPage({
       coachRanking={coachRanking}
       copy={copy}
       currentProviderRoundName={currentProviderRoundName}
+      providerRoundNamesById={providerRoundNamesById}
       locale={locale}
       rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode}
       publishedTopEleven={publishedTopEleven}

@@ -137,6 +137,13 @@
   filter: drop-shadow(0 22px 22px rgba(0, 0, 0, 0.36));
 }
 
+/* .cardFrame already reserves the complete leader-crown stage at every
+   breakpoint. The shared card's normal-surface safety margin is therefore
+   intentionally neutralised here instead of doubling the profile spacing. */
+.cardFrame > [data-card-leadership-crown="true"] {
+  margin-top: 0 !important;
+}
+
 .cardFrame::before {
   content: "";
   position: absolute;

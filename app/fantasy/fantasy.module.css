@@ -371,6 +371,8 @@
    moving neon runs inside this tactical surface. */
 .myClubCommandGrid{grid-template-columns:minmax(0,1fr);gap:22px}
 .myClubTacticalPitch{--pitch-line:rgba(170,255,62,.26)!important;--pitch-line-soft:rgba(170,255,62,.1)!important;width:calc(100% - 40px);max-width:1680px;margin:20px auto;border-color:rgba(170,255,62,.28)}
+.myClubPitchViewport{min-width:0}
+.myClubMobileSlotNav{display:none}
 .myClubTacticalPitch::after{content:none;animation:none}
 .myClubTacticalPitch [data-touchline-card-neon-trace=true]{display:block;opacity:.38;filter:drop-shadow(0 0 7px currentColor)}
 .myClubTacticalPitch [data-touchline-card-neon-trace-run=true]{display:none}
@@ -382,7 +384,7 @@
 .myClubTacticalSlot>span{width:96px}
 .myClubTacticalSlot>span>i{width:58px;font-size:1.65rem}
 .myClubTacticalSlot>b{max-width:132px;overflow:hidden;padding:2px 6px;font-size:.58rem;text-overflow:ellipsis;white-space:nowrap}
-.myClubTacticalSlot>button{min-height:19px;border:1px solid rgba(170,255,62,.3);border-radius:6px;padding:2px 6px;color:#eaffd6;background:rgba(2,10,7,.88);font:inherit;font-size:.48rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.myClubTacticalSlot>button{min-height:25px;border:1px solid rgba(170,255,62,.3);border-radius:6px;padding:3px 7px;color:#eaffd6;background:rgba(2,10,7,.88);font:inherit;font-size:.48rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
 .myClubTacticalSlot>button:not(:disabled):hover,.myClubTacticalSlot>button:not(:disabled):focus-visible{border-color:var(--lime);color:#071007;background:var(--lime);outline:none}
 .myClubTacticalSlot>button:disabled{cursor:default;opacity:.6}
 .myClubTacticalSlot>span [data-touchline-card-zoom=trigger]{transform-origin:center;transition:transform 180ms cubic-bezier(.2,.8,.2,1),filter 180ms ease}
@@ -408,8 +410,13 @@
 .myClubMarketResults article em{overflow:hidden;max-width:100%;color:#a7b5a9;font-size:.61rem;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
 .myClubMarketResults article button{justify-self:center}
 @media(max-width:900px){.myClubMarket{grid-template-columns:1fr}.myClubMarket .myClubSearch,.myClubMarket .clubSelector{grid-column:auto}.myClubMarket .clubSelector{grid-template-columns:repeat(5,minmax(0,1fr));padding:0}.myClubMarketResults{grid-column:auto;grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:1100px){.myClubTacticalSlot{transform:translate(-50%,-50%) scale(.9)}}
-@media(max-width:700px){.myClubTacticalPitch{width:calc(100% - 20px);margin:10px auto}.myClubTacticalSlot{transform:translate(-50%,-50%) scale(.7)}.myClubMarketResults{grid-template-columns:repeat(2,minmax(0,1fr))}.myClubMarket .clubSelector{grid-template-columns:repeat(5,minmax(0,1fr))}}
+/* The card itself—not the whole slot—is reduced at smaller viewports. That
+   preserves readable position labels and a usable 44px replacement target
+   while preventing the tall card art from overlapping adjacent positions. */
+@media(max-width:1450px){.myClubTacticalSlot{width:126px;transform:translate(-50%,-50%)}.myClubTacticalSlot>span{width:88px;--touchline-card-static-scale:.204651}.myClubTacticalSlot>b{max-width:118px}}
+@media(max-width:1180px){.myClubTacticalSlot{width:112px;gap:3px}.myClubTacticalSlot>span{width:76px;--touchline-card-static-scale:.176744}.myClubTacticalSlot>b{max-width:96px;font-size:.52rem}.myClubTacticalSlot>button{position:absolute;top:50%;left:calc(50% + 43px);width:44px;min-height:44px;padding:0;border-radius:50%;font-size:0;transform:translateY(-50%);box-shadow:0 5px 14px rgba(0,0,0,.35)}.myClubTacticalSlot[data-pitch-edge=end]>button{right:calc(50% + 43px);left:auto}.myClubTacticalSlot>button::after{display:grid;place-items:center;width:100%;height:100%;font-size:1rem;line-height:1}.myClubTacticalSlot>button[data-slot-action=add]::after{content:"+"}.myClubTacticalSlot>button[data-slot-action=replace]::after{content:"↻"}.myClubTacticalSlot>span [data-touchline-card-zoom=trigger]:hover{transform:none}}
+@media(max-width:900px){.myClubTacticalSlot{width:94px}.myClubTacticalSlot>span{width:78px;--touchline-card-static-scale:.181395}.myClubTacticalSlot>b{max-width:82px;padding:1px 4px;font-size:.47rem}.myClubTacticalSlot>button{left:calc(50% + 34px);width:40px;min-height:40px}.myClubTacticalSlot[data-pitch-edge=end]>button{right:calc(50% + 34px);left:auto}.myClubPitchViewport{position:relative;width:calc(100% - 20px);aspect-ratio:105/86;margin:10px auto;overflow:hidden}.myClubPitchViewport .myClubTacticalPitch{width:250%;max-width:none;margin:0;aspect-ratio:105/86;transform:scale(.4);transform-origin:top left}.myClubPitchViewport .myClubTacticalSlot>button{display:none}.myClubMobileSlotNav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 10px 12px}.myClubMobileSlotNav button{display:grid;gap:2px;min-height:48px;padding:7px;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#eaffd6;background:rgba(5,18,11,.86);font:inherit;text-align:left}.myClubMobileSlotNav button[data-active=true]{border-color:var(--lime);background:rgba(170,255,62,.13);box-shadow:0 0 16px rgba(170,255,62,.12)}.myClubMobileSlotNav button:disabled{opacity:.58}.myClubMobileSlotNav b{color:var(--lime);font-size:.6rem;letter-spacing:.1em}.myClubMobileSlotNav span{overflow:hidden;color:#f6fff1;font-size:.64rem;font-weight:800;text-overflow:ellipsis;white-space:nowrap}.myClubMarketResults{grid-template-columns:repeat(2,minmax(0,1fr))}.myClubMarket .clubSelector{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(orientation:landscape) and (max-width:900px) and (max-height:520px){.myClubPitchViewport{aspect-ratio:105/68;overflow:visible}.myClubPitchViewport .myClubTacticalPitch{width:100%;aspect-ratio:105/68;transform:none}.myClubPitchViewport .myClubTacticalSlot>span{width:62px;--touchline-card-static-scale:.144186}}
 @media(prefers-reduced-motion:reduce){.myClubTacticalSlot>span [data-touchline-card-zoom=trigger]{transition:none}.myClubTacticalSlot>span [data-touchline-card-zoom=trigger]:hover{transform:none}}
 .myClubSetup{display:grid;gap:18px;padding:clamp(18px,3vw,32px);border:1px solid rgba(170,255,62,.2);border-radius:22px;background:radial-gradient(circle at 50% 0,rgba(170,255,62,.1),transparent 48%),rgba(2,10,7,.78)}
 .myClubSetup>header{display:grid;gap:6px}.myClubSetup>header>span{color:var(--lime);font-size:.64rem;font-weight:900;letter-spacing:.13em}.myClubSetup h2{margin:0;color:#f7fff2;font-size:clamp(1.2rem,2.4vw,1.8rem)}.myClubSetup p{margin:0;color:#a7b5a9;line-height:1.55}

@@ -267,6 +267,21 @@ export function selectTouchlineMatchCentreFixture<T extends TouchlineFixtureSele
   return fixtures.filter((fixture) => touchlineFixtureState(fixture, now) === "finished").sort(latestFirst)[0] ?? null;
 }
 
+/**
+ * A Live URL is a promise about the match currently on screen. Keep this
+ * lookup separate from the fallback selector so a bad deep link can be
+ * normalized by the route instead of silently showing another fixture.
+ */
+export function hasTouchlineMatchCentreFixture<T extends TouchlineFixtureSelectionSource>(
+  fixtures: readonly T[],
+  requestedFixtureId?: string | null,
+) {
+  const requested = requestedFixtureId?.trim();
+  return Boolean(requested && fixtures.some((fixture) => (
+    fixture.id === requested || fixture.providerId === requested
+  )));
+}
+
 export function touchlineMatchCentreHref(fixture: TouchlineFixture, locale?: string) {
   const params = new URLSearchParams({ fixture: fixture.id });
   if (locale) params.set("lang", locale);

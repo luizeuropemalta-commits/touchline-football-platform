@@ -1,4 +1,4 @@
-import { touchlineClubOwnerBasePath, touchlineClubOwnerSubstitutionPath } from "./club-owner-routes.ts";
+import { touchlineClubOwnerBasePath, touchlineMyClubHref } from "./club-owner-routes.ts";
 
 export type ArenaOnlineZoneKey = "live" | "bench" | "market" | "rankings" | "news" | "watch";
 
@@ -24,12 +24,12 @@ export const ARENA_ONLINE_ZONES: ArenaOnlineZone[] = [
   },
   {
     key: "bench",
-    title: "Substitutions",
-    eyebrow: "Bench",
-    href: touchlineClubOwnerSubstitutionPath(),
-    description: "Fast menu to swap starters, open reserves and compare team impact.",
-    promise: "Console-style flow: press Start, choose the bench card, confirm the swap.",
-    details: ["Reserves", "Fast swap", "Starter status"],
+    title: "Build your XI",
+    eyebrow: "My Club",
+    href: touchlineMyClubHref(),
+    description: "Choose, remove or replace a card only in its eligible position.",
+    promise: "One clear eleven-player flow: choose a slot, compare cards, then save the XI.",
+    details: ["11 positions", "Eligible cards", "Saved XI"],
   },
   {
     key: "market",

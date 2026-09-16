@@ -17,7 +17,12 @@ test("My Club owns the one Gameweek transaction boundary and legacy Market route
     source("app/api/touchline-fantasy/lineup/route.ts"),
   ]);
   assert.match(market, /redirect\(`\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad`\)/);
-  assert.match(owner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
+  assert.match(owner, /key=\{`my-club-player-filter-\$\{initialPlayerClubTeamId \?\? "default"\}`\}/);
+  assert.match(owner, /<FantasyGameweekClient[^>]+initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
+  assert.match(owner, /const initialPlayerClubTeamId = TOUCHLINE_ENGLAND_CLUBS\.find\(\(club\) => club\.slug === params\.club\)\?\.teamId \?\? null/);
+  assert.match(owner, /initialPlayerClubTeamId=\{initialPlayerClubTeamId\}/);
+  assert.match(client, /initialPlayerClubTeamId\?: string \| null/);
+  assert.match(client, /TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.some\(\(club\) => club\.teamId === initialPlayerClubTeamId\)/);
   assert.match(owner, /id="my-club-squad"/);
   assert.doesNotMatch(market, /standaloneMarket|<ArenaClient/);
   assert.match(alias, /redirect\(`\/my-club\?lang=.*tab=market#my-club-squad`\)/);
@@ -219,7 +224,7 @@ test("My Club and Arena consume the same canonical Gameweek snapshot without a F
   assert.match(arenaClient, /const savedLayout = hasSyncedFantasyLineup[\s\S]*?\? null/);
   assert.match(arenaClient, /const isQuickSubstitutionOpen = activeArenaPanel === "bench" && !hasSyncedFantasyLineup/);
   assert.match(arenaClient, /!hasSyncedFantasyLineup \? <a[\s\S]*?touchlineArenaPanelHref\("bench"/);
-  assert.match(owner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
+  assert.match(owner, /<FantasyGameweekClient[^>]+initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.match(market, /squadView.*"squad".*"tactical"/);
   assert.match(market, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
   assert.match(market, /replaceTouchlineFantasyPlayerAtSlot/);

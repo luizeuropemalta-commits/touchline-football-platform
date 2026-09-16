@@ -1,4 +1,3 @@
-import { touchlineClubOwnerProfileHref, touchlineClubOwnerSubstitutionHref } from "./club-owner-routes.ts";
 import { resolveTouchLinePresentationLocale } from "./root-locale.ts";
 
 export const TOUCHLINE_ARENA_PANEL_KEYS = [
@@ -51,13 +50,15 @@ export function touchlineArenaPanelHref(panel: TouchlineArenaPanelKey, locale: s
   const effectiveLocale = resolveTouchLinePresentationLocale(locale);
   const lang = `lang=${encodeURIComponent(effectiveLocale)}`;
   if (panel === "market") return `/my-club?${lang}`;
-  // Quick Substitution is an Arena action: it overlays the live Arena field
-  // and temporarily replaces the score rail. It is not a separate site area.
-  if (panel === "bench") return `/arena?panel=bench&${lang}`;
-  if (panel === "formation") return touchlineClubOwnerSubstitutionHref(effectiveLocale);
+  // A ClubOwner owns exactly one playable XI. The former quick-substitution
+  // bench required a hidden second squad and could expose an impossible
+  // 10/11 setup. Keep old links safe, but land them in the one position-led
+  // workspace where a card is replaced in its own eligible slot.
+  if (panel === "bench" || panel === "formation") return `/my-club?${lang}#my-club-squad`;
   if (panel === "live" || panel === "watch") return `/live?${lang}`;
   if (panel === "rankings") return `/touchline-tables?${lang}`;
-  return touchlineClubOwnerProfileHref(effectiveLocale);
+  // News is an Arena surface, not a second owner profile destination.
+  return `/arena?${lang}`;
 }
 
 export function touchlineArenaContractHref(input: {

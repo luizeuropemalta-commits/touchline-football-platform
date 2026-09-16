@@ -182,9 +182,6 @@ export default async function TouchLinePlayerCardRankingsPage({
             const featuredSummary = [
               card.position,
               zoom.displayPrice,
-              card.seasonTotalRating === null || card.seasonTotalRating === undefined
-                ? null
-                : `${locale === "pt-BR" ? "Nota total" : "Total rating"} ${card.seasonTotalRating}`,
             ].filter(Boolean).join(" / ");
             return (
               <article key={card.id} id={card.id}>
@@ -306,7 +303,6 @@ export default async function TouchLinePlayerCardRankingsPage({
                     {club?.logoUrl ? <img src={club.logoUrl} alt="" draggable={false} /> : null}
                     <span>{club?.shortCode ?? card.clubName}</span>
                   </div>
-                  <b aria-label={`${locale === "pt-BR" ? "Nota total" : "Total rating"} ${card.seasonTotalRating ?? "—"}`}>{card.seasonTotalRating ?? "—"}</b>
                   {zoom.displayPrice ? <em>{zoom.displayPrice}</em> : null}
                   <div className="tl-card-rankings-actions">
                     <a href={marketTransferHref(club?.slug)}>{copy.marketTransfer}</a>
@@ -452,15 +448,16 @@ export default async function TouchLinePlayerCardRankingsPage({
           gap: 16px;
         }
 
-        .tl-card-rankings-featured article {
-          position: relative;
-          min-height: 520px;
-          padding: 20px;
-          display: grid;
-          grid-template-rows: minmax(320px, 1fr) auto;
-          justify-items: center;
-          overflow: hidden;
-        }
+.tl-card-rankings-featured article {
+  position: relative;
+  min-height: 520px;
+  padding: 20px;
+  display: grid;
+  grid-template-rows: minmax(320px, 1fr) auto;
+  justify-items: center;
+  /* The ranking crown lives in the card's reserved top envelope. Never crop it. */
+  overflow: visible;
+}
 
         .tl-card-rankings-rank {
           position: absolute;

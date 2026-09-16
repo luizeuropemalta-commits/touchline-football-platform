@@ -77,6 +77,10 @@ const en = {
     description: "Choose a new password for your TouchLine Arena account.",
   },
   form: {
+    firstName: "First name",
+    firstNamePlaceholder: "Alex",
+    lastName: "Last name",
+    lastNamePlaceholder: "Oliveira",
     fullName: "Full name",
     fullNamePlaceholder: "Alex Oliveira",
     email: "Email",
@@ -196,6 +200,10 @@ const ptBR: typeof en = {
     description: "Escolha uma nova senha para sua conta da TouchLine Arena.",
   },
   form: {
+    firstName: "Nome",
+    firstNamePlaceholder: "Alex",
+    lastName: "Sobrenome",
+    lastNamePlaceholder: "Oliveira",
     fullName: "Nome completo",
     fullNamePlaceholder: "Alex Oliveira",
     email: "E-mail",

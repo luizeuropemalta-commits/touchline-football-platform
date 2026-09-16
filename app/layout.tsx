@@ -84,7 +84,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           landmark. Each route keeps its own semantic main; the wrapper lets
           the global skip link work uniformly without nesting landmarks.
         */}
-        <TouchlineLandscapeBoundary locale={locale} skipLabel={skipLabel}>
+        <TouchlineLandscapeBoundary skipLabel={skipLabel}>
           {children}
         </TouchlineLandscapeBoundary>
       </body>

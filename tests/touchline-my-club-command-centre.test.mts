@@ -34,8 +34,10 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
   assert.match(embedded, /displayWidth=\{96\}/);
   assert.match(embedded, /className=\{styles\.myClubTacticalSlot\}/);
+  assert.match(embedded, /data-pitch-edge=\{slot\.x >= 75 \? "end" : undefined\}/);
   assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} compact displayWidth=\{96\} \/>/);
-  assert.match(embedded, /<button type="button" onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
+  assert.match(embedded, /data-slot-action=\{card \? "replace" : "add"\}/);
+  assert.match(embedded, /<button type="button" data-slot-action=.*?onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(embedded, /selectMyClubPlayer\(card\)/);
   assert.doesNotMatch(embedded, /filtered\.slice\(0, 10\)/);
   assert.match(embedded, /data-my-club-setup="coach"/);
@@ -53,6 +55,9 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(styles, /data-touchline-card-neon-trace=true\]\{display:block;opacity:\.38/);
   assert.match(styles, /data-touchline-card-neon-trace-run=true\]\{display:none/);
   assert.match(styles, /\.myClubTacticalSlot>span\{width:96px\}/);
+  assert.match(styles, /@media\(max-width:1180px\)\{[\s\S]*?--touchline-card-static-scale:\.181395/);
+  assert.match(styles, /\.myClubTacticalSlot\[data-pitch-edge=end\]>button\{right:calc\(50% \+ 43px\);left:auto\}/);
+  assert.match(styles, /data-slot-action=replace\]::after\{content:"↻"\}/);
   assert.match(styles, /\.myClubMarket \.myClubSearch\{grid-column:1\/-1;width:min\(100%,620px\);justify-self:center\}/);
   assert.match(styles, /\.myClubMarket \.clubSelector\{align-content:start;grid-column:1\/-1;grid-template-columns:repeat\(10/);
   assert.match(styles, /\.myClubMarketResults\{grid-column:1\/-1;grid-template-columns:repeat\(5/);
@@ -81,7 +86,5 @@ test("My Club removes the ranking strip and puts factual wallet data directly af
   assert.match(owner, /walletBalanceTc === null/);
   assert.match(owner, /activeContractValueKnown/);
   assert.match(owner, /clubCopy\.xiCapacity[\s\S]{0,120}\{fantasySnapshot\?\.selections\.length \?\? 0\}\/11/);
-  assert.match(owner, /ownedContractCount !== null && ownedContractCount > 11/);
-  assert.match(owner, /contratos legados permanecem preservados|legacy contracts remain preserved/);
-  assert.doesNotMatch(owner, /\$\{ownedContractCount\}\/35/);
+  assert.doesNotMatch(owner, /ownedContractCount|contratos legados permanecem preservados|legacy contracts remain preserved|\/35/);
 });

@@ -956,6 +956,14 @@ export function TouchlineEliteExactCard({
     playerId: player.canonicalPlayerId,
   });
   const playerLeaderCrownStyle = touchlinePlayerLeaderCrownStyle(scale);
+  // The crown intentionally lives above the official card art. Its host must
+  // reserve that exact visual envelope in normal surfaces, otherwise a grid,
+  // carousel or small-screen viewport can cut the crown at its own boundary.
+  // Zoom and profile stages already reserve this space and override the
+  // margin locally (without changing card or crown calibration).
+  const leadershipCrownEnvelope = isCanonicalPlayerLeader
+    ? Math.max(0, -playerLeaderCrownStyle.top)
+    : 0;
   // The selected artwork is only used by a published card. An asset cannot
   // turn an unpublished football player into a game card.
   const assignedVisualTemplateUrl = cleanCardTemplateUrl(player.cardTemplateUrl);
@@ -1377,6 +1385,7 @@ export function TouchlineEliteExactCard({
       data-card-editorial-state={reviewRequired ? "review_required" : editorialCard ? "published" : "unpublished"}
       data-card-motion={isEditable ? "false" : "true"}
       data-card-neon="permanent-tier-art"
+      data-card-leadership-crown={isCanonicalPlayerLeader ? "true" : "false"}
       data-neon-active={forceNeonActive || isNeonActive ? "true" : "false"}
       onClick={(event) => {
         // Arena owns one exclusive selection. Its cards must not keep a second,
@@ -1395,7 +1404,7 @@ export function TouchlineEliteExactCard({
         aspectRatio: shellExtraHeight ? undefined : CARD_ASPECT_RATIO,
         height: shellExtraHeight ? CARD_H * scale + shellExtraHeight : undefined,
         position: "relative",
-        margin: "0 auto",
+        margin: isCanonicalPlayerLeader ? `${leadershipCrownEnvelope}px auto 0` : "0 auto",
         maxWidth: "100%",
         overflow: "visible",
         contain: shellExtraHeight ? undefined : "layout size",

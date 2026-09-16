@@ -3,6 +3,8 @@
 import type { CSSProperties } from "react";
 
 import type { StudioFullTimeRenderedFactsV1 } from "@/lib/touchlineArena/social-studio-full-time-rendered-facts";
+import type { TouchlineCardTierKey } from "@/lib/touchlineArena/card-rules";
+import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import styles from "./TouchlineSocialEventsLiveFullTimeReview.module.css";
 
 const minute = (value: { minute: number; extraMinute: number | null }) => `${value.minute}${value.extraMinute ? `+${value.extraMinute}` : ""}'`;
@@ -28,21 +30,68 @@ export default function TouchlineSocialEventsLiveFullTimeReview({ facts, placeme
       {side(facts.away, facts.fixture.score.away)}
     </section>
     <section className={styles.body}>
+      <div className={styles.pitchSurface} aria-hidden="true"><i /><i /><i /></div>
       <article className={styles.report}>
-        <span className={styles.label}>MATCH REPORT</span>
+        <span className={styles.label}>VERIFIED MATCH REPORT</span>
         <h1>{winner ? `${winner.name} take the points` : "Points shared at full time"}</h1>
         <div className={styles.scorers}>
           <div><strong>{facts.home.name}</strong>{facts.goals.filter(goal => goal.providerTeamId === facts.home.providerTeamId).map(goal => <span key={goal.id}>{goal.playerName} {minute(goal)}{goal.kind === "penalty" ? " PEN" : goal.kind === "own-goal" ? " OG" : ""}</span>)}</div>
           <div><strong>{facts.away.name}</strong>{facts.goals.filter(goal => goal.providerTeamId === facts.away.providerTeamId).map(goal => <span key={goal.id}>{goal.playerName} {minute(goal)}{goal.kind === "penalty" ? " PEN" : goal.kind === "own-goal" ? " OG" : ""}</span>)}</div>
         </div>
+        <div className={styles.verifiedStrip}><span>TOUCHLINE VERIFIED</span><b>TOUCHLINE ENGLAND</b><span>GAMEWEEK {facts.fixture.gameweekNumber}</span></div>
       </article>
       <article className={styles.star}>
-        <span className={styles.label}>MATCH STAR</span>
+        <div className={styles.starHead}><span className={styles.label}>MATCH STAR</span><div className={styles.matchRating} data-official-match-rating={facts.featured.officialMatchRating.toFixed(2)}><span>OFFICIAL RATING</span><strong>{facts.featured.officialMatchRating.toFixed(2)}</strong></div></div>
         <div className={styles.card}>
-          <img className={styles.frame} src={facts.featured.card.cardTemplateUrl} alt="" aria-hidden="true" />
-          <img className={styles.crest} src={featuredClub.logoUrl} alt="" aria-hidden="true" />
-          <div className={styles.cardContent}><span>{facts.featured.card.tierKey.replaceAll("-", " ").toUpperCase()}</span><strong>{facts.featured.card.name}</strong><small>{facts.featured.card.clubName}</small></div>
-          <div className={styles.cardMetrics}><span><small>OFFICIAL MATCH RATING</small><b>{facts.featured.officialMatchRating.toFixed(2)}</b></span><span><small>MARKET VALUE</small><b>{facts.featured.card.marketValue ?? "—"}</b></span></div>
+          <TouchlineEliteExactCard
+            className={styles.exactCard}
+            staticRenderScale={0.74}
+            ensureStaticNameFit
+            runtimeLocaleOverride="en-GB"
+            subscribeToRanking={false}
+            enableInteractiveNeon={false}
+            showCardActions={false}
+            showProfileAction={false}
+            showSocialMetrics={false}
+            showMatchRating={false}
+            rankingMode="preview"
+            forceNeonActive
+            player={{
+              sportmonksPlayerId: facts.featured.providerPlayerId,
+              canonicalPlayerId: facts.featured.canonicalPlayerId,
+              overall: facts.featured.card.seasonTotalRating ?? "—",
+              shirtNumber: facts.featured.card.shirtNumber,
+              role: facts.featured.card.role,
+              position: facts.featured.card.position,
+              countryCode3: facts.featured.card.countryCode3,
+              name: facts.featured.card.name,
+              clubName: facts.featured.card.clubName,
+              clubLogoUrl: featuredClub.logoUrl,
+              leagueName: "TouchLine England",
+              cardTemplateUrl: facts.featured.card.cardTemplateUrl,
+              marketValue: facts.featured.card.marketValue,
+              marketValueState: "verified",
+              editorialCard: {
+                tierKey: facts.featured.card.tierKey as TouchlineCardTierKey,
+                cardPrice: facts.featured.card.cardPrice,
+                marketValueEur: facts.featured.card.marketValueEur ?? undefined,
+                marketValueState: "verified",
+                shirtNumber: facts.featured.card.shirtNumber ?? undefined,
+                shirtNumberState: "verified",
+                lastReviewedAt: facts.fixture.displayDate,
+              },
+              totalRating: facts.featured.card.seasonTotalRating,
+              matchRating: facts.featured.officialMatchRating,
+              cardTier: facts.featured.card.tierKey as TouchlineCardTierKey,
+              seasonStats: facts.featured.card.stats,
+              updatedAt: facts.fixture.displayDate,
+              age: "—",
+              height: "—",
+              foot: "—",
+              contract: "—",
+              nationality: facts.featured.card.countryCode3,
+            }}
+          />
         </div>
       </article>
     </section>

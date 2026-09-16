@@ -96,6 +96,12 @@ test("visual fixture is unambiguously local and non-publishable", async () => {
   assert.match(page, /GEOMETRY QA · LOCAL ONLY · NOT PUBLISHABLE/);
   assert.match(page, /readVisualQaMarketCatalogue/);
   assert.match(page, /No partial catalogue is shown/);
+  assert.match(page, /function visualSelections/);
+  assert.match(page, /touchlineFantasySlotAcceptsPlayer/);
+  assert.match(page, /touchlineMarketPositionBucket/);
+  assert.match(page, /const selections = visualSelections\(catalogue\)/);
+  assert.match(page, /params\.surface === "my-club"/);
+  assert.match(page, /embedded=\{embeddedMyClub\}/);
   assert.doesNotMatch(page, /CLUB_OWNER_SQUAD_CARDS|visual-qa-\$\{card\.id\}/);
   assert.doesNotMatch(page, /LINE-UP CONFIRMED/);
 });

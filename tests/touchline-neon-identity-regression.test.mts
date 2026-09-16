@@ -240,17 +240,15 @@ test("My Club profile keeps one factual summary surface without the retired rank
   assert.match(profilePage, /className="club-owner-wallet"/);
 });
 
-test("Arena places the ClubOwner profile first in both menus", () => {
+test("Arena puts My Club first and routes squad building to the canonical XI", () => {
   const arenaClient = source("app/arena/ArenaClient.tsx");
   const quickMenuStart = arenaClient.indexOf('className="arena-quick-links"');
   const sectionMenuStart = arenaClient.indexOf('<nav className="arena-club-sections"');
 
   assert.ok(quickMenuStart >= 0);
   assert.ok(sectionMenuStart >= 0);
-  assert.match(arenaClient.slice(quickMenuStart, quickMenuStart + 720), /touchlineClubOwnerProfileHref\(siteLanguage\)[\s\S]*?ClubOwner/);
-  assert.match(arenaClient.slice(sectionMenuStart, sectionMenuStart + 420), /touchlineClubOwnerProfileHref\(siteLanguage\)[\s\S]*?t\("profile"\)/);
-  assert.match(arenaClient.slice(quickMenuStart, quickMenuStart + 1200), /ClubOwner[\s\S]*?allClubsHubHref[\s\S]*?quickSubstitution/);
-  assert.match(arenaClient.slice(sectionMenuStart, sectionMenuStart + 900), /t\("profile"\)[\s\S]*?allClubsHubHref[\s\S]*?t\("clubHub"\)/);
+  assert.match(arenaClient.slice(quickMenuStart, quickMenuStart + 1000), /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}[\s\S]*?(?:Meu Clube|My Club)[\s\S]*?touchlineArenaPanelHref\("bench", siteLanguage\)/);
+  assert.match(arenaClient.slice(sectionMenuStart, sectionMenuStart + 900), /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}[\s\S]*?(?:Meu Clube|My Club)[\s\S]*?allClubsHubHref/);
 });
 
 test("profile surfaces use the shared compact global navigation", () => {
@@ -345,7 +343,7 @@ test("My Club keeps the profile surface focused on the squad without a public ti
 
 test("My Club keeps the XI as the only post-Gameweek collection surface", () => {
   const ownerSource = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
-  assert.match(ownerSource, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\}/);
+  assert.match(ownerSource, /<FantasyGameweekClient[\s\S]{0,280}?initialSnapshot=\{fantasySnapshot\}/);
   assert.doesNotMatch(ownerSource, /<section className="club-owner-profile-squad"/);
 });
 
@@ -617,7 +615,7 @@ test("My Club exposes the canonical Gameweek XI without restoring the retired lo
   const clubOwner = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
   const gameweekSnapshot = source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx");
 
-  assert.match(clubOwner, /<FantasyGameweekClient initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
+  assert.match(clubOwner, /<FantasyGameweekClient[\s\S]{0,280}?initialSnapshot=\{fantasySnapshot\}[\s\S]{0,180}?locale=\{locale\}[\s\S]{0,180}?embedded/);
   assert.match(gameweekSnapshot, /snapshot!?\.selections\.find/);
   assert.match(gameweekSnapshot, /Um XI titular|One Starting XI/);
   assert.doesNotMatch(gameweekSnapshot, /Nenhum banco Fantasy|No Fantasy bench/);

@@ -8,7 +8,10 @@ import {
 import { TOUCHLINE_CARD_PRICE_TABLE_VERSION } from "./card-rules.ts";
 import { inferArenaRole } from "../football-data/arena-lineup.ts";
 import { touchlineCountryCode3FromName } from "./country-flags.ts";
-import { normalizeTouchLinePlayerKey } from "./player-links.ts";
+import {
+  normalizeTouchLinePlayerKey,
+  normalizeTouchLineProviderPlayerId,
+} from "./player-links.ts";
 
 export type TouchLinePlayerProfileSearchParams = Record<
   string,
@@ -96,6 +99,20 @@ function findLocalCard(playerKey: string, searchParams: TouchLinePlayerProfileSe
       .filter(Boolean);
     return candidates.some((candidate) => cardKeys.includes(candidate));
   });
+}
+
+/**
+ * Public athlete routes may be reached from a published TouchLine card or an
+ * explicit Sportmonks identity.  A free-form slug is not an identity: letting
+ * it render a profile made the page invent a name, club and presentation for
+ * URLs that never existed in the game.
+ */
+export function isTouchLineSupportedPlayerProfile(
+  playerKey: string,
+  searchParams: TouchLinePlayerProfileSearchParams = {},
+) {
+  return Boolean(findLocalCard(playerKey, searchParams))
+    || Boolean(normalizeTouchLineProviderPlayerId(queryValue(searchParams, "playerId")));
 }
 
 function fallbackCard(
