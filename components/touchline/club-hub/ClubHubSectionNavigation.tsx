@@ -36,14 +36,14 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
   }, []);
 
   useEffect(() => {
-    const targets = SECTION_TARGETS
-      .map((target) => document.getElementById(target))
-      .filter((target): target is HTMLElement => Boolean(target));
-    if (!targets.length) return;
-
     let frame: number | null = null;
     const syncActiveTarget = () => {
       frame = null;
+      // Suspense streams each chapter independently. Resolve current elements
+      // on every geometry read rather than retaining the initial partial DOM.
+      const targets = SECTION_TARGETS
+        .map((target) => document.getElementById(target))
+        .filter((target): target is HTMLElement => Boolean(target));
       const reachedPageEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
       if (reachedPageEnd) {
         setActiveTarget(targets.at(-1)?.id ?? null);
@@ -61,9 +61,13 @@ export default function ClubHubSectionNavigation({ locale }: Props) {
     };
 
     syncActiveTarget();
+    const scope = document.querySelector(".club-hub-shell");
+    const observer = new MutationObserver(scheduleSync);
+    if (scope) observer.observe(scope, { childList: true, subtree: true });
     window.addEventListener("scroll", scheduleSync, { passive: true });
     window.addEventListener("resize", scheduleSync);
     return () => {
+      observer.disconnect();
       window.removeEventListener("scroll", scheduleSync);
       window.removeEventListener("resize", scheduleSync);
       if (frame !== null) window.cancelAnimationFrame(frame);

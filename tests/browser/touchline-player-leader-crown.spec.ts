@@ -15,6 +15,13 @@ const supportedProjects = new Set([
 const priceTableVersion = "2026-07-premier-v1";
 const snapshotId = "visual-player-leader-snapshot";
 
+test.beforeEach(async ({ page }) => {
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width <= 767 && viewport.height > viewport.width) {
+    await page.setViewportSize({ width: viewport.height, height: viewport.width });
+  }
+});
+
 function activeRankingPayload(status: "unique-leader" | "tied") {
   const positions = [
     ["goalkeeper", "visual-gk", "gk"],

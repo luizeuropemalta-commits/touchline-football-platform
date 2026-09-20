@@ -3,7 +3,7 @@
 /* The provider owns crest URLs; this preserves the canonical source without a remote-image allowlist. */
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
 import { BellRing, CalendarDays, Clock3, Crown, Goal, Landmark, Radio, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
@@ -216,6 +216,17 @@ function topRatedPlayers(detail: TouchlinePublicFantasyFixtureMatchDetail) {
     .slice(0, 3);
 }
 
+function openSelectedLineup(event: MouseEvent<HTMLAnchorElement>) {
+  // Modified clicks retain normal link behaviour. A normal click scrolls
+  // without adding history entries that could outlive the selected fixture.
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const lineup = document.getElementById("touchline-match-lineups");
+  if (!lineup) return;
+  event.preventDefault();
+  lineup.focus({ preventScroll: true });
+  lineup.scrollIntoView({ block: "start" });
+}
+
 function MatchTeamSheet({
   detail,
   teamId,
@@ -331,8 +342,10 @@ export default function TouchlineMatchCentre({
   const verifiedDetail = matchDetail?.fixture.id === selected?.providerId ? matchDetail : null;
   const selectedHomeClub = TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === selected?.homeTeam?.providerId);
   const verifiedHomeAccent = selected?.venue ? selectedHomeClub?.accent : undefined;
+  // Stay with this fixture's verified teamsheet. ClubHub may already preview
+  // the next fixture, so its generic lineup anchor loses the selected match.
   const homeLineupHref = selectedHomeClub
-    ? `/touchline-clubs/${selectedHomeClub.slug}?lang=${language}#touchline-club-lineup`
+    ? "#touchline-match-lineups"
     : null;
   const homeLineupAvailable = Boolean(
     verifiedDetail?.lineupAvailableAt
@@ -468,7 +481,7 @@ export default function TouchlineMatchCentre({
                 <strong>{selected.homeTeam?.name ?? "Home"}</strong>
                 {showHomeLineupCallout ? <aside className={styles.homeLineupCallout} data-state={homeLineupAvailable ? "available" : "pending"}>
                   {homeLineupAvailable && homeLineupHref
-                    ? <a className={styles.homeLineupLink} href={homeLineupHref}><UsersRound size={14} aria-hidden="true" /> {dictionary.viewLineup}</a>
+                    ? <a className={styles.homeLineupLink} href={homeLineupHref} onClick={openSelectedLineup}><UsersRound size={14} aria-hidden="true" /> {dictionary.viewLineup}</a>
                     : <><span>{dictionary.lineupPending}</span><small>{dictionary.lineupPendingCopy}</small></>}
                 </aside> : null}
               </div>
@@ -534,10 +547,10 @@ export default function TouchlineMatchCentre({
                 <ul>{orderTouchlineMatchRatings(verifiedDetail.playerStatistics).map((row) => <li key={row.playerId}><span><strong>{row.playerName}</strong><small>{teamName(verifiedDetail, row.teamId)}</small></span><b>{row.rating}</b></li>)}</ul>
               </section>
             </div>
-            <div className={styles.lineupGrid}>
+            <section id="touchline-match-lineups" className={styles.lineupGrid} aria-label={dictionary.form} tabIndex={-1}>
               <MatchTeamSheet detail={verifiedDetail} teamId={verifiedDetail.fixture.homeTeam?.id} language={language} />
               <MatchTeamSheet detail={verifiedDetail} teamId={verifiedDetail.fixture.awayTeam?.id} language={language} />
-            </div>
+            </section>
           </section> : <div className={styles.contentGrid}>
             <section className={styles.featurePanel}><div className={styles.panelTitle}><ShieldCheck size={17} /><div><span>{dictionary.recent}</span><strong>{fixtureLabel(selected)}</strong></div></div><p>{dictionary.dataPending}</p></section>
             <section className={styles.featurePanel}><div className={styles.panelTitle}><Trophy size={17} /><div><span>{dictionary.form}</span><strong>{dictionary.players}</strong></div></div><p>{dictionary.dataPending}</p></section>

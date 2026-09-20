@@ -1,5 +1,605 @@
 # TouchLine Current State
 
+## 2026-09-21 — Release continuation: lifecycle safety verified in QA
+
+- Function-only successor `20260920153000_touchline_fantasy_safe_rollover_settlement.sql`
+  applied only to QA `xgxbwqxjssxxuihuwmgy`, remote version `20260920220827`.
+  Atomic guards verified source-definition fingerprints and identical before/after
+  contents of eight fixture/Fantasy tables. No customer prepare/save/reconcile
+  RPC was invoked. The new read-only pending-round discovery is service-role-only;
+  anonymous/authenticated/PUBLIC execution remains denied for all four functions.
+- Reconciliation now follows statistics persistence, rejects incomplete/future
+  lock failures, preserves drafts and the last score while source statistics are
+  pending, and discovers stale settled rounds after a failed RPC even on an idle
+  next tick. Independent review found no remaining P0/P1 in this bounded fix.
+  It does not auto-confirm or repair historical drafts, change scoring formulas,
+  or prove the current real-world Sportmonks coverage.
+- Fresh full suite: 2154 tests, 2146 passed, zero failed, eight skipped. This run
+  explicitly enabled PGlite: 20 real lifecycle SQL tests and 17 market/recovery
+  tests executed. Separate remote-compatible `verify:release` exited 0: 2099
+  tests, 2054 passed, 45 skipped, plus TypeScript, ESLint and readiness checks.
+- Chromium rendered checks: 14/14 passed for card frame decoding, leader crown,
+  public routes, landscape matrix, keyboard controls and repeated phone rotation.
+  Two stale browser assertions were corrected after DOM evidence: inert belongs
+  to the persistent wrapper, and Sound precedes Skip in the intro focus order.
+  Independent review confirmed these assertions retain the intended protections.
+- Local frozen-catalogue My Club fixture rendered on 844x390 and 1440x900 with
+  no horizontal overflow. This is not an authenticated customer or live-data PASS.
+  Native Safari remains externally blocked by the locked Mac; preserve sessions.
+- The final stable4 production build exited 0 and generated 145/145 routes
+  (session58004; /private/tmp/touchline-resolve-stable4-build-final.log).
+  All 94 source input hashes match the pre-build verified fingerprint; only
+  release documentation is being updated. No commit/push/new Vercel build,
+  production migration or alias switch is asserted by this checkpoint.
+- Generated browser reports and the pre-existing `work/runtime-backups` were
+  preserved outside the Git candidate in `outputs/release-20260920/`; nothing
+  was deleted. This avoids iCloud-generated duplicate reports stalling ESLint.
+  Evidence: `qa-lifecycle-preimage.json`, `qa-lifecycle-atomic-bundle.sql`,
+  `qa-lifecycle-postflight.json`, and `/private/tmp/touchline-resolve-stable4-*`.
+
+## 2026-09-20 — Resolve: QA market window applied; lifecycle review active
+
+- Supersedes the earlier statement that no market migration had been applied:
+  QA project `xgxbwqxjssxxuihuwmgy` accepted the atomic preimage/forward/postflight
+  bundle, recorded as remote migration `20260920211911`. The local source remains
+  `20260919151427_touchline_fantasy_kickoff_final_whistle_market_window.sql`.
+  Receipt state is `POSTFLIGHT_CAPTURED`. Production was not modified.
+- A guarded QA window synchronization verified exact kickoff closure. Before/
+  after fingerprints match for all 70 fixtures, four user gameweeks, 44 draft
+  selections and 11 locked selections. Evidence is outside the candidate at
+  `outputs/release-20260920/qa-market-window-apply-receipt.json`.
+- Seventeen isolated PostgreSQL market-window/recovery tests passed with the
+  actual migration, zero skipped. The business-function fixtures in those tests
+  are reduced and do not establish full lifecycle correctness.
+- Historical private social replay evidence remains unavailable. Event contract
+  tests now use explicitly synthetic, deterministic test-only fixtures and are
+  included in the remote gate. They do not approve historical art or invent
+  publishable football facts. The broad suite reported 2126 tests: 2100 passed,
+  one stale classification assertion failed and 25 skipped. That assertion was
+  corrected; this entry does not claim the rerun has passed.
+- Independent review found two P1 lifecycle mechanisms in the proposed rollover
+  change: settlement can precede fresh statistics, and a rejected XI lock can be
+  hidden by an outer successful reconcile response. Implementation and real-SQL
+  regression testing are in progress before authenticated smoke or release.
+- No commit, push, new deployment, alias switch, customer XI change, social
+  publication or new media integration has been performed in this continuation.
+
+## 2026-09-20 18:10 UTC — Release gate passed; private replay inputs missing
+
+- Guarded job `job-mua30mtj-9c9e34e2` finished: isolated SQL and diff checks
+  passed; complete `verify:release` (TypeScript, ESLint, remote-compatible
+  contracts and readiness) exited 0. Input hashes/inventory did not drift.
+- The additional unrestricted suite reported 2073 tests: 2042 passed, six
+  failed and 25 skipped. All six failures are ENOENT for dated private Social
+  Studio replay JSON, not demonstrated application assertions. They remain
+  failures, not waived or converted to PASS. The runner stopped before build.
+- Independent recovery analysis is tracing original archived factual inputs;
+  no synthetic football facts, removed tests or relaxed release guards are
+  authorized. A separate local bundle check can proceed without claiming that
+  these replay tests or the remaining remote/persona gates have passed.
+- Follow-up: five JSON files were recovered only from the authenticated
+  `checkpoint-social-edtY74/source-and-facts.tgz`, with every member hash matched
+  to its historical manifest. They remain Git-ignored/private. All four
+  recovered test files passed: 23 tests, zero failures. The original events
+  render-inputs and rankings editorial-pack dated 20260915 remain unresolved;
+  neither is substituted with renamed or fabricated historical data.
+- Media job `job-mua4cor0-8150c527` exported a ten-second two-person draft,
+  exit 0. Root and independent visual review rejected its arm/hand poses.
+  Numeric rig inspection confirmed FBX lowerarm tails differ from real hand
+  joints: target/endpoint checks alone did not verify the visible hands.
+  A real-joint solver is being developed separately from the website.
+- No new paid generation, deployment, alias, credentials, migration or customer
+  lineup/profile change. Intro and stadium loop remain unapproved prototypes.
+
+## 2026-09-20 17:19 UTC — Runtime restored; workspace-discovery collision removed
+
+- Canonical detached HEAD and 85-path candidate remain unchanged. No deploy,
+  alias change, remote migration, provider credential or customer data mutation.
+- `outputs/release-20260920/runtime-recovery-receipt.json` proves the pinned
+  Node 24.19.0 / pnpm 11.9.0 frozen install completed. Dependency input hashes
+  are unchanged. The two vanished-runtime links were preserved, not deleted.
+- The next run passed all 17 isolated PostgreSQL tests and diff hygiene, then
+  stopped before TypeScript/lint because pnpm's dependency check discovered
+  four generated `package.json` files inside an old Next backup. Independent
+  source inspection traced pnpm 11.9.0's install/run discovery mismatch.
+- Preserved the exact `work/runtime-backups/next-before-audio-20260919` directory
+  outside the candidate as
+  `outputs/release-20260920/next-before-audio-20260919-preserved`. No backup data
+  was deleted and no dependency manifest or verification guard was relaxed.
+  With `pnpm_config_verify_deps_before_run=error` intact, the pinned
+  `check:release-readiness` now exits 0. This proves the discovery failure is
+  cleared, not that release/build/browser gates have passed. Repeat the full
+  guarded chain against these exact inputs next.
+- Separate video work: official free Renderpeople FBX package downloaded and
+  extracted into private assets, outside the website. Three scans and original
+  preview garments inspected; existing walking/dancing/idle animation is not
+  approved stadium cheering. A private Blender import/material review is
+  prepared; no final realism, motion or video export is claimed.
+- Authenticated customer side effects, QA migration and visual/device evidence
+  remain separate release gates. CPJ completion relay failed for the previous
+  two jobs; results were read on the next user turn, not an automatic wake.
+
+## 2026-09-20 16:56 UTC — Missing local runtime diagnosed; guarded recovery prepared
+
+- Canonical candidate remains detached `7254d259`, with the same 85-path
+  manifest. No new deploy, alias change, remote migration or customer mutation.
+- The prior focused isolated PostgreSQL run passed 17 cases, then release
+  verification stopped before type/lint/build because dependency validation
+  attempted an unattended reinstall. Fresh inspection found `node_modules`
+  and `.next` were dangling links into the vanished exact directory
+  `/private/tmp/touchline-audit-runtime-sddQYA`. This supersedes a presumed
+  package-manager mismatch; dependency manifests are unchanged.
+- A recovery runner outside the candidate preserves only those exact dangling
+  links, reinstalls with Node 24.19.0 / pnpm 11.9.0 and the frozen lock, then
+  restores an isolated PGlite 0.5.8 harness and runs focused SQL, release,
+  full-local-test and bundle gates in order. It is prepared, not yet passed.
+  Independent review tightened its evidence to include Git HEAD, the complete
+  allowed dirty inventory, and dependency-input hashes before and after gates.
+- Independent reader review reconfirmed that customer Arena, My Club and
+  Fantasy GET can write lifecycle and draft state. No bypass or incomplete
+  removal of those producers is accepted as customer PASS.
+- Separate 3D work: seven wardrobe contracts pass; the revised loop-view still
+  rendered successfully in Blender 4.5.13 and was visually inspected. It keeps
+  the complete lateral pitch in frame without the former foreground roof/lamp.
+  Crowd and materials remain a procedural blockout, not photoreal final media.
+  Intro trajectory, motion and encoded-loop seam are not yet visually passed.
+  No Runway credits were consumed or new media published.
+
+## 2026-09-20 15:55 UTC — Two independent fronts resumed; no promotion yet
+
+The owner explicitly requested parallel website release and separate 3D intro /
+loop work. New media must not be bundled into this website release or published
+before owner approval. No additional Runway generation or credit spend occurred.
+
+Fresh Vercel CLI metadata now confirms the exact official project and all twelve
+Preview/qa variable names/scopes, including SPORTMONKS_API_TOKEN and the QA
+Supabase bindings. Production metadata was also inspected without revealing or
+changing values. Existence is not proof of token validity. The earlier loading
+obstacle to metadata inspection is superseded, not the remaining release gates.
+Production still resolves to dpl_CZXL6E3gQJdt4sMXDWStdcvywfjq (16 September);
+QA resolves to dpl_CZVHkkQxz7zNWVsaKMPRrj55pvX8 / 7254d259. No alias was changed.
+
+Independent review found two real market-release defects: restoring the strict
+legacy interval constraint before recalculation made recovery fail after the
+new rule had materialized; omitting known zero-fixture rounds could wrongly open
+a later round as bootstrap. Local recovery/forward SQL and behavioral tests are
+being corrected and reverified. Remote read-only inspection confirms all three
+preimage fingerprints, original constraint and service-only privileges match.
+No recovery receipt table exists remotely; no new migration has been applied.
+The release manifest was refreshed from 81 to 85 exact candidate paths.
+
+Customer smoke is a separate unresolved verification boundary: snapshot GET/SSR
+performs global sync, reconciliation and alert writes plus possible user draft
+preparation. These calls predate this candidate; a disposable user would not
+isolate their global effects. No guard was bypassed, no new identity was created,
+and no customer XI, balance or photo was changed. Removing only reader RPCs is
+not a safe shortcut: scoring/alert lifecycle ownership and previous-XI reuse
+would first need explicit replacement. The existing provider scheduler is
+functional-QA-only; a production-target rebuild is not interchangeable with a
+QA deployment receiving an alias. Preserve environment isolation.
+
+Native Safari verification is currently blocked by the Mac lock screen. The
+user has been asked to unlock manually; no lock/security setting was changed.
+Source checks and independent 3D authoring proceeded without the UI.
+
+## 2026-09-20 — Publication requested; final-market defect corrected, release NOT promoted
+
+Owner request: publish to touchline.com.br if publication is the only remaining
+step. It is not: QA migration/recovery evidence, immutable candidate and complete
+persona-matched remote smoke remain open. Production authorization is recorded;
+no additional generic approval is needed, but it does not waive these gates.
+
+Fresh integrated runner before SQL correction: 2024 total,2008 passed,0 failed,
+16 skipped; whole ESLint exit0. Subsequent SQL-enabled run hit a 30s local
+timeout in one PGlite test (not a logic assertion). Recheck without concurrent
+typecheck: 2028 total,2020 passed,0 failed/cancelled,8 skipped, exit0. Logs:
+/private/tmp/touchline-release-with-market-sql-20260920.log (failed timeout),
+/private/tmp/touchline-release-with-market-sql-recheck-20260920.log (passed).
+Typecheck exit0; governance, deployment-input and diff checks pass. Final runner
+hardening subsequently passed24/24 focused plus lint/syntax; customer smoke
+blocks before browser/session/requests because known GET/SSR prepares XI.
+No override was added. Public/Admin reports do not claim server-side writes
+are absent. Do not label integrated counts immutable-SHA or full-site visual
+proof. The eight remaining skips are optional Social SQL
+harness cases, NOT the private artifact exclusions. Missing private social
+render fixtures remain excluded, not approved or executed.
+
+Fixed stale-FINAL market precedence locally: confirmed FINAL precedes future
+schedule windows; partial/unobserved FINAL stays LOCKED. All 11 PGlite cases
+execute, including complete migration grants and denied anon/authenticated
+versus permitted service_role. Twenty focused contracts passed. Independent
+review found no P0; its named-constraint prerequisite is satisfied by QA's
+read-only metadata: the new named constraint is absent, legacy interval check
+is present. This is not remote migration application or rollback proof.
+
+Supabase QA xgxbwqxjssxxuihuwmgy is ACTIVE_HEALTHY. Only BEGIN READ ONLY SELECT
+metadata / ROLLBACK was used. Three RPC anchors and service-only ACLs match;
+football_fixtures.finalized_at exists, gameweeks/user_gameweeks have RLS enabled.
+Remote current rule is +5 MINUTES and offset-before-kickoff, not +5 hours.
+New migration is NOT APPLIED. Do not apply an unnecessary intermediate Sept15
+rule. Capture exact function/constraint/ACL preimage and test forward recovery
+before any authorized remote change; never rewrite historical user snapshots.
+
+Independent non-SQL review recalibrated its proposed 44px/OAuth findings:
+NO_P0_P1. Compact36px is intentional per latest owner request; existing users
+choosing OAuth from registration may see onboarding, a P2 UX/product nuance,
+not auth/data loss. No new onboarding schema was invented.
+
+Vercel runtime-error connector reports no clusters in selected24h (not a full
+availability guarantee). Native Safari Overview confirms touchline.com.br and
+www.touchline.com.br still use dpl_CZXL6E3gQJdt4sMXDWStdcvywfjq/be09bszd7,
+sourceCLI, CreatedSep16. Fresh environment names/scopes could not be completed:
+settings remained loading after refresh, then Safari foreground changed to the
+Private QA Arena. No session switch, login/logout, reveal-value or edit action.
+Do not rely on the stale pre-refresh variable list as fresh approval.
+
+Canonical source remains detached7254d259 + task changes; no commit/push,
+remote build, alias, credential, customer XI/balance/photo or production change.
+Local Arena sound/mute was verified in Safari; this does not claim the new
+audio/onboarding build is deployed or that full registration intro was tested.
+Fresh macOS afinfo additionally confirms both official local MP4s include
+stereo AAC48kHz audio: entry29.419s and loop20.992s. This proves audio tracks
+exist, not a subjective listening review of the music itself. User was told
+local audio/mute works and production has not received this update.
+
+
+## 2026-09-20 — Device-specific Arena HUD verified locally in Safari
+
+Phone landscape now uses 36px controls, tablet 40px and wide screens 56px,
+with their own coordinated type/icon/spacing tokens; no document zoom or
+pitch transform was introduced. Language menu follows this scale, opens to
+the right of its left edge, and reserves footer space. Independent review
+found a legacy 44px specificity override and a 2px collapsed-dock overflow;
+both corrected (specific min-height; width includes padding and borders).
+
+Fresh regression test 4/4, diff check clean. Integrated release runner passed
+2003 tests / 0 failed / 16 skipped (2019 total), before the later isolated
+smoke-runner hardening; that hardening has 21 focused tests. The unrestricted
+full suite earlier reported six missing private dated Social Studio fixtures,
+three superseded assertions (now fixed) and a local-port sandbox failure.
+Storage test was rerun with local-port permission and passed 2/2. Do not
+represent excluded private artifact replays as executed successfully.
+
+Final local build passed (compiled in 5.1 minutes, all routes/types completed):
+/private/tmp/touchline-device-scale-build-final-20260920.log.
+Local server restarted on 127.0.0.1:3019 (exec session 10555). Native Safari
+inspected nominal 800x360 and 667x375, tablet1024x768, wide1920x1080;
+height was explicitly committed with Tab. Phone menu and all six language
+options are visible without clipping; menu/callout do not touch footer.
+Portrait gate appeared during the size transition and resumed content.
+These are Safari responsive-mode observations, not physical TV/gamepad/
+iOS certification or an exact computed-CSS-viewport measurement.
+No remote build, commit, deploy, credentials, customer state or data change.
+Full authenticated/device audit and remote release gates remain open.
+
+
+## 2026-09-20 — Production authority reconfirmed; release review ongoing
+
+The owner explicitly added production to the requested final deployment.
+This authorizes the gated release to touchline.com.br, not bypassing tests,
+customer-state preservation or social-art approval. No deployment performed.
+
+Fresh Vercel connector lookup for touchline.com.br resolved deployment
+dpl_CZXL6E3gQJdt4sMXDWStdcvywfjq, READY, target production, source cli,
+immutable hostname touchline-arena-official-be09bszd7-fifa-agent-plataform.vercel.app.
+Its metadata has no Git SHA. Do not infer that it matches the local candidate.
+The returned alias array omits the custom domain, so verify alias mapping again
+before promotion. Project lookup connector has an input-schema mismatch;
+deployment lookup and listing succeed. No credentials were exposed or changed.
+
+Governance, deployment-input and static readiness checks pass locally; the
+last is LOCAL_CHECKLIST_READY_NOT_RELEASE_APPROVAL. Independent review found
+ranking-path gaps for more than 750 players and active-season rollover.
+Architecture agent owns fixes/tests in ranked-card-catalog-server.ts. Route
+agent owns registration-to-intro-to-My-Club flow and tests, preserving Auth
+isolation. Final integrated tests and visual/data release gates remain open.
+
+
+## 2026-09-19 21:26 UTC — Safari scale qualification; menu remains reachable
+
+Final Safari inspection found that the responsive toolbar's nominal 800x360
+is not always the effective CSS viewport: native Elements/Computed showed
+body 695.652161 x 313.043488, consistent with 115% page scaling. Actual Size
+briefly showed the smaller layout; do not mistake the toolbar's preview zoom
+label for page zoom, or certify an exact CSS viewport from it alone. With the
+larger effective controls, open menu/callout remain separated and the menu's
+last Fullscreen action is reachable by internal scrolling without touching the
+footer. No speculative CSS patch was added. Console reports local 401 Arena
+state and 503 schedule/livescores, so local visuals are NOT authenticated/live
+data evidence. Two resource preload warnings also recorded. Build3 and 52 tests
+remain green; diff check repeated clean. Full-device/exact-viewport release
+matrix remains open. No external mutation or publication.
+
+## 2026-09-19 21:14 UTC — Compact Arena / scroll-close final LOCAL check
+
+Final integrated build3 passed 145 routes and TypeScript (compile 38.4s,
+types 24.8s); 52 focused tests pass, diff hygiene clean. Focused ESLint from
+the unchanged TS/TSX passed with zero errors/warnings. Safari rechecked the
+sticky close after fast bottom scrolling: it remains visible. Donnarumma's
+complete official card and long name fit 800x360 and 667x375. Desktop
+1920x1080 Arena open/closed menu also inspected without collisions. Existing
+800x360, 667x375 and tablet 1024x768 HUD evidence stands. Root-owned local
+3019 server runs the final build; Safari is left at the local Arena, sound
+muted. No claim that frozen catalogue ratings are current, no physical device
+certification, and no full-audit/release completion claim. Complete evidence
+and next ordered work are in the proportional/audio checkpoint. Production,
+remote QA build count, customer state and keys are unchanged.
+
+## 2026-09-19 21:09 UTC — Arena compact HUD inspected in native Safari; audio LOCAL
+
+- Latest owner screenshot: open menu/setup callout oversized. Root narrowed
+  the menu to 18 shared units/34vw and callout to 22 units/42vw; toolbar,
+  language, icons and buttons share the viewport rhythm with 44px hit targets.
+- Fresh local production build completed all 145 routes plus TypeScript.
+  Focused ESLint passed with no errors/warnings. 51 focused tests passed before
+  the final scroll-close correction; 52 after it. No remote deployment.
+- Native Safari rendered the new local build at 800x360, 667x375, 1024x768:
+  open/closed menu and setup callout contained, toolbar separated, footer
+  reachable. Canvas 1024x768 is now actually applied (earlier height text had
+  not committed). Physical hardware/TV/console are not certified by this.
+- Arena audio now opt-in with mute controls in intro/Arena; session generations
+  cancel stale playback after pause/skip/replay. Hidden/portrait/pagehide/freeze,
+  unmount and dynamic reduced-motion stop playback. Independent second review
+  closed its four initial findings; local behavioral tests pass. Native Safari
+  changed to Silenciar Arena and showed its audible-tab indicator on enabling;
+  mute restored before navigating away. No audio outside Arena added.
+- Khusanov frozen-fixture zoom inspected at 800x360: complete canonical artwork
+  scaled together, name/details do not collide. Fast scroll reaches bottom.
+  It exposed a disappearing close button; sticky close correction now added
+  and its rebuild/recheck is in progress. No current rating claim from fixture.
+- `.next` is linked to `/private/tmp/touchline-audit-runtime-sddQYA/next-build`
+  to avoid iCloud generated duplicates while retaining dependency resolution.
+  Failed earlier external build output preserved. Source remains this worktree.
+- Keep-awake job registered for 10h at 20:40 UTC, ID job-mu8uq2l9-fcd3f164;
+  initial response queued, not probed after launch. Password/security unchanged.
+- Source remains dirty/local on 7254d259ea91896f4c9c6313adb714a5a3c01d74. Audio
+  supersedes the earlier not-implemented queue entry; onboarding, both full
+  mobile passes, Admin social, clean release/data gates and app work continue
+  in the recorded order. No commit, ingest, migration, customer data or alias
+  change. QA remote budget consumed 0/1. Production NOT TOUCHED.
+
+## 2026-09-19 20:18 UTC — Proportional zoom/Arena controls LOCAL; app distribution queued
+
+- Owner explicitly authorizes eventual publication to `touchline.com.br` after
+  completion/verification and requests a downloadable customer app afterward.
+  This supersedes the earlier QA-only destination restriction, not release
+  gates, exact-artifact/rollback requirements, or approval of individual social
+  artwork. No remote build, alias, deployment or customer-data mutation done.
+- Dependency-read blocker below is resolved: exact frozen dependencies live in
+  `/private/tmp/touchline-audit-runtime-sddQYA/node_modules`, linked locally;
+  originals preserved in ignored `work/runtime-backups/node_modules`. No
+  dependency versions changed. Fresh orientation/skip build passed 145 routes.
+- Native Safari proved the phone portrait gate, rotation preserving the open
+  Khusanov zoom, and skip during official intro/stadium entry into the loop.
+  The local frozen fixture is geometry evidence, not live/customer-data proof.
+- Safari at 800x360 reproduced overlapping zoom columns and oversized Arena
+  controls. Local fix retains named zoom areas, measures the actual card column
+  and scales the complete canonical player canvas together, with crown reserve.
+  Responsive details selectors are scoped to the zoom to protect spotlights.
+- Shared viewport tokens now coordinate Arena menu/language/intro controls,
+  setup callout and score rail. A separate toolbar lane prevents heading
+  overlap; minimum 44px controls remain reachable. No pitch/state/data change.
+  Focused checks were green; new combined build and Safari recheck in progress.
+- Sequence: finish this visual slice, Arena-only audio/mute, registration intro
+  plus three seconds of actual loop playback and profile setup, both full mobile
+  passes, queued Admin social audit, clean release candidate, QA/Production gates.
+  Download/install readiness is being inventoried separately; no app/store
+  readiness or physical TV/console compatibility is claimed.
+- Existing points/currentness findings below remain open; no remote Sportmonks
+  ingest or migration executed. Remote QA build budget consumed 0/1.
+
+## 2026-09-19 19:23 UTC — Landscape gate and uninterrupted intro skip LOCAL
+
+- Owner clarification SUPERSEDES portrait-usable phone checks: phones are
+  landscape-only, with a premium rotate notice. Mounted page, selected cards,
+  route and XI must survive rotation. Tablets remain outside the phone query.
+- Local boundary now enforces inert/focus, protects first paint and portaled
+  dialogs, exits native/WebKit fullscreen on portrait, and preserves the gate
+  as a body sibling outside dialog background locking. Installed manifest now
+  requests landscape. Nine focused orientation regressions passed.
+- Latest owner request: Pular intro throughout presentation. The control now
+  remains in pending/first/returning/reveal; the stadium entry-video control
+  no longer depends on an earlier callback. Skip retains the original official
+  loop transition. Approved intro artwork/timing, auth, squad and data unchanged.
+- Fresh combined focused run: 28 passed, 0 failed/skipped. New skip regression
+  failed before correction. TypeScript and diff hygiene pass. Independent
+  read-only review: no new P0/P1/P2 in skip/orientation patch; 26 focused tests
+  passed independently. P3: rejected fullscreen exit cannot guarantee the
+  native top layer disappears; real-device fallback remains to be checked.
+- ESLint currently BLOCKED by local dependency read failure (ConfigOps);
+  exact @eslint/eslintrc module was compressed,dataless in iCloud. Reading it
+  hydrated 152080 bytes; dependent reads remain under investigation. Finder
+  reports sync disabled for insufficient disk space; about 9.9 GiB available
+  at latest check. No unrelated files, browser sessions or settings deleted.
+- NOT a fresh build/Safari/mobile/remote PASS. Prior 145-route build predates
+  these changes; local server is older. Full audit pass one remains partial,
+  pass two pending. No commit/deploy; remote QA budget remains 0/1 consumed.
+- Queue preserved: sound only in Arena with mute control (no global music),
+  registration -> official intro -> 3 seconds of actual loop -> My Club;
+  optional profile photo, nationality/flag, city and compact basic information.
+  Audio/onboarding/profile are NOT implemented by this skip patch. Then finish
+  both complete mobile passes before the queued Admin social audit/redesign.
+- Detailed completion-gate checkpoint: Cérebro outputs/Memoria-TouchLine/
+  Auditorias/2026-09-19/checkpoint-orientacao-intro.md. Production, DB, keys,
+  wallet, XI, aliases/DNS, social dispatch and automations remain untouched.
+
+## 2026-09-19 17:29 UTC — Mobile containment/navigation local; Admin social queued
+
+- This entry SUPERSEDES the low-space build blocker and gate totals below,
+  not the unresolved remote data/currentness findings. Same canonical worktree
+  and base `7254d259ea91896f4c9c6313adb714a5a3c01d74`; no commit/deploy.
+- Removed only verified inactive regenerable package/compiler caches; no user
+  files, sources, browser data, credentials, old candidates or running worktree
+  caches removed. Latest disk check shows 3.6 GiB available; capacity remains
+  constrained, not a permanent Mac-health PASS.
+- My Club result/list cards now opt into actual container sizing. Inner article
+  grids use `minmax(0, 1fr)` and wrapped/equal-height name/position/club rows;
+  field and enlarged zoom retain their separate geometry. Local production
+  build with these changes passed 145 routes. Native Safari fixture inspection
+  at 390×844 and 820×1180 showed contained GK/CB cards; player zoom opened and
+  closed with state preserved. Landscape 844×390 and rapid tablet scroll were
+  also sampled. Fixture is frozen geometry evidence, not current customer data.
+- Local navigation repairs cover roster anchor, late Suspense section discovery
+  and observer cleanup, Inbox locale/query/hash preservation, canonical Inbox
+  destinations and safe legacy rankings normalization. Red-first cases then
+  23/23 focused tests passed; independent review found no blocking regression.
+  Native navigation regression on the latest combined build is still pending.
+- Fresh canonical gate passed: 1,945 tests, 1,937 pass, 0 fail/cancelled, 8
+  pre-existing unrelated skips. Eight PGlite market cases executed. Governance,
+  input checks, TypeScript, full ESLint and local readiness also passed; same
+  13 private-artifact/docs exclusions. Log: /private/tmp/
+  touchline-mobile-navigation-final-gate-20260919.log. Fresh combined navigation
+  production build also exited 0, 145/145 routes; log /private/tmp/
+  touchline-mobile-navigation-final-build-20260919.log. Runtime/browser proof
+  remains separate. Latest `git diff --check` passed after documentation updates.
+- Owner requires TWO complete mobile end-to-end passes, including fast scrolling,
+  rotation, links and history. First pass remains partial; second not complete.
+  Source tests and fixtures cannot approve all pages, crowns, current points,
+  real accounts, TV/console devices or app readiness.
+- Queue `ADMIN-SOCIAL-20260919` follows the mobile audit: inventory functional
+  status and redesign all social Admin screens with official site components,
+  real canonical cards/facts, per-art approval and independent delivery receipts.
+  No social activation or publishing authorized by this addendum. Private Safari
+  opened at stable QA `/admin/login?lang=pt-BR`, Private and Admin login verified;
+  owner must log in. Normal customer session preserved; no credentials entered.
+- Matrix and queue: Cérebro outputs/Memoria-TouchLine/Auditorias/2026-09-19/
+  matriz-mobile-alinhamento.md. Production, remote DB/migration, keys, XI,
+  wallet, DNS/aliases, provider ingestion, social dispatch and automations
+  remain untouched. Remote build budget consumed 0/1 QA Git-native build.
+
+## 2026-09-19 — Current continuation: points/market LOCAL, remote data unchanged
+
+- This entry SUPERSEDES the earlier nine-file manifest, broad-read/hydration
+  blocker and old build chronology below; those sections remain history.
+  The audit worktree and base SHA are unchanged. No commit or deployment.
+- Complete QA SELECT inventory covers all 630 players: 583 pass the real
+  editorial gate; 29 lack a published numerical total despite complete
+  individual source evidence, 290 have stale published totals, 57 align and
+  207 lack a valid numerical note in the imported data. Another 47 fail the
+  publication gate. Absence is not zero or proof of non-participation.
+  Evidence was captured 2026-09-19T15:36:25.81684Z; no live provider request.
+- Root verified 630 unique UUIDs and all 376 public numerical cases against
+  the saved classification, individual coverage and settlement sums. Full
+  evidence: Cérebro `outputs/Memoria-TouchLine/Auditorias/2026-09-19/`
+  `adendo-pontos-todos-cards.md` and its JSON. This is not 630 browser checks.
+- Local corrections align My Club/showcase/roster with the published V3
+  rating authority and deliver position-specific supplementary stats. Zero
+  and absence are preserved; mutable aggregates never replace publication.
+  Shared catalogue pagination now handles more than 750/1000 rows, batches
+  editorial reads, reads one ranking snapshot and rejects incomplete reads.
+  Real supplementary-stat errors retain published ratings without partial stats.
+- Ranking-source pagination and live-sync error propagation are also local.
+  Source writes must synchronize Gameweeks before subsequent reconciliation;
+  ranking/schedule errors are no longer silently represented as success.
+- Local My Club changes include enlarged crests, eight browse-position tabs
+  usable while closed, summary below clubs, Market Closed labels and pitch
+  envelope sizing. The owner rule is first kickoff to provider-confirmed last
+  final whistle, with no old time offsets or invented live reopening deadline.
+  The forward SQL migration is NOT APPLIED. Eight isolated PGlite cases and
+  independent review cover null/ambiguous schedules and direct-save guards.
+- Independent catalogue review found no new P0/P1/P2; root reproduced 48/48
+  focused catalogue/rating cases and 8/8 market layout-contract/geometry cases.
+  Fresh typecheck, scoped lint and diff hygiene passed. The integrated gate
+  initially found one obsolete fixed-96px source assertion; it was updated
+  to require actual pitch-derived sizing and complete browse results, not skipped.
+  Fresh canonical integrated verification then passed: 1,938 total, 1,930
+  passed, 0 failed/cancelled, 8 existing unrelated skips; the eight PGlite
+  tests executed rather than skipping. Governance, input, typecheck, full
+  ESLint and readiness checks also passed. This excludes the same 13 private
+  artifact/docs replays as before; no exclusion was added to hide a failure.
+- A local production build passed earlier (145/145 routes), BEFORE these
+  newer changes; it does not approve this patch. Subsequent local dev visual
+  attempts hit Watchpack EMFILE and then ENOSPC. Own dev servers were stopped;
+  only task-owned regenerable compiler caches were removed (about 1 GiB).
+  Disk remains about 1.2 GiB free. Fresh build/render acceptance is BLOCKED;
+  no new full build started in that condition, no local visual PASS claimed.
+- Remote publication remains the 5 September snapshot (347 players/22 fixtures)
+  despite 40 final fixtures persisted. Current-day ingestion, full publication,
+  browser parity and post-deploy checks remain OPEN; source fixes alone do not
+  resolve the 29 missing and 290 stale totals already visible to customers.
+- Remote builds consumed 0/1 QA Git build. No production, database, key, XI,
+  alias/DNS, social dispatch or automation changes. Queued cover proposal below
+  does not interrupt the points/market priority or authorize a new design yet.
+
+## 2026-09-19 — Owner addendum: My Club cover queued, not redesigned
+
+- Owner reports the tactical field overlaid on the official stadium artwork
+  and requests a more premium cover. Queue ID `MYCLUB-COVER-20260919`.
+- Finish the active all-card points/reconciliation work first; this addendum
+  does not reprioritize or authorize replacing the cover immediately.
+- Prepare a proposal using one coherent official stadium artwork, without a
+  second pitch, duplicated photo, opaque identity rectangle or hidden stadium.
+  Portrait, name and controls must remain readable with a localized soft fade.
+- Require owner approval of the proposed cover before implementation/release,
+  then inspect Safari mobile, tablet and desktop. Previous CSS de-duplication
+  is not acceptance of the new visual design. No new cover or deployment yet.
+
+## 2026-09-19 — Recovery and full-site audit: PARTIAL / LOCAL ONLY
+
+- Current verified QA base is `7254d259ea91896f4c9c6313adb714a5a3c01d74`,
+  deployment `dpl_CZVHkkQxz7zNWVsaKMPRrj55pvX8`, canonical QA database
+  `xgxbwqxjssxxuihuwmgy`. Native Safari verified the expected owner portrait,
+  eleven-player XI and the combined My Club/market. Do not substitute the
+  historical production identity or its 35-TC/empty-XI state.
+- Earlier sections below are historical evidence, not current release
+  approval; their operational assumptions are SUPERSEDED by this entry.
+- Local isolated audit worktree changes the duplicated My Club cover
+  background, its regression contract, bounded release-test concurrency,
+  and the Live lineup link so it keeps the selected fixture's teamsheets.
+  No identity, wallet, XI, rating, auth, data or production changes occurred.
+- Canonical release gate passed: 1,836 passed, 0 failed, 0 cancelled,
+  12 pre-existing skipped tests. Independent code review found no blocker.
+  Visual acceptance remains pending; source tests do not prove rendering.
+- First local production build hit ENOSPC. Only regenerable compiler caches
+  were removed; source and user data were preserved. The second build exited
+  1 because TypeScript loaded without `sys`; macOS reported that dependency
+  and the worktree `.git` file as `dataless`. Full reads restored TypeScript
+  exports, but Git reads also stalled. Build acceptance remains BLOCKED.
+  A worktree-move attempt was stopped before moving anything; the original
+  workspace path is retained. Reconfirm identity/path before resuming.
+- Mac lock blocker is SUPERSEDED: owner unlocked the session. Safari checks
+  resumed without account changes. Player leader crown, zoom and profile are
+  intact in observed mobile cases; profile also renders at 820x1180,
+  1920x1080 and 2560x1440. Coach leader crown/zoom/profile were also observed.
+  This is partial viewport evidence, not physical TV/gamepad or whole-site PASS.
+- With explicit owner approval, only the audit folder was set Keep Downloaded
+  in Finder (`cmdUnpin:` confirms enabled). Four inactive compiler caches were
+  removed after open-file/process checks, recovering about 3.3 GiB. The source
+  folder did not move. Download hydration is progressing; TypeScript remains
+  dataless and full Git checks remain pending. Do not start another build yet.
+- Native Safari exposed a data reconciliation gap: leader card/zoom/profile
+  total 22.73 differs from the profile's four match ratings totaling 30.26.
+  Do not substitute values manually. Live fixture 19722167 loads its official
+  detail after an interim unavailable state, but its View Lineup link opens
+  the next fixture's ClubHub preview instead of preserving the selected match.
+  The link now has a local-only fix: it targets the existing verified
+  teamsheets on the selected match, not ClubHub's next-fixture preview.
+  Its source regression failed before the change; the final patch passes31
+  focused tests, including actual isolated click/focus/scroll behaviour with
+  modified-click fallbacks and no added history entry. Independent review
+  found no remaining blocking code issue. Integrated/build/render gates are
+  still pending;
+  the earlier full-suite result does not approve this new patch. No data
+  correction is claimed.
+- Alisson provides a second confirmed cross-surface mismatch: ClubHub zoom
+  shows27.79 while the full player profile card shows20.43; its four recorded
+  match ratings total27.79. No values or ranking snapshots were overwritten.
+- Latest Finder observation showed2.34GB/2.78GB downloaded. Task-owned broad Git
+  status and lint were terminated after confirmed blocked reads of an image
+  and an ESLint module; hydration continues independently. Specific nine-file
+  diff checks pass, but fresh lint/build/clean-worktree proof remain BLOCKED.
+- SportMonks key metadata confirms QA-scoped update on 19 September, but
+  the current deployment predates it. Runtime/provider proof requires a new
+  validated QA deployment. No key value was read or logged.
+- Fresh read-only QA livescores returned nine records with degraded state;
+  all were last verified at `2026-09-16T13:49:02.815+00:00`. Current provider
+  freshness is NOT validated. Do not promote this as current live data.
+- Remote builds consumed: 0 of 1 authorized QA Git build. No commit, push,
+  deployment, production alias/DNS change, database mutation, social dispatch
+  or automation reactivation has been performed in this mission.
+- Detailed audit/checkpoint is retained in the Cérebro workspace at
+  `outputs/Memoria-TouchLine/Auditorias/2026-09-19/checkpoint-auditoria-visual-funcional.md`.
+
 ## 2026-09-14 overnight social studio — LOCAL IN PROGRESS / NOT DEPLOYED
 
 - Current source: branch `codex/myclub-header-final-20260913`, base HEAD

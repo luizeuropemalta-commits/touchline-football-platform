@@ -40,7 +40,7 @@ export default function ClubHubOutsideMatchRoster({
     : (portuguese ? "Todos os jogadores disponíveis estão exibidos acima." : "All available squad members are shown above.");
 
   return (
-    <section className={styles.shell} aria-label={`${clubName} ${title}`}>
+    <section id="club-squad" className={styles.shell} aria-label={`${clubName} ${title}`}>
       <TouchlineClubPerimeterTrace accent="#a3ff12" className={styles.perimeterTrace} />
       <header className={styles.header}>
         <div>

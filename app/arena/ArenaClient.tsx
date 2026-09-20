@@ -2,14 +2,18 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction, type SyntheticEvent } from "react";
-import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, RotateCw, Search, UserRound, X } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction, type SyntheticEvent } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, RotateCw, Search, UserRound, Volume2, VolumeX, X } from "lucide-react";
 import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEliteExactCardLabels, type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
 import TouchlineSubstitutionMark from "@/components/touchline/TouchlineSubstitutionMark";
 import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntro";
+import responsiveStyles from "./arena-responsive.module.css";
+import { createTouchlineArenaMediaSession, readTouchlineArenaMediaAvailability, subscribeTouchlineArenaMediaAvailability } from "@/lib/touchlineArena/arena-media-playback";
+import { observeTouchlineArenaOnboardingPlayback, touchlineArenaOnboardingHref } from "@/lib/touchlineArena/arena-onboarding";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import { TouchlineCoinMark, TouchlineSelectedPlayersMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import TouchlineSquadBuilderStage from "@/components/touchline/market/TouchlineSquadBuilderStage";
@@ -3414,6 +3418,7 @@ export default function ArenaClient({
   initialTwoDimensionalFormationRegistry,
   initialFantasyLineup = null,
 }: ArenaClientProps) {
+  const router = useRouter();
   const standaloneExperience = standaloneMarket ? "market" : standalonePanel ?? null;
   const initialBuilderClubResolution = resolveTouchlineArenaInitialClub(initialContractClubId);
   const initialBuilderClubKey = initialBuilderClubResolution.kind === "unavailable"
@@ -3431,6 +3436,7 @@ export default function ArenaClient({
   const loopCameraFrameRequestRef = useRef<number | null>(null);
   const loopCameraFrameVideoRef = useRef<HTMLVideoElement | null>(null);
   const loopRevealTimerRef = useRef<number | null>(null);
+  const onboardingHandoffCompletedRef = useRef(false);
   const accountLineupSaveTimerRef = useRef<number | null>(null);
   const pendingCardHydrationClubIdsRef = useRef(new Set<string>());
   const lastCardHydrationSignatureByClubRef = useRef(new Map<string, string>());
@@ -3451,10 +3457,27 @@ export default function ArenaClient({
   const [introExperienceMode, setIntroExperienceMode] = useState<"pending" | "hidden" | TouchlineArenaIntroLaunchMode>(initialIntroWasSkipped ? "hidden" : "pending");
   const [introExperienceRun, setIntroExperienceRun] = useState(0);
   const [isEntrySkipAvailable, setIsEntrySkipAvailable] = useState(false);
-  // The root layout already prevents phone/tablet portrait gameplay. Every
-  // viewport that reaches the Arena is therefore ready for the intro; native
-  // landscape fullscreen remains an optional immersion enhancement.
-  const isArenaIntroViewportReady = true;
+  const isArenaIntroViewportReady = useSyncExternalStore(
+    subscribeTouchlineArenaMediaAvailability,
+    readTouchlineArenaMediaAvailability,
+    () => false,
+  );
+  const [hasArenaMediaSource, setHasArenaMediaSource] = useState(false);
+  // Latch the first allowed viewport before committing its video sources.
+  // Later visibility/orientation changes pause media without detaching it.
+  if (isArenaIntroViewportReady && !hasArenaMediaSource) setHasArenaMediaSource(true);
+  const [isArenaAudioMuted, setIsArenaAudioMuted] = useState(true);
+  const arenaAudioMutedRef = useRef(true);
+  const arenaMediaMountedRef = useRef(true);
+  const [arenaMediaSession] = useState(createTouchlineArenaMediaSession);
+  const playOfficialArenaVideo = useCallback((video: HTMLVideoElement) => arenaMediaSession.play(video, {
+    muted: arenaAudioMutedRef.current,
+    isAllowed: () => arenaMediaMountedRef.current && readTouchlineArenaMediaAvailability(),
+    onMutedFallback: () => {
+      arenaAudioMutedRef.current = true;
+      setIsArenaAudioMuted(true);
+    },
+  }), [arenaMediaSession]);
   const [hasLoadedSavedLineup, setHasLoadedSavedLineup] = useState(false);
   const [hasLoadedClubOwnerRoster, setHasLoadedClubOwnerRoster] = useState(false);
   const [arenaPersistencePrincipal, setArenaPersistencePrincipal] = useState<ArenaPersistencePrincipal | null>(null);
@@ -3520,6 +3543,9 @@ export default function ArenaClient({
   const [saveStatus, setSaveStatus] = useState("Auto saved");
   const [fixtureStatus, setFixtureStatus] = useState("Local data");
   const [siteLanguage, setSiteLanguage] = useState<TouchLineLocale>(initialLocale ?? TOUCHLINE_DEFAULT_LOCALE);
+  const arenaAudioLabel = siteLanguage === "pt-BR"
+    ? isArenaAudioMuted ? "Ativar som da Arena" : "Silenciar Arena"
+    : isArenaAudioMuted ? "Enable Arena sound" : "Mute Arena";
   const [hasLoadedLocalePreference, setHasLoadedLocalePreference] = useState(false);
   const [selectedBuilderClubKey, setSelectedBuilderClubKey] = useState(initialBuilderClubKey);
   const [builderSquad, setBuilderSquad] = useState<TeamBuilderSquadPlayer[]>([]);
@@ -4083,30 +4109,52 @@ export default function ArenaClient({
       };
 
   useEffect(() => {
-    // The first ClubOwner arrival may receive a short welcome, but the Arena
-    // never redirects a customer away from the current surface.
+    // Registration onboarding is the only automatic handoff. Normal Arena
+    // visits stay here; the full intro (or its explicit skip) precedes this loop.
     if (
       standaloneExperience
-      || !isArenaFunctionalReady
-      || !hasLoadedOwnerCoach
-      || arenaPersistencePrincipal?.kind === "demo"
-      || activeArenaCoachIdentity?.coach
+      || isQaReadOnly
+      || introExperienceMode !== "hidden"
+      || !hasEntryVideoFinished
+      || arenaPersistencePrincipal?.kind !== "authenticated"
+      || onboardingHandoffCompletedRef.current
     ) return;
 
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("onboarding") !== "market") return;
+    const destination = touchlineArenaOnboardingHref(window.location.search, siteLanguage);
+    const loopVideo = secondVideoRef.current;
+    if (!destination || !loopVideo) return;
 
     // Schedule the visual state after the initial effect tick: this preserves
     // server/client hydration while still presenting the welcome immediately.
     const welcomeTimer = window.setTimeout(() => setIsMarketOnboardingWelcomeVisible(true), 0);
+    const stopObserving = observeTouchlineArenaOnboardingPlayback({
+      video: loopVideo,
+      isAllowed: () => arenaMediaMountedRef.current
+        && arenaMediaSession.owns(loopVideo)
+        && readTouchlineArenaMediaAvailability(),
+      subscribeAvailability: subscribeTouchlineArenaMediaAvailability,
+      requestFrame: (callback) => window.requestAnimationFrame(callback),
+      cancelFrame: (request) => window.cancelAnimationFrame(request),
+      onComplete: () => {
+        if (onboardingHandoffCompletedRef.current
+          || touchlineArenaOnboardingHref(window.location.search, siteLanguage) !== destination) return;
+        onboardingHandoffCompletedRef.current = true;
+        // Replace the marked entry so Back cannot replay the onboarding;
+        // the destination has no hash and explicitly requests the page top.
+        router.replace(destination, { scroll: true });
+      },
+    });
     return () => {
       window.clearTimeout(welcomeTimer);
+      stopObserving();
     };
   }, [
-    activeArenaCoachIdentity?.coach,
+    arenaMediaSession,
     arenaPersistencePrincipal?.kind,
-    hasLoadedOwnerCoach,
-    isArenaFunctionalReady,
+    hasEntryVideoFinished,
+    introExperienceMode,
+    isQaReadOnly,
+    router,
     siteLanguage,
     standaloneExperience,
   ]);
@@ -4517,24 +4565,50 @@ export default function ArenaClient({
   }, [initialIntroIntent, isQaReadOnly]);
 
   useEffect(() => {
+    arenaMediaMountedRef.current = true;
+    const entryVideo = firstVideoRef.current;
+    const loopVideo = secondVideoRef.current;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const stopMedia = () => {
+      arenaMediaSession.stop();
+      entryVideo?.pause();
+      loopVideo?.pause();
+      if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
+      loopRevealTimerRef.current = null;
+    };
+    const handleReducedMotion = () => { if (reducedMotion.matches) stopMedia(); };
+    window.addEventListener("pagehide", stopMedia);
+    document.addEventListener("freeze", stopMedia);
+    reducedMotion.addEventListener("change", handleReducedMotion);
+    return () => {
+      arenaMediaMountedRef.current = false;
+      stopMedia();
+      window.removeEventListener("pagehide", stopMedia);
+      document.removeEventListener("freeze", stopMedia);
+      reducedMotion.removeEventListener("change", handleReducedMotion);
+    };
+  }, [arenaMediaSession]);
+
+  useEffect(() => {
     const entryVideo = firstVideoRef.current;
     const loopVideo = secondVideoRef.current;
     if (!isArenaIntroViewportReady) {
+      arenaMediaSession.stop();
       entryVideo?.pause();
       loopVideo?.pause();
-      if (entryVideo && !hasEntryVideoFinished) entryVideo.currentTime = 0;
       return;
     }
 
-    if (introExperienceMode !== "hidden") return;
+    if (!hasArenaMediaSource || introExperienceMode !== "hidden") return;
     const videoToResume = hasEntryVideoFinished ? loopVideo : entryVideo;
     if (!videoToResume) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       videoToResume.pause();
       return;
     }
-    void videoToResume.play().catch(() => setIsArenaVideoPaused(true));
-  }, [hasEntryVideoFinished, introExperienceMode, isArenaIntroViewportReady]);
+    void playOfficialArenaVideo(videoToResume).then((played) => { if (played !== null) setIsArenaVideoPaused(!played); });
+  // Playback reads the current mute/lifecycle refs, not a captured preference.
+  }, [hasEntryVideoFinished, introExperienceMode, isArenaIntroViewportReady, hasArenaMediaSource, arenaMediaSession, playOfficialArenaVideo]);
 
   useEffect(() => () => {
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
@@ -6000,8 +6074,8 @@ export default function ArenaClient({
     const loopVideo = secondVideoRef.current;
     if (!loopVideo || !loopVideo.paused) return;
 
-    void loopVideo.play().catch(() => undefined);
-  }, [activeVideoIndex, isArenaVideoPaused]);
+    void playOfficialArenaVideo(loopVideo);
+  }, [activeVideoIndex, isArenaVideoPaused, playOfficialArenaVideo]);
 
   useEffect(() => () => {
     cancelLoopCameraFrameSync();
@@ -6248,6 +6322,21 @@ export default function ArenaClient({
     return activeVideoIndex === 0 ? firstVideoRef.current : secondVideoRef.current;
   }
 
+  function toggleArenaAudio() {
+    const muted = !arenaAudioMutedRef.current;
+    arenaAudioMutedRef.current = muted;
+    setIsArenaAudioMuted(muted);
+    for (const video of [firstVideoRef.current, secondVideoRef.current]) {
+      if (video) video.muted = muted;
+    }
+    const video = activeArenaVideo();
+    // Keep the gesture synchronous for browser audio permission, but never
+    // start hidden entry footage underneath the official brand sequence.
+    if (!muted && video && (introExperienceMode === "hidden" || !video.paused)) {
+      void playOfficialArenaVideo(video).then((played) => { if (played !== null) setIsArenaVideoPaused(!played); });
+    }
+  }
+
   function playArenaVideo() {
     let video = hasEntryVideoFinished ? secondVideoRef.current : activeArenaVideo();
     if (!video && secondVideoRef.current) {
@@ -6264,10 +6353,11 @@ export default function ArenaClient({
     }
     setIsArenaVideoPaused(false);
     if (video === secondVideoRef.current) setActiveVideoIndex(1);
-    void video.play().catch(() => setIsArenaVideoPaused(true));
+    void playOfficialArenaVideo(video).then((played) => { if (played !== null) setIsArenaVideoPaused(!played); });
   }
 
   function pauseArenaVideo() {
+    arenaMediaSession.stop();
     activeArenaVideo()?.pause();
     secondVideoRef.current?.pause();
     setIsArenaVideoPaused(true);
@@ -6532,6 +6622,7 @@ export default function ArenaClient({
     if (!loopVideo) return;
 
     if (!loopVideo.paused && !isArenaVideoPaused) {
+      arenaMediaSession.stop();
       loopVideo.pause();
       setIsArenaVideoPaused(true);
       setHasEntryVideoFinished(true);
@@ -6544,8 +6635,10 @@ export default function ArenaClient({
     setActiveVideoIndex(1);
     setIsArenaVideoPaused(false);
     try {
-      await loopVideo.play();
-      setSaveStatus(`Arena QA camera playing · ${currentCameraId}`);
+      const played = await playOfficialArenaVideo(loopVideo);
+      if (played === null) return;
+      setIsArenaVideoPaused(!played);
+      setSaveStatus(played ? `Arena QA camera playing · ${currentCameraId}` : "Arena QA camera could not resume — try again");
     } catch {
       setIsArenaVideoPaused(true);
       setSaveStatus("Arena QA camera could not resume — try again");
@@ -6557,6 +6650,7 @@ export default function ArenaClient({
     if (!loopVideo) return;
 
     firstVideoRef.current?.pause();
+    arenaMediaSession.stop();
     loopVideo.currentTime = 0;
     syncLoopCameraFromVideo(loopVideo);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
@@ -6574,7 +6668,7 @@ export default function ArenaClient({
       finishLoopReveal(true);
     } else {
       loopRevealTimerRef.current = window.setTimeout(() => finishLoopReveal(loopVideo.paused), 700);
-      void loopVideo.play().catch(() => finishLoopReveal(true));
+      void playOfficialArenaVideo(loopVideo).then((played) => { if (played === false) finishLoopReveal(true); });
       setIsArenaVideoPaused(false);
     }
     setActiveVideoIndex(1);
@@ -6621,6 +6715,10 @@ export default function ArenaClient({
   }
 
   function handleCardLoopPlaying(event: SyntheticEvent<HTMLVideoElement>) {
+    if (!arenaMediaSession.owns(event.currentTarget) || !readTouchlineArenaMediaAvailability()) {
+      event.currentTarget.pause();
+      return;
+    }
     startLoopCameraFrameSync(event.currentTarget);
     if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
     loopRevealTimerRef.current = null;
@@ -6645,6 +6743,9 @@ export default function ArenaClient({
   function revealOfficialArena(reducedMotion: boolean) {
     const entryVideo = firstVideoRef.current;
     const loopVideo = secondVideoRef.current;
+    arenaMediaSession.stop();
+    if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
+    loopRevealTimerRef.current = null;
 
     if (reducedMotion) {
       entryVideo?.pause();
@@ -6670,7 +6771,9 @@ export default function ArenaClient({
     setHasEntryVideoFinished(false);
     setActiveVideoIndex(0);
     setIsArenaVideoPaused(false);
-    void entryVideo.play().catch(startCardLoopVideo);
+    void playOfficialArenaVideo(entryVideo).then((played) => {
+      if (played === false && arenaMediaMountedRef.current && readTouchlineArenaMediaAvailability()) startCardLoopVideo();
+    });
   }
 
   function skipOfficialIntroExperience() {
@@ -6681,6 +6784,9 @@ export default function ArenaClient({
   // The official cinematic remains available by an explicit Arena action,
   // without forcing returning users through it on every visit.
   function replayEntryVideo() {
+    arenaMediaSession.stop();
+    if (loopRevealTimerRef.current !== null) window.clearTimeout(loopRevealTimerRef.current);
+    loopRevealTimerRef.current = null;
     firstVideoRef.current?.pause();
     secondVideoRef.current?.pause();
     if (firstVideoRef.current) firstVideoRef.current.currentTime = 0;
@@ -7685,7 +7791,7 @@ export default function ArenaClient({
     >
       <section
         ref={stageRef}
-        className={`arena-stage relative h-[100dvh] min-h-0 w-full overflow-hidden bg-black${isArenaFallbackFullscreen ? " is-mobile-fullscreen-fallback" : ""}`}
+        className={`arena-stage relative h-[100dvh] min-h-0 w-full overflow-hidden bg-black ${responsiveStyles.stage}${isArenaFallbackFullscreen ? " is-mobile-fullscreen-fallback" : ""}`}
         data-fullscreen-mode={isArenaFallbackFullscreen ? "fallback" : isArenaNativeFullscreen ? "native" : "windowed"}
         data-entry-state={isArenaFunctionalReady ? "ready" : "intro"}
         data-coach-spotlight={isCoachSpotlightOpen || selectedLiveCoachData ? "open" : "closed"}
@@ -7699,18 +7805,19 @@ export default function ArenaClient({
           onReveal={revealOfficialArena}
           onSequenceStart={(canSkip) => setIsEntrySkipAvailable(canSkip)}
           onSkip={skipOfficialIntroExperience}
+          onToggleAudio={toggleArenaAudio}
+          audioMuted={isArenaAudioMuted}
         />
         {standalonePanel !== "live" ? (
           <div className="arena-video-stack" aria-hidden="true">
             <video
               className={`arena-video arena-video-a ${activeVideoIndex === 0 ? "is-visible" : ""}`}
               ref={firstVideoRef}
-              // WebKit may keep buffering a hidden video even after pause().
-              // Do not attach the large official source until the Arena can
-              // actually be seen in its required landscape viewport.
-              src={isArenaIntroViewportReady ? TOUCHLINE_ARENA_ENTRY_VIDEO : undefined}
+              // Load only after the Arena is first visible; later rotations
+              // pause playback without replacing its source or losing time.
+              src={hasArenaMediaSource ? TOUCHLINE_ARENA_ENTRY_VIDEO : undefined}
               poster={TOUCHLINE_ARENA_VIDEO_POSTER}
-              muted
+              muted={isArenaAudioMuted}
               playsInline
               preload={isEntrySkipAvailable ? "auto" : "metadata"}
               onEnded={startCardLoopVideo}
@@ -7723,11 +7830,11 @@ export default function ArenaClient({
             <video
               className={`arena-video arena-video-b ${activeVideoIndex === 1 ? "is-visible" : ""}`}
               ref={secondVideoRef}
-              src={isArenaIntroViewportReady
+              src={hasArenaMediaSource
                 ? TOUCHLINE_ARENA_LOOP_VIDEO
                 : undefined}
               poster={TOUCHLINE_ARENA_VIDEO_POSTER}
-              muted
+              muted={isArenaAudioMuted}
               playsInline
               loop
               preload="metadata"
@@ -7747,6 +7854,16 @@ export default function ArenaClient({
         <div className="arena-atmosphere" />
 
         <div className="arena-intro-actions" aria-label={siteLanguage === "pt-BR" ? "Controles da introdução" : "Intro controls"}>
+          {!standaloneExperience ? <button
+            className="arena-intro-replay-toggle"
+            type="button"
+            onClick={toggleArenaAudio}
+            aria-label={arenaAudioLabel}
+            title={arenaAudioLabel}
+          >
+            {isArenaAudioMuted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
+            <span>{siteLanguage === "pt-BR" ? "Som" : "Sound"}</span>
+          </button> : null}
           {hasEntryVideoFinished ? (
             <button
               className="arena-intro-replay-toggle"
@@ -7759,7 +7876,7 @@ export default function ArenaClient({
               <span>{siteLanguage === "pt-BR" ? "Ver intro" : "Watch intro"}</span>
             </button>
           ) : null}
-          {isEntrySkipAvailable && !hasEntryVideoFinished && introExperienceMode === "hidden" ? (
+          {!hasEntryVideoFinished && introExperienceMode === "hidden" ? (
             <button
               className="arena-entry-skip-toggle"
               type="button"

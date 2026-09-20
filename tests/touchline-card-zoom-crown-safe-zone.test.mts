@@ -19,7 +19,7 @@ test("the shared card zoom reserves a leader-crown safe zone without changing cr
   assert.match(zoomCss, /\.expandedCard > \[data-card-leadership-crown="true"\],[\s\S]*?margin-top: 0 !important/);
   assert.match(zoomCss, /100dvh - 72px - var\(--touchline-card-zoom-crown-safe-top\)/);
   assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: clamp\(82px, 21vw, 98px\)/);
-  assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: clamp\(68px, 13vw, 94px\)/);
+  assert.match(zoomCss, /--touchline-card-zoom-crown-safe-top: calc\(var\(--touchline-card-zoom-width\) \* \.30\)/);
   assert.match(zoomCss, /100dvh - 64px - var\(--touchline-card-zoom-crown-safe-top\)/);
   assert.match(playerCard, /src=\{TOUCHLINE_PLAYER_LEADER_CROWN_ASSET\}/);
   assert.match(coachCard, /src=\{TOUCHLINE_PLAYER_LEADER_CROWN_ASSET\}/);

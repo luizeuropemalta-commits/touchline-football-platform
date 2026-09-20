@@ -28,8 +28,8 @@ export type AuthoritativeRosterRows = {
   squadMembers: DatabaseRecord[];
   playerSeasonStatistics?: DatabaseRecord[];
   playerFixtureStatistics?: DatabaseRecord[];
-  /** Immutable V3 fallback while the seasonal `is_current` marker changes. */
-  publishedV3TotalRatings?: ReadonlyMap<string, number>;
+  /** Sole rating authority, validated against the known season by the reader. */
+  publishedV3TotalRatings?: ReadonlyMap<string, number | null>;
 };
 
 export type AuthoritativeRosterSnapshot = {
@@ -95,8 +95,23 @@ function countryCodeForPlayer(player: DatabaseRecord) {
   return hasTouchlineCountryFlag(fromStoredCode) ? fromStoredCode : "N/A";
 }
 
-function totalRatingFor(seasonStatistic?: DatabaseRecord | null) {
-  return asFiniteNumber(asRecord(seasonStatistic?.summary_payload)?.totalRating);
+/** Keep a valid publication through a marker transition, never across a known season mismatch. */
+export function publishedRosterRatingsForSeason(ranking: {
+  phase: string;
+  scoringVersion: string | null;
+  seasonId: string | null;
+  players: readonly { playerId: string; totalRating: number | null }[];
+}, currentSeasonId: string | null) {
+  const publishedSeasonId = asUuid(ranking.seasonId);
+  return new Map<string, number | null>(
+    ranking.phase === "ranked" && ranking.scoringVersion === "player_scoring_v3"
+      && publishedSeasonId && (!currentSeasonId || publishedSeasonId === currentSeasonId)
+      ? ranking.players.flatMap((player) => {
+        const playerId = asUuid(player.playerId);
+        return playerId ? [[playerId, asFiniteNumber(player.totalRating)] as const] : [];
+      })
+      : [],
+  );
 }
 
 function verifiedSeasonStats(row: DatabaseRecord | null | undefined, position: string) {
@@ -281,11 +296,9 @@ export function mapAuthoritativeRosterRows(
 
     const seasonStats = verifiedSeasonStats(seasonStatisticByPlayerId.get(playerId), position);
     const matchStats = verifiedMatchStats(fixtureStatisticByPlayerId.get(playerId), position);
-    // The public ranking is already the audited V3 publication. Its rating is
-    // authoritative when the season aggregate is temporarily outside the
-    // current-season marker, never a local recalculation or V2 fallback.
-    const seasonTotalRating = totalRatingFor(seasonStatisticByPlayerId.get(playerId))
-      ?? asFiniteNumber(rows.publishedV3TotalRatings?.get(playerId));
+    // The reader supplies the sole, season-validated published V3 authority.
+    // Newer mutable aggregates cannot fill a published null or absent player.
+    const seasonTotalRating = asFiniteNumber(rows.publishedV3TotalRatings?.get(playerId));
     const matchRating = asFiniteNumber(fixtureStatisticByPlayerId.get(playerId)?.rating);
     cards.push({
       id: playerId,
@@ -317,7 +330,7 @@ export function mapAuthoritativeRosterRows(
       // read model. The fields remain inert only for the persisted DTO shape.
       touchlinePoints: 0,
       seasonTouchlinePoints: null,
-      ...(seasonTotalRating === null ? {} : { seasonTotalRating }),
+      seasonTotalRating,
       ...(matchRating === null ? {} : { matchRating }),
       ...(seasonStats ? { seasonStats } : {}),
       ...(matchStats ? { matchStats } : {}),
@@ -473,17 +486,7 @@ export async function readAuthoritativeTouchlineRoster(
   }
 
   const currentSeasonId = asUuid(currentSeasonResponse.data?.id);
-  const publishedV3TotalRatings = new Map(
-    activeRanking.phase === "ranked" && activeRanking.scoringVersion === "player_scoring_v3"
-      ? activeRanking.players.flatMap((player) => {
-        const playerId = asUuid(player.playerId);
-        const totalRating = player.totalRating;
-        return playerId && typeof totalRating === "number" && Number.isFinite(totalRating)
-          ? [[playerId, totalRating] as const]
-          : [];
-      })
-      : [],
-  );
+  const publishedV3TotalRatings = publishedRosterRatingsForSeason(activeRanking, currentSeasonId);
   const [seasonStatisticsResponse, fixtureStatisticsResponse] = await Promise.all([
     currentSeasonId
       ? admin.from("football_player_season_statistics")

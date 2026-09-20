@@ -229,11 +229,11 @@ test("phone landscape keeps the complete expanded card inside the short viewport
 
   assert.match(
     zoomCss,
-    /@media \(orientation: landscape\) and \(max-height: 420px\)[\s\S]*?--touchline-card-static-scale: \.5;/,
+    /@media \(orientation: landscape\) and \(max-height: 520px\)[\s\S]*?--touchline-card-zoom-width: min\(245px, calc\(\(100dvh - 64px\) \* \.51\)\);/,
   );
   assert.match(
     zoomCss,
-    /\.panelWithDetails \.expandedMeta \{[\s\S]*?display: none;/,
+    /grid-template-areas: "card identity" "card performance"/,
   );
 });
 

@@ -1,0 +1,79 @@
+.gate { display: none; }
+
+.message {
+  width: min(100%, 360px);
+  margin: auto;
+  text-align: center;
+}
+.shield { display: block; width: 52px; height: 60px; margin: 0 auto 12px; object-fit: contain; filter: drop-shadow(0 0 18px #a3ff122b); }
+.brand {
+  color: #a3ff12;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .22em;
+}
+.eyebrow { color: #91a898 !important; font-size: 11px !important; letter-spacing: .12em; text-transform: uppercase; }
+.device {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 168px;
+  height: 130px;
+  margin: 30px auto 24px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #a3ff120d, transparent 70%);
+  color: #a3ff12;
+  filter: drop-shadow(0 0 18px #a3ff1230);
+}
+.phone { transform: rotate(90deg); }
+.rotate { position: absolute; right: 4px; top: 10px; color: #edffcf; }
+.pitch { position: absolute; width: 65px; height: 32px; border: 1px solid #a3ff1266; border-radius: 2px; }
+.pitch i { position: absolute; left: 50%; height: 100%; border-left: 1px solid #a3ff1266; }
+.pitch b { position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; border: 1px solid #a3ff1266; border-radius: 50%; transform: translate(-50%, -50%); }
+.message h1 {
+  margin: 0 0 16px;
+  color: #f2fff4;
+  font-size: clamp(24px, 7vw, 32px);
+  line-height: 1.12;
+  letter-spacing: -.035em;
+  font-weight: 800;
+}
+.message > p:not(.brand):not(.eyebrow) {
+  margin: 0;
+  color: #b8c7bd;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.hint {
+  display: block;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #a3ff122b;
+  color: #91a898;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Keep identical to TOUCHLINE_PORTRAIT_QUERY. CSS protects even without JS. */
+@media (max-width: 767px) and (orientation: portrait) {
+  .content {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  .skip { display: none !important; }
+  .gate {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: max(28px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    background: radial-gradient(ellipse at 50% 42%, #11271a 0, #06110c 45%, #020807 100%);
+    outline: none;
+  }
+}

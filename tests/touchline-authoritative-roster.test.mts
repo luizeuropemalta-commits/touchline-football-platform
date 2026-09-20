@@ -10,6 +10,7 @@ import {
 } from "../lib/touchlineArena/authoritative-arena-state.ts";
 import {
   mapAuthoritativeRosterRows,
+  publishedRosterRatingsForSeason,
   validateLineupInventoryOwnership,
 } from "../lib/touchlineArena/authoritative-roster-server.ts";
 import { parseAuthoritativeRosterResponse } from "../lib/touchlineArena/authoritative-roster-client.ts";
@@ -27,6 +28,8 @@ const PLAYER_ID = "123e4567-e89b-42d3-a456-426614174003";
 const CLUB_ID = "123e4567-e89b-42d3-a456-426614174004";
 const OTHER_INVENTORY_ID = "123e4567-e89b-42d3-a456-426614174005";
 const RELEASED_INVENTORY_ID = "123e4567-e89b-42d3-a456-426614174006";
+const SEASON_ID = "123e4567-e89b-42d3-a456-426614174010";
+const OTHER_SEASON_ID = "123e4567-e89b-42d3-a456-426614174011";
 const PUBLISHED_EDITORIAL_CARD = {
   tierKey: "emerald-green" as const,
   cardPrice: { amountMinor: 4_900, currency: "GBP" as const },
@@ -132,19 +135,72 @@ test("maps active contracts to complete canonical roster cards with real UUIDs",
     inventoryId: INVENTORY_ID,
     touchlinePoints: 0,
     seasonTouchlinePoints: null,
+    seasonTotalRating: null,
     editorialCard: PUBLISHED_EDITORIAL_CARD,
   });
 });
 
 test("uses the published V3 rating when the current-season marker has no aggregate row", () => {
-  const rows = completeRows();
-  rows.publishedV3TotalRatings = new Map([[PLAYER_ID, 8.21]]);
+  const rows = {
+    ...completeRows(),
+    publishedV3TotalRatings: new Map([[PLAYER_ID, 8.21]]),
+  };
 
   const result = mapAuthoritativeRosterRows(rows, publishedCards());
   assert.equal(result.ok, true);
   if (!result.ok) return;
 
   assert.equal(result.snapshot.cards[0]?.seasonTotalRating, 8.21);
+});
+
+test("roster rating is exclusively the same-season publication, not the newer season aggregate", () => {
+  for (const [label, publication, expected] of [
+    ["published value", new Map([[PLAYER_ID, 20.43]]), 20.43],
+    ["published zero", new Map([[PLAYER_ID, 0]]), 0],
+    ["published null", new Map([[PLAYER_ID, null]]), null],
+    ["missing player", new Map(), null],
+    ["missing publication", undefined, null],
+  ] as const) {
+    const result = mapAuthoritativeRosterRows({
+      ...completeRows(),
+      publishedV3TotalRatings: publication,
+      playerSeasonStatistics: [{
+        football_player_id: PLAYER_ID,
+        summary_payload: { totalRating: 27.79, goals: 2, assists: 1 },
+      }],
+    }, publishedCards());
+    assert.equal(result.ok, true, label);
+    if (!result.ok) continue;
+    assert.equal(result.snapshot.cards[0]?.seasonTotalRating, expected, label);
+    assert.equal(result.snapshot.cards[0]?.seasonStats?.goals, 2, "supplementary stats remain available");
+    assert.equal(squadCardToExactPlayer(result.snapshot.cards[0]!).totalRating, expected, label);
+  }
+});
+
+test("roster reader scopes its publication to the known current season while preserving marker transitions", () => {
+  for (const [currentSeasonId, publishedSeasonId, scoringVersion, expected] of [
+    [SEASON_ID, SEASON_ID, "player_scoring_v3", 20.43],
+    [null, SEASON_ID, "player_scoring_v3", 20.43],
+    [SEASON_ID, OTHER_SEASON_ID, "player_scoring_v3", null],
+    [SEASON_ID, null, "player_scoring_v3", null],
+    [SEASON_ID, SEASON_ID, "player_scoring_v2", null],
+  ] as const) {
+    const publishedV3TotalRatings = publishedRosterRatingsForSeason({
+      phase: "ranked", seasonId: publishedSeasonId, scoringVersion,
+      players: [{ playerId: PLAYER_ID, totalRating: 20.43 }],
+    }, currentSeasonId);
+    const result = mapAuthoritativeRosterRows({
+      ...completeRows(),
+      publishedV3TotalRatings,
+      playerSeasonStatistics: [{ football_player_id: PLAYER_ID, summary_payload: { totalRating: 27.79, goals: 2 } }],
+    }, publishedCards());
+    assert.equal(result.ok, true);
+    if (!result.ok) continue;
+    assert.equal(result.snapshot.cards[0]?.seasonTotalRating, expected);
+    assert.equal(result.snapshot.cards[0]?.seasonStats?.goals, 2);
+  }
+  const source = readFileSync(new URL("../lib/touchlineArena/authoritative-roster-server.ts", import.meta.url), "utf8");
+  assert.match(source, /publishedV3TotalRatings = publishedRosterRatingsForSeason\(activeRanking, currentSeasonId\)/);
 });
 
 test("counts represented clubs from active-contract inventory club IDs only", () => {

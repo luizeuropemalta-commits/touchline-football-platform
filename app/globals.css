@@ -1,6 +1,7 @@
 @import "tailwindcss";
 /* Next watches PostCSS directory dependencies recursively, including ancestors. */
 @source not "../artifacts";
+@source not "../work";
 
 :root {
   --void: #02050a;
@@ -24,6 +25,14 @@
   --touchline-safe-area-right: env(safe-area-inset-right);
   --touchline-safe-area-bottom: env(safe-area-inset-bottom);
   --touchline-safe-area-left: env(safe-area-inset-left);
+  /* Shared responsive rhythm: use both dimensions, not device-name guesses.
+     Short landscape phones stay compact; notebooks and large displays grow
+     together. Never shrink the whole document or disable browser zoom. */
+  --touchline-ui-unit: clamp(.75rem, min(1.25vw, 2.1dvh), 1.5rem);
+  --touchline-control-size: max(2.75rem, calc(var(--touchline-ui-unit) * 3));
+  --touchline-ui-icon: calc(var(--touchline-ui-unit) * 1.4);
+  --touchline-ui-label: clamp(.625rem, calc(var(--touchline-ui-unit) * .8), 1.125rem);
+  --touchline-ui-body: clamp(.6875rem, calc(var(--touchline-ui-unit) * .9), 1.25rem);
 }
 
 @supports (height: 100dvh) {
@@ -87,6 +96,12 @@ body::before {
   opacity: .82;
 }
 button, a, input, textarea, select { font: inherit; }
+/* Owner rule: phone gameplay is landscape-only, including body-portaled zooms.
+   Keep this query aligned with TOUCHLINE_PORTRAIT_QUERY and the boundary CSS. */
+@media (max-width: 767px) and (orientation: portrait) {
+  html, body { overflow: hidden !important; overscroll-behavior: none; }
+  body > :not([data-touchline-orientation-root]):not([data-touchline-orientation-gate]) { display: none !important; }
+}
 button, a { -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 a, button { outline: none; }

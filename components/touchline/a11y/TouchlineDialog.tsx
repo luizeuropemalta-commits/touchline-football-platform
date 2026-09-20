@@ -88,6 +88,9 @@ function lockSiblingBackground(dialog: HTMLElement) {
   while (parent) {
     for (const element of Array.from(parent.children)) {
       if (!(element instanceof HTMLElement) || element === child || element.contains(dialog)) continue;
+      // The phone rotation notice is a body sibling, not part of the game.
+      // It must remain focusable even while a portaled card zoom is retained.
+      if (element.hasAttribute("data-touchline-orientation-gate")) continue;
       siblings.push(element);
     }
     if (parent === document.body) break;

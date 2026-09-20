@@ -4,11 +4,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { inferArenaRole, makeArenaShortName, normalizeOfficialShirtNumber } from "@/lib/football-data/arena-lineup";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { loadTouchlinePublishedCardPresentations } from "./card-publication-read-model";
+import { createCompleteTouchlineCatalogueAdmin, loadCompleteTouchlineCataloguePresentations } from "./complete-catalogue-read-server";
 import { formatTouchlineMarketValueEur } from "./editorial-card-profile";
 import { hasTouchlineCountryFlag, normalizeTouchlineCountryCode3, touchlineCountryCode3FromName } from "./country-flags";
 import type { TouchlineActiveRankingState } from "./card-ranking-live";
 import type { ClubOwnerSquadCard } from "./demo-data";
+import { applyTouchlineSeasonPoints } from "./matchday-player-points";
+import { readPublicSeasonPlayerPoints } from "./public-season-player-points-server";
 import {
   projectTouchlineCardStatsByPosition,
   type TouchlineCardStats,
@@ -63,6 +65,25 @@ function verifiedMatchStats(row: Row | undefined, playerPosition: string) {
     rating: row.rating,
   }, playerPosition, true);
 }
+
+function requireCompleteRankedSeasonProjection(
+  playerIds: readonly string[],
+  points: readonly { canonicalPlayerId: string }[],
+) {
+  const expected = new Set(playerIds.map((playerId) => playerId.trim().toLowerCase()).filter(Boolean));
+  const received = new Set<string>();
+  for (const point of points) {
+    const playerId = point.canonicalPlayerId.trim().toLowerCase();
+    if (!expected.has(playerId) || received.has(playerId)) {
+      throw new Error("TL_RANKED_CATALOGUE_SEASON_PROJECTION_INCOMPLETE");
+    }
+    received.add(playerId);
+  }
+  if (received.size !== expected.size) {
+    throw new Error("TL_RANKED_CATALOGUE_SEASON_PROJECTION_INCOMPLETE");
+  }
+}
+
 /** Public published-card catalogue decorated from canonical Sportmonks ratings. */
 export async function loadTouchLineRankedCardCatalog(
   state: TouchlineActiveRankingState,
@@ -71,21 +92,25 @@ export async function loadTouchLineRankedCardCatalog(
   if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v3" || !state.seasonId || !state.players.length) return [];
   const admin = providedAdmin ?? createAdminClient();
   if (!admin) return [];
-  const playerIds = state.players.map((player) => String(player.playerId)).filter(Boolean);
-  const [{ data: playerData, error: playerError }, { data: squadData, error: squadError }, { data: seasonData, error: seasonError }, { data: fixtureData, error: fixtureError }] = await Promise.all([
-    admin.from("football_players").select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds),
-    admin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }),
-    admin.from("football_player_season_statistics").select("football_player_id,summary_payload,position_statistics_payload").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds),
-    admin.from("touchline_player_fixture_score_settlements").select("football_player_id,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds).order("starts_at", { referencedTable: "football_fixtures", ascending: false }),
+  const catalogueAdmin = createCompleteTouchlineCatalogueAdmin(admin);
+  const playerIds = [...new Set(state.players.map((player) => String(player.playerId).trim().toLowerCase()).filter(Boolean))];
+  const [{ data: playerData }, { data: squadData }, { data: fixtureData }, seasonPoints, published] = await Promise.all([
+    catalogueAdmin.from("football_players").select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds),
+    catalogueAdmin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }),
+    catalogueAdmin.from("touchline_player_fixture_score_settlements").select("football_player_id,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds),
+    readPublicSeasonPlayerPoints(playerIds, {
+      providedAdmin: catalogueAdmin,
+      seasonId: state.seasonId,
+      publishedRankingState: state,
+    }),
+    loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin),
   ]);
-  if (playerError || squadError || seasonError || fixtureError) return [];
+  requireCompleteRankedSeasonProjection(playerIds, seasonPoints);
   const players = rows(playerData);
   const clubIds = [...new Set(players.map((player) => text(player.current_club_id)).filter((id): id is string => Boolean(id)))];
-  const { data: clubData, error: clubError } = clubIds.length
-    ? await admin.from("football_clubs").select("id,name").in("id", clubIds)
-    : { data: [], error: null };
-  if (clubError) return [];
-  const published = await loadTouchlinePublishedCardPresentations({ playerIds, providedAdmin: admin as never });
+  const { data: clubData } = clubIds.length
+    ? await catalogueAdmin.from("football_clubs").select("id,name").in("id", clubIds)
+    : { data: [] };
   const playerById = new Map(players.flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const clubById = new Map(rows(clubData).flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const squadByPlayerId = new Map<string, Row>();
@@ -93,14 +118,18 @@ export async function loadTouchLineRankedCardCatalog(
     const playerId = text(row.player_id);
     if (playerId && !squadByPlayerId.has(playerId)) squadByPlayerId.set(playerId, row);
   }
-  const seasonByPlayerId = new Map(rows(seasonData).flatMap((row) => text(row.football_player_id) ? [[text(row.football_player_id)!, row] as const] : []));
   const matchByPlayerId = new Map<string, Row>();
   for (const row of rows(fixtureData)) {
     const playerId = text(row.football_player_id);
-    if (playerId && !matchByPlayerId.has(playerId)) matchByPlayerId.set(playerId, row);
+    const current = playerId ? matchByPlayerId.get(playerId) : null;
+    const startsAt = Date.parse(text(object(row.football_fixtures).starts_at) ?? "");
+    const currentStartsAt = Date.parse(text(object(current?.football_fixtures).starts_at) ?? "");
+    if (playerId && (!current || (Number.isFinite(startsAt) && (!Number.isFinite(currentStartsAt) || startsAt > currentStartsAt)))) {
+      matchByPlayerId.set(playerId, row);
+    }
   }
 
-  return state.players.flatMap((ranking) => {
+  const cards = state.players.flatMap((ranking): ClubOwnerSquadCard[] => {
     const playerId = String(ranking.playerId).toLowerCase();
     const player = playerById.get(playerId);
     const editorialCard = published.get(playerId);
@@ -140,7 +169,7 @@ export async function loadTouchLineRankedCardCatalog(
       // player surfaces read the two rating fields below.
       touchlinePoints: 0,
       seasonTouchlinePoints: null,
-      seasonTotalRating: ranking.totalRating,
+      seasonTotalRating: null,
       publishedRanking: state.snapshotId && state.publishedAt ? {
         snapshotId: state.snapshotId,
         providerPlayerId: ranking.providerPlayerId ?? null,
@@ -149,10 +178,14 @@ export async function loadTouchLineRankedCardCatalog(
         appearances: ranking.appearances ?? null,
       } : undefined,
       matchRating: number(match?.rating),
-      seasonStats: verifiedStats(seasonByPlayerId.get(playerId), position),
       matchStats: verifiedMatchStats(match, position),
     }];
   });
+  return applyTouchlineSeasonPoints(cards, seasonPoints).map((card) => (
+    card.publishedRanking && card.publishedRanking.totalRating !== card.seasonTotalRating
+      ? { ...card, publishedRanking: undefined }
+      : card
+  ));
 }
 
 /**
@@ -166,48 +199,42 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
 ): Promise<ClubOwnerSquadCard[]> {
   const admin = providedAdmin ?? createAdminClient();
   if (!admin) return [];
+  const catalogueAdmin = createCompleteTouchlineCatalogueAdmin(admin);
 
-  const { data: publicationData, error: publicationError } = await admin
+  const { data: publicationData } = await catalogueAdmin
     .from("touchline_card_publications")
     .select("player_id")
     .eq("publication_status", "published")
-    .limit(750);
-  if (publicationError) return [];
+    .order("player_id", { ascending: true });
 
   const playerIds = [...new Set(rows(publicationData)
     .map((row) => text(row.player_id)?.toLowerCase())
     .filter((playerId): playerId is string => Boolean(playerId)))];
   if (!playerIds.length) return [];
 
-  const [playersResponse, squadsResponse, seasonStatsResponse, published] = await Promise.all([
-    admin
+  const [playersResponse, squadsResponse, seasonPoints, published] = await Promise.all([
+    catalogueAdmin
       .from("football_players")
       .select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
       .in("id", playerIds),
-    admin
+    catalogueAdmin
       .from("football_squad_members")
       .select("player_id,club_id,jersey_number,position,status,source_updated_at")
       .in("player_id", playerIds)
       .eq("status", "active")
       .order("source_updated_at", { ascending: false }),
-    admin
-      .from("football_player_season_statistics")
-      .select("football_player_id,summary_payload,position_statistics_payload,source_synced_at")
-      .eq("scoring_version", "player_scoring_v3")
-      .in("football_player_id", playerIds)
-      .order("source_synced_at", { ascending: false }),
-    loadTouchlinePublishedCardPresentations({ playerIds, providedAdmin: admin as never }),
+    readPublicSeasonPlayerPoints(playerIds, { providedAdmin: catalogueAdmin }),
+    loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin),
   ]);
-  if (playersResponse.error || squadsResponse.error || seasonStatsResponse.error || !published.size) return [];
+  if (!published.size) return [];
 
   const players = rows(playersResponse.data);
   const clubIds = [...new Set(players
     .map((player) => text(player.current_club_id))
     .filter((clubId): clubId is string => Boolean(clubId)))];
-  const { data: clubData, error: clubError } = clubIds.length
-    ? await admin.from("football_clubs").select("id,name").in("id", clubIds)
-    : { data: [], error: null };
-  if (clubError) return [];
+  const { data: clubData } = clubIds.length
+    ? await catalogueAdmin.from("football_clubs").select("id,name").in("id", clubIds)
+    : { data: [] };
 
   const playerById = new Map(players.flatMap((row) => {
     const playerId = text(row.id)?.toLowerCase();
@@ -222,13 +249,7 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
     const playerId = text(row.player_id)?.toLowerCase();
     if (playerId && !squadByPlayerId.has(playerId)) squadByPlayerId.set(playerId, row);
   }
-  const seasonByPlayerId = new Map<string, Row>();
-  for (const row of rows(seasonStatsResponse.data)) {
-    const playerId = text(row.football_player_id)?.toLowerCase();
-    if (playerId && !seasonByPlayerId.has(playerId)) seasonByPlayerId.set(playerId, row);
-  }
-
-  return [...published.entries()].flatMap(([playerId, editorialCard]) => {
+  const cards = [...published.entries()].flatMap(([playerId, editorialCard]): ClubOwnerSquadCard[] => {
     const player = playerById.get(playerId);
     if (!player) return [];
     const squad = squadByPlayerId.get(playerId);
@@ -240,7 +261,6 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
       ?? text(player.provider_position)
       ?? text(player.position)
       ?? "Player";
-    const season = seasonByPlayerId.get(playerId);
     return [{
       id: playerId,
       providerPlayerId: text(player.provider_player_id),
@@ -268,9 +288,9 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
       editorialCard,
       touchlinePoints: 0,
       seasonTouchlinePoints: null,
-      seasonTotalRating: number(object(season?.summary_payload).totalRating),
+      seasonTotalRating: null,
       matchRating: null,
-      seasonStats: verifiedStats(season, position),
     }];
   });
+  return applyTouchlineSeasonPoints(cards, seasonPoints);
 }

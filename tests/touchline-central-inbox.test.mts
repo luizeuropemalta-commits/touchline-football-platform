@@ -80,3 +80,23 @@ test("unsafe deep links and client-controlled receipt fields are rejected", () =
   });
   assert.equal(parseTouchlineCentralReadIntent({ messageId: "not-a-uuid" }), null);
 });
+
+test("Central accepts canonical product destinations without dropping notices", () => {
+  for (const deepLink of ["/my-club", "/touchline-tables", "/touchline-player-card-rankings", "/live?fixture=123", "/touchline-clubs/manchester-city", "/touchline-players/ruben-dias", "/touchline-coaches/pep-guardiola"]) {
+    assert.equal(isSafeTouchlineCentralDeepLink(deepLink), true, deepLink);
+    const inbox = resolveTouchlineCentralInbox({ userId: "user-a", competition: "england", locale: "en", messages: [message({ localizations: [{ locale: "en", title: "Notice", body: "Details", deepLink }] })], readAtByMessageId: {} });
+    assert.equal(inbox.length, 1, deepLink);
+  }
+});
+
+test("legacy ranking notices resolve to the real ranking page without losing query or anchor", () => {
+  const inbox = resolveTouchlineCentralInbox({ userId: "user-a", competition: "england", locale: "en", messages: [message({ localizations: [{ locale: "en", title: "League", body: "Details", deepLink: "/rankings?lang=en-GB#leaders" }] })], readAtByMessageId: {} });
+  assert.equal(inbox[0]?.deepLink, "/touchline-tables?lang=en-GB#leaders");
+});
+
+test("canonicalization does not expand notices to external or administrative paths", () => {
+  for (const deepLink of ["//example.com/arena", "/\\example.com/arena", "/arena/../admin", "/arena/%2e%2e/admin", "/arena\n/../admin", "/rankings/missing", "https://example.com/arena", "javascript:alert(1)"]) {
+    assert.equal(isSafeTouchlineCentralDeepLink(deepLink), false, deepLink);
+  }
+  assert.equal(isSafeTouchlineCentralDeepLink(null), true);
+});

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { FastForward } from "lucide-react";
+import { FastForward, Volume2, VolumeX } from "lucide-react";
 
 import {
   TOUCHLINE_ARENA_INTRO_SLOGAN,
@@ -22,6 +22,8 @@ type TouchlineArenaIntroProps = {
   onReveal: (reducedMotion: boolean) => void;
   onSequenceStart: (canSkip: boolean) => void;
   onSkip: () => void;
+  onToggleAudio?: () => void;
+  audioMuted?: boolean;
 };
 
 type MotionPreference = "pending" | "normal" | "reduce";
@@ -34,6 +36,8 @@ export default function TouchlineArenaIntro({
   onReveal,
   onSequenceStart,
   onSkip,
+  onToggleAudio,
+  audioMuted = true,
 }: TouchlineArenaIntroProps) {
   const [motionPreference, setMotionPreference] = useState<MotionPreference>("pending");
   const [phase, setPhase] = useState<IntroDisplayPhase>("pending");
@@ -66,7 +70,7 @@ export default function TouchlineArenaIntro({
     const timeline = touchlineArenaIntroTimeline(reducedMotion);
     const timers: number[] = [];
 
-    sequenceStartRef.current(false);
+    sequenceStartRef.current(true);
     timers.push(window.setTimeout(() => setPhase("suspense"), 0));
     timers.push(window.setTimeout(() => setPhase("outline"), timeline.outlineAt));
     timers.push(window.setTimeout(() => setPhase("energy"), timeline.energyAt));
@@ -83,7 +87,7 @@ export default function TouchlineArenaIntro({
 
   const isPortuguese = locale === "pt-BR";
   const displayPhase: IntroDisplayPhase = mode === "pending" ? "pending" : phase;
-  const canSkipSequence = mode === "first" && displayPhase !== "reveal";
+  const canSkipSequence = mode !== "hidden" && mode !== "skip";
 
   useEffect(() => {
     if (displayPhase === "suspense") {
@@ -146,10 +150,17 @@ export default function TouchlineArenaIntro({
       </div>
 
       {canSkipSequence ? (
+        <div className={styles.sequenceControls}>
+        {onToggleAudio ? <button type="button" className={styles.sequenceSkip} onClick={onToggleAudio}
+          aria-label={isPortuguese ? audioMuted ? "Ativar som da Arena" : "Silenciar Arena" : audioMuted ? "Enable Arena sound" : "Mute Arena"}>
+          {audioMuted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
+          {isPortuguese ? "Som" : "Sound"}
+        </button> : null}
         <button type="button" className={styles.sequenceSkip} onClick={() => skipRef.current()}>
           {isPortuguese ? "Pular intro" : "Skip intro"}
           <FastForward aria-hidden="true" />
         </button>
+        </div>
       ) : null}
     </section>
   );

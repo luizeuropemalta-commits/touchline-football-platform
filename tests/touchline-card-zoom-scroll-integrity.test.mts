@@ -7,6 +7,16 @@ function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
+test("touch users retain a visible close control while scrolling expanded details", () => {
+  const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
+  const close = zoomCss.match(/\.panelWithDetails \.close \{([^}]+)\}/)?.[1] ?? "";
+  assert.match(close, /position: sticky/);
+  assert.match(close, /top: 4px/);
+  assert.match(close, /grid-column: 1 \/ -1/);
+  assert.match(close, /grid-row: 1/);
+  assert.match(close, /justify-self: end/);
+});
+
 test("expanded cards lock the document and keep one modal scroll surface", () => {
   const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
   const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
@@ -48,4 +58,18 @@ test("card zoom ignores a drag gesture while preserving keyboard activation", ()
   assert.match(zoom, /if \(pointerMovedRef\.current\) \{[\s\S]*?return;/);
   assert.match(zoom, /event\.key !== "Enter" && event\.key !== " "/);
   assert.match(zoomCss, /touch-action: pan-x pan-y;/);
+});
+
+test("short landscape zoom keeps named card regions and scales the artwork to its measured column", () => {
+  const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
+  const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
+  const landscape = zoomCss.slice(zoomCss.indexOf("@media (orientation: landscape) and (max-height: 520px)"));
+
+  assert.match(landscape, /grid-template-areas: "card identity" "card performance"/);
+  assert.doesNotMatch(landscape, /grid-column: auto|grid-row: auto|--touchline-card-static-scale: \.5/);
+  assert.match(landscape, /--touchline-card-zoom-width: min\(245px, calc\(\(100dvh - 64px\) \* \.51\)\)/);
+  assert.match(zoom, /new ResizeObserver/);
+  assert.match(zoom, /entry\.contentRect\.width/);
+  assert.match(zoom, /"--touchline-card-static-scale", String\(Math\.min\(1, width \/ 430\)\)/);
+  assert.match(zoom, /return \(\) => observer\.disconnect\(\)/);
 });

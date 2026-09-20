@@ -126,7 +126,8 @@ test("all authentication continuations stay inside the Arena", () => {
   assert.match(authFormSource, /resetPasswordForEmail\([\s\S]*buildTouchLineAuthCallbackUrl\(resetPasswordHref\)/);
   assert.match(authFormSource, /const arenaHref = touchLinePostAuthHref\(normalizedReturnTo, normalizedLocale\)/);
   assert.match(authFormSource, /normalizeTouchLineAuthReturnTo\(returnTo\)/);
-  assert.match(authFormSource, /touchLineAuthHref\("\/arena\?skipIntro=1&onboarding=market", normalizedLocale\)/);
+  // SUPERSEDED: registration must show the official intro before the playback-gated handoff.
+  assert.match(authFormSource, /touchlineRegistrationEntryHref\(normalizedReturnTo, normalizedLocale\)/);
   assert.match(authFormSource, /const resetPasswordHref = touchLineAuthHref\("\/reset-password", normalizedLocale\)/);
   assert.doesNotMatch(proxySource, /new URL\("\/dashboard"/);
   assert.match(proxySource, /touchLinePostAuthHref\(returnTo, lang\)/);

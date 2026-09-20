@@ -15,9 +15,9 @@ test("installed TouchLine starts in the Arena but keeps every product page insid
   assert.equal(manifest.start_url, "/arena");
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "fullscreen");
-  // TouchLine is used on phone, tablet, desktop, TV and console browsers.
-  // The manifest must not lock portrait users into a rotated landscape app.
-  assert.equal(manifest.orientation, undefined);
+  // Owner rule, 2026-09-19: mobile gameplay is landscape-only. Browsers that
+  // ignore the PWA preference are protected by the shared orientation gate.
+  assert.equal(manifest.orientation, "landscape");
   assert.ok(manifest.icons?.some((icon) => icon.purpose === "maskable"));
 });
 

@@ -21,7 +21,6 @@ const DOCS_ARTIFACT_TESTS = new Set([
 // and rollback Social Studio tests remain in the remote gate.
 const LOCAL_ARTIFACT_REPLAY_TESTS = new Set([
   "touchline-social-events-live-watch.test.mts",
-  "touchline-social-events-live.test.mts",
   "touchline-social-lineup-live-editorial.test.mts",
   "touchline-social-rankings-live-catalog.test.mts",
   "touchline-social-rankings-live-editorial.test.mts",
@@ -39,6 +38,9 @@ const testFiles = (await readdir(testsDirectory))
 
 const result = spawnSync(process.execPath, [
   "--test",
+  // Keep the complete suite, but bound simultaneous workers on the local
+  // audit Mac and the cost-safe Vercel build machine.
+  "--test-concurrency=2",
   "--test-force-exit",
   "--test-timeout=30000",
   "--experimental-strip-types",

@@ -6,6 +6,10 @@ const supportedProjects = new Set(["chromium-desktop-1280", "chromium-phone-390"
 
 test("waits for every card frame before taking visual QA evidence", async ({ page }, testInfo) => {
   test.skip(!supportedProjects.has(testInfo.project.name), "This fixture is intentionally limited to the 1280px and 390px evidence viewports.");
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width <= 767 && viewport.height > viewport.width) {
+    await page.setViewportSize({ width: viewport.height, height: viewport.width });
+  }
 
   const failedImageRequests: Array<{ url: string; error: string | null }> = [];
   page.on("requestfailed", (request) => {

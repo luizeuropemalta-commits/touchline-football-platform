@@ -94,7 +94,7 @@ test("Club Hub receives only allowlisted canonical match and season projections"
     /football_player_season_statistics[\s\S]*?\.eq\("season_id", seasonId\)[\s\S]*?\.eq\("scoring_version", "player_scoring_v3"\)/,
     "Club Hub season data must not select preserved V2 history",
   );
-  assert.match(seasonReader, /const totalRating = finiteNumber\(summary\?\.totalRating\)/);
+  assert.doesNotMatch(seasonReader, /const totalRating = finiteNumber\(summary\?\.totalRating\)/);
   assert.match(seasonReader, /loadTouchLineActiveRanking/);
   assert.match(seasonReader, /rankingTotalRatingByPlayerId/);
   assert.match(seasonReader, /rankingOnlyProjection/);

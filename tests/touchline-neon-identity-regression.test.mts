@@ -151,7 +151,7 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.ok(layout.layout.followAction.x + (118 * layout.layout.followAction.scale) <= layout.layout.likeAction.x);
   assert.ok(layout.layout.likeAction.x + (118 * layout.layout.likeAction.scale) <= 402);
   assert.equal((layout.layout.followAction.x + layout.layout.likeAction.x + 118) / 2, 215);
-  assert.match(zoom, /<div className=\{styles\.expandedCard\} data-card-zoom="expanded">/);
+  assert.match(zoom, /<div ref=\{expandedRef\} className=\{styles\.expandedCard\} data-card-zoom="expanded">/);
   assert.match(zoom, /<a className=\{styles\.contractAction\} href=\{contractHref\}>/);
   assert.ok(
     zoom.indexOf("styles.contractAction") > zoom.indexOf("styles.expandedCard"),

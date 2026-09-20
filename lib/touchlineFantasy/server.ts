@@ -2,11 +2,13 @@ import "server-only";
 
 import type { User } from "@supabase/supabase-js";
 import type { TouchlineCoach } from "@/lib/football-data/types";
+import { reconcileTouchlineFantasyGameweeks } from "./gameweek-lifecycle";
 
 import { inferArenaRole, makeArenaShortName, normalizeOfficialShirtNumber } from "@/lib/football-data/arena-lineup";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { loadTouchLineActiveRanking } from "@/lib/touchlineArena/card-ranking-server";
-import { loadTouchlinePublishedCardPresentations } from "@/lib/touchlineArena/card-publication-read-model";
+import { applyTouchlineSeasonPoints } from "@/lib/touchlineArena/matchday-player-points";
+import { readPublicSeasonPlayerPoints } from "@/lib/touchlineArena/public-season-player-points-server";
+import { createCompleteTouchlineCatalogueAdmin, loadCompleteTouchlineCataloguePresentations } from "@/lib/touchlineArena/complete-catalogue-read-server";
 import {
   hasTouchlineCountryFlag,
   normalizeTouchlineCountryCode3,
@@ -144,48 +146,40 @@ function parseGameweek(row: Row): TouchlineFantasyGameweek | null {
 }
 
 async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminClient>>) {
-  const { data: publicationData, error: publicationError } = await admin
+  const catalogueAdmin = createCompleteTouchlineCatalogueAdmin(admin);
+  const { data: publicationData } = await catalogueAdmin
     .from("touchline_card_publications")
-    .select("player_id,published_at")
+    .select("player_id")
     .eq("publication_status", "published")
-    .order("published_at", { ascending: false });
-  if (publicationError) return [];
+    .order("player_id", { ascending: true });
   const playerIds = [...new Set(rows(publicationData).map((row) => text(row.player_id)?.toLowerCase()).filter((id): id is string => Boolean(id)))];
   if (!playerIds.length) return [];
 
-  const [presentations, ranking, playersResponse, membershipsResponse] = await Promise.all([
-    loadTouchlinePublishedCardPresentations({ playerIds, providedAdmin: admin }),
-    loadTouchLineActiveRanking(),
-    admin.from("football_players")
+  const [presentations, seasonPoints, playersResponse, membershipsResponse] = await Promise.all([
+    loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin),
+    readPublicSeasonPlayerPoints(playerIds, { providedAdmin: catalogueAdmin }),
+    catalogueAdmin.from("football_players")
       .select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
       .in("id", playerIds),
-    admin.from("football_squad_members")
+    catalogueAdmin.from("football_squad_members")
       .select("player_id,club_id,jersey_number,position,detailed_position,status,source_updated_at")
       .eq("status", "active")
       .in("player_id", playerIds)
       .order("source_updated_at", { ascending: false }),
   ]);
-  if (playersResponse.error || membershipsResponse.error) return [];
 
   const players = rows(playersResponse.data);
   const clubIds = [...new Set(players.map((player) => text(player.current_club_id)).filter((id): id is string => Boolean(id)))];
   const clubsResponse = clubIds.length
-    ? await admin.from("football_clubs").select("id,name").in("id", clubIds)
+    ? await catalogueAdmin.from("football_clubs").select("id,name").in("id", clubIds)
     : { data: [], error: null };
-  if (clubsResponse.error) return [];
   const clubById = new Map(rows(clubsResponse.data).flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const membershipByPlayer = new Map<string, Row>();
   for (const membership of rows(membershipsResponse.data)) {
     const playerId = text(membership.player_id)?.toLowerCase();
     if (playerId && !membershipByPlayer.has(playerId)) membershipByPlayer.set(playerId, membership);
   }
-  const ratingByPlayer = new Map(
-    ranking.phase === "ranked"
-      ? ranking.players.map((entry) => [String(entry.playerId).toLowerCase(), entry.totalRating] as const)
-      : [],
-  );
-
-  return players.flatMap((player): ClubOwnerSquadCard[] => {
+  const cards = players.flatMap((player): ClubOwnerSquadCard[] => {
     const playerId = text(player.id)?.toLowerCase();
     const presentation = playerId ? presentations.get(playerId) : null;
     const membership = playerId ? membershipByPlayer.get(playerId) : null;
@@ -214,7 +208,7 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
       editorialCard: presentation,
       touchlinePoints: 0,
       seasonTouchlinePoints: null,
-      seasonTotalRating: ratingByPlayer.get(playerId) ?? null,
+      seasonTotalRating: null,
       matchRating: null,
     }];
   }).sort((first, second) => (
@@ -222,6 +216,10 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
       || first.role.localeCompare(second.role)
       || first.name.localeCompare(second.name)
   ));
+  // The same read-only projection supplies ClubHub, My Club and the exact card
+  // used by zoom. It preserves published totals and position-specific facts;
+  // neither the user's XI nor an unpublished aggregate can override a rating.
+  return applyTouchlineSeasonPoints(cards, seasonPoints);
 }
 
 async function loadRankings(
@@ -332,7 +330,8 @@ async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClien
 export async function loadTouchlineFantasySnapshot(user: User): Promise<TouchlineFantasySnapshot | null> {
   const admin = createAdminClient();
   if (!admin) return null;
-  await admin.rpc("touchline_fantasy_sync_gameweeks");
+  const { error: syncError } = await admin.rpc("touchline_fantasy_sync_gameweeks");
+  if (syncError) return null;
   const [{ data: configData, error: configError }, formationRegistry] = await Promise.all([
     admin.from("touchline_fantasy_configs").select("season_id,budget_eur,max_players_per_club,lock_offset_minutes").eq("competition_key", "england").eq("status", "active").maybeSingle(),
     readTouchlineFormationGeometryRegistry(),
@@ -352,12 +351,20 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     ?? gameweeks.find((entry) => entry.state === "LIVE" || entry.state === "LOCKED")
     ?? gameweeks.at(-1)
     ?? null;
-  if (activeGameweek && !["UPCOMING", "MARKET_OPEN"].includes(activeGameweek.state)) {
-    await admin.rpc("touchline_fantasy_reconcile_gameweek", { p_gameweek_id: activeGameweek.id });
-    const { data: refreshed } = await admin.from("touchline_fantasy_gameweeks")
+  // A customer read handles only its displayed round or immediate predecessor.
+  // The background producer owns backlog processing. Include this one settled
+  // round so a late source correction is not stranded by an earlier GET.
+  const lifecycleGameweek = activeGameweek?.state === "MARKET_OPEN"
+    ? gameweeks.filter((entry) => entry.number < activeGameweek!.number).at(-1)
+    : activeGameweek;
+  const lifecycle = await reconcileTouchlineFantasyGameweeks(admin, lifecycleGameweek ? [lifecycleGameweek] : [], true);
+  if (lifecycle.error) return null;
+  if (lifecycle.reconciled > 0) {
+    const { data: refreshed, error: refreshError } = await admin.from("touchline_fantasy_gameweeks")
       .select("id,gameweek_number,state,market_opens_at,locks_at,first_fixture_at,last_fixture_at")
       .eq("season_id", seasonId)
       .order("gameweek_number", { ascending: true });
+    if (refreshError) return null;
     gameweeks = rows(refreshed).map(parseGameweek).filter((entry): entry is TouchlineFantasyGameweek => Boolean(entry));
     activeGameweek = gameweeks.find((entry) => entry.id === activeGameweek?.id) ?? activeGameweek;
   }
@@ -373,7 +380,8 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     && (!text(entitlement?.current_period_start) || Date.parse(text(entitlement?.current_period_start)!) <= now)
     && (!text(entitlement?.current_period_end) || Date.parse(text(entitlement?.current_period_end)!) > now);
   if (entitlementActive && activeGameweek?.state === "MARKET_OPEN") {
-    await admin.rpc("touchline_fantasy_prepare_user_gameweek", { p_user_id: user.id, p_gameweek_id: activeGameweek.id });
+    const { error: preparationError } = await admin.rpc("touchline_fantasy_prepare_user_gameweek", { p_user_id: user.id, p_gameweek_id: activeGameweek.id });
+    if (preparationError) return null;
   }
 
   const [catalogue, coaches, userGameweekResponse, rankings] = await Promise.all([

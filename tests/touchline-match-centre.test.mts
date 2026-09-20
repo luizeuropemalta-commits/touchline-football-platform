@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 
 import {
   hasTouchlineMatchCentreFixture,
@@ -281,13 +283,74 @@ test("every canonical home hero exposes the same honest verified-lineup call to 
   assert.match(source, /viewLineup: "VIEW LINE-UP"/);
   assert.match(source, /lineupPending: "Escalação oficial ainda não disponível"/);
   assert.match(source, /lineupPendingCopy: "A TouchLine avisará assim que os dados oficiais chegarem\./);
-  assert.match(source, /`\/touchline-clubs\/\$\{selectedHomeClub\.slug\}\?lang=\$\{language\}#touchline-club-lineup`/);
+  assert.match(source, /const homeLineupHref = selectedHomeClub\s*\? "#touchline-match-lineups"/);
+  assert.match(source, /const verifiedDetail = matchDetail\?\.fixture\.id === selected\?\.providerId \? matchDetail : null/);
+  assert.match(source, /<section id="touchline-match-lineups" className=\{styles\.lineupGrid\} aria-label=\{dictionary\.form\} tabIndex=\{-1\}>/);
+  assert.match(source, /href=\{homeLineupHref\} onClick=\{openSelectedLineup\}/);
+  assert.match(source, /function openSelectedLineup[\s\S]*?event\.defaultPrevented \|\| event\.button !== 0 \|\| event\.metaKey \|\| event\.ctrlKey \|\| event\.shiftKey \|\| event\.altKey/);
+  assert.match(source, /if \(!lineup\) return;\s*event\.preventDefault\(\);\s*lineup\.focus\(\{ preventScroll: true \}\);\s*lineup\.scrollIntoView\(\{ block: "start" \}\)/);
+  assert.doesNotMatch(source, /href=\{homeLineupHref\}[^\n]*target=/);
+  assert.doesNotMatch(source, /`\/touchline-clubs\/\$\{selectedHomeClub\.slug\}\?lang=\$\{language\}#touchline-club-lineup`/);
   assert.doesNotMatch(source, /\/touchline-clubs\/manchester-united\?lang=pt-BR#touchline-club-lineup/);
   assert.doesNotMatch(source, /isManchesterUnitedHome/);
   assert.doesNotMatch(source, /lineup[^\n]*(?:60|90)\s*\*\s*60_000/i);
   assert.match(styles, /\.homeLineupCallout \{[^}]*border-radius:[^}]*backdrop-filter:/);
   assert.match(styles, /\.homeLineupLink:focus-visible/);
   assert.match(clubHub, /<section id="touchline-club-lineup" className=\{styles\.shell\}/);
+});
+
+test("lineup click focuses and scrolls locally without adding history, while modified clicks keep their default", () => {
+  const source = readFileSync(
+    new URL("../components/touchline/match-centre/TouchlineMatchCentre.tsx", import.meta.url),
+    "utf8",
+  );
+  const handlerSource = source.match(/^function openSelectedLineup\b[\s\S]*?^}/m)?.[0];
+  assert.ok(handlerSource);
+  const calls: string[] = [];
+  let targetPresent = true;
+  const target = {
+    focus(options: { preventScroll: boolean }) {
+      assert.equal(options.preventScroll, true);
+      calls.push("focus");
+    },
+    scrollIntoView(options: { block: string }) {
+      assert.equal(options.block, "start");
+      calls.push("scroll");
+    },
+  };
+  // Execute the actual handler in a DOM stub with no history/window access.
+  // This verifies event behaviour, not rendered scrolling in Safari.
+  const event = {
+    defaultPrevented: false, button: 0,
+    metaKey: false, ctrlKey: false, shiftKey: false, altKey: false,
+    preventDefault() { calls.push("prevent-default"); },
+  };
+  const handler = runInNewContext(
+    `${stripTypeScriptTypes(handlerSource)}\nopenSelectedLineup;`,
+    { document: { getElementById(id: string) {
+      assert.equal(id, "touchline-match-lineups");
+      calls.push("find");
+      return targetPresent ? target : null;
+    } } },
+    { timeout: 1000 },
+  ) as (input: typeof event) => void;
+
+  handler(event);
+  assert.deepEqual(calls, ["find", "prevent-default", "focus", "scroll"]);
+  for (const modifier of ["metaKey", "ctrlKey", "shiftKey", "altKey", "defaultPrevented"] as const) {
+    calls.length = 0;
+    handler({ ...event, [modifier]: true });
+    assert.deepEqual(calls, [], modifier);
+  }
+  for (const button of [1, 2]) {
+    calls.length = 0;
+    handler({ ...event, button });
+    assert.deepEqual(calls, []);
+  }
+  calls.length = 0;
+  targetPresent = false;
+  handler(event);
+  assert.deepEqual(calls, ["find"]);
 });
 
 test("a venue awaiting verification is not labelled as verified", () => {

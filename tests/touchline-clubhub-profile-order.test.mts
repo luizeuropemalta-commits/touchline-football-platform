@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { stripTypeScriptTypes } from "node:module";
+import { runInNewContext } from "node:vm";
 import test from "node:test";
 
 const page = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
@@ -15,6 +17,58 @@ const technicalStyles = readFileSync(new URL("../components/touchline/ClubHubMat
 const outsideRoster = readFileSync(new URL("../components/touchline/ClubHubOutsideMatchRoster.tsx", import.meta.url), "utf8");
 const outsideRosterStyles = readFileSync(new URL("../components/touchline/ClubHubOutsideMatchRoster.module.css", import.meta.url), "utf8");
 const lineup = readFileSync(new URL("../lib/touchlineArena/club-lineup.ts", import.meta.url), "utf8");
+
+test("the Squad navigation anchor exists even for an empty or unavailable roster", () => {
+  assert.match(outsideRoster, /<section[^>]*id="club-squad"/);
+});
+
+test("section highlighting discovers streamed sections and cleans up listeners", () => {
+  const effectStart = sectionNavigation.indexOf("  useEffect(() => {", sectionNavigation.indexOf("  useEffect(() => {") + 1);
+  const effectEnd = sectionNavigation.indexOf("\n  }, []);", effectStart);
+  assert.ok(effectStart > 0 && effectEnd > effectStart);
+  const effect = sectionNavigation.slice(effectStart + "  useEffect(() => {".length, effectEnd);
+  for (const initiallyHasFeed of [false, true]) {
+    const sections = new Map<string, { id: string; getBoundingClientRect: () => { top: number } }>();
+    const add = (id: string, top: number) => sections.set(id, { id, getBoundingClientRect: () => ({ top }) });
+    if (initiallyHasFeed) add("club-feed", 0);
+    let active: string | null = null;
+    let pending: (() => void) | null = null;
+    let observerCallback: (() => void) | null = null;
+    let disconnected = false;
+    const listeners = new Map<string, () => void>();
+    const cleanup = runInNewContext(stripTypeScriptTypes(`(() => {${effect}})()`), {
+      SECTION_TARGETS: ["club-feed", "touchline-club-lineup", "club-squad"],
+      setActiveTarget: (value: string | null) => { active = value; },
+      document: { getElementById: (id: string) => sections.get(id), querySelector: () => ({}), documentElement: { scrollHeight: 1200 } },
+      MutationObserver: class {
+        constructor(callback: () => void) { observerCallback = callback; }
+        observe() {}
+        disconnect() { disconnected = true; }
+      },
+      window: { scrollY: 800, innerHeight: 600,
+        requestAnimationFrame: (callback: () => void) => { pending = callback; return 1; },
+        cancelAnimationFrame: () => { pending = null; },
+        addEventListener: (event: string, callback: () => void) => listeners.set(event, callback),
+        removeEventListener: (event: string) => listeners.delete(event),
+      },
+    }) as (() => void) | undefined;
+    add("club-feed", -800);
+    add("touchline-club-lineup", -300);
+    add("club-squad", 0);
+    assert.ok(listeners.has("scroll"), "install listeners before Suspense resolves");
+    assert.ok(observerCallback, "streamed content must trigger a fresh geometry read");
+    (observerCallback as () => void)();
+    (pending as (() => void) | null)?.();
+    assert.equal(active, "club-squad");
+    sections.delete("club-squad");
+    listeners.get("scroll")?.();
+    (pending as (() => void) | null)?.();
+    assert.equal(active, "touchline-club-lineup");
+    cleanup?.();
+    assert.equal(listeners.size, 0);
+    assert.equal(disconnected, true);
+  }
+});
 
 function indexOfRequired(source: string, token: string) {
   const index = source.indexOf(token);

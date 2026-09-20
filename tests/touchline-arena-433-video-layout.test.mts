@@ -130,7 +130,12 @@ test("Arena accepts a user-approved QA layout only in the specific QA editor pat
   assert.doesNotMatch(arenaSource, /const tacticalRoles: ArenaPlayer\["role"\]\[\] = \[/);
   assert.match(arenaSource, /constrainArenaQaFreeSlot/);
   assert.match(arenaSource, /handleFieldPlayerKeyDown/);
-  assert.match(arenaSource, /src=\{isArenaIntroViewportReady\s*\? TOUCHLINE_ARENA_LOOP_VIDEO/);
+  // The source is attached only after the first allowed landscape viewport,
+  // then retained while later rotations pause playback. This preserves the
+  // QA camera layout without re-buffering or resetting the filmed loop.
+  assert.match(arenaSource, /const \[hasArenaMediaSource, setHasArenaMediaSource\] = useState\(false\)/);
+  assert.match(arenaSource, /if \(isArenaIntroViewportReady && !hasArenaMediaSource\) setHasArenaMediaSource\(true\)/);
+  assert.match(arenaSource, /src=\{hasArenaMediaSource\s*\? TOUCHLINE_ARENA_LOOP_VIDEO/);
   assert.match(arenaSource, /\n\s+loop\n\s+preload="metadata"/);
   assert.match(arenaSource, /onTimeUpdate=\{handleCardLoopTimelineEvent\}/);
   assert.match(arenaSource, /onSeeking=\{handleCardLoopTimelineEvent\}/);

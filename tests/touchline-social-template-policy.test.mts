@@ -63,7 +63,8 @@ test("Vercel excludes private Social Studio replay media but retains its contrac
   assert.match(ignore, /^!artifacts\/social-studio\/rankings\/match-preview-card-revalidation-20260915\.json$/m);
   assert.match(ignore, /^!artifacts\/social-studio\/match-preview\/2026-09-14-brentford-chelsea-factual-capture\.json$/m);
   assert.match(runner, /LOCAL_ARTIFACT_REPLAY_TESTS/);
-  assert.match(runner, /touchline-social-events-live\.test\.mts/);
+  // Event scenarios are hermetic; only private artifact replays are excluded.
+  assert.doesNotMatch(runner, /touchline-social-events-live\.test\.mts/);
   assert.match(runner, /touchline-social-rankings-live\.test\.mts/);
   assert.doesNotMatch(runner, /touchline-social-studio-contract\.test\.mts/);
   assert.doesNotMatch(runner, /touchline-social-studio-source-gate\.test\.mts/);

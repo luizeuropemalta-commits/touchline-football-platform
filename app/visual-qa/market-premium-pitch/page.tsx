@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 type VisualQaMarketPitchProps = Readonly<{
   searchParams: Promise<{
     surface?: string;
+    lang?: string;
   }>;
 }>;
 
@@ -35,9 +36,9 @@ const COACHES = TOUCHLINE_LIVE_COACHES.map(({ coach, countryCode3 }, index) => {
 const ACTIVE_GAMEWEEK = {
   id: "visual-qa-gameweek",
   number: 3,
-  state: "MARKET_OPEN" as const,
+  state: "LOCKED" as const,
   marketOpensAt: "2026-08-31T20:00:00.000Z",
-  locksAt: "2026-09-04T18:55:00.000Z",
+  locksAt: "2026-09-04T19:00:00.000Z",
   firstFixtureAt: "2026-09-04T19:00:00.000Z",
   lastFixtureAt: "2026-09-06T18:30:00.000Z",
 };
@@ -84,7 +85,7 @@ function visualSnapshot(catalogue: TouchlineFantasySnapshot["catalogue"]): Touch
   userId: "visual-qa-local-only",
   entitlementActive: true,
   subscription: { amountMinor: 2990, currency: "GBP" },
-  config: { budgetEur: 900_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 5 },
+  config: { budgetEur: 900_000_000, maxPlayersPerClub: 11, lockOffsetMinutes: 0 },
   gameweeks: [ACTIVE_GAMEWEEK],
   activeGameweek: ACTIVE_GAMEWEEK,
   userGameweek: {
@@ -123,7 +124,7 @@ export default async function MarketPremiumPitchVisualQaPage({ searchParams }: V
         <p>GEOMETRY QA · LOCAL ONLY · NOT PUBLISHABLE</p>
         <span>
           {catalogueRead.state === "ready"
-            ? `${totalCards} canonical published player cards synchronised across 20 clubs.`
+            ? `${totalCards} canonical player cards from a frozen QA catalogue. Closed-market test scenario; not current live data.`
             : `Canonical player catalogue unavailable (${catalogueRead.reason ?? "unknown"}). No partial catalogue is shown.`}
         </span>
       </header>
@@ -131,7 +132,7 @@ export default async function MarketPremiumPitchVisualQaPage({ searchParams }: V
         ? <FantasyGameweekClient
             embedded={embeddedMyClub}
             initialSnapshot={visualSnapshot(catalogueRead.catalogue)}
-            locale="en-GB"
+            locale={params.lang === "pt-BR" ? "pt-BR" : "en-GB"}
           />
         : null}
     </main>

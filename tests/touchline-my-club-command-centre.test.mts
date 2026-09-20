@@ -6,6 +6,18 @@ const client = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", 
 const styles = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
 const owner = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
 const socialStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocial.module.css", import.meta.url), "utf8");
+const gameweekCard = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
+
+test("My Club grid cards fit their real container without changing pitch or zoom scale", () => {
+  assert.match(client, /displayWidth=\{116\} fitContainer/);
+  assert.match(client, /displayWidth=\{126\} fitContainer/);
+  assert.match(gameweekCard, /fitContainer = false/);
+  assert.match(gameweekCard, /staticRenderScale=\{fitContainer \? undefined : resolvedDisplayWidth \/ 430\}/);
+  assert.match(gameweekCard, /staticRenderScale=\{390 \/ 430\}/);
+  assert.match(client, /compact displayWidth=\{pitchCardWidth\} \/>/);
+  assert.match(styles, /\.myClubMarketResults article\{height:100%;grid-template-columns:minmax\(0,1fr\)\}/);
+  assert.match(styles, /\.myClubCardRows article\{grid-template-columns:minmax\(0,1fr\)\}/);
+});
 
 test("My Club renders a pitch-first command centre instead of the Gameweek wizard", () => {
   assert.match(client, /if \(embedded\) \{/);
@@ -32,19 +44,22 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /<CompactClubSelector selectedTeamId=\{selectedPlayerClub\?\.teamId/);
   assert.match(embedded, /id="my-club-player-selection"/);
   assert.match(embedded, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
-  assert.match(embedded, /displayWidth=\{96\}/);
+  // The requested non-overlap rule now sizes the artwork from actual pitch
+  // dimensions. Geometry/label envelopes are exercised in market-browser tests.
+  assert.match(embedded, /width: Math\.max\(64, pitchCardWidth\)/);
+  assert.match(embedded, /"--touchline-card-static-scale": pitchCardWidth \/ 430/);
   assert.match(embedded, /className=\{styles\.myClubTacticalSlot\}/);
   assert.match(embedded, /data-pitch-edge=\{slot\.x >= 75 \? "end" : undefined\}/);
-  assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} compact displayWidth=\{96\} \/>/);
+  assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} compact displayWidth=\{pitchCardWidth\} \/>/);
   assert.match(embedded, /data-slot-action=\{card \? "replace" : "add"\}/);
   assert.match(embedded, /<button type="button" data-slot-action=.*?onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(embedded, /selectMyClubPlayer\(card\)/);
-  assert.doesNotMatch(embedded, /filtered\.slice\(0, 10\)/);
+  assert.doesNotMatch(embedded, /browseCards\.slice\(0, 10\)/);
   assert.match(embedded, /data-my-club-setup="coach"/);
   assert.match(embedded, /data-my-club-setup="formation"/);
   assert.match(embedded, /Choose your coach|Escolha seu treinador/);
   assert.match(embedded, /Choose formation|Escolha a formação/);
-  assert.match(embedded, /filtered\.map\(\(card\)/);
+  assert.match(embedded, /browseCards\.map\(\(card\)/);
   assert.match(embedded, /<small>\{card\.position\}<\/small><em>\{card\.clubName\}<\/em>/);
   assert.match(styles, /\.myClubCardRows\{display:grid/);
   assert.match(styles, /\.myClubCard\{display:block/);

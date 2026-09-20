@@ -70,6 +70,13 @@ test("TV-size browser exposes a visible keyboard and remote-control focus target
   await expect.poll(() => intro.evaluate((node) => document.activeElement === node)).toBe(true);
 
   await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
+  const soundButton = intro.getByRole("button", { name: /Ativar som da Arena|Silenciar Arena/ });
+  await expect(soundButton).toBeFocused();
+  expect(await soundButton.evaluate((node) => {
+    const styles = window.getComputedStyle(node);
+    return styles.boxShadow !== "none" || (styles.outlineStyle !== "none" && styles.outlineWidth !== "0px");
+  })).toBe(true);
+  await page.keyboard.press(browserName === "webkit" ? "Alt+Tab" : "Tab");
   const skipButton = page.getByRole("button", { name: "Pular intro" });
   await expect(skipButton).toBeFocused();
   expect(await skipButton.evaluate((node) => {
@@ -80,22 +87,42 @@ test("TV-size browser exposes a visible keyboard and remote-control focus target
   await context.close();
 });
 
-test("touch portrait keeps the product interactive instead of forcing a rotation gate", async ({ browser, browserName }) => {
-  test.skip(browserName === "webkit", "Playwright WebKit desktop does not emulate a mobile user agent in a nested context.");
+test("phone portrait blocks gameplay and rotating releases the same page without reload", async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
-    isMobile: true,
   });
   const page = await context.newPage();
   await page.goto(`${baseURL}/arena?lang=pt-BR`, { waitUntil: "domcontentloaded" });
 
+  const gate = page.getByRole("dialog", { name: "Gire para o modo horizontal" });
+  // DocumentLocaleSync moves the skip-link ID to the semantic main. The
+  // persistent orientation wrapper owns inert; its descendants inherit it.
+  const content = page.locator("[data-touchline-main-content-fallback]");
+  await expect(gate).toBeVisible();
+  await expect(content).toHaveJSProperty("inert", true);
+  expect(await page.locator("#touchline-main-content").evaluate((node) => Boolean(node.closest("[inert]")))).toBe(true);
+  await expect(page.getByTestId("touchline-arena-intro")).toBeHidden();
+  await page.keyboard.press("Tab");
+  await expect(gate).toBeFocused();
+  const mountedContent = await content.elementHandle();
+  const startingUrl = page.url();
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(gate).toBeHidden();
+  await expect(content).toHaveJSProperty("inert", false);
+  expect(await mountedContent!.evaluate((node) => node === document.querySelector("[data-touchline-main-content-fallback]"))).toBe(true);
+  expect(page.url()).toBe(startingUrl);
   await expect(page.getByTestId("touchline-arena-intro")).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "Gire para o modo horizontal" })).toHaveCount(0);
   await page.getByRole("button", { name: "Pular intro" }).click();
   await expect(page.locator("main.touchline-game")).toBeVisible();
   await expect(page.getByText(/Prepare seu clube para a próxima rodada/i)).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.dataset.touchlineOrientation)).toBeUndefined();
+  expect(await page.evaluate(() => document.documentElement.dataset.touchlineOrientation)).toBe("landscape");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(gate).toBeVisible();
+  await expect(content).toHaveJSProperty("inert", true);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(gate).toBeHidden();
+  await expect(page.locator("main.touchline-game")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await context.close();
 });

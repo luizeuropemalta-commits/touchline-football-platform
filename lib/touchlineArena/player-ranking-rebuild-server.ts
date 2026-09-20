@@ -78,6 +78,65 @@ type TouchLinePlayerRankingEngine = Readonly<{
   snapshotPrefix: "player-v2" | "player-rating";
 }>;
 
+/** A season has more settlement rows than PostgREST's default response cap.
+ * Read every page in unique, stable order; never mistake an incomplete read
+ * for missing provider facts (which would leave the active ranking stale). */
+async function readRankingSettlements(
+  admin: SupabaseClient,
+  engine: TouchLinePlayerRankingEngine,
+  seasonId: string,
+): Promise<{ data: Row[]; error: string | null }> {
+  const pageSize = 500;
+  const maximumRows = 100_000;
+  const collected: Row[] = [];
+  const ids = new Set<string>();
+  let expectedCount: number | null = null;
+  for (let offset = 0; offset < maximumRows; offset += pageSize) {
+    const { data, error, count } = await admin.from(engine.settlementTable)
+      .select("id,football_player_id,fixture_id,settlement_status,ranking_coverage_status", { count: "exact" })
+      .eq("season_id", seasonId)
+      .eq("scoring_version", engine.scoringVersion)
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error || !Array.isArray(data) || count === null || !Number.isSafeInteger(count) || count < 0 || count > maximumRows) {
+      return { data: [], error: "ranking-settlement-read-unavailable" };
+    }
+    if (expectedCount !== null && count !== expectedCount) return { data: [], error: "ranking-settlement-source-changed" };
+    expectedCount = count;
+    const page = rows(data);
+    if (page.length !== Math.min(pageSize, expectedCount - offset)) {
+      return { data: [], error: "ranking-settlement-read-incomplete" };
+    }
+    for (const row of page) {
+      const id = text(row.id);
+      if (!id || ids.has(id)) return { data: [], error: "ranking-settlement-read-duplicate" };
+      ids.add(id);
+      collected.push(row);
+    }
+    if (collected.length === expectedCount) return { data: collected, error: null };
+  }
+  return { data: [], error: "ranking-settlement-read-limit" };
+}
+
+/** Use the same complete read for the post-write audit as for publication. */
+export async function auditTouchlinePlayerScoreSettlementCoverage(
+  admin: SupabaseClient,
+  seasonId: string,
+  expectedFixtureIds: readonly string[],
+) {
+  const result = await readRankingSettlements(admin, {
+    scoringVersion: "player_scoring_v3",
+    settlementTable: "touchline_player_fixture_score_settlements",
+    snapshotPrefix: "player-rating",
+  }, seasonId);
+  if (result.error) return { missingFixtureIds: [] as string[], error: result.error };
+  const persistedFixtureIds = new Set(result.data.map((row) => text(row.fixture_id)).filter(Boolean));
+  return {
+    missingFixtureIds: [...new Set(expectedFixtureIds)].filter((id) => !persistedFixtureIds.has(id)),
+    error: null,
+  };
+}
+
 /** Inputs are persisted canonical facts only; this function never calls Sportmonks.
  * V2/V3 conversion rows remain technical audit evidence, while the active
  * product ranking is ordered only by the persisted Sportmonks rating total. */
@@ -120,12 +179,9 @@ async function rebuildTouchLinePlayerRanking(
     admin.from("football_players")
       .select("id,provider_player_id,display_name,name,provider_position,detailed_position,position,current_club_id")
       .in("id", aggregatePlayerIds),
-    admin.from(engine.settlementTable)
-      .select("football_player_id,fixture_id,settlement_status,ranking_coverage_status")
-      .eq("season_id", seasonId)
-      .eq("scoring_version", engine.scoringVersion),
+    readRankingSettlements(admin, engine, seasonId),
   ]);
-  if (playerError || ratingError) return failure("ranking-player-source-unavailable", { seasonId });
+  if (playerError || ratingError) return failure(ratingError ?? "ranking-player-source-unavailable", { seasonId });
 
   const playerRows = rows(playerData);
   const playerIds = playerRows.map((row) => text(row.id)).filter((id): id is string => Boolean(id));

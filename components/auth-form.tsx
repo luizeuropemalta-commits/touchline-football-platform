@@ -13,6 +13,7 @@ import {
   touchLinePostAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { resolveTouchLineAuthOrigin } from "@/lib/touchlineArena/public-origin";
+import { touchlineRegistrationEntryHref } from "@/lib/touchlineArena/arena-onboarding";
 import { Button, Input } from "./ui";
 
 type Mode = "login" | "register" | "forgot";
@@ -82,11 +83,7 @@ export function AuthForm({
   const loginHref = touchLineAuthEntryHref("/login", normalizedLocale, normalizedReturnTo);
   const registerHref = touchLineAuthEntryHref("/register", normalizedLocale, normalizedReturnTo);
   const forgotPasswordHref = touchLineAuthEntryHref("/forgot-password", normalizedLocale, normalizedReturnTo);
-  const firstEntryHref = normalizedReturnTo
-    ? touchLinePostAuthHref(normalizedReturnTo, normalizedLocale)
-    // New ClubOwners briefly see the clean Arena, then continue to the
-    // acquisition journey. Returning users keep their normal destination.
-    : touchLineAuthHref("/arena?skipIntro=1&onboarding=market", normalizedLocale);
+  const firstEntryHref = touchlineRegistrationEntryHref(normalizedReturnTo, normalizedLocale);
   const resetPasswordHref = touchLineAuthHref("/reset-password", normalizedLocale);
   const socialProviders: Array<{
     provider: SocialAuthProvider;

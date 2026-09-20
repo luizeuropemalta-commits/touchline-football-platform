@@ -30,6 +30,16 @@ test("authenticated My Club uses the command deck and keeps controls with the ow
   assert.doesNotMatch(css.match(/\.coverCommand \{[^}]+\}/)?.[0] ?? "", /official-live-pitch/);
 });
 
+test("My Club styles define one approved stadium background on the shared header", async () => {
+  const css = await source("components/touchline/social/TouchlineSocial.module.css");
+  const stadiumAsset = "/touchlineArena/my-club/clubowner-arena-neon-cover.png";
+  assert.equal(css.split(stadiumAsset).length - 1, 1);
+  assert.match(css, /\.commandHeader\s*\{[^}]*background:[^}]*clubowner-arena-neon-cover\.png[^}]*no-repeat/);
+  assert.match(css, /\.coverCommand\s*\{[^}]*background: transparent;/);
+  assert.match(css, /\.coverCommand::before,\s*\.coverCommand::after\s*\{\s*display:\s*none;/);
+  assert.match(css, /\.commandHeader \.socialIdentity::before/);
+});
+
 test("the separate market pitch keeps its perimeter while My Club stays calm", async () => {
   const [market, myClub, pitch, pitchCss] = await Promise.all([
     source("components/touchline/market/TouchlineSquadBuilderStage.tsx"),

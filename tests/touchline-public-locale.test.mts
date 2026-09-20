@@ -63,7 +63,7 @@ test("root document receives the request locale before hydration and has one reu
   assert.match(layout, /await headers\(\)/);
   assert.match(layout, /requestHeaders\.get\(TOUCHLINE_PRESENTATION_LOCALE_HEADER\)/);
   assert.match(layout, /<html lang=\{locale\} dir=\{touchlineDocumentDirection\(locale\)\}>/);
-  assert.match(layout, /<TouchlineLandscapeBoundary skipLabel=\{skipLabel\}>/);
+  assert.match(layout, /<TouchlineLandscapeBoundary\s+skipLabel=\{skipLabel\}\s+locale=\{locale\}>/);
   assert.match(landscapeBoundary, /href="#touchline-main-content"/);
   assert.match(landscapeBoundary, /id="touchline-main-content"/);
   assert.match(landscapeBoundary, /tabIndex=\{-1\}/);

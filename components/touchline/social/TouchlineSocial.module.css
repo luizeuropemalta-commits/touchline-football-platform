@@ -95,7 +95,10 @@
 /* Private My Club cover: the approved shared TouchLine Arena stays behind
    every owner. Its scoreboard shield is part of the artwork itself; do not
    place a second animated mark over it. */
-.coverCommand { height: clamp(300px, 24vw, 360px); isolation: isolate; background: url("/touchlineArena/my-club/clubowner-arena-neon-cover.png") center 9% / cover no-repeat, #020706; }
+.coverCommand { height: clamp(300px, 24vw, 360px); isolation: isolate; background: transparent; }
+/* The parent owns one continuous photograph, including the identity area.
+   A second cover background duplicates the pitch on narrow screens. */
+.coverCommand::before,
 .coverCommand::after { display:none; }
 .coverCommand span { display: none; }
 /* The owner identity needs a dependable reading zone without cutting a dark

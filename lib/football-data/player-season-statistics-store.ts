@@ -10,7 +10,7 @@ import { classifyTouchLinePlayerRankingCoverage } from "@/lib/football-data/play
 import { groupTouchLinePlayerSeasonMemberships } from "@/lib/football-data/player-season-membership-grouping";
 import { upsertTouchLineRowsResiliently } from "@/lib/football-data/resilient-batch-upsert";
 import type { TouchlineFantasyEvent, TouchlineFantasyLineupMember } from "@/lib/football-data/types";
-import { rebuildTouchLinePlayerRankingV3 } from "@/lib/touchlineArena/player-ranking-rebuild-server";
+import { auditTouchlinePlayerScoreSettlementCoverage, rebuildTouchLinePlayerRankingV3 } from "@/lib/touchlineArena/player-ranking-rebuild-server";
 
 const TOUCHLINE_LIVE_FIXTURE_STATUS = /^(?:live|in[ -]?play|in progress|1st half|2nd half|half[ -]?time|ht|extra time|penalties)$/i;
 
@@ -504,19 +504,21 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
 
   result.failedFixtureIds = [...new Set(result.failedFixtureIds)].sort();
   if (result.scoringFixtureIds.length) {
-    const { data: persistedSettlements, error: settlementAuditError } = await admin
-      .from("touchline_player_fixture_score_settlements")
-      .select("fixture_id")
-      .eq("scoring_version", "player_scoring_v3")
-      .in("fixture_id", result.scoringFixtureIds);
-    if (settlementAuditError || !Array.isArray(persistedSettlements)) {
-      result.errors.push(`v3-settlement-audit:${settlementAuditError?.message ?? "unavailable"}`);
-    } else {
-      const persistedFixtureIds = new Set(persistedSettlements.map((row) => String(row.fixture_id ?? "")).filter(Boolean));
-      result.missingSettlementFixtureIds = result.scoringFixtureIds.filter((fixtureId) => !persistedFixtureIds.has(fixtureId));
-      if (result.missingSettlementFixtureIds.length) {
-        result.errors.push(`v3-fixture-backfill-missing:${result.missingSettlementFixtureIds.join(",")}`);
-      }
+    const scoringIds = new Set(result.scoringFixtureIds);
+    const seasonFixtures = new Map<string, string[]>();
+    for (const fixture of fixtures as FixtureRow[]) {
+      if (!scoringIds.has(fixture.id)) continue;
+      const ids = seasonFixtures.get(fixture.season_id) ?? [];
+      ids.push(fixture.id);
+      seasonFixtures.set(fixture.season_id, ids);
+    }
+    for (const [seasonId, fixtureIds] of seasonFixtures) {
+      const audit = await auditTouchlinePlayerScoreSettlementCoverage(admin, seasonId, fixtureIds);
+      if (audit.error) result.errors.push(`v3-settlement-audit:${audit.error}`);
+      result.missingSettlementFixtureIds.push(...audit.missingFixtureIds);
+    }
+    if (result.missingSettlementFixtureIds.length) {
+      result.errors.push(`v3-fixture-backfill-missing:${result.missingSettlementFixtureIds.join(",")}`);
     }
   }
 

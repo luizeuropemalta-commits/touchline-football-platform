@@ -34,8 +34,9 @@ export function TouchlineInboxList({
     // Wait for the server-owned receipt before leaving this page. A Link click
     // can cancel an in-flight POST during navigation and lose the durable read.
     await markRead(item.id);
-    const separator = item.deepLink.includes("?") ? "&" : "?";
-    window.location.assign(`${item.deepLink}${separator}lang=${encodeURIComponent(locale)}`);
+    const destination = new URL(item.deepLink, window.location.origin);
+    destination.searchParams.set("lang", locale);
+    window.location.assign(`${destination.pathname}${destination.search}${destination.hash}`);
   }
 
   return <ol>{items.map((item) => <li key={item.id}><div><span>{item.priority} · {item.category}</span><h2>{item.title}</h2><p>{item.body}</p></div><aside><b>{item.readAt ? labels.read : labels.unread}</b><small>{item.lifecycleState}</small>{item.deepLink ? <button type="button" onClick={() => void openDestination(item)}>{labels.open}</button> : !item.readAt ? <button type="button" onClick={() => void markRead(item.id)}>{labels.markRead}</button> : null}</aside></li>)}</ol>;

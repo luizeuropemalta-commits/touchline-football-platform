@@ -7,6 +7,9 @@ const mobileEvidenceProject = "chromium-phone-390";
 test("captures the no-write mobile Arena fixture without promoting desktop geometry", async ({ page }, testInfo) => {
   test.skip(!candidateUrl, "Set TOUCHLINE_ARENA_VISUAL_QA_URL to a clean candidate before mobile visual QA.");
   test.skip(testInfo.project.name !== mobileEvidenceProject, "Runs only in the explicit phone visual-QA project.");
+  // Gameplay evidence is landscape; the shared launch test separately proves
+  // portrait is blocked and state survives rotation.
+  await page.setViewportSize({ width: 844, height: 390 });
   const blockedWrites: string[] = [];
   await page.route("**/*", async (route) => {
     const method = route.request().method();

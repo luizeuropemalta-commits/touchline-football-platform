@@ -162,6 +162,23 @@ test("the shared intro component implements an explicit first-entry sequence, sk
   assert.ok(outline < energy && energy < slogan && slogan < stadium && stadium < reveal && reveal < complete);
 });
 
+test("skip remains available through loading, every intro phase and the stadium entry video", () => {
+  const component = source("components/touchline/arena/TouchlineArenaIntro.tsx");
+  const arena = source("app/arena/ArenaClient.tsx");
+
+  // No phase restriction: reveal is still part of the introduction.
+  assert.match(component, /const canSkipSequence = mode !== "hidden" && mode !== "skip"/);
+  assert.match(component, /sequenceStartRef\.current\(true\)/);
+  // The video control must not depend on a callback from an earlier phase.
+  assert.match(arena, /\{!hasEntryVideoFinished && introExperienceMode === "hidden" \? \(/);
+  const skipStart = arena.indexOf("function skipOfficialIntroExperience()");
+  const skipEnd = arena.indexOf("function replayEntryVideo()", skipStart);
+  const skip = arena.slice(skipStart, skipEnd);
+  assert.match(skip, /completeOfficialIntroExperience\(\)/);
+  assert.match(skip, /startCardLoopVideo\(\)/);
+  assert.doesNotMatch(skip, /location\.(assign|replace|href)|router\.(push|replace)/);
+});
+
 test("intro presentation protects safe areas, landscape controls and reduced-motion users", () => {
   const styles = source("components/touchline/arena/touchline-arena-intro.module.css");
 
@@ -272,8 +289,9 @@ test("Arena relies on the global landscape boundary, reveals first access quickl
   assert.match(arena, /if \(launchMode === "skip"\)/);
   assert.match(arena, /setIntroExperienceMode\("hidden"\)/);
   assert.match(arena, /startCardLoopVideo\(\)/);
-  assert.match(arena, /const isArenaIntroViewportReady = true/);
-  assert.match(arena, /root layout already prevents phone\/tablet portrait gameplay/);
+  assert.match(arena, /const isArenaIntroViewportReady = useSyncExternalStore\(\s*subscribeTouchlineArenaMediaAvailability,\s*readTouchlineArenaMediaAvailability/);
+  assert.match(arena, /if \(!isArenaIntroViewportReady\) \{\s*arenaMediaSession\.stop\(\);\s*entryVideo\?\.pause\(\);\s*loopVideo\?\.pause\(\)/);
+  assert.match(arena, /if \(isArenaIntroViewportReady && !hasArenaMediaSource\) setHasArenaMediaSource\(true\)/);
   assert.match(
     arena,
     /const isArenaFunctionalReady = Boolean\(standaloneExperience\) \|\| \(\s*isArenaIntroViewportReady\s*&& introExperienceMode === "hidden"\s*&& hasEntryVideoFinished\s*\)/,
@@ -298,7 +316,8 @@ test("Arena relies on the global landscape boundary, reveals first access quickl
   assert.match(arena, /if \(reducedMotion\) \{[\s\S]*?loopVideo\.pause\(\)[\s\S]*?setIsArenaVideoPaused\(true\)/);
   assert.ok(revealStart >= 0 && revealEnd > revealStart);
   assert.doesNotMatch(reveal, /introExperienceMode === "first"[\s\S]*?startCardLoopVideo\(\)/);
-  assert.match(reveal, /entryVideo\.currentTime = 0[\s\S]*?void entryVideo\.play\(\)\.catch\(startCardLoopVideo\)/);
+  assert.match(reveal, /entryVideo\.currentTime = 0[\s\S]*?void playOfficialArenaVideo\(entryVideo\)\.then/);
+  assert.match(reveal, /if \(played === false && arenaMediaMountedRef\.current && readTouchlineArenaMediaAvailability\(\)\) startCardLoopVideo\(\)/);
   assert.ok(hotkeyEffectStart >= 0 && hotkeyEffectEnd > hotkeyEffectStart);
   assert.match(hotkeyEffect, /if \(!isArenaFunctionalReady\) return/);
   assert.match(hotkeyEffect, /document\.addEventListener\("keydown", handleArenaHotkeys\)/);

@@ -389,11 +389,16 @@
   height: 16px;
 }
 
-.sequenceSkip {
+.sequenceControls {
   position: absolute;
   z-index: 9;
   top: max(18px, env(safe-area-inset-top));
   right: max(18px, env(safe-area-inset-right));
+  display: flex;
+  gap: 8px;
+}
+
+.sequenceSkip {
   border: 1px solid rgba(255, 255, 255, .18);
   color: rgba(255, 255, 255, .76);
   background: rgba(2, 6, 8, .7);
@@ -485,7 +490,7 @@
     font-size: 10px;
   }
 
-  .sequenceSkip {
+  .sequenceControls {
     top: max(10px, env(safe-area-inset-top));
     right: max(10px, env(safe-area-inset-right));
   }

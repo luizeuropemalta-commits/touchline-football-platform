@@ -13,6 +13,7 @@ import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-coaches";
 import { recordTouchlineLineupAvailableObservation } from "@/lib/football-data/official-team-sheet-readiness";
+import { reconcilePendingTouchlineFantasyGameweeks } from "@/lib/touchlineFantasy/gameweek-lifecycle";
 
 const COMPETITION_ID = "8";
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
@@ -118,7 +119,7 @@ async function completeRun(admin: SupabaseClient, result: LiveSyncResult) {
       playerScoringFixtureIds: result.playerScoringFixtureIds,
       playerFailedFixtureIds: result.playerFailedFixtureIds,
       playerMissingSettlementFixtureIds: result.playerMissingSettlementFixtureIds,
-      cadenceExecuted: result.status !== "skipped",
+      cadenceExecuted: result.status !== "skipped" && result.skippedReason !== "cadence_not_due",
       skippedReason: result.skippedReason ?? null,
     },
   }).eq("id", result.syncRunId);
@@ -207,8 +208,8 @@ export async function syncSportmonksLiveState(
     });
     result.cadence = decision.cadence;
     if (!decision.due) {
-      result.ok = true;
-      result.status = "skipped";
+      result.ok = result.errors.length === 0;
+      result.status = result.ok ? "skipped" : "partial";
       result.skippedReason = "cadence_not_due";
       return result;
     }
@@ -274,16 +275,48 @@ export async function syncSportmonksLiveState(
     result.updated = persistence.updated;
     result.errors.push(...persistence.errors);
 
+    // Only persisted provider states may drive the Fantasy window. A partial
+    // fixture write still has valid canonical observations; a zero-write run
+    // has none. Opening/closing rules remain exclusively in the database RPC.
+    if (persistence.updated > 0) {
+      try {
+        const { error: fantasyWindowError } = await admin.rpc("touchline_fantasy_sync_gameweeks");
+        if (fantasyWindowError) {
+          const code = fantasyWindowError.code;
+          const safeError = typeof code === "string" && /^(?:[A-Z0-9]{5}|PGRST[0-9]{3})$/.test(code)
+            ? code
+            : "unknown";
+          result.errors.push(`fantasy-window:${safeError}`);
+        }
+      } catch {
+        result.errors.push("fantasy-window:unavailable");
+      }
+    }
+
     // The canonical fixture write is the distribution boundary. Reconcile
     // both player and coach game data immediately so a finished match cannot
     // remain visible in Live while cards, profiles and tables still show the
     // previous score.
-    const playerReconciliation = await syncTouchLinePlayerSeasonStatistics(admin);
+    const playerReconciliation = await syncTouchLinePlayerSeasonStatistics(admin).finally(async () => {
+      // Retry already-canonical rounds even when this run has no new fixture
+      // writes. Also retain pending work if the statistics producer throws.
+      // SQL discovers stale score versions durably, without replaying settled
+      // history whose source versions still match.
+      const lifecycle = await reconcilePendingTouchlineFantasyGameweeks(admin);
+      if (lifecycle.error) result.errors.push(`fantasy-lifecycle:${lifecycle.error}`);
+      else if (lifecycle.pendingStatistics) result.errors.push("fantasy-lifecycle:statistics-pending");
+    });
     result.playerFixtureRowsWritten = playerReconciliation.fixtureRowsWritten;
     result.playerScoringFixtureIds = playerReconciliation.scoringFixtureIds;
     result.playerFailedFixtureIds = playerReconciliation.failedFixtureIds;
     result.playerMissingSettlementFixtureIds = playerReconciliation.missingSettlementFixtureIds;
     result.errors.push(...playerReconciliation.errors.map((error) => `player-points:${error}`));
+    // Valid settlements survive deferred publication, but a pending or failed
+    // ranking must remain visible in the enclosing synchronization outcome.
+    if (playerReconciliation.rankingError !== null) {
+      const rankingError = `player-points:ranking:${playerReconciliation.rankingError}`;
+      if (!result.errors.includes(rankingError)) result.errors.push(rankingError);
+    }
     const { data: coachReconciliation, error: coachReconciliationError } = await admin
       .rpc("touchline_reconcile_coach_fixture_points", {
         p_fixture_id: null,
@@ -305,7 +338,7 @@ export async function syncSportmonksLiveState(
     else result.snapshotFixtures = snapshot.length;
 
     result.ok = snapshotResult.persisted
-      && persistence.errors.length === 0
+      && result.errors.length === 0
       && (liveResponse.ok || canonicalIncoming.length > 0);
     result.status = !snapshotResult.persisted
       ? "error"

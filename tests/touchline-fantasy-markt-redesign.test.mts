@@ -47,7 +47,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /Escolha primeiro seu treinador, depois a formação/);
   assert.match(client, /filteredCoaches = snapshot\.coaches\.filter/);
   assert.match(client, /TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.map\(\(club\)/);
-  assert.match(client, /function CompactClubSelector[\s\S]*?TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.map[\s\S]*?<Image[^>]*height=\{38\}[^>]*width=\{38\}/);
+  assert.match(client, /function CompactClubSelector[\s\S]*?TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.map[\s\S]*?<Image[^>]*height=\{56\}[^>]*width=\{56\}/);
   assert.doesNotMatch(client, /ClubHubCrestTrace|TouchlineClubPerimeterTrace/);
   assert.match(client, /aria-pressed=\{club\.teamId === selectedTeamId\}/);
   assert.doesNotMatch(client, /<option value="all">|clubFilter === "all"|All clubs/);
@@ -126,7 +126,8 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /Mercado reabre em|Market reopens in/);
   assert.match(client, /const countdownWindowMs = 24 \* 60 \* 60 \* 1_000/);
   assert.match(client, /O cronômetro inicia 24h antes|The countdown starts 24 hours before/);
-  assert.match(client, /AGUARDANDO RESULTADOS|AWAITING RESULTS/);
+  assert.match(client, /Market Closed/);
+  assert.doesNotMatch(client, /AGUARDANDO RESULTADOS|AWAITING RESULTS/);
   assert.doesNotMatch(client, /GAMEWEEK RATING/);
   assert.match(styles, /\.marketClock\{[\s\S]*?min-width:250px[\s\S]*?overflow:hidden/);
   assert.match(styles, /\.clockDigits\{[\s\S]*?font-variant-numeric:tabular-nums/);
@@ -321,13 +322,15 @@ test("the forward migration fixes T-5, coach snapshot immutability and official-
   assert.match(indexes, /touchline_fantasy_lineup_alerts_fixture_idx/);
 });
 
-test("the canonical Markt window opens five hours after the previous round finalizes without opening early in a compressed calendar", async () => {
-  const [migration, correction, fiveHourMigration, liveSync, rollback] = await Promise.all([
+test("the canonical Markt window closes at kickoff and opens only on every persisted provider-final observation without opening early", async () => {
+  const [migration, correction, finalWhistleMigration, liveSync, rollback, xiSource, deadlinePatch] = await Promise.all([
     source("supabase/migrations/20260826173229_touchline_fantasy_inter_round_market_window.sql"),
     source("supabase/migrations/20260826182434_touchline_fantasy_future_gameweeks_fail_closed.sql"),
-    source("supabase/migrations/20260915103000_touchline_fantasy_inter_round_market_open_5h.sql"),
+    source("supabase/migrations/20260919151427_touchline_fantasy_kickoff_final_whistle_market_window.sql"),
     source("lib/football-data/live-sync.ts"),
     source("supabase/qa/053_touchline_qa_fantasy_inter_round_market_open_5h_rollback.sql"),
+    source("supabase/migrations/20260825202938_touchline_fantasy_markt_gameweek_xi.sql"),
+    source("supabase/migrations/20260825213744_touchline_fantasy_wall_clock_deadline.sql"),
   ]);
   for (const gameweekSync of [migration, correction]) {
     assert.match(gameweekSync, /lag\([\s\S]*?previous_round_completed_at/i);
@@ -341,12 +344,24 @@ test("the canonical Markt window opens five hours after the previous round final
     assert.match(gameweekSync, /round_sequence > 1 and not coalesce\(previous_round_all_final, false\) then 'UPCOMING'/i);
     assert.doesNotMatch(gameweekSync, /else locks_at\s+end as market_opens_at/i);
   }
-  assert.match(fiveHourMigration, /previous_round_completed_at \+ interval '5 hours'/i);
-  assert.match(fiveHourMigration, /first_fixture_at - make_interval\(mins => lock_offset_minutes\)/i);
-  assert.match(fiveHourMigration, /previous_round_completed_at \+ interval '5 hours' < locks_at/i);
-  assert.match(fiveHourMigration, /else locks_at - interval '1 microsecond'/i);
-  assert.match(fiveHourMigration, /not market_window_available[\s\S]*?clock_timestamp\(\) < locks_at then 'UPCOMING'/i);
-  assert.match(fiveHourMigration, /market_window_available and clock_timestamp\(\) < locks_at then 'MARKET_OPEN'/i);
+  assert.match(finalWhistleMigration, /first_fixture_at as locks_at/i);
+  assert.match(finalWhistleMigration, /previous_round_completed_at < locks_at/i);
+  assert.match(finalWhistleMigration, /then previous_round_completed_at/i);
+  assert.match(finalWhistleMigration, /bool_and\([\s\S]*?touchline_fantasy_fixture_is_final\(fixture\.status\)[\s\S]*?fixture\.finalized_at is not null/i);
+  assert.match(finalWhistleMigration, /when any_live then 'LIVE'[\s\S]*?when round_sequence > 1/i);
+  assert.match(finalWhistleMigration, /locks_at <= first_fixture_at/i);
+  assert.match(finalWhistleMigration, /else locks_at - interval '1 microsecond'/i);
+  assert.match(finalWhistleMigration, /not market_window_available[\s\S]*?clock_timestamp\(\) < locks_at then 'UPCOMING'/i);
+  assert.match(finalWhistleMigration, /market_window_available and clock_timestamp\(\) < locks_at then 'MARKET_OPEN'/i);
+  assert.match(finalWhistleMigration, /perform public\.touchline_fantasy_sync_gameweeks\(\);[\s\S]*?TL_FANTASY_GAMEWEEK_LOCKED/i);
+  assert.match(finalWhistleMigration, /TL_FANTASY_SAVE_WINDOW_GUARD_SOURCE_MISMATCH/);
+  assert.match(finalWhistleMigration, /TL_FANTASY_PREPARE_WINDOW_SYNC_SOURCE_MISMATCH/);
+  assert.match(finalWhistleMigration, /TL_FANTASY_PREPARE_WINDOW_GUARD_SOURCE_MISMATCH/);
+  assert.match(xiSource, /perform pg_advisory_xact_lock\(pg_catalog\.hashtextextended\(p_user_id::text \|\| ':' \|\| p_gameweek_id::text, 0\)\);/);
+  assert.match(xiSource, /select \* into v_gameweek from public\.touchline_fantasy_gameweeks where id = p_gameweek_id;/);
+  assert.match(xiSource, /if v_existing is not null then return v_existing; end if;/);
+  assert.match(deadlinePatch, /clock_timestamp\(\) >= v_gameweek\.locks_at/);
+  assert.doesNotMatch(finalWhistleMigration, /interval '5 hours'|interval '5 minutes'/i);
   assert.match(liveSync, /syncSportmonksFixtureSchedule/);
   assert.match(liveSync, /FIXTURE_SCHEDULE_REFRESH_MS = 6 \* 60 \* 60 \* 1000/);
   assert.match(liveSync, /sync_type", "fixture_schedule"/);

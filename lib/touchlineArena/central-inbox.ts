@@ -52,12 +52,24 @@ const PRIORITY_WEIGHT: Record<TouchlineCentralPriority, number> = {
 
 /** Accepts internal product paths only; deep links must never redirect away from TouchLine. */
 export function isSafeTouchlineCentralDeepLink(value: string | null): boolean {
-  if (value === null) return true;
-  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return false;
-  const path = value.split(/[?#]/, 1)[0];
-  return ["/arena", "/club-owner", "/market-transfer", "/rankings", "/notifications", "/inbox"].some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
-  );
+  return value === null || normalizeCentralDeepLink(value) !== null;
+}
+
+function normalizeCentralDeepLink(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\") || /[\u0000-\u0020\u007f]/u.test(value)) return null;
+  try {
+    const destination = new URL(value, "https://touchline.local");
+    if (destination.origin !== "https://touchline.local") return null;
+    // Preserve existing notices while resolving their retired ranking URL.
+    if (destination.pathname === "/rankings") destination.pathname = "/touchline-tables";
+    const path = destination.pathname;
+    const allowed = ["/arena", "/my-club", "/club-owner", "/market-transfer", "/touchline-tables", "/touchline-player-card-rankings", "/live", "/touchline-clubs", "/touchline-players", "/touchline-coaches", "/notifications", "/inbox"].some(
+      (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+    );
+    return allowed ? `${path}${destination.search}${destination.hash}` : null;
+  } catch {
+    return null;
+  }
 }
 
 function localizationFor(message: TouchlineCentralMessage, locale: string) {
@@ -102,7 +114,7 @@ export function resolveTouchlineCentralInbox(input: {
       id: message.id,
       title: localization.title,
       body: localization.body,
-      deepLink: localization.deepLink,
+      deepLink: normalizeCentralDeepLink(localization.deepLink),
       category: message.category,
       lifecycleState: message.lifecycleState,
       priority: message.priority,

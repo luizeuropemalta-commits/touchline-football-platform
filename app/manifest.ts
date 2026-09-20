@@ -8,6 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/arena",
     scope: "/",
     display: "fullscreen",
+    orientation: "landscape",
     background_color: "#020708",
     theme_color: "#07110b",
     icons: [

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Activity,
@@ -247,6 +247,7 @@ export default function TouchlineCardZoom({
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const expandedRef = useRef<HTMLDivElement>(null);
   const pointerOriginRef = useRef<{ x: number; y: number } | null>(null);
   const pointerMovedRef = useRef(false);
   const { dialogProps } = useTouchlineDialog<HTMLDivElement>({
@@ -261,6 +262,24 @@ export default function TouchlineCardZoom({
   const closeLabel = typeof document !== "undefined" && document.documentElement.lang === "pt-BR"
     ? "Fechar card"
     : "Close card";
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    const element = expandedRef.current;
+    if (!element) return;
+    // The official player canvas is 430px wide. Static cards and live cards
+    // must fit the SAME zoom column; do not scale their text independently.
+    // Coach cards already scale proportionally with this column via CSS.
+    const fit = (width: number) => {
+      if (width > 0) element.style.setProperty("--touchline-card-static-scale", String(Math.min(1, width / 430)));
+    };
+    fit(element.clientWidth);
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) fit(entry.contentRect.width);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -360,7 +379,7 @@ export default function TouchlineCardZoom({
               ×
             </button>
             <div className={styles.cardColumn}>
-              <div className={styles.expandedCard} data-card-zoom="expanded">{expandedContent ?? children}</div>
+              <div ref={expandedRef} className={styles.expandedCard} data-card-zoom="expanded">{expandedContent ?? children}</div>
               {(contractTermLabel || (!details && tierLabel)) ? (
                 <div className={styles.expandedMeta}>
                   {!details && tierLabel ? <strong>{tierLabel}</strong> : null}
