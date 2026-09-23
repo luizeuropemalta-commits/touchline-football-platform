@@ -11,9 +11,12 @@ import { acquireTouchlineLiveSyncRun } from "@/lib/football-data/live-sync-lease
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
 import type { FootballDataProvider, TouchlineFixture } from "@/lib/football-data/types";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
+import { inspectTouchlineProductionSyncRuntime } from "@/lib/football-data/production-sync-runtime";
 import { touchlineCompetitionCoachAssignments } from "@/lib/touchlineArena/live-coaches";
 import { recordTouchlineLineupAvailableObservation } from "@/lib/football-data/official-team-sheet-readiness";
 import { reconcilePendingTouchlineFantasyGameweeks } from "@/lib/touchlineFantasy/gameweek-lifecycle";
+import { resolveTouchlineRecoveryScope, recoveryFixtureMatches, recoveryFeedComplete, claimTouchlineFixtureRecovery,
+  finishTouchlineFixtureRecovery, persistTouchlineRecoveryFeed, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS } from "@/lib/football-data/fixture-backlog-recovery";
 
 const COMPETITION_ID = "8";
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
@@ -28,6 +31,10 @@ type Dependencies = {
   acquireRun?: typeof acquireTouchlineLiveSyncRun;
   recordLineupObservation?: typeof recordTouchlineLineupAvailableObservation;
   now?: () => number;
+  resolveRecoveryScope?: typeof resolveTouchlineRecoveryScope;
+  claimRecovery?: typeof claimTouchlineFixtureRecovery;
+  finishRecovery?: typeof finishTouchlineFixtureRecovery;
+  persistRecoveryFeed?: typeof persistTouchlineRecoveryFeed;
 };
 
 export type LiveSyncResult = {
@@ -145,12 +152,14 @@ function uniqueFixtures(fixtures: TouchlineFixture[]) {
   return [...new Map(fixtures.map((fixture) => [fixture.providerId, fixture])).values()];
 }
 
-function assertQaLiveSyncRuntime() {
+function assertLiveSyncRuntime() {
   const inspection = inspectTouchlineIsolatedPreviewEnvironment();
   if (inspection.status !== "qa"
     || process.env.VERCEL_ENV !== "preview"
     || process.env.TOUCHLINE_QA_SUPABASE_PROJECT_REF !== QA_PROJECT_REF) {
-    throw new Error("Live synchronization is available only in the dedicated functional QA Preview.");
+    if (!inspectTouchlineProductionSyncRuntime(process.env).allowed) {
+      throw new Error("Live synchronization requires a verified QA or explicitly enabled Production runtime.");
+    }
   }
 }
 
@@ -159,7 +168,7 @@ export async function syncSportmonksLiveState(
   options: { forceFixtureId?: string | null } = {},
   dependencies: Dependencies = {},
 ): Promise<LiveSyncResult> {
-  assertQaLiveSyncRuntime();
+  assertLiveSyncRuntime();
   const now = dependencies.now?.() ?? Date.now();
   const result: LiveSyncResult = {
     ok: false,
@@ -196,7 +205,9 @@ export async function syncSportmonksLiveState(
       ? []
       : await refreshFixtureScheduleWhenStale(admin, now);
     result.errors.push(...fixtureScheduleErrors);
-    const schedule = await readFixtures({ includeHistorical: true, limit: 240, now });
+    const scope = await (dependencies.resolveRecoveryScope ?? resolveTouchlineRecoveryScope)(admin);
+    const schedule = await readFixtures({ providedAdmin: admin, seasonId: scope.seasonId,
+      through: new Date(now + 24 * 60 * 60 * 1000).toISOString(), now });
     // Cadence is anchored to when the last effective successful run started.
     // A cadence_not_due row remains auditable but cannot postpone real work.
     // The durable lease above remains the authority for overlapping runs.
@@ -222,20 +233,27 @@ export async function syncSportmonksLiveState(
     const provider = dependencies.provider ?? createFootballDataProvider("sportmonks");
     const liveResponse = await provider.getLiveScores({ competitionId: COMPETITION_ID });
     const incoming: TouchlineFixture[] = [];
-    if (liveResponse.ok) incoming.push(...liveResponse.data.filter((fixture) => fixture.competitionId === COMPETITION_ID));
+    if (liveResponse.ok) incoming.push(...liveResponse.data.filter((fixture) => recoveryFixtureMatches(fixture, scope)));
     else result.errors.push(`live-scores:${liveResponse.error.code}`);
 
     const candidateIds = new Set([
       ...decision.candidateFixtureIds,
       ...incoming.map((fixture) => fixture.providerId),
     ]);
+    let providerRateLimited = !liveResponse.ok && liveResponse.error.code === "rate_limited";
     for (const fixtureId of candidateIds) {
+      if (providerRateLimited) break;
       const feedResponse = await provider.getFixtureFantasyFeed(fixtureId);
       if (!feedResponse.ok) {
         result.errors.push(`${fixtureId}:${feedResponse.error.code}`);
+        providerRateLimited = feedResponse.error.code === "rate_limited";
         continue;
       }
       if (!feedResponse.data) continue;
+      if (!recoveryFixtureMatches(feedResponse.data.fixture, scope, fixtureId)) {
+        result.errors.push(`${fixtureId}:fixture-identity-mismatch`);
+        continue;
+      }
       incoming.push(feedResponse.data.fixture);
       const persisted = await (dependencies.persistFantasyFeed ?? persistFantasyFixtureFeed)(feedResponse.data);
       if (persisted.persisted) {
@@ -252,9 +270,51 @@ export async function syncSportmonksLiveState(
       } else result.errors.push(`${fixtureId}:fantasy-feed:${persisted.reason ?? "failed"}`);
     }
 
+    // Current live/deadline traffic is processed first. Backlog is a separate
+    // durable claim, never a sweep of every historical fixture on each tick.
+    const finishRecovery = dependencies.finishRecovery ?? finishTouchlineFixtureRecovery;
+    const recoveredClaims: NonNullable<Awaited<ReturnType<typeof claimTouchlineFixtureRecovery>>>[] = [];
+    const excluded = [...candidateIds];
+    if (liveResponse.ok && !providerRateLimited) for (let index = 0; index < BACKLOG_MAX_PER_RUN; index += 1) {
+      if ((dependencies.now?.() ?? Date.now()) - now >= BACKLOG_DEADLINE_MS) break;
+      const claim = await (dependencies.claimRecovery ?? claimTouchlineFixtureRecovery)(admin, scope, lease.runId, now, excluded);
+      if (!claim) break;
+      excluded.push(claim.providerFixtureId);
+      if (/cancelled|canceled|abandoned|awarded|walkover/i.test(claim.status)) {
+        await finishRecovery(admin, claim, lease.runId, now, "needs_review", "non_played_terminal");
+        result.errors.push(`${claim.providerFixtureId}:recovery-needs-review`);
+        continue;
+      }
+      const response = await provider.getFixtureFantasyFeed(claim.providerFixtureId);
+      if (!response.ok) {
+        await finishRecovery(admin, claim, lease.runId, now, "pending", response.error.code, response.error.retryAfterSeconds);
+        result.errors.push(`${claim.providerFixtureId}:recovery-${response.error.code}`);
+        if (response.error.code === "rate_limited") break;
+        continue;
+      }
+      if (!response.data || !recoveryFixtureMatches(response.data.fixture, scope, claim.providerFixtureId)) {
+        await finishRecovery(admin, claim, lease.runId, now, "needs_review", "fixture_identity_mismatch");
+        result.errors.push(`${claim.providerFixtureId}:recovery-identity-mismatch`);
+        continue;
+      }
+      const persisted = await (dependencies.persistRecoveryFeed ?? persistTouchlineRecoveryFeed)(admin, claim, lease.runId, response.data);
+      if (persisted.persisted) {
+        // The recovery RPC already writes the exact canonical fixture under
+        // its lease fence. Never repeat that write through the legacy path.
+        result.fantasyFeedsStored += 1;
+      }
+      const complete = persisted.persisted && persisted.reconciliationReady && recoveryFeedComplete(response.data);
+      if (complete) recoveredClaims.push(claim);
+      else await finishRecovery(admin, claim, lease.runId, now,
+        persisted.persisted && recoveryFeedComplete(response.data) ? "needs_review" : "pending",
+        persisted.persisted && recoveryFeedComplete(response.data) ? "shirt_reconciliation_pending" : persisted.persisted ? "feed_incomplete" : "persistence_failed", undefined,
+        /postponed/i.test(response.data.fixture.status ?? ""));
+      if (!complete) result.errors.push(`${claim.providerFixtureId}:recovery-${claim.attemptCount >= 8 ? "needs-review" : "pending"}`);
+    }
+
     const fetchedAt = new Date(now).toISOString();
     const canonicalIncoming = uniqueFixtures(incoming)
-      .filter((fixture) => fixture.competitionId === COMPETITION_ID)
+      .filter((fixture) => recoveryFixtureMatches(fixture, scope))
       .map((fixture) => ({
         ...fixture,
         source: { provider: "sportmonks" as const, providerId: fixture.providerId, lastSyncedAt: fetchedAt },
@@ -272,13 +332,17 @@ export async function syncSportmonksLiveState(
       canonicalIncoming,
       fetchedAt,
     );
-    result.updated = persistence.updated;
+    result.updated = persistence.updated + recoveredClaims.length;
     result.errors.push(...persistence.errors);
+    for (const claim of recoveredClaims) {
+      await finishRecovery(admin, claim, lease.runId, now, persistence.errors.length ? "pending" : "recovered",
+        persistence.errors.length ? "canonical_state_pending" : "complete");
+    }
 
     // Only persisted provider states may drive the Fantasy window. A partial
     // fixture write still has valid canonical observations; a zero-write run
     // has none. Opening/closing rules remain exclusively in the database RPC.
-    if (persistence.updated > 0) {
+    if (persistence.updated > 0 || recoveredClaims.length > 0) {
       try {
         const { error: fantasyWindowError } = await admin.rpc("touchline_fantasy_sync_gameweeks");
         if (fantasyWindowError) {

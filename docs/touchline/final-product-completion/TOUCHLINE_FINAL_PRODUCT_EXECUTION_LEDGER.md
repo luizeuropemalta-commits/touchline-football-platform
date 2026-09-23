@@ -1,5 +1,23 @@
 # TouchLine Final Product Completion — Current State
 
+## Latest applied QA leadership checkpoint
+
+- Reviewed atomic leadership correction applied only to selected QA; connector version 20260923221024. Local filename reconciled to that version without changing SQL (SHA256 248048fe2fbef8a235f0dd86fa0d4053e6bb69a788ffcd061da879dc61797c42).
+- Before/after: decisions 40→41; all previous decision hashes identical. Active snapshot content/pointer, 80 fixtures, 44 selections, 11 locked selections and 1,816 settlements have identical hashes. New decision timestamp matches the existing publication timestamp.
+- Trigger present, SECURITY INVOKER, empty search_path; anon/authenticated EXECUTE denied. QA cron paused and HTTP queue empty. No ten-game recovery, deployment or domain change.
+- Forward rollback, if needed: remove only this new trigger/function through a reviewed forward migration; preserve immutable decisions and prior publisher. This supersedes the earlier leadership-not-applied checkpoint.
+
+## 2026-09-24 — Current release checkpoint (supersedes older pending states)
+
+- Fresh full suite: 2,285 passed, zero failed/skipped; TypeScript and ESLint exit 0. Local production build, readiness, mission governance, Vercel documentation inputs and diff hygiene passed. No remote build consumed.
+- Owner's 23 September approval permits the recorded two sequential Production builds, OFF smoke then ON smoke, only after all other release gates. Earlier approval-pending wording is superseded; no machine/plan upgrade authorized.
+- Selected QA cron job 5 remains paused, freshly verified. Recovery schema is applied as 20260923185720; the local filename now matches, with SQL hash unchanged. Old pause-failed/cron-active/mapping-pending checkpoints are superseded, not deleted.
+- Private public/auth/storage SQL exports restored in isolated local Docker. This proves database-record restoration, not online login or the four Storage media objects' bytes. No remote restore.
+- Leadership migration is not yet applied remotely. Fresh catalog preflight confirms its trigger absent and the audited active ranking missing its decision. Exact SQL applied successfully to the isolated restored database: decision count 40 to 41, active decision present, anonymous execution denied.
+- Independent source review found no new P0/P1 within the reviewed scope. Explicit candidate manifest excludes supabase/.temp and secrets. Final immutable commit and remote QA gates remain pending.
+- Mobile QA two-pass ranking/Arsenal scrolling and card zoom passed in isolated WebKit; ClubHub back/reload passed; fresh portrait session correctly gates play. Current Production portrait overflow differs from QA. Native device rotation, authenticated fast-scroll and full-site visual acceptance remain unproven.
+- Ten overdue games have NOT been recovered. No new QA deployment, Production deployment, domain cutover, old-deployment deletion, email or social publication occurred. Next executable work: exact leadership preflight/verification, immutable QA candidate, then bounded game recovery and post-recovery acceptance.
+
 This is the sole authoritative continuation ledger. It supersedes the former
 Full Product Recovery ledger without deleting its historical evidence.
 
@@ -3896,3 +3914,33 @@ PASS is not binding/database/functional QA proof. Fiscal review pending.
   candidate, QA deploy/smoke and production gates remain explicit.
 - Preserved generated reports/runtime backups outside candidate; no deletions,
   new paid video generation, social approval or dispatch.
+
+## 2026-09-23 06:20 UTC — resumed integration and bounded security review
+
+- Correct QA read-only Sportmonks diagnostic succeeded for team8,29 squad entries; ten overdue18–20September fixtures remain not started in persisted data. No claim of current points.
+- Default-OFF exact-bound Production sync runtime implemented and independently verified (87focusedtests plus7additionalcases). Final integration2281/2281,0skip; types/lint/build/diff/governance/inputchecksPASS. Logs workspace-external `/private/tmp/touchline-integrated-20260923-{tests,build,lint}.log`.
+- Profile wholeword/numeric rendering checked568/844/1051/1280/1440/1920; isolatedDOM+CSS only, not fullnativeacceptance.
+- Securitydiffscan f1165f49-8485-46d2-b51c-cafb6f00f305 completed against frozenpatch37bcc0bee0b4c70ded1ae35edc827b35b694242b1b82dcd68f03aeffa27cb1c4.12/12changedsourceitems,0confirmedfindings, partialruntimeassurance. Report in native scan artifacts; no source changes during scan. Usage telemetry reports8,954,159totaltokens,8,762,496cachedinput, withpartialcoverage/rollout_record_invalid warning; not a reliable incremental billing measurement.
+- FreshQA catalog confirms lease advisorykeymatchesnewrecoveryRPCs, restrictedEXECUTE. Installedscheduler onlyjob5 touchline-qa-live-sync active; no runningwriter atobservation; pg_cron1.6.4,pg_net0.20.4,Vault0.3.1. Allreadonly.
+- Private preserved snapshots: QA3accounts/44selections/11lockedselections plusrelatedgameweekstate; legacy19accounts. Scopednotfullbackup. No user, team, score, migration, credential, scheduler, deployment, domain, billing or publication mutated remotely.
+- Continue localoperator-only disabledschedulerpreparation, thenindependentreview. Actualdatarecovery, safePreviewwriterretirement, fullrole/deviceacceptance andrelease gatesremainopen.
+# 2026-09-23 — continued local recovery integrity verification
+
+Independent reproduction proved the pending recovery RPC could accept incorrect ordered participants and persist scores despite returning incomplete readiness. Corrected before any remote application. Initial handcrafted club scaffold hid a wrong-column defect; independent real catalog comparison found it, and the regression now executes canonical migration 013 club DDL. Wrong/swapped/missing/equal/unmapped participants preserve complete preimages; matching legacy payload remains supported. Final migration SHA256 `86e46d6b7d800d0f6e35960cc079e25d44dbafaeb8a1390fb8945ba066bd92c0`.
+
+Prepared three local scheduler operator/runbook/test files; root executed 30/30 operator/runtime tests and independent source review found no material issue. It remains a guarded rollback, not unconditional emergency stop; real cron/net concurrency and queue drain are not established by substituted collaborators. Integrated full suite 2,284/2,284, no skips/failures; build/lint exit 0. Read-only selected QA maps all 80 fixtures to valid distinct official clubs, with ten past Not Started. No remote mutation, sync, deployment, secret, cron or alias change. Two-build OFF→ON policy exception requested, not assumed. Full release remains NO-GO pending operational and acceptance gates.
+## 2026-09-23 — authorized OFF-stage preparation
+
+Owner approved the requested exception of two serialized Production publications for the same verified SHA, OFF smoke then ON smoke. CLI authenticated and project metadata independently verified: prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM / team_P1d7YNrmUObvbJJTJRlGcXoz, production branch main. Exact Git remotes qa273009af16f0d5fd128ca25a10e3265508f0d435, main2e9197e37a25716952e4c26865ad9f4ba2858503. No push/build/deploy/domain change.
+
+Production flag TOUCHLINE_PRODUCTION_DATA_SYNC_ENABLED created explicitly false, ID YjrL1M4cM3E9hQc4, production-only. Initial target parameter request failed HTTP400 without mutation; corrected JSON succeeded. No other variables/credentials changed; secret values not exposed. Environment edit affects future deployment only.
+
+Canonical verify:release completed 2,229/2,229, zero skips, exit0 with local SQL harness; initial sandbox EPERM local-port failure resolved by authorized execution. Safari existing QA /my-club showed safe-navigation 404 under current normal-window Admin session; proxy.ts explicitly rejects Admin for this customer route. Customer acceptance not passed; owner asked to restore role-matched sessions, no logout or identity change performed. Before recovery invocation, current fixture/feed/settlement/aggregate/ranking rollback coverage must be established; account/XI snapshot is not a full recovery point. Release remains NO-GO pending those concrete gates and clean immutable candidate.
+
+## 2026-09-23 — additive recovery schema applied, runtime gated
+
+Owner restored CUSTOMER and Supabase sessions. QA My Club XI11/11 verified; safe CB browsing and Ruben Dias zoom rendered28.51 consistently on card/panel. No roster writes. Retained-project daily physical backup23Sep03:16:11UTC verified in dashboard; PITR disabled. No backup restore/purchase.
+
+Independent read-only review approved additive recovery schema separately from broad live-sync runtime. Exact reviewed SQL hash86e46d6b7d800d0f6e35960cc079e25d44dbafaeb8a1390fb8945ba066bd92c0 applied with explicit atomic wrapper, bounded timeouts, target+season guard and shared writer advisory lock. Connector recorded20260923185720 touchline_fixture_backlog_recovery; reconcile local filename20260921093526 mapping without deleting history before release. Postflight queue0, RLS/FORCE RLS enabled, four RPCs service-only. Root compared all four deployed prosrc bodies to exact local source:4/4 identical. Leadership not applied; no recovery invoked.
+
+Fixtures80/feeds40/XI44/locked11/active-ranking1 full-row fingerprints stable. Player stats797/1816 and settlements1816 counts stable but full hashes changed while old minute cron ran partial recalculations. No claim of whole-database immutability. Attempted reviewed pause-qa operator failed42501 at unsupported cron.job table lock and rolled back; QA remains active. Narrow local fix assigned to sole writer, no grant escalation. No deployment/alias change or old-candidate deletion; release remains NO-GO.

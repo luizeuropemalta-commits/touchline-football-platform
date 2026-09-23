@@ -541,7 +541,7 @@ function FixtureStatisticsPanel({
                 <span>{fixture.fixtureStartsAt ?? text.unavailable}</span>
                 <strong>{appearanceLabel(fixture.appearanceStatus)}</strong>
                 <small>{fixture.minutes === null ? text.unavailable : `${fixture.minutes} ${text.minutes.toLowerCase()}`}</small>
-                <small>{text.rating}: {fixture.rating === null ? "—" : String(fixture.rating)}</small>
+                <small className={styles.fixtureRating}>{text.rating}: {fixture.rating === null ? "—" : String(fixture.rating)}</small>
               </div>
             ))}
           </div>
@@ -551,7 +551,7 @@ function FixtureStatisticsPanel({
         <h3>{text.currentFixture}</h3>
         {current ? (
           <>
-            <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small>{text.currentMatchPoints}: {current.rating === null ? "—" : String(current.rating)}</small></div></div>
+            <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small className={styles.fixtureRating}>{text.currentMatchPoints}: {current.rating === null ? "—" : String(current.rating)}</small></div></div>
             {matchFacts.length ? (
               <div className={styles.officialStats} data-stat-count={matchFacts.length} data-position-aware-player-facts>
                 {matchFacts.map((fact) => (
@@ -1256,7 +1256,7 @@ export default async function TouchLinePlayerProfilePage({
           <div className={styles.metrics}>
             <div>
               <small>{text.points}</small>
-              <strong>{cumulativeRatingText}</strong>
+              <strong className={styles.numericMetric}>{cumulativeRatingText}</strong>
             </div>
             <div>
               <small>{text.rank}</small>
@@ -1277,7 +1277,7 @@ export default async function TouchLinePlayerProfilePage({
             {displayedPriceText ? (
               <div>
                 <small>{text.price}</small>
-                <strong>{displayedPriceText}</strong>
+                <strong className={styles.numericMetric}>{displayedPriceText}</strong>
               </div>
             ) : null}
           </div>

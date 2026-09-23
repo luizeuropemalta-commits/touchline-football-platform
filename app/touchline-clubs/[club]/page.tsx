@@ -1230,10 +1230,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         }
         .club-hub-hero {
           min-height: 492px;
-          padding: clamp(24px, 4vw, 52px) clamp(24px, 4vw, 52px) 126px;
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
+          padding: clamp(24px, 4vw, 52px);
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(240px, 32%);
+          grid-template-areas: "identity match" "honours honours";
+          align-items: center;
           gap: 24px;
           overflow: hidden;
           position: relative;
@@ -1292,6 +1293,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           animation: club-hub-border-sweep 8s linear infinite;
         }
         .club-hub-identity {
+          grid-area: identity;
           position: relative;
           z-index: 1;
         }
@@ -1301,7 +1303,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           gap: clamp(22px, 3vw, 42px);
           flex: 1;
           min-width: 0;
-          transform: translateY(16px);
         }
         .club-hub-title-block {
           min-width: 0;
@@ -1309,11 +1310,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           animation: club-hub-content-rise .72s cubic-bezier(.2,.8,.2,1) .12s both;
         }
         .club-hub-hero-next-match {
-          position: absolute;
+          grid-area: match;
+          position: relative;
           z-index: 2;
-          top: clamp(26px, 3vw, 46px);
-          right: clamp(22px, 3vw, 48px);
-          width: min(420px, 31vw);
+          min-width: 0;
+          width: 100%;
         }
         .club-hub-hero-next-match-awaiting {
           display: grid;
@@ -1580,11 +1581,9 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           line-height: 1.2;
           font-weight: 950;                  }
         .club-hub-hero-footer {
-          position: absolute;
+          grid-area: honours;
+          position: relative;
           z-index: 1;
-          right: clamp(300px, 27vw, 430px);
-          bottom: 20px;
-          left: clamp(230px, 21vw, 410px);
           min-width: 0;
           display: grid;
           grid-template-columns: minmax(0, 1fr);
@@ -1607,6 +1606,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           line-height: .92;
           letter-spacing: -.045em;
           text-wrap: balance;
+          overflow-wrap: anywhere;
           text-shadow: 0 18px 38px rgba(0,0,0,.42);
         }
         @keyframes club-hub-stadium-breathe {
@@ -2033,7 +2033,10 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
         }
         @media (max-width: 980px) {
           .club-hub { padding: 22px 14px 42px; }
-          .club-hub-hero,
+          .club-hub-hero {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "identity" "match" "honours";
+          }
           .club-hub-identity,
           .club-hub-section-head { align-items: stretch; flex-direction: column; }
           .club-hub-section-actions { justify-items: start; }
@@ -2174,21 +2177,22 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
             margin-top: 14px;
             gap: 12px;
           }
-          .club-hub-hero,
           .club-hub-identity,
           .club-hub-section-head {
             align-items: center;
             flex-direction: row;
           }
           .club-hub-hero {
+            grid-template-columns: minmax(0, 1fr) minmax(220px, 32%);
+            grid-template-areas: "identity match" "honours honours";
             min-height: 0;
-            padding: 16px 20px 68px;
+            padding: 16px 20px;
           }
           .club-hub-identity {
             gap: 24px;
           }
           .club-hub-logo-stack {
-            width: 180px;
+            width: 136px;
             gap: 8px;
           }
           .club-hub-logo {
@@ -2224,6 +2228,15 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           }
           .club-hub-section-actions small {
             text-align: right;
+          }
+        }
+        @media (orientation: landscape) and (max-width: 720px) and (max-height: 520px) {
+          .club-hub-hero {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "identity" "match" "honours";
+          }
+          .club-hub-logo-stack {
+            width: 136px;
           }
         }
         @media (prefers-reduced-motion: reduce) {

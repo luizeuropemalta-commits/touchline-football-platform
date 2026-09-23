@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
+import { inspectTouchlineProductionSyncRuntime } from "@/lib/football-data/production-sync-runtime";
 
 const QA_PROJECT_REF = "xgxbwqxjssxxuihuwmgy";
 
@@ -24,12 +25,10 @@ async function isAuthorized(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // V3 settlements share the existing protected rebuild route, but are
-  // deliberately confined to the dedicated QA database and Preview runtime.
-  // This check precedes authentication and client construction so a future
-  // Production deployment cannot mutate legacy read models while V3 is QA-only.
-  if (!isDedicatedQaRuntime()) {
-    return NextResponse.json({ ok: false, error: "Score Engine V3 rebuild is available only in dedicated QA." }, { status: 403 });
+  // Runtime admission precedes authentication/client construction. Production
+  // is default OFF and bound to the explicitly retained data project.
+  if (!isDedicatedQaRuntime() && !inspectTouchlineProductionSyncRuntime(process.env).allowed) {
+    return NextResponse.json({ ok: false, error: "Score Engine V3 rebuild requires a verified QA or explicitly enabled Production runtime." }, { status: 403 });
   }
   if (!await isAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "Owner session or TouchLine Data sync credential required." }, { status: 401 });

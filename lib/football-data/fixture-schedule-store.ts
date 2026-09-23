@@ -210,6 +210,10 @@ export async function readPublicCompetitionFixtureByProviderId(
 
 /** Server-only schedule read shared by ClubHub, Arena and TouchLine Live. */
 export async function readPublicCompetitionFixtures(options: {
+  /** Internal synchronization can reuse this mapper with an explicit season/window. */
+  providedAdmin?: FixtureAdminClient;
+  seasonId?: string;
+  through?: string;
   provider?: FootballDataProviderName;
   competitionProviderId?: string;
   limit?: number;
@@ -217,7 +221,7 @@ export async function readPublicCompetitionFixtures(options: {
   /** Match Centre uses the durable archive as well as the current schedule. */
   includeHistorical?: boolean;
 } = {}) {
-  const admin = createAdminClient();
+  const admin = options.providedAdmin ?? createAdminClient();
   if (!admin) return [] as TouchlineFixture[];
 
   const provider = options.provider ?? DEFAULT_PROVIDER;
@@ -243,6 +247,8 @@ export async function readPublicCompetitionFixtures(options: {
     .order("starts_at", { ascending: true })
     .limit(limit);
   if (!options.includeHistorical) fixtureQuery = fixtureQuery.gte("starts_at", from);
+  if (options.seasonId) fixtureQuery = fixtureQuery.eq("season_id", options.seasonId);
+  if (options.through) fixtureQuery = fixtureQuery.lte("starts_at", options.through);
   const { data: fixtureRows, error: fixturesError } = await fixtureQuery;
   if (fixturesError || !Array.isArray(fixtureRows) || !fixtureRows.length) return [] as TouchlineFixture[];
 

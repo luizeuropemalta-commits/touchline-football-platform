@@ -6,8 +6,10 @@ import { runInNewContext } from "node:vm";
 
 import { decideLiveSyncCadence } from "../lib/football-data/live-sync-cadence.ts";
 import { touchlineFixtureState } from "../lib/touchlineArena/match-centre.ts";
+import { recoveryFixtureMatches, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS } from "../lib/football-data/fixture-backlog-recovery.ts";
 import type { LiveSyncResult } from "../lib/football-data/live-sync.ts";
 import type { TouchlineFixture } from "../lib/football-data/types.ts";
+import { inspectTouchlineProductionSyncRuntime } from "../lib/football-data/production-sync-runtime.ts";
 
 // Execute the production orchestrator and its real cadence/merge helpers. All
 // provider, reconciliation and persistence boundaries are isolated in memory.
@@ -31,11 +33,12 @@ const NOW = Date.parse("2026-09-19T15:30:00.000Z");
 const RUN_ID = "11111111-1111-4111-8111-111111111111";
 const fixture: TouchlineFixture = {
   id: "sportmonks:19722167", providerId: "19722167", provider: "sportmonks",
-  competitionId: "8", startsAt: "2026-09-19T15:00:00.000Z", status: "Live",
+  competitionId: "8", seasonId: "25600", startsAt: "2026-09-19T15:00:00.000Z", status: "Live",
   homeScore: 1, awayScore: 0, source: { provider: "sportmonks", providerId: "19722167" },
 };
 
 type Input = {
+  environment?: Record<string, string | undefined>;
   rankingError?: string;
   playerErrors?: string[];
   coachError?: string;
@@ -53,6 +56,11 @@ type Input = {
   settledGameweek?: boolean;
   fantasyStatisticsPending?: boolean;
   noIncomingFixtures?: boolean;
+  wrongSeason?: boolean;
+  backlog?: boolean;
+  backlogError?: string;
+  recoveryWriteFailure?: boolean;
+  shirtsPending?: boolean;
   noPendingGameweeks?: boolean;
   snapshotError?: string;
   scheduleError?: string;
@@ -124,7 +132,10 @@ function scenario(input: Input = {}) {
   const readFixtures = async () => input.noIncomingFixtures ? [] : [fixture];
   const sync = runInNewContext(`${syncSource}\nsyncSportmonksLiveState;`, {
     decideLiveSyncCadence, mergeCanonicalLiveFixture, reconcilePendingTouchlineFantasyGameweeks,
-    process: { env: { VERCEL_ENV: "preview", TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy" } },
+    recoveryFixtureMatches, BACKLOG_MAX_PER_RUN, BACKLOG_DEADLINE_MS,
+    recoveryFeedComplete: () => true,
+    process: { env: input.environment ?? { VERCEL_ENV: "preview", TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy" } },
+    inspectTouchlineProductionSyncRuntime,
     inspectTouchlineIsolatedPreviewEnvironment: () => ({ status: "qa" }),
     touchlineCompetitionCoachAssignments: () => [],
     console: { info: (message: string) => logs.push(JSON.parse(message)), warn: (message: string) => logs.push(JSON.parse(message)) },
@@ -145,21 +156,35 @@ function scenario(input: Input = {}) {
 
   const run = () => sync(admin, input.cadenceNotDue || input.noIncomingFixtures ? {} : { forceFixtureId: fixture.providerId }, {
     now: () => NOW,
-    acquireRun: async () => input.leaseUnavailable
+    resolveRecoveryScope: async () => ({ seasonId: "active-season", providerSeasonId: "25600", competitionId: "league-a" }),
+    claimRecovery: async () => {
+      if (!input.backlog) return null;
+      const index=calls.filter(c=>c.startsWith("claim-")).length;
+      calls.push(`claim-${index}`);
+      return {fixtureId:`backlog-${index}`,providerFixtureId:String(380+index),status:"NS",attemptCount:1};
+    },
+    finishRecovery: async (_a: unknown,_c: unknown,_r: unknown,_n: unknown,outcome: string,code: string) => { calls.push(`finish-${outcome}-${code}`); },
+    persistRecoveryFeed: async () => { calls.push("persist-recovery"); return {persisted:!input.recoveryWriteFailure,reconciliationReady:!input.shirtsPending}; },
+    acquireRun: async () => { calls.push("lease"); return input.leaseUnavailable
       ? { acquired: false, reason: "live_sync_in_flight" }
-      : { acquired: true, runId: RUN_ID },
+      : { acquired: true, runId: RUN_ID }; },
     ...(input.scheduleError ? {} : { readFixtures }),
     provider: {
       async getLiveScores() {
         calls.push("provider-live");
         return input.liveError ? { ok: false, error: { code: input.liveError } } : { ok: true, data: input.noIncomingFixtures ? [] : [fixture] };
       },
-      async getFixtureFantasyFeed() {
+      async getFixtureFantasyFeed(providerId: string) {
+        if (providerId !== fixture.providerId) {
+          calls.push(`fetch-${providerId}`);
+          return input.backlogError ? {ok:false,error:{code:input.backlogError,retryAfterSeconds:600}}
+            : {ok:true,data:{fixture:{...fixture,providerId,status:"Full Time"}}};
+        }
         calls.push("provider-feed");
-        return input.feedError ? { ok: false, error: { code: input.feedError } } : { ok: true, data: { fixture } };
+        return input.feedError ? { ok: false, error: { code: input.feedError } } : { ok: true, data: { fixture: input.wrongSeason ? { ...fixture, seasonId: "wrong-season" } : fixture } };
       },
     },
-    persistFantasyFeed: async () => ({ persisted: !input.feedPersistenceError, reason: input.feedPersistenceError }),
+    persistFantasyFeed: async () => { calls.push("persist-feed"); return { persisted: !input.feedPersistenceError, reason: input.feedPersistenceError }; },
     recordLineupObservation: async () => input.lineupError ? { recorded: false, error: input.lineupError } : { recorded: true },
     persistStates: async () => {
       await Promise.resolve();
@@ -173,6 +198,72 @@ function scenario(input: Input = {}) {
   });
   return { run, writes, calls, snapshots, logs };
 }
+
+const boundProductionEnvironment = {
+  VERCEL_ENV: "production", VERCEL_PROJECT_ID: "prj_GtCzQlIE8AJdm0hSf7GB5yOWejmM",
+  VERCEL_ORG_ID: "team_P1d7YNrmUObvbJJTJRlGcXoz", TOUCHLINE_PRODUCTION_DATA_SYNC_ENABLED: "true",
+  SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+  NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+  NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN: "https://touchline.com.br",
+};
+test("explicit Production runtime admission reaches the unchanged live orchestrator", async () => {
+  const s = scenario({ environment: boundProductionEnvironment });
+  assert.equal((await s.run()).ok, true);
+  assert.equal(s.calls[0], "lease");
+  assert.ok(s.calls.includes("provider-live"));
+});
+for (const change of [
+  { TOUCHLINE_PRODUCTION_DATA_SYNC_ENABLED: undefined },
+  { NEXT_PUBLIC_SUPABASE_URL: "https://wrong.supabase.co" },
+  { VERCEL_ENV: undefined },
+  { TOUCHLINE_DEPLOYMENT_MODE: "isolated-preview" },
+]) test(`invalid Production runtime performs no lease/provider/persistence: ${JSON.stringify(change)}`, async () => {
+  const s = scenario({ environment: { ...boundProductionEnvironment, ...change } });
+  await assert.rejects(s.run, /verified QA or explicitly enabled Production runtime/);
+  assert.deepEqual(s.calls, []);
+  assert.deepEqual(s.writes, []);
+});
+
+test("a provider feed from another season is rejected before persistence", async () => {
+  const s = scenario({ wrongSeason: true });
+  await s.run();
+  assert.equal(s.calls.includes("persist-feed"), false);
+});
+
+test("429 live response stops all further provider work, not a partial success", async () => {
+  const s=scenario({liveError:"rate_limited",backlog:true}); const result=await s.run();
+  assert.equal(result.status,"error"); assert.equal(result.ok,false);
+  assert.equal(s.calls.some(c=>c.startsWith("claim-") || c.startsWith("fetch-")),false);
+  assert.equal(s.calls.includes("persist-feed"),false);
+});
+
+test("backlog claims precede fetch, cap two and finish only after canonical persistence", async () => {
+  const s=scenario({backlog:true}); await s.run();
+  assert.equal(s.calls.filter(c=>c.startsWith("claim-")).length,2);
+  assert.ok(s.calls.indexOf("claim-0")<s.calls.indexOf("fetch-380"));
+  assert.ok(s.calls.indexOf("states")<s.calls.indexOf("finish-recovered-complete"));
+});
+
+test("backlog 429 stops batch after durable pending outcome", async () => {
+  const s=scenario({backlog:true,backlogError:"rate_limited"}); const result=await s.run();
+  assert.equal(result.ok,false);
+  assert.equal(s.calls.filter(c=>c.startsWith("claim-")).length,1);
+  assert.ok(s.calls.includes("finish-pending-rate_limited"));
+});
+
+test("backlog-only canonical writes trigger Fantasy window synchronization", async () => {
+  const s=scenario({backlog:true,noIncomingFixtures:true,stateUpdates:0}); const result=await s.run();
+  assert.equal(result.updated,2);
+  assert.ok(s.calls.includes("fantasy-window"));
+  assert.ok(s.calls.indexOf("persist-recovery")<s.calls.indexOf("fantasy-window"));
+});
+
+for (const input of [{recoveryWriteFailure:true},{shirtsPending:true}]) test(`partial backlog cannot report recovered: ${JSON.stringify(input)}`,async()=>{
+  const s=scenario({backlog:true,...input}); const result=await s.run();
+  assert.equal(result.ok,false);
+  assert.equal(s.calls.includes("finish-recovered-complete"),false);
+  assert.ok(s.calls.includes(input.shirtsPending ? "finish-needs_review-shirt_reconciliation_pending" : "finish-pending-persistence_failed"));
+});
 
 function assertCompletion(s: ReturnType<typeof scenario>, result: LiveSyncResult) {
   assert.equal(s.writes.length, 1, "The acquired run must be finalized exactly once");
@@ -330,7 +421,6 @@ test("a ranking error already emitted by the scorer is not duplicated", async ()
 for (const [input, error] of [
   [{ playerErrors: ["aggregate-row:unavailable"] }, "player-points:aggregate-row:unavailable"],
   [{ coachError: "XX001" }, "coach-points:XX001"],
-  [{ liveError: "rate_limited" }, "live-scores:rate_limited"],
   [{ feedError: "provider_unavailable" }, `${fixture.providerId}:provider_unavailable`],
   [{ feedPersistenceError: "write_failed" }, `${fixture.providerId}:fantasy-feed:write_failed`],
   [{ lineupError: "write_failed" }, `${fixture.providerId}:lineup-observation:write_failed`],
@@ -382,7 +472,7 @@ test("a schedule failure before the cadence gate must not be recorded as success
 test("an unacquired lease remains a no-op without finalizing another run", async () => {
   const s = scenario({ leaseUnavailable: true }); const result = await s.run();
   assert.equal(result.ok, true); assert.equal(result.status, "skipped");
-  assert.equal(s.calls.length, 0); assert.equal(s.writes.length, 0);
+  assert.deepEqual(s.calls, ["lease"]); assert.equal(s.writes.length, 0);
 });
 
 test("a thrown reconciliation error still finalizes the acquired run as error", async () => {

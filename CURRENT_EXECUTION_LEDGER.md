@@ -1,7 +1,33 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+## Latest applied QA leadership checkpoint
+
+- Reviewed atomic leadership correction applied only to selected QA; connector version 20260923221024. Local filename reconciled to that version without changing SQL (SHA256 248048fe2fbef8a235f0dd86fa0d4053e6bb69a788ffcd061da879dc61797c42).
+- Before/after: decisions 40→41; all previous decision hashes identical. Active snapshot content/pointer, 80 fixtures, 44 selections, 11 locked selections and 1,816 settlements have identical hashes. New decision timestamp matches the existing publication timestamp.
+- Trigger present, SECURITY INVOKER, empty search_path; anon/authenticated EXECUTE denied. QA cron paused and HTTP queue empty. No ten-game recovery, deployment or domain change.
+- Forward rollback, if needed: remove only this new trigger/function through a reviewed forward migration; preserve immutable decisions and prior publisher. This supersedes the earlier leadership-not-applied checkpoint.
+
+## 2026-09-24 — Current release checkpoint (supersedes older pending states)
+
+- Fresh full suite: 2,285 passed, zero failed/skipped; TypeScript and ESLint exit 0. Local production build, readiness, mission governance, Vercel documentation inputs and diff hygiene passed. No remote build consumed.
+- Owner's 23 September approval permits the recorded two sequential Production builds, OFF smoke then ON smoke, only after all other release gates. Earlier approval-pending wording is superseded; no machine/plan upgrade authorized.
+- Selected QA cron job 5 remains paused, freshly verified. Recovery schema is applied as 20260923185720; the local filename now matches, with SQL hash unchanged. Old pause-failed/cron-active/mapping-pending checkpoints are superseded, not deleted.
+- Private public/auth/storage SQL exports restored in isolated local Docker. This proves database-record restoration, not online login or the four Storage media objects' bytes. No remote restore.
+- Leadership migration is not yet applied remotely. Fresh catalog preflight confirms its trigger absent and the audited active ranking missing its decision. Exact SQL applied successfully to the isolated restored database: decision count 40 to 41, active decision present, anonymous execution denied.
+- Independent source review found no new P0/P1 within the reviewed scope. Explicit candidate manifest excludes supabase/.temp and secrets. Final immutable commit and remote QA gates remain pending.
+- Mobile QA two-pass ranking/Arsenal scrolling and card zoom passed in isolated WebKit; ClubHub back/reload passed; fresh portrait session correctly gates play. Current Production portrait overflow differs from QA. Native device rotation, authenticated fast-scroll and full-site visual acceptance remain unproven.
+- Ten overdue games have NOT been recovered. No new QA deployment, Production deployment, domain cutover, old-deployment deletion, email or social publication occurred. Next executable work: exact leadership preflight/verification, immutable QA candidate, then bounded game recovery and post-recovery acceptance.
+
 Status: CURRENT AUTHORITATIVE INDEX
-Last reviewed: 2026-09-20
+Last reviewed: 2026-09-23
+
+## 23 September continuation — recovery integrity and scheduler preparation
+
+Local recovery now rejects mismatched ordered club identities before any writes. Independent review caught a wrong schema column in the first implementation; it was corrected to actual `provider_team_id`, and tests now use canonical club DDL from migration 013. Earlier handcrafted-schema green evidence is superseded. Integrated full suite: 2,284/2,284, zero failures/skips; production build and ESLint exit 0. Operator scheduler preparation is local-only, independently reviewed, with real extension/runtime gaps documented. Read-only retained QA check: 80 fixtures, zero invalid canonical participant mappings, ten past Not Started. No remote mutation or publication. One-time two-build exception requested because environment gate OFF→ON requires another immutable deployment; approval pending. This checkpoint is not full-site or release approval.
+
+## 23 September 06:20 UTC integration checkpoint
+
+Production sync admission implemented locally default OFF; independent 87 tests plus seven boundary cases passed. Final integrated suite 2,281/2,281, TypeScript/lint/build/diff and local governance checks passed. Security scan f1165f49-8485-46d2-b51c-cafb6f00f305 reviewed all12 changed source items with no confirmed findings and explicit runtime coverage gaps. No remote write/deploy/domain change. See latest CURRENT_STATE checkpoint and private workspace outputs/card-review-20260921/resume-20260923.md. Real stale fixture recovery, single-writer scheduler cutover, full acceptance and release gates remain open; no completion claimed.
 
 Read [CURRENT_STATE.md](CURRENT_STATE.md) first for the active SHA, gates, blockers, and next action.
 
@@ -236,3 +262,22 @@ PASS is not binding/database/functional QA proof. Fiscal review pending.
 - **Included capabilities:** numeric Sportsmonks provider identity is separated from the internal UUID in player-card links; Match Centre orders events by minute/accrued minute and ratings descending; the seven player/coach perimeter traces centre on their real side rails; crown-safe zoom/profile envelopes reserve headroom without changing the approved crown; Coach Profile separates official facts from TouchLine Points and renders yellow/red cards individually or `—`; ClubHub hero contains Next Match only, with a discrete home-stadium identity and honours carousel; Club Owner embeds the Market with authoritative formation slot eligibility, replacement/removal and duplicate rejection.
 - **Checks:** `pnpm test` `1733/1733`; `pnpm run build` `143/143`; TypeScript pass; lint `0` errors / `5` established warnings; release readiness local checklist; Vercel input pass; diff check pass. The temporary ENOSPC build block was resolved by permanently removing only regenerable Codex/browser-test caches; project worktrees, source, user documents and QA data were preserved.
 - **Rollback / next owner:** no schema changed. On remote regression, roll QA deployment back to `f27a8780`; do not retry the same SHA. Next owner runs the QA visual/runtime checklist registered by Fiscal: public profiles, Club Owner Market, Match Centre, ClubHub, card neon/crown, Coach Profile, Arena formation/camera/loop/no-write and social snapshot visual gates.
+
+## 2026-09-21 — Reboot recovery, synchronization and responsive audit / NOT RELEASED
+
+Owner scope is comprehensive audit and conditional correct-candidate production promotion, with data preservation and no old deployment deletion before validation. Work is based on `273009a`; all current changes are local. Source writers were serialized: recovery, ClubHub, recovery acknowledgment fix, then narrow ClubHub refinement. Independent reviews remained read-only.
+
+Evidence: 2,204 integrated local tests passed without skips before final narrow CSS refinement; final layout focused checks passed 22 tests. Four independently repeated scenarios execute the real shirt reconciler on reduced PGlite schema. A stale readiness acknowledgment defect was reproduced and corrected. Final local production build generated 145/145 pages, exit 0. First attempts failed because `.next` pointed to a reboot-removed temporary directory and then its missing dependency link; only those generated-output paths were restored, with no source/dependency installation or remote build.
+
+Public remote QA WebKit smoke passed three tests; isolated layout checks are recorded separately and do not certify native Safari, live data or all user flows. Local built server on loopback3130 is pending runtime verification. Sportmonks credential validity remains inconclusive until authorized Admin access; no provider synchronization or migration was executed. Production/domain, accounts, XI, budgets, email and social systems were not mutated. Remaining gates are listed in CURRENT_STATE and the workspace audit reports. This entry is a checkpoint, not mission completion or deployment approval.
+
+### Subsequent audit evidence
+
+Local built-server smoke completed (3 checks); later full suite passed 2,238 tests without skips after statistics pagination and numeric profile CSS. Independent transport-cap reproduction demonstrated the original partial-total overwrite; corrected preflight fails before writes and passed focused/independent checks. QA schema compatibility and social-trigger effects were read-only verified. Mobile profile renders exposed and corrected numeric wrapping; isolated desktop text wrapping remains open.
+
+Public API and QA SELECT confirmed absent leadership decision for the current player ranking, despite existing table/function/ACL. Local atomic-publication fix was assigned to the sole writer; it is not yet tested by the preceding integrated run. Correct-candidate accounts/data, production alias and old deployments remain untouched. Native Safari is blocked by the locked Mac; owner unlock requested. All latest detailed evidence is in the workspace root's outputs/card-review-20260921. No mission-complete or release-approved claim.
+## 2026-09-23 resumed audit checkpoint
+
+Read-only Admin diagnostic confirms Sportmonks squad access using the candidate's effective key. Ten fixtures remain overdue; most recent covered fixture is still 14 September. No remote SQL mutation, credential change, deployment or alias change.
+
+Fresh integrated local evidence before subsequent refinements: 2,239 tests passed, zero skips; TypeScript, ESLint, diff/governance/input checks and build exit 0. Independent crown SQL review and QA function fingerprints match. Production live-sync guard and QA-bound scheduler require explicit retained-dataset production contract and single-writer cutover. Complete site/real data release gate is NOT passed. Detailed preserved report: workspace outputs/card-review-20260921/resume-20260923.md.

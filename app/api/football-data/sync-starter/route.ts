@@ -102,13 +102,13 @@ async function runFootballDataSync(request: NextRequest) {
       );
     }
 
+    // Legacy QA reconcilers return a successful status without an `ok` field.
+    // Preserve that contract without masking an explicit provider failure.
+    const resultOk = "ok" in result ? result.ok : true;
+
     return NextResponse.json({
       ...result,
-      // Every successful scope shares one explicit response contract. In
-      // particular, the QA roster reconciler returns a status field rather
-      // than an `ok` field, so the owner control must never present a
-      // committed QA run as a client-side failure.
-      ok: true,
+      ok: resultOk,
       mode: auth.mode,
       syncedAt: new Date().toISOString(),
       note: scope === "capabilities"
