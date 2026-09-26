@@ -5,6 +5,19 @@ import test from "node:test";
 const css=readFileSync(new URL("../app/touchline-players/[player]/player-profile.module.css",import.meta.url),"utf8");
 const page=readFileSync(new URL("../app/touchline-players/[player]/page.tsx",import.meta.url),"utf8");
 
+test("short landscape keeps club beside identity and preserves the accessible club link",()=>{
+  const compact=css.slice(css.indexOf("@media (orientation: landscape) and (max-height: 520px) and (min-width: 761px)"));
+  assert.match(compact,/\.identityHeading \{ flex-direction: row;/);
+  assert.match(compact,/\.identityCrest \{ width: 64px;/);
+  assert.match(page,/aria-label=\{`\$\{text.openClub\}: \$\{club.name\}`\}/);
+});
+
+test("landscape identity facts reserve readable width instead of squeezing three columns",()=>{
+  const landscape=css.slice(css.indexOf("@media (orientation: landscape)"));
+  assert.match(landscape,/\.factGrid\s*\{\s*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 170px\), 1fr\)\)/);
+  assert.match(css,/\.fact > div\s*\{\s*min-width: 0;\s*overflow-wrap: anywhere/);
+});
+
 test("desktop metadata allows whole position words without arbitrary word breaks",()=>{
   assert.match(css,/\.metrics\s*\{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\)/);
   assert.match(css,/\.metrics strong\s*\{[^}]*overflow-wrap: normal/);

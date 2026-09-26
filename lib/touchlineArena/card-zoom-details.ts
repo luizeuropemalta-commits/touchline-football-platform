@@ -1,4 +1,5 @@
 import type { TouchlineCardZoomDetails } from "../../components/touchline/cards/TouchlineCardZoom.tsx";
+import { localizedPositionLabel } from "./position-labels.ts";
 import {
   touchlineArenaTierForKey,
   touchlineCardTierName,
@@ -163,6 +164,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   extraFields?: readonly TouchlineCardZoomExtraField[];
 }>): TouchlineCardZoomDetails {
   const isPortuguese = input.locale === "pt-BR";
+  const displayPosition = localizedPositionLabel(input.position, input.locale);
   const field = (
     label: string,
     value: string | number | null | undefined,
@@ -240,7 +242,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
     ...reviewFields,
     ...editorialFields,
     field(isPortuguese ? "Clube atual" : "Current club", input.clubName, false, "identity", "club"),
-    field(isPortuguese ? "Posição" : "Position", input.position, false, "identity", "position"),
+    field(isPortuguese ? "Posição" : "Position", displayPosition, false, "identity", "position"),
     field(isPortuguese ? "Nacionalidade" : "Nationality", input.nationality, false, "identity", "nationality"),
     ...(input.extraFields ?? []).map((extra) => field(
       extra.label,
@@ -256,7 +258,7 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
   return {
     eyebrow: input.eyebrow ?? (isPortuguese ? "Perfil do card" : "Card profile"),
     title: input.name,
-    subtitle: [input.clubName, input.position].filter(Boolean).join(" · "),
+    subtitle: [input.clubName, displayPosition].filter(Boolean).join(" · "),
     performanceTitle: isPortuguese ? "Desempenho" : "Performance",
     performanceSubtitle: isPortuguese ? "Ratings e estatísticas oficiais da partida" : "Official match ratings and statistics",
     fields: baseFields,

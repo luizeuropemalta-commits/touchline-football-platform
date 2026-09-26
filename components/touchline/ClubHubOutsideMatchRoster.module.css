@@ -76,7 +76,14 @@
 .cards :global(.club-hub-card) { min-width: 0; }
 .cards :global(.club-hub-card-meta) { gap: 4px; font-size: 8px; }
 .cards :global(.club-hub-card-meta small) { font-size: 8px; }
-.cards :global(.club-hub-progressive-controls) { display: none; }
+.cards :global(.club-hub-progressive-controls) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
 
 .list {
   display: grid;
@@ -162,6 +169,10 @@
   color: rgba(226, 242, 249, .62);
   font-size: 12px;
   line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  .cards :global(.club-hub-card-grid) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 @media (max-width: 680px) {

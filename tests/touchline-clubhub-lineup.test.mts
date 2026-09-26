@@ -8,7 +8,7 @@ import {
   buildTouchLineClubMatchdayPresentation,
   isClubHubSquadPreviewWindow,
 } from "../lib/touchlineArena/club-lineup.ts";
-import { findTouchLineClub, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
+import { findTouchLineClub, TOUCHLINE_ENGLAND_CLUBS, type ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
 
 const city = findTouchLineClub("manchester-city")!;
 const starterRoles = ["goalkeeper", "defender", "defender", "defender", "defender", "midfielder", "midfielder", "midfielder", "forward", "forward", "forward"];
@@ -66,6 +66,23 @@ const matchingCoach = {
   teamId: city.teamId,
   name: "Official City Coach",
 } as const;
+
+for (const club of TOUCHLINE_ENGLAND_CLUBS) {
+  test(`${club.slug}: only an exact complete team sheet can classify remaining squad members`, () => {
+    const extra = { ...squadCards[0]!, id: "31504", name: "Unselected squad member" };
+    const cards = [...squadCards, extra];
+    const sheet = [...officialStarters, ...officialBench].map((member) => ({ ...member, teamId: club.teamId }));
+    for (const officialLineup of [[], sheet.slice(0, 11), sheet.map((member) => ({ ...member, fixtureId: "old-match" }))]) {
+      const result = buildTouchLineClubMatchdayPresentation({ club, squadCards: cards, officialLineup, fixtureId: "fixture-1" });
+      assert.equal(result.remainingSquad.state, "unconfirmed");
+      assert.ok(result.remainingSquad.cards.some((card) => card.id === extra.id));
+    }
+    const result = buildTouchLineClubMatchdayPresentation({ club, squadCards: cards, officialLineup: sheet, fixtureId: "fixture-1" });
+    assert.equal(result.remainingSquad.state, "not_listed");
+    assert.deepEqual(result.remainingSquad.cards.map((card) => card.id), [extra.id]);
+    assert.equal(result.remainingSquad.fixtureId, "fixture-1");
+  });
+}
 
 test("ClubHub labels squad-only data as preview, never as official", () => {
   const presentation = buildTouchLineClubMatchdayPresentation({ club: city, squadCards });
@@ -238,7 +255,7 @@ test("ClubHub uses Squad Preview from T−24 until confirmation or a terminal fi
   assert.match(source, /fixtureStatus: matchup\?\.initialFixture\?\.status/);
   assert.match(source, /const showPreviewContext = !confirmed && squadPreviewWindow/);
   assert.match(source, /Line-up confirmed/);
-  assert.match(source, /showPreviewContext\n\s*\? \(isPortuguese \? "Prévia do elenco" : "Squad Preview"\)\n\s*:\s*\(isPortuguese \? "Escalação" : "Line-up"\)/);
+  assert.match(source, /showPreviewContext\n\s*\? \(isPortuguese \? "Prévia do elenco" : "Squad Preview"\)\n\s*:\s*\(isPortuguese \? "Escalação ainda não confirmada" : "Line-up not yet confirmed"\)/);
   assert.match(source, /isPortuguese \? "Formação" : "Formation"/);
   assert.match(source, /showPreviewContext \? \(/);
   assert.doesNotMatch(source, /Predicted line-up/);

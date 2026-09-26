@@ -7,6 +7,12 @@ function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
 
+test("ordinary zoom cards do not reserve an absent player or coach crown", () => {
+  const css = source("components/touchline/cards/TouchlineCardZoom.module.css");
+  assert.match(css, /\.cardColumn:not\(:has\(\[data-card-leadership-crown="true"\], \[data-coach-ranking-leader="true"\]\)\) \{\s*padding-top: 0;/);
+  assert.match(css, /\.cardColumn \{[^}]*padding-top: var\(--touchline-card-zoom-crown-safe-top\)/);
+});
+
 test("the shared card zoom reserves a leader-crown safe zone without changing crown art", () => {
   const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
   const playerCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
@@ -33,7 +39,9 @@ test("player and coach profiles reserve the same uncropped leader-crown envelope
   assert.match(playerProfile, /\.cardFrame \{[\s\S]*?padding-top: clamp\(98px, 16vw, 128px\)/);
   assert.match(playerProfile, /\.cardFrame > \[data-card-leadership-crown="true"\] \{[\s\S]*?margin-top: 0 !important/);
   assert.match(playerProfile, /width: 310px;[\s\S]*?padding-top: clamp\(82px, 21vw, 98px\)/);
-  assert.match(coachProfile, /\.coach-profile-card \{ width:min\(100%,410px\); justify-self:center; padding-top:128px; box-sizing:border-box; overflow:visible; \}/);
+  assert.match(coachProfile, /\.coach-profile-card \{ width:min\(100%,300px\); justify-self:center; padding-top:0; box-sizing:border-box; overflow:visible; \}/);
+  assert.match(coachProfile, /\.coach-profile-card:has\(> \[data-coach-ranking-leader="true"\]\) \{ padding-top:96px; \}/);
   assert.match(coachProfile, /\.coach-profile-card > \[data-coach-ranking-leader="true"\] \{ margin-top:0 !important; \}/);
-  assert.match(coachProfile, /width:min\(100%,330px\); padding-top:98px/);
+  assert.match(coachProfile, /width:min\(100%,280px\)/);
+  assert.match(coachProfile, /\.coach-profile-card:has\(> \[data-coach-ranking-leader="true"\]\) \{ padding-top:84px; \}/);
 });

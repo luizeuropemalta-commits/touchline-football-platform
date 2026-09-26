@@ -1,11 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import { TOUCHLINE_COACH_TIER_GALLERY } from "@/lib/touchlineArena/coach-tier-gallery";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
+import { coachCompetitionFromRanking } from "@/lib/touchlineArena/coach-competition-projection";
+import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
 import {
   selectTouchlineCoachTierRepresentatives,
   selectTouchlinePlayerTierRepresentatives,
@@ -28,16 +31,17 @@ import styles from "./TouchlineCoachCategoryShowcase.module.css";
 type Props = Readonly<{
   locale: string;
   playerCards: readonly ClubOwnerSquadCard[];
+  coachRanking: TouchLineCoachRankingState;
 }>;
 
 const copy = {
   "en-GB": {
     playerEyebrow: "TouchLine player borders",
     playerTitle: "Seven official player-card borders",
-    playerDescription: "Ordered from the highest-value border to the entry border. Each card is a real published representative with the highest verified market value in its tier; Erling Haaland leads Diamond Gold.",
+    playerDescription: `Ordered from the highest-value border to the entry border. Each card is a real published representative with the highest verified market value in its tier; Erling Haaland leads ${touchlineCardTierName("diamond-gold", "en-GB")}.`,
     coachEyebrow: "TouchLine coach borders",
     coachTitle: "Seven official coach-card borders",
-    coachDescription: "Seven coach representatives are ordered by the approved previous-season finish and distributed from the highest-value border to the entry border. Coach name is the final tiebreak when records are equal.",
+    coachDescription: "Each representative keeps the same border as their official profile. Within each tier, approved previous-season results determine the representative. Borders without an eligible coach remain pending.",
     verifiedValue: "Verified market value",
     previousFinish: "Previous-season finish",
     promotedChampion: "Promoted champion",
@@ -57,7 +61,7 @@ const copy = {
     playerDescription: "Ordem da borda de maior valor até a borda de entrada. Cada card é um representante real publicado com o maior valor de mercado verificado do seu tier; Erling Haaland lidera o Diamante Dourado.",
     coachEyebrow: "Bordas de treinadores TouchLine",
     coachTitle: "As sete bordas oficiais dos cards de treinadores",
-    coachDescription: "Sete representantes são ordenados pela posição aprovada da temporada anterior e distribuídos da borda de maior valor até a borda de entrada. O nome do treinador é o último desempate quando os resultados são iguais.",
+    coachDescription: "Cada representante mantém a mesma borda do seu perfil oficial. Dentro de cada tier, os resultados aprovados da temporada anterior definem o representante. Bordas sem treinador elegível permanecem pendentes.",
     verifiedValue: "Valor de mercado verificado",
     previousFinish: "Posição na temporada anterior",
     promotedChampion: "Campeão promovido",
@@ -94,7 +98,7 @@ function coachEvidenceLabel(
   return dictionary.approvedFallback;
 }
 
-export default function TouchlineCoachCategoryShowcase({ locale, playerCards }: Props) {
+export default function TouchlineCoachCategoryShowcase({ locale, playerCards, coachRanking }: Props) {
   const effectiveLocale = locale === "pt-BR" ? "pt-BR" : "en-GB";
   const dictionary = copy[effectiveLocale];
   const playerRepresentatives = selectTouchlinePlayerTierRepresentatives(playerCards);
@@ -117,6 +121,7 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards }: 
             const profileHref = exactPlayer ? touchlinePlayerProfileHref(exactPlayer, effectiveLocale) : null;
             return (
               <li key={tierKey} className={styles.card} style={tierStyle(tierKey)} data-tier={tierKey}>
+                <TouchlineClubPerimeterTrace accent={touchlineCardTierPalette(tierKey).accent} />
                 {exactPlayer && profileHref ? (
                   <Link className={styles.cardLink} href={profileHref} aria-label={`${dictionary.openPlayer}: ${card?.name}`}>
                     <span className={styles.playerCardVisual}>
@@ -175,11 +180,13 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards }: 
               ? `/touchline-coaches/${encodeURIComponent(snapshot.coach.providerId)}?lang=${encodeURIComponent(effectiveLocale)}`
               : null;
             const cardSlot = snapshot
-              ? createTouchlineArenaCoachSlot(snapshot.coach, classification?.finalPosition ?? null, tierKey)
+              ? createTouchlineArenaCoachSlot(snapshot.coach, classification?.finalPosition ?? null, classification?.tierKey ?? tierKey)
               : null;
+            const competition = snapshot ? coachCompetitionFromRanking(coachRanking, snapshot.coach.providerId) : null;
 
             return (
               <li key={tierKey} className={styles.card} style={tierStyle(tierKey)} data-tier={tierKey}>
+                <TouchlineClubPerimeterTrace accent={touchlineCardTierPalette(tierKey).accent} />
                 {snapshot && classification && coachHref && cardSlot ? (
                   <div className={styles.cardLink}>
                     <span className={styles.coachCardVisual}>
@@ -192,6 +199,9 @@ export default function TouchlineCoachCategoryShowcase({ locale, playerCards }: 
                         countryCode3={snapshot.countryCode3}
                         locale={effectiveLocale}
                         contract={null}
+                        competition={competition}
+                        publishedTouchlinePoints={competition?.totalTouchlinePoints ?? null}
+                        showLeadershipCrown={competition?.rank === 1}
                         profileHref={coachHref}
                         assetLoading="eager"
                         frameLoading="eager"

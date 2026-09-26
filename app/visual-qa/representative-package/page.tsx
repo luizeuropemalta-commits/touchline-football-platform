@@ -202,7 +202,7 @@ export default async function RepresentativePackageVisualQaPage({ searchParams }
             expandedContent={<StaticPlayerCard player={longNamePlayer} locale={locale} scale={0.92} />}
             details={publishedDetails}
             tierAccent="#ffd85e"
-            tierLabel="Diamond Gold · QA FIXTURE"
+            tierLabel="Golden Diamond · QA FIXTURE"
           >
             <StaticPlayerCard player={longNamePlayer} locale={locale} />
           </TouchlineCardZoom>

@@ -3,6 +3,15 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
+test("short landscape details mask underlying page artwork without changing the card column", () => {
+  const css = readFileSync(new URL("../components/touchline/cards/TouchlineCardZoom.module.css", import.meta.url), "utf8");
+  const landscape = css.slice(css.indexOf("@media (orientation: landscape) and (max-height: 520px)"));
+  const details = landscape.match(/\.panelWithDetails \.details\s*\{([^}]+)\}/)?.[1] ?? "";
+  assert.match(details, /background: rgb\(2, 8, 9\);/);
+  assert.doesNotMatch(details, /overflow:\s*hidden|transform:|display:\s*none/);
+  assert.match(css.slice(0, css.indexOf("@media (orientation: landscape)")), /\.details\s*\{[^}]*background: transparent;/);
+});
+
 function source(relativePath: string) {
   return readFileSync(path.join(process.cwd(), relativePath), "utf8");
 }
@@ -33,10 +42,10 @@ test("expanded cards lock the document and keep one modal scroll surface", () =>
 test("the global scrollbar uses the neutral TouchLine green and graphite standard", () => {
   const globalCss = source("app/globals.css");
 
-  assert.match(globalCss, /scrollbar-color: rgba\(144, 205, 52, \.72\) #030a08;/);
-  assert.match(globalCss, /::-webkit-scrollbar-track \{ background: #030a08; \}/);
-  assert.match(globalCss, /#8bc93d/);
-  assert.match(globalCss, /#4f851e/);
+  assert.match(globalCss, /scrollbar-color: #608b32 #030a08 !important;/);
+  assert.match(globalCss, /::-webkit-scrollbar-track \{ background: #030a08 !important; \}/);
+  assert.match(globalCss, /::-webkit-scrollbar \{ width: 5px !important; height: 5px !important;/);
+  assert.match(globalCss, /\*:is\(:hover, :focus-within, :active\)\s*\{\s*scrollbar-color: #b8ff46 #030a08 !important;/);
   assert.doesNotMatch(globalCss, /#17364a|#0f5360|#1d536c|#19a1ad/);
 });
 

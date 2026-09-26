@@ -54,6 +54,41 @@ test("1001 player mappings are chunked and the final identity is preserved",asyn
 });
 for(const table of ["football_players","football_clubs"])test(`mapping ${table} count unavailable prevents all writes`,async()=>{const x=await execute(tables(1),{table,kind:"missing-count"});assert.equal(x.result.ok,false);assert.equal(x.writes.length,0);assert.equal(x.rankings,0);});
 
+for (const table of ["football_players", "football_clubs"]) {
+  for (const mode of ["missing", "ambiguous"]) {
+    test(`${table} ${mode} lineup identity stops before membership, history and ranking writes`, async () => {
+      const t = tables(1);
+      t[table] = mode === "missing" ? [] : [...t[table], { ...t[table][0], id: "duplicate-canonical-identity" }];
+      const x = await execute(t);
+      assert.equal(x.result.ok, false);
+      assert.ok(x.result.errors.some((error: string) => error.startsWith("lineup-identity-coverage:")));
+      assert.equal(x.writes.length, 0);
+      assert.equal(x.rankings, 0);
+    });
+  }
+}
+
+for (const fault of ["foreign-provider", "member-provider", "wrong-fixture", "missing-player", "missing-team"]) {
+  test(`lineup provenance ${fault} prevents every write despite colliding mappings`, async () => {
+    const t = tables(1);
+    const member = (t.football_fantasy_fixture_feeds[0].lineups_payload as Row[])[0];
+    if (fault === "foreign-provider") {
+      t.football_fixtures[0].provider = "other";
+      t.football_fantasy_fixture_feeds[0].provider = "other";
+      member.provider = "other";
+    }
+    if (fault === "member-provider") member.provider = "other";
+    if (fault === "wrong-fixture") member.fixtureId = "999";
+    if (fault === "missing-player") member.playerId = "";
+    if (fault === "missing-team") member.teamId = "";
+    const x = await execute(t);
+    assert.equal(x.result.ok, false);
+    assert.ok(x.result.errors.includes("lineup-provenance-invalid"));
+    assert.equal(x.writes.length, 0);
+    assert.equal(x.rankings, 0);
+  });
+}
+
 test("first-ever derived membership retains season competition and club labels",async()=>{
  const t=tables(1);t.football_player_season_memberships=[];
  Object.assign(t.football_fixtures[0],{football_seasons:{name:"2026/2027"},football_competitions:{name:"Premier League"}});

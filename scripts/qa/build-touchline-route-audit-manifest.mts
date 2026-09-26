@@ -67,6 +67,10 @@ const PAGE_POLICIES: Record<string, Partial<RoutePolicy>> = {
 };
 
 const API_POLICIES: Record<string, RoutePolicy> = {
+  "GET /api/notifications/fixtures/[fixtureId]": { auth: "AUTHENTICATED_ARENA_ACCESS", role: "ARENA_USER", data: "FLAG_GATED_SELF_SCOPED_FIXTURE_INTEREST", browser: "HTTP_CONTRACT", status: "PENDING_SCHEMA_AUTH_AND_DEVICE_QA" },
+  "PUT /api/notifications/fixtures/[fixtureId]": { auth: "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN", role: "ARENA_USER", data: "FLAG_GATED_SELF_SCOPED_FIXTURE_INTEREST_NO_DELIVERY", browser: "HTTP_CONTRACT", status: "PENDING_SCHEMA_AUTH_AND_DEVICE_QA" },
+  "GET /api/touchline/players/[playerId]/social": { auth: "PUBLIC_OPTIONAL_SESSION", role: "ANY", data: "FLAG_GATED_SOCIAL_TOTALS_AND_SELF_STATE", browser: "HTTP_CONTRACT", status: "PENDING_SCHEMA_AND_AUTHENTICATED_QA" },
+  "PUT /api/touchline/players/[playerId]/social": { auth: "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN", role: "ARENA_USER", data: "FLAG_GATED_SELF_SCOPED_SOCIAL_REACTION", browser: "HTTP_CONTRACT", status: "PENDING_SCHEMA_AND_AUTHENTICATED_QA" },
   "GET /favicon.ico": { auth: "PUBLIC", role: "ANY", data: "STATIC_FAVICON_REDIRECT", browser: "HTTP_REDIRECT_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /login/submit": { auth: "PUBLIC", role: "ANY", data: "SUPABASE_AUTH", browser: "HTTP_REDIRECT_CONTRACT", status: "HTTP_CONTRACT_PENDING" },
   "POST /api/auth/login": { auth: "PUBLIC", role: "ANY", data: "SUPABASE_AUTH", browser: "HTTP_CONTRACT", status: "HTTP_CONTRACT_PENDING" },

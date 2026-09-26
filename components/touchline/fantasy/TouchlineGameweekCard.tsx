@@ -30,6 +30,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   const useLiveCompactAsset = resolvedDisplayWidth <= 119;
   return <TouchlineCardZoom
     ariaLabel={`${card.name} TouchLine card`}
+    socialProviderId={String(exact.sportmonksPlayerId ?? "")}
     tierAccent={palette.accent}
     details={buildTouchlinePlayerCardZoomDetails({
       locale,

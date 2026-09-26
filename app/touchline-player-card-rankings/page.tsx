@@ -1,9 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
+import type { CSSProperties } from "react";
+import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
+import { TouchlineCardLeadershipProvider } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
+import { buildTouchlineCardLeadershipValue } from "@/lib/touchlineArena/card-leadership-authority";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   findTouchLineClub,
@@ -137,6 +142,7 @@ export default async function TouchLinePlayerCardRankingsPage({
   };
 
   return (
+    <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, null)}>
     <main className="tl-card-rankings">
       <TouchlineLivePresentationRefresh
         initialPlayerRankingSnapshotId={activeRanking.snapshotId}
@@ -180,11 +186,12 @@ export default async function TouchLinePlayerCardRankingsPage({
             const exactPlayer = squadCardToExactPlayer(card);
             const zoom = zoomPresentation(card);
             const featuredSummary = [
-              card.position,
+              localizedPositionLabel(card.position, locale),
               zoom.displayPrice,
             ].filter(Boolean).join(" / ");
             return (
-              <article key={card.id} id={card.id}>
+              <article key={card.id} id={card.id} data-ranking-tier-frame={card.editorialCard?.tierKey ?? "unresolved"} style={{ "--tier-accent": zoom.tierAccent } as CSSProperties}>
+                <TouchlineClubPerimeterTrace accent={card.editorialCard?.tierKey ? zoom.tierAccent : undefined} />
                 <span className="tl-card-rankings-rank">#{index + 1}</span>
                 <div className="tl-card-rankings-card">
                   <TouchlineCardZoom
@@ -254,7 +261,8 @@ export default async function TouchLinePlayerCardRankingsPage({
               const exactPlayer = squadCardToExactPlayer(card);
               const zoom = zoomPresentation(card);
               return (
-                <article key={card.id} id={`row-${card.id}`} className="tl-card-rankings-row">
+                <article key={card.id} id={`row-${card.id}`} className="tl-card-rankings-row" data-ranking-tier-frame={card.editorialCard?.tierKey ?? "unresolved"} style={{ "--tier-accent": zoom.tierAccent } as CSSProperties}>
+                  <TouchlineClubPerimeterTrace accent={card.editorialCard?.tierKey ? zoom.tierAccent : undefined} />
                   <span className="tl-card-rankings-row-rank" aria-label={`${locale === "pt-BR" ? "Posição" : "Rank"} ${index + 1}`}>#{index + 1}</span>
                   <div className="tl-card-rankings-row-card">
                     <TouchlineCardZoom
@@ -297,7 +305,7 @@ export default async function TouchLinePlayerCardRankingsPage({
                   </div>
                   <div className="tl-card-rankings-row-main">
                     <strong>{card.name}</strong>
-                    <small>{card.position} / #{card.shirtNumber} / {card.countryCode3}</small>
+                    <small>{localizedPositionLabel(card.position, locale)} / #{card.shirtNumber} / {card.countryCode3}</small>
                   </div>
                   <div className="tl-card-rankings-club">
                     {club?.logoUrl ? <img src={club.logoUrl} alt="" draggable={false} /> : null}
@@ -561,6 +569,17 @@ export default async function TouchLinePlayerCardRankingsPage({
           box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
         }
 
+        .tl-card-rankings-featured article[data-ranking-tier-frame],
+        .tl-card-rankings-row[data-ranking-tier-frame] {
+          --touchline-perimeter-radius: 8px;
+          position: relative;
+          isolation: isolate;
+          border-color: color-mix(in srgb, var(--tier-accent) 45%, rgba(255,255,255,.16));
+          background:
+            radial-gradient(circle at 50% 4%, color-mix(in srgb, var(--tier-accent) 18%, transparent), transparent 42%),
+            linear-gradient(160deg, rgba(7,16,13,.96), rgba(1,4,4,.9));
+        }
+
         .tl-card-rankings-row-rank {
           color: rgba(122,231,255,.82);
         }
@@ -666,5 +685,6 @@ export default async function TouchLinePlayerCardRankingsPage({
         }
       `}</style>
     </main>
+    </TouchlineCardLeadershipProvider>
   );
 }

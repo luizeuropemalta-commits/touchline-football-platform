@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
+import { touchlineCardTierName } from "@/lib/touchlineArena/card-tier-names";
 import { inferArenaRole, makeArenaShortName, type ArenaLineupPlayer } from "@/lib/football-data/arena-lineup";
 import {
   TOUCHLINE_ARENA_EDITOR_LINEUP_STORAGE_KEY,
@@ -42,15 +43,15 @@ const DEFAULT_PORTRAIT = "";
 const DEFAULT_CLUB_TEMPLATE_URL = "/touchlineArena/cards/templates/clubs/Manchester%20City/template.png";
 const CARD_STUDIO_DRAFT_KEY = `${TOUCHLINE_ARENA_EDITOR_LINEUP_STORAGE_KEY}:studio-draft`;
 
-const CARD_PREVIEW_VALUES = [
-  { label: "Ruby Red", tierKey: "ruby-red", name: "Base Player", number: 18, country: "ENG" },
-  { label: "Sapphire Blue", tierKey: "sapphire-blue", name: "Blue Player", number: 22, country: "ENG" },
-  { label: "Amethyst Purple", tierKey: "amethyst-purple", name: "Purple Player", number: 10, country: "BRA" },
-  { label: "Radiant Gold", tierKey: "radiant-gold", name: "Rodri", number: 16, country: "ESP" },
-  { label: "Emerald Green", tierKey: "emerald-green", name: "Elite Mid", number: 8, country: "FRA" },
-  { label: "Clear Diamond", tierKey: "clear-diamond", name: "Diamond Pro", number: 7, country: "POR" },
-  { label: "Diamond Gold", tierKey: "diamond-gold", name: "Haaland", number: 9, country: "NOR" },
-] as const;
+const CARD_PREVIEW_VALUES = ([
+  { tierKey: "ruby-red", name: "Base Player", number: 18, country: "ENG" },
+  { tierKey: "sapphire-blue", name: "Blue Player", number: 22, country: "ENG" },
+  { tierKey: "amethyst-purple", name: "Purple Player", number: 10, country: "BRA" },
+  { tierKey: "radiant-gold", name: "Rodri", number: 16, country: "ESP" },
+  { tierKey: "emerald-green", name: "Elite Mid", number: 8, country: "FRA" },
+  { tierKey: "clear-diamond", name: "Diamond Pro", number: 7, country: "POR" },
+  { tierKey: "diamond-gold", name: "Haaland", number: 9, country: "NOR" },
+] as const).map((preview) => ({ ...preview, label: touchlineCardTierName(preview.tierKey, "en-GB") }));
 
 const FORMATION_CARD_SLOTS_BY_ROLE: Record<ArenaLineupPlayer["role"], Array<Pick<ArenaLineupPlayer, "x" | "y" | "heightVh">>> = {
   goalkeeper: [
@@ -230,7 +231,7 @@ function cleanSportMonksCard(
 function buildPreviewPlayer(basePlayer: TouchlineEliteExactPlayer, preview: (typeof CARD_PREVIEW_VALUES)[number]): TouchlineEliteExactPlayer {
   return {
     ...basePlayer,
-    sportmonksPlayerId: `preview-${preview.label.toLowerCase()}`,
+    sportmonksPlayerId: `preview-${preview.tierKey.replaceAll("-", " ")}`,
     name: preview.name,
     overall: preview.number,
     shirtNumber: preview.number,

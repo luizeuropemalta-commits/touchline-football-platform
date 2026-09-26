@@ -420,6 +420,7 @@ test("a ranking error already emitted by the scorer is not duplicated", async ()
 
 for (const [input, error] of [
   [{ playerErrors: ["aggregate-row:unavailable"] }, "player-points:aggregate-row:unavailable"],
+  [{ playerErrors: ["lineup-identity-coverage:players=48;clubs=0"] }, "player-points:lineup-identity-coverage:players=48;clubs=0"],
   [{ coachError: "XX001" }, "coach-points:XX001"],
   [{ feedError: "provider_unavailable" }, `${fixture.providerId}:provider_unavailable`],
   [{ feedPersistenceError: "write_failed" }, `${fixture.providerId}:fantasy-feed:write_failed`],

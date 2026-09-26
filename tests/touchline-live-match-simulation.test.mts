@@ -228,7 +228,7 @@ test("Live warms only the current verified 22 player card products", () => {
   // Ranking leadership is shared state, not a per-card warm-up. Live cards may
   // subscribe so the leading card can receive the crown, while static callers
   // opt out through the same prop.
-  assert.match(eliteCardSource, /useTouchlineActiveRanking\(subscribeToRanking\)/);
+  assert.match(eliteCardSource, /useTouchlineActiveRanking\(!leadershipAuthority && subscribeToRanking\)/);
   assert.match(rankingClientSource, /subscribeToUpdates \? subscribe : subscribeWithoutUpdates/);
   assert.match(coachCardSource, /templates\/live-compact\/coaches/);
   assert.match(coachCardSource, /templates\/zoom\/coaches/);

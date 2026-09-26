@@ -28,6 +28,7 @@ export function resolveTouchlinePushPreference(input: Readonly<{
   requested: boolean;
   serverConfigured: boolean;
   hasRegisteredDevice: boolean;
+  explicitConsent: unknown;
 }>) {
-  return input.requested && input.serverConfigured && input.hasRegisteredDevice;
+  return input.explicitConsent === true && input.requested && input.serverConfigured && input.hasRegisteredDevice;
 }

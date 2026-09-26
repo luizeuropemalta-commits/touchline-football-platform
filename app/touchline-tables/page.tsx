@@ -11,6 +11,8 @@ import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-sched
 import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
 import TouchLineTablesClient from "./touchline-tables-client";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
+import { TouchlineCardLeadershipProvider } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
+import { buildTouchlineCardLeadershipValue } from "@/lib/touchlineArena/card-leadership-authority";
 
 export const metadata = { title: "TouchLine Tables" };
 
@@ -25,7 +27,7 @@ export default async function TouchLineTablesPage({
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   const activeRanking = await loadTouchLineActiveRanking();
   const [publishedTopEleven, publicFixtures, rankedCards, coachRanking, publishedCardCount] = await Promise.all([
-    loadTouchLinePublishedTopEleven(),
+    loadTouchLinePublishedTopEleven(activeRanking),
     readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
     loadTouchLineRankedCardCatalog(activeRanking),
     loadTouchLineCoachRanking(),
@@ -52,7 +54,7 @@ export default async function TouchLineTablesPage({
   const copy = getTouchLineRankingsCopy(locale);
 
   return (
-    <>
+    <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, coachRanking)}>
       <TouchlineLivePresentationRefresh
         initialCoachRankingSnapshotId={coachRanking.snapshotId}
         initialPlayerRankingSnapshotId={activeRanking.snapshotId}
@@ -75,6 +77,6 @@ export default async function TouchLineTablesPage({
       totalRankedCards={rankedCards.length}
       touchLineEnglandTable={touchLineEnglandTable}
       />
-    </>
+    </TouchlineCardLeadershipProvider>
   );
 }

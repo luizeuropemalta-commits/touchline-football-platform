@@ -19,13 +19,13 @@ export const TOUCHLINE_CARD_TIER_NAMES: Record<
   TouchlineCardTierKey,
   { en: string; pt: string }
 > = {
-  "ruby-red": { en: "Ruby Red", pt: "Rubi Vermelho" },
-  "sapphire-blue": { en: "Sapphire Blue", pt: "Safira Azul" },
-  "amethyst-purple": { en: "Amethyst Purple", pt: "Ametista Roxa" },
+  "ruby-red": { en: "Red Ruby", pt: "Rubi Vermelho" },
+  "sapphire-blue": { en: "Blue Sapphire", pt: "Safira Azul" },
+  "amethyst-purple": { en: "Purple Amethyst", pt: "Ametista Roxa" },
   "radiant-gold": { en: "Radiant Gold", pt: "Ouro Radiante" },
-  "emerald-green": { en: "Emerald Green", pt: "Esmeralda Verde" },
+  "emerald-green": { en: "Green Emerald", pt: "Esmeralda Verde" },
   "clear-diamond": { en: "Clear Diamond", pt: "Diamante Cristalino" },
-  "diamond-gold": { en: "Diamond Gold", pt: "Diamante Dourado" },
+  "diamond-gold": { en: "Golden Diamond", pt: "Diamante Dourado" },
 };
 
 export function touchlineCardTierName(

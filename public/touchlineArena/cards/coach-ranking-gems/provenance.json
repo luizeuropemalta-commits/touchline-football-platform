@@ -1,0 +1,351 @@
+[
+  {
+    "rank": 1,
+    "tier": "diamond-gold",
+    "source": "07_golddiamond_coach.png",
+    "points": [
+      [
+        481,
+        1205
+      ],
+      [
+        594,
+        1205
+      ],
+      [
+        659,
+        1270
+      ],
+      [
+        659,
+        1377
+      ],
+      [
+        594,
+        1446
+      ],
+      [
+        482,
+        1446
+      ],
+      [
+        416,
+        1378
+      ],
+      [
+        416,
+        1270
+      ]
+    ],
+    "crop": {
+      "left": 413,
+      "top": 1204,
+      "width": 250,
+      "height": 244
+    },
+    "sourceSha256": "f3411b070ba8f85215c83b91354bcf63a1bbc3e6f15da06610da4751d72498bf",
+    "outputSha256": "8ba64b251936f4c115fae6fc519631f8a090f9d9f5506ee78a046af2bec0fcbf"
+  },
+  {
+    "rank": 2,
+    "tier": "clear-diamond",
+    "source": "05_silver_coach.png",
+    "points": [
+      [
+        508,
+        1155
+      ],
+      [
+        593,
+        1155
+      ],
+      [
+        660,
+        1222
+      ],
+      [
+        660,
+        1341
+      ],
+      [
+        596,
+        1391
+      ],
+      [
+        551,
+        1415
+      ],
+      [
+        506,
+        1390
+      ],
+      [
+        443,
+        1342
+      ],
+      [
+        443,
+        1223
+      ]
+    ],
+    "crop": {
+      "left": 440,
+      "top": 1154,
+      "width": 224,
+      "height": 263
+    },
+    "sourceSha256": "9331b75361780c8fdb0798371af4ed8f9a172745f6ba59e73870ce6cfa2a0485",
+    "outputSha256": "ec75bd6af1c7b0700fa8074e4ac2837ab0cb8b3cfae0191dfc0e926f337a23a7"
+  },
+  {
+    "rank": 3,
+    "tier": "emerald-green",
+    "source": "03_green_coach.png",
+    "points": [
+      [
+        588,
+        923
+      ],
+      [
+        654,
+        923
+      ],
+      [
+        702,
+        967
+      ],
+      [
+        702,
+        1061
+      ],
+      [
+        655,
+        1110
+      ],
+      [
+        585,
+        1110
+      ],
+      [
+        539,
+        1060
+      ],
+      [
+        539,
+        967
+      ]
+    ],
+    "crop": {
+      "left": 536,
+      "top": 922,
+      "width": 170,
+      "height": 190
+    },
+    "sourceSha256": "2e8b5caeb3467fa2ddeb5afccd6394eb671dcb4ae32f92a95412a64f62dce280",
+    "outputSha256": "900177353dac60649c5eeee01a84d1f452cb450a7d4612bf8bb055fd1287d12e"
+  },
+  {
+    "rank": 4,
+    "tier": "radiant-gold",
+    "source": "06_gold_coach.png",
+    "points": [
+      [
+        496,
+        1224
+      ],
+      [
+        585,
+        1224
+      ],
+      [
+        646,
+        1283
+      ],
+      [
+        646,
+        1370
+      ],
+      [
+        586,
+        1426
+      ],
+      [
+        543,
+        1446
+      ],
+      [
+        495,
+        1425
+      ],
+      [
+        437,
+        1369
+      ],
+      [
+        437,
+        1282
+      ]
+    ],
+    "crop": {
+      "left": 434,
+      "top": 1223,
+      "width": 216,
+      "height": 225
+    },
+    "sourceSha256": "83122f12917670a45ceb9b0af2a4ac3a7afb25f048fd81339033ecc44394a3bb",
+    "outputSha256": "48ebfbcf2d34b45d48b8471aa25a729e0ba870942988e84637cd076083f0dc38"
+  },
+  {
+    "rank": 5,
+    "tier": "amethyst-purple",
+    "source": "04_purple_coach.png",
+    "points": [
+      [
+        491,
+        1133
+      ],
+      [
+        590,
+        1133
+      ],
+      [
+        663,
+        1210
+      ],
+      [
+        663,
+        1337
+      ],
+      [
+        592,
+        1407
+      ],
+      [
+        543,
+        1443
+      ],
+      [
+        491,
+        1407
+      ],
+      [
+        419,
+        1338
+      ],
+      [
+        419,
+        1210
+      ]
+    ],
+    "crop": {
+      "left": 416,
+      "top": 1132,
+      "width": 251,
+      "height": 313
+    },
+    "sourceSha256": "6286dad22785dca33c67b733806178b88e205b97290537ccf735084763df77c6",
+    "outputSha256": "120b1bd42ff63c12e4397e058792afbcd1a692d40778e551364aab85286629aa"
+  },
+  {
+    "rank": 6,
+    "tier": "sapphire-blue",
+    "source": "01_blue_coach.png",
+    "points": [
+      [
+        493,
+        1178
+      ],
+      [
+        593,
+        1178
+      ],
+      [
+        658,
+        1243
+      ],
+      [
+        658,
+        1343
+      ],
+      [
+        592,
+        1407
+      ],
+      [
+        543,
+        1427
+      ],
+      [
+        493,
+        1407
+      ],
+      [
+        428,
+        1344
+      ],
+      [
+        428,
+        1243
+      ]
+    ],
+    "crop": {
+      "left": 425,
+      "top": 1177,
+      "width": 237,
+      "height": 252
+    },
+    "sourceSha256": "9a2dff3191e3016b1a611a82a3cb63429276c87a33a3044139801fa875434f40",
+    "outputSha256": "30014f4d51c845007e6e27d8011cdc1d27b8b6da6a447bdbce1ce9a2b885bd2b"
+  },
+  {
+    "rank": 7,
+    "tier": "ruby-red",
+    "source": "02_red_coach.png",
+    "points": [
+      [
+        499,
+        1206
+      ],
+      [
+        585,
+        1206
+      ],
+      [
+        644,
+        1263
+      ],
+      [
+        644,
+        1345
+      ],
+      [
+        586,
+        1402
+      ],
+      [
+        543,
+        1424
+      ],
+      [
+        500,
+        1402
+      ],
+      [
+        443,
+        1345
+      ],
+      [
+        443,
+        1263
+      ]
+    ],
+    "crop": {
+      "left": 440,
+      "top": 1205,
+      "width": 208,
+      "height": 221
+    },
+    "sourceSha256": "db3d6a9df380f874d6b63a8eadca6598849be860f9c9574afaf832cfc12bc394",
+    "outputSha256": "cbf4508a2c9c337e0262b125a7b41f25efece6fe4d4d6420dce21ebf14d87c04"
+  }
+]

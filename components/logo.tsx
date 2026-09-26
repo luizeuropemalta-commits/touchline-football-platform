@@ -62,9 +62,9 @@ export function Logo({
           <span className="font-display relative text-[23px] font-black italic text-white drop-shadow-[0_0_18px_rgba(34,211,238,.75)]">TL</span>
         )}
       </span>
-      <span>
-        <TouchLineWordmark className="block text-[19px]" />
-        <span className="block text-[7px] font-bold text-cyan-300/70">Arena / TouchLine England</span>
+      <span className="min-w-0">
+        <TouchLineWordmark className="block text-[clamp(23px,3vw,30px)] leading-tight" />
+        <span className="block text-[11px] font-semibold leading-5 text-cyan-100">Arena Touchline</span>
       </span>
     </Link>
   );

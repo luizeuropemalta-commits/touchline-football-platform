@@ -220,7 +220,7 @@ test("ClubHub line-up preserves the pitch and responsive card sizing contract", 
   assert.match(squadGrid, /<TouchlineCardZoom/);
   assert.match(lineupComponent, /<TouchlineCardZoom/);
   assert.match(lineupComponent, /showSocialMetrics=\{false\}/);
-  assert.match(squadGrid, /className="club-hub-card-meta"/);
+  assert.match(squadGrid, /className=\{`club-hub-card-meta \$\{styles.meta\}`\}/);
   assert.doesNotMatch(clubHubPage, /t\("topClubAssets"\)/);
   assert.doesNotMatch(clubHubPage, /\.club-hub-card div \{/);
   assert.doesNotMatch(clubHubPage, /\/market-transfer\?\$\{localeQuery\}/);

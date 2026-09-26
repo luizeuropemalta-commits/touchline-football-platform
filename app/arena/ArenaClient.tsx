@@ -2,8 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction, type SyntheticEvent } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type Dispatch, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type SetStateAction, type SyntheticEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowUpDown, Check, ChevronDown, FastForward, Handshake, Menu, Radio, RotateCw, Search, UserRound, Volume2, VolumeX, X } from "lucide-react";
 import TouchlineEliteExactCard, { touchlineLiveCompactFrameUrl, type TouchlineEliteExactCardLabels, type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { TouchlineCardZoomDetailsPanel, type TouchlineCardZoomDetails } from "@/components/touchline/cards/TouchlineCardZoom";
@@ -11,6 +12,7 @@ import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard"
 import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
 import TouchlineSubstitutionMark from "@/components/touchline/TouchlineSubstitutionMark";
 import TouchlineArenaIntro from "@/components/touchline/arena/TouchlineArenaIntro";
+import { useTouchlineAmbientAudio } from "@/components/auth-ambient-audio";
 import responsiveStyles from "./arena-responsive.module.css";
 import { createTouchlineArenaMediaSession, readTouchlineArenaMediaAvailability, subscribeTouchlineArenaMediaAvailability } from "@/lib/touchlineArena/arena-media-playback";
 import { observeTouchlineArenaOnboardingPlayback, touchlineArenaOnboardingHref } from "@/lib/touchlineArena/arena-onboarding";
@@ -146,7 +148,7 @@ import {
   resolveTouchlineArenaInitialClub,
   type TouchlineArenaClub,
 } from "@/lib/touchlineArena/arena-club-registry-adapter";
-import { touchlinePlayerIdentityMatches } from "@/lib/touchlineArena/player-identity";
+import { resolveTouchlineRefreshedPlayerNames, touchlinePlayerIdentityMatches } from "@/lib/touchlineArena/player-identity";
 import { TOUCHLINE_SHIRT_DIGIT_ASSETS } from "@/lib/touchlineArena/shirt-number-art";
 import { touchlineDemoTierForPlayer } from "@/lib/touchlineArena/demo-card-tier";
 import {
@@ -893,17 +895,24 @@ function hydrateArenaPlayerFromSquad(player: ArenaPlayer, squadPlayer: TeamBuild
   const clubName = player.card.clubName || squadPlayer.clubName;
   const countryCode3 = hasUsableCountryCode(player.card.countryCode3) ? player.card.countryCode3 : squadPlayer.countryCode3 || null;
   const shirtNumber = normalizeArenaShirtNumber(player.card.shirtNumber, squadPlayer.shirtNumber);
+  const names = resolveTouchlineRefreshedPlayerNames({
+    canonicalPlayerId: player.card.canonicalPlayerId,
+    providerId: player.id.match(/(?:^|-)builder-[a-z]{3}-(\d+)$/i)?.[1],
+    name: player.name || squadPlayer.name,
+    shortName: player.shortName || squadPlayer.shortName,
+    playerName: player.card.playerName || squadPlayer.name,
+  }, squadPlayer);
 
   return {
     ...player,
-    name: player.name || squadPlayer.name,
-    shortName: player.shortName || squadPlayer.shortName,
+    name: names.name,
+    shortName: names.shortName,
     role: player.role || squadPlayer.role,
     card: {
       ...card,
       canonicalPlayerId: player.card.canonicalPlayerId ?? squadPlayer.canonicalPlayerId ?? null,
       templateUrl: arenaPublishedCardTemplateUrl(clubName, presentation.cardTier),
-      playerName: player.card.playerName || squadPlayer.name,
+      playerName: names.playerName,
       shirtNumber,
       clubName,
       position: player.card.position || squadPlayer.position || roleLabel(squadPlayer.role),
@@ -3467,11 +3476,30 @@ export default function ArenaClient({
   // Later visibility/orientation changes pause media without detaching it.
   if (isArenaIntroViewportReady && !hasArenaMediaSource) setHasArenaMediaSource(true);
   const [isArenaAudioMuted, setIsArenaAudioMuted] = useState(true);
+  const ambientAudio = useTouchlineAmbientAudio();
+  const claimAmbientIntro = ambientAudio?.claimIntro;
+  const enableAmbientAudio = ambientAudio?.enable;
+  const isAmbientArena = activeVideoIndex === 1 && introExperienceMode === "hidden";
+  // A returning visit resolves its existing intro decision asynchronously.
+  // Do not interrupt a public ambient track while that decision is pending.
+  const introOwnsAudio = introExperienceMode !== "pending" && !isAmbientArena;
+  const displayedAudioMuted = isAmbientArena
+    ? ambientAudio?.state !== "on" && ambientAudio?.state !== "starting"
+    : isArenaAudioMuted;
+  useLayoutEffect(() => {
+    claimAmbientIntro?.(introOwnsAudio);
+    return () => claimAmbientIntro?.(false);
+  }, [claimAmbientIntro, introOwnsAudio]);
+  useEffect(() => {
+    // Carry explicit intro opt-in forward; a browser denial stays silent and
+    // the ambient control permits another gesture. Never amplify a fallback.
+    if (isAmbientArena && !isArenaAudioMuted) void enableAmbientAudio?.();
+  }, [isAmbientArena, isArenaAudioMuted, enableAmbientAudio]);
   const arenaAudioMutedRef = useRef(true);
   const arenaMediaMountedRef = useRef(true);
   const [arenaMediaSession] = useState(createTouchlineArenaMediaSession);
   const playOfficialArenaVideo = useCallback((video: HTMLVideoElement) => arenaMediaSession.play(video, {
-    muted: arenaAudioMutedRef.current,
+    muted: video === secondVideoRef.current || arenaAudioMutedRef.current,
     isAllowed: () => arenaMediaMountedRef.current && readTouchlineArenaMediaAvailability(),
     onMutedFallback: () => {
       arenaAudioMutedRef.current = true;
@@ -3544,8 +3572,8 @@ export default function ArenaClient({
   const [fixtureStatus, setFixtureStatus] = useState("Local data");
   const [siteLanguage, setSiteLanguage] = useState<TouchLineLocale>(initialLocale ?? TOUCHLINE_DEFAULT_LOCALE);
   const arenaAudioLabel = siteLanguage === "pt-BR"
-    ? isArenaAudioMuted ? "Ativar som da Arena" : "Silenciar Arena"
-    : isArenaAudioMuted ? "Enable Arena sound" : "Mute Arena";
+    ? displayedAudioMuted ? "Ativar som da Arena" : "Silenciar Arena"
+    : displayedAudioMuted ? "Enable Arena sound" : "Mute Arena";
   const [hasLoadedLocalePreference, setHasLoadedLocalePreference] = useState(false);
   const [selectedBuilderClubKey, setSelectedBuilderClubKey] = useState(initialBuilderClubKey);
   const [builderSquad, setBuilderSquad] = useState<TeamBuilderSquadPlayer[]>([]);
@@ -6323,12 +6351,18 @@ export default function ArenaClient({
   }
 
   function toggleArenaAudio() {
+    if (isAmbientArena) {
+      // Clear old intro consent when controlling the independent ambience.
+      arenaAudioMutedRef.current = true;
+      setIsArenaAudioMuted(true);
+      void ambientAudio?.toggle();
+      return;
+    }
     const muted = !arenaAudioMutedRef.current;
     arenaAudioMutedRef.current = muted;
     setIsArenaAudioMuted(muted);
-    for (const video of [firstVideoRef.current, secondVideoRef.current]) {
-      if (video) video.muted = muted;
-    }
+    if (firstVideoRef.current) firstVideoRef.current.muted = muted;
+    if (secondVideoRef.current) secondVideoRef.current.muted = true;
     const video = activeArenaVideo();
     // Keep the gesture synchronous for browser audio permission, but never
     // start hidden entry footage underneath the official brand sequence.
@@ -7186,7 +7220,7 @@ export default function ArenaClient({
     // experience after the server has redirected the legacy URL.  The QA
     // visual fixture remains explicitly isolated behind its QA editor flag.
     if ((panel === "bench" || panel === "formation") && !initialQaVisualEditor) {
-      window.location.assign(touchlineArenaPanelHref(panel, siteLanguage));
+      router.push(touchlineArenaPanelHref(panel, siteLanguage));
       return;
     }
     if (quickSubCloseTimerRef.current !== null) {
@@ -7834,7 +7868,7 @@ export default function ArenaClient({
                 ? TOUCHLINE_ARENA_LOOP_VIDEO
                 : undefined}
               poster={TOUCHLINE_ARENA_VIDEO_POSTER}
-              muted={isArenaAudioMuted}
+              muted={true}
               playsInline
               loop
               preload="metadata"
@@ -7854,16 +7888,18 @@ export default function ArenaClient({
         <div className="arena-atmosphere" />
 
         <div className="arena-intro-actions" aria-label={siteLanguage === "pt-BR" ? "Controles da introdução" : "Intro controls"}>
-          {!standaloneExperience ? <button
+          <button
             className="arena-intro-replay-toggle"
             type="button"
             onClick={toggleArenaAudio}
             aria-label={arenaAudioLabel}
+            aria-pressed={!displayedAudioMuted}
             title={arenaAudioLabel}
           >
-            {isArenaAudioMuted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
+            {displayedAudioMuted ? <VolumeX aria-hidden="true" /> : <Volume2 aria-hidden="true" />}
             <span>{siteLanguage === "pt-BR" ? "Som" : "Sound"}</span>
-          </button> : null}
+          </button>
+          {isAmbientArena && ambientAudio?.state === "error" ? <span role="status">{siteLanguage === "pt-BR" ? "Som indisponível. Tente novamente." : "Sound unavailable. Try again."}</span> : null}
           {hasEntryVideoFinished ? (
             <button
               className="arena-intro-replay-toggle"
@@ -7905,9 +7941,9 @@ export default function ArenaClient({
               <p>{marketOnboardingWelcomeCopy.message}</p>
               <strong>{marketOnboardingWelcomeCopy.journey}</strong>
               <div><i aria-hidden="true" />{marketOnboardingWelcomeCopy.transition}</div>
-              <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+              <Link prefetch={false} href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                 {marketOnboardingWelcomeCopy.skip}
-              </a>
+              </Link>
             </div>
           </section>
         ) : null}
@@ -7923,10 +7959,10 @@ export default function ArenaClient({
                   : (siteLanguage === "pt-BR" ? `Seu elenco tem ${ownedSquadCount} jogadores. Continue a montagem até completar a formação.` : `Your squad has ${ownedSquadCount} players. Continue building until the formation is complete.`)}
             </p>
             <div>
-              <a className="is-primary" href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+              <Link prefetch={false} className="is-primary" href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                 {siteLanguage === "pt-BR" ? "Monte seu time" : "Build your team"}
-              </a>
-              <a href={allClubsHubHref}>{siteLanguage === "pt-BR" ? "Ver todos os clubes" : "View all clubs"}</a>
+              </Link>
+              <Link prefetch={false} href={allClubsHubHref}>{siteLanguage === "pt-BR" ? "Ver todos os clubes" : "View all clubs"}</Link>
             </div>
           </aside>
         ) : null}
@@ -7973,9 +8009,9 @@ export default function ArenaClient({
                         : (siteLanguage === "pt-BR" ? "Carregando ofertas oficiais dos treinadores…" : "Loading official coach offers…")}
                   </p>
                   {coachOfferStatus === "idle" ? (
-                    <a className="arena-coach-login-link" href={coachFirstLoginHref}>
+                    <Link prefetch={false} className="arena-coach-login-link" href={coachFirstLoginHref}>
                       {siteLanguage === "pt-BR" ? "Entrar para montar seu time" : "Sign in to build your team"}
-                    </a>
+                    </Link>
                   ) : null}
                 </div>
               ) : TOUCHLINE_LIVE_COACHES.map(({ coach, countryCode3 }) => {
@@ -8194,15 +8230,15 @@ export default function ArenaClient({
                 // navigation action over the Arena.
                 inert={!isArenaNavOpen ? true : undefined}
               >
-                <a href={allClubsHubHref}>
+                <Link prefetch={false} href={allClubsHubHref}>
                   {t("clubHub")}
-                </a>
-                <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                </Link>
+                <Link prefetch={false} href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                   {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
-                </a>
-                {!hasSyncedFantasyLineup ? <a href={touchlineArenaPanelHref("bench", siteLanguage)}>
+                </Link>
+                {!hasSyncedFantasyLineup ? <Link prefetch={false} href={touchlineArenaPanelHref("bench", siteLanguage)}>
                     {siteLanguage === "pt-BR" ? "Montar meu XI" : "Build my XI"}
-                  </a> : null}
+                  </Link> : null}
                 {hasEntryVideoFinished ? (
                   <button type="button" onClick={replayEntryVideo}>
                     {siteLanguage === "pt-BR" ? "Ver intro" : "Watch intro"}
@@ -8279,14 +8315,14 @@ export default function ArenaClient({
                     <small>{PUBLIC_DATA_SOURCE_LABEL} · {visibleLiveFixtures.length}</small>
                   </span>
                 </span>
-                <a
+                <Link prefetch={false}
                   className="arena-live-dock-close"
                   aria-label={t("backToArena")}
                   title={t("backToArena")}
                   href={`/arena?skipIntro=1&lang=${encodeURIComponent(siteLanguage)}`}
                 >
                   <X aria-hidden="true" />
-                </a>
+                </Link>
               </div>
               <div className="arena-live-dock-list">
                 {visibleLiveFixtures.map((fixture) => {
@@ -8638,10 +8674,10 @@ export default function ArenaClient({
         ) : standalonePanel !== "live" && visibleClubMatches.length ? (
           <section className="club-symbol-carousel" aria-label="TouchLine England" data-testid="arena-club-symbol-carousel">
             <div className="club-symbol-open">
-              <a className="club-symbol-kicker" href={`/live?lang=${encodeURIComponent(siteLanguage)}`}>
+              <Link prefetch={false} className="club-symbol-kicker" href={`/live?lang=${encodeURIComponent(siteLanguage)}`}>
                 <strong>{siteLanguage === "pt-BR" ? "Inglaterra" : "England"}</strong>
                 <small>{siteLanguage === "pt-BR" ? "Liga" : "League"}</small>
-              </a>
+              </Link>
               <button
                 type="button"
                 className="club-symbol-arrow club-symbol-arrow-previous"
@@ -8667,7 +8703,7 @@ export default function ArenaClient({
               >
                 <span className={`club-symbol-stream${visibleClubMatches.length <= 1 ? " is-static" : ""}`}>
                   {clubMatchLoop.map((match, index) => (
-                    <a
+                    <Link prefetch={false}
                       key={`${match.id}-${index}`}
                       href={`/live?fixture=${encodeURIComponent(match.fixtureId)}&lang=${encodeURIComponent(siteLanguage)}`}
                       className="club-symbol-pill"
@@ -8689,7 +8725,7 @@ export default function ArenaClient({
                         <strong>{match.home.shortCode} vs {match.away.shortCode}</strong>
                         <small>{displayFixtureStatus(match.status, t("nextMatchShort"), siteLanguage)}</small>
                       </span>
-                    </a>
+                    </Link>
                   ))}
                 </span>
               </span>
@@ -8702,7 +8738,7 @@ export default function ArenaClient({
                 ›
               </button>
               {effectiveSelectedLiveFixtureId ? (
-                <a
+                <Link prefetch={false}
                   className="club-symbol-match-centre"
                   href={`/live?fixture=${encodeURIComponent(effectiveSelectedLiveFixtureId)}&lang=${encodeURIComponent(siteLanguage)}`}
                   data-testid="arena-open-match-centre"
@@ -8710,7 +8746,7 @@ export default function ArenaClient({
                 >
                   <span>{siteLanguage === "pt-BR" ? "Abrir central da partida" : "Open Match Centre"}</span>
                   <b>→</b>
-                </a>
+                </Link>
               ) : null}
             </div>
           </section>
@@ -8723,7 +8759,7 @@ export default function ArenaClient({
               </span>
               <strong>{siteLanguage === "pt-BR" ? "PLACARES PREMIUM" : "PREMIUM SCORES"}</strong>
               <span>{siteLanguage === "pt-BR" ? "Aguardando placares verificados da rodada" : "Awaiting verified round scores"}</span>
-              <a href={`/live?lang=${encodeURIComponent(siteLanguage)}`}>{siteLanguage === "pt-BR" ? "Abrir Live" : "Open Live"}</a>
+              <Link prefetch={false} href={`/live?lang=${encodeURIComponent(siteLanguage)}`}>{siteLanguage === "pt-BR" ? "Abrir Live" : "Open Live"}</Link>
             </div>
           </section>
         ) : null}
@@ -8898,13 +8934,13 @@ export default function ArenaClient({
                   <span>{siteLanguage === "pt-BR" ? "Contrato · 1 temporada" : "Contract · 1 season"}</span>
                 </div>
                 {spotlightPlayerContractHref ? (
-                  <a className="arena-player-spotlight-contract" href={spotlightPlayerContractHref}>
+                  <Link prefetch={false} className="arena-player-spotlight-contract" href={spotlightPlayerContractHref}>
                     <TouchlineCoinMark size={18} />
                     <span>{siteLanguage === "pt-BR" ? "Contratar" : "Contract"}</span>
                     <strong>{spotlightPlayerCard.editorialCard
                       ? formatTouchlineEditorialCardPrice(spotlightPlayerCard.editorialCard.cardPrice, siteLanguage)
                       : marketUi.cardUnavailable}</strong>
-                  </a>
+                  </Link>
                 ) : null}
               </div>
               {spotlightPlayerZoomDetails ? <TouchlineCardZoomDetailsPanel details={spotlightPlayerZoomDetails} /> : null}
@@ -8953,7 +8989,7 @@ export default function ArenaClient({
                   </p>
                 ) : <p>{siteLanguage === "pt-BR" ? "Próximo jogo verificado pendente." : "Next verified fixture pending."}</p>}
                 <div className="arena-owner-coach-contract-actions">
-                  {coachSlot.coach ? <a href={`/touchline-coaches/${encodeURIComponent(coachSlot.coach.providerId)}?lang=${encodeURIComponent(siteLanguage)}`}>{siteLanguage === "pt-BR" ? "Ver perfil" : "View profile"}</a> : null}
+                  {coachSlot.coach ? <Link prefetch={false} href={`/touchline-coaches/${encodeURIComponent(coachSlot.coach.providerId)}?lang=${encodeURIComponent(siteLanguage)}`}>{siteLanguage === "pt-BR" ? "Ver perfil" : "View profile"}</Link> : null}
                   {activeCoachContract ? (
                     <button type="button" onClick={() => setIsCoachEndConfirmationOpen(true)} disabled={isCoachSaving}>
                       {siteLanguage === "pt-BR" ? "Liberar treinador" : "Release coach"}
@@ -8997,7 +9033,7 @@ export default function ArenaClient({
                   ) : null}
                 </div>
                 {standaloneExperience ? (
-                  <a className="arena-market-return" href={`/arena?skipIntro=1&lang=${encodeURIComponent(siteLanguage)}`}>{t("backToArena")}</a>
+                  <Link prefetch={false} className="arena-market-return" href={`/arena?skipIntro=1&lang=${encodeURIComponent(siteLanguage)}`}>{t("backToArena")}</Link>
                 ) : (
                   <button type="button" onClick={closeArenaPanel}>{t("backToArena")}</button>
                 )}
@@ -9032,20 +9068,20 @@ export default function ArenaClient({
 
               {["market", "rankings"].includes(arenaOverlayPanel) ? (
                 <nav className="arena-club-sections" data-panel={arenaOverlayPanel} aria-label={t("clubControl")}>
-                  <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                  <Link prefetch={false} href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                     {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
-                  </a>
-                  <a href={allClubsHubHref}>
+                  </Link>
+                  <Link prefetch={false} href={allClubsHubHref}>
                     {t("clubHub")}
-                  </a>
+                  </Link>
                   {arenaOverlayPanel !== "market" ? (
-                    <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                    <Link prefetch={false} href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                       {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
-                    </a>
+                    </Link>
                   ) : null}
-                  <a className={arenaOverlayPanel === "rankings" ? "is-active" : ""} href={`/touchline-tables?lang=${encodeURIComponent(siteLanguage)}`}>
+                  <Link prefetch={false} className={arenaOverlayPanel === "rankings" ? "is-active" : ""} href={`/touchline-tables?lang=${encodeURIComponent(siteLanguage)}`}>
                     {t("rankings")}
-                  </a>
+                  </Link>
                 </nav>
               ) : null}
 
@@ -9097,12 +9133,12 @@ export default function ArenaClient({
                     </div>
                     {standaloneQuickSubstitutionSessionState === "setup-required" ? (
                       <div className="arena-standalone-bench-readiness-actions">
-                        <a className="is-primary" href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                        <Link prefetch={false} className="is-primary" href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                           {standaloneQuickSubstitutionCopy.openMarket}
-                        </a>
-                        <a href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
+                        </Link>
+                        <Link prefetch={false} href={`/my-club?lang=${encodeURIComponent(siteLanguage)}`}>
                           {siteLanguage === "pt-BR" ? "Meu Clube" : "My Club"}
-                        </a>
+                        </Link>
                       </div>
                     ) : null}
                   </section>
@@ -9344,10 +9380,10 @@ export default function ArenaClient({
                       <small>{replacementTarget ? `${positionGroupLabel(arenaPositionGroup(replacementTarget.card?.position, replacementTarget.role), t)} / ${replacementTarget.card?.clubName ?? "TouchLine XI"}` : t("clickCardOnField")}</small>
                     </div>
                     {replacementTargetProfileHref ? (
-                      <a className="bench-open-player-profile" href={replacementTargetProfileHref}>
+                      <Link prefetch={false} className="bench-open-player-profile" href={replacementTargetProfileHref}>
                         <UserRound aria-hidden="true" />
                         <span>{t("openSelectedPlayerProfile")}</span>
-                      </a>
+                      </Link>
                     ) : null}
                     {(selectedBenchFormationLocked || !canSelectedBenchReplaceTarget) && replacementTarget ? (
                       <p className="bench-rule-warning">
@@ -9637,9 +9673,9 @@ export default function ArenaClient({
                           <small>{t("choosePlayerPremiumCard")}</small>
                         </div>
                         {selectedBuilderClubHubHref ? (
-                          <a className="team-builder-club-hub" href={selectedBuilderClubHubHref}>
+                          <Link prefetch={false} className="team-builder-club-hub" href={selectedBuilderClubHubHref}>
                             {t("clubHub")}
-                          </a>
+                          </Link>
                         ) : null}
                       </div>
 
@@ -9864,8 +9900,8 @@ export default function ArenaClient({
                       <small>{t("rankingsDescription")}</small>
                     </div>
                     <div className="arena-ranking-hero-links">
-                      <a href={`/touchline-tables?lang=${encodeURIComponent(siteLanguage)}`}>{t("openTables")}</a>
-                      <a href={`/touchline-player-card-rankings?lang=${encodeURIComponent(siteLanguage)}`}>{t("cardRanking")}</a>
+                      <Link prefetch={false} href={`/touchline-tables?lang=${encodeURIComponent(siteLanguage)}`}>{t("openTables")}</Link>
+                      <Link prefetch={false} href={`/touchline-player-card-rankings?lang=${encodeURIComponent(siteLanguage)}`}>{t("cardRanking")}</Link>
                     </div>
                   </div>
                   <section className="arena-owner-table" aria-label="TouchLine Club Owner table">
@@ -9885,7 +9921,7 @@ export default function ArenaClient({
                           </>
                         );
                         return owner.profileHref ? (
-                          <a key={owner.id} href={`${owner.profileHref}?lang=${encodeURIComponent(siteLanguage)}`} className="arena-owner-row">{row}</a>
+                          <Link prefetch={false} key={owner.id} href={`${owner.profileHref}?lang=${encodeURIComponent(siteLanguage)}`} className="arena-owner-row">{row}</Link>
                         ) : (
                           <div key={owner.id} className="arena-owner-row is-demo" aria-disabled="true">{row}</div>
                         );
@@ -9916,13 +9952,13 @@ export default function ArenaClient({
                       const club = findTouchLineClub(card.clubName);
                       const cardPrice = squadCardPriceLabel(card, siteLanguage);
                       return (
-                        <a key={card.id} href={`/touchline-player-card-rankings?lang=${encodeURIComponent(siteLanguage)}#row-${card.id}`} className="arena-ranking-row">
+                        <Link prefetch={false} key={card.id} href={`/touchline-player-card-rankings?lang=${encodeURIComponent(siteLanguage)}#row-${card.id}`} className="arena-ranking-row">
                           <span>#{index + 1}</span>
                           <strong>{card.shortName}</strong>
                           <small>{card.position} / {club?.shortCode ?? card.clubName}</small>
                           <b>{card.seasonTotalRating?.toFixed(2) ?? "—"}</b>
                           {cardPrice ? <em>{cardPrice}</em> : null}
-                        </a>
+                        </Link>
                       );
                     })}
                   </div>

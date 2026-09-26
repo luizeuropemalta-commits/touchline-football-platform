@@ -48,7 +48,10 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(client, /filteredCoaches = snapshot\.coaches\.filter/);
   assert.match(client, /TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.map\(\(club\)/);
   assert.match(client, /function CompactClubSelector[\s\S]*?TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.map[\s\S]*?<Image[^>]*height=\{56\}[^>]*width=\{56\}/);
-  assert.doesNotMatch(client, /ClubHubCrestTrace|TouchlineClubPerimeterTrace/);
+  // Owner's 24 September frame request supersedes the page-wide animation ban.
+  // Compact club selectors remain quiet; only outer card frames gain the trace.
+  const compactClubControls = client.slice(client.indexOf("function CompactClubIdentity"), client.indexOf("export default function FantasyGameweekClient"));
+  assert.doesNotMatch(compactClubControls, /ClubHubCrestTrace|TouchlineClubPerimeterTrace/);
   assert.match(client, /aria-pressed=\{club\.teamId === selectedTeamId\}/);
   assert.doesNotMatch(client, /<option value="all">|clubFilter === "all"|All clubs/);
   assert.match(client, /selections\.length === 11/);
@@ -224,7 +227,7 @@ test("My Club and Arena consume the same canonical Gameweek snapshot without a F
   assert.match(arenaClient, /return initialFantasyLineup\.players\.map/);
   assert.match(arenaClient, /const savedLayout = hasSyncedFantasyLineup[\s\S]*?\? null/);
   assert.match(arenaClient, /const isQuickSubstitutionOpen = activeArenaPanel === "bench" && !hasSyncedFantasyLineup/);
-  assert.match(arenaClient, /!hasSyncedFantasyLineup \? <a[\s\S]*?touchlineArenaPanelHref\("bench"/);
+  assert.match(arenaClient, /!hasSyncedFantasyLineup \? <Link\b[\s\S]*?touchlineArenaPanelHref\("bench"/);
   assert.match(owner, /<FantasyGameweekClient[^>]+initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.match(market, /squadView.*"squad".*"tactical"/);
   assert.match(market, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);

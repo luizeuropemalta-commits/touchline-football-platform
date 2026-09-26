@@ -163,7 +163,7 @@ export function TouchlineSocialProfileHeader({
 type ProfileActionsProps = {
   entityId: string;
   entityName: string;
-  followerCount: number;
+  followerCount: number | null;
   accent: string;
   locale?: string;
   purchaseHref?: string | null;
@@ -212,7 +212,9 @@ export function TouchlineSocialProfileActions({
       <button type="button" aria-pressed={isFollowing} onClick={toggleFollow}>
         <UserPlus aria-hidden="true" size={17} />
         <span>{isFollowing ? (isPortuguese ? "Seguindo" : "Following") : (isPortuguese ? "Seguir" : "Follow")}</span>
-        <strong>{compact(followerCount + (isFollowing ? 1 : 0), locale)}</strong>
+        <strong aria-label={followerCount === null ? (isPortuguese ? "Total de seguidores indisponível" : "Follower total unavailable") : undefined}>
+          {followerCount === null ? "—" : compact(followerCount, locale)}
+        </strong>
       </button>
       {purchaseHref ? (
         <a href={purchaseHref} aria-label={`${purchaseLabel}: ${entityName}`}>
@@ -273,27 +275,10 @@ export function TouchlineSocialFeed({
   const resolvedEmptyMessage = emptyMessage || (
     isPortuguese ? "As atualizações oficiais aparecerão aqui." : "Official updates will appear here."
   );
-  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [sharedPosts, setSharedPosts] = useState<Map<string, TouchlineNativeShareResult>>(new Map());
   const [activeKind, setActiveKind] = useState<"all" | TouchlineSocialPost["kind"]>("all");
-  const storagePrefix = useMemo(() => `touchline:social:likes:${entityId}:`, [entityId]);
   const availableKinds = useMemo(() => [...new Set(posts.map((post) => post.kind))], [posts]);
   const visiblePosts = activeKind === "all" ? posts : posts.filter((post) => post.kind === activeKind);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLikedPosts(new Set(posts.filter((post) => readBoolean(`${storagePrefix}${post.id}`)).map((post) => post.id)));
-  }, [posts, storagePrefix]);
-
-  function toggleLike(postId: string) {
-    setLikedPosts((current) => {
-      const next = new Set(current);
-      if (next.has(postId)) next.delete(postId);
-      else next.add(postId);
-      window.localStorage.setItem(`${storagePrefix}${postId}`, String(next.has(postId)));
-      return next;
-    });
-  }
 
   async function sharePost(post: TouchlineSocialPost) {
     const text = `${post.title}\n${post.body}`.trim();
@@ -378,8 +363,6 @@ export function TouchlineSocialFeed({
 
       <div className={styles.feedList}>
         {visiblePosts.map((post, index) => {
-          const liked = likedPosts.has(post.id);
-          const likeCount = Math.max(0, post.baseLikeCount ?? 0) + (liked ? 1 : 0);
           const visualTheme = post.visualTheme || "profile";
           const actionHref = post.actionHref || defaultActionHref;
           const actionLabel = post.actionLabel || defaultActionLabel;
@@ -443,10 +426,11 @@ export function TouchlineSocialFeed({
               </div>
 
               <footer>
-                <button type="button" aria-pressed={liked} onClick={() => toggleLike(post.id)}>
-                  <Heart aria-hidden="true" size={18} fill={liked ? "currentColor" : "none"} />
-                  <span>{liked ? (isPortuguese ? "Curtido" : "Liked") : (isPortuguese ? "Curtir" : "Like")}</span>
-                  <strong>{likeCount ? compact(likeCount, locale) : ""}</strong>
+                {/* Post reactions need their own persisted identity; player likes
+                    and browser preferences cannot stand in for post totals. */}
+                <button type="button" disabled title={isPortuguese ? "Curtidas indisponíveis: integração de publicações pendente." : "Post likes unavailable: persistence integration pending."}>
+                  <Heart aria-hidden="true" size={18} />
+                  <span>{isPortuguese ? "Curtidas indisponíveis" : "Likes unavailable"}</span>
                 </button>
                 <button type="button" onClick={() => void sharePost(post)} aria-live="polite">
                   <Share2 aria-hidden="true" size={18} />

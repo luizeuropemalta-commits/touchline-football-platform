@@ -195,18 +195,18 @@
   justify-items: center;
   gap: 5px;
   overflow: hidden;
-  border: 1px solid rgba(163,255,18,.24);
+  border: 1px solid color-mix(in srgb, var(--tier-accent) 35%, transparent);
   border-radius: 15px;
   padding: 12px 10px 11px;
-  background: radial-gradient(circle at 50% 25%, rgba(163,255,18,.12), transparent 48%), linear-gradient(145deg, rgba(5,20,14,.94), rgba(1,10,8,.98));
+  background: radial-gradient(circle at 50% 25%, color-mix(in srgb, var(--tier-accent) 12%, transparent), transparent 48%), linear-gradient(145deg, rgba(5,20,14,.94), rgba(1,10,8,.98));
 }
-.lineupLeaderTrace { --touchline-perimeter-radius: 15px; --touchline-perimeter-z-index: 2; --touchline-perimeter-run-color: #a3ff12; --touchline-perimeter-run-width: .8px; --touchline-perimeter-glow: 2px; --touchline-perimeter-speed: 8s; }
+.lineupLeaderTrace { --touchline-perimeter-radius: 15px; --touchline-perimeter-z-index: 2; --touchline-perimeter-run-color: var(--tier-accent); --touchline-perimeter-run-width: .8px; --touchline-perimeter-glow: 2px; --touchline-perimeter-speed: 8s; }
 .lineupLeaderCard > header { display: grid; width: 100%; gap: 2px; text-align: center; }
-.lineupLeaderCard > header span { color: #a3ff12; font-size: 8.8px; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
+.lineupLeaderCard > header span { color: var(--tier-accent); font-size: 8.8px; font-weight: 950; letter-spacing: .07em; text-transform: uppercase; }
 .lineupLeaderCard > header strong { overflow: hidden; color: #f3ffed; font-size: 11px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .lineupLeaderVisual { display: grid; min-height: 202px; place-items: center; }
 .lineupLeaderCard > small { color: rgba(241,255,234,.62); font-size: 8.8px; font-weight: 800; text-align: center; }
-.lineupLeaderAwaiting { display: grid; min-height: 202px; place-items: center; color: rgba(163,255,18,.62); font-size: 22px; }
+.lineupLeaderAwaiting { display: grid; min-height: 202px; place-items: center; color: color-mix(in srgb, var(--tier-accent) 62%, transparent); font-size: 22px; }
 
 .statusRail .nextFixtureCard {
   position: relative;

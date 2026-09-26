@@ -14,6 +14,24 @@ const tablesClient = readFileSync(new URL("../app/touchline-tables/touchline-tab
 const arenaClient = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 const pitchSurfaceCss = readFileSync(new URL("../components/touchline/pitch/TouchlinePitchSurface.module.css", import.meta.url), "utf8");
 
+test("Ranking preserves the shared landscape field ratio without a height floor", () => {
+  const css = readFileSync(new URL("../app/touchline-tables/touchline-tables.module.css", import.meta.url), "utf8");
+  const pitch = css.match(/\.pitch\s*\{([^}]+)\}/)?.[1] ?? "";
+  assert.match(pitch, /aspect-ratio:\s*105\s*\/\s*68/);
+  assert.doesNotMatch(pitch, /min-height:/);
+  assert.match(pitchSurfaceCss, /aspect-ratio:\s*105\s*\/\s*68/);
+  assert.match(css, /\.pitchPlayer\s*\{[^}]*width: min\(64px, 5\.5%\)/);
+  assert.match(css, /\.positionLabel\s*\{[^}]*right: calc\(100% \+ 4px\)/);
+  assert.match(css, /@media \(max-width: 1160px\)[\s\S]*?\.rankStage \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+});
+
+test("My Club scaled mobile field and viewport preserve the same regulation ratio", () => {
+  const css = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
+  assert.match(css, /\.myClubPitchViewport,\s*\.myClubPitchViewport \.myClubTacticalPitch\{aspect-ratio:105\/68\}/);
+  const client = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
+  assert.match(client, /width: Math\.max\(44, pitchCardWidth\)/);
+});
+
 test("ClubHub and Market use the same canonical formation geometry", () => {
   assert.equal(TOUCHLINE_CLUB_OWNER_XI_SLOTS.length, 11);
   assert.equal(TOUCHLINE_STANDARD_433_SLOTS.length, 11);

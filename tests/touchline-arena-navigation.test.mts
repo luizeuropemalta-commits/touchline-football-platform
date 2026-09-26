@@ -73,12 +73,23 @@ describe("TouchLine Arena navigation", () => {
     );
     assert.match(
       arenaClientSource,
-      /if \(\(panel === "bench" \|\| panel === "formation"\) && !initialQaVisualEditor\) \{\s*window\.location\.assign\(touchlineArenaPanelHref\(panel, siteLanguage\)\);/,
+      /if \(\(panel === "bench" \|\| panel === "formation"\) && !initialQaVisualEditor\) \{\s*router\.push\(touchlineArenaPanelHref\(panel, siteLanguage\)\);/,
     );
     assert.match(arenaClientSource, /\{siteLanguage === "pt-BR" \? "Montar meu XI" : "Build my XI"\}/);
   });
 
+  it("keeps primary Arena navigation inside the current document", () => {
+    const quickLinks = arenaClientSource.slice(arenaClientSource.indexOf('className="arena-quick-links"'), arenaClientSource.indexOf('{hasEntryVideoFinished ? (', arenaClientSource.indexOf('className="arena-quick-links"')));
+    assert.match(arenaClientSource, /import Link from "next\/link"/);
+    assert.equal((quickLinks.match(/<Link\b/g) ?? []).length, 3);
+    assert.doesNotMatch(quickLinks, /<a\b/);
+    assert.doesNotMatch(arenaClientSource, /window\.location\.assign\(touchlineArenaPanelHref/);
+  });
+
   it("anchors the Arena score carousel to one safe viewport edge", () => {
+    const rail = arenaClientSource.slice(arenaClientSource.indexOf('<section className="club-symbol-carousel"'), arenaClientSource.indexOf('{selectedLiveSimulationCard ? ('));
+    assert.doesNotMatch(rail, /<a\b/, "score rail links must preserve the root audio player");
+    assert.equal((rail.match(/<Link\b/g) ?? []).length, 4);
     const carouselRuleBodies = [
       ...arenaClientSource.matchAll(/\.club-symbol-carousel\s*\{([\s\S]*?)\n\s*\}/g),
     ].map((match) => match[1]);
@@ -89,6 +100,14 @@ describe("TouchLine Arena navigation", () => {
       carouselBottomDeclarations[0] ?? "",
       /bottom:\s*env\(safe-area-inset-bottom, 0px\);/,
     );
+  });
+
+  it("keeps known internal Arena destinations on client navigation", () => {
+    const anchors = arenaClientSource.match(/<a\b[\s\S]*?<\/a>/g) ?? [];
+    for (const anchor of anchors) {
+      assert.ok(anchor.includes('href="https://www.freepik.com"'),
+        "only the external artwork credit may remain a native anchor");
+    }
   });
 
   it("updates only the active panel in an existing Arena URL", () => {

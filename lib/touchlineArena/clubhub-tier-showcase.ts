@@ -88,10 +88,10 @@ function promotionRank(classification: TouchlineCoachClassification) {
 }
 
 /**
- * Orders the seven representatives by their immutable previous-season
- * evidence, then assigns that order to the seven commercial borders from
- * highest to entry. Official final position is authoritative; promotion route
- * follows completed top-flight positions and coach name is the final tiebreak.
+ * Selects a representative within each immutable classification, never assigning
+ * a different border just to fill the gallery. Previous-season position and
+ * promotion evidence choose among coaches in the same tier. Empty tiers remain
+ * explicit instead of borrowing another coach's classification.
  */
 export function selectTouchlineCoachTierRepresentatives(): readonly TouchlineCoachTierRepresentative[] {
   const ranked = TOUCHLINE_LIVE_COACHES
@@ -109,11 +109,10 @@ export function selectTouchlineCoachTierRepresentatives(): readonly TouchlineCoa
           "en-GB",
           { sensitivity: "base" },
         );
-    })
-    .slice(0, TOUCHLINE_CLUBHUB_TIER_ORDER.length);
+    });
 
-  return TOUCHLINE_CLUBHUB_TIER_ORDER.map((tierKey, index) => {
-    const representative = ranked[index];
+  return TOUCHLINE_CLUBHUB_TIER_ORDER.map((tierKey) => {
+    const representative = ranked.find((entry) => entry.classification.tierKey === tierKey);
     return {
       tierKey,
       snapshot: representative?.snapshot ?? null,

@@ -26,13 +26,20 @@ const lineups = ["19", "20"].flatMap((teamId, teamIndex) => Array.from({ length:
 const payload = { provider: "sportmonks", providerId: "100", status: "Full Time", homeTeam: { providerId: "19" }, awayTeam: { providerId: "20" } };
 const feed = { provider: "sportmonks", provider_fixture_id: "100", fixture_payload: payload, lineups_payload: lineups, events_payload: [], sidelined_payload: [sidelined], last_synced_at: "2026-09-21T10:00:00Z" };
 
-async function execute(input: { feeds?: Row[]; fixtures?: Row[]; players?: Row[]; clubs?: Row[] } = {}) {
+async function execute(input: { feeds?: Row[]; fixtures?: Row[]; players?: Row[]; clubs?: Row[] } = {}, expectedOk = true) {
   const writes: Record<string, Row[]> = {};
   const tables: Record<string, Row[]> = {
     football_fixtures: input.fixtures ?? [fixture, { ...fixture, id: "fixture-b", provider_fixture_id: "101" }],
     football_fantasy_fixture_feeds: input.feeds ?? [feed],
-    football_players: input.players ?? [{ id: "player-a", provider: "sportmonks", provider_player_id: "17544737", position: "Defender" }],
-    football_clubs: input.clubs ?? [{ id: "club-a", provider: "sportmonks", provider_team_id: "19" }],
+    // The official team sheet must have canonical identities too. These
+    // tests isolate the sidelined player, not incomplete lineup coverage.
+    football_players: [
+      ...lineups.map((member) => ({ id: `lineup-${member.playerId}`, provider: "sportmonks", provider_player_id: member.playerId, position: "Midfielder" })),
+      ...(input.players ?? [{ id: "player-a", provider: "sportmonks", provider_player_id: "17544737", position: "Defender" }]),
+    ],
+    football_clubs: input.clubs
+      ? [...input.clubs, ...(input.clubs.some((club) => club.provider_team_id === "20") ? [] : [{ id: "club-b", provider: "sportmonks", provider_team_id: "20" }])]
+      : [{ id: "club-a", provider: "sportmonks", provider_team_id: "19" }, { id: "club-b", provider: "sportmonks", provider_team_id: "20" }],
     football_player_season_memberships: [],
   };
   const admin = { from(table: string) {
@@ -57,8 +64,14 @@ async function execute(input: { feeds?: Row[]; fixtures?: Row[]; players?: Row[]
     auditTouchlinePlayerScoreSettlementCoverage: async () => ({ missingFixtureIds: [], error: null }),
     rebuildTouchLinePlayerRankingV3: async () => ({ ok: true, snapshotId: null, playerCount: 0, published: false }),
   });
-  await sync(admin);
-  return writes;
+  const result = await sync(admin);
+  assert.equal(result.ok, expectedOk, `Unexpected global sync outcome: ${result.errors.join(", ")}`);
+  // Preserve assertions about the sideline target independently of the
+  // now-complete supporting XI/bench records.
+  return Object.fromEntries(Object.entries(writes).flatMap(([table, rows]) => {
+    const targetRows = rows.filter((row) => !String(row.football_player_id ?? "").startsWith("lineup-"));
+    return targetRows.length ? [[table, targetRows]] : [];
+  }));
 }
 
 test("persisted final sideline proves absence only in its fixture without fabricating scores or global membership", async () => {
@@ -97,9 +110,13 @@ test("conflicting sideline clubs do not establish an absence", async () => {
   assert.equal(writes.touchline_player_fixture_score_settlements, undefined);
 });
 
-test("a lineup claim wins over a contradictory sideline; sideline never invents its missing team mapping", async () => {
-  const writes = await execute({ feeds: [{ ...feed, lineups_payload: [{ playerId: "17544737", isStarter: true, statistics: [] }] }] });
-  assert.equal(writes.touchline_player_fixture_score_settlements, undefined);
+test("a valid lineup claim wins over a contradictory sideline without aborting the rebuild", async () => {
+  const writes = await execute({ feeds: [{ ...feed, lineups_payload: lineups.map((member, index) => (
+    index === 0 ? { ...member, playerId: "17544737" } : member
+  )) }] });
+  const rows = (writes.touchline_player_fixture_score_settlements ?? []).filter((row) => row.fixture_id === "fixture-a");
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].appearance_status, "started");
 });
 
 test("a known club outside the fixture and a different player provider cannot become sideline membership", async () => {
@@ -127,7 +144,7 @@ test("ambiguous fixture, feed, player or club identities fail closed", async () 
     { feeds: [feed, { ...feed, sidelined_payload: [] }] },
     { players: [{ id: "p1", provider: "sportmonks", provider_player_id: "17544737" }, { id: "p2", provider: "sportmonks", provider_player_id: "17544737" }] },
     { clubs: [{ id: "club-a", provider: "sportmonks", provider_team_id: "19" }, { id: "club-b", provider: "sportmonks", provider_team_id: "19" }] },
-  ]) assert.equal((await execute(input)).touchline_player_fixture_score_settlements, undefined);
+  ]) assert.equal((await execute(input, !("clubs" in input))).touchline_player_fixture_score_settlements, undefined);
 });
 
 test("stale live feed, missing or mismatched payload, invalid observation and incomplete team sheets cannot prove absence", async () => {

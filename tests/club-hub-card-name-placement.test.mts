@@ -6,7 +6,7 @@ const clubHubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx
 const clubHubSquadGrid = readFileSync(new URL("../components/touchline/ClubHubSquadGrid.tsx", import.meta.url), "utf8");
 
 test("ClubHub keeps the player name inside the official card and never repeats it below", () => {
-  const cardMeta = clubHubSquadGrid.match(/<div className="club-hub-card-meta">([\s\S]*?)<\/div>/)?.[1] ?? "";
+  const cardMeta = clubHubSquadGrid.match(/<div className=\{`club-hub-card-meta \$\{styles.meta\}`\}>([\s\S]*?)<\/div>/)?.[1] ?? "";
 
   assert.match(cardMeta, /openProfileLabel/);
   assert.doesNotMatch(cardMeta, /card\.shortName/);
@@ -15,8 +15,8 @@ test("ClubHub keeps the player name inside the official card and never repeats i
 
 test("ClubHub compact cards reserve enough width for a readable official shirt name", () => {
   assert.match(clubHubSquadGrid, /cardRenderScale = 180 \/ 430/);
-  assert.match(clubHubSquadGrid, /staticRenderScale=\{cardRenderScale\}/);
-  assert.doesNotMatch(clubHubSquadGrid, /initialRenderScale=/);
+  assert.match(clubHubSquadGrid, /initialRenderScale=\{cardRenderScale\}/);
+  assert.doesNotMatch(clubHubSquadGrid, /staticRenderScale=\{cardRenderScale\}/);
   assert.match(clubHubSquadGrid, /imageLoading="lazy"/);
   assert.doesNotMatch(clubHubSquadGrid, /imageLoading=\{index < 4 \? "eager" : "lazy"\}/);
 });

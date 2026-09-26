@@ -13,6 +13,12 @@ const cardSource = readFileSync(
   "utf8",
 );
 
+test("static-render crowns follow the same responsive CSS scale as their card canvas", () => {
+  assert.match(cardSource, /const crownRenderScale = `var\(--touchline-card-static-scale, \$\{scale\}\)`/);
+  assert.match(cardSource, /top: hasStaticRenderScale\s*\? `calc\(\$\{basePlayerLeaderCrownStyle\.top\}px \* \$\{crownRenderScale\}\)`/);
+  assert.match(cardSource, /width: hasStaticRenderScale\s*\? `calc\(\$\{basePlayerLeaderCrownStyle\.width\}px \* \$\{crownRenderScale\}\)`/);
+});
+
 test("player leader crown is a non-interactive overlay with a calibrated frame gap", () => {
   const desktop = touchlinePlayerLeaderCrownStyle(1);
   const mobile = touchlinePlayerLeaderCrownStyle(0.4);
@@ -40,9 +46,11 @@ test("only the canonical player leadership decision may render the approved crow
   assert.match(cardSource, /data-touchline-player-leader-crown="true"/);
   assert.match(cardSource, /data-card-leadership-crown=\{isCanonicalPlayerLeader \? "true" : "false"\}/);
   assert.match(cardSource, /const leadershipCrownEnvelope = isCanonicalPlayerLeader[\s\S]*?Math\.max\(0, -playerLeaderCrownStyle\.top\)/);
-  assert.match(cardSource, /margin: isCanonicalPlayerLeader \? `\$\{leadershipCrownEnvelope\}px auto 0` : "0 auto"/);
+  assert.match(cardSource, /margin: isCanonicalPlayerLeader\s*\? hasStaticRenderScale/);
+  assert.ok(cardSource.includes('`calc(${-basePlayerLeaderCrownStyle.top}px * ${crownRenderScale}) auto 0`'));
+  assert.ok(cardSource.includes('`${leadershipCrownEnvelope}px auto 0`'));
   assert.match(cardSource, /pointerEvents:\s*"none"/);
-  assert.match(cardSource, /top:\s*playerLeaderCrownStyle\.top/);
+  assert.match(cardSource, /:\s*playerLeaderCrownStyle\.top/);
   assert.match(cardSource, /src=\{TOUCHLINE_PLAYER_LEADER_CROWN_ASSET\}/);
   assert.doesNotMatch(cardSource, /providerPlayerId:\s*player\.sportmonksPlayerId[\s\S]{0,120}touchlinePlayerCrownEligibility/s);
 });

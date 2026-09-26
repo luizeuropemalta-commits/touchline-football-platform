@@ -5,6 +5,21 @@ export type TouchlinePlayerIdentity = {
   clubName?: string | null;
 };
 
+/** Refresh presentation spelling only with a positive, non-conflicting ID match. */
+export function resolveTouchlineRefreshedPlayerNames(
+  saved: { canonicalPlayerId?: string | null; providerId?: string | null; name: string; shortName: string; playerName: string },
+  current: { canonicalPlayerId?: string | null; providerId?: string | null; name: string; shortName: string },
+) {
+  const pairs = [
+    [saved.canonicalPlayerId, current.canonicalPlayerId],
+    [saved.providerId, current.providerId],
+  ].filter(([a, b]) => Boolean(a?.trim() && b?.trim()));
+  const matched = pairs.length > 0 && pairs.every(([a, b]) => a!.trim() === b!.trim());
+  const name = current.name.trim();
+  if (!matched || !name) return { name: saved.name, shortName: saved.shortName, playerName: saved.playerName };
+  return { name, shortName: current.shortName.trim() || name, playerName: name };
+}
+
 export function normalizeTouchlinePlayerIdentityText(value?: string | null) {
   return String(value || "")
     .normalize("NFD")

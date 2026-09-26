@@ -207,6 +207,21 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
   }
   const feedByKey = new Map((feeds as FeedRow[]).map((feed) => [`${feed.provider}:${feed.provider_fixture_id}`, feed]));
 
+  // This writer resolves Sportmonks identities only. Reject inconsistent
+  // provenance before numeric IDs can collide with that provider's mappings.
+  for (const feed of feeds as FeedRow[]) {
+    const members = lineupMembers(feed.lineups_payload) ?? [];
+    if (members.some((member) => !member
+      || feed.provider !== "sportmonks"
+      || member.provider !== feed.provider
+      || String(member.fixtureId) !== feed.provider_fixture_id
+      || !/^\d+$/.test(String(member.playerId ?? ""))
+      || !/^\d+$/.test(String(member.teamId ?? "")))) {
+      result.errors.push("lineup-provenance-invalid");
+      return result;
+    }
+  }
+
   // A persisted official team sheet is itself verified membership evidence.
   // Materialise that relation before building statistics instead of requiring
   // a separate historical bootstrap that can silently leave the read model at
@@ -270,6 +285,25 @@ export async function syncTouchLinePlayerSeasonStatistics(admin: SupabaseClient)
   }
   const playerIdByProviderId = new Map(playerRows.map((row) => [String(row.provider_player_id), String(row.id)]));
   const clubIdByProviderId = new Map(clubRows.map((row) => [String(row.provider_team_id), String(row.id)]));
+  // A successful paginated read does not prove every team-sheet identity was
+  // resolved. Never silently omit named participants or select an ambiguous
+  // mapping before writing memberships, history, scores or ranking snapshots.
+  const unresolvedLineupPlayers = new Set<string>();
+  const unresolvedLineupClubs = new Set<string>();
+  for (const { member } of lineupFacts) {
+    const playerId = String(member.playerId);
+    const teamId = String(member.teamId);
+    if (playerRows.filter((row) => String(row.provider_player_id) === playerId).length !== 1) {
+      unresolvedLineupPlayers.add(playerId);
+    }
+    if (clubRows.filter((row) => String(row.provider_team_id) === teamId).length !== 1) {
+      unresolvedLineupClubs.add(teamId);
+    }
+  }
+  if (unresolvedLineupPlayers.size || unresolvedLineupClubs.size) {
+    result.errors.push(`lineup-identity-coverage:players=${unresolvedLineupPlayers.size};clubs=${unresolvedLineupClubs.size}`);
+    return result;
+  }
   const { data: existingMemberships, error: membershipsError } = await readCompleteStatisticsInput(admin,
     "football_player_season_memberships",
     "id,football_player_id,competition_id,season_id,club_id,source_synced_at,football_players(provider,provider_player_id,provider_position,position),football_seasons(name),football_competitions(name),football_clubs(name)");

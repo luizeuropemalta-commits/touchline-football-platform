@@ -46,7 +46,8 @@
     "server-only": "0.0.1",
     "sharp": "0.35.3",
     "stripe": "^22.2.2",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "web-push": "3.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -54,6 +55,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@types/web-push": "3.6.4",
     "eslint": "^9.39.1",
     "eslint-config-next": "16.2.11",
     "tailwindcss": "^4.1.17",

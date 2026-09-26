@@ -63,12 +63,9 @@ test("Gameweek coach resolves only the exact immutable payload, never a season f
   });
 });
 
-test("pending Gameweek coach state never presents a leadership crown", () => {
-  const pendingGate = tablesClient.match(
-    /data-gameweek-coach-state="pending">([\s\S]*?)<\/div>}\s*<\/>/,
-  );
-
-  assert.ok(pendingGate, "Gameweek coach pending gate must remain explicit");
-  assert.doesNotMatch(pendingGate[1], /<Crown\b/, "an unpublished Gameweek coach cannot appear as leader");
-  assert.match(tablesClient, /data-gameweek-coach-state="published"[\s\S]*?<Crown\b/, "only the published coach gate may show the crown");
+test("season pitch excludes the historical Gameweek coach and retains the separate season leader", () => {
+  assert.doesNotMatch(tablesClient, /data-gameweek-coach-state|resolveTouchlinePublishedGameweekCoach/);
+  assert.match(tablesClient, /data-top-coach-card/);
+  assert.match(tablesClient, /publishedTouchlinePoints=\{topCoachRow\.touchlinePoints\}/);
+  assert.match(tablesClient, /showLeadershipCrown=\{topCoachRow\.rank === 1\}/);
 });

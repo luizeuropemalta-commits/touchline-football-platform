@@ -61,6 +61,26 @@ describe("TouchLine player profile links", () => {
 });
 
 describe("TouchLine player profile resolution", () => {
+  it("keeps canonical accented identities identical in profile and shirt-card inputs despite a misleading route", () => {
+    for (const name of ["Pascal Groß", "Rayan Cherki", "Rúben Dias", "João Pedro", "Pape Matar Sarr"]) {
+      const profile = resolveTouchLinePlayerProfile("erling-haaland", {
+        playerId: "987",
+        name: "Wrong Player",
+      }, {
+        providerPlayerId: "987",
+        name,
+        displayName: name,
+        clubName: null,
+        position: null,
+        nationality: null,
+        jerseyNumber: null,
+      });
+      assert.equal(profile.card.name, name);
+      assert.equal(profile.exactPlayer.name, name);
+      assert.equal(profile.card.id, "987");
+    }
+  });
+
   it("only accepts a known TouchLine card or a numeric provider identity as a public profile route", () => {
     assert.equal(isTouchLineSupportedPlayerProfile("haaland"), true);
     assert.equal(isTouchLineSupportedPlayerProfile("erling-haaland"), true);

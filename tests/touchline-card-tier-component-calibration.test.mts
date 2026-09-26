@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -8,6 +9,13 @@ import {
   touchlineCardTierComponentScale,
 } from "../lib/touchlineArena/card-tier-component-calibration.ts";
 import { TOUCHLINE_CARD_TIER_KEYS } from "../lib/touchlineArena/card-rules.ts";
+
+test("visual calibration reserves the same canvas width as its fixed artwork scale", () => {
+  const source = readFileSync(new URL("../app/visual-qa/card-tier-component-calibration/page.tsx", import.meta.url), "utf8");
+  assert.match(source, /const renderScale = zoom \? 0\.4 : 0\.28/);
+  assert.match(source, /width: 430 \* renderScale/);
+  assert.match(source, /staticRenderScale=\{renderScale\}/);
+});
 
 test("seven-tier component calibration has one deterministic contract per approved tier", () => {
   assert.equal(TOUCHLINE_CARD_TIER_COMPONENT_CALIBRATION_REVISION, "touchline-card-tier-component-calibration-v1");

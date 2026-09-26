@@ -1,0 +1,13 @@
+.trigger { --social-accent: #b9ff56; position: absolute; top: 30px; right: 8px; }
+.trigger.trigger button {
+  width: 44px;
+  padding: 0;
+  color: #dce8df;
+  border-color: rgba(220,232,223,.32);
+  background: #07110d;
+  box-shadow: none;
+}
+.trigger.trigger button:focus-visible { outline: 2px solid #b9ff56; outline-offset: 3px; }
+.panel { --social-accent: #b9ff56; padding: 14px; margin-top: 6px; border: 1px solid rgba(185,255,86,.28); border-radius: 14px; background: #07110d; }
+.panel strong { font-size: 13px; }
+.panel p { color: #dce8df; font-size: 12px; line-height: 1.5; }

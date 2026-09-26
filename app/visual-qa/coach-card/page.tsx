@@ -97,7 +97,7 @@ export default function CoachCardVisualQA() {
         <p className="text-[10px] font-black uppercase tracking-[.22em] text-amber-200">TouchLine · Card Mestre do treinador</p>
         <h1 className="mt-2 text-4xl font-black tracking-[-.045em] sm:text-5xl">Editor visual</h1>
         <p className="mt-3 max-w-3xl text-sm font-semibold leading-6 text-white/55">
-          Arraste os blocos diretamente no card. O treinador usa as mesmas sete categorias dos jogadores, começa em Rubi Vermelho (Ruby Red) e veste a camisa do clube. As letras de destaque permanecem no verde TouchLine em todas as cores.
+          Arraste os blocos diretamente no card. O treinador usa as mesmas sete categorias dos jogadores, começa em Rubi Vermelho (Red Ruby) e veste a camisa do clube. As letras de destaque permanecem no verde TouchLine em todas as cores.
         </p>
       </header>
 

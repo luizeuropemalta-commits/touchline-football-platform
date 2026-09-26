@@ -1,0 +1,126 @@
+.grid { min-width: 0; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(218px, 1fr));
+  gap: 14px;
+  padding-top: 22px;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  padding-top: 18px;
+}
+.controls span {
+  color: rgba(255,255,255,.62);
+  font-size: 11px;
+  font-weight: 850;
+}
+.controls button {
+  min-height: 44px;
+  border: 1px solid rgba(181,255,75,.48);
+  border-radius: 999px;
+  padding: 0 18px;
+  color: #efffbd;
+  background: rgba(181,255,75,.1);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 950;
+  cursor: pointer;
+}
+.controls button:hover,
+.controls button:focus-visible {
+  border-color: #c5ff6d;
+  background: rgba(181,255,75,.2);
+  outline: none;
+}
+.frame {
+  position: relative;
+  min-height: 360px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  padding: 14px;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  background: linear-gradient(150deg, rgba(255,255,255,.08), rgba(0,0,0,.3));
+  overflow: visible;
+}
+.rank {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  border: 1px solid rgba(177,255,77,.35);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #dfff9b;
+  background: rgba(0,0,0,.44);
+  font-size: 11px;
+  font-weight: 950;
+}
+.artwork {
+  width: min(100%, 180px) !important;
+  position: relative;
+  z-index: 1;
+}
+.meta {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  text-align: center;
+}
+.meta a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 12px;
+  color: #dfff9b;
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.meta a:hover,
+.meta a:focus-visible {
+  color: #dfff9b;
+  outline: 0;
+  text-shadow: 0 0 14px rgba(163,255,18,.42);
+}
+.meta small {
+  display: block;
+  color: rgba(255,255,255,.62);
+  font-weight: 800;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.frame:global(.club-hub-card) {
+  --touchline-perimeter-radius: 8px;
+  isolation: isolate;
+  border-color: color-mix(in srgb, var(--tier-accent) 45%, rgba(255, 255, 255, .16));
+  background:
+    radial-gradient(circle at 50% 4%, color-mix(in srgb, var(--tier-accent) 18%, transparent), transparent 42%),
+    linear-gradient(160deg, rgba(7, 16, 13, .96), rgba(1, 4, 4, .9));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .05), 0 14px 32px rgba(0, 0, 0, .24);
+}
+
+/* The card tier, not its club, owns this frame's colour. */
+@media (max-width: 720px) {
+  .grid { grid-template-columns: 1fr; gap: 12px; }
+  .controls { align-items: stretch; flex-direction: column; }
+  .artwork { width: min(100%, 190px) !important; }
+}
+
+.frame:global(.club-hub-card)::before {
+  content: none;
+}

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createECDH, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
@@ -8,7 +9,7 @@ import { hasTouchlineServerPushConfiguration, resolveTouchlinePushPreference } f
 const installationId = "11111111-1111-4111-8111-111111111111";
 const subscription = {
   endpoint: "https://push.example.test/subscription/123",
-  keys: { p256dh: "public-key", auth: "auth-key" },
+  keys: { p256dh: createECDH("prime256v1").generateKeys().toString("base64url"), auth: randomBytes(16).toString("base64url") },
 };
 
 test("a push device becomes registerable only with granted permission and a complete HTTPS subscription", () => {
@@ -35,9 +36,9 @@ test("the authenticated device route and RLS migration fail closed without a rea
   const migration = readFileSync(new URL("../supabase/migrations/20260910183000_touchline_notification_devices.sql", import.meta.url), "utf8");
   const client = readFileSync(new URL("../lib/touchlineArena/push-device-registration.ts", import.meta.url), "utf8");
   assert.match(route, /hasTouchLineArenaAccess\(user\)/);
-  assert.match(route, /Authentication required/);
-  assert.match(route, /parseTouchlineDeviceRegistration/);
-  assert.match(route, /user_id: user\.id/);
+  assert.match(route, /handlePushDeviceRegistration\(request/);
+  assert.match(route, /return \{ id: user\.id, allowed:/);
+  assert.match(route, /user_id: userId/);
   assert.match(migration, /enable row level security/i);
   assert.match(migration, /force row level security/i);
   assert.match(migration, /using \(user_id = auth\.uid\(\)\) with check \(user_id = auth\.uid\(\)\)/i);
@@ -55,7 +56,7 @@ test("the authenticated device route and RLS migration fail closed without a rea
   assert.doesNotMatch(client, /subscription:\s*null/);
 });
 
-test("an authenticated direct preferences PUT cannot persist push without server VAPID and a registered device", () => {
+test("push preferences require literal consent, server VAPID and a registered device", () => {
   const configured = {
     NEXT_PUBLIC_TOUCHLINE_WEB_PUSH_PUBLIC_KEY: "A".repeat(43),
     TOUCHLINE_WEB_PUSH_PRIVATE_KEY: "B".repeat(43),
@@ -63,13 +64,33 @@ test("an authenticated direct preferences PUT cannot persist push without server
   };
   assert.equal(hasTouchlineServerPushConfiguration(configured), true);
   assert.equal(hasTouchlineServerPushConfiguration({ ...configured, TOUCHLINE_WEB_PUSH_PRIVATE_KEY: undefined }), false);
-  assert.equal(resolveTouchlinePushPreference({ requested: true, serverConfigured: false, hasRegisteredDevice: true }), false);
-  assert.equal(resolveTouchlinePushPreference({ requested: true, serverConfigured: true, hasRegisteredDevice: false }), false);
-  assert.equal(resolveTouchlinePushPreference({ requested: true, serverConfigured: true, hasRegisteredDevice: true }), true);
+  assert.equal(resolveTouchlinePushPreference({ requested: true, serverConfigured: false, hasRegisteredDevice: true, explicitConsent: true }), false);
+  assert.equal(resolveTouchlinePushPreference({ requested: true, serverConfigured: true, hasRegisteredDevice: false, explicitConsent: true }), false);
+  assert.equal(resolveTouchlinePushPreference({ requested: true, serverConfigured: true, hasRegisteredDevice: true, explicitConsent: true }), true);
+  for (const explicitConsent of [false, "false", "true", 1, {}, null, undefined]) {
+    assert.equal(resolveTouchlinePushPreference({ requested: true, serverConfigured: true, hasRegisteredDevice: true, explicitConsent }), false);
+  }
+  for (const requested of [false, true]) {
+    for (const serverConfigured of [false, true]) {
+      for (const hasRegisteredDevice of [false, true]) {
+        for (const explicitConsent of [false, true]) {
+          assert.equal(
+            resolveTouchlinePushPreference({ requested, serverConfigured, hasRegisteredDevice, explicitConsent }),
+            [requested, serverConfigured, hasRegisteredDevice, explicitConsent].every((value) => value === true),
+          );
+        }
+      }
+    }
+  }
 
   const preferencesRoute = readFileSync(new URL("../app/api/notifications/preferences/route.ts", import.meta.url), "utf8");
   assert.match(preferencesRoute, /userHasRegisteredPushDevice\(supabase, user\.id\)/);
   assert.match(preferencesRoute, /parseTouchlineDeviceRegistration/);
   assert.match(preferencesRoute, /hasTouchlineServerPushConfiguration\(\)/);
   assert.match(preferencesRoute, /resolveTouchlinePushPreference/);
+  assert.match(preferencesRoute, /payload\.explicitConsent === true/);
+  assert.doesNotMatch(preferencesRoute, /Boolean\(payload\.explicitConsent\)/);
+  assert.match(preferencesRoute, /request\.headers\.get\("origin"\) !== new URL\(request\.url\)\.origin/);
+  assert.match(preferencesRoute, /explicitConsent: hasConsent/);
+  assert.match(preferencesRoute, /Array\.isArray\(payload\)/);
 });

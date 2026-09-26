@@ -46,7 +46,7 @@ export function touchlineFantasyPitchCardWidth(slots: readonly TouchlineFormatio
     for (const other of centres.slice(index + 1)) {
       const dx = Math.abs(centre.x - other.x);
       const dy = Math.abs(centre.y - other.y);
-      const horizontalLimit = dx >= 64 + gap ? dx - gap : 0;
+      const horizontalLimit = dx >= 44 + gap ? dx - gap : 0;
       limit = Math.min(limit, Math.max(horizontalLimit, (dy - labelHeight - gap) / ratio));
     }
   }

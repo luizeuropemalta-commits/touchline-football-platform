@@ -78,22 +78,24 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
 }
 
 /** Reads only an immutable, audited published Top 11; absence is a valid state. */
-export async function loadTouchLinePublishedTopEleven(): Promise<TouchlinePublishedTopEleven | null> {
+export async function loadTouchLinePublishedTopEleven(ranking: TouchlineActiveRankingState): Promise<TouchlinePublishedTopEleven | null> {
+  // Pin to the caller's validated publication: never resolve the active pointer
+  // again while this page's catalogue is being built from an earlier snapshot.
+  if (ranking.phase !== "ranked" || !ranking.snapshotId || !ranking.seasonId || ranking.scoringVersion !== "player_scoring_v3") return null;
   const admin = createAdminClient();
   if (!admin) return null;
-  const { data: active, error: activeError } = await admin
-    .from("touchline_card_ranking_active_snapshots")
-    .select("snapshot_id")
-    .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
-    .maybeSingle();
-  if (activeError || !active?.snapshot_id) return null;
   const { data: record, error } = await admin
     .from("touchline_card_ranking_snapshots")
-    .select("snapshot_id,round_id,published_at,source,status,selection_payload")
-    .eq("snapshot_id", active.snapshot_id)
+    .select("snapshot_id,season_id,scoring_version,coverage_status,actual_player_count,expected_player_count,round_id,published_at,source,status,selection_payload")
+    .eq("snapshot_id", ranking.snapshotId)
+    .eq("season_id", ranking.seasonId)
     .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
     .maybeSingle();
-  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited") return null;
+  if (error || !record || record.snapshot_id !== ranking.snapshotId || record.season_id !== ranking.seasonId
+    || record.status !== "published" || record.source !== "sportmonks-audited"
+    || record.scoring_version !== ranking.scoringVersion
+    || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring")
+    || record.actual_player_count !== record.expected_player_count) return null;
   return parseTouchlinePublishedTopEleven({
     snapshotId: record.snapshot_id,
     roundId: record.round_id,

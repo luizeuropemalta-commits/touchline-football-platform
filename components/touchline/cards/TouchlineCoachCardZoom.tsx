@@ -7,6 +7,7 @@ import type {
   TouchlineCoachContractSnapshot,
 } from "@/lib/touchlineArena/coach-scoring";
 import { touchlineCardTierName, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
+import { localizedCountryLabel } from "@/lib/touchlineArena/country-labels";
 
 import TouchlineCardZoom, { type TouchlineCardZoomDetails } from "./TouchlineCardZoom";
 import TouchlineCoachCard from "./TouchlineCoachCard";
@@ -64,7 +65,7 @@ export default function TouchlineCoachCardZoom({
   compact = true,
   cardClassName,
   publishedTouchlinePoints = null,
-  showLeadershipCrown = false,
+  showLeadershipCrown,
   assetLoading,
   frameLoading,
   frameDecoding,
@@ -77,7 +78,7 @@ export default function TouchlineCoachCardZoom({
   const identityFields: TouchlineCardZoomDetails["fields"] = [
     { label: portuguese ? "Clube atual" : "Current club", value: clubName, icon: "club", group: "identity" },
     ...(coach.nationality
-      ? [{ label: portuguese ? "Nacionalidade" : "Nationality", value: coach.nationality, icon: "nationality", group: "identity" as const }]
+      ? [{ label: portuguese ? "Nacionalidade" : "Nationality", value: localizedCountryLabel(coach.nationality, locale) ?? coach.nationality, icon: "nationality", group: "identity" as const }]
       : []),
     { label: portuguese ? "Função" : "Role", value: portuguese ? "Treinador principal" : "First-team coach", icon: "position", group: "identity" },
     ...(formattedDateOfBirth
@@ -126,7 +127,7 @@ export default function TouchlineCoachCardZoom({
     subtitle: `${clubName} · ${portuguese ? "Treinador principal" : "First-team coach"}`,
     performanceTitle: portuguese ? "Registo TouchLine" : "TouchLine record",
     performanceSubtitle: competition?.seasonLabel
-      ?? (portuguese ? "Apenas evidência verificada" : "Verified evidence only"),
+      || (portuguese ? "Apenas evidência verificada" : "Verified evidence only"),
     fields: [...identityFields, ...performanceFields],
     profileHref,
     profileLabel: portuguese ? "Ver perfil completo" : "View full profile",

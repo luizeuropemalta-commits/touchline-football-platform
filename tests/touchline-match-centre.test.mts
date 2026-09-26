@@ -539,7 +539,11 @@ test("Match Centre fixture rail presents each confrontation as a vertical score 
   assert.match(component, /className=\{styles\.fixtureDay\}/);
   assert.match(component, /className=\{styles\.fixtureKickoff\}/);
   assert.match(component, /className=\{styles\.fixtureScore\}/);
-  assert.match(component, /BellRing/);
+  assert.match(component, /<TouchlineFixtureAlerts fixtureId=\{fixture\.id\} label=\{fixtureLabel\(fixture\)\} locale=\{language\}/);
+  const alerts = readFileSync(new URL("../components/touchline/match-centre/TouchlineFixtureAlerts.tsx", import.meta.url), "utf8");
+  assert.match(alerts, /<Bell size=\{18\}/);
+  assert.doesNotMatch(alerts, /<BellRing/);
+  assert.match(alerts, /<button type="button" aria-expanded=\{open\} aria-controls=\{panelId\}/);
   assert.match(styles, /\.fixture, \.selectedFixture \{[^}]*min-height: 104px/);
   assert.match(styles, /\.fixtureStack \{[^}]*grid-template-columns: 86px minmax\(0,1fr\)[^}]*gap: 6px/);
   assert.match(styles, /\.fixtureScore \{[^}]*top: 50%[^}]*right: 47px[^}]*translateY\(-50%\)/);

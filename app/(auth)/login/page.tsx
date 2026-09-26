@@ -25,7 +25,7 @@ export default async function Login({
     <AuthLayout cinematic locale={locale}>
       <p className="text-[9px] font-black text-cyan-300">{copy.eyebrow}</p>
       <h1 className="font-display mt-3 text-4xl italic">{copy.title}</h1>
-      <p className="mt-3 text-xs text-slate-500">{copy.description}</p>
+      <p className="mt-3 text-sm font-medium leading-6 text-slate-200">{copy.description}</p>
       <AuthForm
         mode="login"
         locale={locale}

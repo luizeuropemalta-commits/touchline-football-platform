@@ -111,19 +111,35 @@ a, button { outline: none; }
 }
 ::selection { background: var(--cyan); color: #041019; }
 .font-display { font-family: Arial, Helvetica, sans-serif; font-weight: 800; letter-spacing: 0; }
-/* One subdued TouchLine treatment for every visible scrolling surface. Keep
-   the thumb green/graphite: blue tracks were a leftover from the old shell
-   and made nested scrolling areas look like unrelated products. */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #030a08; }
-::-webkit-scrollbar-thumb {
-  border: 1px solid #06110b;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #8bc93d 0%, #4f851e 52%, #234a24 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.2);
+/* Shared visible-scrollbar contract overrides legacy page-specific widths.
+   Native scrolling and intentionally hidden navigation rails stay intact. */
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: #608b32 #030a08 !important;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #b5f35c 0%, #69a92a 52%, #2f622d 100%);
+*:is(:hover, :focus-within, :active) {
+  scrollbar-color: #b8ff46 #030a08 !important;
+}
+/* Let WebKit/Blink use the precise 5px thumb instead of native 'thin'. */
+@supports selector(::-webkit-scrollbar) {
+  * { scrollbar-width: auto !important; scrollbar-color: auto !important; }
+}
+::-webkit-scrollbar { width: 5px !important; height: 5px !important; }
+::-webkit-scrollbar-track { background: #030a08 !important; }
+::-webkit-scrollbar-thumb {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #608b32 !important;
+  box-shadow: none !important;
+}
+*:is(:hover, :focus-within, :active)::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: #b8ff46 !important;
+  box-shadow: inset 0 0 3px #e4ffb0 !important;
+}
+@media (forced-colors: active) {
+  * { scrollbar-color: auto !important; }
 }
 
 .arena-bg {
@@ -1057,8 +1073,8 @@ a, button { outline: none; }
 .auth-cinematic-original { opacity: 1; }
 
 .auth-brand-header {
-  position: sticky;
-  top: max(1.25rem, env(safe-area-inset-top));
+  /* Keep the transparent brand and controls in flow when the form scrolls. */
+  position: relative;
   z-index: 40;
 }
 

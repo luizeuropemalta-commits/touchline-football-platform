@@ -123,6 +123,24 @@ for (const [teamId, clubName, clubShortCode] of clubs) {
       );
     }
 
+    // Exercise the canonical roster identity through both profile and shirt
+    // inputs, not only metadata echoed by the generated URL. This verifies
+    // adapter consistency, not the independent accuracy of the roster source.
+    const canonicalProfile = resolveTouchLinePlayerProfile(playerKey, {}, {
+      providerPlayerId: providerId,
+      name,
+      displayName: name,
+      clubName: player.clubName || clubName,
+      position: player.position || null,
+      nationality: null,
+      jerseyNumber: null,
+    });
+    if (canonicalProfile.card.id !== providerId
+      || canonicalProfile.card.name !== name
+      || canonicalProfile.exactPlayer.name !== name) {
+      failures.push(`${clubName}: ${name || providerId} changes identity between canonical roster, profile and shirt-card input.`);
+    }
+
     allPlayers.push({ ...player, providerId, name, sourceClub: clubName });
   }
 
@@ -151,6 +169,6 @@ if (failures.length) {
   process.exitCode = 1;
 } else {
   console.log(
-    `\nPlayer-profile audit passed: ${clubs.length} clubs, ${allPlayers.length} unique players, valid links and stable official identities.`,
+    `\nPlayer-profile audit passed: ${clubs.length} clubs, ${allPlayers.length} unique players, valid links and consistent roster/profile/shirt-card inputs. Rendered shirts and independent source accuracy are not verified by this audit.`,
   );
 }

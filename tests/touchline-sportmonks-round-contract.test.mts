@@ -50,7 +50,10 @@ test("Live and Tables render the same provider-backed round with a safe pending 
   assert.match(tablesPage, /fixture\.roundName\?\.trim\(\)/);
   assert.match(tablesClient, /currentProviderRoundName/);
   assert.match(tablesPage, /providerRoundNamesById/);
-  assert.match(tablesClient, /providerRoundNamesById\[gameweekBest\.roundId\] \?\? null/);
+  // The page header still identifies the provider round. The owner-defined
+  // season XI is cumulative and must not be labelled as that one round.
+  assert.match(tablesClient, /<h2>\{copy\.seasonSelection\}<\/h2>/);
+  assert.doesNotMatch(tablesClient, /providerRoundNamesById\[gameweekBest\.roundId\]/);
   assert.doesNotMatch(tablesClient, /\$\{isPortuguese \? "Rodada" : "Gameweek"\} \$\{gameweekBest\.roundId\}/);
   assert.match(tablesClient, /Matchweek awaiting provider/);
   assert.doesNotMatch(`${matchCentre}\n${tablesPage}\n${tablesClient}`, /Matchweek 1|Rodada 1/);

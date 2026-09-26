@@ -62,6 +62,34 @@ test("a complete season aggregate requires every eligible fixture exactly once",
   assert.equal(aggregate.summary.ratedAppearances, 2);
 });
 
+test("season percentages use compatible event totals, never the sum or simple mean of match percentages", () => {
+  const players = [
+    { passes: 10, "accurate-passes": 9, "accurate-passes-percentage": 90 },
+    { passes: 90, "accurate-passes": 45, "accurate-passes-percentage": 50 },
+  ].map((stats, index) => {
+    const member = lineup({ fixtureId: `ratio-${index}`, starter: true, minutes: 90 });
+    member.statistics.push(...Object.entries(stats).map(([code, value]) => ({ code, value })));
+    return { fixtureId: member.fixtureId, lineups: [member] };
+  });
+  const aggregate = buildTouchLinePlayerSeasonAggregate({
+    providerPlayerId: "154421",
+    season: { seasonId: "s", seasonName: "s", competitionId: "c", competitionName: "c", clubId: "club", clubName: "club" },
+    eligibleFixtures: players,
+  });
+  assert.equal(aggregate.positionStatistics["accurate-passes-percentage"], 54);
+  assert.equal(aggregate.positionStatistics.passes, 100);
+  assert.equal(aggregate.summary.totalRating, 14);
+
+  players[1].lineups[0].statistics = players[1].lineups[0].statistics.filter((stat) => stat.code !== "accurate-passes");
+  const missingCounts = buildTouchLinePlayerSeasonAggregate({
+    providerPlayerId: "154421",
+    season: { seasonId: "s", seasonName: "s", competitionId: "c", competitionName: "c", clubId: "club", clubName: "club" },
+    eligibleFixtures: players,
+  });
+  assert.equal(missingCounts.positionStatistics["accurate-passes-percentage"], undefined);
+  assert.equal(missingCounts.summary.totalRating, 14);
+});
+
 test("total rating backfills every valid started or substitute appearance without bench or missing-rating zeros", () => {
   const unusedBench = lineup({ fixtureId: "f-3", starter: false, minutes: 0, rating: 9 });
   const enteredWithoutRating = lineup({ fixtureId: "f-4", starter: false, minutes: 4, rating: 7 });

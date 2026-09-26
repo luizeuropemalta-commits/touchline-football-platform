@@ -4,7 +4,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
-import { BellRing, CalendarDays, Clock3, Crown, Goal, Landmark, Radio, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
+import { CalendarDays, Clock3, Crown, Goal, Landmark, Radio, ShieldCheck, Sparkles, Trophy, UsersRound } from "lucide-react";
+import TouchlineFixtureAlerts from "./TouchlineFixtureAlerts";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
@@ -432,7 +433,7 @@ export default function TouchlineMatchCentre({
                 const isSelected = selected?.id === fixture.id;
                 const fixtureScores = fixtureScorePair(fixture);
                 const railStatus = fixtureRailStatus(fixture, language, readMetadata, now);
-                return <button key={fixture.id} type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
+                return <div key={fixture.id} className={styles.fixtureRow}><button type="button" aria-controls={selected ? "touchline-match-panel" : undefined} aria-pressed={isSelected} onClick={() => selectFixture(fixture)} className={isSelected ? styles.selectedFixture : styles.fixture}>
                   <span className={styles.fixtureStack}>
                     <span className={styles.fixtureCentre}>
                       <time
@@ -452,13 +453,13 @@ export default function TouchlineMatchCentre({
                   {fixtureScores ? <span className={styles.fixtureScore} aria-label={`${fixtureScores.home} ${dictionary.versus} ${fixtureScores.away}`}>
                     <strong>{fixtureScores.home}</strong><i aria-hidden="true" /><strong>{fixtureScores.away}</strong>
                   </span> : null}
-                  <span
+                  {isResultSection ? <span
                     className={styles.fixtureAlert}
                     role="img"
                     title={isResultSection ? dictionary.completed : dictionary.alertsSoon}
                     aria-label={isResultSection ? dictionary.completed : dictionary.alertsSoon}
-                  >{isResultSection ? <Trophy size={13} aria-hidden="true" /> : <BellRing size={13} aria-hidden="true" />}</span>
-                </button>;
+                  ><Trophy size={13} aria-hidden="true" /></span> : null}
+                </button>{!isResultSection ? <TouchlineFixtureAlerts fixtureId={fixture.id} label={fixtureLabel(fixture)} locale={language} /> : null}</div>;
               })}</div>
               </section> : null;
             })}

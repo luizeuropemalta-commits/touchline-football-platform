@@ -187,13 +187,13 @@ export default function RankingSimulator({ snapshot }: { snapshot: TouchlineRank
         <article>
           <ShieldCheck aria-hidden="true" />
           <span>Fase pública atual</span>
-          <strong>Ruby Red · 1 TC</strong>
+          <strong>Red Ruby · 1 TC</strong>
           <small>O jogo continua sem mudança.</small>
         </article>
         <article>
           <Trophy aria-hidden="true" />
           <span>Líderes posicionais</span>
-          <strong>{mode === "preseason" ? "6 líderes simulados" : "6 Diamond Gold"}</strong>
+          <strong>{mode === "preseason" ? "6 líderes simulados" : "6 Golden Diamond"}</strong>
           <small>{mode === "preseason" ? "Ainda sem mudança pública." : "Um líder em cada grupo."}</small>
         </article>
         <article>
@@ -228,7 +228,7 @@ export default function RankingSimulator({ snapshot }: { snapshot: TouchlineRank
             <span>Líderes da rodada simulada</span>
             <h2>Topo por posição</h2>
           </div>
-          <small>O primeiro de cada posição recebe Diamond Gold somente após publicação auditada.</small>
+          <small>O primeiro de cada posição recebe Golden Diamond somente após publicação auditada.</small>
         </div>
         <div className={styles.leaderGrid}>
           {snapshot.positions.map((position) => {

@@ -1,3 +1,5 @@
+import { ECDH } from "node:crypto";
+
 export type TouchlinePushPermission = "granted" | "denied" | "default";
 
 export type TouchlineDeviceRegistration = Readonly<{
@@ -16,11 +18,36 @@ function isNonBlankString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function decodeCanonicalKey(value: unknown, bytes: number): Buffer | null {
+  if (typeof value !== "string" || value.length !== Math.ceil(bytes * 4 / 3)
+    || !/^[A-Za-z0-9_-]+$/.test(value)) return null;
+  const decoded = Buffer.from(value, "base64url");
+  return decoded.length === bytes && decoded.toString("base64url") === value ? decoded : null;
+}
+
+function validSubscriptionKeys(value: Record<string, unknown>): boolean {
+  // RFC8291: uncompressed P-256 public point and a 16-octet auth secret.
+  // Node-only consumers: registration handler and server preference lookup.
+  const publicKey = decodeCanonicalKey(value.p256dh, 65);
+  if (!publicKey || publicKey[0] !== 4 || !decodeCanonicalKey(value.auth, 16)) return false;
+  try {
+    // Length/prefix alone cannot prove that the point belongs to the curve.
+    ECDH.convertKey(publicKey, "prime256v1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function isHttpsPushEndpoint(value: unknown): value is string {
-  if (!isNonBlankString(value) || value.length > 2048 || /\s/.test(value)) return false;
+  // Reject URL repair and URL credentials before retaining an opaque delivery
+  // address. Preserve legitimate path/query tokens exactly as supplied.
+  if (!isNonBlankString(value) || value.length > 2048 || /[\s\\#]/.test(value)
+    || !/^https:\/\/[^/]/i.test(value)) return false;
   try {
     const endpoint = new URL(value);
-    return endpoint.protocol === "https:" && endpoint.hostname.length > 0;
+    return endpoint.protocol === "https:" && endpoint.hostname.length > 0
+      && endpoint.username === "" && endpoint.password === "";
   } catch {
     return false;
   }
@@ -45,8 +72,7 @@ export function parseTouchlineDeviceRegistration(value: unknown): TouchlineDevic
   const keys = subscription.keys;
   if (!isHttpsPushEndpoint(subscription.endpoint)
     || !keys || typeof keys !== "object" || Array.isArray(keys)
-    || !isNonBlankString((keys as Record<string, unknown>).p256dh)
-    || !isNonBlankString((keys as Record<string, unknown>).auth)) return null;
+    || !validSubscriptionKeys(keys as Record<string, unknown>)) return null;
   return {
     installationId,
     permission: "granted",

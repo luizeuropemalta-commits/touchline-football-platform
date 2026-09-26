@@ -35,15 +35,23 @@ function normalizedTimestamp(value: unknown) {
   return typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : null;
 }
 
+function normalizedSnapshotId(value: unknown) {
+  // Publishers use colon-delimited prefix:season:digest identities. These are
+  // opaque revision tokens, not fixture IDs, URLs or navigation targets.
+  return typeof value === "string" && /^[A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)*$/.test(value.trim())
+    ? value.trim()
+    : null;
+}
+
 export function parseTouchlineLivePresentationState(value: unknown): TouchlineLivePresentationState | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const candidate = value as Partial<TouchlineLivePresentationState>;
   const playerRankingSnapshotId = candidate.playerRankingSnapshotId === null
     ? null
-    : normalizedId(candidate.playerRankingSnapshotId);
+    : normalizedSnapshotId(candidate.playerRankingSnapshotId);
   const coachRankingSnapshotId = candidate.coachRankingSnapshotId === null
     ? null
-    : normalizedId(candidate.coachRankingSnapshotId);
+    : normalizedSnapshotId(candidate.coachRankingSnapshotId);
   const resumeAt = normalizedTimestamp(candidate.resumeAt);
   const mode = candidate.mode;
   const pollAfterMs = candidate.pollAfterMs;

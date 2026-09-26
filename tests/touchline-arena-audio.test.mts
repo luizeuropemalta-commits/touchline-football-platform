@@ -7,7 +7,12 @@ const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.u
 
 test("Arena sound is opt-in, scoped to official media and reachable from the intro", () => {
   assert.match(arena, /const \[isArenaAudioMuted, setIsArenaAudioMuted\] = useState\(true\)/);
-  assert.equal((arena.match(/muted=\{isArenaAudioMuted\}/g) ?? []).length, 2);
+  assert.equal((arena.match(/muted=\{isArenaAudioMuted\}/g) ?? []).length, 1);
+  assert.match(arena, /muted=\{true\}\s+playsInline\s+loop/);
+  assert.match(arena, /muted: video === secondVideoRef.current \|\| arenaAudioMutedRef.current/);
+  assert.match(arena, /ambientAudio\?\.toggle\(\)/);
+  assert.match(arena, /const isAmbientArena = activeVideoIndex === 1 && introExperienceMode === "hidden"/);
+  assert.match(arena, /const introOwnsAudio = introExperienceMode !== "pending" && !isAmbientArena/);
   assert.match(arena, /onToggleAudio=\{toggleArenaAudio\}/);
   assert.match(arena, /aria-label=\{arenaAudioLabel\}/);
   assert.doesNotMatch(arena, /const isArenaIntroViewportReady = true/);

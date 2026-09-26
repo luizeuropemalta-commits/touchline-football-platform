@@ -22,11 +22,11 @@ test("all formations fit card and label envelopes without collisions from phone 
   for (const code of TOUCHLINE_CALIBRATED_FORMATION_CODES) {
     const slots = resolveTouchlineFormationGeometry(code).slots;
     // Portrait phones render a 250% board at .4 scale; these are layout pixels.
-    for (const width of [640, 760, 850, 900, 1100, 1440, 1680, 2200]) {
+    for (const width of [500, 568, 640, 760, 850, 900, 1100, 1440, 1680, 2200]) {
       const height = width * 68 / 105;
       const cardWidth = touchlineFantasyPitchCardWidth(slots, width, height);
       assert.ok(cardWidth > 0 && cardWidth <= 96);
-      const boxWidth = Math.max(cardWidth, 64);
+      const boxWidth = Math.max(cardWidth, 44);
       const boxHeight = cardWidth * 691 / 430 + 42;
       const boxes = slots.map((slot) => ({
         x: Math.min(89, Math.max(11, slot.x)) / 100 * width,

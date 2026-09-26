@@ -100,6 +100,12 @@ export type TouchLineClubMatchdayPresentation = Readonly<{
   }>;
   /** Every named player shown in the XI or the visible technical bench. */
   displayedPlayerIds: readonly string[];
+  /** Display partition is not evidence of absence from a match. */
+  remainingSquad: Readonly<{
+    state: "unconfirmed" | "not_listed";
+    fixtureId: string | null;
+    cards: readonly ClubOwnerSquadCard[];
+  }>;
 }>;
 
 function memberPlayerId(member: TouchlineFantasyLineupMember) {
@@ -268,5 +274,10 @@ export function buildTouchLineClubMatchdayPresentation(input: {
       previewBench,
     },
     displayedPlayerIds,
+    remainingSquad: {
+      state: hasConfirmedTechnicalTeamSheet ? "not_listed" : "unconfirmed",
+      fixtureId: input.fixtureId ?? null,
+      cards: input.squadCards.filter((card) => !displayedPlayerIds.includes(String(card.id))),
+    },
   };
 }

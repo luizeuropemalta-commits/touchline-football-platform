@@ -106,7 +106,15 @@ export default function TouchlineLivePresentationRefresh({
           scheduleAfter(ERROR_RETRY_MS);
           return;
         }
-        const state = parseTouchlineLivePresentationState(await response.json());
+        const payload = await response.json();
+        // Body reading is asynchronous too: navigation, visibility changes or
+        // the request deadline can invalidate a response after its headers.
+        if (disposed || requestController !== controller || document.hidden || !navigator.onLine) return;
+        if (controller.signal.aborted) {
+          scheduleAfter(ERROR_RETRY_MS);
+          return;
+        }
+        const state = parseTouchlineLivePresentationState(payload);
         if (!state?.available) {
           scheduleAfter(ERROR_RETRY_MS);
           return;

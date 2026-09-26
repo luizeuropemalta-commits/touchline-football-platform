@@ -1,5 +1,631 @@
 # TouchLine Current State
 
+2026-09-26 22:42 UTC freeze authorised successor for gate-OFF QA review, NOT Production approval. Intended222-file manifest excludes tsconfig.tsbuildinfo and supabase/.temp/linked-project.json, preserved locally. Currentbuild74992/types145routes,2416PASS57SKIP,wholeESLint30279,diff,frozeninstall verified. Bounded identity/notification/ranking reviews no introducedP0/P1 for idle gatedQA; known P2crownlifecycle, missingdevice schema,48historicalidentity gaps,realpush/native/persistence remain. Three migration files ship inert, none applied. Next immutable commit then clean checkout proof/remote gate, no force/main switch or domain change.
+
+2026-09-26 22:37 UTC frozen offline dependencyinstall exit0 Alreadyuptodate; no scripts/networkchanges. .com.br/www verified on correctVercelproject by readonlymetadata, no domainmutation. Forwarddevicerestorationplan complete inclNULL-check fix/RLS/data-preservingtests; notimplemented. Gate-OFFQA and fullfeature/Productionacceptance remain distinct. See rootreport.
+
+2026-09-26 22:32 UTC QA schema drift proven:20260910183000 migration recorded(9statements) but no notification_devices relation in anyschema; parentusers/updatedfunction exist. No replay/historyedit; forward-restoration review ACTIVE. Rankingboundedreview noP0/P1, twoP2crownlifecyclelimits retained. No deploy/schema/domain mutation; root report records full limits.
+
+2026-09-26 22:27 UTC fresh SELECT-only QA: cron paused1, active jobs/runs0; notification_devices table ABSENT, preferences exists. Hosted schema compatibility needs reconciliation, no migration applied. Identity/absence bounded review no introducedP0/P1 for paused gate-OFFQA; ranking review active.222-file boundedsecretpatternscan no matches, not full attestation. Build74992/preview18758 retained; no deploy/domain change. Root report details.
+
+2026-09-26 22:22 UTC resumed release preparation: current LOCALbuild74992exit0eea992/types/145routes; ownedpreview72868 stopped, newguarded18758READY localhost3217.222-input hash check only checkpoints changed, application intact; no repeat tests. Existing reviewer active on identity/absence release delta. No commit/deploy/domain/data change; immutable clean candidate/full acceptance remain pending. Root completion report details.
+
+2026-09-26 16:45 UTC owner authorises correct QA candidate then validated .com.br cutover. Proposed222-file hashed manifest recorded outside repo; excludes local link metadata/generated tsbuildinfo. Bounded gate-OFF API/migration review no source blocker; hosted schema/acceptance/full review pending. Fresh official project metadata confirms repo/QA scopes/main Production; two new feature flags absent from returned project inventory. Whole ESLint30279exit0; latest2416PASS retained. No commit/deploy/domain change. See completion-resumed-20260926.md for evidence/limits.
+
+2026-09-26 16:15 UTC integrated runner68171 CLOSEDexit0e96f15:2473total/2416PASS57SKIP0FAIL/CANCELLED17suites17.485s after policy/fingerprint changes. Supersedes prior integration-pending notices, not build/durability/adapter/producer/native/release gates. Preview72868 unchanged; no remote actions. Root completion report records exact boundary.
+
+2026-09-26 16:10 UTC fingerprint reviewer completed/no bounded blocker. Hash explicitly remains sensitive/private; misleading test title corrected and opaque-query-byte regression added,4PASS375978. Pending-review status below superseded. Integration/persistence still pending.
+
+2026-09-26 16:10 UTC new validated-subscription fingerprint helper +4tests;17focusedPASS bbe919, lint/types/diff14643exit0 69cc8f. Real derived synthetic-key fingerprints compose with final policy; persistence/adapter/producer absent. Reviewer pending, fullintegration/build notcurrent for latestpush work. No remote/send changes.
+
+2026-09-26 16:05 UTC binding-guard reviewer COMPLETED/no bounded blocker. Synthetic fingerprints prove predicate/composition only; derivation/persistence still missing. Supersedes pending review below, no new tests/remote changes.
+
+2026-09-26 16:05 UTC delivery policy now fails closed on missing/malformed/mismatched queued/current subscription fingerprints. RED78e707→19affectedPASS34bc1b;lint/types/diff85519exit0e28118. Reviewer pending. No hashing/persistence/schema/productioncaller/send; full integration/build predate patch, item8 remains incomplete. Root report details.
+
+2026-09-26 16:00 UTC sender contract reviewer complete. Next safe local slice: disabled claim-bound adapter with separate constituent evidence and explicit injected age policy; missing policy/subscription fingerprint fail closed. Producer needs atomic event-revision admission, no audible retry after uncertain. No app/schema/tests/build changes; item8 remains unfulfilled. Root report records concrete boundaries.
+
+2026-09-26 15:55 UTC existing reviewer reused for bounded next push-integration contract, currently running. Root identified device ID survives subscription upsert; pending adapter must not infer subscriptionUnchanged from ID alone. No schema/source/send/test/build change. See root report; resume reviewer.
+
+2026-09-26 15:50 UTC reviewer COMPLETED: no bounded biography blocker; canonical/provenance/null handling traced, regression limits acknowledged. Supersedes running status below. No repeated tests/writes. Full14/native/data/release gates remain open.
+
+2026-09-26 15:50 UTC bounded independent biography reviewer /root/profile_biography_review running (no prior live agents to reuse). No verdict yet; resume existing reviewer. Root read-only sender trace retains absent production caller and constituent-freshness/revision gates; no source/tests/build/remote changes.
+
+2026-09-26 15:45 UTC IAB card orientation roundtrip844→390portrait gate→844 preserves open Groß modal/rating; settled screenshot complete crown/card, no overflow, close restores triggerfocus,console[]. Temporary viewportreset/tab13closed. Not native rotation/Safari acceptance; no source/data/build changes. Root report retains capture limitations.
+
+2026-09-26 15:40 UTC actual IAB568×320 English biography wraps normally in249px with no horizontal overflow/collision; screenshot after scroll and console[] retained. Temp tab12closed/viewportreset. Native/full-profile/social/release remain pending; no code/test/build/remote changes. Details root report.
+
+2026-09-26 15:35 UTC local rebuild40439 exit0c7714e/types/145routes; guarded preview72868READY replaces75147. Actual Portuguese Groß desktop header now canonical identity summary; separate previous-season/career gaps and5starts450minutes retained. No overflow/console errors; temp tab11closed/viewportreset. Mobile/English/independent review/external/release pending; no remote changes.
+
+2026-09-26 15:30 UTC current integrated runner68007 exit0ece722:2468tests/2411PASS57SKIP0FAIL/CANCELLED17suites17.841s after biography patch. No exclusions changed. Build/rendered/independent review still pending for latest patch; no remote/data change. Root report records limitations.
+
+2026-09-26 15:25 UTC local profile biography now uses verified canonical identity and identity-specific unavailable copy, retaining independent season/career warnings. New expression regression RED1PASS3FAIL033837→12focusedPASS ead64d; lint/types/diff chain exit0e8cf76. Build15:15/2407 integrated receipt now predate this patch; rendered/review/integration pending. No data/provider/remote changes. Root completion report records scope.
+
+2026-09-26 15:20 UTC item12 read-only trace confirms header sync warning depends on independent official.player lookup, not canonical season coverage. Verified canonical identity is already available separately; numeric lookup correctly forbids name fallback. Narrow identity-summary correction and regression pending; no new source/test/build/data changes. See root completion report.
+
+2026-09-26 15:15 UTC local build9710 exit0d65c8f,145routes/typesPASS, IDizshF_JoE8cjmyqiQG5Sn; guarded preview75147READY replaces3235. Actual rebuilt login1280/568 normal-flow header no longer overlaps hero/form; console empty, viewport reset/tab10closed. No remote build/data/deployment. Latest2407PASS57SKIP retained; native,48identities,push,hosted persistence and release gates remain open. Root completion report contains exact geometry/receipts.
+
+2026-09-26 15:10 UTC integrated2464total/2407PASS57SKIP0FAIL/CANCELLED17suites,session80153exit0. Initial run failed older intro sticky-header source assertion; updated to relative/no sticky-or-fixed while retaining media/logo/z-index checks. Scoped lint/diff0. No build/runtime proof of new CSS or release approval. Root completion report retains failed run and current boundaries.
+
+2026-09-26 15:05 UTC actual login scroll revealed transparent sticky auth header overlapping hero/form atscrollY67. Scoped CSS changed to relative/no top; new regression REDf9aa34→26affectedPASS5ed012. Existing preview remains old CSS, rebuilt rendered check pending. Root report retains exact screenshot/geometry scope. No auth/DB/intro/deployment change.
+
+2026-09-26 15:00 UTC actual local IAB audio check: enabled on Live, one loop media readyState4/playing; ClubHub navigation retained playing state and time advanced6.485→17.646s. Explicit mute paused before temporary tab closed. No audible/native/full-loop acceptance. Prior14:50/14:55 actual showcases: all14English tier labels and compact two-column containment verified; see root completion report. No source/build/remote changes.
+
+2026-09-26 14:40 UTC item8 test-only collaboration: actual formatter/worker/click/Match Centre selector preserves provider-to-canonical destination and locale with a competing fallback fixture.39focusedPASS9a34fe; scoped lint/nonincrementaltypes exit0b08aab. VM browser boundaries, no actual push/route/device acceptance. Production source unchanged; latest integrated2405PASS retained, not rerun. Root completion report records remaining sender/freshness/remote gates.
+
+2026-09-26 14:10 UTC integrated successor check61af1d exit0:2462total/2405PASS/57SKIP/0FAIL/CANCELLED/17suites after social cancellation patch. Scoped diff48c1d7exit0, lint2644bc/typesc3ea0b pass. Not fresh build/browser/device/hosted proof; preview remains previous compiled source. No external changes.
+
+2026-09-26 14:05 UTC local item4 fix: requestPlayerSocial rejects pre-cancelled and post-body-cancelled responses. Regression39a4039PASS2FAIL, affected24PASS7a230b, nonincrementaltypes0c3ea0b. No remote state change. Current preview/build and full2403test receipt predate this latest source patch; rebuild/integration/browser gates not closed. Root completion report records scope.
+
+2026-09-26 14:00 UTC: new mounted Like concurrency check mirrors prior Follow scenario. Both actual React instances converge to Liked2 after reversed PUT responses; obsolete GET1-like result ignored; Follow0 unchanged, queue empty. Diagnostic harness only modified; controlled transport/CSS stub, not hosted/device proof. No application/data/release changes. Root completion report retains boundaries.
+
+2026-09-26 shutdown recovery: checked HEAD/build manifests/dependency link/crown patch preserved; restarted existing compiled QA preview3217 as session3235 (1c261f), no new build. Mounted React social race now verified in isolated synthetic transport: PUT4=2 before PUT3=1, reconciliation both2, obsolete GET5=1 cannot overwrite either instance. No live counts, schema, flags or release changes; Follow hosted persistence and all device gates remain open. Root completion-resumed-20260926.md contains scope and receipts.
+
+2026-09-26 owner-confirmed crown-scale fix: static player crown now follows the canvas CSS scale (width/offset/envelope), preserving artwork/calibration. Rebuilt local preview91412;build9d3ee8exit0/145routes. Actual zoom568: crown37.03px versus former110.65px,top18.68px;844/1280 dynamic ratio122/430 and containment verified. Local regression resolved, not iPhone/all14 acceptance. Current runner summary2403PASS57SKIP0FAIL/CANCELLED; initial exact-source assertion failure corrected with both scale paths required. Scoped lint/types/diffPASS. See root completion-resumed-20260926.md. No remote changes.
+
+2026-09-26 07:41 UTC: NEW local visual failure in actual Groß profile-feed zoom at568×320: crown y=-53.828px, height110.648px while modal scrollTop0. Screenshot confirms top clipping. Pitch geometry evidence does not cover this modal. Next bounded local fix: crown-stage/landscape wrapper layout, preserve artwork and data. Close restores trigger focus; viewport reset. Details completion-resumed-20260926.md. No build/source/remote change during check.
+
+2026-09-26 continuation: owner requests all14 today and confirms iPhone availability for final proof. Local preview had stopped; broken temporary runtime directory/dependency link restored. Placeholder Preview configuration resolved in memory through exact QA key-claim/persona preflight. After diagnosed config/module-resolution failures, fresh LOCAL build3acd68 exit0 (TypeScript,145/145 routes); preview3217 started56214. Populated Ranking observed in native macOS Safari; IAB844/568 eleven-envelope checks zero collisions/overflow. Not whole-item/native-iPhone or release PASS. Broad Git status failed mmap timeout; clean candidate remains open. See root outputs/card-review-20260921/completion-resumed-20260926.md. No hosted writes/deployment.
+
+15:58UTC fullESLint exit0a7a6c1; scoped10filediffcheck0(5b91b4). Integrated2402PASS57SKIP andtypesPASS retained. No source/externalchanges; build/rendered/externalidentity gates stillopen.
+
+15:13UTC current nonincrementaltypesPASSd7282aexit0,99624closed.No flags/config edits; historical browsertyping failure cause remainsunproved. Integratedtests e19af6 retained, not releaseGO; build/native/48identity/external gates open.
+
+15:08UTC asset materialisation verified0dataless/282scoped files;3remainingassettestsPASS. One changed-condition canonical revalidation e19af6exit0:2459total2402PASS57SKIP0FAIL/CANCELLED17suites17.660s. Prior failedrun retained; external48identities/native/remote/types/build gates remain. No source/data/preview/deploy changes.
+
+15:03UTC2zoom assets materialised; exact overlay regression1PASS60b324 after changedcondition.38additionaldataless runtime derivatives among282scopedfiles received accepted macOSdownloadrequests0961b3; arrival/unresolved3assettests stillpending. No fullsuite retry, edits to assets, move fromiCloud or livechange.
+
+14:58UTC integration33008 CLOSEDexit1:f2151f2459tests/2398PASS/4timeoutCANCELLED/57SKIP/0assertionFAIL. FullsuiteNOTPASS. macOS accepted targeted download requests for2dataless zoom assets849a5a, bytesnotverified. No retry/data/preview/remotechange; otherasset waits unresolved.
+
+14:53UTC same integration33008 still active; third asset timeout (stadium interiors). Metadata confirms zoom clear-diamond/radiant-gold WebPs compressed,dataless (a85f0c), partial environment evidence; not all timeout causes proved. No retry/deletion/preview changes. Resume existing handle.
+
+14:48UTC fresh integrated local runner after latest absence changes: session33008 ACTIVE, asset overlay and Live pitch/crest tests timed out30s; no terminal summary yet. Inspect existing handle only; no duplicate/retry. Cause unresolved, NOT fullsuitePASS. No remote/data/build action. See root absence report.
+
+13:46UTC test-only verification strengthened: sideline cases now assert global sync outcome; complete contradictory lineup proves exact fixture remains started rather than absent.13PASS0skip2917dd.48identity/external acceptance gate unchanged; no live/source mutation.
+
+2026-09-25 follow-up: independent review found provider/fixture provenance could bypass numeric mapping coverage.5new regressions failed before fix; pre-write lineup-provenance-invalid guard now rejects inconsistent origin and missing IDs.63affected testsPASS (1809ba); incremental independent review accepts this bounded fix. No live writes/deploy/rebuild;48missing identities and full acceptance remain pending. Root absence report holds evidence and limits.
+
+Owner requests no messages untilresolved. Completionblocked on verified external identity source:48missingIDs have0profile snapshots/0identity mappings inQA; shellprovider token absent and localtokenplaceholder. Do not use broad20currentrostersync to infer historical/currentmemberships. Targetedlint10files nowPASS89c492 afterdependencyimport succeeds; earlier wholeprojecttypes errors remain. No secrets exposed or livewrites. Rootabsenceaudit records next authority/access boundary.
+
+11:28UTC identity-guard caller test:47live-sync-outcome testsPASS including explicit48missingidentity error → partial/not-success completion (d58032), in-memory external boundaries only. No fullpipeline zero-write claim; existing lifecycle finally still runs. No live sync/data changes; import and release gates remain open.
+
+## 2026-09-25 — local pre-write identity guard
+
+Owner continued correction. Statistics routine now rejects missing/ambiguous lineup player/team mappings before all writes, rather than silently omitting participants.4new regressions reproduced gap;58affected testsPASS0skip (76c493) after completing supporting identity fixtures in sideline tests. No48playerimport/rebuild/remotechange. Guard remains local; types/lint/fullintegration/review/release pending. See root clubhub-absence-audit-20260925.md.
+
+## 2026-09-25 — real QA lineup reconciliation reveals canonical coverage gap
+
+Read-only connector confirmed exactQAproject, Groß fixture19722161 starter90min/goal1/assist1.50finalfeeds/100team-sheets/20clubs structurally coherent (11+9,2000rows,0duplicate/wrongfixture/foreignteam/dualrole).1894canonicalmatched rows have0starter/sub/minute mismatches.106rows/48providerplayers missing canonical identity/statistics;16starts/53played entries, missing even acrossanyprovider. NOT evidence of53wrongexistingminutevalues.39additionaldomain/inventory/account-sync testsPASS. Types28799exit2 browser-test errors; lint4972exit2 dependencyreadtimeout. No remoteimport/reprocess/datachanges. Root clubhub-absence-audit-20260925.md records scope/nextguarded investigation. ReleaseNO-GO.
+
+## 2026-09-25 — ClubHub false-absence classification corrected locally; audit partial
+
+Owner prioritised Groß/ALL-club participation audit and explicitly authorised programming fix. Preview XI+bench remainder was unconditionally labelled outside match. Shared model now carries unconfirmed/not_listed provenance; page and roster consume it fail-closed, pitch clearly distinguishes illustrative squad from official XI.53focused testsPASS,20localClubHub HTTP200 checks all show unconfirmed warning and no old absence heading. Synthetic20club tests are NOT real provider reconciliation. Groß profile last entry19Sep/fixture19722161 says started90min; raw fixture API requires authentication, not bypassed. Full saved-team impact and real20club audit/native/mobile remain pending. Types28799/lint4972/gitstatus47933/diff82213 pending; no duplicate launches. No DB/history/saved-XI/deploy changes. Details root outputs/card-review-20260921/clubhub-absence-audit-20260925.md.
+
+## 2026-09-25 — pending transport verification terminated
+
+Heartbeat receipts: test39650 terminated exit0 (7c383d):6PASS0FAIL, including dispatcher plus real encrypted transport with fake network. Runtime640321ms includes file availability wait, not transport performance. Lint chain92915 terminated exit2 (093fe3): Next ESLint plugin no-html-link-for-pages.js throws TypeError `_url.execOnce is not a function`; TypeScript/diff stages were NOT reached. Diagnose dependency integrity before retry; no silent bypass or PASS. No real send, deployment or data changes. Item8 and full14 remain incomplete.
+
+## 2026-09-25 — external local-file availability blocker
+
+Repeated across more than three goal continuations: required files remain dataless despite Foundation download requests. Fresh d8b3af shows package.json still dataless; test39650 waits on it (child20698), ESLint92915 waits on fs.walk/out/settings.js (20352). Both handles still live (2dc7ea,1fe19c); not restarted or killed. Preview previously timed out. Safe download requests and Finder inspection exhausted; pinning project locally was requested from owner and remains unanswered. No new PASS; integrated transport test still pending. Goal blocked on local availability/owner direction, not complete; resume same live handles when files return. No session, remote, account, original or deployment changes.
+
+## 2026-09-25 — hydration advancing; dispatcher/transport integration check added
+
+Previous goal turn VERIFIED WAIT: ESLint92915 and canonical-read74029 remained live; no restart. Read74029 now terminated successfully and queue plus braces stringify/expand no longer dataless. ESLint progresses to other dependencies; directory hydration requested for node_modules/lib/tests, request52207 exit0 (101a0b), not proof all downloaded. Local preview read-only HTTP check timed out8s (90e9ec); server NOT restarted. Added dispatcher→real encryption→fake fetch test for accepted/opted-out/uncertain scenarios with exact request/receipt counts. Test39650 is live, result PENDING; do not call PASS. Full-suite count discrepancy and adapter/producer/mobile/release gates remain open. No external notification, data mutation or deployment.
+
+## 2026-09-25 — transport TTL type corrected; iCloud reads pending
+
+Previous turn PROGRESS: owner-authorised safe cache/installer cleanup; no project or artwork removal. Current transport TTL header converted to string to satisfy web-push header contract. Seventeen focused dispatch/policy/transport tests PASS (ff78dd); real encryption with fake network, no device send. ESLint/typecheck chain session92915 remains live at ESLint, blocked reading braces/lib/stringify.js marked dataless by macOS. Canonical outputs queue/release candidate also dataless; read session74029 remains live. Download requested through Foundation in session22584; not yet confirmed. Do not restart these jobs solely for observation timeout. Integrated count discrepancy (2423 before transport versus2416 later) remains unresolved; no full-suite PASS for this delta. Item8 RED, production adapter and real delivery still missing; all14 gates retained, no deployment or remote mutation.
+
+## 2026-09-25 — dispatch abort ordering regression corrected
+
+Fresh integrated runner after fix:2423total,2366PASS,57SKIP,0FAIL,17suites,18.356s(1e42bd exit0). Existing exclusions unchanged, no device/remote proof.
+
+Independent read-only review found a real race: abort listeners could settle transport before timeout rejection, incorrectly recording failed/provider_accepted rather than uncertain. Reproduced both cases with mocked timers:8PASS2FAIL(46a961). Corrected ordering (reject before abort) plus defensive aborted-result guard.12 focused policy/dispatcher testsPASS(084ef8); ESLint/nonincremental TypeScript/diff exit0(5177ad). Independent reviewer confirmed delta and coverage, no new bounded blocker; did not rerun tests. Previous full runner2364PASS57SKIP0FAIL(6c3f15) predates this correction. Dispatcher still lacks production adapter/producer/transport; no real send, external mutation or whole-item completion. Full14/release gates remain open.
+
+
+## 2026-09-25 — bounded single-claim dispatcher
+
+Previous goal turn PROGRESS (delivery policy implemented). Added match-push-dispatch.ts consuming policy with current clock after source read, 15s maximum read/transport deadline bounded by lease/expiry, AbortSignal, no retry, uncertain transport outcome and bounded5s completion receipt. Late source completion does not start a send; acceptance is provider_accepted, never device-delivered. Fresh focused10PASS(7be17a); ESLint/nonincremental TypeScript/diff exit0(3c9f8d). New module has tests but no production adapter/caller yet. Integration still needs claim-bound canonical DB reads, per-source freshness, validated endpoint transport, producer, real opt-in/device proof and authorised deployment. No remote/sends/sessions/payment changes. Full14 active. Independent review and fresh full suite being collected; no release PASS.
+
+
+## 2026-09-25 — pre-transport delivery policy (local, not wired)
+
+Previous goal turn PROGRESS: timezone-aware quiet-hours helper and regression proof. Current source audit confirms existing canonical confirmed-event reader supports live matches and provisional/final V3 settlements, but also depends on social attestation, published card and revision checks; do not bypass those checks or assume sourceSnapshotAt (maximum component timestamp) proves all components fresh.
+
+Added match-push-delivery-policy.ts composing quiet-hours with lease/queue expiry, matching verified source checksum, current fixture consent, strict push/goalsAndEvents/realtime settings, device permission/subscription continuity and nonfuture explicit consent. Tests cover removal of consent after earlier eligibility and arrival of quiet hours. 19 focused tests PASS (0f641e); ESLint/nonincremental TypeScript/diff exit0 (02216e). No baseline-red test this increment; new pure module. Grep confirms ONLY tests consume this new policy: worker/DB reader/transport integration is still missing, so no runtime delivery claim. No notifications, DB writes, native browsing, deployment or payment action. Item8 remains RED; all14 scope and final gates remain open. Next: wire current-fact server reader + bounded worker/transport, preserving uncertain-outcome behavior and explicit deployment gates.
+
+
+## 2026-09-25 — local notification outbox and quiet-hours gate
+
+Fresh post-extension canonical runner: 2411 total, 2354 PASS, 57 SKIP, 0 FAIL, 17 suites, 19.381s; terminal receipt2073e1 exit0. Exclusions unchanged; not mobile or remote delivery proof.
+
+Previous goal work PROGRESS: isolated PostgreSQL outbox integration completed (receipt e235b9), with independent review fixes for eligibility between cleanup/claim and lease expiry while waiting for row locks. Migration remains LOCAL ONLY; no producer, transport, scheduler, remote schema or real send enabled. Last integrated receipt before quiet-hours extension: 2352 PASS, 57 SKIP, 0 FAIL (a8aa81). Disposable synthetic test container removed; existing restore-check container preserved.
+
+Current continuation implemented pure local-time quiet-hours evaluation (user zone, overnight windows, daylight-saving repetition, inclusive start/exclusive end). Missing/malformed stored settings or equal enabled endpoints return invalid, not permission to send. This helper is not yet wired to the missing sender and does not prove mobile delivery. Regression red 3 PASS/2 FAIL (38c1f3), then 19 focused notification tests PASS (90bc99); ESLint, nonincremental TypeScript and diff check exit0 (afc88b). Full14 goal remains active, all publication/native-device/persistence gates still open. See outputs/card-review-20260921/match-push-outbox-local-20260925.md for scope and remaining work.
+
+
+## 2026-09-25 — scrollbar cross-surface runtime evidence
+
+Previous goal turn PROGRESS (owner-requested gemstone scale/inset/shared CSS implemented). Temporary IAB19 actual public Live1280x800 fixture rail measured5px; scrolling moved0→800 of1640 and changed thumb rgb96,139,50→rgb184,255,70. Screenshot confirms narrow lit vertical bar, selected Arsenal match unchanged. Visible Voltar para a Arena link reached /arena and menu opened; no notification/audio writes. Market is authenticated MyClub, so no unverified account test: inspected existing local-only frozen market-premium-pitch fixture instead. Legacy gameweek player/coach containers compute5px and player focus lights thumb, but maxscroll0, so NOT proof nested market scrolling. Current embedded surface=my-club uses a different responsive layout with normal document scrolling, no active nested vertical overflow in this scenario; compact844x390 document width844. Both fixture datasets remain historical/frozen, not current customer XI proof. No production patch or unchanged test rerun. Viewport reset/temp19closed/userTables16preserved. Remaining: native Safari/iPhone/Firefox, authenticated Market and complete site matrix; no global visual PASS or publication.
+
+
+## 2026-09-25 — owner gemstone size and shared scrollbar refinement
+
+Owner requested 15% smaller coach gems, inset points and thin interaction-lit scrollbars. CSS-only production changes: existing gem image scale(.85), unchanged PNGs/row slots; coach points margin-inline-end10px; global visible scrollbars5px WebKit/Blink, native thin fallback, green interaction state on hover/focus-within/active, forced-colors native fallback. Existing local widths/colours overridden centrally, no synthetic scrolling or event handlers. Six focused tests PASS (6fbf43); diffcheck0. Actual IAB16 desktop1280x800 measured all7gems32.30px from38px, points inset10px, scrollbar5px, focused thumb rgb184,255,70; End moved coach list0→26=max. Compact844x390 gems27.2px from32px, document844=viewport844, seven rows shown in screenshot. Viewport reset/usertabpreserved. Global CSS implemented, but nativeSafari/iPhone/Firefox and every consumer not freshly visually accepted; full14 and publication gates remain open. No data/artwork/auth/remote changes.
+
+## 2026-09-25 — thin crest contour runtime confirmation
+
+Previous goal turn PROGRESS (seven original coach gems extracted/integrated). Read-only IAB18 actual ManchesterCity ClubHub next-fixture Liverpool image loaded from Next image optimizer; computed filter confirms four white zero-blur offsets of0.5px. Navigated visible Todos os clubes link; all three actual Liverpool/NottinghamForest/Tottenham images loaded with identical narrow silhouette filter. Desktop1280x800 screenshots by scrolling individually confirm contour follows crest alpha rather than a rectangular border; originals and other crests unchanged. No code patch needed, no unchanged test rerun. This proves these actual next-fixture/list consumers, not every site/device surface. Temporary viewport reset and tab18closed; userTables16preserved. No native/session/database/notification/deployment action. Full14 active.
+
+## 2026-09-25 — seven original coach gemstones extracted and integrated locally
+
+Owner explicitly authorised local deterministic masks without generative AI/redrawing/external cost, superseding pending method permission. scripts/extract-touchline-coach-gems.mjs extracts bottom gems with individual antialiased polygons from seven canonical COACH originals; no originals changed. Dark/light contact sheets visually inspected: no frame arms or background retained. Seven transparent PNGs and source/output SHA256 provenance saved under public/touchlineArena/cards/coach-ranking-gems. Decorative rank mapping isolated in coach-ranking-gems.ts; preserves published coach card tiers, ranking, points and identities. Tables replaced monograms with decorative alt-empty gems sized38px/compact32px; owner avatars unchanged.
+
+Tests compare every fully opaque output RGB pixel with corresponding original coach pixel, assert genuine transparent and softened edges, verify source/output hashes, correct seven-position order and invalid-rank rejection. Seven combined focused testsPASS(fa0979); ESLint/nonincrementaltypes/diff56697 terminalexit0(6b25e0). Fresh integrated runner63765 completed:2407tests,2350PASS,57SKIP,0FAIL,17suites,27.301s(28c808). This is the canonical runner with its existing exclusions, not remote/native/persistence acceptance.
+
+Actual IAB Tables16 at1280x800 loaded all7PNG natural sizes; compact844x390 screenshot after scrolling shows seven stones beside names, including final ruby, without overlap. Document scrollWidth844=viewport844; existing list scroll and crown/card appearance retained. Temporary viewport reset; usertab kept. This is local IAB only, not nativeiPhone/remote acceptance. Item6 remains partial for complete profile/device acceptance; extraction and localTop7 replacement now implemented and verified. No DB/auth/subscription/build/deployment changes. Full14 goal active.
+
+## 2026-09-24 — exact coach gem sources and position mapping
+
+Read-only audit inspected all seven original coach artworks selected by TOUCHLINE_COACH_CARD_ART (not player frames). Emerald source is1254x1254; other six1086x1448. Bottom gem/frame joins require individual masks; rectangular crops fail fidelity. Top7 medals must follow rank1gold-diamond,2clear,3green,4gold,5purple,6blue,7red WITHOUT changing coach season card tiers. Details in outputs/card-review-20260921/gems-navigation-preflight-20260924.md. Explicit local non-generative crop-method question renewed, pending; no generated/edited images or initials replacement. All14 remain active.
+
+Native public Cherki→ManchesterCity club link rendered successfully; back action interrupted by user app change, not claimed passed. No session mutation. Temporary IAB17 same club loaded after initial observation timeout then closed; crest contrast investigation not yet proven. User Tables16 preserved. No deployment/database/notification writes.
+
+## 2026-09-24 — natural card accepted; compact coach rendered
+
+Owner explicitly approved the natural card after removing both the small red focus rectangle and the attempted silhouette glow ("isso agora ficou otimo"). Shared TouchlineCardZoom trigger now outline:none/filter:none in ordinary mode; forced-colors Highlight outline retained. Crown, original gemstone artwork and approved outer travelling tier frame unchanged. IMPORTANT: ordinary keyboard focus has no visible indicator on this trigger; accessibility gate remains OPEN, not a whole-accessibility PASS. Do not reintroduce the rejected box/glow without resolving the owner's appearance contract.
+
+Latest turn revalidated current source and five focused card-focus/coach-spacing/podium tests PASS (361054), no production change in this continuation. The prior full integrated run passed 2346 tests,57 skipped,0 failures (2403 total,17 suites,0ab10e); that receipt predates latest compact-coach/focus CSS. Earlier failure was an assertion tied to property order; test now checks the same required panel properties independently.
+
+IAB tab16 at844x390: actual Enzo featured panel renders crown and bottom sapphire entirely, identity and21pts beside card; columns160px/240px, body822px, document scrollWidth844=viewport844. Screenshot after scrolling confirms no overlap and whole card envelope. This is IAB landscape proof, NOT native iPhone. User-facing tab preserved, temporary viewport reset after inspection. No auth/social/push/audio writes, server restart or remote publication.
+
+Previous native Safari public Cherki check resumed successfully: reopened zoom showed complete card and bottom gemstone, Escape returned focus to correct trigger; subsequent user app change interrupted further actions, sessions preserved. No authenticated customer XI or iPhone proof. Full14 goal active, release/notification delivery/persistence and real-device gates remain open.
+
+## 2026-09-24 — fixture bell state integrity
+
+Previous turn PROGRESS (bounded device preparation). Item8 actual client rendered BellRing from saved fixture interest even though API explicitly delivery=unavailable; corrected to neutral Bell until a future real delivery contract is implemented. GET now rejects aborted body results, clears stale subscribed on401, and GET/PUT require explicit ok===true plus current delivery acknowledgement. No claim notification delivery is implemented. Updated old source assertion that incorrectly required BellRing for interest-only; new actual-source VM tests independently reproduce saved-interest misleading icon, stale post-abort body and malformed acknowledgement. Initial0PASS3FAIL(657b16), then33client/handler/MatchCentre testsPASS(f437f9); ESLint/nonincrementaltypes/diff17677 terminalexit0(6d91c8).
+
+IABtab15 localLive actual Arsenal bell opened read-only: loading then 'Os alertas desta partida ainda não foram ativados.' Computed icon lucide-bell, animation none, box-shadow none; no save, subscription, permission, social or push action. Temporarytab15closed/user session preserved. NativeSafari/iPhone and real sender/outbox remain pending. No schema/flags/publication. Full14 active, final releasegate not passed.
+
+## 2026-09-24 — bounded push browser preparation
+
+Previous goal turn PROGRESS (featured-coach tier frame implemented/rendered). Item8 current audit reconfirms persisted fixture preference returns delivery unavailable; no proven sender/durable outbox, no whole-mobile completion. Local client had unbounded serviceworker register/ready/getSubscription/subscribe before existing bounded device PUT. MDN ready explicitly may wait indefinitely: https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/ready . Added per-stage15s Promise.race deadline with finally cleanup, awaited separately so late browser completion cannot advance to subscribe/device save after failure. Browser operation itself cannot be cancelled; no unsubscribe/blind retry, explicit retry reuses existing subscription. Existing permission/config prerequisites and server acknowledgement preserved.
+
+New actual-source VM regression: stalled register/ready/getSubscription/subscribe reject, no late save; initial4PASS1FAIL(249ce3). First combined run found old test's10microtask flush insufficient after awaits (test harness issue); changed to one event-loop turn. Final21combinedregistration/feedback/receiver testsPASS(d8740f); ESLint/nonincrementaltypes/diff22741 terminalexit0(1af04c). No real permission prompt, subscription, notification, credentials, schema or remote changes. Not proof sender/delivery or nativeSafari/iPhone; item8 remains incomplete. Full14 goal active, releasegate not passed.
+
+## 2026-09-24 — featured coach tier frame
+
+Previous goal turn classified PROGRESS: real Tables Top3 animation/zoom evidence. Current item5 uncovered active topCoachPanel retained generic green/gold frame despite blue coach card. Scoped Tables client/CSS patch derives perimeter and interior/hover glow from topCoachSlot.cardTier, neutral pending fallback/no trace when absent, radius26; removed old top multicolour stripe. Preserves published ranking, crown, points, art and layout. Unused CanonicalCoachPanel showcase variant inspected but deliberately not patched (only current caller uses technical variant).
+
+Regression initially1PASS1FAIL(51348b); after patch8related podium/market/squad testsPASS(f3bd0e). ESLint/nonincremental TypeScript/diff63172 terminalexit0(a69801). IABtab14 actual local Tables shows Enzo sapphire-blue, accent#61c7ff, computed stroke rgb(97,199,255), shared travelling animation; desktop screenshot verifies matched blue panel/card. Compact844x390 measured document844=scrollWidth844 and panelwidth824 within viewport; screenshot only top of coach panel, not whole compact card acceptance. No nativeSafari/iPhone claim. Viewport reset/tab14closed, usertab retained. No DB/auth/social/audio/remote/build writes. Full14 remains active; final mission/release gate not passed.
+
+## 2026-09-24 — actual Tables tier-frame browser proof
+
+Item5: temporary IAB tab13 navigated via visible Rankings link to local3217/touchline-tables?lang=pt-BR. Actual Top3 screenshot shows red interior/frame for Groß, gold for Cherki, green for Fernandes. DOM computed strokes rgb(255,77,94), rgb(255,242,168), rgb(95,240,160); shared travelling animation7s, pointer-events:none. Two observations showed animated dash offset -81.8945→-29.0259px, confirming live motion rather than only static border. No production edit needed for these existing three consumers; this does not prove all site frames or native/iPhone acceptance.
+
+Opened actual Top3 Cherki trigger: whole bottom gemstone unobscured; social controls below card, disabled/unknown counts (not persistence proof). Escape restored focus to same Cherki trigger. Screenshot at1280x720, no social/push/audio mutation. Temporarytab13closed, usertab preserved. Full14 goal remains active; no publication or remote changes.
+
+
+## 2026-09-24 — bounded quiet-audio activation
+
+Item10: createQuietAudio awaited media.play and AudioContext.resume indefinitely. Added15s activation deadline with cleared timer; current failure mutes/pauses and returnsfalse so provider can expose retryableerror. Same-track navigation/root owner/intro/existing0.12gain unchanged. Deterministic stalled-play regression failed(6PASS1FAIL), then stalledplay+resume and obsolete-deadline/newer-success cases passed;20combinedaudio testsPASS(1480de). ESLint/nonincrementaltypes/diff53592 exit0(3f9805), last test-only addition focusedPASS/diff0. No claim this explains all audible stutter; loop seam/listening/nativeiPhone remains unverified. No media regenerated, no browser sound toggled.
+
+Item6 original-gem preflight reread: no standalone approvedPNG, connected frame fragments remainqualityrisk; prior deterministic-crop permission request unresolved, originals untouched/initialsretained. No new paidmedia or external writes. Full14goal active, no publication.
+
+## 2026-09-24 — seven-tier rendered calibration repaired and inspected
+
+Item3: IAB existing calibration fixture showed fixed-scale art(.28/.4) inside full-column shell, causing enlarged detached neon outline. Scoped fixture fix gives wrapper width430*renderScale and shares scale with exact renderer; no production art/layout/tier change. Initial navigation observation timed out, same tab12 reinspection showed loaded page; no duplicate server/reload. All21 rendered player presentations(7tiers×normal/compact/zoom) measured shell/art width difference<0.002px at desktop and844x390. Compact document scrollWidth=clientWidth844. Screenshots by scrolling confirmed bottom gems unobscured by stat strip for all7, no socialtoolbar rendered in this fixture. Full-page stitched capture had duplication/partial lazy loading and is not visual evidence; viewport captures used instead. This is static QA/short names only, not actual expanded-modal/social/crown/nativeiPhone/allnames acceptance. Viewport reset/tab12closed, usertab retained.
+
+9focused calibration/shirt checksPASS(4715e2); ESLint/nonincrementaltypes/diff24400 exit0(3f10b4). Added fixture scale regression test; production card unchanged. Full14 remain open, no remote writes/publication.
+
+## 2026-09-24 — current 20-club identity adapter audit
+
+Item2: bounded read-only localhost3217 public premier-squad audit returned20clubs/587uniqueplayers, valid provider IDs/links and no cross-club duplicate IDs (session53688 exit0,205d86). Existing audit only checked generated link/lookup metadata; extended scripts/audit-touchline-player-profiles.mts to pass each roster identity through canonical profile resolution and assert matching providerID, profile name and exact-card shirt input. Fresh expanded audit54205 exit0(d49baa), all587consistent. This proves adapter consistency against current public roster, NOT independent roster truth or rendered587shirts. Both players and pendingPlayers included; no assumed historical618denominator, no dataset alteration. Club counts ARS29 AVL27 BOU30 BRE31 BHA33 CHE40 COV31 CRY30 EVE24 FUL24 HUL30 IPS31 LEE25 LIV30 MCI29 MUN30 NEW26 NFO29 SUN28 TOT30. Each fetch was bounded15s; no credentials read/copied, no recovery or mutations.
+
+17focused name/profile/shirt-safe-zone testsPASS; ESLint/nonincrementaltypes/diff15391 exit0(14facb). Fullsuite2338PASS predates audit-script-only patch; no production renderer change. Native/mobile, independent identity-source verification and full14 release remain open.
+
+## 2026-09-24 — reusable squad grid styles and integrated verification
+
+Items5/13: moved base grid/card/rank/artwork/meta/progressive-control CSS out of ClubHub page into ClubHubSquadGrid.module.css; component now binds local classes while retaining public global hooks for outside-roster column overrides. Moved720px responsive rules, removed obsolete static-scale variable; tier-specific frame and reduced-motion trace unchanged. No hooks/data/pagination changes. IAB static expanded fixture now renders6desktop columns and4at844x390; clicked View8 at compact size and observed12→20/21. Synthetic pending grey cards only, not realXI/sevenart/native proof. Viewport reset and temporarytab11closed, usertabpreserved. Native remains manual-unlock pending.
+
+17focusedPASS; ESLint/nonincrementaltypes/diff session8876 exit0(0a2708). Initial integrated run87382 failed on source assertions tied to old class literals/CSS location. Updated four tests to retained navigation/name/44px requirements in new module, without weakening behavior. Fresh runner88254 exit0(16f8f3):2395tests,2338PASS,57SKIP,0FAIL,17suites,17.907s. React checklist: no new state/hooks/fetch/dependencies; progressive mount retained. Full release/browser/persistence gates remain open; no publication/remote writes. Historical2240/2250 discrepancy not resolved by current count.
+
+## 2026-09-24 — progressive roster browser proof and fixture layout gap
+
+Item13: native Safari fresh check still MacLOCKED; no unlock bypass/reload. IAB remained available. Added opt-in roster=expanded to existing static clubhub-profile-contract fixture:18 uniquely labelled synthetic entries appended only to local fixture, giving21 outside-match cards, default scenario and production squad untouched. Browser actual clicks proved12→20→21, final Pagination Fixture Player18 present and no further pagination button. Temporary tab10 closed; existing usertab9 preserved. Sixfocused testsPASS; ESLint/nonincrementaltypes/diff session89214 exited0 (458d29). Screenshot revealed fixture lacks page-owned base club-hub-card-grid styles, displaying oversized stackedcards; do NOT count as visualPASS. Follow-up: make isolated fixture accurately exercise reusable grid layout (base rules currently page.tsx1875+), then responsive visual acceptance. No real XI, mobile/native or persistence proof, no remote changes. Full14 active.
+
+## 2026-09-24 — outside-match roster pagination restored
+
+Items5/13 audit found ClubHubOutsideMatchRoster embeds progressive ClubHubSquadGrid with initialCardCount12 but CSS hid its progressive-controls, making later cards inaccessible when more than12 exist. Replaced display:none with wrapping flex placement; shared button appearance and grid/tier effects retained, no data/count/pagination logic changes. New source-level regression failed for hidden controls (2PASS1FAIL), then17focused responsive/profile-order/tier-frame checksPASS and diff check exit0 (d78542). CSS-only production patch; no TypeScript boundary changed. This is source/contract evidence, not rendered/native/mobile acceptance; test actual >12-card roster after access resumes. No remote writes, restart or deployment. Full14 remains active.
+
+## 2026-09-24 — ClubHub next-match loading dependency isolated
+
+Item13: next-match hero now awaits the single shared matchSnapshotPromise instead of the complete presentation (squad, geometry and season points). Both direct and mirrored loaders reuse that promise; no duplicate match query, data/schema/auth change or server restart. Regression initially6PASS/1FAIL; after implementation19related testsPASS. ESLint, nonincremental TypeScript and diff check completed session86995, cad872 exit0. This removes an unnecessary dependency, not proof of the cause of the entire Safari delay or measured performance improvement. Latest native state remained locked; rendered acceptance pending manual unlock. Previous integrated2390-test run predates this patch, leader-tier frames and social identity bridge. No deployment or remote writes.
+
+Item5 reaffirmed by owner: every existing framed player/coach card in market, rankings and club surfaces should use the shared travelling perimeter neon plus restrained interior glow derived from its canonical tier. Preserve names, crowns, gems, controls and reduced-motion support. Fine white silhouette only for Liverpool, Nottingham Forest and Tottenham crests. Existing local coverage is partial; no whole-site or native acceptance claimed. Preserve all14 pending items.
+
+## 2026-09-24 — Gameweek social identity bridge
+
+Item4: confirmed GameweekCard profile URLs intentionally omit providerID (existing premium contract); social Zoom previously depended solely on URL, hiding controls. Added explicit socialProviderId from existing sanitized exact card identity, keeping URL contract unchanged. resolvePlayerSocialSubject normalizes/rejects invalid IDs and conflicting link/explicit IDs; coach actionguard retained. No name-based identity or fabricated counts. Tests cover UUID/demo/zero/negative/conflict and component seam; initial missing-prop regressionFAIL then23relatedPASS. ESLint/nonincrementaltypes/diff session56698 exit0(ae3abe). Reactskill review confirmed controls stay mounted only in isOpen portal; no per-thumbnail socialfetch or new hooks. No social mutations or flags enabled, hosted persistence remains unproven. Safari still had loading placeholders at start; latest nativecheck reportsMacLOCKED, manualunlock required for rendered acceptance. No reloadretry/serverrestart, sessionspreserved. Goal14active, no remote release.
+
+
+## 2026-09-24 — positional leader tier frames implemented
+
+Final verification update: session73954 exited0 (1df1ee): ESLint, nonincremental TypeScript and diff check passed. Supersedes the in-flight sentence below; do not poll finished handle.
+
+Item5: page.tsx positional leader frames now derive accent only from leader.card.editorialCard.tierKey; absent tier uses neutral#9eaaa5 and no animatedtrace. Shared CSS border, interiorglow, header and perimeter replace fixedgreen with tieraccent; data-leader-tier-frame exposes canonicaltier/unresolved. Ranking/card/artwork unchanged. Regression1PASS1FAIL→2PASS (45a73e),diff0. Lint/type/diff chain session73954 still live at checkpoint; poll samehandle, do not rerun. Safari manualreload still streaming placeholders (Preparando escalação oficial), therefore new colours NOT visually accepted yet. Server95201 verified listening3217 with canonical cwd; not restarted. Previous native screenshot showed oldgreen duringload, not evidence newpatch failed. Resume sameSafari binding after freshstate; preserve sessions. All14active, no publication.
+
+
+## 2026-09-24 — native Safari public ClubHub inspection resumed
+
+Mac/Safari now accessible (previous locked condition superseded for this observation). Existing private Safari local3217 ManchesterCity public ClubHub inspected without auth actions or other tabs. Day-of-game anchor navigated and native scroll moved0.2739to0.6023; upper/lower pitch portions show separated cards within lines, not a full customer-XI validation. Cherki leader zoom opened with full gold gem, matching name/shirt10, uniform dividers; Escape restored focus to trigger and exact0.6023176 scroll. No black screen observed in this bounded interaction, not proof of global resolution; iPhone remains untested. Audio was alreadyON, unchanged; no audible continuity claim. Findings: four positional-leader frames still fixedgreen, confirmed page.tsx accent# a3ff12 and lineupLeaderTrace CSS; require canonical tiercolour propagation. Leader zoom lacks socialactions; current TouchlineGameweekCard intentionally builds profileHref without providerID with a server-only comment, whereas social toolbar requires playerSocialIdFromProfileHref—investigate approved identity contract before modifying. No account/session writes or remote operations. Full14 remains active.
+
+
+## 2026-09-24 — refresh recovery and integrated regression
+
+Item13 lifecycle harness now covers hide/show and offline/online resumption, repeated-resume deduplication, stale body after fresh revision, 30s timeout backoff and timer cleanup. Initial expansion had a syntax error then insufficient microtask flushing (test-harness defects, not new product failures); corrected bracket and used one event-loop turn.17 focused testsPASS/diff0 (5fbe1b). Fresh integrated release-runner session25091 exit0 (e7a533):2390tests,2333PASS,57SKIP,0FAIL/cancelled,17suites,37.869s. Runner still excludes12 local artifact replay files, so this is not every local artifact test or browser acceptance. Runtime production change remains previous post-body guard; this turn expands evidence, no remote/auth/data changes. HEAD fe2a302 dirty worktree, no commit/build/deploy. NativeSafari/iPhone, persistence/push, croppedgem and release gates remain open; full14goal active.
+
+
+
+## 2026-09-24 — late refresh response invalidation
+
+Item13: real component VM lifecycle regression reproduced response-body race (control PASS, stop/hide/deadline FAIL before fix). Added post-body current-request, visibility, online and abort guards; expired current request keeps normal error retry rather than refreshing. Extended offline coverage:14 focused tests PASS,0FAIL (cff451). No proof this caused the reported native Safari black screen; no native/mobile acceptance claim. ESLint/nonincremental TypeScript/diff chain session96525 exited0 (538a07). No data, artwork, subscriptions or remote publication changed. Full14 remain active.
+
+
+## 2026-09-24 — player short-landscape identity compacted
+
+Item12/13 actual public Cherki844x390 inspected: below880px name and130px crest stacked, forcing social actions below firstviewport. Scoped landscape height<=520,width>=761 override now places64px crest beside name, hides redundant visual open-club caption but keeps link aria-label. Final screenshot shows full name, position/club/number and both social buttons in firstviewport; no horizontal overflow. Card/crown/artwork geometry untouched, social unavailable message remains honest, no interactionwrites.9focusedresponsive/crown contractsPASS,diff0; CSS-only productionchange, no new typeboundary. Narrowerphones/nativeiPhone and remote/persistence gates stillopen,14items active. No publication.
+
+## 2026-09-24 — English tier gallery confirmation
+
+Item9 read-only evidence: localclubs en-GB rendered all14 expected labels (same7 names players/coaches), no legacy inverse small captions. Source old phrases confined to comments. Fresh Cambridge/BritishCouncil references support adjective-before-noun naming convention, not exclusive correctness or official brandnames. Detailed british-tier-consistency-20260924.md updated. No code/unchangedtests/remote mutation; allsite/native acceptance still pending,14goal active.
+
+## 2026-09-24 — push device-save deadline
+
+Item8 source audit confirmed receiver and verified event formatter exist, but no proven sender/durable delivery path; real mobile delivery remains incomplete. Fixed unbounded device PUT/response read using15s AbortController and finally timer cleanup, no retry/unsubscribe/false activation. Existing real-source VM client harness extended with deterministic stalled fetch, observing abort, single request and cleanup;4testsPASS, lint/nonincrementaltypes/diff33786exit0. Test boundary is fetch/browser doubles, not remote delivery. Serviceworker registration/permission lifecycle is not covered by this PUT deadline. No credentials, flags, schema, subscription or actual push changed. Full14active, no publication.
+
+## 2026-09-24 — Arena navigation and global-entry rendered proof
+
+Read-only IAB844x390: clicked actual profile Voltar para a Arena and login Início da Arena; both resolved /arena?lang=pt-BR and Arena rendered, not ClubHub. Navigation initially retained old URL until completion; no repeated clicks. Back returned login; temporary locator miss while transition finished resolved via fresh AX. Login copy displayed exact Entre para montar seu time e acessar a Arena Touchline. Expanded Escolher liga: explicit one available TouchLine England destination and honest other-leagues-unavailable notice. No invented leagues or login/registration/audio changes. This proves these local routes only, not allsite navigation, nativeSafari or multi-league backend readiness. No source changes/unchanged tests rerun. Goal14items active, no release.
+
+## 2026-09-24 — coach profile tablet whitespace fixed
+
+Item6/13 public Enzo profile inspected1280x800 and844x390. Reproduced performance top679px vs identity bottom306px (373px whitespace) because compact composition started only at1000px. Extended existing composition to761px; rendered reload confirms performance top330px (24px gap), full crown/gem preserved, no horizontal overflow. Screenshot of performance shows readable home/away metrics beside complete lowercard.568x320 remains full-width performance to avoid squeezing metrics into narrowcolumn; no horizontal overflow observed. Regression2PASS/1FAIL to7focusedPASS, ESLint/types/diff81536exit0. No data, tier, rank or crown ownership changes; only breakpoint and regression assertion. Previous fullsuite67911 predates this patch. Still no actual iPhone/native acceptance/fullscope completion, no build/deploy/database writes. All14active.
+
+## 2026-09-24 — integrated chooser regression and keyboard proof
+
+Fresh canonical runner67911exit0 after guidedplayer/coach fixes:2380tests,2323PASS,57SKIP,0FAIL/cancelled,17suites,23.927s. Existing12artifactfile exclusions and2workers/30s deadline unchanged. Counts describe current integrated worktree, not only this slice; historical count discrepancy remains open. Added short-landscape chooser contract. IAB844x390 actual coach scroller End key moved0to42.5px, exposed full name, metrics and disabled hire control; no hire/save/account action. Initial generic-role locator matched nothing; observed aria-label locator succeeded. Remaining consumer inventory: canonical coach panel's live call uses technical presentation (no showcaseframe); technicalarea bench and tacticalbuilder cards are unframed, so do not add new obstructing frames there merely to inflate coverage. No full-site/native/release PASS; goal14items active. Production untouched.
+
+## 2026-09-24 — coach market frames and compact list
+
+DAILY item5 continuation: FantasyGameweekClient selected summary and coach chooser now use slot.cardTier palette/shared perimeter, matching the displayed canonical artwork rather than fixed green. No selection/data logic changes. Regression2PASS/1FAIL to3PASS; ESLint/nonincrementaltypes/diff9128exit0. IAB frozen local fixture1280 confirmed gold selected/ purple chooser, no horizontal overflow. At844x390 found pre-existing two-column horizontal coach card103px clipping186px content and81px scroller; scoped short-landscape coach panel now autoheight/340px scroll limit, single-column stacked card with wrapping full name. Final rendered Enzo Maresca full name/art and216px client=scroll width verified; diffcheck0. Latest CSS layout additions require broader regression; native Safari/iPhone acceptance and remaining consumers pending. No hire/save/notification/account mutation, build or deployment. Full14 still active, no completion claim.
+
+## 2026-09-24 — guided chooser runtime and compact clipping correction
+
+IAB local-only frozen market fixture inspected at1280x800 and844x390: canonical blue/green/red frames, no horizontal overflow and disabled selection preserved. Compact reproduction found guide max-height338 collapsing playerViewport to2px; scoped landscape players panel now auto-height with340px scroll viewport. Fixed thumbnail132px overflowing92px wrapper by using existing fitContainer prop; screenshot now shows gem separated from player name. Two focused contracts PASS; ESLint, nonincremental TypeScript and diff check session66245 exit0. No XI selected/saved, no account writes, no native/mobile acceptance claim. Integrated95780 predates this slice. Item5 and full14 remain partial; no build/deploy/DB changes. Rollback only these guided chooser CSS/fitContainer/test hunks.
+
+## 2026-09-24 — guided slot chooser tier frames
+
+Remaining FantasyGameweekClient playerGrid chooser now uses canonical editorialtier sharedtrace and innerglow; unresolvedstaticneutral. Removed green pseudo overlay on theseframes, hover uses tier and breakpoint radius16/12 follows existingframe. Kept disabled/addPlayer and allXI controls unchanged. Testsmarket-tier-frame expanded;11focusedPASS/lint/types/diff72580exit0. This slice source/contracts verified only; renderedguidedchooser stillpending, noactualplayerselection/save. Latest integrated95780 predates thischange. No build/DB/remote changes, all14active.
+
+## 2026-09-24 — integrated regression after frame/social slices
+
+Canonical release-test runner95780exit0:2365tests,2308PASS,57SKIP,0FAIL/0cancelled,17suites,18.904s. Runner inspected:12existing localartifact-file exclusions unchanged, concurrency2/timeout30s; no skipped/excluded claimedpassed. Fresh integrated evidence covers currentlocalchanges, not remote/native/persistence/release. Historical2240/2250 discrepancy not resolved by this count. Orderedqueue updated to supersede stale “unimplemented” item5 status with precisepartialconsumercoverage. All14active, no build/deployment/DB changes.
+
+## 2026-09-24 — social read authentication feedback corrected
+
+Inspected loading: GET already has15s AbortController, no evidence of infinite loading from prior immediate screenshot. Found GET401 mapped genericerror unlike PUT401. Componentcatch now maps AUTHENTICATION_REQUIRED to signed-out, clearsunconfirmedcounts and keepsbuttonsdisabled. New actualTSX VM effect harness: regression2PASS/1FAIL→10combinedsocialchecksPASS; lint/types/diff69054exit0. Serviceboundaryfake only, not browser/backend persistenceproof. No remote flags/schema/account/reactions changed. All14active; realfollow/like/native acceptance remains pending.
+
+## 2026-09-24 — ranking position localisation and zoom check
+
+Dedicated ranking featured/list summaries now call shared localizedPositionLabel, keeping rawposition data inputs unchanged. Regression3PASS/1FAIL before→5focusedPASS after; lint/types/diff95126exit0. IAB bothsummarygroups show Meio-campista/Meiaofensivo; openedCherki fromfeatured and inspected1280×800 fullcard/gem and exterior socialtoolbar, Escapecloses. Socialcounters shownloading, not persistenceproof. MarketTransfer is existing brandedcataloguelabel; preserved (prior generic languagefinding narrowed topositions). No prices/rating/ranking/data changes, no publication. All14active.
+
+## 2026-09-24 — dedicated card ranking living frames
+
+NativeSafari attempt blocked by lockedMac; manualunlock required, neither session touched. Independentlocal item5: dedicated touchline-player-card-rankings now adds canonical tier trace/innerglow to3featured+20rows, neutralunresolved, no order/data/crown changes. Newranking-living-frame test pluscardcompetition6PASS; lint/types/diff33144exit0. IABtab9 navigation initiallytimedout but samehandle subsequentlyloaded23frames;1280×800 screenshot inspected featuredlowersections and firstfullrankingrow. Not fullresponsive/native certification. Existing Portuguese ranking still exposes Englishpositionlabels and MarketTransfercopy; follow-up pending. No build/deploy/database changes; all14active.
+
+## 2026-09-24 — squad position captions aligned with profiles
+
+Removed ClubHubSquadGrid partiallocaltranslator; shared localizedPositionLabel now drives captions, preserving original identity/scoring values. Shared formatter also retains legacyDF/MF/FWaliases. Regression2PASS/1FAIL before→8affectedPASS; lint/types/diff65394exit0. ActualCity IAB ninecaptions now Portuguese (Meiaofensivo/Lateralesquerdo/Zagueiro/etc), screenshot inspected. No roster/DB writes. All14 remains active; native/mobile and full-site acceptance pending.
+
+## 2026-09-24 — ClubHub runtime recovered; compact roster improved
+
+Existing listener95201 confirmed live, no restart. New IABtab9 in same browser loaded publicCity successfully; oldtab8 error-document remains untouched. Nine squad frames rendered; desktop1280×800 screenshot confirms canonical colours, complete first row. At844×390 six columns produced122pxframes: corrected OutsideMatchRoster CSS to4columns up to1100px, existing2columns<=680 retained. Fresh runtime188pxframe/nohorizontaloverflow844; screenshot confirms larger artwork. ThreefocusedPASS, lint/diff91642exit0. No newTS changes (prior71798typesPASS). Cardposition labels still include untranslated specificroles, follow-up required. ActualSafari/iPhone/zoom/reducedmotion and all-site remain pending. No account/data/config/build/deploy changes.
+
+## 2026-09-24 — squad frame implementation, visual check interrupted
+
+ClubHubSquadGrid now uses canonical published tier for shared continuous perimeter and gallery innerglow; unresolved tier staticneutral. New scopedCSS overrides old club-accent pseudo glow without changing dimensions, batching, players or zoom. Regression1FAIL→5focusedPASS; ESLint/types/diff71798exit0. Runtime NOT verified: navigating public ManchesterCity ended ERR_INCOMPLETE_CHUNKED_ENCODING; formerPID85618 absent, listener now95201 in canonicalcwd (33s old when checked), no restart performed by this turn. IABtab8 error-document URL policy prevents recovery via same-tab goto. Do not claim visual PASS or infer missing QAconfig; next inspect current server owner/state before any restart. All14active, no remote/data writes.
+
+## 2026-09-24 — living perimeter extended to both official tier galleries
+
+Item5 TouchlineCoachCategoryShowcase TSX/CSS now uses shared continuously travelling SVG perimeter on each of14 tier frames, canonical palette. Original internal radial glow retained; obsolete hover-only rotating masked pseudo-border removed to avoid two competing sweeps. Existing hover lift/focus and shared reduced-motion rule retained. New source-contract regression1FAIL before→5affectedPASS after; ESLint/nonincrementalTypeScript/diff session58380exit0. IAB1280×800 player and coach galleries visually inspected; DOM14traces/7matchingcolours and computed running animation. Native/mobile/reduced-motion runtime and remaining framed consumers stillpending; not fullitem5 completion. No images/data/build/remote mutations.
+
+## 2026-09-24 — Live crest visual follow-up
+
+Read-only local IAB Live inspection at1280×800 confirms the three targeted sidebar crests carry four white0.5px zero-blur offsets at34px; selected Nottingham Forest hero also carries them at156px. Forest hero visually inspected at844×390 after scrolling: thin contour and original red artwork visible, no rectangular box; document scrollWidth844 equals viewport844. Existing ancestor red glow remains, not introduced by silhouette stylesheet. No alert, preference, subscription or data writes. This extends earlier Market evidence, not native Safari/iPhone or all-consumer certification. Remaining living-frame consumers and all14 acceptance remain open.
+
+## 2026-09-24 — three crest silhouettes implemented in shared stylesheet
+
+Final scoped ESLint, nonincremental TypeScript and diffcheck session79399 completed exit0.
+
+Item5 Liverpool/NottinghamForest/Tottenham thin white alpha contours, zero-blur four0.5px offsets, narrowly scoped canonical club-logo paths inclPNG/WebP/original/UI/Live/Nextencoded URLs. Original image bytes unchanged, no rectangular border/background/newglow. Dedicated touchline-crest-visibility.css imported by rootlayout. Initial globals insertion passed source test but absent from served CSS after reload; separate shared stylesheet import reached browser, globals restored unchanged. Adhoc PostCSS probe unavailable (postcss notdirectdependency), no install/restart used. Real IAB1280×800 frozen-market56px selectors show all3outlined, computedfilters confirm; otherclubs visually unchanged.1focusedPASS and final lint/types/diff79399 tracked. Smaller/Live/native/allconsumer runtime proof pending, embedded crests already baked into rastercards cannot be independently affected. Viewportreset/tab8handedoff, no DB/build/deploy. All14active.
+
+## 2026-09-24 — canonical My Club Market tier frames
+
+Expanded item5 applied to browseCards in FantasyGameweekClient embedded canonical MyClub Market: editorial tier colours, same gallery internal glow/shared perimeter, neutral no-trace unresolved tier. Selection conditions/actions unchanged, no XI writes.13focused testsPASS after updating superseded page-wide trace prohibition to retain quiet CompactClub controls only; initial12PASS/1FAIL was obsolete presentation expectation, not hidden. Lint/types/diff69736. Real IAB visual-QA market fixture1280×800 shows sapphire/emerald/ruby cards with matching outer glow and visible names;844×390 has no horizontal overflow, first-row cards and third card lower section inspected, stroke offset changes prove motion. This is frozen578-card catalogue/locked-market fixture, NOT current customer/session persistence. Native acceptance and remaining frame consumers/crest outlines still open. Viewportreset,tab8handedoff; no build/deploy/DB/art changes. All14active.
+
+## 2026-09-24 — item5 podium tier frames implemented locally
+
+Resumed newly expanded item5 after bounded notification parser work. Top3 outer frames now reuse TouchlineClubPerimeterTrace and gallery radial tier glow from actual editorial tier, not podium rank; unresolved tier remains neutral with no trace. Removed first-place gold frame override, preserving gold rank/crown identity and44px crown envelope. Source regression failed before,2focusedPASS after; lint/types/diff76005. IAB1280×800 screenshot shows ruby/golden/emerald frames with full cards and unobscured crown/gems. DOM confirms3canonical colours and running animation; offset changed between reads. IAB844×390 width equals scrollWidth844, inspected upper/lower frame portions by scrolling and opened/closed Cherki zoom successfully; viewport reset/tab8handedoff. NativeSafari/iPhone,reduced-motion runtime and all-site performance still unverified. Existing sharedCSS reducedmotion disables animation. Market/otherframes and three white crest outlines still pending; all14active. No art/data/deploy changes.
+
+## 2026-09-24 — subscription cryptographic key validation
+
+Item8 parser now requires canonical unpadded base64url,65-byte uncompressed P-256 public key validated by Node ECDH.convertKey, and16-byte authentication secret. RFC8291 sections3.1/3.2 and Node crypto official documentation inspected. Audited consumers are Node server handler/preferences only, no client imports. Prior arbitrary nonempty keys were accepted; regression12PASS/1FAIL before,16focusedPASS after including malformed/off-curve/compressed/oversized/noncanonical keys rejected before save and genuine generated public keys accepted. Lint/types/diff58983exit0; import moved to top then13affected testsPASS with final lint/diff44657. No stored data rewrite, real subscription/send, dependency or migration. Existing malformed registrations will not qualify as delivery-capable through preference lookup; no silent repair. Provider destination/egress controls, sender/outbox and native delivery remain open. All14active.
+
+## 2026-09-24 — device endpoint structural validation
+
+Item8 actual authenticated registration handler accepted HTTPS URLs containing credentials, fragments or parser-repaired delimiters. Regression8PASS/1FAIL before; parser now rejects these inputs before save while preserving opaque valid path/query bytes.15device/handler/client testsPASS; scoped ESLint, nonincremental TypeScript and diffcheck session26761 exit0. No subscription/network send or stored data changed. This is structural validation only, NOT complete SSRF protection: provider/egress destination checks and cryptographic key validation still required before sender implementation. Full integrated2305PASS predates this slice. Current goal remains active, no native/mobile delivery proof or deployment.
+
+## 2026-09-24 — integrated regression after notification refinements
+
+Canonical node scripts/run-vercel-release-tests.mjs completed session20234 exit0:2362 tests,2305PASS,57SKIP,0FAIL,0cancelled,17suites. Existing12artifact-file exclusions unchanged; skips are not passes. This supersedes older local totals for this tested snapshot, not the unexplained historical2240/2250 difference. No build/deployment/native-device or real notification evidence added. Item5 travelling external frame neon/internal tier-colour glow and three thin white logo silhouettes remain queued, not implemented. All14 objective remains incomplete; preservation/release gates unchanged.
+
+## 2026-09-24 — club push feedback and pre-granted permission
+
+ClubFollowButton no longer declares delivery active merely after preference save. Returned push=false says phone delivery unavailable; true acknowledges registered device/saved preference while delivery remains unverified. Permission already granted now still exposes explicit device registration; permission exceptions caught, saving state disables controls and finally returns ready. Removed unsupported in-app-delivery-active copy.9focused testsPASS including actual TSX handler execution with mocked hooks/browser/network; initial4fail were test CSSdefault stub error, corrected, not product regressions. Lint/types/diff5750exit0. No real permission request, subscription, auth switch, notification or remote write; native/UI acceptance of enabled state remains pending and sender/outbox absent. Next.js client-boundary/hydration references read; all14active.
+
+## 2026-09-24 — device acknowledgement no longer trusts HTTP status alone
+
+Item8 client registration previously returned registered for anyHTTP200, including null/error/malformed body. Now requires explicit ok:true and delivery:not-sent from the existing authenticated handler, without automatic retry or deleting the browser subscription. Executed actual client source in isolated VM with browser/network boundaries mocked:1PASS/2FAIL before→13combined client/handler/preferencesPASS; lint/types/diff24358exit0. No actual subscription or send. Supabase skill/changelog reviewed (markdown fetched by curl after web content-type failure), no relevant API change; no schema/auth code changed. Current search confirms no web-push sender or delivery/outbox migration in lib/app/scripts: receiver/registration must not be presented as complete delivery. Additional open UI finding: ClubFollowButton still says Push activated after preferences success without checking returned push=false, and says in-app alerts active despite absent sender. Correct before exposing enabled flow. All14active, no remote/build changes.
+
+## 2026-09-24 — local event artwork wired into push receiver
+
+Item8 local receiver now allows only eventIcon goal/red-card to select local192pxPNG; unknown keys/foreign URLs retain brand fallback. Brand badge unchanged. Formatter emits the event key. Added SVG/PNG sources: ball paths match FootballBallStatIcon exactly; isolated red discipline outline uses card13×20/1.8border/radius2/5deg geometry on dark tile, without recreating a full card or modifying originals. BothPNG visually inspected; localhost3217 serves200image/png.3regressions failed before wiring, then28receiver/event checksPASS, lint/types/diff21804 exit0;2artwork tests prove ball paths and SVG→PNGpixel equivalence, lint/diff24478 exit0. Finaltypes14135 recorded separately. This proves local assets/receiver contract, not native OS rendering, real delivery, sender/outbox, or in-app notification centre. No notification/subscription/config/schema/build/deploy/media-service call. All14 remain active.
+
+## 2026-09-24 — frame perimeter motion clarified by owner
+
+Item5 now explicitly includes living neon travelling along external card-frame borders across Market, ranking/Top3 and other framed card consumers, in addition to approved internal gallery effect and canonical tier colours. Reference screenshot20:47:29. Reduced-motion static treatment and Safari/mobile animation performance required; no change to original artwork/data. Distinct from thin white non-glowing silhouette outlines for Liverpool/Forest/Tottenham and inactive neutral bells. Recorded in ordered queue, not yet implemented; active notification work remains intact.
+
+## 2026-09-24 — notification point semantics and added visual request
+
+SUPERSEDED: earlier suggestion to derive notification points from event contributions in player-fixture-scoring.ts. That is V2 audit scoring; active public reader selects rating-only player_scoring_v3. Existing social-confirmed-event-draft-server already verifies persisted event/identity/event-time score and V3 points; goal/card must not create a second bonus/penalty. New presentation adapter match-event-notification.ts consumes its verified result, labels points as match points, rejects failed reader/mismatched rating/invalid IDs or score, preserves fixture/event tag and update flag.27focused testsPASS including adapter→worker VM contract, lint/types/diff90660 exit0. This is tested local formatting, NOT a wired sender or phone delivery; no remote sends or config changes. Original event icon extraction and real outbox/delivery remain pending.
+
+Owner added thin white silhouette outlines for Liverpool, Nottingham Forest and Tottenham across logo consumers, plus reuse of approved seven-border gallery internal frame effect across card/club frames. Recorded as expanded item5 alongside existing dividers in ordered-visual-improvements-20260924.md, with current14 numbering overriding historical12. New request queued, not implemented; active work not discarded.
+
+## 2026-09-24 — full fixture names in compact Live rail
+
+Verified the pending name-layout change: fixture names wrap instead of ellipsis; <=850px cards place date above teams, preserving dedicated bell/score space. Prior focused run27PASS and lint/diff session78132 now confirmed exit0. Actual IAB844×390 screenshot shows full Leeds United/AFC Bournemouth with neutral bells;568×320 screenshot shows full Manchester United and score without collision. All40 rendered team labels have no internal overflow at568; document width568. Selection remained Arsenal19722153, bell collapsed during safe inspection; no preference/storage writes. Viewport reset and tab8 preserved. This is responsive IAB evidence, not physical Safari/iPhone acceptance or full item completion. No build/deploy/data/art changes; all14goalactive.
+
+## 2026-09-24 — inactive bell verified in rendered Live
+
+IAB tab8 measured588×759 portrait before override, so rotation gate was correct for that observed viewport, not a proven site orientation failure. Controlled844×390 override confirmed innerWidth844/height390/portraitfalse and restored profile without reload. Followed actual Ao vivo link, waited existing navigation, opened Arsenal bell. Computed44×44 target and box-shadow:none; screenshot confirms neutral bell while selected fixture itself retains green highlight. Final panel visibly says Os alertas desta partida ainda não foram ativados, with no Check again; scroll brought complete copy into view. No subscription/write or delivery attempted. Override reset, tab8 nowLivePT and preserved. This proves this IAB state only, not nativeSafari/iPhone or item13complete. New visible issue: horizontal fixture cards truncate team names (Leeds…,AFCB…) at844 despite available row geometry; continued layout review needed.
+
+## 2026-09-24 — bell inactive styling and disabled-state diagnosis
+
+Item8: inactive bell previously inherited social button glow. Scoped trigger styles now neutral/no-shadow with visible keyboard focus, preserving44px target. Disabled fixture handler now returns ALERTS_NOT_ENABLED distinctly from runtime ALERTS_UNAVAILABLE; client GET/PUT display not-enabled copy and no futile Check again button in that state. Regression3PASS/1FAIL→30fixture/MatchCentrePASS; scopedlint/nonincrementaltypes/diff7060 exit0. Fresh localhost3217 response503 ALERTS_NOT_ENABLED confirms current configuration gate remains off; owner MacBook message is not evidence of device-specific failure. Real visual proof still pending: owned IAB tab8 currently portrait-gated, no viewport change performed, tabmarkedhandoff. No schema/flag/device/send/build/deploy changes. Saved interest still not active mobile delivery, no lit-active state claimed. All14goalactive.
+
+## 2026-09-24 — event notification revisions and owner presentation contract
+
+Owner clarified item8: inactive bells unlit, active delivery indication only after real confirmation; brief restrained confirmation pulse, no continuous flashing. Goal and red-card notices use the actual in-card TouchLine artwork, not emoji/generic icons. Compact example: GOL — Arsenal1×0Chelsea / Saka ·23′ ·TouchLine Points:+5;5 is illustrative, only canonical confirmed event contribution may supply points. One alert per confirmed event; late author/points enrich the same notice without second sound where supported. In-app visual must follow TouchLine; native lock-screen layout remains OS-controlled. Physical phone not yet tested by owner; finaldomain proof intended after approved release, not authority to bypass gates.
+
+Local receiver now explicitly requests renotify:false and silent:true for literal server update:true, retaining event tag, canonical icon and safe deep link. Empty/oversized tags rejected. Two regressions failed before;14focusedPASS; test harness preexisting any lint errors fixed with explicit event/notification types; final lint/types/diff56309 exit0. Browser tag replacement/silent behaviour still requires real-device verification; backend durable dedupe/sender remains absent, no delivery claimed or performed. Icon inspection found ball is inline SVG and discipline cards are CSS shapes in TouchlineEliteExactCard, not separate original files: extraction/reuse pending, no replacement generated. Current push badge still brand icon. All14active, no remote modifications.
+
+## 2026-09-24 — quiet-hours validation and owner desktop bell evidence
+
+Item8: reproduced current normalizer accepting99:99,12:60 and Europe/NotAPlace. Added strict local-clock/timezone parser to preferences PUT before device lookup/persistence. Invalid values reject400 rather than silently replacing the requested window; omitted field retains documented default. Six consent/quiet-hours testsPASS, scopedlint/diff29040 exit0, nonincrementaltypes93581 exit0. GET legacy presentation unchanged; delivery-time enforcement and existing malformed stored preferences remain to address before enabling sender. No DB/send/build/deploy. Owner supplied nativeSafari screenshot of localLive bell showing Alerts unavailable/Check again and said physicalphone not yet tested, final .com.br test intended later. Read-only local endpoint returned503 ALERTS_UNAVAILABLE, consistent with screenshot; code uses same response for disabled configuration and runtime failures, so exact cause cannot be inferred from that response alone. Screenshot is desktop panel evidence, not saved preference or delivered notification. Keep all14goalactive and release gates open.
+
+## 2026-09-24 — notification preference consent enforced
+
+Item8 local correction: preferences PUT previously treated textual "false" as explicit consent and push capability ignored consent. Now only boolean true can enable push, together with requested channel, server configuration and registered device. Same-origin/cross-site guard runs before authentication; malformed/null/array JSON rejected instead of resetting preferences. Regression reproduced2PASS/1FAIL before fix;20focused testsPASS after, including all16boolean combinations and malformed consent values. Type/lint54108 exit0; final focused/lint/diff81572 exit0. Actual unauthenticated foreign-origin localhost3217 PUT returned403 without storage access. No database writes, notifications, flags, cron, builds or deployment. Hosted persistence, sender/outbox, quiet-hours validation, event choice and physical device delivery remain pending; all14goalactive.
+
+## 2026-09-24 — readable player history timestamps
+
+Replaced raw ISO display in player history, selected fixture, zoom history and season sync metadata with shared profile-timestamp.ts: localized PT/EN, fixed explicitUTC, no assumed host zone, unknown/timezone-less input unavailable. Original timestamps and time dateTime attributes preserved. PT selected-fixture heading now Partida atual ou selecionada. Actual IAB history inspection showed small/faint supporting text; date/status rows increased12→14px and supporting minutes/rating explicitly12px with stronger contrast. Initial2timestampPASS/1integrationFAIL→28focusedPASS; after CSS10profile/time checksPASS. Type16552/lint83538/diff0. Actual Cherki IAB desktop screenshot and568×320 screenshot inspected; all six displayed dates14px, no clipping, document width568. Viewportreset/tab8preserved. No actual match times, data, scoring, assets, remote deployment or Safari sessions changed. PhysicalSafari/iPhone remains unverified; all14active.
+
+## 2026-09-24 — player position presentation consistent in Portuguese
+
+Actual Cherki profile showed Attacking Midfield across six visible locations despite PT locale. Extracted existing abbreviated position labels into shared position-labels.ts and added full provider-role names. Profile/feed consume shared helper; common card-zoom builder translates both subtitle and identity field, benefiting its existing consumers without modifying positional eligibility/scoring input. Unknown values and English retain original strings. New integration regression failed on old zoom subtitle then25focusedPASS; types17539/lint1683/diff0. Actual IAB after reload: six Meia ofensivo occurrences and no visible Attacking Midfield; expanded Cherki card shows translated subtitle/field and intact golden gemstone in1280×720 screenshot, modal closed afterwards. Original position remains in identity URLs, intentionally. No assets, database, lineup, score, deployment or Safari sessions altered. This slice does not complete native acceptance or all14 items.
+
+## 2026-09-24 — invalid summed season percentages corrected locally
+
+Actual Cherki IAB profile exposed raw percentage sums463/334/258 and untranslated statistic codes. Traced to player-season-statistics-sync summing every numeric code. Added season-statistic-ratios: pass/long-ball/cross accuracy derives from compatible success/attempt totals, never summed or averaged match percentages. Missing/zero/contradictory/unsupported count evidence remains unavailable, not an invented rate. Future local aggregation uses projection; existing persisted rows are corrected only at profile presentation, no historical writes or recovery. Rating average/total remain authoritative summary fields; removed duplicate raw rating tile. Existing PT dictionary now actually used, added observed missing labels, humanised EN code fallback and explicit calculated-rate note. Regression proved140 vs correct54 before fix;29focusedPASS, final15incl missing-count assertion PASS. Types/lint/diff77322 exit0. Fresh integrated runner59140:2338total,2281PASS,57SKIP,0FAIL. IAB Cherki now68.75% long balls,91.13% passes,42.86% crosses; PT formatted comma, screenshot568×320 shows readable values, no clipped metric text/document overflow. Viewport reset; tab8 preserved. Source reference: https://docs.sportmonks.com/v3/definitions/types/statistics/player-statistics and provider glossary for pass completion. No canonical summary/rank/tier/price/XI/database/remote changes. All14 still partial; native Safari/iPhone and release gates open. Raw timestamps, untranslated position labels and other non-additive provider metrics require continued review; this is not an all-statistics accuracy claim.
+
+## 2026-09-24 — push device registration boundary and integrated verification
+
+Item8 audit confirms receiver, device storage and fixture-interest exist, but no push sender/outbox/delivery path. Before outbound integration, fixed device PUT: strict same-origin before auth/storage; verified account identity; reject extra ownership fields; no public raw database errors; private/no-store responses; successful registration still says not-sent. New push-device-handler.ts is wired into the existing authenticated/RLS client route.20focused testsPASS (handler collaborators are test doubles, not hosted persistence proof). Real localhost3217 foreign-origin PUT returned403 INVALID_ORIGIN/no-store, without credentials or writes. Types23229/lint3030 and final test lint99630 exit0. Full runner43026 failed on prior gallery source assertion forbidding the added ranking prop; updated assertion to require canonical ranking. Fresh runner29363:2333total,2276PASS,57SKIP,0FAIL,exit0. Existing12 artifact exclusions and57 skips remain unverified, not PASS. No build, schema, flag, cron, push send or remote changes. Owner asked once asynchronously to choose initial fixture events/lead time; still pending, not a blocker for independent work. Outbound endpoint validation, durable dedupe/retry/revocation/quiet-hours delivery and consented physical-device proof remain required before enabling notifications. All14 mission active.
+
+## 2026-09-24 — shared nationality localisation
+
+Extracted player nationality presentation into country-labels.ts and reused it in coach profile and coach zoom. Portuguese now covers all20 current coach nationalities, including República da Irlanda; en-GB/source identities and unknown values remain unchanged. No canonical country, club or player data rewritten. New regression initially2PASS/1FAIL before consumer integration;21focused testsPASS afterwards. Scoped lint and nonincremental types process13427 exit0 without output; diff check0. Actual IAB Keith profile shows Portuguese nationality in subtitle and both fact areas;568×320 document width568, no clipped copy/dd. Viewport reset and agent tab preserved. This is not physical Safari/iPhone acceptance, deployment or completion of all14 items.
+
+## 2026-09-24 — coach showcase points wired to canonical competition
+
+Shared coachCompetitionFromRanking projection now serves full profile and showcase. Club list loads ranking alongside published cards, installs existing revision refresh boundary once, and passes competition/acknowledged points/rank1 crown predicate into compact and expanded coach cards. Unknown rows/snapshot identity stay null; optional unknown season label is not invented. Integration regression failed before wiring,14focusedPASS then15 including style isolation. Types42343/lint68808/diff0. Actual IAB Keith Andrews zoom now13TLPTS,rank5,home7/away6; View full profile confirms13/rank5, replacing old awaiting-data text. One reload encountered unstyled white viewport: listener now85618, same canonical cwd and parent65510, CSS200text/css; subsequent controlled reload restored styling. No server restart performed by this slice, cause/physicalSafari still unproven. Current IAB tab8 is Keith profile. No database/schema/flags/remote changes; all14 goalactive.
+
+## 2026-09-24 — coach gallery no longer fabricates tier associations
+
+Real profile audit found Fabian Hürzeler emerald while ClubHub showed radiant gold. Root cause: selector sorted previous-season evidence then assigned array positions to commercial tiers, overriding immutable classification. Corrected to pick within each classification tier. Actual gallery now Arteta/gold diamond, Emery/clear, Le Bris/emerald, Andrews/radiant, Moyes/amethyst, Lampard/sapphire promotion fallback; ruby remains explicit pending rather than assigning Moyes another tier. Updated explanatory EN/PT copy; profile/ranking/points/history untouched. Regression red on Fabian→Keith then7focusedPASS; types23991/lint50878/diff0. Full runner47179:2319total,2262PASS,57SKIP,0FAIL, exit0. IAB actual gallery screenshot confirms all seven border slots/six valid identities; Andrews/Moyes/Lampard zoom screenshots show lower gems clear. Arteta/Emery/Le Bris/Fabian profiles inspected at1280. No fully populated ruby coach can be claimed. Remaining finding: showcase coach zoom lacks competition totals and says awaiting data although profile has ranked points; must wire canonical read model, not invent metrics. Native acceptance, gem extraction and deployment remain pending.
+
+## 2026-09-24 — coach profile nested-style collision repaired
+
+Actual Mikel Arteta IAB profile exposed generic page CSS overriding nested performance panels:34px record padding and two statistic columns instead of module-owned14px/four. Scoped page article/dl/heading/copy styles to direct owned children and identity/facts definitions only, preserving shared performance rendering/data. New regression failed before;9coach testsPASS after. Actual reload: performance section1059.59→881.59px (178px shorter); four stat columns84.75px and padding14px. IAB568×320: four114.25px columns per record, no clippeddt/dd or horizontal document overflow; screenshot inspected, viewportreset. Initial coach navigation timed out but subsequent state proved completed route; no duplicate navigation/restart. Golden coach border whole; all-seven coach audit still pending. No assets/data/remote changes. Types32356/lint52614 results recorded in tool transcript; diff0.
+
+## 2026-09-24 — cross-tab player social reconciliation
+
+Added shared lazy BroadcastChannel invalidation for acknowledged player reactions. Same-tab subscribers receive one local notification; other tabs receive only provider ID and must GET their own totals/access. Strict message validation rejects injected counts/permissions, received messages never echo, last unsubscribe closes channel, restricted contexts retain local/focus recovery. Integrated toolbar preserves mutation-in-flight invalidation fence and timeout fresh-GET semantics.17focused client/handler/transport testsPASS, including actual two-channel delivery in Node; types22981, scopedlint53884 and diff all exit0. IAB HMR still shows disabled unknown-count controls under current feature gate. This is local transport proof, NOT hosted social activation, browser two-account persistence or native-device acceptance. No schema/flags/account/deployment changes.
+
+## 2026-09-24 — seven player-border representative coverage
+
+Continued actual IAB 1280×720 audit: clear diamond Jan Paul van Hecke and amethyst Konstantinos Tzolakis from the ranking, then radiant gold David Raya (provider 3130) and sapphire Illan Meslier (432881), using real public roster profile links. Combined with earlier Cherki/Hall/Groß, all seven player tiers now have a rendered representative, not a full all-card or native acceptance. Raya and Meslier screenshots show entire bottom gem clear of information and external follow/like controls; goalkeeper SAVES uses glove icon. Meslier unavailable stats remain dashes, not fabricated zero. Tzolakis card season saves17 and selected-match saves3 have different scopes. Follow/like remains explicitly unavailable; no persistence PASS. Roster clubs reflect persisted QA data, not fresh external membership verification. No artwork, records, user sessions or remote state changed. Physical Safari/iPhone and coach seven-tier coverage remain pending.
+
+## 2026-09-24 — remove crown reserve from ordinary zoom cards
+
+Actual IAB emerald Lewis Hall zoom reserved128px above artwork despite no crown, pushing bottom gemstone below initial720px viewport. Shared CSS now removes padding only when neither player nor coach crown is present; unsupported :has retains conservative safe fallback. Runtime Hall padding0, cardtop20/bottom646.72; screenshot shows whole gemstone and external social buttons below, no artwork changed. Pascal Groß ruby leader retains128pxpadding and intactcrown in screenshot.11focused crown/scroll/envelope testsPASS, lint/diff32102 exit0. Modalclosed and rankingtabpreserved. This checks emerald/ruby examples, not allseven or physicalSafari/iPhone; broader border audit remainsopen.
+
+## 2026-09-24 — compact orphan feed story and readable facts
+
+IAB desktop reproduced second Cherki feed post564px wide/605.94px high beneath1142px featured post, leaving empty half-row. Desktop-only orphan rule now spans final even child across grid with horizontal body and no forced copy floor: actual1142×384.94, about221px less height. Paired posts and <=980 stacked flow preserved. Fact tiles no longer truncate identity/tier text; wrapping and slightly stronger label contrast now show full Diamante Dourado. Two targeted regressions failed before fixes, combined7testsPASS; lint/diff43072 exit0. IAB568×320 screenshot inspected, both posts520px, docwidth568, no article overflow or clipped strong text; viewportreset. This is local responsive IAB proof, not physical Safari/iPhone acceptance. No data/media/remote changes; goalactive.
+
+## 2026-09-24 — remove false post-like acknowledgement
+
+IAB Cherki profile confirmed player toolbar properly unavailable but feed exposed active browser-only Like toggles. Removed local feed reaction state/storage increments; post control truthfully says Likes unavailable, disabled, while share remains available. Post reactions must get their own persisted subject, not reuse player likes. Regression first2PASS/1FAIL then10focusedPASS; IAB AX shows both post buttons disabled and screenshot confirms readable labels. Also replaced unsupported 'Official sync in progress' fallback with 'Additional official data unavailable'; no running sync evidence exists. Generic visitor ClubOwner follow still uses local-only state and remains an explicit open finding, not fixed/accepted here. Feed screenshot additionally shows excess empty right-column space with two posts; refinement pending. No remote operations; real persisted post reactions remain unimplemented, item4 not complete.
+
+## 2026-09-24 — numeric profile identity cannot be replaced by URL name
+
+Found actual identity-mixing path: canonical profile/card used numeric ID, while official biography/career resolver could reject the ID's name and search another athlete using the untrusted URL name. Resolver now accepts only a matching returned provider ID when a numeric ID is supplied; missing/mismatched response remains unavailable without name fallback. Official spelling changes (Groß/GROSS) preserve identity. Legacy no-ID exact-name disambiguation unchanged. Four regression cases failed before, then22focusedPASS; scopedlint15931/types18526/diff0. Real local HTTP2343 with Cherki21072805 but Haaland slug/query returned200, h1RayanCherki and only shirt-nameRayanCherki. Fresh release runner42481:2254PASS/57SKIP/0FAIL,2311total. This is local HTTP+contract evidence, not complete browser/native inventory or release. No remote writes/deployments.
+
+## 2026-09-24 — current public roster identity inventory
+
+Read-only local public endpoint inventory for all20canonicalclubs completed:587rosterplayers/587distinctproviderIDs/587distinctcanonicalIDs; no missing identities/names, cross-club duplicate provider IDs, canonical mapping conflicts, clubID mismatches or public/editorial shirt-number conflicts. Nine players explicitly await shirt numbers (Chelsea4,Leeds2,City1,Forest1,Sunderland1), not additional omitted rows. All20snapshots report degraded=true from stale capture, so neither official-current spelling/membership nor all-card visual correctness is proven. Historical618 is published records, not the same denominator; no31-player disappearance claimed. Report ../../outputs/card-review-20260921/public-player-identity-inventory-20260924.md. No writes/recovery/deployment; all14goalactive.
+
+## 2026-09-24 — integrated release-runner regression verification
+
+Root inspected integrated failures and corrected obsolete source assertions for Arena home (not ClubHub), client Link/router navigation, 44px pitch envelopes, extracted independent fixture bell, and explicit smooth-scroll document attribute. Added four explicit API audit policies for fixture-interest and player-social GET/PUT, preserving optional public social reads, authenticated same-origin writes, default-off/schema/device pending status and no-delivery claim. Inventory now 83 API methods. Focused suites 41+47 PASS. Fresh canonical release runner session15127: 2308 tests, 2251 PASS, 57 SKIP, 0 FAIL, exit0. Scoped ESLint63600 and diff check exit0. Runner excludes twelve local/docs-artifact test files by existing policy; skipped SQL tests and exclusions are NOT PASS, and current counts do not explain historical2240/2250. No build, commit, remote schema/flags, deployment, notification or account changes. All14 goal remains ACTIVE; physical Safari/iPhone, hosted persistence/push, gems and release gates remain open.
+
+## 2026-09-24 — audio control no longer overlays content
+
+Moved public sound control from fixed bottom-right overlay into shared navigation using canonical link styling and page locale. Root media owner unchanged; removed redundant document-language observer.13audio/navigation testsPASS after updating obsolete observer-specific assertion. IAB568 screenshot and DOM: button74.27×44px in menu, no fixed ancestor or horizontal overflow; actual audio activation pausedfalse/mutedfalse/ready4/time0.36, mute confirmed and viewportreset. Native Safari remains blocked by locked Mac; physical audio/device acceptance pending. Previous profile test lint97331 exit0.
+
+## 2026-09-24 — player phone-landscape fact overflow repaired
+
+Native Safari inspection now blocked by locked Mac; no unlock bypass or session changes. Independent IAB568×320 Cherki profile reproduced identity facts overflow: Position115px/Nationality132px in83px tracks. Landscape facts now use content-sized minimum170px tracks and shrinkable wrapping text. Seven focused profile testsPASS/diff0; actual post-change DOM overflow list empty at568 and844, page scrollWidth equals viewport. Screenshot inspected and viewport reset. This is IAB evidence only, not Safari/iPhone acceptance. Floating audio control currently overlays lower-right content; placement refinement remains pending. All14goalactive.
+
+## 2026-09-24 — global entry league gateway
+
+Follow-up: TypeScript99685 exit0; actual IAB click reached /arena?lang=pt-BR with England fixture rail and soundOFF. No account selection changed.
+
+Source inventory found only the England public runtime (ranking/coach/live filters fixed to touchline-england); no other league route/catalog found. Auth entry now exposes accessible Choose league disclosure using shared navigation styling, one supported England destination, and explicit other-leagues-unavailable copy. Unsupported keys resolve null; no cookie/account/XI mutation or invented options. Five entry/catalog testsPASS, scopedESLint54617/diff0; types99685 pending at entry creation. IAB1280 screenshot shows readable disclosure and correct localized link; actual click navigation verification in progress. This is a one-league gateway, NOT completed multi-league context persistence. Wider competition support remains unimplemented/unverified; no release.
+
+## 2026-09-24 — remaining Arena internal navigation
+
+Root converted17 remaining verified internal anchors (coach login/profile, squad, market return, rankings and owner-self route) to client Links with prefetchfalse; external Freepik credit remains native. Regression initially10PASS/1FAIL then11PASS; combined audio/navigation29PASS/diff0. TypeScript58153/ESLint51945 exit0 for initial16-link slice; final owner-self conversion covered by focused suite. Fresh IAB Arena score-rail→Live reached fixture19722153 with one audio pausedfalse/mutedfalse/ready4, then explicitly muted. No device/audio-quality blanket PASS. Prior root integration TypeScript59249/ESLint40630 also completed exit0. Item10 local continuity materially improved; physical Safari/iPhone and loop listening remain open.
+
+## 2026-09-24 — persistent Arena ambience integrated
+
+Existing agent integrated exclusive intro ownership and persistent public-route loop, muted background video, localized floating control and lifecycle/error handling. Root IAB observed one active audio (ready4, mutedfalse) through Arena→ClubHub→Arena; both videos muted, intro paused. Loop duration21.025sec explains sampled time wrapping. Sound left OFF. This is playback-state continuity, not an auditory seamless-loop or physical Safari/iPhone claim. Root additionally reproduced score-rail full-anchor navigation via failing regression and converted four Live links to client navigation with prefetchfalse; integrated28testsPASS/diff0. Fresh root types/lint running; no remote build/deploy/server restart. Remaining hard-navigation links and device acceptance still open.
+
+## 2026-09-24 — tier-label consistency follow-up
+
+Market tier labels now resolve through the shared British-English dictionary; residual public showcase and visual-QA labels aligned, and audit gallery no longer derives display names from stable IDs. Eleven focused tier/engine/studio tests PASS; scoped ESLint31554 exit0 and diff check exit0. This is local source/contract evidence, not all-site rendered acceptance or publication. Ruby Red is valid as a colour name; Red Ruby is the selected gemstone-led category convention. IDs, prices, Portuguese dictionary and assets preserved. Persistent Arena audio integration remains active with the existing agent; no deployment or remote mutation.
+
+## 2026-09-24 — persistent root entry-audio owner
+
+Follow-up: TypeScript/diff check74465 exit0; final lint and6focused tests81760 exit0. Browser control left OFF after actual playback test. Next integration remains Arena-mode arbitration and source ownership, plus remaining full-reload links.
+
+Root provider owns one audio element; AuthAmbientAudio is context-only control. Allowed auth routes retain element/position; other routes stop intentionally until Arena intro handoff is implemented. Independent review caught no-op Admin/isolated controls and removed-element enable-toggle risk: availability hides unsupported control; stable audio element has no source when isolated. Fresh IAB after reload (needed because HMR had retained old graph) confirmed login→register playback: one audio, paused=false, muted=false, readyState4, time0.362667→6.494721. No form submitted. This is rendered playback continuity for auth only, not auditory/Safari/iPhone proof. Combined audio/intro28PASS; lint/types pass before final onPause synchronization; latest focused verification underway. Real dev listener is PID65516 on3217; old PID66991 absent; no server restart performed. Goal ACTIVE.
+
+## 2026-09-24 — Arena primary client navigation
+
+Final verification: TypeScript/diff check 38461 exit0; IAB menu ClubHub reached /touchline-clubs?lang=pt-BR and rendered club list/shared navigation. Not a proof of persistent audio or physical Safari.
+
+Removed forced full document navigation for former bench/formation path; router.push preserves canonical My Club hash and QA guard. Welcome/recovery and quick-menu links now Next Link with prefetch=false to avoid eager authenticated data work. Navigation regression first failed twice then integrated navigation/QA-readonly suite 15 PASS; scoped lint 79653 exit 0. IAB public entry Arena Home reached /arena (not ClubHub); quick menu exposed unchanged ClubHub/My Club/Build XI destinations. Audio still route-owned: this is necessary navigation work, not continuity completion. Remaining links and persistent audio owner pending.
+
+## 2026-09-24 — quiet entry audio and continuity diagnosis
+
+Independent review found portrait/freeze lifecycle gap and partially constructed graph retry risk. Corrected shared media-availability subscription + freeze stop, and replace audio element after failed start. Post-review focused audio/intro suite 27 PASS (includes source-wiring regression, not browser lifecycle proof); scoped lint 51076 and post-review types 32045 exit 0.
+
+Final scoped ESLint and diff check 71184 exit 0 after warning correction. Independent read-only review requested from existing agent; root owns integration. Entry control left OFF after browser test.
+
+Added explicit opt-in auth entry sound using existing official entry MP4 audio track (MP4 handler inspection confirms soun track; no standalone audio assets). Web Audio gain 0.12 is connected before playback; unsupported/denied graph fails silent. Stop/unmount invalidates pending intents; hidden/pagehide stops. Existing intro/video unchanged. Root 26 audio/intro tests PASS; TypeScript 98826 exit 0; initial lint warning corrected, final lint pending. IAB login public click changed control to mute after play accepted; second click restored off. No physical audibility or iPhone proof. Independent read-only agent traced Arena cuts to route unmount, full window.location.assign navigation and mute reset; camera index itself does not replace loop source. Remaining: root-persistent single audio owner coordinated with intro/auth, client navigation, crowd-only/seamless-loop listening and native acceptance. Item 10 PARTIAL, goal ACTIVE.
+
+## 2026-09-24 — fixture alert preference slice
+
+Live bell now independent interactive disclosure, not nested inside match selection. Local HTTP GET/PUT uses verified actor and canonical fixture UUID; feature defaults OFF. Service-only migration stores idempotent per-match opt-ins separately from existing notification preferences. Root verification: 10 handler/worker tests PASS; real SQL reopen test 1 PASS, no skipped tests; scoped ESLint, TypeScript and diff check exit 0. Save response ignores obsolete panel generations; score reserves space beside 44px bell. IAB localhost: clicking Chelsea bell kept Arsenal selected; unavailable state truthfully states mobile delivery is not enabled. No hosted migration, notification, permission change or deployment. Real device delivery, enabled-route UI and concurrent React lifecycle verification remain pending; item 8 is PARTIAL, goal ACTIVE.
+
+## 2026-09-24 Live push receiver slice
+
+Existing bell decorative; preferences/devices/receiver exist, sender/event producer not found in examined runtime. Added actual-worker VM regressions;4red then4green, combined7PASS, scopedESLint0. Worker now handles malformed JSON, bounded tags and safe same-origin click destinations including stale payloads. Not device delivery proof. No notification sent/permission activated/schema changed. Next atomic fixture preference + independent bell UI + verified-event outbox/transport remain required. Parent live-push-receiver-20260924.md.
+
+## 2026-09-24 gemstone and navigation preflight
+
+Seven full-frame originals found; no standalone gemPNG in public assets. Amethyst physically joins lowerframe; simplecropquality notproven. Explicit deterministic local-crop permission requested asynchronously, no generated/paid media or asset changes. Public568IAB TablesMore expandedRankings and Live navigation reached correct route/sharednav. Bell remains decorative image "alerts coming soon", no notificationfunction claimed. Next inspect existing device/preferences contract/delivery. Parent gems-navigation-preflight-20260924.md. Objective active, independent work continues; no remote/state mutation.
+
+## 2026-09-24 responsive social follow-up
+
+IAB390portrait orientation gate preserved open card when rotated844landscape. Narrow toolbar crushed icons; corrected auto-fit140px whole-button layout plus nonshrinking icons, visually confirmed844 and568 widths. Follow130.55x44px/close44x44px at568; close returns table focus.7focusedclientPASS. Viewportreset; no Safari/physicalphone/hostedpersistence claim. Independent final review accepts pending-invalidation mechanism; behavioural React race test remains open. Parent player-social-toolbar-20260924.md updated.
+
+## 2026-09-24 15:47 UTC — external social toolbar, local visual proof
+
+Zoom and player profile use canonical-ID server-backed toolbar outside artwork; public embedded controls removed without changing compact card size. Root IAB inspection confirms clear golden-diamond and amethyst gems, external controls and Cherki compact profile.22focusedPASS/lint0; types74662exit0 before final pending-invalidation refinement. GET-only invalidation follows same-player changes/focus; independent reviewer found busy-event race, pending flag added, concurrent React behaviour proof remains pending. FeatureOFF/hosted schema unapplied; unavailable shown honestly. Older feed/ClubOwner controls and account/device acceptance still open. Parent report player-social-toolbar-20260924.md. No remote or user-session changes; goal active.
+
+## 2026-09-24 15:34 UTC — local account-backed reaction foundation
+
+New strict social HTTP contract/handler and GET/PUT route; verified account/Arena access, same-origin writes, canonical player UUID, generic errors, no-store responses. Default-OFF server flag prevents activation before hosted schema gates. CLI-created local migration adds service-only/RLS reaction store and invoker RPCs with desired-state idempotency. Real SQL test proves reopen persistence/two-user isolation/counts/ACLs locally; not hosted acceptance. Root corrected inherited service-role excess grants and expanded test. Initial combined10PASS; final8367, TypeScript2121 and ESLint31298 completed successfully. UI wiring/external toolbar and real-account/browser proof remain pending. No remote operations. Parent report player-social-backend-20260924.md.
+
+## 2026-09-24 15:24 UTC — social integrity and remaining gemstone collision
+
+Removed hash-generated player follower totals (24,000 + identity hash modulo 940,000). Player profile now passes null and shared social actions show unavailable, without adding a synthetic +1 from browser-local state. This is data-integrity correction only: account-backed Follow/Like persistence remains NOT IMPLEMENTED. ExactCard still has local-only toggles. Seven-template read-only design review confirms y531..565 action boxes overlap the amethyst gemstone starting approximately y533 and several other frames. Recommended external zoom toolbar, preserving compact footprints; no geometry patch claimed yet.
+
+Studio seven-tier labels now use the canonical British-English dictionary; old fixture identifiers preserved independently from display labels. Regression runs: social/profile/action14PASS; social/studio/tier8PASS; independent targeted3PASS. Three-file ESLint exit0; diffcheck0. Prior tsc94442 and new post-increment TypeScript35052 both completed exit0. No live database, build, publication or session changes. All14 items remain tracked in parent outputs, not complete.
+
+## 2026-09-24 15:13 UTC — integrated local slices and runtime limitation
+
+38 focused tests passed across identity, entry, tiers, navigation, coach/player layout and dividers; final metadata/scroll change3/3PASS, diffcheck0, scoped lint63597exit0. Shared coach nav inspected at1280; final nav wrapping refinement and player fullpage still not rendered. TypeScript94442 ongoing without output (process73361 active after10min); no duplicate check launched. IAB selection/observations repeatedly time out, local table route logged200in86s; root cause not established and no bypass/restart. Continue safe independent source work, no false native/mobile PASS. Parent visual-progress-20260924-1500.md preserves all14 exact requests and gaps. No deployment or live writes.
+
+## 2026-09-24 14:55 UTC — local improvement slices, not release completion
+
+Entry logo enlarged, global subtitle Arena Touchline, Portuguese login description and contrast corrected. Real IAB click on Início da Arena reaches /arena?lang=pt-BR rather than ClubHub. Modal identity separators now share one border intensity (8 focused checks passed); rendered modal acceptance pending. Saved Arena names now refresh all three display strings only when current/saved IDs agree (32 focused tests passed), without altering identity or XI. TypeScript and scoped ESLint exit 0 before subsequent coach/language refinement.
+
+Coach desktop composition was inspected twice: first compact pass still left excessive empty space, so performance moved directly below identity alongside the full card/crown; root IAB 1280x720 now confirms performance begins around y342 rather than y670. Native/iPhone acceptance pending. British English gemstone-led labels standardised in the shared seven-tier dictionary; IDs, Portuguese, order and economy unchanged. 24 combined tier/zoom/coach tests passed after a demonstrated 3-test label failure. Language decision is semantic consistency, not a claim that Ruby Red is ungrammatical. Shared navigation and full player profile refinement remain in progress. No deployment, remote build, data mutation, scheduler or domain change.
+
+## 2026-09-24 14:38 UTC — identity check partial
+
+New canonical-profile regression verifies five accented/full names survive misleading route/query data unchanged in both profile card and shirt input. 19 focused tests passed, diff check clean. No wrong-identity defect established in this slice; Groß/GROSS is an uppercase transformation. Item 2 live/rendered inventory is not complete. External acceptance of fields remains pending without blocking this local work.
+
+## 2026-09-24 14:33 UTC — ordered work continues despite external acceptance gates
+
+Latest owner instruction supersedes stopping the entire queue for login or mobile acceptance. Local step 1 geometry changes remain partially verified; authenticated XI and real Safari/iPhone remain pending. Item 2 identity source tracing has begun without changing identities. Automation updated to match. Temporary caffeinate idle-system-sleep assertion verified for four hours; no permanent power/security changes. No new release, data or synchronization action.
+
+## 2026-09-24 — Ranking overlap correction, local partial verification
+
+Owner requires sequential improvement queue; step 1 remains active. Ranking pitch uses shared 105:68 ratio without fixed minimum height, cards capped at 5.5%/64px, role badges beside cards and positive name spacing. Coach panel stacks below the pitch at <=1160px. Populated local browser measured 11 card envelopes and zero pairwise intersections at 1280x720, 844x390 and 568x320 after the patch; screenshots inspected. Before stacking, 844 still reproduced Hall/Tarkowski collision, then cleared. This is bounded local evidence, not native iPhone/all-field/full-site acceptance. No deployment/data/scheduler changes. Queue in parent outputs/card-review-20260921/ordered-visual-improvements-20260924.md.
+
+## 2026-09-24 — QA connection verified in memory
+
+Owner-approved official Supabase CLI path succeeded: existing QA service-role identity checked against xgxbwqxjssxxuihuwmgy, canonical QA persona preflight exit0/PASS. No secret values output or written. SUPERSEDES manual-only configuration blocker. Disk .env.local remains placeholders, not valid runtime config; use guarded in-memory injection. Populated visual proof remains pending. No remote mutation/deployment/build.
+
+## 2026-09-24 — Authorized QA configuration pull, unusable redacted values
+
+Owner authorized local QA config retrieval. Preview/qa scoped Vercel pull created ignored .env.local (0600), but database URLs/key are redaction placeholders; QA target validation failed before any database access/server launch. File presence is NOT configured-state proof. Manual secure QA configuration needed; never request secrets in chat or bypass redaction. Details in parent browser-resumed-20260924.md. No remote settings/build/publication changes.
+
+## 2026-09-24 — Owner keeps existing intro
+
+Owner explicitly declined the proposed entrance video and wants the existing intro unchanged. Any future replacement requires a new request. Preserve media files; no deletion authorized. Keep this outside the current release change manifest.
+
+## 2026-09-24 — Local visual data limitation diagnosed
+
+Local Ranking opens with corrected season label but empty official ranking. Presence-only checks establish missing database URL/service key and standard local environment files; source returns preseason when admin client is absent. Not remote data loss, not populated visual PASS. No credentials copied, environment modified, new build or deployment. Receipt: parent outputs/card-review-20260921/browser-resumed-20260924.md. Local temporary tab/server closed, user sessions preserved.
+
+## 2026-09-24 — Browser access resumed
+
+Owner returned; nativeSafari privatewindow successfully opened on explicitrequest. IABQA Ranking nowresponds. Bounded844x390render/scroll,documentwidth844,initialconsole0;390x844portraitgate confirmed,viewportreset. This testsoldQAfe2a302, notlocalsuccessor. Authenticatedpersona/nativephone/fullvisualacceptance pending. Do not repeat blanket browserblocked status. Parentreceipt browser-resumed-20260924.md; no deploy/data/build changes.
+
+## 2026-09-24 — Post-parser integration
+
+Canonical runner freshly passed2240/2240,17suites,0skip/fail/cancel,93.383s,exit0.401files/389selected by unchanged12exclusions; affectednewtests present. Prior2250count discrepancy remains unaccounted evidence question, not silently reconciled. Diff0. No build/browser/remote action; owner manualbrowser restoration still pending, coachidlefreshness/release gates open.
+
+## 2026-09-24 — Live publication parser correction, local only
+
+Independent reviewer confirmed no bounded blocker and9/9focusedPASS; actualplayer publisher grammar covered. No fullrelease approval.
+
+Reproduced real colon-delimited snapshot IDs rejected by client parser. Snapshot-only grammar corrected, fixture ID restrictions unchanged. New regression red then green; related20testsPASS, scopedlint/types/diff0. Prior full2250/build now historical for this new slice; final integration pending. Independent review pending. Owner away awaiting manual browser restoration; no browser retry, data/scheduler/deployment action. Parent-workspace evidence live-publication-id-parser-20260924.md.
+
+## 2026-09-24 — Remote baseline reconciled read-only
+
+Actual main2e9197e is already ancestor of candidatefe2a302;69/0 candidate...main,merge-base2e9197e. Stale trackingref32d64b2 is parent of mainmerge; no missing main changes. Baseline blocker resolved without merge. Fresh connectorQA READY exactSHA; .com.br resolves different olderProduction dpl_CZXL6E3gQJdt4sMXDWStdcvywfjq. No publication. Browser verification unavailable, coach idle freshness and remaining release gates still open.
+
+## 2026-09-24 — Publication preflight, not published
+
+Fresh governance/input/readiness/diff checks passed; readiness is explicitly not release approval. Actual remote main is2e9197e, qa fe2a302; local origin/main32d64b2 is not current remote authority and must be reconciled before push. Successor remains local/uncommitted. Local server started with scoped approval; IAB webview attach failed twice, no visual evidence. Server stopped; native restriction respected. No deployment/data/scheduler changes. Evidence: outputs/card-review-20260921/publication-preflight-20260924.md in parent workspace. Existing coach freshness, visual/authenticated acceptance, asset bytes, external coverage and cutover gates remain open.
+
+## 2026-09-24 — Latest local season-selection consistency work
+
+Local build now PASS exit0,145/145routes,TypeScriptpassed. No remote build/deployment. Next gate: rendered validation and remaining coach freshness; native permission restriction unchanged. Entire site NOT declared complete.
+
+Latest integration: shared player/coach crown authority implemented locally, including passive player consumers and missing coach props; Tables/player profile/player-ranking have publication-pinned providers. Existing player singleton preserved with request-start fencing, withdrawal/recovery and rollback guards. Stable provider tree does not explicitly remount children. Season title/hint fixed; weekly coach block removed only from season section. Final canonical tests2250/2250PASS,0skip/fail,107.439s with established PGlite modules and loopback; targetedlint/diff0, finalwriter types0. Localbuild pending. Coach idle freshness and native/visual/state acceptance remain OPEN, no deploy. Detailed global-crown-consistency-20260924.md outside repository.
+
+Owner requires cumulative seasonal XI and awarded player/coach crowns across all product surfaces. Fresh QA read-only comparison: 385 ratings match settlement sums and season aggregates; 11 unique selected players match active snapshot and ratings. Root locally pins selection reader to caller ranking snapshot and season, rejects incompatible scoring/coverage. Baseline VM reproduced A→B mismatch; patched focused tests 12/12, targeted lint and TypeScript passed. No data or deployment changes. Seasonal presentation correction in progress separately; global crown audit found coach omitted props and player subscribeToRanking=false paths suppressing crowns. Those crown fixes and visual proof remain pending; prior full-suite/build does not certify this new successor.
+
 ## Latest applied QA leadership checkpoint
 
 - Reviewed atomic leadership correction applied only to selected QA; connector version 20260923221024. Local filename reconciled to that version without changing SQL (SHA256 248048fe2fbef8a235f0dd86fa0d4053e6bb69a788ffcd061da879dc61797c42).
@@ -1364,3 +1990,38 @@ Do not begin Block 4B while Block 4A is not GREEN. When an already-authenticated
 - Subsequent customer login by owner supersedes that session blocker: native Safari QA My Club shows Luiz Lopes and XI11/11. Read-only GK→CB browsing returned six cards; Rúben Dias zoom visually rendered complete, rating28.51 both card and panel. No lineup action or full-site PASS. Backup inspection dashboard requires owner login; SQL connector reads remain available but no backup inventory tool is exposed. Independent review establishes wider recovery mutation surface and immutable-history constraints; verify usable recovery coverage before first sync. No new remote writes/deployment.
 - 23 September18:57UTC: owner restored Supabase dashboard; retained daily physical backup03:16:11UTC verified, PITR not enabled. Independently approved additive recovery schema applied atomically, source SHA25686e46d6b7d800d0f6e35960cc079e25d44dbafaeb8a1390fb8945ba066bd92c0. Connector recorded migration20260923185720 touchline_fixture_backlog_recovery (local filename20260921093526 mapping must be reconciled before runner). Queue0, RLS/FORCE RLS true, four service-only RPCs confirmed. No recovery invocation or leadership migration. Fixture/feed/XI/active-ranking fingerprints unchanged; statistics/settlement full-row hashes changed during active legacy minute cron, counts unchanged. Do not claim complete no-write comparison; investigate concurrent recalculation. No deployment/domain action.
 - Operator pause-qa failed42501 at LOCK TABLE cron.job; transaction aborted and cron remains active. No permission escalation or manual table write. Sole local writer leadership_verify_resume assigned narrow operator/test/runbook fix; independent verification required before retry. Recovery execution remains closed.
+# 24 September — local successor after recovered backlog
+
+Deployed QA remains fe2a302; root operational authority is outputs/card-review-20260921/release-candidate-fe2a302.md in the parent workspace. All ten original stale fixtures recovered; 50 finals covered, accounts/XI preserved, cron paused. This supersedes historical recovery-pending statements below, not Production acceptance.
+
+Owner resumed implementation. Local uncommitted presentation-only successor qualifies inferred absence as participation unconfirmed in PT/EN, shared profile/zoom helper; 27 focused tests, TypeScript and scoped ESLint passed. No points/database changes or remote build. Public isolated WebKit navigation on exact deployed QA passed bounded ranking/Arsenal interactions, BUT root screenshot inspection confirms Arsenal card overlaps and obscured labels. Visual release gate FAIL pending diagnosis/fix; physical device/authenticated acceptance and external provider completeness remain unverified. No Production promotion or deletion.
+# 24 September 05:14 UTC — bounded local mobile verification
+
+ClubHub responsive four-file patch delivered, no remote publication. Root reviewed minimal diff and actual React750px fixture screenshots with/without crown: collision removed in those fixtures;8focused tests passed and diffcheck exit0. Agent41affected tests/types/lint passed. Full-page/native acceptance, integrated suite/build and premium density/readability remain unproven. Ranking reported overlap not reproduced on public QA states; remains open, no speculative fix. Canonical operational receipt in parent outputs/card-review-20260921/release-candidate-fe2a302.md. No data/scheduler/domain changes.
+# 24 September 05:27 UTC — integrated local gates
+
+Successor release runner2235/2235 PASS, zero skips,12artifact-only file exclusions disclosed; ESLint/diffcheck0. Stale generated dev types referencing removed fixture moved recoverably to /private/tmp/touchline-stale-dev-types-20260924-0527, no source/config changes; TypeScript rerun exit0. Local build and native/full-page release acceptance pending. No remote/database/scheduler/domain change. Detailed parent report successor-integrated-local-verification.md.
+# 24 September 05:34 UTC — local build passed
+
+Successor pnpm run build exit0; log /private/tmp/touchline-successor-build-20260924-0534.log. No remote build or publication. Uncommitted source remains separate from deployed fe2a302. Native/full-page acceptance, ranking report, external coverage, Storage bytes and single-writer gates remain open.
+# 24 September 06:28 UTC — mobile modal readability
+
+Two-file local zoomCSS/test patch adds opaque details surface only in shortlandscape. Root inspected player/coach568 screenshots and diff,7tests pass. Agent21focused/types/lint pass. Combined9file successor integrated verification now assigned; earlier build predates this patch. Desktop transparency residual, native/deployed/fullsite gates open. No remote/data/cron/domain changes.
+# 24 September 06:43 UTC — nine-file verification partial
+
+Local build145/145/types/lint/diff passed,9sourcehashes unchanged. Canonical runner2234pass/2timeout cancellations;21isolateddiagnostic pass does not close suitegate. Sameinventory serialdiagnostic assigned once, no timeout/source changes. Reviewer observed local origin/main32d64b2 without fetch; revalidate branches before future release. No remote/domain/data changes.
+# 24 September 07:13 UTC — timeout boundary narrowed
+
+Instrumented TEMP run stalled at PGlite import/startup/first baseline exec, before ranking/leadership migrations or assertions. Exact cause unresolved; no confirmed product SQL failure. Same30s readiness/SELECT1 diagnosis assigned; no code/dependency/live changes. Prior build/types/lint pass, integrated suite remains partial.
+
+# 24 September 07:49 UTC — canonical revalidation passed
+
+Second owner photo: compact top-coach ranking CSS/test now local, duplicate crown outergap removed while canonical29.55% reserve retained.11focusedPASS/lint0/diff0, visual/hover verificationpending. No release. See parent ranking-premium-owner-request.md.
+
+Owner-photo follow-up: newer Top3 CSS/test patch; root reproduced leaderoffset and verified equal geometry in localstaticfixture568/750/844/1280.10focusedtests pass. FullReact/native and Gameweekpolish pending. No publication. Prior2236/build evidence predates this patch.
+
+08:21UTC permission follow-up: owner reiterated publication and browser-audit intent, but native Safari selection was rejected by tool access review. No native state inspected; APPROVAL REQUIRED remains, no bypass/repeated request absent changed condition. Nine source hashes matched at08:10. Data/asset/full-client/Admin/mobile/single-writer release gates stay open. Detailed parent operational receipt records exact rejection.
+
+Follow-up07:58UTC: local origin/main32d64b2 is an ancestor of HEADfe2a302 (merge-base32d64b2, is-ancestor0,416/0 left/right commits). No local main-only omissions established. This is not fresh remote proof; no fetch or promotion. Remaining gates unchanged.
+
+Root inspected fresh canonical report and raw terminal log:2236/2236 passed,17suites,0failed/cancelled/skipped,39.374s, unchanged2workers/30s deadline and9input hashes. Existing12artifact-file exclusions disclosed. Supersedes current partial suite verdict only; historical timeouts and unresolved cause preserved. Prior same-source local build145/145/types/lint remain valid separate receipts. Publication remains blocked on native/full-page acceptance, ranking report, external coverage, Storage bytes, immutable candidate and controlled single-writer cutover. No live/source/build/Safari change. Parent receipt: outputs/card-review-20260921/successor-ninefile-canonical-revalidation.md.

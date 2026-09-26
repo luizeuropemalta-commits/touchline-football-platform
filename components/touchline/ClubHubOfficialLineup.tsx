@@ -72,7 +72,7 @@ export default function ClubHubOfficialLineup({
     ? (isPortuguese ? "Escalação confirmada" : "Line-up confirmed")
     : (showPreviewContext
       ? (isPortuguese ? "Prévia do elenco" : "Squad Preview")
-      : (isPortuguese ? "Escalação" : "Line-up"));
+      : (isPortuguese ? "Escalação ainda não confirmada" : "Line-up not yet confirmed"));
   const accessibleTitle = title;
 
   // The Market formation is stored on a horizontal 105×68 coordinate plane:
@@ -99,6 +99,7 @@ export default function ClubHubOfficialLineup({
           <div>
             <span className={styles.eyebrow}>{isPortuguese ? "Escalação da partida" : "Matchday line-up"}</span>
             <h2>{title}</h2>
+            <p>{isPortuguese ? "Distribuição ilustrativa do elenco, não uma previsão de titulares. Aguarde a escalação oficial da partida indicada." : "Illustrative squad arrangement, not a prediction of the starting XI. Await the official team sheet for the match shown."}</p>
           </div>
         )}
         <div className={styles.statusPanel}>
@@ -123,7 +124,7 @@ export default function ClubHubOfficialLineup({
           <span className={`${styles.status} ${confirmed ? styles.confirmed : ""}`}>
             {confirmed
               ? (isPortuguese ? "Escalação confirmada" : "Line-up confirmed")
-              : (showPreviewContext ? (isPortuguese ? "Prévia do elenco" : "Squad Preview") : (isPortuguese ? "Escalação" : "Line-up"))}
+              : (showPreviewContext ? (isPortuguese ? "Prévia do elenco" : "Squad Preview") : (isPortuguese ? "Aguardando confirmação" : "Awaiting confirmation"))}
           </span>
           <span className={styles.syncLabel}>{isPortuguese ? "Formação" : "Formation"}</span>
           <strong className={styles.formation}>{lineup.formation}</strong>

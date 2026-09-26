@@ -16,7 +16,7 @@ test("Coach Profile resolves the canonical live-coach registry and shared compet
   assert.match(source, /TOUCHLINE_LIVE_COACHES/);
   assert.match(source, /touchlineCoachClassificationForProviderId/);
   assert.match(source, /loadTouchLineCoachRanking/);
-  assert.match(source, /coachRanking\.rows\.find/);
+  assert.match(source, /coachCompetitionFromRanking\(coachRanking, entry\.coach\.providerId, TOUCHLINE_ENGLAND_SEASON\)/);
   assert.match(source, /TouchlineCoachPerformance contract=\{null\} competition=\{competition\}/);
   assert.doesNotMatch(source, /offer\.displayPrice|Official price|Preço oficial|WalletCards/);
   assert.match(source, /notFound\(\)/);

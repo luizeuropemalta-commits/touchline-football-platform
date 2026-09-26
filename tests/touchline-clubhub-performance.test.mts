@@ -11,6 +11,13 @@ import {
 
 const clubsPage = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
 const clubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+test("next-match hero waits only for the shared match snapshot, never squad or season points", () => {
+  const hero = clubPage.slice(clubPage.indexOf("async function ClubHubHeroNextMatch"), clubPage.indexOf("function normalizedPlayerIdentity"));
+  assert.match(hero, /const matchSnapshot = await matchSnapshotPromise/);
+  assert.doesNotMatch(hero, /presentationPromise/);
+  assert.equal((clubPage.match(/\(\) => loadClubMatchSnapshot\(club, locale, dataSource, mirrorResultPromise\)/g) ?? []).length, 1);
+  assert.match(clubPage, /loadClubHubPresentation\(club, locale, dataSource, matchSnapshotPromise\)/);
+});
 const route = readFileSync(new URL("../app/api/football-data/premier-squad/route.ts", import.meta.url), "utf8");
 const reader = readFileSync(new URL("../lib/football-data/public-premier-squad-server.ts", import.meta.url), "utf8");
 const pending = readFileSync(new URL("../components/touchline/ClubHubNavigationPending.tsx", import.meta.url), "utf8");

@@ -1,0 +1,12 @@
+/* Thin alpha-silhouette contour, never a box or glow. Original artwork stays unchanged. */
+:is(img[src*="/club-logos/"], img[src*="%2Fclub-logos%2F"]):is(
+  [src*="/liverpool.png"], [src*="/liverpool.webp"],
+  [src*="/nottingham-forest.png"], [src*="/nottingham-forest.webp"],
+  [src*="/tottenham-hotspur.png"], [src*="/tottenham-hotspur.webp"],
+  [src*="%2Fliverpool.png"], [src*="%2Fliverpool.webp"],
+  [src*="%2Fnottingham-forest.png"], [src*="%2Fnottingham-forest.webp"],
+  [src*="%2Ftottenham-hotspur.png"], [src*="%2Ftottenham-hotspur.webp"]
+) {
+  filter: drop-shadow(.5px 0 0 #fff) drop-shadow(-.5px 0 0 #fff)
+    drop-shadow(0 .5px 0 #fff) drop-shadow(0 -.5px 0 #fff) !important;
+}

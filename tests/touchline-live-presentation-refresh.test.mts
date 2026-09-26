@@ -129,6 +129,32 @@ test("the public state parser fails closed and revisions change atomically", () 
   });
 });
 
+test("publication revisions accept generated snapshot identities without weakening fixture IDs", () => {
+  const snapshotId = "player-rating:1e83121b-b778-459b-b9a0-7cf1eaff5729:8f668692";
+  const payload = {
+    version: 1, available: true,
+    playerRankingSnapshotId: snapshotId,
+    coachRankingSnapshotId: "coach-v2:season-1:digest-2",
+    mode: "live", pollAfterMs: TOUCHLINE_LIVE_PRESENTATION_POLL_MS, resumeAt: null,
+  };
+  const parsed = parseTouchlineLivePresentationState(payload);
+  assert.ok(parsed, "real publication IDs must reach the refresh consumer");
+  assert.equal(parsed.playerRankingSnapshotId, snapshotId);
+  assert.equal(parsed.coachRankingSnapshotId, payload.coachRankingSnapshotId);
+  assert.equal(touchlineLivePresentationRevisionChanged({
+    playerRankingSnapshotId: "player-rating:season-1:previous",
+    coachRankingSnapshotId: payload.coachRankingSnapshotId,
+  }, parsed), true);
+  for (const invalid of ["", ":", "bad::id", "id:", ":id", "bad id", "<script>", "https://example.com", "id/other"]) {
+    assert.equal(parseTouchlineLivePresentationState({ ...payload, playerRankingSnapshotId: invalid }), null);
+    assert.equal(parseTouchlineLivePresentationState({ ...payload, coachRankingSnapshotId: invalid }), null);
+  }
+  assert.deepEqual(resolveTouchlineLivePresentationTiming({
+    fixtures: [fixture("not:a:fixture", "finished")],
+    playerRankingFixtureIds: [], coachRankingFixtureIds: [], now,
+  }), { mode: "idle", pollAfterMs: null, resumeAt: null });
+});
+
 test("the refresh boundary deduplicates at the page level and preserves browser state", () => {
   assert.match(componentSource, /fetch\(STATE_URL/);
   assert.match(componentSource, /requestController/);

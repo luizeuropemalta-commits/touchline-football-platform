@@ -12,6 +12,7 @@ import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNav
 import TouchlineOfficialLeagueTable from "@/components/touchline/TouchlineOfficialLeagueTable";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import TouchlineGameweekCard from "@/components/touchline/fantasy/TouchlineGameweekCard";
+import { touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import ClubHubNextFixtureCard from "@/components/touchline/club-hub/ClubHubNextFixtureCard";
 import ClubHubSectionNavigation from "@/components/touchline/club-hub/ClubHubSectionNavigation";
 import officialLeagueStyles from "@/components/touchline/club-hub/ClubHubOfficialLeague.module.css";
@@ -436,14 +437,10 @@ async function loadClubHubPresentation(
   club: NonNullable<ReturnType<typeof findTouchLineClub>>,
   locale: TouchLineLocale,
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>,
-  mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null,
+  matchSnapshotPromise: Promise<ClubMatchSnapshot>,
 ) {
   if (dataSource !== "direct") {
-    const matchSnapshot = await traceClubHubLoader(
-      club.slug,
-      "match-snapshot",
-      () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise),
-    );
+    const matchSnapshot = await matchSnapshotPromise;
     const squadLoad = {
       cards: [] as ClubOwnerSquadCard[],
       status: locale === "pt-BR" ? "Elenco temporariamente indisponível" : "Squad temporarily unavailable",
@@ -469,11 +466,6 @@ async function loadClubHubPresentation(
   }
 
   const squadLoadPromise = traceClubHubLoader(club.slug, "squad", () => loadClubSquadCards(club, locale));
-  const matchSnapshotPromise = traceClubHubLoader(
-    club.slug,
-    "match-snapshot",
-    () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise),
-  );
   const formationGeometryPromise = traceClubHubLoader(club.slug, "formation-geometry", () => readTouchlineFormationGeometryRegistry());
   const seasonPointsPromise = squadLoadPromise.then((squadLoad) => traceClubHubLoader(
     club.slug,
@@ -502,8 +494,7 @@ async function loadClubHubPresentation(
     officialCoach: matchSnapshot.coach,
     formationGeometryRegistry,
   });
-  const displayedMatchdayPlayerIds = new Set(matchdayPresentation.displayedPlayerIds.map(String));
-  const outsideMatchdayCards = clubCards.filter((card) => !displayedMatchdayPlayerIds.has(String(card.id)));
+  const outsideMatchdayCards = [...matchdayPresentation.remainingSquad.cards];
 
   return {
     squadLoad,
@@ -609,9 +600,14 @@ async function ClubHubLineupSection({
       canEditCardEngine={viewerAccess.canEditCardEngine}
       leaderCards={(
         <>
-          {clubPositionLeaders.map(({ key, en, pt, leader }) => (
-            <article className={premiumStyles.lineupLeaderCard} data-clubhub-card-spotlight={`position-${key}`} key={key}>
-              <TouchlineClubPerimeterTrace accent="#a3ff12" className={premiumStyles.lineupLeaderTrace} />
+          {clubPositionLeaders.map(({ key, en, pt, leader }) => {
+            const tierKey = leader?.card.editorialCard?.tierKey ?? null;
+            const tierAccent = tierKey ? touchlineCardTierPalette(tierKey).accent : "#9eaaa5";
+            return (
+            <article className={premiumStyles.lineupLeaderCard} data-clubhub-card-spotlight={`position-${key}`} key={key}
+              data-leader-tier-frame={tierKey ?? "unresolved"}
+              style={{ "--tier-accent": tierAccent } as CSSProperties}>
+              <TouchlineClubPerimeterTrace accent={tierKey ? tierAccent : undefined} className={premiumStyles.lineupLeaderTrace} />
               <header>
                 <span>{portuguese ? pt : en}</span>
                 <strong>{leader?.card.name ?? (portuguese ? "Aguardando ranking verificado" : "Awaiting verified ranking")}</strong>
@@ -625,7 +621,8 @@ async function ClubHubLineupSection({
               )}
               <small>{leader ? `#${leader.positionRank}` : (portuguese ? "Ranking em verificação" : "Ranking under verification")}</small>
             </article>
-          ))}
+            );
+          })}
         </>
       )}
       matchup={{
@@ -681,6 +678,7 @@ async function ClubHubTechnicalSections({
       <ClubHubOutsideMatchRoster
         clubName={club.name}
         cards={outsideMatchdayCards}
+        selectionState={presentation.matchdayPresentation.remainingSquad.state}
         locale={locale}
         labels={cardLabels}
         squadUnavailable={presentation.squadLoad.state === "unavailable"}
@@ -808,15 +806,15 @@ async function ClubHubOfficialLeagueSection({
 
 async function ClubHubHeroNextMatch({
   locale,
-  presentationPromise,
+  matchSnapshotPromise,
 }: {
   locale: TouchLineLocale;
-  presentationPromise: Promise<ClubHubPresentation>;
+  matchSnapshotPromise: Promise<ClubMatchSnapshot>;
 }) {
-  const presentation = await presentationPromise;
+  const matchSnapshot = await matchSnapshotPromise;
   // The profile hero deliberately represents the next scheduled fixture. The
   // match-state rail below can retain a live or final fixture when appropriate.
-  const fixture = presentation.matchSnapshot.publicFixture;
+  const fixture = matchSnapshot.publicFixture;
   const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
     ?? findTouchLineClub(fixture?.homeTeam?.name);
   const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
@@ -915,7 +913,12 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
   const dataSource = resolveTouchlineClubHubDataSource();
   const mirrorResultPromise = dataSource === "direct" ? null : loadTouchlineQaClubHubMirror(club.teamId);
   const homeStadium = resolveTouchlineClubHomeStadium(club.teamId);
-  const presentationPromise = loadClubHubPresentation(club, locale, dataSource, mirrorResultPromise);
+  const matchSnapshotPromise = traceClubHubLoader(
+    club.slug,
+    "match-snapshot",
+    () => loadClubMatchSnapshot(club, locale, dataSource, mirrorResultPromise),
+  );
+  const presentationPromise = loadClubHubPresentation(club, locale, dataSource, matchSnapshotPromise);
   const viewerAccessPromise = loadClubHubViewerAccess(club.slug, dataSource);
   const tablePromise = traceClubHubLoader(
     club.slug,
@@ -954,7 +957,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           ) : null}
           <div className="club-hub-hero-shade" aria-hidden="true" />
           <Suspense fallback={<div className="club-hub-hero-next-match club-hub-hero-next-match-awaiting" aria-hidden="true" />}>
-            <ClubHubHeroNextMatch locale={locale} presentationPromise={presentationPromise} />
+            <ClubHubHeroNextMatch locale={locale} matchSnapshotPromise={matchSnapshotPromise} />
           </Suspense>
           <div className="club-hub-identity">
             <div className="club-hub-logo-stack">
@@ -1869,119 +1872,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
                     white-space: nowrap;
           font-size: 9px;
           font-weight: 1000;        }
-        .club-hub-card-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(218px, 1fr));
-          gap: 14px;
-          padding-top: 22px;
-        }
-        .club-hub-progressive-controls {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 14px;
-          margin-top: 18px;
-          border-top: 1px solid rgba(255,255,255,.1);
-          padding-top: 18px;
-        }
-        .club-hub-progressive-controls span {
-          color: rgba(255,255,255,.62);
-          font-size: 11px;
-          font-weight: 850;
-        }
-        .club-hub-progressive-controls button {
-          min-height: 44px;
-          border: 1px solid rgba(181,255,75,.48);
-          border-radius: 999px;
-          padding: 0 18px;
-          color: #efffbd;
-          background: rgba(181,255,75,.1);
-          font: inherit;
-          font-size: 10px;
-          font-weight: 950;
-          cursor: pointer;
-        }
-        .club-hub-progressive-controls button:hover,
-        .club-hub-progressive-controls button:focus-visible {
-          border-color: #c5ff6d;
-          background: rgba(181,255,75,.2);
-          outline: none;
-        }
-        .club-hub-card {
-          position: relative;
-          min-height: 360px;
-          border: 1px solid rgba(255,255,255,.12);
-          border-radius: 8px;
-          padding: 14px;
-          display: grid;
-          align-content: start;
-          justify-items: center;
-          background: linear-gradient(150deg, rgba(255,255,255,.08), rgba(0,0,0,.3));
-          overflow: visible;
-        }
-        .club-hub-card::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--club-accent) 22%, transparent), transparent 36%);
-          border-radius: inherit;
-          pointer-events: none;
-        }
-        .club-hub-rank {
-          position: absolute;
-          top: 12px;
-          left: 12px;
-          z-index: 2;
-          border: 1px solid rgba(177,255,77,.35);
-          border-radius: 999px;
-          padding: 6px 10px;
-          color: #dfff9b;
-          background: rgba(0,0,0,.44);
-          font-size: 11px;
-          font-weight: 950;
-        }
-        .club-hub-rendered-card {
-          width: min(100%, 180px) !important;
-          --touchline-card-static-scale: .4186046512;
-          position: relative;
-          z-index: 1;
-        }
-        .club-hub-card-meta {
-          position: relative;
-          z-index: 1;
-          width: 100%;
-          display: grid;
-          justify-items: center;
-          gap: 6px;
-          margin-top: 10px;
-          text-align: center;
-        }
-        .club-hub-card-meta a {
-          display: inline-flex;
-          min-height: 44px;
-          align-items: center;
-          justify-content: center;
-          padding-inline: 12px;
-          color: #dfff9b;
-          text-decoration: none;
-          font-size: 10px;
-          font-weight: 950;
-          letter-spacing: .1em;
-          text-transform: uppercase;
-        }
-        .club-hub-card-meta a:hover,
-        .club-hub-card-meta a:focus-visible {
-          color: #dfff9b;
-          outline: 0;
-          text-shadow: 0 0 14px rgba(163,255,18,.42);
-        }
-        .club-hub-card-meta small {
-          display: block;
-          color: rgba(255,255,255,.62);
-          font-weight: 800;
-          font-size: 11px;
-          line-height: 1.35;
-        }
         .club-hub-feature-list {
           display: grid;
           gap: 10px;
@@ -2144,19 +2034,6 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           }
           .club-hub-section-head { gap: 15px; }
           .club-hub-section-head strong { font-size: 30px; }
-          .club-hub-card-grid {
-            grid-template-columns: 1fr;
-            gap: 12px;
-          }
-          .club-hub-progressive-controls {
-            align-items: stretch;
-            flex-direction: column;
-          }
-          .club-hub-rendered-card {
-            width: min(100%, 190px) !important;
-            --touchline-card-static-scale: .4418604651;
-          }
-          .club-hub-card-meta a { min-height: 44px; }
           .club-hub-footer { align-items: flex-start; flex-direction: column; gap: 6px; font-size: 10px; }
           .club-hub-fixture-row { gap: 8px; }
           .club-hub-fixture-row img { height: 72px; }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthAmbientAudio } from "@/components/auth-ambient-audio";
 import {
   Activity,
   BarChart3,
@@ -185,6 +186,7 @@ export default function TouchlineGlobalNavigation({
           ))}
         </div>
       </details>
+      <AuthAmbientAudio locale={effectiveLocale} className={styles.audioControl} buttonClassName={styles.link} />
     </nav>
   );
 }

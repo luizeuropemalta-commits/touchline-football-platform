@@ -1,4 +1,5 @@
 import type { TouchlineFantasyLineupMember } from "./types.ts";
+import { projectSeasonStatisticRatios } from "./season-statistic-ratios.ts";
 import type { TouchLinePlayerSeasonStatistics } from "../touchlineArena/player-season-statistics.ts";
 import { emptyTouchLinePlayerSeasonStatistics } from "../touchlineArena/player-season-statistics.ts";
 import {
@@ -139,7 +140,7 @@ export function buildTouchLinePlayerSeasonAggregate(input: {
           : [];
       }),
   );
-  const positionStatistics = { ...providerPositionStatistics, ...scoringStatistics };
+  const positionStatistics = projectSeasonStatisticRatios({ ...providerPositionStatistics, ...scoringStatistics });
 
   return {
     coverageStatus: complete

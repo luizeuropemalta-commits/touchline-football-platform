@@ -10,6 +10,14 @@ import {
 const ACTIVE_RANKING_URL = "/api/touchline-arena/card-ranking/active";
 
 let currentState: TouchlineActiveRankingState = TOUCHLINE_PRESEASON_RANKING_STATE;
+export type TouchlineRankingRead = Readonly<{ state: TouchlineActiveRankingState; revision: number; requestEpoch: number }>;
+let requestEpoch = 0;
+export const getTouchlineRankingRequestEpoch = () => requestEpoch;
+const NO_COMPLETED_READ: TouchlineRankingRead | null = null;
+let completedRead: TouchlineRankingRead | null = null;
+export const getTouchlineRankingReadRevision = () => completedRead?.revision ?? 0;
+const getCompletedRead = () => completedRead;
+const getNoCompletedRead = () => NO_COMPLETED_READ;
 let activeRequest: Promise<void> | null = null;
 let refreshTimer: number | null = null;
 const listeners = new Set<() => void>();
@@ -23,6 +31,7 @@ function emitChange() {
 
 function loadActiveRanking() {
   if (activeRequest || typeof window === "undefined") return;
+  const startedEpoch = ++requestEpoch;
 
   const controller = new AbortController();
   const deadline = window.setTimeout(() => controller.abort(), 8_000);
@@ -32,6 +41,7 @@ function loadActiveRanking() {
       const nextState = parseTouchlineActiveRankingState(await response.json());
       if (!nextState) return;
       currentState = nextState;
+      completedRead = { state: nextState, revision: (completedRead?.revision ?? 0) + 1, requestEpoch: startedEpoch };
       emitChange();
     })
     .catch(() => undefined)
@@ -62,4 +72,10 @@ export function useTouchlineActiveRanking(subscribeToUpdates = true) {
     subscribeToUpdates ? getActiveRankingSnapshot : getPreseasonRankingSnapshot,
     getPreseasonRankingSnapshot,
   );
+}
+
+/** Null means no completed valid response, not an authoritative withdrawal. */
+export function useTouchlineRankingRead(enabled: boolean) {
+  return useSyncExternalStore(enabled ? subscribe : subscribeWithoutUpdates,
+    enabled ? getCompletedRead : getNoCompletedRead, getNoCompletedRead);
 }

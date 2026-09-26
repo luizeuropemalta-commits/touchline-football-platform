@@ -27,10 +27,21 @@ test("every card surface resolves one canonical color for all seven tiers", () =
 
 test("all seven tier names have one official English and Portuguese identity", () => {
   assert.equal(Object.keys(TOUCHLINE_CARD_TIER_NAMES).length, 7);
-  assert.equal(touchlineCardTierName("ruby-red", "en"), "Ruby Red");
+  assert.equal(touchlineCardTierName("ruby-red", "en"), "Red Ruby");
   assert.equal(touchlineCardTierName("ruby-red", "pt-BR"), "Rubi Vermelho");
-  assert.equal(touchlineCardTierName("diamond-gold", "en"), "Diamond Gold");
+  assert.equal(touchlineCardTierName("diamond-gold", "en"), "Golden Diamond");
   assert.equal(touchlineCardTierName("diamond-gold", "pt-BR"), "Diamante Dourado");
+});
+
+test("British English tier labels consistently name the gemstone, without changing tier identities", () => {
+  assert.deepEqual(TOUCHLINE_CARD_TIER_KEYS.map((tier) => touchlineCardTierName(tier, "en-GB")), [
+    "Red Ruby", "Blue Sapphire", "Purple Amethyst", "Radiant Gold",
+    "Green Emerald", "Clear Diamond", "Golden Diamond",
+  ]);
+  assert.deepEqual(TOUCHLINE_CARD_TIER_KEYS.map((tier) => touchlineCardTierName(tier, "pt-BR")), [
+    "Rubi Vermelho", "Safira Azul", "Ametista Roxa", "Ouro Radiante",
+    "Esmeralda Verde", "Diamante Cristalino", "Diamante Dourado",
+  ]);
 });
 
 test("player card color and price preserve the authoritative market-value tier", () => {

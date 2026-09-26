@@ -145,11 +145,11 @@ const initialTable = resolveTouchlineOfficialLeagueTable({
 });
 
 type VisualQaPageProps = Readonly<{
-  searchParams: Promise<Readonly<{ state?: string; viewport?: string; lang?: string }>>;
+  searchParams: Promise<Readonly<{ state?: string; viewport?: string; lang?: string; roster?: string }>>;
 }>;
 
 export default async function ClubHubProfileContractVisualQaPage({ searchParams }: VisualQaPageProps) {
-  const { state, viewport, lang } = await searchParams;
+  const { state, viewport, lang, roster } = await searchParams;
   const pending = state === "pending";
   const presentation = buildTouchLineClubMatchdayPresentation({
     club: staticClub,
@@ -195,6 +195,16 @@ export default async function ClubHubProfileContractVisualQaPage({ searchParams 
     };
   const displayed = new Set(presentation.displayedPlayerIds);
   const outsideMatchdayCards = staticCards.filter((card) => !displayed.has(card.id));
+  // Opt-in pagination stress case: synthetic fixtures only, never live squad data.
+  if (roster === "expanded") {
+    outsideMatchdayCards.push(...Array.from({ length: 18 }, (_, index) => ({
+      ...staticCards[20],
+      id: `static-pagination-${index + 1}`,
+      name: `Pagination Fixture Player ${index + 1}`,
+      shortName: `Fixture ${index + 1}`,
+      shirtNumber: index + 40,
+    })));
+  }
   const mobile = viewport === "mobile";
 
   return (

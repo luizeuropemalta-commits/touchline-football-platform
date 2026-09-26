@@ -20,6 +20,13 @@ const formSource = fs.readFileSync(new URL("../components/auth-form.tsx", import
 const layoutSource = fs.readFileSync(new URL("../components/auth-layout.tsx", import.meta.url), "utf8");
 const languageSwitcherSource = fs.readFileSync(new URL("../components/auth-language-switcher.tsx", import.meta.url), "utf8");
 const globalStylesSource = fs.readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+
+test("auth branding scrolls with its content instead of overlapping the form and introduction", () => {
+  const headerRule = globalStylesSource.match(/\.auth-brand-header\s*\{([^}]+)\}/)?.[1];
+  assert.ok(headerRule);
+  assert.match(headerRule, /position:\s*relative\s*;/);
+  assert.doesNotMatch(headerRule, /position:\s*(?:sticky|fixed)|\btop\s*:/);
+});
 const adminEntrySources = [
   ["../app/(app)/admin/page.tsx", "/admin"],
   ["../app/(app)/admin/cards/page.tsx", "/admin/cards"],
@@ -106,7 +113,7 @@ test("form links and authentication callbacks retain the selected language", () 
   assert.match(formSource, /resolveTouchLineAuthOrigin/);
   assert.match(formSource, /NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN/);
   assert.doesNotMatch(formSource, /touchline-football-platform/);
-  assert.match(layoutSource, /const publicArenaHref = touchLineAuthHref\("\/touchline-clubs", normalizedLocale\)/);
+  assert.match(layoutSource, /const publicArenaHref = touchLineAuthHref\("\/arena", normalizedLocale\)/);
   assert.match(layoutSource, /<Logo href=\{publicArenaHref\}/);
   assert.match(layoutSource, /<Link href=\{publicArenaHref\}/);
   assert.match(layoutSource, /<AuthLanguageSwitcher locale=\{normalizedLocale\}/);

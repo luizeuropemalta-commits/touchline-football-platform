@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
 import { parseTouchlineDeviceRegistration } from "@/lib/touchlineArena/push-device-contract";
+import { parseNotificationQuietHours } from "@/lib/touchlineArena/notification-quiet-hours";
 import { hasTouchlineServerPushConfiguration, resolveTouchlinePushPreference } from "@/lib/touchlineArena/push-preference-contract";
 
 const DEFAULT_NOTIFICATION_SETTINGS = {
@@ -121,24 +122,36 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  if (request.headers.get("origin") !== new URL(request.url).origin
+    || request.headers.get("sec-fetch-site") === "cross-site") {
+    return NextResponse.json({ ok: false, error: "Invalid request origin." }, { status: 403 });
+  }
+
   const { supabase, user } = await currentUser();
   if (!supabase || !user) return NextResponse.json({ ok: false, error: "Authentication required." }, { status: 401 });
 
-  const payload = await request.json().catch(() => ({}));
+  const payload = await request.json().catch(() => null);
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return NextResponse.json({ ok: false, error: "Invalid preferences." }, { status: 400 });
+  }
   const settings = normalizeSettings(payload.settings);
   const channels = normalizeChannels(payload.channels);
-  const quietHours = normalizeQuietHours(payload.quietHours);
+  const quietHours = parseNotificationQuietHours(payload.quietHours);
+  if (!quietHours) {
+    return NextResponse.json({ ok: false, error: "Invalid quiet hours. Use HH:mm and a valid time zone." }, { status: 400 });
+  }
   const frequency = FREQUENCIES.has(payload.frequency) ? payload.frequency : "realtime";
-  const hasConsent = Boolean(payload.explicitConsent);
+  const hasConsent = payload.explicitConsent === true;
 
   // Preferences are user-controlled, but remote delivery capability is
   // server-owned. Do not allow a direct authenticated PUT to claim that push
   // is active unless VAPID is complete and a real device registration exists.
   const pushRequested = channels.push;
-  const hasRegisteredDevice = pushRequested
+  const hasRegisteredDevice = pushRequested && hasConsent
     ? await userHasRegisteredPushDevice(supabase, user.id)
     : false;
   channels.push = resolveTouchlinePushPreference({
+    explicitConsent: hasConsent,
     requested: pushRequested,
     serverConfigured: hasTouchlineServerPushConfiguration(),
     hasRegisteredDevice,

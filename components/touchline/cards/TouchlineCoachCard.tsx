@@ -5,6 +5,8 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { TouchlineCoach } from "@/lib/football-data/types";
+import { useTouchlineCardLeadershipAuthority } from "./TouchlineCardLeadershipProvider";
+import { inheritedCoachCrown } from "@/lib/touchlineArena/card-leadership-authority";
 import { touchlineCoachCardArtForTier, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { touchlineArenaTierForKey, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
@@ -122,10 +124,12 @@ export default function TouchlineCoachCard({
   frameDecoding,
   frameFetchPriority,
   fixtureContext = null,
-  showLeadershipCrown = false,
+  showLeadershipCrown: explicitLeadershipCrown,
   publishedTouchlinePoints = null,
   discipline = null,
 }: TouchlineCoachCardProps) {
+  const leadershipAuthority = useTouchlineCardLeadershipAuthority();
+  const showLeadershipCrown = inheritedCoachCrown({ authority: leadershipAuthority, coachProviderId: coach?.providerId, explicit: explicitLeadershipCrown, editable, publishedTouchlinePoints });
   const [storedLayout, setStoredLayout] = useState<TouchlineCoachCardLayout>(TOUCHLINE_COACH_CARD_DEFAULT_LAYOUT);
   const [isNeonActive, setIsNeonActive] = useState(false);
   const [isFrameReady, setIsFrameReady] = useState(false);

@@ -16,7 +16,7 @@ function row(route: string) {
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 81);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 79);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 83);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -42,6 +42,20 @@ test("social studio and live-art routes have explicit owner policies without pub
     assert.equal(row(route).status, "LOCAL_ONLY");
     assert.notEqual(row(route).data, "STATIC_VISUAL_QA_FIXTURE");
   }
+});
+
+test("social and fixture interest policies retain pending schema and device gates", () => {
+  const fixture = "/api/notifications/fixtures/[fixtureId]";
+  const social = "/api/touchline/players/[playerId]/social";
+  assert.equal(row(`GET ${fixture}`).auth, "AUTHENTICATED_ARENA_ACCESS");
+  assert.equal(row(`GET ${social}`).auth, "PUBLIC_OPTIONAL_SESSION");
+  for (const route of [fixture, social]) {
+    assert.equal(row(`PUT ${route}`).auth, "AUTHENTICATED_ARENA_ACCESS_SAME_ORIGIN");
+    assert.equal(row(`PUT ${route}`).role, "ARENA_USER");
+    assert.match(row(`PUT ${route}`).status, /^PENDING_SCHEMA/);
+    assert.match(row(`GET ${route}`).data, /^FLAG_GATED_/);
+  }
+  assert.match(row(`PUT ${fixture}`).data, /NO_DELIVERY$/);
 });
 
 test("records no Server Actions instead of assuming an uninspected mutation surface", () => {

@@ -155,8 +155,10 @@ test("ClubHub gives the reusable club hero premium motion without sacrificing na
 });
 
 test("ClubHub partitions the displayed XI, official bench, and a compact linked outside-match roster", () => {
-  assert.match(page, /const displayedMatchdayPlayerIds = new Set\(matchdayPresentation\.displayedPlayerIds\.map\(String\)\)/);
-  assert.match(page, /const outsideMatchdayCards = clubCards\.filter\(\(card\) => !displayedMatchdayPlayerIds\.has\(String\(card\.id\)\)\)/);
+  assert.match(page, /const outsideMatchdayCards = \[\.\.\.matchdayPresentation\.remainingSquad\.cards\]/);
+  assert.match(page, /selectionState=\{presentation\.matchdayPresentation\.remainingSquad\.state\}/);
+  assert.match(outsideRoster, /selectionState = "unconfirmed"/);
+  assert.doesNotMatch(outsideRoster, /"Elenco fora da partida"/);
   assert.match(page, /<ClubHubOutsideMatchRoster[\s\S]*?cards=\{outsideMatchdayCards\}/);
   assert.match(outsideRoster, /<ClubHubSquadGrid[\s\S]*?cards=\{\[\.\.\.cards\]\}/);
   assert.match(outsideRoster, /Premium compact roster/);

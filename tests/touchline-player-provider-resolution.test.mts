@@ -69,7 +69,7 @@ describe("TouchLine official player resolution", () => {
     assert.equal(resolved?.providerId, "100");
   });
 
-  it("falls back to one exact name when a stale id points to another player", async () => {
+  it("does not replace the numeric identity with another athlete named in the URL", async () => {
     const resolved = await resolveTouchLineProviderPlayer(
       provider({
         byId: player("999", "Different Player"),
@@ -77,7 +77,31 @@ describe("TouchLine official player resolution", () => {
       }),
       { name: "Erling Haaland", candidateId: "999" },
     );
-    assert.equal(resolved?.providerId, "100");
+    assert.equal(resolved?.providerId, "999");
+  });
+
+  it("accepts official spelling changes without searching for another identity", async () => {
+    const resolved = await resolveTouchLineProviderPlayer({
+      async getPlayerById(id) { assert.equal(id, "100"); return ok(player("100", "Pascal Groß")); },
+      async searchPlayers() { assert.fail("numeric identity must not fall back to a name search"); },
+    }, { candidateId: "100", name: "PASCAL GROSS" });
+    assert.equal(resolved?.displayName, "Pascal Groß");
+  });
+
+  it("rejects a mismatched provider response even when the name matches", async () => {
+    const resolved = await resolveTouchLineProviderPlayer({
+      async getPlayerById() { return ok(player("200", "Alex Smith")); },
+      async searchPlayers() { assert.fail("identity mismatch must remain unavailable"); },
+    }, { candidateId: "100", name: "Alex Smith" });
+    assert.equal(resolved, null);
+  });
+
+  it("does not substitute name search results when the requested identity is missing", async () => {
+    const resolved = await resolveTouchLineProviderPlayer({
+      async getPlayerById() { return ok(null); },
+      async searchPlayers() { assert.fail("missing identity must remain unavailable"); },
+    }, { candidateId: "100", name: "Alex Smith" });
+    assert.equal(resolved, null);
   });
 
   it("does not guess when an exact name is ambiguous", async () => {

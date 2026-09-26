@@ -52,8 +52,7 @@ test("Club trophies remain manually operable without autoplay when reduced motio
 });
 
 test("ClubHub mobile profile controls retain a 44px target", () => {
-  const page = source("app/touchline-clubs/[club]/page.tsx");
-  const mobileStyles = page.slice(page.indexOf("@media (max-width: 720px)"));
-
-  assert.match(mobileStyles, /\.club-hub-card-meta a \{[\s\S]*?min-height: 44px/);
+  const styles = source("components/touchline/ClubHubSquadGrid.module.css");
+  assert.match(styles, /\.meta a \{[\s\S]*?min-height: 44px/);
+  assert.doesNotMatch(styles.slice(styles.indexOf("@media")), /min-height:\s*(?:[0-3]?\d|4[0-3])px/);
 });

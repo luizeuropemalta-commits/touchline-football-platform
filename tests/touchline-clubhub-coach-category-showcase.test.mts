@@ -46,7 +46,8 @@ test("the public ClubHub keeps language selection at the top and player borders 
   assert.match(page, /href="\/touchline-clubs\?lang=en-GB"/);
   assert.match(page, /href="\/touchline-clubs\?lang=pt-BR"/);
   assert.match(page, /loadTouchlinePublishedCardShowcaseCatalog\(\)/);
-  assert.match(page, /<TouchlineCoachCategoryShowcase locale=\{locale\} playerCards=\{publishedPlayerCards\} \/>/);
+  assert.match(page, /loadTouchLineCoachRanking\(\)/);
+  assert.match(page, /<TouchlineCoachCategoryShowcase locale=\{locale\} playerCards=\{publishedPlayerCards\} coachRanking=\{coachRanking\} \/>/);
   assert.doesNotMatch(page, /TouchlineOfficialLeagueTable|loadTouchlineOfficialLeagueTable|official-league-table/);
 
   const playerSection = component.indexOf("touchline-player-border-title");

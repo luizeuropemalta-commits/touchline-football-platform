@@ -28,9 +28,13 @@ export async function resolveTouchLineProviderPlayer(
 
   if (candidateId) {
     const result = await provider.getPlayerById(candidateId);
-    if (result.ok && result.data && playerMatchesName(result.data, input.name)) {
-      return result.data;
-    }
+    // A profile's numeric identity must also own its biography and career.
+    // Query names can be stale, transliterated or deliberately misleading;
+    // never resolve a different athlete by name after an ID lookup.
+    return result.ok && result.data
+      && normalizeTouchLineProviderPlayerId(result.data.providerId) === candidateId
+      ? result.data
+      : null;
   }
 
   const result = await provider.searchPlayers({ query: input.name, limit: 10 });

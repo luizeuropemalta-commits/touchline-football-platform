@@ -46,7 +46,7 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /scrollIntoView\(\{ behavior: "smooth", block: "start" \}\)/);
   // The requested non-overlap rule now sizes the artwork from actual pitch
   // dimensions. Geometry/label envelopes are exercised in market-browser tests.
-  assert.match(embedded, /width: Math\.max\(64, pitchCardWidth\)/);
+  assert.match(embedded, /width: Math\.max\(44, pitchCardWidth\)/);
   assert.match(embedded, /"--touchline-card-static-scale": pitchCardWidth \/ 430/);
   assert.match(embedded, /className=\{styles\.myClubTacticalSlot\}/);
   assert.match(embedded, /data-pitch-edge=\{slot\.x >= 75 \? "end" : undefined\}/);

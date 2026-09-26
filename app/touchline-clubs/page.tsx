@@ -4,6 +4,8 @@ import { Check, ChevronDown, Languages } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineCoachCategoryShowcase from "@/components/touchline/TouchlineCoachCategoryShowcase";
+import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
+import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
 import ClubHubCrestTrace from "@/components/touchline/ClubHubCrestTrace";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import ClubHubCardLink from "@/components/touchline/ClubHubCardLink";
@@ -55,10 +57,13 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
   const locale = normalizeTouchLineLocale(params.lang);
   const dictionary = locale === "pt-BR" ? copy["pt-BR"] : copy["en-GB"];
   const localeQuery = languageQuery(locale);
-  const publishedPlayerCards = await loadTouchlinePublishedCardShowcaseCatalog();
+  const [publishedPlayerCards, coachRanking] = await Promise.all([
+    loadTouchlinePublishedCardShowcaseCatalog(), loadTouchLineCoachRanking(),
+  ]);
 
   return (
     <main className={styles.shell}>
+      <TouchlineLivePresentationRefresh initialCoachRankingSnapshotId={coachRanking.snapshotId} />
       <div className={styles.topbar}>
         <TouchlineGlobalNavigation
           locale={locale}
@@ -123,7 +128,7 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
         ))}
       </section>
 
-      <TouchlineCoachCategoryShowcase locale={locale} playerCards={publishedPlayerCards} />
+      <TouchlineCoachCategoryShowcase locale={locale} playerCards={publishedPlayerCards} coachRanking={coachRanking} />
 
       <footer className={styles.footer}>
         <span>{dictionary.clubs}</span>

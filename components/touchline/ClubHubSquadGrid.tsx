@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
+import styles from "./ClubHubSquadGrid.module.css";
 
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
@@ -23,19 +25,10 @@ import type { TouchLineLocale } from "@/lib/touchlineArena/i18n";
 import { TOUCHLINE_NEUTRAL_CARD_ACCENT } from "@/lib/touchlineArena/public-card-presentation";
 import { evaluateTouchlineCardCompleteness } from "@/lib/touchlineArena/card-review-state";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
+import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
 
 const INITIAL_CARD_COUNT = 8;
 const CARD_BATCH_SIZE = 8;
-
-function localizedPosition(value: string, pt: boolean) {
-  if (!pt) return value;
-  const normalized = value.trim().toLowerCase();
-  if (normalized.includes("goalkeeper") || normalized === "gk") return "Goleiro";
-  if (normalized.includes("defender") || ["cb", "lb", "rb", "df"].includes(normalized)) return "Defensor";
-  if (normalized.includes("midfielder") || ["cm", "dm", "am", "mf"].includes(normalized)) return "Meio-campista";
-  if (normalized.includes("attacker") || normalized.includes("forward") || ["st", "cf", "lw", "rw", "fw"].includes(normalized)) return "Atacante";
-  return value;
-}
 
 type ClubHubSquadGridProps = {
   cards: ClubOwnerSquadCard[];
@@ -71,7 +64,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
 
   return (
     <>
-      <div className={["club-hub-card-grid", className].filter(Boolean).join(" ")} aria-live="polite">
+      <div className={["club-hub-card-grid", styles.grid, className].filter(Boolean).join(" ")} aria-live="polite">
         {visibleCards.map((card, index) => {
           const cardReview = card.cardReview ?? evaluateTouchlineCardCompleteness({
             displayName: card.name,
@@ -97,8 +90,14 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
           }, locale);
 
           return (
-            <article key={card.id} className="club-hub-card">
-              <span className="club-hub-rank">#{index + 1}</span>
+            <article
+              key={card.id}
+              className={`club-hub-card ${styles.frame}`}
+              style={{ "--tier-accent": tierAccent } as CSSProperties}
+              data-squad-tier-frame={tierKey ?? "unresolved"}
+            >
+              <TouchlineClubPerimeterTrace accent={tierKey ? tierAccent : undefined} />
+              <span className={`club-hub-rank ${styles.rank}`}>#{index + 1}</span>
               <TouchlineCardZoom
                 ariaLabel={`${pt ? "Ampliar card de" : "Expand card for"} ${card.name}`}
                 contractHref={undefined}
@@ -151,11 +150,11 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                 )}
               >
                 <TouchlineEliteExactCard
-                  className="club-hub-rendered-card"
+                  className={`club-hub-rendered-card ${styles.artwork}`}
                   player={exactPlayer}
                   labels={labels}
                   imageLoading="lazy"
-                  staticRenderScale={cardRenderScale}
+                  initialRenderScale={cardRenderScale}
                   layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
                   playerProfileHref={profileHref}
                   showProfileAction={false}
@@ -163,16 +162,16 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                     showMatchRating
                 />
               </TouchlineCardZoom>
-              <div className="club-hub-card-meta">
+              <div className={`club-hub-card-meta ${styles.meta}`}>
                 <a href={profileHref} aria-label={`${openProfileLabel}: ${card.name}`}>{openProfileLabel}</a>
-                <small>{localizedPosition(card.position, pt)}</small>
+                <small>{localizedPositionLabel(card.position, locale)}</small>
               </div>
             </article>
           );
         })}
       </div>
 
-      <div className="club-hub-progressive-controls">
+      <div className={`club-hub-progressive-controls ${styles.controls}`}>
         <span>{pt ? `${visibleCards.length} de ${cards.length} jogadores exibidos` : `${visibleCards.length} of ${cards.length} players shown`}</span>
         {hasMore ? (
           <button type="button" onClick={() => setVisibleCount((current) => Math.min(cards.length, current + CARD_BATCH_SIZE))}>

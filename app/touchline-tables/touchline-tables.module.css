@@ -150,7 +150,8 @@
   position: relative;
   isolation: isolate;
   width: 100%;
-  aspect-ratio: 1575 / 1000;
+  /* Match the shared pitch geometry; fit the XI without stretching the field. */
+  aspect-ratio: 105 / 68;
   margin-inline: auto;
   border: 1px solid rgba(255, 255, 255, .13);
   box-shadow: inset 0 0 55px rgba(0, 0, 0, .28), 0 20px 50px rgba(0, 0, 0, .3);
@@ -158,22 +159,23 @@
 
 .pitchPlayer {
   position: absolute;
-  z-index: 2;
+  /* Above premium field markings and lighting, including at rest. */
+  z-index: 7;
   display: grid;
   justify-items: center;
   /* The public Best XI is a dense 4-3-3.  This compact envelope leaves the
      documented row clearance intact instead of allowing real cards to touch. */
-  width: clamp(44px, 4.5vw, 64px);
+  width: min(64px, 5.5%);
   transform: translate(-50%, -50%);
 }
 
-.pitchPlayer:hover { z-index: 5; }
+.pitchPlayer:hover { z-index: 8; }
 
 .positionLabel {
   position: absolute;
   z-index: 4;
-  top: 1px;
-  left: 50%;
+  top: 0;
+  right: calc(100% + 4px);
   min-width: 31px;
   padding: 3px 7px;
   border: 1px solid rgba(184, 255, 70, .48);
@@ -185,7 +187,6 @@
   font-weight: 950;
   letter-spacing: .07em;
   text-align: center;
-  transform: translate(-50%, -50%);
 }
 
 .cardButton { display: block; width: 100%; padding: 0; border: 0; color: inherit; background: transparent; cursor: zoom-in; transition: filter 170ms ease, transform 170ms ease; }
@@ -206,7 +207,7 @@
   align-items: center;
   gap: 4px;
   max-width: 112px;
-  margin-top: -2px;
+  margin-top: 2px;
   padding: 3px 6px;
   border: 1px solid rgba(255, 255, 255, .12);
   border-radius: 7px;
@@ -223,7 +224,14 @@
 
 .topCoachPanel,
 .coachRankingPanel { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
-.topCoachPanel::before,
+.topCoachPanel {
+  --touchline-perimeter-radius: 26px;
+  align-self: start;
+  grid-template-rows: auto auto;
+  border-color: color-mix(in srgb, var(--tier-accent, #9eaaa5) 48%, transparent);
+  background: radial-gradient(circle at 50% 4%, color-mix(in srgb, var(--tier-accent, #9eaaa5) 15%, transparent), transparent 55%), linear-gradient(145deg, rgba(7, 27, 20, .96), rgba(2, 12, 11, .96));
+}
+.topCoachPanel::before { content: none; }
 .coachRankingPanel::before { position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, transparent, var(--gold), var(--lime), transparent); content: ""; }
 .topCoachPanel > header,
 .coachRankingPanel > header { padding: 26px 24px 18px; border-bottom: 1px solid rgba(255, 255, 255, .1); background: linear-gradient(135deg, rgba(243, 216, 107, .08), transparent 60%); }
@@ -239,18 +247,17 @@
 .topCoachBody {
   position: relative;
   display: grid;
-  align-content: center;
+  align-content: start;
   justify-items: center;
   min-height: 0;
   padding: clamp(16px, 2.2vw, 26px);
-  background: radial-gradient(circle at 50% 35%, rgba(243, 216, 107, .12), transparent 45%);
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--tier-accent, #9eaaa5) 12%, transparent), transparent 45%);
 }
 
-/* A leader crown sits above the official card without touching its frame.
-   Reserve that space inside this panel so its transparent pixels can never
-   be cropped by the panel's overflow boundary. */
-.topCoachCardLink { display: block; width: min(245px, 82%); margin-top: clamp(74px, 5vw, 96px); color: inherit; transition: filter 180ms ease, transform 180ms ease; }
-.topCoachCardLink:hover { filter: drop-shadow(0 18px 24px rgba(243, 216, 107, .2)); transform: translateY(-4px) scale(1.025); }
+/* The canonical coach card already reserves its complete crown envelope.
+   Body padding supplies clearance from the header; do not reserve it twice. */
+.topCoachCardLink { display: block; width: min(245px, 82%); margin-top: 0; color: inherit; transition: filter 180ms ease, transform 180ms ease; }
+.topCoachCardLink:hover { filter: drop-shadow(0 18px 24px color-mix(in srgb, var(--tier-accent, #9eaaa5) 20%, transparent)); transform: translateY(-4px) scale(1.025); }
 .topCoachCardLink:focus-visible { border-radius: 18px; outline: 2px solid var(--gold); outline-offset: 5px; }
 .topCoachCard { width: 100% !important; max-width: none !important; }
 .topCoachIdentity { display: grid; justify-items: center; gap: 4px; margin-top: -4px; text-align: center; }
@@ -276,20 +283,32 @@
   list-style: none;
 }
 .playerPodium li {
+  --touchline-perimeter-radius: 20px;
   position: relative;
   display: grid;
   justify-items: center;
+  align-content: start;
   min-width: 0;
-  padding: 52px 12px 14px;
+  padding: 24px 12px 14px;
   overflow: visible;
-  border: 1px solid rgba(255, 255, 255, .1);
+  border: 1px solid color-mix(in srgb, var(--tier-accent, #83918b) 45%, rgba(255, 255, 255, .16));
   border-radius: 20px;
-  background: linear-gradient(155deg, rgba(255, 255, 255, .045), rgba(0, 8, 7, .62));
+  background:
+    radial-gradient(circle at 50% 4%, color-mix(in srgb, var(--tier-accent, #83918b) 18%, transparent), transparent 42%),
+    linear-gradient(160deg, rgba(7, 16, 13, .96), rgba(1, 4, 4, .9));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .05), 0 14px 32px rgba(0, 0, 0, .24);
 }
-.playerPodium li:first-child { border-color: rgba(243, 216, 107, .42); background: radial-gradient(circle at 50% 24%, rgba(243, 216, 107, .13), transparent 42%), rgba(0, 8, 7, .72); box-shadow: inset 0 2px var(--gold); }
 .podiumRank { position: absolute; z-index: 2; top: 12px; left: 12px; color: rgba(245, 248, 245, .42); font-size: 11px; font-weight: 950; letter-spacing: .12em; }
 .playerPodium li:first-child .podiumRank { color: var(--gold); }
-.podiumCard { width: min(150px, 74%); }
+.podiumCard {
+  width: min(150px, 74%);
+  /* Reserve the same crown envelope for all three cards (150px maximum). */
+  padding-top: 44px;
+  box-sizing: content-box;
+}
+.podiumCard :global([data-card-leadership-crown="true"]) {
+  margin-top: 0 !important;
+}
 .podiumIdentity { display: grid; justify-items: center; min-width: 0; gap: 3px; margin-top: -2px; text-align: center; }
 .podiumIdentity strong { max-width: 100%; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .podiumIdentity span { max-width: 100%; overflow: hidden; color: rgba(245, 248, 245, .46); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
@@ -316,7 +335,9 @@
 .ownerTableList li > b { color: rgba(245, 248, 245, .36); font-size: 11px; text-align: center; }
 .coachList li:first-child > b { color: var(--gold); }
 
-.coachMonogram,
+.coachRankGem { display: grid; width: 38px; height: 44px; place-items: center; }
+.coachRankGem img { display: block; width: 100%; height: 100%; object-fit: contain; transform: scale(.85); }
+.coachList .pointsValue { margin-inline-end: 10px; }
 .ownerAvatar { display: grid; width: 38px; height: 38px; place-items: center; overflow: hidden; border: 1px solid rgba(255, 255, 255, .12); border-radius: 50%; color: #eaffca; background: radial-gradient(circle at 35% 25%, rgba(184, 255, 70, .18), rgba(255, 255, 255, .035)); font-size: 9px; font-weight: 950; }
 .ownerAvatar img { width: 100%; height: 100%; object-fit: contain; }
 .rowIdentity { display: grid; min-width: 0; gap: 3px; }
@@ -352,7 +373,7 @@
 @media (max-width: 1160px) {
   .hero { grid-template-columns: 1fr; }
   .summary { max-width: 800px; }
-  .rankStage { grid-template-columns: minmax(0, 1fr) minmax(270px, 34%); }
+  .rankStage { grid-template-columns: minmax(0, 1fr); }
   .topCoachCardLink { width: min(210px, 80%); }
   .rankingHighlights { grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); }
 }
@@ -361,11 +382,10 @@
   .page { padding-inline: 10px; }
   .hero { padding: 24px 20px; }
   .hero h1 { font-size: clamp(40px, 8vw, 58px); }
-  .rankStage { gap: 10px; grid-template-columns: minmax(0, 1fr) minmax(235px, 34%); }
+  .rankStage { gap: 10px; grid-template-columns: minmax(0, 1fr); }
   .bestXiPanel { padding: 14px; }
   .sectionHeading { align-items: flex-start; flex-direction: column; gap: 8px; margin-bottom: 12px; }
   .sectionHeading > span { text-align: left; }
-  .pitchPlayer { width: clamp(38px, 6.5vw, 56px); }
   .pitchIdentity { max-width: 78px; padding-inline: 4px; font-size: 6px; }
   .pitchIdentity strong { max-width: 48px; }
   .topCoachPanel > header,
@@ -374,11 +394,11 @@
   .coachRankingPanel h2 { font-size: 22px; }
   .topCoachBody { padding: 12px; }
   .topCoachCardLink { width: min(170px, 74%); }
-  .rankingHighlights { gap: 10px; grid-template-columns: minmax(0, 1.18fr) minmax(275px, .82fr); }
+  .rankingHighlights { gap: 10px; grid-template-columns: minmax(0, 1fr); }
   .podiumPanel { padding: 14px; }
   .podiumCard { width: min(104px, 78%); }
   .coachList li { grid-template-columns: 26px 32px minmax(0, 1fr) auto; min-height: 56px; padding-inline: 8px; }
-  .coachMonogram { width: 32px; height: 32px; }
+  .coachRankGem { width: 32px; height: 38px; }
   .rowIdentity strong { font-size: 10px; }
   .rowIdentity span { font-size: 8px; }
   .pointsValue strong { font-size: 14px; }
@@ -393,7 +413,6 @@
   .rankingHighlights { grid-template-columns: 1fr; }
   .playerPodium { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .coachRankingPanel { max-height: 540px; }
-  .pitchPlayer { width: clamp(38px, 10vw, 60px); }
   .clubOwnerTableHeader { grid-template-columns: 44px 1fr 90px; }
   .clubOwnerTableHeader span:nth-child(3) { display: none; }
 }
@@ -412,6 +431,18 @@
   .sectionHeading > span { font-size: 10px; }
   .topCoachCardLink { width: min(160px, 66%); }
   .rankingHighlights { padding-bottom: 14px; }
+}
+
+@media (max-width: 1000px) and (max-height: 520px) and (orientation: landscape) {
+  .topCoachBody {
+    grid-template-columns: minmax(0, 160px) minmax(0, 240px);
+    justify-content: center;
+    align-items: center;
+    gap: clamp(18px, 4vw, 36px);
+  }
+  .topCoachCardLink { width: 100%; }
+  .topCoachIdentity { justify-items: start; margin-top: 0; text-align: left; }
+  .topCoachIdentity strong { overflow-wrap: anywhere; }
 }
 
 @media (prefers-reduced-motion: reduce) {

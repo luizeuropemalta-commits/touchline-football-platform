@@ -29,6 +29,7 @@ import {
   type TouchlineCardStatId,
 } from "@/lib/touchlineArena/position-aware-card-stats";
 import { useTouchlineActiveRanking } from "@/lib/touchlineArena/card-ranking-client";
+import { useTouchlineCardLeadershipAuthority } from "./TouchlineCardLeadershipProvider";
 import { touchlinePlayerCrownEligibility } from "@/lib/touchlineArena/card-ranking-live";
 import {
   resolveTouchlineCardTierComponentCalibration,
@@ -773,7 +774,9 @@ export function TouchlineEliteExactCard({
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isNeonActive, setIsNeonActive] = useState(false);
-  const activeRanking = useTouchlineActiveRanking(subscribeToRanking);
+  const leadershipAuthority = useTouchlineCardLeadershipAuthority();
+  const fallbackRanking = useTouchlineActiveRanking(!leadershipAuthority && subscribeToRanking);
+  const activeRanking = isEditable ? null : leadershipAuthority ? leadershipAuthority.playerRanking : fallbackRanking;
   const neonInstanceId = useId();
   const didSkipInitialLayoutWriteRef = useRef(false);
   const baseFollowerCount = canonicalSocialCount(followerCount);
@@ -956,6 +959,10 @@ export function TouchlineEliteExactCard({
     playerId: player.canonicalPlayerId,
   });
   const playerLeaderCrownStyle = touchlinePlayerLeaderCrownStyle(scale);
+  // Static canvases may be resized by the zoom host without updating React's
+  // initial scale. The sibling crown must consume that same live CSS scale.
+  const basePlayerLeaderCrownStyle = touchlinePlayerLeaderCrownStyle(1);
+  const crownRenderScale = `var(--touchline-card-static-scale, ${scale})`;
   // The crown intentionally lives above the official card art. Its host must
   // reserve that exact visual envelope in normal surfaces, otherwise a grid,
   // carousel or small-screen viewport can cut the crown at its own boundary.
@@ -1404,7 +1411,11 @@ export function TouchlineEliteExactCard({
         aspectRatio: shellExtraHeight ? undefined : CARD_ASPECT_RATIO,
         height: shellExtraHeight ? CARD_H * scale + shellExtraHeight : undefined,
         position: "relative",
-        margin: isCanonicalPlayerLeader ? `${leadershipCrownEnvelope}px auto 0` : "0 auto",
+        margin: isCanonicalPlayerLeader
+          ? hasStaticRenderScale
+            ? `calc(${-basePlayerLeaderCrownStyle.top}px * ${crownRenderScale}) auto 0`
+            : `${leadershipCrownEnvelope}px auto 0`
+          : "0 auto",
         maxWidth: "100%",
         overflow: "visible",
         contain: shellExtraHeight ? undefined : "layout size",
@@ -1424,8 +1435,12 @@ export function TouchlineEliteExactCard({
           style={{
             position: "absolute",
             left: "50%",
-            top: playerLeaderCrownStyle.top,
-            width: playerLeaderCrownStyle.width,
+            top: hasStaticRenderScale
+              ? `calc(${basePlayerLeaderCrownStyle.top}px * ${crownRenderScale})`
+              : playerLeaderCrownStyle.top,
+            width: hasStaticRenderScale
+              ? `calc(${basePlayerLeaderCrownStyle.width}px * ${crownRenderScale})`
+              : playerLeaderCrownStyle.width,
             height: "auto",
             zIndex: 90,
             transform: "translateX(-50%)",
@@ -1796,7 +1811,8 @@ export function TouchlineEliteExactCard({
           </>
         ) : null}
 
-        {showSocialMetrics ? (
+        {/* Public interactions live outside the artwork, never across a gemstone. */}
+        {showSocialMetrics && isEditable ? (
           <>
             <div
               {...dragAttrs("followAction")}

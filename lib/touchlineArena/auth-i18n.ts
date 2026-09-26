@@ -176,7 +176,7 @@ const ptBR: typeof en = {
   login: {
     eyebrow: "Acesso à Arena",
     title: "Entre na Arena",
-    description: "Entre para montar seu elenco e acessar a TouchLine Arena.",
+    description: "Entre para montar seu time e acessar a Arena Touchline.",
   },
   register: {
     back: "Voltar ao acesso",

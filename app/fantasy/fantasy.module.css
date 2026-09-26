@@ -141,6 +141,9 @@
 .coachGrid{display:grid;grid-template-columns:1fr;gap:8px}
 .coachGrid>article{display:grid;grid-template-columns:var(--choice-card-width) minmax(0,1fr);grid-template-areas:"card identity" "card metrics" "card action";align-items:center;gap:9px 14px;min-height:220px;padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:16px;color:#edf7f0;background:radial-gradient(circle at 18% 28%,rgba(170,255,62,.12),transparent 34%),rgba(255,255,255,.025);overflow:hidden}
 .coachGrid>article[data-selected=true]{border-color:var(--lime);background:rgba(170,255,62,.08);box-shadow:0 0 18px rgba(170,255,62,.1)}
+.coachGrid>article[data-coach-tier-frame],.selectedCoachSummary[data-coach-tier-frame]{--touchline-perimeter-radius:16px;position:relative;isolation:isolate;border-color:color-mix(in srgb,var(--tier-accent) 45%,rgba(255,255,255,.16));background:radial-gradient(circle at 18% 28%,color-mix(in srgb,var(--tier-accent) 18%,transparent),transparent 42%),linear-gradient(160deg,rgba(7,16,13,.96),rgba(1,4,4,.9));box-shadow:0 14px 28px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05);animation:none}
+.selectedCoachSummary[data-coach-tier-frame]{--touchline-perimeter-radius:18px}
+.coachGrid>article[data-coach-tier-frame][data-selected=true]{border-color:var(--tier-accent);box-shadow:0 0 16px color-mix(in srgb,var(--tier-accent) 12%,transparent)}
 .coachGrid>article>span{grid-area:card;width:var(--choice-card-width);height:calc(var(--choice-card-width) * 1.5);overflow:visible;filter:drop-shadow(0 14px 18px rgba(0,0,0,.48))}
 .coachGrid>article>.coachIdentity{grid-area:identity}
 .coachGrid>article>.coachMetrics{grid-area:metrics}
@@ -179,6 +182,9 @@
 .playerScroller::-webkit-scrollbar-thumb,.coachScroller::-webkit-scrollbar-thumb{border:2px solid rgba(3,13,9,.72);border-radius:999px;background:linear-gradient(180deg,#b7ff4b,#68bd24)}
 .playerScroller:focus-visible{outline:0}
 .playerGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.playerGrid article[data-choice-tier-frame]{--touchline-perimeter-radius:16px;border-color:color-mix(in srgb,var(--tier-accent,#94a3b8) 45%,rgba(255,255,255,.16));background:radial-gradient(circle at 50% 4%,color-mix(in srgb,var(--tier-accent,#94a3b8) 18%,transparent),transparent 42%),linear-gradient(160deg,rgba(7,16,13,.96),rgba(1,4,4,.9))}
+.playerGrid article[data-choice-tier-frame]::before{content:none}
+.playerGrid article[data-choice-tier-frame]:hover{border-color:var(--tier-accent,#94a3b8);box-shadow:0 18px 36px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.08)}
 .playerGrid article{position:relative;display:grid;grid-template-rows:auto auto auto;align-content:start;justify-items:center;min-width:0;padding:11px 9px 10px;border:1px solid rgba(170,255,62,.15);border-radius:16px;background:radial-gradient(circle at 50% 26%,rgba(170,255,62,.1),transparent 42%),linear-gradient(160deg,rgba(14,32,23,.98),rgba(2,10,7,.98));box-shadow:0 14px 28px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden;isolation:isolate;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
 .playerGrid article::before{position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,rgba(255,255,255,.06),transparent 28%,transparent 70%,rgba(170,255,62,.05));content:"";pointer-events:none}
 .playerGrid article:hover{border-color:rgba(170,255,62,.4);box-shadow:0 18px 36px rgba(0,0,0,.42),0 0 24px rgba(170,255,62,.08),inset 0 1px 0 rgba(255,255,255,.08);transform:translateY(-2px)}
@@ -337,10 +343,20 @@
   .pitchSlot>i{right:5px;top:1px;width:19px;height:19px;font-size:.75rem}
   .pitchFooter{gap:7px;padding:8px 10px;font-size:.52rem}
   .guidePanel{--choice-card-width:92px;--coach-card-scale:.27;max-height:338px;padding:11px}
+  .guidePanel[data-guide-step=players],.guidePanel[data-guide-step=coach]{height:auto;max-height:none}
+  .guidePanel[data-guide-step=players] .playerViewport{flex:none;height:340px}
+  .guidePanel[data-guide-step=coach] .coachScroller{flex:none;max-height:340px}
+  .guidePanel[data-guide-step=coach] .coachGrid{grid-template-columns:1fr}
+  .guidePanel[data-guide-step=coach] .coachGrid>article{grid-template-columns:minmax(0,1fr);grid-template-areas:"card" "identity" "metrics" "action";justify-items:center;gap:10px}
+  .guidePanel[data-guide-step=coach] .coachIdentity{width:100%;text-align:center}
+  .guidePanel[data-guide-step=coach] .coachIdentity>b{white-space:normal;overflow:visible}
+  .guidePanel[data-guide-step=coach] .coachMetrics{width:100%}
+  .guidePanel[data-guide-step=coach] .coachGrid>article>button{justify-self:stretch}
   .guidePanel h2{font-size:1.12rem}
   .guidePanel>p{margin-bottom:9px;font-size:.61rem}
   .playerGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
   .playerGrid article{padding:7px 6px;border-radius:12px}
+  .playerGrid article[data-choice-tier-frame]{--touchline-perimeter-radius:12px}
   .marketCard{width:92px}
   .playerIdentity{padding:5px 2px}
   .playerIdentity b{font-size:.57rem}
@@ -402,7 +418,7 @@
 .myClubMarket .clubSelector>button img{width:56px;height:56px;max-width:100%}
 .myClubMarketResults{grid-column:1/-1;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;max-height:none;overflow:visible}
 .myClubMarketResults>p{grid-column:1/-1}
-.myClubMarketResults article{grid-template-columns:1fr;grid-template-rows:auto auto;align-content:start;justify-items:center;gap:9px;min-width:0;padding:14px 10px 12px;border-color:rgba(170,255,62,.16);background:radial-gradient(circle at 50% 0,rgba(170,255,62,.075),transparent 46%),rgba(2,10,7,.72);text-align:center}
+.myClubMarketResults article{--touchline-perimeter-radius:13px;position:relative;isolation:isolate;grid-template-columns:1fr;grid-template-rows:auto auto;align-content:start;justify-items:center;gap:9px;min-width:0;padding:14px 10px 12px;border-color:color-mix(in srgb,var(--tier-accent,#83918b) 45%,rgba(255,255,255,.16));background:radial-gradient(circle at 50% 4%,color-mix(in srgb,var(--tier-accent,#83918b) 18%,transparent),transparent 42%),linear-gradient(160deg,rgba(7,16,13,.96),rgba(1,4,4,.9));box-shadow:inset 0 1px rgba(255,255,255,.05),0 14px 32px rgba(0,0,0,.24);text-align:center}
 .myClubMarketResults article>span{width:126px;max-width:100%}
 .myClubMarketResults article>div{display:grid;justify-items:center;gap:3px;min-width:0}
 .myClubMarketResults article strong{overflow:hidden;max-width:100%;color:#f7fff2;font-size:.8rem;text-overflow:ellipsis;white-space:nowrap}
@@ -470,6 +486,9 @@
   .myClubMarketStatus{padding:16px;gap:16px;flex-wrap:wrap}
   .myClubMarketStatus .marketClock{padding-left:0;border-left:0;width:100%;max-width:none;min-width:0;padding-top:14px;border-top:1px solid rgba(170,255,62,.16)}
   .myClubMarketStatus .clockDigits{max-width:320px}
+  /* Keep the scaled mobile board and its viewport on the same field ratio. */
+  .myClubPitchViewport,
+  .myClubPitchViewport .myClubTacticalPitch{aspect-ratio:105/68}
   .myClubPitchViewport .myClubTacticalSlot{transform:translate(-50%,-50%)}
 }
 @media(prefers-reduced-motion:reduce){.myClubTacticalSlot>span [data-touchline-card-zoom=trigger]:hover{transform:none}}

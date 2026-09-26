@@ -237,7 +237,10 @@ test("registration background uses one uninterrupted official intro and preserve
   assert.match(entryVideo, /preload="auto"/);
   assert.match(layout, /<Logo[\s\S]*?officialArena\s*\/>/);
   assert.match(layout, /<header className="auth-brand-header/);
-  assert.match(globalStyles, /\.auth-brand-header \{[\s\S]*?position: sticky;[\s\S]*?z-index: 40/);
+  const brandHeader = globalStyles.match(/\.auth-brand-header\s*\{([^}]+)\}/)?.[1] ?? "";
+  assert.match(brandHeader, /position: relative;/);
+  assert.match(brandHeader, /z-index: 40/);
+  assert.doesNotMatch(brandHeader, /position:\s*(?:sticky|fixed)/);
   assert.match(globalStyles, /\.auth-cinematic-media \{[\s\S]*?var\(--auth-cinematic-poster\)/);
   assert.match(globalStyles, /\.auth-cinematic-video \{[\s\S]*?filter: none/);
   assert.match(globalStyles, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.auth-cinematic-media \{ background-position: center; \}/);

@@ -4,7 +4,9 @@ import { Suspense } from "react";
 
 import DocumentLocaleSync from "@/components/touchline/DocumentLocaleSync";
 import TouchlineLandscapeBoundary from "@/components/touchline/TouchlineLandscapeBoundary";
+import TouchlineCardLeadershipBoundary from "@/components/touchline/cards/TouchlineCardLeadershipBoundary";
 import { TouchlineActivityTracker } from "@/components/touchline-activity-tracker";
+import { TouchlineAmbientAudioProvider } from "@/components/auth-ambient-audio";
 import {
   isTouchlineIsolatedPreviewRequest,
   TOUCHLINE_ISOLATED_PREVIEW_HEADER,
@@ -17,11 +19,12 @@ import {
   TOUCHLINE_PRESENTATION_LOCALE_HEADER,
 } from "@/lib/touchlineArena/root-locale";
 import "./globals.css";
+import "./touchline-crest-visibility.css";
 
 const productMetadata: Metadata = {
   metadataBase: new URL(TOUCHLINE_PUBLIC_ORIGIN),
-  title: "TouchLine Arena / TouchLine England",
-  description: "TouchLine England is the first TouchLine Arena competition experience for premium football cards, squads and clubowner gameplay.",
+  title: "Arena Touchline",
+  description: "Arena Touchline brings football cards, teams and ClubOwner gameplay together. Explore the available competitions and build your team.",
   alternates: {
     canonical: "/",
   },
@@ -71,7 +74,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const skipLabel = locale === "pt-BR" ? "Pular para o conteúdo principal" : "Skip to main content";
 
   return (
-    <html lang={locale} dir={touchlineDocumentDirection(locale)}>
+    <html lang={locale} dir={touchlineDocumentDirection(locale)} data-scroll-behavior="smooth">
       <body>
         {!isIsolatedPreview ? (
           <Suspense fallback={null}>
@@ -85,7 +88,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           the global skip link work uniformly without nesting landmarks.
         */}
         <TouchlineLandscapeBoundary skipLabel={skipLabel} locale={locale}>
-          {children}
+          <TouchlineCardLeadershipBoundary enabled={!isIsolatedPreview && dataSource === "direct"}>
+            <TouchlineAmbientAudioProvider enabled={!isIsolatedPreview}>
+              {children}
+            </TouchlineAmbientAudioProvider>
+          </TouchlineCardLeadershipBoundary>
         </TouchlineLandscapeBoundary>
       </body>
     </html>

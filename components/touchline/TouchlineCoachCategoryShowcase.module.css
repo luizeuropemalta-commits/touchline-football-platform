@@ -55,7 +55,9 @@
 }
 
 .card {
+  --touchline-perimeter-radius: 20px;
   position: relative;
+  isolation: isolate;
   min-width: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--tier-accent) 45%, rgba(255, 255, 255, .16));
@@ -67,32 +69,11 @@
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 
-.card::after {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  padding: 1px;
-  border-radius: inherit;
-  background: conic-gradient(from 0deg, transparent 0 64%, var(--tier-accent) 72%, #fff 78%, var(--tier-secondary) 84%, transparent 92%);
-  content: "";
-  opacity: 0;
-  pointer-events: none;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
 .card:hover,
 .card:focus-within {
   transform: translateY(-5px);
   border-color: color-mix(in srgb, var(--tier-accent) 72%, #fff 12%);
   box-shadow: 0 20px 45px color-mix(in srgb, var(--tier-secondary) 24%, rgba(0, 0, 0, .5));
-}
-
-.card:hover::after,
-.card:focus-within::after {
-  opacity: .95;
-  animation: touchlineTierEdge .78s linear 1;
 }
 
 .cardLink,
@@ -181,8 +162,6 @@
 
 .note { margin-top: 18px; }
 
-@keyframes touchlineTierEdge { to { transform: rotate(1turn); } }
-
 @media (max-width: 1180px) {
   .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
@@ -202,6 +181,4 @@
   .card,
   .card:hover,
   .card:focus-within { transform: none; transition: none; }
-  .card:hover::after,
-  .card:focus-within::after { animation: none; }
 }

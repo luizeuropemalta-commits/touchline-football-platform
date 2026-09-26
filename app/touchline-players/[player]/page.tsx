@@ -2,6 +2,10 @@
 import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { localizedCountryLabel } from "@/lib/touchlineArena/country-labels";
+import { localizedPositionLabel } from "@/lib/touchlineArena/position-labels";
+import { formatTouchlineProfileTimestamp as formatOfficialSyncTime } from "@/lib/touchlineArena/profile-timestamp";
+import { isSeasonPercentage, seasonPercentageFromCounts } from "@/lib/football-data/season-statistic-ratios";
 import {
   ArrowRight,
   Activity,
@@ -17,6 +21,8 @@ import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineElite
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
+import { TouchlineCardLeadershipProvider } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
+import { buildTouchlineCardLeadershipValue } from "@/lib/touchlineArena/card-leadership-authority";
 import {
   TOUCHLINE_CARD_STUDIO_LAYOUT_KEY,
   CLUB_OWNER_SQUAD_CARDS,
@@ -35,6 +41,7 @@ import {
 import { loadTouchLineOfficialPlayerIdentity } from "@/lib/touchlineArena/player-profile-official";
 import { loadTouchlinePublicPlayerProjections } from "@/lib/touchlineArena/market-value-read-model";
 import { loadTouchLinePlayerStatisticsReadModel } from "@/lib/touchlineArena/player-season-statistics-server";
+import { touchlinePlayerAppearanceLabel, touchlinePlayerDataSourceLabel } from "@/lib/touchlineArena/player-appearance-presentation";
 import {
   touchLinePlayerSeasonCoverageMessage,
   type TouchLinePlayerSeasonStatistics,
@@ -70,9 +77,9 @@ import {
 } from "@/lib/touchlineArena/country-flags";
 import {
   TouchlineSocialFeed,
-  TouchlineSocialProfileActions,
   type TouchlineSocialPost,
 } from "@/components/touchline/social/TouchlineSocial";
+import TouchlinePlayerSocialActions from "@/components/touchline/social/TouchlinePlayerSocialActions";
 import { touchlineArenaContractHref } from "@/lib/touchlineArena/arena-navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
@@ -129,14 +136,14 @@ const copy = {
     toClub: "To",
     rankPending: "Pending",
     officialData: "Official football data",
-    performance: "Verified performance",
-    performanceCopy: "Every statistic below comes from the canonical TouchLine Verified season read model. No estimated values are used.",
+    performance: "Season performance",
+    performanceCopy: "Statistics reflect available match data. Unconfirmed participation does not establish an absence or its reason. Missing ratings are not estimated.",
     syncPending: "TouchLine Verified statistics are awaiting a complete player, season and fixture sync.",
+    identityPending: "Verified player identity is currently unavailable.",
     latestSeason: "Last completed season",
     updatedAt: "Updated",
     verifiedSeason: "Verified season",
     fullStats: "TouchLine Verified statistics",
-    providerVerified: "Verified by TouchLine",
     officialSummary: "Key numbers",
     officialAttack: "Attack",
     officialDistribution: "Passing",
@@ -200,14 +207,14 @@ const copy = {
     toClub: "Destino",
     rankPending: "Pendente",
     officialData: "Dados do futebol real",
-    performance: "Desempenho verificado",
-    performanceCopy: "Todas as estatísticas abaixo vêm do modelo canônico de temporada TouchLine Verified. Nenhum valor estimado é usado.",
+    performance: "Desempenho na temporada",
+    performanceCopy: "As estatísticas refletem os dados disponíveis por partida. Participação não confirmada não comprova ausência nem seu motivo. Notas indisponíveis não são estimadas.",
     syncPending: "As estatísticas TouchLine Verified aguardam sincronização completa de jogador, temporada e fixtures.",
+    identityPending: "A identidade verificada do jogador está indisponível no momento.",
     latestSeason: "Última temporada concluída",
     updatedAt: "Atualizado",
     verifiedSeason: "Temporada verificada",
     fullStats: "Estatísticas TouchLine Verified",
-    providerVerified: "Verificado pela TouchLine",
     officialSummary: "Números principais",
     officialAttack: "Ataque",
     officialDistribution: "Passe",
@@ -220,7 +227,7 @@ const copy = {
     touchlineData: "Dados do jogo TouchLine",
     currentSeason: "Temporada atual",
     lastFiveMatches: "Últimas cinco partidas",
-    currentFixture: "Fixture atual ou selecionada",
+    currentFixture: "Partida atual ou selecionada",
     currentMatchPoints: "Nota da partida atual",
     unavailable: "Indisponível",
     appearances: "Jogos",
@@ -240,19 +247,6 @@ const copy = {
 
 function languageQuery(locale: string) {
   return `?lang=${encodeURIComponent(locale)}`;
-}
-
-function formatOfficialSyncTime(value: string | null, locale: string) {
-  if (!value || !Number.isFinite(Date.parse(value))) return null;
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  }).format(new Date(value));
 }
 
 function formatTransferDate(value: string | undefined, locale: string) {
@@ -314,6 +308,14 @@ const ptStatLabels: Record<string, string> = {
   "blocked-shots": "Chutes bloqueados",
   "hit-woodwork": "Bolas na trave",
   passes: "Passes",
+  touches: "Toques na bola",
+  "duels-lost": "Duelos perdidos",
+  "backward-passes": "Passes para trás",
+  "possession-lost": "Perdas de posse",
+  "passes-in-final-third": "Passes no terço final",
+  "cumulative-minutes-played": "Minutos acumulados",
+  "long-balls-won-percentage": "Precisão dos lançamentos longos",
+  "successful-crosses-percentage": "Precisão dos cruzamentos",
   "accurate-passes": "Passes certos",
   "accurate-passes-percentage": "Precisão dos passes",
   "key-passes": "Passes decisivos",
@@ -357,90 +359,17 @@ const ptStatLabels: Record<string, string> = {
   rating: "Nota",
 };
 
-function _localizedStatLabel(code: string, fallback: string, locale: string) {
-  if (locale !== "pt-BR") return fallback;
+function localizedStatLabel(code: string, fallback: string, locale: string) {
+  const readableFallback = fallback.replace(/[-_]+/g, " ").replace(/^./, (letter) => letter.toUpperCase());
+  if (locale !== "pt-BR") return readableFallback;
   const normalized = code.toLowerCase().replace(/[_\s]+/g, "-");
   const normalizedFallback = fallback.toLowerCase().replace(/[_\s]+/g, "-");
-  return ptStatLabels[normalized] ?? ptStatLabels[normalizedFallback] ?? fallback;
+  return ptStatLabels[normalized] ?? ptStatLabels[normalizedFallback] ?? readableFallback;
 }
 
 function measurement(value: string | undefined, unit: "cm" | "kg") {
   if (!value) return undefined;
   return /[a-z]/i.test(value) ? value : `${value} ${unit}`;
-}
-
-const ptPositionLabels: Record<string, string> = {
-  attacker: "Atacante",
-  forward: "Atacante",
-  striker: "Centroavante",
-  defender: "Defensor",
-  goalkeeper: "Goleiro",
-  midfielder: "Meio-campista",
-  winger: "Ponta",
-  player: "Jogador",
-  st: "Centroavante",
-  cf: "Atacante",
-  lw: "Ponta esquerda",
-  rw: "Ponta direita",
-  am: "Meia ofensivo",
-  cm: "Meio-campista",
-  dm: "Volante",
-  cb: "Zagueiro",
-  lb: "Lateral esquerdo",
-  rb: "Lateral direito",
-  gk: "Goleiro",
-};
-
-const ptCountryLabels: Record<string, string> = {
-  brazil: "Brasil",
-  england: "Inglaterra",
-  france: "França",
-  norway: "Noruega",
-  spain: "Espanha",
-  portugal: "Portugal",
-  italy: "Itália",
-  germany: "Alemanha",
-  netherlands: "Holanda",
-  sweden: "Suécia",
-  denmark: "Dinamarca",
-  croatia: "Croácia",
-  argentina: "Argentina",
-  belgium: "Bélgica",
-  ecuador: "Equador",
-  egypt: "Egito",
-  cameroon: "Camarões",
-  japan: "Japão",
-  "south korea": "Coreia do Sul",
-  "korea republic": "Coreia do Sul",
-  united_states: "Estados Unidos",
-  "united states": "Estados Unidos",
-  usa: "Estados Unidos",
-};
-
-function lookupKey(value?: string | null) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function localizedPositionLabel(value: string | null | undefined, locale: string) {
-  if (!value) return value;
-  if (locale !== "pt-BR") return value;
-  return ptPositionLabels[lookupKey(value)] ?? value;
-}
-
-function localizedCountryLabel(value: string | null | undefined, locale: string) {
-  if (!value) return value;
-  if (locale !== "pt-BR") return value;
-  return ptCountryLabels[lookupKey(value)] ?? value;
-}
-
-function playerFollowerCount(playerId: string) {
-  const hash = [...playerId].reduce((total, character) => ((total * 33) + character.charCodeAt(0)) >>> 0, 23);
-  return 24_000 + (hash % 940_000);
 }
 
 function seasonSummaryEntries(statistics: TouchLinePlayerSeasonStatistics, text: typeof copy.en | typeof copy.pt, publishedTotalRating?: number | null) {
@@ -463,11 +392,13 @@ function SeasonStatisticsPanel({
   title,
   statistics,
   text,
+  locale,
   publishedTotalRating,
 }: {
   title: string;
   statistics: TouchLinePlayerSeasonStatistics;
   text: typeof copy.en | typeof copy.pt;
+  locale: string;
   publishedTotalRating?: number | null;
 }) {
   const coverageMessage = touchLinePlayerSeasonCoverageMessage(statistics);
@@ -481,7 +412,7 @@ function SeasonStatisticsPanel({
       <div className={styles.seasonMeta}>
         <strong>{statistics.seasonName ?? text.unavailable}</strong>
         {statistics.competitionName ? <span>{statistics.competitionName}</span> : null}
-        {statistics.latestSyncAt ? <time dateTime={statistics.latestSyncAt}>{statistics.latestSyncAt}</time> : null}
+        {statistics.latestSyncAt ? <time dateTime={statistics.latestSyncAt}>{formatOfficialSyncTime(statistics.latestSyncAt, locale) ?? text.unavailable}</time> : null}
       </div>
       {coverageMessage ? <p className={styles.partialData} data-partial-season-data>{coverageMessage}</p> : null}
       {hasStatistics ? (
@@ -492,12 +423,17 @@ function SeasonStatisticsPanel({
               <strong>{value === null ? text.unavailable : String(value)}</strong>
             </div>
           ))}
-          {Object.entries(statistics.positionStatistics).map(([label, value]) => (
-            <div key={label}>
-              <small>{label}</small>
-              <strong>{String(value)}</strong>
-            </div>
-          ))}
+          {/* Rating average and total already have separate authoritative summary fields. */}
+          {Object.entries(statistics.positionStatistics).filter(([label]) => label !== "rating").map(([label, value]) => {
+            const percentage = isSeasonPercentage(label);
+            const ratio = percentage ? seasonPercentageFromCounts(label, statistics.positionStatistics) : null;
+            return (
+              <div key={label}>
+                <small>{localizedStatLabel(label, label, locale)}</small>
+                <strong>{percentage ? ratio === null ? text.unavailable : `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(ratio)}%` : String(value)}</strong>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className={styles.pendingSync}>
@@ -505,6 +441,13 @@ function SeasonStatisticsPanel({
           <div><strong>{text.unavailable}</strong><small>{text.syncPending}</small></div>
         </div>
       )}
+      {Object.keys(statistics.positionStatistics).some(isSeasonPercentage) ? (
+        <p className={styles.providerNote}>
+          {locale === "pt-BR"
+            ? "Percentuais calculados a partir das contagens disponíveis. Sem contagens compatíveis, a taxa fica indisponível."
+            : "Percentages calculated from available counts. Rates remain unavailable without compatible counts."}
+        </p>
+      ) : null}
     </article>
   );
 }
@@ -525,10 +468,7 @@ function FixtureStatisticsPanel({
   const current = model.currentOrSelectedFixture;
   const matchFacts = buildTouchlineVerifiedMatchFactFields({ statistics: matchStats, position }, locale);
   const appearanceLabel = (value: "started" | "substitute" | "unused" | "absent" | "unavailable") => {
-    const labels = text === copy.pt
-      ? { started: "Titular", substitute: "Substituto", unused: "Não utilizado", absent: "Ausente", unavailable: text.unavailable }
-      : { started: "Started", substitute: "Substitute", unused: "Unused", absent: "Absent", unavailable: text.unavailable };
-    return labels[value];
+    return touchlinePlayerAppearanceLabel(value, locale);
   };
   return (
     <div className={styles.fixtureStatsGrid}>
@@ -538,7 +478,7 @@ function FixtureStatisticsPanel({
           <div className={styles.fixtureStatsList}>
             {model.matchHistory.map((fixture) => (
               <div key={fixture.fixtureId}>
-                <span>{fixture.fixtureStartsAt ?? text.unavailable}</span>
+                <span>{formatOfficialSyncTime(fixture.fixtureStartsAt, locale) ?? text.unavailable}</span>
                 <strong>{appearanceLabel(fixture.appearanceStatus)}</strong>
                 <small>{fixture.minutes === null ? text.unavailable : `${fixture.minutes} ${text.minutes.toLowerCase()}`}</small>
                 <small className={styles.fixtureRating}>{text.rating}: {fixture.rating === null ? "—" : String(fixture.rating)}</small>
@@ -551,7 +491,7 @@ function FixtureStatisticsPanel({
         <h3>{text.currentFixture}</h3>
         {current ? (
           <>
-            <div className={styles.fixtureStatsList}><div><span>{current.fixtureStartsAt ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small className={styles.fixtureRating}>{text.currentMatchPoints}: {current.rating === null ? "—" : String(current.rating)}</small></div></div>
+            <div className={styles.fixtureStatsList}><div><span>{formatOfficialSyncTime(current.fixtureStartsAt, locale) ?? text.unavailable}</span><strong>{appearanceLabel(current.appearanceStatus)}</strong><small>{current.minutes === null ? text.unavailable : `${current.minutes} ${text.minutes.toLowerCase()}`}</small><small className={styles.fixtureRating}>{text.currentMatchPoints}: {current.rating === null ? "—" : String(current.rating)}</small></div></div>
             {matchFacts.length ? (
               <div className={styles.officialStats} data-stat-count={matchFacts.length} data-position-aware-player-facts>
                 {matchFacts.map((fact) => (
@@ -690,27 +630,13 @@ export default async function TouchLinePlayerProfilePage({
   });
   const competition = rankingCompetition;
   const zoomMatchHistoryFields = playerStatistics.matchHistory.map((fixture) => {
-    const appearance = isPortuguese
-      ? {
-        started: "Titular",
-        substitute: "Substituto",
-        unused: "Não utilizado",
-        absent: "Ausente",
-        unavailable: text.unavailable,
-      }[fixture.appearanceStatus]
-      : {
-        started: "Started",
-        substitute: "Substitute",
-        unused: "Unused",
-        absent: "Absent",
-        unavailable: text.unavailable,
-      }[fixture.appearanceStatus];
+    const appearance = touchlinePlayerAppearanceLabel(fixture.appearanceStatus, locale);
     const minutes = fixture.minutes === null
       ? text.unavailable
       : `${fixture.minutes} ${text.minutes.toLowerCase()}`;
     const rating = fixture.rating === null ? "—" : String(fixture.rating);
     return {
-      label: `${isPortuguese ? "Histórico da partida" : "Match history"} · ${fixture.fixtureStartsAt ?? text.unavailable}`,
+      label: `${isPortuguese ? "Histórico da partida" : "Match history"} · ${formatOfficialSyncTime(fixture.fixtureStartsAt, locale) ?? text.unavailable}`,
       value: `${appearance} · ${minutes} · ${isPortuguese ? "Nota" : "Rating"} ${rating}`,
       kind: "history" as const,
     };
@@ -942,7 +868,7 @@ export default async function TouchLinePlayerProfilePage({
       kind: "official",
       title: official.player
         ? (isPortuguese ? "Dados oficiais do atleta atualizados" : "Official player data updated")
-        : (isPortuguese ? "Sincronização oficial em andamento" : "Official sync in progress"),
+        : (isPortuguese ? "Dados oficiais adicionais indisponíveis" : "Additional official data unavailable"),
       body: official.player
         ? (isPortuguese
             ? `Perfil esportivo verificado para ${official.player?.displayName ?? card.name}. Eventos de partida serão publicados aqui sem revelar qualquer estratégia de ClubOwner.`
@@ -1049,6 +975,7 @@ export default async function TouchLinePlayerProfilePage({
     );
   }
   return (
+    <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, null)}>
     <main className={styles.page} style={pageStyle}>
       <TouchlineLivePresentationRefresh
         initialPlayerRankingSnapshotId={activeRanking.snapshotId}
@@ -1111,10 +1038,9 @@ export default async function TouchLinePlayerProfilePage({
             </p>
 
             <div className={styles.socialActions}>
-              <TouchlineSocialProfileActions
-                entityId={`athlete:${card.id}`}
-                entityName={card.name}
-                followerCount={playerFollowerCount(card.id)}
+              <TouchlinePlayerSocialActions
+                providerId={card.id}
+                playerName={card.name}
                 accent={accent}
                 locale={locale}
                 purchaseHref={hasActiveContractOffer ? marketHref : undefined}
@@ -1123,9 +1049,15 @@ export default async function TouchLinePlayerProfilePage({
             </div>
 
             <p className={styles.biography}>
-              {official.player
+              {canonicalIdentity
+                ? [
+                    canonicalIdentity.displayName || canonicalIdentity.name,
+                    localizedCountryLabel(canonicalIdentity.nationality, locale),
+                    localizedPositionLabel(canonicalIdentity.position, locale),
+                  ].filter(Boolean).join(" · ")
+                : !officialLookup.providerPlayerId && official.player
                 ? `${official.player?.displayName ?? card.name} · ${displayNationality} · ${displayPosition}`
-                : text.syncPending}
+                : text.identityPending}
             </p>
 
             <div className={styles.sourceLegend}>
@@ -1220,7 +1152,7 @@ export default async function TouchLinePlayerProfilePage({
 
           <div className={styles.syncLine}>
             <div className={styles.syncSource}>
-              <span><i />{text.providerVerified}</span>
+              <span><i />{touchlinePlayerDataSourceLabel(locale)}</span>
               {playerStatistics.previousCompletedSeason.latestSyncAt
                 ? <time dateTime={playerStatistics.previousCompletedSeason.latestSyncAt}>{text.updatedAt} {formatOfficialSyncTime(playerStatistics.previousCompletedSeason.latestSyncAt, locale)}</time>
                 : null}
@@ -1231,8 +1163,8 @@ export default async function TouchLinePlayerProfilePage({
             </div>
           </div>
           <div className={styles.officialGroups}>
-            <SeasonStatisticsPanel title={text.latestSeason} statistics={playerStatistics.previousCompletedSeason} text={text} />
-            <SeasonStatisticsPanel title={text.currentSeason} statistics={playerStatistics.currentSeason} text={text} publishedTotalRating={totalRatingText} />
+            <SeasonStatisticsPanel title={text.latestSeason} statistics={playerStatistics.previousCompletedSeason} text={text} locale={locale} />
+            <SeasonStatisticsPanel title={text.currentSeason} statistics={playerStatistics.currentSeason} text={text} locale={locale} publishedTotalRating={totalRatingText} />
           </div>
           <FixtureStatisticsPanel
             model={playerStatistics}
@@ -1340,5 +1272,6 @@ export default async function TouchLinePlayerProfilePage({
         </section>
       </div>
     </main>
+    </TouchlineCardLeadershipProvider>
   );
 }

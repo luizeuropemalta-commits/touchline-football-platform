@@ -7,10 +7,14 @@ import type { Metadata } from "next";
 import TouchlineCoachCard from "@/components/touchline/cards/TouchlineCoachCard";
 import TouchlineCoachPerformance from "@/components/touchline/cards/TouchlineCoachPerformance";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import navigationStyles from "@/components/touchline/TouchlineGlobalNavigation.module.css";
 import { CalendarDays, Flag, Gem, House, PlaneTakeoff, ShieldCheck, Trophy } from "lucide-react";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-server";
+import { coachCompetitionFromRanking } from "@/lib/touchlineArena/coach-competition-projection";
+import { localizedCountryLabel } from "@/lib/touchlineArena/country-labels";
 import { touchlineCardTierName } from "@/lib/touchlineArena/card-rules";
 import {
   touchlineCoachClassificationForProviderId,
@@ -78,27 +82,14 @@ export default async function TouchlineCoachProfilePage({
     coach.providerId === coachParam || coachSlug(coach.displayName) === coachSlug(coachParam)
   ));
   if (!entry) notFound();
+  const nationalityLabel = localizedCountryLabel(entry.coach.nationality, locale) ?? "—";
 
   const classification = touchlineCoachClassificationForProviderId(entry.coach.providerId);
   if (!classification) notFound();
   const club = TOUCHLINE_ENGLAND_CLUBS.find((candidate) => candidate.teamId === entry.coach.teamId);
   if (!club) notFound();
   const coachRanking = await loadTouchLineCoachRanking();
-  const coachRankingRow = coachRanking.phase === "ranked"
-    ? coachRanking.rows.find((candidate) => candidate.coachProviderId === entry.coach.providerId) ?? null
-    : null;
-  const competition = coachRankingRow && coachRanking.snapshotId && coachRanking.seasonId && coachRanking.scoringVersion
-    ? {
-      snapshotId: coachRanking.snapshotId,
-      seasonId: coachRanking.seasonId,
-      seasonLabel: TOUCHLINE_ENGLAND_SEASON,
-      rank: coachRankingRow.rank,
-      scoringVersion: coachRanking.scoringVersion,
-      home: coachRankingRow.home,
-      away: coachRankingRow.away,
-      totalTouchlinePoints: coachRankingRow.touchlinePoints,
-    }
-    : null;
+  const competition = coachCompetitionFromRanking(coachRanking, entry.coach.providerId, TOUCHLINE_ENGLAND_SEASON);
   const slot = createTouchlineArenaCoachSlot(entry.coach, null, classification.tierKey);
   const scoredSlot = competition ? {
     ...slot,
@@ -131,19 +122,19 @@ export default async function TouchlineCoachProfilePage({
       <TouchlineLivePresentationRefresh
         initialCoachRankingSnapshotId={coachRanking.snapshotId}
       />
-      <nav className="coach-profile-nav" aria-label={pt ? "Navegação do perfil" : "Profile navigation"}>
-        <Link href={`/touchline-clubs/${club.slug}${profileLocale}`}>← {pt ? "Clube" : "Club"}</Link>
-        <Link href={`/live${profileLocale}`}>{pt ? "Match Centre" : "Match Centre"}</Link>
-        <Link href={`/market-transfer${profileLocale}`}>{pt ? "Mercado" : "Market"}</Link>
-      </nav>
+      <div className="coach-profile-nav">
+        <TouchlineGlobalNavigation locale={locale} currentRoute="coachProfile" surface="public" />
+        <Link className={navigationStyles.link} href={`/touchline-clubs/${club.slug}${profileLocale}`}>← {club.name}</Link>
+      </div>
+      <div className="coach-profile-composition">
       <section className="coach-profile-hero">
         <div className="coach-profile-copy">
           <span>{pt ? "FUTEBOL REAL · TREINADOR" : "REAL FOOTBALL · COACH"}</span>
           <h1>{entry.coach.displayName}</h1>
-          <p>{entry.coach.nationality} · {club.name}</p>
+          <p>{nationalityLabel} · {club.name}</p>
           <dl className="coach-profile-identity-grid">
             <div><dt>{pt ? "Clube atual" : "Current club"}</dt><dd>{club.name}</dd></div>
-            <div><dt>{pt ? "Nacionalidade" : "Nationality"}</dt><dd>{entry.coach.nationality ?? "—"}</dd></div>
+            <div><dt>{pt ? "Nacionalidade" : "Nationality"}</dt><dd>{nationalityLabel}</dd></div>
             <div><dt>{pt ? "Verificação" : "Verification"}</dt><dd>{pt ? "TouchLine Verified" : "Verified by TouchLine"}</dd></div>
           </dl>
         </div>
@@ -157,7 +148,7 @@ export default async function TouchlineCoachProfilePage({
           locale={locale}
           forceNeonActive
           enableInteractiveNeon={false}
-          showLeadershipCrown={coachRankingRow?.rank === 1}
+          showLeadershipCrown={competition?.rank === 1}
         /></div>
       </section>
       <section className="coach-profile-grid">
@@ -182,7 +173,7 @@ export default async function TouchlineCoachProfilePage({
             <div><small>{pt ? "CLUBE ATUAL" : "CURRENT CLUB"}</small><strong>{club.name}</strong></div>
           </div>
           <dl className="coach-profile-fact-grid">
-            <div><dt>{pt ? "Nacionalidade" : "Nationality"}</dt><dd>{entry.coach.nationality ?? "—"}</dd></div>
+            <div><dt>{pt ? "Nacionalidade" : "Nationality"}</dt><dd>{nationalityLabel}</dd></div>
             <div><dt>{pt ? "Temporada" : "Season"}</dt><dd>{competition?.seasonLabel ?? TOUCHLINE_ENGLAND_SEASON}</dd></div>
             <div><dt>{pt ? "Partidas" : "Matches"}</dt><dd>{matchesPlayed ?? "—"}</dd></div>
             <div><dt>{pt ? "Tier" : "Tier"}</dt><dd>{touchlineCardTierName(classification.tierKey, locale)}</dd></div>
@@ -203,26 +194,32 @@ export default async function TouchlineCoachProfilePage({
           ) : <p className="coach-profile-pending">{pt ? "O histórico de clubes e ligas ainda não foi confirmado pela fonte oficial. A TouchLine mantém a classificação pendente em vez de inventar dados." : "Club and league history has not yet been confirmed by the official source. TouchLine keeps the classification pending instead of inventing data."}</p>}
         </article>
       </section>
+      </div>
       <style>{`
-        .coach-profile-page { min-height: 100dvh; padding: clamp(18px,4vw,64px); color:#efffd5; background:radial-gradient(circle at 82% 10%,rgba(181,255,75,.13),transparent 32%),linear-gradient(145deg,#020708,#07140f); }
-        .coach-profile-nav { display:flex; flex-wrap:wrap; gap:10px; max-width:1180px; margin:0 auto 24px; }
-        .coach-profile-nav a { display:inline-flex; min-height:44px; align-items:center; border:1px solid rgba(181,255,75,.28); border-radius:999px; padding:0 13px; color:#efffd5; font-size:12px; font-weight:800; text-decoration:none; }
-        .coach-profile-hero,.coach-profile-grid { max-width:1180px; margin:0 auto; display:grid; gap:clamp(22px,4vw,56px); grid-template-columns:minmax(0,1.15fr) minmax(260px,.85fr); align-items:center; }
-        .coach-profile-copy > span,.coach-profile-grid article > span { color:#b5ff4b; font-size:10px; font-weight:950; letter-spacing:.13em; }
-        .coach-profile-copy h1 { margin:9px 0 5px; font-size:clamp(38px,7vw,82px); line-height:.93; letter-spacing:-.065em; }
+        .coach-profile-page { min-height: 100dvh; padding: clamp(16px,2.5vw,32px); color:#efffd5; background:radial-gradient(circle at 82% 10%,rgba(181,255,75,.13),transparent 32%),linear-gradient(145deg,#020708,#07140f); }
+        .coach-profile-nav { display:flex; flex-wrap:wrap; align-items:center; gap:10px; max-width:1180px; margin:0 auto 24px; }
+        .coach-profile-nav > nav { width:auto; flex:1 1 560px; margin:0; }
+        .coach-profile-hero,.coach-profile-grid { max-width:1180px; margin:0 auto; display:grid; gap:clamp(18px,2.5vw,32px); grid-template-columns:minmax(0,1fr) minmax(240px,300px); }
+        .coach-profile-hero { align-items:start; }
+        .coach-profile-copy { min-width:0; padding-top:16px; }
+        .coach-profile-copy > span,.coach-profile-grid > article > span { color:#b5ff4b; font-size:10px; font-weight:950; letter-spacing:.13em; }
+        .coach-profile-copy h1 { margin:9px 0 10px; font-size:clamp(34px,4.5vw,62px); line-height:1.05; letter-spacing:-.045em; overflow-wrap:anywhere; }
         .coach-profile-copy p { margin:0; color:rgba(239,255,213,.72); font-size:16px; }
-        .coach-profile-copy dl,.coach-profile-grid dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:30px 0 0; }
-        .coach-profile-grid { margin-top:clamp(30px,6vw,72px); grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr); align-items:stretch; }
-        .coach-profile-grid article { border:1px solid rgba(181,255,75,.18); border-radius:24px; padding:clamp(20px,3vw,34px); background:rgba(3,15,12,.72); }
+        .coach-profile-copy > dl,.coach-profile-grid > article > dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:20px 0 0; }
+        .coach-profile-identity-grid > div { border-top:1px solid rgba(181,255,75,.24); padding-top:12px; min-width:0; }
+        .coach-profile-identity-grid dd,.coach-profile-facts dd { overflow-wrap:anywhere; }
+        .coach-profile-grid { margin-top:24px; grid-template-columns:minmax(0,1.28fr) minmax(280px,.72fr); align-items:start; }
+        .coach-profile-grid > article { border:1px solid rgba(181,255,75,.18); border-radius:24px; padding:clamp(20px,3vw,34px); background:rgba(3,15,12,.72); }
         .coach-profile-game-card { display:grid; align-content:start; gap:18px; }
-        .coach-profile-grid h2 { margin:8px 0 4px; font-size:clamp(23px,3vw,36px); letter-spacing:-.04em; }
-        .coach-profile-grid p { color:rgba(239,255,213,.7); font-size:14px; line-height:1.55; }
-        .coach-profile-grid dl { grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:20px; }
-        .coach-profile-page dt { color:rgba(239,255,213,.56); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
-        .coach-profile-page dd { margin:5px 0 0; font-size:14px; font-weight:800; }
+        .coach-profile-grid > article > h2 { margin:8px 0 4px; font-size:clamp(23px,3vw,36px); letter-spacing:-.04em; }
+        .coach-profile-grid > article > p { color:rgba(239,255,213,.7); font-size:14px; line-height:1.55; }
+        .coach-profile-grid > article > dl { grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:20px; }
+        .coach-profile-identity-grid dt,.coach-profile-facts dt { color:rgba(239,255,213,.56); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+        .coach-profile-identity-grid dd,.coach-profile-facts dd { margin:5px 0 0; font-size:14px; font-weight:800; }
         /* Keep the official leader crown fully inside the profile composition
            while leaving its approved art and frame clearance untouched. */
-        .coach-profile-card { width:min(100%,410px); justify-self:center; padding-top:128px; box-sizing:border-box; overflow:visible; }
+        .coach-profile-card { width:min(100%,300px); justify-self:center; padding-top:0; box-sizing:border-box; overflow:visible; }
+        .coach-profile-card:has(> [data-coach-ranking-leader="true"]) { padding-top:96px; }
         .coach-profile-card > [data-coach-ranking-leader="true"] { margin-top:0 !important; }
         .coach-profile-offer-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
         .coach-profile-offer-grid > div { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:10px; border:1px solid rgba(181,255,75,.13); border-radius:14px; padding:12px; background:rgba(0,0,0,.2); }
@@ -249,7 +246,16 @@ export default async function TouchlineCoachProfilePage({
         .coach-profile-campaign strong { margin-top:2px; color:#fff; font-size:12px; }
         .coach-profile-history-grid { margin-top:0 !important; }
         .coach-profile-pending { margin:0; border:1px dashed rgba(255,255,255,.15); border-radius:12px; padding:11px; font-size:12px !important; }
-        @media (max-width:760px) { .coach-profile-hero,.coach-profile-grid { grid-template-columns:1fr; } .coach-profile-card { order:-1; width:min(100%,330px); padding-top:98px; } .coach-profile-copy dl { grid-template-columns:1fr; } }
+        @media (min-width:761px) {
+          .coach-profile-composition { max-width:1180px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 300px; grid-template-rows:auto auto auto; gap:24px 32px; align-items:start; }
+          .coach-profile-hero,.coach-profile-grid { display:contents; }
+          .coach-profile-copy { grid-column:1; grid-row:1; }
+          .coach-profile-card { grid-column:2; grid-row:1 / 3; }
+          .coach-profile-game-card { grid-column:1; grid-row:2; }
+          .coach-profile-facts { grid-column:1 / -1; grid-row:3; }
+        }
+        @media (max-width:760px) { .coach-profile-grid { grid-template-columns:1fr; } .coach-profile-hero { grid-template-columns:minmax(0,1fr) minmax(180px,34%); } .coach-profile-card { width:min(100%,280px); } .coach-profile-card:has(> [data-coach-ranking-leader="true"]) { padding-top:84px; } .coach-profile-copy dl { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media (max-width:520px) { .coach-profile-hero { grid-template-columns:1fr; } .coach-profile-copy { padding-top:0; } }
       `}</style>
     </main>
   );

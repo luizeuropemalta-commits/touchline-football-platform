@@ -105,7 +105,7 @@ test("renders the same published editorial profile with English labels", () => {
 
   assert.equal(details.eyebrow, "Card profile");
   assert.deepEqual(details.fields.map(({ label, value, accent }) => ({ label, value, accent })), [
-    { label: "Card tier", value: "Diamond Gold", accent: true },
+    { label: "Card tier", value: "Golden Diamond", accent: true },
     { label: "Market value", value: "Pending", accent: true },
     { label: "Current club", value: "Arsenal FC", accent: false },
     { label: "Position", value: "Forward", accent: false },

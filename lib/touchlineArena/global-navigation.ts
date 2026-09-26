@@ -18,6 +18,7 @@ export type TouchlineGlobalNavigationRoute =
   | "clubHub"
   | "clubProfile"
   | "playerProfile"
+  | "coachProfile"
   | "live"
   | "market"
   | "rankings"

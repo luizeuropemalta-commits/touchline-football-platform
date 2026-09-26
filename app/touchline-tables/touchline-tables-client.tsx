@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { touchlineCoachRankingGem } from "@/lib/touchlineArena/coach-ranking-gems";
 import Link from "next/link";
 import { type CSSProperties } from "react";
 import {
@@ -14,6 +15,7 @@ import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import {
   touchlineCardTierName,
   touchlineCardTierPalette,
@@ -37,7 +39,6 @@ import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published
 import { touchlineTopElevenBroadcastPoint } from "@/lib/touchlineArena/top-eleven-broadcast-layout";
 import {
   resolveTouchlinePublishedGameweekBest,
-  resolveTouchlinePublishedGameweekCoach,
 } from "@/lib/touchlineArena/published-gameweek-best";
 import { compareTouchLineRankedCards } from "@/lib/touchlineArena/ranked-card-catalog";
 import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
@@ -174,7 +175,6 @@ export default function TouchLineTablesClient({
   coachRanking,
   copy,
   currentProviderRoundName,
-  providerRoundNamesById,
   locale,
   navigationSurface,
   rankMode,
@@ -187,22 +187,6 @@ export default function TouchLineTablesClient({
   const publishedRosterCards = rosterCards.filter((card) => Boolean(card.editorialCard));
   const gameweekBest = resolveTouchlinePublishedGameweekBest({ selection: publishedTopEleven, cards: publishedRosterCards });
   const selection = gameweekBest.phase === "ready" ? gameweekBest.slots : null;
-  const gameweekBestRoundName = gameweekBest.phase === "ready"
-    ? providerRoundNamesById[gameweekBest.roundId] ?? null
-    : null;
-  const gameweekCoach = resolveTouchlinePublishedGameweekCoach(publishedTopEleven);
-  const gameweekCoachIdentity = gameweekCoach.phase === "ready"
-    ? touchlineLiveCoachForProviderId(gameweekCoach.coachProviderId)
-    : null;
-  const gameweekCoachClub = gameweekCoachIdentity
-    ? TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === gameweekCoachIdentity.coach.teamId) ?? null
-    : null;
-  const gameweekCoachClassification = gameweekCoachIdentity
-    ? touchlineCoachClassificationForProviderId(gameweekCoachIdentity.coach.providerId)
-    : null;
-  const gameweekCoachSlot = gameweekCoachIdentity
-    ? createTouchlineArenaCoachSlot(gameweekCoachIdentity.coach, null, gameweekCoachClassification?.tierKey)
-    : null;
   const topPlayerCards = publishedRosterCards
     .filter((card) => card.seasonTotalRating != null)
     .sort(compareTouchLineRankedCards)
@@ -281,11 +265,9 @@ export default function TouchLineTablesClient({
             <div className={styles.sectionHeading}>
               <div>
                 <p>{copy.touchLineXi}</p>
-                <h2>{isPortuguese ? "Melhores da Gameweek" : "Gameweek Best XI"}</h2>
+                <h2>{copy.seasonSelection}</h2>
               </div>
-              <span>{gameweekBest.phase === "ready"
-                ? `${gameweekBestRoundName ? `${isPortuguese ? "Rodada" : "Gameweek"} ${gameweekBestRoundName} · ` : ""}11 ${isPortuguese ? "posições verificadas" : "verified positions"}`
-                : copy.seasonSelectionRule}</span>
+              <span>{copy.seasonSelectionRule}</span>
             </div>
 
             {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection} surfaceVariant="premium-stadium">
@@ -315,43 +297,16 @@ export default function TouchLineTablesClient({
               })}
             </TouchlinePitchSurface>
             <p className={styles.pitchHint}>
-              {isPortuguese
-                ? "Seleção congelada na publicação oficial desta Gameweek. Toque em um card para ampliar."
-                : "Selection frozen in this Gameweek's official publication. Tap a card to enlarge it."}
+              {copy.seasonSelectionHint}
             </p>
-            {gameweekCoach.phase === "ready" && gameweekCoachIdentity && gameweekCoachClub && gameweekCoachSlot ? (
-              <div className={styles.gameweekCoachGate} data-gameweek-coach-state="published" data-gameweek-coach-provider-id={gameweekCoach.coachProviderId}>
-                <Crown aria-hidden="true" />
-                <div className={styles.gameweekCoachPublished}>
-                  <div><strong>{isPortuguese ? "Treinador da Gameweek" : "Gameweek coach"}</strong><span>{isPortuguese ? "Fato congelado da Gameweek publicada." : "Frozen fact from the published Gameweek."}</span></div>
-                  <div
-                    className={styles.gameweekCoachCardLink}
-                  >
-                    <TouchlineCoachCardZoom
-                      coach={gameweekCoachIdentity.coach}
-                      slot={gameweekCoachSlot}
-                      clubName={gameweekCoachClub.name}
-                      clubLogoUrl={gameweekCoachClub.logoUrl}
-                      clubAccent={gameweekCoachClub.accent}
-                      countryCode3={gameweekCoachIdentity.countryCode3}
-                      locale={locale}
-                      contract={null}
-                      profileHref={`/touchline-coaches/${encodeURIComponent(gameweekCoach.coachProviderId)}?lang=${encodeURIComponent(locale)}`}
-                      publishedTouchlinePoints={gameweekCoach.touchlinePoints}
-                      showLeadershipCrown
-                    />
-                  </div>
-                  <b>{gameweekCoach.touchlinePoints} {copy.pointsShort}</b>
-                </div>
-              </div>
-            ) : <div className={styles.gameweekCoachGate} data-gameweek-coach-state="pending">
-              <div><strong>{isPortuguese ? "Treinador da Gameweek" : "Gameweek coach"}</strong><span>{isPortuguese ? "Aguardando o treinador verificado da mesma Gameweek." : "Awaiting the verified coach from the same Gameweek."}</span></div>
-            </div>}
             </> : <div className={styles.selectionPending} role="status"><strong>{copy.seasonSelectionPending}</strong><p>{gameweekBest.phase === "unavailable" && gameweekBest.reason === "incomplete-card-catalogue"
               ? (isPortuguese ? "A seleção publicada ainda não resolve os 11 cards canônicos; nenhum card parcial é exibido." : "The published selection does not yet resolve all 11 canonical cards; no partial XI is shown.")
               : copy.seasonSelectionPendingDescription}</p></div>}
           </div>
-          <aside className={styles.topCoachPanel} data-top-coach-card aria-labelledby="top-coach-title">
+          <aside className={styles.topCoachPanel} data-top-coach-card aria-labelledby="top-coach-title"
+            data-coach-tier-frame={topCoachSlot?.cardTier ?? "unresolved"}
+            style={{ "--tier-accent": topCoachSlot ? touchlineCardTierPalette(topCoachSlot.cardTier).accent : undefined } as CSSProperties}>
+            <TouchlineClubPerimeterTrace accent={topCoachSlot ? touchlineCardTierPalette(topCoachSlot.cardTier).accent : undefined} />
             <header>
               <span><Crown aria-hidden="true" /> {isPortuguese ? "TREINADOR Nº 1" : "NO. 1 COACH"}</span>
               <h2 id="top-coach-title">{isPortuguese ? "Melhor treinador" : "Best coach"}</h2>
@@ -404,8 +359,13 @@ export default function TouchLineTablesClient({
           </div>
           {topPlayerCards.length ? (
             <ol className={styles.playerPodium}>
-              {topPlayerCards.map((card, index) => (
-                <li key={card.canonicalPlayerId} data-player-podium-rank={index + 1}>
+              {topPlayerCards.map((card, index) => {
+                const tierKey = card.editorialCard?.tierKey;
+                const palette = tierKey ? touchlineCardTierPalette(tierKey) : null;
+                return (
+                <li key={card.canonicalPlayerId} data-player-podium-rank={index + 1}
+                  style={{ "--tier-accent": palette?.accent } as CSSProperties}>
+                  <TouchlineClubPerimeterTrace accent={palette?.accent} />
                   <span className={styles.podiumRank}>{String(index + 1).padStart(2, "0")}</span>
                   <div className={styles.podiumCard}>
                     <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
@@ -415,7 +375,8 @@ export default function TouchLineTablesClient({
                     <span>{card.clubName} · {card.position}</span>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ol>
           ) : <RankingPending copy={copy} />}
         </div>
@@ -435,7 +396,12 @@ export default function TouchLineTablesClient({
             {topSevenCoaches.map((coach) => (
               <li key={coach.coachProviderId} data-coach-rank={coach.rank}>
                 <b>{String(coach.rank).padStart(2, "0")}</b>
-                <div className={styles.coachMonogram}><span aria-hidden="true">{coach.coachName.slice(0, 2)}</span></div>
+                <div className={styles.coachRankGem} aria-hidden="true">
+                  {touchlineCoachRankingGem(coach.rank) ? <Image
+                    src={touchlineCoachRankingGem(coach.rank)!}
+                    alt="" width={44} height={44} unoptimized
+                  /> : null}
+                </div>
                 <div className={styles.rowIdentity}><strong>{coach.coachName}</strong><span>{coach.clubName} · {coach.wins}W {coach.draws}D {coach.losses}L</span></div>
                 <div className={styles.pointsValue}><strong>{coach.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
               </li>

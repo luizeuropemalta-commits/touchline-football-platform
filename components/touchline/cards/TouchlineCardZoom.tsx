@@ -28,6 +28,8 @@ import {
 import { useTouchlineDialog } from "@/components/touchline/a11y/TouchlineDialog";
 import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import styles from "./TouchlineCardZoom.module.css";
+import TouchlinePlayerSocialActions from "@/components/touchline/social/TouchlinePlayerSocialActions";
+import { resolvePlayerSocialSubject } from "@/lib/touchlineArena/player-social-client";
 
 export type TouchlineCardZoomDetails = {
   eyebrow?: string;
@@ -66,6 +68,7 @@ type TouchlineCardZoomProps = {
   tierLabel?: string;
   details?: TouchlineCardZoomDetails;
   detailsContent?: ReactNode;
+  socialProviderId?: string;
 };
 
 export function TouchlineCardZoomDetailsPanel({ details }: { details: TouchlineCardZoomDetails }) {
@@ -243,7 +246,9 @@ export default function TouchlineCardZoom({
   tierLabel,
   details,
   detailsContent,
+  socialProviderId,
 }: TouchlineCardZoomProps) {
+  const socialPlayerId = details?.profileActionKind === "coach" ? null : resolvePlayerSocialSubject(socialProviderId, details?.profileHref);
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -380,6 +385,12 @@ export default function TouchlineCardZoom({
             </button>
             <div className={styles.cardColumn}>
               <div ref={expandedRef} className={styles.expandedCard} data-card-zoom="expanded">{expandedContent ?? children}</div>
+              {socialPlayerId && details ? <TouchlinePlayerSocialActions
+                providerId={socialPlayerId}
+                playerName={details.title}
+                locale={details.performanceTitle === "Desempenho" ? "pt-BR" : "en-GB"}
+                accent={tierAccent}
+              /> : null}
               {(contractTermLabel || (!details && tierLabel)) ? (
                 <div className={styles.expandedMeta}>
                   {!details && tierLabel ? <strong>{tierLabel}</strong> : null}

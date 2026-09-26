@@ -17,9 +17,16 @@
 }
 
 .trigger:focus-visible {
-  border-radius: 16px;
-  outline: 1px solid var(--touchline-card-zoom-accent, #b5ff4b);
-  outline-offset: 5px;
+  outline: none;
+  filter: none;
+}
+
+@media (forced-colors: active) {
+  .trigger:focus-visible {
+    filter: none;
+    outline: 2px solid Highlight;
+    outline-offset: 5px;
+  }
 }
 
 .backdrop {
@@ -92,6 +99,12 @@
   width: 100% !important;
   height: auto !important;
   overflow: visible !important;
+}
+
+/* Preserve the safe fallback in browsers without :has(), but do not reserve
+   an absent crown above ordinary cards in supporting browsers. */
+.cardColumn:not(:has([data-card-leadership-crown="true"], [data-coach-ranking-leader="true"])) {
+  padding-top: 0;
 }
 
 .expandedCard {
@@ -275,13 +288,9 @@
 
 .identityGrid > div {
   min-width: 0;
-  border-bottom: 1px solid rgba(216, 255, 184, .12);
+  border-bottom: 1px solid rgba(158, 255, 45, .32);
   padding: 11px 0;
   background: transparent;
-}
-
-.identityGrid .detailAccent {
-  border-color: rgba(158, 255, 45, .55);
 }
 
 .detailIcon {
@@ -538,6 +547,9 @@
   .panelWithDetails .details {
     gap: 10px;
     padding: 12px 0;
+    /* An opaque version of the existing expanded-meta surface keeps page
+       artwork behind the modal from competing with short-screen text. */
+    background: rgb(2, 8, 9);
   }
   .panelWithDetails .identityDetails { text-align: left; }
   .panelWithDetails .identityDetails::after { margin-left: 0; }

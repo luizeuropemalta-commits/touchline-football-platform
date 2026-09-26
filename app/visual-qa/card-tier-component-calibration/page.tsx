@@ -68,17 +68,18 @@ function CardDelivery({ player, locale, presentation }: Readonly<{
 }>) {
   const compact = presentation === "compact";
   const zoom = presentation === "zoom";
+  const renderScale = zoom ? 0.4 : 0.28;
   const metricSeed = Number(player.shirtNumber) || 0;
 
   return (
-    <div data-card-calibration-presentation={presentation} style={{ display: "grid", justifyItems: "center", gap: 8 }}>
+    <div data-card-calibration-presentation={presentation} style={{ display: "grid", justifyItems: "center", justifySelf: "center", width: 430 * renderScale, gap: 8 }}>
       <span style={{ color: "rgba(226,232,240,.7)", fontSize: 11, fontWeight: 850, letterSpacing: ".09em", textTransform: "uppercase" }}>{presentation}</span>
       <TouchlineEliteExactCard
         player={player}
         isEditable={false}
         persistLayoutToMaster={false}
         ignoreStoredLayout={true}
-        staticRenderScale={zoom ? 0.4 : 0.28}
+        staticRenderScale={renderScale}
         optimizeForLiveCompact={compact}
         tierCalibrationPresentation={presentation}
         runtimeLocaleOverride={locale}

@@ -4,6 +4,8 @@ import { getTouchLineAuthCopy, normalizeTouchLineAuthLocale, touchLineAuthHref }
 import { Logo } from "./logo";
 import { AuthCinematicMedia } from "./auth-cinematic-media";
 import { AuthLanguageSwitcher } from "./auth-language-switcher";
+import { AuthAmbientAudio } from "./auth-ambient-audio";
+import { AuthLeaguePicker } from "./auth-league-picker";
 
 export function AuthLayout({
   children,
@@ -18,7 +20,7 @@ export function AuthLayout({
 }) {
   const normalizedLocale = normalizeTouchLineAuthLocale(locale);
   const copy = getTouchLineAuthCopy(normalizedLocale).layout;
-  const publicArenaHref = touchLineAuthHref("/touchline-clubs", normalizedLocale);
+  const publicArenaHref = touchLineAuthHref("/arena", normalizedLocale);
 
   return (
     <main className={`arena-bg console-shell relative min-h-[100dvh] overflow-x-clip bg-[#02050a]${cinematic ? " auth-cinematic" : ""}`}>
@@ -33,6 +35,7 @@ export function AuthLayout({
           <header className="auth-brand-header flex shrink-0 items-center justify-between">
             <Logo href={publicArenaHref} officialArena />
             <div className="flex items-center gap-2">
+              <AuthAmbientAudio locale={normalizedLocale} />
               <AuthLanguageSwitcher locale={normalizedLocale} />
               <Link href={publicArenaHref} className="console-mini-card hidden items-center gap-2 px-4 py-3 text-[10px] font-black text-cyan-200 transition hover:-translate-y-1 sm:inline-flex">
                 <Globe2 size={14}/> {copy.arenaHome}
@@ -55,6 +58,7 @@ export function AuthLayout({
               <p className="mt-6 max-w-xl text-sm leading-7 text-slate-300/80">
                 {cinematic ? copy.cinematicDescription : copy.standardDescription}
               </p>
+              <AuthLeaguePicker locale={normalizedLocale} />
 
               <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
                 <div className="console-mini-card p-4"><Trophy size={18} className="text-amber-300"/><p className="mt-4 text-[10px] font-black text-slate-400">{copy.cardLabel}</p><p className="mt-1 text-xl font-black">{copy.cardValue}</p></div>

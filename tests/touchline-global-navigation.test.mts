@@ -53,6 +53,7 @@ test("global navigation exposes an honest current state only for its exact gener
 
 test("Club Profile, Live and 404 use the shared public navigation without duplicate Arena returns", () => {
   const clubProfile = source("app/touchline-clubs/[club]/page.tsx");
+  const coachProfile = source("app/touchline-coaches/[coach]/page.tsx");
   const live = source("components/touchline/match-centre/TouchlineMatchCentre.tsx");
   const notFound = source("components/touchline/TouchlineNotFound.tsx");
   const player = source("app/touchline-players/[player]/page.tsx");
@@ -65,6 +66,8 @@ test("Club Profile, Live and 404 use the shared public navigation without duplic
   const navigationStyles = source("components/touchline/TouchlineGlobalNavigation.module.css");
 
   assert.match(clubProfile, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="clubProfile"[\s\S]*?surface="public"[\s\S]*?trustedContext=\{\{/);
+  assert.match(coachProfile, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="coachProfile"[\s\S]*?surface="public"/);
+  assert.doesNotMatch(coachProfile, /<Link href=\{`\/market-transfer/);
   assert.match(live, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="live"[\s\S]*?surface="public"/);
   assert.match(notFound, /<TouchlineGlobalNavigation locale=\{locale\} currentRoute="notFound" surface="public"/);
   assert.doesNotMatch(live, /className=\{styles\.return\}/);
@@ -91,4 +94,10 @@ test("Club Profile, Live and 404 use the shared public navigation without duplic
   assert.doesNotMatch(clubOwnerProfile, /TouchlineProfileQuickNav/);
   assert.doesNotMatch(clubOwnerHistory, /TouchlineProfileQuickNav|touchlineArenaHref/);
   assert.doesNotMatch(clubOwnerRenewals, /TouchlineProfileQuickNav|touchlineArenaHref/);
+});
+
+test("shared navigation keeps crisp borders and no blurred neon ring", () => {
+  const css = source("components/touchline/TouchlineGlobalNavigation.module.css");
+  assert.match(css, /border: 1px solid rgba\(234, 255, 199, \.36\)/);
+  assert.match(css, /\.moreLink::after \{[^}]*box-shadow: none/);
 });
