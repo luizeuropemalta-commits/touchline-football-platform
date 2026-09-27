@@ -1,5 +1,13 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+2026-09-27 00:44 heartbeat: postapplypullcause experimental.pgdelta=true generatedconfig; explicitfalse isolatesSQLworkflow, actualCLI0e14691+catalog11d436. Owneddisposableremoved. Changedsuite75366CLOSED0c484bb2417PASS67SKIP/2484total, no failures. Revisedmigrationhash2f70b978... awaitsfreeze/soleforwardstagingrefresh thenQApreflight. No hostedapply/build/domainaction.
+
+2026-09-27 00:34 heartbeat: removedauthoredtransaction, directtestwrappersadded;11PASS,typeslintdiff0. ExactCLIforcedhistoryfailure rollsDDLback; subsequentlocalDBsuccessproved, then unexpectededge-runtimepull interrupted130, notCLIcompletion. Disposablecontainerremoved; diagnosisworkspace retained. No targetmigration, no repeatunchangedtests/build. RevisedSQLhash2f70b978... differs62b3399; freeze/reviewpending.
+
+2026-09-27 00:29 heartbeat: soleforward dry-runPASS3166cc using actualremote-historymirror. Local actualCLI injectedhistoryfailure proves partialcommit with authoredtransaction(bb8a79), managedbatchrollback confirmed. This blocks62b3399application until transactionformat/testwrapper correction; not ownerpermission blocker. Disposableprobe removed, private stagingretained, no targetmigration/build/cutover.
+
+2026-09-27 00:24 heartbeat:62b3399localfreeze proofclean; dbpush dry-run exactQA--skip-vault45325exit1missing-local-history, no DDL pushed/retry/historyrepair. LocalCLI2.114.0; upstreammain suggests authoredtransaction/history split, installedversionmatch unproven. Next actualCLI isolated failure rehearsal + fetchedremote-history mirror with onlysoleforwardpending; preservecanonicalhistory/otherpendingmigrations. Rootreportupdated, no remote release or wholemissionPASS.
+
 2026-09-27 00:14 heartbeat: Supabase skill/security checklist used for hosted read-only rollout gate. Saved catalog SQL actually executed; absent relation givesNULL privileges, not falsePASS. Advisor baseline and actual invoker timestamp function recorded. No remoteDDL/build/repeated tests. Pending exact-manifest freeze/version-safe atomic application path before single forward rollout; fullmission not complete.
 
 2026-09-27 00:07 heartbeat: recovered cached isolatedPostgreSQL17.6; ten real-engine restoration/RLS/upsert/rollback/drift scenariosPASS86260CLOSED0(7b8622). No repeated app tests/build, no remote schema or domain mutation. New outeroutputs pg17harness/report records bounded evidence; pending controlled rollout and native/data/sender gates. Synthetic ownedcontainer cleanup only.

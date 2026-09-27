@@ -1,6 +1,8 @@
 -- Forward-only repair. Never replay/delete the recorded historical migration.
 -- No sender, cron, consent, feature flag or existing row is created/modified.
-begin;
+-- The migration runner MUST execute this entire file and its history insert in
+-- one managed transaction. Authored BEGIN/COMMIT would split CLI history from DDL.
+-- Direct SQL test harnesses must provide an explicit surrounding transaction.
 set local lock_timeout = '5s';
 
 do $$
@@ -161,4 +163,3 @@ create policy "users manage own notification devices" on public.notification_dev
 revoke all on public.notification_devices from public, anon, authenticated;
 grant select,insert,update on public.notification_devices to authenticated;
 grant select,insert,update,delete on public.notification_devices to service_role;
-commit;

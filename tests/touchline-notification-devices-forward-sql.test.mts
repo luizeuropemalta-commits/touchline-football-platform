@@ -4,7 +4,13 @@ import test from 'node:test';
 import { createECDH, randomBytes } from 'node:crypto';
 
 const modulePath = process.env.TOUCHLINE_FANTASY_PGLITE_MODULE;
-const migration = readFileSync(new URL('../supabase/migrations/20260926233755_touchline_notification_devices_forward_restore.sql', import.meta.url),'utf8');
+const migrationSource = readFileSync(new URL('../supabase/migrations/20260926233755_touchline_notification_devices_forward_restore.sql', import.meta.url),'utf8');
+// Emulate the runner-owned transaction; production history is inserted before commit.
+const migration = `begin;\n${migrationSource}\ncommit;`;
+
+test('forward migration leaves transaction ownership to the migration runner', () => {
+  assert.doesNotMatch(migrationSource, /^\s*(?:begin|commit|rollback)\s*;/im);
+});
 const user = '11111111-1111-4111-8111-111111111111';
 const installation = '22222222-2222-4222-8222-222222222222';
 const other = '33333333-3333-4333-8333-333333333333';
