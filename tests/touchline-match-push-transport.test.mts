@@ -31,9 +31,13 @@ test("dispatcher and encrypted transport preserve consent and uncertain outcomes
     const claim = { id: "synthetic", leaseToken: "synthetic-lease", leaseUntil: data.expiresAt.toISOString(), expiresAt: data.expiresAt.toISOString() };
     const expected = scenario === "accepted" ? "provider_accepted" : scenario === "opted-out" ? "cancelled" : "uncertain";
     let requests = 0;
+    let reservations = 0;
     const receipts: string[] = [];
+    const references: unknown[] = [];
+    const attemptId = '11111111-1111-4111-8111-111111111111';
     const result = await dispatchMatchPush(claim, {
       enabled: true, now: () => new Date(),
+      attemptId, reserve: async () => { reservations++; return true; },
       loadFresh: async () => ({
         policy: {
           sourceChecksum: `sha256:${"a".repeat(64)}`, currentSourceChecksum: `sha256:${"a".repeat(64)}`,
@@ -50,11 +54,13 @@ test("dispatcher and encrypted transport preserve consent and uncertain outcomes
           return new Response(null, { status: scenario === "uncertain" ? 503 : 201 });
         }),
       }),
-      finish: async (received, state) => { assert.equal(received, claim); receipts.push(state); return true; },
+      finish: async (received, state, reference) => { assert.equal(received, claim); receipts.push(state); references.push(reference); return true; },
     });
     assert.equal(result, expected);
     assert.deepEqual(receipts, [expected]);
     assert.equal(requests, scenario === "opted-out" ? 0 : 1);
+    assert.equal(reservations, scenario === "opted-out" ? 0 : 1);
+    assert.deepEqual(references,[scenario==='opted-out'?{kind:'unreserved'}:{kind:'reserved',attemptId}]);
   }
 });
 

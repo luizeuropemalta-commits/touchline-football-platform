@@ -72,8 +72,8 @@ test("the shared exact card preserves the editorial tier and exposes verified Ma
   assert.match(card, /const editorialCard = player\.editorialCard \?\? null/);
   assert.match(card, /formatTouchlineMarketValueEur\(editorialCard\.marketValueEur, runtimeLocale \?\? undefined\)/);
   assert.match(card, /player\.marketValueState === "verified"/);
-  assert.match(card, /data-card-editorial-state=\{reviewRequired \? "review_required" : editorialCard \? "published" : "unpublished"\}/);
-  assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
+  assert.match(card, /data-card-editorial-state=\{reviewRequired \? "review_required" : publicationPending \? "publication_pending" : editorialCard \? "published" : "unpublished"\}/);
+  assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired && !publicationPending\) return null/);
 
   assert.doesNotMatch(card, /resolveTouchlineVerifiedPlayerEconomy/);
   assert.doesNotMatch(card, /resolveTouchlinePublicCardPresentation/);
@@ -82,8 +82,8 @@ test("the shared exact card preserves the editorial tier and exposes verified Ma
 });
 
 test("an unpublished football player cannot become a commercial card through artwork or a legacy price", () => {
-  assert.match(card, /const cardTemplateUrl = reviewRequired[\s\S]{0,240}: assignedVisualTemplateUrl;/);
-  assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
+  assert.match(card, /const cardTemplateUrl = neutralIdentity[\s\S]{0,240}: assignedVisualTemplateUrl;/);
+  assert.match(card, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired && !publicationPending\) return null/);
   assert.match(card, /allowVisualInventoryPreview = false/);
   assert.match(card, /player\.cardPriceAuthority === "active-contract"/);
   assert.doesNotMatch(card, /formatTouchlineContractedCommercialCardPrice/);

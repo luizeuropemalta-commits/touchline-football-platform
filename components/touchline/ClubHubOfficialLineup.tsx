@@ -215,6 +215,7 @@ export default function ClubHubOfficialLineup({
                     expandedContent={(
                       <TouchlineEliteExactCard
                         player={exactPlayer}
+                        showUnpublishedIdentity
                         labels={labels}
                         imageLoading="lazy"
                         playerProfileHref={profileHref}
@@ -229,6 +230,7 @@ export default function ClubHubOfficialLineup({
                     <TouchlineEliteExactCard
                       className={styles.card}
                       player={exactPlayer}
+                      showUnpublishedIdentity
                       labels={labels}
                       imageLoading="lazy"
                       playerProfileHref={profileHref}

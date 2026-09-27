@@ -140,6 +140,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                 expandedContent={(
                   <TouchlineEliteExactCard
                     player={exactPlayer}
+                    showUnpublishedIdentity
                     labels={labels}
                     imageLoading="lazy"
                     layoutStorageKey={TOUCHLINE_CARD_STUDIO_LAYOUT_KEY}
@@ -152,6 +153,7 @@ export default function ClubHubSquadGrid({ cards, locale, labels, openProfileLab
                 <TouchlineEliteExactCard
                   className={`club-hub-rendered-card ${styles.artwork}`}
                   player={exactPlayer}
+                  showUnpublishedIdentity
                   labels={labels}
                   imageLoading="lazy"
                   initialRenderScale={cardRenderScale}

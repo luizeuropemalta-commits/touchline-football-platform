@@ -1,5 +1,153 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+2026-09-27 16:08 — Supersedes queued diagnostic status: both jobs closed. Corrected job-muk0cjun-90ec732f produced bounded actual-caller/CSS measurements and screenshots at1280x800/844x390,11 cards/no measured collisions/cuts; failed third portrait visibility assumption, not a demonstrated product regression. Independent reviewer confirms partial result, recommends no repeat; final errors/assets assertions unexecuted,71 source hashes independently unchanged. Native/full-root/other consumers remain open. Existing reviewer reconciling next genuinely executable local gap in14-order; no duplicate tests/build or source mutation. Full14PARTIAL, preview/sessions/release/data/push gates preserved.
+
+2026-09-27 15:57 — root CPJ launch a0dd37 job-muk05gk5-d198ce35 QUEUED, actual ClubHub caller+CSS in minimal isolated Next dev/synthetic fixture; not PASS/build/QA/native. Capture closure/assets with hashes, clean env/loopbackonly/home+canonical+depswrite deny; preview14061 untouched. No same-turn process/result polling, resume exactjob later. Original item5 “not implemented” is historical: root/reviewer currentconsumer mapping confirms trace exists, acceptance only remains; no duplicate neon writer. Full14 remainsPARTIAL, no remote/migration/send/activation.
+
+2026-09-27 15:25 heartbeat continuation — QA Crystal Palace11triggers/9visible reproduced; COMPLETE/noeditorial null guard corrected LOCAL via6 explicit opt-ins across3ClubHub consumers. No fabricated review gap/tier/price/publication.113focusedPASS, typesadbeb1/lint8f967a; aggregate41195exit0/2479e2:2536total17suites2455PASS81SKIP0FAIL19.4508s. Independent review no functional/security blocker. Actual component render25d7ac proves neutral nonzero identity, not full caller/native acceptance;153.23px badge on52.53px compact card remains contextual visual risk. One public local tab22 confirmed protected next-start preview is older; closed without restart. Build job-mujyeg0c-39773ba8 predates new4TSX delta; no repeat/build/publication/migration/send. Outer clubhub-unpublished-identity report owns details. Full14PARTIAL.
+
+2026-09-27 15:16 — single isolated current-source CPJ build completedexit0,8d47c6/b04296:35.3scompile12.7stypes145/145. Source/dependency verified by launcher; root3187canonicalhashesd9a751unchanged, preview14061present. Freeze lifted solely after posthash; no source delta at this point. No configuredQA/mobile/ProductionGO, migrations/send/offgates unchanged. FullmissionPARTIAL; subsequent runtime feasibility is read-only, no duplicated build/test.
+
+2026-09-27 15:03 — Five remaining eligible coach direct profiles visually sampled in native desktop Safari, joining previous Mikel proof; Frank additionally844×390 with scroll. Not five new modal proofs, not iPhone, Ruby still pending. Session cleanup preserved original tabs and restored responsive settings. Sources/checkpoints FROZEN now for proposed isolated current-source build capture; no workload launched. Progress goes to outer hosted-tier/push-binding reports until post-build verification or explicit cancellation. Dirty manifest inspected d3da33; historical modifications preserved. Full missionPARTIAL, all external/release gates unchanged.
+
+2026-09-27 14:53 — LOCAL copy + canonical public profile bridge verified, not published. Exact UUID only/published presentation/current verified membership; invalid/duplicate/conflicting cardId rejects, no name authority/provider URL leak. Root independent review98030c/1b43e6/311b7e. Aggregate41153 failed obsolete source-shape assertion (405461); test-only correction retains publication requirement, focused37PASS. Final aggregate16731exit0/93d9e0=2533total/17suites/2452PASS/81SKIP/0FAIL/0CANCEL24.017s; globalESLint+diff74028exit0/7d5960. Agent25focused/nonincrementaltypes/scopedlint passed. Initial cross-realm comparison failure was a test harness error, not product RED. New build/hosted/native proof pending; no repeated old build, remote/migration/send/activation. Exact eight-file new slice documented in outer My Club report; preview14061 preserved, existing historical dirty changes retained. Full missionPARTIAL; public coach acceptance continues independently.
+
+2026-09-27 14:31 root hosted Safari read-only customer flow and scoped market copy correction. Preflight7e329a; agent two-file copy delta REDf2fa51/GREEN12PASS e10cda/static46c728; root fullrevieweca1e6. Same editable gates and callbacks; no account/XI mutation. Settled landscape modal inspected and Escape returned focus; orientation preserved XI, not physical iPhone acceptance. New local copy not hosted/build-verified. Canonical identity link and crown eligibility under independent read-only review. Report my-club-safari-acceptance-20260927.md contains transient screenshot/reload caveat. Six pending/no remote/send/preview interruption; full missionPARTIAL.
+
+2026-09-27 14:12 existing reviewer real Next transport45549 CLOSEDexit0/f5c5e6; root final reviewfadb6d. Identical loader GET memoization explained previous count-oracle failure81e817; corrected test retained actual Flight/DOM/state assertions. Coach C1→C2 and season A→B passed; equal pointers no extra refresh. Fourteen module hashes unchanged, synthetic data boundaries explicit. Cleanup787121 removed own temp only and preserved preview14061. No production change/repeated aggregate/build/remote write; six pending/missionPARTIAL. Full receipt and remaining withdrawal/offseason/native/data gates in outer report.
+
+2026-09-27 09:00 agent provider-only scoped root refresh+new source-scope test reviewed732b2a; actual ReactDOM composition reviewedc51316, focusedGREENdcac05 and staticc847de. Root integrated37351closedexit0/6aa771=2525/2444PASS81SKIP0FAIL17suites; diff00a765 no errors. No repeated build, canonical preview unchanged. TransportRSC proof next, no closure of withdrawal/offseason/native; sixpending/missionPARTIAL.
+
+2026-09-27 08:50 root accepted bounded real-provider lifecycle proofa8798c after requesting stale-preseason discriminator; actual ReactDOM six transitions retain one child mount/state, final unmount1, no page errors/external page requests. Diagnostic files outside canonical checkout. Refresh delivery remains unimplemented; reviewer evaluating reuse without duplicate page/root polling or weakened null/cross-season guards. No new source build, remote action, migration or send; six pending and missionPARTIAL. Full receipts in outer push-binding-integration-20260927.md.
+
+2026-09-27 06:58 existingagent threefile slice reviewed by root8744aa; invalid policy zero delegation, explicit projection/historyfalse/realclock, no runtime imports1804ae. Focused8PASS/types/scopedlintfdd2e8; rootnewdeltaaggregate2523/2442PASS81SKIP0FAIL17suites9ac8a2. FouroptionalSQLskips separately tested05:39. Build15979 remains pre-entry, sixpending/fullmissionPARTIAL/no activation.
+
+2026-09-27 06:48 build15979closedexit0/94d055, derived current-source snapshot with independent dependencies; minimal clean environment/direct pinnedNodeNextentrypoint, sandbox denies network/homewrites. Compile/types/145of145 passed, canonicalposthash56edfe unchanged, preview14061 kept. Not QAconfiguration/data/native/ProductionGO; sixpending/callerOFF/missionPARTIAL. Checkpoint freeze ended after completed verification; documentation-only receipt now intentionally differs from immutable build-input manifest. No duplicate build, remote action or unchanged test repetition.
+
+2026-09-27 05:39 existingagent delivered exclusive composition-sql test,4PASS0SKIP0f3959/lint374ffe. Rootreview8f0bfd verifies SQL/SDK/crypto real boundaries and external assertions; no duplicate test run. Four newoptionaltests not in05:29 aggregate. No app/migration/remote/send/build action, sixpending/missionPARTIAL.
+
+2026-09-27 05:29 integrated verification for post04:46 adapter/composer/config delta:2516/2439PASS77SKIP0FAIL17suites, globalESLint/diff86220exit0/31c04c. Not unchanged cadence test; no exclusions altered. Next boundedcomposition proof design requested, no remote/build/send, sixpending/missionPARTIAL.
+
+2026-09-27 05:24 config helper+composer early refusal added, frozenvalidated VAPID copy.3focusedPASS48d24e/61769exit0/699a88 scopedlint/types/diff; no baselineRED, reviewpending. Fixedsynthetic scalars only, no credential/generatedkey/network/remote action. Sixpending/missionPARTIAL; aggregate/build remain earlier.
+
+2026-09-27 05:19 composition test-only deadline cases added,2PASS20f971/93935exit0/5b3c0d scopedlint/diff. Independent finishabort and ignoredabort outerreceipt timeout proved; late read/transport cannot restart effects. No app/schema/remote/send/build changes; next configuration design pending, sixpending/missionPARTIAL.
+
+2026-09-27 05:11 local singleclaim composition plus15controlled scenarios. Scopedlint initial threeany annotations corrected; final49268exit0/f4cc47 focusedPASS/types/lint/diff. Independent review no blocker, no route/scheduler/activation or realtransport proof. Late-read/finishdeadline tests next; sixpending and missionPARTIAL, aggregate/buildstale.
+
+2026-09-27 05:06 test-only adapter/SDK/SQL composition throughcontrolledfetch, lostcommittedreceipt+legacycancel+owneduncertainfinish.3PGlitePASS57807d882a9 then79147 extendedfinish/lintdiff. No sourceSQL/runtime/remote/send action; nextcomposition designpending, sixpending/missionPARTIAL.
+
+2026-09-27 05:01 adapter boundarytests expanded52combinations/2PASSafedda,72319exit0/3f44aa scopedlint/diff. Independentreview no blocker, callerowneddeadline retained. No production/SQL/remote/send change, sixpending and missionPARTIAL.
+
+2026-09-27 04:56 adapter module+36controlledSDKcases REDmissing110f4d→PASS06d45e/static89935exit0/84d390. No realRPC/transport/caller activation; reviewrequested, deadlineowner/external gates documented. Sixpending, missionPARTIAL.
+
+2026-09-27 04:51 actual SQLcommit followed by synthetic lostreceipt through realdispatcher: oneRPCbridge/zeroHTTP/zerofinish,3PGlitePASS24064exit0e70c17 scopedlint/diff. No sourceSQL/remote change, sixpending and missionPARTIAL. ServerRPCadapter not yet implemented.
+
+2026-09-27 04:46 test expansion+transport fixture contract migration; aggregateRED5437e4 traced missingmandatoryreservefixture, corrected not bypassed.24focusedPASScbf5b2/lintdiff; integrated2511/2434PASS77SKIP0FAILecb5da. Reviewer dispatcher no blocker, no servercaller/send. Sixpending, missionPARTIAL, buildstale.
+
+2026-09-27 04:41 dispatch reservation seam+noncecompletion/secondread delta RED3bd5016→14PASSb69959/static97545exit0ea346b. No production dependency defaults, no serverRPCadapter/runtimecaller/send; reviewrequested and additional controlledcases next. Sixpending, missionPARTIAL.
+
+2026-09-27 04:36 observedwaiter-before-release reservecommit/reserverollback/cancelwaiter tests verified17.6,9818exit0/9690aa scopedlint/diff. Container5aea4c3 removed, syntheticdata only; productionSQL/source unchanged. Reviewer nextdispatcher contract pending; sixmigrations remote-pending, missionPARTIAL.
+
+2026-09-27 04:31 attempt protocol added after historical prefix in guarded17.6harness:55215exit0/8f31d1 alltests+lint/diff. Reservation/cancel races and afterlockexpiry exercised; no explicitwaiter handshake for first races yet. Ownedd4be4c9/networknone/tmpfs syntheticcontainer removed after identitycheckd1b878. No SQL/app/remote/send change; sixpending, missionPARTIAL.
+
+2026-09-27 04:26 attempt SQL test expanded to actual four-migration chain with synthetic prerequisites and service_role:cleanup preserves nonce/time, no reclaim, sequential cancelthenreserve refuses. Pair/legacy/trigger ACL gaps covered;3PASS34849exit0/853a0e scopedlint/diff. No production delta/remote/send, sixpending and missionPARTIAL; concurrent17.6/runtime next.
+
+2026-09-27 04:21 sixpending after officialCLI125bf5 new attempt reservation migration. One-shot nonce/currentclock/immutable pair and noncefinish, intentional legacyfinish tightening. PGlite2PASS2ae313/static92083exit0eb7fb8; rollbacktest fixture BEGIN separation corrected132ab4. Reviewer no isolated blocker, fullchain/concurrency/HTTP proof pending. MissionPARTIAL; no remote/send or preview/build action.
+
+2026-09-27 04:15 existing reviewer completed one-attempt design; root confirmed old finish/shared-token compatibility gap e60426 and dispatcher unconditional completion316ff9. Recorded nonce+timestamp reservation/nonce-fenced finish, old pre-attempt cancellation only, lostresponse zeroHTTP, loser nofinish, concurrency/rollback acceptance plan. Design only, fivepending unchanged; no remote/schema/send or unchangedverification. MissionPARTIAL.
+
+2026-09-27 04:10 read-only sendercomposition review/callgraph2ccce1: no realcaller, duplicate sameclaim invocations require persistentattempt CAS before activation. Final live consent reread/timecutoff also required; no unsafe wiring added. No unchangedverification/remote action; missionPARTIAL.
+
+2026-09-27 04:05 globalESLint+integrated72070exit0e9023b2427PASS74SKIP0FAIL2501total. Compositionreview exactreadfilter gap addressed, focusedPGlitePASS931c0c/68567lintdiff. Preview/buildcollision checkedfd2916, no build/preview interruption. MissionPARTIAL, remaining external/authority gates preserved.
+
+2026-09-27 04:00 new producerSQL composition test1PGlitePASS79687exit0f9aed3/static16483exit0/9f5bd1. Actual producer/helpers/migrations with controlled read seams, historyfalse conservative and dedupe verified. No app/schema/remote change; missionPARTIAL, fullsource/hosted/native/build/authority gates retained.
+
+2026-09-27 03:55 boundedproducer test expansion39modesPASS965b44;4102static lint/nonincrementaltypes/diff closure in tooltrace. Parentlistener inventory verifiedempty, latecheckpoint/RPC cases retained. No production/schema/remote action; missionPARTIAL, fullmatrix/build/historyauthority unresolved.
+
+2026-09-27 03:50 boundedproducer wrapper REDmissingdeadlinee49213→35modesPASSa517fc/static19266exit0/5d1a92. Firstterminal-before-abort explicit semantics, no late readRPC, review requested. No schema/remote/caller/send changes; missionPARTIAL and rootreport records remaining proof gaps.
+
+2026-09-27 03:45 test-oracle source/RPC contract hardening PASSexit0f129d6; no production change. Reviewer boundedwrapper design recorded for next test-first step, not completion. Existing no-signal sharedreaders confirmed7bd717. No unchanged aggregate/build or remote mutation; missionPARTIAL.
+
+2026-09-27 03:40 producer aggregate2500/2427PASS73SKIP0FAIL91115exit0/62cbf0. Reviewer test-oracle gap corrected with outside-catch assertions; focused32modesPASS54dd00. Historical authority keptfalse absent positivecoverage, no initial inference. Official heartbeat updated without pausing; missionPARTIAL, no remote/send/schema/build action.
+
+2026-09-27 03:35 test-only producer32modes incl realSDK controlledHTTP(no network) and postattempt abort semantics.91711CLOSED0/b1186e focused/lint/nonincrementaltypes/diff. No schema/source/remote/build action, no runtimecaller/sender proof. MissionPARTIAL; canonical rootreport lists outstanding integration/authority/native gates.
+
+2026-09-27 03:30 producer module+20mode controlled integration test added. MissingmoduleREDd74b09; reviewer P2sizeRED17164d→fixfalseworstcase→6focusedPASS9393b2/static91829exit0/83f89f. No real enqueue/remote/caller/send activated. Historyproof/policy/cancellation/SDKintegration/native/currentbuild remain open. MissionPARTIAL; rootreport records boundaries and evidence.
+
+2026-09-27 03:25 fresh integrated runner for enqueue-test/deadline changes54314CLOSEDexit0ca0688=2426PASS73SKIP0FAIL2499total17suites17.562s. No schema/source/remote writes; recorded skip/exclusion limits preserved. MissionPARTIAL; next realproducer, not fake claim-based reuse, with unresolved policy/history/native/build gates.
+
+2026-09-27 03:20 reviewer deadline coverage suggestion addressed with four distinct limits;4tests/scopedlint/diff exit0f0d93a. No source/schema/apply change. Official automation supersedes stale classification-design/fourpending state while retaining ACTIVE cadence and gates. Footer assessed: missionPARTIAL, runtimeproducer/currentbuild/native/hosteddata unresolved.
+
+2026-09-27 03:14 source-bounded deadline helper test-first REDc042cf/GREEN4PASS; static65401exit0/eacddc, extendedboundary tests17576exit0/fccd6b. Local prerequisite only, no actual producer/RPC invocation or remote change. Reviewer design retained; policy/history authority and native/build gates unresolved. MissionPARTIAL.
+
+2026-09-27 03:09 harness deterministic observedwaiter-before-rollback case PASS16073/a8f353; classificationreservation recovered onlyafterrollback. Ownedsyntheticcontainer removed; no user/remote data. Reviewer designrequest fornextproducer, no runtimeimplementation yet; missionPARTIAL.
+
+2026-09-27 03:04 guarded17.6actualenqueue concurrency/time tests PASS96062/d59313;PGlite2 andscopedlint/diff in sameexit0chain. SchemaSQL unchanged thisturn. b0ee12isolation/version, f01bcacleanuponlyownedtempdata. No sender/remote/fullmissionPASS; rootreport details exact remaining limitations.
+
+2026-09-27 02:59 SQLenqueue persistence function inUNAPPLIED20260927023959; testfirstd91b6c→6SQLPASS68362exit0/567589 lint/types/diff. Service-only, device serialization, checksum idempotence, conservative unknownhistory. Not fullproducer/send; targetconcurrency/reviewpending, fivepending migrations and no remote mutation. MissionPARTIAL.
+
+2026-09-27 02:54 expanded guarded17.6harness with classification migration+immutableinsertfixture+concurrentuniqueinitial.15426exit0/798cd7 tests/lint/diff;version/isolation20f14d. Only owned3ab910container removedcdc208, syntheticdata disposable. No enqueue/send/hosted action; missionPARTIAL.
+
+2026-09-27 02:49 persistedkind adapter binding41modes, realformatter revisionflag regression corrected.14focusedPASS72a10d/static91425exit0/f74c5b. Newaggregate39973exit0/19b0a2=2425PASS72SKIP0FAIL2497total17suites. Reviewreused; no enqueue/send/remote/build. MissionPARTIAL.
+
+2026-09-27 02:44 test-only complete queue service_role lifecycle and classification runnerrollback coverage.37190exit0/8cecda4PASS;43099exit0/76ff26classification2PASS+lint/types/diff. Synthetic receipts not delivery, PGlite not17.6/hosted. MissionPARTIAL, no remote/build/send changes.
+
+2026-09-27 02:39 CLIcreated20260927023959 local classification foundation; fivepending. MinimalPGliteRED77641e thenPASSbb251b;74516exit0/4f5631 focusedlint/types/diff. Immutableidentity/legacyNULL/initialunique tests, no actualenqueue or remote application. Reviewer reused pending; missionPARTIAL and targetengine/fullchain/producer/native gates open.
+
+2026-09-27 02:34 bounded read-only classification design accepted for next implementation exploration; transactional device lock, immutable initial reservation, legacy/uncertain conservative handling and retention caveat documented in rootreport. NOT implemented/PASS. Official automation update preserved ACTIVE cadence/thread/silence, appended latest evidence. No app/schema/source/send/deploy change; missionPARTIAL.
+
+2026-09-27 02:29 payload boundary/locale test delta37modesPASSca94cd;21609CLOSED0/642598 scopedlint/nonincrementaltypes/diff. Existing reviewer requested bounded classification design. MissionPARTIAL; producer/transport/currentbuild/native/live-data unresolved, no remoteaction.
+
+2026-09-27 02:24 local adapter payload seam integrated with existing formatter; test-first missing-payload regression54a312,14focusedPASS3dd2cb and55568staticexit0/809581. Exact public fields asserted with real formatter; no queue payload trust. Existing reviewer reused, pending. No remote/build/send/producer action; missionPARTIAL, size/locale negative coverage remains next.
+
+2026-09-27 02:19 test-only31scenario adapter coverage and fresh integrated regression after adapter addition. Focusedc93bde; static9474exit0/5aa4e9; canonicalrunner30920exit0/1237ae2425PASS70SKIP0FAIL2495total17suites17.722s. No implementation/SQL/remote/build mutation. MissionPARTIAL; real reader/producer/transport/native gates not replaced by controlled tests.
+
+2026-09-27 02:14 test-only recipient identity isolation strengthened following independent review: six distinct UUIDs and exact query filters.21scenarios/1testPASS4aa186;39019CLOSED0/ef225e focused test+scopedlint+diff. No production-code/schema/remote action. Remaining negative-path coverage and aggregate/current-build/runtime/native verification pending; mission PARTIAL.
+
+02:09 chain59889CLOSED0/5b5273 allfocused/staticchecks approved; pendingcollection below superseded. Review/caller/native/fullrelease still open.
+
+2026-09-27 02:09 source adapter consumes real registration/fingerprint/policy helpers over private recipient reads;RED5a39c0/GREEN21modes37eb24.59889staticclosurecollect, reviewer reusedACTIVE. No sender/caller/remote mutation, fullmissionPARTIAL.
+
+2026-09-27 02:04 source revision postclaim guard integrated;RED7827ee/GREEN16modes44885a.58211CLOSED0/1a18f4 types/lint/diff;53843testlintdiffclosurecollected. Independent reviewer reusedACTIVE; no external mutation or wholemissionPASS.
+
+01:59 reviewer P2 final-read age race reproduced0134f7 then fixed with postread agecheck;11modesPASS,26103CLOSED0/a1094b lint/types/diff. Earlier10mode receipt superseded; fulladapter/device/source revision/native gates remain open.
+
+2026-09-27 01:59 claimedsource read-only adapter/test implemented. InitialTSerrors corrected via finalRow narrowing/constkeys;40121CLOSED0/c41e72 test/lint/types/diff.10modes in1testPASS,reviewer reusedACTIVE. No producer/send/remoteapply/build/domainchange; fullmissionPARTIAL.
+
+2026-09-27 01:54 reviewer CLOSED; independent distinct-limits3PASS674f7b lint/diff0. Fresh fullsuite58352CLOSED0/24c9112424PASS70SKIP/2494total0FAIL17suites. Seven reader/age tests added since previous aggregate; no stale build or runtimeacceptance claim, no remote mutation. Next claimed-item adapter integration remains local/OFF.
+
+2026-09-27 01:49 local explicit-source-age helper/tests2PASS7c3a68,readerintegration2PASS58a7f0;52398CLOSED0/81408d staticchecks,56072closurecollected. Reviewer reused ACTIVE; no product window invented or activation. Full mission PARTIAL, no remote writes/build.
+
+2026-09-27 01:44 source review CLOSED, runtime reader seam tests2PASS(b7096c) with real caption/checksum and controlled collaborators; fixture-status test mistake corrected, negative exact reasons enforced.25955CLOSED0/208166 lint/types/diff. No remote changes/newbuild; fullmission PARTIAL, sourceagepolicy/producer/native gates persist.
+
+2026-09-27 01:39 implemented shared fenced reader private envelope/social projection.16focusedPASS/33a6a8 staticchain0,2newstructuralguardsPASS. Independent reviewer reused ACTIVE. Full executed reader regression and current application build remain pending; no provider/DB/deploy/send/domain changes. Mission PARTIAL.
+
+2026-09-27 01:34 automation stale operational counts corrected via official update, ACTIVE/cadence/thread/silence preserved. Existing reviewer ACTIVE read-only minimal private freshness evidence seam; root inspected actual3consumers/checksum exclusion. No implementation/unchangedtests/build/remoteDBchange, do not claim new runtime PASS. Root push-binding report next-step checkpoint.
+
+2026-09-27 01:29 CLI2.114.0/PG17.6 isolated rehearsal: expected historyfailures23577/66268exit1 with verified rollback; success8f5708exit0 missingbindingonly; finalcatalog+cleanup29c755exit0. ExacttwoSQLmanifest,no hostedtarget,no newbuild. Per-migration rollback proven, not wholechain transaction or fullQA schema acceptance. Sourceproducer/nativegates persist.
+
+2026-09-27 01:24 integrated78934CLOSED0/2d2125:2487total2417PASS70SKIP0FAIL/CANCEL17suites17.113s. Fresh after binding/transaction changes, not unchanged rerun. Source adapter read-only mapping/freshness inspection recorded; no sender or deployment. Local slice verified, full mission PARTIAL.
+
+01:19 owned synthetic container cleanup CLOSED0/5f7f1f, no running task container retained; previous pending cleanup superseded.
+
+2026-09-27 01:19 existing local harness expanded for binding,80091CLOSED0/1f42f2 actualPG17.6 concurrent queue/regression PASS.70423CLOSED0/e94ba1 scopedlint/diff. Synthetic network-none425a860ec28a cleanup requested; no remote writes, no broad unchanged tests/build. CLIhistory/sourceproducer/native gates retained; mission PARTIAL.
+
+01:14 independent transaction-delta review CLOSED/no bounded blocker. Earlier pending status superseded; CLI17.6/full-chain gates retained.
+
+2026-09-27 01:14 RED110d84 confirmed pending base outbox transaction escape; local transaction ownership correction then3PASS,33410CLOSED0/1b5000 scopedstaticchecks. Reviewer reused/pending; no remote schema/history/flags/build/domain mutation. RealCLI+targetengine gate remains open; whole mission PARTIAL.
+
+2026-09-27 01:09 reviewer completed bounded binding-schema review; no own blocker, pending base transaction remains separate rollout blocker. Expanded real fingerprint+SQL rotation test2PASS;98139CLOSED0/e3ca22 includes lint/types/diff. No external mutations or repeated broad tests/build; full mission PARTIAL.
+
+01:04 chain29984 CLOSEDexit0/60a743; scoped lint/types/diff PASS. Full suite not repeated; adapter/producer/target17.6/review/native gates open, remote state untouched.
+
+2026-09-27 01:04 bounded integration test only: 2PASS0SKIP0FAIL523eab on actual queue SQL plus forward binding and final policy, synthetic prerequisites. No sender wiring/activation, remote migration/build/domain action. Static chain29984 in progress; full mission and external gates remain open.
+
+2026-09-27 00:59 newlocaloutboxbindingSQL/test;RED e2fa5a then3focusedPASS bdd226. Chain72738lint/types/diffcollectbeforePASS. No backfill/producer/transport/remoteapply/build/domainaction; full integrationnotcurrent. Nextqueue/claimboundreaderintegration, rootpush-bindingreport.
+
+2026-09-27 00:54 actualQAPUTnegativechecks403/401(78fbaa/9fa2af), noauth/session/write. Nextsafeindependentitem8slice: durablequeuedsubscriptionfingerprintmissingfrompendingoutboxschema; serverhelper/policyalreadyrequireit. KeepworkerOFF; do notclaimregistration/delivery. No unchangedtests/buildrepeated.
+
+2026-09-27 00:49 exactQAforwardappliedonce6aef86;35bfb903cleanproof/hashmatch/solefiledryrun/freshpreflight recorded. Postcatalogdevice0/users3/history1/RLS+grants+constraintsverified,oldhistoryuntouched,cron0. No sender/nativeacceptanceclaim. Threeothermigrationspending; no deploy/domainaction. Nextrealregistrationwithidentitypreflight andremainingorderedintegration; rootreportreceipt.
+
 2026-09-27 00:44 heartbeat: postapplypullcause experimental.pgdelta=true generatedconfig; explicitfalse isolatesSQLworkflow, actualCLI0e14691+catalog11d436. Owneddisposableremoved. Changedsuite75366CLOSED0c484bb2417PASS67SKIP/2484total, no failures. Revisedmigrationhash2f70b978... awaitsfreeze/soleforwardstagingrefresh thenQApreflight. No hostedapply/build/domainaction.
 
 2026-09-27 00:34 heartbeat: removedauthoredtransaction, directtestwrappersadded;11PASS,typeslintdiff0. ExactCLIforcedhistoryfailure rollsDDLback; subsequentlocalDBsuccessproved, then unexpectededge-runtimepull interrupted130, notCLIcompletion. Disposablecontainerremoved; diagnosisworkspace retained. No targetmigration, no repeatunchangedtests/build. RevisedSQLhash2f70b978... differs62b3399; freeze/reviewpending.

@@ -126,7 +126,8 @@ test("Club Hub uses the shared premium review card rather than a generic pending
   assert.match(lineup, /evaluateTouchlineCardCompleteness/);
   assert.doesNotMatch(lineup, /CARD PENDING REVIEW|DATA PENDING|pendingCard/);
   assert.match(card, /data-card-editorial-state=\{reviewRequired \? "review_required"/);
-  assert.match(card, /filter: reviewRequired \? "grayscale\(1\)/);
+  assert.match(card, /const neutralIdentity = reviewRequired \|\| publicationPending/);
+  assert.match(card, /filter: neutralIdentity \? "grayscale\(1\)/);
   assert.match(card, /Card review required/);
 });
 

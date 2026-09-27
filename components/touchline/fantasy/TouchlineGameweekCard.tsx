@@ -20,6 +20,7 @@ export default function TouchlineGameweekCard({ card, locale, compact = false, d
   // Public profile links use TouchLine presentation identity only. Provider
   // identifiers remain server-side and never leak into a card URL.
   const profileHref = touchlinePlayerProfileHref({
+    canonicalPlayerId: card.editorialCard ? exact.canonicalPlayerId : null,
     name: exact.name,
     clubName: exact.clubName,
     position: exact.position,

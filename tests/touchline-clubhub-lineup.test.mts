@@ -340,7 +340,7 @@ test("shared player cards require publication and show only a verified market va
   assert.match(source, /const editorialCard = player\.editorialCard \?\? null/);
   assert.match(source, /formatTouchlineMarketValueEur/);
   assert.match(source, /player\.marketValueState === "verified"/);
-  assert.match(source, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired\) return null/);
+  assert.match(source, /if \(!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired && !publicationPending\) return null/);
   assert.match(source, /allowVisualInventoryPreview = false/);
   assert.match(source, /player\.cardPriceAuthority === "active-contract"/);
   assert.doesNotMatch(source, /resolveTouchlineVerifiedPlayerEconomy|formatTouchlineContractedCommercialCardPrice/);

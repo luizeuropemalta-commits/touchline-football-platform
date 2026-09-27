@@ -148,6 +148,7 @@ export default function ClubHubMatchdayTechnicalArea({
                       expandedContent={(
                         <TouchlineEliteExactCard
                           player={exactPlayer}
+                          showUnpublishedIdentity
                           labels={labels}
                           imageLoading="lazy"
                           playerProfileHref={profileHref}
@@ -162,6 +163,7 @@ export default function ClubHubMatchdayTechnicalArea({
                       <TouchlineEliteExactCard
                         className={styles.card}
                         player={exactPlayer}
+                        showUnpublishedIdentity
                         labels={labels}
                         imageLoading="lazy"
                         playerProfileHref={profileHref}

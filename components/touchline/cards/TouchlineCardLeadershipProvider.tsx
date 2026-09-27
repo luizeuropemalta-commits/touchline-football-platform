@@ -10,6 +10,7 @@ import {
   type TouchlineCardLeadershipAuthority,
 } from "@/lib/touchlineArena/card-leadership-authority";
 import { getTouchlineRankingReadRevision, getTouchlineRankingRequestEpoch, useTouchlineRankingRead } from "@/lib/touchlineArena/card-ranking-client";
+import TouchlineLivePresentationRefresh from "../TouchlineLivePresentationRefresh";
 
 const AuthorityContext = createContext<TouchlineCardLeadershipAuthority | null>(null);
 
@@ -31,7 +32,16 @@ export function TouchlineCardLeadershipProvider({ value, children, livePlayerUpd
   // Reconcile the seed in place: never key/remount the gameplay subtree.
   if (accepted.seedKey !== seedKey || accepted.state !== displayed) setAccepted({ seedKey, state: displayed });
   const resolved = !allowed ? EMPTY_CARD_LEADERSHIP_AUTHORITY : livePlayerUpdates ? { ...value, playerRanking: displayed.current } : value;
-  return <AuthorityContext.Provider value={resolved}>{children}</AuthorityContext.Provider>;
+  // These root consumers have no page-owned presentation refresh. Its pointer
+  // hint requests new canonical server seeds; it never supplies crown authority.
+  const refreshRootSeed = livePlayerUpdates && allowed && (pathname === "/arena" || pathname === "/my-club");
+  return <AuthorityContext.Provider value={resolved}>
+    {refreshRootSeed ? <TouchlineLivePresentationRefresh
+      initialPlayerRankingSnapshotId={value.playerRanking?.snapshotId ?? null}
+      initialCoachRankingSnapshotId={value.coachLeader?.snapshotId ?? null}
+    /> : null}
+    {children}
+  </AuthorityContext.Provider>;
 }
 
 export function useTouchlineCardLeadershipAuthority() {

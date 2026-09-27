@@ -221,6 +221,9 @@ export default function FantasyGameweekClient({
   const validation = geometry && snapshot ? validateTouchlineFantasyLineup({ selections, players: eligiblePlayers, geometry, budgetEur: snapshot.config.budgetEur, maxPlayersPerClub: snapshot.config.maxPlayersPerClub, requireComplete: true }) : null;
   const deadlineReached = deadlineReachedFor === activeGameweek?.id;
   const editable = snapshot?.entitlementActive === true && activeGameweek?.state === "MARKET_OPEN" && !deadlineReached;
+  const marketOpen = activeGameweek?.state === "MARKET_OPEN" && !deadlineReached;
+  const marketStatusLabel = !activeGameweek?.state ? (pt ? "Indisponível" : "Unavailable") : marketOpen ? (pt ? "Mercado aberto" : "Market Open") : (pt ? "Mercado fechado" : "Market Closed");
+  const marketAccessLabel = marketOpen ? (pt ? "Somente consulta" : "View only") : marketStatusLabel;
   const localFingerprint = lineupFingerprint({ selectedCoachId, formationCode, selections });
   const persistedFingerprint = lineupFingerprint({ selectedCoachId: persistedUserGameweek?.selectedCoachId ?? null, formationCode: persistedUserGameweek?.formationCode ?? null, selections: persistedSelections });
   const hasUnsavedChanges = localFingerprint !== persistedFingerprint;
@@ -390,7 +393,7 @@ export default function FantasyGameweekClient({
     };
     return <section className={styles.myClubCommand} data-fantasy-context="my-club" data-market-state={activeGameweek?.state ?? "unknown"} aria-label={pt ? "Central do Meu Clube" : "My Club command centre"}>
       <section className={styles.myClubMarketStatus} aria-label={pt ? "Estado do mercado" : "Market status"}>
-        <div><span>{pt ? "MERCADO DE TRANSFERÊNCIAS" : "TRANSFER MARKET"}</span><strong>{activeGameweek?.state === "MARKET_OPEN" && !deadlineReached ? "Market Open" : "Market Closed"}</strong><small>{editable ? (pt ? "Escolha uma posição para gerenciar o XI" : "Choose a position to manage the XI") : (pt ? "Consulte todos os clubes, posições e perfis. Alterações no XI estão bloqueadas." : "Browse every club, position and profile. XI changes are locked.")}</small><p className={styles.myClubMarketRule}>{pt ? "Fecha no apito inicial do primeiro jogo da rodada. Reabre após a confirmação do apito final do último jogo pelo provedor." : "Closes at the first match kickoff of the round. Reopens after the provider confirms the final whistle of the last match."}</p></div>
+        <div><span>{pt ? "MERCADO DE TRANSFERÊNCIAS" : "TRANSFER MARKET"}</span><strong>{marketStatusLabel}</strong><small>{editable ? (pt ? "Escolha uma posição para gerenciar o XI" : "Choose a position to manage the XI") : (pt ? "Consulte todos os clubes, posições e perfis. Alterações no XI não estão disponíveis." : "Browse every club, position and profile. XI changes are unavailable.")}</small><p className={styles.myClubMarketRule}>{pt ? "Fecha no apito inicial do primeiro jogo da rodada. Reabre após a confirmação do apito final do último jogo pelo provedor." : "Closes at the first match kickoff of the round. Reopens after the provider confirms the final whistle of the last match."}</p></div>
         <MarketWindowClock gameweeks={gameweeks} locale={locale} />
       </section>
       <header className={styles.myClubCommandHeader}>
@@ -426,7 +429,7 @@ export default function FantasyGameweekClient({
                 return <div key={slot.id} className={styles.myClubTacticalSlot} data-pitch-edge={slot.x >= 75 ? "end" : undefined} style={{ ...horizontalMyClubPitchPosition(slot), width: Math.max(44, pitchCardWidth) }}>
                   <span style={{ width: pitchCardWidth, "--touchline-card-static-scale": pitchCardWidth / 430 } as CSSProperties}>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={pitchCardWidth} /> : <i>+</i>}</span>
                   <b>{slot.id}</b>
-                  {editable ? <button type="button" data-slot-action={card ? "replace" : "add"} onClick={() => openTacticalSelector(slot.id)} aria-label={`${action} ${slot.id}`}>{action}</button> : <small className={styles.marketClosedLabel}>Market Closed</small>}
+                  {editable ? <button type="button" data-slot-action={card ? "replace" : "add"} onClick={() => openTacticalSelector(slot.id)} aria-label={`${action} ${slot.id}`}>{action}</button> : <small className={styles.marketClosedLabel}>{marketAccessLabel}</small>}
                 </div>;
               })}</TouchlinePitchSurface>
             </div>
@@ -445,7 +448,7 @@ export default function FantasyGameweekClient({
               <span className={styles.myClubPosition}>{slot.id}</span>
               {card ? <span className={styles.myClubCard}><TouchlineGameweekCard card={card} locale={locale} displayWidth={116} fitContainer /></span> : <span className={styles.myClubEmptyCard}>+</span>}
               <strong>{card?.shortName ?? (pt ? "Vaga aberta" : "Open slot")}</strong>
-              {editable ? <button type="button" className={styles.myClubSelect} onClick={() => openTacticalSelector(slot.id)} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")} ${slot.id}`}>{card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")}</button> : <small className={styles.marketClosedLabel}>Market Closed</small>}
+              {editable ? <button type="button" className={styles.myClubSelect} onClick={() => openTacticalSelector(slot.id)} aria-label={`${card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")} ${slot.id}`}>{card ? (pt ? "Trocar" : "Replace") : (pt ? "Escolher" : "Choose")}</button> : <small className={styles.marketClosedLabel}>{marketAccessLabel}</small>}
               {card && editable ? <button className={styles.myClubRemove} type="button" onClick={() => removePlayer(selection!.playerId)} aria-label={`${pt ? "Remover" : "Remove"} ${card.name}`}>{pt ? "Remover" : "Remove"}</button> : null}
             </article>;
           })}</div>}
@@ -460,7 +463,7 @@ export default function FantasyGameweekClient({
             const slot = resolveTouchlineFantasyBrowseSlot({ geometry, bucket: position.bucket, activeSlotId: activeSlot?.id ?? null, selections });
             if (slot) setActiveSlotId(slot.id);
           }}>{position.code}</button>)}</nav>
-          <header className={styles.myClubSelectionSummary} aria-live="polite"><div><span>{pt ? "SELEÇÃO DE JOGADORES" : "PLAYER SELECTION"}</span><h3>{touchlineMarketPositionBucketLabel(browsingPosition, locale)}</h3><p>{selectedPlayerClub?.name} · {browseCards.length} {pt ? "cards nesta posição" : "cards in this position"}</p></div><p>{editable && browseSlot ? (pt ? `Vaga do XI: ${browseSlot.id}` : `XI slot: ${browseSlot.id}`) : !editable ? (pt ? "Modo consulta · mercado fechado" : "Review mode · market closed") : (pt ? "Consulte os cards; escolha treinador e formação para montar o XI." : "Browse cards; choose a coach and formation to build the XI.")}</p></header>
+          <header className={styles.myClubSelectionSummary} aria-live="polite"><div><span>{pt ? "SELEÇÃO DE JOGADORES" : "PLAYER SELECTION"}</span><h3>{touchlineMarketPositionBucketLabel(browsingPosition, locale)}</h3><p>{selectedPlayerClub?.name} · {browseCards.length} {pt ? "cards nesta posição" : "cards in this position"}</p></div><p>{editable && browseSlot ? (pt ? `Vaga do XI: ${browseSlot.id}` : `XI slot: ${browseSlot.id}`) : !editable ? marketAccessLabel : (pt ? "Consulte os cards; escolha treinador e formação para montar o XI." : "Browse cards; choose a coach and formation to build the XI.")}</p></header>
           <div className={styles.myClubMarketResults} id="my-club-position-results">{browseCards.map((card) => {
             const inLineup = selections.some((entry) => entry.playerId === (card.canonicalPlayerId ?? card.id));
             const tierKey = card.editorialCard?.tierKey;
@@ -472,7 +475,7 @@ export default function FantasyGameweekClient({
               <span><TouchlineGameweekCard card={card} locale={locale} displayWidth={126} fitContainer /></span>
               <div>
                 <strong>{card.name}</strong><small>{card.position}</small><em>{card.clubName}</em>
-                {!editable ? <span className={styles.marketClosedLabel}>Market Closed</span>
+                {!editable ? <span className={styles.marketClosedLabel}>{marketAccessLabel}</span>
                   : inLineup ? <span className={styles.marketClosedLabel}>{pt ? "No seu XI" : "In your XI"}</span>
                   : browseSlot && browseSlot.id === activeSlot?.id && selectedCoach
                     ? <button type="button" onClick={() => selectMyClubPlayer(card)}>{selections.some((entry) => entry.slotId === browseSlot.id) ? (pt ? `Substituir · ${browseSlot.id}` : `Replace · ${browseSlot.id}`) : (pt ? `Escolher · ${browseSlot.id}` : `Choose · ${browseSlot.id}`)}</button>
@@ -481,7 +484,7 @@ export default function FantasyGameweekClient({
             </article>;
           })}{browseCards.length === 0 ? <p>{pt ? "Nenhum card publicado para esta posição neste clube. Experimente outra posição ou clube." : "No published card for this position at this club. Try another position or club."}</p> : null}</div>
         </aside>
-      <footer className={styles.myClubGameweekFooter}><div><span>{pt ? "GAMEWEEK" : "GAMEWEEK"}</span><strong>{lineupConfirmed ? (pt ? "XI confirmado" : "XI confirmed") : validation?.valid ? (pt ? "Pronto para confirmar" : "Ready to confirm") : `${selectedCount}/11`}</strong></div><div><small>{hasUnsavedChanges ? (pt ? "Alterações não salvas" : "Unsaved changes") : (pt ? "Elenco sincronizado" : "Squad synced")}</small><button type="button" disabled={!editable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{pt ? "Confirmar XI" : "Confirm XI"}</button></div></footer>
+      <footer className={styles.myClubGameweekFooter}><div><span>{pt ? "GAMEWEEK" : "GAMEWEEK"}</span><strong>{lineupConfirmed ? (pt ? "XI confirmado" : "XI confirmed") : !editable ? marketAccessLabel : validation?.valid ? (pt ? "Pronto para confirmar" : "Ready to confirm") : `${selectedCount}/11`}</strong></div><div><small>{hasUnsavedChanges ? (pt ? "Alterações não salvas" : "Unsaved changes") : (pt ? "Elenco sincronizado" : "Squad synced")}</small><button type="button" disabled={!editable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{pt ? "Confirmar XI" : "Confirm XI"}</button></div></footer>
       {feedback ? <p className={styles.feedback} role="status">{feedback}</p> : null}
     </section>;
   }

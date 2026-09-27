@@ -2,7 +2,8 @@
 -- The server producer must verify canonical event provenance/freshness before
 -- insertion. Claiming is NOT permission to send: the worker must recheck source,
 -- consent, quiet hours and current subscription immediately before transport.
-begin;
+-- The migration runner must own the transaction, including migration history.
+-- Do not commit inside this pending migration: history failure must roll back DDL.
 
 create table public.touchline_match_push_outbox (
   id uuid primary key default gen_random_uuid(),
@@ -115,4 +116,3 @@ revoke all on function public.touchline_claim_match_push_batch(integer) from pub
 revoke all on function public.touchline_finish_match_push(uuid, uuid, text) from public, anon, authenticated, service_role;
 grant execute on function public.touchline_claim_match_push_batch(integer) to service_role;
 grant execute on function public.touchline_finish_match_push(uuid, uuid, text) to service_role;
-commit;

@@ -35,11 +35,13 @@ import {
   type TouchLinePlayerProfileSearchParams,
 } from "@/lib/touchlineArena/player-profile";
 import {
+  parseTouchlineCanonicalProfileLink,
   resolveTouchLineOfficialLookup,
   touchlinePlayerProfileHref,
 } from "@/lib/touchlineArena/player-links";
 import { loadTouchLineOfficialPlayerIdentity } from "@/lib/touchlineArena/player-profile-official";
 import { loadTouchlinePublicPlayerProjections } from "@/lib/touchlineArena/market-value-read-model";
+import { resolveTouchlineCanonicalPublicPlayerProfile } from "@/lib/touchlineArena/canonical-public-player-profile-server";
 import { loadTouchLinePlayerStatisticsReadModel } from "@/lib/touchlineArena/player-season-statistics-server";
 import { touchlinePlayerAppearanceLabel, touchlinePlayerDataSourceLabel } from "@/lib/touchlineArena/player-appearance-presentation";
 import {
@@ -528,26 +530,36 @@ export default async function TouchLinePlayerProfilePage({
   );
   const text = locale === "pt-BR" ? copy.pt : copy.en;
   const isPortuguese = locale === "pt-BR";
+  const canonicalLink = parseTouchlineCanonicalProfileLink(query);
+  if (canonicalLink.status === "invalid") notFound();
   // Never turn an arbitrary URL into a synthetic footballer. A player page
   // begins only from a known TouchLine card or a numeric provider identity;
   // the latter still renders as unavailable if its canonical projection is
   // not ready.
-  if (!isTouchLineSupportedPlayerProfile(playerKey, query)) notFound();
+  if (canonicalLink.status === "absent" && !isTouchLineSupportedPlayerProfile(playerKey, query)) notFound();
+  const canonicalResolution = canonicalLink.status === "valid"
+    ? await resolveTouchlineCanonicalPublicPlayerProfile({ canonicalPlayerId: canonicalLink.canonicalPlayerId })
+    : null;
+  if (canonicalLink.status === "valid" && !canonicalResolution) notFound();
   const supabase = await createClient();
   const currentUserPromise = supabase
     ? supabase.auth.getUser().then(({ data }) => data.user)
     : Promise.resolve(null);
-  const fallbackProfile = resolveTouchLinePlayerProfile(playerKey, query);
-  const officialLookup = resolveTouchLineOfficialLookup({
-    providerPlayerId: Array.isArray(query.playerId) ? query.playerId[0] : query.playerId,
-    requestedName: Array.isArray(query.name) ? query.name[0] : query.name,
-    fallbackName: fallbackProfile.card.name,
-  });
+  const fallbackProfile = resolveTouchLinePlayerProfile(playerKey, canonicalLink.status === "valid" ? {} : query);
+  const officialLookup = canonicalResolution
+    ? { providerPlayerId: canonicalResolution.providerPlayerId, name: canonicalResolution.projection.identity.value!.name }
+    : resolveTouchLineOfficialLookup({
+      providerPlayerId: Array.isArray(query.playerId) ? query.playerId[0] : query.playerId,
+      requestedName: Array.isArray(query.name) ? query.name[0] : query.name,
+      fallbackName: fallbackProfile.card.name,
+    });
   const [publicProjectionBatch, official, activeRanking, currentUser] = await Promise.all([
-    loadTouchlinePublicPlayerProjections({
-      providerPlayerIds: [officialLookup.providerPlayerId],
-      includeMarketValues: false,
-    }),
+    canonicalResolution
+      ? Promise.resolve(null)
+      : loadTouchlinePublicPlayerProjections({
+        providerPlayerIds: [officialLookup.providerPlayerId],
+        includeMarketValues: false,
+      }),
     loadTouchLineOfficialPlayerIdentity({
       name: officialLookup.name,
       providerPlayerId: officialLookup.providerPlayerId,
@@ -559,9 +571,9 @@ export default async function TouchLinePlayerProfilePage({
     isAuthenticated: Boolean(currentUser),
     isAdmin: Boolean(currentUser && isOwnerEmail(currentUser.email)),
   });
-  const publicProjection = officialLookup.providerPlayerId
-    ? publicProjectionBatch.projections.find((projection) => projection.providerPlayerId === officialLookup.providerPlayerId)
-    : undefined;
+  const publicProjection = canonicalResolution?.projection ?? (officialLookup.providerPlayerId
+    ? publicProjectionBatch?.projections.find((projection) => projection.providerPlayerId === officialLookup.providerPlayerId)
+    : undefined);
   const canonicalIdentity = publicProjection?.identity.status === "verified"
     && publicProjection.identity.value
     ? {
@@ -584,7 +596,7 @@ export default async function TouchLinePlayerProfilePage({
   // canonical row cannot be loaded, show a controlled unavailable state rather
   // than letting a URL slug or demo seed substitute another footballer.
   const profile = canonicalIdentity
-    ? resolveTouchLinePlayerProfile(playerKey, query, canonicalIdentity)
+    ? resolveTouchLinePlayerProfile(playerKey, canonicalLink.status === "valid" ? {} : query, canonicalIdentity)
     : officialLookup.providerPlayerId
     ? resolveTouchLineUnavailableOfficialProfile(officialLookup.providerPlayerId)
     : resolveTouchLinePlayerProfile(playerKey, query);
@@ -598,12 +610,14 @@ export default async function TouchLinePlayerProfilePage({
     position: canonicalIdentity?.position ?? null,
   });
   if (canonicalProviderPlayerId) exactPlayer.sportmonksPlayerId = canonicalProviderPlayerId;
-  const canonicalPlayerId = canonicalIdentity ? publicProjection?.identity.value?.playerId : null;
+  const canonicalPlayerId = canonicalResolution?.canonicalPlayerId
+    ?? (canonicalIdentity ? publicProjection?.identity.value?.playerId : null);
   exactPlayer.canonicalPlayerId = canonicalPlayerId;
-  const publishedCards = canonicalPlayerId
+  const publishedCards = canonicalResolution ? null : canonicalPlayerId
     ? await loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
     : new Map();
-  const editorialCard = canonicalPlayerId ? publishedCards.get(canonicalPlayerId) ?? null : null;
+  const editorialCard = canonicalResolution?.editorialCard
+    ?? (canonicalPlayerId && publishedCards ? publishedCards.get(canonicalPlayerId) ?? null : null);
   exactPlayer.editorialCard = editorialCard;
   if (editorialCard?.shirtNumber !== undefined) exactPlayer.shirtNumber = editorialCard.shirtNumber;
   exactPlayer.marketValue = editorialCard?.marketValueEur === undefined

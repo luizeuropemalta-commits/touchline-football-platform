@@ -363,6 +363,8 @@ type Props = {
    * a published state, and must not be used by roster/public card surfaces.
    */
   allowVisualInventoryPreview?: boolean;
+  /** ClubHub-only non-commercial identity, never a tier/publication fallback. */
+  showUnpublishedIdentity?: boolean;
   /** Canonical social totals only; unknown totals render as unavailable. */
   followerCount?: number | null;
   likeCount?: number | null;
@@ -742,6 +744,7 @@ export function TouchlineEliteExactCard({
   showSocialMetrics = true,
   forceNeonActive = false,
   allowVisualInventoryPreview = false,
+  showUnpublishedIdentity = false,
   followerCount,
   likeCount,
   tierCalibrationPresentation,
@@ -951,6 +954,9 @@ export function TouchlineEliteExactCard({
     ? touchlineArenaTierForKey(player.cardTier)
     : null;
   const marketTier = editorialTier ?? contractedTier ?? inventoryPreviewTier;
+  const publicationPending = showUnpublishedIdentity && !editorialCard && !contractedTier
+    && !allowVisualInventoryPreview && !reviewRequired && player.cardReview?.state === "COMPLETE";
+  const neutralIdentity = reviewRequired || publicationPending;
   const calibrationPresentation = tierCalibrationPresentation
     ?? (optimizeForLiveCompact ? "compact" : "normal");
   const tierComponentCalibration = resolveTouchlineCardTierComponentCalibration(marketTier?.key);
@@ -1009,7 +1015,7 @@ export function TouchlineEliteExactCard({
     : touchlineCardMetricText(player.matchRating);
   const totalRatingSize = valueDisplaySize(compactPrimaryValue);
   const marketValueSize = valueDisplaySize(compactSecondaryValue);
-  const cardTemplateUrl = reviewRequired
+  const cardTemplateUrl = neutralIdentity
     ? null
     : marketTier
     ? touchlineArenaClubTemplateForTierPreview(player.clubName, marketTier.key) || assignedVisualTemplateUrl
@@ -1378,9 +1384,10 @@ export function TouchlineEliteExactCard({
 
   // Real football data is rendered by its profile/roster consumers. Only the
   // authenticated Market receives the explicitly opt-in inventory preview;
-  // a valid frozen contract may also render its already-owned artwork. All
-  // other card surfaces remain fail-closed until publication.
-  if (!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired) return null;
+  // a valid frozen contract may also render its already-owned artwork. ClubHub
+  // can retain a neutral football identity, never commercial publication.
+  // Other card surfaces remain fail-closed until publication.
+  if (!editorialCard && !contractedTier && !allowVisualInventoryPreview && !reviewRequired && !publicationPending) return null;
 
   return (
     <div
@@ -1389,7 +1396,7 @@ export function TouchlineEliteExactCard({
       data-card-tier={marketTier?.key ?? "neutral"}
       data-card-tier-calibration={tierComponentCalibration?.tierKey ?? "neutral"}
       data-card-calibration-presentation={calibrationPresentation}
-      data-card-editorial-state={reviewRequired ? "review_required" : editorialCard ? "published" : "unpublished"}
+      data-card-editorial-state={reviewRequired ? "review_required" : publicationPending ? "publication_pending" : editorialCard ? "published" : "unpublished"}
       data-card-motion={isEditable ? "false" : "true"}
       data-card-neon="permanent-tier-art"
       data-card-leadership-crown={isCanonicalPlayerLeader ? "true" : "false"}
@@ -1451,9 +1458,11 @@ export function TouchlineEliteExactCard({
         />
       ) : null}
       <TouchlineCardPerimeterTrace tier={marketTier?.key ?? "neutral"} />
-      {reviewRequired ? (
+      {neutralIdentity ? (
         <div
-          aria-label={runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required"}
+          aria-label={publicationPending
+            ? (runtimeLocale === "pt-BR" ? "Publicação do card pendente" : "Card publication pending")
+            : (runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required")}
           style={{
             position: "absolute", left: "50%", top: -13, zIndex: 92,
             transform: "translateX(-50%)", whiteSpace: "nowrap", borderRadius: 999,
@@ -1463,7 +1472,9 @@ export function TouchlineEliteExactCard({
             letterSpacing: ".08em", textTransform: "uppercase",
           }}
         >
-          {runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required"}
+          {publicationPending
+            ? (runtimeLocale === "pt-BR" ? "Publicação do card pendente" : "Card publication pending")
+            : (runtimeLocale === "pt-BR" ? "Card requer revisão" : "Card review required")}
         </div>
       ) : null}
       {effectiveShowMatchRating ? (
@@ -1547,7 +1558,7 @@ export function TouchlineEliteExactCard({
           WebkitTextSizeAdjust: "none",
           textSizeAdjust: "none",
           isolation: "isolate",
-          filter: reviewRequired ? "grayscale(1) contrast(1.06)" : undefined,
+          filter: neutralIdentity ? "grayscale(1) contrast(1.06)" : undefined,
           fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           textTransform: "uppercase",
         }}

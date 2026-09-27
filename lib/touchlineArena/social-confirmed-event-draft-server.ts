@@ -156,11 +156,34 @@ function ratingContributionMatches(value: unknown, rating: unknown, points: unkn
  * settlement. Goal/card events provide editorial context; they never create a
  * second TouchLine points contribution.
  */
-export async function readTouchlineSocialConfirmedEventDraft(
+export type TouchlineConfirmedEventPrivateEvidence = Readonly<{
+  canonicalFixtureId: string;
+  canonicalPlayerId: string;
+  fixtureProviderId: string;
+  eventProviderId: string;
+  playerProviderId: string;
+  eventSyncedAt: string | null;
+  settlementSyncedAt: string | null;
+  fixtureUpdatedAt: string | null;
+  firstObservedAt: string;
+  lastObservedAt: string | null;
+  confirmedAt: string;
+  eventFactChecksum: string;
+  settlementStatus: string;
+  scoringVersion: "player_scoring_v3";
+  clockRevision: number;
+}>;
+
+type PrivateConfirmedEventResult =
+  | Readonly<{ ok: true; data: TouchlineSocialConfirmedEventDraft; evidence: TouchlineConfirmedEventPrivateEvidence }>
+  | Readonly<{ ok: false; reason: string }>;
+
+/** Private evidence from the SAME fenced read; not freshness or delivery approval. */
+export async function readTouchlineConfirmedEventPushSource(
   fixtureIdInput: string,
   eventIdInput: string,
   requestedContentType?: TouchlineSocialConfirmedEventContentType,
-): Promise<TouchlineSocialConfirmedEventDraftResult> {
+): Promise<PrivateConfirmedEventResult> {
   const fixtureId = fixtureIdInput.trim();
   const eventId = eventIdInput.trim();
   if (!NUMERIC_ID.test(fixtureId)) return { ok: false, reason: "invalid-fixture-id" };
@@ -434,5 +457,24 @@ export async function readTouchlineSocialConfirmedEventDraft(
     ...baseSource, sourceChecksum,
     sourceRevisionManifest: sourceReadEnd.manifest,
     sourceRevisionChecksum: sourceReadEnd.checksum,
+  }, evidence: {
+    canonicalFixtureId: String(canonical.id), canonicalPlayerId: playerId,
+    fixtureProviderId: fixtureId, eventProviderId: eventId, playerProviderId,
+    eventSyncedAt: timestamp(row.source_synced_at),
+    settlementSyncedAt: timestamp(settlement.source_synced_at),
+    fixtureUpdatedAt: timestamp(canonical.source_updated_at),
+    firstObservedAt, lastObservedAt: timestamp(observation.data.last_observed_at), confirmedAt,
+    eventFactChecksum, settlementStatus: String(settlement.settlement_status),
+    scoringVersion: "player_scoring_v3", clockRevision: sourceReadEnd.clockRevision,
   } };
+}
+
+/** Preserve the social contract: never spread the private evidence envelope. */
+export async function readTouchlineSocialConfirmedEventDraft(
+  fixtureIdInput: string,
+  eventIdInput: string,
+  requestedContentType?: TouchlineSocialConfirmedEventContentType,
+): Promise<TouchlineSocialConfirmedEventDraftResult> {
+  const result = await readTouchlineConfirmedEventPushSource(fixtureIdInput, eventIdInput, requestedContentType);
+  return result.ok ? { ok: true, data: result.data } : { ok: false, reason: result.reason };
 }

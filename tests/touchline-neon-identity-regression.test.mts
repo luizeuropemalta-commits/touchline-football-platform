@@ -25,7 +25,7 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.doesNotMatch(exactCard, /formatTouchlineContractedCommercialCardPrice/);
   assert.match(exactCard, /<span>\{compactSecondaryLabel\}<\/span>/);
   assert.match(exactCard, /data-card-tier=\{marketTier\?\.key \?\? "neutral"\}/);
-  assert.match(exactCard, /data-card-editorial-state=\{reviewRequired \? "review_required" : editorialCard \? "published" : "unpublished"\}/);
+  assert.match(exactCard, /data-card-editorial-state=\{reviewRequired \? "review_required" : publicationPending \? "publication_pending" : editorialCard \? "published" : "unpublished"\}/);
   assert.doesNotMatch(exactCard, /resolveTouchlineVerifiedPlayerEconomy|resolveTouchlinePublicCardPresentation/);
   assert.doesNotMatch(exactCard, /TC Value/);
   assert.match(globalCss, /\.touchline-card-surface\[data-card-motion="true"\]/);
@@ -370,7 +370,8 @@ test("athlete feed publishes the canonical card instead of a detached frame imag
   assert.doesNotMatch(playerSource, /visualImageUrl: tier\.frameUrl/);
   assert.match(playerSource, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale\)/);
   assert.match(playerSource, /loadTouchlinePublishedCardPresentations/);
-  assert.match(playerSource, /const editorialCard = canonicalPlayerId/);
+  assert.match(playerSource, /resolveTouchlineCanonicalPublicPlayerProfile/);
+  assert.match(playerSource, /const editorialCard = canonicalResolution\?\.editorialCard\s*\?\? \(canonicalPlayerId && publishedCards \? publishedCards\.get\(canonicalPlayerId\) \?\? null : null\)/);
   assert.doesNotMatch(playerSource, /touchlinePublicCardStatusLabel/);
   assert.doesNotMatch(playerSource, /value: tier\.label/);
   assert.match(playerSource, /Sapphire Blue|tierDisplayName/);

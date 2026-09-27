@@ -2,6 +2,12 @@ import type { TouchlineCardTierKey } from "./card-rules.ts";
 
 export type TouchLinePlayerLinkInput = {
   sportmonksPlayerId?: string | number | null;
+  /**
+   * Opaque TouchLine identity for a published card. This is deliberately not
+   * a Sportmonks identifier: public profile routes must never need to expose
+   * a provider id in order to resolve a card presentation.
+   */
+  canonicalPlayerId?: string | null;
   name?: string | null;
   clubName?: string | null;
   position?: string | null;
@@ -12,6 +18,41 @@ export type TouchLinePlayerLinkInput = {
 type TouchLinePlayerProfileLinkOptions = {
   previewTier?: TouchlineCardTierKey | null;
 };
+
+const TOUCHLINE_CANONICAL_PLAYER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export type TouchlineCanonicalProfileLink =
+  | { status: "absent" }
+  | { status: "valid"; canonicalPlayerId: string }
+  | { status: "invalid" };
+
+function queryValues(
+  searchParams: Record<string, string | string[] | undefined>,
+  key: string,
+) {
+  const value = searchParams[key];
+  return Array.isArray(value) ? value : value === undefined ? [] : [value];
+}
+
+/**
+ * A canonical card selector is authoritative only when it is one exact UUID.
+ * A provider selector alongside it is ambiguous, so callers must fail closed
+ * rather than translating either value through a display name.
+ */
+export function parseTouchlineCanonicalProfileLink(
+  searchParams: Record<string, string | string[] | undefined>,
+): TouchlineCanonicalProfileLink {
+  const rawCardId = searchParams.cardId;
+  if (rawCardId === undefined) return { status: "absent" };
+  if (Array.isArray(rawCardId)) return { status: "invalid" };
+  if (queryValues(searchParams, "playerId").length) return { status: "invalid" };
+
+  const canonicalPlayerId = rawCardId.toLowerCase();
+  if (!TOUCHLINE_CANONICAL_PLAYER_ID.test(canonicalPlayerId)) {
+    return { status: "invalid" };
+  }
+  return { status: "valid", canonicalPlayerId };
+}
 
 export function normalizeTouchLinePlayerKey(value?: string | number | null) {
   return String(value ?? "")
@@ -66,6 +107,10 @@ export function touchlinePlayerProfileHref(
   if (player.countryCode3) params.set("country", String(player.countryCode3));
   if (player.sportmonksPlayerId !== null && player.sportmonksPlayerId !== undefined) {
     params.set("playerId", String(player.sportmonksPlayerId));
+  }
+  const canonicalPlayerId = String(player.canonicalPlayerId ?? "").toLowerCase();
+  if (TOUCHLINE_CANONICAL_PLAYER_ID.test(canonicalPlayerId) && !params.has("playerId")) {
+    params.set("cardId", canonicalPlayerId);
   }
   if (options?.previewTier) params.set("previewTier", options.previewTier);
 
