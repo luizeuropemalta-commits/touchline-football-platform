@@ -1,5 +1,19 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+2026-09-27 00:14 heartbeat: Supabase skill/security checklist used for hosted read-only rollout gate. Saved catalog SQL actually executed; absent relation givesNULL privileges, not falsePASS. Advisor baseline and actual invoker timestamp function recorded. No remoteDDL/build/repeated tests. Pending exact-manifest freeze/version-safe atomic application path before single forward rollout; fullmission not complete.
+
+2026-09-27 00:07 heartbeat: recovered cached isolatedPostgreSQL17.6; ten real-engine restoration/RLS/upsert/rollback/drift scenariosPASS86260CLOSED0(7b8622). No repeated app tests/build, no remote schema or domain mutation. New outeroutputs pg17harness/report records bounded evidence; pending controlled rollout and native/data/sender gates. Synthetic ownedcontainer cleanup only.
+
+2026-09-26 23:57 UTC integrated36848CLOSED0c5cd64,2416PASS67SKIP0FAIL/CANCEL(2483total17suites).10newSQL cases independently passed with externalPGlite; standard integrated gate skips them, don't relabel. Freshread-onlyQA prerequisites consistent, no forwardmigrationrecord/device table. No build/remotechange; next explicit isolated migration rollout preflight, no broad sync/migration batch.
+
+2026-09-26 23:52 UTC localforward device10SQLPASS4001a3, review complete for latest2fixes. New namedCHECK kept by exact semantic expression/OID on repeat; incompatible abort; legacy columns dynamic. No fullmission/apply/releaseGO. Root report retains historical failures and pending integrated/targetDB gates; no remote mutation.
+
+2026-09-26 23:47 UTC forward device SQL8PASS525c43,0skip; new schema guards and exact legacyCHECK replacement tested. Independent reviewer reused, unresolved new-name constraint drift concern. Chain67554types/lint/diff in progress; resume handle. No broad test/build/live migration/notification/deployment.
+
+2026-09-26 23:42 UTC expanded device SQL tests3PASS2FAIL, not completed. PostgreSQL invalid repetition count exposes historical{16,512} constraint defect; default drift also reproduced. Independent reviewer returned3bounded compatibility blockers; draft guards added, not yet verified. Existing reviewer reused to assess exact safe legacy CHECK replacement. Keep historical SQL unchanged, no remote migration/build or activation. Resume root device-restoration-20260926.md.
+
+2026-09-26 23:37 UTC resumed local item8 after publishedQA smoke/customer login boundary. New forward-device-restoration SQL +2real SQL tests;2PASS0SKIP2419fb. Scoped ESLint/diff session32871exit0(11148f). Remaining compatibility/valid-upsert/rollback/cross-owner/defaults/index tests and independent review required, so no completion/apply/release GO. No remote schema/flags/cron/data/sender changes. Candidate7c20d29 stays published and immutable; working successor now differs by these2files plus checkpoints. Existing generated/localmetadata preserved. See root device-restoration-20260926.md; next extend narrow SQL coverage before any broad test or build.
+
 2026-09-26 22:42 UTC authorised222-file localcandidate freeze planned after completed boundedreviews/currentbuild/verification. Index initiallyempty. Excluded generated/localmetadata preserved; no blindgitadd. Commit not deployment; no full14/ProductionPASS. Root release report will retain immutableSHA and subsequent gate status outside candidate to avoid checkpointchurn.
 
 2026-09-26 22:37 UTC frozenofflineinstall CLOSED0/Alreadyuptodate; domainmetadata83058 CLOSED0 correctprojectverified.com.br/www. Restorationreview CLOSED, newmigration/testsneeded notapplied. No deploy/alias/DBwrites; localbuild74992 retained.
