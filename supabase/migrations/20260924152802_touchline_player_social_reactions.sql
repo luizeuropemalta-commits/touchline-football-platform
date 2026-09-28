@@ -1,7 +1,6 @@
 -- Local candidate only. HTTP authenticates the actor and validates the canonical
 -- player before calling these service-only operations. No football/game facts
 -- are modified. Reactions are account preferences, not scoring events.
-begin;
 
 create table public.touchline_player_social_reactions (
   player_id uuid not null references public.football_players(id) on delete cascade,
@@ -80,5 +79,3 @@ revoke all on function public.touchline_player_social_summary(uuid, uuid) from p
 revoke all on function public.touchline_set_player_social_reaction(uuid, uuid, text, boolean) from public, anon, authenticated;
 grant execute on function public.touchline_player_social_summary(uuid, uuid) to service_role;
 grant execute on function public.touchline_set_player_social_reaction(uuid, uuid, text, boolean) to service_role;
-
-commit;

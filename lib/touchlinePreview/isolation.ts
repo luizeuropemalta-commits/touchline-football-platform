@@ -77,6 +77,8 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "TOUCHLINE_QA_SUPABASE_PROJECT_REF",
   "TOUCHLINE_CURRENT_SEASON",
   "TOUCHLINE_CARD_PUBLICATION_GATE",
+  // Server-only social gate. Runtime policy remains fail-closed in its route.
+  "TOUCHLINE_PLAYER_SOCIAL_ENABLED",
   "TOUCHLINE_OWNER_EMAILS",
   "TOUCHLINE_SITE_OFFLINE",
   // Functional QA is the only Preview contract allowed to call Sportmonks.

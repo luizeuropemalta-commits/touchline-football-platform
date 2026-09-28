@@ -323,13 +323,13 @@
 .gameweekCoachCardLink { display:block; width:min(126px, 42vw); margin-top:8px; overflow:visible; border-radius:12px; outline-offset:4px; }
 .gameweekCoachCardLink:focus-visible { outline:2px solid var(--lime); }
 .gameweekCoachPublished > b { color:var(--gold); font-size:12px; }
-.coachRankingPanel { max-height: 590px; }
+.coachRankingPanel { max-height: 590px; container: coach-ranking / inline-size; }
 
 .coachList,
 .ownerTableList { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; background: rgba(255, 255, 255, .09); }
 .coachList { overflow: auto; overscroll-behavior: contain; scrollbar-color: rgba(184, 255, 70, .45) rgba(0, 0, 0, .16); scrollbar-gutter: stable; }
 .coachList:focus-visible { outline: 2px solid var(--lime); outline-offset: -3px; }
-.coachList li { display: grid; grid-template-columns: 30px 38px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 64px; padding: 8px 12px; background: rgba(3, 15, 13, .96); }
+.coachList li { display: grid; grid-template-columns: 30px 38px minmax(0, 1fr) 84px auto; align-items: center; gap: 9px; min-height: 64px; padding: 8px 12px; background: rgba(3, 15, 13, .96); }
 .coachList li:first-child { background: linear-gradient(90deg, rgba(243, 216, 107, .12), rgba(4, 17, 15, .96)); box-shadow: inset 3px 0 var(--gold); }
 .coachList li > b,
 .ownerTableList li > b { color: rgba(245, 248, 245, .36); font-size: 11px; text-align: center; }
@@ -345,6 +345,13 @@
 .rowIdentity span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rowIdentity strong { font-size: 12px; }
 .rowIdentity span { color: rgba(245, 248, 245, .48); font-size: 9px; }
+.coachList .coachClubIdentity { display: flex; align-items: center; gap: 6px; overflow: visible; white-space: normal; }
+.coachClubIdentity img { flex: 0 0 22px; width: 22px; height: 22px; object-fit: contain; }
+.coachList .coachClubIdentity > span { min-width: 0; overflow: visible; white-space: normal; overflow-wrap: anywhere; }
+.coachRecord { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin: 0; text-align: center; font-variant-numeric: tabular-nums; }
+.coachRecord dt { color: rgba(245, 248, 245, .62); font-size: 9px; }
+.coachRecord abbr { text-decoration: none; }
+.coachRecord dd { margin: 3px 0 0; color: var(--white, #f5f8f5); font-size: 12px; font-weight: 700; }
 .pointsValue { display: grid; justify-items: end; gap: 1px; }
 .pointsValue strong { color: var(--gold); font-size: 16px; }
 .pointsValue span { color: rgba(245, 248, 245, .42); font-size: 8px; text-transform: uppercase; }
@@ -397,7 +404,7 @@
   .rankingHighlights { gap: 10px; grid-template-columns: minmax(0, 1fr); }
   .podiumPanel { padding: 14px; }
   .podiumCard { width: min(104px, 78%); }
-  .coachList li { grid-template-columns: 26px 32px minmax(0, 1fr) auto; min-height: 56px; padding-inline: 8px; }
+  .coachList li { grid-template-columns: 26px 32px minmax(0, 1fr) 84px auto; min-height: 56px; padding-inline: 8px; }
   .coachRankGem { width: 32px; height: 38px; }
   .rowIdentity strong { font-size: 10px; }
   .rowIdentity span { font-size: 8px; }
@@ -443,6 +450,13 @@
   .topCoachCardLink { width: 100%; }
   .topCoachIdentity { justify-items: start; margin-top: 0; text-align: left; }
   .topCoachIdentity strong { overflow-wrap: anywhere; }
+}
+
+@container coach-ranking (max-width: 440px) {
+  .coachList { grid-auto-rows: max-content; align-content: start; }
+  .coachList li { grid-template-columns: 26px 32px minmax(0, 1fr) auto; }
+  .coachRecord { grid-column: 3 / 5; grid-row: 2; width: min(100%, 108px); }
+  .coachList .pointsValue { grid-column: 4; grid-row: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

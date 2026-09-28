@@ -1,5 +1,21 @@
 # TouchLine Final Product Completion — Current State
 
+## 2026-09-27 19:18 — Top7 bounded local visual verification
+
+First diagnostic exposed second-line records overflowing64px rows; narrow container now uses intrinsic list rows. Corrected job-muk7a9om-deafe316 exit0/3db658, four cases and108 final integrity checks57717e passed. Root inspected PT desktop/EN tablet/844 landscape screenshots: identities, crests and localized results contained, seventh row reachable. No extra gem shrink required in sampled widths. Synthetic ranking inputs and local real client/CSS, not remote data/native/release proof. Next image dimension warnings retained; no runtime errors. Full item3 and mission remain partial, local delta unpublished; no remote build, migration, flag, cron, sender or Production changes.
+
+## 2026-09-27 — requested Top7 coach club/record presentation, local partial
+
+Direct screenshot request implemented in touchline-tables client/CSS plus focused structural test. Crest identity uses providerId/teamId, exact snapshot consistency guard; no name-based lookup or data rewrite. Preserved gems, ranking and points. Separate localized result columns wrap below identity in narrow panels. Root6 focusedPASS b76749/types6cdb37/lintcb2d9f/diff-f9e7bf all exit0. Actual updated browser/desktop/mobile and release gates remain pending; no visual or whole-mission PASS. No build, remote publication, session, flag, migration, cron or Production change. QA remains df0, remote allowance consumed1/1.
+
+## 2026-09-27 18:59 — owner accepts1/2; item3 active
+
+Owner explicitly stated items1/2 are green; root advances to item3, then4–14 sequentially. This is owner acceptance, not invented native or persistence verification. Preserve local unpublished Arena delta and diagnostic geometry findings historically; no further item1 refinement dispatched. Current item3 work reuses hosted seven-player-tier/six-coach-profile samples and identifies uncovered visual flow without repeating tests. QA df0 READY and one remote publication consumed; all six pending migrations, OFF flags, paused cron, sessions and .com.br unchanged. Detailed outer qa-successor-authorized report controls latest evidence.
+
+## 2026-09-27 18:29 — item1 Arena collision correction in progress
+
+Current QA is READY df0f5f9725a454e0c38f214b3874ac1f004827aa; remote allowance consumed. Camera-dependent body overlap observed in Safari; deterministic actual video-slot reproduction c861cc confirms one tablet pair. Scoped local containment helper/tests + display-only caller integration underway, no visual or completion PASS. Wrong-checkout edit incident recovered: root e44863 confirms immutable qa-release-df0f5f9 clean and original file blobs restored. Delta now canonical only; integration review and focused evidence pending. No new deployment, schema/data write, activation, cron or .com.br change. Strict item1green→2 order governs; native and full-envelope acceptance remain open. Detailed current receipts: outer outputs/card-review-20260921/qa-successor-authorized-20260927.md.
+
 ## Latest applied QA leadership checkpoint
 
 - Reviewed atomic leadership correction applied only to selected QA; connector version 20260923221024. Local filename reconciled to that version without changing SQL (SHA256 248048fe2fbef8a235f0dd86fa0d4053e6bb69a788ffcd061da879dc61797c42).

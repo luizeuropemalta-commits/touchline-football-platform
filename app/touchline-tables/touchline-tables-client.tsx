@@ -393,7 +393,14 @@ export default function TouchLineTablesClient({
             tabIndex={0}
             aria-label={isPortuguese ? "Classificação dos treinadores" : "Coach standings"}
           >
-            {topSevenCoaches.map((coach) => (
+            {topSevenCoaches.map((coach) => {
+              const coachIdentity = touchlineLiveCoachForProviderId(coach.coachProviderId);
+              const coachClub = coachIdentity
+                ? TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === coachIdentity.coach.teamId) ?? null
+                : null;
+              // A current coach association must not contradict the ranking snapshot.
+              const coachClubLogoUrl = coachClub?.name === coach.clubName ? coachClub.logoUrl : null;
+              return (
               <li key={coach.coachProviderId} data-coach-rank={coach.rank}>
                 <b>{String(coach.rank).padStart(2, "0")}</b>
                 <div className={styles.coachRankGem} aria-hidden="true">
@@ -402,10 +409,22 @@ export default function TouchLineTablesClient({
                     alt="" width={44} height={44} unoptimized
                   /> : null}
                 </div>
-                <div className={styles.rowIdentity}><strong>{coach.coachName}</strong><span>{coach.clubName} · {coach.wins}W {coach.draws}D {coach.losses}L</span></div>
+                <div className={styles.rowIdentity}>
+                  <strong>{coach.coachName}</strong>
+                  <span className={styles.coachClubIdentity}>
+                    {coachClubLogoUrl ? <Image src={coachClubLogoUrl} alt="" width={22} height={22} unoptimized /> : null}
+                    <span>{coach.clubName}</span>
+                  </span>
+                </div>
+                <dl className={styles.coachRecord}>
+                  <div><dt><abbr title={isPortuguese ? "Vitórias" : "Wins"} aria-label={isPortuguese ? "Vitórias" : "Wins"}>{isPortuguese ? "V" : "W"}</abbr></dt><dd>{coach.wins}</dd></div>
+                  <div><dt><abbr title={isPortuguese ? "Empates" : "Draws"} aria-label={isPortuguese ? "Empates" : "Draws"}>{isPortuguese ? "E" : "D"}</abbr></dt><dd>{coach.draws}</dd></div>
+                  <div><dt><abbr title={isPortuguese ? "Derrotas" : "Losses"} aria-label={isPortuguese ? "Derrotas" : "Losses"}>{isPortuguese ? "D" : "L"}</abbr></dt><dd>{coach.losses}</dd></div>
+                </dl>
                 <div className={styles.pointsValue}><strong>{coach.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
               </li>
-            ))}
+              );
+            })}
           </ol> : <RankingPending copy={copy} />}
         </aside>
       </section>

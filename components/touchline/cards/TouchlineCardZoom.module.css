@@ -1,8 +1,28 @@
 .triggerFrame {
+  position: relative;
   display: grid;
   width: 100%;
   min-width: 0;
   justify-items: center;
+}
+
+/* Match the shared navigation focus colour without boxing or lighting the
+   artwork. Absolute placement preserves the compact card's measured footprint. */
+.triggerFrame::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: min(32px, 40%);
+  height: 2px;
+  transform: translateX(-50%);
+  background: #efffd2;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.triggerFrame:has(> .trigger:focus-visible)::after {
+  opacity: 1;
 }
 
 .trigger {
@@ -14,6 +34,8 @@
   cursor: zoom-in;
   touch-action: pan-x pan-y;
   overflow: visible;
+  /* Include the external focus marker and rounding clearance in native scrolling. */
+  scroll-margin-bottom: 8px;
 }
 
 .trigger:focus-visible {
@@ -26,6 +48,9 @@
     filter: none;
     outline: 2px solid Highlight;
     outline-offset: 5px;
+  }
+  .triggerFrame::after {
+    display: none;
   }
 }
 

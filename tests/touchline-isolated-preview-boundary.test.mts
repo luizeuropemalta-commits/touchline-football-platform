@@ -147,6 +147,11 @@ test("a dedicated QA Supabase contract enables functional Preview routes without
     SPORTMONKS_API_TOKEN: "qa-only-token",
   })), { status: "qa", reasons: [] });
 
+  assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
+    // Server-only feature gate: QA may carry the value without exposing it.
+    TOUCHLINE_PLAYER_SOCIAL_ENABLED: "true",
+  })), { status: "qa", reasons: [] });
+
   const awsCredentialLeak = inspectTouchlineIsolatedPreviewEnvironment(qaEnvironment({
     AWS_ACCESS_KEY_ID: "not-allowed",
   }));
@@ -193,6 +198,7 @@ test("any recognised production integration key rejects the isolated contract by
     "SPORTMONKS_API_TOKEN",
     "FOOTBALL_DATA_SYNC_SECRET",
     "TOUCHLINE_CARD_PUBLICATION_GATE",
+    "TOUCHLINE_PLAYER_SOCIAL_ENABLED",
     "STRIPE_SECRET_KEY",
     "RESEND_API_KEY",
     "AWS_ACCESS_KEY_ID",

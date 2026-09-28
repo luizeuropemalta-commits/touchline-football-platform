@@ -28,7 +28,7 @@ test("real SQL player reactions preserve desired-state idempotency, private acto
       insert into public.football_players values ('${player}'), ('${otherPlayer}');
       insert into auth.users values ('${userA}'), ('${userB}');
     `);
-    await db.exec(migration);
+    await db.exec(`begin;\n${migration}\ncommit;`);
     const flags = await db.query(`select relrowsecurity from pg_class where oid='public.touchline_player_social_reactions'::regclass`);
     assert.equal(flags.rows[0].relrowsecurity, true);
     const privileges = await db.query(`select
@@ -98,5 +98,44 @@ test("real SQL player reactions preserve desired-state idempotency, private acto
   } finally {
     await db.close();
     await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("social migration rolls back DDL with failed migration-history registration", { skip: !modulePath }, async () => {
+  const { PGlite } = await import(modulePath!);
+  const db = new PGlite();
+  try {
+    await db.exec(`
+      create role anon; create role authenticated; create role service_role bypassrls;
+      create schema auth;
+      create table public.football_players(id uuid primary key);
+      create table auth.users(id uuid primary key);
+      insert into public.football_players values ('${player}');
+      insert into auth.users values ('${userA}');
+      create schema supabase_migrations;
+      create table supabase_migrations.schema_migrations (
+        version text primary key,
+        constraint reject_candidate_history check (version <> '20260924152802')
+      );
+      insert into supabase_migrations.schema_migrations values ('historical');
+    `);
+    await assert.rejects(db.exec(`begin;\n${migration}\n
+      insert into supabase_migrations.schema_migrations values ('20260924152802');
+      commit;`), /reject_candidate_history/);
+    await db.exec("rollback;");
+    const result = await db.query(`select
+      to_regclass('public.touchline_player_social_reactions') is null as table_absent,
+      to_regprocedure('public.touchline_player_social_summary(uuid,uuid)') is null as summary_absent,
+      to_regprocedure('public.touchline_set_player_social_reaction(uuid,uuid,text,boolean)') is null as writer_absent,
+      (select count(*)::int from supabase_migrations.schema_migrations) as history_count,
+      (select count(*)::int from public.football_players where id='${player}') as players,
+      (select count(*)::int from auth.users where id='${userA}') as users
+    `);
+    assert.deepEqual(result.rows[0], {
+      table_absent: true, summary_absent: true, writer_absent: true,
+      history_count: 1, players: 1, users: 1,
+    });
+  } finally {
+    await db.close();
   }
 });
