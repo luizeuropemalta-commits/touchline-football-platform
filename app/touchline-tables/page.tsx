@@ -13,29 +13,38 @@ import TouchLineTablesClient from "./touchline-tables-client";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import { TouchlineCardLeadershipProvider } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
 import { buildTouchlineCardLeadershipValue } from "@/lib/touchlineArena/card-leadership-authority";
+import { Suspense } from "react";
+import { ShieldCheck } from "lucide-react";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import styles from "./touchline-tables.module.css";
 
 export const metadata = { title: "TouchLine Tables" };
 
-export default async function TouchLineTablesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ lang?: string }>;
-}) {
-  const { lang } = await searchParams;
-  const locale = normalizeTouchLineLocale(lang);
-  const rankingPromise = loadTouchLineActiveRanking();
-  const userPromise = createClient().then(async (supabase) => (
-    supabase ? await supabase.auth.getUser() : { data: { user: null } }
-  ));
-  const [activeRanking, { data: { user } }, publishedTopEleven, publicFixtures, rankedCards, coachRanking, publishedCardCount] = await Promise.all([
+function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveRanking>, fixtures: ReturnType<typeof readPublicCompetitionFixtures>) {
+  return Promise.all([
     rankingPromise,
-    userPromise,
     rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking)),
-    readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
+    fixtures,
     rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking)),
     loadTouchLineCoachRanking(),
     countTouchlinePublishedPlayerCards(),
   ]);
+}
+
+async function RoundBadge({ fixtures, locale }: { fixtures: ReturnType<typeof readPublicCompetitionFixtures>; locale: string }) {
+  const names = [...new Set(selectArenaFixtureRound(await fixtures).map(fixture => fixture.roundName?.trim()).filter((name): name is string => Boolean(name)))];
+  const round = names.length === 1 ? names[0] : null;
+  return <span className={styles.status}><ShieldCheck aria-hidden="true" size={18} />
+    {round ? `${locale === "pt-BR" ? "Rodada" : "Matchweek"} ${round}` : locale === "pt-BR" ? "Rodada aguardando provider" : "Matchweek awaiting provider"}
+  </span>;
+}
+
+async function SportingContent({ data, locale, user }: {
+  data: ReturnType<typeof readSportingData>;
+  locale: ReturnType<typeof normalizeTouchLineLocale>;
+  user: { email?: string | null } | null;
+}) {
+  const [activeRanking, publishedTopEleven, publicFixtures, rankedCards, coachRanking, publishedCardCount] = await data;
   const selectedProviderRound = selectArenaFixtureRound(publicFixtures);
   const providerRoundNames = [...new Set(selectedProviderRound
     .map((fixture) => fixture.roundName?.trim())
@@ -82,4 +91,30 @@ export default async function TouchLineTablesPage({
       />
     </TouchlineCardLeadershipProvider>
   );
+}
+
+export default async function TouchLineTablesPage({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
+  const { lang } = await searchParams;
+  const locale = normalizeTouchLineLocale(lang);
+  const ranking = loadTouchLineActiveRanking();
+  const fixtures = readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 });
+  const data = readSportingData(ranking, fixtures);
+  // Observe early failures while auth is pending; the original promise still
+  // rejects at the sporting boundary rather than inventing empty standings.
+  void data.catch(() => undefined);
+  const supabase = await createClient();
+  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const pending = locale === "pt-BR" ? "Carregando classificações…" : "Loading rankings…";
+  const navigationSurface = resolveTouchlineGlobalNavigationSurface({ isAuthenticated: Boolean(user), isAdmin: Boolean(user && isOwnerEmail(user.email)) });
+  return <main className={styles.page}>
+    <header className={styles.topbar}>
+      <TouchlineGlobalNavigation locale={locale} currentRoute="rankings" surface={navigationSurface} className={styles.globalNavigation} />
+      <Suspense fallback={<span className={styles.status} role="status">{locale === "pt-BR" ? "Carregando rodada…" : "Loading matchweek…"}</span>}>
+        <RoundBadge fixtures={fixtures} locale={locale} />
+      </Suspense>
+    </header>
+    <Suspense fallback={<p role="status">{pending}</p>}>
+      <SportingContent data={data} locale={locale} user={user} />
+    </Suspense>
+  </main>;
 }

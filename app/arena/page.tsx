@@ -66,17 +66,16 @@ export default async function ArenaPage({
     redirect(`/arena${suffix}`);
   }
 
-  const [supabase, initialTwoDimensionalFormationRegistry] = await Promise.all([
-    createClient(),
+  const [user, initialTwoDimensionalFormationRegistry] = await Promise.all([
+    createClient().then((supabase) => supabase
+      ? resolveServerReadWithin(
+        supabase.auth.getUser().then(({ data }) => data.user),
+        null,
+        ARENA_SERVER_AUTH_READ_TIMEOUT_MS,
+      )
+      : null),
     readTouchlineFormationGeometryRegistry(),
   ]);
-  const user = supabase
-    ? await resolveServerReadWithin(
-      supabase.auth.getUser().then(({ data }) => data.user),
-      null,
-      ARENA_SERVER_AUTH_READ_TIMEOUT_MS,
-    )
-    : null;
   const locale = normalizeTouchLineLocale(firstValue(params.lang));
   const fantasySnapshot = user && !isOwnerEmail(user.email)
     ? await loadTouchlineFantasySnapshot(user)

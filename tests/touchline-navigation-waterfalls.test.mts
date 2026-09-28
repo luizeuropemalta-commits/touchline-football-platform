@@ -80,6 +80,8 @@ test("Rankings starts independent reads while authentication is pending and shar
   const calls: string[] = [];
   let release!: (value: unknown) => void;
   const pending = new Promise(resolve => { release = resolve; });
+  let releaseCatalogue!: (value: unknown[]) => void;
+  const catalogue = new Promise<unknown[]>(resolve => { releaseCatalogue = resolve; });
   const ranking = { snapshotId: "same-snapshot" };
   const page = loadPage("../app/touchline-tables/page.tsx", {
     "@/lib/touchlineArena/i18n": { normalizeTouchLineLocale: () => "en-GB" },
@@ -88,7 +90,9 @@ test("Rankings starts independent reads while authentication is pending and shar
       loadTouchLineActiveRanking: async () => { calls.push("ranking"); return ranking; },
       loadTouchLinePublishedTopEleven: async (state: unknown) => { assert.equal(state, ranking); calls.push("xi"); return []; },
     },
-    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async (state: unknown) => { assert.equal(state, ranking); calls.push("catalogue"); return []; } },
+    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: async (state: unknown) => { assert.equal(state, ranking); calls.push("catalogue"); return catalogue; } },
+    "@/lib/touchlineArena/global-navigation": { resolveTouchlineGlobalNavigationSurface: ({ isAuthenticated, isAdmin }: { isAuthenticated: boolean; isAdmin: boolean }) => { assert.equal(isAuthenticated, true); assert.equal(isAdmin, false); return "authenticated"; } },
+    "@/lib/admin/owner": { isOwnerEmail: () => false },
     "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: async () => { calls.push("fixtures"); return []; } },
     "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => { calls.push("coaches"); return {}; } },
     "@/lib/touchlineArena/card-publication-read-model": { countTouchlinePublishedPlayerCards: async () => { calls.push("count"); return 0; } },
@@ -98,8 +102,26 @@ test("Rankings starts independent reads while authentication is pending and shar
   const result = page({ searchParams: Promise.resolve({}) });
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(calls.slice().sort(), ["catalogue", "coaches", "count", "fixtures", "ranking", "xi"]);
-  release({ data: { user: null } });
-  await result;
+  release({ data: { user: { email: "synthetic@example.test" } } });
+  const shell = await result;
+  assert.equal(shell.type, "main");
+  const navigation = shell.props.children[0].props.children[0];
+  assert.equal(navigation.props.surface, "authenticated");
+  const sportingBoundary = shell.props.children[1];
+  assert.equal(sportingBoundary.type, require("react").Suspense);
+  assert.equal(sportingBoundary.props.fallback.props.role, "status");
+  const sporting = sportingBoundary.props.children;
+  let sportingReady = false;
+  const complete = sporting.type(sporting.props).then((tree: { props: { children: Array<{ props: { rosterCards?: unknown[]; totalRankedCards?: number; initialPlayerRankingSnapshotId?: string } }> } }) => { sportingReady = true; return tree; });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(sportingReady, false, "Catalogue pending must not block the authenticated shell");
+  const allCards = Array.from({ length: 5 }, (_, index) => ({ id: `published-${index}` }));
+  releaseCatalogue(allCards);
+  const loaded = await complete;
+  assert.equal(loaded.props.children[0].props.initialPlayerRankingSnapshotId, ranking.snapshotId);
+  assert.equal(loaded.props.children[1].props.rosterCards, allCards);
+  assert.equal(loaded.props.children[1].props.totalRankedCards, 5, "Do not truncate the catalogue to the top three");
+  assert.equal(shell.props.children[0].props.children[0], navigation, "Navigation is owned by the shell, not sporting completion");
 });
 
 test("My Club starts roster and wallet while avatar is pending, after identity approval", async () => {

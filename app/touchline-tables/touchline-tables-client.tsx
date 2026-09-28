@@ -7,14 +7,12 @@ import { type CSSProperties } from "react";
 import {
   ChevronRight,
   Crown,
-  ShieldCheck,
   Trophy,
 } from "lucide-react";
 import TouchlineEliteExactCard from "@/components/touchline/cards/TouchlineEliteExactCard";
 import TouchlineCardZoom from "@/components/touchline/cards/TouchlineCardZoom";
 import TouchlineCoachCardZoom from "@/components/touchline/cards/TouchlineCoachCardZoom";
 import TouchlinePitchSurface from "@/components/touchline/pitch/TouchlinePitchSurface";
-import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import TouchlineClubPerimeterTrace from "@/components/touchline/TouchlineClubPerimeterTrace";
 import {
   touchlineCardTierName,
@@ -175,9 +173,7 @@ export default function TouchLineTablesClient({
   canEditCardEngine,
   coachRanking,
   copy,
-  currentProviderRoundName,
   locale,
-  navigationSurface,
   rankMode,
   publishedTopEleven,
   rosterCards,
@@ -231,22 +227,7 @@ export default function TouchLineTablesClient({
     : null;
 
   return (
-    <main className={styles.page}>
-      <header className={styles.topbar}>
-        <TouchlineGlobalNavigation
-          locale={locale}
-          currentRoute="rankings"
-          surface={navigationSurface}
-          className={styles.globalNavigation}
-        />
-        <span className={styles.status}>
-          <ShieldCheck aria-hidden="true" size={18} />
-          {currentProviderRoundName
-            ? `${isPortuguese ? "Rodada" : "Matchweek"} ${currentProviderRoundName}`
-            : isPortuguese ? "Rodada aguardando provider" : "Matchweek awaiting provider"}
-        </span>
-      </header>
-
+    <>
       <section className={styles.hero}>
         <div>
           <p>{isPortuguese ? "TouchLine Cards League" : "TouchLine Cards League"}</p>
@@ -458,6 +439,6 @@ export default function TouchLineTablesClient({
         <Trophy aria-hidden="true" size={19} />
         <span>{copy.connectedDescription}</span>
       </footer>
-    </main>
+    </>
   );
 }
