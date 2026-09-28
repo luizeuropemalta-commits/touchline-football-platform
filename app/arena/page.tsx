@@ -9,7 +9,7 @@ import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadli
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
-import { loadTouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
+import { loadTouchlineFantasyArenaSnapshot } from "@/lib/touchlineFantasy/server";
 import { buildTouchlineFantasyArenaLineup } from "@/lib/touchlineFantasy/arena-lineup";
 
 // This read only controls the protected Card Engine affordance. It must not
@@ -78,7 +78,7 @@ export default async function ArenaPage({
   ]);
   const locale = normalizeTouchLineLocale(firstValue(params.lang));
   const fantasySnapshot = user && !isOwnerEmail(user.email)
-    ? await loadTouchlineFantasySnapshot(user)
+    ? await loadTouchlineFantasyArenaSnapshot(user)
     : null;
   const fantasyArenaLineup = buildTouchlineFantasyArenaLineup(fantasySnapshot);
 

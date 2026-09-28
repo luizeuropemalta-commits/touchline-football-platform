@@ -8,10 +8,10 @@ import { runInNewContext } from "node:vm";
 // Persistence is the boundary fake: preparing a round copies only locked XI,
 // just as the deployed SQL contract does, and never replaces an existing draft.
 const source = stripTypeScriptTypes(readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8"));
-const start = source.indexOf("export async function loadTouchlineFantasySnapshot");
+const start = source.indexOf("async function loadFantasySnapshotCore");
 const end = source.indexOf("  const [catalogue, coaches, userGameweekResponse, rankings]", start);
 const lifecycleSource = source.slice(start, end).replace("export ", "")
-  + "return { gameweeks, activeGameweek }; }\nloadTouchlineFantasySnapshot;";
+  + "return { gameweeks, activeGameweek }; }\nloadFantasySnapshotCore;";
 const helperSource = stripTypeScriptTypes(readFileSync(new URL("../lib/touchlineFantasy/gameweek-lifecycle.ts", import.meta.url), "utf8"))
   .replace(/^import[^;]*;\s*$/gm, "").replace(/^export /gm, "");
 const reconcileTouchlineFantasyGameweeks = runInNewContext(`${helperSource}\nreconcileTouchlineFantasyGameweeks;`);

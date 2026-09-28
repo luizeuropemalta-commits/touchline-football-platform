@@ -328,6 +328,19 @@ async function loadCoaches(admin: NonNullable<ReturnType<typeof createAdminClien
 }
 
 export async function loadTouchlineFantasySnapshot(user: User): Promise<TouchlineFantasySnapshot | null> {
+  return loadFantasySnapshotCore(user, "full");
+}
+
+export type TouchlineFantasyArenaSnapshot = Pick<TouchlineFantasySnapshot,
+  "activeGameweek" | "userGameweek" | "selections" | "catalogue" | "formationRegistry">;
+
+export async function loadTouchlineFantasyArenaSnapshot(user: User): Promise<TouchlineFantasyArenaSnapshot | null> {
+  return loadFantasySnapshotCore(user, "arena");
+}
+
+function loadFantasySnapshotCore(user: User, projection: "full"): Promise<TouchlineFantasySnapshot | null>;
+function loadFantasySnapshotCore(user: User, projection: "arena"): Promise<TouchlineFantasyArenaSnapshot | null>;
+async function loadFantasySnapshotCore(user: User, projection: "full" | "arena"): Promise<TouchlineFantasySnapshot | TouchlineFantasyArenaSnapshot | null> {
   const admin = createAdminClient();
   if (!admin) return null;
   const { error: syncError } = await admin.rpc("touchline_fantasy_sync_gameweeks");
@@ -386,7 +399,7 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
 
   const [catalogue, coaches, userGameweekResponse, rankings] = await Promise.all([
     loadCatalogue(admin),
-    loadCoaches(admin),
+    projection === "full" ? loadCoaches(admin) : Promise.resolve([]),
     activeGameweek
       ? admin.from("touchline_fantasy_user_gameweeks")
         .select("id,formation_code,selected_coach_id,locked_coach_id,state,total_market_value_eur,carry_source_user_gameweek_id")
@@ -394,7 +407,7 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
         .eq("gameweek_id", activeGameweek.id)
         .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    activeGameweek ? loadRankings(admin, activeGameweek.id, seasonId, user.id) : Promise.resolve({ gameweek: [], season: [] }),
+    projection === "full" && activeGameweek ? loadRankings(admin, activeGameweek.id, seasonId, user.id) : Promise.resolve({ gameweek: [], season: [] }),
   ]);
   const userGameweekRow = userGameweekResponse.data as Row | null;
   const userGameweekId = text(userGameweekRow?.id);
@@ -405,14 +418,14 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     ? await Promise.all([
       admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
       admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
-      admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score").eq("user_gameweek_id", userGameweekId).maybeSingle(),
-      admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status,touchline_fantasy_user_gameweeks!inner(user_id,touchline_fantasy_gameweeks!inner(season_id))")
+      projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score").eq("user_gameweek_id", userGameweekId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+      projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status,touchline_fantasy_user_gameweeks!inner(user_id,touchline_fantasy_gameweeks!inner(season_id))")
         .eq("touchline_fantasy_user_gameweeks.user_id", user.id)
-        .eq("touchline_fantasy_user_gameweeks.touchline_fantasy_gameweeks.season_id", seasonId),
-      admin.from("touchline_fantasy_lineup_alerts")
+        .eq("touchline_fantasy_user_gameweeks.touchline_fantasy_gameweeks.season_id", seasonId) : Promise.resolve({ data: [], error: null }),
+      projection === "full" ? admin.from("touchline_fantasy_lineup_alerts")
         .select("player_id,fixture_id,state,was_editable_at_detection,detected_at")
         .eq("user_gameweek_id", userGameweekId)
-        .order("detected_at", { ascending: false }),
+        .order("detected_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
     ])
     : [{ data: [], error: null }, { data: [], error: null }, { data: null, error: null }, { data: [], error: null }, { data: [], error: null }];
   const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
@@ -421,6 +434,17 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     const slotId = text(row.slot_id);
     return playerId && slotId ? [{ playerId, slotId }] : [];
   });
+  const userGameweek: TouchlineFantasySnapshot["userGameweek"] = userGameweekId ? {
+    id: userGameweekId,
+    formationCode: text(userGameweekRow?.formation_code) ?? "4-3-3",
+    state: (text(userGameweekRow?.state) ?? "DRAFT") as "DRAFT" | "CONFIRMED" | "LOCKED" | "FINAL",
+    totalMarketValueEur: number(userGameweekRow?.total_market_value_eur) ?? 0,
+    carriedFromPrevious: Boolean(text(userGameweekRow?.carry_source_user_gameweek_id)),
+    selectedCoachId: text(userGameweekRow?.locked_coach_id) ?? text(userGameweekRow?.selected_coach_id),
+  } : null;
+  // Keep every lifecycle writer above. Only unused read-only enrichments are
+  // omitted; the Arena receives the same complete catalogue and locked XI.
+  if (projection === "arena") return { activeGameweek, userGameweek, selections, catalogue, formationRegistry };
   const selectedPlayerIds = selections.map((entry) => entry.playerId);
   const { data: historyData } = activeGameweek && selectedPlayerIds.length
     ? await admin.from("touchline_fantasy_player_fixture_scores")
@@ -470,14 +494,7 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
     },
     gameweeks,
     activeGameweek,
-    userGameweek: userGameweekId ? {
-      id: userGameweekId,
-      formationCode: text(userGameweekRow?.formation_code) ?? "4-3-3",
-      state: (text(userGameweekRow?.state) ?? "DRAFT") as "DRAFT" | "CONFIRMED" | "LOCKED" | "FINAL",
-      totalMarketValueEur: number(userGameweekRow?.total_market_value_eur) ?? 0,
-      carriedFromPrevious: Boolean(text(userGameweekRow?.carry_source_user_gameweek_id)),
-      selectedCoachId: text(userGameweekRow?.locked_coach_id) ?? text(userGameweekRow?.selected_coach_id),
-    } : null,
+    userGameweek,
     selections,
     catalogue,
     coaches,
