@@ -10,6 +10,24 @@ import {
 
 const LIVERPOOL_ID = "club-liverpool";
 
+test("validated membership prefers recognised detailed position without inventing missing detail", () => {
+  for (const [position, detail, expected] of [
+    ["Defender", "Left-Back", "Left Back"],
+    ["Midfielder", "Defensive Midfield", "Defensive Midfield"],
+    ["Attacker", "Left Winger", "Left Wing"],
+    ["Attacker", "Right Winger", "Right Wing"],
+    ["ST", null, "ST"],
+    ["Defender", "unknown", "Defender"],
+  ]) {
+    const rows = sourceRows();
+    Object.assign(rows.memberships[0]!, { position, detailed_position: detail });
+    const result = projectTouchlinePublicPlayers(["129820"], rows, { expectedClubProviderTeamId: "8" });
+    assert.equal(result.projections[0]?.membership.value?.position, expected);
+    const refused = projectTouchlinePublicPlayers(["129820"], rows, { expectedClubProviderTeamId: "9" });
+    assert.notEqual(refused.projections[0]?.membership.status, "verified");
+  }
+});
+
 function sourceRows() {
   return {
     players: [

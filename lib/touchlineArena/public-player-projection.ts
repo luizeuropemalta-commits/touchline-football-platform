@@ -1,4 +1,5 @@
 import { resolveTouchlineCardClassification } from "./card-engine.ts";
+import { recognizedSportmonksDetailedPosition } from "../football-data/sportmonks-position-taxonomy.ts";
 import type { TouchlineCardTierKey } from "./card-rules.ts";
 import { touchlineCountryCode3FromName } from "./country-flags.ts";
 import { PLAYER_MARKET_TIER_POLICY_VERSION } from "./player-market-tiers.ts";
@@ -333,7 +334,8 @@ export function projectTouchlinePublicPlayers(
       : status("verified", {
         clubId: asTrimmedString(membershipByPlayerId.get(playerId)?.club_id)!,
         providerTeamId: currentClub.value.providerTeamId,
-        position: asTrimmedString(membershipByPlayerId.get(playerId)?.position),
+        position: recognizedSportmonksDetailedPosition(membershipByPlayerId.get(playerId)?.detailed_position)
+          ?? asTrimmedString(membershipByPlayerId.get(playerId)?.position),
         jerseyNumber: asSafeInteger(membershipByPlayerId.get(playerId)?.jersey_number),
       }, null);
 

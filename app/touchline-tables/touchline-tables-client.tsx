@@ -34,6 +34,7 @@ import {
   type TouchLineClubOwnerStanding,
 } from "@/lib/touchlineArena/demo-data";
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
+import { touchlineCoachRankingClubLogo } from "@/lib/touchlineArena/coach-ranking-club";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
 import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published-top-eleven";
 import { touchlineTopElevenBroadcastPoint } from "@/lib/touchlineArena/top-eleven-broadcast-layout";
@@ -394,12 +395,7 @@ export default function TouchLineTablesClient({
             aria-label={isPortuguese ? "Classificação dos treinadores" : "Coach standings"}
           >
             {topSevenCoaches.map((coach) => {
-              const coachIdentity = touchlineLiveCoachForProviderId(coach.coachProviderId);
-              const coachClub = coachIdentity
-                ? TOUCHLINE_ENGLAND_CLUBS.find((club) => club.teamId === coachIdentity.coach.teamId) ?? null
-                : null;
-              // A current coach association must not contradict the ranking snapshot.
-              const coachClubLogoUrl = coachClub?.name === coach.clubName ? coachClub.logoUrl : null;
+              const coachClubLogoUrl = touchlineCoachRankingClubLogo(coach.coachProviderId, coach.clubName);
               return (
               <li key={coach.coachProviderId} data-coach-rank={coach.rank}>
                 <b>{String(coach.rank).padStart(2, "0")}</b>

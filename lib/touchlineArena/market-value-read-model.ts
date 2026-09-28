@@ -120,7 +120,7 @@ async function readTouchlinePublicPlayerProjections(
   const membershipsPromise = playerIds.length
     ? queryRows(admin
       .from("football_squad_members")
-      .select("player_id,club_id,competition_id,jersey_number,position,status,source_updated_at")
+      .select("player_id,club_id,competition_id,jersey_number,position,detailed_position,status,source_updated_at")
       .eq("provider", context.provider)
       .eq("status", "active")
       .in("player_id", playerIds)

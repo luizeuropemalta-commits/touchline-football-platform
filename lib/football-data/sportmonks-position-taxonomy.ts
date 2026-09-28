@@ -26,3 +26,13 @@ export function sportmonksDetailedPositionName(positionId: string | null | undef
   const normalized = typeof positionId === "string" ? positionId.trim() : "";
   return normalized ? SPORTMONKS_DETAILED_POSITION_NAMES.get(normalized) ?? null : null;
 }
+
+/** Accept provider detail labels only; never infer a player's position from identity. */
+export function recognizedSportmonksDetailedPosition(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase().replace(/-/g, " ").replace(/\s+/g, " ");
+  if (normalized === "left winger") return "Left Wing";
+  if (normalized === "right winger") return "Right Wing";
+  return [...SPORTMONKS_DETAILED_POSITION_NAMES.values()]
+    .find((name) => name.toLowerCase() === normalized) ?? null;
+}
