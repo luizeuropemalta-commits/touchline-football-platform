@@ -604,18 +604,20 @@ export default async function TouchLinePlayerProfilePage({
   const canonicalProviderPlayerId = canonicalIdentity?.providerPlayerId
     ?? officialLookup.providerPlayerId
     ?? official.providerPlayerId;
-  const playerStatistics = await loadTouchLinePlayerStatisticsReadModel({
-    providerPlayerId: canonicalProviderPlayerId,
-    selectedFixtureId: Array.isArray(query.fixture) ? query.fixture[0] : query.fixture,
-    position: canonicalIdentity?.position ?? null,
-  });
   if (canonicalProviderPlayerId) exactPlayer.sportmonksPlayerId = canonicalProviderPlayerId;
   const canonicalPlayerId = canonicalResolution?.canonicalPlayerId
     ?? (canonicalIdentity ? publicProjection?.identity.value?.playerId : null);
   exactPlayer.canonicalPlayerId = canonicalPlayerId;
-  const publishedCards = canonicalResolution ? null : canonicalPlayerId
-    ? await loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
-    : new Map();
+  const [playerStatistics, publishedCards] = await Promise.all([
+    loadTouchLinePlayerStatisticsReadModel({
+      providerPlayerId: canonicalProviderPlayerId,
+      selectedFixtureId: Array.isArray(query.fixture) ? query.fixture[0] : query.fixture,
+      position: canonicalIdentity?.position ?? null,
+    }),
+    canonicalResolution ? null : canonicalPlayerId
+      ? loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
+      : new Map(),
+  ]);
   const editorialCard = canonicalResolution?.editorialCard
     ?? (canonicalPlayerId && publishedCards ? publishedCards.get(canonicalPlayerId) ?? null : null);
   exactPlayer.editorialCard = editorialCard;

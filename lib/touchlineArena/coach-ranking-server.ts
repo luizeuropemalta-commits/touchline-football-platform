@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { TouchlineCoachRecord } from "./coach-scoring";
@@ -53,6 +54,11 @@ function record(value: unknown): TouchlineCoachRecord | null {
 
 /** Server-only projection; contract/user identities never enter the browser DTO. */
 export async function loadTouchLineCoachRanking(): Promise<TouchLineCoachRankingState> {
+  return readRequestCoachRanking();
+}
+
+// Request-local only; never retain public crown authority across requests.
+const readRequestCoachRanking = cache(async (): Promise<TouchLineCoachRankingState> => {
   const admin = createAdminClient();
   if (!admin) return EMPTY;
   const { data: active, error: activeError } = await admin.from("touchline_coach_ranking_active_snapshots")
@@ -97,4 +103,4 @@ export async function loadTouchLineCoachRanking(): Promise<TouchLineCoachRanking
     generatedAt: text(snapshot.generated_at),
     rows: parsed,
   };
-}
+});

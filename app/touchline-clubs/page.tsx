@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { Suspense, type CSSProperties } from "react";
 import { Check, ChevronDown, Languages } from "lucide-react";
 
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
@@ -52,18 +52,26 @@ function languageQuery(locale: TouchLineLocale) {
   return `lang=${encodeURIComponent(locale)}`;
 }
 
+async function ClubShowcase({ locale }: { locale: TouchLineLocale }) {
+  const [publishedPlayerCards, coachRanking] = await Promise.all([
+    loadTouchlinePublishedCardShowcaseCatalog(), loadTouchLineCoachRanking(),
+  ]);
+  return (
+    <>
+      <TouchlineLivePresentationRefresh initialCoachRankingSnapshotId={coachRanking.snapshotId} />
+      <TouchlineCoachCategoryShowcase locale={locale} playerCards={publishedPlayerCards} coachRanking={coachRanking} />
+    </>
+  );
+}
+
 export default async function TouchlineClubsPage({ searchParams }: ClubsPageProps) {
   const params = await searchParams;
   const locale = normalizeTouchLineLocale(params.lang);
   const dictionary = locale === "pt-BR" ? copy["pt-BR"] : copy["en-GB"];
   const localeQuery = languageQuery(locale);
-  const [publishedPlayerCards, coachRanking] = await Promise.all([
-    loadTouchlinePublishedCardShowcaseCatalog(), loadTouchLineCoachRanking(),
-  ]);
 
   return (
     <main className={styles.shell}>
-      <TouchlineLivePresentationRefresh initialCoachRankingSnapshotId={coachRanking.snapshotId} />
       <div className={styles.topbar}>
         <TouchlineGlobalNavigation
           locale={locale}
@@ -128,7 +136,9 @@ export default async function TouchlineClubsPage({ searchParams }: ClubsPageProp
         ))}
       </section>
 
-      <TouchlineCoachCategoryShowcase locale={locale} playerCards={publishedPlayerCards} coachRanking={coachRanking} />
+      <Suspense fallback={<p role="status">{locale === "pt-BR" ? "Carregando cards…" : "Loading cards…"}</p>}>
+        <ClubShowcase locale={locale} />
+      </Suspense>
 
       <footer className={styles.footer}>
         <span>{dictionary.clubs}</span>

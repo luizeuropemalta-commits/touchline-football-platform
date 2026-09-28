@@ -24,6 +24,11 @@ export const metadata: Metadata = {
   description: "Central premium de partidas, eventos e estatísticas ao vivo da TouchLine England.",
 };
 
+async function readLiveViewer() {
+  const supabase = await createClient();
+  return supabase ? await supabase.auth.getUser() : { data: { user: null } };
+}
+
 export default async function TouchLineLivePage({
   searchParams,
 }: {
@@ -47,9 +52,12 @@ export default async function TouchLineLivePage({
 
   // Keep the durable schedule available to the client while the presentation
   // selector exposes only the current ten-match round and ten prior results.
-  const fixtures = toTouchlineLiveFixtures(
-    await readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
-  );
+  const [persistedFixtures, viewer] = await Promise.all([
+    readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
+    // An invalid fixture redirect must not wait for authentication.
+    requestedFixture ? null : readLiveViewer(),
+  ]);
+  const fixtures = toTouchlineLiveFixtures(persistedFixtures);
   const initialSchedule = selectTouchlineMatchCentreSchedule(fixtures, initialNow);
   const initiallyVisibleFixtures = [
     ...initialSchedule.currentFixtures,
@@ -61,8 +69,7 @@ export default async function TouchLineLivePage({
     if (initiallySelected) canonical.set("fixture", initiallySelected.id);
     redirect(`/live?${canonical.toString()}`);
   }
-  const supabase = await createClient();
-  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const { data: { user } } = viewer ?? await readLiveViewer();
   const canReadMatchDetail = hasTouchLineArenaAccess(user);
   const initialMatchDetail = canReadMatchDetail && initiallySelected
     ? await readPublicFantasyFixtureMatchDetail(initiallySelected.providerId)

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TouchlineNavigationLabel from "./TouchlineNavigationLabel";
 import { AuthAmbientAudio } from "@/components/auth-ambient-audio";
 import {
   Activity,
@@ -46,6 +47,7 @@ type NavigationCopy = Readonly<{
   myClub: string;
   more: string;
   currentClub: string;
+  opening: string;
 }>;
 
 const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
@@ -60,6 +62,7 @@ const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
     myClub: "My Club",
     more: "More",
     currentClub: "Current club",
+    opening: "Opening",
   },
   "pt-BR": {
     ariaLabel: "Navegação TouchLine",
@@ -72,6 +75,7 @@ const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
     myClub: "Meu Clube",
     more: "Mais",
     currentClub: "Clube atual",
+    opening: "Abrindo",
   },
 };
 
@@ -115,7 +119,10 @@ function NavigationLink({
       data-touchline-navigation-key={item.key}
     >
       <Icon aria-hidden="true" />
-      <span>{labelFor(item.key, dictionary, hasTrustedClubContext)}</span>
+      <TouchlineNavigationLabel
+        label={labelFor(item.key, dictionary, hasTrustedClubContext)}
+        pendingLabel={`${dictionary.opening}…`}
+      />
     </Link>
   );
 }
@@ -146,7 +153,7 @@ export default function TouchlineGlobalNavigation({
     >
       <Link className={styles.arena} href={touchlineGlobalNavigationArenaHref(effectiveLocale)}>
         <Goal aria-hidden="true" />
-        <span>{dictionary.backToArena}</span>
+        <TouchlineNavigationLabel label={dictionary.backToArena} pendingLabel={`${dictionary.opening}…`} />
       </Link>
 
       {trustedContext?.club ? (

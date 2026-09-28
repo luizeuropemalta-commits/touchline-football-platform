@@ -148,11 +148,17 @@ export function createCompleteTouchlineCatalogueAdmin<T extends SupabaseClient>(
 export async function loadCompleteTouchlineCataloguePresentations(playerIds: readonly string[], admin: SupabaseClient) {
   const ids = [...new Set(playerIds.map((id) => id.trim().toLowerCase()).filter(Boolean))].sort();
   const result = new Map<string, TouchlinePublicEditorialCardPresentation>();
-  for (let index = 0; index < ids.length; index += PAGE_SIZE) {
-    const presentations = await loadTouchlinePublishedCardPresentations({
-      playerIds: ids.slice(index, index + PAGE_SIZE), providedAdmin: admin,
-    });
-    for (const [id, presentation] of presentations) result.set(id, presentation);
+  // At most two complete batches at once; preserve deterministic merge order
+  // and all per-batch pagination/publication checks in the existing reader.
+  for (let index = 0; index < ids.length; index += PAGE_SIZE * 2) {
+    const batches = [ids.slice(index, index + PAGE_SIZE), ids.slice(index + PAGE_SIZE, index + PAGE_SIZE * 2)]
+      .filter((batch) => batch.length > 0);
+    const results = await Promise.all(batches.map((playerIds) => (
+      loadTouchlinePublishedCardPresentations({ playerIds, providedAdmin: admin })
+    )));
+    for (const presentations of results) {
+      for (const [id, presentation] of presentations) result.set(id, presentation);
+    }
   }
   return result;
 }

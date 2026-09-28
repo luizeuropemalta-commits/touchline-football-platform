@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   TOUCHLINE_ENGLAND_LEAGUE_KEY,
@@ -11,6 +12,11 @@ import { parseTouchlinePublishedTopEleven, type TouchlinePublishedTopEleven } fr
 import { parsePersistedTouchlinePlayerLeadership } from "./player-ranking-leadership";
 
 export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRankingState> {
+  return readRequestActiveRanking();
+}
+
+// Request-local only; a later render revalidates publication authority.
+const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingState> => {
   const admin = createAdminClient();
   if (!admin) return TOUCHLINE_PRESEASON_RANKING_STATE;
 
@@ -75,7 +81,7 @@ export async function loadTouchLineActiveRanking(): Promise<TouchlineActiveRanki
   return state && state.players.length === record.actual_player_count
     ? state
     : TOUCHLINE_PRESEASON_RANKING_STATE;
-}
+});
 
 /** Reads only an immutable, audited published Top 11; absence is a valid state. */
 export async function loadTouchLinePublishedTopEleven(ranking: TouchlineActiveRankingState): Promise<TouchlinePublishedTopEleven | null> {

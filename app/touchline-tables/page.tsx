@@ -23,13 +23,16 @@ export default async function TouchLineTablesPage({
 }) {
   const { lang } = await searchParams;
   const locale = normalizeTouchLineLocale(lang);
-  const supabase = await createClient();
-  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
-  const activeRanking = await loadTouchLineActiveRanking();
-  const [publishedTopEleven, publicFixtures, rankedCards, coachRanking, publishedCardCount] = await Promise.all([
-    loadTouchLinePublishedTopEleven(activeRanking),
+  const rankingPromise = loadTouchLineActiveRanking();
+  const userPromise = createClient().then(async (supabase) => (
+    supabase ? await supabase.auth.getUser() : { data: { user: null } }
+  ));
+  const [activeRanking, { data: { user } }, publishedTopEleven, publicFixtures, rankedCards, coachRanking, publishedCardCount] = await Promise.all([
+    rankingPromise,
+    userPromise,
+    rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking)),
     readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }),
-    loadTouchLineRankedCardCatalog(activeRanking),
+    rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking)),
     loadTouchLineCoachRanking(),
     countTouchlinePublishedPlayerCards(),
   ]);

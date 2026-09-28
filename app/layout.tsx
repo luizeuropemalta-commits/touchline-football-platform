@@ -4,7 +4,6 @@ import { Suspense } from "react";
 
 import DocumentLocaleSync from "@/components/touchline/DocumentLocaleSync";
 import TouchlineLandscapeBoundary from "@/components/touchline/TouchlineLandscapeBoundary";
-import TouchlineCardLeadershipBoundary from "@/components/touchline/cards/TouchlineCardLeadershipBoundary";
 import { TouchlineActivityTracker } from "@/components/touchline-activity-tracker";
 import { TouchlineAmbientAudioProvider } from "@/components/auth-ambient-audio";
 import {
@@ -88,11 +87,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           the global skip link work uniformly without nesting landmarks.
         */}
         <TouchlineLandscapeBoundary skipLabel={skipLabel} locale={locale}>
-          <TouchlineCardLeadershipBoundary enabled={!isIsolatedPreview && dataSource === "direct"}>
-            <TouchlineAmbientAudioProvider enabled={!isIsolatedPreview}>
-              {children}
-            </TouchlineAmbientAudioProvider>
-          </TouchlineCardLeadershipBoundary>
+          <TouchlineAmbientAudioProvider enabled={!isIsolatedPreview}>
+            {children}
+          </TouchlineAmbientAudioProvider>
         </TouchlineLandscapeBoundary>
       </body>
     </html>

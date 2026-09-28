@@ -138,7 +138,7 @@ test("the authenticated profile bounds its private avatar lookup before identity
 
   assert.match(
     source,
-    /const \{ data: storedProfile \} = await resolveServerReadWithin(?:<[^>]+>)?\([\s\S]*?\.from\("users"\)[\s\S]*?\.maybeSingle\(\)[\s\S]*?\{ data: null \},[\s\S]*?CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS/,
+    /const avatarRead = activeClubOwnerUser && supabase[\s\S]*?resolveServerReadWithin(?:<[^>]+>)?\([\s\S]*?\.from\("users"\)[\s\S]*?\.maybeSingle\(\)[\s\S]*?\{ data: null \},[\s\S]*?CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS/,
   );
 });
 

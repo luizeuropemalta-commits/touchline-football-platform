@@ -51,7 +51,7 @@ test("Arena refreshes every saved card from the current roster and never lets a 
 test("Arena mounts the Starting XI ahead of reveal but keeps it hidden throughout the official intro", () => {
   const fieldLayer = sourceBetween(
     "{shouldRenderArenaOwnerLayer ? (",
-    "{arenaFieldPlayersForRendering.map((player) => {",
+    "{arenaFieldPlayersForRendering.map(",
   );
 
   assert.match(

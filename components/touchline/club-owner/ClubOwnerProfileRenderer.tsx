@@ -161,26 +161,22 @@ export default async function ClubOwnerProfileRenderer({
   const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
   const canEditCardEngine = Boolean(user && isOwnerEmail(user.email));
   const clubOwnerUser = user && !isOwnerEmail(user.email) ? user : null;
-  let storedAvatarUrl: string | null = null;
-  if (clubOwnerUser && supabase) {
-    const { data: storedProfile } = await resolveServerReadWithin<{ data: ClubOwnerAvatarProfile | null }>(
+  let ownerIdentity = resolveTouchlineClubOwnerPageIdentity(clubOwnerUser, ownerSlug);
+  if (!ownerIdentity) notFound();
+  const activeClubOwnerUser = ownerIdentity.isAuthenticatedClubOwner && clubOwnerUser ? clubOwnerUser : null;
+  const showPrivateClubControl = ownerIdentity.isAuthenticatedClubOwner;
+  const avatarRead = activeClubOwnerUser && supabase
+    ? resolveServerReadWithin<{ data: ClubOwnerAvatarProfile | null }>(
       supabase
         .from("users")
         .select("avatar_url")
-        .eq("id", clubOwnerUser.id)
+        .eq("id", activeClubOwnerUser.id)
         .maybeSingle()
         .then(({ data }) => ({ data: data as ClubOwnerAvatarProfile | null })),
       { data: null },
       CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS,
-    );
-    storedAvatarUrl = typeof storedProfile?.avatar_url === "string"
-      ? storedProfile.avatar_url
-      : null;
-  }
-  const ownerIdentity = resolveTouchlineClubOwnerPageIdentity(clubOwnerUser, ownerSlug, storedAvatarUrl);
-  if (!ownerIdentity) notFound();
-  const activeClubOwnerUser = ownerIdentity.isAuthenticatedClubOwner && clubOwnerUser ? clubOwnerUser : null;
-  const showPrivateClubControl = ownerIdentity.isAuthenticatedClubOwner;
+    )
+    : Promise.resolve({ data: null });
   const activeRankingRead = resolveServerReadWithin(
     loadTouchLineActiveRanking(),
     TOUCHLINE_PRESEASON_RANKING_STATE,
@@ -209,12 +205,17 @@ export default async function ClubOwnerProfileRenderer({
   const fantasySnapshotRead = activeClubOwnerUser
     ? resolveServerReadWithin(loadTouchlineFantasySnapshot(activeClubOwnerUser), null, CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS)
     : Promise.resolve(null);
-  const [activeRanking, authoritativeRoster, walletEntriesResponse, fantasySnapshot] = await Promise.all([
+  const [activeRanking, authoritativeRoster, walletEntriesResponse, fantasySnapshot, avatarResponse] = await Promise.all([
     activeRankingRead,
     authoritativeRosterRead,
     walletEntriesRead,
     fantasySnapshotRead,
+    avatarRead,
   ]);
+  const storedAvatarUrl = typeof avatarResponse.data?.avatar_url === "string"
+    ? avatarResponse.data.avatar_url
+    : null;
+  ownerIdentity = resolveTouchlineClubOwnerPageIdentity(clubOwnerUser, ownerSlug, storedAvatarUrl) ?? ownerIdentity;
   const publicRosterCookieValue = activeClubOwnerUser
     ? null
     : (await cookies()).get(arenaPersistenceKeys(
