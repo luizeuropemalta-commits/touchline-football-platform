@@ -19,10 +19,19 @@ import {
 } from "@/lib/touchlineArena/match-centre";
 import { toTouchlineLiveFixtures } from "@/lib/touchlineArena/stadium-catalog";
 
-export const metadata: Metadata = {
-  title: "Ao vivo | TouchLine England",
-  description: "Central premium de partidas, eventos e estatísticas ao vivo da TouchLine England.",
-};
+export async function generateMetadata({ searchParams }: {
+  searchParams: Promise<{ lang?: string | string[] }>;
+}): Promise<Metadata> {
+  const { lang } = await searchParams;
+  const locale = normalizeTouchLineLocale(Array.isArray(lang) ? lang[0] : lang);
+  return locale === "pt-BR" ? {
+    title: "Ao vivo | TouchLine England",
+    description: "Central premium de partidas, eventos e estatísticas ao vivo da TouchLine England.",
+  } : {
+    title: "Live | TouchLine England",
+    description: "Live matches, events and statistics from TouchLine England.",
+  };
+}
 
 async function readLiveViewer() {
   const supabase = await createClient();

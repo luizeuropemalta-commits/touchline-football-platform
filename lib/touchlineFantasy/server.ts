@@ -334,20 +334,22 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
 export type TouchlineFantasyArenaSnapshot = Pick<TouchlineFantasySnapshot,
   "activeGameweek" | "userGameweek" | "selections" | "catalogue" | "formationRegistry">;
 
-export async function loadTouchlineFantasyArenaSnapshot(user: User): Promise<TouchlineFantasyArenaSnapshot | null> {
-  return loadFantasySnapshotCore(user, "arena");
+export async function loadTouchlineFantasyArenaSnapshot(user: User, formationRegistry?: TouchlineFormationGeometryRegistry): Promise<TouchlineFantasyArenaSnapshot | null> {
+  return loadFantasySnapshotCore(user, "arena", formationRegistry);
 }
 
 function loadFantasySnapshotCore(user: User, projection: "full"): Promise<TouchlineFantasySnapshot | null>;
-function loadFantasySnapshotCore(user: User, projection: "arena"): Promise<TouchlineFantasyArenaSnapshot | null>;
-async function loadFantasySnapshotCore(user: User, projection: "full" | "arena"): Promise<TouchlineFantasySnapshot | TouchlineFantasyArenaSnapshot | null> {
+function loadFantasySnapshotCore(user: User, projection: "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry): Promise<TouchlineFantasyArenaSnapshot | null>;
+async function loadFantasySnapshotCore(user: User, projection: "full" | "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry): Promise<TouchlineFantasySnapshot | TouchlineFantasyArenaSnapshot | null> {
   const admin = createAdminClient();
   if (!admin) return null;
   const { error: syncError } = await admin.rpc("touchline_fantasy_sync_gameweeks");
   if (syncError) return null;
   const [{ data: configData, error: configError }, formationRegistry] = await Promise.all([
     admin.from("touchline_fantasy_configs").select("season_id,budget_eur,max_players_per_club,lock_offset_minutes").eq("competition_key", "england").eq("status", "active").maybeSingle(),
-    readTouchlineFormationGeometryRegistry(),
+    projection === "arena" && providedFormationRegistry !== undefined
+      ? Promise.resolve(providedFormationRegistry)
+      : readTouchlineFormationGeometryRegistry(),
   ]);
   if (configError || !configData) return null;
   const config = configData as Row;

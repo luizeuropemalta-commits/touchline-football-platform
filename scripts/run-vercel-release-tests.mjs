@@ -41,7 +41,8 @@ const result = spawnSync(process.execPath, [
   // Keep the complete suite, but bound simultaneous workers on the local
   // audit Mac and the cost-safe Vercel build machine.
   "--test-concurrency=2",
-  "--test-force-exit",
+  // Let every worker finish reporting. A complete no-force run restored 15
+  // missing results from a zero-exit aggregate; keep hangs visible to CI.
   "--test-timeout=30000",
   "--experimental-strip-types",
   ...testFiles,

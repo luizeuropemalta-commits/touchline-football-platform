@@ -78,7 +78,7 @@ export default async function ArenaPage({
   ]);
   const locale = normalizeTouchLineLocale(firstValue(params.lang));
   const fantasySnapshot = user && !isOwnerEmail(user.email)
-    ? await loadTouchlineFantasyArenaSnapshot(user)
+    ? await loadTouchlineFantasyArenaSnapshot(user, initialTwoDimensionalFormationRegistry)
     : null;
   const fantasyArenaLineup = buildTouchlineFantasyArenaLineup(fantasySnapshot);
 

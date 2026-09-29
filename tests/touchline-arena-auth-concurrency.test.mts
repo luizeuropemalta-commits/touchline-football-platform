@@ -31,7 +31,7 @@ function fixture(panel: string | null = null) {
     "@/lib/supabase/server": { createClient: async () => { calls.push("client"); return { auth: { getUser: () => { calls.push("auth"); return auth.promise; } } }; } },
     "@/lib/admin/owner": { isOwnerEmail: () => false },
     "@/lib/touchlineArena/formation-geometry-server": { readTouchlineFormationGeometryRegistry: () => { calls.push("geometry"); return geometry.promise; } },
-    "@/lib/touchlineFantasy/server": { loadTouchlineFantasyArenaSnapshot: async (user: { id: string }) => { assert.equal(user.id, "customer"); calls.push("fantasy"); return null; } },
+    "@/lib/touchlineFantasy/server": { loadTouchlineFantasyArenaSnapshot: async (user: { id: string }, registry: object) => { assert.equal(user.id, "customer"); assert.equal(registry, await geometry.promise); calls.push("fantasy"); return null; } },
     "@/lib/touchlineFantasy/arena-lineup": { buildTouchlineFantasyArenaLineup: () => null },
   };
   const exports: { default?: (input: { searchParams: Promise<object> }) => Promise<unknown> } = {};

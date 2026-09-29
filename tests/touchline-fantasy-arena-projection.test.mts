@@ -68,7 +68,7 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
     number: (v: unknown) => typeof v === "number" ? v : null,
     rows: (v: unknown) => Array.isArray(v) ? v : [],
     parseGameweek: (r: { id: string; gameweek_number: number; state: string }) => ({ id: r.id, number: r.gameweek_number, state: r.state }),
-    readTouchlineFormationGeometryRegistry: async () => geometry,
+    readTouchlineFormationGeometryRegistry: async () => { queries.push("geometry"); return geometry; },
     loadCatalogue: async () => catalogue,
     loadCoaches: async () => { queries.push("coaches"); if (options.pending) await pending; return []; },
     loadRankings: async (_a: unknown, gw: string, season: string, user: string) => { assert.equal(gw, "active"); assert.equal(season, "season"); assert.equal(user, "customer"); queries.push("rankings"); if (options.pending) await pending; return { gameweek: [], season: [] }; },
@@ -87,9 +87,24 @@ function scenario(input = source, options: { pending?: boolean; state?: string; 
     catalogue, coaches: [], lineupAlerts: [], formationRegistry: geometry,
     gameweekScore: 0, seasonScore: 0, matchHistory: [], gameweekRanking: [], seasonRanking: [],
   };
-  return { run: (projection: "arena" | "full") => core({ id: "customer" }, projection), calls, queries, release, golden };
+  return { run: (projection: "arena" | "full", registry?: object) => core({ id: "customer" }, projection, registry), calls, queries, release, golden };
 }
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
+
+test("Arena reuses the supplied geometry reference; omitted registry and full API still read", async () => {
+  const arena = scenario();
+  const registry = arena.golden.formationRegistry;
+  const value = await arena.run("arena", registry);
+  assert.equal(value.formationRegistry, registry);
+  assert.equal(arena.queries.filter(q => q === "geometry").length, 0);
+  const fallback = scenario();
+  assert.equal((await fallback.run("arena")).formationRegistry, fallback.golden.formationRegistry);
+  assert.equal(fallback.queries.filter(q => q === "geometry").length, 1);
+  const full = scenario();
+  assert.equal((await full.run("full", registry)).formationRegistry, full.golden.formationRegistry);
+  assert.equal(full.queries.filter(q => q === "geometry").length, 1);
+  assert.deepEqual(plain(arena.calls), plain(fallback.calls));
+});
 
 test("full projection matches immutable baseline; Arena retains exact XI and writer trace", async () => {
   const full = scenario(); const arena = scenario();

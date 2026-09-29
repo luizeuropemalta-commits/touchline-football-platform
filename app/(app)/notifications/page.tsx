@@ -165,7 +165,7 @@ const EN_CHANNELS: Array<{
   {
     key: "in_app",
     title: "In app",
-    body: "Notification center and in-product alerts.",
+    body: "Notification centre and in-product alerts.",
     icon: Bell,
   },
   {
@@ -190,10 +190,10 @@ const PT_CHANNELS: typeof EN_CHANNELS = [
 
 const NOTIFICATION_COPY = {
   "en-GB": {
-    preferences: "ClubOwner preferences", consentFirst: "Consent first", title: "Notification Center",
+    preferences: "ClubOwner preferences", consentFirst: "Consent first", title: "Notification Centre",
     description: "Choose what TouchLine England can send, where it can send it and when it should stay quiet.",
     categories: "Categories", consent: "Consent", optIn: "Opt-in", status: "Status", loading: "Loading",
-    consentCenter: "Consent center", notificationCategories: "Notification Categories", channels: "Channels",
+    consentCenter: "Consent centre", notificationCategories: "Notification Categories", channels: "Channels",
     deliveryControls: "Delivery Controls", pushNotice: "Push permission is requested only after the ClubOwner enables that channel.",
     frequency: "Frequency", quietTime: "Quiet Time", deliveryFrequency: "Delivery frequency", quietEnabled: "Quiet hours enabled",
     quietStart: "Quiet hours start", quietEnd: "Quiet hours end", quietTimezone: "Quiet hours timezone",
