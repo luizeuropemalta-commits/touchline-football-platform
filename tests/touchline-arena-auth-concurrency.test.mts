@@ -4,8 +4,14 @@ import { createRequire } from "node:module";
 import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
+import { inspectTouchlineIsolatedPreviewEnvironment } from "../lib/touchlinePreview/isolation.ts";
 
 const require = createRequire(import.meta.url);
+const timingExports = {};
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../lib/touchlineArena/server-phase-timing.ts", import.meta.url), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, {
+  exports: timingExports, process: { env: {} }, performance, console,
+  require: (name: string) => name === "server-only" ? {} : name === "../touchlinePreview/isolation" ? { inspectTouchlineIsolatedPreviewEnvironment } : require(name),
+});
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>(done => { resolve = done; });
@@ -17,6 +23,7 @@ function fixture(panel: string | null = null) {
   const calls: string[] = [];
   const redirect = new Error("redirect");
   const modules: Record<string, unknown> = {
+    "@/lib/touchlineArena/server-phase-timing": timingExports,
     "react/jsx-runtime": require("react/jsx-runtime"),
     "./ArenaClient": { default: () => null },
     "next/headers": { headers: async () => ({ get: () => "qa.example" }) },

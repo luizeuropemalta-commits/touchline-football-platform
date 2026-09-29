@@ -1,4 +1,5 @@
 "use client";
+import { createArenaSaveIntent } from "@/lib/touchlineArena/arena-save-intent";
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -5209,6 +5210,20 @@ export default function ArenaClient({
     };
   }, [arenaPersistencePrincipal, t]);
 
+  const [arenaSaveIntent] = useState(createArenaSaveIntent);
+  const [arenaSaveRevision, setArenaSaveRevision] = useState(0);
+  const arenaSavePrincipal = arenaPersistencePrincipal?.kind === "authenticated" ? arenaPersistencePrincipal.userId : null;
+  useLayoutEffect(() => {
+    arenaSaveIntent.scope(arenaSavePrincipal);
+    return () => arenaSaveIntent.scope(null);
+  }, [arenaSaveIntent, arenaSavePrincipal]);
+  function requestArenaStateSave() {
+    if (!arenaSavePrincipal || isQaReadOnly || isArenaMatchdayViewActive || isQuickSubstitutionOpen) return;
+    const revision = arenaSaveIntent.edit(arenaSavePrincipal);
+    if (revision !== null) setArenaSaveRevision((value) => value + 1);
+    else if (arenaSaveIntent.blocked(arenaSavePrincipal)) setSaveStatus(t("savedLocallySyncUnavailable"));
+  }
+
   useEffect(() => {
     if (!hasLoadedSavedLineup || !hasLoadedClubOwnerRoster || isDemoLineup || !arenaPersistencePrincipal || isQaReadOnly) return;
     // Quick Substitution is a match-session projection, never an Arena roster
@@ -5237,8 +5252,18 @@ export default function ArenaClient({
       ));
       return;
     }
+    const savePrincipal = arenaSavePrincipal;
+    const saveTicket = savePrincipal ? arenaSaveIntent.ticket(savePrincipal) : null;
+    if (!savePrincipal || saveTicket === null) return;
     if (accountLineupSaveTimerRef.current) window.clearTimeout(accountLineupSaveTimerRef.current);
     accountLineupSaveTimerRef.current = window.setTimeout(() => {
+      if (!arenaSaveIntent.claim(savePrincipal, saveTicket)) return;
+      const controller = new AbortController();
+      const deadline = window.setTimeout(() => {
+        arenaSaveIntent.settle(savePrincipal, saveTicket, false);
+        controller.abort();
+        if (arenaSaveIntent.owns(savePrincipal)) setSaveStatus(t("savedLocallySyncUnavailable"));
+      }, 15_000);
       fetch("/api/touchline-arena/state", {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -5251,13 +5276,23 @@ export default function ArenaClient({
           ),
         }),
         keepalive: true,
-      }).catch(() => null);
+        signal: controller.signal,
+      }).then(async (response) => {
+        const acknowledgement = await response.json().catch(() => null) as { ok?: boolean } | null;
+        if (!response.ok || acknowledgement?.ok !== true) throw new Error("Arena state acknowledgement missing");
+        if (!arenaSaveIntent.settle(savePrincipal, saveTicket, true)) return;
+        if (arenaSaveIntent.current(savePrincipal, saveTicket)) setSaveStatus(t("autoSaved"));
+        // Wake the latest queued edit only after the previous write is acknowledged.
+        if (arenaSaveIntent.ticket(savePrincipal) !== null) setArenaSaveRevision((value) => value + 1);
+      }).catch(() => {
+        arenaSaveIntent.settle(savePrincipal, saveTicket, false);
+        if (arenaSaveIntent.owns(savePrincipal)) setSaveStatus(t("savedLocallySyncUnavailable"));
+      }).finally(() => window.clearTimeout(deadline));
     }, 700);
-    queueMicrotask(() => setSaveStatus(t("autoSaved")));
     return () => {
       if (accountLineupSaveTimerRef.current) window.clearTimeout(accountLineupSaveTimerRef.current);
     };
-  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isArenaMatchdayViewActive, isDemoLineup, isQaReadOnly, isQuickSubstitutionOpen, players, selectedFormationKey, t]);
+  }, [arenaAccountSyncStatus, arenaPersistencePrincipal, arenaRosterSyncStatus, hasLoadedClubOwnerRoster, hasLoadedSavedLineup, isArenaMatchdayViewActive, isDemoLineup, isQaReadOnly, isQuickSubstitutionOpen, players, selectedFormationKey, t, arenaSaveIntent, arenaSavePrincipal, arenaSaveRevision]);
 
   useEffect(() => {
     if (!hasLoadedSavedLineup || !players.some(hasArenaCardForHydration)) return;
@@ -6152,7 +6187,8 @@ export default function ArenaClient({
     }
     saveLineup(players, selectedFormationKey, arenaPersistencePrincipal);
     persistArenaRoster(players, benchPlayers);
-    setSaveStatus(t("saved"));
+    requestArenaStateSave();
+    setSaveStatus(t("savedLocally"));
   }
 
   function writeQaVisualDraft(playerId: string, patch: Partial<ArenaFieldSlot>) {
@@ -6271,6 +6307,7 @@ export default function ArenaClient({
       return;
     }
     if (isQaVisualEditor && !QA_EDITABLE_FORMATION_KEYS.has(formationKey)) return;
+    requestArenaStateSave();
     setSelectedFormationKey(formationKey);
     setPlayers((currentPlayers) => normalizeArenaPlayersForFormation(
       currentPlayers,
@@ -6293,6 +6330,7 @@ export default function ArenaClient({
       return;
     }
 
+    requestArenaStateSave();
     setPlayers((currentPlayers) =>
       currentPlayers.map((player) => {
         if (player.id !== selectedPlayer.id) return player;
@@ -6321,6 +6359,7 @@ export default function ArenaClient({
     }
 
     const heightVh = Math.min(ARENA_CARD_MAX_HEIGHT_VH, Math.max(ARENA_CARD_MIN_HEIGHT_VH, Math.round(value * 10) / 10));
+    requestArenaStateSave();
     setPlayers((currentPlayers) =>
       currentPlayers.map((player) => player.id === selectedPlayer.id ? { ...player, heightVh } : player),
     );
@@ -6554,6 +6593,7 @@ export default function ArenaClient({
     }
 
     const position = clientPointToArenaPosition(player, clientX, clientY, stageRect, loopCameraIndex);
+    requestArenaStateSave();
 
     setCameraEditSlots((currentSlots) => ({
       ...currentSlots,
@@ -6977,6 +7017,7 @@ export default function ArenaClient({
       });
     const nextBench = [...benchPlayers, ...movedToReserves];
 
+    requestArenaStateSave();
     setSelectedFormationKey(formationKey);
     setPlayers(nextPlayers);
     setBenchPlayers(nextBench);
@@ -7064,6 +7105,7 @@ export default function ArenaClient({
       ? benchPlayers.map((bench) => bench.id === candidate.id ? arenaPlayerToBenchOption(target, candidate) : bench)
       : benchPlayers.filter((bench) => bench.id !== candidate.id);
 
+    requestArenaStateSave();
     setPlayers(nextPlayers);
     setBenchPlayers(nextBench);
     saveLineup(nextPlayers, selectedFormationKey, arenaPersistencePrincipal);
@@ -7350,6 +7392,7 @@ export default function ArenaClient({
     const nextPlayers = players.map((player) => (player.id === replacementTarget.id ? incomingPlayer : player));
     const nextBench = benchPlayers.map((bench) => (bench.id === selectedBench.id ? outgoingBench : bench));
 
+    requestArenaStateSave();
     setPlayers(nextPlayers);
     setBenchPlayers(nextBench);
     persistArenaRoster(nextPlayers, nextBench);
@@ -7569,6 +7612,7 @@ export default function ArenaClient({
       selectedFormationKey,
     );
     setIsDemoLineup(false);
+    requestArenaStateSave();
     setPlayers(placement.players);
     setBenchPlayers(placement.bench);
     persistArenaRoster(placement.players, placement.bench);
@@ -7690,6 +7734,7 @@ export default function ArenaClient({
 
     const nextPlayers = players.filter((player) => player.id !== candidate.id);
     const nextBench = benchPlayers.filter((player) => player.id !== candidate.id);
+    requestArenaStateSave();
     setPlayers(nextPlayers);
     setBenchPlayers(nextBench);
     persistArenaRoster(nextPlayers, nextBench);
@@ -7752,6 +7797,7 @@ export default function ArenaClient({
     const nextPlayers = players.map((player) => (player.id === releasedPlayer.id ? incomingPlayer : player));
     const nextBench = benchPlayers.filter((bench) => bench.id !== selectedBench.id);
 
+    requestArenaStateSave();
     setPlayers(nextPlayers);
     setBenchPlayers(nextBench);
     persistArenaRoster(nextPlayers, nextBench);

@@ -5,7 +5,7 @@ import vm from "node:vm";
 import ts from "typescript";
 
 type Element = { type: string; props: { children?: unknown; onClick?: () => Promise<void>; disabled?: boolean } };
-function harness(push: unknown, permission: NotificationPermission = "granted", rejectPermission = false) {
+function harness(push: unknown, permission: NotificationPermission = "granted", rejectPermission = false, registrationError?: string, locale = "en-GB") {
   const state: unknown[] = ["ready", { settings: { scopes: { clubs: ["19"] } }, channels: { push: false } }, true, ""];
   let cursor = 0, registrations = 0, prompts = 0, saves = 0;
   const exports: { default?: (props: object) => Element } = {};
@@ -17,16 +17,17 @@ function harness(push: unknown, permission: NotificationPermission = "granted", 
     require: (name: string) => {
       if (name === "react/jsx-runtime") return { jsx, jsxs: jsx };
       if (name === "react") return { useEffect() {}, useState() { const index = cursor++; return [state[index], (value: unknown) => { state[index] = value; }]; } };
-      if (name.includes("push-device-registration")) return { touchlinePushIsConfigured: () => "configured", registerTouchlinePushDevice: async () => { registrations++; return "registered"; } };
+      if (name.includes("push-device-registration")) return { touchlinePushIsConfigured: () => "configured", registerTouchlinePushDevice: async () => { registrations++; if (registrationError) throw new Error(registrationError); return "registered"; } };
       if (name.endsWith(".css")) return { default: {} };
       if (name === "lucide-react" || name.includes("club-follow-preferences")) return {};
       throw new Error(`Unexpected import ${name}`);
     },
+    Error,
     window: { Notification: {} },
     Notification: { permission, requestPermission: async () => { prompts++; if (rejectPermission) throw new Error("browser refused"); return "granted"; } },
     fetch: async () => { saves++; return { ok: true, json: async () => ({ ok: true, data: { channels: { push } } }) }; },
   });
-  function render() { cursor = 0; return exports.default!({ clubId: "19", clubName: "Arsenal", locale: "en-GB" }); }
+  function render() { cursor = 0; return exports.default!({ clubId: "19", clubName: "Arsenal", locale }); }
   function buttons(node: unknown): Element[] {
     if (Array.isArray(node)) return node.flatMap(buttons);
     if (!node || typeof node !== "object" || !("props" in node)) return [];
@@ -64,4 +65,14 @@ test("malformed preference acknowledgement never confirms success", async () => 
   const instance = harness("false");
   await instance.button().props.onClick!();
   assert.match(String(instance.state[3]), /could not be confirmed/);
+});
+
+test("key mismatch explains explicit re-registration without saving preferences", async () => {
+  for (const locale of ["en-GB", "pt-BR"]) {
+    const instance = harness(false, "granted", false, "touchline-push-re-registration-required", locale);
+    await instance.button().props.onClick!();
+    assert.deepEqual(instance.counts(), { registrations: 1, prompts: 0, saves: 0 });
+    assert.equal(instance.state[0], "ready");
+    assert.match(String(instance.state[3]), locale === "en-GB" ? /browser.*settings.*register again/i : /configurações.*navegador.*cadastre novamente/i);
+  }
 });

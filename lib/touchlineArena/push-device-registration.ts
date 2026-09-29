@@ -58,7 +58,16 @@ export async function registerTouchlinePushDevice(): Promise<"registered" | "per
   const worker = await awaitPushPreparation(navigator.serviceWorker.register("/touchline-push-sw.js", { scope: "/" }));
   await awaitPushPreparation(navigator.serviceWorker.ready);
   const existing = await awaitPushPreparation(worker.pushManager.getSubscription());
-  const subscription = existing ?? await awaitPushPreparation(worker.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) }));
+  const requestedKey = urlBase64ToUint8Array(publicKey);
+  const subscription = existing ?? await awaitPushPreparation(worker.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: requestedKey }));
+  // A subscription may survive a VAPID rotation. Never save an unverifiable
+  // binding or silently replace it; the user must explicitly re-register.
+  const boundKey = subscription.options?.applicationServerKey;
+  const boundBytes = boundKey ? new Uint8Array(boundKey) : null;
+  if (!boundBytes || boundBytes.length !== requestedKey.length
+    || !boundBytes.every((value, index) => value === requestedKey[index])) {
+    throw new Error("touchline-push-re-registration-required");
+  }
 
   const payload: DeviceRegistration = {
     installationId: installationId(),

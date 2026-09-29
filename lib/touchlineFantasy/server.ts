@@ -1,4 +1,5 @@
 import "server-only";
+import type { ArenaPhaseTiming } from "@/lib/touchlineArena/server-phase-timing";
 
 import type { User } from "@supabase/supabase-js";
 import type { TouchlineCoach } from "@/lib/football-data/types";
@@ -334,17 +335,20 @@ export async function loadTouchlineFantasySnapshot(user: User): Promise<Touchlin
 export type TouchlineFantasyArenaSnapshot = Pick<TouchlineFantasySnapshot,
   "activeGameweek" | "userGameweek" | "selections" | "catalogue" | "formationRegistry">;
 
-export async function loadTouchlineFantasyArenaSnapshot(user: User, formationRegistry?: TouchlineFormationGeometryRegistry): Promise<TouchlineFantasyArenaSnapshot | null> {
-  return loadFantasySnapshotCore(user, "arena", formationRegistry);
+export async function loadTouchlineFantasyArenaSnapshot(user: User, formationRegistry?: TouchlineFormationGeometryRegistry, timing?: ArenaPhaseTiming): Promise<TouchlineFantasyArenaSnapshot | null> {
+  try { return await loadFantasySnapshotCore(user, "arena", formationRegistry, timing); }
+  finally { timing?.finish(); }
 }
 
 function loadFantasySnapshotCore(user: User, projection: "full"): Promise<TouchlineFantasySnapshot | null>;
-function loadFantasySnapshotCore(user: User, projection: "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry): Promise<TouchlineFantasyArenaSnapshot | null>;
-async function loadFantasySnapshotCore(user: User, projection: "full" | "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry): Promise<TouchlineFantasySnapshot | TouchlineFantasyArenaSnapshot | null> {
+function loadFantasySnapshotCore(user: User, projection: "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry, timing?: ArenaPhaseTiming): Promise<TouchlineFantasyArenaSnapshot | null>;
+async function loadFantasySnapshotCore(user: User, projection: "full" | "arena", providedFormationRegistry?: TouchlineFormationGeometryRegistry, timing?: ArenaPhaseTiming): Promise<TouchlineFantasySnapshot | TouchlineFantasyArenaSnapshot | null> {
   const admin = createAdminClient();
   if (!admin) return null;
+  timing?.mark("sync");
   const { error: syncError } = await admin.rpc("touchline_fantasy_sync_gameweeks");
   if (syncError) return null;
+  timing?.mark("config");
   const [{ data: configData, error: configError }, formationRegistry] = await Promise.all([
     admin.from("touchline_fantasy_configs").select("season_id,budget_eur,max_players_per_club,lock_offset_minutes").eq("competition_key", "england").eq("status", "active").maybeSingle(),
     projection === "arena" && providedFormationRegistry !== undefined
@@ -355,6 +359,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   const config = configData as Row;
   const seasonId = text(config.season_id);
   if (!seasonId) return null;
+  timing?.mark("gameweeks");
   const { data: gameweekData, error: gameweekError } = await admin
     .from("touchline_fantasy_gameweeks")
     .select("id,gameweek_number,state,market_opens_at,locks_at,first_fixture_at,last_fixture_at")
@@ -372,6 +377,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   const lifecycleGameweek = activeGameweek?.state === "MARKET_OPEN"
     ? gameweeks.filter((entry) => entry.number < activeGameweek!.number).at(-1)
     : activeGameweek;
+  timing?.mark("lifecycle");
   const lifecycle = await reconcileTouchlineFantasyGameweeks(admin, lifecycleGameweek ? [lifecycleGameweek] : [], true);
   if (lifecycle.error) return null;
   if (lifecycle.reconciled > 0) {
@@ -384,6 +390,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     activeGameweek = gameweeks.find((entry) => entry.id === activeGameweek?.id) ?? activeGameweek;
   }
 
+  timing?.mark("entitlement");
   const { data: entitlementData } = await admin.from("touchline_fantasy_entitlements")
     .select("status,current_period_start,current_period_end")
     .eq("user_id", user.id)
@@ -395,10 +402,12 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     && (!text(entitlement?.current_period_start) || Date.parse(text(entitlement?.current_period_start)!) <= now)
     && (!text(entitlement?.current_period_end) || Date.parse(text(entitlement?.current_period_end)!) > now);
   if (entitlementActive && activeGameweek?.state === "MARKET_OPEN") {
+    timing?.mark("prepare");
     const { error: preparationError } = await admin.rpc("touchline_fantasy_prepare_user_gameweek", { p_user_id: user.id, p_gameweek_id: activeGameweek.id });
     if (preparationError) return null;
   }
 
+  timing?.mark("catalogue-and-squad");
   const [catalogue, coaches, userGameweekResponse, rankings] = await Promise.all([
     loadCatalogue(admin),
     projection === "full" ? loadCoaches(admin) : Promise.resolve([]),
@@ -414,8 +423,10 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   const userGameweekRow = userGameweekResponse.data as Row | null;
   const userGameweekId = text(userGameweekRow?.id);
   if (activeGameweek && userGameweekId) {
+    timing?.mark("alerts");
     await admin.rpc("touchline_fantasy_reconcile_lineup_alerts", { p_gameweek_id: activeGameweek.id });
   }
+  timing?.mark("selections");
   const [draftResponse, lockedResponse, scoreResponse, seasonScoresResponse, alertsResponse] = userGameweekId
     ? await Promise.all([
       admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
@@ -430,6 +441,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
         .order("detected_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
     ])
     : [{ data: [], error: null }, { data: [], error: null }, { data: null, error: null }, { data: [], error: null }, { data: [], error: null }];
+  timing?.mark("projection");
   const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
   const selections = selectionRows.flatMap((row): TouchlineFantasySelectionView[] => {
     const playerId = text(row.player_id);

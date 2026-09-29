@@ -29,7 +29,7 @@ test("anonymous visitors may enter the Arena while account-backed product operat
   assert.doesNotMatch(proxySource, /protectedArenaPaths\s*=\s*\[[^\]]*"\/arena"/);
   assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
   assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);
-  assert.match(arenaSource, /const \[user, initialTwoDimensionalFormationRegistry\] = await Promise\.all/);
+  assert.match(arenaSource, /const \[user, initialTwoDimensionalFormationRegistry\] = await timing\.run\("auth-and-geometry", \(\) => Promise\.all/);
   assert.match(arenaSource, /createClient\(\)\.then\(\(supabase\) => supabase[\s\S]*?resolveServerReadWithin\([\s\S]*?supabase\.auth\.getUser\(\)[\s\S]*?ARENA_SERVER_AUTH_READ_TIMEOUT_MS,[\s\S]*?: null\)/);
   assert.match(arenaSource, /fantasySnapshot = user && !isOwnerEmail\(user\.email\)/);
   assert.match(arenaClientSource, /kind: "anonymous"/);

@@ -131,8 +131,10 @@ export default function TouchlineClubFollowButton({
       setMessage(body.data.channels.push
         ? (pt ? "Dispositivo cadastrado e preferência de push salva. Nenhum alerta foi enviado; a entrega ainda não foi verificada." : "Device registered and push preference saved. No alert was sent; delivery has not been verified.")
         : (pt ? "Dispositivo cadastrado, mas o envio ao celular continua indisponível." : "Device registered, but phone delivery remains unavailable."));
-    } catch {
-      setMessage(pt ? "Não foi possível confirmar o cadastro e a preferência de notificações. Tente novamente." : "Notification registration and preferences could not be confirmed. Try again.");
+    } catch (error) {
+      setMessage(error instanceof Error && error.message === "touchline-push-re-registration-required"
+        ? (pt ? "O vínculo de notificações deste navegador não corresponde à configuração atual. Revise as notificações deste site nas configurações do navegador e cadastre novamente. Nada foi cancelado automaticamente." : "This browser's notification registration does not match the current configuration. Review this site's notifications in your browser settings and register again. Nothing was cancelled automatically.")
+        : (pt ? "Não foi possível confirmar o cadastro e a preferência de notificações. Tente novamente." : "Notification registration and preferences could not be confirmed. Try again."));
     } finally {
       setState("ready");
     }

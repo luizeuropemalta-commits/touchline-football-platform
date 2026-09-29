@@ -4,13 +4,16 @@ import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
 import vm from "node:vm";
 
-function client(response: { ok: boolean; json: () => Promise<unknown> }, stall = false, workerStage?: "register" | "ready" | "subscription" | "subscribe") {
+function client(response: { ok: boolean; json: () => Promise<unknown> }, stall = false, workerStage?: "register" | "ready" | "subscription" | "subscribe", binding: "match" | "mismatch" | "missing" = "match", fresh = false) {
   let requests = 0;
   let timeoutAction: (() => void) | undefined;
   let cleared = false;
   let releaseWorker: (() => void) | undefined;
   let subscriptionReads = 0;
-  const subscription = { toJSON: () => ({ endpoint: "https://push.example.test/device", keys: {} }) };
+  let subscriptions = 0;
+  const key = new Uint8Array(65);
+  if (binding === "mismatch") key[0] = 1;
+  const subscription = { options: { applicationServerKey: binding === "missing" ? null : key.buffer }, toJSON: () => ({ endpoint: "https://push.example.test/device", keys: {} }) };
   const context = vm.createContext({
     AbortController,
     atob,
@@ -25,9 +28,10 @@ function client(response: { ok: boolean; json: () => Promise<unknown> }, stall =
         return { pushManager: { getSubscription: async () => {
           subscriptionReads += 1;
           if (workerStage === "subscription") await new Promise<void>(resolve => { releaseWorker = resolve; });
-          return workerStage === "subscribe" ? null : subscription;
+          return workerStage === "subscribe" || fresh ? null : subscription;
         }, subscribe: async () => {
-          await new Promise<void>(resolve => { releaseWorker = resolve; });
+          subscriptions += 1;
+          if (workerStage === "subscribe") await new Promise<void>(resolve => { releaseWorker = resolve; });
           return subscription;
         } } };
       },
@@ -44,8 +48,27 @@ function client(response: { ok: boolean; json: () => Promise<unknown> }, stall =
   const source = readFileSync(new URL("../lib/touchlineArena/push-device-registration.ts", import.meta.url), "utf8");
   vm.runInContext(stripTypeScriptTypes(source).replace(/export /g, ""), context);
   return { run: () => vm.runInContext("registerTouchlinePushDevice()", context) as Promise<string>, count: () => requests, expire: () => timeoutAction?.(), cleared: () => cleared,
-    hasDeadline: () => Boolean(timeoutAction), releaseWorker: () => releaseWorker?.(), subscriptionReads: () => subscriptionReads };
+    hasDeadline: () => Boolean(timeoutAction), releaseWorker: () => releaseWorker?.(), subscriptionReads: () => subscriptionReads, subscriptions: () => subscriptions };
 }
+
+test("existing subscription must prove the configured application server key before reuse", async () => {
+  for (const binding of ["mismatch", "missing"] as const) {
+    const instance = client({ ok: true, json: async () => ({ ok: true, delivery: "not-sent" }) }, false, undefined, binding);
+    await assert.rejects(instance.run(), /touchline-push-re-registration-required/);
+    assert.equal(instance.count(), 0);
+    assert.equal(instance.subscriptions(), 0, "must not silently replace the existing subscription");
+  }
+});
+
+test("a new subscription is created once and saved only with matching key binding", async () => {
+  for (const binding of ["match", "mismatch", "missing"] as const) {
+    const instance = client({ ok: true, json: async () => ({ ok: true, delivery: "not-sent" }) }, false, undefined, binding, true);
+    if (binding === "match") assert.equal(await instance.run(), "registered");
+    else await assert.rejects(instance.run(), /touchline-push-re-registration-required/);
+    assert.equal(instance.count(), binding === "match" ? 1 : 0);
+    assert.equal(instance.subscriptions(), 1);
+  }
+});
 
 test("stalled worker preparation fails explicitly and late completion cannot save a device", async () => {
   for (const stage of ["register", "ready", "subscription", "subscribe"] as const) {

@@ -1,5 +1,6 @@
 import ArenaClient from "./ArenaClient";
 import { headers } from "next/headers";
+import { createArenaPhaseTiming } from "@/lib/touchlineArena/server-phase-timing";
 import { redirect } from "next/navigation";
 import { parseTouchlineArenaPanel } from "@/lib/touchlineArena/arena-navigation";
 import { parseTouchlineArenaIntroIntent } from "@/lib/touchlineArena/arena-intro";
@@ -66,7 +67,8 @@ export default async function ArenaPage({
     redirect(`/arena${suffix}`);
   }
 
-  const [user, initialTwoDimensionalFormationRegistry] = await Promise.all([
+  const timing = createArenaPhaseTiming();
+  const [user, initialTwoDimensionalFormationRegistry] = await timing.run("auth-and-geometry", () => Promise.all([
     createClient().then((supabase) => supabase
       ? resolveServerReadWithin(
         supabase.auth.getUser().then(({ data }) => data.user),
@@ -75,10 +77,10 @@ export default async function ArenaPage({
       )
       : null),
     readTouchlineFormationGeometryRegistry(),
-  ]);
+  ]));
   const locale = normalizeTouchLineLocale(firstValue(params.lang));
   const fantasySnapshot = user && !isOwnerEmail(user.email)
-    ? await loadTouchlineFantasyArenaSnapshot(user, initialTwoDimensionalFormationRegistry)
+    ? await loadTouchlineFantasyArenaSnapshot(user, initialTwoDimensionalFormationRegistry, timing)
     : null;
   const fantasyArenaLineup = buildTouchlineFantasyArenaLineup(fantasySnapshot);
 
