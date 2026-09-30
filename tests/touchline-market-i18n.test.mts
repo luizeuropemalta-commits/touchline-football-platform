@@ -41,18 +41,17 @@ test("card and copy counts use locale-aware singular and plural labels", () => {
   assert.equal(portuguese.copiesAvailable(2), "2 cópias disponíveis");
 });
 
-test("the compatibility route resolves lang before forwarding to the My Club market section", () => {
+test("the Market game route resolves lang for metadata and the real client", () => {
   const marketPage = source("app/market-transfer/page.tsx");
 
   assert.match(marketPage, /lang\?: string \| string\[\]/);
   assert.match(marketPage, /generateMetadata/);
   assert.match(marketPage, /marketLocale\(searchParams\)/);
   assert.match(marketPage, /locale === "pt-BR"/);
-  assert.match(marketPage, /tab: "market"/);
-  assert.match(marketPage, /\/my-club/);
-  assert.match(marketPage, /#my-club-squad/);
-  assert.match(marketPage, /title: "Meu Clube · TouchLine"/);
-  assert.match(marketPage, /title: "My Club · TouchLine"/);
+  assert.match(marketPage, /<FantasyGameweekClient[^>]*locale=\{locale\}/);
+  assert.match(marketPage, /touchLineAuthEntryHref\("\/login", locale, destination\)/);
+  assert.match(marketPage, /title: "Mercado · TouchLine"/);
+  assert.match(marketPage, /title: "Market · TouchLine"/);
 });
 
 test("shared Market Transfer navigation contains no retired product name", () => {

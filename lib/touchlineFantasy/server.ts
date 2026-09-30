@@ -156,12 +156,21 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
   const playerIds = [...new Set(rows(publicationData).map((row) => text(row.player_id)?.toLowerCase()).filter((id): id is string => Boolean(id)))];
   if (!playerIds.length) return [];
 
-  const [presentations, seasonPoints, playersResponse, membershipsResponse] = await Promise.all([
+  const [presentations, seasonPoints, { players, clubsResponse }, membershipsResponse] = await Promise.all([
     loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin),
     readPublicSeasonPlayerPoints(playerIds, { providedAdmin: catalogueAdmin }),
-    catalogueAdmin.from("football_players")
-      .select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
-      .in("id", playerIds),
+    (async () => {
+      const playersResponse = await catalogueAdmin.from("football_players")
+        .select("id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
+        .in("id", playerIds);
+      const players = rows(playersResponse.data);
+      const clubIds = [...new Set(players.map((player) => text(player.current_club_id)).filter((id): id is string => Boolean(id)))];
+      // Club names depend only on players, not on the other catalogue readers.
+      const clubsResponse = clubIds.length
+        ? await catalogueAdmin.from("football_clubs").select("id,name").in("id", clubIds)
+        : { data: [], error: null };
+      return { players, clubsResponse };
+    })(),
     catalogueAdmin.from("football_squad_members")
       .select("player_id,club_id,jersey_number,position,detailed_position,status,source_updated_at")
       .eq("status", "active")
@@ -169,11 +178,6 @@ async function loadCatalogue(admin: NonNullable<ReturnType<typeof createAdminCli
       .order("source_updated_at", { ascending: false }),
   ]);
 
-  const players = rows(playersResponse.data);
-  const clubIds = [...new Set(players.map((player) => text(player.current_club_id)).filter((id): id is string => Boolean(id)))];
-  const clubsResponse = clubIds.length
-    ? await catalogueAdmin.from("football_clubs").select("id,name").in("id", clubIds)
-    : { data: [], error: null };
   const clubById = new Map(rows(clubsResponse.data).flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const membershipByPlayer = new Map<string, Row>();
   for (const membership of rows(membershipsResponse.data)) {

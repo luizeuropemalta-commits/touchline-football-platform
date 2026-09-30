@@ -1,15 +1,13 @@
 import {
-  touchlineArenaHref,
   touchlineClubHubHref,
 } from "./arena-navigation.ts";
-import { touchlineMyClubHref } from "./club-owner-routes.ts";
 import { resolveTouchLinePresentationLocale } from "./root-locale.ts";
 
 /**
  * The public navigation vocabulary is intentionally small and stable. Routes
  * may add contextual actions nearby, but they must not quietly turn one of
- * these links into a specific club or ClubOwner destination. Market is part
- * of the authenticated ClubOwner surface and intentionally has no global link.
+ * these links into a specific club or ClubOwner destination. The primary
+ * Market destination replaces the cinematic Arena and separate My Club link.
  */
 export type TouchlineGlobalNavigationSurface = "public" | "auth" | "authenticated";
 
@@ -75,13 +73,13 @@ export function resolveTouchlineGlobalNavigationItems(
     { key: "rankings", href: `/touchline-tables?lang=${lang}` },
   ];
 
-  return surface === "authenticated"
-    ? [...generalItems, { key: "myClub", href: touchlineMyClubHref(effectiveLocale) }]
-    : generalItems;
+  // The primary Market link owns the game; no duplicate ClubOwner entry.
+  void surface;
+  return generalItems;
 }
 
 export function touchlineGlobalNavigationArenaHref(locale: string) {
-  return touchlineArenaHref(resolveTouchLinePresentationLocale(locale));
+  return `/market-transfer?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale))}`;
 }
 
 export function isTouchlineGlobalNavigationCurrent(

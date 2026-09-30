@@ -2,21 +2,22 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { resolveTouchlineGlobalNavigationItems } from "../lib/touchlineArena/global-navigation.ts";
+import { touchlineGlobalNavigationArenaHref } from "../lib/touchlineArena/global-navigation.ts";
 import { touchlineMyClubHref } from "../lib/touchlineArena/club-owner-routes.ts";
 
 function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("My Club is the only product-facing navigation destination", () => {
+test("Market is the game destination and the legacy My Club link redirects without losing locale", () => {
   assert.equal(touchlineMyClubHref("pt-BR"), "/my-club?lang=pt-BR");
   assert.equal(
-    resolveTouchlineGlobalNavigationItems("en-GB", "authenticated").at(-1)?.href,
-    "/my-club?lang=en-GB",
+    touchlineGlobalNavigationArenaHref("en-GB"),
+    "/market-transfer?lang=en-GB",
   );
-  assert.match(source("app/my-club/page.tsx"), /ClubOwnerProfileRenderer searchParams=\{searchParams\}/);
-  assert.match(source("app/market-transfer/page.tsx"), /\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad/);
+  assert.match(source("app/my-club/page.tsx"), /redirect\(`\/market-transfer\?\$\{forwarded\.toString\(\)\}`\)/);
+  assert.match(source("app/market-transfer/page.tsx"), /auth\.getUser\(/);
+  assert.match(source("app/market-transfer/page.tsx"), /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
   assert.match(source("proxy.ts"), /pathname === "\/club-owner\/me"[\s\S]*?canonicalUrl\.pathname = "\/my-club"/);
   assert.match(source("proxy.ts"), /const isMyClubRoute = pathname === "\/my-club"/);
   assert.match(source("proxy.ts"), /if \(isMyClubRoute && !user\) return loginRedirect\(request, response\)/);

@@ -52,7 +52,7 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(embedded, /data-pitch-edge=\{slot\.x >= 75 \? "end" : undefined\}/);
   assert.match(embedded, /<TouchlineGameweekCard card=\{card\} locale=\{locale\} compact displayWidth=\{pitchCardWidth\} \/>/);
   assert.match(embedded, /data-slot-action=\{card \? "replace" : "add"\}/);
-  assert.match(embedded, /<button type="button" data-slot-action=.*?onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
+  assert.match(embedded, /<button[^\n]*type="button" data-slot-action=.*?onClick=\{\(\) => openTacticalSelector\(slot\.id\)\}/);
   assert.match(embedded, /selectMyClubPlayer\(card\)/);
   assert.doesNotMatch(embedded, /browseCards\.slice\(0, 10\)/);
   assert.match(embedded, /data-my-club-setup="coach"/);

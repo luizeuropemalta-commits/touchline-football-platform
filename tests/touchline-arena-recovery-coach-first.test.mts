@@ -203,10 +203,10 @@ test("the Arena quick menu sends squad building directly to localized My Club", 
   assert.doesNotMatch(quickMenu, /market-transfer/);
 });
 
-test("Arena market panel routes directly to the canonical My Club workspace", () => {
+test("legacy Arena panels route directly to the canonical Market workspace", () => {
   const arenaPage = readFileSync(new URL("../app/arena/page.tsx", import.meta.url), "utf8");
 
-  assert.match(arenaPage, /if \(initialPanel === "market"\)[\s\S]*?redirect\(`\/my-club/);
-  assert.doesNotMatch(arenaPage, /if \(initialPanel === "market"\)[\s\S]*?redirect\(`\/market-transfer/);
-  assert.match(arenaPage, /if \(initialPanel === "bench" \|\| initialPanel === "formation"\)[\s\S]*?#my-club-squad/);
+  assert.match(arenaPage, /if \(initialPanel === "market"\)[\s\S]*?redirect\(`\/market-transfer/);
+  assert.doesNotMatch(arenaPage, /redirect\(`\/my-club/);
+  assert.match(arenaPage, /if \(initialPanel === "bench" \|\| initialPanel === "formation"\)[\s\S]*?#my-club-xi-pitch/);
 });

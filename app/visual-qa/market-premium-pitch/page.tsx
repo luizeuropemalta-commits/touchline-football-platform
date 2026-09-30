@@ -1,4 +1,6 @@
 import FantasyGameweekClient from "@/app/fantasy/FantasyGameweekClient";
+import Link from "next/link";
+import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { TOUCHLINE_ENGLAND_CLUBS } from "@/lib/touchlineArena/demo-data";
 import { TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY } from "@/lib/touchlineArena/formation-geometry";
@@ -111,30 +113,36 @@ function visualSnapshot(catalogue: TouchlineFantasySnapshot["catalogue"]): Touch
 
 export default async function MarketPremiumPitchVisualQaPage({ searchParams }: VisualQaMarketPitchProps) {
   const params = await searchParams;
-  const embeddedMyClub = params.surface === "my-club";
+  const marketPage = params.surface === "market";
+  const locale = params.lang === "pt-BR" ? "pt-BR" : "en-GB";
+  const embeddedMyClub = params.surface === "my-club" || marketPage;
   const catalogueRead = await readVisualQaMarketCatalogue();
   const totalCards = catalogueRead.catalogue.length;
   return (
     <main
       className={styles.page}
       data-market-premium-pitch-visual-qa={catalogueRead.state}
-      data-market-premium-pitch-surface={embeddedMyClub ? "my-club" : "gameweek"}
+      data-market-premium-pitch-surface={marketPage ? "market" : embeddedMyClub ? "my-club" : "gameweek"}
     >
-      <header>
+      {marketPage ? <header className={styles.marketNavigation}>
+        <TouchlineGlobalNavigation locale={locale} currentRoute="market" surface="authenticated" />
+        <Link className={styles.introLink} href={`/arena?lang=${locale}&intro=first`}>{locale === "pt-BR" ? "Ver intro" : "Watch intro"}</Link>
+      </header> : <header>
         <p>GEOMETRY QA · LOCAL ONLY · NOT PUBLISHABLE</p>
         <span>
           {catalogueRead.state === "ready"
             ? `${totalCards} canonical player cards from a frozen QA catalogue. Closed-market test scenario; not current live data.`
             : `Canonical player catalogue unavailable (${catalogueRead.reason ?? "unknown"}). No partial catalogue is shown.`}
         </span>
-      </header>
+      </header>}
       {catalogueRead.state === "ready"
         ? <FantasyGameweekClient
             embedded={embeddedMyClub}
+            marketPage={marketPage}
             initialSnapshot={visualSnapshot(catalogueRead.catalogue)}
-            locale={params.lang === "pt-BR" ? "pt-BR" : "en-GB"}
+            locale={locale}
           />
-        : null}
+        : <p role="status">{locale === "pt-BR" ? "Catálogo indisponível nesta prévia." : "Catalogue unavailable in this preview."}</p>}
     </main>
   );
 }

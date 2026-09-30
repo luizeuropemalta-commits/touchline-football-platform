@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   Activity,
@@ -25,7 +25,7 @@ import {
   Trophy,
   UserRound,
 } from "lucide-react";
-import { useTouchlineDialog } from "@/components/touchline/a11y/TouchlineDialog";
+import { useTouchlineDialog, useTouchlineDialogScrollLock } from "@/components/touchline/a11y/TouchlineDialog";
 import { TouchlineCoinMark } from "@/components/touchline/market/TouchlineMarketMarks";
 import styles from "./TouchlineCardZoom.module.css";
 import TouchlinePlayerSocialActions from "@/components/touchline/social/TouchlinePlayerSocialActions";
@@ -286,29 +286,7 @@ export default function TouchlineCardZoom({
     return () => observer.disconnect();
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // The expanded card is a self-contained reading surface. Lock the page
-    // behind it so Safari/WebKit never exposes a second page scrollbar beside
-    // the modal scrollbar. All values are restored exactly when it closes.
-    const root = document.documentElement;
-    const body = document.body;
-    const previousRootOverflow = root.style.overflow;
-    const previousBodyOverflow = body.style.overflow;
-    const previousLock = root.dataset.touchlineModalScrollLock;
-
-    root.style.overflow = "hidden";
-    body.style.overflow = "hidden";
-    root.dataset.touchlineModalScrollLock = "true";
-
-    return () => {
-      root.style.overflow = previousRootOverflow;
-      body.style.overflow = previousBodyOverflow;
-      if (previousLock === undefined) delete root.dataset.touchlineModalScrollLock;
-      else root.dataset.touchlineModalScrollLock = previousLock;
-    };
-  }, [isOpen]);
+  useTouchlineDialogScrollLock(isOpen);
 
   function openFromCard(event: MouseEvent<HTMLDivElement>) {
     if (pointerMovedRef.current) {

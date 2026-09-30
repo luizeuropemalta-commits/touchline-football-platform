@@ -159,10 +159,11 @@ test("the proxy exposes the Arena entrance and protects account-backed operation
   assert.doesNotMatch(proxySource, /"\/dashboard"|"\/players"|"\/agencies"|"\/deals"|"\/scouting"/);
 });
 
-test("the legacy Market Transfer route forwards to the My Club Gameweek builder while Arena panel state remains isolated", () => {
-  assert.match(marketPageSource, /redirect\(`\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad`\)/);
-  assert.match(marketPageSource, /tab: "market"/);
-  assert.doesNotMatch(marketPageSource, /loadTouchlineFantasySnapshot\(user\)|<FantasyGameweekClient/);
+test("Market owns the authenticated Gameweek builder while protected Arena panel state remains isolated", () => {
+  assert.match(marketPageSource, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination\)\)/);
+  assert.match(marketPageSource, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
+  assert.match(marketPageSource, /loadTouchlineFantasySnapshot\(user\)/);
+  assert.match(marketPageSource, /<FantasyGameweekClient[^>]*embedded marketPage/);
   assert.doesNotMatch(marketPageSource, /standaloneMarket|<ArenaClient/);
   assert.match(arenaClientSource, /const standaloneExperience = standaloneMarket \? "market" : standalonePanel \?\? null/);
   assert.match(arenaClientSource, /if \(standaloneExperience\) \{[\s\S]*setActiveArenaPanel\(standaloneExperience === "live" \? null : standaloneExperience\)/);

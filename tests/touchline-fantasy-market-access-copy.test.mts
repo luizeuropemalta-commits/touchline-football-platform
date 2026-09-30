@@ -34,7 +34,7 @@ function firstStrongIn(name: string) {
 }
 const accessLabels = elements.filter((node) => hasClass(node, "marketClosedLabel")
   && ts.isConditionalExpression(node.parent)
-  && ["editable", "!editable"].includes(node.parent.condition.getText(tree)));
+  && ["editable", "!editable", "editable || marketPage"].includes(node.parent.condition.getText(tree)));
 assert.equal(accessLabels.length, 3, "tactical slots, card slots and catalogue read-only labels");
 function render(node: ts.JsxElement, input: Record<string, unknown>) {
   const javascript = ts.transpileModule(`(() => { ${declarations.join("\n")} return (${node.getText(tree)}); })()`, {

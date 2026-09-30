@@ -1,0 +1,10 @@
+.overlay { position: fixed; inset: 0; z-index: 1700; color: #f4f8f5; background: rgb(0 6 4 / 70%); padding: clamp(8px, 2vw, 24px); display: flex; align-items: flex-start; justify-content: center; }
+.panel { width: min(1380px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #5c783e; border-radius: 0 0 20px 20px; background: #091410; box-shadow: 0 16px 40px #0008; animation: enter 180ms ease-out; }
+.heading { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 20px; border-bottom: 1px solid #334632; }
+.heading span { color: #aaff3e; font-size: 11px; letter-spacing: .12em; }
+.heading h2 { margin: 4px 0 0; font-size: clamp(16px, 2vw, 22px); }
+.heading button { flex: none; }
+.content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px; }
+@keyframes enter { from { transform: translateY(-36px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
+@media (max-height: 500px) { .overlay { padding: 4px; } .heading { padding: 8px 12px; } .heading span { display: none; } .content { padding: 6px; } }

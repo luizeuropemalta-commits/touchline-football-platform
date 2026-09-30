@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
-import ClubOwnerProfileRenderer, {
-  type ClubOwnerProfileSearchParams,
-} from "@/components/touchline/club-owner/ClubOwnerProfileRenderer";
+import { redirect } from "next/navigation";
+import type { ClubOwnerProfileSearchParams } from "@/components/touchline/club-owner/ClubOwnerProfileRenderer";
+import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +15,11 @@ export const metadata: Metadata = {
  * The canonical customer route. The component keeps the existing secure
  * `club_owner` authorization adapter internal while rendering only My Club.
  */
-export default function MyClubPage({ searchParams }: {
+export default async function MyClubPage({ searchParams }: {
   searchParams: ClubOwnerProfileSearchParams;
 }) {
-  return <ClubOwnerProfileRenderer searchParams={searchParams} />;
+  const params = await searchParams;
+  const forwarded = new URLSearchParams({ lang: normalizeTouchLineLocale(params.lang) });
+  if (params.club) forwarded.set("club", params.club);
+  redirect(`/market-transfer?${forwarded.toString()}`);
 }

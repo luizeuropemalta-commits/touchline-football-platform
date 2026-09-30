@@ -49,16 +49,14 @@ test("public card pages derive Card Engine visibility from the authenticated ser
   assert.match(source("components/touchline/market/TouchlineSquadBuilderStage.tsx"), /canEditCardEngine = false/);
 });
 
-test("the retired Market route is only a safe My Club compatibility redirect", () => {
+test("Market keeps customer authentication and denies owner/admin shortcuts", () => {
   const marketRoute = source("app/market-transfer/page.tsx");
   const selfRoute = source("components/touchline/club-owner/ClubOwnerSelfRouteRedirect.tsx");
 
-  // It deliberately has no owner/admin branch: authentication and owner
-  // resolution occur at the My Club boundary after login.
-  assert.doesNotMatch(marketRoute, /isOwnerEmail/);
-  assert.doesNotMatch(marketRoute, /\/admin\//);
-  assert.match(marketRoute, /redirect\(`\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad`\)/);
-  assert.match(marketRoute, /new URLSearchParams\(\{ lang: locale, tab: "market" \}\)/);
+  assert.match(marketRoute, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
+  assert.doesNotMatch(marketRoute, /(?:redirect\(|href=)[^\n]*\/admin\//);
+  assert.match(marketRoute, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination\)\)/);
+  assert.match(marketRoute, /const destination = `\/market-transfer\?lang=/);
   assert.doesNotMatch(marketRoute, /contractPlayer|contractName|contractClub/, "unused legacy contract context is not carried into ClubOwner");
 
   // A signed-out request returns through the authenticated compatibility

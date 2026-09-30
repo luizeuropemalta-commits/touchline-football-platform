@@ -39,6 +39,25 @@
   margin-inline: auto;
 }
 
+.page > .marketNavigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.introLink {
+  color: #c6edac;
+  padding: 12px 4px;
+  text-underline-offset: 4px;
+}
+
+.introLink:focus-visible {
+  outline: 2px solid #aaff3e;
+  outline-offset: 3px;
+}
+
 @media (max-width: 760px) {
   .page { padding: 14px; }
 }

@@ -13,7 +13,7 @@ function source(relativePath: string) {
   return readFileSync(new URL(`../${relativePath}`, import.meta.url), "utf8");
 }
 
-test("global public navigation keeps the fixed safe order and no standalone Market destination", () => {
+test("global public navigation keeps sports links and the primary Market destination", () => {
   const items = resolveTouchlineGlobalNavigationItems("pt-BR", "public");
 
   assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "rankings"]);
@@ -22,16 +22,16 @@ test("global public navigation keeps the fixed safe order and no standalone Mark
     "/live?lang=pt-BR",
     "/touchline-tables?lang=pt-BR",
   ]);
-  assert.equal(touchlineGlobalNavigationArenaHref("pt-BR"), "/arena?lang=pt-BR");
+  assert.equal(touchlineGlobalNavigationArenaHref("pt-BR"), "/market-transfer?lang=pt-BR");
   assert.equal(resolveTouchlineGlobalNavigationItems("es-ES", "auth")[0]?.href, "/touchline-clubs?lang=en-GB");
   assert.doesNotMatch(JSON.stringify(items), /club-owner|manchester|luiz-lopez/i);
 });
 
-test("authenticated navigation may add only the server-resolved My Club boundary", () => {
+test("authenticated navigation does not duplicate the game with a separate My Club entry", () => {
   const items = resolveTouchlineGlobalNavigationItems("en-GB", "authenticated");
 
-  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "rankings", "myClub"]);
-  assert.equal(items.at(-1)?.href, "/my-club?lang=en-GB");
+  assert.deepEqual(items.map((item) => item.key), ["clubHub", "live", "rankings"]);
+  assert.equal(items.at(-1)?.href, "/touchline-tables?lang=en-GB");
   assert.doesNotMatch(JSON.stringify(items), /luiz-lopez|manchester-united|manchester-city/i);
 });
 

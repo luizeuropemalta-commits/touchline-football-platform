@@ -47,6 +47,32 @@ type InertSnapshot = {
 // protected by another open dialog.
 const inertSnapshots = new WeakMap<HTMLElement, InertSnapshot>();
 
+const scrollLocks = new WeakMap<Document, { count: number; rootOverflow: string; bodyOverflow: string; marker: string | undefined }>();
+
+/** Nested pickers/card zooms may unmount in either order during navigation. */
+export function useTouchlineDialogScrollLock(open: boolean) {
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    const body = document.body;
+    const lock = scrollLocks.get(document) ?? { count: 0, rootOverflow: root.style.overflow, bodyOverflow: body.style.overflow, marker: root.dataset.touchlineModalScrollLock };
+    scrollLocks.set(document, lock);
+    lock.count += 1;
+    root.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    root.dataset.touchlineModalScrollLock = "true";
+    return () => {
+      lock.count -= 1;
+      if (lock.count > 0) return;
+      root.style.overflow = lock.rootOverflow;
+      body.style.overflow = lock.bodyOverflow;
+      if (lock.marker === undefined) delete root.dataset.touchlineModalScrollLock;
+      else root.dataset.touchlineModalScrollLock = lock.marker;
+      scrollLocks.delete(document);
+    };
+  }, [open]);
+}
+
 function isVisible(element: HTMLElement) {
   return element.getClientRects().length > 0 && !element.hasAttribute("hidden");
 }
@@ -154,6 +180,9 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
   const onKeyDownCapture = useCallback((event: ReactKeyboardEvent<HTMLElement>) => {
     const dialog = dialogRef.current;
     if (!dialog) return;
+    // React portals retain event ancestry. A card zoom inside a picker owns
+    // its own Escape/Tab gestures, even though it is a DOM sibling.
+    if (event.target instanceof Element && event.target.closest('[data-touchline-dialog-root="true"]') !== dialog) return;
 
     if (event.key === "Escape") {
       event.preventDefault();
@@ -210,9 +239,10 @@ export function useTouchlineDialog<T extends HTMLElement = HTMLElement>({
 
       window.requestAnimationFrame(() => {
         const anotherDialogIsOpen = document.querySelector('[data-touchline-dialog-root="true"][aria-modal="true"]');
-        if (anotherDialogIsOpen) return;
-
         const returnTarget = explicitReturnTarget ?? previousFocusRef.current;
+        // A nested zoom may return to its trigger in the still-open picker,
+        // but never to the background behind an unrelated dialog.
+        if (anotherDialogIsOpen && (!returnTarget || !anotherDialogIsOpen.contains(returnTarget))) return;
         if (!returnTarget || hasInertAncestor(returnTarget)) return;
         focusElement(returnTarget);
       });

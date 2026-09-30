@@ -5,14 +5,14 @@ import test from 'node:test';
 
 const source = readFileSync(new URL('../components/touchline/cards/TouchlineCardLeadershipProvider.tsx', import.meta.url), 'utf8');
 
-test('root presentation refresh is limited to live allowed Arena and My Club consumers', () => {
+test('root presentation refresh is limited to live allowed game consumers including Market', () => {
   const expression = source.match(/const refreshRootSeed = ([^;]+);/)?.[1];
   assert.ok(expression, 'actual provider must define its root refresh admission');
-  for (const pathname of ['/arena', '/my-club', '/fantasy', '/arena/other', '/my-club/history', '/touchline-tables', '/touchline-player-card-rankings', '/touchline-players/42', '/touchline-coaches/43', '/touchline-clubs', '/admin', '/visual-qa', null]) {
+  for (const pathname of ['/arena', '/my-club', '/market-transfer', '/market-transfer/other', '/fantasy', '/arena/other', '/my-club/history', '/touchline-tables', '/touchline-player-card-rankings', '/touchline-players/42', '/touchline-coaches/43', '/touchline-clubs', '/admin', '/visual-qa', null]) {
     for (const livePlayerUpdates of [true, false]) {
       for (const allowed of [true, false]) {
         const actual = vm.runInNewContext(expression, { pathname, livePlayerUpdates, allowed });
-        assert.equal(actual, livePlayerUpdates && allowed && ['/arena', '/my-club'].includes(pathname ?? ''), String(pathname));
+        assert.equal(actual, livePlayerUpdates && allowed && ['/arena', '/my-club', '/market-transfer'].includes(pathname ?? ''), String(pathname));
       }
     }
   }

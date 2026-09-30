@@ -17,7 +17,7 @@ function deferred<T>() {
   const promise = new Promise<T>(done => { resolve = done; });
   return { promise, resolve };
 }
-function fixture(panel: string | null = null) {
+function fixture(panel: string | null = null, params: Record<string, string> = { qaReadOnly: "1" }, host = "qa.example") {
   const geometry = deferred<object>();
   const auth = deferred<{ data: { user: { id: string; email: string } | null } }>();
   const calls: string[] = [];
@@ -26,7 +26,8 @@ function fixture(panel: string | null = null) {
     "@/lib/touchlineArena/server-phase-timing": timingExports,
     "react/jsx-runtime": require("react/jsx-runtime"),
     "./ArenaClient": { default: () => null },
-    "next/headers": { headers: async () => ({ get: () => "qa.example" }) },
+    "@/components/touchline/arena/TouchlineGameEntry": { default: () => null },
+    "next/headers": { headers: async () => ({ get: () => host }) },
     "next/navigation": { redirect: () => { throw redirect; } },
     "@/lib/touchlineArena/arena-navigation": { parseTouchlineArenaPanel: () => panel },
     "@/lib/touchlineArena/arena-intro": { parseTouchlineArenaIntroIntent: () => null },
@@ -48,10 +49,10 @@ function fixture(panel: string | null = null) {
   } }).outputText, { exports, require(name: string) {
     assert.ok(name in modules, `Unexpected module: ${name}`); return modules[name];
   }, URLSearchParams, fetch: () => assert.fail("Network forbidden") });
-  return { result: exports.default!({ searchParams: Promise.resolve({}) }), calls, geometry, auth, redirect };
+  return { result: exports.default!({ searchParams: Promise.resolve(params) }), calls, geometry, auth, redirect, entry: (modules["@/components/touchline/arena/TouchlineGameEntry"] as { default: unknown }).default };
 }
 
-test("Arena starts bounded authentication while geometry is pending; Fantasy waits for identity", async () => {
+test("protected QA Arena starts bounded authentication while geometry is pending; Fantasy waits for identity", async () => {
   const run = fixture();
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(run.calls.slice().sort(), ["auth", "client", "geometry"]);
@@ -63,7 +64,7 @@ test("Arena starts bounded authentication while geometry is pending; Fantasy wai
   assert.equal(run.calls.filter(call => call === "fantasy").length, 1);
 });
 
-test("Arena anonymous identity never reads Fantasy", async () => {
+test("protected QA Arena anonymous identity never reads Fantasy", async () => {
   const run = fixture();
   run.geometry.resolve({}); run.auth.resolve({ data: { user: null } });
   await run.result;
@@ -74,4 +75,20 @@ test("Arena panel redirect occurs before auth, geometry or Fantasy reads", async
   const run = fixture("rankings");
   await assert.rejects(run.result, error => error === run.redirect);
   assert.deepEqual(run.calls, []);
+});
+
+test("normal Arena renders only the intro without loading authentication, geometry or Fantasy", async () => {
+  const run = fixture(null, {});
+  const result = await run.result as { type: unknown };
+  assert.equal(result.type, run.entry);
+  assert.deepEqual(run.calls, []);
+});
+
+test("QA flags on another host cannot enable the legacy Arena", async () => {
+  for (const params of [{ qaReadOnly: "1" }, { qaEditor: "1" }]) {
+    const run = fixture(null, params, "touchline.com.br");
+    const result = await run.result as { type: unknown };
+    assert.equal(result.type, run.entry);
+    assert.deepEqual(run.calls, []);
+  }
 });

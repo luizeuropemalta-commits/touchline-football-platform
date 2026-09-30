@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { BadgeCheck, CalendarClock, Check, ChevronRight, CircleAlert, Crown, House, LockKeyhole, PlaneTakeoff, Save, Search, Send, ShieldCheck, Sparkles, TimerReset, Trophy, Users, WalletCards } from "lucide-react";
 
@@ -17,6 +18,7 @@ import { assignTouchlineFantasyPlayerToFirstSlot, formatTouchlineFantasyDeadline
 import type { TouchlineFantasyCoachView, TouchlineFantasySnapshot } from "@/lib/touchlineFantasy/server";
 import { TOUCHLINE_FANTASY_BROWSE_POSITIONS, resolveTouchlineFantasyBrowseSlot, touchlineFantasyPitchCardWidth } from "@/lib/touchlineFantasy/market-browser";
 import styles from "./fantasy.module.css";
+import TouchlinePositionPicker from "./TouchlinePositionPicker";
 
 type LiveState = Pick<NonNullable<TouchlineFantasySnapshot>, "gameweeks" | "activeGameweek" | "userGameweek" | "selections" | "gameweekScore" | "seasonScore" | "matchHistory" | "gameweekRanking" | "seasonRanking" | "lineupAlerts">;
 const STEPS: readonly TouchlineFantasyBuilderStep[] = ["coach", "formation", "players", "review", "locked"];
@@ -52,7 +54,7 @@ function stepLabel(step: TouchlineFantasyBuilderStep, pt: boolean) {
 function RankingTable({ title, entries, empty }: { title: string; entries: TouchlineFantasySnapshot["gameweekRanking"]; empty: string }) {
   return <section className={styles.rankingPanel}><h3><Trophy aria-hidden="true" />{title}</h3>{entries.length ? <ol>{entries.slice(0, 20).map((entry) => <li key={entry.rank} data-current-manager={entry.isCurrentManager ? "true" : undefined}><span>#{entry.rank}</span><b>{entry.name}</b><strong>{entry.score.toFixed(2)}</strong></li>)}</ol> : <p>{empty}</p>}</section>;
 }
-function MarketWindowClock({ gameweeks, locale }: { gameweeks: TouchlineFantasySnapshot["gameweeks"]; locale: string }) {
+function MarketWindowClock({ gameweeks, locale, marketStatus }: { gameweeks: TouchlineFantasySnapshot["gameweeks"]; locale: string; marketStatus?: string }) {
   const countdownWindowMs = 24 * 60 * 60 * 1_000;
   const pt = locale === "pt-BR";
   const [nowMs, setNowMs] = useState<number | null>(null);
@@ -102,7 +104,8 @@ function MarketWindowClock({ gameweeks, locale }: { gameweeks: TouchlineFantasyS
   ].join(", ");
   return <aside className={styles.marketClock} data-market-clock-phase={phase} aria-label={`${heading}. ${timed ? accessibleCountdown : detail}`}>
     <div className={styles.clockHeading}><i aria-hidden="true"><TimerReset /></i><span><small>TOUCHLINE · MARKET</small><b>{heading}</b></span>{clock?.gameweekNumber ? <em>GW {clock.gameweekNumber}</em> : null}</div>
-    {timed ? <><div className={styles.clockDigits} aria-hidden="true">{parts.map((part) => <span key={part.unit}><b>{String(part.value).padStart(2, "0")}</b><small>{part.unit}</small></span>)}</div><time className={styles.srOnly} dateTime={clock?.targetAt ?? undefined}>{accessibleCountdown}</time></> : <strong className={styles.clockRule}>{phase === "awaiting-final" || phase === "opening" ? "Market Closed" : phase === "closing" ? "Market Open" : phase === "syncing" ? (pt ? "Sincronizando" : "Syncing") : (pt ? "A confirmar" : "To be confirmed")}</strong>}
+    {marketStatus ? <strong className={styles.clockRule}>{marketStatus}</strong> : null}
+    {timed ? <><div className={styles.clockDigits} aria-hidden="true">{parts.map((part) => <span key={part.unit}><b>{String(part.value).padStart(2, "0")}</b><small>{part.unit}</small></span>)}</div><time className={styles.srOnly} dateTime={clock?.targetAt ?? undefined}>{accessibleCountdown}</time></> : !marketStatus ? <strong className={styles.clockRule}>{phase === "awaiting-final" || phase === "opening" ? "Market Closed" : phase === "closing" ? "Market Open" : phase === "syncing" ? (pt ? "Sincronizando" : "Syncing") : (pt ? "A confirmar" : "To be confirmed")}</strong> : null}
     <p><span aria-hidden="true" />{detail}</p>
   </aside>;
 }
@@ -175,14 +178,19 @@ export default function FantasyGameweekClient({
   initialSnapshot,
   locale,
   embedded = false,
+  marketPage = false,
   initialPlayerClubTeamId,
+  clubOwner,
 }: {
   initialSnapshot: TouchlineFantasySnapshot | null;
   locale: string;
   /** The ClubOwner page owns the outer identity/navigation shell. */
   embedded?: boolean;
+  /** Standalone game presentation; shares the same rules, state and save API. */
+  marketPage?: boolean;
   /** A validated ClubHub/Ranking hand-off opens that club in the XI selector. */
   initialPlayerClubTeamId?: string | null;
+  clubOwner?: Readonly<{ name: string; avatarUrl: string }>;
 }) {
   const pt = locale === "pt-BR";
   const [live, setLive] = useState<LiveState | null>(initialSnapshot);
@@ -190,6 +198,9 @@ export default function FantasyGameweekClient({
   const [formationCode, setFormationCode] = useState<string | null>(initialSnapshot?.userGameweek?.formationCode ?? null);
   const [selections, setSelections] = useState<TouchlineFantasySelection[]>([...(initialSnapshot?.selections ?? [])]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  const [positionPickerOpen, setPositionPickerOpen] = useState(false);
+  const positionTriggerRef = useRef<HTMLElement | null>(null);
+  const positionButtonsRef = useRef(new Map<string, HTMLButtonElement>());
   const [browsePosition, setBrowsePosition] = useState<Exclude<TouchlineMarketPositionBucket, "outfield"> | null>(null);
   const [pitchCardWidth, setPitchCardWidth] = useState(48);
   const pitchViewportRef = useRef<HTMLDivElement>(null);
@@ -206,6 +217,15 @@ export default function FantasyGameweekClient({
       ? initialPlayerClubTeamId!
       : TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? ""
   ));
+  const [previousClubHandoff, setPreviousClubHandoff] = useState(initialPlayerClubTeamId);
+  // A new ClubHub link changes the browse filter, not the unsaved XI.
+  // Repeated server renders must preserve a manually selected browse club.
+  if (previousClubHandoff !== initialPlayerClubTeamId) {
+    setPreviousClubHandoff(initialPlayerClubTeamId);
+    setPlayerClubTeamId(TOUCHLINE_ENGLAND_CLUBS_BY_RANK.some((club) => club.teamId === initialPlayerClubTeamId)
+      ? initialPlayerClubTeamId!
+      : TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "");
+  }
   const [coachClubTeamId, setCoachClubTeamId] = useState(TOUCHLINE_ENGLAND_CLUBS_BY_RANK[0]?.teamId ?? "");
   const [feedback, setFeedback] = useState<string | null>(null); const [saving, setSaving] = useState(false);
   const [deadlineReachedFor, setDeadlineReachedFor] = useState<string | null>(null);
@@ -359,7 +379,7 @@ export default function FantasyGameweekClient({
   // The review catalogue stays available when closed, including cards already
   // in the XI. Browsing never calls the lineup mutation functions.
   const browseCards = snapshot.catalogue.filter((card) => (
-    touchlineMarketPositionBucket(card.position, canonicalRosterRole(card.role)) === browsingPosition
+    (marketPage ? Boolean(activeSlot) && slotAccepts(activeSlot, card) : touchlineMarketPositionBucket(card.position, canonicalRosterRole(card.role)) === browsingPosition)
     && findTouchLineClub(card.clubName)?.teamId === selectedPlayerClub?.teamId
     && (!normalizedQuery || `${card.name} ${card.position}`.toLowerCase().includes(normalizedQuery))
   ));
@@ -382,19 +402,30 @@ export default function FantasyGameweekClient({
       setBrowsePosition(null);
       setVisibleStep("players");
       setSquadView("tactical");
+      if (marketPage) {
+        positionTriggerRef.current = positionButtonsRef.current.get(slotId) ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+        setQuery("");
+        setFeedback(null);
+        setPositionPickerOpen(true);
+        return;
+      }
       window.requestAnimationFrame(() => document.getElementById("my-club-player-selection")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     };
     const selectMyClubPlayer = (card: ClubOwnerSquadCard) => {
-      if (!browseSlot || browseSlot.id !== activeSlot?.id) return;
+      if (!activeSlot || (!marketPage && browseSlot?.id !== activeSlot.id)) return;
       if (!addPlayer(card)) return;
       setBrowsePosition(null);
       setSquadView("tactical");
+      if (marketPage) {
+        setPositionPickerOpen(false);
+        return;
+      }
       window.requestAnimationFrame(() => document.getElementById("my-club-xi-pitch")?.scrollIntoView({ behavior: "smooth", block: "start" }));
     };
-    return <section className={styles.myClubCommand} data-fantasy-context="my-club" data-market-state={activeGameweek?.state ?? "unknown"} aria-label={pt ? "Central do Meu Clube" : "My Club command centre"}>
+    return <section className={styles.myClubCommand} data-fantasy-context={marketPage ? "market" : "my-club"} data-market-state={activeGameweek?.state ?? "unknown"} aria-label={marketPage ? (pt ? "Jogar TouchLine" : "Play TouchLine") : (pt ? "Central do Meu Clube" : "My Club command centre")}>
       <section className={styles.myClubMarketStatus} aria-label={pt ? "Estado do mercado" : "Market status"}>
-        <div><span>{pt ? "MERCADO DE TRANSFERÊNCIAS" : "TRANSFER MARKET"}</span><strong>{marketStatusLabel}</strong><small>{editable ? (pt ? "Escolha uma posição para gerenciar o XI" : "Choose a position to manage the XI") : (pt ? "Consulte todos os clubes, posições e perfis. Alterações no XI não estão disponíveis." : "Browse every club, position and profile. XI changes are unavailable.")}</small><p className={styles.myClubMarketRule}>{pt ? "Fecha no apito inicial do primeiro jogo da rodada. Reabre após a confirmação do apito final do último jogo pelo provedor." : "Closes at the first match kickoff of the round. Reopens after the provider confirms the final whistle of the last match."}</p></div>
-        <MarketWindowClock gameweeks={gameweeks} locale={locale} />
+        <div><span>{pt ? "MERCADO DE TRANSFERÊNCIAS" : "TRANSFER MARKET"}</span>{!marketPage ? <strong>{marketStatusLabel}</strong> : null}<small>{editable ? (pt ? "Escolha uma posição para gerenciar o XI" : "Choose a position to manage the XI") : (pt ? "Consulte todos os clubes, posições e perfis. Alterações no XI não estão disponíveis." : "Browse every club, position and profile. XI changes are unavailable.")}</small><p className={styles.myClubMarketRule}>{pt ? "Fecha no apito inicial do primeiro jogo da rodada. Reabre após a confirmação do apito final do último jogo pelo provedor." : "Closes at the first match kickoff of the round. Reopens after the provider confirms the final whistle of the last match."}</p></div>
+        <MarketWindowClock gameweeks={gameweeks} locale={locale} marketStatus={marketPage ? marketStatusLabel : undefined} />
       </section>
       <header className={styles.myClubCommandHeader}>
         <div>
@@ -419,17 +450,17 @@ export default function FantasyGameweekClient({
         <header><span>STEP 2</span><h2>{pt ? "Escolha a formação" : "Choose formation"}</h2><p>{pt ? "A formação canônica abre as 11 vagas elegíveis para montagem." : "The canonical formation opens the 11 eligible slots for your build."}</p></header>
         <div className={styles.formationGrid}>{Object.keys(snapshot.formationRegistry).map((code) => <button type="button" key={code} onClick={() => changeFormation(code)} disabled={!editable}><b>{code}</b><small>11 {pt ? "vagas" : "slots"}</small></button>)}</div>
       </section> : <div className={styles.myClubCommandGrid}>
-        <section className={styles.myClubSquad} id="my-club-xi-pitch" aria-label={pt ? "Seu XI por linhas" : "Your XI by lines"}>
+        <section className={styles.myClubSquad} id="my-club-xi-pitch" data-market-starting-xi="true" aria-label={pt ? "Seu XI por linhas" : "Your XI by lines"}>
           <header><div><span>{pt ? "ELENCO TITULAR" : "STARTING XI"}</span><strong>{selectedCount}/11</strong></div><button type="button" className={styles.viewToggle} onClick={() => setSquadView((current) => current === "squad" ? "tactical" : "squad")}>{squadView === "squad" ? (pt ? "Ver visão tática" : "View tactical layout") : (pt ? "Ver cards" : "View cards")}</button></header>
           {squadView === "tactical" ? <>
             <div className={styles.myClubPitchViewport} ref={pitchViewportRef}>
-              <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="horizontal" surfaceVariant="premium-stadium">{selectedCards.map(({ slot, selection }) => {
+              <TouchlinePitchSurface className={styles.myClubTacticalPitch} ariaLabel={pt ? "Campo tático interativo" : "Interactive tactical field"} orientation="horizontal" surfaceVariant={marketPage ? "smoked-glass" : "premium-stadium"}>{selectedCards.map(({ slot, selection }) => {
                 const card = selection ? catalogueById.get(selection.playerId) : null;
                 const action = card ? (pt ? "Trocar" : "Replace") : (pt ? "Adicionar" : "Add");
                 return <div key={slot.id} className={styles.myClubTacticalSlot} data-pitch-edge={slot.x >= 75 ? "end" : undefined} style={{ ...horizontalMyClubPitchPosition(slot), width: Math.max(44, pitchCardWidth) }}>
-                  <span style={{ width: pitchCardWidth, "--touchline-card-static-scale": pitchCardWidth / 430 } as CSSProperties}>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={pitchCardWidth} /> : <i>+</i>}</span>
+                  <span style={{ width: pitchCardWidth, "--touchline-card-static-scale": pitchCardWidth / 430 } as CSSProperties}>{card ? <TouchlineGameweekCard card={card} locale={locale} compact displayWidth={pitchCardWidth} /> : <button type="button" className={styles.emptyPosition} aria-label={`${pt ? "Escolher jogador" : "Choose player"} · ${slot.id}`} onClick={() => openTacticalSelector(slot.id)} aria-haspopup={marketPage ? "dialog" : undefined}>+</button>}</span>
                   <b>{slot.id}</b>
-                  {editable ? <button type="button" data-slot-action={card ? "replace" : "add"} onClick={() => openTacticalSelector(slot.id)} aria-label={`${action} ${slot.id}`}>{action}</button> : <small className={styles.marketClosedLabel}>{marketAccessLabel}</small>}
+                  {editable || marketPage ? <button ref={(element) => { if (element) positionButtonsRef.current.set(slot.id, element); else positionButtonsRef.current.delete(slot.id); }} type="button" data-slot-action={card ? "replace" : "add"} onClick={() => openTacticalSelector(slot.id)} aria-haspopup={marketPage ? "dialog" : undefined} aria-label={`${editable ? action : (pt ? "Consultar" : "Browse")} ${slot.id}`}>{editable ? action : (pt ? "Consultar" : "Browse")}</button> : <small className={styles.marketClosedLabel}>{marketAccessLabel}</small>}
                 </div>;
               })}</TouchlinePitchSurface>
             </div>
@@ -453,18 +484,40 @@ export default function FantasyGameweekClient({
             </article>;
           })}</div>}
         </section>
+        {marketPage && selectedCoach ? <div className={styles.marketSideColumn} data-market-side-column="true">
+          <section className={styles.clubOwnerArea} data-market-club-owner-area="true" aria-label={pt ? "Área do ClubOwner" : "ClubOwner area"}>
+            <h2>{pt ? "Área do ClubOwner" : "ClubOwner area"}</h2>
+            <div className={styles.clubOwnerIdentity}>
+              <Image src={clubOwner?.avatarUrl ?? "/icons/touchline-512.png"} alt={clubOwner?.name ?? "ClubOwner"} width={64} height={64} unoptimized />
+              <strong>{clubOwner?.name ?? "ClubOwner"}</strong>
+            </div>
+            <div className={styles.clubOwnerMetrics}>
+              <div><span>{pt ? "Orçamento restante" : "Budget remaining"}</span><strong>{formatTouchlineFantasyMarketValue(validation?.budgetRemainingEur ?? snapshot.config.budgetEur, locale)}</strong></div>
+              <Link href={`/touchline-tables?lang=${encodeURIComponent(locale)}`} aria-label={pt ? "Pontos da rodada — abrir ranking" : "Gameweek points — open rankings"}><span>{pt ? "Pontos da rodada" : "Gameweek points"}</span><strong>{(live?.gameweekScore ?? snapshot.gameweekScore).toFixed(2)}</strong></Link>
+              <Link href={`/touchline-tables?lang=${encodeURIComponent(locale)}`} aria-label={pt ? "Pontos da temporada — abrir ranking" : "Season points — open rankings"}><span>{pt ? "Pontos da temporada" : "Season points"}</span><strong>{(live?.seasonScore ?? snapshot.seasonScore).toFixed(2)}</strong></Link>
+            </div>
+          </section>
+          <aside className={styles.technicalArea} data-market-technical-area="true" aria-label={pt ? "Área técnica" : "Technical area"}>
+          <h2>{pt ? "Área técnica" : "Technical area"}</h2>
+          <div className={styles.technicalCoach}><FantasyCoachZoom entry={selectedCoach} locale={locale} eager /></div>
+          <strong>{selectedCoach.coach.displayName}</strong>
+          <label>{pt ? "Treinador" : "Coach"}<select value={selectedCoachId ?? ""} disabled={!editable || saving} onChange={(event) => setSelectedCoachId(event.target.value)}>{snapshot.coaches.map((entry) => <option key={entry.id} value={entry.id}>{entry.coach.displayName} · {entry.clubName}</option>)}</select></label>
+          <label>{pt ? "Formação" : "Formation"}<select value={formationCode ?? ""} disabled={!editable || saving} onChange={(event) => changeFormation(event.target.value)}>{Object.keys(snapshot.formationRegistry).map((code) => <option key={code} value={code}>{code}</option>)}</select></label>
+        </aside></div> : null}
       </div>}
-        <aside className={styles.myClubMarket} id="my-club-player-selection" data-open="true" aria-label={pt ? "Seleção por posição" : "Position selection"}>
-          <header className={styles.myClubMarketHeading}><span>MY CLUB · SCOUTING</span><h2>Market Transfer TouchLine</h2><p>{pt ? "Explore o clube. Escolha a posição. Conheça cada atleta." : "Explore the club. Choose a position. Discover every player."}</p></header>
+      <TouchlinePositionPicker inline={!marketPage} open={marketPage && positionPickerOpen} title={`${pt ? "Escolher jogador" : "Choose player"} · ${activeSlot?.id ?? "XI"}`} closeLabel={pt ? "Voltar ao campo" : "Back to pitch"} onClose={() => setPositionPickerOpen(false)} returnFocusRef={positionTriggerRef}>
+        <aside className={styles.myClubMarket} id="my-club-player-selection" data-open="true" data-position-overlay={marketPage ? "true" : undefined} aria-label={pt ? "Seleção por posição" : "Position selection"}>
+          {!marketPage ? <header className={styles.myClubMarketHeading}><span>MY CLUB · SCOUTING</span><h2>Market Transfer TouchLine</h2><p>{pt ? "Explore o clube. Escolha a posição. Conheça cada atleta." : "Explore the club. Choose a position. Discover every player."}</p></header> : null}
           <label className={styles.myClubSearch}><Search aria-hidden="true" /><span className={styles.srOnly}>{pt ? "Pesquisar jogador" : "Search player"}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={pt ? "Pesquisar jogador" : "Search player"} /></label>
           <CompactClubSelector selectedTeamId={selectedPlayerClub?.teamId ?? ""} onSelect={(club) => setPlayerClubTeamId(club.teamId)} locale={locale} />
-          <nav className={styles.myClubPositionTabs} aria-label={pt ? "Posições dos jogadores" : "Player positions"}>{TOUCHLINE_FANTASY_BROWSE_POSITIONS.map((position) => <button key={position.bucket} type="button" className={styles.viewToggle} aria-pressed={browsingPosition === position.bucket} aria-controls="my-club-position-results" aria-label={touchlineMarketPositionBucketLabel(position.bucket, locale)} onClick={() => {
+          {!marketPage ? <nav className={styles.myClubPositionTabs} aria-label={pt ? "Posições dos jogadores" : "Player positions"}>{TOUCHLINE_FANTASY_BROWSE_POSITIONS.map((position) => <button key={position.bucket} type="button" className={styles.viewToggle} aria-pressed={browsingPosition === position.bucket} aria-controls="my-club-position-results" aria-label={touchlineMarketPositionBucketLabel(position.bucket, locale)} onClick={() => {
             setBrowsePosition(position.bucket);
             const slot = resolveTouchlineFantasyBrowseSlot({ geometry, bucket: position.bucket, activeSlotId: activeSlot?.id ?? null, selections });
             if (slot) setActiveSlotId(slot.id);
-          }}>{position.code}</button>)}</nav>
+          }}>{position.code}</button>)}</nav> : null}
           <header className={styles.myClubSelectionSummary} aria-live="polite"><div><span>{pt ? "SELEÇÃO DE JOGADORES" : "PLAYER SELECTION"}</span><h3>{touchlineMarketPositionBucketLabel(browsingPosition, locale)}</h3><p>{selectedPlayerClub?.name} · {browseCards.length} {pt ? "cards nesta posição" : "cards in this position"}</p></div><p>{editable && browseSlot ? (pt ? `Vaga do XI: ${browseSlot.id}` : `XI slot: ${browseSlot.id}`) : !editable ? marketAccessLabel : (pt ? "Consulte os cards; escolha treinador e formação para montar o XI." : "Browse cards; choose a coach and formation to build the XI.")}</p></header>
           <div className={styles.myClubMarketResults} id="my-club-position-results">{browseCards.map((card) => {
+            const targetSlot = marketPage ? activeSlot : browseSlot;
             const inLineup = selections.some((entry) => entry.playerId === (card.canonicalPlayerId ?? card.id));
             const tierKey = card.editorialCard?.tierKey;
             const palette = tierKey ? touchlineCardTierPalette(tierKey) : null;
@@ -477,13 +530,15 @@ export default function FantasyGameweekClient({
                 <strong>{card.name}</strong><small>{card.position}</small><em>{card.clubName}</em>
                 {!editable ? <span className={styles.marketClosedLabel}>{marketAccessLabel}</span>
                   : inLineup ? <span className={styles.marketClosedLabel}>{pt ? "No seu XI" : "In your XI"}</span>
-                  : browseSlot && browseSlot.id === activeSlot?.id && selectedCoach
-                    ? <button type="button" onClick={() => selectMyClubPlayer(card)}>{selections.some((entry) => entry.slotId === browseSlot.id) ? (pt ? `Substituir · ${browseSlot.id}` : `Replace · ${browseSlot.id}`) : (pt ? `Escolher · ${browseSlot.id}` : `Choose · ${browseSlot.id}`)}</button>
+                  : targetSlot && targetSlot.id === activeSlot?.id && selectedCoach
+                    ? <button type="button" disabled={saving} onClick={() => selectMyClubPlayer(card)}>{selections.some((entry) => entry.slotId === targetSlot.id) ? (pt ? `Substituir · ${targetSlot.id}` : `Replace · ${targetSlot.id}`) : (pt ? `Escolher · ${targetSlot.id}` : `Choose · ${targetSlot.id}`)}</button>
                     : <span className={styles.marketClosedLabel}>{pt ? "Somente consulta" : "Review only"}</span>}
               </div>
             </article>;
           })}{browseCards.length === 0 ? <p>{pt ? "Nenhum card publicado para esta posição neste clube. Experimente outra posição ou clube." : "No published card for this position at this club. Try another position or club."}</p> : null}</div>
+          {marketPage && feedback ? <p role="status">{feedback}</p> : null}
         </aside>
+      </TouchlinePositionPicker>
       <footer className={styles.myClubGameweekFooter}><div><span>{pt ? "GAMEWEEK" : "GAMEWEEK"}</span><strong>{lineupConfirmed ? (pt ? "XI confirmado" : "XI confirmed") : !editable ? marketAccessLabel : validation?.valid ? (pt ? "Pronto para confirmar" : "Ready to confirm") : `${selectedCount}/11`}</strong></div><div><small>{hasUnsavedChanges ? (pt ? "Alterações não salvas" : "Unsaved changes") : (pt ? "Elenco sincronizado" : "Squad synced")}</small><button type="button" disabled={!editable || saving || !selectedCoachId || !validation?.valid || lineupConfirmed} onClick={() => save("confirm")}>{pt ? "Confirmar XI" : "Confirm XI"}</button></div></footer>
       {feedback ? <p className={styles.feedback} role="status">{feedback}</p> : null}
     </section>;

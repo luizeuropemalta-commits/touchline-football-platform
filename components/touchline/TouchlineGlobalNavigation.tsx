@@ -53,7 +53,7 @@ type NavigationCopy = Readonly<{
 const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
   "en-GB": {
     ariaLabel: "TouchLine navigation",
-    backToArena: "Back to Arena",
+    backToArena: "Market",
     clubHub: "ClubHub",
     allClubs: "All clubs",
     live: "Live",
@@ -66,7 +66,7 @@ const copy: Record<"en-GB" | "pt-BR", NavigationCopy> = {
   },
   "pt-BR": {
     ariaLabel: "Navegação TouchLine",
-    backToArena: "Voltar para a Arena",
+    backToArena: "Mercado",
     clubHub: "ClubHub",
     allClubs: "Todos os clubes",
     live: "Ao vivo",

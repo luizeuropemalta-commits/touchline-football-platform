@@ -1,0 +1,8 @@
+.page { min-height: 100dvh; color: #f3f8f1; background: linear-gradient(135deg, #07100e, #101c1b 55%, #070e0d); }
+.content { width: 100%; margin-inline: auto; padding: clamp(8px, 1.4vw, 24px); }
+.heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 24px 0; }
+.heading span { color: #a3ff12; font-weight: 800; letter-spacing: .15em; }
+.heading h1 { margin: 6px 0; font-size: clamp(28px, 3vw, 46px); }
+.heading p { margin: 0; color: #b9c7c0; }
+.heading a { color: #d5ffab; text-underline-offset: 5px; padding: 12px; }
+.heading a:focus-visible { outline: 2px solid #a3ff12; outline-offset: 3px; }

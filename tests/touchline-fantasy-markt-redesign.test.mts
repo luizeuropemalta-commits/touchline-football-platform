@@ -8,7 +8,7 @@ async function source(path: string) {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("My Club owns the one Gameweek transaction boundary and legacy Market routes forward safely", async () => {
+test("Market reuses the Gameweek transaction boundary and legacy Fantasy forwards safely", async () => {
   const [market, owner, alias, client, route] = await Promise.all([
     source("app/market-transfer/page.tsx"),
     source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
@@ -16,7 +16,7 @@ test("My Club owns the one Gameweek transaction boundary and legacy Market route
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("app/api/touchline-fantasy/lineup/route.ts"),
   ]);
-  assert.match(market, /redirect\(`\/my-club\?\$\{forwarded\.toString\(\)\}#my-club-squad`\)/);
+  assert.match(market, /<FantasyGameweekClient[^>]*initialSnapshot=\{snapshot\} locale=\{locale\} embedded marketPage/);
   assert.match(owner, /key=\{`my-club-player-filter-\$\{initialPlayerClubTeamId \?\? "default"\}`\}/);
   assert.match(owner, /<FantasyGameweekClient[^>]+initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.match(owner, /const initialPlayerClubTeamId = TOUCHLINE_ENGLAND_CLUBS\.find\(\(club\) => club\.slug === params\.club\)\?\.teamId \?\? null/);
@@ -25,7 +25,7 @@ test("My Club owns the one Gameweek transaction boundary and legacy Market route
   assert.match(client, /TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.some\(\(club\) => club\.teamId === initialPlayerClubTeamId\)/);
   assert.match(owner, /id="my-club-squad"/);
   assert.doesNotMatch(market, /standaloneMarket|<ArenaClient/);
-  assert.match(alias, /redirect\(`\/my-club\?lang=.*tab=market#my-club-squad`\)/);
+  assert.match(alias, /redirect\(`\/market-transfer\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
   assert.match(client, /selectedCoachId/);
   assert.match(route, /p_selected_coach_id: input\.selectedCoachId/);
   assert.match(route, /MAX_LINEUP_REQUEST_BYTES = 8_192/);
@@ -103,7 +103,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.guidePanel\{[\s\S]*?max-height:min\(680px,72dvh\)/);
   assert.doesNotMatch(styles, /\.guidePanel\{[\s\S]*?max-height:min\(760px,calc\(100dvh - 32px\)\)/);
   assert.match(styles, /\.pitchCard\{[\s\S]*?width:62px[\s\S]*?aspect-ratio:430 \/ 691/);
-  assert.match(client, /className=\{styles\.myClubTacticalPitch\}[\s\S]*?orientation="horizontal"[\s\S]*?surfaceVariant="premium-stadium"/);
+  assert.match(client, /className=\{styles\.myClubTacticalPitch\}[\s\S]*?orientation="horizontal"[\s\S]*?surfaceVariant=\{marketPage \? "smoked-glass" : "premium-stadium"\}/);
   assert.match(client, /function horizontalMyClubPitchPosition[\s\S]*?left:[\s\S]*?slot\.x/);
   assert.match(styles, /\.myClubTacticalPitch\{[\s\S]*?--pitch-line:rgba\(170,255,62[\s\S]*?aspect-ratio:105\/68/);
   assert.match(styles, /@keyframes myClubPitchTrace/);

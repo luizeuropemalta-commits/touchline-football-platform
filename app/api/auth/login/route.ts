@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { ensureTouchlineArenaAccess } from "@/lib/server/touchline-arena-access";
 import { isAllowedLoginPost, safeReturnTo } from "@/lib/server/login-request-security";
+import { shouldSecureLoginCookie } from "@/lib/server/login-cookie-security";
 
 type LoginPayload = {
   email?: unknown;
@@ -60,25 +61,25 @@ function safeLoginError(error: { code?: string; message?: string } | null): Logi
   return "auth_unavailable";
 }
 
-function applySessionCookies(response: NextResponse, sessionCookies: SessionCookie[]) {
+function applySessionCookies(request: NextRequest, response: NextResponse, sessionCookies: SessionCookie[]) {
   sessionCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, {
       ...options,
       domain: undefined,
       path: "/",
       sameSite: "lax",
-      secure: true,
+      secure: shouldSecureLoginCookie(request, process.env),
     });
   });
   return response;
 }
 
-function successResponse(sessionCookies: SessionCookie[]) {
+function successResponse(request: NextRequest, sessionCookies: SessionCookie[]) {
   const response = NextResponse.json(
     { ok: true },
     { headers: { "Cache-Control": "no-store" } },
   );
-  return applySessionCookies(response, sessionCookies);
+  return applySessionCookies(request, response, sessionCookies);
 }
 
 function nativeSessionResponse(
@@ -91,7 +92,7 @@ function nativeSessionResponse(
   response.headers.set("Cache-Control", "no-store");
   response.headers.set("Referrer-Policy", "no-referrer");
 
-  return applySessionCookies(response, sessionCookies);
+  return applySessionCookies(request, response, sessionCookies);
 }
 
 /**
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
       }
       return nativeFormPost
         ? nativeSessionResponse(request, sessionCookies, payload.return_to)
-        : successResponse(sessionCookies);
+        : successResponse(request, sessionCookies);
     } catch {
       return nativeFormPost
         ? nativeErrorResponse(request, "profile_setup_failed", payload.return_to, payload.locale, payload.login_path)

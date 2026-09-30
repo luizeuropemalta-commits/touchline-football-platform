@@ -14,6 +14,13 @@ const configuredDevOrigins = (process.env.TOUCHLINE_DEV_ORIGINS ?? "")
 const localTurbopackRoot = process.env.TOUCHLINE_LOCAL_TURBOPACK_ROOT?.trim();
 
 const nextConfig: NextConfig = {
+  // Next 16.2's separate dev debug channel can mistake an unfinished streamed
+  // document for a cache restore and reload before hydration (upstream #94128).
+  // Keep debug data in the RSC response for local development. This does not
+  // disable HMR, Sentry, auth or the isolation guard; published builds are unchanged.
+  ...(process.env.NODE_ENV === "development" && process.env.VERCEL !== "1"
+    ? { experimental: { reactDebugChannel: false } }
+    : {}),
   allowedDevOrigins: [...new Set(["127.0.0.1", "localhost", ...configuredDevOrigins])],
   ...(localTurbopackRoot ? { turbopack: { root: localTurbopackRoot } } : {}),
   async headers() {

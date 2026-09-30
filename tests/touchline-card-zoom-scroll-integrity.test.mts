@@ -30,11 +30,14 @@ test("expanded cards lock the document and keep one modal scroll surface", () =>
   const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
   const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
 
-  assert.match(zoom, /root\.style\.overflow = "hidden"/);
-  assert.match(zoom, /body\.style\.overflow = "hidden"/);
-  assert.match(zoom, /touchlineModalScrollLock = "true"/);
-  assert.match(zoom, /root\.style\.overflow = previousRootOverflow/);
-  assert.match(zoom, /body\.style\.overflow = previousBodyOverflow/);
+  const lock = source("components/touchline/a11y/TouchlineDialog.tsx");
+  assert.match(zoom, /useTouchlineDialogScrollLock\(isOpen\)/);
+  assert.match(lock, /root\.style\.overflow = "hidden"/);
+  assert.match(lock, /body\.style\.overflow = "hidden"/);
+  assert.match(lock, /touchlineModalScrollLock = "true"/);
+  assert.match(lock, /if \(lock\.count > 0\) return/);
+  assert.match(lock, /root\.style\.overflow = lock\.rootOverflow/);
+  assert.match(lock, /body\.style\.overflow = lock\.bodyOverflow/);
   assert.match(zoomCss, /\.backdrop \{[\s\S]*?overflow-y: auto;[\s\S]*?overscroll-behavior: contain;/);
   assert.match(zoomCss, /\.panelWithDetails \{[\s\S]*?overflow: visible;/);
 });

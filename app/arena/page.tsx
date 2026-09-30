@@ -1,4 +1,4 @@
-import ArenaClient from "./ArenaClient";
+import TouchlineGameEntry from "@/components/touchline/arena/TouchlineGameEntry";
 import { headers } from "next/headers";
 import { createArenaPhaseTiming } from "@/lib/touchlineArena/server-phase-timing";
 import { redirect } from "next/navigation";
@@ -56,17 +56,25 @@ export default async function ArenaPage({
       if (contractPlayer) marketParams.set("contractPlayer", contractPlayer);
       if (contractName) marketParams.set("contractName", contractName);
       if (contractClub) marketParams.set("contractClub", contractClub);
-      redirect(`/my-club${marketParams.size ? `?${marketParams.toString()}` : ""}`);
+      redirect(`/market-transfer${marketParams.size ? `?${marketParams.toString()}` : ""}`);
     }
     const suffix = marketParams.size ? `?${marketParams.toString()}` : "";
     if (initialPanel === "bench" || initialPanel === "formation") {
-      redirect(`/my-club${suffix}#my-club-squad`);
+      redirect(`/market-transfer${suffix}#my-club-xi-pitch`);
     }
     if (initialPanel === "live" || initialPanel === "watch") redirect(`/live${suffix}`);
     if (initialPanel === "rankings") redirect(`/touchline-tables${suffix}`);
     redirect(`/arena${suffix}`);
   }
 
+  const locale = normalizeTouchLineLocale(firstValue(params.lang));
+  if (!initialQaVisualEditor && !initialQaReadOnly) {
+    return <TouchlineGameEntry locale={locale} initialIntroIntent={parseTouchlineArenaIntroIntent({
+      intro: firstValue(params.intro), skipIntro: firstValue(params.skipIntro),
+    })} />;
+  }
+  // Protected calibration remains available without loading the old game for normal play.
+  const { default: ArenaClient } = await import("./ArenaClient");
   const timing = createArenaPhaseTiming();
   const [user, initialTwoDimensionalFormationRegistry] = await timing.run("auth-and-geometry", () => Promise.all([
     createClient().then((supabase) => supabase
@@ -78,7 +86,6 @@ export default async function ArenaPage({
       : null),
     readTouchlineFormationGeometryRegistry(),
   ]));
-  const locale = normalizeTouchLineLocale(firstValue(params.lang));
   const fantasySnapshot = user && !isOwnerEmail(user.email)
     ? await loadTouchlineFantasyArenaSnapshot(user, initialTwoDimensionalFormationRegistry, timing)
     : null;
