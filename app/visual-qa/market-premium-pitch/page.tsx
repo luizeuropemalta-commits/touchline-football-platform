@@ -126,7 +126,7 @@ export default async function MarketPremiumPitchVisualQaPage({ searchParams }: V
     >
       {marketPage ? <header className={styles.marketNavigation}>
         <TouchlineGlobalNavigation locale={locale} currentRoute="market" surface="authenticated" />
-        <Link className={styles.introLink} href={`/arena?lang=${locale}&intro=first`}>{locale === "pt-BR" ? "Ver intro" : "Watch intro"}</Link>
+        <Link className={styles.introLink} href={`/intro?lang=${locale}&intro=first`}>{locale === "pt-BR" ? "Ver intro" : "Watch intro"}</Link>
       </header> : <header>
         <p>GEOMETRY QA · LOCAL ONLY · NOT PUBLISHABLE</p>
         <span>

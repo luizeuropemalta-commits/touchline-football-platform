@@ -13,7 +13,6 @@ const registerPageSource = fs.readFileSync(new URL("../app/(auth)/register/page.
 const callbackSource = fs.readFileSync(new URL("../app/auth/callback/route.ts", import.meta.url), "utf8");
 const proxySource = fs.readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 const marketPageSource = fs.readFileSync(new URL("../app/market-transfer/page.tsx", import.meta.url), "utf8");
-const arenaClientSource = fs.readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 const protectedArenaApiSources = [
   "../lib/touchlineArena/api-access.ts",
   "../app/api/touchline-arena/market/checkout/route.ts",
@@ -147,7 +146,7 @@ test("the proxy exposes the Arena entrance and protects account-backed operation
   assert.doesNotMatch(proxySource, /protectedArenaPaths\s*=\s*\[[^\]]*"\/arena"/);
   assert.match(proxySource, /adminOnlyArenaPaths\s*=\s*\["\/admin", "\/visual-qa"\]/);
   assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
-  assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return arenaRedirect\(request, response\)/);
+  assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return introRedirect\(request, response\)/);
   assert.match(proxySource, /loginUrl\.searchParams\.set\("returnTo"/);
   assert.match(proxySource, /adminEntry \? "\/admin\/login" : "\/login"/);
   assert.match(proxySource, /sourceResponse\?\.cookies\.getAll\(\)/);
@@ -159,14 +158,11 @@ test("the proxy exposes the Arena entrance and protects account-backed operation
   assert.doesNotMatch(proxySource, /"\/dashboard"|"\/players"|"\/agencies"|"\/deals"|"\/scouting"/);
 });
 
-test("Market owns the authenticated Gameweek builder while protected Arena panel state remains isolated", () => {
+test("Market owns the authenticated Gameweek builder without the retired Arena", () => {
   assert.match(marketPageSource, /if \(!user\) redirect\(touchLineAuthEntryHref\("\/login", locale, destination\)\)/);
   assert.match(marketPageSource, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
   assert.match(marketPageSource, /loadTouchlineFantasySnapshot\(user\)/);
   assert.match(marketPageSource, /<FantasyGameweekClient[^>]*embedded marketPage/);
   assert.doesNotMatch(marketPageSource, /standaloneMarket|<ArenaClient/);
-  assert.match(arenaClientSource, /const standaloneExperience = standaloneMarket \? "market" : standalonePanel \?\? null/);
-  assert.match(arenaClientSource, /if \(standaloneExperience\) \{[\s\S]*setActiveArenaPanel\(standaloneExperience === "live" \? null : standaloneExperience\)/);
-  assert.match(arenaClientSource, /\[initialFantasyLineup, initialPanel, initialQaReadOnly, initialQaVisualEditor, standaloneExperience\]/);
-  assert.match(arenaClientSource, /const isArenaFunctionalReady = Boolean\(standaloneExperience\) \|\| \(/);
+  assert.equal(fs.existsSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url)), false);
 });

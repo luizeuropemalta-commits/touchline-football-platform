@@ -2,10 +2,8 @@
 
 import Image from "next/image";
 import { touchlineCoachRankingGem } from "@/lib/touchlineArena/coach-ranking-gems";
-import Link from "next/link";
 import { type CSSProperties } from "react";
 import {
-  ChevronRight,
   Crown,
   Trophy,
 } from "lucide-react";
@@ -428,7 +426,7 @@ export default function TouchLineTablesClient({
                 <div className={styles.ownerAvatar}><OwnerAvatar owner={owner} /></div>
                 <div className={styles.rowIdentity}><strong>{owner.name}</strong><span>{owner.clubName}</span></div>
                 <div className={styles.pointsValue}><strong>{owner.touchlinePoints}</strong><span>{copy.pointsShort}</span></div>
-                {owner.profileHref ? <Link href={`${owner.profileHref}?lang=${encodeURIComponent(locale)}`} aria-label={`${isPortuguese ? "Abrir perfil de" : "Open profile for"} ${owner.name}`}><ChevronRight aria-hidden="true" /></Link> : <span className={styles.rowEnd} />}
+                <span className={styles.rowEnd} />
               </li>
             ))}
           </ol> : <RankingPending copy={copy} />}

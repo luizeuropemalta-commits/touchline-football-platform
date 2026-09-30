@@ -9,7 +9,6 @@ function source(relativePath: string) {
 
 test("the Club Owner portrait uses an opt-in fixed-green continuous perimeter trace", () => {
   const social = source("components/touchline/social/TouchlineSocial.tsx");
-  const profile = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
   const trace = source("components/touchline/social/ClubOwnerPortraitPerimeterTrace.tsx");
   const css = source("components/touchline/social/TouchlineSocial.module.css");
   const ownerCss = css.slice(
@@ -21,8 +20,6 @@ test("the Club Owner portrait uses an opt-in fixed-green continuous perimeter tr
     css.indexOf("@keyframes club-owner-portrait-perimeter-trace"),
   );
 
-  assert.match(profile, /const CLUB_OWNER_TOUCHLINE_NEON = "#a3ff12"/);
-  assert.match(profile, /accent=\{CLUB_OWNER_TOUCHLINE_NEON\}[\s\S]*?clubOwnerPortraitTrace/);
   assert.match(social, /clubOwnerPortraitTrace = false/);
   assert.match(social, /data-club-owner-portrait-trace=\{clubOwnerPortraitTrace \? "touchline-logo-green" : undefined\}/);
   assert.match(social, /\{clubOwnerPortraitTrace \? <ClubOwnerPortraitPerimeterTrace \/> : null\}[\s\S]*?className=\{styles\.socialAvatarPhoto\}/);

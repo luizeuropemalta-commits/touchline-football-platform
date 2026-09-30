@@ -94,84 +94,8 @@ test("Arena keeps an incomplete canonical round intact instead of borrowing a ma
 });
 
 test("My Club keeps production coach identity out of the demo fallback and owns persistent coach-first selection", () => {
-  const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const coachRoute = readFileSync(new URL("../app/api/touchline-arena/coach/route.ts", import.meta.url), "utf8");
   const stateRoute = readFileSync(new URL("../app/api/touchline-arena/state/route.ts", import.meta.url), "utf8");
-
-  assert.match(arena, /arenaPersistencePrincipal\?\.kind === "demo"[\s\S]*?TOUCHLINE_DEMO_COACH/);
-  assert.match(arena, /data-testid="arena-coach-first-gate"/);
-  assert.match(arena, /const isCoachSelectionRequired = Boolean\([\s\S]*?standaloneExperience === "market"/);
-  assert.match(
-    arena,
-    /const shouldRenderArenaOwnerLayer = \(hasSyncedFantasyLineup \|\| shouldRenderPlayers \|\| isQuickSubstitutionSessionActive\)\s*&& standaloneExperience !== "live"\s*&& !isCoachSelectionRequired/,
-  );
-  assert.match(arena, /setIsArenaMatchdayViewActive\(showPlayers\)/);
-  assert.match(
-    arena,
-    /setPlayers\(normalizeArenaPlayersForFormation\(lineupPlayers[\s\S]*?setIsArenaMatchdayViewActive\(true\)[\s\S]*?setShouldRenderPlayers\(true\)/,
-  );
-  assert.match(arena, /\.catch\(\(error: Error\) => \{[\s\S]*?setIsArenaMatchdayViewActive\(false\)/);
-  assert.match(
-    arena,
-    /className="arena-coach-gated-content"[\s\S]*?inert=\{isCoachSelectionRequired \|\| isCoachSelectionBootstrapPending \? true : undefined\}[\s\S]*?aria-hidden=\{isCoachSelectionRequired \|\| isCoachSelectionBootstrapPending\}/,
-  );
-  assert.match(arena, /is-market-standalone \.arena-coach-gated-content > :not\(\.arena-action-layer\)/);
-  assert.match(arena, /is-panel-standalone \.arena-coach-first-gate \{\s*inset: 10px;/);
-  assert.match(arena, /\/api\/touchline-arena\/coach/);
-  assert.match(arena, /const requestTimeout = window\.setTimeout\(\(\) => controller\.abort\(\), 10_000\)/);
-  assert.match(arena, /signal: controller\.signal/);
-  assert.match(arena, /window\.clearTimeout\(requestTimeout\)/);
-  assert.match(arena, /coachOfferStatus === "idle"[\s\S]*?Entre na sua conta para carregar as ofertas oficiais dos treinadores/);
-  assert.match(arena, /const coachFirstLoginHref = touchLineAuthEntryHref\([\s\S]*?"\/login"[\s\S]*?\/my-club\?lang=/);
-  assert.match(arena, /className="arena-coach-login-link" href=\{coachFirstLoginHref\}/);
-  assert.match(arena, /TOUCHLINE MARKET · PASSO 1 DE 10/);
-  assert.match(arena, /<TouchlineSquadBuilderStage/);
-  assert.match(arena, /data-testid="arena-coach-bootstrap"/);
-  assert.doesNotMatch(arena, /window\.location\.replace\(`\/market-transfer\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\)/);
-  assert.match(arena, /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/);
-  assert.match(arena, /Monte seu time|Build your team/);
-  assert.doesNotMatch(arena, /Open Coach Market|Abrir Mercado de Treinadores/);
-  assert.match(arena, /className="arena-market-welcome"/);
-  assert.match(arena, /arena-market-welcome-title/);
-  assert.match(arena, /const mustPersistForClubOwner = canPersistArenaAccountState/);
-  assert.match(arena, /if \(!response\.ok\) \{[\s\S]*?Não foi possível salvar o treinador na sua conta/);
-  assert.match(arena, /setCoachSelectionError\(message\)/);
-  assert.match(arena, /className="arena-coach-selection-error" role="alert"/);
-  const selectCoach = arena.slice(
-    arena.indexOf("async function selectOfficialArenaCoach"),
-    arena.indexOf("async function toggleArenaFullscreen"),
-  );
-  assert.ok(
-    selectCoach.indexOf("const mustPersistForClubOwner") < selectCoach.indexOf('writeBrowserStorage("localStorage", coachStorageKey'),
-    "authenticated ClubOwner coach selection must be accepted by the server before local cache is written",
-  );
-  assert.match(selectCoach, /standaloneExperience === "market"[\s\S]*?setMarketFormationConfirmed\(false\)/);
-  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?reconcileTouchlineFormationStarters/);
-  assert.match(selectCoach, /confirmMarketFormation[\s\S]*?setMarketPositionBucketFilter\("all"\)/);
-  assert.match(arena, /coachOffersByProviderId/);
-  assert.doesNotMatch(arena, /offer\.displayPrice/);
-  assert.match(arena, /className="arena-coach-market-header"/);
-  assert.match(arena, /data-tier=\{offer\.tierKey\}/);
-  assert.match(arena, /"--coach-offer-accent": tierPalette\.accent/);
-  assert.match(arena, /"--coach-offer-secondary": tierPalette\.secondary/);
-  assert.match(arena, /arena-coach-choice-topline/);
-  assert.match(arena, /arena-coach-choice-footer/);
-  assert.match(arena, /grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 176px\), 1fr\)\)/);
-  assert.match(arena, /selectArenaFixtureRound\(premierLiveFixtures\)/);
-  assert.match(arena, /function isFixtureFinished\(fixture: TouchlinePublicFixture\)/);
-  assert.match(arena, /isFixtureFinished\(fixture\)[\s\S]*?\? "FT"/);
-  assert.match(arena, /const shouldPollPersistedLiveSnapshot = isLiveDockOpen \|\| standalonePanel === "live"/);
-  const fixtureEffect = arena.slice(
-    arena.indexOf("const shouldPollPersistedLiveSnapshot = isLiveDockOpen || standalonePanel === \"live\""),
-    arena.indexOf("Do not request a provisional fallback squad"),
-  );
-  assert.doesNotMatch(fixtureEffect, /if \(!isLiveDockOpen && standalonePanel !== "live"\) return;/);
-  assert.match(fixtureEffect, /"\/api\/football-data\/fixture-schedule"/);
-  assert.match(
-    fixtureEffect,
-    /function applyPersistedLiveSnapshot[\s\S]*?one durable server snapshot[\s\S]*?server-side rather than recomputed[\s\S]*?setLiveFixtures\(parsedFixtures\)/,
-  );
-  assert.doesNotMatch(fixtureEffect, /function applyLiveFixtureUpdates/);
   assert.match(coachRoute, /touchlineLiveCoachForProviderId\(coachProviderId\)/);
   assert.match(coachRoute, /TL_COACH_CONTRACT_SCHEMA_UNAVAILABLE/);
   assert.match(coachRoute, /touchline_hire_coach_contract/);
@@ -180,33 +104,4 @@ test("My Club keeps production coach identity out of the demo fallback and owns 
   assert.match(coachRoute, /p_idempotency_key: idempotencyKey/);
   assert.match(stateRoute, /coach_provider_id/);
   assert.match(stateRoute, /error\?\.code === "42703"/);
-});
-
-test("the intro action remains an explicit top-right control", () => {
-  const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-  assert.match(arena, /className="arena-intro-actions"/);
-  assert.match(arena, /Watch intro/);
-  assert.match(arena, /\.arena-intro-actions \{[\s\S]*?right: max\(18px, env\(safe-area-inset-right\)\)/);
-});
-
-test("the Arena quick menu sends squad building directly to localized My Club", () => {
-  const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-  const menuStart = arena.indexOf('<nav ref={arenaNavRef} className={`arena-quick-dock');
-  const menuEnd = arena.indexOf("</nav>", menuStart);
-  const quickMenu = arena.slice(menuStart, menuEnd);
-
-  assert.ok(menuStart >= 0 && menuEnd > menuStart);
-  assert.match(
-    quickMenu,
-    /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/,
-  );
-  assert.doesNotMatch(quickMenu, /market-transfer/);
-});
-
-test("legacy Arena panels route directly to the canonical Market workspace", () => {
-  const arenaPage = readFileSync(new URL("../app/arena/page.tsx", import.meta.url), "utf8");
-
-  assert.match(arenaPage, /if \(initialPanel === "market"\)[\s\S]*?redirect\(`\/market-transfer/);
-  assert.doesNotMatch(arenaPage, /redirect\(`\/my-club/);
-  assert.match(arenaPage, /if \(initialPanel === "bench" \|\| initialPanel === "formation"\)[\s\S]*?#my-club-xi-pitch/);
 });

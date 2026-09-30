@@ -55,10 +55,10 @@ test("public authentication copy describes the launched Arena without beta or te
 });
 
 test("authentication destinations preserve the normalized locale", () => {
-  assert.equal(touchLineAuthHref("/arena", "pt-BR"), "/arena?lang=pt-BR");
-  assert.equal(touchlineArenaFirstEntryHref("pt-BR"), "/arena?lang=pt-BR&intro=first");
+  assert.equal(touchLineAuthHref("/intro", "pt-BR"), "/intro?lang=pt-BR");
+  assert.equal(touchlineArenaFirstEntryHref("pt-BR"), "/intro?lang=pt-BR&intro=first");
   assert.equal(touchLineAuthHref("/login?error=1", "pt-BR"), "/login?error=1&lang=pt-BR");
-  assert.equal(touchLineAuthHref("/arena", "unknown"), "/arena?lang=en-GB");
+  assert.equal(touchLineAuthHref("/intro", "unknown"), "/intro?lang=en-GB");
   assert.equal(
     touchLinePostAuthHref("/market-transfer?contractPlayer=10&lang=en-GB", "pt-BR"),
     "/market-transfer?contractPlayer=10&lang=pt-BR",
@@ -79,12 +79,14 @@ test("authentication destinations preserve the normalized locale", () => {
   assert.equal(normalizeTouchLineAuthReturnTo("/login?lang=pt-BR"), null);
   assert.equal(
     normalizeTouchLineAuthReturnTo("/club-owner/new-owner/substitution?lang=en-GB"),
-    "/club-owner/new-owner/substitution?lang=en-GB",
+    "/market-transfer?lang=en-GB",
   );
   assert.equal(normalizeTouchLineAuthReturnTo("/visual-qa/coach-card?lang=en-GB"), "/visual-qa/coach-card?lang=en-GB");
   assert.equal(normalizeTouchLineAdminReturnTo("/admin/social-publications?lang=pt-BR"), "/admin/social-publications?lang=pt-BR");
   assert.equal(normalizeTouchLineAdminReturnTo("/visual-qa/social-confirmed-event?design=goal"), "/visual-qa/social-confirmed-event?design=goal");
   assert.equal(normalizeTouchLineAdminReturnTo("/arena"), "/admin");
+  assert.equal(normalizeTouchLineAdminReturnTo("/intro"), "/admin");
+  assert.equal(normalizeTouchLineAdminReturnTo("/market-transfer"), "/admin");
   assert.equal(normalizeTouchLineAdminReturnTo("https://evil.example/steal"), "/admin");
 });
 
@@ -113,7 +115,7 @@ test("form links and authentication callbacks retain the selected language", () 
   assert.match(formSource, /resolveTouchLineAuthOrigin/);
   assert.match(formSource, /NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN/);
   assert.doesNotMatch(formSource, /touchline-football-platform/);
-  assert.match(layoutSource, /const publicArenaHref = touchLineAuthHref\("\/arena", normalizedLocale\)/);
+  assert.match(layoutSource, /const publicArenaHref = touchLineAuthHref\("\/intro", normalizedLocale\)/);
   assert.match(layoutSource, /<Logo href=\{publicArenaHref\}/);
   assert.match(layoutSource, /<Link href=\{publicArenaHref\}/);
   assert.match(layoutSource, /<AuthLanguageSwitcher locale=\{normalizedLocale\}/);

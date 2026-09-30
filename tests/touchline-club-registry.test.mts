@@ -117,11 +117,6 @@ test("records every existing extension against the same twenty identities withou
 });
 
 test("permits only the P2-2 Arena adapter as the first registry consumer", () => {
-  const arenaSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-  assert.match(arenaSource, /from\s+["'][^"']*arena-club-registry-adapter["']/);
-  assert.doesNotMatch(arenaSource, /from\s+["'][^"']*\bclub-registry["']/);
-  assert.equal(arenaSource.includes("PREMIER_CLUB_VISUALS"), false);
-  assert.equal(arenaSource.includes("TEAM_BUILDER_CLUB_RANK"), false);
 
   for (const path of [
     "../lib/touchlineArena/shirt-number-colors.ts",

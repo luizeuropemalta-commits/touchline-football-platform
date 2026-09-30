@@ -3,19 +3,15 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createTouchlineArenaMediaSession, playTouchlineArenaMedia, readTouchlineArenaMediaAvailability, subscribeTouchlineArenaMediaAvailability } from "../lib/touchlineArena/arena-media-playback.ts";
 
-const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
+const arena = readFileSync(new URL("../components/touchline/arena/TouchlineGameEntry.tsx", import.meta.url), "utf8");
 
 test("Arena sound is opt-in, scoped to official media and reachable from the intro", () => {
-  assert.match(arena, /const \[isArenaAudioMuted, setIsArenaAudioMuted\] = useState\(true\)/);
-  assert.equal((arena.match(/muted=\{isArenaAudioMuted\}/g) ?? []).length, 1);
-  assert.match(arena, /muted=\{true\}\s+playsInline\s+loop/);
-  assert.match(arena, /muted: video === secondVideoRef.current \|\| arenaAudioMutedRef.current/);
-  assert.match(arena, /ambientAudio\?\.toggle\(\)/);
-  assert.match(arena, /const isAmbientArena = activeVideoIndex === 1 && introExperienceMode === "hidden"/);
-  assert.match(arena, /const introOwnsAudio = introExperienceMode !== "pending" && !isAmbientArena/);
-  assert.match(arena, /onToggleAudio=\{toggleArenaAudio\}/);
-  assert.match(arena, /aria-label=\{arenaAudioLabel\}/);
-  assert.doesNotMatch(arena, /const isArenaIntroViewportReady = true/);
+  assert.match(arena, /const \[muted, setMuted\] = useState\(true\)/);
+  assert.equal((arena.match(/muted=\{muted\}/g) ?? []).length, 1);
+  assert.match(arena, /onToggleAudio=\{\(\) => setMuted/);
+  assert.match(arena, /useSyncExternalStore\(subscribeTouchlineArenaMediaAvailability/);
+  assert.match(arena, /mediaSession.stop\(\)/);
+  assert.doesNotMatch(arena, /LOOP_VIDEO|\bloop[ =]/);
 });
 
 function media(play: () => Promise<void> = async () => {}) {
@@ -136,17 +132,4 @@ test("an older promise cannot pause a newer request for the same video", async (
   assert.equal(await older, null);
   assert.equal(await newer, true);
   assert.equal(video.pauses, 0);
-});
-
-test("replay cancels the prior loop reveal and page lifecycle owns a media stop", () => {
-  const replay = arena.slice(arena.indexOf("function replayEntryVideo()"), arena.indexOf("async function selectOfficialArenaCoach"));
-  assert.match(replay, /arenaMediaSession\.stop\(\)/);
-  assert.match(replay, /window\.clearTimeout\(loopRevealTimerRef\.current\)/);
-  assert.match(replay, /loopRevealTimerRef\.current = null/);
-  for (const event of ["pagehide", "freeze"]) {
-    assert.ok(arena.includes(`addEventListener("${event}", stopMedia)`));
-    assert.ok(arena.includes(`removeEventListener("${event}", stopMedia)`));
-  }
-  assert.match(arena, /reducedMotion\.addEventListener\("change", handleReducedMotion\)/);
-  assert.match(arena, /reducedMotion\.removeEventListener\("change", handleReducedMotion\)/);
 });

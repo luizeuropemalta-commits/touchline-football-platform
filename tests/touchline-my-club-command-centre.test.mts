@@ -4,9 +4,25 @@ import test from "node:test";
 
 const client = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
-const owner = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
 const socialStyles = readFileSync(new URL("../components/touchline/social/TouchlineSocial.module.css", import.meta.url), "utf8");
 const gameweekCard = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
+
+test("Market preserves its ClubOwner photo, name, remaining budget and points", () => {
+  const market = readFileSync(new URL("../app/market-transfer/page.tsx", import.meta.url), "utf8");
+  const start = client.indexOf('data-market-club-owner-area="true"');
+  const end = client.indexOf('<aside className={styles.technicalArea}', start);
+  assert.ok(start >= 0 && end > start, "The Market ClubOwner area remains beside the technical area");
+  const area = client.slice(start, end);
+
+  assert.match(market, /resolveTouchlineClubOwnerPageIdentity\(user\)/);
+  assert.match(market, /clubOwner=\{clubOwner \? \{ name: clubOwner\.name, avatarUrl: clubOwner\.avatarUrl \} : undefined\}/);
+  assert.match(area, /<Image src=\{clubOwner\?\.avatarUrl \?\? "\/icons\/touchline-512\.png"\}/);
+  assert.match(area, /<strong>\{clubOwner\?\.name \?\? "ClubOwner"\}<\/strong>/);
+  assert.match(area, /formatTouchlineFantasyMarketValue\(validation\?\.budgetRemainingEur \?\? snapshot\.config\.budgetEur, locale\)/);
+  assert.match(area, /\(live\?\.gameweekScore \?\? snapshot\.gameweekScore\)\.toFixed\(2\)/);
+  assert.match(area, /\(live\?\.seasonScore \?\? snapshot\.seasonScore\)\.toFixed\(2\)/);
+  assert.equal((area.match(/href=\{`\/touchline-tables\?lang=/g) ?? []).length, 2);
+});
 
 test("My Club grid cards fit their real container without changing pitch or zoom scale", () => {
   assert.match(client, /displayWidth=\{116\} fitContainer/);
@@ -80,11 +96,6 @@ test("My Club opens the tactical field by default and keeps eligibility contextu
   assert.match(styles, /@media\(max-width:700px\).*?\.myClubCardRows\{grid-template-columns:repeat\(2/m);
 });
 
-test("My Club keeps ownership actions private and visitor follow controls separate", () => {
-  assert.match(owner, /showPrivateClubControl \? <ClubOwnerAvatarUpload locale=\{locale\} \/> : <TouchlineSocialProfileActions/);
-  assert.match(owner, /actionsPlacement=\{showPrivateClubControl \? "avatar" : "default"\}/);
-});
-
 test("My Club keeps the Arena cover visible while protecting owner identity readability", () => {
   assert.match(socialStyles, /clubowner-arena-neon-cover\.png/);
   assert.match(socialStyles, /\.commandHeader \.socialIdentity::before\s*\{\s*content:""; position:absolute; z-index:0/);
@@ -92,14 +103,4 @@ test("My Club keeps the Arena cover visible while protecting owner identity read
   assert.match(socialStyles, /width:min\(63%,900px\)/);
   assert.match(socialStyles, /\.commandHeader \.socialIdentity > \* \{ position:relative; z-index:1; \}/);
   assert.match(socialStyles, /\.commandHeader \.socialName h1 \{ text-shadow:/);
-});
-
-test("My Club removes the ranking strip and puts factual wallet data directly after identity", () => {
-  assert.doesNotMatch(owner, /club-owner-rank-deck/);
-  assert.ok(owner.indexOf("</TouchlineSocialProfileHeader>") < owner.indexOf('className="club-owner-wallet"'));
-  assert.ok(owner.indexOf('className="club-owner-wallet"') < owner.indexOf("<FantasyGameweekClient"));
-  assert.match(owner, /walletBalanceTc === null/);
-  assert.match(owner, /activeContractValueKnown/);
-  assert.match(owner, /clubCopy\.xiCapacity[\s\S]{0,120}\{fantasySnapshot\?\.selections\.length \?\? 0\}\/11/);
-  assert.doesNotMatch(owner, /ownedContractCount|contratos legados permanecem preservados|legacy contracts remain preserved|\/35/);
 });

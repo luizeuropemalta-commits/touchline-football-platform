@@ -6,8 +6,6 @@ const publicCardPriceSurfaces = [
   "components/touchline/cards/TouchlineEliteExactCard.tsx",
   "lib/touchlineArena/card-zoom-details.ts",
   "components/touchline/ClubHubOfficialLineup.tsx",
-  "components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
-  "app/arena/ArenaClient.tsx",
   "components/touchline/ClubHubSquadGrid.tsx",
   "app/touchline-tables/touchline-tables-client.tsx",
 ];
@@ -23,18 +21,8 @@ test("card-price surfaces use a shared approved presentation helper rather than 
 });
 
 test("Market Transfer presents card terms without exposing a player market valuation", () => {
-  const arenaSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const marketCopy = readFileSync(new URL("../lib/touchlineArena/market-i18n.ts", import.meta.url), "utf8");
 
-  assert.match(arenaSource, /function builderPlayerCommercialPrice/);
-  assert.match(arenaSource, /builderPlayerCommercialPrice\(player, marketUi\.cardUnavailable\)/);
-  assert.match(arenaSource, /builderPlayerCommercialPrice\(player, marketUi\.cardUnavailable\)/);
-  assert.match(arenaSource, /marketSpotlightPlayer/);
-  assert.match(arenaSource, /<TouchlineCardZoomDetailsPanel details=\{marketSpotlightZoomDetails\}/);
-  assert.doesNotMatch(arenaSource, /<strong>\{builderPlayerRetailPriceTc\(player\)\} TC<\/strong>/);
-  assert.doesNotMatch(arenaSource, /builderPlayerRetailPriceTc\(selectedBuilderPlayer\)\} TC/);
-  assert.match(arenaSource, /formatTouchlineCommercialCardTotal/);
-  assert.doesNotMatch(arenaSource, /\{rosterValueTc\} TC/);
   assert.match(marketCopy, /sortPriceLow: "Lowest card price"/);
   assert.match(marketCopy, /sortPriceLow: "Menor preço do card"/);
   assert.match(marketCopy, /sortTierHigh: "Highest card tier"/);
@@ -47,27 +35,6 @@ test("Market Transfer presents card terms without exposing a player market valua
   assert.match(marketCopy, /totalContractValue: "Touch Credits necessários"/);
   assert.doesNotMatch(marketCopy, /Squad TC Value|Valor TC do elenco/);
   assert.doesNotMatch(marketCopy, /sortValueHigh|marketValue: "Market Value"|marketValue: "Valor de mercado"|marketChange|marketRange|ariaEconomicData/);
-  assert.doesNotMatch(arenaSource, /displayBuilderMarketValue|displayAuthoritativeMarketValue|displayMarketChange|displayMarketUpdate/);
-  assert.doesNotMatch(arenaSource, /<small>\{marketUi\.marketValue\}<\/small>|marketUi\.marketChange|marketUi\.lastUpdate/);
-});
-
-test("ClubOwner keeps card assets separate from the TC wallet and can present editorial terms", () => {
-  const clubOwner = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
-  const arenaCopy = readFileSync(new URL("../lib/touchlineArena/i18n.ts", import.meta.url), "utf8");
-
-  assert.match(clubOwner, /formatTouchlineCommercialCardTotal\(\{ numericPrice: squadCardValue, competition: "england" \}\)/);
-  assert.match(clubOwner, /formatTouchlineContractedCommercialCardPrice/);
-  assert.match(clubOwner, /const publishedClubOwnerSquadCards = sortedClubOwnerSquadCards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/);
-  assert.match(clubOwner, /loadTouchlineFantasySnapshot\(activeClubOwnerUser\)/);
-  assert.match(clubOwner, /<FantasyGameweekClient[\s\S]{0,280}?initialSnapshot=\{fantasySnapshot\}[\s\S]{0,180}?locale=\{locale\}[\s\S]{0,180}?embedded/);
-  assert.doesNotMatch(clubOwner, /selectSavedArenaStartingXi|partitionClubOwnerRoster/);
-  assert.doesNotMatch(clubOwner, /startingShowcaseCards|<section className="club-owner-profile-squad"/);
-  assert.doesNotMatch(clubOwner, /card\.editorialCard\?\.tierKey\s*\?\? \(card\.cardPriceAuthority === "active-contract"/);
-  assert.doesNotMatch(clubOwner, /formatTouchlineVerifiedCommercialCardPrice/);
-  assert.doesNotMatch(clubOwner, /walletBalanceTc \+ squadValueTc/);
-  assert.doesNotMatch(clubOwner, /\{squadValueTc\} TC/);
-  assert.match(clubOwner, /club-owner-wallet-metrics/);
-  assert.doesNotMatch(arenaCopy, /Squad TC Value|Valor TC atual do elenco|preços TC atuais/);
 });
 
 test("player-card rankings expose published card terms only", () => {

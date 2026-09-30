@@ -22,7 +22,7 @@ export const TOUCHLINE_LOCALE_SURFACE_RELEASE_MANIFEST = [
   {
     id: "root-document-and-navigation",
     kind: "public",
-    paths: ["/", "/arena"],
+    paths: ["/", "/intro"],
     requires: ["document-lang", "direction", "global-navigation", "first-visit", "persistence"],
   },
   {
@@ -52,7 +52,7 @@ export const TOUCHLINE_LOCALE_SURFACE_RELEASE_MANIFEST = [
   {
     id: "private-owner-and-administration",
     kind: "private",
-    paths: ["/club-owner/me", "/admin", "/admin/arena", "/inbox"],
+    paths: ["/market-transfer", "/admin", "/admin/arena", "/inbox"],
     requires: ["owner-boundary", "auth-copy", "empty-state", "audit-state", "viewport"],
   },
   {

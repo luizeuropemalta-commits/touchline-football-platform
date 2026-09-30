@@ -34,24 +34,20 @@ test("the shared overlay exposes the Card Engine action only when a server-appro
 
 test("public card pages derive Card Engine visibility from the authenticated server user", () => {
   const serverSurfaces = [
-    "app/arena/page.tsx",
     "app/touchline-clubs/[club]/page.tsx",
     "app/touchline-player-card-rankings/page.tsx",
     "app/touchline-players/[player]/page.tsx",
     "app/touchline-tables/page.tsx",
-    "components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
   ].map(source);
 
   for (const serverSurface of serverSurfaces) {
     assert.match(serverSurface, /isOwnerEmail\(/);
   }
-  assert.match(source("app/arena/ArenaClient.tsx"), /canEditCardEngine = false/);
   assert.match(source("components/touchline/market/TouchlineSquadBuilderStage.tsx"), /canEditCardEngine = false/);
 });
 
 test("Market keeps customer authentication and denies owner/admin shortcuts", () => {
   const marketRoute = source("app/market-transfer/page.tsx");
-  const selfRoute = source("components/touchline/club-owner/ClubOwnerSelfRouteRedirect.tsx");
 
   assert.match(marketRoute, /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
   assert.doesNotMatch(marketRoute, /(?:redirect\(|href=)[^\n]*\/admin\//);
@@ -59,11 +55,7 @@ test("Market keeps customer authentication and denies owner/admin shortcuts", ()
   assert.match(marketRoute, /const destination = `\/market-transfer\?lang=/);
   assert.doesNotMatch(marketRoute, /contractPlayer|contractName|contractClub/, "unused legacy contract context is not carried into ClubOwner");
 
-  // A signed-out request returns through the authenticated compatibility
-  // route, not an owner or admin shortcut, and keeps the exact section anchor.
-  assert.match(selfRoute, /touchLineAuthEntryHref\("\/login", locale, destination\)/);
-  assert.match(selfRoute, /const marketAnchor = marketTab \? "#my-club-squad" : ""/);
-  assert.match(selfRoute, /isClubOwner: Boolean\(user && !isOwnerEmail\(user\.email\)\)/);
+
 });
 
 test("Market keeps card zoom on the Starting XI without rendering a substitute bench", () => {

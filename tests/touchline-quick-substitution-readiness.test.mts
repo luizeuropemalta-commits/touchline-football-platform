@@ -1,28 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { resolveTouchlineQuickSubstitutionReadiness } from "../lib/touchlineArena/quick-substitution-readiness.ts";
-
-const arenaSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-const proxySource = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
-const selfLoadingSource = readFileSync(
-  new URL("../app/club-owner/me/substitution/loading.tsx", import.meta.url),
-  "utf8",
-);
-const dynamicLoadingSource = readFileSync(
-  new URL("../app/club-owner/[owner]/substitution/loading.tsx", import.meta.url),
-  "utf8",
-);
-const fixtureSource = readFileSync(
-  new URL("../app/visual-qa/quick-substitution-readiness/page.tsx", import.meta.url),
-  "utf8",
-);
-const substitutionRendererSource = readFileSync(
-  new URL("../components/touchline/club-owner/ClubOwnerSubstitutionRenderer.tsx", import.meta.url),
-  "utf8",
-);
-
 test("Quick Substitution stays loading until both persisted reads have settled", () => {
   assert.deepEqual(
     resolveTouchlineQuickSubstitutionReadiness({
@@ -85,33 +64,4 @@ test("Quick Substitution opens only for exactly eleven starters and nine substit
       missingBench: 0,
     },
   );
-});
-
-test("the standalone panel renders an honest readiness state instead of an empty substitution board", () => {
-  assert.match(arenaSource, /resolveTouchlineQuickSubstitutionReadiness/);
-  assert.match(arenaSource, /data-quick-substitution-readiness=/);
-  assert.match(arenaSource, /Nenhum jogador é criado automaticamente/);
-  assert.match(arenaSource, /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}/);
-  assert.match(arenaSource, /standaloneQuickSubstitutionSessionState && standaloneQuickSubstitutionSessionState !== "ready"/);
-});
-
-test("the authenticated self route bypasses the retired bench and both historical routes have a local loader", () => {
-  assert.match(proxySource, /clubOwnerSubstitutionToMyClubRedirect/);
-  assert.match(proxySource, /pathname === "\/club-owner\/me\/substitution"/);
-  assert.match(selfLoadingSource, /ClubOwnerSubstitutionLoading/);
-  assert.match(dynamicLoadingSource, /ClubOwnerSubstitutionLoading/);
-});
-
-test("the private legacy substitution route enters the canonical My Club XI workspace", () => {
-  assert.match(substitutionRendererSource, /redirect\(`\/my-club\?lang=\$\{encodeURIComponent\(lang\)\}#my-club-squad`\)/);
-  assert.doesNotMatch(substitutionRendererSource, /panel=bench/);
-});
-
-test("the local Quick Sub visual fixture uses the actual in-Arena rail with deterministic demo data", () => {
-  assert.match(fixtureSource, /data-quick-substitution-readiness-fixture=\{isSetupScenario \? "setup" : "ready"\}/);
-  assert.match(fixtureSource, /initialPanel="bench"/);
-  assert.match(fixtureSource, /initialDemoLineup/);
-  assert.match(arenaSource, /parseTouchlineArenaPanel\(new URLSearchParams\(window\.location\.search\)\.get\("panel"\)\) \?\? initialPanel/);
-  assert.match(fixtureSource, /initialEmptyLineup/);
-  assert.doesNotMatch(fixtureSource, /fetch\(|createClient\(|createAdminClient\(/);
 });

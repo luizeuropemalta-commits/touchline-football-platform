@@ -82,14 +82,14 @@ test("client locale sync keeps the server locale when the URL has no explicit la
   assert.doesNotMatch(localeSync, /readBrowserStorage/);
 });
 
-test("the retired Coming Soon route preserves locale and redirects into the Arena", () => {
+test("the retired Coming Soon route preserves locale and redirects into the intro", () => {
   assert.match(comingSoon, /resolveTouchLineRootLocale\(params\.lang\)/);
-  assert.match(comingSoon, /redirect\(`\/arena\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
+  assert.match(comingSoon, /redirect\(`\/intro\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
   assert.doesNotMatch(comingSoon, /Coming soon|Em breve|TouchlineComingSoonLanding/);
 });
 
 test("generic public navigation keeps the same effective locale and never picks a club or owner", () => {
-  assert.equal(touchlineArenaHref("es-ES"), "/arena?lang=en-GB");
+  assert.equal(touchlineArenaHref("es-ES"), "/market-transfer?lang=en-GB");
   assert.equal(touchlineClubHubHref("es-ES"), "/touchline-clubs?lang=en-GB");
   assert.equal(touchlineClubHubHref("pt-BR"), "/touchline-clubs?lang=pt-BR");
   assert.equal(touchlineClubOwnerProfileHref("es-ES"), "/club-owner/me?lang=en-GB");

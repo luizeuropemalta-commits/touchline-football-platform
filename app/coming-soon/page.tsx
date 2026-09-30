@@ -10,5 +10,5 @@ type TouchLineComingSoonPageProps = {
 export default async function TouchLineComingSoonPage({ searchParams }: TouchLineComingSoonPageProps) {
   const params = await searchParams;
   const locale = resolveTouchLineRootLocale(params.lang);
-  redirect(`/arena?lang=${encodeURIComponent(locale)}`);
+  redirect(`/intro?lang=${encodeURIComponent(locale)}`);
 }

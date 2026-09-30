@@ -35,7 +35,7 @@ export function PremierTouchLineBrand({
 
 export function Logo({
   light = false,
-  href = "/arena",
+  href = "/intro",
   officialArena = false,
 }: {
   light?: boolean;

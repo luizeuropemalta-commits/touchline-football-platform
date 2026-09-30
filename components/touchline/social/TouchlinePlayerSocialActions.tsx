@@ -109,10 +109,10 @@ function PlayerSocialActions({ providerId, playerName, locale, accent = "#b9ff56
         </button>
       </div>
       <p className={styles.status} role="status">
-        {phase === "loading" ? (pt ? "Carregando interações…" : "Loading interactions…") : phase === "saving" ? (pt ? "Salvando…" : "Saving…") : phase === "error" ? (pt ? "Interações indisponíveis. Nenhuma confirmação recebida." : "Interactions unavailable. No confirmation received.") : phase === "signed-out" ? (pt ? "Entre em uma conta com acesso à Arena para interagir." : "Sign in with Arena access to interact.") : (pt ? "Interações salvas na sua conta." : "Interactions saved to your account.")}
+        {phase === "loading" ? (pt ? "Carregando interações…" : "Loading interactions…") : phase === "saving" ? (pt ? "Salvando…" : "Saving…") : phase === "error" ? (pt ? "Interações indisponíveis. Nenhuma confirmação recebida." : "Interactions unavailable. No confirmation received.") : phase === "signed-out" ? (pt ? "Entre em uma conta com acesso à TouchLine para interagir." : "Sign in with TouchLine access to interact.") : (pt ? "Interações salvas na sua conta." : "Interactions saved to your account.")}
       </p>
       {phase === "error" ? <button type="button" className={styles.retry} onClick={() => { setPhase("loading"); setRevision((value) => value + 1); }}>{pt ? "Consultar novamente" : "Check again"}</button> : null}
-      {phase === "signed-out" ? <a className={styles.retry} href={`/login?lang=${encodeURIComponent(locale)}`}>{pt ? "Entrar na Arena" : "Sign in to Arena"}</a> : null}
+      {phase === "signed-out" ? <a className={styles.retry} href={`/login?lang=${encodeURIComponent(locale)}`}>{pt ? "Entrar na TouchLine" : "Sign in to TouchLine"}</a> : null}
       {purchaseHref ? <div className={shared.profileActions}><a href={purchaseHref}>{purchaseLabel ?? (pt ? "Contratar jogador" : "Contract player")}</a></div> : null}
     </section>
   );

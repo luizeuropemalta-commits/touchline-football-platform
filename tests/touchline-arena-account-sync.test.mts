@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 
 import type { ArenaLineupPlayer } from "../lib/football-data/arena-lineup.ts";
@@ -255,47 +254,4 @@ describe("TouchLine Arena legacy inventory reconciliation", () => {
     assert.equal(reconciled[0].name, "Alisson Becker");
     assert.equal(reconciled[0].card?.inventoryId, INVENTORY_ID);
   });
-});
-
-it("wires the account sync gate before the Arena remote PUT", async () => {
-  const source = await readFile(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-  const remotePutIndex = source.indexOf('method: "PUT"');
-  assert.ok(remotePutIndex > 0);
-  const effectStart = source.lastIndexOf("useEffect(() => {", remotePutIndex);
-  const effect = source.slice(effectStart, remotePutIndex + 80);
-
-  assert.match(effect, /!hasLoadedClubOwnerRoster/);
-  assert.match(effect, /canPersistArenaAccountState\(arenaPersistencePrincipal, arenaAccountSyncStatus\)/);
-  assert.match(effect, /arenaRosterSyncStatus !== "ready"/);
-  assert.ok(effect.indexOf("canPersistArenaAccountState") < effect.indexOf('method: "PUT"'));
-  assert.match(source, /data-account-sync-status=\{arenaAccountSyncStatus\}/);
-  assert.match(source, /data-roster-sync-status=\{arenaRosterSyncStatus\}/);
-  assert.match(source, /fetch\("\/api\/touchline-arena\/roster", \{ cache: "no-store" \}\)/);
-  assert.match(source, /reconcileArenaLineupWithAuthoritativeRoster\(players, roster\)/);
-});
-
-it("bootstraps account identity through the bounded authoritative server route", async () => {
-  const source = await readFile(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-
-  assert.doesNotMatch(source, /hasTouchlineBrowserSession/);
-  assert.doesNotMatch(source, /supabase\.auth\.getSession\(\)/);
-  const bootstrapStart = source.indexOf("if (!isDemoRequest) {");
-  const bootstrapEnd = source.indexOf("if (cancelled) return;", bootstrapStart);
-  const bootstrap = source.slice(bootstrapStart, bootstrapEnd);
-  assert.match(bootstrap, /touchlineJsonRequest</);
-  assert.match(bootstrap, /"\/api\/touchline-arena\/state"/);
-  assert.match(bootstrap, /\{ cache: "no-store", timeoutMs: 8_000 \}/);
-  assert.match(source, /setHasLoadedOwnerCoach\(true\)/);
-});
-
-it("bootstraps an authenticated wallet from the authoritative inventory snapshot", async () => {
-  const source = await readFile(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-  const bootstrapStart = source.indexOf('arenaAccountSyncStatus !== "ready"');
-  const bootstrapEnd = source.indexOf("useEffect(() => {", bootstrapStart + 20);
-  const bootstrapEffect = source.slice(bootstrapStart, bootstrapEnd);
-
-  assert.match(source, /const \[marketWalletBalanceTc, setMarketWalletBalanceTc\] = useState\(0\)/);
-  assert.match(bootstrapEffect, /arenaPersistencePrincipal\?\.kind !== "authenticated"/);
-  assert.match(bootstrapEffect, /\/api\/touchline-arena\/market\/inventory\?teamId=/);
-  assert.match(bootstrapEffect, /setMarketWalletBalanceTc\(inventorySnapshot\.walletBalanceTc\)/);
 });

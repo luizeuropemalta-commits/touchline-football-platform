@@ -74,7 +74,7 @@ export function TouchlineSocialApprovedScoreboard({
 }
 
 function ApprovedClub({ club }: Readonly<{ club: TouchlineApprovedClub }>) {
-  return <div><img src={club.logoUrl} alt="" aria-hidden="true" width={76} height={76} style={{ width: 76, height: 76, objectFit: "contain", filter: `drop-shadow(0 0 10px ${club.accent})` }} /><strong style={{ display: "block" }}>{club.name}</strong></div>;
+  return <div><img src={club.logoUrl} alt="" aria-hidden="true" width={76} height={76} style={{ width: 76, height: 76, objectFit: "contain" }} /><strong style={{ display: "block" }}>{club.name}</strong></div>;
 }
 
 export function TouchlineSocialApprovedDuel({

@@ -229,7 +229,7 @@ export default async function TouchlineCoachProfilePage({
         .coach-profile-offer-grid strong { margin-top:3px; color:white; font-size:13px; }
         .coach-profile-facts { display:grid; align-content:start; gap:16px; }
         .coach-profile-club { display:flex; align-items:center; gap:12px; min-width:0; border:1px solid rgba(181,255,75,.17); border-radius:16px; padding:12px; background:linear-gradient(135deg,rgba(181,255,75,.08),rgba(0,0,0,.16)); }
-        .coach-profile-club img,.coach-profile-club > svg { width:48px; height:48px; flex:0 0 auto; object-fit:contain; filter:drop-shadow(0 0 12px color-mix(in srgb,${club.accent} 55%,transparent)); }
+        .coach-profile-club img,.coach-profile-club > svg { width:48px; height:48px; flex:0 0 auto; object-fit:contain; filter:none; }
         .coach-profile-club small,.coach-profile-club strong { display:block; }
         .coach-profile-club small,.coach-profile-campaign header span { color:rgba(229,255,203,.56); font-size:9px; font-weight:900; letter-spacing:.11em; }
         .coach-profile-club strong { margin-top:3px; color:#fff; font-size:16px; }

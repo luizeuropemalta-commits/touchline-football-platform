@@ -54,6 +54,6 @@ test("native club feed keeps its shared TouchLine frame while deriving media and
   const styles = readFileSync(new URL("../components/touchline/club-social/TouchlineClubSocialFeed.module.css", import.meta.url), "utf8");
   assert.match(styles, /--feed-accent:\s*var\(--club-accent, #a3ff12\)/);
   assert.match(styles, /\.shell\s*\{[\s\S]*?border: 1px solid rgba\(163, 255, 18, \.34\)/);
-  assert.match(styles, /\.liveMedia img\s*\{[\s\S]*?drop-shadow\(0 0 13px var\(--feed-accent\)\)/);
+  assert.match(styles, /\.liveMedia img\s*\{[^}]*filter: none/);
   assert.match(styles, /\.actions button\s*\{[\s\S]*?var\(--feed-accent\)/);
 });

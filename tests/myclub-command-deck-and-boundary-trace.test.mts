@@ -6,16 +6,12 @@ import test from "node:test";
 const root = process.cwd();
 const source = (file: string) => readFile(path.join(root, file), "utf8");
 
-test("authenticated My Club uses the command deck and keeps controls with the owner identity", async () => {
-  const [profile, social, css] = await Promise.all([
-    source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
+test("the shared social command header preserves its presentation options", async () => {
+  const [social, css] = await Promise.all([
     source("components/touchline/social/TouchlineSocial.tsx"),
     source("components/touchline/social/TouchlineSocial.module.css"),
   ]);
 
-  assert.match(profile, /coverVariant=\{showPrivateClubControl \? "command" : "standard"\}/);
-  assert.match(profile, /actionsPlacement=\{showPrivateClubControl \? "avatar" : "default"\}/);
-  assert.match(profile, /\.filter\(\(detail\) => Boolean\(detail\.value && detail\.value !== "—"\)\)/);
   assert.match(social, /coverVariant\?: "standard" \| "stadium" \| "command"/);
   assert.match(social, /actionsPlacement\?: "default" \| "avatar"/);
   assert.match(social, /actionsPlacement === "avatar"/);

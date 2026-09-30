@@ -278,15 +278,30 @@ export function touchLineAuthHref(path: string, locale?: string | null) {
 }
 
 export function normalizeTouchLineAuthReturnTo(returnTo?: string | null) {
-  if (!returnTo || returnTo.includes("\\") || returnTo.startsWith("//")) return null;
+  if (!returnTo?.startsWith("/") || returnTo.includes("\\") || returnTo.startsWith("//")) return null;
+  if ([...returnTo].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return null;
 
   try {
     const candidate = new URL(returnTo, TOUCHLINE_AUTH_URL_BASE);
     if (candidate.origin !== TOUCHLINE_AUTH_URL_BASE) return null;
-    const isAllowed = TOUCHLINE_AUTH_RETURN_PATHS.some(
+    const isAllowed = candidate.pathname === "/intro" || TOUCHLINE_AUTH_RETURN_PATHS.some(
       (path) => candidate.pathname === path || candidate.pathname.startsWith(`${path}/`),
     );
-    return isAllowed ? `${candidate.pathname}${candidate.search}${candidate.hash}` : null;
+    if (!isAllowed) return null;
+    if (candidate.pathname === "/arena" && candidate.searchParams.get("intro") === "first") {
+      candidate.pathname = "/intro";
+    } else if (candidate.pathname === "/arena" || candidate.pathname.startsWith("/arena/")
+      || candidate.pathname === TOUCHLINE_CLUB_OWNER_ROUTE_BASE
+      || candidate.pathname.startsWith(`${TOUCHLINE_CLUB_OWNER_ROUTE_BASE}/`)) {
+      // Retired UI context cannot select another owner's identity or a private
+      // destination. Only the language survives the move to the customer game.
+      const locale = candidate.searchParams.get("lang");
+      candidate.pathname = "/market-transfer";
+      candidate.search = "";
+      candidate.hash = "";
+      if (locale) candidate.searchParams.set("lang", normalizeTouchLineAuthLocale(locale));
+    }
+    return `${candidate.pathname}${candidate.search}${candidate.hash}`;
   } catch {
     return null;
   }
@@ -306,7 +321,7 @@ export function normalizeTouchLineAdminReturnTo(returnTo?: string | null) {
 export function touchLinePostAuthHref(
   returnTo: string | null | undefined,
   locale?: string | null,
-  fallbackPath = "/arena",
+  fallbackPath = "/market-transfer",
 ) {
   const destination = new URL(
     normalizeTouchLineAuthReturnTo(returnTo) ?? fallbackPath,

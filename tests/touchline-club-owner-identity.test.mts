@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -7,15 +6,6 @@ import {
   resolveTouchlineClubOwnerPageIdentity,
   touchlineClubOwnerSlugForUser,
 } from "../lib/touchlineArena/club-owner-page-identity.ts";
-
-const rendererSource = readFileSync(
-  new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url),
-  "utf8",
-);
-const avatarUploadSource = readFileSync(
-  new URL("../components/touchline/ClubOwnerAvatarUpload.tsx", import.meta.url),
-  "utf8",
-);
 
 test("an authenticated ClubOwner profile uses that account identity, not Luiz's public identity", () => {
   const identity = resolveTouchlineClubOwnerPageIdentity({
@@ -57,7 +47,7 @@ test("unsafe or absent profile metadata never reuses Luiz's photo for another ac
   assert.equal(identity.since, "—");
 });
 
-test("stored profile media overrides auth metadata and never enters the session token", () => {
+test("stored profile media overrides auth metadata in the identity projection", () => {
   const storedAvatar = "data:image/jpeg;base64,aGVsbG8=";
   const identity = resolveTouchlineClubOwnerPageIdentity({
     id: "account-3",
@@ -70,9 +60,6 @@ test("stored profile media overrides auth metadata and never enters the session 
   }, "maria-silva", storedAvatar);
 
   assert.equal(identity?.avatarUrl, storedAvatar);
-  assert.match(avatarUploadSource, /\.from\("users"\)/);
-  assert.match(avatarUploadSource, /\.update\(\{ avatar_url: avatarUrl \}\)/);
-  assert.doesNotMatch(avatarUploadSource, /auth\.updateUser\(\{ data: \{ avatar_url/);
 });
 
 test("ClubOwner slugs come from account metadata/name and never silently fall back to Luiz", () => {
@@ -102,47 +89,4 @@ test("the anonymous page preserves the isolated public Luiz profile", () => {
   assert.equal(identity.name, PUBLIC_CLUB_OWNER_IDENTITY.name);
   assert.equal(identity.avatarUrl, PUBLIC_CLUB_OWNER_IDENTITY.avatarUrl);
   assert.equal(identity.entityId, PUBLIC_CLUB_OWNER_IDENTITY.entityId);
-});
-
-test("ClubOwner account, private controls, roster and TC wallet share one non-admin boundary", () => {
-  assert.match(
-    rendererSource,
-    /const clubOwnerUser = user && !isOwnerEmail\(user\.email\) \? user : null;/,
-  );
-  assert.match(
-    rendererSource,
-    /const activeClubOwnerUser = ownerIdentity\.isAuthenticatedClubOwner && clubOwnerUser \? clubOwnerUser : null;/,
-  );
-  assert.match(
-    rendererSource,
-    /const showPrivateClubControl = ownerIdentity\.isAuthenticatedClubOwner;/,
-  );
-  assert.match(
-    rendererSource,
-    /readAuthoritativeTouchlineRoster\(admin, activeClubOwnerUser\.id\)/,
-  );
-  assert.match(rendererSource, /\.eq\("user_id", activeClubOwnerUser\.id\)/);
-  assert.match(rendererSource, /\.eq\("currency", "TC"\)/);
-  assert.doesNotMatch(
-    rendererSource,
-    /showPrivateClubControl\s*=\s*process\.env\.NODE_ENV/,
-  );
-  assert.doesNotMatch(
-    rendererSource,
-    /showPrivateClubControl\s*=.*isOwnerEmail/,
-  );
-});
-
-test("rendered identity and social namespaces come from the resolved ClubOwner", () => {
-  assert.match(rendererSource, /name=\{ownerIdentity\.name\}/);
-  assert.match(rendererSource, /avatarUrl=\{ownerIdentity\.avatarUrl\}/);
-  assert.match(rendererSource, /entityId=\{ownerIdentity\.entityId\}/);
-  assert.match(rendererSource, /entityName=\{ownerIdentity\.name\}/);
-  assert.doesNotMatch(rendererSource, /name="Luiz Lopez"/);
-  assert.doesNotMatch(rendererSource, /entityName="Luiz Lopez"/);
-});
-
-test("My Club displays the current XI capacity without surfacing retired contract capacity", () => {
-  assert.match(rendererSource, /clubCopy\.xiCapacity[\s\S]{0,120}\{fantasySnapshot\?\.selections\.length \?\? 0\}\/11/);
-  assert.doesNotMatch(rendererSource, /ownedContractCount|openContractSlotCount|clubCopy\.limit35|\/35/);
 });

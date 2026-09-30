@@ -12,16 +12,16 @@ const COPY: Partial<Record<TouchLineLocale, { eyebrow: string; title: string; bo
   "pt-BR": {
     eyebrow: "TouchLine · estado seguro",
     title: "Não foi possível abrir esta área agora.",
-    body: "Nenhum dado do seu clube foi alterado. Você pode tentar novamente ou voltar para a Arena.",
+    body: "Nenhum dado do seu clube foi alterado. Você pode tentar novamente ou voltar para o Mercado.",
     retry: "Tentar novamente",
-    arena: "Voltar à Arena",
+    arena: "Voltar ao Mercado",
   },
   "en-GB": {
     eyebrow: "TouchLine · safe state",
     title: "This area could not be opened right now.",
-    body: "No club data has been changed. Try again or return to the Arena.",
+    body: "No club data has been changed. Try again or return to the Market.",
     retry: "Try again",
-    arena: "Return to Arena",
+    arena: "Return to Market",
   },
 };
 
@@ -33,7 +33,7 @@ export default function TouchlineErrorBoundary({ error: _error, reset }: Touchli
   );
 
   const copy = COPY[locale] ?? COPY["en-GB"]!;
-  const arenaHref = `/arena?lang=${locale}`;
+  const arenaHref = `/market-transfer?lang=${locale}`;
 
   return (
     <main className="min-h-[100dvh] bg-[#040706] px-5 py-[max(32px,env(safe-area-inset-top))] text-white">

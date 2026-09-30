@@ -39,7 +39,7 @@ type ShellLink = {
 
 const PRIMARY_LINKS: ShellLink[] = [
   {
-    href: "/arena",
+    href: "/intro",
     label: "TouchLine Arena",
     description: "Return to matchday",
     icon: Trophy,
@@ -104,7 +104,7 @@ const OWNER_LINKS: ShellLink[] = [
 ];
 
 function pathIsActive(pathname: string, href: string) {
-  if (href === "/arena") return pathname === "/arena";
+  if (href === "/intro") return pathname === "/intro";
   if (href === "/admin") return pathname === "/admin";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -187,7 +187,7 @@ export function ArenaAdminShell({
     signingOut: "Signing out…", signOut: "Sign out", switchAccount: "Switch account", authUnavailable: "Authentication service is unavailable.",
   };
   const primaryLinks = pt ? [
-    { href: "/arena", label: "TouchLine Arena", description: "Voltar ao dia de jogo", icon: Trophy },
+    { href: "/intro", label: "TouchLine Arena", description: "Voltar ao dia de jogo", icon: Trophy },
     { href: "/notifications", label: "Notificações", description: "Suas preferências de entrega", icon: Bell },
     { href: "/inbox", label: "Caixa de entrada", description: "Avisos oficiais da Central", icon: Inbox },
     { href: "/football-search", label: "Pesquisa de Futebol", description: "Dados oficiais de futebol", icon: Search },
@@ -379,7 +379,7 @@ export function ArenaAdminShell({
                 <Bell size={16} />
               </Link>
               <Link
-                href={touchLineAuthHref("/arena", locale)}
+                href={touchLineAuthHref("/intro", locale)}
                 className="hidden h-10 items-center gap-2 rounded-xl border border-[#a3ff12]/25 bg-[#a3ff12]/[.08] px-3 text-[9px] font-black text-[#caff72] transition hover:bg-[#a3ff12]/[.13] sm:flex"
               >
                 <Trophy size={14} />

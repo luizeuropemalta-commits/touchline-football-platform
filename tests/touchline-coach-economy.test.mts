@@ -117,7 +117,6 @@ test("Coach-first keeps server-owned offer tiers while hiding monetary coach val
   const coachCard = readFileSync(new URL("../lib/touchlineArena/coach-card.ts", import.meta.url), "utf8");
   const coachRoute = readFileSync(new URL("../app/api/touchline-arena/coach/route.ts", import.meta.url), "utf8");
   const marketRoute = readFileSync(new URL("../app/api/touchline-arena/market/inventory/route.ts", import.meta.url), "utf8");
-  const arena = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 
   assert.doesNotMatch(coachCard, /TOUCHLINE_COACH_TIER_PRICES/);
   assert.match(coachCard, /touchlineArenaTierForKey\(cardTier\)/);
@@ -125,7 +124,4 @@ test("Coach-first keeps server-owned offer tiers while hiding monetary coach val
   assert.match(coachRoute, /resolveCompetitionCardOffer/);
   assert.match(marketRoute, /resolveCompetitionCardOffer/);
   assert.match(marketRoute, /subjectType: "player"/);
-  assert.match(arena, /coachOffersByProviderId/);
-  assert.doesNotMatch(arena, /offer\.displayPrice/);
-  assert.match(arena, /offer\.tierKey/);
 });

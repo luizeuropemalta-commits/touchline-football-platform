@@ -7,7 +7,6 @@ import {
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
 import { resolveTouchlineContractedCommercialCardPrice } from "./commercial-card-pricing.ts";
-import { touchlineClubOwnerBasePath } from "./club-owner-routes.ts";
 import type { TouchlinePublicEditorialCardPresentation } from "./editorial-card-profile.ts";
 import type { TouchlineCardReviewPresentation } from "./card-review-state.ts";
 
@@ -89,7 +88,6 @@ export type TouchLineClubOwnerStanding = {
   touchlinePoints: number;
   squadValueTc: number;
   avatarUrl?: string;
-  profileHref?: string;
 };
 
 export type TouchLineEnglandClubStanding = {
@@ -303,7 +301,6 @@ export function buildDemoClubOwnerStandings(ownerCards: ClubOwnerSquadCard[] = C
       touchlinePoints: ownerPoints,
       squadValueTc: ownerValueTc,
       avatarUrl: "/touchlineArena/club-owner/avatars/luiz-lopez-owner-avatar-v1.png",
-      profileHref: touchlineClubOwnerBasePath(),
     },
     { id: "north-stand", rank: 2, name: "North Stand Elite", clubName: "North Stand FC", countryCode3: "ENG", squadCount: 35, touchlinePoints: 0, squadValueTc: 35 },
     { id: "royal-touch", rank: 3, name: "Royal Touch XI", clubName: "Royal Touch XI", countryCode3: "ENG", squadCount: 35, touchlinePoints: 0, squadValueTc: 35 },

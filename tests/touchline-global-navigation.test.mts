@@ -60,9 +60,6 @@ test("Club Profile, Live and 404 use the shared public navigation without duplic
   const tables = source("app/touchline-tables/page.tsx");
   const rankings = source("app/touchline-player-card-rankings/page.tsx");
   const clubDiscovery = source("app/touchline-clubs/page.tsx");
-  const clubOwnerProfile = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
-  const clubOwnerHistory = source("components/touchline/club-owner/ClubOwnerSeasonHistoryRenderer.tsx");
-  const clubOwnerRenewals = source("components/touchline/club-owner/ClubOwnerRenewalCenterRenderer.tsx");
   const navigationStyles = source("components/touchline/TouchlineGlobalNavigation.module.css");
 
   assert.match(clubProfile, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="clubProfile"[\s\S]*?surface="public"[\s\S]*?trustedContext=\{\{/);
@@ -88,12 +85,6 @@ test("Club Profile, Live and 404 use the shared public navigation without duplic
   assert.doesNotMatch(rankings, /TouchlineProfileQuickNav/);
   assert.match(clubDiscovery, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="clubHub"[\s\S]*?surface="public"/);
   assert.doesNotMatch(clubDiscovery, /className=\{styles\.quickNav\}/);
-  assert.match(clubOwnerProfile, /<TouchlineGlobalNavigation[\s\S]*?currentRoute=\{ownerIdentity\.isAuthenticatedClubOwner \? "myClub" : "clubProfile"\}[\s\S]*?surface=\{ownerIdentity\.isAuthenticatedClubOwner \? "authenticated" : "public"\}/);
-  assert.match(clubOwnerHistory, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="clubOwnerHistory"[\s\S]*?surface=\{isOwner \? "authenticated" : "public"\}/);
-  assert.match(clubOwnerRenewals, /<TouchlineGlobalNavigation[\s\S]*?currentRoute="clubOwnerRenewals"[\s\S]*?surface=\{isOwner \? "authenticated" : "public"\}/);
-  assert.doesNotMatch(clubOwnerProfile, /TouchlineProfileQuickNav/);
-  assert.doesNotMatch(clubOwnerHistory, /TouchlineProfileQuickNav|touchlineArenaHref/);
-  assert.doesNotMatch(clubOwnerRenewals, /TouchlineProfileQuickNav|touchlineArenaHref/);
 });
 
 test("shared navigation keeps crisp borders and no blurred neon ring", () => {

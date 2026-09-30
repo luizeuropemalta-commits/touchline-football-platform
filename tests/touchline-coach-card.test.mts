@@ -179,36 +179,6 @@ test("normalizes the square emerald coach export through lightweight runtime der
   assert.doesNotMatch(coachCardStyles, /\.frame \{[\s\S]*?transform: scale\(1\);/);
 });
 
-test("keeps the approved live compact player and coach sizes across desktop and mobile", () => {
-  const arenaClient = fs.readFileSync("app/arena/ArenaClient.tsx", "utf8");
-
-  assert.match(arenaClient, /\.arena-live-moving-card \{[\s\S]*?width: clamp\(27px, 3vw, 42px\)/);
-  assert.match(arenaClient, /\.arena-live-coach-card-art \{[\s\S]*?width: clamp\(35px, 3\.9vw, 55px\)/);
-  assert.match(arenaClient, /@media \(max-width: 900px\)[\s\S]*?\.arena-live-coach-card-art \{[\s\S]*?width: clamp\(30px, 7\.4vw, 42px\)/);
-  assert.match(arenaClient, /@media \(max-width: 760px\)[\s\S]*?\.arena-live-moving-card \{[\s\S]*?width: clamp\(30px, 7\.8vw, 38px\)/);
-
-  assert.ok(35 / 27 >= 1.29);
-  assert.ok(55 / 42 >= 1.3);
-});
-
-test("keeps live coach zoom isolated and renders the full card instead of compact content", () => {
-  const arenaClient = fs.readFileSync("app/arena/ArenaClient.tsx", "utf8");
-  const liveCoachSpotlightStart = arenaClient.indexOf('className="arena-coach-spotlight arena-live-card-spotlight arena-live-coach-spotlight"');
-  const liveCoachSpotlightSource = arenaClient.slice(liveCoachSpotlightStart, liveCoachSpotlightStart + 2800);
-
-  assert.ok(liveCoachSpotlightStart >= 0);
-  assert.match(liveCoachSpotlightSource, /className="arena-live-coach-spotlight-card"/);
-  assert.match(liveCoachSpotlightSource, /forceNeonActive/);
-  assert.doesNotMatch(liveCoachSpotlightSource, /displayMode="compact"/);
-  assert.match(
-    arenaClient,
-    /\.arena-stage\[data-coach-spotlight="open"\] \.field-player-layer,[\s\S]*?visibility: hidden;[\s\S]*?pointer-events: none/,
-  );
-  assert.match(
-    arenaClient,
-    /\.arena-coach-spotlight \{[\s\S]*?position: fixed;[\s\S]*?z-index: 1305;[\s\S]*?isolation: isolate;[\s\S]*?overflow: hidden/,
-  );
-});
 
 test("reveals every coach card as one decoded product instead of exposing floating layers", () => {
   const coachCard = fs.readFileSync("components/touchline/cards/TouchlineCoachCard.tsx", "utf8");

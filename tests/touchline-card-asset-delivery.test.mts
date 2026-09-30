@@ -135,15 +135,8 @@ test("keeps the Live pitch and all fixture crests inside responsive runtime budg
     assert.ok((metadata.height ?? 0) <= 160, file);
     assert.ok(fs.statSync(file).size < 20_000, `${file} exceeds the 20 KB crest budget`);
   }
-
-  const arenaClient = fs.readFileSync("app/arena/ArenaClient.tsx", "utf8");
   const pitchSurface = fs.readFileSync("components/touchline/pitch/TouchlinePitchSurface.module.css", "utf8");
-  assert.match(arenaClient, /function liveOptimizedClubLogoUrl/);
-  assert.match(arenaClient, /import TouchlinePitchSurface/);
-  assert.match(arenaClient, /<TouchlinePitchSurface className="arena-live-visualizer"/);
   assert.match(pitchSurface, /official-live-pitch-960\.webp/);
-  assert.match(arenaClient, /const ARENA_LIVE_VISUAL_ASSET_VERSION = "2026-07-28-1"/);
-  assert.doesNotMatch(arenaClient, /src="\/touchlineArena\/live\/official-live-pitch-dgim-studio-freepik\.jpg"/);
 
   const nextConfig = fs.readFileSync("next.config.ts", "utf8");
   assert.match(nextConfig, /Cache-Control/);

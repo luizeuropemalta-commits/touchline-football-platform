@@ -17,7 +17,7 @@ export default async function FootballSearchPage({
   return (
     <div className="mx-auto max-w-[1760px] animate-in space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Link href={touchLineAuthHref("/arena", locale)} className="inline-flex items-center gap-2 text-[8px] font-black text-slate-600 hover:text-cyan-300">
+        <Link href={touchLineAuthHref("/market-transfer", locale)} className="inline-flex items-center gap-2 text-[8px] font-black text-slate-600 hover:text-cyan-300">
           <ArrowLeft size={12} />
           {copy.back}
         </Link>

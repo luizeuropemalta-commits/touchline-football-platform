@@ -1,38 +1,21 @@
-import { TOUCHLINE_CLUB_OWNER_ROUTE_BASE } from "../touchlineArena/club-owner-routes.ts";
-
-const ALLOWED_AUTH_CALLBACK_PATHS = [
-  "/arena",
-  "/my-club",
-  TOUCHLINE_CLUB_OWNER_ROUTE_BASE,
-  "/reset-password",
-  "/market-transfer",
-  "/admin",
-  "/notifications",
-  "/inbox",
-  "/football-search",
-  "/visual-qa",
-] as const;
-
-function isAllowedPath(pathname: string) {
-  return ALLOWED_AUTH_CALLBACK_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
-  );
-}
+import { normalizeTouchLineAuthReturnTo } from "../touchlineArena/auth-i18n.ts";
 
 export function resolveTouchLineAuthCallbackDestination(
   requestedNext: string | null | undefined,
   requestOrigin: string,
 ) {
   const trustedOrigin = new URL(requestOrigin).origin;
-  const fallback = new URL("/arena", trustedOrigin);
-  if (!requestedNext) return fallback;
+  const fallback = new URL("/market-transfer", trustedOrigin);
+  if (!requestedNext || requestedNext.includes("\\") || requestedNext.startsWith("//")) return fallback;
+  if ([...requestedNext].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return fallback;
 
   try {
     const candidate = new URL(requestedNext, trustedOrigin);
-    if (candidate.origin !== trustedOrigin || !isAllowedPath(candidate.pathname)) {
-      return fallback;
-    }
-    return candidate;
+    if (candidate.origin !== trustedOrigin) return fallback;
+    // Recovery remains separate from ordinary post-auth navigation.
+    if (candidate.pathname === "/reset-password") return candidate;
+    const normalized = normalizeTouchLineAuthReturnTo(`${candidate.pathname}${candidate.search}${candidate.hash}`);
+    return normalized ? new URL(normalized, trustedOrigin) : fallback;
   } catch {
     return fallback;
   }

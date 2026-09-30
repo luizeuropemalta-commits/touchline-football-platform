@@ -4,14 +4,12 @@ import test from "node:test";
 
 import { TOUCHLINE_CLUB_OWNER_XI_SLOTS, TOUCHLINE_STANDARD_433_SLOTS, touchlineCanonicalFormationSlots } from "../lib/touchlineArena/pitch-layout.ts";
 
-const clubOwnerRenderer = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
 const gameweekTeamSnapshot = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx", import.meta.url), "utf8");
 const clubHubLineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 const clubLineupBuilder = readFileSync(new URL("../lib/touchlineArena/club-lineup.ts", import.meta.url), "utf8");
 const clubHubLineupCss = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
 const clubHubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
 const tablesClient = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
-const arenaClient = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 const pitchSurfaceCss = readFileSync(new URL("../components/touchline/pitch/TouchlinePitchSurface.module.css", import.meta.url), "utf8");
 
 test("Ranking preserves the shared landscape field ratio without a height floor", () => {
@@ -63,12 +61,10 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
 });
 
 test("field art is a shared component rather than separate page drawings", () => {
-  assert.match(clubOwnerRenderer, /<FantasyGameweekClient[\s\S]{0,280}?initialSnapshot=\{fantasySnapshot\}[\s\S]{0,180}?locale=\{locale\}[\s\S]{0,180}?embedded/);
   assert.match(gameweekTeamSnapshot, /TouchlinePitchSurface/);
   assert.match(clubHubLineup, /TouchlinePitchSurface/);
   assert.match(clubLineupBuilder, /touchlineCanonicalFormationSlots\(formation, input\.formationGeometryRegistry\)/);
   assert.match(readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8"), /touchlineCanonicalFormationSlots\(formation, geometryRegistry\)/);
-  assert.doesNotMatch(clubOwnerRenderer, /CLUB_OWNER_PROFILE_PITCH_SLOTS/);
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });
 
@@ -78,7 +74,6 @@ test("static Rank, Line-up, and Club Owner fields share Market's premium grass w
   assert.match(clubHubLineup, /orientation="horizontal"[\s\S]*?surfaceVariant="premium-stadium"/);
   assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?touchline-premium-grass-clean-horizontal-v1\.png/);
   assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?repeating-linear-gradient\(90deg/);
-  assert.doesNotMatch(arenaClient, /surfaceVariant="premium-stadium"/);
 });
 
 test("ClubHub formation keeps each card as the single visible player identity surface", () => {

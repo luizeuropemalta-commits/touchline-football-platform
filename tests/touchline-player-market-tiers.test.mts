@@ -15,7 +15,6 @@ import {
 
 const productionEconomicSurfaces = [
   "../components/touchline/cards/TouchlineEliteExactCard.tsx",
-  "../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
   "../app/touchline-player-card-rankings/page.tsx",
   "../app/touchline-players/[player]/page.tsx",
 ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));

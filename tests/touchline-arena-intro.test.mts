@@ -90,8 +90,8 @@ test("first-entry, returning-entry and explicit-skip launches resolve determinis
 });
 
 test("first-entry links preserve locale and cannot accidentally inject a skip parameter", () => {
-  assert.equal(touchlineArenaFirstEntryHref("pt-BR"), "/arena?lang=pt-BR&intro=first");
-  assert.equal(touchlineArenaFirstEntryHref("en-GB"), "/arena?lang=en-GB&intro=first");
+  assert.equal(touchlineArenaFirstEntryHref("pt-BR"), "/intro?lang=pt-BR&intro=first");
+  assert.equal(touchlineArenaFirstEntryHref("en-GB"), "/intro?lang=en-GB&intro=first");
 
   const hostileLocale = new URL(touchlineArenaFirstEntryHref("pt-BR&skipIntro=1"), "https://touchline.example");
   assert.equal(hostileLocale.searchParams.get("lang"), "pt-BR&skipIntro=1");
@@ -162,23 +162,6 @@ test("the shared intro component implements an explicit first-entry sequence, sk
   assert.ok(outline < energy && energy < slogan && slogan < stadium && stadium < reveal && reveal < complete);
 });
 
-test("skip remains available through loading, every intro phase and the stadium entry video", () => {
-  const component = source("components/touchline/arena/TouchlineArenaIntro.tsx");
-  const arena = source("app/arena/ArenaClient.tsx");
-
-  // No phase restriction: reveal is still part of the introduction.
-  assert.match(component, /const canSkipSequence = mode !== "hidden" && mode !== "skip"/);
-  assert.match(component, /sequenceStartRef\.current\(true\)/);
-  // The video control must not depend on a callback from an earlier phase.
-  assert.match(arena, /\{!hasEntryVideoFinished && introExperienceMode === "hidden" \? \(/);
-  const skipStart = arena.indexOf("function skipOfficialIntroExperience()");
-  const skipEnd = arena.indexOf("function replayEntryVideo()", skipStart);
-  const skip = arena.slice(skipStart, skipEnd);
-  assert.match(skip, /completeOfficialIntroExperience\(\)/);
-  assert.match(skip, /startCardLoopVideo\(\)/);
-  assert.doesNotMatch(skip, /location\.(assign|replace|href)|router\.(push|replace)/);
-});
-
 test("intro presentation protects safe areas, landscape controls and reduced-motion users", () => {
   const styles = source("components/touchline/arena/touchline-arena-intro.module.css");
 
@@ -246,91 +229,13 @@ test("registration background uses one uninterrupted official intro and preserve
   assert.match(globalStyles, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.auth-cinematic-media \{ background-position: center; \}/);
 });
 
-test("Arena without a lang query restores the stored language before using the cookie fallback", () => {
-  const arena = source("app/arena/ArenaClient.tsx");
-  const readerStart = arena.indexOf("function readTouchLineLocalePreference");
-  const readerEnd = arena.indexOf("function writeTouchLineLocalePreference", readerStart);
-  const reader = arena.slice(readerStart, readerEnd);
-  const queryIndex = reader.indexOf('new URLSearchParams(window.location.search).get("lang")');
-  const storageIndex = reader.indexOf('readBrowserStorage("localStorage", TOUCHLINE_LOCALE_STORAGE_KEY)');
-  const cookieIndex = reader.indexOf("document.cookie");
-
-  assert.ok(readerStart >= 0 && readerEnd > readerStart);
-  assert.match(reader, /if \(rawUrlLocale\) return normalizeTouchLineLocale\(rawUrlLocale\)/);
-  assert.match(reader, /if \(stored\) return stored/);
-  assert.match(reader, /item\.startsWith\(`\$\{TOUCHLINE_LOCALE_STORAGE_KEY\}=`\)/);
-  assert.match(reader, /cookie \? decodeURIComponent\(cookie\.split\("="\)\.slice\(1\)\.join\("="\)\) : null/);
-  assert.ok(queryIndex >= 0 && queryIndex < storageIndex && storageIndex < cookieIndex);
-  assert.match(arena, /const savedLocale = normalizeTouchLineLocale\(readTouchLineLocalePreference\(\)\)/);
-  assert.match(arena, /const preferredLocale = initialLocale[\s\S]*?isTouchLineLocaleComplete\(savedLocale\)/);
-  assert.match(arena, /setSiteLanguage\(\(current\) => current === preferredLocale \? current : preferredLocale\)/);
-});
-
-test("Arena relies on the global landscape boundary, reveals first access quickly and keeps replay explicit", () => {
-  const arena = source("app/arena/ArenaClient.tsx");
-  const page = source("app/arena/page.tsx");
-  const zonePage = source("app/arena/[zone]/page.tsx");
-  const revealStart = arena.indexOf("function revealOfficialArena");
-  const revealEnd = arena.indexOf("function skipOfficialIntroExperience", revealStart);
-  const reveal = arena.slice(revealStart, revealEnd);
-  const hotkeyGuard = arena.indexOf("if (!isArenaFunctionalReady) return;");
-  const hotkeyEffectStart = arena.lastIndexOf("useEffect(() => {", hotkeyGuard);
-  const hotkeyEffectEnd = arena.indexOf("\n\n  useEffect(() => {", hotkeyGuard);
-  const hotkeyEffect = arena.slice(hotkeyEffectStart, hotkeyEffectEnd);
-  const videoStackStart = arena.indexOf('<div className="arena-video-stack"');
-  const entryVideoStart = arena.indexOf("<video", videoStackStart);
-  const loopVideoStart = arena.indexOf("<video", entryVideoStart + 1);
-  const videoStackEnd = arena.indexOf("</div>", loopVideoStart);
-  const entryVideo = arena.slice(entryVideoStart, loopVideoStart);
-  const loopVideo = arena.slice(loopVideoStart, videoStackEnd);
-
-  assert.match(page, /parseTouchlineArenaIntroIntent/);
-  assert.match(page, /initialIntroIntent=/);
-  assert.match(zonePage, /redirect\(`\$\{arenaZone\.href\}\$\{suffix\}`\)/);
-  assert.match(arena, /readBrowserStorage\([\s\S]*?"localStorage",[\s\S]*?TOUCHLINE_ARENA_INTRO_STORAGE_KEY,[\s\S]*?\) === "1"/);
-  assert.match(arena, /resolveTouchlineArenaIntroLaunchMode\(\{ intent, hasCompletedIntro \}\)/);
-  assert.match(arena, /if \(launchMode === "skip"\)/);
-  assert.match(arena, /setIntroExperienceMode\("hidden"\)/);
-  assert.match(arena, /startCardLoopVideo\(\)/);
-  assert.match(arena, /const isArenaIntroViewportReady = useSyncExternalStore\(\s*subscribeTouchlineArenaMediaAvailability,\s*readTouchlineArenaMediaAvailability/);
-  assert.match(arena, /if \(!isArenaIntroViewportReady\) \{\s*arenaMediaSession\.stop\(\);\s*entryVideo\?\.pause\(\);\s*loopVideo\?\.pause\(\)/);
-  assert.match(arena, /if \(isArenaIntroViewportReady && !hasArenaMediaSource\) setHasArenaMediaSource\(true\)/);
-  assert.match(
-    arena,
-    /const isArenaFunctionalReady = Boolean\(standaloneExperience\) \|\| \(\s*isArenaIntroViewportReady\s*&& introExperienceMode === "hidden"\s*&& hasEntryVideoFinished\s*\)/,
-  );
-  assert.match(arena, /<TouchlineArenaIntro/);
-  assert.match(
-    arena,
-    /mode=\{introExperienceMode === "hidden" \? "hidden" : isArenaIntroViewportReady \? introExperienceMode : "pending"\}/,
-  );
-  assert.match(arena, /onComplete=\{completeOfficialIntroExperience\}/);
-  assert.match(arena, /onReveal=\{revealOfficialArena\}/);
-  assert.match(arena, /onSkip=\{skipOfficialIntroExperience\}/);
-  assert.match(arena, /writeBrowserStorage\("localStorage", TOUCHLINE_ARENA_INTRO_STORAGE_KEY, "1"\)/);
-  assert.match(arena, /url\.searchParams\.delete\(TOUCHLINE_ARENA_INTRO_QUERY_PARAM\)/);
-  assert.match(arena, /setIntroExperienceMode\("first"\)/);
-  assert.match(arena, /\{siteLanguage === "pt-BR" \? "Ver intro" : "Watch intro"\}/);
-  assert.match(arena, /preload=\{isEntrySkipAvailable \? "auto" : "metadata"\}/);
-  assert.match(arena, /onEnded=\{startCardLoopVideo\}/);
-  assert.match(arena, /onError=\{startCardLoopVideo\}/);
-  assert.match(arena, /inert=\{isArenaFunctionalReady && !isQaReadOnly \? undefined : true\}/);
-  assert.match(arena, /aria-hidden=\{!isArenaFunctionalReady\}/);
-  assert.match(arena, /if \(reducedMotion\) \{[\s\S]*?loopVideo\.pause\(\)[\s\S]*?setIsArenaVideoPaused\(true\)/);
-  assert.ok(revealStart >= 0 && revealEnd > revealStart);
-  assert.doesNotMatch(reveal, /introExperienceMode === "first"[\s\S]*?startCardLoopVideo\(\)/);
-  assert.match(reveal, /entryVideo\.currentTime = 0[\s\S]*?void playOfficialArenaVideo\(entryVideo\)\.then/);
-  assert.match(reveal, /if \(played === false && arenaMediaMountedRef\.current && readTouchlineArenaMediaAvailability\(\)\) startCardLoopVideo\(\)/);
-  assert.ok(hotkeyEffectStart >= 0 && hotkeyEffectEnd > hotkeyEffectStart);
-  assert.match(hotkeyEffect, /if \(!isArenaFunctionalReady\) return/);
-  assert.match(hotkeyEffect, /document\.addEventListener\("keydown", handleArenaHotkeys\)/);
-  assert.match(hotkeyEffect, /document\.removeEventListener\("keydown", handleArenaHotkeys\)/);
-  assert.ok(hotkeyEffect.indexOf("if (!isArenaFunctionalReady) return") < hotkeyEffect.indexOf('document.addEventListener("keydown"'));
-  assert.ok(videoStackStart >= 0 && entryVideoStart > videoStackStart && loopVideoStart > entryVideoStart && videoStackEnd > loopVideoStart);
-  assert.match(entryVideo, /onPlay=\{\(\) => setIsArenaVideoPaused\(false\)\}/);
-  assert.doesNotMatch(entryVideo, /onPlaying=/);
-  assert.match(loopVideo, /onPlaying=\{handleCardLoopPlaying\}/);
-  assert.doesNotMatch(loopVideo, /onPlay=/);
-  assert.equal((arena.match(/onPlaying=/g) ?? []).length, 1);
-  assert.doesNotMatch(arena, /arena-orientation-gate/);
+test("dedicated intro always offers skip and hands off to Market without a background loop", () => {
+  const component = source("components/touchline/arena/TouchlineArenaIntro.tsx");
+  const entry = source("components/touchline/arena/TouchlineGameEntry.tsx");
+  assert.match(component, /const canSkipSequence = mode !== "hidden" && mode !== "skip"/);
+  assert.match(entry, /onSkip=\{finish\}/);
+  assert.match(entry, /mode === "hidden"/);
+  assert.match(entry, /onClick=\{finish\}/);
+  assert.match(entry, /router.replace\(`\/market-transfer\?lang=/);
+  assert.doesNotMatch(entry, /LOOP_VIDEO|ArenaClient/);
 });

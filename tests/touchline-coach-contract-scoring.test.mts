@@ -17,10 +17,6 @@ const route = await readFile(
   new URL("../app/api/touchline-arena/coach/route.ts", import.meta.url),
   "utf8",
 );
-const arena = await readFile(
-  new URL("../app/arena/ArenaClient.tsx", import.meta.url),
-  "utf8",
-);
 const coachCard = await readFile(
   new URL("../components/touchline/cards/TouchlineCoachCard.tsx", import.meta.url),
   "utf8",
@@ -214,15 +210,6 @@ test("the compact coach card renders exactly the verified Home or Away context",
   assert.match(coachCard, /Home fixture/);
   assert.match(coachCard, /Away fixture/);
   assert.doesNotMatch(coachCard, />AWAY</);
-});
-
-test("Arena exposes current contract, cancellation confirmation, and preserved history", () => {
-  assert.match(arena, /Current contract/i);
-  assert.match(arena, /Release coach/);
-  assert.match(arena, /Confirm release/);
-  assert.match(arena, /historical contract\(s\) preserved/i);
-  assert.match(arena, /contractHistory/);
-  assert.match(arena, /TouchlineCoachPerformance contract=\{activeCoachContract\}/);
 });
 
 test("public coach profile separates official coach context from the shared TouchLine competition record", () => {

@@ -1,112 +1,14 @@
-import TouchlineGameEntry from "@/components/touchline/arena/TouchlineGameEntry";
-import { headers } from "next/headers";
-import { createArenaPhaseTiming } from "@/lib/touchlineArena/server-phase-timing";
 import { redirect } from "next/navigation";
-import { parseTouchlineArenaPanel } from "@/lib/touchlineArena/arena-navigation";
-import { parseTouchlineArenaIntroIntent } from "@/lib/touchlineArena/arena-intro";
 import { normalizeTouchLineLocale } from "@/lib/touchlineArena/i18n";
-import { TOUCHLINE_QA_HOSTNAME } from "@/lib/touchlineArena/public-origin";
-import { resolveServerReadWithin } from "@/lib/touchlineArena/server-read-deadline";
-import { createClient } from "@/lib/supabase/server";
-import { isOwnerEmail } from "@/lib/admin/owner";
-import { readTouchlineFormationGeometryRegistry } from "@/lib/touchlineArena/formation-geometry-server";
-import { loadTouchlineFantasyArenaSnapshot } from "@/lib/touchlineFantasy/server";
-import { buildTouchlineFantasyArenaLineup } from "@/lib/touchlineFantasy/arena-lineup";
 
-// This read only controls the protected Card Engine affordance. It must not
-// leave the App Router's global loading boundary open if Supabase auth stalls.
-const ARENA_SERVER_AUTH_READ_TIMEOUT_MS = 8_000;
-
-export default async function ArenaPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    panel?: string | string[];
-    contractPlayer?: string | string[];
-    contractName?: string | string[];
-    contractClub?: string | string[];
-    intro?: string | string[];
-    skipIntro?: string | string[];
-    lang?: string | string[];
-    qaEditor?: string | string[];
-    qaReadOnly?: string | string[];
-  }>;
+// Temporary compatibility for existing bookmarks; no retired game is loaded.
+export default async function RetiredArenaPage({ searchParams }: {
+  searchParams: Promise<{ lang?: string | string[]; intro?: string | string[]; skipIntro?: string | string[] }>;
 }) {
-  const params = await searchParams;
-  const firstValue = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
-  const initialPanel = parseTouchlineArenaPanel(params.panel);
-  // This route is intentionally reachable only on the exact stable QA host.
-  // The client applies a second authenticated-persona check before edits/save.
-  const requestHost = (await headers()).get("host")?.split(":")[0]?.toLowerCase();
-  // This is a validation-only surface. It is deliberately available only on
-  // the stable QA alias and never enables the editor or a save path.
-  const initialQaReadOnly = firstValue(params.qaReadOnly) === "1"
-    && requestHost === TOUCHLINE_QA_HOSTNAME;
-  const initialQaVisualEditor = firstValue(params.qaEditor) === "1"
-    && requestHost === TOUCHLINE_QA_HOSTNAME
-    && !initialQaReadOnly;
-  if (initialPanel && !initialQaVisualEditor) {
-    const marketParams = new URLSearchParams();
-    const lang = firstValue(params.lang);
-    const contractPlayer = firstValue(params.contractPlayer);
-    const contractName = firstValue(params.contractName);
-    const contractClub = firstValue(params.contractClub);
-    if (lang) marketParams.set("lang", lang);
-    if (initialPanel === "market") {
-      if (contractPlayer) marketParams.set("contractPlayer", contractPlayer);
-      if (contractName) marketParams.set("contractName", contractName);
-      if (contractClub) marketParams.set("contractClub", contractClub);
-      redirect(`/market-transfer${marketParams.size ? `?${marketParams.toString()}` : ""}`);
-    }
-    const suffix = marketParams.size ? `?${marketParams.toString()}` : "";
-    if (initialPanel === "bench" || initialPanel === "formation") {
-      redirect(`/market-transfer${suffix}#my-club-xi-pitch`);
-    }
-    if (initialPanel === "live" || initialPanel === "watch") redirect(`/live${suffix}`);
-    if (initialPanel === "rankings") redirect(`/touchline-tables${suffix}`);
-    redirect(`/arena${suffix}`);
-  }
-
-  const locale = normalizeTouchLineLocale(firstValue(params.lang));
-  if (!initialQaVisualEditor && !initialQaReadOnly) {
-    return <TouchlineGameEntry locale={locale} initialIntroIntent={parseTouchlineArenaIntroIntent({
-      intro: firstValue(params.intro), skipIntro: firstValue(params.skipIntro),
-    })} />;
-  }
-  // Protected calibration remains available without loading the old game for normal play.
-  const { default: ArenaClient } = await import("./ArenaClient");
-  const timing = createArenaPhaseTiming();
-  const [user, initialTwoDimensionalFormationRegistry] = await timing.run("auth-and-geometry", () => Promise.all([
-    createClient().then((supabase) => supabase
-      ? resolveServerReadWithin(
-        supabase.auth.getUser().then(({ data }) => data.user),
-        null,
-        ARENA_SERVER_AUTH_READ_TIMEOUT_MS,
-      )
-      : null),
-    readTouchlineFormationGeometryRegistry(),
-  ]));
-  const fantasySnapshot = user && !isOwnerEmail(user.email)
-    ? await loadTouchlineFantasyArenaSnapshot(user, initialTwoDimensionalFormationRegistry, timing)
-    : null;
-  const fantasyArenaLineup = buildTouchlineFantasyArenaLineup(fantasySnapshot);
-
-  return (
-    <ArenaClient
-      initialPanel={initialPanel}
-      initialLocale={locale}
-      initialContractPlayerId={firstValue(params.contractPlayer)}
-      initialContractPlayerName={firstValue(params.contractName)}
-      initialContractClubId={firstValue(params.contractClub)}
-      initialIntroIntent={parseTouchlineArenaIntroIntent({
-        intro: firstValue(params.intro),
-        skipIntro: firstValue(params.skipIntro),
-      })}
-      initialQaVisualEditor={initialQaVisualEditor}
-      initialQaReadOnly={initialQaReadOnly}
-      canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
-      initialTwoDimensionalFormationRegistry={initialTwoDimensionalFormationRegistry}
-      initialFantasyLineup={fantasyArenaLineup}
-    />
-  );
+  const input = await searchParams;
+  const first = (value?: string | string[]) => Array.isArray(value) ? value[0] : value;
+  const query = new URLSearchParams({ lang: normalizeTouchLineLocale(first(input.lang)) });
+  if (first(input.intro) === "first") query.set("intro", "first");
+  if (first(input.skipIntro) === "1") query.set("skipIntro", "1");
+  redirect(`/intro?${query.toString()}`);
 }

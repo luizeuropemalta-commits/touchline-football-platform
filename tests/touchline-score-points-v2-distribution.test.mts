@@ -8,13 +8,11 @@ import {
 } from "../lib/touchlineArena/player-ranking-eligibility.ts";
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [store, liveSync, arena, accountSync, authoritativeRoster, clubOwner, marketStage, rankingRebuild, rankingPage, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
+const [store, liveSync, accountSync, authoritativeRoster, marketStage, rankingRebuild, rankingPage, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
   read("lib/football-data/player-season-statistics-store.ts"),
   read("lib/football-data/live-sync.ts"),
-  read("app/arena/ArenaClient.tsx"),
   read("lib/touchlineArena/arena-account-sync.ts"),
   read("lib/touchlineArena/authoritative-roster-server.ts"),
-  read("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
   read("components/touchline/market/TouchlineSquadBuilderStage.tsx"),
   read("lib/touchlineArena/player-ranking-rebuild-server.ts"),
   read("app/touchline-player-card-rankings/page.tsx"),
@@ -39,12 +37,9 @@ test("finished and live fixtures enter the same player settlement pipeline", () 
   assert.match(liveSync, /event: "touchline\.live_sync\.completed"/);
 });
 
-test("Arena refreshes canonical Sportmonks ratings without persisting a performance cache", () => {
+test("account and roster readers retain canonical Sportmonks ratings and scoring provenance", () => {
   assert.match(accountSync, /totalRating: rosterCard\.seasonTotalRating \?\? null/);
   assert.match(accountSync, /matchRating: rosterCard\.matchRating \?\? null/);
-  assert.match(arena, /refreshAuthoritativeScoring/);
-  assert.match(arena, /setInterval\(\(\) => void refreshAuthoritativeScoring\(\), 45_000\)/);
-  assert.match(arena, /totalRating: undefined[\s\S]*matchRating: undefined[\s\S]*seasonStats: undefined/);
   assert.match(authoritativeRoster, /football_player_season_statistics[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v3"\)/);
   assert.match(authoritativeRoster, /touchline_player_fixture_score_settlements[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v3"\)/);
 });
@@ -105,7 +100,7 @@ test("ranking pages use the league-wide published catalogue, not a private owner
   assert.match(tablesPage, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
   assert.match(tablesPage, /rosterCards=\{rankedCards\}/);
   assert.doesNotMatch(tablesPage, /cardPlayerRank/);
-  for (const surface of [rankingPage, clubOwner, marketStage]) {
+  for (const surface of [rankingPage, marketStage]) {
     assert.match(surface, /buildTouchlineVerifiedMatchFactFields/);
     assert.doesNotMatch(surface, /buildTouchlineMatchScoringBreakdownFields/);
   }

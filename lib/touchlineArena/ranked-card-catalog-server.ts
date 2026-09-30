@@ -216,11 +216,29 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
     .filter((playerId): playerId is string => Boolean(playerId)))];
   if (!playerIds.length) return [];
 
-  const [playersResponse, squadsResponse, seasonPoints, published] = await Promise.all([
-    catalogueAdmin
+  const playersPromise = (async () => {
+    const response = await catalogueAdmin
       .from("football_players")
       .select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position")
-      .in("id", playerIds),
+      .in("id", playerIds);
+    return rows(response.data);
+  })();
+  // Start identity reads early, but observe their failure without making an
+  // empty publication result wait for (or depend on) unused club data.
+  const clubsOutcome = playersPromise.then(async (players) => {
+    const clubIds = [...new Set(players
+      .map((player) => text(player.current_club_id))
+      .filter((clubId): clubId is string => Boolean(clubId)))];
+    const { data } = clubIds.length
+      ? await catalogueAdmin.from("football_clubs").select("id,name").in("id", clubIds)
+      : { data: [] };
+    return data;
+  }).then(
+    (data) => ({ ok: true as const, data }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+  const [players, squadsResponse, seasonPoints, published] = await Promise.all([
+    playersPromise,
     catalogueAdmin
       .from("football_squad_members")
       .select("player_id,club_id,jersey_number,position,status,source_updated_at")
@@ -231,14 +249,9 @@ export async function loadTouchlinePublishedCardShowcaseCatalog(
     loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin),
   ]);
   if (!published.size) return [];
-
-  const players = rows(playersResponse.data);
-  const clubIds = [...new Set(players
-    .map((player) => text(player.current_club_id))
-    .filter((clubId): clubId is string => Boolean(clubId)))];
-  const { data: clubData } = clubIds.length
-    ? await catalogueAdmin.from("football_clubs").select("id,name").in("id", clubIds)
-    : { data: [] };
+  const clubs = await clubsOutcome;
+  if (!clubs.ok) throw clubs.error;
+  const clubData = clubs.data;
 
   const playerById = new Map(players.flatMap((row) => {
     const playerId = text(row.id)?.toLowerCase();

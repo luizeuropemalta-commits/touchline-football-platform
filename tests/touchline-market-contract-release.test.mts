@@ -6,7 +6,7 @@ import { parseTouchlineMarketContractReleaseRequest } from "../lib/touchlineAren
 
 const CARD_ID = "cb58b289-dbb6-4a2f-8db5-bf3af1cb8d6e";
 
-const [migration, lineupIntegrityMigration, route, arenaClient, marketInventory] = await Promise.all([
+const [migration, lineupIntegrityMigration, route, marketInventory] = await Promise.all([
   readFile(
     new URL("../supabase/migrations/026_touchline_market_contract_release.sql", import.meta.url),
     "utf8",
@@ -20,33 +20,10 @@ const [migration, lineupIntegrityMigration, route, arenaClient, marketInventory]
     "utf8",
   ),
   readFile(
-    new URL("../app/arena/ArenaClient.tsx", import.meta.url),
-    "utf8",
-  ),
-  readFile(
     new URL("../lib/touchlineArena/market-inventory.ts", import.meta.url),
     "utf8",
   ),
 ]);
-
-function sourceSection(source: string, start: string, end: string) {
-  const startIndex = source.indexOf(start);
-  const endIndex = source.indexOf(end, startIndex + start.length);
-  assert.notEqual(startIndex, -1, `missing source marker: ${start}`);
-  assert.notEqual(endIndex, -1, `missing source marker: ${end}`);
-  return source.slice(startIndex, endIndex);
-}
-
-const checkoutFlow = sourceSection(
-  arenaClient,
-  "async function checkoutBuilderCart()",
-  "async function releaseAuthoritativeContract(",
-);
-const releaseFlow = sourceSection(
-  arenaClient,
-  "async function releaseAuthoritativeContract(",
-  "async function releaseSelectedBenchContract()",
-);
 
 test("accepts only a normalized inventory card id and idempotency key", () => {
   assert.deepEqual(parseTouchlineMarketContractReleaseRequest({
@@ -163,87 +140,9 @@ test("POST authenticates the session and never accepts a user id from the client
   assert.doesNotMatch(route, /requested_user_id:\s*parsed/);
 });
 
-test("Arena releases only authoritative inventory ids before mutating its local roster", () => {
-  assert.match(
-    arenaClient,
-    /releaseSelectedBenchContract[\s\S]*releaseAuthoritativeContract\([\s\S]*selectedBench\.inventoryId[\s\S]*if \(!released\) return;[\s\S]*nextBench/,
-  );
-  assert.match(
-    arenaClient,
-    /replaceAndReleaseSelectedContract[\s\S]*releasedPlayer\.card\?\.inventoryId[\s\S]*if \(!released\) return;[\s\S]*incomingPlayer/,
-  );
-  assert.match(
-    arenaClient,
-    /fetch\("\/api\/touchline-arena\/contracts\/release"[\s\S]*JSON\.stringify\(\{ cardId: normalizedCardId, idempotencyKey \}\)/,
-  );
-  assert.doesNotMatch(
-    arenaClient,
-    /releaseAuthoritativeContract\([\s\S]{0,120}selectedBench\.id\s*,/,
-  );
-});
-
-test("Arena normalizes and validates inventory UUIDs before release", () => {
+test("market inventory normalizes and validates contract UUIDs", () => {
   assert.match(
     marketInventory,
     /export function normalizeTouchlineMarketInventoryId[\s\S]*value\.trim\(\)\.toLowerCase\(\)[\s\S]*UUID_PATTERN\.test\(normalized\)/,
   );
-  assert.match(arenaClient, /import \{[\s\S]*normalizeTouchlineMarketInventoryId,[\s\S]*\} from "@\/lib\/touchlineArena\/market-inventory"/);
-  assert.match(releaseFlow, /const normalizedCardId = normalizeTouchlineMarketInventoryId\(cardId\)/);
-  assert.match(releaseFlow, /JSON\.stringify\(\{ cardId: normalizedCardId, idempotencyKey \}\)/);
-  assert.match(releaseFlow, /parseTouchlineMarketContractReleaseResult\(payload, normalizedCardId\)/);
-});
-
-test("only an explicit local demo can bypass the release API", () => {
-  assert.match(
-    releaseFlow,
-    /const isExplicitLocalDemo = arenaPersistencePrincipal\?\.kind === "demo"[\s\S]*!normalizedCardId[\s\S]*marketInventoryMode !== "authoritative"/,
-  );
-  assert.match(releaseFlow, /if \(isExplicitLocalDemo\) return true/);
-  assert.doesNotMatch(releaseFlow, /kind !== "authenticated"\) return true/);
-});
-
-test("checkout and release share one mutation lock and disable each other", () => {
-  assert.match(
-    checkoutFlow,
-    /if \(isMarketCheckoutPending \|\| isContractReleasePending \|\| marketMutationPendingRef\.current\) return/,
-  );
-  assert.match(checkoutFlow, /marketMutationPendingRef\.current = "checkout"/);
-  assert.match(checkoutFlow, /marketMutationPendingRef\.current === "checkout"[\s\S]*marketMutationPendingRef\.current = null/);
-  assert.match(
-    releaseFlow,
-    /if \(isContractReleasePending \|\| isMarketCheckoutPending \|\| marketMutationPendingRef\.current\) return false/,
-  );
-  assert.match(releaseFlow, /marketMutationPendingRef\.current = "release"/);
-  assert.match(releaseFlow, /marketMutationPendingRef\.current === "release"[\s\S]*marketMutationPendingRef\.current = null/);
-  assert.match(
-    arenaClient,
-    /className="team-builder-cart-checkout"[\s\S]{0,240}disabled=\{!marketCartQuote\.valid \|\| isMarketCheckoutPending \|\| isContractReleasePending\}/,
-  );
-  assert.match(
-    arenaClient,
-    /className="bench-release-contract" disabled=\{isContractReleasePending \|\| isMarketCheckoutPending\}/,
-  );
-});
-
-test("an idempotent replay discards historical counters and requests reconciliation", () => {
-  assert.match(
-    arenaClient,
-    /typeof payload\.idempotentReplay !== "boolean"/,
-  );
-  const replayStart = releaseFlow.indexOf("if (released.idempotentReplay)");
-  const liveCounterStart = releaseFlow.indexOf("} else {", replayStart);
-  assert.notEqual(replayStart, -1);
-  assert.notEqual(liveCounterStart, -1);
-  const replayBranch = releaseFlow.slice(replayStart, liveCounterStart);
-  assert.match(replayBranch, /setMarketInventorySnapshot\(null\)/);
-  assert.doesNotMatch(replayBranch, /activeContractCount|openContractSlots|soldCopies|availableCopies|supplyLimit/);
-  assert.match(releaseFlow.slice(liveCounterStart), /setMarketInventoryRevision\(\(revision\) => revision \+ 1\)/);
-});
-
-test("network ambiguity keeps the local roster and schedules authoritative reconciliation", () => {
-  assert.match(
-    releaseFlow,
-    /catch \{[\s\S]*setSaveStatus\(marketUi\.releaseConnectionUnavailable\)[\s\S]*setMarketInventoryRevision\(\(revision\) => revision \+ 1\)[\s\S]*return false/,
-  );
-  assert.doesNotMatch(releaseFlow, /setMarketWalletBalanceTc|writeMarketWalletBalanceTc/);
 });

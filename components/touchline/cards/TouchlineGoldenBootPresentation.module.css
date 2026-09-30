@@ -1,0 +1,4 @@
+.frame { display: flex; flex-direction: column; align-items: center; flex: none; }
+.card { position: relative; width: 100%; }
+.award { display: flex; justify-content: center; width: 100%; flex: none; pointer-events: none; }
+.award img { display: block; object-fit: contain; user-select: none; }

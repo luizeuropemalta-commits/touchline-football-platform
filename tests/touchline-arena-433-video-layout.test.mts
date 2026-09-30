@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   ARENA_433_VIDEO_COORDINATES,
@@ -14,8 +13,6 @@ import {
   isArenaQaManualLayoutCameraId,
   resolveArena433VideoSlots,
 } from "../lib/touchlineArena/arena-formation-video-layout.ts";
-
-const arenaSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 
 const expectedRoleCounts = {
   goalkeeper: 1,
@@ -112,36 +109,4 @@ test("the human QA editor has a separate, viewport-specific key for the camera d
   assert.equal(isArenaQaManualLayoutCameraId("qa-manual-wide-touchline-desktop-extra"), false);
   assert.equal(arena433VideoLoopStartTime("lower-stand", duration), 10);
   assert.equal(arena433VideoLoopStartTime("side-sweep", duration), 14.7);
-});
-
-test("Arena accepts a user-approved QA layout only in the specific QA editor pathway", () => {
-  assert.match(arenaSource, /resolveArena433VideoSlots\([\s\S]*?arenaFieldPlayersForRendering[\s\S]*?arenaVideoViewport/);
-  assert.match(arenaSource, /const qaManualCameraLayout = !hasSyncedFantasyLineup && isStableQaArenaHost && QA_EDITABLE_FORMATION_KEYS\.has\(arenaDisplayFormationKey\)/);
-  assert.match(arenaSource, /const fieldPlayerPositions = new Map\(lockedCameraPositions \?\? canonical433VideoPositions \?\? projectedFieldPlayerPositions\)/);
-  assert.match(arenaSource, /if \(cameraEditPositions && \(!canonical433VideoPositions \|\| isQaVisualEditor\)\)/);
-  assert.match(arenaSource, /Save Arena QA standard/);
-  assert.match(arenaSource, /Pause camera/);
-  assert.match(arenaSource, /Resume camera/);
-  assert.match(arenaSource, /async function toggleQaArenaCameraPlayback\(\)/);
-  assert.match(arenaSource, /"4-5-1"/);
-  assert.match(arenaSource, /"3-4-3"/);
-  assert.match(arenaSource, /"3-5-2"/);
-  assert.match(arenaSource, /Normalization owns coordinates only/);
-  assert.doesNotMatch(arenaSource, /const tacticalRoles: ArenaPlayer\["role"\]\[\] = \[/);
-  assert.match(arenaSource, /constrainArenaQaFreeSlot/);
-  assert.match(arenaSource, /handleFieldPlayerKeyDown/);
-  // The source is attached only after the first allowed landscape viewport,
-  // then retained while later rotations pause playback. This preserves the
-  // QA camera layout without re-buffering or resetting the filmed loop.
-  assert.match(arenaSource, /const \[hasArenaMediaSource, setHasArenaMediaSource\] = useState\(false\)/);
-  assert.match(arenaSource, /if \(isArenaIntroViewportReady && !hasArenaMediaSource\) setHasArenaMediaSource\(true\)/);
-  assert.match(arenaSource, /src=\{hasArenaMediaSource\s*\? TOUCHLINE_ARENA_LOOP_VIDEO/);
-  assert.match(arenaSource, /\n\s+loop\n\s+preload="metadata"/);
-  assert.match(arenaSource, /onTimeUpdate=\{handleCardLoopTimelineEvent\}/);
-  assert.match(arenaSource, /onSeeking=\{handleCardLoopTimelineEvent\}/);
-  assert.match(arenaSource, /onSeeked=\{handleCardLoopTimelineEvent\}/);
-  assert.doesNotMatch(arenaSource, /onEnded=\{advanceArenaLoopCamera\}/);
-  assert.match(arenaSource, /const baseHeight = fieldPosition\.heightVh \?\? arenaLoopCameraProfile\(loopCameraIndex\)\.cardHeightVh/);
-  assert.match(arenaSource, /onLoadedMetadata=\{handleCardLoopTimelineEvent\}/);
-  assert.match(arenaSource, /onCanPlay=\{handleCardLoopTimelineEvent\}/);
 });

@@ -118,7 +118,7 @@ export function ResetPasswordForm({ locale = "en-GB" }: { locale?: string }) {
         <div className="rounded-xl bg-[#e7f4df] px-4 py-3 text-xs text-[#2a633b]" role="status">
           {message || copy.recoveryUpdated}
         </div>
-        <Link href={touchLineAuthHref("/arena", normalizedLocale)} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-4 text-xs font-extrabold text-[#071007] transition hover:bg-[#bcff52]">
+        <Link href={touchLineAuthHref("/intro", normalizedLocale)} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#a3ff12]/45 bg-[#a3ff12] px-4 text-xs font-extrabold text-[#071007] transition hover:bg-[#bcff52]">
           {copy.enterArena} <ArrowRight size={15} />
         </Link>
       </div>

@@ -94,24 +94,6 @@ test("public pages retain the isolated demo cookie and demo fallback", () => {
   assert.equal(fallback.cards.length, CLUB_OWNER_SQUAD_CARDS.length);
 });
 
-test("account-aware server pages gate cookies behind the public branch", () => {
-  const pagePaths = [
-    "../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
-  ];
-
-  for (const pagePath of pagePaths) {
-    const source = readFileSync(new URL(pagePath, import.meta.url), "utf8");
-    assert.match(
-      source,
-      /if \((user|activeClubOwnerUser) && admin\)[\s\S]*?readAuthoritativeTouchlineRoster\(admin, \1\.id\)/,
-    );
-    assert.match(source, /const publicRosterCookieValue = (user|activeClubOwnerUser)\s*\? null\s*:/);
-    assert.match(source, /resolveTouchlineServerPageRoster\(\{/);
-    assert.doesNotMatch(source, /kind:\s*["']authenticated["']/);
-    assert.doesNotMatch(source, /fallback:\s*user\s*\?/);
-  }
-});
-
 test("the public rankings page never reads a private contract roster", () => {
   const source = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
   assert.match(source, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
@@ -128,30 +110,4 @@ test("the league-wide player ranking never reads a private roster or demo cookie
   assert.doesNotMatch(source, /readAuthoritativeTouchlineRoster/);
   assert.doesNotMatch(source, /resolveTouchlineServerPageRoster/);
   assert.doesNotMatch(source, /publicRosterCookieValue|cookies\(\)/);
-});
-
-test("the authenticated profile bounds its private avatar lookup before identity rendering", () => {
-  const source = readFileSync(
-    new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(
-    source,
-    /const avatarRead = activeClubOwnerUser && supabase[\s\S]*?resolveServerReadWithin(?:<[^>]+>)?\([\s\S]*?\.from\("users"\)[\s\S]*?\.maybeSingle\(\)[\s\S]*?\{ data: null \},[\s\S]*?CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS/,
-  );
-});
-
-test("the authenticated profile reads the Gameweek XI only for the server-derived owner", () => {
-  const source = readFileSync(
-    new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(
-    source,
-    /const fantasySnapshotRead = activeClubOwnerUser[\s\S]*?resolveServerReadWithin\(loadTouchlineFantasySnapshot\(activeClubOwnerUser\), null, CLUB_OWNER_PRIVATE_READ_TIMEOUT_MS\)[\s\S]*?: Promise\.resolve\(null\)/,
-  );
-  assert.match(source, /<FantasyGameweekClient[\s\S]{0,280}?initialSnapshot=\{fantasySnapshot\}[\s\S]{0,180}?locale=\{locale\}[\s\S]{0,180}?embedded/);
-  assert.doesNotMatch(source, /const arenaStateRead = activeClubOwnerUser/);
 });

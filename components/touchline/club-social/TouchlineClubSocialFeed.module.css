@@ -136,7 +136,7 @@
 }
 
 .liveMedia::after { content: ""; position: absolute; inset: 12px; border: 1px solid color-mix(in srgb, var(--feed-accent) 20%, transparent); border-radius: 16px; pointer-events: none; }
-.liveMedia img { position: relative; z-index: 1; width: 72px; height: 72px; object-fit: contain; filter: drop-shadow(0 0 13px var(--feed-accent)); }
+.liveMedia img { position: relative; z-index: 1; width: 72px; height: 72px; object-fit: contain; filter: none; }
 .liveMedia span { position: relative; z-index: 1; color: color-mix(in srgb, var(--feed-accent) 64%, #fff); font-size: 10px; font-weight: 950; letter-spacing: .14em; text-transform: uppercase; }
 .liveMedia strong { position: relative; z-index: 1; color: #f8fff5; font-size: clamp(21px, 4vw, 34px); font-weight: 950; letter-spacing: -.04em; }
 .liveMedia small { position: relative; z-index: 1; max-width: 220px; color: rgba(238,255,222,.68); font-size: 11px; font-weight: 750; line-height: 1.4; }

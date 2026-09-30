@@ -92,6 +92,15 @@ test("same-player instances invalidate through GET only after a confirmed mutati
   assert.match(client, /window\.removeEventListener\("focus", refresh\)/);
 });
 
+test("social sign-in copy names the active product, not the retired Arena", () => {
+  const client = readFileSync(new URL("../components/touchline/social/TouchlinePlayerSocialActions.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(client, /acesso à Arena|Arena access|Entrar na Arena|Sign in to Arena/);
+  assert.match(client, /Sign in with TouchLine access to interact\./);
+  assert.match(client, /Entre em uma conta com acesso à TouchLine para interagir\./);
+  assert.match(client, /Sign in to TouchLine/);
+  assert.match(client, /Entrar na TouchLine/);
+});
+
 test("narrow card columns wrap whole social buttons instead of crushing their icons", () => {
   const css = readFileSync(new URL("../components/touchline/social/TouchlinePlayerSocialActions.module.css", import.meta.url), "utf8");
   assert.match(css, /repeat\(auto-fit, minmax\(min\(100%, 140px\), 1fr\)\)/);

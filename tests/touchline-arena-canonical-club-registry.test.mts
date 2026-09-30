@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -13,11 +12,6 @@ import {
   TOUCHLINE_CANONICAL_CLUB_REGISTRY,
   touchlineCanonicalClubHubHref,
 } from "../lib/touchlineArena/club-registry.ts";
-
-const arenaClientSource = readFileSync(
-  new URL("../app/arena/ArenaClient.tsx", import.meta.url),
-  "utf8",
-);
 
 function canonicalFixtureClub(source: Parameters<typeof resolveTouchlineArenaFixtureClub>[0]) {
   const result = resolveTouchlineArenaFixtureClub(source);
@@ -116,54 +110,9 @@ test("fails closed for a present invalid contractClub while preserving only the 
   }
 });
 
-test("the Arena consumer guards an unavailable contractClub before selection, render, or both market endpoints", () => {
-  assert.equal(arenaClientSource.includes("PREMIER_CLUB_VISUALS"), false);
-  assert.equal(arenaClientSource.includes("TEAM_BUILDER_CLUB_RANK"), false);
-  assert.match(arenaClientSource, /resolveTouchlineArenaInitialClub\(initialContractClubId\)/);
-  assert.match(arenaClientSource, /initialBuilderClubResolution\.kind === "unavailable"\s*\? null/);
-  assert.match(arenaClientSource, /const selectedBuilderClub = findTouchlineArenaClub\(selectedBuilderClubKey\)/);
-  assert.match(arenaClientSource, /if \(!teamId\) return;/);
-  assert.match(arenaClientSource, /const builderClub = findTouchlineArenaClub\(selectedBuilderClubKey\);\s*if \(!builderClub\)/);
-  const invalidBuilderGuard = arenaClientSource.indexOf("const builderClub = findTouchlineArenaClub(selectedBuilderClubKey);");
-  assert.ok(invalidBuilderGuard >= 0);
-  const guardedBuilderEffect = arenaClientSource.slice(
-    invalidBuilderGuard,
-    arenaClientSource.indexOf("\n  useEffect(() => {\n    if (activeArenaPanel !== \"news\")", invalidBuilderGuard),
-  );
-  assert.match(guardedBuilderEffect, /\/api\/football-data\/premier-squad\?/);
-  assert.match(guardedBuilderEffect, /\/api\/touchline-arena\/market\/inventory\?teamId=\$\{encodeURIComponent\(builderClub\.teamId\)\}/);
-  assert.match(arenaClientSource, /selectedBuilderClub\?\.teamId/);
-  assert.match(arenaClientSource, /selectedBuilderClub\?\.name/);
-  assert.doesNotMatch(
-    arenaClientSource,
-    /find\([^\n]+selectedBuilderClubKey[^\n]*\)\s*\?\?\s*[^\n]*\[0\]/,
-  );
-});
-
 test("preserves fixture home and away positions when only one provider side exists", () => {
   const awayOnly = { providerId: "19", name: "Arsenal" };
   const [home, away] = preserveTouchlineArenaFixtureSides(undefined, awayOnly);
   assert.equal(home, undefined);
   assert.equal(away, awayOnly);
-
-  assert.match(arenaClientSource, /return preserveTouchlineArenaFixtureSides\(/);
-  assert.doesNotMatch(
-    arenaClientSource.slice(
-      arenaClientSource.indexOf("function fixtureClubSources("),
-      arenaClientSource.indexOf("function fixtureClubSourceToSymbol("),
-    ),
-    /\.filter\(/,
-  );
-});
-
-test("the Arena consumer keeps an external fixture outside the canonical catalog", () => {
-  assert.match(arenaClientSource, /const resolution = resolveTouchlineArenaFixtureClub\(club\);/);
-  assert.match(arenaClientSource, /const externalSource = resolution\.kind === "external" \? resolution\.source : null;/);
-  assert.match(arenaClientSource, /fixtureShortCode\(name, club\.shortCode\)/);
-  const fixtureShortCodeSource = arenaClientSource.slice(
-    arenaClientSource.indexOf("function fixtureShortCode("),
-    arenaClientSource.indexOf("function fixtureClubSources("),
-  );
-  assert.doesNotMatch(fixtureShortCodeSource, /findTouchlineArenaClub|getPremierClubVisual/);
-  assert.match(arenaClientSource, /return preserveTouchlineArenaFixtureSides\(/);
 });

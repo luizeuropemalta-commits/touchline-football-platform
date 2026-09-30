@@ -1362,17 +1362,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           isolation: isolate;
           animation: club-hub-crest-arrive .78s cubic-bezier(.2,.8,.2,1) both;
         }
-        .club-hub-logo-stack::before {
-          content: "";
-          position: absolute;
-          z-index: -1;
-          inset: 10% 4%;
-          pointer-events: none;
-          background: radial-gradient(circle, color-mix(in srgb, var(--club-accent) 48%, transparent), transparent 68%);
-          filter: blur(26px);
-          opacity: .52;
-          animation: club-hub-crest-aura 4.8s ease-in-out infinite alternate;
-        }
+        .club-hub-logo-stack::before { content: none; }
         .club-hub-logo img {
           width: 96%;
           height: 96%;
@@ -1383,15 +1373,11 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
           border: 0;
           box-shadow: none;
           filter:
-            drop-shadow(0 0 5px color-mix(in srgb, var(--club-accent) 80%, transparent))
-            drop-shadow(0 0 15px color-mix(in srgb, var(--club-accent) 46%, transparent))
             drop-shadow(0 22px 34px rgba(0,0,0,.46));
         }
         .club-hub-logo-stack:hover .club-hub-logo img,
         .club-hub-logo-stack:focus-within .club-hub-logo img {
           filter:
-            drop-shadow(0 0 7px color-mix(in srgb, var(--club-accent) 92%, transparent))
-            drop-shadow(0 0 22px color-mix(in srgb, var(--club-accent) 66%, transparent))
             drop-shadow(0 24px 38px rgba(0,0,0,.5));
         }
         .club-hub-honours {

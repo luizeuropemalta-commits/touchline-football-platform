@@ -51,9 +51,11 @@ test("backwards clocks suppress invalid durations and request ids are isolated",
   await create(qa, { now: () => time, emit: r => records.push(r) }).run("sync", async () => 1);
   assert.notEqual(records[0].requestId, records[1].requestId);
 });
-test("Arena and loader carry the same request-local timing without replacing lifecycle calls", () => {
-  const page = readFileSync(new URL("../app/arena/page.tsx", import.meta.url), "utf8");
+test("retained timed loader finishes its request-local timer and preserves shared lifecycle calls", () => {
   const server = readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8");
-  assert.match(page, /initialTwoDimensionalFormationRegistry, timing/);
+  assert.match(server, /try \{ return await loadFantasySnapshotCore\(user, "arena", formationRegistry, timing\); \}\s*finally \{ timing\?\.finish\(\); \}/);
+  assert.match(server, /loadTouchlineFantasySnapshot\(user: User\)[\s\S]*?return loadFantasySnapshotCore\(user, "full"\)/);
   assert.match(server, /timing\?\.mark\("lifecycle"\)/);
+  assert.match(server, /const lifecycle = await reconcileTouchlineFantasyGameweeks\(admin, lifecycleGameweek \? \[lifecycleGameweek\] : \[\], true\);\s*if \(lifecycle\.error\) return null;/);
+  assert.ok(server.indexOf('timing?.mark("lifecycle")') < server.indexOf("const lifecycle = await reconcileTouchlineFantasyGameweeks("));
 });

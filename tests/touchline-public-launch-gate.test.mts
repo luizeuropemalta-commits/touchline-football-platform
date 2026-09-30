@@ -5,12 +5,11 @@ import test from "node:test";
 const proxySource = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 const homeSource = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
 const arenaSource = readFileSync(new URL("../app/arena/page.tsx", import.meta.url), "utf8");
-const arenaClientSource = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 const comingSoonSource = readFileSync(new URL("../app/coming-soon/page.tsx", import.meta.url), "utf8");
 
 test("the public root and retired pre-launch route both enter the canonical Arena", () => {
-  assert.match(homeSource, /redirect\(`\/arena\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
-  assert.match(comingSoonSource, /redirect\(`\/arena\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
+  assert.match(homeSource, /redirect\(`\/intro\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
+  assert.match(comingSoonSource, /redirect\(`\/intro\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
   assert.doesNotMatch(homeSource, /TouchlinePublicLaunchGate|resolveTouchlinePublicLaunchGate|launchPreview/);
   assert.doesNotMatch(comingSoonSource, /TouchlinePublicLaunchGate|TouchlineComingSoonLanding|resolveTouchlinePublicLaunchGate|launchPreview/);
 });
@@ -29,11 +28,8 @@ test("anonymous visitors may enter the Arena while account-backed product operat
   assert.doesNotMatch(proxySource, /protectedArenaPaths\s*=\s*\[[^\]]*"\/arena"/);
   assert.match(proxySource, /if \(!user && isProtectedArenaRoute\) return loginRedirect\(request, response\)/);
   assert.match(proxySource, /if \(user && hasArenaAccess && isAuthEntry\)/);
-  assert.match(arenaSource, /const \[user, initialTwoDimensionalFormationRegistry\] = await timing\.run\("auth-and-geometry", \(\) => Promise\.all/);
-  assert.match(arenaSource, /createClient\(\)\.then\(\(supabase\) => supabase[\s\S]*?resolveServerReadWithin\([\s\S]*?supabase\.auth\.getUser\(\)[\s\S]*?ARENA_SERVER_AUTH_READ_TIMEOUT_MS,[\s\S]*?: null\)/);
-  assert.match(arenaSource, /fantasySnapshot = user && !isOwnerEmail\(user\.email\)/);
-  assert.match(arenaClientSource, /kind: "anonymous"/);
-  assert.match(arenaClientSource, /touchline-arena-anonymous/);
+  assert.match(arenaSource, /redirect\(`\/intro\?/);
+  assert.doesNotMatch(arenaSource, /ArenaClient|createClient|loadTouchlineFantasy|qaEditor|qaReadOnly/);
 });
 
 test("the live public entry files contain no pre-launch admission copy", () => {
@@ -48,6 +44,6 @@ test("the live public entry files contain no pre-launch admission copy", () => {
 
 test("Admin and OWNER-only boundaries remain fail-closed", () => {
   assert.match(proxySource, /adminOnlyArenaPaths\s*=\s*\["\/admin", "\/visual-qa"\]/);
-  assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return arenaRedirect/);
+  assert.match(proxySource, /if \(user && isAdminOnlyArenaRoute && !isAdmin\) return introRedirect/);
   assert.match(proxySource, /isOwnerEmail\(user\?\.email\)/);
 });

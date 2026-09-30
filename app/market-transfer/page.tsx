@@ -62,7 +62,7 @@ export default async function MarketTransferPage({ searchParams }: {
   return <main className={styles.page}>
     <div className={styles.content}>
       <TouchlineGlobalNavigation locale={locale} currentRoute="market" surface="authenticated" />
-      <header className={styles.heading}><div><span>TOUCHLINE</span><h1>{pt ? "Mercado" : "Market"}</h1><p>{pt ? "Seu XI. Seu treinador. Seu jogo." : "Your XI. Your coach. Your game."}</p></div><Link href={`/arena?lang=${encodeURIComponent(locale)}&intro=first`}>{pt ? "Ver intro" : "Watch intro"}</Link></header>
+      <header className={styles.heading}><div><span>TOUCHLINE</span><h1>{pt ? "Mercado" : "Market"}</h1><p>{pt ? "Seu XI. Seu treinador. Seu jogo." : "Your XI. Your coach. Your game."}</p></div><Link href={`/intro?lang=${encodeURIComponent(locale)}&intro=first`}>{pt ? "Ver intro" : "Watch intro"}</Link></header>
       <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} embedded marketPage initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
     </div>
   </main>;

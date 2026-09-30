@@ -22,13 +22,20 @@ function loadPage(path: string, modules: Record<string, unknown>, exportName = "
   return exports[exportName];
 }
 
-test("catalogue runs two bounded batches and merges in input order despite reverse completion", async () => {
+test("catalogue continuously refills a two-read pool and merges in input order despite reverse completion", async () => {
   const started: string[][] = [];
   const releases: Array<() => void> = [];
+  let active = 0;
+  let peak = 0;
   const load = loadPage("../lib/touchlineArena/complete-catalogue-read-server.ts", {
     "./card-publication-read-model": { loadTouchlinePublishedCardPresentations: ({ playerIds }: { playerIds: string[] }) => {
       started.push(playerIds);
-      return new Promise(resolve => releases.push(() => resolve(new Map(playerIds.map(id => [id, {}])))));
+      active++;
+      peak = Math.max(peak, active);
+      return new Promise(resolve => releases.push(() => {
+        active--;
+        resolve(new Map(playerIds.map(id => [id, {}])));
+      }));
     } },
   }, "loadCompleteTouchlineCataloguePresentations");
   const ids = Array.from({ length: 451 }, (_, n) => String(n).padStart(4, "0"));
@@ -37,12 +44,16 @@ test("catalogue runs two bounded batches and merges in input order despite rever
   assert.deepEqual(started.map(batch => batch.length), [150, 150]);
   releases[1]!();
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(started.length, 2, "Do not start another wave while the first is pending");
+  assert.equal(started.length, 3, "Refill the free slot while the first read is pending");
+  assert.equal(active, 2);
   releases[0]!();
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(started.length, 4);
   releases[3]!(); releases[2]!();
   assert.deepEqual([...((await result) as Map<string, unknown>).keys()], ids);
+  assert.deepEqual(started.map(batch => batch.length), [150, 150, 150, 1]);
+  assert.equal(peak, 2);
+  assert.equal(active, 0);
 });
 
 test("navigation label reflects only the current Link pending state and recovers", () => {
@@ -122,54 +133,6 @@ test("Rankings starts independent reads while authentication is pending and shar
   assert.equal(loaded.props.children[1].props.rosterCards, allCards);
   assert.equal(loaded.props.children[1].props.totalRankedCards, 5, "Do not truncate the catalogue to the top three");
   assert.equal(shell.props.children[0].props.children[0], navigation, "Navigation is owned by the shell, not sporting completion");
-});
-
-test("My Club starts roster and wallet while avatar is pending, after identity approval", async () => {
-  const calls: string[] = [];
-  let release!: (value: unknown) => void;
-  const avatar = new Promise(resolve => { release = resolve; });
-  const stop = new Error("Reached roster presentation");
-  const query = (name: string) => {
-    calls.push(name);
-    const chain = {
-      select: () => chain, eq: () => chain, maybeSingle: () => chain,
-      then: (resolve: (value: unknown) => unknown) => (name === "users" ? avatar : Promise.resolve({ data: [] })).then(resolve),
-    };
-    return chain;
-  };
-  const page = loadPage("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", {
-    "@/lib/touchlineArena/demo-data": { TOUCHLINE_ENGLAND_CLUBS: [] },
-    "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: "owner" } } }) }, from: query }) },
-    "@/lib/supabase/admin": { createAdminClient: () => ({ from: query }) },
-    "@/lib/admin/owner": { isOwnerEmail: () => false },
-    "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: () => ({ isAuthenticatedClubOwner: true }) },
-    "@/lib/touchlineArena/server-read-deadline": { resolveServerReadWithin: (promise: unknown) => promise },
-    "@/lib/touchlineArena/card-ranking-server": { loadTouchLineActiveRanking: async () => { calls.push("ranking"); return {}; } },
-    "@/lib/touchlineArena/authoritative-roster-server": { readAuthoritativeTouchlineRoster: async (_admin: unknown, id: string) => { assert.equal(id, "owner"); calls.push("roster"); return {}; } },
-    "@/lib/touchlineFantasy/server": { loadTouchlineFantasySnapshot: async () => { calls.push("fantasy"); return {}; } },
-    "@/lib/touchlineArena/server-page-roster": { resolveTouchlineServerPageRoster: () => { throw stop; } },
-  });
-  const result = page({ searchParams: Promise.resolve({}) });
-  await new Promise(resolve => setImmediate(resolve));
-  assert.deepEqual(calls.slice().sort(), ["clubowner_credit_ledger", "fantasy", "ranking", "roster", "users"]);
-  release({ data: { avatar_url: "/avatar.png" } });
-  await assert.rejects(result, error => error === stop);
-});
-
-test("My Club refuses a foreign identity before any private reads", async () => {
-  const refused = new Error("not-found");
-  const noRead = () => { assert.fail("Private read before identity approval"); };
-  const page = loadPage("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", {
-    "@/lib/touchlineArena/demo-data": { TOUCHLINE_ENGLAND_CLUBS: [] },
-    "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: "owner" } } }) }, from: noRead }) },
-    "@/lib/supabase/admin": { createAdminClient: () => ({ from: noRead }) },
-    "@/lib/admin/owner": { isOwnerEmail: () => false },
-    "@/lib/touchlineArena/club-owner-page-identity": { resolveTouchlineClubOwnerPageIdentity: () => null },
-    "next/navigation": { notFound: () => { throw refused; } },
-    "@/lib/touchlineArena/authoritative-roster-server": { readAuthoritativeTouchlineRoster: noRead },
-    "@/lib/touchlineFantasy/server": { loadTouchlineFantasySnapshot: noRead },
-  });
-  await assert.rejects(page({ searchParams: Promise.resolve({}), ownerSlug: "foreign" }), error => error === refused);
 });
 
 test("Live starts authentication alongside schedule but refuses private detail anonymously", async () => {

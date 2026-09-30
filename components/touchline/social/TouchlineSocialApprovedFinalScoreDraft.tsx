@@ -40,5 +40,5 @@ export default function TouchlineSocialFinalScoreDraftView({ draft, placement = 
 }
 
 function ClubFinal({ club, goals }: Readonly<{ club: TouchlineApprovedClub; goals: readonly Goal[] }>) {
-  return <article><img src={club.logoUrl} alt="" aria-hidden="true" width={128} height={128} style={{ objectFit: "contain", filter: `drop-shadow(0 0 10px ${club.accent})` }} /><strong style={{ display: "block", fontSize: 30 }}>{club.name}</strong>{goals.map((goal) => <div key={goal.id}>{goal.playerName} {goalMinute(goal.minute, goal.extraMinute)}{goal.kind === "penalty" ? " PEN" : goal.kind === "own-goal" ? " OG" : ""}</div>)}</article>;
+  return <article><img src={club.logoUrl} alt="" aria-hidden="true" width={128} height={128} style={{ objectFit: "contain" }} /><strong style={{ display: "block", fontSize: 30 }}>{club.name}</strong>{goals.map((goal) => <div key={goal.id}>{goal.playerName} {goalMinute(goal.minute, goal.extraMinute)}{goal.kind === "penalty" ? " PEN" : goal.kind === "own-goal" ? " OG" : ""}</div>)}</article>;
 }

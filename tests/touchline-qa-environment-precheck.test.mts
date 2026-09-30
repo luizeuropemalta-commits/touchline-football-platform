@@ -116,7 +116,7 @@ test("proxy sends only the exact precheck path directly to its handler before ot
   const sentinel = new Response(null, { status: 204 });
   const exports: Record<string, unknown> = {};
   vm.runInNewContext(javascript, {
-    exports, process: { env: {} },
+    exports, Headers, process: { env: {} },
     require: (specifier: string) => specifier === "next/server"
       ? { NextResponse: { next: () => sentinel } }
       : new Proxy({}, { get: forbidden }),

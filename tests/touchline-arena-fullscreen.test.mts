@@ -9,10 +9,12 @@ import {
 } from "../lib/touchlineArena/fullscreen.ts";
 import touchlineManifest from "../app/manifest.ts";
 
-test("installed TouchLine starts in the Arena but keeps every product page inside the app", () => {
+test("installed TouchLine starts with the preserved intro and keeps every product page inside the app", () => {
   const manifest = touchlineManifest();
 
-  assert.equal(manifest.start_url, "/arena");
+  assert.equal(manifest.start_url, "/intro");
+  assert.equal(manifest.id, "/arena", "Existing installations keep their identity independently of the start page");
+  assert.equal(manifest.name, "TouchLine");
   assert.equal(manifest.scope, "/");
   assert.equal(manifest.display, "fullscreen");
   // Owner rule, 2026-09-19: mobile gameplay is landscape-only. Browsers that
@@ -65,19 +67,8 @@ test("Arena fullscreen supports the Safari-prefixed API", async () => {
   assert.equal(touchlineFullscreenElement(documentTarget), null);
 });
 
-test("Arena activates a full-viewport fallback when native fullscreen is unavailable", async () => {
+test("fullscreen helper reports native fullscreen unavailability", async () => {
   const documentTarget = { fullscreenElement: null } as unknown as Document;
   const element = {} as HTMLElement;
   assert.equal(await requestTouchlineFullscreen(element, documentTarget), false);
-
-  const arenaClient = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
-  assert.match(arenaClient, /nativeFullscreenRemainedActive/);
-  assert.match(arenaClient, /setIsArenaFallbackFullscreen\(mobileFullscreenShellIsRequired \|\| !nativeFullscreenRemainedActive\)/);
-  assert.match(arenaClient, /arenaFullscreenRequestedRef/);
-  assert.match(arenaClient, /nativeFullscreenIsStillActive/);
-  assert.match(arenaClient, /mobileFullscreenShellIsRequired/);
-  assert.match(arenaClient, /matchMedia\("\(max-width: 1100px\)"\)/);
-  assert.match(arenaClient, /data-fullscreen-mode=/);
-  assert.match(arenaClient, /\.arena-stage\.is-mobile-fullscreen-fallback/);
-  assert.match(arenaClient, /100dvh !important/);
 });

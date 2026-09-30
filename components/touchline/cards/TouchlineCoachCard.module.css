@@ -156,21 +156,16 @@
   height: var(--coach-crest-size, 132px);
   max-width: none;
   object-fit: contain;
-  /* The exact crest asset stays intact; this is the same quiet, permanent
-     club-colour neon used by player cards. */
+  /* Preserve the exact crest asset and neutral depth without a coloured halo. */
   filter:
-    drop-shadow(0 2px 4px rgba(0,0,0,.48))
-    drop-shadow(0 0 2px color-mix(in srgb, var(--touchline-club-crest-color) 84%, transparent))
-    drop-shadow(0 0 7px color-mix(in srgb, var(--touchline-club-crest-color) 42%, transparent));
+    drop-shadow(0 2px 4px rgba(0,0,0,.48));
   transition: filter 180ms ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .shell:hover .clubBadge [data-touchline-card-crest-host="true"] > img {
     filter:
-      drop-shadow(0 2px 4px rgba(0,0,0,.5))
-      drop-shadow(0 0 3px color-mix(in srgb, var(--touchline-club-crest-color) 96%, transparent))
-      drop-shadow(0 0 11px color-mix(in srgb, var(--touchline-club-crest-color) 68%, transparent));
+      drop-shadow(0 2px 4px rgba(0,0,0,.5));
   }
 }
 

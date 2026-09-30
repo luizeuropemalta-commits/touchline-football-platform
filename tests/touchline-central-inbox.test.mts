@@ -38,12 +38,21 @@ test("Central is the single admin-origin source and Inbox filters scope without 
     id: "11111111-1111-4111-8111-111111111111",
     title: "Maintenance",
     body: "Scheduled maintenance",
-    deepLink: "/arena",
+    deepLink: "/market-transfer",
     category: "MAINTENANCE",
     lifecycleState: "ACTIVE",
     priority: "NORMAL",
     readAt: "2026-08-02T12:01:00.000Z",
   }]);
+});
+
+test("stored notices target Market instead of retired areas without carrying obsolete private parameters", () => {
+  for (const deepLink of ["/arena?qaEditor=1&lang=pt-BR#old", "/club-owner/me/history?owner=other&lang=pt-BR#old"]) {
+    const inbox = resolveTouchlineCentralInbox({ userId: "user-a", competition: "england", locale: "en", messages: [message({ localizations: [{ locale: "en", title: "Notice", body: "Details", deepLink }] })], readAtByMessageId: {} });
+    assert.equal(inbox[0]?.deepLink, "/market-transfer?lang=pt-BR");
+  }
+  assert.equal(isSafeTouchlineCentralDeepLink("/club-owner-other"), false);
+  assert.equal(isSafeTouchlineCentralDeepLink("/arena-other"), false);
 });
 
 test("Central supports localization, lifecycle state and deterministic priority", () => {

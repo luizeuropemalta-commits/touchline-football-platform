@@ -9,21 +9,15 @@ async function source(path: string) {
 }
 
 test("Market reuses the Gameweek transaction boundary and legacy Fantasy forwards safely", async () => {
-  const [market, owner, alias, client, route] = await Promise.all([
+  const [market, alias, client, route] = await Promise.all([
     source("app/market-transfer/page.tsx"),
-    source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
     source("app/fantasy/page.tsx"),
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("app/api/touchline-fantasy/lineup/route.ts"),
   ]);
   assert.match(market, /<FantasyGameweekClient[^>]*initialSnapshot=\{snapshot\} locale=\{locale\} embedded marketPage/);
-  assert.match(owner, /key=\{`my-club-player-filter-\$\{initialPlayerClubTeamId \?\? "default"\}`\}/);
-  assert.match(owner, /<FantasyGameweekClient[^>]+initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
-  assert.match(owner, /const initialPlayerClubTeamId = TOUCHLINE_ENGLAND_CLUBS\.find\(\(club\) => club\.slug === params\.club\)\?\.teamId \?\? null/);
-  assert.match(owner, /initialPlayerClubTeamId=\{initialPlayerClubTeamId\}/);
   assert.match(client, /initialPlayerClubTeamId\?: string \| null/);
   assert.match(client, /TOUCHLINE_ENGLAND_CLUBS_BY_RANK\.some\(\(club\) => club\.teamId === initialPlayerClubTeamId\)/);
-  assert.match(owner, /id="my-club-squad"/);
   assert.doesNotMatch(market, /standaloneMarket|<ArenaClient/);
   assert.match(alias, /redirect\(`\/market-transfer\?lang=\$\{encodeURIComponent\(locale\)\}`\)/);
   assert.match(client, /selectedCoachId/);
@@ -137,7 +131,7 @@ test("the My Club presentation keeps the guided coach-first Gameweek flow", asyn
   assert.match(styles, /@media\(max-width:760px\)\{[\s\S]*?\.marketClock\{width:100%/);
   assert.match(styles, /@media \(orientation:landscape\) and \(max-width:1100px\) and \(max-height:520px\)/);
   assert.match(styles, /\.pitchCard\{width:46px\}/);
-  assert.match(client, /\/arena\?lang=/);
+  assert.match(client, /\/market-transfer\?lang=/);
 });
 
 test("the Markt clock follows canonical close and reopen timestamps without inventing a live-round deadline", () => {
@@ -198,13 +192,10 @@ test("the Markt clock follows canonical close and reopen timestamps without inve
   });
 });
 
-test("My Club and Arena consume the same canonical Gameweek snapshot without a Fantasy bench", async () => {
-  const [shared, arena, arenaClient, arenaAdapter, owner, market] = await Promise.all([
+test("shared Gameweek presentation preserves exact XI identity and position eligibility", async () => {
+  const [shared, arenaAdapter, market] = await Promise.all([
     source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx"),
-    source("app/arena/page.tsx"),
-    source("app/arena/ArenaClient.tsx"),
     source("lib/touchlineFantasy/arena-lineup.ts"),
-    source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
     source("app/fantasy/FantasyGameweekClient.tsx"),
   ]);
   assert.match(shared, /snapshot!?\.selections\.find/);
@@ -212,27 +203,14 @@ test("My Club and Arena consume the same canonical Gameweek snapshot without a F
   assert.match(shared, /One Starting XI|Um XI titular/);
   assert.doesNotMatch(shared, /No Fantasy bench|Nenhum banco Fantasy/);
   assert.match(shared, /formatTouchlineFantasyDeadline\(gameweek\.locksAt, locale\)/);
-  assert.match(arena, /buildTouchlineFantasyArenaLineup\(fantasySnapshot\)/);
-  assert.match(arena, /initialFantasyLineup=\{fantasyArenaLineup\}/);
-  assert.doesNotMatch(arena, /TouchlineGameweekTeamSnapshot/);
   assert.match(arenaAdapter, /userGameweek\.state === "DRAFT"/);
   assert.match(arenaAdapter, /snapshot\.selections\.length !== 11/);
   assert.match(arenaAdapter, /seen\.size !== 11/);
   assert.match(arenaAdapter, /canonicalPlayerId: playerId/);
   assert.match(arenaAdapter, /role: slot\.role/);
-  assert.match(arenaClient, /data-fantasy-gameweek-xi=\{hasSyncedFantasyLineup \? "true"/);
-  assert.match(arenaClient, /data-canonical-player-id=\{hasSyncedFantasyLineup/);
-  assert.match(arenaClient, /GAMEWEEK XI SYNCED/);
-  assert.match(arenaClient, /arenaDisplayFormationKey/);
-  assert.match(arenaClient, /return initialFantasyLineup\.players\.map/);
-  assert.match(arenaClient, /const savedLayout = hasSyncedFantasyLineup[\s\S]*?\? null/);
-  assert.match(arenaClient, /const isQuickSubstitutionOpen = activeArenaPanel === "bench" && !hasSyncedFantasyLineup/);
-  assert.match(arenaClient, /!hasSyncedFantasyLineup \? <Link\b[\s\S]*?touchlineArenaPanelHref\("bench"/);
-  assert.match(owner, /<FantasyGameweekClient[^>]+initialSnapshot=\{fantasySnapshot\} locale=\{locale\} embedded/);
   assert.match(market, /squadView.*"squad".*"tactical"/);
   assert.match(market, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
   assert.match(market, /replaceTouchlineFantasyPlayerAtSlot/);
-  assert.doesNotMatch(owner, />Fazer substituição<|>Make substitution<|<div className="club-owner-unified-bench"/);
 });
 
 test("the Arena adapter accepts only one confirmed canonical 11-player snapshot", () => {

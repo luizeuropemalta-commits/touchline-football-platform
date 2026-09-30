@@ -58,7 +58,6 @@ test("shared Market Transfer navigation contains no retired product name", () =>
   const sources = [
     source("lib/touchlineArena/i18n.ts"),
     source("lib/touchlineArena/auth-i18n.ts"),
-    source("components/touchline/TouchlineProfileQuickNav.tsx"),
     source("app/market-transfer/page.tsx"),
   ];
 

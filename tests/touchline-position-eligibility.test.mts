@@ -87,40 +87,15 @@ test("shows football language for Portuguese and English buyers", () => {
 });
 
 test("Market Transfer uses centralized position eligibility on gallery cards and checkout action", () => {
-  const source = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const squadBuilder = readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8");
-
-  assert.match(source, /touchlineMarketPositionBucketCount/);
-  assert.match(source, /marketNeedsOnly/);
-  assert.match(source, /<TouchlineSquadBuilderStage/);
-  assert.match(source, /onAssignPlayer=\{assignMarketFormationPlayer\}/);
   assert.match(squadBuilder, /isTouchlineTacticalSlotCandidateEligible/);
   assert.match(squadBuilder, /const steps = \[/);
   assert.match(squadBuilder, /className=\{styles\.progress\}/);
-  assert.match(source, /isPositionLimitReached/);
-  assert.match(source, /marketUi\.positionLimitReached/);
-  assert.match(source, /touchlineTwoStrikerFormationHint/);
-  assert.match(source, /const effectiveMarketPositionBucketFilter: TouchlineMarketPositionBucketFilter = marketPositionBucketFilter;/);
-  assert.doesNotMatch(source, /Conclua primeiro:|Complete first:|isSequentialStepLocked|isInitialMarketSquadBuild/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market \{/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market \{[\s\S]*?overflow: visible;/);
-  assert.match(source, /className="team-builder-card-sign"/);
-  assert.match(source, /isPositionLimitReached/);
-  assert.match(source, /setMarketSpotlightPlayerId\(fieldId\)/);
-  assert.match(source, /\.arena-action-panel-market \.team-builder-send \{[\s\S]*?position: sticky;/);
 });
 
 test("Market Transfer keeps the buying workspace visible on Safari/mobile landscape", () => {
-  const source = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
   const squadBuilderStyles = readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8");
-
-  assert.match(source, /Market Transfer — short landscape\/mobile audit pass/);
-  assert.match(source, /max-width: 940px\) and \(max-height: 540px\)/);
   assert.match(squadBuilderStyles, /max-height: 480px\) and \(orientation: landscape\)/);
   assert.match(squadBuilderStyles, /\.workspace \{ grid-template-columns: 1fr; \}/);
   assert.match(squadBuilderStyles, /\.pitch \{ min-height: 0; border-right:/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.arena-action-panel-market > \.team-builder-bank \{[\s\S]*?display: grid;/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-board \{[\s\S]*?"clubs clubs"[\s\S]*?"roster roster"/);
-  assert.match(source, /Final Market Transfer gallery authority/);
-  assert.match(source, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
 });

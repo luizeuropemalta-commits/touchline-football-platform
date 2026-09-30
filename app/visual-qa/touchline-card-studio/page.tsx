@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import TouchlineEliteExactCard, { type TouchlineEliteExactPlayer } from "@/components/touchline/cards/TouchlineEliteExactCard";
 import { touchlineCardTierName } from "@/lib/touchlineArena/card-tier-names";
-import { inferArenaRole, makeArenaShortName, type ArenaLineupPlayer } from "@/lib/football-data/arena-lineup";
+import type { ArenaLineupPlayer } from "@/lib/football-data/arena-lineup";
 import {
   TOUCHLINE_ARENA_EDITOR_LINEUP_STORAGE_KEY,
   TOUCHLINE_CARD_PRICE_TABLE_VERSION,
@@ -52,35 +52,6 @@ const CARD_PREVIEW_VALUES = ([
   { tierKey: "clear-diamond", name: "Diamond Pro", number: 7, country: "POR" },
   { tierKey: "diamond-gold", name: "Haaland", number: 9, country: "NOR" },
 ] as const).map((preview) => ({ ...preview, label: touchlineCardTierName(preview.tierKey, "en-GB") }));
-
-const FORMATION_CARD_SLOTS_BY_ROLE: Record<ArenaLineupPlayer["role"], Array<Pick<ArenaLineupPlayer, "x" | "y" | "heightVh">>> = {
-  goalkeeper: [
-    { x: 50, y: 43, heightVh: 20 },
-    { x: 42, y: 45, heightVh: 19 },
-    { x: 58, y: 45, heightVh: 19 },
-  ],
-  defender: [
-    { x: 28, y: 55, heightVh: 22 },
-    { x: 42, y: 53, heightVh: 22 },
-    { x: 58, y: 53, heightVh: 22 },
-    { x: 72, y: 55, heightVh: 22 },
-    { x: 50, y: 57, heightVh: 22 },
-  ],
-  midfielder: [
-    { x: 38, y: 68, heightVh: 25 },
-    { x: 50, y: 66, heightVh: 25 },
-    { x: 62, y: 68, heightVh: 25 },
-    { x: 44, y: 72, heightVh: 24 },
-    { x: 56, y: 72, heightVh: 24 },
-  ],
-  forward: [
-    { x: 36, y: 82, heightVh: 27 },
-    { x: 50, y: 84, heightVh: 28 },
-    { x: 64, y: 82, heightVh: 27 },
-    { x: 43, y: 86, heightVh: 26 },
-    { x: 57, y: 86, heightVh: 26 },
-  ],
-};
 
 const DEFAULT_PLAYER: TouchlineEliteExactPlayer = {
   sportmonksPlayerId: "touchline-card-studio-haaland",
@@ -158,32 +129,6 @@ function errorMessage(error: unknown, fallback: string) {
 function cardPriceForTier(tierKey: TouchlineCardTierKey) {
   const tier = touchlineArenaTierForKey(tierKey);
   return formatTouchlineCardPrice(tier?.retailPriceTc ?? 0);
-}
-
-function slugifyFormationId(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function nextFormationSlot(role: ArenaLineupPlayer["role"], savedPlayers: Partial<ArenaLineupPlayer>[], playerId: string) {
-  const existingPlayer = savedPlayers.find((savedPlayer) => savedPlayer.id === playerId);
-  const roleCards = savedPlayers.filter((savedPlayer) => savedPlayer.id !== playerId && savedPlayer.card && savedPlayer.role === role).length;
-  const slots = FORMATION_CARD_SLOTS_BY_ROLE[role];
-  const defaultSlot = slots[roleCards % slots.length];
-
-  if (existingPlayer && typeof existingPlayer.x === "number" && typeof existingPlayer.y === "number" && typeof existingPlayer.heightVh === "number") {
-    return {
-      x: existingPlayer.x,
-      y: existingPlayer.y,
-      heightVh: Math.max(existingPlayer.heightVh, defaultSlot.heightVh),
-    };
-  }
-
-  return defaultSlot;
 }
 
 function cleanSportMonksCard(
@@ -427,56 +372,6 @@ export default function TouchlineCardStudioPage() {
     }
   }
 
-  function saveCurrentCardToFormation() {
-    try {
-      const stored = window.localStorage.getItem(TOUCHLINE_ARENA_EDITOR_LINEUP_STORAGE_KEY);
-      const savedPlayers = stored ? (JSON.parse(stored) as Partial<ArenaLineupPlayer>[]) : [];
-      if (stored && stored !== "[]") {
-        window.localStorage.setItem(`${TOUCHLINE_ARENA_EDITOR_LINEUP_STORAGE_KEY}:backup`, stored);
-      }
-      const usableSavedPlayers = Array.isArray(savedPlayers) ? savedPlayers.filter((savedPlayer) => savedPlayer.id && !String(savedPlayer.id).startsWith("demo-")) : [];
-      const role = inferArenaRole(player.position || player.role);
-      const playerId = player.formationPlayerId || `touchline-card-${slugifyFormationId(String(player.sportmonksPlayerId || player.name))}`;
-      const formationSlot = nextFormationSlot(role, usableSavedPlayers, playerId);
-      const formationPlayer: ArenaLineupPlayer = {
-        id: playerId,
-        name: player.name,
-        shortName: makeArenaShortName(player.name),
-        role,
-        card: {
-          templateUrl:
-            touchlineArenaClubTemplateForCard(player.clubName, null, player.cardTier)
-            || player.cardTemplateUrl
-            || DEFAULT_CLUB_TEMPLATE_URL,
-          frameUrl: "",
-          playerName: player.name,
-          shirtNumber: player.shirtNumber || null,
-          clubName: player.clubName,
-          clubLogoUrl: player.clubLogoUrl || null,
-          position: player.position || null,
-          countryCode3: player.countryCode3 || null,
-          flagUrl: player.flagUrl || null,
-          totalRating: player.totalRating ?? null,
-          marketValue: player.marketValue || null,
-          marketValueSource: player.marketValue ? "provider" : "unavailable",
-          cardTier: touchlineArenaCompetitionTierForCard(player.cardTier).key,
-          cardPriceVersion: TOUCHLINE_CARD_PRICE_TABLE_VERSION,
-          matchStats: player.matchStats,
-        },
-        x: formationSlot.x,
-        y: formationSlot.y,
-        heightVh: formationSlot.heightVh,
-      };
-      const nextPlayers = [...usableSavedPlayers.filter((savedPlayer) => savedPlayer.id !== playerId), formationPlayer].slice(-11);
-
-      window.localStorage.setItem(TOUCHLINE_ARENA_EDITOR_LINEUP_STORAGE_KEY, JSON.stringify(nextPlayers));
-      setStatus(`Card saved to formation: ${player.name}. ${nextPlayers.length}/11 cards. Opening Arena...`);
-      window.location.assign("/visual-qa/arena-video-preview");
-    } catch (error: unknown) {
-      setStatus(errorMessage(error, "Could not save the card to the formation."));
-    }
-  }
-
   return (
     <main className="min-h-screen bg-[#05070b] px-4 py-5 text-white sm:px-6 lg:px-8">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_45%_0%,rgba(80,245,168,.14),transparent_30%),radial-gradient(circle_at_75%_22%,rgba(191,72,255,.16),transparent_28%),linear-gradient(180deg,#071018,#030408)]" />
@@ -548,9 +443,6 @@ export default function TouchlineCardStudioPage() {
                 {tier.label}
                 <div className="mt-1 text-cyan-100/70">{tier.material}</div>
               </div>
-              <button onClick={saveCurrentCardToFormation} className="rounded-md bg-lime-300 px-4 py-2 text-[10px] font-black text-black shadow-[0_0_22px_rgba(190,242,100,.18)]">
-                Save to Formation
-              </button>
             </div>
           </div>
 

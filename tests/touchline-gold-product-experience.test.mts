@@ -6,8 +6,8 @@ const read = (file: string) => readFile(new URL(`../${file}`, import.meta.url), 
 
 test("Arena honours the explicit URL locale on first render", async () => {
   const source = await read("app/arena/page.tsx");
-  assert.match(source, /const locale = normalizeTouchLineLocale\(firstValue\(params\.lang\)\)/);
-  assert.match(source, /initialLocale=\{locale\}/);
+  assert.ok(source.includes("normalizeTouchLineLocale(first(input.lang))"));
+  assert.ok(source.includes('redirect(`/intro?'));
 });
 
 test("Portuguese Notifications and Football Search use first-party localized copy", async () => {
@@ -39,32 +39,16 @@ test("ClubHub mounts its heavy outside-matchday squad cards progressively", asyn
   assert.match(grid, /View.*more/);
 });
 
-test("Arena exposes a persistent non-financial recovery journey for incomplete clubs", async () => {
-  const source = await read("app/arena/ArenaClient.tsx");
-  assert.match(source, /needsArenaRosterRecovery/);
-  assert.match(source, /\/my-club\?lang=/);
-  assert.match(source, /Monte seu time/);
-  assert.match(source, /Ver todos os clubes/);
-  assert.doesNotMatch(source, /Abrir Mercado de Treinadores/);
-  assert.doesNotMatch(source, /Abrir Mercado de Jogadores/);
-  assert.doesNotMatch(source, /Continuar Montagem do Elenco/);
-});
-
-test("compact Arena and Market controls retain effective 44px targets", async () => {
-  const [source, clubHub, auth, quickNav, social, matchCentre, rankings] = await Promise.all([
-    read("app/arena/ArenaClient.tsx"),
+test("active ClubHub, authentication, social and rankings controls retain minimum touch targets", async () => {
+  const [clubHub, auth, social, matchCentre, rankings] = await Promise.all([
     read("app/touchline-clubs/[club]/page.tsx"),
     read("components/auth-form.tsx"),
-    read("components/touchline/TouchlineProfileQuickNav.module.css"),
     read("components/touchline/social/TouchlineSocial.module.css"),
     read("components/touchline/match-centre/touchline-match-centre.module.css"),
     read("app/touchline-player-card-rankings/page.tsx"),
   ]);
-  assert.match(source, /\.club-symbol-arrow \{ width: 44px; height: 44px/);
   assert.match(clubHub, /\.club-hub-section-actions a \{[\s\S]*min-height: 44px/);
-  assert.match(source, /\.touchline-game\.is-market-standalone \.team-builder-position-filters button,[\s\S]*min-height: 44px/);
   assert.match(auth, /grid size-11/);
-  assert.match(quickNav, /\.shortcuts a \{[\s\S]*min-height: 44px/);
   assert.match(social, /\.post footer button, \.post footer a \{[^\n]*min-height: 44px/);
   assert.match(matchCentre, /\.brand \{[^\n]*min-height: 52px/);
   assert.match(rankings, /\.tl-card-rankings-featured-copy a,[\s\S]*min-height: 44px/);
@@ -72,7 +56,7 @@ test("compact Arena and Market controls retain effective 44px targets", async ()
 
 test("the shared card localizes its league-statistics label", async () => {
   const source = await read("components/touchline/cards/TouchlineEliteExactCard.tsx");
-  assert.match(source, /runtimeLocale === "pt-BR" \? "Estatísticas da TouchLine England League"/);
+  assert.ok(source.includes('runtimeLocale === "pt-BR" ? "Estatísticas da TouchLine England League"'));
 });
 
 test("browser audit tooling follows the installed Playwright API and includes Firefox", async () => {

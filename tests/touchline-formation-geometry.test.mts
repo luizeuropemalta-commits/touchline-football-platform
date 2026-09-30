@@ -14,8 +14,6 @@ import {
   validateTouchlineFormationGeometry,
   type TouchlineFormationGeometry,
 } from "../lib/touchlineArena/formation-geometry.ts";
-
-const arenaClient = readFileSync(new URL("../app/arena/ArenaClient.tsx", import.meta.url), "utf8");
 const migration = readFileSync(new URL("../supabase/qa/028_touchline_qa_formation_geometry_registry.sql", import.meta.url), "utf8");
 const fieldDepthMigration = readFileSync(new URL("../supabase/qa/029_touchline_qa_formation_geometry_field_depth.sql", import.meta.url), "utf8");
 const adminRoute = readFileSync(new URL("../app/api/admin/formation-geometries/route.ts", import.meta.url), "utf8");
@@ -118,15 +116,6 @@ test("one formation registry is reusable by all twenty clubs without club-specif
     assert.equal(resolveTouchlineFormationGeometry("4-3-3", TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY), reference, club.name);
   }
   assert.ok(Object.keys(TOUCHLINE_DEFAULT_FORMATION_GEOMETRY_REGISTRY).every((key) => /^\d(?:-\d){2,3}$/.test(key)));
-});
-
-test("Arena field and camera calibration remain independent from the 2D registry", () => {
-  assert.match(arenaClient, /Market\/Club Construction only; the Arena field keeps its independent camera calibration/);
-  assert.match(arenaClient, /Squad management uses a flat tactical board/);
-  assert.match(arenaClient, /const fieldPlayerPositions = new Map\(lockedCameraPositions \?\? canonical433VideoPositions \?\? projectedFieldPlayerPositions\)/);
-  assert.doesNotMatch(arenaClient, /arenaSlotsForFormation\([^)]*initialTwoDimensionalFormationRegistry/);
-  assert.doesNotMatch(arenaClient, /fieldPlayerPositions[^;]*initialTwoDimensionalFormationRegistry/);
-  assert.match(arenaClient, /geometryRegistry=\{initialTwoDimensionalFormationRegistry\}/);
 });
 
 test("QA migration is fenced, versioned, service-role only and rolls back as a new version", () => {

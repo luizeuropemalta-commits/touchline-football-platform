@@ -181,11 +181,10 @@ test("ClubHub UI exposes the bounded server reader with local like and native sh
   assert.doesNotMatch(component, /comment|reaction|SportMonks|provider|API/i);
 });
 
-test("049 keeps approved canonical posts available to ClubHub while My Club omits the public timeline", () => {
+test("049 keeps approved canonical posts available to ClubHub and protects native sharing", () => {
   const sql = readFileSync(new URL("../supabase/qa/049_touchline_qa_clubowner_social_feed.sql", import.meta.url), "utf8");
   const rollback = readFileSync(new URL("../supabase/qa/049_touchline_qa_clubowner_social_feed_rollback.sql", import.meta.url), "utf8");
   const reader = readFileSync(new URL("../lib/touchlineArena/club-social-feed-server.ts", import.meta.url), "utf8");
-  const owner = readFileSync(new URL("../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx", import.meta.url), "utf8");
   const social = readFileSync(new URL("../components/touchline/social/TouchlineSocial.tsx", import.meta.url), "utf8");
   const nativeShare = readFileSync(new URL("../lib/touchlineArena/social-native-share.ts", import.meta.url), "utf8");
   assert.match(sql, /touchline_assert_qa_fixture_target\('xgxbwqxjssxxuihuwmgy'\)/);
@@ -203,10 +202,6 @@ test("049 keeps approved canonical posts available to ClubHub while My Club omit
   assert.doesNotMatch(sql, /graph\.facebook|graph\.instagram|access[_-]?token|client[_-]?secret/i);
   assert.match(rollback, /drop function if exists public\.touchline_social_049_read_clubowner_feed/);
   assert.match(reader, /readTouchlineClubOwnerSocialFeed/);
-  assert.doesNotMatch(owner, /readTouchlineClubOwnerSocialFeed/);
-  assert.doesNotMatch(owner, /<TouchlineClubSocialFeed/);
-  assert.doesNotMatch(owner, /<TouchlineSocialFeed/);
-  assert.doesNotMatch(owner, /providerTeamId|club_provider_team_id/);
   assert.match(social, /shareTouchlinePost/);
   assert.match(nativeShare, /navigator\.share/);
   assert.match(nativeShare, /\/api\/touchline-social\/share-art/);

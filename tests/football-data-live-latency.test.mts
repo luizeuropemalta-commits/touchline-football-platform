@@ -12,11 +12,6 @@ import {
   writeLiveScoreSnapshot,
 } from "../lib/football-data/live-score-snapshot.ts";
 import type { TouchlineFixture } from "../lib/football-data/types.ts";
-
-const arenaClientSource = readFileSync(
-  new URL("../app/arena/ArenaClient.tsx", import.meta.url),
-  "utf8",
-);
 const liveScoresRouteSource = readFileSync(
   new URL("../app/api/football-data/fantasy/livescores/route.ts", import.meta.url),
   "utf8",
@@ -98,19 +93,6 @@ test("live score cache atomically replaces coherent snapshots and expires them",
   assert.equal(readLiveScoreSnapshot({ maxAgeMs: 1, now: (replacement?.storedAt ?? 0) + 2 }), null);
 
   resetLiveScoreSnapshotForTests();
-});
-
-test("Live client preserves only presentation cache while server reads stay persisted-only", () => {
-  assert.match(arenaClientSource, /readStoredLiveFixtureSnapshot\(\)/);
-  assert.match(arenaClientSource, /readBrowserStorage\("localStorage", ARENA_LIVE_FIXTURE_SNAPSHOT_STORAGE_KEY\)/);
-  assert.match(arenaClientSource, /\/football-data\/fixture-schedule/);
-  assert.match(arenaClientSource, /void refreshLiveFixtures\(\)/);
-  assert.match(arenaClientSource, /function applyPersistedLiveSnapshot/);
-  assert.match(arenaClientSource, /canonical-round projection must be selected[\s\S]*?server-side/);
-  assert.match(arenaClientSource, /loadClubSquad\(homeClub\)/);
-  assert.match(arenaClientSource, /ARENA_LIVE_SNAPSHOT_REQUEST_TIMEOUT_MS/);
-  assert.doesNotMatch(arenaClientSource, /params\.set\("refresh", "1"\)|params\.set\("preferSnapshot", "1"\)/);
-  assert.doesNotMatch(arenaClientSource, /window\.localStorage|localStorage\.(?:getItem|setItem|removeItem)/);
 });
 
 test("live scores and public squads never fall through to Sportmonks", () => {

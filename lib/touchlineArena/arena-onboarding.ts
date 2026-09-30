@@ -14,12 +14,12 @@ export function touchlineRegistrationEntryHref(returnTo: string | null | undefin
   if (pathname && ["/admin", "/visual-qa"].some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
     return touchLinePostAuthHref(normalizedReturnTo, locale);
   }
-  return touchLineAuthHref("/arena?intro=first&onboarding=market", locale);
+  return touchLineAuthHref("/intro?intro=first&onboarding=market", locale);
 }
 
 export function touchlineArenaOnboardingHref(search: string, locale: string) {
   return new URLSearchParams(search).get("onboarding") === "market"
-    ? touchLineAuthHref("/my-club", locale)
+    ? touchLineAuthHref("/market-transfer", locale)
     : null;
 }
 

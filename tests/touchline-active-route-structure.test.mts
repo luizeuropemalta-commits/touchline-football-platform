@@ -22,44 +22,10 @@ test("ClubHub compact cards keep navigation outside the zoom trigger", () => {
   assert.doesNotMatch(officialLineup, /styles\.playerLink/);
 });
 
-test("Arena uses the dynamic viewport without a conflicting root minimum or viewport width", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-
-  assert.match(
-    arenaClient,
-    /arena-stage relative h-\[100dvh\] min-h-0 w-full overflow-hidden/,
-  );
-  assert.doesNotMatch(
-    arenaClient,
-    /arena-stage relative h-\[100dvh\] min-h-screen w-screen/,
-  );
-  assert.match(
-    arenaClient,
-    /\.arena-stage\.is-mobile-fullscreen-fallback[\s\S]*?height: 100dvh !important;[\s\S]*?min-height: 0 !important;/,
-  );
-});
-
-test("My Club removes the retired collection while its retained featured card uses canonical profile navigation", () => {
-  const ownerPage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
-
-  assert.match(
-    ownerPage,
-    /publishedClubOwnerSquadCards = sortedClubOwnerSquadCards\.filter\(\(card\) => Boolean\(card\.editorialCard\)\)/,
-  );
-  assert.match(ownerPage, /featuredVisual=\{!showPrivateClubControl && bestPlayerCard \?/);
-  assert.match(ownerPage, /squadCardToExactPlayer\(bestPlayerCard, \{ useSuppliedTier: true \}\)/);
-  assert.match(ownerPage, /touchlinePlayerProfileHref\(squadCardToExactPlayer\(bestPlayerCard, \{ useSuppliedTier: true \}\), locale, \{ previewTier: bestPlayerCard\.cardTier \}\)/);
-  assert.doesNotMatch(ownerPage, /<section className="club-owner-profile-trophy-gallery"|<section className="club-owner-profile-squad"/);
-  assert.doesNotMatch(ownerPage, /\/club-owner\/luiz-lopez\?player=\$\{card\.id\}/);
-});
-
 test("market and auth controls do not nest secondary controls inside labels", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
   const authForm = source("components/auth-form.tsx");
   const resetForm = source("components/reset-password-form.tsx");
 
-  assert.match(arenaClient, /<div className="team-builder-market-search">[\s\S]*?<input[\s\S]*?aria-label=\{marketUi\.searchPlaceholder\}/);
-  assert.doesNotMatch(arenaClient, /<label className="team-builder-market-search">/);
 
   assert.match(authForm, /<label htmlFor="touchline-auth-password"/);
   assert.match(authForm, /<Input id="touchline-auth-password"/);

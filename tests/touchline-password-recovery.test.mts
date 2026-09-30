@@ -141,7 +141,7 @@ test("reset UI is localized and preserves language after completion or an expire
   assert.match(resetPageSource, /normalizeTouchLineAuthLocale\(lang\)/);
   assert.match(resetPageSource, /<ResetPasswordForm locale=\{locale\}/);
   assert.match(resetFormSource, /touchLineAuthHref\("\/forgot-password", normalizedLocale\)/);
-  assert.match(resetFormSource, /touchLineAuthHref\("\/arena", normalizedLocale\)/);
+  assert.match(resetFormSource, /touchLineAuthHref\("\/intro", normalizedLocale\)/);
 });
 
 test("proxy permits the recovery page while keeping ordinary authenticated entry redirects", () => {

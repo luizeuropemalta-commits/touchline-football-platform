@@ -28,8 +28,8 @@
   aspect-ratio: 1;
   border: 1px solid color-mix(in srgb, var(--club-accent) 66%, #fff 12%);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--club-accent) 14%, transparent);
-  box-shadow: 0 0 22px color-mix(in srgb, var(--club-accent) 24%, transparent);
+  background: transparent;
+  box-shadow: none;
 }
 
 .lines {

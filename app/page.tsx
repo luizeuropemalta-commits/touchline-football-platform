@@ -11,5 +11,5 @@ export default async function Home({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const locale = resolveTouchLineRootLocale(params.lang);
 
-  redirect(`/arena?lang=${encodeURIComponent(locale)}`);
+  redirect(`/intro?lang=${encodeURIComponent(locale)}`);
 }

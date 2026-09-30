@@ -11,12 +11,6 @@ import {
   touchLinePostAuthHref,
 } from "@/lib/touchlineArena/auth-i18n";
 import { hasTouchLineArenaAccess } from "@/lib/touchlineArena/auth-access";
-import { touchlineClubOwnerSlugForUser } from "@/lib/touchlineArena/club-owner-page-identity";
-import { resolveTouchlineClubOwnerRouteAccess } from "@/lib/touchlineArena/club-owner-route-access";
-import {
-  touchlineClubOwnerSelfHref,
-  type TouchlineClubOwnerSelfArea,
-} from "@/lib/touchlineArena/club-owner-routes";
 import {
   resolveTouchLinePresentationLocale,
   touchlineLocaleRequestNeedsCanonicalRedirect,
@@ -310,54 +304,26 @@ function isolatedPreviewResponse(request: NextRequest) {
   return applyIsolatedPreviewHeaders(NextResponse.next({ request: { headers: requestHeaders } }));
 }
 
-function clubOwnerLoginRedirect(
-  request: NextRequest,
-  area: TouchlineClubOwnerSelfArea,
-  sourceResponse?: NextResponse,
-) {
-  const locale = requestLocale(request);
-  const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("lang", locale);
-  loginUrl.searchParams.set("returnTo", touchlineClubOwnerSelfHref(locale, area));
-  return redirectWithSupabaseCookies(loginUrl, sourceResponse);
-}
-
-function clubOwnerSelfRedirect(
-  request: NextRequest,
-  area: TouchlineClubOwnerSelfArea,
-  sourceResponse?: NextResponse,
-) {
-  const locale = requestLocale(request);
-  return redirectWithSupabaseCookies(
-    new URL(touchlineClubOwnerSelfHref(locale, area), request.url),
-    sourceResponse,
-  );
-}
-
 /**
- * Historical substitution URLs must not reopen the retired 9-player bench.
- * Once the edge has authenticated the ClubOwner, send the route straight to
- * the single position-led XI workspace while preserving locale and cookies.
+ * Retired pages contain no private surface to authorize. Drop owner/area
+ * context and let Market enforce its own customer boundary on the next request.
+ * No session lookup or cookie mutation is needed for this compatibility hop.
  */
-function clubOwnerSubstitutionToMyClubRedirect(
-  request: NextRequest,
-  sourceResponse?: NextResponse,
-) {
-  const canonicalUrl = request.nextUrl.clone();
-  canonicalUrl.pathname = "/my-club";
-  canonicalUrl.hash = "my-club-squad";
-  return redirectWithSupabaseCookies(canonicalUrl, sourceResponse);
+function retiredClubOwnerRedirect(request: NextRequest) {
+  const destination = new URL("/market-transfer", request.url);
+  destination.searchParams.set("lang", requestLocale(request));
+  const response = NextResponse.redirect(destination, 307);
+  response.headers.set("cache-control", "no-store");
+  return response;
 }
 
 /**
- * `notFound()` after an async session lookup starts the App Router stream and
- * can leave the HTTP status at 200. Private ClubOwner paths are authorized in
- * this availability boundary instead, so a foreign owner URL receives an
- * actual 404 without disclosing which ClubOwner identity was requested.
+ * Keep a real 404 before streaming for forbidden My Club identities and
+ * unexpected failures while evaluating a retired route's environment boundary.
  */
 function clubOwnerNotFoundResponse(request: NextRequest, sourceResponse?: NextResponse) {
   const isPortuguese = requestLocale(request) === "pt-BR";
-  const arenaHref = `/arena?lang=${isPortuguese ? "pt-BR" : "en-GB"}`;
+  const introHref = `/intro?lang=${isPortuguese ? "pt-BR" : "en-GB"}`;
   const response = new NextResponse(
     `<!doctype html>
 <html lang="${isPortuguese ? "pt-BR" : "en-GB"}">
@@ -382,7 +348,7 @@ function clubOwnerNotFoundResponse(request: NextRequest, sourceResponse?: NextRe
     <small>TouchLine</small>
     <h1>${isPortuguese ? "Navegação segura" : "Safe navigation"}</h1>
     <p>${isPortuguese ? "Esta área não está disponível." : "This area is not available."}</p>
-    <a href="${arenaHref}">${isPortuguese ? "Voltar para a Arena" : "Return to Arena"}</a>
+    <a href="${introHref}">${isPortuguese ? "Voltar para TouchLine" : "Back to TouchLine"}</a>
   </main></body>
 </html>`,
     {
@@ -398,28 +364,11 @@ function clubOwnerNotFoundResponse(request: NextRequest, sourceResponse?: NextRe
   return response;
 }
 
-function resolveClubOwnerFailureBoundary(request: NextRequest, sourceResponse?: NextResponse) {
-  const clubOwnerAccess = resolveTouchlineClubOwnerRouteAccess({
-    pathname: request.nextUrl.pathname,
-    isAuthenticated: false,
-  });
-  if (clubOwnerAccess?.action === "login") {
-    return clubOwnerLoginRedirect(request, clubOwnerAccess.area, sourceResponse);
-  }
-  if (clubOwnerAccess?.action === "redirect-self") {
-    return clubOwnerSelfRedirect(request, clubOwnerAccess.area, sourceResponse);
-  }
-  if (clubOwnerAccess?.action === "not-found") {
-    return clubOwnerNotFoundResponse(request, sourceResponse);
-  }
-  return null;
-}
-
-function arenaRedirect(request: NextRequest, sourceResponse?: NextResponse) {
-  const arenaUrl = new URL("/arena", request.url);
+function introRedirect(request: NextRequest, sourceResponse?: NextResponse) {
+  const introUrl = new URL("/intro", request.url);
   const lang = request.nextUrl.searchParams.get("lang");
-  if (lang) arenaUrl.searchParams.set("lang", lang);
-  return redirectWithSupabaseCookies(arenaUrl, sourceResponse);
+  if (lang) introUrl.searchParams.set("lang", lang);
+  return redirectWithSupabaseCookies(introUrl, sourceResponse);
 }
 
 /**
@@ -472,9 +421,11 @@ async function handleTouchLineRequest(request: NextRequest) {
   if (localeRedirect) return localeRedirect;
   const isLocalDev = localDevHosts.has(hostname);
   const isMyClubRoute = pathname === "/my-club";
+  const isRetiredClubOwnerRoute = matchesRoute(pathname, "/club-owner");
   // My Club is account-backed even on localhost. Let it pass through the same
   // customer-only identity gate used by QA so an absent or Admin session can
   // never render the public fallback in place of the authenticated cover.
+  if (isLocalDev && isRetiredClubOwnerRoute) return retiredClubOwnerRedirect(request);
   if (isLocalDev && !isMyClubRoute) return nextResponseWithPresentationLocale(request);
   if (await hasQaSocialRenderBearer(request, hostname)) {
     const response = nextResponseWithPresentationLocale(request);
@@ -525,20 +476,19 @@ async function handleTouchLineRequest(request: NextRequest) {
   // particular, a visitor with an expired browser session must not cause every
   // public navigation to refresh a Supabase token at the edge.  That pattern
   // amplifies into concurrent refreshes for HTML and assets and can exhaust
-  // the middleware execution budget. My Club and the legacy ClubOwner paths
-  // remain here because their private management routes are authorized here.
-  const requiresIdentityLookup = isProtectedArenaRoute || isMyClubRoute || pathname.startsWith("/club-owner/");
+  // the middleware execution budget. Only current account-backed routes need
+  // identity; retired ClubOwner bookmarks never render private data.
+  const requiresIdentityLookup = isProtectedArenaRoute || isMyClubRoute;
   const isEmergencyOffline = siteOffline && !isVercelHost;
 
   if (isEmergencyOffline && !isProtectedArenaRoute && !isAuth) {
     return offlineResponse(requestLocale(request));
   }
+  if (isRetiredClubOwnerRoute) return retiredClubOwnerRedirect(request);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    const clubOwnerFailure = resolveClubOwnerFailureBoundary(request);
-    if (clubOwnerFailure) return clubOwnerFailure;
     return (isProtectedArenaRoute || isMyClubRoute) ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
   }
 
@@ -578,46 +528,10 @@ async function handleTouchLineRequest(request: NextRequest) {
   const isAdmin = isOwnerEmail(user?.email);
   if (isMyClubRoute && !user) return loginRedirect(request, response);
   if (isMyClubRoute && isAdmin) return clubOwnerNotFoundResponse(request, response);
-  // `/my-club` is the single product-facing destination. Keep the previous
-  // self route alive only long enough to redirect an authenticated customer;
-  // the internal `club_owner` authorization boundary remains unchanged.
-  if (pathname === "/club-owner/me" && user && !isAdmin) {
-    const canonicalUrl = request.nextUrl.clone();
-    canonicalUrl.pathname = "/my-club";
-    return redirectWithSupabaseCookies(canonicalUrl, response);
-  }
-  const clubOwnerSlug = user?.id && !isAdmin
-    ? touchlineClubOwnerSlugForUser({
-      id: user.id,
-      email: user.email,
-      user_metadata: user.user_metadata,
-    })
-    : null;
-  const clubOwnerAccess = resolveTouchlineClubOwnerRouteAccess({
-    pathname,
-    isAuthenticated: Boolean(user),
-    ownerSlug: clubOwnerSlug,
-  });
-  if (clubOwnerAccess?.action === "login") {
-    return clubOwnerLoginRedirect(request, clubOwnerAccess.area, response);
-  }
-  if (clubOwnerAccess?.action === "redirect-self") {
-    return clubOwnerSelfRedirect(request, clubOwnerAccess.area, response);
-  }
-  if (
-    clubOwnerAccess?.action === "allow"
-    && clubOwnerAccess.kind === "self"
-    && pathname === "/club-owner/me/substitution"
-  ) {
-    return clubOwnerSubstitutionToMyClubRedirect(request, response);
-  }
-  if (clubOwnerAccess?.action === "not-found") {
-    return clubOwnerNotFoundResponse(request, response);
-  }
   if (!user && isProtectedArenaRoute) return loginRedirect(request, response);
   const hasArenaAccess = hasTouchLineArenaAccess(user);
   if (user && isProtectedArenaRoute && !hasArenaAccess) return loginRedirect(request, response);
-  if (user && isAdminOnlyArenaRoute && !isAdmin) return arenaRedirect(request, response);
+  if (user && isAdminOnlyArenaRoute && !isAdmin) return introRedirect(request, response);
   if (isEmergencyOffline && user && !isAdmin && !isAuth) return offlineResponse(requestLocale(request));
   if (user && hasArenaAccess && isAuthEntry) {
     const lang = request.nextUrl.searchParams.get("lang");
@@ -643,14 +557,14 @@ export async function proxy(request: NextRequest) {
   try {
     return await handleTouchLineRequest(request);
   } catch {
-    // If an edge dependency fails, private ClubOwner routes must still fail
-    // closed instead of reaching a streamed `notFound()` response with 200.
-    const clubOwnerFailure = resolveClubOwnerFailureBoundary(request);
-    if (clubOwnerFailure) return clubOwnerFailure;
+    // Never turn an unknown environment-policy failure into a compatibility
+    // redirect. Current private routes, including My Club, still fail closed.
+    if (matchesRoute(request.nextUrl.pathname, "/club-owner")) return clubOwnerNotFoundResponse(request);
     const isAuth = authPaths.some((path) => matchesRoute(request.nextUrl.pathname, path));
     const isProtectedArenaRoute = !isAuth
       && protectedArenaPaths.some((path) => matchesRoute(request.nextUrl.pathname, path));
-    return isProtectedArenaRoute ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
+    return (isProtectedArenaRoute || request.nextUrl.pathname === "/my-club")
+      ? loginRedirect(request) : nextResponseWithPresentationLocale(request);
   }
 }
 

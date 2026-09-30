@@ -2,10 +2,12 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "TouchLine Arena",
+    // Preserve the installed application's previous implicit identity; not a navigation URL.
+    id: "/arena",
+    name: "TouchLine",
     short_name: "TouchLine",
-    description: "TouchLine football card arena.",
-    start_url: "/arena",
+    description: "TouchLine football cards, Market and live points.",
+    start_url: "/intro",
     scope: "/",
     display: "fullscreen",
     orientation: "landscape",

@@ -22,8 +22,8 @@ import "./touchline-crest-visibility.css";
 
 const productMetadata: Metadata = {
   metadataBase: new URL(TOUCHLINE_PUBLIC_ORIGIN),
-  title: "Arena Touchline",
-  description: "Arena Touchline brings football cards, teams and ClubOwner gameplay together. Explore the available competitions and build your team.",
+  title: "TouchLine",
+  description: "TouchLine brings football cards, teams and live points together. Explore the available competitions and build your team in the Market.",
   alternates: {
     canonical: "/",
   },

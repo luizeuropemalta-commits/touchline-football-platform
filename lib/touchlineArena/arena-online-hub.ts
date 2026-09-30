@@ -1,5 +1,3 @@
-import { touchlineClubOwnerBasePath, touchlineMyClubHref } from "./club-owner-routes.ts";
-
 export type ArenaOnlineZoneKey = "live" | "bench" | "market" | "rankings" | "news" | "watch";
 
 export type ArenaOnlineZone = {
@@ -26,7 +24,7 @@ export const ARENA_ONLINE_ZONES: ArenaOnlineZone[] = [
     key: "bench",
     title: "Build your XI",
     eyebrow: "My Club",
-    href: touchlineMyClubHref(),
+    href: "/market-transfer",
     description: "Choose, remove or replace a card only in its eligible position.",
     promise: "One clear eleven-player flow: choose a slot, compare cards, then save the XI.",
     details: ["11 positions", "Eligible cards", "Saved XI"],
@@ -53,7 +51,7 @@ export const ARENA_ONLINE_ZONES: ArenaOnlineZone[] = [
     key: "news",
     title: "New Rumours",
     eyebrow: "Signals",
-    href: touchlineClubOwnerBasePath(),
+    href: "/live",
     description: "Real player news, injuries, rumours and direct card impact.",
     promise: "The user opens the Arena every day to see what changed in the squad.",
     details: ["Injuries", "Transfers", "Card impact"],

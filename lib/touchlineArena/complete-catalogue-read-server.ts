@@ -148,17 +148,28 @@ export function createCompleteTouchlineCatalogueAdmin<T extends SupabaseClient>(
 export async function loadCompleteTouchlineCataloguePresentations(playerIds: readonly string[], admin: SupabaseClient) {
   const ids = [...new Set(playerIds.map((id) => id.trim().toLowerCase()).filter(Boolean))].sort();
   const result = new Map<string, TouchlinePublicEditorialCardPresentation>();
-  // At most two complete batches at once; preserve deterministic merge order
-  // and all per-batch pagination/publication checks in the existing reader.
-  for (let index = 0; index < ids.length; index += PAGE_SIZE * 2) {
-    const batches = [ids.slice(index, index + PAGE_SIZE), ids.slice(index + PAGE_SIZE, index + PAGE_SIZE * 2)]
-      .filter((batch) => batch.length > 0);
-    const results = await Promise.all(batches.map((playerIds) => (
-      loadTouchlinePublishedCardPresentations({ playerIds, providedAdmin: admin })
-    )));
-    for (const presentations of results) {
-      for (const [id, presentation] of presentations) result.set(id, presentation);
+  // Keep the existing two-batch ceiling, but refill each free slot immediately.
+  // A slow sibling must not stall independent publication reads. Merge only
+  // after all reads succeed, in input order rather than completion order.
+  const batches: string[][] = [];
+  for (let index = 0; index < ids.length; index += PAGE_SIZE) batches.push(ids.slice(index, index + PAGE_SIZE));
+  const results: Map<string, TouchlinePublicEditorialCardPresentation>[] = [];
+  let next = 0;
+  let failed = false;
+  async function worker() {
+    while (!failed && next < batches.length) {
+      const index = next++;
+      try {
+        results[index] = await loadTouchlinePublishedCardPresentations({ playerIds: batches[index], providedAdmin: admin });
+      } catch (error) {
+        failed = true;
+        throw error;
+      }
     }
+  }
+  await Promise.all(Array.from({ length: Math.min(2, batches.length) }, () => worker()));
+  for (const presentations of results) {
+    for (const [id, presentation] of presentations) result.set(id, presentation);
   }
   return result;
 }

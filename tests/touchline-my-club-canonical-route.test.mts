@@ -18,7 +18,8 @@ test("Market is the game destination and the legacy My Club link redirects witho
   assert.match(source("app/my-club/page.tsx"), /redirect\(`\/market-transfer\?\$\{forwarded\.toString\(\)\}`\)/);
   assert.match(source("app/market-transfer/page.tsx"), /auth\.getUser\(/);
   assert.match(source("app/market-transfer/page.tsx"), /if \(isOwnerEmail\(user\.email\)\) notFound\(\)/);
-  assert.match(source("proxy.ts"), /pathname === "\/club-owner\/me"[\s\S]*?canonicalUrl\.pathname = "\/my-club"/);
+  assert.match(source("proxy.ts"), /const isRetiredClubOwnerRoute = matchesRoute\(pathname, "\/club-owner"\)/);
+  assert.match(source("proxy.ts"), /function retiredClubOwnerRedirect[\s\S]*?new URL\("\/market-transfer", request\.url\)/);
   assert.match(source("proxy.ts"), /const isMyClubRoute = pathname === "\/my-club"/);
   assert.match(source("proxy.ts"), /if \(isMyClubRoute && !user\) return loginRedirect\(request, response\)/);
 });
@@ -41,7 +42,6 @@ test("local My Club reaches the same customer-only identity gates as QA", () => 
 
 test("My Club opens pitch-first while preserving strict position-only replacement", () => {
   const market = source("app/fantasy/FantasyGameweekClient.tsx");
-  const owner = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
 
   assert.match(market, /useState<"squad" \| "tactical">\("tactical"\)/);
   assert.match(market, /squadView === "tactical" \? <TouchlinePitchSurface/);
@@ -50,6 +50,4 @@ test("My Club opens pitch-first while preserving strict position-only replacemen
   assert.match(market, /setFeedback\(pt \? "Este card não é elegível para a vaga selecionada/);
   assert.match(market, /replaceTouchlineFantasyPlayerAtSlot/);
   assert.match(market, /removeTouchlineFantasyPlayerFromSlot/);
-  assert.match(owner, /club-owner-wallet/);
-  assert.doesNotMatch(owner, /<TouchlineClubSocialFeed/);
 });

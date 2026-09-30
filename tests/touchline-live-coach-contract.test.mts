@@ -50,11 +50,3 @@ test("registers one unique verified coach snapshot for every TouchLine England c
     assert.ok(fs.existsSync(`public${flagUrl}`), `missing nationality flag asset ${flagUrl}`);
   }
 });
-
-test("does not publish a locally curated coach card as official Live match data", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-
-  assert.doesNotMatch(arenaClient, /data-live-coach-card=/);
-  assert.match(arenaClient, /DADOS OFICIAIS/);
-  assert.match(arenaClient, /OFFICIAL DATA/);
-});

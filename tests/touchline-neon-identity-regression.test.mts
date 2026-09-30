@@ -12,7 +12,6 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   const exactCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
   const coachCard = source("components/touchline/cards/TouchlineCoachCard.tsx");
   const trace = source("components/touchline/cards/TouchlineCardPerimeterTrace.tsx");
-  const arenaClient = source("app/arena/ArenaClient.tsx");
   const traceCss = globalCss.slice(
     globalCss.indexOf('[data-touchline-card-neon-trace="true"]'),
     globalCss.indexOf('.touchline-card-surface[data-card-tier="neutral"][data-card-classification="pending"]'),
@@ -61,9 +60,9 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(coachCard, /data-touchline-card-crest-host="true"/);
   assert.match(exactCard, /data-touchline-card-crest="true"/);
   assert.match(coachCard, /data-touchline-card-crest="true"/);
-  assert.match(globalCss, /drop-shadow\(0 0 7px color-mix\(in srgb, var\(--touchline-club-crest-color\) 42%, transparent\)\)/);
+  assert.match(globalCss, /drop-shadow\(0 2px 5px rgba\(0,0,0,\.48\)\)/);
   assert.match(globalCss, /touchline-card-surface\[data-card-motion="true"\]:hover \[data-touchline-card-crest="true"\]/);
-  assert.match(globalCss, /drop-shadow\(0 0 11px color-mix\(in srgb, var\(--touchline-club-crest-color\) 68%, transparent\)\)/);
+  assert.doesNotMatch(globalCss, /drop-shadow\([^;\n]*var\(--touchline-club-crest-color\)/);
   assert.match(coachCard, /--touchline-club-crest-color": clubAccent/);
   assert.match(source("components\/touchline\/cards\/TouchlineCoachCard\.module\.css"), /\.shell:hover \.clubBadge \[data-touchline-card-crest-host="true"\] > img/);
   assert.doesNotMatch(globalCss, /data-touchline-card-crest-trace/);
@@ -92,8 +91,6 @@ test("every TouchLine card keeps the permanent tier neon contract", () => {
   assert.match(exactCard, /touchline-card-neon-select/);
   assert.match(exactCard, /document\.addEventListener\("pointerdown", clearWhenPointerLeavesTheCard\)/);
   assert.match(exactCard, /selectedId !== neonInstanceId/);
-  assert.doesNotMatch(arenaClient, /data-touchline-card-crest-trace/);
-  assert.match(arenaClient, /arena-live-moving-card[\s\S]*?data-touchline-card-neon-trace-run="true"[\s\S]*?will-change: auto !important/);
 });
 
 test("the perimeter trace centres each official player and coach rail without changing its approved lower extent", () => {
@@ -137,7 +134,6 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   const zoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
   const zoomCss = source("components/touchline/cards/TouchlineCardZoom.module.css");
   const zoomUsages = [
-    source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx"),
     source("app/touchline-clubs/[club]/page.tsx"),
     source("app/touchline-player-card-rankings/page.tsx"),
     source("app/touchline-players/[player]/page.tsx"),
@@ -166,18 +162,15 @@ test("card controls stay inside the master safe zone and contracting stays outsi
   assert.doesNotMatch(zoomUsages, /Sign player/);
   assert.match(zoomUsages, /contractLabel=\{locale === "pt-BR" \? "Contratar"/);
   assert.match(zoomUsages, /Contrato · 1 temporada/);
-  assert.match(zoomUsages, /tierLabel=\{touchlineCardTierName/);
+  assert.match(zoomUsages, /const tierDisplayName = tier[\s\S]*?touchlineCardTierName\(tier\.key, locale\)/);
+  assert.match(zoomUsages, /tierLabel=\{tierDisplayName \?\? undefined\}/);
 });
 
-test("ClubOwner keeps a quiet public identity while authenticated My Club gets its compact stadium ambience", () => {
-  const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
+test("shared social identity preserves the ClubOwner portrait trace and reduced motion", () => {
   const social = source("components/touchline/social/TouchlineSocial.tsx");
   const socialCss = source("components/touchline/social/TouchlineSocial.module.css");
   const trace = source("components/touchline/social/ClubOwnerPortraitPerimeterTrace.tsx");
 
-  assert.match(profilePage, /showCover=\{showPrivateClubControl\}/);
-  assert.match(profilePage, /featuredVisual=\{!showPrivateClubControl && bestPlayerCard/);
-  assert.match(profilePage, /clubOwnerPortraitTrace/);
   assert.match(social, /ClubOwnerPortraitPerimeterTrace/);
   assert.match(trace, /data-club-owner-portrait-neon-trace="true"/);
   assert.match(socialCss, /--club-owner-portrait-trace-color: #a3ff12/);
@@ -185,14 +178,12 @@ test("ClubOwner keeps a quiet public identity while authenticated My Club gets i
   assert.match(socialCss, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation: none !important/);
 });
 
-test("ClubOwner keeps a clean identity layout on every device and scales its feature only on mobile", () => {
-  const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
+test("shared social identity keeps its responsive name and portrait layout", () => {
   const socialCss = source("components/touchline/social/TouchlineSocial.module.css");
 
   assert.match(socialCss, /\.identityOnly \.socialName h1 \{[\s\S]*?white-space: nowrap/);
   assert.match(socialCss, /\.identityOnly \.avatarFooter \{[\s\S]*?translateY\(10%\)/);
   assert.match(socialCss, /@media \(max-width: 720px\)[\s\S]*?\.identityOnly \.socialName h1 \{ font-size: 37\.8px/);
-  assert.match(profilePage, /@media \(max-width: 760px\)[\s\S]*?\.club-owner-best-player-card \{[\s\S]*?width: min\(217px, 70vw\)/);
   assert.match(socialCss, /@media \(max-width: 720px\)[\s\S]*?\.identityOnly \.socialIdentity\.hasFeaturedVisual \{[\s\S]*?grid-template-columns: 112px minmax\(0, 1fr\)/);
   assert.match(socialCss, /\.socialIdentity\.hasFeaturedVisual \.socialAvatar \{[\s\S]*?width: 112px;[\s\S]*?height: 112px/);
 });
@@ -229,28 +220,6 @@ test("ClubHub line-up preserves the pitch and responsive card sizing contract", 
   assert.match(cardZoom, /document\.body/);
 });
 
-test("My Club profile keeps one factual summary surface without the retired ranking strip", () => {
-  const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
-
-  assert.doesNotMatch(profilePage, /stats=\{ownerStats\}/);
-  assert.doesNotMatch(profilePage, /className="club-owner-profile-club-control"/);
-  assert.doesNotMatch(profilePage, /<section className="club-owner-profile-(?:collection-details|trophy-gallery)"/);
-  assert.doesNotMatch(profilePage, /Posição do Meu Clube/);
-  assert.doesNotMatch(profilePage, /club-owner-rank-deck/);
-  assert.match(profilePage, /className="club-owner-wallet"/);
-});
-
-test("Arena puts My Club first and routes squad building to the canonical XI", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-  const quickMenuStart = arenaClient.indexOf('className="arena-quick-links"');
-  const sectionMenuStart = arenaClient.indexOf('<nav className="arena-club-sections"');
-
-  assert.ok(quickMenuStart >= 0);
-  assert.ok(sectionMenuStart >= 0);
-  assert.match(arenaClient.slice(quickMenuStart, quickMenuStart + 1000), /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}[\s\S]*?(?:Meu Clube|My Club)[\s\S]*?touchlineArenaPanelHref\("bench", siteLanguage\)/);
-  assert.match(arenaClient.slice(sectionMenuStart, sectionMenuStart + 900), /href=\{`\/my-club\?lang=\$\{encodeURIComponent\(siteLanguage\)\}`\}[\s\S]*?(?:Meu Clube|My Club)[\s\S]*?allClubsHubHref/);
-});
-
 test("profile surfaces use the shared compact global navigation", () => {
   const globalNavigation = source("components/touchline/TouchlineGlobalNavigation.tsx");
   const globalNavigationCss = source("components/touchline/TouchlineGlobalNavigation.module.css");
@@ -270,30 +239,17 @@ test("profile surfaces use the shared compact global navigation", () => {
   assert.doesNotMatch(athleteProfile, /TouchlineProfileQuickNav/);
 });
 
-test("ClubOwner Best of the Week follows the latest round and preserves any winning tier", () => {
-  const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
+test("ranked cards preserve their supplied winning tier", () => {
   const tablesClient = source("app/touchline-tables/touchline-tables-client.tsx");
 
-  assert.match(profilePage, /loadTouchLineActiveRanking\(\)/);
-  assert.match(profilePage, /seasonTotalRating: competition\.totalRating/);
-  assert.match(profilePage, /seasonTotalRating/);
-  assert.doesNotMatch(profilePage, /roundPoints/);
-  assert.match(profilePage, /Best of the Week/);
-  assert.match(profilePage, /Maior nota acumulada entre os cards publicados/);
-  assert.match(profilePage, /backgroundAccent=\{bestPlayerPalette\.accent\}/);
   assert.match(tablesClient, /squadCardToExactPlayer\(card, \{ useSuppliedTier: true \}\)/);
   assert.doesNotMatch(tablesClient, /TOUCHLINE_CARD_STARTING_TIER_KEY/);
 });
 
-test("Best of the Week receives a large readable promotion stage", () => {
-  const profilePage = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
+test("shared social promotion stage keeps readable sizing and a reversible card zoom", () => {
   const socialCss = source("components/touchline/social/TouchlineSocial.module.css");
   const cardZoom = source("components/touchline/cards/TouchlineCardZoom.tsx");
 
-  assert.match(profilePage, /width: min\(264px, 100%\)/);
-  assert.match(profilePage, /--touchline-card-static-scale: \.85/);
-  assert.match(profilePage, /width: min\(1640px, calc\(100vw - 32px\)\)/);
-  assert.match(profilePage, /<TouchlineCardZoom/);
   assert.match(cardZoom, /onClick=\{\(\) => setIsOpen\(false\)\}/);
   assert.match(cardZoom, /if \(\(event\.target as HTMLElement\)\.closest\("a,button"\)\) return;[\s\S]*?setIsOpen\(false\)/);
   assert.match(socialCss, /min-height: 620px/);
@@ -329,22 +285,6 @@ test("dedicated player-card ranking reuses the shared zoom and keeps compact car
   assert.match(rankingsSource, /published TouchLine cards only/);
   assert.match(rankingsSource, /Tier and card price come from the card-publication process/);
   assert.doesNotMatch(rankingsSource, /resolveTouchlineVerifiedPlayerEconomy|Market value|market value pending/);
-});
-
-test("My Club keeps the profile surface focused on the squad without a public timeline", () => {
-  const ownerSource = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
-
-  assert.doesNotMatch(ownerSource, /import TouchlineClubSocialFeed/);
-  assert.doesNotMatch(ownerSource, /readTouchlineClubOwnerSocialFeed/);
-  assert.doesNotMatch(ownerSource, /<TouchlineClubSocialFeed/);
-  assert.match(ownerSource, /<TouchlineSocialProfileHeader[\s\S]*?<FantasyGameweekClient/);
-  assert.doesNotMatch(ownerSource, /providerTeamId|ownerClub|visualImageUrl:\s*club\?\.logoUrl/);
-});
-
-test("My Club keeps the XI as the only post-Gameweek collection surface", () => {
-  const ownerSource = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
-  assert.match(ownerSource, /<FantasyGameweekClient[\s\S]{0,280}?initialSnapshot=\{fantasySnapshot\}/);
-  assert.doesNotMatch(ownerSource, /<section className="club-owner-profile-squad"/);
 });
 
 test("social profile header protects the ClubOwner name from the featured card on tablets", () => {
@@ -389,20 +329,8 @@ test("official player profiles reject URL preview tiers while explicit local dem
 });
 
 test("Market Transfer uses football selection language and official TouchLine money marks", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
   const translations = source("lib/touchlineArena/i18n.ts");
   const marketMarks = source("components/touchline/market/TouchlineMarketMarks.tsx");
-
-  assert.match(arenaClient, /marketUi\.squadValue/);
-  assert.match(arenaClient, /TouchlineCoinMark/);
-  assert.match(arenaClient, /TouchlineSelectedPlayersMark/);
-  assert.match(arenaClient, /className="team-builder-gallery-card"/);
-  // The card gallery is the only compact selection surface; details are opened
-  // in the shared enlarged card overlay instead of a duplicate dossier.
-  assert.match(arenaClient, /setMarketSpotlightPlayerId\(fieldId\)/);
-  assert.match(arenaClient, /<TouchlineCardZoomDetailsPanel details=\{marketSpotlightZoomDetails\}/);
-  assert.match(arenaClient, /Contrato · 1 temporada/);
-  assert.doesNotMatch(arenaClient, /<ShoppingCart/);
   assert.match(translations, /marketCart: "Contratações"/);
   assert.match(translations, /checkoutCart: "Contratar selecionados"/);
   assert.match(translations, /addToCart: "Contratar atleta"/);
@@ -410,28 +338,6 @@ test("Market Transfer uses football selection language and official TouchLine mo
   assert.match(marketMarks, /Moeda TouchLine TC/);
   assert.match(marketMarks, /Três atletas selecionados/);
   assert.match(marketMarks, /#ffd75c/);
-});
-
-test("Market Transfer remains readable without horizontal clipping on compact landscape phones", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-
-  assert.match(
-    arenaClient,
-    /@media \(orientation: landscape\) and \(min-width: 600px\) and \(max-width: 900px\) and \(max-height: 520px\)/,
-  );
-  assert.match(
-    arenaClient,
-    /grid-template-columns: clamp\(100px, 15\.2vw, 128px\) minmax\(0, 1fr\) clamp\(150px, 23\.2vw, 196px\)/,
-  );
-  assert.match(
-    arenaClient,
-    /\.arena-action-panel-market \.team-builder-player-list \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);[\s\S]*?max-height: none/,
-  );
-  assert.match(
-    arenaClient,
-    /\.arena-action-panel-market \.team-builder-player-copy strong \{[\s\S]*?text-overflow: clip;[\s\S]*?-webkit-line-clamp: 2/,
-  );
-  assert.match(arenaClient, /\.arena-action-panel-market \.team-builder-preview-card \{[\s\S]*?width: min\(150px, 86%\)/);
 });
 
 test("ClubHub owns one fixture-scoped line-up surface without cross-product distribution claims", () => {
@@ -451,7 +357,6 @@ test("coach uses official coach art with player-card nationality and club identi
   const coachRules = source("lib/touchlineArena/coach-card.ts");
   const coachCard = source("components/touchline/cards/TouchlineCoachCard.tsx");
   const coachCardStyles = source("components/touchline/cards/TouchlineCoachCard.module.css");
-  const arenaClient = source("app/arena/ArenaClient.tsx");
   const coachEditor = source("app/visual-qa/coach-card/page.tsx");
 
   assert.match(coachRules, /TOUCHLINE_COACH_CARD_APPAREL = "official-coach-photo-art"/);
@@ -507,125 +412,41 @@ test("coach uses official coach art with player-card nationality and club identi
   assert.doesNotMatch(coachEditor, /label="Tamanho do escudo"/);
   assert.match(coachEditor, /1\. Nome \+ clube/);
   assert.match(coachEditor, /2\. Dados técnicos/);
-  assert.doesNotMatch(arenaClient, /className=\{`arena-coach-technical-area/);
-  assert.match(arenaClient, /className="arena-quick-sub-coach"/);
-  assert.match(arenaClient, /arena-coach-spotlight/);
-  assert.match(arenaClient, /<TouchlineCoachCard/);
-  assert.doesNotMatch(arenaClient, /arena-club-owner-card/);
   assert.match(coachEditor, /editable/);
   assert.match(coachEditor, /Salvar como padrão/);
   assert.match(coachEditor, /TOUCHLINE_COACH_CARD_LAYOUT_STORAGE_KEY/);
   assert.doesNotMatch(coachEditor, /Foto opcional|type="file"|Formação/);
 });
 
-test("bench panel always opens at a complete first row and snaps card rows", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-
-  assert.match(arenaClient, /benchListShellRef\.current\?\.scrollTo\(\{ top: 0/);
-  assert.match(arenaClient, /scroll-snap-type: y proximity/);
-  assert.match(arenaClient, /\.bench-list > button,/);
-  assert.match(arenaClient, /scroll-snap-align: start/);
-});
-
-test("arena panel follows the current URL and closes stale Meu Clube content", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-
-  assert.match(arenaClient, /parseTouchlineArenaPanel\(new URLSearchParams\(window\.location\.search\)\.get\("panel"\)\)/);
-  assert.match(arenaClient, /window\.addEventListener\("popstate", syncArenaPanelFromUrl\)/);
-  assert.match(arenaClient, /setActiveArenaPanel\(panel === "live" \? null : panel\)/);
-  assert.match(arenaClient, /if \(panel !== "bench"\) setReplacementTargetId\(null\)/);
-});
-
 test("operational card selectors never nest social or profile controls inside buttons", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
   const exactCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
-  const socialDisabled = arenaClient.match(/showSocialMetrics=\{false\}/g) ?? [];
-  const profileDisabled = arenaClient.match(/showProfileAction=\{false\}/g) ?? [];
-
-  assert.ok(socialDisabled.length >= 3);
-  assert.ok(profileDisabled.length >= 3);
   assert.match(exactCard, /clubHubHref && !isEditable && showProfileAction/);
 });
 
 test("Arena compact cards keep one click target, one selected neon and a compact match badge", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
   const exactCard = source("components/touchline/cards/TouchlineEliteExactCard.tsx");
-  const fieldCardStart = arenaClient.indexOf('<span className="arena-field-card">');
-  const fieldCardSource = arenaClient.slice(fieldCardStart, fieldCardStart + 900);
-  const spotlightStart = arenaClient.indexOf('className="arena-player-spotlight-card"');
-  const spotlightSource = arenaClient.slice(spotlightStart, spotlightStart + 700);
-
-  assert.ok(fieldCardStart >= 0);
-  assert.match(fieldCardSource, /showMatchRating/);
-  assert.match(fieldCardSource, /showProfileAction=\{false\}/);
-  assert.match(fieldCardSource, /showSocialMetrics=\{false\}/);
-  assert.match(fieldCardSource, /forceNeonActive=\{selectedPlayerId === player\.id\}/);
   assert.match(exactCard, /forceNeonActive \|\| isNeonActive/);
   assert.match(exactCard, /data-arena-match-rating="true"[\s\S]*?top: -16,[\s\S]*?minWidth: 24,[\s\S]*?height: 16,[\s\S]*?padding: "1px 5px"/);
   assert.match(exactCard, /data-arena-match-rating="true"[\s\S]*?<strong[\s\S]*?fontSize: 9,[\s\S]*?fontVariantNumeric: "tabular-nums"/);
   assert.match(exactCard, /const compactPrimaryLabel = cardLabels\.totalRating/);
   assert.match(exactCard, /const compactPrimaryValue = totalRatingText/);
-  assert.ok(spotlightStart >= 0);
-  assert.match(spotlightSource, /showProfileAction[\s\S]*?forceNeonActive/);
-  assert.match(arenaClient, /arena-player-spotlight-meta/);
-  assert.match(arenaClient, /arena-player-spotlight-contract/);
-  assert.match(arenaClient, /touchlineArenaContractHref/);
-  assert.match(arenaClient, /Contrato · 1 temporada/);
-  assert.match(arenaClient, /"Contratar"/);
-  assert.match(arenaClient, /touchlineCardTierName/);
-  assert.doesNotMatch(arenaClient, />Comprar</);
-  assert.match(arenaClient, /arena-player-spotlight-backdrop[\s\S]*?setSpotlightPlayerId\(null\);[\s\S]*?setSelectedPlayerId\(null\)/);
-});
-
-test("Arena enlarges match points by twenty percent on desktop only", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-  assert.match(arenaClient, /@media \(min-width: 1101px\) \{[\s\S]*?\[data-arena-match-points="true"\][\s\S]*?scale\(1\.2\)/);
-});
-
-test("coach stays centered in the Quick Sub bench and never overlays the formation", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-
-  assert.doesNotMatch(arenaClient, /className=\{`arena-coach-technical-area/);
-  assert.match(arenaClient, /className="arena-quick-sub-coach"/);
-  assert.match(arenaClient, /\.arena-quick-sub-coach \{[\s\S]*?order: 5;[\s\S]*?min-height: 136px/);
-  assert.match(arenaClient, /\.arena-quick-sub-coach > span \{[\s\S]*?height: 108px/);
-  assert.match(arenaClient, /\.arena-action-panel-bench \.training-center-coach \{[\s\S]*?grid-column: 3;[\s\S]*?grid-template-columns: 18px minmax\(0, 1fr\);[\s\S]*?justify-self: end/);
-  assert.match(arenaClient, /\.arena-action-panel-bench \.training-center-coach-card \{[\s\S]*?width: 18px/);
 });
 
 test("Arena coach uses compact typography and an isolated fullscreen spotlight", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
   const coachCard = source("components/touchline/cards/TouchlineCoachCard.tsx");
   const coachStyles = source("components/touchline/cards/TouchlineCoachCard.module.css");
 
   assert.match(coachCard, /displayMode\?: "default" \| "compact"/);
   assert.match(coachCard, /data-coach-card-display=\{displayMode\}/);
-  assert.match(arenaClient, /displayMode="compact"/);
   assert.match(coachStyles, /data-coach-card-display="compact"[\s\S]*?\.stat \{[\s\S]*?min-height: 0/);
-  assert.match(
-    arenaClient,
-    /data-coach-spotlight=\{isCoachSpotlightOpen \|\| selectedLiveCoachData \? "open" : "closed"\}/,
-  );
-  assert.match(arenaClient, /\.arena-coach-spotlight \{[\s\S]*?position: fixed;[\s\S]*?isolation: isolate/);
-  assert.match(arenaClient, /data-coach-spotlight="open"\] \.field-player-layer[\s\S]*?visibility: hidden/);
-  assert.match(arenaClient, /\.arena-stage:fullscreen \.arena-coach-spotlight[\s\S]*?z-index: 2147483646/);
 });
 
-test("My Club exposes the canonical Gameweek XI without restoring the retired local Fantasy bench", () => {
-  const arenaClient = source("app/arena/ArenaClient.tsx");
-  const clubOwner = source("components/touchline/club-owner/ClubOwnerProfileRenderer.tsx");
+test("the canonical Gameweek snapshot presents one starting XI", () => {
   const gameweekSnapshot = source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx");
 
-  assert.match(clubOwner, /<FantasyGameweekClient[\s\S]{0,280}?initialSnapshot=\{fantasySnapshot\}[\s\S]{0,180}?locale=\{locale\}[\s\S]{0,180}?embedded/);
   assert.match(gameweekSnapshot, /snapshot!?\.selections\.find/);
   assert.match(gameweekSnapshot, /Um XI titular|One Starting XI/);
   assert.doesNotMatch(gameweekSnapshot, /Nenhum banco Fantasy|No Fantasy bench/);
-  assert.doesNotMatch(clubOwner, /<div className="club-owner-unified-bench"|Fazer substituição|Make substitution/);
-  assert.match(arenaClient, /draggable=\{!isLocked\}/);
-  assert.match(arenaClient, /text\/touchline-bench-id/);
-  assert.match(arenaClient, /data-substitution-target-id=\{player\.id\}/);
-  assert.match(arenaClient, /handleBenchDrop\(player/);
-  assert.match(arenaClient, /Central da partida/);
 });
 
 test("ClubHub honours use complete discrete pages rather than a continuous partial-card loop", () => {

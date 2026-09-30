@@ -18,10 +18,6 @@ const activityTrackerSource = fs.readFileSync(
   new URL("../components/touchline-activity-tracker.tsx", import.meta.url),
   "utf8",
 );
-const arenaSource = fs.readFileSync(
-  new URL("../app/arena/ArenaClient.tsx", import.meta.url),
-  "utf8",
-);
 
 function throwingStorage() {
   return {
@@ -92,9 +88,6 @@ test("locale, analytics and Arena bootstrap use resilient browser boundaries", (
   assert.match(activityTrackerSource, /void start\(\)\.catch/);
   assert.match(activityTrackerSource, /readBrowserStorage\("sessionStorage"/);
   assert.match(activityTrackerSource, /writeBrowserStorage\(\s*"sessionStorage"/);
-  assert.match(arenaSource, /queueResilientAsyncTask\(async \(\) =>/);
-  assert.match(arenaSource, /const randomKey = createResilientBrowserId\(\)/);
   assert.doesNotMatch(localeSyncSource, /window\.localStorage|window\.sessionStorage/);
   assert.doesNotMatch(activityTrackerSource, /window\.localStorage|window\.sessionStorage|\bcrypto\.randomUUID\b/);
-  assert.doesNotMatch(arenaSource, /window\.localStorage|window\.sessionStorage|\bcrypto\.randomUUID\b/);
 });

@@ -62,8 +62,15 @@ function normalizeCentralDeepLink(value: string | null): string | null {
     if (destination.origin !== "https://touchline.local") return null;
     // Preserve existing notices while resolving their retired ranking URL.
     if (destination.pathname === "/rankings") destination.pathname = "/touchline-tables";
+    if (["/arena", "/club-owner"].some((retired) => destination.pathname === retired || destination.pathname.startsWith(`${retired}/`))) {
+      const lang = destination.searchParams.get("lang");
+      destination.pathname = "/market-transfer";
+      destination.search = "";
+      destination.hash = "";
+      if (lang === "en-GB" || lang === "pt-BR") destination.searchParams.set("lang", lang);
+    }
     const path = destination.pathname;
-    const allowed = ["/arena", "/my-club", "/club-owner", "/market-transfer", "/touchline-tables", "/touchline-player-card-rankings", "/live", "/touchline-clubs", "/touchline-players", "/touchline-coaches", "/notifications", "/inbox"].some(
+    const allowed = ["/my-club", "/market-transfer", "/touchline-tables", "/touchline-player-card-rankings", "/live", "/touchline-clubs", "/touchline-players", "/touchline-coaches", "/notifications", "/inbox"].some(
       (prefix) => path === prefix || path.startsWith(`${prefix}/`),
     );
     return allowed ? `${path}${destination.search}${destination.hash}` : null;

@@ -50,7 +50,7 @@ function nativeErrorResponse(
   target.searchParams.set("error", error);
   if (locale === "pt-BR" || locale === "en-GB") target.searchParams.set("lang", locale);
   const destination = safeReturnTo(request, returnTo);
-  if (destination !== "/arena") target.searchParams.set("returnTo", destination);
+  if (destination !== "/market-transfer") target.searchParams.set("returnTo", destination);
   return NextResponse.redirect(target, { status: 303 });
 }
 

@@ -541,10 +541,15 @@ export default async function TouchLinePlayerProfilePage({
     ? await resolveTouchlineCanonicalPublicPlayerProfile({ canonicalPlayerId: canonicalLink.canonicalPlayerId })
     : null;
   if (canonicalLink.status === "valid" && !canonicalResolution) notFound();
-  const supabase = await createClient();
-  const currentUserPromise = supabase
-    ? supabase.auth.getUser().then(({ data }) => data.user)
-    : Promise.resolve(null);
+  const currentUserPromise = (async () => {
+    const supabase = await createClient();
+    return supabase ? (await supabase.auth.getUser()).data.user : null;
+  })().then(
+    (user) => ({ ok: true as const, user }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+  // Observe auth rejection immediately, but do not hold up public statistics.
+  // Its original error is rethrown before rendering, never an anonymous fallback.
   const fallbackProfile = resolveTouchLinePlayerProfile(playerKey, canonicalLink.status === "valid" ? {} : query);
   const officialLookup = canonicalResolution
     ? { providerPlayerId: canonicalResolution.providerPlayerId, name: canonicalResolution.projection.identity.value!.name }
@@ -553,7 +558,7 @@ export default async function TouchLinePlayerProfilePage({
       requestedName: Array.isArray(query.name) ? query.name[0] : query.name,
       fallbackName: fallbackProfile.card.name,
     });
-  const [publicProjectionBatch, official, activeRanking, currentUser] = await Promise.all([
+  const [publicProjectionBatch, official, activeRanking] = await Promise.all([
     canonicalResolution
       ? Promise.resolve(null)
       : loadTouchlinePublicPlayerProjections({
@@ -565,12 +570,7 @@ export default async function TouchLinePlayerProfilePage({
       providerPlayerId: officialLookup.providerPlayerId,
     }),
     loadTouchLineActiveRanking(),
-    currentUserPromise,
   ]);
-  const navigationSurface = resolveTouchlineGlobalNavigationSurface({
-    isAuthenticated: Boolean(currentUser),
-    isAdmin: Boolean(currentUser && isOwnerEmail(currentUser.email)),
-  });
   const publicProjection = canonicalResolution?.projection ?? (officialLookup.providerPlayerId
     ? publicProjectionBatch?.projections.find((projection) => projection.providerPlayerId === officialLookup.providerPlayerId)
     : undefined);
@@ -618,6 +618,13 @@ export default async function TouchLinePlayerProfilePage({
       ? loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
       : new Map(),
   ]);
+  const authResult = await currentUserPromise;
+  if (!authResult.ok) throw authResult.error;
+  const currentUser = authResult.user;
+  const navigationSurface = resolveTouchlineGlobalNavigationSurface({
+    isAuthenticated: Boolean(currentUser),
+    isAdmin: Boolean(currentUser && isOwnerEmail(currentUser.email)),
+  });
   const editorialCard = canonicalResolution?.editorialCard
     ?? (canonicalPlayerId && publishedCards ? publishedCards.get(canonicalPlayerId) ?? null : null);
   exactPlayer.editorialCard = editorialCard;

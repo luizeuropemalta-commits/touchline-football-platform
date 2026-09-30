@@ -25,7 +25,7 @@ test("protected layout authenticates directly and no longer loads the profession
 
 test("Arena admin shell exposes only official operational navigation", () => {
   for (const href of [
-    "/arena",
+    "/intro",
     "/notifications",
     "/inbox",
     "/football-search",
@@ -71,10 +71,10 @@ test("Arena admin shell keeps the fixed rail off tablets and narrow laptops", ()
   assert.doesNotMatch(shellSource, /hidden lg:block|lg:ml-\[272px\]/);
 });
 
-test("football search returns every authenticated user to the Arena", () => {
+test("football search returns every authenticated user to Market", () => {
   assert.match(footballSearchSource, /searchParams: Promise<\{ lang\?: string \}>/);
   assert.match(footballSearchSource, /const locale = normalizeTouchLineAuthLocale\(lang\)/);
-  assert.match(footballSearchSource, /href=\{touchLineAuthHref\("\/arena", locale\)\}/);
+  assert.match(footballSearchSource, /href=\{touchLineAuthHref\("\/market-transfer", locale\)\}/);
   assert.match(footballSearchSource, /Back to TouchLine Arena/);
   assert.doesNotMatch(footballSearchSource, /href="\/admin"/);
 });

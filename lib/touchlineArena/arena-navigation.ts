@@ -13,16 +13,14 @@ export const TOUCHLINE_ARENA_PANEL_KEYS = [
 export type TouchlineArenaPanelKey = (typeof TOUCHLINE_ARENA_PANEL_KEYS)[number];
 
 export function touchlineArenaHref(locale: string) {
-  return `/arena?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale))}`;
+  return `/market-transfer?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(locale))}`;
 }
 
 export function touchlineArenaDemoHref(locale: string) {
   const params = new URLSearchParams({
-    demoLineup: "1",
-    skipIntro: "1",
     lang: resolveTouchLinePresentationLocale(locale),
   });
-  return `/arena?${params.toString()}`;
+  return `/market-transfer?${params.toString()}`;
 }
 
 /**
@@ -49,16 +47,15 @@ export function parseTouchlineArenaPanel(value?: string | string[] | null): Touc
 export function touchlineArenaPanelHref(panel: TouchlineArenaPanelKey, locale: string) {
   const effectiveLocale = resolveTouchLinePresentationLocale(locale);
   const lang = `lang=${encodeURIComponent(effectiveLocale)}`;
-  if (panel === "market") return `/my-club?${lang}`;
+  if (panel === "market") return `/market-transfer?${lang}`;
   // A ClubOwner owns exactly one playable XI. The former quick-substitution
   // bench required a hidden second squad and could expose an impossible
   // 10/11 setup. Keep old links safe, but land them in the one position-led
   // workspace where a card is replaced in its own eligible slot.
-  if (panel === "bench" || panel === "formation") return `/my-club?${lang}#my-club-squad`;
+  if (panel === "bench" || panel === "formation") return `/market-transfer?${lang}#my-club-xi-pitch`;
   if (panel === "live" || panel === "watch") return `/live?${lang}`;
   if (panel === "rankings") return `/touchline-tables?${lang}`;
-  // News is an Arena surface, not a second owner profile destination.
-  return `/arena?${lang}`;
+  return `/live?${lang}`;
 }
 
 export function touchlineArenaContractHref(input: {
@@ -67,7 +64,7 @@ export function touchlineArenaContractHref(input: {
   playerName: string;
   clubId?: string | number | null;
 }) {
-  return `/my-club?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(input.locale))}`;
+  return `/market-transfer?lang=${encodeURIComponent(resolveTouchLinePresentationLocale(input.locale))}`;
 }
 
 export function touchlineArenaPanelUrl(currentUrl: string, panel: TouchlineArenaPanelKey | null) {

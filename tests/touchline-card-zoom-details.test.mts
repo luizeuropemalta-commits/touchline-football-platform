@@ -208,11 +208,10 @@ test("the zoom receives only the public editorial projection, never internal not
   assert.deepEqual(Object.keys(editorialCard).sort(), ["cardPrice", "lastReviewedAt", "tierKey"]);
 });
 
-test("reuses the shared editorial zoom builder in ClubHub, ClubOwner and player profile", () => {
+test("reuses the shared editorial zoom builder in ClubHub and player profile", () => {
   const sources = [
     "../components/touchline/ClubHubSquadGrid.tsx",
     "../components/touchline/ClubHubOfficialLineup.tsx",
-    "../components/touchline/club-owner/ClubOwnerProfileRenderer.tsx",
     "../app/touchline-players/[player]/page.tsx",
   ].map((source) => readFileSync(new URL(source, import.meta.url), "utf8"));
 

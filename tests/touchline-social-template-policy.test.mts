@@ -121,9 +121,22 @@ test("046 keeps standalone 041/042 snapshots unavailable until their own visual 
 
 test("046 snapshot manifests fail closed when a transitive approved asset changes", async () => {
   const template = "touchline-match-preview-feed-v1";
-  assert.equal((await assessTouchlineApprovedSocialSnapshot(template)).state, "approved");
-  const diverged = await assessTouchlineApprovedSocialSnapshot(template, process.cwd(), async (absolutePath) => {
+  // Removing the crest glow changes approved bytes, not their approval record.
+  assert.equal((await assessTouchlineApprovedSocialSnapshot(template)).state, "diverged");
+  const approvedBytes = async (absolutePath: string) => {
     const bytes = readFileSync(absolutePath);
+    if (!absolutePath.endsWith("TouchlineSocialApprovedSnapshotPrimitives.tsx")) return bytes;
+    // Reconstruct only the historical line for this regression fixture. The
+    // unchanged production checksum must authenticate the entire old bundle.
+    const current = 'objectFit: "contain" }} /><strong style={{ display: "block" }}>{club.name}</strong>';
+    const historical = 'objectFit: "contain", filter: `drop-shadow(0 0 10px ${club.accent})` }} /><strong style={{ display: "block" }}>{club.name}</strong>';
+    const text = bytes.toString("utf8");
+    assert.equal(text.split(current).length - 1, 1, "historical fixture must replace exactly one crest style");
+    return Buffer.from(text.replace(current, historical));
+  };
+  assert.equal((await assessTouchlineApprovedSocialSnapshot(template, process.cwd(), approvedBytes)).state, "approved");
+  const diverged = await assessTouchlineApprovedSocialSnapshot(template, process.cwd(), async (absolutePath) => {
+    const bytes = await approvedBytes(absolutePath);
     return absolutePath.endsWith("TouchlineSocialApprovedExactCard.tsx")
       ? Buffer.concat([bytes, Buffer.from("\n// test-only divergent dependency\n")])
       : bytes;
