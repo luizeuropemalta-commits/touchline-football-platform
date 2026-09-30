@@ -431,10 +431,30 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
     await admin.rpc("touchline_fantasy_reconcile_lineup_alerts", { p_gameweek_id: activeGameweek.id });
   }
   timing?.mark("selections");
-  const [draftResponse, lockedResponse, scoreResponse, seasonScoresResponse, alertsResponse] = userGameweekId
+  const [{ selections, historyData }, scoreResponse, seasonScoresResponse, alertsResponse] = userGameweekId
     ? await Promise.all([
-      admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
-      admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
+      (async () => {
+        const [draftResponse, lockedResponse] = await Promise.all([
+          admin.from("touchline_fantasy_user_gameweek_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
+          admin.from("touchline_fantasy_locked_selections").select("player_id,slot_id").eq("user_gameweek_id", userGameweekId),
+        ]);
+        const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
+        const selections = selectionRows.flatMap((row): TouchlineFantasySelectionView[] => {
+          const playerId = text(row.player_id);
+          const slotId = text(row.slot_id);
+          return playerId && slotId ? [{ playerId, slotId }] : [];
+        });
+        // All lifecycle writers above remain settled. History depends on this
+        // XI, not on the independent scores or reconciled-alert read below.
+        const selectedPlayerIds = selections.map((entry) => entry.playerId);
+        const { data: historyData } = projection === "full" && activeGameweek && selectedPlayerIds.length
+          ? await admin.from("touchline_fantasy_player_fixture_scores")
+            .select("fixture_id,player_id,rating,goals,hat_trick_multiplier,fantasy_contribution,reason_code,settlement_status")
+            .eq("gameweek_id", activeGameweek.id)
+            .in("player_id", selectedPlayerIds)
+          : { data: [] };
+        return { selections, historyData };
+      })(),
       projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score").eq("user_gameweek_id", userGameweekId).maybeSingle() : Promise.resolve({ data: null, error: null }),
       projection === "full" ? admin.from("touchline_fantasy_user_gameweek_scores").select("gameweek_score,settlement_status,touchline_fantasy_user_gameweeks!inner(user_id,touchline_fantasy_gameweeks!inner(season_id))")
         .eq("touchline_fantasy_user_gameweeks.user_id", user.id)
@@ -444,14 +464,8 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
         .eq("user_gameweek_id", userGameweekId)
         .order("detected_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
     ])
-    : [{ data: [], error: null }, { data: [], error: null }, { data: null, error: null }, { data: [], error: null }, { data: [], error: null }];
+    : [{ selections: [], historyData: [] }, { data: null, error: null }, { data: [], error: null }, { data: [], error: null }];
   timing?.mark("projection");
-  const selectionRows = rows(lockedResponse.data).length ? rows(lockedResponse.data) : rows(draftResponse.data);
-  const selections = selectionRows.flatMap((row): TouchlineFantasySelectionView[] => {
-    const playerId = text(row.player_id);
-    const slotId = text(row.slot_id);
-    return playerId && slotId ? [{ playerId, slotId }] : [];
-  });
   const userGameweek: TouchlineFantasySnapshot["userGameweek"] = userGameweekId ? {
     id: userGameweekId,
     formationCode: text(userGameweekRow?.formation_code) ?? "4-3-3",
@@ -463,13 +477,6 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
   // Keep every lifecycle writer above. Only unused read-only enrichments are
   // omitted; the Arena receives the same complete catalogue and locked XI.
   if (projection === "arena") return { activeGameweek, userGameweek, selections, catalogue, formationRegistry };
-  const selectedPlayerIds = selections.map((entry) => entry.playerId);
-  const { data: historyData } = activeGameweek && selectedPlayerIds.length
-    ? await admin.from("touchline_fantasy_player_fixture_scores")
-      .select("fixture_id,player_id,rating,goals,hat_trick_multiplier,fantasy_contribution,reason_code,settlement_status")
-      .eq("gameweek_id", activeGameweek.id)
-      .in("player_id", selectedPlayerIds)
-    : { data: [] };
   const matchHistory = rows(historyData).flatMap((row): TouchlineFantasyMatchHistory[] => {
     const fixtureId = text(row.fixture_id);
     const playerId = text(row.player_id);

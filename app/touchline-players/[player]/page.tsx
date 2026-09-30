@@ -558,7 +558,13 @@ export default async function TouchLinePlayerProfilePage({
       requestedName: Array.isArray(query.name) ? query.name[0] : query.name,
       fallbackName: fallbackProfile.card.name,
     });
-  const [publicProjectionBatch, official, activeRanking] = await Promise.all([
+  const activeRankingPromise = loadTouchLineActiveRanking().then(
+    (ranking) => ({ ok: true as const, ranking }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+  // Ranking authority is mandatory before rendering, not before independent
+  // identity-based statistics. Observe failures now while enrichment proceeds.
+  const [publicProjectionBatch, official] = await Promise.all([
     canonicalResolution
       ? Promise.resolve(null)
       : loadTouchlinePublicPlayerProjections({
@@ -569,7 +575,6 @@ export default async function TouchLinePlayerProfilePage({
       name: officialLookup.name,
       providerPlayerId: officialLookup.providerPlayerId,
     }),
-    loadTouchLineActiveRanking(),
   ]);
   const publicProjection = canonicalResolution?.projection ?? (officialLookup.providerPlayerId
     ? publicProjectionBatch?.projections.find((projection) => projection.providerPlayerId === officialLookup.providerPlayerId)
@@ -618,6 +623,9 @@ export default async function TouchLinePlayerProfilePage({
       ? loadTouchlinePublishedCardPresentations({ playerIds: [canonicalPlayerId] })
       : new Map(),
   ]);
+  const rankingResult = await activeRankingPromise;
+  if (!rankingResult.ok) throw rankingResult.error;
+  const activeRanking = rankingResult.ranking;
   const authResult = await currentUserPromise;
   if (!authResult.ok) throw authResult.error;
   const currentUser = authResult.user;
