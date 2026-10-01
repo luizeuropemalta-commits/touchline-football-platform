@@ -4,16 +4,16 @@ import test from "node:test";
 
 const source = async (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("Market uses the premium vertical pitch with a real-boundary neon trace", async () => {
+test("Market uses its horizontal smoked-glass pitch while shared boundary trace remains available", async () => {
   const [stage, pitch] = await Promise.all([
-    source("components/touchline/market/TouchlineSquadBuilderStage.tsx"),
+    source("app/fantasy/FantasyGameweekClient.tsx"),
     source("components/touchline/pitch/TouchlinePitchSurface.tsx"),
   ]);
 
-  assert.match(stage, /orientation="vertical"/);
-  assert.match(stage, /surfaceVariant="premium-stadium"/);
-  assert.match(stage, /boundaryTrace/);
-  assert.doesNotMatch(stage, /advertisingCampaign=|TOUCHLINE_MARKET_HOUSE_CAMPAIGN/);
+  const marketPitch = stage.match(/<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\}[^>]*>/)?.[0] ?? "";
+  assert.match(marketPitch, /orientation="horizontal"/);
+  assert.match(marketPitch, /surfaceVariant=\{marketPage \? "smoked-glass" : "premium-stadium"\}/);
+  assert.doesNotMatch(marketPitch, /boundaryTrace|advertisingCampaign=/);
   assert.match(pitch, /className=\{styles\.boundaryTraceRunner\}/);
 });
 
@@ -60,16 +60,16 @@ test("the proportional pitch has equal grass runoffs and an external LED apron",
   assert.match(styles, /\.ledGoalBoard\s*\{[\s\S]*?top:\s*var\(--premium-led-top, \.4%\)/);
 });
 
-test("Market formation rotates attack-right coordinates upwards and keeps every card upright", async () => {
+test("Market preserves horizontal coordinates and the shared orientation wrapper retains attack-up support", async () => {
   const [stage, orientation, orientationStyles] = await Promise.all([
-    source("components/touchline/market/TouchlineSquadBuilderStage.tsx"),
+    source("app/fantasy/FantasyGameweekClient.tsx"),
     source("components/touchline/cards/TouchlineGoalFacingPitchCard.tsx"),
     source("components/touchline/cards/TouchlineGoalFacingPitchCard.module.css"),
   ]);
 
-  assert.match(stage, /function verticalPitchPosition/);
-  assert.match(stage, /100 - slot\.x/);
-  assert.match(stage, /orientation="attack-up"/);
+  assert.match(stage, /function horizontalMyClubPitchPosition[\s\S]*?left:[\s\S]*?slot\.x/);
+  assert.match(stage, /horizontalMyClubPitchPosition\(slot\)/);
+  assert.doesNotMatch(stage, /TouchlineGoalFacingPitchCard/);
   assert.match(orientation, /"attack-right" \| "attack-up" \| "upright"/);
   assert.match(orientationStyles, /\.shellAttackUp > \*/);
   assert.match(orientationStyles, /transform:\s*translate\(-50%, -50%\);/);
@@ -77,18 +77,17 @@ test("Market formation rotates attack-right coordinates upwards and keeps every 
 
 test("the Market pitch shows the coach and Starting XI without a substitute bench", async () => {
   const [stage, styles] = await Promise.all([
-    source("components/touchline/market/TouchlineSquadBuilderStage.tsx"),
-    source("components/touchline/market/TouchlineSquadBuilderStage.module.css"),
+    source("app/fantasy/FantasyGameweekClient.tsx"),
+    source("app/fantasy/fantasy.module.css"),
   ]);
 
-  assert.match(stage, /className=\{styles\.technicalArea\}/);
-  assert.match(stage, /className=\{styles\.coachBrief\}/);
+  assert.match(stage, /data-market-technical-area="true"/);
+  assert.match(stage, /<FantasyCoachZoom entry=\{selectedCoach\}/);
   assert.doesNotMatch(stage, /touchline-market-dugout-title/);
-  assert.doesNotMatch(stage, /Matchday bench|Banco da partida|Substitutes|Reservas/);
+  assert.doesNotMatch(stage, /Matchday bench|Banco da partida|className=\{styles\.bench\}/);
   assert.doesNotMatch(stage, /key: "bench"/);
-  assert.match(styles, /\.pitchColumn\s*\{[\s\S]*?--market-technical-width:\s*clamp\(360px, 40%, 720px\)/);
-  assert.match(styles, /\.pitchColumn\s*\{[\s\S]*?width:\s*100%/);
-  assert.match(styles, /\.pitch\s*\{[\s\S]*?min-height:\s*0/);
+  assert.match(stage, /data-market-starting-xi="true"/);
+  assert.match(styles, /\.myClubTacticalPitch\{[\s\S]*?aspect-ratio:105\/68/);
 });
 
 test("visual fixture is unambiguously local and non-publishable", async () => {

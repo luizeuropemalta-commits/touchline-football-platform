@@ -20,9 +20,9 @@ test("global metadata names TouchLine while entry branding and team copy remain 
   const login = readFileSync(new URL("../app/(auth)/login/page.tsx", import.meta.url), "utf8");
   const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
   assert.match(layout, /title: "TouchLine"/);
-  assert.match(logo, />Arena Touchline</);
+  assert.match(logo, />TouchLine</);
   assert.doesNotMatch(logo, /Arena \/ TouchLine England/);
-  assert.equal(getTouchLineAuthCopy("pt-BR").login.description, "Entre para montar seu time e acessar a Arena Touchline.");
+  assert.equal(getTouchLineAuthCopy("pt-BR").login.description, "Entre para montar seu time e acessar a TouchLine.");
   assert.match(login, /text-sm font-medium leading-6 text-slate-200/);
 });
 

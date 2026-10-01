@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { TOUCHLINE_CLUB_OWNER_XI_SLOTS, TOUCHLINE_STANDARD_433_SLOTS, touchlineCanonicalFormationSlots } from "../lib/touchlineArena/pitch-layout.ts";
 
-const gameweekTeamSnapshot = readFileSync(new URL("../components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx", import.meta.url), "utf8");
+const market = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
 const clubHubLineup = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.tsx", import.meta.url), "utf8");
 const clubLineupBuilder = readFileSync(new URL("../lib/touchlineArena/club-lineup.ts", import.meta.url), "utf8");
 const clubHubLineupCss = readFileSync(new URL("../components/touchline/ClubHubOfficialLineup.module.css", import.meta.url), "utf8");
@@ -61,16 +61,18 @@ test("ClubHub and Market use the same canonical formation geometry", () => {
 });
 
 test("field art is a shared component rather than separate page drawings", () => {
-  assert.match(gameweekTeamSnapshot, /TouchlinePitchSurface/);
+  assert.match(market, /TouchlinePitchSurface/);
   assert.match(clubHubLineup, /TouchlinePitchSurface/);
   assert.match(clubLineupBuilder, /touchlineCanonicalFormationSlots\(formation, input\.formationGeometryRegistry\)/);
-  assert.match(readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8"), /touchlineCanonicalFormationSlots\(formation, geometryRegistry\)/);
+  assert.match(market, /const geometry = formationCode \? snapshot\?\.formationRegistry\[formationCode\] : null/);
+  assert.match(market, /const selectedCards = geometry\?\.slots\.map/);
+  assert.match(readFileSync(new URL("../lib/touchlineFantasy/server.ts", import.meta.url), "utf8"), /readTouchlineFormationGeometryRegistry\(\)/);
   assert.doesNotMatch(clubHubLineup, /styles\.goalBox/);
 });
 
-test("static Rank, Line-up, and Club Owner fields share Market's premium grass without changing Arena's loop field", () => {
+test("Rank and ClubHub retain premium grass while Market uses its approved smoked-glass field", () => {
   assert.match(tablesClient, /<TouchlinePitchSurface className=\{styles\.pitch\} ariaLabel=\{copy\.seasonSelection\} surfaceVariant="premium-stadium">/);
-  assert.match(gameweekTeamSnapshot, /surfaceVariant=\{surface === "club-owner" \? "premium-stadium" : "canonical"\}/);
+  assert.match(market, /orientation="horizontal" surfaceVariant=\{marketPage \? "smoked-glass" : "premium-stadium"\}/);
   assert.match(clubHubLineup, /orientation="horizontal"[\s\S]*?surfaceVariant="premium-stadium"/);
   assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?touchline-premium-grass-clean-horizontal-v1\.png/);
   assert.match(pitchSurfaceCss, /\.surfacePremiumStadium:not\(\.surfaceVertical\)[\s\S]*?repeating-linear-gradient\(90deg/);

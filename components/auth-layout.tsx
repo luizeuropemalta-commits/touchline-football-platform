@@ -92,7 +92,7 @@ export function AuthLayout({
           <div className="pitch-lines" />
           <div className="manager-silhouette" />
           <div className="relative z-10 mt-auto flex h-full flex-col justify-end">
-            <p className="text-[11px] font-black text-cyan-200/80">TouchLine Arena</p>
+            <p className="text-[11px] font-black text-cyan-200/80">TouchLine</p>
             <h2 className="font-display mt-5 text-6xl  italic leading-[.86] xl:text-7xl">{copy.asideTitleTop}<br/><span className="text-[#a3ff12]">{copy.asideTitleBottom}</span></h2>
             <div className="mt-9 space-y-4">{copy.features.map(x=><div key={x} className="console-mini-card flex items-center gap-3 p-4 text-[10px] font-bold text-slate-300"><span className="grid size-7 place-items-center rounded-lg border border-[#a3ff12]/25 bg-[#a3ff12]/10 text-[#a3ff12]"><Check size={13} strokeWidth={3}/></span>{x}</div>)}</div>
           </div>

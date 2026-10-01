@@ -38,20 +38,20 @@ const adminEntrySources = [
 test("authentication copy is Portuguese for pt-BR and English for unsupported locales", () => {
   assert.equal(normalizeTouchLineAuthLocale("pt-BR"), "pt-BR");
   assert.equal(normalizeTouchLineAuthLocale("fr-FR"), "en-GB");
-  assert.equal(getTouchLineAuthCopy("pt-BR").login.title, "Entre na Arena");
+  assert.equal(getTouchLineAuthCopy("pt-BR").login.title, "Entre na TouchLine");
   assert.equal(getTouchLineAuthCopy("pt-BR").form.password, "Senha");
   assert.equal(getTouchLineAuthCopy("pt-BR").reset.title, "Defina uma nova senha.");
-  assert.equal(getTouchLineAuthCopy("en-GB").login.title, "Enter the arena");
+  assert.equal(getTouchLineAuthCopy("en-GB").login.title, "Enter TouchLine");
 });
 
-test("public authentication copy describes the launched Arena without beta or test wording", () => {
+test("public authentication copy describes TouchLine without beta or test wording", () => {
   for (const locale of ["en-GB", "pt-BR"] as const) {
     const copy = getTouchLineAuthCopy(locale);
     const publicCopy = JSON.stringify({ login: copy.login, register: copy.register, terms: copy.form.terms });
     assert.doesNotMatch(publicCopy, /coming soon|currently in testing|\bbeta\b|test environment|ambiente de testes|fase de testes|montar e testar|building and testing/i);
   }
-  assert.equal(getTouchLineAuthCopy("en-GB").register.betaTitle, "TouchLine Arena · Secure access");
-  assert.equal(getTouchLineAuthCopy("pt-BR").register.betaTitle, "TouchLine Arena · Acesso seguro");
+  assert.equal(getTouchLineAuthCopy("en-GB").register.betaTitle, "TouchLine · Secure access");
+  assert.equal(getTouchLineAuthCopy("pt-BR").register.betaTitle, "TouchLine · Acesso seguro");
 });
 
 test("authentication destinations preserve the normalized locale", () => {

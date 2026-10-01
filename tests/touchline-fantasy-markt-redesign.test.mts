@@ -193,16 +193,18 @@ test("the Markt clock follows canonical close and reopen timestamps without inve
 });
 
 test("shared Gameweek presentation preserves exact XI identity and position eligibility", async () => {
-  const [shared, arenaAdapter, market] = await Promise.all([
-    source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx"),
+  const [card, arenaAdapter, market] = await Promise.all([
+    source("components/touchline/fantasy/TouchlineGameweekCard.tsx"),
     source("lib/touchlineFantasy/arena-lineup.ts"),
     source("app/fantasy/FantasyGameweekClient.tsx"),
   ]);
-  assert.match(shared, /snapshot!?\.selections\.find/);
-  assert.match(shared, /data-canonical-player-id/);
-  assert.match(shared, /One Starting XI|Um XI titular/);
-  assert.doesNotMatch(shared, /No Fantasy bench|Nenhum banco Fantasy/);
-  assert.match(shared, /formatTouchlineFantasyDeadline\(gameweek\.locksAt, locale\)/);
+  assert.match(market, /selection: selections\.find\(\(entry\) => entry\.slotId === slot\.id\)/);
+  assert.match(market, /card\.canonicalPlayerId \?\? card\.id/);
+  assert.match(card, /canonicalPlayerId: card\.editorialCard \? exact\.canonicalPlayerId : null/);
+  assert.match(market, /data-market-starting-xi="true"/);
+  assert.match(market, /\{selectedCount\}\/11/);
+  assert.doesNotMatch(market, /No Fantasy bench|Nenhum banco Fantasy/);
+  assert.match(market, /formatTouchlineFantasyDeadline\(activeGameweek\.locksAt, locale\)/);
   assert.match(arenaAdapter, /userGameweek\.state === "DRAFT"/);
   assert.match(arenaAdapter, /snapshot\.selections\.length !== 11/);
   assert.match(arenaAdapter, /seen\.size !== 11/);

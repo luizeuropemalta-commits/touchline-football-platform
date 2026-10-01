@@ -7,7 +7,7 @@ import {
   resolveTouchlineSquadJourney,
 } from "../lib/touchlineArena/squad-rules.ts";
 
-const stagePath = new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url);
+const stagePath = new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url);
 const marketI18nPath = new URL("../lib/touchlineArena/market-i18n.ts", import.meta.url);
 
 test("canonical TouchLine England squad rules remain in one server-independent read model", () => {
@@ -33,23 +33,19 @@ test("the canonical squad model still resolves the complete internal journey", (
   assert.equal(resolveTouchlineSquadJourney({ hasCoach: true, hasFormation: true, starterCount: 12, benchCount: 10, contractedCount: 36 }).reviewAvailable, true);
 });
 
-test("the Market owns one premium squad-building stage with distinct player groups", async () => {
+test("the Market owns one canonical XI editor with coach-first setup", async () => {
   const source = await readFile(stagePath, "utf8");
-  assert.match(source, /Monte seu time TouchLine/);
+  assert.match(source, /ELENCO TITULAR.*STARTING XI/);
   assert.match(source, /TouchlinePitchSurface/);
-  assert.match(source, /touchlineCanonicalFormationSlots\(formation, geometryRegistry\)/);
-  assert.doesNotMatch(source, /Banco da partida|Matchday bench|Substitutes|Reservas/);
+  assert.match(source, /snapshot\?\.formationRegistry\[formationCode\]/);
+  assert.match(source, /const selectedCards = geometry\?\.slots\.map/);
+  assert.match(source, /data-market-starting-xi="true"/);
+  assert.doesNotMatch(source, /Banco da partida|Matchday bench/);
   assert.doesNotMatch(source, /className=\{styles\.bench\}/);
   assert.doesNotMatch(source, /className=\{styles\.remaining\}/);
-  assert.match(source, /aria-current=\{index === currentStepIndex \? "step"/);
-  assert.match(source, /Área técnica e preparação do elenco/);
-  assert.match(source, /Defina a formação e contrate os seus 11 titulares/);
-  assert.match(source, /className=\{styles\.coachBrief\}/);
-  assert.doesNotMatch(source, /Complete the Starting XI/);
-  assert.doesNotMatch(source, /Confirm club and enter Arena/);
-  assert.doesNotMatch(source, /key: "arena"/);
-  assert.doesNotMatch(source, /Enter Arena/);
-  assert.doesNotMatch(source, /Organizar elenco/);
+  assert.match(source, /data-my-club-setup="coach"/);
+  assert.match(source, /data-my-club-setup="formation"/);
+  assert.match(source, /\{selectedCount\}\/11/);
 });
 
 test("the account header exposes four canonical metrics without fake capacity or TC labels", async () => {
@@ -70,56 +66,55 @@ test("the account header exposes four canonical metrics without fake capacity or
 
 test("coach remains a dedicated entity outside every player slot", async () => {
   const source = await readFile(stagePath, "utf8");
-  const styles = await readFile(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8");
-  assert.match(source, /className=\{styles\.technicalArea\}/);
+  assert.match(source, /data-market-technical-area="true"/);
   const coachCardStyles = await readFile(new URL("../components/touchline/cards/TouchlineCoachCard.module.css", import.meta.url), "utf8");
-  assert.match(styles, /\.coachCard \{ display: grid; place-items: center; width: 78px; min-height: 112px;/);
-  assert.match(styles, /\.technicalArea \{[\s\S]*?width: var\(--market-technical-width\);/);
   assert.match(coachCardStyles, /width: clamp\(9px, 16cqw, 28px\)/);
-  assert.match(styles, /\.pitch \{[\s\S]*?min-height: 0;/);
-  assert.match(source, /coachProfileHref/);
+  const pitch = source.match(/<TouchlinePitchSurface className=\{styles\.myClubTacticalPitch\}[\s\S]*?<\/TouchlinePitchSurface>/)?.[0] ?? "";
+  assert.match(pitch, /selectedCards\.map/);
+  assert.doesNotMatch(pitch, /FantasyCoachZoom|TouchlineCoachCardZoom/);
+  assert.match(source, /<FantasyCoachZoom entry=\{selectedCoach\}/);
+  assert.match(source, /profileHref=\{`\/touchline-coaches\//);
   assert.doesNotMatch(source, /starters\.push\([^)]*coach/i);
   assert.doesNotMatch(source, /role:\s*["']coach["']/);
 });
 
 
 
-test("owned non-starters remain eligible selection inputs without rendering a Market bench", async () => {
+test("published catalogue candidates remain available without rendering a Market bench", async () => {
   const stage = await readFile(stagePath, "utf8");
-  assert.match(stage, /export type TouchlineSquadBuilderBenchPlayer = \{[\s\S]*?card: TouchlineEliteExactPlayer;/);
-  assert.match(stage, /const squadCandidates = useMemo\([\s\S]*?\[\.\.\.bench, \.\.\.remainingSquad\]/);
-  assert.match(stage, /squadCandidates\.filter/);
+  assert.match(stage, /snapshot\?\.catalogue \?\? \[\]/);
+  assert.match(stage, /browseCards\.map\(\(card\)/);
+  assert.match(stage, /const inLineup = selections\.some/);
+  assert.match(stage, /marketPage \? Boolean\(activeSlot\) && slotAccepts\(activeSlot, card\)/);
+  assert.match(stage, /!editable \? <span[\s\S]*?: inLineup \? <span/);
   assert.doesNotMatch(stage, /className=\{styles\.bench\}|className=\{styles\.remaining\}/);
 });
 
-test("owned squad cards remain visibly rendered in the authenticated Market builder", async () => {
+test("canonical XI cards retain the shared expanded card and suppress duplicate actions", async () => {
   const stage = await readFile(stagePath, "utf8");
-  const renderedCards = stage.match(/<TouchlineEliteExactCard[\s\S]*?\/>/g) ?? [];
-  const sharedZoomUsages = stage.match(/<SquadPlayerCardZoom/g) ?? [];
-
-  assert.equal(sharedZoomUsages.length, 1);
-  assert.equal(renderedCards.length, 3);
-  assert.match(stage, /function SquadPlayerCardZoom/);
-  assert.match(stage, /allowVisualInventoryPreview/);
-  assert.match(stage, /showCardActions=\{false\}/);
-  assert.match(stage, /showProfileAction=\{false\}/);
-  assert.match(stage, /expandedContent=/);
-  assert.match(stage, /className=\{styles\.playerSlot\}[\s\S]*?<SquadPlayerCardZoom card=\{player\.card\}/);
+  const card = await readFile(new URL("../components/touchline/fantasy/TouchlineGameweekCard.tsx", import.meta.url), "utf8");
+  assert.match(stage, /className=\{styles\.myClubTacticalSlot\}[\s\S]*?<TouchlineGameweekCard card=\{card\}/);
+  assert.match(card, /<TouchlineCardZoom/);
+  assert.match(card, /showCardActions=\{false\}/);
+  assert.match(card, /showProfileAction=\{false\}/);
+  assert.match(card, /expandedContent=\{<TouchlineEliteExactCard/);
+  assert.match(card, /canonicalPlayerId: card\.editorialCard \? exact\.canonicalPlayerId : null/);
   assert.doesNotMatch(stage, /className=\{styles\.dugoutSeat\}/);
 });
 
 test("formation vacancies and replacements stay inside the pitch with eligible-only controls", async () => {
-  const [stage, styles] = await Promise.all([
+  const [stage, picker] = await Promise.all([
     readFile(stagePath, "utf8"),
-    readFile(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8"),
+    readFile(new URL("../app/fantasy/TouchlinePositionPicker.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(stage, /role="dialog" aria-modal="false"/);
-  assert.match(stage, /Cards eligible for the selected position on the pitch/);
-  assert.match(stage, /onAssignPlayer\(\{/);
-  assert.match(stage, /window\.addEventListener\("keydown", closePicker\)/);
-  assert.match(styles, /\.slotPicker \{/);
-  assert.match(styles, /\.positionPrompt \{/);
-  assert.match(styles, /\.formationStatus \{/);
-  assert.doesNotMatch(stage, /Formation complete|Formação completa/);
+  assert.match(stage, /<TouchlinePositionPicker inline=\{!marketPage\}/);
+  assert.match(stage, /returnFocusRef=\{positionTriggerRef\}/);
+  assert.match(stage, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
+  assert.match(stage, /replaceTouchlineFantasyPlayerAtSlot/);
+  assert.match(stage, /const editable = snapshot\?\.entitlementActive === true && activeGameweek\?\.state === "MARKET_OPEN" && !deadlineReached/);
+  assert.match(stage, /if \(!editable \|\| !geometry\) return false/);
+  assert.match(stage, /if \(!addPlayer\(card\)\) return;[\s\S]*setPositionPickerOpen\(false\)/);
+  assert.match(picker, /useTouchlineDialog<HTMLDivElement>/);
+  assert.match(picker, /open, onDismiss: onClose, label: title, initialFocusRef: closeRef, returnFocusRef/);
 });

@@ -136,7 +136,7 @@
 .matchupTeams strong { color: #f7fff2; font-size: 12.1px; letter-spacing: .08em; }
 .matchupTeamPending strong { color: rgba(255,255,255,.54); font-size: 8.8px; line-height: 1.15; }
 .matchupTeams > b { min-width: 54px; color: #f7fff2; font-size: 17px; font-weight: 1000; line-height: 1; text-align: center; text-shadow: 0 0 16px rgba(163,255,18,.38); white-space: nowrap; }
-.matchupCrest { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.4)); }
+.matchupCrest { width: 48px; height: 48px; object-fit: contain; }
 
 .status {
   display: inline-flex;

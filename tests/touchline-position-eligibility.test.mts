@@ -86,16 +86,17 @@ test("shows football language for Portuguese and English buyers", () => {
   assert.match(touchlineTwoStrikerFormationHint("pt-BR"), /4-4-2/);
 });
 
-test("Market Transfer uses centralized position eligibility on gallery cards and checkout action", () => {
-  const squadBuilder = readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.tsx", import.meta.url), "utf8");
-  assert.match(squadBuilder, /isTouchlineTacticalSlotCandidateEligible/);
-  assert.match(squadBuilder, /const steps = \[/);
-  assert.match(squadBuilder, /className=\{styles\.progress\}/);
+test("Market Transfer uses canonical slot eligibility and validates player replacement", () => {
+  const squadBuilder = readFileSync(new URL("../app/fantasy/FantasyGameweekClient.tsx", import.meta.url), "utf8");
+  assert.match(squadBuilder, /touchlineFantasySlotAcceptsPlayer\(activeSlot, player\)/);
+  assert.match(squadBuilder, /replaceTouchlineFantasyPlayerAtSlot\(\{ selections, slot, player \}\)/);
+  assert.match(squadBuilder, /validateTouchlineFantasyLineup\(\{ selections: next/);
 });
 
-test("Market Transfer keeps the buying workspace visible on Safari/mobile landscape", () => {
-  const squadBuilderStyles = readFileSync(new URL("../components/touchline/market/TouchlineSquadBuilderStage.module.css", import.meta.url), "utf8");
-  assert.match(squadBuilderStyles, /max-height: 480px\) and \(orientation: landscape\)/);
-  assert.match(squadBuilderStyles, /\.workspace \{ grid-template-columns: 1fr; \}/);
-  assert.match(squadBuilderStyles, /\.pitch \{ min-height: 0; border-right:/);
+test("Market mobile styles retain unscaled pitch controls and minimum touch targets", () => {
+  const squadBuilderStyles = readFileSync(new URL("../app/fantasy/fantasy.module.css", import.meta.url), "utf8");
+  const marketMobile = squadBuilderStyles.slice(squadBuilderStyles.indexOf("/* The Market picker must remain reachable"));
+  assert.match(marketMobile, /@media \(max-width: 900px\)/);
+  assert.match(marketMobile, /\.myClubTacticalPitch\s*\{\s*width: 100%;\s*transform: none;/);
+  assert.match(marketMobile, /\.myClubTacticalSlot > button\s*\{\s*display: grid;[\s\S]*?min-height: 44px;/);
 });

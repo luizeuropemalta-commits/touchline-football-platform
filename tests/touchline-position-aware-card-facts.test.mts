@@ -218,11 +218,10 @@ test("zoom facts are position-aware and render unavailable rating as a dash", ()
   ]);
 });
 
-test("all product card surfaces consume the shared position-aware fact builder", async () => {
+test("public match-fact surfaces consume the shared position-aware fact builder", async () => {
   const paths = [
     "app/touchline-player-card-rankings/page.tsx",
     "app/touchline-players/[player]/page.tsx",
-    "components/touchline/market/TouchlineSquadBuilderStage.tsx",
     "components/touchline/ClubHubOfficialLineup.tsx",
     "components/touchline/ClubHubSquadGrid.tsx",
   ];

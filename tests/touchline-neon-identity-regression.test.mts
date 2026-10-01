@@ -441,11 +441,12 @@ test("Arena coach uses compact typography and an isolated fullscreen spotlight",
   assert.match(coachStyles, /data-coach-card-display="compact"[\s\S]*?\.stat \{[\s\S]*?min-height: 0/);
 });
 
-test("the canonical Gameweek snapshot presents one starting XI", () => {
-  const gameweekSnapshot = source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx");
+test("the Market presents one canonical starting XI", () => {
+  const gameweekSnapshot = source("app/fantasy/FantasyGameweekClient.tsx");
 
-  assert.match(gameweekSnapshot, /snapshot!?\.selections\.find/);
-  assert.match(gameweekSnapshot, /Um XI titular|One Starting XI/);
+  assert.match(gameweekSnapshot, /selection: selections\.find\(\(entry\) => entry\.slotId === slot\.id\)/);
+  assert.match(gameweekSnapshot, /data-market-starting-xi="true"/);
+  assert.match(gameweekSnapshot, /\{selectedCount\}\/11/);
   assert.doesNotMatch(gameweekSnapshot, /Nenhum banco Fantasy|No Fantasy bench/);
 });
 

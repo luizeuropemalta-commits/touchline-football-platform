@@ -8,12 +8,11 @@ import {
 } from "../lib/touchlineArena/player-ranking-eligibility.ts";
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [store, liveSync, accountSync, authoritativeRoster, marketStage, rankingRebuild, rankingPage, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
+const [store, liveSync, accountSync, authoritativeRoster, rankingRebuild, rankingPage, tablesPage, tablesClient, coachRanking, backup] = await Promise.all([
   read("lib/football-data/player-season-statistics-store.ts"),
   read("lib/football-data/live-sync.ts"),
   read("lib/touchlineArena/arena-account-sync.ts"),
   read("lib/touchlineArena/authoritative-roster-server.ts"),
-  read("components/touchline/market/TouchlineSquadBuilderStage.tsx"),
   read("lib/touchlineArena/player-ranking-rebuild-server.ts"),
   read("app/touchline-player-card-rankings/page.tsx"),
   read("app/touchline-tables/page.tsx"),
@@ -101,10 +100,8 @@ test("ranking pages use the league-wide published catalogue, not a private owner
   assert.match(tablesPage, /highlights=\{projectTouchlineRankingsHighlights\(rankedCards, publishedTopEleven\)\}/);
   assert.match(tablesPage, /totalRankedCards=\{rankedCards\.length\}/);
   assert.doesNotMatch(tablesPage, /cardPlayerRank/);
-  for (const surface of [rankingPage, marketStage]) {
-    assert.match(surface, /buildTouchlineVerifiedMatchFactFields/);
-    assert.doesNotMatch(surface, /buildTouchlineMatchScoringBreakdownFields/);
-  }
+  assert.match(rankingPage, /buildTouchlineVerifiedMatchFactFields/);
+  assert.doesNotMatch(rankingPage, /buildTouchlineMatchScoringBreakdownFields/);
 });
 
 test("coach ranking stays separate and exposes no owner or contract identity", () => {

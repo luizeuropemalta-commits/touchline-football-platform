@@ -132,10 +132,10 @@ test("all authentication continuations stay inside the Arena", () => {
   assert.match(proxySource, /touchLinePostAuthHref\(returnTo, lang\)/);
 });
 
-test("authentication presents only the current TouchLine Arena product", () => {
+test("authentication presents only the current TouchLine product", () => {
   assert.match(authI18nSource, /Build your squad, manage official player contracts/);
   assert.match(authI18nSource, /Market Transfer and live rankings/);
-  assert.match(authI18nSource, /Create secure access for TouchLine Arena/);
+  assert.match(authI18nSource, /Create secure access for TouchLine and enter your squad environment/);
   assert.doesNotMatch(authLayoutSource, /Agent, club and player profile tools/);
   assert.doesNotMatch(authLayoutSource, /Agents, clubs and profiles coming next/);
   assert.doesNotMatch(registerPageSource, /Professional modules come later/);

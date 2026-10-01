@@ -25,6 +25,17 @@ test("crest filter guard rejects a coloured shadow split across lines", () => {
   assert.throws(() => assertExactFilter(`${selector} { filter:\n${black}\n drop-shadow(\n0 0 15px\nvar(--club-accent)\n); }`, selector, black), assert.AssertionError);
 });
 
+test("ClubHub fixture crest wrapper adds no diffuse shadow above the shared crest image", () => {
+  const css = read("components/touchline/ClubHubOfficialLineup.module.css");
+  const rule = css.match(/(?:^|[{}])\s*\.matchupCrest\s*\{([^}]*)\}/)?.[1];
+  assert.ok(rule, "fixture crest rule must remain present");
+  assert.match(rule, /width:\s*48px;/);
+  assert.match(rule, /height:\s*48px;/);
+  assert.match(rule, /object-fit:\s*contain;/);
+  assert.doesNotMatch(rule, /(?:filter|box-shadow|text-shadow)\s*:/);
+  assert.match(read("components/touchline/ClubHubOfficialLineup.tsx"), /className=\{styles\.matchupCrest\}/);
+});
+
 test("club crests have no coloured halo in shared cards and isolated social crests", () => {
   for (const path of ["app/globals.css", "components/touchline/cards/TouchlineCoachCard.module.css"]) {
     assert.doesNotMatch(read(path), /drop-shadow\([^;]*var\(--touchline-club-crest-color\)/, path);

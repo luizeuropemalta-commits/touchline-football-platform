@@ -43,7 +43,7 @@ test("public card pages derive Card Engine visibility from the authenticated ser
   for (const serverSurface of serverSurfaces) {
     assert.match(serverSurface, /isOwnerEmail\(/);
   }
-  assert.match(source("components/touchline/market/TouchlineSquadBuilderStage.tsx"), /canEditCardEngine = false/);
+  assert.doesNotMatch(source("components/touchline/fantasy/TouchlineGameweekCard.tsx"), /cardEngineHref|touchlineCardEnginePlayerHref/);
 });
 
 test("Market keeps customer authentication and denies owner/admin shortcuts", () => {
@@ -59,14 +59,16 @@ test("Market keeps customer authentication and denies owner/admin shortcuts", ()
 });
 
 test("Market keeps card zoom on the Starting XI without rendering a substitute bench", () => {
-  const builder = source("components/touchline/market/TouchlineSquadBuilderStage.tsx");
-
-  assert.match(builder, /function SquadPlayerCardZoom/);
-  assert.equal(builder.match(/<SquadPlayerCardZoom/g)?.length, 1);
+  const builder = source("app/fantasy/FantasyGameweekClient.tsx");
+  const card = source("components/touchline/fantasy/TouchlineGameweekCard.tsx");
+  assert.match(builder, /data-market-starting-xi="true"/);
+  assert.match(builder, /<TouchlineGameweekCard card=\{card\}/);
+  assert.match(card, /<TouchlineCardZoom/);
+  assert.match(card, /expandedContent=\{<TouchlineEliteExactCard/);
   assert.doesNotMatch(builder, /Matchday bench/);
-  assert.doesNotMatch(builder, /remainingSquad\.map[\s\S]*?<SquadPlayerCardZoom/);
-  assert.match(builder, /const squadCandidates = useMemo\([\s\S]*?\[\.\.\.bench, \.\.\.remainingSquad\]/);
-  assert.match(builder, /className=\{styles\.changePlayer\}/);
+  assert.doesNotMatch(builder, /remainingSquad\.map|className=\{styles\.bench\}/);
+  assert.match(builder, /data-slot-action=\{card \? "replace" : "add"\}/);
+  assert.match(builder, /<TouchlinePositionPicker inline=\{!marketPage\}/);
 });
 
 test("the destination remains owner-gated and resolves the requested canonical player", () => {

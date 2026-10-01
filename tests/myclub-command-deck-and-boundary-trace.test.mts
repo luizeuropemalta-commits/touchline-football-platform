@@ -36,16 +36,14 @@ test("My Club styles define one approved stadium background on the shared header
   assert.match(css, /\.commandHeader \.socialIdentity::before/);
 });
 
-test("the separate market pitch keeps its perimeter while My Club stays calm", async () => {
-  const [market, myClub, pitch, pitchCss] = await Promise.all([
-    source("components/touchline/market/TouchlineSquadBuilderStage.tsx"),
+test("Market keeps its approved tactical surface without enabling the optional shared boundary trace", async () => {
+  const [myClub, pitch, pitchCss] = await Promise.all([
     source("app/fantasy/FantasyGameweekClient.tsx"),
     source("components/touchline/pitch/TouchlinePitchSurface.tsx"),
     source("components/touchline/pitch/TouchlinePitchSurface.module.css"),
   ]);
 
-  assert.match(market, /<TouchlinePitchSurface\s+boundaryTrace/);
-  assert.doesNotMatch(market, /TOUCHLINE_MARKET_HOUSE_CAMPAIGN|advertisingCampaign=/);
+  assert.match(myClub, /orientation="horizontal" surfaceVariant=\{marketPage \? "smoked-glass" : "premium-stadium"\}/);
   assert.doesNotMatch(myClub, /<TouchlinePitchSurface boundaryTrace className=\{styles\.myClubTacticalPitch\}/);
   assert.match(pitch, /boundaryTrace\?: boolean/);
   assert.match(pitchCss, /\.boundaryTraceRunner/);

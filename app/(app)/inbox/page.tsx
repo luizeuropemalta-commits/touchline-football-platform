@@ -59,12 +59,12 @@ export default async function TouchlineInboxPage({ searchParams }: InboxPageProp
     title: "Inbox do ClubOwner", subtitle: "Comunicados oficiais da TouchLine Central para a sua competição.",
     empty: "Nenhum comunicado para você agora.", unavailable: "O Inbox está indisponível neste ambiente.",
     unavailableCopy: "A fonte de mensagens ainda não foi preparada neste ambiente. Nenhum comunicado é simulado.",
-    read: "Lida", unread: "Não lida", open: "Abrir destino", markRead: "Marcar como lida", back: "Voltar à Arena",
+    read: "Lida", unread: "Não lida", open: "Abrir destino", markRead: "Marcar como lida", back: "Voltar ao Mercado",
   } : {
     title: "ClubOwner Inbox", subtitle: "Official TouchLine Central notices for your competition.",
     empty: "There are no notices for you right now.", unavailable: "Inbox is unavailable in this environment.",
     unavailableCopy: "The message source has not been prepared in this environment. No notice is simulated.",
-    read: "Read", unread: "Unread", open: "Open destination", markRead: "Mark as read", back: "Back to Arena",
+    read: "Read", unread: "Unread", open: "Open destination", markRead: "Mark as read", back: "Back to Market",
   };
   let unavailable = !user || !admin;
   let items: ReturnType<typeof resolveTouchlineCentralInbox> = [];

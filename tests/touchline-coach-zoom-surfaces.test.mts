@@ -6,10 +6,10 @@ function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("coach cards open the canonical zoom before the full profile on category, tables, and snapshot surfaces", () => {
+test("coach cards open the canonical zoom before the full profile on category, tables, and Market surfaces", () => {
   const category = source("components/touchline/TouchlineCoachCategoryShowcase.tsx");
   const tables = source("app/touchline-tables/touchline-tables-client.tsx");
-  const snapshot = source("components/touchline/fantasy/TouchlineGameweekTeamSnapshot.tsx");
+  const snapshot = source("app/fantasy/FantasyGameweekClient.tsx");
 
   for (const surface of [category, tables, snapshot]) {
     assert.match(surface, /TouchlineCoachCardZoom/);
@@ -18,7 +18,8 @@ test("coach cards open the canonical zoom before the full profile on category, t
 
   assert.doesNotMatch(category, /<Link className=\{styles\.cardLink\} href=\{coachHref\}/);
   assert.doesNotMatch(tables, /<Link[\s\S]*?className=\{styles\.(?:gameweekCoachCardLink|topCoachCardLink)\}/);
-  assert.match(snapshot, /competition=\{coach!\.competition\}/);
+  assert.match(snapshot, /competition=\{entry\.competition\}/);
+  assert.match(snapshot, /<FantasyCoachZoom entry=\{selectedCoach\}/);
 });
 
 test("the card layout editor no longer accepts the removed share action", () => {
