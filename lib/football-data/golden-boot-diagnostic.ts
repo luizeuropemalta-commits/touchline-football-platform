@@ -22,7 +22,7 @@ function diagnosticId(value: unknown) {
  * creates a stage authority from the provider's leaderboard observations. */
 export async function readGoldenBootDiagnostic(
   admin: SupabaseClient | null,
-  createProvider: () => Pick<FootballDataProvider, "getSeasonTopScorers">,
+  createProvider: () => Pick<FootballDataProvider, "getSeasonTopScorers" | "getSeasonStages">,
 ) {
   const unavailable = (reason: string) => ({ ...contract, ok: false as const, reason });
   if (!admin) return unavailable("canonical-client-unavailable");
@@ -43,7 +43,26 @@ export async function readGoldenBootDiagnostic(
       || seasons.data[0].is_current !== true) return unavailable("canonical-season-unavailable-or-ambiguous");
     const seasonId = diagnosticId(seasons.data[0].provider_season_id);
     if (!seasonId) return unavailable("canonical-season-unavailable-or-ambiguous");
-    const result = await createProvider().getSeasonTopScorers({ seasonId, totalBudgetMs: 12_000, maxPages: 10 });
+    const provider = createProvider();
+    const deadline = Date.now() + 15_000;
+    async function bounded<T>(start: () => Promise<T>, budget: number): Promise<T | null> {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try { return await Promise.race([Promise.resolve().then(start), new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), budget); })]); }
+      finally { if (timer) clearTimeout(timer); }
+    }
+    const stageResult = await bounded(() => provider.getSeasonStages({ seasonId, leagueId: "8", totalBudgetMs: 3_000 }), 3_000);
+    const independentStageEvidence = stageResult?.ok && stageResult.data.requestedSeasonId === seasonId
+      && stageResult.data.leagueId === "8" && stageResult.data.coverage === "complete"
+      && Array.isArray(stageResult.data.rows) && stageResult.data.rows.every(row => diagnosticId(row.id) && diagnosticId(row.typeId) && row.leagueId === "8" && row.seasonId === seasonId)
+      && new Set(stageResult.data.rows.map(row => row.id)).size === stageResult.data.rows.length
+      && Number.isFinite(Date.parse(stageResult.data.fetchedAt)) && Date.parse(stageResult.data.fetchedAt) <= Date.now()
+      && stageResult.fetchedAt === stageResult.data.fetchedAt
+      ? { state: "available" as const, count: stageResult.data.rows.length, listTruncated: stageResult.data.rows.length > 20, fetchedAt: stageResult.data.fetchedAt, fetchAgeMs: Date.now() - Date.parse(stageResult.data.fetchedAt), stages: stageResult.data.rows.slice(0, 20).map(row => ({ id: row.id, typeId: row.typeId, leagueId: row.leagueId, seasonId: row.seasonId })) }
+      : { state: "unavailable" as const };
+    const remaining = Math.min(12_000, deadline - Date.now());
+    if (remaining <= 0) return unavailable("provider-budget-exhausted");
+    const result = await bounded(() => provider.getSeasonTopScorers({ seasonId, totalBudgetMs: remaining, maxPages: 10 }), remaining);
+    if (!result || Date.now() > deadline) return unavailable("provider-budget-exhausted");
     if (!result.ok) {
       const reason = result.error.code === "not_configured" ? "provider-not-configured"
         : result.error.code === "rate_limited" ? "provider-rate-limited" : "provider-unavailable";
@@ -68,7 +87,7 @@ export async function readGoldenBootDiagnostic(
     }));
     const stageIds = [...new Set(rows.flatMap(row => row.stageId ? [row.stageId] : []))].sort();
     return {
-      ...contract, ok: true as const, seasonProviderId: seasonId,
+      ...contract, ok: true as const, seasonProviderId: seasonId, independentStageEvidence,
       coverage: "complete" as const,
       scopeStatus: data.scopeStatus === "complete" || data.scopeStatus === "ambiguous" ? data.scopeStatus : "unavailable",
       pagesRead: data.pagesRead, rowCount: rows.length, cached: result.cached === true,

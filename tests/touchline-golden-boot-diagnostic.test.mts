@@ -15,7 +15,53 @@ const evidence = { ok: true, provider: "sportmonks", fetchedAt: "2026-10-01T00:0
   requestedSeasonId: "28083", coverage: "complete", scopeStatus: "unavailable", reason: "secret-error", pagesRead: 1, fetchedAt: "2026-10-01T00:00:00Z",
   rows: [{ providerRecordId: "1", providerPlayerId: "10", providerTeamId: "9", leagueId: "8", seasonId: "28083", stageId: null, goals: 3, raw: "secret-row" }],
 } };
-function scenario(options: { user?: unknown; qa?: string; ref?: string; production?: boolean; competitions?: unknown[]; seasons?: unknown[]; providerResult?: unknown; dbError?: boolean; providerThrows?: boolean; adminMissing?: boolean; authThrows?: boolean } = {}) {
+function fakeClock() {
+  let now = Date.parse("2026-10-01T01:00:00Z"), id = 0;
+  const timers = new Map<number, { at: number; callback: () => void }>();
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  return {
+    runtime: { Date: class extends Date { static now() { return now; } }, setTimeout: (callback: () => void, delay: number) => { timers.set(++id, { at: now + delay, callback }); return id; }, clearTimeout: (key: number) => timers.delete(key) },
+    async advance(ms: number) { now += ms; for (const [key, timer] of timers) if (timer.at <= now) { timers.delete(key); timer.callback(); } await flush(); },
+    jump(ms: number) { now += ms; }, flush, pending: () => timers.size,
+  };
+}
+
+test("integrated stage timeout and top timeout share at most fifteen seconds and observe late failures", async () => {
+  const clock = fakeClock(); let stageReject!: (x: unknown) => void, topReject!: (x: unknown) => void;
+  let budget = 0, done = false;
+  const h = scenario({ runtime: clock.runtime,
+    stageRead: () => new Promise((_yes, no) => { stageReject = no; }),
+    topRead: params => { budget = params.totalBudgetMs; return new Promise((_yes, no) => { topReject = no; }); },
+  });
+  const result = h.run().then(value => { done = true; return value; }); await clock.flush();
+  await clock.advance(2999); assert.equal(budget, 0); assert.equal(done, false);
+  await clock.advance(1); assert.equal(budget, 12000);
+  stageReject(new Error("late private stage")); await clock.flush();
+  await clock.advance(11999); assert.equal(done, false);
+  await clock.advance(1); assert.equal((await result).body.reason, "provider-budget-exhausted");
+  topReject(new Error("late private top")); await clock.flush(); assert.equal(clock.pending(), 0);
+});
+
+test("elapsed stage work reduces remaining top budget and expired deadline starts no top read", async () => {
+  for (const elapsed of [7000, 15000]) {
+    const clock = fakeClock(); let budget = 0;
+    const h = scenario({ runtime: clock.runtime, stageRead: async () => { clock.jump(elapsed); return { ok: false }; }, topRead: async params => { budget = params.totalBudgetMs; return evidence; } });
+    const result = await h.run();
+    assert.equal(budget, elapsed === 7000 ? 8000 : 0);
+    if (elapsed === 15000) { assert.equal(result.body.reason, "provider-budget-exhausted"); assert.ok(!h.calls.includes("provider:get")); }
+    assert.equal(clock.pending(), 0);
+  }
+});
+
+test("independent stage sample declares truncation without granting award authority", async () => {
+  const rows = Array.from({ length: 21 }, (_, i) => ({ id: String(i + 1), typeId: "223", leagueId: "8", seasonId: "28083" }));
+  const result = await scenario({ stageRead: async () => ({ ok: true, fetchedAt: evidence.fetchedAt, data: { requestedSeasonId: "28083", leagueId: "8", coverage: "complete", fetchedAt: evidence.fetchedAt, rows } }) }).run();
+  assert.equal(result.body.independentStageEvidence.listTruncated, true);
+  assert.equal(result.body.independentStageEvidence.count, 21);
+  assert.equal(result.body.independentStageEvidence.stages.length, 20);
+  assert.equal(result.body.publicAwardEligible, false);
+});
+function scenario(options: { user?: unknown; qa?: string; ref?: string; production?: boolean; competitions?: unknown[]; seasons?: unknown[]; providerResult?: unknown; dbError?: boolean; providerThrows?: boolean; adminMissing?: boolean; authThrows?: boolean; runtime?: Record<string, unknown>; stageRead?: () => Promise<unknown>; topRead?: (params: { totalBudgetMs: number }) => Promise<unknown> } = {}) {
   const calls: string[] = [];
   const admin = { from(table: string) {
     calls.push(`read:${table}`);
@@ -33,15 +79,20 @@ function scenario(options: { user?: unknown; qa?: string; ref?: string; producti
       },
     }; return query;
   } };
-  const provider = { getSeasonTopScorers: async (params: unknown) => {
+  const provider = { getSeasonStages: async (params: unknown) => {
+    if (options.stageRead) return options.stageRead();
+    assert.deepEqual(JSON.parse(JSON.stringify(params)), { seasonId: "28083", leagueId: "8", totalBudgetMs: 3000 });
+    return { ok: true, fetchedAt: evidence.fetchedAt, data: { requestedSeasonId: "28083", leagueId: "8", coverage: "complete", fetchedAt: evidence.fetchedAt, rows: [{ id: "1", typeId: "223", leagueId: "8", seasonId: "28083", raw: "secret-stage" }] } };
+  }, getSeasonTopScorers: async (params: unknown) => {
     calls.push("provider:get");
+    if (options.topRead) return options.topRead(params as { totalBudgetMs: number });
     assert.equal(JSON.stringify(params), JSON.stringify({ seasonId: "28083", totalBudgetMs: 12_000, maxPages: 10 }));
     if (options.providerThrows) throw new Error("secret-provider");
     return options.providerResult ?? evidence;
   } };
   const helperPath = "lib/football-data/golden-boot-diagnostic.ts";
   const helper = existsSync(new URL(`../${helperPath}`, import.meta.url))
-    ? runInNewContext(`${source(helperPath)}\nreadGoldenBootDiagnostic;`, { strictSportmonksId })
+    ? runInNewContext(`${source(helperPath)}\nreadGoldenBootDiagnostic;`, { strictSportmonksId, setTimeout, clearTimeout, ...options.runtime })
     : () => assert.fail("diagnostic helper is not implemented");
   const GET = runInNewContext(`${source("app/api/football-data/provider-diagnostic/route.ts")}\nGET;`, {
     process: { env: { TOUCHLINE_QA_SUPABASE_PROJECT_REF: options.ref ?? "xgxbwqxjssxxuihuwmgy", VERCEL_ENV: options.production ? "production" : "preview" } },
@@ -63,6 +114,9 @@ test("owner-only Golden Boot diagnostic resolves its canonical season and emits 
   assert.equal(result.status, 200);
   assert.equal(result.headers["Cache-Control"], "no-store");
   assert.equal(result.body.stageAuthority, "unavailable");
+  assert.equal(result.body.independentStageEvidence.state, "available");
+  assert.equal(result.body.independentStageEvidence.count, 1);
+  assert.ok(!JSON.stringify(result.body).includes("secret-stage"));
   assert.equal(result.body.publicAwardEligible, false);
   assert.equal(result.body.seasonProviderId, "28083");
   assert.equal(result.body.rowCount, 1);

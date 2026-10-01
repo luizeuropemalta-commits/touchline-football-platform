@@ -1,5 +1,7 @@
 import { withFootballDataCache } from "@/lib/football-data/cache";
 import { normalizeSportmonksSeasonTopScorers, strictSportmonksId } from "@/lib/football-data/sportmonks-season-topscorers";
+import { normalizeSportmonksSeasonStages } from "@/lib/football-data/sportmonks-season-stages";
+import type { SeasonStagesParams, TouchlineSeasonStages } from "@/lib/football-data/types";
 import { estimateFantasyEventPoints } from "@/lib/football-data/fantasy-scoring";
 import {
   asNumber,
@@ -195,6 +197,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     bucket: "static" | "daily" | "live" | "historical" = "daily",
     timeoutProfile: FootballDataTimeoutProfile = bucket === "live" ? "live" : "background",
     remainingBudgetMs?: number,
+    maxAttempts = 3,
   ): Promise<SportmonksRequestResult<T>> {
     const token = this.token();
     if (!token) return { configured: false as const };
@@ -215,7 +218,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
           provider: this.name,
           timeoutMs,
           retry: {
-            maxAttempts: 3,
+            maxAttempts,
             totalBudgetMs: Math.min(timeoutMs + Math.min(timeoutMs, 1_000), remainingBudgetMs ?? Infinity),
             baseDelayMs: timeoutProfile === "live" ? 100 : 250,
             maxDelayMs: 1_000,
@@ -299,6 +302,26 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   }
 
   /** Strict, internal-only read. Never treats a capped/truncated list as complete. */
+  async getSeasonStages(params: SeasonStagesParams): Promise<FootballDataResult<TouchlineSeasonStages>> {
+    const seasonId = strictSportmonksId(params.seasonId), leagueId = strictSportmonksId(params.leagueId);
+    if (!seasonId || !leagueId || !Number.isSafeInteger(params.totalBudgetMs) || params.totalBudgetMs < 1 || params.totalBudgetMs > 15_000) return resultError(this.name, "invalid_request", "Invalid stage scope or budget.");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const request = await Promise.race([
+        this.request<unknown[]>(`/stages/seasons/${seasonId}`, {}, "live", "interactive", params.totalBudgetMs, 1),
+        new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), params.totalBudgetMs); }),
+      ]);
+      if (!request) return resultError(this.name, "provider_error", "Stage read budget exhausted.");
+      if (!request.configured) return this.notConfigured<TouchlineSeasonStages>();
+      if (!request.value.ok) return this.providerFailure(request.value, "Stage read unavailable.");
+      const rows = normalizeSportmonksSeasonStages(request.value.data, leagueId, seasonId);
+      if (!rows || !Number.isFinite(Date.parse(request.value.fetchedAt))) return resultError(this.name, "provider_error", "Stage evidence invalid.");
+      const data: TouchlineSeasonStages = { requestedSeasonId: seasonId, leagueId, coverage: "complete", rows, fetchedAt: request.value.fetchedAt };
+      return resultOk(this.name, data, undefined, request.cached, data.fetchedAt);
+    } catch { return resultError(this.name, "provider_error", "Stage read unavailable."); }
+    finally { if (timer) clearTimeout(timer); }
+  }
+
   async getSeasonTopScorers(params: SeasonTopScorersParams): Promise<FootballDataResult<TouchlineSeasonTopScorers>> {
     const seasonId = strictSportmonksId(params.seasonId);
     const maxPages = params.maxPages ?? 10;

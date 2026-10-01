@@ -8,6 +8,11 @@ export type SeasonTopScorersParams = {
   totalBudgetMs: number;
   maxPages?: number;
 };
+export type SeasonStagesParams = { seasonId: string; leagueId: string; totalBudgetMs: number };
+export type TouchlineSeasonStages = Readonly<{
+  requestedSeasonId: string; leagueId: string; coverage: "complete"; fetchedAt: string;
+  rows: readonly { id: string; leagueId: string; seasonId: string; typeId: string }[];
+}>;
 
 /** Provider facts only; neither canonical player IDs nor public card authority. */
 export type TouchlineSeasonTopScorer = Readonly<{
@@ -404,6 +409,7 @@ export interface FootballDataProvider {
   getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
   getStandings(params: StandingsParams): Promise<FootballDataResult<TouchlineStandingRow[]>>;
   getSeasonTopScorers(params: SeasonTopScorersParams): Promise<FootballDataResult<TouchlineSeasonTopScorers>>;
+  getSeasonStages(params: SeasonStagesParams): Promise<FootballDataResult<TouchlineSeasonStages>>;
   getTransfers(params: TransfersParams): Promise<FootballDataResult<TouchlineTransfer[]>>;
   getSeasons(competitionId?: string): Promise<FootballDataResult<TouchlineSeason[]>>;
   getCompetitions(): Promise<FootballDataResult<TouchlineCompetition[]>>;

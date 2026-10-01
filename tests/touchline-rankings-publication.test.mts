@@ -5,6 +5,7 @@ import test from "node:test";
 const page = readFileSync(new URL("../app/touchline-tables/page.tsx", import.meta.url), "utf8");
 const client = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
 const copy = readFileSync(new URL("../lib/touchlineArena/rankings-i18n.ts", import.meta.url), "utf8");
+const projection = readFileSync(new URL("../lib/touchlineArena/rankings-highlight-projection.ts", import.meta.url), "utf8");
 
 test("TouchLine Tables never present demo data as an official competition ranking", () => {
   assert.doesNotMatch(page, /rankClubOwnerCards|buildDemoClubOwnerStandings|buildTouchlineRankingSnapshot/);
@@ -22,10 +23,13 @@ test("TouchLine Tables shows one positional Best XI, coaches and the sporting Cl
   assert.match(client, /data-top-coach-card/);
   assert.match(client, /id="coach-rankings"/);
   assert.match(client, /coachRanking\.rows\.slice\(0, 7\)/);
-  assert.match(client, /compareTouchLineRankedCards/);
-  assert.match(client, /filter\(\(card\) => card\.seasonTotalRating != null\)/);
-  assert.match(client, /sort\(compareTouchLineRankedCards\)/);
-  assert.match(client, /\.slice\(0, 3\)/);
+  assert.match(projection, /compareTouchLineRankedCards/);
+  assert.match(projection, /filter\(\(card\) => card\.seasonTotalRating != null\)/);
+  assert.match(projection, /sort\(compareTouchLineRankedCards\)/);
+  assert.match(projection, /\.slice\(0, 3\)/);
+  assert.match(page, /highlights=\{projectTouchlineRankingsHighlights\(rankedCards, publishedTopEleven\)\}/);
+  assert.doesNotMatch(page, /rosterCards=\{rankedCards\}/);
+  assert.match(page, /totalRankedCards=\{rankedCards\.length\}/);
   assert.match(client, /Top 3 Cards da Temporada/);
   assert.match(client, /Melhores treinadores/);
   assert.match(client, /id="club-owner-table"/);

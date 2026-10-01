@@ -32,12 +32,8 @@ import {
 import { touchlinePlayerProfileHref } from "@/lib/touchlineArena/player-links";
 import { touchlineCoachRankingClubLogo } from "@/lib/touchlineArena/coach-ranking-club";
 import { touchlineCardEnginePlayerHref } from "@/lib/touchlineArena/card-engine-links";
-import type { TouchlinePublishedTopEleven } from "@/lib/touchlineArena/published-top-eleven";
+import type { TouchlineRankingsHighlights } from "@/lib/touchlineArena/rankings-highlight-projection";
 import { touchlineTopElevenBroadcastPoint } from "@/lib/touchlineArena/top-eleven-broadcast-layout";
-import {
-  resolveTouchlinePublishedGameweekBest,
-} from "@/lib/touchlineArena/published-gameweek-best";
-import { compareTouchLineRankedCards } from "@/lib/touchlineArena/ranked-card-catalog";
 import type { TouchLineCoachRankingState } from "@/lib/touchlineArena/coach-ranking-server";
 import { createTouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import {
@@ -56,8 +52,7 @@ type TouchLineTablesClientProps = {
   locale: TouchLineLocale;
   navigationSurface: TouchlineGlobalNavigationSurface;
   rankMode: string;
-  publishedTopEleven: TouchlinePublishedTopEleven | null;
-  rosterCards: ClubOwnerSquadCard[];
+  highlights: TouchlineRankingsHighlights;
   totalPublishedCards: number | null;
   totalRankedCards: number;
   touchLineEnglandTable: TouchLineClubOwnerStanding[];
@@ -171,19 +166,13 @@ export default function TouchLineTablesClient({
   copy,
   locale,
   rankMode,
-  publishedTopEleven,
-  rosterCards,
+  highlights,
   totalPublishedCards,
   totalRankedCards,
   touchLineEnglandTable,
 }: TouchLineTablesClientProps) {
-  const publishedRosterCards = rosterCards.filter((card) => Boolean(card.editorialCard));
-  const gameweekBest = resolveTouchlinePublishedGameweekBest({ selection: publishedTopEleven, cards: publishedRosterCards });
+  const { gameweekBest, topPlayerCards } = highlights;
   const selection = gameweekBest.phase === "ready" ? gameweekBest.slots : null;
-  const topPlayerCards = publishedRosterCards
-    .filter((card) => card.seasonTotalRating != null)
-    .sort(compareTouchLineRankedCards)
-    .slice(0, 3);
   const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
   const topCoachRow = topSevenCoaches[0] ?? null;
   const topCoachIdentity = topCoachRow

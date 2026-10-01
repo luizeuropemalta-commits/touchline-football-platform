@@ -18,6 +18,7 @@ import { ShieldCheck } from "lucide-react";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import styles from "./touchline-tables.module.css";
 import { createRankingLoadDiagnostics } from "@/lib/touchlineArena/ranking-load-diagnostics";
+import { projectTouchlineRankingsHighlights } from "@/lib/touchlineArena/rankings-highlight-projection";
 
 export const metadata = { title: "TouchLine Tables" };
 
@@ -62,12 +63,11 @@ async function SportingContent({ data, locale, user }: {
       copy={copy}
       locale={locale}
       rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode}
-      publishedTopEleven={publishedTopEleven}
+      highlights={projectTouchlineRankingsHighlights(rankedCards, publishedTopEleven)}
       navigationSurface={resolveTouchlineGlobalNavigationSurface({
         isAuthenticated: Boolean(user),
         isAdmin: Boolean(user && isOwnerEmail(user.email)),
       })}
-      rosterCards={rankedCards}
       totalPublishedCards={publishedCardCount}
       totalRankedCards={rankedCards.length}
       touchLineEnglandTable={touchLineEnglandTable}
