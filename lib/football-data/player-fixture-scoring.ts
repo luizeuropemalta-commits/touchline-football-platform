@@ -78,7 +78,14 @@ function canonicalEvents(events: readonly TouchlineFantasyEvent[]) {
 }
 
 function isGoal(eventType: string) {
-  return /goal/i.test(eventType) && !/own\s*goal/i.test(eventType);
+  // Sportmonks names a converted in-match penalty "Penalty". An exact
+  // allowlist excludes own/disallowed goals, VAR, shootouts, misses and saves.
+  return /^(goal|penalty)$/i.test(eventType);
+}
+
+function isAssistEligibleGoal(eventType: string) {
+  // A penalty's related player is not evidence of an official assist.
+  return /^goal$/i.test(eventType);
 }
 
 function isSecondYellow(eventType: string) {
@@ -116,7 +123,7 @@ export function touchLinePlayerFixtureEventStatistics(
         if (/red/i.test(eventType)) statistics.redCards += 1;
       }
     }
-    if (isGoal(eventType) && event.relatedPlayerId === providerPlayerId) statistics.assists += 1;
+    if (isAssistEligibleGoal(eventType) && event.relatedPlayerId === providerPlayerId) statistics.assists += 1;
   }
   return statistics;
 }
@@ -194,7 +201,7 @@ export function touchLinePlayerFixturePoints(input: TouchLinePlayerFixtureScorin
     if (event.playerId === providerPlayerId && isGoal(eventType)) {
       contributions.push(contribution({ providerEventId: event.providerId, role: "primary", ruleCode: "goal", eventType: "Goal", minute: event.minute ?? null, quantity: 1, unitPoints: goalUnitPoints(positionGroup) }));
     }
-    if (isGoal(eventType) && event.relatedPlayerId === providerPlayerId) {
+    if (isAssistEligibleGoal(eventType) && event.relatedPlayerId === providerPlayerId) {
       contributions.push(contribution({ providerEventId: event.providerId, role: "assist", ruleCode: "assist", eventType: "Assist", minute: event.minute ?? null, quantity: 1, unitPoints: 2 }));
     }
     if (event.playerId !== providerPlayerId) continue;

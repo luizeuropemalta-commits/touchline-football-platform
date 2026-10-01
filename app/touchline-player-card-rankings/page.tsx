@@ -50,12 +50,26 @@ export default async function TouchLinePlayerCardRankingsPage({
 }: {
   searchParams: Promise<{ lang?: string }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
-  const activeRanking = await loadTouchLineActiveRanking();
+  const authentication = (async () => {
+    const supabase = await createClient();
+    return supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  })();
   // This is the league-wide published-card ranking, never the signed-in
   // customer's private roster. Every surface receives the same V3 snapshot.
-  const rosterCards = await loadTouchLineRankedCardCatalog(activeRanking);
+  // Observe public-read failures immediately, but preserve auth-first failure
+  // precedence and never render owner links before identity is resolved.
+  const publication = Promise.resolve().then(async () => {
+    const activeRanking = await loadTouchLineActiveRanking();
+    const rosterCards = await loadTouchLineRankedCardCatalog(activeRanking);
+    return { activeRanking, rosterCards };
+  }).then(
+    value => ({ ok: true as const, value }),
+    error => ({ ok: false as const, error }),
+  );
+  const { data: { user } } = await authentication;
+  const result = await publication;
+  if (!result.ok) throw result.error;
+  const { activeRanking, rosterCards } = result.value;
   const rankedCards = rosterCards.sort(compareTouchLineRankedCards);
   const topCards = rankedCards.slice(0, 3);
   const topTwentyCards = rankedCards.slice(0, 20);
