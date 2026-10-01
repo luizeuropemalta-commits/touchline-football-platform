@@ -49,6 +49,8 @@ async function readComplete(
   orders: readonly Order[],
 ): Promise<ReadResult> {
   const key = READ_KEYS[table];
+  // Keep ID partitions bounded independently of response pages for match history.
+  const responsePageSize = table === "touchline_player_fixture_score_settlements" ? 500 : PAGE_SIZE;
   const selected = columns.split(",").map((column) => column.trim());
   const projection = selected.includes(key) || selected.includes("*") ? columns : `${columns},${key}`;
   const ordered = orders.some((order) => order.column === key) ? orders : [...orders, { column: key, ascending: true }];
@@ -57,7 +59,7 @@ async function readComplete(
     const result: Row[] = [];
     const seen = new Set<string>();
     let expectedCount: number | null = null;
-    for (let offset = 0; ; offset += PAGE_SIZE) {
+    for (let offset = 0; ; offset += responsePageSize) {
       let query = admin.from(table).select(projection, { count: "exact" });
       for (const filter of batch) {
         query = filter.kind === "eq"
@@ -65,7 +67,7 @@ async function readComplete(
           : query.in(filter.column, [...filter.values]);
       }
       for (const order of ordered) query = query.order(order.column, { ascending: order.ascending });
-      const response = await query.range(offset, offset + PAGE_SIZE - 1).then(
+      const response = await query.range(offset, offset + responsePageSize - 1).then(
         (value) => value,
         () => ({ data: null, count: null, error: { message: "transport unavailable" } }),
       );
@@ -87,7 +89,7 @@ async function readComplete(
       if (count === null || !Number.isSafeInteger(count) || count < 0) failure("COUNT_UNAVAILABLE", table);
       if (expectedCount !== null && expectedCount !== count) failure("COUNT_CHANGED", table);
       expectedCount = count;
-      if (!Array.isArray(data) || data.length !== Math.min(PAGE_SIZE, Math.max(0, count - offset))) {
+      if (!Array.isArray(data) || data.length !== Math.min(responsePageSize, Math.max(0, count - offset))) {
         failure("INCOMPLETE_READ", table);
       }
       for (const value of data) {
