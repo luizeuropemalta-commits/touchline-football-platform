@@ -30,6 +30,10 @@ import {
 } from "@/lib/touchlineArena/position-aware-card-stats";
 import { useTouchlineActiveRanking } from "@/lib/touchlineArena/card-ranking-client";
 import { useTouchlineCardLeadershipAuthority } from "./TouchlineCardLeadershipProvider";
+import { usePathname } from "next/navigation";
+import { allowsInheritedCardLeadership } from "@/lib/touchlineArena/card-leadership-authority";
+import { useTouchlineGoldenBootPlayers } from "@/lib/touchlineArena/golden-boot-client";
+import { TouchlineGoldenBootHead } from "./TouchlineGoldenBootPresentation";
 import { touchlinePlayerCrownEligibility } from "@/lib/touchlineArena/card-ranking-live";
 import {
   resolveTouchlineCardTierComponentCalibration,
@@ -939,6 +943,11 @@ export function TouchlineEliteExactCard({
   // a visual-only inventory preview below; it never turns that preview into a
   // public publication or commercial authority.
   const editorialCard = player.editorialCard ?? null;
+  const awardPath = usePathname();
+  const goldenBootPlayers = useTouchlineGoldenBootPlayers(!isEditable && Boolean(editorialCard)
+    && allowsInheritedCardLeadership(awardPath) && Boolean(player.canonicalPlayerId));
+  const hasGoldenBoot = !isEditable && Boolean(editorialCard) && Boolean(player.canonicalPlayerId
+    && goldenBootPlayers.includes(player.canonicalPlayerId.toLowerCase()));
   const reviewRequired = !editorialCard && player.cardReview?.state === "REVIEW_REQUIRED";
   const editorialTier = editorialCard
     ? touchlineArenaTierForKey(editorialCard.tierKey)
@@ -974,7 +983,8 @@ export function TouchlineEliteExactCard({
   // carousel or small-screen viewport can cut the crown at its own boundary.
   // Zoom and profile stages already reserve this space and override the
   // margin locally (without changing card or crown calibration).
-  const leadershipCrownEnvelope = isCanonicalPlayerLeader
+  const hasHeadAward = isCanonicalPlayerLeader || hasGoldenBoot;
+  const leadershipCrownEnvelope = hasHeadAward
     ? Math.max(0, -playerLeaderCrownStyle.top)
     : 0;
   // The selected artwork is only used by a published card. An asset cannot
@@ -1400,6 +1410,7 @@ export function TouchlineEliteExactCard({
       data-card-motion={isEditable ? "false" : "true"}
       data-card-neon="permanent-tier-art"
       data-card-leadership-crown={isCanonicalPlayerLeader ? "true" : "false"}
+      data-card-golden-boot={hasGoldenBoot ? "true" : "false"}
       data-neon-active={forceNeonActive || isNeonActive ? "true" : "false"}
       onClick={(event) => {
         // Arena owns one exclusive selection. Its cards must not keep a second,
@@ -1418,7 +1429,7 @@ export function TouchlineEliteExactCard({
         aspectRatio: shellExtraHeight ? undefined : CARD_ASPECT_RATIO,
         height: shellExtraHeight ? CARD_H * scale + shellExtraHeight : undefined,
         position: "relative",
-        margin: isCanonicalPlayerLeader
+        margin: hasHeadAward
           ? hasStaticRenderScale
             ? `calc(${-basePlayerLeaderCrownStyle.top}px * ${crownRenderScale}) auto 0`
             : `${leadershipCrownEnvelope}px auto 0`
@@ -1450,13 +1461,28 @@ export function TouchlineEliteExactCard({
               : playerLeaderCrownStyle.width,
             height: "auto",
             zIndex: 90,
-            transform: "translateX(-50%)",
+            transform: hasGoldenBoot ? "translateX(-104%)" : "translateX(-50%)",
             transformOrigin: "bottom center",
             pointerEvents: "none",
             userSelect: "none",
           }}
         />
       ) : null}
+      {hasGoldenBoot ? <TouchlineGoldenBootHead
+        label={runtimeLocale === "pt-BR" ? "Bota de Ouro — artilheiro da liga" : "Golden Boot — league top scorer"}
+        style={{ position: "absolute", left: "50%",
+          top: hasStaticRenderScale
+            ? `calc(${basePlayerLeaderCrownStyle.top}px * ${crownRenderScale})`
+            : playerLeaderCrownStyle.top,
+          width: hasStaticRenderScale
+            ? `calc(${basePlayerLeaderCrownStyle.width}px * ${crownRenderScale})`
+            : playerLeaderCrownStyle.width,
+          height: hasStaticRenderScale
+            ? `calc(${-basePlayerLeaderCrownStyle.top - 8}px * ${crownRenderScale})`
+            : Math.max(0, -playerLeaderCrownStyle.top - 8 * scale),
+          transform: isCanonicalPlayerLeader ? "translateX(4%)" : "translateX(-50%)",
+          transformOrigin: "bottom center" }}
+      /> : null}
       <TouchlineCardPerimeterTrace tier={marketTier?.key ?? "neutral"} />
       {neutralIdentity ? (
         <div

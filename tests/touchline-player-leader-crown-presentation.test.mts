@@ -45,8 +45,9 @@ test("only the canonical player leadership decision may render the approved crow
   assert.match(cardSource, /touchlinePlayerCrownEligibility\(\{\s*state:\s*activeRanking,\s*playerId:\s*player\.canonicalPlayerId/s);
   assert.match(cardSource, /data-touchline-player-leader-crown="true"/);
   assert.match(cardSource, /data-card-leadership-crown=\{isCanonicalPlayerLeader \? "true" : "false"\}/);
-  assert.match(cardSource, /const leadershipCrownEnvelope = isCanonicalPlayerLeader[\s\S]*?Math\.max\(0, -playerLeaderCrownStyle\.top\)/);
-  assert.match(cardSource, /margin: isCanonicalPlayerLeader\s*\? hasStaticRenderScale/);
+  assert.match(cardSource, /const hasHeadAward = isCanonicalPlayerLeader \|\| hasGoldenBoot/);
+  assert.match(cardSource, /const leadershipCrownEnvelope = hasHeadAward[\s\S]*?Math\.max\(0, -playerLeaderCrownStyle\.top\)/);
+  assert.match(cardSource, /margin: hasHeadAward\s*\? hasStaticRenderScale/);
   assert.ok(cardSource.includes('`calc(${-basePlayerLeaderCrownStyle.top}px * ${crownRenderScale}) auto 0`'));
   assert.ok(cardSource.includes('`${leadershipCrownEnvelope}px auto 0`'));
   assert.match(cardSource, /pointerEvents:\s*"none"/);

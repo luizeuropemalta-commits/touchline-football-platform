@@ -20,6 +20,8 @@ const PLAYER_ID_QUERY_CHUNK_SIZE = 150;
 
 type Row = Record<string, unknown>;
 type Admin = NonNullable<ReturnType<typeof createAdminClient>>;
+type PublicationScope = Readonly<{ competitionId: string; effectiveSeason: string }>;
+type PublicationBinding = Readonly<{ clubId: string; membershipId: string }>;
 
 function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -64,6 +66,8 @@ function isPublicationRowValid(
   player: Row | undefined,
   membership: Row | undefined,
   overrides: ReadonlyMap<string, Row>,
+  requiredScope?: PublicationScope,
+  requiredBindings?: ReadonlyMap<string, PublicationBinding>,
 ) {
   const playerId = text(publication.player_id)?.toLowerCase();
   const publicationState = text(publication.publication_status);
@@ -72,6 +76,7 @@ function isPublicationRowValid(
   const reviewedAt = text(publication.last_reviewed_at);
   const season = text(publication.effective_season);
   const playerCurrentClub = text(player?.current_club_id);
+  const binding = playerId ? requiredBindings?.get(playerId) : undefined;
 
   if (
     !playerId || publicationState !== "published" || !tierKey || price === null || price < 0
@@ -79,8 +84,16 @@ function isPublicationRowValid(
     || text(value.player_id)?.toLowerCase() !== playerId
     || safeInteger(value.market_value_eur) === null || text(value.verified_season) !== season
     || text(membership.id) !== text(publication.current_membership_id)
+    || text(membership.player_id)?.toLowerCase() !== playerId
     || text(membership.status) !== "active" || text(membership.club_id) !== playerCurrentClub
     || text(membership.competition_id) !== text(publication.competition_id)
+    || (requiredScope !== undefined && (
+      text(publication.competition_id)?.toLowerCase() !== requiredScope.competitionId.toLowerCase()
+      || season !== requiredScope.effectiveSeason
+    ))
+    || (requiredBindings !== undefined && (!binding
+      || playerCurrentClub?.toLowerCase() !== binding.clubId
+      || text(membership.id)?.toLowerCase() !== binding.membershipId))
   ) return null;
 
   const marketValue = safeInteger(value.market_value_eur);
@@ -132,7 +145,7 @@ function isPublicationRowValid(
   });
 }
 
-async function readPublishedTouchlineCardsChunk(playerIds: readonly string[], admin: Admin) {
+async function readPublishedTouchlineCardsChunk(playerIds: readonly string[], admin: Admin, requiredScope?: PublicationScope, requiredBindings?: ReadonlyMap<string, PublicationBinding>) {
   const publicationsResponse = await admin
     .from("touchline_card_publications")
     .select("player_id,current_membership_id,competition_id,effective_season,publication_status,calculated_tier,calculated_nominal_price_gbp,last_reviewed_at,internal_source")
@@ -194,20 +207,22 @@ async function readPublishedTouchlineCardsChunk(playerIds: readonly string[], ad
       playersById.get(playerId),
       membershipsById.get(text(publication.current_membership_id) ?? ""),
       overridesByPlayer.get(playerId) ?? new Map(),
+      requiredScope,
+      requiredBindings,
     );
     if (presentation) result.set(playerId, presentation);
   }
   return result;
 }
 
-async function readPublishedTouchlineCards(playerIds: readonly string[], admin: Admin | null) {
+async function readPublishedTouchlineCards(playerIds: readonly string[], admin: Admin | null, requiredScope?: PublicationScope, requiredBindings?: ReadonlyMap<string, PublicationBinding>) {
   if (!admin || !playerIds.length || playerIds.length > MAX_PLAYER_IDS) return new Map<string, TouchlinePublicEditorialCardPresentation>();
 
   const chunks = Array.from(
     { length: Math.ceil(playerIds.length / PLAYER_ID_QUERY_CHUNK_SIZE) },
     (_, index) => playerIds.slice(index * PLAYER_ID_QUERY_CHUNK_SIZE, (index + 1) * PLAYER_ID_QUERY_CHUNK_SIZE),
   );
-  const chunkResults = await Promise.all(chunks.map((chunk) => readPublishedTouchlineCardsChunk(chunk, admin)));
+  const chunkResults = await Promise.all(chunks.map((chunk) => readPublishedTouchlineCardsChunk(chunk, admin, requiredScope, requiredBindings)));
   if (chunkResults.some((result) => result === null)) return new Map<string, TouchlinePublicEditorialCardPresentation>();
 
   const result = new Map<string, TouchlinePublicEditorialCardPresentation>();
@@ -232,12 +247,40 @@ export async function loadTouchlinePublishedCardPresentations(input: Readonly<{
   playerIds: readonly (string | null | undefined)[];
   /** Test-only injection bypasses the cache. */
   providedAdmin?: Admin | null;
+  /** Server-resolved canonical award scope; checked against the same rows
+   * producing the presentation, never a second cached publication lookup. */
+  requiredScope?: PublicationScope;
+  /** Pins the identity resolved by an internal award producer across these
+   * reads. A transfer between reads must not authorize the old mapping. */
+  requiredBindings?: ReadonlyMap<string, PublicationBinding>;
 }>) {
+  const requestedScope = input.requiredScope;
+  if (requestedScope !== undefined && (!requestedScope || typeof requestedScope.competitionId !== "string"
+    || !UUID_PATTERN.test(requestedScope.competitionId) || typeof requestedScope.effectiveSeason !== "string"
+    || !/^\d{4}-\d{2}$/.test(requestedScope.effectiveSeason))) {
+    return new Map<string, TouchlinePublicEditorialCardPresentation>();
+  }
+  const scope = requestedScope ? { ...requestedScope } : undefined;
   const playerIds = normalizePlayerIds(input.playerIds);
   if (!playerIds.length || playerIds.length > MAX_PLAYER_IDS) return new Map<string, TouchlinePublicEditorialCardPresentation>();
-  if (input.providedAdmin !== undefined) return readPublishedTouchlineCards(playerIds, input.providedAdmin);
+  let bindings: Map<string, PublicationBinding> | undefined;
+  if (input.requiredBindings !== undefined) {
+    if (!(input.requiredBindings instanceof Map) || input.requiredBindings.size !== playerIds.length) {
+      return new Map<string, TouchlinePublicEditorialCardPresentation>();
+    }
+    bindings = new Map();
+    for (const id of playerIds) {
+      const binding = input.requiredBindings.get(id);
+      if (!binding || typeof binding.clubId !== "string" || !UUID_PATTERN.test(binding.clubId)
+        || typeof binding.membershipId !== "string" || !UUID_PATTERN.test(binding.membershipId)) {
+        return new Map<string, TouchlinePublicEditorialCardPresentation>();
+      }
+      bindings.set(id, { clubId: binding.clubId.toLowerCase(), membershipId: binding.membershipId.toLowerCase() });
+    }
+  }
+  if (input.providedAdmin !== undefined) return readPublishedTouchlineCards(playerIds, input.providedAdmin, scope, bindings);
   unstable_noStore();
-  return readPublishedTouchlineCards(playerIds, createAdminClient());
+  return readPublishedTouchlineCards(playerIds, createAdminClient(), scope, bindings);
 }
 
 /** Public summary count; it never expands the publication DTO or exposes rows. */

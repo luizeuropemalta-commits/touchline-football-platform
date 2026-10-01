@@ -692,7 +692,7 @@ async function ClubHubOfficialLeagueSection({
   club,
   locale,
   cursor,
-  presentationPromise,
+  matchSnapshotPromise,
   tablePromise,
   dataSource,
   mirrorResultPromise,
@@ -700,7 +700,7 @@ async function ClubHubOfficialLeagueSection({
   club: NonNullable<ReturnType<typeof findTouchLineClub>>;
   locale: TouchLineLocale;
   cursor: string | null;
-  presentationPromise: Promise<ClubHubPresentation>;
+  matchSnapshotPromise: Promise<ClubMatchSnapshot>;
   tablePromise: ReturnType<typeof loadClubHubLeagueTable>;
   dataSource: ReturnType<typeof resolveTouchlineClubHubDataSource>;
   mirrorResultPromise: Promise<TouchlineQaClubHubMirrorReadResult> | null;
@@ -712,12 +712,12 @@ async function ClubHubOfficialLeagueSection({
       cursor,
     })
     : loadTouchlineQaMirroredSocialFeed(club.teamId, mirrorResultPromise ?? undefined);
-  const [presentation, table, feedPage] = await Promise.all([
-    presentationPromise,
+  const [matchSnapshot, table, feedPage] = await Promise.all([
+    matchSnapshotPromise,
     tablePromise,
     feedPromise,
   ]);
-  const fixture = presentation.matchSnapshot.railFixture;
+  const fixture = matchSnapshot.railFixture;
   const homeClub = findTouchLineClub(fixture?.homeTeam?.providerId)
     ?? findTouchLineClub(fixture?.homeTeam?.name);
   const awayClub = findTouchLineClub(fixture?.awayTeam?.providerId)
@@ -1004,7 +1004,7 @@ export default async function ClubHubPage({ params, searchParams }: ClubHubPageP
               club={club}
               locale={locale}
               cursor={feedCursor ?? null}
-              presentationPromise={presentationPromise}
+              matchSnapshotPromise={matchSnapshotPromise}
               tablePromise={tablePromise}
               dataSource={dataSource}
               mirrorResultPromise={mirrorResultPromise}

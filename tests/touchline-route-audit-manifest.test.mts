@@ -16,7 +16,7 @@ function row(route: string) {
 
 test("inventories every page, API method, proxy, metadata route, and error boundary", () => {
   assert.equal(rows.filter((item) => item.kind === "PAGE").length, 71);
-  assert.equal(rows.filter((item) => item.kind === "API").length, 83);
+  assert.equal(rows.filter((item) => item.kind === "API").length, 86);
   assert.equal(rows.filter((item) => item.kind === "BOUNDARY").length, 7);
   assert.equal(rows.filter((item) => item.kind === "METADATA").length, 3);
   assert.equal(rows.filter((item) => item.kind === "PROXY").length, 1);
@@ -114,6 +114,11 @@ test("separates retained public, authenticated, Admin, audit and preview pages f
 });
 
 test("distinguishes read methods, disabled ingestion, local editors, user writes, and signed webhooks", () => {
+  const boot = row("GET /api/touchline-awards/golden-boot");
+  assert.equal(boot.auth, "PUBLIC");
+  assert.equal(boot.role, "ANY");
+  assert.equal(boot.data, "FLAG_GATED_SANITIZED_GOLDEN_BOOT_READ_ONLY");
+  assert.equal(boot.status, "PENDING_SCHEMA_AND_QA_ACTIVATION");
   assert.equal(row("GET /api/football-data/fixture-schedule").auth, "PUBLIC");
   assert.equal(row("GET /api/touchline-arena/live-presentation-state").data, "PUBLIC_ACTIVE_RANKING_AND_FIXTURE_REVISIONS");
   assert.equal(row("GET /api/football-data/provider-diagnostic").auth, "OWNER_SESSION");

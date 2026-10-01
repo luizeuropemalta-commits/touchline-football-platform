@@ -32,9 +32,39 @@ test("fixture denies hosted production and permits only local development or val
 
 const source = readFileSync(new URL("../components/touchline/cards/TouchlineGoldenBootPresentation.tsx", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.React, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-const compiledModule = { exports: {} as { default?: React.ComponentType<{cardWidth: number; label: string; children?: React.ReactNode}> } };
+const compiledModule = { exports: {} as { default?: React.ComponentType<{cardWidth: number; label: string; children?: React.ReactNode}>;
+  TouchlineGoldenBootHead: React.ComponentType<{label:string; style: React.CSSProperties}> } };
 new Function("require", "module", "exports", "React", compiled)(() => ({ default: { frame: "frame", card: "card", award: "award" } }), compiledModule, compiledModule.exports, React);
 const Presentation = compiledModule.exports.default!;
+
+test("production boot shares the crown head geometry without covering card statistics", () => {
+  const Head = compiledModule.exports.TouchlineGoldenBootHead;
+  const html = renderToStaticMarkup(React.createElement(Head, {label:"Golden Boot — league top scorer",
+    style: { position:"absolute", top:-130, width:122, height:122, left:"50%" }}));
+  assert.match(html,/data-touchline-golden-boot="true"/);
+  assert.match(html,/position:absolute/);
+  assert.match(html,/top:-130px;width:122px;height:122px/);
+  assert.match(html,/pointer-events:none/);
+  assert.match(html,/alt="Golden Boot — league top scorer"/);
+  assert.match(html,/object-fit:contain/);
+  for (const width of [64,100,300,430]) {
+    const size = 122 * width / 430, gap = 8 * width / 430;
+    assert.ok(2 * size + gap < width, "both awards must fit within the card width");
+  }
+});
+
+test("shared card places awards above the art and keeps eligibility independent", () => {
+  const card = readFileSync(new URL("../components/touchline/cards/TouchlineEliteExactCard.tsx",import.meta.url),"utf8");
+  assert.match(card,/useTouchlineGoldenBootPlayers\(!isEditable && Boolean\(editorialCard\)/);
+  assert.match(card,/allowsInheritedCardLeadership\(awardPath\)/);
+  assert.match(card,/goldenBootPlayers\.includes\(player\.canonicalPlayerId\.toLowerCase\(\)\)/);
+  assert.match(card,/hasGoldenBoot \? <TouchlineGoldenBootHead/);
+  assert.doesNotMatch(card,/TouchlineGoldenBootFoot/);
+  assert.match(card,/const hasHeadAward = isCanonicalPlayerLeader \|\| hasGoldenBoot/);
+  assert.match(card,/translateX\(-104%\)/);
+  assert.match(card,/translateX\(4%\)/);
+  assert.match(card,/data-card-leadership-crown=\{isCanonicalPlayerLeader \? "true" : "false"\}/);
+});
 
 test("all preview widths reserve a separate award row without changing the card", () => {
   for (const width of [64, 100, 300]) {

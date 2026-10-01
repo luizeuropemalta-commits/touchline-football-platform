@@ -5,6 +5,7 @@ import { TOUCHLINE_AVAILABLE_LEAGUES, touchlineLeagueEntryHref } from "../lib/to
 
 test("global entry offers only the implemented league and preserves language without changing identity", () => {
   assert.deepEqual(TOUCHLINE_AVAILABLE_LEAGUES.map(x => x.key), ["touchline-england"]);
+  assert.equal(TOUCHLINE_AVAILABLE_LEAGUES[0].name, "TouchLine England 2026/27");
   for (const locale of ["pt-BR", "en-GB"]) {
     assert.equal(touchlineLeagueEntryHref("touchline-england", locale), `/market-transfer?lang=${locale}`);
   }

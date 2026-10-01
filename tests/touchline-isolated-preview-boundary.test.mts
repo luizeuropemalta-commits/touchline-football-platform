@@ -44,6 +44,27 @@ function qaEnvironment(overrides: Record<string, string | undefined> = {}) {
   };
 }
 
+test("exact private Golden Boot settings admit QA without weakening isolated or public boundaries", () => {
+  const keys = ["TOUCHLINE_GOLDEN_BOOT_ENABLED", "TOUCHLINE_GOLDEN_BOOT_REFRESH_ENABLED", "TOUCHLINE_GOLDEN_BOOT_REFRESH_SECRET"];
+  const paths = ["/market-transfer", "/touchline-tables", "/touchline-clubs", "/api/touchline-awards/golden-boot", "/api/touchline-awards/golden-boot/refresh"];
+  for (const enabled of ["false", "true"]) {
+    const environment = qaEnvironment({ [keys[0]]: enabled, [keys[1]]: enabled, [keys[2]]: "synthetic-secret-not-real-000000000000" });
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(environment).status, "qa");
+    for (const path of paths) assert.deepEqual(resolveTouchlineIsolatedPreviewRoutePolicy(path, environment), { status: "inactive" });
+    for (const patch of [{ SUPABASE_URL: "https://other.supabase.co" }, { VERCEL_ENV: "production" }]) {
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment({ ...environment, ...patch }).status, "invalid");
+    }
+  }
+  for (const key of keys) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ [key]: "synthetic-only" })).status, "invalid");
+    for (const forbidden of [`NEXT_PUBLIC_${key}`, `${key}_OTHER`]) {
+      const environment = qaEnvironment({ [forbidden]: "synthetic-only" });
+      assert.equal(inspectTouchlineIsolatedPreviewEnvironment(environment).status, "invalid");
+      for (const path of paths) assert.equal(resolveTouchlineIsolatedPreviewRoutePolicy(path, environment).status, "blocked");
+    }
+  }
+});
+
 test("exact server ranking timing key admits real QA contract only and collector remains gated", async () => {
   const environment = qaEnvironment({
     VERCEL_GIT_COMMIT_REF: "qa", TOUCHLINE_QA_RANKING_TIMINGS: "true",

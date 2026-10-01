@@ -15,7 +15,8 @@ test("leader cards reserve their crown before a host can clip it", () => {
 
   assert.match(playerCard, /data-card-leadership-crown=\{isCanonicalPlayerLeader \? "true" : "false"\}/);
   assert.match(playerCard, /leadershipCrownEnvelope/);
-  assert.match(playerCard, /margin: isCanonicalPlayerLeader\s*\? hasStaticRenderScale/);
+  assert.match(playerCard, /const hasHeadAward = isCanonicalPlayerLeader \|\| hasGoldenBoot/);
+  assert.match(playerCard, /margin: hasHeadAward\s*\? hasStaticRenderScale/);
   assert.ok(playerCard.includes('`calc(${-basePlayerLeaderCrownStyle.top}px * ${crownRenderScale}) auto 0`'));
   assert.ok(playerCard.includes('`${leadershipCrownEnvelope}px auto 0`'));
   assert.match(coachCard, /marginTop: showLeadershipCrown \? "29\.55%" : undefined/);

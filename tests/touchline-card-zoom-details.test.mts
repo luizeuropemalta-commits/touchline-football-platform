@@ -11,6 +11,31 @@ import { resolveTouchlinePublicEditorialCardPresentation } from "../lib/touchlin
 
 const PLAYER_ID = "d9428888-122b-11e1-b85c-61cd3cbb3210";
 
+test("zoom distinguishes the accumulated season rating from selected-match statistics in both locales", () => {
+  for (const [locale, subtitle] of [
+    ["en-GB", "Total rating: season total. Match statistics: selected match."],
+    ["pt-BR", "Nota total: acumulado da temporada. Estatísticas de jogo: partida selecionada."],
+  ]) {
+    const facts = buildTouchlineVerifiedMatchFactFields({ position: "Forward", statistics: { goals: 1, assists: 0 } }, locale!);
+    const details = buildTouchlinePlayerCardZoomDetails({ locale: locale!, name: "Test scorer", extraFields: [
+      { label: locale === "pt-BR" ? "Nota total" : "Total rating", value: "36.85", kind: "rating-total" },
+      ...facts,
+    ] });
+    assert.equal(details.performanceSubtitle, subtitle);
+    assert.ok(details.fields.some(field => field.value === "36.85"));
+    assert.ok(details.fields.some(field => field.value === "1"));
+    assert.ok(details.fields.some(field => field.value === "0"));
+    const history = { label: "Match history", value: "Earlier match: 7.29", kind: "history" as const };
+    const withHistory = buildTouchlinePlayerCardZoomDetails({ locale: locale!, name: "Test scorer", extraFields: [...facts, history] });
+    assert.equal(withHistory.performanceSubtitle, subtitle);
+    assert.ok(withHistory.fields.some(field => field.kind === "history" && field.value === history.value));
+    const totalOnly = buildTouchlinePlayerCardZoomDetails({ locale: locale!, name: "Test scorer", extraFields: [
+      { label: "Total rating", value: "36.85", kind: "rating-total" },
+    ] });
+    assert.equal(totalOnly.fields.length, 1, "Scope legend must not invent match statistics");
+  }
+});
+
 test("keeps confirmed match zero distinct from unavailable statistic facts", () => {
   assert.deepEqual(
     buildTouchlineVerifiedMatchFactFields({

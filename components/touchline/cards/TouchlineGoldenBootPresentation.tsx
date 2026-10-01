@@ -1,5 +1,13 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import styles from "./TouchlineGoldenBootPresentation.module.css";
+
+/** Head award: the shared card supplies exactly the crown's responsive box. */
+export function TouchlineGoldenBootHead({ label, style }: { label: string; style: CSSProperties }) {
+  return <img src="/touchline/awards/golden-boot-v1.png" alt={label}
+    data-touchline-golden-boot="true" draggable={false} decoding="sync" loading="eager"
+    style={{ ...style, objectFit: "contain", pointerEvents: "none",
+      userSelect: "none", zIndex: 90 }} />;
+}
 
 /** Presentation only: callers must independently establish award authority. */
 export default function TouchlineGoldenBootPresentation({ cardWidth, label, children }: {

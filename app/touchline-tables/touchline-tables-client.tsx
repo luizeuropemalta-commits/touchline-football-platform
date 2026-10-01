@@ -54,7 +54,7 @@ type TouchLineTablesClientProps = {
   rankMode: string;
   highlights: TouchlineRankingsHighlights;
   totalPublishedCards: number | null;
-  totalRankedCards: number;
+  totalRankedCards: number | null;
   touchLineEnglandTable: TouchLineClubOwnerStanding[];
 };
 
@@ -160,19 +160,70 @@ function TablePlayerCardZoom({
   );
 }
 
-export default function TouchLineTablesClient({
-  canEditCardEngine,
-  coachRanking,
-  copy,
-  locale,
-  rankMode,
-  highlights,
-  totalPublishedCards,
-  totalRankedCards,
-  touchLineEnglandTable,
-}: TouchLineTablesClientProps) {
-  const { gameweekBest, topPlayerCards } = highlights;
+export default function TouchLineTablesClient({ canEditCardEngine, copy, locale, highlights }: Pick<TouchLineTablesClientProps, "canEditCardEngine" | "copy" | "locale" | "highlights">) {
+  const isPortuguese = locale === "pt-BR";
+  const { gameweekBest } = highlights;
   const selection = gameweekBest.phase === "ready" ? gameweekBest.slots : null;
+  return (<div className={styles.bestXiPanel}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <p>{copy.touchLineXi}</p>
+                <h2>{copy.seasonSelection}</h2>
+              </div>
+              <span>{copy.seasonSelectionRule}</span>
+            </div>
+
+            {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection} surfaceVariant="premium-stadium">
+              {selection.map(({ slot, card }) => {
+                const point = touchlineTopElevenBroadcastPoint(slot);
+                // An unknown role must not be projected onto a live card and
+                // overlap a published player. The immutable selection itself
+                // remains available to the rest of the page.
+                if (!point) return null;
+                return (
+                  <article
+                    key={slot.id}
+                    className={styles.pitchPlayer}
+                    data-best-eleven-player={card.canonicalPlayerId}
+                    data-best-eleven-position={slot.label}
+                    style={{ left: `${point.x}%`, top: `${point.y}%` } as CSSProperties}
+                  >
+                    <span className={styles.positionLabel}>{slot.label}</span>
+                    <div className={styles.cardButton}>
+                      <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
+                    </div>
+                    <div className={styles.pitchIdentity}>
+                      <strong>{card.shortName}</strong>
+                    </div>
+                  </article>
+                );
+              })}
+            </TouchlinePitchSurface>
+            <p className={styles.pitchHint}>
+              {copy.seasonSelectionHint}
+            </p>
+            </> : <><div className={`${styles.pitch} ${styles.selectionPending}`} role="status"><strong>{copy.seasonSelectionPending}</strong><p>{gameweekBest.phase === "unavailable" && gameweekBest.reason === "incomplete-card-catalogue"
+              ? (isPortuguese ? "A seleção publicada ainda não resolve os 11 cards canônicos; nenhum card parcial é exibido." : "The published selection does not yet resolve all 11 canonical cards; no partial XI is shown.")
+              : copy.seasonSelectionPendingDescription}</p></div><p className={styles.pitchHint}>{copy.seasonSelectionHint}</p></>}
+          </div>);
+}
+
+export function TouchlineRankingsHero({ copy, rankMode, totalPublishedCards, totalRankedCards }: Pick<TouchLineTablesClientProps, "copy" | "rankMode" | "totalPublishedCards" | "totalRankedCards">) {
+ return (      <section className={styles.hero}>
+        <div>
+          <p>TouchLine Cards League</p>
+          <h1>{copy.tablesTitle}</h1>
+          <span>{copy.tablesDescription}</span>
+        </div>
+        <dl className={styles.summary}>
+          <div><dt>{copy.publishedCards}</dt><dd>{totalPublishedCards ?? "—"}</dd></div>
+          <div><dt>{copy.rankedCards}</dt><dd>{totalRankedCards ?? "—"}</dd></div>
+          <div><dt>{copy.rankMode}</dt><dd>{rankMode}</dd></div>
+        </dl>
+      </section>);
+}
+
+export function TouchlineFeaturedCoach({ coachRanking, copy, locale }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "locale">) {
   const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
   const topCoachRow = topSevenCoaches[0] ?? null;
   const topCoachIdentity = topCoachRow
@@ -211,66 +262,7 @@ export default function TouchLineTablesClient({
       }
     : null;
 
-  return (
-    <>
-      <section className={styles.hero}>
-        <div>
-          <p>{isPortuguese ? "TouchLine Cards League" : "TouchLine Cards League"}</p>
-          <h1>{copy.tablesTitle}</h1>
-          <span>{copy.tablesDescription}</span>
-        </div>
-        <dl className={styles.summary}>
-          <div><dt>{copy.publishedCards}</dt><dd>{totalPublishedCards ?? "—"}</dd></div>
-          <div><dt>{copy.rankedCards}</dt><dd>{totalRankedCards}</dd></div>
-          <div><dt>{copy.rankMode}</dt><dd>{rankMode}</dd></div>
-        </dl>
-      </section>
-
-      <section className={styles.selectionSection} id="best-xi">
-        <div className={styles.rankStage}>
-          <div className={styles.bestXiPanel}>
-            <div className={styles.sectionHeading}>
-              <div>
-                <p>{copy.touchLineXi}</p>
-                <h2>{copy.seasonSelection}</h2>
-              </div>
-              <span>{copy.seasonSelectionRule}</span>
-            </div>
-
-            {selection ? <><TouchlinePitchSurface className={styles.pitch} ariaLabel={copy.seasonSelection} surfaceVariant="premium-stadium">
-              {selection.map(({ slot, card }) => {
-                const point = touchlineTopElevenBroadcastPoint(slot);
-                // An unknown role must not be projected onto a live card and
-                // overlap a published player. The immutable selection itself
-                // remains available to the rest of the page.
-                if (!point) return null;
-                return (
-                  <article
-                    key={slot.id}
-                    className={styles.pitchPlayer}
-                    data-best-eleven-player={card.canonicalPlayerId}
-                    data-best-eleven-position={slot.label}
-                    style={{ left: `${point.x}%`, top: `${point.y}%` } as CSSProperties}
-                  >
-                    <span className={styles.positionLabel}>{slot.label}</span>
-                    <div className={styles.cardButton}>
-                      <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
-                    </div>
-                    <div className={styles.pitchIdentity}>
-                      <strong>{card.shortName}</strong>
-                    </div>
-                  </article>
-                );
-              })}
-            </TouchlinePitchSurface>
-            <p className={styles.pitchHint}>
-              {copy.seasonSelectionHint}
-            </p>
-            </> : <div className={styles.selectionPending} role="status"><strong>{copy.seasonSelectionPending}</strong><p>{gameweekBest.phase === "unavailable" && gameweekBest.reason === "incomplete-card-catalogue"
-              ? (isPortuguese ? "A seleção publicada ainda não resolve os 11 cards canônicos; nenhum card parcial é exibido." : "The published selection does not yet resolve all 11 canonical cards; no partial XI is shown.")
-              : copy.seasonSelectionPendingDescription}</p></div>}
-          </div>
-          <aside className={styles.topCoachPanel} data-top-coach-card aria-labelledby="top-coach-title"
+ return (          <aside className={styles.topCoachPanel} data-top-coach-card aria-labelledby="top-coach-title"
             data-coach-tier-frame={topCoachSlot?.cardTier ?? "unresolved"}
             style={{ "--tier-accent": topCoachSlot ? touchlineCardTierPalette(topCoachSlot.cardTier).accent : undefined } as CSSProperties}>
             <TouchlineClubPerimeterTrace accent={topCoachSlot ? touchlineCardTierPalette(topCoachSlot.cardTier).accent : undefined} />
@@ -311,43 +303,13 @@ export default function TouchLineTablesClient({
                 </div>
               </div>
             ) : <RankingPending copy={copy} />}
-          </aside>
-        </div>
-      </section>
+          </aside>);
+}
 
-      <section className={styles.rankingHighlights} aria-label={isPortuguese ? "Destaques da temporada" : "Season highlights"}>
-        <div className={styles.podiumPanel} id="top-player-cards">
-          <div className={styles.sectionHeading}>
-            <div>
-              <p>{isPortuguese ? "PÓDIO GERAL" : "OVERALL PODIUM"}</p>
-              <h2>{isPortuguese ? "Top 3 Cards da Temporada" : "Season Top 3 Cards"}</h2>
-            </div>
-            <span>{isPortuguese ? "Os três maiores Ratings acumulados, atualizados automaticamente." : "The three highest accumulated Ratings, updated automatically."}</span>
-          </div>
-          {topPlayerCards.length ? (
-            <ol className={styles.playerPodium}>
-              {topPlayerCards.map((card, index) => {
-                const tierKey = card.editorialCard?.tierKey;
-                const palette = tierKey ? touchlineCardTierPalette(tierKey) : null;
-                return (
-                <li key={card.canonicalPlayerId} data-player-podium-rank={index + 1}
-                  style={{ "--tier-accent": palette?.accent } as CSSProperties}>
-                  <TouchlineClubPerimeterTrace accent={palette?.accent} />
-                  <span className={styles.podiumRank}>{String(index + 1).padStart(2, "0")}</span>
-                  <div className={styles.podiumCard}>
-                    <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
-                  </div>
-                  <div className={styles.podiumIdentity}>
-                    <strong>{card.shortName}</strong>
-                    <span>{card.clubName} · {card.position}</span>
-                  </div>
-                </li>
-                );
-              })}
-            </ol>
-          ) : <RankingPending copy={copy} />}
-        </div>
-
+export function TouchlineCoachRankingTable({ coachRanking, copy, locale }: Pick<TouchLineTablesClientProps, "coachRanking" | "copy" | "locale">) {
+  const isPortuguese = locale === "pt-BR";
+  const topSevenCoaches = coachRanking.phase === "ranked" ? coachRanking.rows.slice(0, 7) : [];
+  return (
         <aside className={styles.coachRankingPanel} id="coach-rankings" aria-labelledby="coach-ranking-title">
           <header>
             <span><Crown aria-hidden="true" /> {isPortuguese ? "RANKING DA TEMPORADA" : "SEASON RANKING"}</span>
@@ -389,8 +351,71 @@ export default function TouchLineTablesClient({
             })}
           </ol> : <RankingPending copy={copy} />}
         </aside>
-      </section>
+  );
+}
 
+function PodiumHeading({ locale }: { locale: TouchLineLocale }) {
+  const isPortuguese = locale === "pt-BR";
+  return <div className={styles.sectionHeading}>
+            <div>
+              <p>{isPortuguese ? "PÓDIO GERAL" : "OVERALL PODIUM"}</p>
+              <h2>{isPortuguese ? "Top 3 Cards da Temporada" : "Season Top 3 Cards"}</h2>
+            </div>
+            <span>{isPortuguese ? "Os três maiores Ratings acumulados, atualizados automaticamente." : "The three highest accumulated Ratings, updated automatically."}</span>
+          </div>;
+}
+
+/** Only layout geometry: no sporting identities, ranks, tiers or scores. */
+function PodiumEnvelope() {
+  return <div className={styles.playerPodium} aria-hidden="true">
+    {[0, 1, 2].map(slot => <div className={styles.podiumPlaceholder} key={slot}>
+      <div className={styles.podiumCard}><div className={styles.podiumCardPlaceholder} /></div>
+      <div className={styles.podiumIdentity}><strong>&nbsp;</strong><span>&nbsp;</span></div>
+    </div>)}
+  </div>;
+}
+
+export function TouchlineRankingPodiumPending({ locale }: { locale: TouchLineLocale }) {
+  return <div className={styles.podiumPanel} aria-busy="true">
+    <PodiumHeading locale={locale} />
+    <div className={styles.podiumReserve}><PodiumEnvelope /><p className={styles.podiumLoading} role="status">{locale === "pt-BR" ? "Carregando classificações…" : "Loading rankings…"}</p></div>
+  </div>;
+}
+
+export function TouchlineRankingPodium({ highlights, copy, locale, canEditCardEngine }: Pick<TouchLineTablesClientProps, "highlights" | "copy" | "locale" | "canEditCardEngine">) {
+  const { topPlayerCards } = highlights;
+  return (
+        <div className={styles.podiumPanel} id="top-player-cards">
+          <PodiumHeading locale={locale} />
+          {topPlayerCards.length ? (
+            <ol className={styles.playerPodium}>
+              {topPlayerCards.map((card, index) => {
+                const tierKey = card.editorialCard?.tierKey;
+                const palette = tierKey ? touchlineCardTierPalette(tierKey) : null;
+                return (
+                <li key={card.canonicalPlayerId} data-player-podium-rank={index + 1}
+                  style={{ "--tier-accent": palette?.accent } as CSSProperties}>
+                  <TouchlineClubPerimeterTrace accent={palette?.accent} />
+                  <span className={styles.podiumRank}>{String(index + 1).padStart(2, "0")}</span>
+                  <div className={styles.podiumCard}>
+                    <TablePlayerCardZoom card={card} locale={locale} canEditCardEngine={canEditCardEngine} />
+                  </div>
+                  <div className={styles.podiumIdentity}>
+                    <strong>{card.shortName}</strong>
+                    <span>{card.clubName} · {card.position}</span>
+                  </div>
+                </li>
+                );
+              })}
+            </ol>
+          ) : <div className={styles.podiumReserve}><PodiumEnvelope /><RankingPending copy={copy} /></div>}
+        </div>
+  );
+}
+
+export function TouchlineRankingEnding({ copy, locale, touchLineEnglandTable }: Pick<TouchLineTablesClientProps, "copy" | "locale" | "touchLineEnglandTable">) {
+  const isPortuguese = locale === "pt-BR";
+  return (<>
       <section className={styles.clubOwnerSection} id="club-owner-table">
         <div className={styles.sectionHeading}>
           <div>
@@ -424,6 +449,5 @@ export default function TouchLineTablesClient({
         <Trophy aria-hidden="true" size={19} />
         <span>{copy.connectedDescription}</span>
       </footer>
-    </>
-  );
+  </>);
 }

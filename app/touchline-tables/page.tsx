@@ -9,7 +9,7 @@ import { resolveTouchlineGlobalNavigationSurface } from "@/lib/touchlineArena/gl
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { readPublicCompetitionFixtures } from "@/lib/football-data/fixture-schedule-store";
 import { selectArenaFixtureRound } from "@/lib/touchlineArena/arena-fixture-round";
-import TouchLineTablesClient from "./touchline-tables-client";
+import TouchLineTablesClient, { TouchlineCoachRankingTable, TouchlineRankingPodium, TouchlineRankingPodiumPending, TouchlineRankingEnding, TouchlineRankingsHero, TouchlineFeaturedCoach } from "./touchline-tables-client";
 import TouchlineLivePresentationRefresh from "@/components/touchline/TouchlineLivePresentationRefresh";
 import { TouchlineCardLeadershipProvider } from "@/components/touchline/cards/TouchlineCardLeadershipProvider";
 import { buildTouchlineCardLeadershipValue } from "@/lib/touchlineArena/card-leadership-authority";
@@ -23,13 +23,19 @@ import { projectTouchlineRankingsHighlights } from "@/lib/touchlineArena/ranking
 export const metadata = { title: "TouchLine Tables" };
 
 function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveRanking>, diagnostics: ReturnType<typeof createRankingLoadDiagnostics>) {
-  return Promise.all([
+  const topXI = diagnostics.measure("topXI", () => rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking)));
+  const catalog = diagnostics.measure("catalog", () => rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking)));
+  const coach = diagnostics.measure("coach", () => loadTouchLineCoachRanking());
+  const count = diagnostics.measure("count", () => countTouchlinePublishedPlayerCards());
+  const complete = Promise.all([
     rankingPromise,
-    diagnostics.measure("topXI", () => rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking))),
-    diagnostics.measure("catalog", () => rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking))),
-    diagnostics.measure("coach", () => loadTouchLineCoachRanking()),
-    diagnostics.measure("count", () => countTouchlinePublishedPlayerCards()),
+    topXI, catalog, coach, count,
   ]);
+  const leadership = Promise.all([rankingPromise, coach]);
+  void leadership.catch(() => undefined);
+  const highlights = complete.then(([, selection, cards]) => projectTouchlineRankingsHighlights(cards, selection));
+  void highlights.catch(() => undefined);
+  return { complete, leadership, highlights };
 }
 
 async function RoundBadge({ fixtures, locale }: { fixtures: ReturnType<typeof readPublicCompetitionFixtures>; locale: string }) {
@@ -40,40 +46,59 @@ async function RoundBadge({ fixtures, locale }: { fixtures: ReturnType<typeof re
   </span>;
 }
 
-async function SportingContent({ data, locale, user }: {
+async function SportingContent({ data, locale, user, section }: {
   data: ReturnType<typeof readSportingData>;
   locale: ReturnType<typeof normalizeTouchLineLocale>;
   user: { email?: string | null } | null;
+  section: "overview" | "hero" | "podium" | "ending";
 }) {
-  const [activeRanking, publishedTopEleven, rankedCards, coachRanking, publishedCardCount] = await data;
+  const [activeRanking, , rankedCards, , publishedCardCount] = await data.complete;
   // No fabricated ClubOwner table may be presented as a published competition
   // ranking. It remains empty until its audited sporting snapshot is available.
   const touchLineEnglandTable: never[] = [];
   const copy = getTouchLineRankingsCopy(locale);
+  if (section === "ending") return <TouchlineRankingEnding copy={copy} locale={locale} touchLineEnglandTable={touchLineEnglandTable} />;
+  if (section === "hero") return <TouchlineRankingsHero copy={copy} rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode} totalPublishedCards={publishedCardCount} totalRankedCards={rankedCards.length} />;
+  const highlights = await data.highlights;
+  if (section === "podium") return <TouchlineRankingPodium copy={copy} locale={locale} highlights={highlights} canEditCardEngine={Boolean(user && isOwnerEmail(user.email))} />;
 
   return (
-    <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, coachRanking)}>
-      <TouchlineLivePresentationRefresh
-        initialCoachRankingSnapshotId={coachRanking.snapshotId}
-        initialPlayerRankingSnapshotId={activeRanking.snapshotId}
-      />
       <TouchLineTablesClient
       canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
-      coachRanking={coachRanking}
       copy={copy}
       locale={locale}
-      rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode}
-      highlights={projectTouchlineRankingsHighlights(rankedCards, publishedTopEleven)}
-      navigationSurface={resolveTouchlineGlobalNavigationSurface({
-        isAuthenticated: Boolean(user),
-        isAdmin: Boolean(user && isOwnerEmail(user.email)),
-      })}
-      totalPublishedCards={publishedCardCount}
-      totalRankedCards={rankedCards.length}
-      touchLineEnglandTable={touchLineEnglandTable}
+      highlights={highlights}
       />
-    </TouchlineCardLeadershipProvider>
   );
+}
+
+function BestXiPending({ locale }: { locale: ReturnType<typeof normalizeTouchLineLocale> }) {
+  const copy = getTouchLineRankingsCopy(locale);
+  const pending = locale === "pt-BR" ? "Carregando classificações…" : "Loading rankings…";
+  return <div className={styles.bestXiPanel} aria-busy="true"><div className={styles.sectionHeading}><div><p>{copy.touchLineXi}</p><h2>{copy.seasonSelection}</h2></div><span>{copy.seasonSelectionRule}</span></div><div className={styles.pitch} role="status">{pending}</div><p className={styles.pitchHint}>{copy.seasonSelectionHint}</p></div>;
+}
+
+async function SportingFrame({ data, locale, user }: {
+  data: ReturnType<typeof readSportingData>;
+  locale: ReturnType<typeof normalizeTouchLineLocale>;
+  user: { email?: string | null } | null;
+}) {
+  // Leadership is fixed once for every card; the catalogue cannot gate this frame.
+  const [activeRanking, coachRanking] = await data.leadership;
+  const copy = getTouchLineRankingsCopy(locale);
+  return <TouchlineCardLeadershipProvider value={buildTouchlineCardLeadershipValue(activeRanking, coachRanking)}>
+    <TouchlineLivePresentationRefresh initialCoachRankingSnapshotId={coachRanking.snapshotId} initialPlayerRankingSnapshotId={activeRanking.snapshotId} />
+    <Suspense fallback={<TouchlineRankingsHero copy={copy} rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode} totalPublishedCards={null} totalRankedCards={null} />}><SportingContent data={data} locale={locale} user={user} section="hero" /></Suspense>
+    <section className={styles.selectionSection} id="best-xi"><div className={styles.rankStage}>
+      <Suspense fallback={<BestXiPending locale={locale} />}><SportingContent data={data} locale={locale} user={user} section="overview" /></Suspense>
+      <TouchlineFeaturedCoach coachRanking={coachRanking} copy={copy} locale={locale} />
+    </div></section>
+    <section className={styles.rankingHighlights} aria-label={locale === "pt-BR" ? "Destaques da temporada" : "Season highlights"}>
+      <Suspense fallback={<TouchlineRankingPodiumPending locale={locale} />}><SportingContent data={data} locale={locale} user={user} section="podium" /></Suspense>
+      <TouchlineCoachRankingTable coachRanking={coachRanking} copy={copy} locale={locale} />
+    </section>
+    <Suspense fallback={null}><SportingContent data={data} locale={locale} user={user} section="ending" /></Suspense>
+  </TouchlineCardLeadershipProvider>;
 }
 
 export default async function TouchLineTablesPage({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
@@ -88,7 +113,7 @@ export default async function TouchLineTablesPage({ searchParams }: { searchPara
   const data = readSportingData(ranking, diagnostics);
   // Observe early failures while auth is pending; the original promise still
   // rejects at the sporting boundary rather than inventing empty standings.
-  void data.catch(() => undefined);
+  void data.complete.catch(() => undefined);
   const authentication = diagnostics.measure("auth", async () => {
     const supabase = await createClient();
     return supabase ? await supabase.auth.getUser() : { data: { user: null } };
@@ -105,7 +130,7 @@ export default async function TouchLineTablesPage({ searchParams }: { searchPara
       </Suspense>
     </header>
     <Suspense fallback={<p role="status">{pending}</p>}>
-      <SportingContent data={data} locale={locale} user={user} />
+      <SportingFrame data={data} locale={locale} user={user} />
     </Suspense>
   </main>;
 }

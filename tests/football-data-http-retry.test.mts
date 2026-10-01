@@ -5,6 +5,117 @@ import { footballDataFetchJson } from "../lib/football-data/http.ts";
 
 const originalFetch = globalThis.fetch;
 
+test("completed-attempt observer sees 429 and success before retry decisions", async () => {
+  const order: string[] = [];
+  const observed: Array<{ attempt: number; status: number; fetchedAt: string }> = [];
+  const retry = testRetryPolicy();
+  let calls = 0;
+  globalThis.fetch = (async (_url, init) => {
+    assert.equal(Object.hasOwn(init ?? {}, "onAttemptCompleted"), false);
+    calls += 1;
+    order.push(`fetch:${calls}`);
+    return jsonResponse(calls === 1 ? 429 : 200, { "Retry-After": "2" });
+  }) as typeof fetch;
+
+  const result = await footballDataFetchJson<{ status: number }>(
+    new URL("https://sportmonks.test/observed-retry"),
+    {
+      provider: "sportmonks",
+      retry: {
+        ...retry.policy,
+        sleep: async (delayMs) => {
+          order.push("sleep");
+          await retry.policy.sleep(delayMs);
+        },
+      },
+      onAttemptCompleted: ({ attempt, response }) => {
+        order.push(`observe:${attempt}`);
+        observed.push({ attempt, status: response.status, fetchedAt: response.fetchedAt });
+        // Deliberate observer mutation must not alter retries or returned data.
+        response.headers.set("Retry-After", "999");
+        if (response.data) response.data.status = 999;
+      },
+    },
+  );
+
+  assert.deepEqual(order, ["fetch:1", "observe:1", "sleep", "fetch:2", "observe:2"]);
+  assert.deepEqual(observed.map(({ attempt, status }) => [attempt, status]), [[1, 429], [2, 200]]);
+  assert.deepEqual(retry.waits, [2_000]);
+  assert.deepEqual(result.data, { status: 200 });
+  assert.equal(result.headers.get("Retry-After"), "2");
+  assert.equal(observed[1]?.fetchedAt, result.fetchedAt);
+  assert.ok(observed.every(({ fetchedAt }) => Number.isFinite(Date.parse(fetchedAt))));
+});
+
+test("throwing and rejected observers preserve the no-observer retry outcome", async () => {
+  for (const mode of ["absent", "throw", "reject", "pending"] as const) {
+    const retry = testRetryPolicy();
+    let calls = 0;
+    let observations = 0;
+    globalThis.fetch = (async (_url, init) => {
+      assert.equal(Object.hasOwn(init ?? {}, "onAttemptCompleted"), false);
+      assert.equal(Object.hasOwn(init ?? {}, "retry"), false);
+      calls += 1;
+      return jsonResponse(calls === 1 ? 429 : 200, { "Retry-After": "1" });
+    }) as typeof fetch;
+
+    const result = await footballDataFetchJson<{ status: number }>(
+      new URL("https://sportmonks.test/observer-isolation"),
+      {
+        provider: "sportmonks",
+        retry: retry.policy,
+        ...(mode === "absent" ? {} : {
+          onAttemptCompleted: () => {
+            observations += 1;
+            if (mode === "throw") throw new Error("observer private failure");
+            if (mode === "reject") return Promise.reject(new Error("observer private rejection"));
+            return new Promise<void>(() => {});
+          },
+        }),
+      },
+    );
+    // Let a rejected callback settle; node:test also detects unhandled rejection.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.equal(result.ok, true, mode);
+    assert.equal(result.status, 200, mode);
+    assert.deepEqual(result.data, { status: 200 }, mode);
+    assert.equal(result.error, undefined, mode);
+    assert.equal(calls, 2, mode);
+    assert.equal(observations, mode === "absent" ? 0 : 2, mode);
+    assert.deepEqual(retry.waits, [1_000], mode);
+  }
+});
+
+test("observer reports a completed transport failure but not a pre-request abort", async () => {
+  let calls = 0;
+  const observed: Array<{ attempt: number; status: number; fetchedAt: string }> = [];
+  globalThis.fetch = (async () => {
+    calls += 1;
+    throw new TypeError("network unavailable");
+  }) as typeof fetch;
+  const onAttemptCompleted = ({ attempt, response }: {
+    attempt: number;
+    response: { status: number; fetchedAt: string };
+  }) => { observed.push({ attempt, status: response.status, fetchedAt: response.fetchedAt }); };
+  const result = await footballDataFetchJson(new URL("https://sportmonks.test/observe-failure"), {
+    provider: "sportmonks",
+    onAttemptCompleted,
+  });
+  assert.equal(result.status, 0);
+  assert.equal(result.error, "network unavailable");
+  assert.deepEqual(observed, [{ attempt: 1, status: 0, fetchedAt: result.fetchedAt }]);
+
+  const controller = new AbortController();
+  controller.abort();
+  await footballDataFetchJson(new URL("https://sportmonks.test/pre-abort"), {
+    provider: "sportmonks",
+    signal: controller.signal,
+    onAttemptCompleted,
+  });
+  assert.equal(calls, 1);
+  assert.equal(observed.length, 1);
+});
+
 afterEach(() => {
   globalThis.fetch = originalFetch;
 });

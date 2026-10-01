@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FootballDataProvider } from "./types";
 import { strictSportmonksId } from "./sportmonks-season-topscorers";
+import { resolveGoldenBootPremierStageScope } from "../touchlineArena/golden-boot-stage-scope";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const contract = {
@@ -86,8 +87,19 @@ export async function readGoldenBootDiagnostic(
       goals: row.goals !== null && Number.isSafeInteger(row.goals) && row.goals >= 0 ? row.goals : null,
     }));
     const stageIds = [...new Set(rows.flatMap(row => row.stageId ? [row.stageId] : []))].sort();
+    // Diagnostic-only fetch-age policy. Re-evaluate after the top-scorer read
+    // so waiting for it cannot extend stage validity or grant public authority.
+    const stageMaxAgeMs = 60_000;
+    const stageScope = resolveGoldenBootPremierStageScope({
+      evidence: stageResult, canonicalScope: { leagueId: "8", seasonId },
+      maxAgeMs: stageMaxAgeMs, nowMs: Date.now(),
+    });
     return {
       ...contract, ok: true as const, seasonProviderId: seasonId, independentStageEvidence,
+      stageAuthority: stageScope?.authority ?? "unavailable",
+      stageScope,
+      stageScopeExpiresAt: stageScope && stageResult?.ok
+        ? new Date(Date.parse(stageResult.data.fetchedAt) + stageMaxAgeMs).toISOString() : null,
       coverage: "complete" as const,
       scopeStatus: data.scopeStatus === "complete" || data.scopeStatus === "ambiguous" ? data.scopeStatus : "unavailable",
       pagesRead: data.pagesRead, rowCount: rows.length, cached: result.cached === true,

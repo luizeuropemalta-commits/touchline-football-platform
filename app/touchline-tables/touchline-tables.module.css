@@ -282,7 +282,8 @@
   padding: 0;
   list-style: none;
 }
-.playerPodium li {
+.playerPodium li,
+.podiumPlaceholder {
   --touchline-perimeter-radius: 20px;
   position: relative;
   display: grid;
@@ -313,6 +314,13 @@
 .podiumIdentity strong { max-width: 100%; overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .podiumIdentity span { max-width: 100%; overflow: hidden; color: rgba(245, 248, 245, .46); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .podiumIdentity b { margin-top: 3px; color: var(--gold); font-size: 19px; }
+/* Same 430×691 card canvas as TouchlineEliteExactCard; responsive width,
+   crown padding and identity line boxes come from the populated podium. */
+.podiumCardPlaceholder { width: 100%; aspect-ratio: 430 / 691; }
+.podiumReserve { display: grid; }
+.podiumReserve > * { grid-area: 1 / 1; }
+.podiumReserve > :first-child { visibility: hidden; pointer-events: none; }
+.podiumLoading { align-self: center; justify-self: center; margin: 0; }
 .gameweekCoachGate { display:flex; max-width:520px; align-items:flex-start; gap:10px; margin:18px auto 0; border:1px solid rgba(243,216,107,.28); border-radius:14px; padding:11px 13px; background:rgba(243,216,107,.055); color:rgba(245,248,245,.78); }
 .gameweekCoachGate svg { flex:0 0 auto; width:18px; color:var(--gold); }
 .gameweekCoachGate div { display:grid; gap:3px; }
@@ -359,6 +367,7 @@
 .selectionPending,
 .rankingPending { display: grid; gap: 8px; min-height: 180px; align-content: center; border: 1px dashed rgba(184, 255, 70, .3); border-radius: 18px; padding: 24px; background: rgba(2, 13, 10, .5); text-align: center; }
 .selectionPending { min-height: 360px; }
+.pitch.selectionPending { min-height: 0; }
 .selectionPending strong,
 .rankingPending strong { color: #caff70; font-size: clamp(17px, 2vw, 24px); }
 .selectionPending p,

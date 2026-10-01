@@ -4,6 +4,7 @@ import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { strictSportmonksId } from "../lib/football-data/sportmonks-season-topscorers.ts";
+import { resolveGoldenBootPremierStageScope } from "../lib/touchlineArena/golden-boot-stage-scope.ts";
 import { hasTouchLineArenaAccess } from "../lib/touchlineArena/auth-access.ts";
 
 const source = (path: string) => stripTypeScriptTypes(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"))
@@ -92,7 +93,7 @@ function scenario(options: { user?: unknown; qa?: string; ref?: string; producti
   } };
   const helperPath = "lib/football-data/golden-boot-diagnostic.ts";
   const helper = existsSync(new URL(`../${helperPath}`, import.meta.url))
-    ? runInNewContext(`${source(helperPath)}\nreadGoldenBootDiagnostic;`, { strictSportmonksId, setTimeout, clearTimeout, ...options.runtime })
+    ? runInNewContext(`${source(helperPath)}\nreadGoldenBootDiagnostic;`, { strictSportmonksId, resolveGoldenBootPremierStageScope, setTimeout, clearTimeout, ...options.runtime })
     : () => assert.fail("diagnostic helper is not implemented");
   const GET = runInNewContext(`${source("app/api/football-data/provider-diagnostic/route.ts")}\nGET;`, {
     process: { env: { TOUCHLINE_QA_SUPABASE_PROJECT_REF: options.ref ?? "xgxbwqxjssxxuihuwmgy", VERCEL_ENV: options.production ? "production" : "preview" } },
@@ -107,6 +108,35 @@ function scenario(options: { user?: unknown; qa?: string; ref?: string; producti
   });
   return { calls, run: () => GET({ nextUrl: new URL("https://qa.invalid/api/football-data/provider-diagnostic?scope=golden-boot&seasonId=999&maxPages=99&totalBudgetMs=999999") }) };
 }
+
+test("diagnostic resolves fresh independent stage scope without granting a public award", async () => {
+  const clock = fakeClock();
+  const fetchedAt = new Date(clock.runtime.Date.now()).toISOString();
+  const stageEvidence = { ok: true, provider: "sportmonks", fetchedAt, data: {
+    requestedSeasonId: "28083", leagueId: "8", coverage: "complete", fetchedAt,
+    rows: [{ id: "123", typeId: "223", leagueId: "8", seasonId: "28083" }],
+  } };
+  const result = await scenario({ runtime: clock.runtime, stageRead: async () => stageEvidence }).run();
+  assert.equal(result.body.stageAuthority, "canonical-season-stage");
+  assert.deepEqual(JSON.parse(JSON.stringify(result.body.stageScope)), {
+    authority: "canonical-season-stage", leagueId: "8", seasonId: "28083", stageId: "123",
+  });
+  assert.equal(result.body.stageScopeExpiresAt, new Date(Date.parse(fetchedAt) + 60_000).toISOString());
+  assert.equal(result.body.publicAwardEligible, false);
+  await clock.advance(60_001);
+  const expired = await scenario({ runtime: clock.runtime, stageRead: async () => stageEvidence }).run();
+  assert.equal(expired.body.stageAuthority, "unavailable");
+  assert.equal(expired.body.stageScope, null);
+  assert.equal(expired.body.stageScopeExpiresAt, null);
+  const lateClock = fakeClock();
+  const olderFetch = new Date(lateClock.runtime.Date.now() - 59_000).toISOString();
+  const late = await scenario({ runtime: lateClock.runtime,
+    stageRead: async () => ({ ...stageEvidence, fetchedAt: olderFetch, data: { ...stageEvidence.data, fetchedAt: olderFetch } }),
+    topRead: async () => { lateClock.jump(2_000); return evidence; },
+  }).run();
+  assert.equal(late.body.stageAuthority, "unavailable", "Stage expiry during top-scorer read must revoke authority");
+  assert.equal(late.body.stageScopeExpiresAt, null);
+});
 
 test("owner-only Golden Boot diagnostic resolves its canonical season and emits only private allowlisted evidence", async () => {
   const h = scenario();

@@ -11,6 +11,13 @@ import {
 
 const clubsPage = readFileSync(new URL("../app/touchline-clubs/page.tsx", import.meta.url), "utf8");
 const clubPage = readFileSync(new URL("../app/touchline-clubs/[club]/page.tsx", import.meta.url), "utf8");
+test("official league section does not wait for squad presentation", () => {
+  const section = clubPage.slice(clubPage.indexOf("async function ClubHubOfficialLeagueSection"), clubPage.indexOf("async function ClubHubHeroNextMatch"));
+  assert.doesNotMatch(section, /presentationPromise/);
+  assert.match(section, /const \[matchSnapshot, table, feedPage\] = await Promise\.all\(\[\s*matchSnapshotPromise,/);
+  assert.match(section, /const fixture = matchSnapshot\.railFixture/);
+  assert.match(clubPage, /<ClubHubOfficialLeagueSection[\s\S]*?matchSnapshotPromise=\{matchSnapshotPromise\}/);
+});
 test("next-match hero waits only for the shared match snapshot, never squad or season points", () => {
   const hero = clubPage.slice(clubPage.indexOf("async function ClubHubHeroNextMatch"), clubPage.indexOf("function normalizedPlayerIdentity"));
   assert.match(hero, /const matchSnapshot = await matchSnapshotPromise/);

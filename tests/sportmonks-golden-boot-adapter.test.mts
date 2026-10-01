@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 import test from "node:test";
 import { clearFootballDataCache, withFootballDataCache } from "../lib/football-data/cache.ts";
+import type { SportmonksQuotaTrace } from "../lib/football-data/sportmonks-quota-observation.ts";
 
 const root = new URL("../", import.meta.url);
 registerHooks({ resolve(specifier, context, next) {
@@ -13,6 +14,134 @@ const row = (player = 10, goals = 3, extra = {}) => ({ id: player, player_id: pl
 const page = (rows: unknown[], current = 1, more = false) => ({ data: rows, pagination: { count: rows.length, per_page: 50, current_page: current, has_more: more } });
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 type Provider = InstanceType<typeof SportmonksFootballProvider>;
+
+test("quota retains retries, original times and IDs across unobserved cache owners", async () => {
+  let calls = 0;
+  const traces: SportmonksQuotaTrace[] = [];
+  await synthetic(async () => {
+    calls++;
+    return response({
+      ...page([row()]),
+      rate_limit: { remaining: calls === 1 ? 0 : 9, resets_in_seconds: 30, requested_entity: "Topscorers" },
+    }, calls === 1 ? 429 : 200);
+  }, async provider => {
+    const first = await provider.getSeasonTopScorers({ seasonId: "28083", totalBudgetMs: 3_000 });
+    const second = await provider.getSeasonTopScorers({
+      seasonId: "28083", totalBudgetMs: 3_000, quotaObserver: trace => { traces.push(trace); },
+    });
+    assert.equal(first.ok, true); assert.equal(second.ok, true); assert.equal(calls, 2);
+    assert.equal(first.fetchedAt, second.fetchedAt);
+    const trace = traces.at(-1)!;
+    assert.equal(trace.coverage, "complete");
+    assert.deepEqual(trace.observations.map(value => value.status), [429, 200]);
+    assert.deepEqual(trace.observations.map(value => value.attempt), [1, 2]);
+    assert.equal(trace.observations[1]!.observedAt, first.fetchedAt);
+    assert.equal(trace.observations[0]!.requestId, trace.observations[1]!.requestId);
+    assert.deepEqual(trace.reusedRequestIds, [trace.observations[0]!.requestId]);
+    const throttle = trace.observations[0]!;
+    assert.equal(Date.parse(throttle.cooldownUntil!) - Date.parse(throttle.observedAt!), 30_000);
+    assert.doesNotMatch(JSON.stringify(trace), /synthetic-token|sportmonks.invalid|player_id|message/);
+  });
+});
+
+test("inflight join replays one request identity, not duplicate consumption", async () => {
+  let calls = 0, release!: () => void, started!: () => void;
+  const barrier = new Promise<void>(resolve => { release = resolve; });
+  const began = new Promise<void>(resolve => { started = resolve; });
+  const owner: SportmonksQuotaTrace[] = [], joiner: SportmonksQuotaTrace[] = [];
+  await synthetic(async () => { calls++; started(); await barrier; return response(page([row()])); }, async provider => {
+    const a = provider.getSeasonTopScorers({ seasonId: "28083", totalBudgetMs: 3_000, quotaObserver: t => { owner.push(t); } });
+    await began;
+    const b = provider.getSeasonTopScorers({ seasonId: "28083", totalBudgetMs: 3_000, quotaObserver: t => { joiner.push(t); } });
+    release(); await Promise.all([a, b]);
+    assert.equal(calls, 1);
+    assert.deepEqual(owner.at(-1)!.observations, joiner.at(-1)!.observations);
+    assert.deepEqual(owner.at(-1)!.reusedRequestIds, []);
+    assert.deepEqual(joiner.at(-1)!.reusedRequestIds, [owner.at(-1)!.observations[0]!.requestId]);
+    assert.equal(owner.at(-1)!.observations[0]!.remaining, null);
+    assert.equal(owner.at(-1)!.observations[0]!.requestedEntity, null);
+  });
+});
+
+test("later-page failure preserves earlier quota and cooldown without partial facts", async () => {
+  let calls = 0;
+  const traces: SportmonksQuotaTrace[] = [];
+  await synthetic(async () => {
+    if (++calls === 1) return response({
+      ...page([row()], 1, true),
+      rate_limit: { remaining: 3, resets_in_seconds: 10, requested_entity: "Topscorers" },
+    });
+    const failed = response({ message: "PRIVATE sentinel", rate_limit: { remaining: 0, resets_in_seconds: 120, requested_entity: "Topscorers" } }, 429);
+    failed.headers.set("Retry-After", "180");
+    return failed;
+  }, async provider => {
+    const result = await provider.getSeasonTopScorers({ seasonId: "28083", totalBudgetMs: 1_000, quotaObserver: t => { traces.push(t); } });
+    assert.equal(result.ok, false); assert.equal("data" in result, false); assert.equal(calls, 2);
+    const trace = traces.at(-1)!;
+    assert.equal(trace.coverage, "complete");
+    assert.deepEqual(trace.observations.map(value => value.status), [200, 429]);
+    const last = trace.observations[1]!;
+    assert.equal(Date.parse(last.cooldownUntil!) - Date.parse(last.observedAt!), 180_000);
+    assert.doesNotMatch(JSON.stringify(trace), /PRIVATE|sentinel/);
+  });
+});
+
+test("legacy cache without attempt metadata is unknown, never invented zero cost", async () => {
+  await synthetic(async () => { throw Error("No network permitted"); }, async provider => {
+    const params = { filters: "seasonTopscorerTypes:208", include: "player;team;type;stage;season;league", per_page: 50, page: 1 };
+    const fetchedAt = new Date().toISOString();
+    await withFootballDataCache("live", ["sportmonks", "/topscorers/seasons/28083", JSON.stringify(params)], async () => ({
+      ok: true, status: 200, data: page([row()]), headers: new Headers(), fetchedAt,
+    }));
+    const traces: SportmonksQuotaTrace[] = [];
+    const result = await provider.getSeasonTopScorers({ seasonId: "28083", totalBudgetMs: 1_000, quotaObserver: t => { traces.push(t); } });
+    assert.equal(result.ok, true); assert.equal(result.fetchedAt, fetchedAt);
+    assert.deepEqual(traces.at(-1), { coverage: "unknown", observations: [], reusedRequestIds: [] });
+  });
+});
+
+test("a later in-flight timeout preserves earlier cooldown and remains unknown after late completion", async () => {
+  await synthetic(async () => response({
+    ...page([row()], 1, true),
+    rate_limit: { remaining: 0, resets_in_seconds: 120, requested_entity: "Topscorers" },
+  }), async provider => {
+    const params = { filters: "seasonTopscorerTypes:208", include: "player;team;type;stage;season;league", per_page: 50, page: 2 };
+    let release!: () => void;
+    const barrier = new Promise<void>(resolve => { release = resolve; });
+    const joined = withFootballDataCache("live", ["sportmonks", "/topscorers/seasons/28083", JSON.stringify(params)], async () => {
+      await barrier;
+      return { ok: true, status: 200, data: page([row(11)], 2), headers: new Headers(), fetchedAt: new Date().toISOString() };
+    });
+    const traces: SportmonksQuotaTrace[] = [];
+    try {
+      const result = await provider.getSeasonTopScorers({ seasonId: "28083", totalBudgetMs: 100, quotaObserver: t => { traces.push(t); } });
+      assert.equal(result.ok, false); assert.equal("data" in result, false);
+      const final = traces.at(-1)!;
+      assert.equal(final.coverage, "unknown"); assert.equal(final.observations.length, 1);
+      assert.equal(Date.parse(final.observations[0]!.cooldownUntil!) - Date.parse(final.observations[0]!.observedAt!), 120_000);
+      const count = traces.length;
+      release(); await joined; await new Promise<void>(resolve => setImmediate(resolve));
+      assert.equal(traces.length, count, "closed operation does not claim later completeness");
+    } finally { release(); await joined; }
+  });
+});
+
+test("stage observer failure preserves facts and malformed quota stays null", async () => {
+  const traces: SportmonksQuotaTrace[] = [];
+  await synthetic(async () => response({
+    data: [{ id: 1, season_id: 28083, league_id: 8, type_id: 223 }],
+    rate_limit: { remaining: "50 left", resets_in_seconds: -1, requested_entity: "PRIVATE token/url" },
+  }), async provider => {
+    const result = await provider.getSeasonStages({ seasonId: "28083", leagueId: "8", totalBudgetMs: 1_000,
+      quotaObserver: t => { traces.push(t); throw Error("PRIVATE observer"); } });
+    assert.equal(result.ok, true);
+    const trace = traces.at(-1)!;
+    assert.equal(trace.coverage, "complete"); assert.equal(trace.observations.length, 1);
+    assert.equal(trace.observations[0]!.remaining, null); assert.equal(trace.observations[0]!.resetAt, null);
+    assert.equal(trace.observations[0]!.requestedEntity, null);
+    assert.doesNotMatch(JSON.stringify(trace), /PRIVATE|token/);
+  });
+});
 async function synthetic(mock: typeof fetch, run: (provider: Provider) => Promise<void>) {
   const original = globalThis.fetch;
   clearFootballDataCache();

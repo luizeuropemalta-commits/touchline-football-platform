@@ -213,19 +213,18 @@ async function projectSquadForPublic(
   if (batch.status === "error") return { state: "error", players: [], omitted: [] };
 
   const projections = new Map(batch.projections.map((projection) => [projection.providerPlayerId, projection] as const));
-  const publishedCards = publicationGateEnabled
-    ? await loadTouchlinePublishedCardPresentations({
-      playerIds: batch.projections.flatMap((projection) => projection.identity.status === "verified" && projection.identity.value
-        ? [projection.identity.value.playerId]
-        : []),
-      providedAdmin,
-    })
-    : new Map<string, TouchlinePublicEditorialCardPresentation>();
-  const editorialOverrides = await loadTouchlineCardEditorialOverrides(
-    batch.projections.flatMap((projection) => projection.identity.status === "verified" && projection.identity.value
-      ? [projection.identity.value.playerId]
-      : []),
-  );
+  const playerIds = batch.projections.flatMap((projection) => projection.identity.status === "verified" && projection.identity.value
+    ? [projection.identity.value.playerId]
+    : []);
+  const [publishedCards, editorialOverrides] = await Promise.all([
+    publicationGateEnabled
+      ? loadTouchlinePublishedCardPresentations({
+        playerIds,
+        providedAdmin,
+      })
+      : new Map<string, TouchlinePublicEditorialCardPresentation>(),
+    loadTouchlineCardEditorialOverrides(playerIds),
+  ]);
   const players: PublicPremierSquadPlayer[] = [];
   const omitted: PendingPublicPremierSquadPlayer[] = [];
 

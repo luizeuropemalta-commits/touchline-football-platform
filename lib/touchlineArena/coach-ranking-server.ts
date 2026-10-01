@@ -62,12 +62,14 @@ const readRequestCoachRanking = cache(async (): Promise<TouchLineCoachRankingSta
   const admin = createAdminClient();
   if (!admin) return EMPTY;
   const { data: active, error: activeError } = await admin.from("touchline_coach_ranking_active_snapshots")
-    .select("snapshot_id").eq("league_key", "touchline-england").maybeSingle();
+    .select("snapshot_id,snapshot:touchline_coach_ranking_snapshots(snapshot_id,league_key,season_id,scoring_version,fixture_ids,generated_at,ranking_payload)")
+    .eq("league_key", "touchline-england").maybeSingle();
   if (activeError || !text(active?.snapshot_id)) return EMPTY;
-  const { data: snapshot, error } = await admin.from("touchline_coach_ranking_snapshots")
-    .select("snapshot_id,season_id,scoring_version,fixture_ids,generated_at,ranking_payload")
-    .eq("snapshot_id", active!.snapshot_id).eq("league_key", "touchline-england").maybeSingle();
-  if (error || !snapshot || snapshot.scoring_version !== "coach_scoring_v2" || !Array.isArray(snapshot.ranking_payload) || !Array.isArray(snapshot.fixture_ids)) return EMPTY;
+  // The existing many-to-one FK resolves the active snapshot in one read.
+  // Never repair a missing/malformed relation with stale or unscoped data.
+  const snapshot = object(active?.snapshot);
+  if (!snapshot || snapshot.snapshot_id !== active!.snapshot_id || snapshot.league_key !== "touchline-england") return EMPTY;
+  if (snapshot.scoring_version !== "coach_scoring_v2" || !Array.isArray(snapshot.ranking_payload) || !Array.isArray(snapshot.fixture_ids)) return EMPTY;
   const parsed = snapshot.ranking_payload.flatMap((value): TouchLineCoachRankingRow[] => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return [];
     const row = value as Record<string, unknown>;

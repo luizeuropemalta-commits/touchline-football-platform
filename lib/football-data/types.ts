@@ -1,3 +1,5 @@
+import type { SportmonksQuotaObserver } from "./sportmonks-quota-observation.ts";
+
 export type FootballDataProviderName = "sportmonks";
 
 export type FootballDataCacheBucket = "static" | "daily" | "live" | "historical";
@@ -7,8 +9,10 @@ export type SeasonTopScorersParams = {
   /** Entire read, including pagination/cache waits. Capped at 30 seconds. */
   totalBudgetMs: number;
   maxPages?: number;
+  /** Internal operational telemetry, never football/public authority. */
+  quotaObserver?: SportmonksQuotaObserver;
 };
-export type SeasonStagesParams = { seasonId: string; leagueId: string; totalBudgetMs: number };
+export type SeasonStagesParams = { seasonId: string; leagueId: string; totalBudgetMs: number; quotaObserver?: SportmonksQuotaObserver };
 export type TouchlineSeasonStages = Readonly<{
   requestedSeasonId: string; leagueId: string; coverage: "complete"; fetchedAt: string;
   rows: readonly { id: string; leagueId: string; seasonId: string; typeId: string }[];

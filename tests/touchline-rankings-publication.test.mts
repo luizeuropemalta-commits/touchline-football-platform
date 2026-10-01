@@ -27,7 +27,8 @@ test("TouchLine Tables shows one positional Best XI, coaches and the sporting Cl
   assert.match(projection, /filter\(\(card\) => card\.seasonTotalRating != null\)/);
   assert.match(projection, /sort\(compareTouchLineRankedCards\)/);
   assert.match(projection, /\.slice\(0, 3\)/);
-  assert.match(page, /highlights=\{projectTouchlineRankingsHighlights\(rankedCards, publishedTopEleven\)\}/);
+  assert.match(page, /complete\.then\(\(\[, selection, cards\]\) => projectTouchlineRankingsHighlights\(cards, selection\)\)/);
+  assert.match(page, /highlights=\{highlights\}/);
   assert.doesNotMatch(page, /rosterCards=\{rankedCards\}/);
   assert.match(page, /totalRankedCards=\{rankedCards\.length\}/);
   assert.match(client, /Top 3 Cards da Temporada/);

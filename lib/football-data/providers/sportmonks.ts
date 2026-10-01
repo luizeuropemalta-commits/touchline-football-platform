@@ -1,3 +1,8 @@
+import { randomUUID } from "node:crypto";
+import {
+  createSportmonksQuotaRead, observeSportmonksQuota,
+  type SportmonksQuotaOperation, type SportmonksQuotaObservation, type SportmonksRequestQuota,
+} from "@/lib/football-data/sportmonks-quota-observation";
 import { withFootballDataCache } from "@/lib/football-data/cache";
 import { normalizeSportmonksSeasonTopScorers, strictSportmonksId } from "@/lib/football-data/sportmonks-season-topscorers";
 import { normalizeSportmonksSeasonStages } from "@/lib/football-data/sportmonks-season-stages";
@@ -198,14 +203,20 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     remainingBudgetMs?: number,
     maxAttempts = 3,
     cachePolicy?: "fixture-diagnostic-v1",
+    quotaRead?: ReturnType<typeof createSportmonksQuotaRead>,
   ): Promise<SportmonksRequestResult<T>> {
+    quotaRead?.begin();
     const token = this.token();
     if (!token) return { configured: false as const };
+    // Instrument all owners of these shared keys, even without a subscriber.
+    const quotaOperation: SportmonksQuotaOperation | null =
+      /^\/stages\/seasons\/[1-9]\d*$/.test(path) ? "stages"
+        : /^\/topscorers\/seasons\/[1-9]\d*$/.test(path) ? "topscorers" : null;
 
     const cachedResponse = await withFootballDataCache(
       bucket,
       ["sportmonks", path, JSON.stringify(params), ...(cachePolicy ? [cachePolicy] : [])],
-      async () => {
+      async (): Promise<FootballDataHttpResponse<SportmonksEnvelope<T>> & { quota?: SportmonksRequestQuota }> => {
         const baseUrl = path.startsWith("/my/") ? this.rootBaseUrl() : this.baseUrl();
         const url = new URL(path.replace(/^\//, ""), `${baseUrl.replace(/\/$/, "")}/`);
         url.searchParams.set("api_token", token);
@@ -214,9 +225,16 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         });
 
         const timeoutMs = Math.min(footballDataTimeoutMs(timeoutProfile), remainingBudgetMs ?? Infinity);
-        return footballDataFetchJson<SportmonksEnvelope<T>>(url, {
+        const requestId = quotaOperation ? randomUUID() : "";
+        const observations: SportmonksQuotaObservation[] = [];
+        const response = await footballDataFetchJson<SportmonksEnvelope<T>>(url, {
           provider: this.name,
           timeoutMs,
+          onAttemptCompleted: quotaOperation ? ({ attempt, response: completed }) => {
+            const observation = observeSportmonksQuota(requestId, quotaOperation, attempt, completed);
+            observations.push(observation);
+            quotaRead?.observe(observation);
+          } : undefined,
           retry: {
             maxAttempts,
             totalBudgetMs: Math.min(timeoutMs + Math.min(timeoutMs, 1_000), remainingBudgetMs ?? Infinity),
@@ -225,11 +243,20 @@ export class SportmonksFootballProvider implements FootballDataProvider {
             jitterRatio: 0.2,
           },
         });
+        if (!quotaOperation) return response;
+        const last = observations[observations.length - 1];
+        const complete = observations.length > 0
+          && observations.every((value, index) => value.attempt === index + 1 && value.observedAt !== null)
+          && last?.status === response.status && last.observedAt === response.fetchedAt;
+        return { ...response, quota: Object.freeze({
+          requestId, observations: Object.freeze(observations.slice()), complete,
+        }) };
       },
       undefined,
       footballDataHttpResponseCanBeCached,
     );
 
+    quotaRead?.finish(cachedResponse.value.quota, cachedResponse.cached);
     return { configured: true as const, ...cachedResponse };
   }
 
@@ -303,12 +330,18 @@ export class SportmonksFootballProvider implements FootballDataProvider {
 
   /** Strict, internal-only read. Never treats a capped/truncated list as complete. */
   async getSeasonStages(params: SeasonStagesParams): Promise<FootballDataResult<TouchlineSeasonStages>> {
+    const { quotaObserver, ...policy } = params;
+    const quota = createSportmonksQuotaRead(quotaObserver);
+    try { return await this.readSeasonStages(policy, quota); } finally { quota.close(); }
+  }
+
+  private async readSeasonStages(params: SeasonStagesParams, quota: ReturnType<typeof createSportmonksQuotaRead>): Promise<FootballDataResult<TouchlineSeasonStages>> {
     const seasonId = strictSportmonksId(params.seasonId), leagueId = strictSportmonksId(params.leagueId);
     if (!seasonId || !leagueId || !Number.isSafeInteger(params.totalBudgetMs) || params.totalBudgetMs < 1 || params.totalBudgetMs > 15_000) return resultError(this.name, "invalid_request", "Invalid stage scope or budget.");
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const request = await Promise.race([
-        this.request<unknown[]>(`/stages/seasons/${seasonId}`, {}, "live", "interactive", params.totalBudgetMs, 1),
+        this.request<unknown[]>(`/stages/seasons/${seasonId}`, {}, "live", "interactive", params.totalBudgetMs, 1, undefined, quota),
         new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), params.totalBudgetMs); }),
       ]);
       if (!request) return resultError(this.name, "provider_error", "Stage read budget exhausted.");
@@ -323,6 +356,12 @@ export class SportmonksFootballProvider implements FootballDataProvider {
   }
 
   async getSeasonTopScorers(params: SeasonTopScorersParams): Promise<FootballDataResult<TouchlineSeasonTopScorers>> {
+    const { quotaObserver, ...policy } = params;
+    const quota = createSportmonksQuotaRead(quotaObserver);
+    try { return await this.readSeasonTopScorers(policy, quota); } finally { quota.close(); }
+  }
+
+  private async readSeasonTopScorers(params: SeasonTopScorersParams, quota: ReturnType<typeof createSportmonksQuotaRead>): Promise<FootballDataResult<TouchlineSeasonTopScorers>> {
     const seasonId = strictSportmonksId(params.seasonId);
     const maxPages = params.maxPages ?? 10;
     if (!seasonId || !Number.isSafeInteger(params.totalBudgetMs) || params.totalBudgetMs < 1 || params.totalBudgetMs > 30_000
@@ -344,7 +383,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         const request = await Promise.race([
           this.request<unknown[]>(`/topscorers/seasons/${seasonId}`, {
             filters: "seasonTopscorerTypes:208", include: "player;team;type;stage;season;league", per_page: 50, page,
-          }, "live", "interactive", remaining),
+          }, "live", "interactive", remaining, 3, undefined, quota),
           new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining); }),
         ]);
         if (!request || Date.now() > deadline) return fail("budget-exhausted");

@@ -1,0 +1,53 @@
+import { timingSafeEqual } from "node:crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import { produceGoldenBootSnapshot } from "@/lib/touchlineArena/golden-boot-producer";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+// Finite hosting bound, below the worker's abandonment recovery grace. This
+// is not a claim that every in-flight network request can be cancelled.
+export const maxDuration = 45;
+
+const headers = {
+  "Cache-Control": "private, no-store",
+  "CDN-Cache-Control": "no-store",
+  "Vercel-CDN-Cache-Control": "no-store",
+};
+function response(status: string, httpStatus: number) {
+  return NextResponse.json({ ok: httpStatus === 200, status }, { status: httpStatus, headers });
+}
+function authorized(request: NextRequest) {
+  const secret = process.env.TOUCHLINE_GOLDEN_BOOT_REFRESH_SECRET;
+  if (!secret || secret.length < 32 || secret.length > 512) return false;
+  const supplied = request.headers.get("authorization") ?? "";
+  const expected = Buffer.from(`Bearer ${secret}`, "utf8");
+  const received = Buffer.from(supplied, "utf8");
+  return received.length === expected.length && timingSafeEqual(received, expected);
+}
+
+/** Trusted scheduler only. No browser session, body, query string, league or
+ * token supplied by a caller can override canonical producer admission. */
+export async function POST(request: NextRequest) {
+  if (process.env.TOUCHLINE_GOLDEN_BOOT_REFRESH_ENABLED !== "true") return response("disabled", 503);
+  if (!authorized(request)) return response("unauthorized", 401);
+  try {
+    const admin = createAdminClient();
+    if (!admin) return response("not_configured", 503);
+    const result = await produceGoldenBootSnapshot({ admin, createProvider: createFootballDataProvider });
+    // Operational provider traces and SQL errors remain private. The public
+    // GET is the only award read authority; this is merely an invocation ack.
+    switch (result.status) {
+      case "stored": case "skipped": return response(result.status, 200);
+      case "unavailable": return response("unavailable", 502);
+      default: return response("unconfirmed", 503);
+    }
+  } catch { return response("unconfirmed", 503); }
+}
+
+export function GET() {
+  return NextResponse.json({ ok: false, status: "method_not_allowed" }, {
+    status: 405, headers: { ...headers, Allow: "POST" },
+  });
+}

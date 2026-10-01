@@ -42,10 +42,21 @@ export type FootballDataRetryPolicy = {
   random?: () => number;
 };
 
-type FootballDataFetchInit = RequestInit & {
+export type FootballDataCompletedAttempt<T> = Readonly<{
+  /** One-based actual attempt; no event is emitted for a pre-request abort. */
+  attempt: number;
+  /** Detached response, retaining its original completion timestamp. */
+  response: Readonly<FootballDataHttpResponse<T>>;
+}>;
+
+type FootballDataFetchInit<T> = RequestInit & {
   timeoutMs?: number;
   provider: FootballDataProviderName;
   retry?: FootballDataRetryPolicy;
+  /** Internal bounded observation only: do not log/persist raw responses or do I/O.
+   * Invoked before retry selection. Returned promises are observed, never awaited.
+   */
+  onAttemptCompleted?: (attempt: FootballDataCompletedAttempt<T>) => void | Promise<void>;
 };
 
 function retryAfterDelayMs(value: string | null, now: number) {
@@ -148,12 +159,13 @@ export function footballDataHttpResponseCanBeCached(
 
 export async function footballDataFetchJson<T>(
   url: URL,
-  init: FootballDataFetchInit,
+  init: FootballDataFetchInit<T>,
 ): Promise<FootballDataHttpResponse<T>> {
   const {
     provider,
     timeoutMs = footballDataTimeoutMs("background"),
     retry,
+    onAttemptCompleted,
     signal: externalSignal,
     ...requestInit
   } = init;
@@ -228,6 +240,24 @@ export async function footballDataFetchJson<T>(
     } finally {
       clearTimeout(timeout);
       retrySignal?.removeEventListener("abort", forwardExternalAbort);
+    }
+
+    if (onAttemptCompleted) {
+      try {
+        const observation = Object.freeze({
+          attempt,
+          response: Object.freeze({
+            ...lastResponse,
+            data: structuredClone(lastResponse.data),
+            headers: new Headers(lastResponse.headers),
+          }),
+        });
+        // An observer cannot mutate the request result or Retry-After headers.
+        // Neither synchronous failure nor asynchronous rejection changes retry.
+        void Promise.resolve(onAttemptCompleted(observation)).catch(() => undefined);
+      } catch {
+        // Observation is best-effort; cloning/callback errors are not HTTP errors.
+      }
     }
 
     if (

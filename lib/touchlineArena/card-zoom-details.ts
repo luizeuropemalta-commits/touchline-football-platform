@@ -260,7 +260,9 @@ export function buildTouchlinePlayerCardZoomDetails(input: Readonly<{
     title: input.name,
     subtitle: [input.clubName, displayPosition].filter(Boolean).join(" · "),
     performanceTitle: isPortuguese ? "Desempenho" : "Performance",
-    performanceSubtitle: isPortuguese ? "Ratings e estatísticas oficiais da partida" : "Official match ratings and statistics",
+    performanceSubtitle: isPortuguese
+      ? "Nota total: acumulado da temporada. Estatísticas de jogo: partida selecionada."
+      : "Total rating: season total. Match statistics: selected match.",
     fields: baseFields,
     profileHref: input.profileHref ?? undefined,
     profileLabel: isPortuguese ? "Ver perfil completo" : "View full profile",

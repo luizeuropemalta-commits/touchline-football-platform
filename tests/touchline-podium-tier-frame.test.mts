@@ -4,7 +4,10 @@ import test from "node:test";
 
 test("featured coach frame follows its canonical card tier, including the neutral pending state", () => {
   const source = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
-  const panel = source.slice(source.indexOf('<aside className={styles.topCoachPanel}'), source.indexOf('className={styles.rankingHighlights}'));
+  const panelStart = source.indexOf('<aside className={styles.topCoachPanel}');
+  const panelEnd = source.indexOf('export function TouchlineCoachRankingTable');
+  assert.ok(panelStart >= 0 && panelEnd > panelStart);
+  const panel = source.slice(panelStart, panelEnd);
   assert.match(panel, /data-coach-tier-frame=\{topCoachSlot\?\.cardTier \?\? "unresolved"\}/);
   assert.match(panel, /"--tier-accent": topCoachSlot \? touchlineCardTierPalette\(topCoachSlot\.cardTier\)\.accent : undefined/);
   assert.match(panel, /TouchlineClubPerimeterTrace accent=\{topCoachSlot \? touchlineCardTierPalette\(topCoachSlot\.cardTier\)\.accent : undefined\}/);
@@ -16,7 +19,10 @@ test("featured coach frame follows its canonical card tier, including the neutra
 
 test("podium frames use the published card tier, never the podium position, for their living perimeter", () => {
   const source = readFileSync(new URL("../app/touchline-tables/touchline-tables-client.tsx", import.meta.url), "utf8");
-  const podium = source.slice(source.indexOf("{topPlayerCards.map"), source.indexOf('<aside className={styles.coachRankingPanel}'));
+  const podiumStart = source.indexOf('export function TouchlineRankingPodium');
+  const podiumEnd = source.indexOf('export function TouchlineRankingEnding');
+  assert.ok(podiumStart >= 0 && podiumEnd > podiumStart);
+  const podium = source.slice(podiumStart, podiumEnd);
   assert.match(podium, /card\.editorialCard\?\.tierKey/);
   assert.match(podium, /touchlineCardTierPalette\(tierKey\)/);
   assert.match(podium, /TouchlineClubPerimeterTrace accent=\{palette\?\.accent\}/);
