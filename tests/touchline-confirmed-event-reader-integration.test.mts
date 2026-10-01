@@ -13,23 +13,42 @@ const at = '2026-09-27T00:00:00Z';
 const source = readFileSync(new URL('../lib/touchlineArena/social-confirmed-event-draft-server.ts', import.meta.url), 'utf8');
 const javascript = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 
-function harness(options: { eventTime?: string | null; changedRevision?: boolean; badFact?: boolean; duplicate?: boolean } = {}) {
+function harness(options: { eventTime?: string | null; changedRevision?: boolean; badFact?: boolean; duplicate?: boolean; hatTrick?: boolean; removeConstituent?: string; eventKind?: 'penalty' | 'own-goal' | 'red-card'; feedError?: boolean; extraFeedOrder?: 'unknown' | 'only-sort' | 'later'; feedCase?: 'missing' | 'duplicate' | 'rescinded' | 'drift' | 'wrong-fixture' | 'predecessor-missing' | 'canonical-predecessor-missing' | 'irrelevant-later' } = {}) {
   const event = { provider_event_id: '9', provider_team_id: '1', provider_player_id: '3', football_player_id: uuid,
     player_name: 'Test Player', minute: 12, extra_minute: null, event_type: 'goal', event_status: 'recorded', result: '1-0',
     source_synced_at: options.eventTime === undefined ? at : options.eventTime };
-  const fact = checksum.checksumTouchlineConfirmedEventFact({ fixtureId: '8', eventId: '9', eventKind: 'goal', result: '1-0', teamId: '1', playerId: '3', minute: 12, extraMinute: null });
+  if (options.feedCase === 'predecessor-missing') event.result = '2-0';
+  if (options.hatTrick) event.result = '3-0';
+  if (options.eventKind) event.event_type = options.eventKind;
+  if (options.eventKind === 'own-goal') event.result = '0-1';
+  if (options.eventKind === 'red-card') event.result = '0-0';
+  const fact = checksum.checksumTouchlineConfirmedEventFact({ fixtureId: '8', eventId: '9', eventKind: options.eventKind ?? 'goal', result: event.result, teamId: '1', playerId: '3', minute: 12, extraMinute: null });
+  const currentEvent = { provider: 'sportmonks', fixtureId: '8', providerId: '9', teamId: '1', playerId: '3', minute: 12, extraMinute: null, type: event.event_type, status: options.feedCase === 'rescinded' ? 'rescinded' : 'recorded', result: event.result, ...(options.feedCase === 'drift' ? { playerId: '4' } : {}) };
+  const hatEvents = [{ ...event,provider_event_id:'7',minute:4,result:'1-0' },{ ...event,provider_event_id:'8',minute:8,result:'2-0' },event];
   const rows: Record<string, unknown> = {
     football_fixtures: { id: uuid, competition_id: uuid, season_id: uuid, round_id: uuid, home_club_id: uuid, away_club_id: uuid, source_updated_at: '2026-09-27T00:02:00Z' },
-    football_fixture_events: options.duplicate ? [event, event] : [event],
+    football_fixture_events: options.duplicate ? [event, event] : options.feedCase === 'predecessor-missing' ? [{ ...event, provider_event_id: '7', minute: 5, result: '1-0' }, event] : options.feedCase === 'irrelevant-later' ? [event,{ ...event,provider_event_id: '10',minute: 80 }] : [event],
+    football_fantasy_fixture_feeds: { provider: 'sportmonks', provider_fixture_id: options.feedCase === 'wrong-fixture' ? '88' : '8', last_synced_at: at, events_payload: options.feedCase === 'missing' ? [] : options.feedCase === 'duplicate' ? [currentEvent,currentEvent] : options.feedCase === 'canonical-predecessor-missing' ? [{ ...currentEvent,providerId: '7',minute: 5 },currentEvent] : [currentEvent] },
     touchline_social_confirmed_event_observations: { first_observed_at: at, last_observed_at: '2026-09-27T00:03:00Z', confirmed_at: at,
       event_fact_checksum: options.badFact ? 'wrong' : fact, stable_observation_count: 2, confirmation_state: 'CONFIRMED' },
     touchline_player_fixture_score_settlements: { rating: 7, touchline_points: 10, settlement_status: 'provisional', source_synced_at: '2026-09-27T00:01:00Z',
       touchline_points_breakdown: [{ providerEventId: 'rating:7', ruleCode: 'sportmonks-rating', factValue: 7, points: 10 }] },
   };
+  if (options.hatTrick) {
+    rows.football_fixture_events = hatEvents;
+    (rows.football_fantasy_fixture_feeds as { events_payload: unknown }).events_payload = hatEvents
+      .filter(item => item.provider_event_id !== options.removeConstituent)
+      .map(item => ({ ...currentEvent,providerId:item.provider_event_id,minute:item.minute,result:item.result }));
+  }
+  if (options.extraFeedOrder) {
+    (rows.football_fantasy_fixture_feeds as { events_payload: unknown[] }).events_payload.push({ ...currentEvent,providerId:'10',minute: options.extraFeedOrder === 'later' ? 80 : null,sortOrder:options.extraFeedOrder === 'only-sort' ? 80 : null });
+  }
   let revisionReads = 0;
   const admin = { from(table: string) {
     assert.ok(table in rows, table);
-    const query = { select: () => query, eq: () => query, order: () => Promise.resolve({ data: rows[table], error: null }), maybeSingle: () => Promise.resolve({ data: rows[table], error: null }) };
+    const query = { select: () => query, eq: () => query,
+      in: () => Promise.resolve({ data: hatEvents.map(item => ({ event_provider_id:item.provider_event_id,confirmation_state:'CONFIRMED',stable_observation_count:2,event_fact_checksum:checksum.checksumTouchlineConfirmedEventFact({ fixtureId:'8',eventId:item.provider_event_id,eventKind:'goal',result:item.result,teamId:'1',playerId:'3',minute:item.minute,extraMinute:null }) })),error:null }),
+      order: () => Promise.resolve({ data: rows[table], error: null }), maybeSingle: () => Promise.resolve({ data: rows[table], error: table === 'football_fantasy_fixture_feeds' && options.feedError ? { message:'synthetic failure' } : null }) };
     return query;
   } };
   const dependencies: Record<string, unknown> = {
@@ -77,6 +96,51 @@ test('executed reader preserves social DTO while private evidence retains indivi
   assert.equal(missing.evidence.eventSyncedAt, null);
   assert.equal(matchPushSourceFreshness(missing.evidence, testPolicy, testNow), 'invalid-evidence');
   assert.equal(missing.data.sourceChecksum, privateResult.data.sourceChecksum);
+});
+
+test('current feed membership is mandatory for both shared consumers including score predecessor', async () => {
+  for (const feedCase of ['missing','duplicate','rescinded','drift','wrong-fixture','predecessor-missing','canonical-predecessor-missing'] as const) {
+    for (const name of ['readTouchlineConfirmedEventPushSource','readTouchlineSocialConfirmedEventDraft'] as const) {
+      const result = await harness({ feedCase })[name]('8','9');
+      assert.equal(result.ok,false, `${name}:${feedCase} must fail closed`);
+    }
+  }
+});
+
+test('hat-trick constituent absent from feed fails before approval; unrelated later history does not block', async () => {
+  const rejected = await harness({ feedCase: 'predecessor-missing' }).readTouchlineConfirmedEventPushSource('8','9','HAT_TRICK_HERO');
+  assert.equal(rejected.ok,false);
+  if (!rejected.ok) assert.equal(rejected.reason,'current-event-feed-identity-conflict');
+  assert.equal((await harness({ feedCase: 'irrelevant-later' }).readTouchlineConfirmedEventPushSource('8','9')).ok,true);
+});
+
+test('three confirmed current goals admit hat-trick, removal of each constituent rejects', async () => {
+  const valid = await harness({ hatTrick:true }).readTouchlineConfirmedEventPushSource('8','9','HAT_TRICK_HERO');
+  assert.equal(valid.ok,true,JSON.stringify(valid));
+  for (const removeConstituent of ['7','8','9']) {
+    const result = await harness({ hatTrick:true,removeConstituent }).readTouchlineConfirmedEventPushSource('8','9','HAT_TRICK_HERO');
+    assert.equal(result.ok,false,removeConstituent);
+    if (!result.ok) assert.equal(result.reason,'current-event-feed-identity-conflict');
+  }
+});
+test('current penalty, own goal and red card remain admitted; feed read errors fail closed', async () => {
+  for (const eventKind of ['penalty','own-goal','red-card'] as const) {
+    const result = await harness({ eventKind }).readTouchlineConfirmedEventPushSource('8','9');
+    assert.equal(result.ok,true,JSON.stringify(result));
+  }
+  const failed = await harness({ feedError:true }).readTouchlineConfirmedEventPushSource('8','9');
+  assert.equal(failed.ok,false);
+  if (!failed.ok) assert.equal(failed.reason,'current-event-feed-unavailable');
+});
+test('feed-only score with unknown relative order rejects, but known later event does not', async () => {
+  for (const name of ['readTouchlineConfirmedEventPushSource','readTouchlineSocialConfirmedEventDraft'] as const) {
+    for (const extraFeedOrder of ['unknown','only-sort'] as const) {
+      const result = await harness({extraFeedOrder})[name]('8','9');
+      assert.equal(result.ok,false);
+      if (!result.ok) assert.equal(result.reason,'current-event-feed-score-context-conflict');
+    }
+    assert.equal((await harness({extraFeedOrder:'later'})[name]('8','9')).ok,true);
+  }
 });
 
 test('executed shared reader rejects revision changes, conflicting events and bad observation facts on both paths', async () => {

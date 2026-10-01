@@ -231,6 +231,63 @@ export async function readTouchlineConfirmedEventPushSource(
   const matches = events.filter((row) => String(row.provider_event_id ?? "") === eventId);
   if (matches.length !== 1) return { ok: false, reason: "canonical-event-identity-conflict" };
   const row = matches[0];
+  // The event table retains removed provider rows for history. A fresh revision
+  // fence alone cannot turn such a row into a current fact. Verify the requested
+  // event and its entire score/hat-trick prefix against the current fixture feed.
+  const feedResult = await admin.from("football_fantasy_fixture_feeds")
+    .select("provider,provider_fixture_id,events_payload")
+    .eq("provider", "sportmonks").eq("provider_fixture_id", fixtureId).maybeSingle();
+  const feed = feedResult.data;
+  if (feedResult.error || !feed || feed.provider !== "sportmonks"
+    || String(feed.provider_fixture_id) !== fixtureId || !Array.isArray(feed.events_payload)) {
+    return { ok: false, reason: "current-event-feed-unavailable" };
+  }
+  const kindOf = (candidate: EventRow) => classifyTouchlineConfirmedMatchEvent({
+    type: String(candidate.event_type ?? ""), status: String(candidate.event_status ?? ""),
+    info: candidate.info == null ? null : String(candidate.info),
+    addition: candidate.addition == null ? null : String(candidate.addition),
+  });
+  const isScoreEvent = (candidate: EventRow) => ["goal", "own-goal", "penalty"].includes(kindOf(candidate) ?? "");
+  const relevant = events.slice(0, events.indexOf(row)).filter(isScoreEvent).concat(row);
+  const nullableText = (value: unknown) => value == null ? null : String(value);
+  for (const candidate of relevant) {
+    const counterparts = feed.events_payload.filter((value: unknown) => value && typeof value === "object"
+      && String((value as Record<string, unknown>).providerId ?? "") === String(candidate.provider_event_id));
+    if (counterparts.length !== 1) return { ok: false, reason: "current-event-feed-identity-conflict" };
+    const current = counterparts[0] as Record<string, unknown>;
+    if (current.provider !== "sportmonks" || String(current.fixtureId ?? "") !== fixtureId
+      || current.status === "rescinded"
+      || nullableText(current.status ?? "recorded") !== nullableText(candidate.event_status)
+      || nullableText(current.type) !== nullableText(candidate.event_type)
+      || nullableText(current.playerId) !== nullableText(candidate.provider_player_id)
+      || nullableText(current.teamId) !== nullableText(candidate.provider_team_id)
+      || nullableText(current.result) !== nullableText(candidate.result)
+      || nullableText(current.info) !== nullableText(candidate.info)
+      || nullableText(current.addition) !== nullableText(candidate.addition)
+      || nullableText(current.minute) !== nullableText(candidate.minute)
+      || nullableText(current.extraMinute) !== nullableText(candidate.extra_minute)
+      || nullableText(current.sortOrder) !== nullableText(candidate.provider_sort_order)) {
+      return { ok: false, reason: "current-event-feed-fact-conflict" };
+    }
+  }
+  // Conversely, a new preceding goal present only in the feed must not be
+  // silently replaced by a fabricated 0-0 (or older canonical predecessor).
+  for (const value of feed.events_payload) {
+    if (!value || typeof value !== "object") return { ok: false, reason: "current-event-feed-unavailable" };
+    const current = value as Record<string, unknown>;
+    const currentKind = classifyTouchlineConfirmedMatchEvent({ type: String(current.type ?? ""),
+      status: String(current.status ?? "recorded"), info: nullableText(current.info), addition: nullableText(current.addition) });
+    if (!["goal", "own-goal", "penalty"].includes(currentKind ?? "")) continue;
+    const order = current.sortOrder == null ? null : integer(current.sortOrder);
+    const targetOrder = row.provider_sort_order == null ? null : integer(row.provider_sort_order);
+    const minute = current.minute == null ? null : integer(current.minute);
+    const targetMinute = row.minute == null ? null : integer(row.minute);
+    const precedes = order !== null && targetOrder !== null ? order <= targetOrder
+      : minute !== null && targetMinute !== null ? minute <= targetMinute : null;
+    if (precedes !== false && !relevant.some(candidate => String(candidate.provider_event_id) === String(current.providerId))) {
+      return { ok: false, reason: "current-event-feed-score-context-conflict" };
+    }
+  }
   const kind = classifyTouchlineConfirmedMatchEvent({
     type: String(row.event_type ?? ""), status: String(row.event_status ?? ""),
     info: row.info === null ? null : String(row.info ?? ""),
