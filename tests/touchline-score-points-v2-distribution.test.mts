@@ -25,11 +25,14 @@ test("finished and live fixtures enter the same player settlement pipeline", () 
   assert.match(store, /isTouchLineSettledFixtureStatus\(status\) \|\| TOUCHLINE_LIVE_FIXTURE_STATUS\.test\(status\)/);
   assert.match(store, /settlementStatus = isTouchLineSettledFixtureStatus\(fixture\.status\) \? "final" as const : "provisional" as const/);
   assert.match(store, /upsert\(batch, \{ onConflict: "football_player_id,competition_id,season_id,scoring_version" \}\)/);
-  assert.match(store, /upsert\(batch, \{ onConflict: "football_player_id,fixture_id" \}\)/);
+  assert.doesNotMatch(store, /upsert\(batch, \{ onConflict: "football_player_id,fixture_id" \}\)/);
+  assert.doesNotMatch(store, /\.from\("football_player_fixture_statistics"\)/);
+  assert.match(store, /v3FixtureRowsWritten: 0/);
+  assert.match(store, /scoringVersion: "player_scoring_v4"/);
   assert.match(store, /upsert\(batch, \{ onConflict: "football_player_id,fixture_id,scoring_version" \}\)/);
   assert.match(store, /groupTouchLinePlayerSeasonMemberships/);
   assert.match(store, /upsertTouchLineRowsResiliently/);
-  assert.match(store, /v3-fixture-backfill-missing/);
+  assert.match(store, /v4-fixture-backfill-missing/);
   assert.match(liveSync, /syncTouchLinePlayerSeasonStatistics\(admin\)/);
   assert.match(liveSync, /acquireTouchlineLiveSyncRun/);
   assert.ok(liveSync.indexOf("const lease = await") < liveSync.indexOf("syncTouchLinePlayerSeasonStatistics(admin)"));
@@ -39,12 +42,14 @@ test("finished and live fixtures enter the same player settlement pipeline", () 
 test("account and roster readers retain canonical Sportmonks ratings and scoring provenance", () => {
   assert.match(accountSync, /totalRating: rosterCard\.seasonTotalRating \?\? null/);
   assert.match(accountSync, /matchRating: rosterCard\.matchRating \?\? null/);
-  assert.match(authoritativeRoster, /football_player_season_statistics[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v3"\)/);
-  assert.match(authoritativeRoster, /touchline_player_fixture_score_settlements[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v3"\)/);
+  assert.match(authoritativeRoster, /football_player_season_statistics[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v4"\)/);
+  assert.match(authoritativeRoster, /touchline_player_fixture_score_settlements[\s\S]*\.eq\("season_id", currentSeasonId\)[\s\S]*\.eq\("scoring_version", "player_scoring_v4"\)/);
 });
 
-test("player ranking publishes Sportmonks totals with V3 retained only as technical provenance", () => {
-  assert.match(rankingRebuild, /scoringVersion: "player_scoring_v3"/);
+test("active player ranking publishes V4 raw ratings while retaining historical V3 entrypoint", () => {
+  assert.match(rankingRebuild, /rebuildTouchLinePlayerRankingV4[\s\S]*scoringVersion: "player_scoring_v4"/);
+  assert.match(rankingRebuild, /rebuildTouchLinePlayerRankingV3[\s\S]*scoringVersion: "player_scoring_v3"/);
+  assert.match(store, /await rebuildTouchLinePlayerRankingV4\(admin, options\)/);
   assert.match(rankingRebuild, /settlementTable: "touchline_player_fixture_score_settlements"/);
   assert.match(rankingRebuild, /fixtureIds/);
   assert.match(rankingRebuild, /providerPlayerId: String\(player\.providerPlayerId\)[\s\S]*minutesPlayed: player\.minutesPlayed[\s\S]*appearances: player\.appearances/);

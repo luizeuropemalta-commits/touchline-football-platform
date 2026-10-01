@@ -53,7 +53,7 @@ export default function TouchlineSocialEventsLiveReview({ input, placement, chec
             <div><small className={styles.eyebrow}>{eyebrow}</small><h1 className={styles.title} aria-label={title}>{[...title].map((letter, index) => <span aria-hidden="true" key={index} style={{ animationDelay: `${index * -120}ms` }}>{letter === " " ? "\u00a0" : letter}</span>)}</h1>
               <div className={styles.moments}>{input.moments.map(moment => <span key={moment.eventId}>{minute(moment)} {moment.kind === "penalty" ? "PEN" : moment.kind === "own-goal" ? "OWN GOAL" : moment.kind === "red-card" ? "RED CARD" : "GOAL"}</span>)}</div>
               <p className={styles.identity}>{input.playerCard.name}<br /><small>{input.playerClub.name} · {input.venue.name}</small></p>
-              <dl className={styles.metrics}><div><dt>OFFICIAL MATCH RATING</dt><dd>{input.matchRating.toFixed(2)}</dd></div><div><dt>TOUCHLINE POINTS</dt><dd>{input.touchlinePoints > 0 ? "+" : ""}{input.touchlinePoints}</dd></div></dl>
+              <dl className={styles.metrics}><div><dt>OFFICIAL MATCH RATING</dt><dd>{input.matchRating.toFixed(2)}</dd></div><div><dt>TOUCHLINE POINTS</dt><dd>{input.touchlinePoints}</dd></div></dl>
               <p className={styles.result}>FINAL RESULT<br /><strong>{input.home.shortCode} {input.finalScore.home}–{input.finalScore.away} {input.away.shortCode}</strong></p>
             </div>
             <div className={styles.card}><TouchlineSocialApprovedExactCard player={approvedSnapshotCard(input.playerCard, input.playerClub)} staticRenderScale={1} /></div>

@@ -20,7 +20,7 @@ function harness(missing = false, constructionError?: Error) {
     } }; return q;
   } };
   const load = runInNewContext(`${source}\nloadTouchLineActiveRanking;`, { cache: (fn: unknown) => fn, createAdminClient: () => admin, TOUCHLINE_ENGLAND_LEAGUE_KEY: "england", TOUCHLINE_PRESEASON_RANKING_STATE: preseason, parseTouchlineActiveRankingState: (x: unknown) => x, parsePersistedTouchlinePlayerLeadership: (x: unknown) => x });
-  const valid = { data: { snapshot_id: "fixed", league_key: "england", season_id: "season", status: "published", source: "sportmonks-audited", scoring_version: "player_scoring_v3", coverage_status: "complete", actual_player_count: 1, expected_player_count: 1, ranking_payload: { players: [{ playerId: "player", totalRating: 0 }] } }, error: null };
+  const valid = { data: { snapshot_id: "fixed", league_key: "england", season_id: "season", status: "published", source: "sportmonks-audited", scoring_version: "player_scoring_v4", coverage_status: "complete", actual_player_count: 1, expected_player_count: 1, ranking_payload: { players: [{ playerId: "player", totalRating: 0 }] } }, error: null };
   return { load, snapshot, leadership, reads, filters, preseason, valid };
 }
 test("snapshot and leadership start together but state waits for validated leadership", async () => {

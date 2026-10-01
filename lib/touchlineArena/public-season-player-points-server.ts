@@ -79,14 +79,14 @@ export async function readPublicSeasonPlayerPoints(
   // depend on that presentation-only marker.
   const publishedSeasonId = String(activeRanking.seasonId ?? "").trim().toLowerCase();
   const rankingPlayerIds = new Set(
-    activeRanking.phase === "ranked" && activeRanking.scoringVersion === "player_scoring_v3"
+    activeRanking.phase === "ranked" && activeRanking.scoringVersion === "player_scoring_v4"
       && UUID.test(publishedSeasonId)
       && (!requestedSeasonId || requestedSeasonId === publishedSeasonId)
       ? activeRanking.players.map((player) => String(player.playerId).trim().toLowerCase()).filter(Boolean)
       : [],
   );
   const rankingTotalRatingByPlayerId = new Map(
-    activeRanking.phase === "ranked" && activeRanking.scoringVersion === "player_scoring_v3"
+    activeRanking.phase === "ranked" && activeRanking.scoringVersion === "player_scoring_v4"
       && UUID.test(publishedSeasonId)
       && (!requestedSeasonId || requestedSeasonId === publishedSeasonId)
       ? activeRanking.players.flatMap((player) => (
@@ -132,7 +132,7 @@ export async function readPublicSeasonPlayerPoints(
       .eq("season_id", seasonId)
       // V2 rows remain audit/history only. V3 rows supply supplementary stats,
       // never the cumulative rating owned by the published snapshot.
-      .eq("scoring_version", "player_scoring_v3")
+      .eq("scoring_version", "player_scoring_v4")
       .in("football_player_id", ids),
     providedPlayers
       ? providedPlayers.then((outcome) => {

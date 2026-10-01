@@ -67,7 +67,7 @@ export function deriveRankingsLive(source: RankingsLiveSource, evidence: Ranking
       if (!expected.length) continue;
       const parts = expected.map((f) => {
         const row = settlements.get(`${p.id}:${f.id}`);
-        if (!row || row.scoring_version !== "player_scoring_v3" || !isTouchLinePlayerRankingSettlementComplete({ settlementStatus: row.settlement_status, rankingCoverageStatus: row.ranking_coverage_status })) throw new Error(`RANKINGS_MISSING_SETTLEMENT:${p.id}:${f.id}`);
+        if (!row || row.scoring_version !== "player_scoring_v4" || !isTouchLinePlayerRankingSettlementComplete({ settlementStatus: row.settlement_status, rankingCoverageStatus: row.ranking_coverage_status })) throw new Error(`RANKINGS_MISSING_SETTLEMENT:${p.id}:${f.id}`);
         if (![f.home_club_id, f.away_club_id].includes(row.club_id)) throw new Error("RANKINGS_SETTLEMENT_CLUB_MISMATCH");
         if (row.rating !== null && (!Number.isFinite(row.rating) || row.rating < 0 || row.rating > 10)) throw new Error("RANKINGS_RATING_INVALID");
         const feed = feeds.get(f.id)!;
@@ -93,7 +93,7 @@ export function deriveRankingsLive(source: RankingsLiveSource, evidence: Ranking
       rows.push({ playerId: p.id, providerPlayerId: p.provider_player_id, name: p.display_name || p.name, clubName: club.name, position: p.detailed_position || p.provider_position || p.position, role: p.provider_position, totalRating: aggregate.summary.totalRating, minutesPlayed: aggregate.summary.minutes ?? 0, appearances: aggregate.summary.appearances ?? 0, provider: "sportmonks", verified: true, sourceFixtureIds: expected.map((f) => f.provider_fixture_id) });
     }
     const fixtureIds = scope.map((f) => f.provider_fixture_id).sort();
-    const draft = buildSportmonksRankingDraft({ snapshotId: `local-review:${label}:${revision}`, seasonId: source.season.id, roundId: round!.provider_round_id, receivedAt: evidence.fetchedAt, expectedPlayerCount: rows.length, scoringVersion: "player_scoring_v3", coverageStatus: "complete_for_scoring", fixtureIds, expectedFixtureIds: fixtureIds, totalScorePoints: 0, players: rows });
+    const draft = buildSportmonksRankingDraft({ snapshotId: `local-review:${label}:${revision}`, seasonId: source.season.id, roundId: round!.provider_round_id, receivedAt: evidence.fetchedAt, expectedPlayerCount: rows.length, scoringVersion: "player_scoring_v4", coverageStatus: "complete_for_scoring", fixtureIds, expectedFixtureIds: fixtureIds, totalScorePoints: 0, players: rows });
     const audit = auditTouchlineRankingDraft(draft, evidence.fetchedAt);
     if (!audit.passed || !audit.snapshot) throw new Error(`RANKINGS_AUDIT_FAILED:${audit.issues.map((i) => i.code).join(",")}`);
     return { snapshot: audit.snapshot, audit };

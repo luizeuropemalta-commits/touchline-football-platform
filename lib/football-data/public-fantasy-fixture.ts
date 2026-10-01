@@ -84,7 +84,6 @@ export type TouchlinePublicFantasyEvent = Readonly<{
   type?: string;
   minute?: number;
   extraMinute?: number;
-  fantasyPoints?: number;
 }>;
 
 export type TouchlinePublicPlayerPointContribution = Readonly<{
@@ -253,7 +252,6 @@ function publicEvent(item: TouchlineFantasyEvent): TouchlinePublicFantasyEvent |
     type: nonEmptyString(item.type),
     minute: finiteNumber(item.minute),
     extraMinute: finiteNumber(item.extraMinute),
-    fantasyPoints: finiteNumber(item.fantasyPoints),
   };
 }
 

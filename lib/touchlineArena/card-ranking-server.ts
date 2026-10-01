@@ -47,7 +47,7 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
   const { data: record, error } = await snapshotRead;
   // V2/V3 conversion snapshots remain technical audit history only. A product
   // surface activates only the current fully auditable rating snapshot.
-  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v3" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
+  if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v4" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
     return TOUCHLINE_PRESEASON_RANKING_STATE;
   }
 
@@ -96,7 +96,7 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
 export async function loadTouchLinePublishedTopEleven(ranking: TouchlineActiveRankingState): Promise<TouchlinePublishedTopEleven | null> {
   // Pin to the caller's validated publication: never resolve the active pointer
   // again while this page's catalogue is being built from an earlier snapshot.
-  if (ranking.phase !== "ranked" || !ranking.snapshotId || !ranking.seasonId || ranking.scoringVersion !== "player_scoring_v3") return null;
+  if (ranking.phase !== "ranked" || !ranking.snapshotId || !ranking.seasonId || ranking.scoringVersion !== "player_scoring_v4") return null;
   const admin = createAdminClient();
   if (!admin) return null;
   const { data: record, error } = await admin

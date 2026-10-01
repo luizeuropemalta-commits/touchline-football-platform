@@ -107,7 +107,7 @@ export async function readClubHubNextFixturePreview(): Promise<Readonly<{
     ranking: {
       snapshotId: qaSnapshot.ranking.snapshotId,
       publishedAt: qaSnapshot.ranking.publishedAt,
-      scoringVersion: "player_scoring_v3",
+      scoringVersion: "player_scoring_v4",
       coverageStatus: "complete_for_scoring",
     },
     tableAsOf: qaSnapshot.table.asOf,

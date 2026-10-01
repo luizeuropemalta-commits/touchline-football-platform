@@ -8,9 +8,9 @@ import { TOUCHLINE_SELECTION_SLOTS } from "../lib/touchlineArena/touchline-selec
 
 const source = readFileSync(new URL("../lib/touchlineArena/card-ranking-server.ts", import.meta.url), "utf8");
 const loader = stripTypeScriptTypes(source.slice(source.indexOf("export async function loadTouchLinePublishedTopEleven"))).replace("export async function", "async function");
-const ranking = { phase: "ranked", snapshotId: "publication-A", seasonId: "season-1", scoringVersion: "player_scoring_v3" };
+const ranking = { phase: "ranked", snapshotId: "publication-A", seasonId: "season-1", scoringVersion: "player_scoring_v4" };
 const record = {
-  snapshot_id: "publication-A", season_id: "season-1", scoring_version: "player_scoring_v3",
+  snapshot_id: "publication-A", season_id: "season-1", scoring_version: "player_scoring_v4",
   coverage_status: "complete_for_scoring", actual_player_count: 11, expected_player_count: 11,
   status: "published", source: "sportmonks-audited", round_id: "round-5", published_at: "2026-09-24T02:45:00Z",
   selection_payload: { sourceSnapshotId: "publication-A", complete: true, formation: "4-3-3",

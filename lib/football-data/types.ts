@@ -314,7 +314,6 @@ export type TouchlineFantasyEvent = {
   info?: string;
   addition?: string;
   status?: "recorded" | "rescinded";
-  fantasyPoints?: number;
   raw?: unknown;
 };
 
@@ -418,7 +417,7 @@ export interface FootballDataProvider {
   getTeamStats(params: StatsParams): Promise<FootballDataResult<Record<string, unknown>>>;
   getRateLimitStatus(): Promise<FootballDataResult<FootballRateLimitStatus>>;
   getFixtureBallCoordinates(fixtureId: string): Promise<FootballDataResult<TouchlineBallCoordinate[]>>;
-  getFixtureFantasyFeed(fixtureId: string): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>>;
+  getFixtureFantasyFeed(fixtureId: string, options?: { totalBudgetMs: number }): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>>;
   getLiveFantasyEvents(fixtureId?: string): Promise<FootballDataResult<TouchlineFantasyEvent[]>>;
   getSubscriptionCapabilities(): Promise<FootballDataResult<TouchlineProviderCapabilities>>;
 }

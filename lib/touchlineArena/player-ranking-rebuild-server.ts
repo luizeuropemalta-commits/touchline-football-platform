@@ -18,6 +18,7 @@ type Row = Record<string, unknown>;
 export type TouchLinePlayerRankingRebuildResult = Readonly<{
   ok: boolean;
   published: boolean;
+  publicationState?: "staged" | "already-active";
   snapshotId: string | null;
   seasonId: string | null;
   roundId: string | null;
@@ -73,9 +74,9 @@ function sourceDigest(value: unknown) {
 }
 
 type TouchLinePlayerRankingEngine = Readonly<{
-  scoringVersion: "player_scoring_v2" | "player_scoring_v3";
+  scoringVersion: "player_scoring_v2" | "player_scoring_v3" | "player_scoring_v4";
   settlementTable: "football_player_fixture_statistics" | "touchline_player_fixture_score_settlements";
-  snapshotPrefix: "player-v2" | "player-rating";
+  snapshotPrefix: "player-v2" | "player-rating" | "player-rating-v4";
 }>;
 
 /** A season has more settlement rows than PostgREST's default response cap.
@@ -123,9 +124,10 @@ export async function auditTouchlinePlayerScoreSettlementCoverage(
   admin: SupabaseClient,
   seasonId: string,
   expectedFixtureIds: readonly string[],
+  scoringVersion: "player_scoring_v3" | "player_scoring_v4" = "player_scoring_v4",
 ) {
   const result = await readRankingSettlements(admin, {
-    scoringVersion: "player_scoring_v3",
+    scoringVersion,
     settlementTable: "touchline_player_fixture_score_settlements",
     snapshotPrefix: "player-rating",
   }, seasonId);
@@ -143,6 +145,7 @@ export async function auditTouchlinePlayerScoreSettlementCoverage(
 async function rebuildTouchLinePlayerRanking(
   admin: SupabaseClient,
   engine: TouchLinePlayerRankingEngine,
+  options: { publicationMode?: "publish" | "stage" } = {},
 ): Promise<TouchLinePlayerRankingRebuildResult> {
   const failure = (error: string, extra: Partial<TouchLinePlayerRankingRebuildResult> = {}): TouchLinePlayerRankingRebuildResult => ({
     ok: false, published: false, snapshotId: null, seasonId: null, roundId: null,
@@ -337,9 +340,10 @@ async function rebuildTouchLinePlayerRanking(
     selection,
   });
 
-  const { data: active } = await admin.from("touchline_card_ranking_active_snapshots")
+  const { data: active, error: activeError } = await admin.from("touchline_card_ranking_active_snapshots")
     .select("snapshot_id").eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY).maybeSingle();
-  if (active?.snapshot_id === snapshotId) {
+  if (options.publicationMode === "stage" && activeError) return failure("ranking-stage-active-read-unavailable", { snapshotId, seasonId, roundId });
+  if (active?.snapshot_id === snapshotId && options.publicationMode !== "stage") {
     return {
       ok: true, published: false, snapshotId, seasonId, roundId,
       playerCount: rankingPlayers.length, fixtureIds, expectedFixtureIds,
@@ -347,7 +351,7 @@ async function rebuildTouchLinePlayerRanking(
     };
   }
 
-  const { error: insertError } = await admin.from("touchline_card_ranking_snapshots").upsert({
+  const persisted = {
     snapshot_id: record.snapshotId,
     league_key: record.leagueKey,
     season_id: record.seasonId,
@@ -370,12 +374,42 @@ async function rebuildTouchLinePlayerRanking(
     selection_version: record.selectionVersion,
     selection_payload: record.selectionPayload,
     audit_report: record.auditReport,
-  }, { onConflict: "snapshot_id", ignoreDuplicates: true });
+  };
+  // Stage cannot overwrite a published immutable snapshot, including an active
+  // candidate. It only admits a semantically identical persisted record.
+  const alreadyActive = active?.snapshot_id === snapshotId;
+  const { error: insertError } = alreadyActive ? { error: null } : await admin.from("touchline_card_ranking_snapshots")
+    .upsert(persisted, { onConflict: "snapshot_id", ignoreDuplicates: true });
   if (insertError) return failure(`ranking-persist-failed:${insertError.message}`, {
     seasonId, roundId, snapshotId, playerCount: rankingPlayers.length, fixtureIds,
     expectedFixtureIds, coverageStatus, totalScorePoints, checksum: record.checksum,
   });
 
+  if (options.publicationMode === "stage") {
+    const { data: stored, error: readError } = await admin.from("touchline_card_ranking_snapshots")
+      .select("*").eq("snapshot_id", snapshotId).eq("league_key", record.leagueKey).maybeSingle();
+    const semantic = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(semantic);
+      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value)
+        .filter(([key]) => key !== "auditedAt").sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => [key, semantic(item)]));
+      return value;
+    };
+    const matches = stored
+      && Date.parse(String(object(stored.ranking_payload).auditedAt)) === Date.parse(String(stored.audited_at))
+      && Date.parse(String(object(stored.audit_report).auditedAt)) === Date.parse(String(stored.audited_at))
+      && Object.entries(persisted).every(([key, value]) => {
+      if (key === "audited_at") return typeof stored[key] === "string" && Number.isFinite(Date.parse(stored[key]));
+      if (key === "generated_at") return Date.parse(String(stored[key])) === Date.parse(String(value));
+      if (key === "published_at") return alreadyActive ? Boolean(stored[key]) : stored[key] === null;
+      if (key === "status") return stored[key] === (alreadyActive ? "published" : "audited");
+      return JSON.stringify(semantic(stored[key])) === JSON.stringify(semantic(value));
+    });
+    if (readError || !matches) return failure("ranking-stage-readback-mismatch", { snapshotId, seasonId, roundId });
+    return { ok: true, published: false, publicationState: alreadyActive ? "already-active" : "staged",
+      snapshotId, seasonId, roundId, playerCount: rankingPlayers.length, fixtureIds, expectedFixtureIds,
+      coverageStatus, totalScorePoints, checksum: record.checksum };
+  }
   const publishedAt = new Date().toISOString();
   const { error: publishError } = await admin.rpc("publish_touchline_card_ranking_snapshot", {
     requested_snapshot_id: snapshotId,
@@ -407,4 +441,12 @@ export function rebuildTouchLinePlayerRankingV3(admin: SupabaseClient) {
     settlementTable: "touchline_player_fixture_score_settlements",
     snapshotPrefix: "player-rating",
   });
+}
+
+export function rebuildTouchLinePlayerRankingV4(admin: SupabaseClient, options: { publicationMode?: "publish" | "stage" } = {}) {
+  return rebuildTouchLinePlayerRanking(admin, {
+    scoringVersion: "player_scoring_v4",
+    settlementTable: "touchline_player_fixture_score_settlements",
+    snapshotPrefix: "player-rating-v4",
+  }, options);
 }

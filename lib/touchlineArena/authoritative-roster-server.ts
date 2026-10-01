@@ -104,7 +104,7 @@ export function publishedRosterRatingsForSeason(ranking: {
 }, currentSeasonId: string | null) {
   const publishedSeasonId = asUuid(ranking.seasonId);
   return new Map<string, number | null>(
-    ranking.phase === "ranked" && ranking.scoringVersion === "player_scoring_v3"
+    ranking.phase === "ranked" && ranking.scoringVersion === "player_scoring_v4"
       && publishedSeasonId && (!currentSeasonId || publishedSeasonId === currentSeasonId)
       ? ranking.players.flatMap((player) => {
         const playerId = asUuid(player.playerId);
@@ -492,14 +492,14 @@ export async function readAuthoritativeTouchlineRoster(
       ? admin.from("football_player_season_statistics")
         .select("football_player_id,summary_payload,position_statistics_payload,source_synced_at")
         .eq("season_id", currentSeasonId)
-        .eq("scoring_version", "player_scoring_v3")
+        .eq("scoring_version", "player_scoring_v4")
         .in("football_player_id", playerIds)
       : Promise.resolve({ data: [], error: null }),
     currentSeasonId
       ? admin.from("touchline_player_fixture_score_settlements")
         .select("football_player_id,rating,statistics_payload,source_synced_at,football_fixtures!inner(starts_at)")
         .eq("season_id", currentSeasonId)
-        .eq("scoring_version", "player_scoring_v3")
+        .eq("scoring_version", "player_scoring_v4")
         .in("football_player_id", playerIds)
         .order("starts_at", { referencedTable: "football_fixtures", ascending: false })
       : Promise.resolve({ data: [], error: null }),

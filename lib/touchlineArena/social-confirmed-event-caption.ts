@@ -12,10 +12,6 @@ function clubHashtag(value: string) {
   return hashtag ? `#${hashtag}` : null;
 }
 
-function signedPoints(value: number) {
-  return value > 0 ? `+${value}` : String(value);
-}
-
 function goalImpactLine(input: Readonly<{
   eventKind: TouchlineConfirmedEventKind;
   eventTeam: "home" | "away";
@@ -112,7 +108,7 @@ export function buildTouchlineConfirmedEventCaption(input: Readonly<{
   const ratingLine = [
     `Total Rating ${input.totalRating.toFixed(2)}`,
     ...(input.matchRating === null ? [] : [`Match Rating ${input.matchRating.toFixed(2)}`]),
-    `TouchLine Points ${signedPoints(input.touchlinePoints)}`,
+    `TouchLine Points ${input.touchlinePoints} (match rating, no extra bonus)`,
   ].join(" · ");
   const caption = [
     input.contentType === "HAT_TRICK_HERO"

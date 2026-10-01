@@ -2,7 +2,6 @@ import { withFootballDataCache } from "@/lib/football-data/cache";
 import { normalizeSportmonksSeasonTopScorers, strictSportmonksId } from "@/lib/football-data/sportmonks-season-topscorers";
 import { normalizeSportmonksSeasonStages } from "@/lib/football-data/sportmonks-season-stages";
 import type { SeasonStagesParams, TouchlineSeasonStages } from "@/lib/football-data/types";
-import { estimateFantasyEventPoints } from "@/lib/football-data/fantasy-scoring";
 import {
   asNumber,
   asString,
@@ -198,13 +197,14 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     timeoutProfile: FootballDataTimeoutProfile = bucket === "live" ? "live" : "background",
     remainingBudgetMs?: number,
     maxAttempts = 3,
+    cachePolicy?: "fixture-diagnostic-v1",
   ): Promise<SportmonksRequestResult<T>> {
     const token = this.token();
     if (!token) return { configured: false as const };
 
     const cachedResponse = await withFootballDataCache(
       bucket,
-      ["sportmonks", path, JSON.stringify(params)],
+      ["sportmonks", path, JSON.stringify(params), ...(cachePolicy ? [cachePolicy] : [])],
       async () => {
         const baseUrl = path.startsWith("/my/") ? this.rootBaseUrl() : this.baseUrl();
         const url = new URL(path.replace(/^\//, ""), `${baseUrl.replace(/\/$/, "")}/`);
@@ -741,11 +741,22 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     );
   }
 
-  async getFixtureFantasyFeed(fixtureId: string): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>> {
+  async getFixtureFantasyFeed(fixtureId: string, options?: { totalBudgetMs: number }): Promise<FootballDataResult<TouchlineFantasyFixtureFeed | null>> {
     if (!fixtureId.trim()) return resultError(this.name, "invalid_request", "fixtureId is required for fantasy fixture feed.");
-    const request = await this.request<SportmonksEntity>(`/fixtures/${encodeURIComponent(fixtureId)}`, {
+    if (options && (!Number.isSafeInteger(options.totalBudgetMs) || options.totalBudgetMs < 1 || options.totalBudgetMs > 5000)) {
+      return resultError(this.name, "invalid_request", "Invalid fixture diagnostic budget.");
+    }
+    const pending = this.request<SportmonksEntity>(`/fixtures/${encodeURIComponent(fixtureId)}`, {
       include: "participants;scores;league;season;round;state;periods;lineups.player;lineups.position;lineups.details.type;formations;sidelined.sideline;sidelined.player;events.type;events.player;events.relatedPlayer",
-    }, "live");
+    }, "live", "live", options?.totalBudgetMs, options ? 1 : 3, options ? "fixture-diagnostic-v1" : undefined);
+    // Diagnostics own a separate cache/flight policy: their short single
+    // attempt must never reduce a normal caller's retry budget. TTL is unchanged.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let request: SportmonksRequestResult<SportmonksEntity> | null;
+    try {
+      request = options ? await Promise.race([pending, new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), options.totalBudgetMs); })]) : await pending;
+    } finally { if (timer) clearTimeout(timer); }
+    if (!request) return resultError(this.name, "provider_error", "Fixture diagnostic budget exhausted.");
     if (!request.configured) return this.notConfigured<TouchlineFantasyFixtureFeed | null>();
     const { value, cached } = request;
     if (!value.ok) return this.providerFailure<TouchlineFantasyFixtureFeed | null>(value, "Sportmonks fantasy fixture feed failed.");
@@ -1192,7 +1203,6 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         info: asString(item.info),
         addition: asString(item.addition),
         status: item.cancelled === true || item.rescinded === true ? "rescinded" : "recorded",
-        fantasyPoints: estimateFantasyEventPoints(type),
         raw: item,
       };
     });

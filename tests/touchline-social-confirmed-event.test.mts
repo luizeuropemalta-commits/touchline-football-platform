@@ -116,7 +116,7 @@ test("043 British-English captions are event-specific and source-neutral", () =>
     eventKind: "goal",
     totalRating: 14.22,
     matchRating: 8.1,
-    touchlinePoints: 5,
+    touchlinePoints: 8.1,
     gameweekNumber: 2,
   });
   assert.equal(goal.ok, true);
@@ -126,7 +126,8 @@ test("043 British-English captions are event-specific and source-neutral", () =>
     assert.match(goal.caption, /Ollie Watkins puts Aston Villa in front at 40'/);
     assert.match(goal.caption, /Total Rating 14\.22/);
     assert.match(goal.caption, /Match Rating 8\.10/);
-    assert.match(goal.caption, /TouchLine Points \+5/);
+    assert.match(goal.caption, /TouchLine Points 8\.1 \(match rating, no extra bonus\)/);
+    assert.doesNotMatch(goal.caption, /TouchLine Points \+/);
     assert.match(goal.caption, /TouchLine Verified Match Data/);
     assert.doesNotMatch(goal.caption, /sportmonks|\bapi\b|\bprovider\b|\bpipeline\b/i);
   }
@@ -143,7 +144,7 @@ test("043 British-English captions are event-specific and source-neutral", () =>
     eventKind: "second-yellow-red",
     totalRating: 7.4,
     matchRating: 5.8,
-    touchlinePoints: -3,
+    touchlinePoints: 5.8,
     gameweekNumber: 2,
   });
   assert.equal(red.ok, true);

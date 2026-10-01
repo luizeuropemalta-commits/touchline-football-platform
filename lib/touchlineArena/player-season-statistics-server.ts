@@ -177,7 +177,7 @@ async function readSeasonRows(admin: SupabaseClient, playerId: string, competiti
     .select("season_id,club_id,coverage_status,expected_fixture_count,synchronized_fixture_count,expected_fixture_ids,aggregated_fixture_ids,summary_payload,position_statistics_payload,source_synced_at,football_clubs(id,name)")
     .eq("football_player_id", playerId)
     .eq("competition_id", competitionId)
-    .eq("scoring_version", "player_scoring_v3");
+    .eq("scoring_version", "player_scoring_v4");
   return error || !Array.isArray(data) ? [] as SeasonStatisticRow[] : data as SeasonStatisticRow[];
 }
 
@@ -186,7 +186,7 @@ async function readFixtureRows(admin: SupabaseClient, input: { playerId: string;
     .from("touchline_player_fixture_score_settlements")
     .select("fixture_id,appearance_status,minutes_played,rating,statistics_payload,source_synced_at,football_fixtures!inner(provider_fixture_id,starts_at,status,competition_id,home_club_id,away_club_id)")
     .eq("football_player_id", input.playerId)
-    .eq("scoring_version", "player_scoring_v3")
+    .eq("scoring_version", "player_scoring_v4")
     .eq("football_fixtures.competition_id", input.competitionId)
     .limit(input.selectedFixtureId ? 1 : 120);
   if (input.selectedFixtureId) query = query.eq("football_fixtures.provider_fixture_id", input.selectedFixtureId);

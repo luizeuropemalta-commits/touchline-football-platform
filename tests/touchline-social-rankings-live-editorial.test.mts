@@ -4,9 +4,9 @@ import { readFileSync } from "node:fs";
 import { deriveRankingsLive, RANKINGS_LIVE_ART_IDS } from "../lib/social-rankings-live-contract.ts";
 import { applyRankingsGoldenBootEvidence } from "../lib/social-rankings-live-golden-boot.ts";
 import { rankingsLiveCaptions, rankingsLiveDispatchProposal } from "../lib/social-rankings-live-editorial.ts";
+import { syntheticRankingsV4Evidence } from "./fixtures/rankings-v4.synthetic.mts";
 const read = (name: string) => JSON.parse(readFileSync(new URL(`../artifacts/social-studio/rankings/${name}`, import.meta.url), "utf8"));
-const source = read("snapshot-20260914.json"), facts = read("settlement-evidence-20260914.json");
-facts.ratingFeeds = read("rating-lineup-evidence-20260914.json").feeds;
+const source = read("snapshot-20260914.json"), facts = syntheticRankingsV4Evidence();
 const data = applyRankingsGoldenBootEvidence(deriveRankingsLive(source, facts, facts.publishedPlayerIds, "editorial-test"), source, read("golden-boot-reconciliation-20260914.json"));
 test("every art has separate bounded IG/FB captions with date and XI call to action", () => {
   for (const id of RANKINGS_LIVE_ART_IDS) for (const placement of ["FEED", "STORY"] as const) {

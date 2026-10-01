@@ -63,7 +63,7 @@ function reader(input: Input = {}) {
       activeRankingReads++;
       return {
       phase: input.phase ?? "ranked",
-      scoringVersion: input.scoringVersion ?? "player_scoring_v3",
+      scoringVersion: input.scoringVersion ?? "player_scoring_v4",
       seasonId: input.publishedSeasonId === undefined ? SEASON_ID : input.publishedSeasonId,
       players: input.publishedPlayerPresent === false ? [] : [{ playerId: input.uppercaseRankingId ? PLAYER_ID.toUpperCase() : PLAYER_ID, totalRating: input.publishedRating === undefined ? 20.43 : input.publishedRating }],
       };
@@ -95,6 +95,7 @@ test("public cards preserve published zero, null and absence without an aggregat
     [{ publishedPlayerPresent: false }, null],
     [{ phase: "preseason" }, null],
     [{ scoringVersion: "player_scoring_v2" }, null],
+    [{ scoringVersion: "player_scoring_v3" }, null],
   ] as const) {
     const { read } = reader(input);
     const rows = await read([PLAYER_ID]);
@@ -141,7 +142,7 @@ test("fixture-scoped public cards use only the publication for that requested se
 test("an injected published snapshot survives an active-snapshot rollover without a second read", async () => {
   const injected = {
     phase: "ranked" as const,
-    scoringVersion: "player_scoring_v3" as const,
+    scoringVersion: "player_scoring_v4" as const,
     seasonId: SEASON_ID,
     players: [{ playerId: PLAYER_ID, totalRating: 0 }],
   };

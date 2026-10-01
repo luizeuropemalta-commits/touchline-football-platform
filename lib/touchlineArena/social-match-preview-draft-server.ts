@@ -50,7 +50,7 @@ export type TouchlineSocialMatchPreviewDraft = Readonly<{
   ranking: Readonly<{
     snapshotId: string;
     publishedAt: string;
-    scoringVersion: "player_scoring_v3";
+    scoringVersion: "player_scoring_v4";
     coverageStatus: "complete" | "complete_for_scoring";
   }>;
   tableAsOf: string;
@@ -121,7 +121,7 @@ async function readActivePublishedRanking(admin: Admin) {
   if (!parsed || parsed.phase !== "ranked"
     || row.source !== "sportmonks-audited"
     || row.status !== "published"
-    || row.scoring_version !== "player_scoring_v3"
+    || row.scoring_version !== "player_scoring_v4"
     || players.length !== Number(row.expected_player_count)
     || players.length !== Number(row.actual_player_count)
     || players.some((player) => (
@@ -135,7 +135,7 @@ async function readActivePublishedRanking(admin: Admin) {
     snapshotId: parsed.snapshotId!,
     seasonId: parsed.seasonId!,
     publishedAt: parsed.publishedAt!,
-    scoringVersion: parsed.scoringVersion as "player_scoring_v3",
+    scoringVersion: parsed.scoringVersion as "player_scoring_v4",
     coverageStatus: parsed.coverageStatus!,
     players,
   } as const;

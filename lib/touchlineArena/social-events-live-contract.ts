@@ -139,8 +139,10 @@ export function assessEventsLivePackage(input: EventsLivePackageInput, now: numb
     || card.detailed_position !== input.playerCard.position || card.market_value_status !== "verified" || card.verified_season !== "2026/27"
     || `€${card.market_value_eur / 1000000}m` !== input.playerCard.marketValue
     || score.football_player_id !== card.id || score.club_id !== card.current_club_id || score.provider_fixture_id !== input.evidence.providerFixtureId
-    || score.settlement_status !== "final" || score.scoring_coverage_status !== "complete" || score.scoring_version !== "player_scoring_v3"
-    || !Number.isFinite(Number(score.rating)) || Number(score.rating) !== input.matchRating || score.touchline_points !== input.touchlinePoints
+    || score.settlement_status !== "final" || score.scoring_coverage_status !== "complete" || score.scoring_version !== "player_scoring_v4"
+    || score.rating === null || !Number.isFinite(Number(score.rating)) || Number(score.rating) < 0 || Number(score.rating) > 10
+    || Number(score.rating) !== input.matchRating || score.touchline_points !== input.touchlinePoints
+    || input.touchlinePoints !== input.matchRating
     || input.totalRating !== null) return fail("CARD_OR_METRIC_PROVENANCE_CONFLICT");
   const goals = input.evidence.events.filter(event => ["goal", "penalty", "own-goal"].includes(classifyTouchlineConfirmedMatchEvent(event) ?? ""));
   if (input.goals.length !== goals.length || new Set(input.goals.map(goal => goal.id)).size !== goals.length || input.goals.some(goal => {

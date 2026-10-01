@@ -15,7 +15,7 @@ import { TOUCHLINE_SELECTION_VERSION, buildTouchlineSelection } from "../lib/tou
 const source = stripTypeScriptTypes(readFileSync(new URL("../lib/touchlineArena/player-ranking-rebuild-server.ts", import.meta.url), "utf8"))
   .replace(/^import\s+[\s\S]*?;\s*$/gm, "")
   .replace(/^export /gm, "");
-const { rebuild, auditCoverage } = runInNewContext(`${source}\n({ rebuild: rebuildTouchLinePlayerRankingV3, auditCoverage: auditTouchlinePlayerScoreSettlementCoverage });`, {
+const { rebuild, rebuildV4, auditCoverage } = runInNewContext(`${source}\n({ rebuild: rebuildTouchLinePlayerRankingV3, rebuildV4: rebuildTouchLinePlayerRankingV4, auditCoverage: auditTouchlinePlayerScoreSettlementCoverage });`, {
   isTouchLineSettledFixtureStatus, buildSportmonksRankingDraft, auditTouchlineRankingDraft,
   buildTouchlineRankingPersistenceRecord, TOUCHLINE_ENGLAND_LEAGUE_KEY,
   isTouchLinePlayerRankingAggregateComplete, isTouchLinePlayerRankingSettlementComplete,
@@ -23,7 +23,7 @@ const { rebuild, auditCoverage } = runInNewContext(`${source}\n({ rebuild: rebui
   loadTouchlinePublishedCardPresentations: async ({ playerIds }) => new Map(playerIds.map(id => [id, {}])),
 });
 
-function database(options: { pageFailure?: boolean; missing?: boolean; duplicate?: boolean; cap?: number } = {}) {
+function database(options: { pageFailure?: boolean; missing?: boolean; duplicate?: boolean; cap?: number; rating?: number; persistFailure?: boolean; readFailure?: string } = {}) {
   const fixtureIds = Array.from({ length: 100 }, (_, n) => `fixture-${String(n).padStart(3, "0")}`);
   const positions = ["Goalkeeper", "Left Back", "Centre Back", "Centre Back", "Right Back", "Central Midfield", "Central Midfield", "Central Midfield", "Left Wing", "Centre Forward", "Right Wing"];
   const players = positions.map((position, n) => ({ id: `00000000-0000-4000-8000-${String(n + 1).padStart(12, "0")}`, provider_player_id: String(n + 1), display_name: `Test player ${n}`, detailed_position: position, current_club_id: "club" }));
@@ -36,24 +36,33 @@ function database(options: { pageFailure?: boolean; missing?: boolean; duplicate
     football_clubs: [{ id: "club", name: "Test club" }],
     football_rounds: [{ id: "round", provider_round_id: "100" }],
     touchline_card_ranking_active_snapshots: [],
+    touchline_card_ranking_snapshots: [],
   };
   if (options.missing) tables.touchline_player_fixture_score_settlements.pop();
+  if (options.rating !== undefined) for (const aggregate of tables.football_player_season_statistics) aggregate.summary_payload.totalRating = options.rating;
   const reads = [];
+  const filters = [];
   const writes = [];
   return {
-    reads, writes,
+    reads, writes, filters, tables,
     admin: {
       from(table) {
         let from = 0; let to = (options.cap ?? 1000) - 1; let counted = false;
         let order = ""; let single = false;
         const query = {
           select(_columns, config) { counted = config?.count === "exact"; return query; },
-          eq() { return query; }, in() { return query; },
+          eq(key, value) { filters.push({ table, key, value }); return query; }, in() { return query; },
           order(column, config) { assert.equal(config?.ascending, true); order = column; return query; },
           range(start, end) { from = start; to = end; return query; },
           maybeSingle() { single = true; return query; },
-          upsert(value) { writes.push({ table, value }); return Promise.resolve({ error: null }); },
+          upsert(value) {
+            writes.push({ table, value });
+            if (options.persistFailure) return Promise.resolve({error:{message:"synthetic persist failure"}});
+            if (!(tables[table] ?? []).some(row=>row.snapshot_id===value.snapshot_id)) tables[table].push(value);
+            return Promise.resolve({ error: null });
+          },
           then(resolve, reject) {
+            if (table===options.readFailure) return Promise.resolve({data:null,error:{message:"synthetic read failure"}}).then(resolve,reject);
             const all = [...(tables[table] ?? [])];
             if (order) all.sort((a, b) => String(a[order]).localeCompare(String(b[order])));
             reads.push({ table, from, to, order });
@@ -94,6 +103,20 @@ test("a lower configured row cap cannot silently truncate a ranking source", asy
   assert.equal(db.writes.length, 0);
 });
 
+test("V4 rebuild uses only V4 source queries and retains decimal ratings", async () => {
+  const db = database({ rating: 8.09 });
+  const result = await rebuildV4(db.admin);
+  assert.equal(result.ok, true, result.error);
+  assert.match(result.snapshotId, /^player-rating-v4/);
+  const versions = db.filters.filter(filter => filter.key === "scoring_version");
+  assert.ok(versions.length >= 2);
+  assert.ok(versions.every(filter => filter.value === "player_scoring_v4"));
+  const snapshot = db.writes.find(write => write.table === "touchline_card_ranking_snapshots").value;
+  assert.equal(snapshot.scoring_version, "player_scoring_v4");
+  assert.equal(snapshot.ranking_payload.players[0].totalRating, 8.09);
+  assert.equal(snapshot.total_score_points, 0, "legacy compatibility counter is not a second scoring authority");
+});
+
 for (const options of [{ pageFailure: true }, { duplicate: true }, { missing: true }]) {
   test(`incomplete settlement reads never publish: ${JSON.stringify(options)}`, async () => {
     const db = database(options);
@@ -119,4 +142,39 @@ test("post-write coverage audit cannot pass after a partial read", async () => {
   const result = await auditCoverage(db.admin, "season", ["fixture-099"]);
   assert.equal(result.error, "ranking-settlement-read-unavailable");
   assert.equal(db.writes.length, 0);
+});
+
+test("staging persists an audited V4 candidate, repeats safely and never publishes", async()=>{
+  const db=database();
+  db.tables.touchline_card_ranking_active_snapshots.push({snapshot_id:"old-v3"});
+  for(let i=0;i<2;i++) {
+    const result=await rebuildV4(db.admin,{publicationMode:"stage"});
+    assert.equal(result.ok,true,result.error);
+    assert.equal(result.publicationState,"staged");
+    assert.equal(result.published,false);
+  }
+  assert.equal(db.tables.touchline_card_ranking_snapshots.length,1);
+  assert.equal(db.tables.touchline_card_ranking_snapshots[0].status,"audited");
+  assert.equal(db.tables.touchline_card_ranking_active_snapshots[0].snapshot_id,"old-v3");
+  assert.equal(db.writes.filter(w=>w.name).length,0);
+});
+test("staging recognizes already-active without rewriting immutable record",async()=>{
+  const db=database(); await rebuildV4(db.admin,{publicationMode:"stage"});
+  const row=db.tables.touchline_card_ranking_snapshots[0]; row.status="published"; row.published_at=new Date().toISOString();
+  db.tables.touchline_card_ranking_active_snapshots.push({snapshot_id:row.snapshot_id});
+  const before=JSON.stringify(row),writes=db.writes.length;
+  const result=await rebuildV4(db.admin,{publicationMode:"stage"});
+  assert.equal(result.ok,true,result.error);assert.equal(result.publicationState,"already-active");
+  assert.equal(db.writes.length,writes);assert.equal(JSON.stringify(row),before);
+});
+test("staging fails closed on ignored conflicting candidate",async()=>{
+  const db=database();await rebuildV4(db.admin,{publicationMode:"stage"});
+  db.tables.touchline_card_ranking_snapshots[0].checksum="tampered";
+  const result=await rebuildV4(db.admin,{publicationMode:"stage"});
+  assert.equal(result.ok,false);assert.equal(result.error,"ranking-stage-readback-mismatch");
+  assert.equal(db.writes.filter(w=>w.name).length,0);
+});
+for(const options of [{persistFailure:true},{missing:true},{readFailure:"touchline_card_ranking_active_snapshots"},{readFailure:"touchline_card_ranking_snapshots"}]) test(`staging preserves failure ${JSON.stringify(options)}`,async()=>{
+  const db=database(options);const result=await rebuildV4(db.admin,{publicationMode:"stage"});
+  assert.equal(result.ok,false);assert.equal(db.writes.filter(w=>w.name).length,0);
 });

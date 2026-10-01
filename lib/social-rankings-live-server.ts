@@ -56,7 +56,7 @@ export async function prepareRankingsLiveRenderInput(): Promise<RankingsLiveRend
   const selected = new Set([data.overall.playerId, data.weeklyOverall.playerId, ...data.weeklyLeaders.map((p) => p.playerId), ...data.selection.players.map((p) => p.player.playerId), ...data.weeklySelection.players.map((p) => p.player.playerId), ...data.goldenBoot.candidates.map((p) => p.playerId)]);
   const publishedCards = await loadRankingsLiveCardsInChunks({ ...TOUCHLINE_PRESEASON_RANKING_STATE,
     phase: "ranked", snapshotId: data.seasonRanking.snapshot.snapshotId, publishedAt: null,
-    seasonId: source.season.id, roundId: data.round.provider_round_id, scoringVersion: "player_scoring_v3", coverageStatus: "complete_for_scoring",
+    seasonId: source.season.id, roundId: data.round.provider_round_id, scoringVersion: "player_scoring_v4", coverageStatus: "complete_for_scoring",
     fixtureIds: data.provenance.fixtureIds, expectedFixtureIds: data.provenance.fixtureIds,
     players: data.seasonRanking.snapshot.players.filter(player => selected.has(player.playerId)),
   }, state => loadTouchLineRankedCardCatalog(state, admin));

@@ -137,7 +137,8 @@ function scoreDelta(previous: Score, current: Score) {
 function ratingContributionMatches(value: unknown, rating: unknown, points: unknown) {
   const expectedRating = finite(rating);
   const expectedPoints = finite(points);
-  if (!Array.isArray(value) || expectedRating === null || expectedPoints === null) return false;
+  if (!Array.isArray(value) || value.length !== 1 || expectedRating === null
+    || expectedRating < 0 || expectedRating > 10 || expectedPoints !== expectedRating) return false;
   return value.some((entry) => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
     const row = entry as Record<string, unknown>;
@@ -152,7 +153,7 @@ function ratingContributionMatches(value: unknown, rating: unknown, points: unkn
  * Server-only, persisted-source reader for one event Story. It never contacts
  * the upstream provider. The canonical event must be recorded, semantically
  * stable in the 043 attestation table, score-reconciled (for goals), linked to
- * a published card and reflected by the current rating-only player_scoring_v3
+ * a published card and reflected by the current rating-only player_scoring_v4
  * settlement. Goal/card events provide editorial context; they never create a
  * second TouchLine points contribution.
  */
@@ -170,7 +171,7 @@ export type TouchlineConfirmedEventPrivateEvidence = Readonly<{
   confirmedAt: string;
   eventFactChecksum: string;
   settlementStatus: string;
-  scoringVersion: "player_scoring_v3";
+  scoringVersion: "player_scoring_v4";
   clockRevision: number;
 }>;
 
@@ -430,7 +431,7 @@ export async function readTouchlineConfirmedEventPushSource(
     admin.from("touchline_player_fixture_score_settlements")
       .select("rating,touchline_points,touchline_points_breakdown,settlement_status,source_synced_at")
       .eq("fixture_id", String(canonical.id)).eq("football_player_id", playerId)
-      .eq("scoring_version", "player_scoring_v3").maybeSingle(),
+      .eq("scoring_version", "player_scoring_v4").maybeSingle(),
     readPublicPremierSquad(playerTeamId, { providedAdmin: admin }),
   ]);
   const settlement = settlementResult.data;
@@ -522,7 +523,7 @@ export async function readTouchlineConfirmedEventPushSource(
     fixtureUpdatedAt: timestamp(canonical.source_updated_at),
     firstObservedAt, lastObservedAt: timestamp(observation.data.last_observed_at), confirmedAt,
     eventFactChecksum, settlementStatus: String(settlement.settlement_status),
-    scoringVersion: "player_scoring_v3", clockRevision: sourceReadEnd.clockRevision,
+    scoringVersion: "player_scoring_v4", clockRevision: sourceReadEnd.clockRevision,
   } };
 }
 

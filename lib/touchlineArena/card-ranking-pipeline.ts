@@ -23,7 +23,7 @@ export type TouchlineSportmonksRankingPlayer = TouchlineRankingPlayerInput & {
 
 export type TouchlineRankingDraft = {
   seasonId: string;
-  scoringVersion: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3";
+  scoringVersion: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3" | "player_scoring_v4";
   coverageStatus: "complete" | "complete_for_scoring";
   fixtureIds: readonly string[];
   expectedFixtureIds: readonly string[];
@@ -51,7 +51,7 @@ export type TouchlineAuditedRankingSnapshot = TouchlineRankingSnapshot & {
   status: "audited";
   source: "sportmonks-audited";
   seasonId: string;
-  scoringVersion: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3";
+  scoringVersion: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3" | "player_scoring_v4";
   coverageStatus: "complete" | "complete_for_scoring";
   fixtureIds: readonly string[];
   expectedFixtureIds: readonly string[];
@@ -97,7 +97,7 @@ export function touchlineRankingSnapshotChecksum(input: {
   seasonId: string;
   priceTableVersion: string;
   snapshot: TouchlineRankingSnapshot;
-  scoringVersion?: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3";
+  scoringVersion?: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3" | "player_scoring_v4";
   coverageStatus?: "complete" | "complete_for_scoring";
   fixtureIds?: readonly string[];
   expectedFixtureIds?: readonly string[];
@@ -140,7 +140,7 @@ export function buildSportmonksRankingDraft(input: {
   receivedAt: string;
   expectedPlayerCount: number;
   priceTableVersion?: string;
-  scoringVersion?: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3";
+  scoringVersion?: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3" | "player_scoring_v4";
   coverageStatus?: "complete" | "complete_for_scoring";
   fixtureIds?: readonly string[];
   expectedFixtureIds?: readonly string[];

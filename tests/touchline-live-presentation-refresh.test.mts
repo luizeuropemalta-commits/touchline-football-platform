@@ -200,7 +200,7 @@ test("the lightweight reader executes exactly six bounded projections", async ()
       snapshot_id: "player-2",
       source: "sportmonks-audited",
       status: "published",
-      scoring_version: "player_scoring_v3",
+      scoring_version: "player_scoring_v4",
       coverage_status: "complete",
       expected_player_count: 20,
       actual_player_count: 20,

@@ -1,4 +1,4 @@
-import { touchLinePointsFromSportmonksRating } from "../football-data/player-score-engine-v3.ts";
+import { touchLinePlayerFixtureScoreV4 } from "../football-data/player-score-engine-v4.ts";
 import type { TouchlineSocialConfirmedEventDraft } from "./social-confirmed-event-draft-server";
 
 type NotificationDraft = Pick<TouchlineSocialConfirmedEventDraft,
@@ -8,7 +8,7 @@ type VerifiedResult = { ok: true; data: NotificationDraft } | { ok: false; reaso
 
 /** Presentation only: the persisted reader must verify the event first.
  * This does not authorise delivery, establish freshness or replace an outbox.
- * V3 points describe the player's match rating, never an extra goal/card bonus.
+ * V4 points equal the player's match rating, never an extra goal/card bonus.
  */
 export function buildMatchEventNotification(
   result: VerifiedResult,
@@ -26,13 +26,13 @@ export function buildMatchEventNotification(
     || ![draft.score.home, draft.score.away, draft.event.minute].every(value => Number.isSafeInteger(value) && value >= 0)
     || (draft.event.extraMinute !== null && (!Number.isSafeInteger(draft.event.extraMinute) || draft.event.extraMinute < 0))
     || !Number.isFinite(draft.touchlinePoints)
-    || touchLinePointsFromSportmonksRating(draft.matchRating) !== draft.touchlinePoints) return null;
+    || touchLinePlayerFixtureScoreV4(draft.matchRating).points !== draft.touchlinePoints) return null;
   const heading = goal ? (pt ? "GOL" : "GOAL") : (pt ? "CARTÃO VERMELHO" : "RED CARD");
   const minute = `${draft.event.minute}${draft.event.extraMinute ? `+${draft.event.extraMinute}` : ""}′`;
-  const points = `${draft.touchlinePoints > 0 ? "+" : ""}${draft.touchlinePoints}`;
+  const points = `${draft.touchlinePoints}`;
   return {
     title: `${heading} — ${draft.home.name} ${draft.score.home} × ${draft.score.away} ${draft.away.name}`,
-    body: `${draft.event.playerName} · ${minute} · TouchLine Points (${pt ? "na partida" : "match"}): ${points}`,
+    body: `${draft.event.playerName} · ${minute} · ${pt ? "Nota da partida" : "Match rating"}: ${points}`,
     tag: `fixture:${draft.fixtureId}:event:${draft.eventId}`,
     href: `/live?fixture=${draft.fixtureId}&lang=${locale}`,
     update: update === true,

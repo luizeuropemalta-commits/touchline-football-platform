@@ -11,7 +11,7 @@ const verifiedEvent = {
     sourceProvenance: "PERSISTED_VERIFIED_CONFIRMED_EVENT", fixtureId: "123", eventId: "456",
     home: { name: "Arsenal" }, away: { name: "Chelsea" }, score: { home: 1, away: 0 },
     event: { kind: "goal", scoringTeamId: "19", playerTeamId: "19", playerProviderId: "101", playerName: "Saka", minute: 23, extraMinute: null },
-    matchRating: 8.2, touchlinePoints: 5,
+    matchRating: 8.2, touchlinePoints: 8.2,
   },
 } as const;
 
@@ -21,7 +21,7 @@ test("verified goal copy reaches receiver with match points, not an invented goa
   const worker = receiver();
   await worker.emit("push", { data: { json: () => payload } });
   assert.equal(worker.shown[0][0], "GOL — Arsenal 1 × 0 Chelsea");
-  assert.equal(worker.shown[0][1].body, "Saka · 23′ · TouchLine Points (na partida): +5");
+  assert.equal(worker.shown[0][1].body, "Saka · 23′ · Nota da partida: 8.2");
   assert.equal(worker.shown[0][1].tag, "fixture:123:event:456");
   assert.equal(worker.shown[0][1].icon, "/icons/touchline-event-goal.png");
   assert.equal(worker.shown[0][1].badge, "/icons/touchline-192.png");
@@ -30,10 +30,10 @@ test("verified goal copy reaches receiver with match points, not an invented goa
 test("red-card copy preserves rating points and added time rather than imposing a card penalty", () => {
   const payload = buildMatchEventNotification({ ok: true, data: { ...verifiedEvent.data,
     event: { ...verifiedEvent.data.event, kind: "second-yellow-red", minute: 90, extraMinute: 3 },
-    matchRating: 7.2, touchlinePoints: 2,
+    matchRating: 7.2, touchlinePoints: 7.2,
   } }, "en-GB", true);
   assert.equal(payload?.title, "RED CARD — Arsenal 1 × 0 Chelsea");
-  assert.equal(payload?.body, "Saka · 90+3′ · TouchLine Points (match): +2");
+  assert.equal(payload?.body, "Saka · 90+3′ · Match rating: 7.2");
   assert.equal(payload?.tag, "fixture:123:event:456");
   assert.equal(payload?.update, true);
   assert.equal(payload?.eventIcon, "red-card");
@@ -79,9 +79,15 @@ test("event artwork accepts only local TouchLine icon keys, never arbitrary imag
 
 test("unverified reader results or mismatched rating points cannot form a notice", () => {
   assert.equal(buildMatchEventNotification({ ok: false, reason: "event-pending" }, "pt-BR"), null);
-  for (const changes of [{ matchRating: null }, { touchlinePoints: -3 }, { eventId: "" }, { score: { home: -1, away: 0 } }]) {
+  for (const changes of [{ matchRating: null }, { matchRating: 8.09, touchlinePoints: 5 }, { touchlinePoints: -3 }, { eventId: "" }, { score: { home: -1, away: 0 } }]) {
     assert.equal(buildMatchEventNotification({ ok: true, data: { ...verifiedEvent.data, ...changes } }, "pt-BR"), null);
   }
+});
+
+test("raw decimal rating is copied without an event bonus prefix", () => {
+  const payload=buildMatchEventNotification({ok:true,data:{...verifiedEvent.data,matchRating:8.09,touchlinePoints:8.09}},"en-GB");
+  assert.equal(payload?.body,"Saka · 23′ · Match rating: 8.09");
+  assert.equal(payload?.tag,"fixture:123:event:456");
 });
 
 function receiver(windows: Array<{ url: string; focus: () => Promise<void> }> = []) {

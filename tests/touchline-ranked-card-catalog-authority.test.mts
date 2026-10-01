@@ -81,7 +81,7 @@ function loadRankedCatalogue({
     id: `settlement-${index}`,
     football_player_id,
     season_id: SEASON,
-    scoring_version: "player_scoring_v3",
+    scoring_version: "player_scoring_v4",
     rating: 7.5,
     statistics_payload: {},
     football_fixtures: { starts_at: "2026-09-01T12:00:00Z" },
@@ -140,7 +140,7 @@ function loadRankedCatalogue({
   }>>;
   const state = {
     phase: "ranked",
-    scoringVersion: "player_scoring_v3",
+    scoringVersion: "player_scoring_v4",
     seasonId: SEASON,
     snapshotId: "player-rating:test",
     publishedAt: "2026-09-01T12:00:00Z",

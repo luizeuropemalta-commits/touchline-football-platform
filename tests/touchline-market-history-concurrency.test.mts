@@ -100,7 +100,7 @@ test("history follows selections while scores and alerts remain pending, with id
   assert.deepEqual(plain(h.queries.find((query) => query.key === "history")?.filters), { gameweek_id: "round", player_id: ["locked-player"] });
   for (const key of ["draft", "locked", "scores", "season", "alerts", "history"]) assert.equal(h.queries.filter((query) => query.key === key).length, 1);
   assert.equal(value?.gameweekScore, 7); assert.equal(value?.seasonScore, 9);
-  assert.deepEqual(plain(value?.matchHistory), [{ fixtureId: "fixture", playerId: "locked-player", rating: 7, goals: 1, multiplier: 1, contribution: 7, reason: "RATED_APPEARANCE", settlementStatus: "FINAL" }]);
+  assert.deepEqual(plain(value?.matchHistory), [{ fixtureId: "fixture", playerId: "locked-player", rating: 7, goals: 1, contribution: 7, reason: "RATED_APPEARANCE", settlementStatus: "FINAL" }]);
 });
 
 test("catalogue and alert writer retain their existing barriers before any selection/history read", async () => {

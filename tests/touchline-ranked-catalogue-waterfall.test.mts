@@ -10,7 +10,7 @@ import { projectTouchlineCardStatsByPosition } from "../lib/touchlineArena/posit
 const code = (file: string) => stripTypeScriptTypes(readFileSync(new URL(`../${file}`, import.meta.url), "utf8"))
   .replace(/^import\s+[\s\S]*?;\s*$/gm, "").replace(/^export /gm, "");
 const playerId = "00000000-0000-4000-8000-000000000001";
-const state = { phase: "ranked", scoringVersion: "player_scoring_v3", seasonId: "season", snapshotId: "snapshot", publishedAt: "2026-09-01", players: [{ playerId, totalRating: 0 }] };
+const state = { phase: "ranked", scoringVersion: "player_scoring_v4", seasonId: "season", snapshotId: "snapshot", publishedAt: "2026-09-01", players: [{ playerId, totalRating: 0 }] };
 
 function scenario(clubFailure = false, showcase = false, unpublished = false, holdClubs = false, diagnosticsEnabled = false) {
   const reads: string[] = [];

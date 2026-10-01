@@ -119,7 +119,7 @@ async function readActiveRankingBundle(admin: Admin) {
     })),
   });
   if (!state || state.phase !== "ranked" || row.source !== "sportmonks-audited"
-    || row.status !== "published" || state.scoringVersion !== "player_scoring_v3"
+    || row.status !== "published" || state.scoringVersion !== "player_scoring_v4"
     || !["complete", "complete_for_scoring"].includes(String(state.coverageStatus))
     || players.length !== Number(row.expected_player_count)
     || players.length !== Number(row.actual_player_count)
@@ -235,7 +235,7 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
     const fixtureStateRows = round.rows.map((row) => ({ id: String(row.id), status: String(row.status ?? "") }));
     const fixtureUuids = round.rows.map((row) => String(row.id));
     const settlements = await admin.from("touchline_player_fixture_score_settlements")
-      .select("fixture_id,settlement_status").eq("scoring_version", "player_scoring_v3")
+      .select("fixture_id,settlement_status").eq("scoring_version", "player_scoring_v4")
       .in("fixture_id", fixtureUuids).limit(2000);
     if (settlements.error || !Array.isArray(settlements.data) || settlements.data.length >= 2000) {
       return { ok: false, reason: "gameweek-settlement-coverage-unavailable" };
@@ -294,7 +294,7 @@ export async function readTouchlineSocialRankingFamilyDraft(input: Readonly<{
     }
     const settlements = await admin.from("touchline_player_fixture_score_settlements")
       .select("football_player_id,rating,minutes_played,settlement_status")
-      .eq("fixture_id", canonicalFixtureId).eq("scoring_version", "player_scoring_v3").eq("settlement_status", "final");
+      .eq("fixture_id", canonicalFixtureId).eq("scoring_version", "player_scoring_v4").eq("settlement_status", "final");
     if (settlements.error || !Array.isArray(settlements.data) || !settlements.data.length) {
       return { ok: false, reason: "final-v3-settlements-unavailable" };
     }

@@ -164,8 +164,8 @@ function roundedRating(value: number) {
 }
 
 /**
- * The complete active Fantasy scoring rule. No event statistic other than the
- * per-fixture hat-trick threshold changes the provider Rating.
+ * Player points are the provider Rating only. Goals remain football facts;
+ * neither hat-tricks nor any other event add a bonus to that Rating.
  */
 export function touchlineFantasyFixtureContribution(input: Readonly<{
   appearanceStatus: "started" | "substitute" | "unused" | "absent" | "unavailable";
@@ -174,7 +174,7 @@ export function touchlineFantasyFixtureContribution(input: Readonly<{
 }>): TouchlineFantasyFixtureContribution {
   const appeared = input.appearanceStatus === "started" || input.appearanceStatus === "substitute";
   const goals = normalizedGoals(input.goals);
-  const multiplier = goals >= 3 ? 2 as const : 1 as const;
+  const multiplier = 1 as const;
   const rating = finiteNonNegative(input.rating);
 
   if (!appeared) {
@@ -201,7 +201,7 @@ export function touchlineFantasyFixtureContribution(input: Readonly<{
     rating: roundedRating(rating),
     goals,
     hatTrickMultiplier: multiplier,
-    roundScore: roundedRating(rating * multiplier),
+    roundScore: roundedRating(rating),
     participation: "rated_appearance",
     reason: "RATED_APPEARANCE",
   };

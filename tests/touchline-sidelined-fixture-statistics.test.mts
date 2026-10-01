@@ -5,8 +5,8 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { isTouchLineSettledFixtureStatus } from "../lib/football-data/fixture-settlement.ts";
 import { buildTouchLinePlayerSeasonAggregate } from "../lib/football-data/player-season-statistics-sync.ts";
-import { touchLinePlayerFixturePoints } from "../lib/football-data/player-fixture-scoring.ts";
-import { touchLinePlayerFixtureScoreV3 } from "../lib/football-data/player-score-engine-v3.ts";
+import { touchLinePlayerFixtureEventStatistics } from "../lib/football-data/player-fixture-scoring.ts";
+import { touchLinePlayerFixtureScoreV4 } from "../lib/football-data/player-score-engine-v4.ts";
 import { classifyTouchLinePlayerRankingCoverage } from "../lib/football-data/player-ranking-coverage.ts";
 import { groupTouchLinePlayerSeasonMemberships } from "../lib/football-data/player-season-membership-grouping.ts";
 import { upsertTouchLineRowsResiliently } from "../lib/football-data/resilient-batch-upsert.ts";
@@ -57,15 +57,22 @@ async function execute(input: { feeds?: Row[]; fixtures?: Row[]; players?: Row[]
     return query;
   } };
   const sync = runInNewContext(`${code}\nsyncTouchLinePlayerSeasonStatistics;`, {
-    isTouchLineSettledFixtureStatus, buildTouchLinePlayerSeasonAggregate, touchLinePlayerFixturePoints,
-    touchLinePlayerFixtureScoreV3, classifyTouchLinePlayerRankingCoverage, groupTouchLinePlayerSeasonMemberships,
+    isTouchLineSettledFixtureStatus, buildTouchLinePlayerSeasonAggregate, touchLinePlayerFixtureEventStatistics,
+    touchLinePlayerFixtureScoreV4, classifyTouchLinePlayerRankingCoverage, groupTouchLinePlayerSeasonMemberships,
     upsertTouchLineRowsResiliently,
     inspectTouchlineOfficialTeamSheet,
     auditTouchlinePlayerScoreSettlementCoverage: async () => ({ missingFixtureIds: [], error: null }),
-    rebuildTouchLinePlayerRankingV3: async () => ({ ok: true, snapshotId: null, playerCount: 0, published: false }),
+    rebuildTouchLinePlayerRankingV4: async () => ({ ok: true, snapshotId: null, playerCount: 0, published: false }),
   });
   const result = await sync(admin);
   assert.equal(result.ok, expectedOk, `Unexpected global sync outcome: ${result.errors.join(", ")}`);
+  assert.equal(result.scoringVersion, "player_scoring_v4");
+  assert.equal(result.fixtureRowsWritten, 0);
+  assert.equal(result.v3FixtureRowsWritten, 0);
+  assert.equal(writes.football_player_fixture_statistics, undefined);
+  for (const table of ["football_player_season_statistics", "touchline_player_fixture_score_settlements"]) {
+    for (const row of writes[table] ?? []) assert.equal(row.scoring_version, "player_scoring_v4");
+  }
   // Preserve assertions about the sideline target independently of the
   // now-complete supporting XI/bench records.
   return Object.fromEntries(Object.entries(writes).flatMap(([table, rows]) => {

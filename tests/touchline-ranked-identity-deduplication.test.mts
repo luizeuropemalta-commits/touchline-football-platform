@@ -33,13 +33,13 @@ function harness(options: { legacy?: boolean; statsFailure?: boolean; competitio
     { position: "Goalkeeper" }, { position: "Forward" }, {},
   ];
   const players = positions.map((position, n) => ({ id: ids[n], provider_player_id: String(n + 1), display_name: `Synthetic ${n}`, current_club_id: clubId, ...position }));
-  const ranking = { phase: "ranked", scoringVersion: "player_scoring_v3", seasonId, snapshotId: "published-snapshot", publishedAt: "2026-09-30", players: ids.map((playerId, n) => ({ playerId, totalRating: n === 0 ? 0 : n + 10 })) };
+  const ranking = { phase: "ranked", scoringVersion: "player_scoring_v4", seasonId, snapshotId: "published-snapshot", publishedAt: "2026-09-30", players: ids.map((playerId, n) => ({ playerId, totalRating: n === 0 ? 0 : n + 10 })) };
   const tables: Record<string, Row[]> = {
     football_players: players,
     football_competitions: [{ id: competitionId, provider: "sportmonks", provider_competition_id: "8" }],
     football_seasons: options.noSeasons ? [] : [{ id: seasonId, competition_id: competitionId, is_current: true }],
     football_clubs: [{ id: clubId, name: "Synthetic club" }],
-    football_player_season_statistics: ids.map((id, n) => ({ id: uuid(100 + n), football_player_id: id, competition_id: competitionId, season_id: seasonId, scoring_version: "player_scoring_v3", summary_payload: { goals: 0, saves: 4, defense: 3, "def-score": 3, totalRating: 999 } })),
+    football_player_season_statistics: ids.map((id, n) => ({ id: uuid(100 + n), football_player_id: id, competition_id: competitionId, season_id: seasonId, scoring_version: "player_scoring_v4", summary_payload: { goals: 0, saves: 4, defense: 3, "def-score": 3, totalRating: 999 } })),
     football_squad_members: ids.map((id, n) => ({ id: uuid(200 + n), player_id: id, club_id: clubId, competition_id: competitionId, status: "active", jersey_number: n + 1 })),
     touchline_card_publications: options.unpublished ? [] : ids.map((id, n) => ({ player_id: id, current_membership_id: uuid(200 + n), competition_id: competitionId, effective_season: "2026/27", publication_status: "published", calculated_tier: "ruby-red", calculated_nominal_price_gbp: 10, last_reviewed_at: "2026-09-30T00:00:00Z" })),
     football_player_market_values: ids.map((id, n) => ({ id: uuid(300 + n), player_id: id, market_value_eur: 1_000_000, verified_season: "2026/27", status: "verified", confidence: "verified" })),

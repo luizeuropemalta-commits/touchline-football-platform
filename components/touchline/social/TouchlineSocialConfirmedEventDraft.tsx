@@ -108,7 +108,7 @@ export default function TouchlineSocialConfirmedEventDraftView({
         <dl className={styles.metrics}>
           <div><dt>TOTAL RATING</dt><dd>{draft.totalRating.toFixed(2)}</dd></div>
           <div><dt>MATCH RATING</dt><dd>{draft.matchRating === null ? "—" : draft.matchRating.toFixed(2)}</dd></div>
-          <div><dt>TOUCHLINE POINTS</dt><dd>{draft.touchlinePoints > 0 ? "+" : ""}{draft.touchlinePoints}</dd></div>
+          <div><dt>TOUCHLINE POINTS</dt><dd>{draft.touchlinePoints}</dd></div>
         </dl>
       </section>
 

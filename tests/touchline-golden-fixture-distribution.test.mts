@@ -163,11 +163,14 @@ test("season points remain unavailable until the event feed is known", () => {
 test("fixture persistence keeps points unavailable and delegates lineup lifecycle to the shared guard", async () => {
   const source = await readFile(new URL("../lib/football-data/player-season-statistics-store.ts", import.meta.url), "utf8");
   assert.match(source, /events = feed \? fantasyEvents\(feed\.events_payload\) : null/);
-  assert.match(source, /touchline_points: pointResult\.points/);
-  assert.match(source, /scoring_version: pointResult\.scoringVersion/);
-  assert.match(source, /scoring_coverage_status: pointResult\.coverageStatus/);
+  assert.match(source, /touchline_points: v4PointResult\.points/);
+  assert.match(source, /scoring_version: v4PointResult\.scoringVersion/);
+  assert.match(source, /scoring_coverage_status: v4PointResult\.coverageStatus/);
   assert.match(source, /isTouchLineSettledFixtureStatus\(fixture\.status\)/);
-  assert.match(source, /statistics_payload: \{ \.\.\.statistics, \.\.\.pointResult\.statistics \}/);
+  assert.match(source, /statistics_payload: \{ \.\.\.statistics, \.\.\.eventStatistics \}/);
+  assert.match(source, /events === null \? \{\} : touchLinePlayerFixtureEventStatistics\(providerPlayerId, events\)/);
+  assert.doesNotMatch(source, /\.from\("football_player_fixture_statistics"\)/);
+  assert.doesNotMatch(source, /touchLinePlayerFixturePoints\(/);
   assert.doesNotMatch(source, /completeOfficialTeamSheet/);
   assert.doesNotMatch(source, /football_fixture_lifecycle_events/);
   assert.doesNotMatch(source, /event_type:\s*"LINEUP_AVAILABLE"/);
@@ -218,7 +221,7 @@ test("Live consumes the persisted allowlisted match detail instead of a static p
   assert.match(component, /statistic\?\.minutes \?\? "—"/);
   assert.match(component, /statistic\?\.rating \?\? "—"/);
   assert.match(reader, /touchline_player_fixture_score_settlements/);
-  assert.match(reader, /scoring_version", "player_scoring_v3/);
+  assert.match(reader, /scoring_version", "player_scoring_v4/);
   assert.match(reader, /football_fixture_lifecycle_events/);
   assert.doesNotMatch(reader, /SPORTMONKS_API_TOKEN|api\.sportmonks/);
   assert.match(route, /requireAuthenticatedOrLocalTouchlineEditor/);

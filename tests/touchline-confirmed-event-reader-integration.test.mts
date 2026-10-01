@@ -13,7 +13,7 @@ const at = '2026-09-27T00:00:00Z';
 const source = readFileSync(new URL('../lib/touchlineArena/social-confirmed-event-draft-server.ts', import.meta.url), 'utf8');
 const javascript = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 
-function harness(options: { eventTime?: string | null; changedRevision?: boolean; badFact?: boolean; duplicate?: boolean; hatTrick?: boolean; removeConstituent?: string; eventKind?: 'penalty' | 'own-goal' | 'red-card'; feedError?: boolean; extraFeedOrder?: 'unknown' | 'only-sort' | 'later'; feedCase?: 'missing' | 'duplicate' | 'rescinded' | 'drift' | 'wrong-fixture' | 'predecessor-missing' | 'canonical-predecessor-missing' | 'irrelevant-later' } = {}) {
+function harness(options: { legacyBand?: boolean; missingRating?: boolean; duplicateContribution?: boolean; eventTime?: string | null; changedRevision?: boolean; badFact?: boolean; duplicate?: boolean; hatTrick?: boolean; removeConstituent?: string; eventKind?: 'penalty' | 'own-goal' | 'red-card'; feedError?: boolean; extraFeedOrder?: 'unknown' | 'only-sort' | 'later'; feedCase?: 'missing' | 'duplicate' | 'rescinded' | 'drift' | 'wrong-fixture' | 'predecessor-missing' | 'canonical-predecessor-missing' | 'irrelevant-later' } = {}) {
   const event = { provider_event_id: '9', provider_team_id: '1', provider_player_id: '3', football_player_id: uuid,
     player_name: 'Test Player', minute: 12, extra_minute: null, event_type: 'goal', event_status: 'recorded', result: '1-0',
     source_synced_at: options.eventTime === undefined ? at : options.eventTime };
@@ -31,9 +31,13 @@ function harness(options: { eventTime?: string | null; changedRevision?: boolean
     football_fantasy_fixture_feeds: { provider: 'sportmonks', provider_fixture_id: options.feedCase === 'wrong-fixture' ? '88' : '8', last_synced_at: at, events_payload: options.feedCase === 'missing' ? [] : options.feedCase === 'duplicate' ? [currentEvent,currentEvent] : options.feedCase === 'canonical-predecessor-missing' ? [{ ...currentEvent,providerId: '7',minute: 5 },currentEvent] : [currentEvent] },
     touchline_social_confirmed_event_observations: { first_observed_at: at, last_observed_at: '2026-09-27T00:03:00Z', confirmed_at: at,
       event_fact_checksum: options.badFact ? 'wrong' : fact, stable_observation_count: 2, confirmation_state: 'CONFIRMED' },
-    touchline_player_fixture_score_settlements: { rating: 7, touchline_points: 10, settlement_status: 'provisional', source_synced_at: '2026-09-27T00:01:00Z',
-      touchline_points_breakdown: [{ providerEventId: 'rating:7', ruleCode: 'sportmonks-rating', factValue: 7, points: 10 }] },
+    touchline_player_fixture_score_settlements: { rating: 8.09, touchline_points: 8.09, settlement_status: 'provisional', source_synced_at: '2026-09-27T00:01:00Z',
+      touchline_points_breakdown: [{ providerEventId: 'rating:8.09', ruleCode: 'sportmonks-rating', factValue: 8.09, points: 8.09 }] },
   };
+  const settlement = rows.touchline_player_fixture_score_settlements as { rating: number | null; touchline_points: number; touchline_points_breakdown: Array<{ points: number }> };
+  if (options.legacyBand) { settlement.touchline_points = 5; settlement.touchline_points_breakdown[0].points = 5; }
+  if (options.missingRating) settlement.rating = null;
+  if (options.duplicateContribution) settlement.touchline_points_breakdown.push(settlement.touchline_points_breakdown[0]);
   if (options.hatTrick) {
     rows.football_fixture_events = hatEvents;
     (rows.football_fantasy_fixture_feeds as { events_payload: unknown }).events_payload = hatEvents
@@ -96,6 +100,16 @@ test('executed reader preserves social DTO while private evidence retains indivi
   assert.equal(missing.evidence.eventSyncedAt, null);
   assert.equal(matchPushSourceFreshness(missing.evidence, testPolicy, testNow), 'invalid-evidence');
   assert.equal(missing.data.sourceChecksum, privateResult.data.sourceChecksum);
+});
+
+test('V4 shared readers reject legacy 8.09-to-5 band points, missing rating and extra contribution', async () => {
+  for (const options of [{legacyBand:true},{missingRating:true},{duplicateContribution:true}]) {
+    for (const name of ['readTouchlineConfirmedEventPushSource','readTouchlineSocialConfirmedEventDraft'] as const) {
+      const result = await harness(options)[name]('8','9');
+      assert.equal(result.ok,false);
+      assert.equal('evidence' in result,false);
+    }
+  }
 });
 
 test('current feed membership is mandatory for both shared consumers including score predecessor', async () => {

@@ -179,10 +179,10 @@ test("roster rating is exclusively the same-season publication, not the newer se
 
 test("roster reader scopes its publication to the known current season while preserving marker transitions", () => {
   for (const [currentSeasonId, publishedSeasonId, scoringVersion, expected] of [
-    [SEASON_ID, SEASON_ID, "player_scoring_v3", 20.43],
-    [null, SEASON_ID, "player_scoring_v3", 20.43],
-    [SEASON_ID, OTHER_SEASON_ID, "player_scoring_v3", null],
-    [SEASON_ID, null, "player_scoring_v3", null],
+    [SEASON_ID, SEASON_ID, "player_scoring_v4", 20.43],
+    [null, SEASON_ID, "player_scoring_v4", 20.43],
+    [SEASON_ID, OTHER_SEASON_ID, "player_scoring_v4", null],
+    [SEASON_ID, null, "player_scoring_v4", null],
     [SEASON_ID, SEASON_ID, "player_scoring_v2", null],
   ] as const) {
     const publishedV3TotalRatings = publishedRosterRatingsForSeason({

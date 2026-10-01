@@ -65,7 +65,7 @@ export default function TouchlineSocialEventsLiveGoalHat({
     draft.sourceProvenance !== "LOCAL_NON_PUBLISHABLE_VISUAL_QA"
     || draft.touchlinePoints !== 0;
   const touchlinePointsDisplay = hasOfficialTouchlinePoints
-    ? `${draft.touchlinePoints > 0 ? "+" : ""}${draft.touchlinePoints}`
+    ? `${draft.touchlinePoints}`
     : "—";
   const moments = isHatTrick ? draft.confirmedGoalMoments ?? [] : [{
     eventId: draft.eventId,
@@ -163,7 +163,7 @@ export default function TouchlineSocialEventsLiveGoalHat({
               <span className={`${rankingStyles.hatRankPosition} ${localStyles.pointsValue}`}>{touchlinePointsDisplay}</span>
               <div>
                 <strong>TOUCHLINE POINTS</strong>
-                <span>{hasOfficialTouchlinePoints ? "VERIFIED SCORING RESULT" : "AWAITING OFFICIAL CALCULATION"}</span>
+                <span>{hasOfficialTouchlinePoints ? "MATCH RATING · NO EXTRA BONUS" : "AWAITING OFFICIAL CALCULATION"}</span>
               </div>
             </div>
           </div>

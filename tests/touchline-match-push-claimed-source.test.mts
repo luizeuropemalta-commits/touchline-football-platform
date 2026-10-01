@@ -27,7 +27,7 @@ const js = ts.transpileModule(readFileSync(new URL('../lib/touchlineArena/match-
 test('claimed-source adapter binds private queue facts and refuses changed or late results', async () => {
   const payloadModes = ['valid-revision', 'kind-null', 'kind-unknown', 'kind-changed', 'valid-pt', 'invalid-locale', 'missing-locale', 'formatter-null', 'payload-exact', 'payload-oversize'];
   // Padding is computed against the independent public message expectation.
-  const expectedEnglish = { title: 'GOAL — Arsenal 1 × 0 Chelsea', body: 'Saka · 23′ · TouchLine Points (match): +5', tag: 'fixture:8:event:9', href: '/live?fixture=8&lang=en-GB', update: false, eventIcon: 'goal' };
+  const expectedEnglish = { title: 'GOAL — Arsenal 1 × 0 Chelsea', body: 'Saka · 23′ · Match rating: 8.2', tag: 'fixture:8:event:9', href: '/live?fixture=8&lang=en-GB', update: false, eventIcon: 'goal' };
   const paddingBytes = 3072 - Buffer.byteLength(JSON.stringify(expectedEnglish), 'utf8');
   const boundaryName = 'Saka' + 'é'.repeat(Math.floor(paddingBytes / 2)) + 'x'.repeat(paddingBytes % 2);
   for (const mode of [...payloadModes, 'valid', 'missing-binding', 'wrong-fixture', 'changed-checksum', 'revoked', 'rotated-binding', 'aborted', 'unconfigured', 'expired', 'hat-trick', 'aged-during-final-read', 'revision-changed', 'revision-unavailable', 'revision-checksum-changed', 'aged-during-revision', 'aborted-during-revision', 'device-missing', 'device-changed', 'push-off', 'fixture-optout', 'no-consent', 'denied', 'malformed-registration', 'quiet-hours', 'expired-during-revision', 'error-notification_devices', 'error-notification_preferences', 'error-touchline_fixture_alert_subscriptions', 'error-football_fixtures', 'error-touchline_match_push_outbox', 'error-final-claim']) {
@@ -79,7 +79,7 @@ test('claimed-source adapter binds private queue facts and refuses changed or la
         if (mode === 'aborted') controller.abort();
         if (mode === 'expired') late = true;
         const playerName = mode.startsWith('payload-') ? boundaryName + (mode === 'payload-oversize' ? 'x' : '') : 'Saka';
-        return { ok: true, data: { sourceProvenance: 'PERSISTED_VERIFIED_CONFIRMED_EVENT', fixtureId: '8', eventId: '9', home: { name: 'Arsenal' }, away: { name: 'Chelsea' }, score: { home: 1, away: 0 }, event: { kind: 'goal', playerName, minute: 23, extraMinute: null }, matchRating: 8.2, touchlinePoints: mode === 'formatter-null' ? 999 : 5, sourceChecksum: mode === 'changed-checksum' ? 'wrong' : hash, contentType: mode === 'hat-trick' ? 'HAT_TRICK_HERO' : 'GOAL_CONFIRMED', sourceRevisionManifest: { 'fixture-provider:8': 1 }, sourceRevisionChecksum: hash },
+        return { ok: true, data: { sourceProvenance: 'PERSISTED_VERIFIED_CONFIRMED_EVENT', fixtureId: '8', eventId: '9', home: { name: 'Arsenal' }, away: { name: 'Chelsea' }, score: { home: 1, away: 0 }, event: { kind: 'goal', playerName, minute: 23, extraMinute: null }, matchRating: 8.2, touchlinePoints: mode === 'formatter-null' ? 999 : 8.2, sourceChecksum: mode === 'changed-checksum' ? 'wrong' : hash, contentType: mode === 'hat-trick' ? 'HAT_TRICK_HERO' : 'GOAL_CONFIRMED', sourceRevisionManifest: { 'fixture-provider:8': 1 }, sourceRevisionChecksum: hash },
           evidence: { canonicalFixtureId: mode === 'wrong-fixture' ? deviceId : fixtureId, fixtureProviderId: '8', eventProviderId: '9',
             eventSyncedAt: now.toISOString(), settlementSyncedAt: now.toISOString(), fixtureUpdatedAt: now.toISOString(), lastObservedAt: now.toISOString(), clockRevision: 1 } };
       } },
@@ -95,8 +95,8 @@ test('claimed-source adapter binds private queue facts and refuses changed or la
     if (mode === 'invalid-locale' || mode === 'missing-locale') assert.equal(reads, 0);
     if (result) {
       assert.equal(result.deviceId, deviceId); assert.equal(result.registration.installationId, installationId); assert.equal(result.queuedSubscriptionFingerprint, binding); assert.equal(reads, 2);
-      const expected = mode === 'valid-pt' ? { ...expectedEnglish, title: 'GOL — Arsenal 1 × 0 Chelsea', body: 'Saka · 23′ · TouchLine Points (na partida): +5', href: '/live?fixture=8&lang=pt-BR' }
-        : mode === 'payload-exact' ? { ...expectedEnglish, body: boundaryName + ' · 23′ · TouchLine Points (match): +5' }
+      const expected = mode === 'valid-pt' ? { ...expectedEnglish, title: 'GOL — Arsenal 1 × 0 Chelsea', body: 'Saka · 23′ · Nota da partida: 8.2', href: '/live?fixture=8&lang=pt-BR' }
+        : mode === 'payload-exact' ? { ...expectedEnglish, body: boundaryName + ' · 23′ · Match rating: 8.2' }
         : mode === 'valid-revision' ? { ...expectedEnglish, update: true } : expectedEnglish;
       assert.deepEqual(JSON.parse(JSON.stringify(result.payload)), expected);
       if (mode === 'payload-exact') assert.equal(Buffer.byteLength(JSON.stringify(result.payload), 'utf8'), 3072);

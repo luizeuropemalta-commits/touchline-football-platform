@@ -80,7 +80,7 @@ async function readPlayerRankingRevision(admin: SupabaseClient) {
     text(snapshot?.snapshot_id) !== activeId
     || snapshot?.source !== "sportmonks-audited"
     || snapshot?.status !== "published"
-    || snapshot?.scoring_version !== "player_scoring_v3"
+    || snapshot?.scoring_version !== "player_scoring_v4"
     || !["complete", "complete_for_scoring"].includes(String(snapshot?.coverage_status))
     || snapshot?.actual_player_count !== snapshot?.expected_player_count
     || !sameIds(fixtureIds, expectedFixtureIds)

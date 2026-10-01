@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
 import { readGoldenBootDiagnostic } from "@/lib/football-data/golden-boot-diagnostic";
+import { readFixtureDiagnostic } from "@/lib/football-data/fixture-read-diagnostic";
 import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import { sportmonksDetailedPositionName } from "@/lib/football-data/sportmonks-position-taxonomy";
 import type { TouchlineSquadMember } from "@/lib/football-data/types";
@@ -267,6 +268,15 @@ export async function GET(request: NextRequest) {
   }
 
   const scope = text(request.nextUrl.searchParams.get("scope"));
+  if (scope === "fixture") {
+    if (process.env.VERCEL_ENV === "production"
+      || inspectTouchlineIsolatedPreviewEnvironment().status !== "qa"
+      || process.env.TOUCHLINE_QA_SUPABASE_PROJECT_REF !== "xgxbwqxjssxxuihuwmgy") {
+      return NextResponse.json({ ok: false, error: "Dedicated QA runtime required." }, { status: 403, headers: { "Cache-Control": "no-store" } });
+    }
+    const diagnostic = await readFixtureDiagnostic(createAdminClient(), text(request.nextUrl.searchParams.get("fixtureId")), () => createFootballDataProvider("sportmonks"));
+    return NextResponse.json(diagnostic, { status: diagnostic.ok ? 200 : 502, headers: { "Cache-Control": "no-store" } });
+  }
   if (scope === "golden-boot") {
     if (process.env.VERCEL_ENV === "production"
       || inspectTouchlineIsolatedPreviewEnvironment().status !== "qa"

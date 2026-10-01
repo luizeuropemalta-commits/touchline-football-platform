@@ -3,11 +3,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { deriveRankingsLive, type RankingsLiveSource, type RankingsLiveEvidence } from "../lib/social-rankings-live-contract.ts";
 import { leadershipCrownEligibility } from "../lib/touchlineArena/leadership-decision.ts";
+import { syntheticRankingsV4Evidence } from "./fixtures/rankings-v4.synthetic.mts";
 
 const source = JSON.parse(readFileSync(new URL("../artifacts/social-studio/rankings/snapshot-20260914.json", import.meta.url), "utf8")) as RankingsLiveSource;
-const evidence = JSON.parse(readFileSync(new URL("../artifacts/social-studio/rankings/settlement-evidence-20260914.json", import.meta.url), "utf8")) as RankingsLiveEvidence;
-evidence.ratingFeeds = JSON.parse(readFileSync(new URL("../artifacts/social-studio/rankings/rating-lineup-evidence-20260914.json", import.meta.url), "utf8")).feeds;
+const evidence: RankingsLiveEvidence = syntheticRankingsV4Evidence();
 const derive = (s = source, e = evidence) => deriveRankingsLive(s, e, evidence.publishedPlayerIds, "fixture-audit");
+test("active V4 replay refuses retained V3 settlement authority", () => {
+  const historical = structuredClone(evidence);
+  historical.settlements.forEach(row => { row.scoring_version = "player_scoring_v3"; });
+  assert.throws(() => derive(source, historical), /RANKINGS_MISSING_SETTLEMENT/);
+});
 
 test("the whole final season and latest round remain separate", () => {
   const data = derive();

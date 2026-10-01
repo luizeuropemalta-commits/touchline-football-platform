@@ -16,7 +16,7 @@ const code = (file: string) => stripTypeScriptTypes(readFileSync(new URL(`../${f
 
 function catalogue(options: { statsError?: boolean; noStats?: boolean; otherSeason?: boolean } = {}) {
   const state = {
-    phase: "ranked", scoringVersion: "player_scoring_v3", seasonId: SEASON,
+    phase: "ranked", scoringVersion: "player_scoring_v4", seasonId: SEASON,
     players: ids.map((playerId, n) => ({ playerId, totalRating: [13.2, null, 0][n] })),
   };
   const tables: Record<string, Array<Record<string, unknown>>> = {
@@ -27,7 +27,7 @@ function catalogue(options: { statsError?: boolean; noStats?: boolean; otherSeas
     football_competitions: [{ id: COMPETITION, provider: "sportmonks", provider_competition_id: "8" }],
     football_seasons: [{ id: options.otherSeason ? "00000000-0000-4000-8000-000000000011" : SEASON, competition_id: COMPETITION, is_current: true }],
     football_player_season_statistics: options.noStats ? [] : ids.map((football_player_id, n) => ({
-      id: `stat-${n}`, football_player_id, competition_id: COMPETITION, season_id: SEASON, scoring_version: "player_scoring_v3",
+      id: `stat-${n}`, football_player_id, competition_id: COMPETITION, season_id: SEASON, scoring_version: "player_scoring_v4",
       summary_payload: { totalRating: [28.26, 7, 9][n], saves: 10, yellowCards: 0, goalsConceded: 2 },
       position_statistics_payload: {},
     })),

@@ -45,15 +45,14 @@ function sumOnlyWhenKnown(members: TouchlineFantasyLineupMember[], codes: string
 }
 
 function isStartedOrEntered(member: TouchlineFantasyLineupMember) {
-  if (member.isStarter) return true;
   const minutes = numericStatistic(member, ["minutes-played", "minutes"]);
-  return Boolean(member.isSubstitute && minutes !== null && minutes > 0);
+  return Boolean((member.isStarter || member.isSubstitute) && minutes !== null && minutes > 0);
 }
 
 function validRatedAppearances(members: TouchlineFantasyLineupMember[]) {
   return members.flatMap((member) => {
     const rating = numericStatistic(member, ["rating"]);
-    return isStartedOrEntered(member) && rating !== null ? [rating] : [];
+    return isStartedOrEntered(member) && rating !== null && rating >= 0 && rating <= 10 ? [rating] : [];
   });
 }
 

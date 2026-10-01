@@ -73,7 +73,7 @@ function input(artId: EventsLivePackageInput["artId"], player: Player, eventIds:
         membership_status: "active", name: player.name, jersey_number: player.shirt, detailed_position: player.position,
         market_value_eur: 10_000_000, market_value_status: "verified", verified_season: "2026/27" },
       settlement: { football_player_id: player.id, provider_fixture_id: "99010", club_id: player.club.id, rating: String(matchRating),
-        touchline_points: touchlinePoints, settlement_status: "final", scoring_coverage_status: "complete", scoring_version: "player_scoring_v3" },
+        touchline_points: touchlinePoints, settlement_status: "final", scoring_coverage_status: "complete", scoring_version: "player_scoring_v4" },
       fixture: { events: goals.map(goal => ({ provider_event_id: goal.id, player_name: goal.playerName })) },
       // These are schema-test values, NOT a claim that any URL was consulted.
       externalSources: [{ url: "https://social-events-unit-test.invalid/synthetic", accessedAt: "2026-09-15T12:00:00Z" }],
@@ -84,16 +84,16 @@ function input(artId: EventsLivePackageInput["artId"], player: Player, eventIds:
 export function syntheticEventsLiveInputs(): SyntheticInput[] {
   return [
     input("GOAL_CONFIRMED", scorer, [SYNTHETIC_EVENT_IDS.firstGoal], { home: 2, away: 0 },
-      [{ eventId: SYNTHETIC_EVENT_IDS.firstGoal, kind: "goal", minute: 20, extraMinute: null }], 10, 12),
+      [{ eventId: SYNTHETIC_EVENT_IDS.firstGoal, kind: "goal", minute: 20, extraMinute: null }], 10, 10),
     input("OWN_GOAL", defender, [SYNTHETIC_EVENT_IDS.ownGoal], { home: 1, away: 0 },
-      [{ eventId: SYNTHETIC_EVENT_IDS.ownGoal, kind: "own-goal", minute: 10, extraMinute: null }], 5.9, -1),
+      [{ eventId: SYNTHETIC_EVENT_IDS.ownGoal, kind: "own-goal", minute: 10, extraMinute: null }], 5.9, 5.9),
     input("HAT_TRICK_HERO", scorer, [SYNTHETIC_EVENT_IDS.firstGoal, SYNTHETIC_EVENT_IDS.secondGoal, SYNTHETIC_EVENT_IDS.penalty], { home: 4, away: 0 }, [
       { eventId: SYNTHETIC_EVENT_IDS.firstGoal, kind: "goal", minute: 20, extraMinute: null },
       { eventId: SYNTHETIC_EVENT_IDS.secondGoal, kind: "goal", minute: 40, extraMinute: null },
       { eventId: SYNTHETIC_EVENT_IDS.penalty, kind: "penalty", minute: 60, extraMinute: null },
-    ], 10, 12),
+    ], 10, 10),
     input("RED_CARD_CONFIRMED", defender, [SYNTHETIC_EVENT_IDS.dismissal], { home: 2, away: 0 },
-      [{ eventId: SYNTHETIC_EVENT_IDS.dismissal, kind: "red-card", minute: 30, extraMinute: null }], 5.9, -1),
-    input("FULL_TIME", finisher, [], { home: 5, away: 1 }, [], 7.5, 3),
+      [{ eventId: SYNTHETIC_EVENT_IDS.dismissal, kind: "red-card", minute: 30, extraMinute: null }], 5.9, 5.9),
+    input("FULL_TIME", finisher, [], { home: 5, away: 1 }, [], 7.5, 7.5),
   ].map(scenario => structuredClone(scenario));
 }

@@ -38,6 +38,31 @@ function lineup(input: {
   };
 }
 
+test("ratings require positive minutes for starters as well as substitutes", () => {
+  const members = [0, -1, null].map((minutes, index) => {
+    const member = lineup({ fixtureId: `dnp-${index}`, starter: true, minutes: minutes ?? 0, rating: 8.09 });
+    if (minutes === null) member.statistics = member.statistics.filter((stat) => stat.code !== "minutes-played");
+    return member;
+  });
+  const aggregate = buildTouchLinePlayerSeasonAggregate({
+    season: { seasonId: "previous", seasonName: "2025/26", competitionId: "england", competitionName: "TouchLine England", clubId: "city", clubName: "Manchester City" },
+    providerPlayerId: "154421",
+    eligibleFixtures: members.map((member, index) => ({ fixtureId: `dnp-${index}`, lineups: [member] })),
+  });
+  assert.equal(aggregate.summary.totalRating, null);
+  assert.equal(aggregate.summary.ratedAppearances, null);
+});
+
+test("out-of-range ratings never enter the season total", () => {
+  const aggregate = buildTouchLinePlayerSeasonAggregate({
+    season: { seasonId: "previous", seasonName: "2025/26", competitionId: "england", competitionName: "TouchLine England", clubId: "city", clubName: "Manchester City" },
+    providerPlayerId: "154421",
+    eligibleFixtures: [-1, 11, 8.09].map((rating, index) => ({ fixtureId: `range-${index}`, lineups: [lineup({ fixtureId: `range-${index}`, starter: true, minutes: 90, rating })] })),
+  });
+  assert.equal(aggregate.summary.totalRating, 8.09);
+  assert.equal(aggregate.summary.ratedAppearances, 1);
+});
+
 test("a complete season aggregate requires every eligible fixture exactly once", () => {
   const aggregate = buildTouchLinePlayerSeasonAggregate({
     providerPlayerId: "154421",

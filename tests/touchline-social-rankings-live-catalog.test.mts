@@ -6,7 +6,7 @@ import { TOUCHLINE_PRESEASON_RANKING_STATE, type TouchlineActiveRankingState } f
 import type { ClubOwnerSquadCard } from "../lib/touchlineArena/demo-data.ts";
 const row = JSON.parse(readFileSync(new URL("../artifacts/social-studio/rankings/editorial-pack-20260915.json", import.meta.url), "utf8")).facts.overall;
 const state = (count: number): TouchlineActiveRankingState => ({ ...TOUCHLINE_PRESEASON_RANKING_STATE,
-  phase: "ranked", seasonId: "1e83121b-b778-459b-b9a0-7cf1eaff5729", scoringVersion: "player_scoring_v3",
+  phase: "ranked", seasonId: "1e83121b-b778-459b-b9a0-7cf1eaff5729", scoringVersion: "player_scoring_v4",
   snapshotId: "local-review:catalog-regression", publishedAt: null,
   players: Array.from({ length: count }, (_, index) => ({ ...row, playerId: `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`, providerPlayerId: String(index + 1) })) });
 const cards = (scope: TouchlineActiveRankingState) => scope.players.map(p => ({ canonicalPlayerId: p.playerId } as ClubOwnerSquadCard));

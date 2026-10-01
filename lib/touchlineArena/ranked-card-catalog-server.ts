@@ -90,7 +90,7 @@ export async function loadTouchLineRankedCardCatalog(
   state: TouchlineActiveRankingState,
   providedAdmin?: SupabaseClient | null,
 ): Promise<ClubOwnerSquadCard[]> {
-  if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v3" || !state.seasonId || !state.players.length) return [];
+  if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v4" || !state.seasonId || !state.players.length) return [];
   const seasonId = state.seasonId;
   const admin = providedAdmin ?? createAdminClient();
   if (!admin) return [];
@@ -112,7 +112,7 @@ export async function loadTouchLineRankedCardCatalog(
       return { players, clubData };
     })()),
     diagnostics.measure("memberships", () => Promise.resolve(catalogueAdmin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }))),
-    diagnostics.measure("settlements", () => Promise.resolve(catalogueAdmin.from("touchline_player_fixture_score_settlements").select("football_player_id,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds))),
+    diagnostics.measure("settlements", () => Promise.resolve(catalogueAdmin.from("touchline_player_fixture_score_settlements").select("football_player_id,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v4").in("football_player_id", playerIds))),
     diagnostics.measure("seasonPoints", () => readPublicSeasonPlayerPoints(playerIds, {
       providedAdmin: catalogueAdmin,
       seasonId,

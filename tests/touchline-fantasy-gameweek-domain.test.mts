@@ -22,7 +22,7 @@ test("the canonical Gameweek budget is €900M", () => {
   assert.equal(TOUCHLINE_FANTASY_INITIAL_BUDGET_EUR, 900_000_000);
 });
 
-test("Rating is the sole score and the hat-trick multiplier is applied once", () => {
+test("Sportmonks Rating is the sole score, including hat-tricks", () => {
   for (const goals of [0, 1, 2]) {
     assert.deepEqual(touchlineFantasyFixtureContribution({ appearanceStatus: "started", rating: 8, goals }), {
       rating: 8,
@@ -37,8 +37,8 @@ test("Rating is the sole score and the hat-trick multiplier is applied once", ()
     assert.deepEqual(touchlineFantasyFixtureContribution({ appearanceStatus: "substitute", rating: 8, goals }), {
       rating: 8,
       goals,
-      hatTrickMultiplier: 2,
-      roundScore: 16,
+      hatTrickMultiplier: 1,
+      roundScore: 8,
       participation: "rated_appearance",
       reason: "RATED_APPEARANCE",
     });
@@ -68,7 +68,14 @@ test("double Gameweek adds per-fixture Round Scores", () => {
   assert.equal(touchlineFantasyGameweekScore([
     touchlineFantasyFixtureContribution({ appearanceStatus: "started", rating: 7.5, goals: 0 }),
     touchlineFantasyFixtureContribution({ appearanceStatus: "started", rating: 8.21, goals: 3 }),
-  ]), 23.92);
+  ]), 15.71);
+});
+
+test("Bruno season example sums provider ratings without a hat-trick bonus", () => {
+  const ratings = [7.18, 7.11, 6.86, 10, 7.16];
+  assert.equal(touchlineFantasyGameweekScore(ratings.map((rating, index) =>
+    touchlineFantasyFixtureContribution({ appearanceStatus: "started", rating, goals: index === 3 ? 3 : 0 }),
+  )), 38.31);
 });
 
 test("manager rankings expose only public identity and current-manager state", () => {

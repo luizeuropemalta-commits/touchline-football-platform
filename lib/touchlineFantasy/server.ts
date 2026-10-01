@@ -76,7 +76,6 @@ export type TouchlineFantasyMatchHistory = Readonly<{
   playerId: string;
   rating: number | null;
   goals: number;
-  multiplier: 1 | 2;
   contribution: number;
   reason: "RATED_APPEARANCE" | "NO_PROVIDER_RATING" | "DID_NOT_PLAY";
   settlementStatus: "PROVISIONAL" | "FINAL";
@@ -449,7 +448,7 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
         const selectedPlayerIds = selections.map((entry) => entry.playerId);
         const { data: historyData } = projection === "full" && activeGameweek && selectedPlayerIds.length
           ? await admin.from("touchline_fantasy_player_fixture_scores")
-            .select("fixture_id,player_id,rating,goals,hat_trick_multiplier,fantasy_contribution,reason_code,settlement_status")
+            .select("fixture_id,player_id,rating,goals,fantasy_contribution,reason_code,settlement_status")
             .eq("gameweek_id", activeGameweek.id)
             .in("player_id", selectedPlayerIds)
           : { data: [] };
@@ -488,7 +487,6 @@ async function loadFantasySnapshotCore(user: User, projection: "full" | "arena",
       playerId,
       rating: number(row.rating),
       goals: number(row.goals) ?? 0,
-      multiplier: number(row.hat_trick_multiplier) === 2 ? 2 : 1,
       contribution: number(row.fantasy_contribution) ?? 0,
       reason,
       settlementStatus: status,
