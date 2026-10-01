@@ -52,9 +52,10 @@ async function readComplete(
   const selected = columns.split(",").map((column) => column.trim());
   const projection = selected.includes(key) || selected.includes("*") ? columns : `${columns},${key}`;
   const ordered = orders.some((order) => order.column === key) ? orders : [...orders, { column: key, ascending: true }];
-  const result: Row[] = [];
-  const seen = new Set<string>();
-  for (const batch of partitions(filters)) {
+  const batches = partitions(filters);
+  async function readPartition(batch: Filter[]): Promise<ReadResult> {
+    const result: Row[] = [];
+    const seen = new Set<string>();
     let expectedCount: number | null = null;
     for (let offset = 0; ; offset += PAGE_SIZE) {
       let query = admin.from(table).select(projection, { count: "exact" });
@@ -100,7 +101,40 @@ async function readComplete(
       }
       if (offset + data.length >= count) break;
     }
+    return { data: result, error: null, count: result.length };
   }
+  const outcomes: Array<{ result: ReadResult } | { failure: unknown }> = [];
+  let next = 0;
+  let stopped = false;
+  async function worker() {
+    while (!stopped && next < batches.length) {
+      const index = next++;
+      try {
+        const result = await readPartition(batches[index]);
+        outcomes[index] = { result };
+        if (result.error) stopped = true;
+      } catch (error) {
+        outcomes[index] = { failure: error };
+        stopped = true;
+      }
+    }
+  }
+  // Drain both workers before exposing a failure or compatibility fallback.
+  await Promise.all(Array.from({ length: Math.min(2, batches.length) }, () => worker()));
+  for (const outcome of outcomes) if ("failure" in outcome) throw outcome.failure;
+  const result: Row[] = [];
+  const seen = new Set<string>();
+  for (const outcome of outcomes) {
+    if (!("result" in outcome)) continue;
+    for (const row of outcome.result.data ?? []) {
+      const identity = row[key] as string;
+      if (seen.has(identity)) failure("DUPLICATE_ROW", table);
+      seen.add(identity);
+      result.push(row);
+    }
+  }
+  // Recoverable read failures must never conceal corruption in successful partitions.
+  for (const outcome of outcomes) if ("result" in outcome && outcome.result.error) return outcome.result;
   return { data: result, error: null, count: result.length };
 }
 
