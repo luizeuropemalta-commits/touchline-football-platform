@@ -1,4 +1,5 @@
 import { withFootballDataCache } from "@/lib/football-data/cache";
+import { normalizeSportmonksSeasonTopScorers, strictSportmonksId } from "@/lib/football-data/sportmonks-season-topscorers";
 import { estimateFantasyEventPoints } from "@/lib/football-data/fantasy-scoring";
 import {
   asNumber,
@@ -34,6 +35,8 @@ import type {
   FootballRateLimitStatus,
   SearchPlayersParams,
   StandingsParams,
+  SeasonTopScorersParams,
+  TouchlineSeasonTopScorers,
   StatsParams,
   TouchlineBallCoordinate,
   TouchlineCoach,
@@ -191,6 +194,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
     params: Record<string, string | number | undefined> = {},
     bucket: "static" | "daily" | "live" | "historical" = "daily",
     timeoutProfile: FootballDataTimeoutProfile = bucket === "live" ? "live" : "background",
+    remainingBudgetMs?: number,
   ): Promise<SportmonksRequestResult<T>> {
     const token = this.token();
     if (!token) return { configured: false as const };
@@ -206,13 +210,13 @@ export class SportmonksFootballProvider implements FootballDataProvider {
           if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
         });
 
-        const timeoutMs = footballDataTimeoutMs(timeoutProfile);
+        const timeoutMs = Math.min(footballDataTimeoutMs(timeoutProfile), remainingBudgetMs ?? Infinity);
         return footballDataFetchJson<SportmonksEnvelope<T>>(url, {
           provider: this.name,
           timeoutMs,
           retry: {
             maxAttempts: 3,
-            totalBudgetMs: timeoutMs + Math.min(timeoutMs, 1_000),
+            totalBudgetMs: Math.min(timeoutMs + Math.min(timeoutMs, 1_000), remainingBudgetMs ?? Infinity),
             baseDelayMs: timeoutProfile === "live" ? 100 : 250,
             maxDelayMs: 1_000,
             jitterRatio: 0.2,
@@ -292,6 +296,69 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         fetchedAt: fetchedAt ?? completedRequest.value.fetchedAt,
       },
     };
+  }
+
+  /** Strict, internal-only read. Never treats a capped/truncated list as complete. */
+  async getSeasonTopScorers(params: SeasonTopScorersParams): Promise<FootballDataResult<TouchlineSeasonTopScorers>> {
+    const seasonId = strictSportmonksId(params.seasonId);
+    const maxPages = params.maxPages ?? 10;
+    if (!seasonId || !Number.isSafeInteger(params.totalBudgetMs) || params.totalBudgetMs < 1 || params.totalBudgetMs > 30_000
+      || !Number.isSafeInteger(maxPages) || maxPages < 1 || maxPages > 20) {
+      return resultError(this.name, "invalid_request", "Invalid bounded season top-scorer request.");
+    }
+    const deadline = Date.now() + params.totalBudgetMs;
+    const items: unknown[] = [];
+    const seenPages = new Set<string>();
+    let oldest = Infinity, allCached = true;
+    const fail = (reason: string) => resultError(this.name, "provider_error", `Incomplete season top-scorer evidence: ${reason}.`);
+    for (let page = 1; page <= maxPages; page++) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return fail("budget-exhausted");
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        // A cache hit may join another caller's in-flight request. Bound our
+        // wait too; Promise.race keeps that request's later rejection observed.
+        const request = await Promise.race([
+          this.request<unknown[]>(`/topscorers/seasons/${seasonId}`, {
+            filters: "seasonTopscorerTypes:208", include: "player;team;type;stage;season;league", per_page: 50, page,
+          }, "live", "interactive", remaining),
+          new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining); }),
+        ]);
+        if (!request || Date.now() > deadline) return fail("budget-exhausted");
+        if (!request.configured) return this.notConfigured<TouchlineSeasonTopScorers>();
+        if (!request.value.ok) return this.providerFailure(request.value, "Unable to read season top scorers.");
+        const envelope = request.value.data, pagination = envelope?.pagination;
+        const rows = envelope?.data;
+        if (!Array.isArray(rows) || !pagination || pagination.current_page !== page
+          || typeof pagination.has_more !== "boolean" || pagination.per_page !== 50
+          || pagination.count !== rows.length || rows.length > 50
+          || (pagination.has_more && rows.length === 0)
+          || (!pagination.has_more && pagination.next_page != null)) return fail("invalid-pagination");
+        const fingerprint = JSON.stringify(rows.map(row => (
+          row && typeof row === "object" && !Array.isArray(row)
+            ? strictSportmonksId((row as Record<string, unknown>).id) ?? JSON.stringify(row)
+            : JSON.stringify(row)
+        )).sort());
+        if (seenPages.has(fingerprint)) return fail("repeated-page");
+        seenPages.add(fingerprint);
+        const fetchedAt = Date.parse(request.value.fetchedAt);
+        if (!Number.isFinite(fetchedAt)) return fail("invalid-fetch-time");
+        oldest = Math.min(oldest, fetchedAt);
+        allCached &&= request.cached;
+        items.push(...rows);
+        if (!pagination.has_more) {
+          const data: TouchlineSeasonTopScorers = {
+            requestedSeasonId: seasonId, coverage: "complete", pagesRead: page,
+            fetchedAt: new Date(oldest).toISOString(),
+            ...normalizeSportmonksSeasonTopScorers(items, seasonId),
+          };
+          return resultOk(this.name, data, undefined, allCached, data.fetchedAt);
+        }
+      } catch {
+        return fail("request-failed");
+      } finally { if (timer !== undefined) clearTimeout(timer); }
+    }
+    return fail("page-limit");
   }
 
   async searchPlayers(params: SearchPlayersParams): Promise<FootballDataResult<TouchlinePlayer[]>> {

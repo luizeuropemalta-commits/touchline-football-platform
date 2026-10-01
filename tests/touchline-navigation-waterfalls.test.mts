@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
+import { createRankingLoadDiagnostics } from "../lib/touchlineArena/ranking-load-diagnostics.ts";
 
 const require = createRequire(import.meta.url);
 function loadPage(path: string, modules: Record<string, unknown>, exportName = "default") {
@@ -15,6 +16,7 @@ function loadPage(path: string, modules: Record<string, unknown>, exportName = "
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
   } }).outputText, { exports, require(name: string) {
     if (name in modules) return modules[name];
+    if (name === "@/lib/touchlineArena/ranking-load-diagnostics") return { createRankingLoadDiagnostics: () => createRankingLoadDiagnostics({}) };
     if (name === "react" || name === "react/jsx-runtime") return require(name);
     if (name.endsWith(".css")) return { default: {} };
     return new Proxy({}, { get: () => () => null });

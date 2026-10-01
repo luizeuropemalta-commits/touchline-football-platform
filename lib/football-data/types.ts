@@ -2,6 +2,38 @@ export type FootballDataProviderName = "sportmonks";
 
 export type FootballDataCacheBucket = "static" | "daily" | "live" | "historical";
 
+export type SeasonTopScorersParams = {
+  seasonId: string;
+  /** Entire read, including pagination/cache waits. Capped at 30 seconds. */
+  totalBudgetMs: number;
+  maxPages?: number;
+};
+
+/** Provider facts only; neither canonical player IDs nor public card authority. */
+export type TouchlineSeasonTopScorer = Readonly<{
+  providerRecordId: string | null;
+  providerPlayerId: string | null;
+  providerTeamId: string | null;
+  leagueId: string | null;
+  seasonId: string | null;
+  stageId: string | null;
+  goals: number | null;
+}>;
+
+export type TouchlineSeasonTopScorers = Readonly<{
+  requestedSeasonId: string;
+  /** All endpoint pages were read; not a fixture reconciliation or proof of
+   * entitlement, official update time, or season-wide stage aggregation. */
+  coverage: "complete";
+  scopeStatus: "complete" | "unavailable" | "ambiguous";
+  reason: string | null;
+  rows: readonly TouchlineSeasonTopScorer[];
+  pagesRead: number;
+  /** Oldest actual HTTP fetch among ALL pages, including cached pages.
+   * This does not establish when the provider last updated the football fact. */
+  fetchedAt: string;
+}>;
+
 export type FootballDataErrorCode =
   | "not_configured"
   | "unsupported"
@@ -371,6 +403,7 @@ export interface FootballDataProvider {
   getLiveScores(params?: { competitionId?: string }): Promise<FootballDataResult<TouchlineFixture[]>>;
   getLatestLiveScores(): Promise<FootballDataResult<TouchlineFixture[]>>;
   getStandings(params: StandingsParams): Promise<FootballDataResult<TouchlineStandingRow[]>>;
+  getSeasonTopScorers(params: SeasonTopScorersParams): Promise<FootballDataResult<TouchlineSeasonTopScorers>>;
   getTransfers(params: TransfersParams): Promise<FootballDataResult<TouchlineTransfer[]>>;
   getSeasons(competitionId?: string): Promise<FootballDataResult<TouchlineSeason[]>>;
   getCompetitions(): Promise<FootballDataResult<TouchlineCompetition[]>>;

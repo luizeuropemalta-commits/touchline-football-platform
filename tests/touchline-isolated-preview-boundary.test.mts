@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { createRankingLoadDiagnostics } from "../lib/touchlineArena/ranking-load-diagnostics.ts";
 
 import {
   inspectTouchlineIsolatedPreviewEnvironment,
@@ -42,6 +43,31 @@ function qaEnvironment(overrides: Record<string, string | undefined> = {}) {
     ...overrides,
   };
 }
+
+test("exact server ranking timing key admits real QA contract only and collector remains gated", async () => {
+  const environment = qaEnvironment({
+    VERCEL_GIT_COMMIT_REF: "qa", TOUCHLINE_QA_RANKING_TIMINGS: "true",
+    NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    TOUCHLINE_QA_SUPABASE_PROJECT_REF: "xgxbwqxjssxxuihuwmgy",
+  });
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(environment).status, "qa");
+  let summaries = 0;
+  const diagnostics = createRankingLoadDiagnostics(environment, () => 1, () => { summaries++; });
+  await Promise.all((["activeRanking", "topXI", "catalog", "coach", "count", "fixtures", "auth"] as const)
+    .map(label => diagnostics.measure(label, () => Promise.resolve(null))));
+  diagnostics.seal(); assert.equal(summaries, 1);
+  for (const patch of [{ VERCEL_ENV: "production" }, { NEXT_PUBLIC_SUPABASE_URL: "https://production.supabase.co" }]) {
+    const invalid = { ...environment, ...patch };
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment(invalid).status, "invalid");
+    const disabled = createRankingLoadDiagnostics(invalid, () => assert.fail("clock must remain off"), () => assert.fail("log"));
+    await disabled.measure("auth", () => Promise.resolve(null)); disabled.seal();
+  }
+  for (const key of ["NEXT_PUBLIC_TOUCHLINE_QA_RANKING_TIMINGS", "TOUCHLINE_QA_RANKING_TIMINGS_OTHER"]) {
+    assert.equal(inspectTouchlineIsolatedPreviewEnvironment({ ...environment, [key]: "true" }).status, "invalid");
+  }
+  assert.equal(inspectTouchlineIsolatedPreviewEnvironment(isolatedEnvironment({ TOUCHLINE_QA_RANKING_TIMINGS: "true" })).status, "invalid");
+});
 
 test("only an exact Vercel-bound isolated contract enables the inert preview route", () => {
   assert.deepEqual(inspectTouchlineIsolatedPreviewEnvironment({ NODE_ENV: "test" }), {

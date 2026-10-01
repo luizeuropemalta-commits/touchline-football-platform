@@ -17,16 +17,17 @@ import { Suspense } from "react";
 import { ShieldCheck } from "lucide-react";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
 import styles from "./touchline-tables.module.css";
+import { createRankingLoadDiagnostics } from "@/lib/touchlineArena/ranking-load-diagnostics";
 
 export const metadata = { title: "TouchLine Tables" };
 
-function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveRanking>) {
+function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveRanking>, diagnostics: ReturnType<typeof createRankingLoadDiagnostics>) {
   return Promise.all([
     rankingPromise,
-    rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking)),
-    rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking)),
-    loadTouchLineCoachRanking(),
-    countTouchlinePublishedPlayerCards(),
+    diagnostics.measure("topXI", () => rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking))),
+    diagnostics.measure("catalog", () => rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking))),
+    diagnostics.measure("coach", () => loadTouchLineCoachRanking()),
+    diagnostics.measure("count", () => countTouchlinePublishedPlayerCards()),
   ]);
 }
 
@@ -78,17 +79,22 @@ async function SportingContent({ data, locale, user }: {
 export default async function TouchLineTablesPage({ searchParams }: { searchParams: Promise<{ lang?: string }> }) {
   const { lang } = await searchParams;
   const locale = normalizeTouchLineLocale(lang);
-  const ranking = loadTouchLineActiveRanking();
-  const fixtures = readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 });
+  const diagnostics = createRankingLoadDiagnostics();
+  const ranking = diagnostics.measure("activeRanking", () => loadTouchLineActiveRanking());
+  const fixtures = diagnostics.measure("fixtures", () => readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 }));
   // The schedule belongs only to RoundBadge. Observe failures before auth
   // completes while retaining the original rejection for that boundary.
   void fixtures.catch(() => undefined);
-  const data = readSportingData(ranking);
+  const data = readSportingData(ranking, diagnostics);
   // Observe early failures while auth is pending; the original promise still
   // rejects at the sporting boundary rather than inventing empty standings.
   void data.catch(() => undefined);
-  const supabase = await createClient();
-  const { data: { user } } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  const authentication = diagnostics.measure("auth", async () => {
+    const supabase = await createClient();
+    return supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  });
+  diagnostics.seal();
+  const { data: { user } } = await authentication;
   const pending = locale === "pt-BR" ? "Carregando classificações…" : "Loading rankings…";
   const navigationSurface = resolveTouchlineGlobalNavigationSurface({ isAuthenticated: Boolean(user), isAdmin: Boolean(user && isOwnerEmail(user.email)) });
   return <main className={styles.page}>

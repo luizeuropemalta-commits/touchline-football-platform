@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { createFootballDataProvider } from "@/lib/football-data/provider-factory";
+import { readGoldenBootDiagnostic } from "@/lib/football-data/golden-boot-diagnostic";
+import { inspectTouchlineIsolatedPreviewEnvironment } from "@/lib/touchlinePreview/isolation";
 import { sportmonksDetailedPositionName } from "@/lib/football-data/sportmonks-position-taxonomy";
 import type { TouchlineSquadMember } from "@/lib/football-data/types";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -16,10 +18,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function authorizeOwner() {
-  const supabase = await createClient();
-  if (!supabase) return false;
-  const { data: { user } } = await supabase.auth.getUser();
-  return hasTouchLineArenaAccess(user) && isOwnerEmail(user?.email);
+  try {
+    const supabase = await createClient();
+    if (!supabase) return false;
+    const { data: { user } } = await supabase.auth.getUser();
+    return hasTouchLineArenaAccess(user) && isOwnerEmail(user?.email);
+  } catch {
+    return false;
+  }
 }
 
 function text(value: unknown) {
@@ -257,10 +263,25 @@ async function twentyClubReadOnlyDiagnostic() {
  */
 export async function GET(request: NextRequest) {
   if (!await authorizeOwner()) {
-    return NextResponse.json({ ok: false, error: "Owner session required." }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "Owner session required." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 
   const scope = text(request.nextUrl.searchParams.get("scope"));
+  if (scope === "golden-boot") {
+    if (process.env.VERCEL_ENV === "production"
+      || inspectTouchlineIsolatedPreviewEnvironment().status !== "qa"
+      || process.env.TOUCHLINE_QA_SUPABASE_PROJECT_REF !== "xgxbwqxjssxxuihuwmgy") {
+      return NextResponse.json({ ok: false, error: "Dedicated QA runtime required.", stageAuthority: "unavailable", publicAwardEligible: false },
+        { status: 403, headers: { "Cache-Control": "no-store" } });
+    }
+    try {
+      const diagnostic = await readGoldenBootDiagnostic(createAdminClient(), () => createFootballDataProvider("sportmonks"));
+      return NextResponse.json(diagnostic, { status: diagnostic.ok ? 200 : 502, headers: { "Cache-Control": "no-store" } });
+    } catch {
+      return NextResponse.json({ ok: false, error: "Golden Boot diagnostic unavailable.", stageAuthority: "unavailable", publicAwardEligible: false },
+        { status: 502, headers: { "Cache-Control": "no-store" } });
+    }
+  }
   if (scope === "twenty") {
     try {
       return NextResponse.json({
@@ -293,7 +314,7 @@ export async function GET(request: NextRequest) {
 
   const teamId = text(request.nextUrl.searchParams.get("teamId"));
   if (!/^\d{1,20}$/.test(teamId)) {
-    return NextResponse.json({ ok: false, error: "A numeric teamId is required." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "A numeric teamId is required." }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
 
   const provider = createFootballDataProvider("sportmonks");
@@ -303,7 +324,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   if (!squad.ok) {
-    return NextResponse.json({ ok: false, teamId, error: squad.error.message }, { status: 502 });
+    return NextResponse.json({ ok: false, teamId, error: squad.error.message }, { status: 502, headers: { "Cache-Control": "no-store" } });
   }
 
   const players = squad.data;

@@ -75,6 +75,8 @@ export const TOUCHLINE_QA_PREVIEW_ALLOWED_APPLICATION_ENVIRONMENT_KEYS = [
   "SUPABASE_SERVICE_ROLE_KEY",
   "NEXT_PUBLIC_TOUCHLINE_AUTH_ORIGIN",
   "TOUCHLINE_QA_SUPABASE_PROJECT_REF",
+  // Exact server-only diagnostic switch; runtime additionally requires branch qa.
+  "TOUCHLINE_QA_RANKING_TIMINGS",
   "TOUCHLINE_CURRENT_SEASON",
   "TOUCHLINE_CARD_PUBLICATION_GATE",
   // Server-only social gate. Runtime policy remains fail-closed in its route.

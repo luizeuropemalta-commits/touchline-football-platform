@@ -66,7 +66,7 @@ export default function TouchlineLandscapeBoundary({
     >
       <div className={styles.message}>
         <Image className={styles.shield} src="/touchlineArena/brand/tl-shield-lime.svg" width={52} height={60} alt="" aria-hidden="true" unoptimized />
-        <p className={styles.brand}>TOUCHLINE ARENA</p>
+        <p className={styles.brand}>TOUCHLINE</p>
         <p className={styles.eyebrow}>{portuguese ? "O jogo merece a tela inteira" : "Give the game the whole screen"}</p>
         <div className={styles.device} aria-hidden="true">
           <Smartphone className={styles.phone} size={98} strokeWidth={1} />

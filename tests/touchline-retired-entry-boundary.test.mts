@@ -9,6 +9,15 @@ import { parseTouchlineArenaIntroIntent } from "../lib/touchlineArena/arena-intr
 import { ARENA_ONLINE_ZONES } from "../lib/touchlineArena/arena-online-hub.ts";
 
 const require = createRequire(import.meta.url);
+test("active player and orientation copy no longer advertises the retired Arena", () => {
+  const profile = readFileSync(new URL("../app/touchline-players/[player]/page.tsx", import.meta.url), "utf8");
+  const orientation = readFileSync(new URL("../components/touchline/TouchlineLandscapeBoundary.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(profile, /Back to Arena|Voltar à Arena|used by Arena|compartilhado pela Arena/);
+  assert.doesNotMatch(orientation, />TOUCHLINE ARENA</);
+  assert.match(orientation, /touchlineArena\/brand\/tl-shield-lime\.svg/);
+  assert.match(orientation, /installTouchlineOrientationGate/);
+});
+
 test("legacy zone destinations lead only to retained Market, Live and Rankings pages", () => {
   const destinations = Object.fromEntries(ARENA_ONLINE_ZONES.map(({ key, href }) => [key, href]));
   assert.deepEqual(destinations, {

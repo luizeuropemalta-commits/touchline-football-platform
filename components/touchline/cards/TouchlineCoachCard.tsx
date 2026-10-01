@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type PointerEve
 import type { TouchlineCoach } from "@/lib/football-data/types";
 import { useTouchlineCardLeadershipAuthority } from "./TouchlineCardLeadershipProvider";
 import { inheritedCoachCrown } from "@/lib/touchlineArena/card-leadership-authority";
+import { loadCoachCardLayout } from "@/lib/touchlineArena/coach-card-layout-loader";
 import { touchlineCoachCardArtForTier, type TouchlineArenaCoachSlot } from "@/lib/touchlineArena/coach-card";
 import { touchlineArenaTierForKey, touchlineCardTierPalette } from "@/lib/touchlineArena/card-rules";
 import { touchlineCountryFlagUrl } from "@/lib/touchlineArena/country-flags";
@@ -173,18 +174,20 @@ export default function TouchlineCoachCard({
 
   useEffect(() => {
     if (layoutOverride || typeof window === "undefined") return;
+    let disposed = false;
+    let generation = 0;
 
     function loadStoredLayout() {
+      const requestedGeneration = ++generation;
       try {
         const saved = window.localStorage.getItem(TOUCHLINE_COACH_CARD_LAYOUT_STORAGE_KEY);
         if (saved) {
           setStoredLayout(normalizeTouchlineCoachCardLayout(JSON.parse(saved)));
           return;
         }
-        fetch("/touchlineArena/card-layouts/coach-card-layout.json", { cache: "no-store" })
-          .then((response) => response.ok ? response.json() : null)
+        loadCoachCardLayout()
           .then((payload) => {
-            if (payload) setStoredLayout(normalizeTouchlineCoachCardLayout(payload));
+            if (!disposed && generation === requestedGeneration && payload) setStoredLayout(normalizeTouchlineCoachCardLayout(payload));
           })
           .catch(() => undefined);
       } catch {
@@ -193,6 +196,7 @@ export default function TouchlineCoachCard({
     }
 
     function handleLayoutChange(event: Event) {
+      generation++;
       const detail = (event as CustomEvent<{ layout?: unknown }>).detail;
       setStoredLayout(normalizeTouchlineCoachCardLayout(detail?.layout));
     }
@@ -201,6 +205,8 @@ export default function TouchlineCoachCard({
     window.addEventListener("storage", loadStoredLayout);
     window.addEventListener(TOUCHLINE_COACH_CARD_LAYOUT_EVENT, handleLayoutChange);
     return () => {
+      disposed = true;
+      generation++;
       window.removeEventListener("storage", loadStoredLayout);
       window.removeEventListener(TOUCHLINE_COACH_CARD_LAYOUT_EVENT, handleLayoutChange);
     };

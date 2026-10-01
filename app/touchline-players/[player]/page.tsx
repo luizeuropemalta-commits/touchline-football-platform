@@ -104,7 +104,6 @@ type PlayerProfilePageProps = {
 
 const copy = {
   en: {
-    back: "Back to Arena",
     eyebrow: "Player profile + card profile",
     realFootball: "Real football",
     touchlineCard: "TouchLine card",
@@ -129,7 +128,7 @@ const copy = {
       "TouchLine ratings, card rank and verified match history update here as league fixtures are played.",
     current: "Current status",
     currentCopy:
-      "The card is connected to the shared TouchLine master used by Arena, squad, market and club profile.",
+      "The card uses the same verified TouchLine presentation across the Market, squad and club profile.",
     sources: "Verified football sources",
     currentClub: "Current club",
     openClub: "Open club profile",
@@ -175,7 +174,6 @@ const copy = {
     redCards: "Red cards",
   },
   pt: {
-    back: "Voltar à Arena",
     eyebrow: "Perfil do jogador + perfil do card",
     realFootball: "Futebol real",
     touchlineCard: "Card TouchLine",
@@ -200,7 +198,7 @@ const copy = {
       "Notas TouchLine, rank do card e histórico verificado serão atualizados aqui conforme a liga acontecer.",
     current: "Estado atual",
     currentCopy:
-      "O card está conectado ao padrão mestre compartilhado pela Arena, elenco, mercado e perfil do clube.",
+      "O card usa a mesma apresentação verificada da TouchLine no Mercado, no elenco e no perfil do clube.",
     sources: "Fontes oficiais verificadas",
     currentClub: "Clube atual",
     openClub: "Abrir perfil do clube",
