@@ -1,5 +1,9 @@
 # TouchLine Current Execution Ledger — Canonical Entry Point
 
+2026-10-01 02:31 UTC — CPJmuowzln0 CLOSEDPASS771b6c/2568PASS82SKIP0FAIL2650total/build139/all9stages0. Root3211hashesunchanged970041,freezeENDED. Receipt-onlydocs precede explicit4pathcommit. Next immutableSHA/clean/envmetadata/duplicate/fiscalQA gate, notProductionpromotion. Macawake7207confirmedda27f1/disk14GiB8d5f2b. Allscopegoalsremainincomplete.
+
+2026-10-01 02:27 UTC — QA f94READY6e121c;2hostedsamples9881ed demonstrate settlements~1.3s but fullRankingheading3.266s notgoal. NextLOCAL snapshot/leadershipparallel aftersamepointer, preservedfallback/errors/authority; root16PASS69db24 and independentreviewclear aftersyncconstructionfix. Manifest card-ranking-server.ts, newtouchline-ranking-snapshot-concurrency.test.mts, CURRENT_STATE.md, CURRENT_EXECUTION_LEDGER.md. FREEZE for one new local fullgate baselinef94, unique premium-ranking-snapshot receipts. NoDB/env/Productionchanges; no fullmissioncompletion. External premium-closure-blocks owns ongoingreceipts.
+
 2026-10-01 02:12 UTC — CPJmuowcc34 CLOSEDPASS7450eb/2563PASS82SKIP0FAIL/build139/all9stages0. Root3210hashesunchangedbebc8c; freezeENDED, receipt-onlydocs then explicit4pathcommit. Next exactSHA/clean/envmetadata/duplicate/fiscalgate→singleQA Gitpush→realmeasurement. QA0bc/Production437 unchanged; no newgreen for latency yet.
 
 2026-10-01 02:10 UTC — QA0bcREADY9ccea6; two real samples settlements2689/2565 dominatecatalog4140/3474, global<2snotmet. ImplementedLOCAL500rowsettlementpages only, IN150/pool2/fullcompleteness unchanged. QA500rowRESTproof159bad; root50focused306609/strengthened9a5005fPASS/lintdiff, independentclear. Four-pathscope2source/test+2docs; freeze for one fullgate premium-settlement-pages receipts baseline0bc. NoDB/env/Productionmutation, no fullmissioncompletion.

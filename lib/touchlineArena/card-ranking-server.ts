@@ -27,12 +27,24 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
     .maybeSingle();
   if (activeError || !active?.snapshot_id) return TOUCHLINE_PRESEASON_RANKING_STATE;
 
-  const { data: record, error } = await admin
+  const snapshotRead = Promise.resolve(admin
     .from("touchline_card_ranking_snapshots")
     .select("snapshot_id, league_key, season_id, round_id, source, status, published_at, price_table_version, expected_player_count, actual_player_count, scoring_version, coverage_status, fixture_ids, expected_fixture_ids, total_score_points, ranking_payload")
     .eq("snapshot_id", active.snapshot_id)
     .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
-    .maybeSingle();
+    .maybeSingle());
+  // Both reads are pinned to the same pointer. Observe speculative failure even
+  // when an invalid snapshot returns before leadership is consumed.
+  const leadershipRead = Promise.resolve().then(() => admin
+    .from("touchline_player_ranking_leadership_decisions")
+    .select("ranking_id,status,leader_player_id,contender_player_ids")
+    .eq("snapshot_id", active.snapshot_id)
+    .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
+    .maybeSingle()).then(
+      value => ({ ok: true as const, value }),
+      (error: unknown) => ({ ok: false as const, error }),
+    );
+  const { data: record, error } = await snapshotRead;
   // V2/V3 conversion snapshots remain technical audit history only. A product
   // surface activates only the current fully auditable rating snapshot.
   if (error || !record || record.status !== "published" || record.source !== "sportmonks-audited" || record.scoring_version !== "player_scoring_v3" || (record.coverage_status !== "complete" && record.coverage_status !== "complete_for_scoring") || record.actual_player_count !== record.expected_player_count) {
@@ -40,12 +52,9 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
   }
 
   const payload = record.ranking_payload as TouchlinePublishedRankingSnapshot;
-  const { data: persistedLeadership, error: leadershipError } = await admin
-    .from("touchline_player_ranking_leadership_decisions")
-    .select("ranking_id,status,leader_player_id,contender_player_ids")
-    .eq("snapshot_id", record.snapshot_id)
-    .eq("league_key", TOUCHLINE_ENGLAND_LEAGUE_KEY)
-    .maybeSingle();
+  const leadershipOutcome = await leadershipRead;
+  if (!leadershipOutcome.ok) throw leadershipOutcome.error;
+  const { data: persistedLeadership, error: leadershipError } = leadershipOutcome.value;
   const playerIds = Array.isArray(payload?.players) ? payload.players.map((player) => player.playerId) : [];
   const leadershipDecision = leadershipError
     ? null
