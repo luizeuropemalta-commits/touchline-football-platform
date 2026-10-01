@@ -4,15 +4,18 @@ import { loadTouchLineCoachRanking } from "@/lib/touchlineArena/coach-ranking-se
 import { buildTouchlineCardLeadershipValue, EMPTY_CARD_LEADERSHIP_AUTHORITY } from "@/lib/touchlineArena/card-leadership-authority";
 import { TouchlineCardLeadershipProvider } from "./TouchlineCardLeadershipProvider";
 
+export type TouchlineCardLeadershipScope = "all" | "coach-only";
+
 /** Only public ranking data crosses this server boundary; never user contracts. */
-export default async function TouchlineCardLeadershipBoundary({ enabled, children }: {
+export default async function TouchlineCardLeadershipBoundary({ enabled, children, scope = "all" }: {
   enabled: boolean;
   children: ReactNode;
+  scope?: TouchlineCardLeadershipScope;
 }) {
   if (!enabled) return <TouchlineCardLeadershipProvider value={EMPTY_CARD_LEADERSHIP_AUTHORITY}>{children}</TouchlineCardLeadershipProvider>;
   const [playerRanking, coaches] = await Promise.all([
-    loadTouchLineActiveRanking().catch(() => null),
+    scope === "coach-only" ? Promise.resolve(null) : loadTouchLineActiveRanking().catch(() => null),
     loadTouchLineCoachRanking().catch(() => null),
   ]);
-  return <TouchlineCardLeadershipProvider livePlayerUpdates value={buildTouchlineCardLeadershipValue(playerRanking, coaches)}>{children}</TouchlineCardLeadershipProvider>;
+  return <TouchlineCardLeadershipProvider livePlayerUpdates={scope === "all"} value={buildTouchlineCardLeadershipValue(playerRanking, coaches)}>{children}</TouchlineCardLeadershipProvider>;
 }
