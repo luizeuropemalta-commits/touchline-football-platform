@@ -1,7 +1,7 @@
 const LABELS = ["activeRanking", "topXI", "catalog", "coach", "count", "fixtures", "auth"] as const;
-type Label = typeof LABELS[number];
+const CATALOGUE_LABELS = ["identityAndClubs", "memberships", "settlements", "seasonPoints", "publication"] as const;
 type Environment = Readonly<Record<string, string | undefined>>;
-type Timing = { label: Label; durationMs: number; status: "fulfilled" | "rejected" };
+type Timing<L extends string> = { label: L; durationMs: number; status: "fulfilled" | "rejected" };
 
 function enabled(env: Environment) {
   if (env.TOUCHLINE_QA_RANKING_TIMINGS !== "true" || env.VERCEL_ENV !== "preview"
@@ -17,24 +17,38 @@ function enabled(env: Environment) {
 export function createRankingLoadDiagnostics(
   environment: Environment = process.env,
   clock: () => number = () => performance.now(),
-  emit: (summary: { event: string; timings: Timing[] }) => void = (summary) => console.info(JSON.stringify(summary)),
+  emit: (summary: { event: string; timings: Timing<typeof LABELS[number]>[] }) => void = (summary) => console.info(JSON.stringify(summary)),
 ) {
+  return createDiagnostics(LABELS, "TL_QA_RANKING_TIMINGS", environment, clock, emit);
+}
+
+/** Branch-local elapsed time: excludes active-ranking wait; includes dependencies inside each branch. */
+export function createCatalogueLoadDiagnostics(
+  environment: Environment = process.env,
+  clock: () => number = () => performance.now(),
+  emit: (summary: { event: string; timings: Timing<typeof CATALOGUE_LABELS[number]>[] }) => void = (summary) => console.info(JSON.stringify(summary)),
+) {
+  return createDiagnostics(CATALOGUE_LABELS, "TL_QA_CATALOGUE_TIMINGS", environment, clock, emit);
+}
+
+function createDiagnostics<L extends string>(labels: readonly L[], event: string, environment: Environment,
+  clock: () => number, emit: (summary: { event: string; timings: Timing<L>[] }) => void) {
   const active = enabled(environment);
-  const pending = new Set<Label>();
-  const results = new Map<Label, Timing>();
+  const pending = new Set<L>();
+  const results = new Map<L, Timing<L>>();
   let sealed = false;
   let emitted = false;
   function publish() {
-    if (!sealed || emitted || pending.size || results.size !== LABELS.length) return;
+    if (!sealed || emitted || pending.size || results.size !== labels.length) return;
     emitted = true;
-    try { emit({ event: "TL_QA_RANKING_TIMINGS", timings: LABELS.map(label => results.get(label)!) }); } catch { /* Diagnostics never alter the request. */ }
+    try { emit({ event, timings: labels.map(label => results.get(label)!) }); } catch { /* Diagnostics never alter the request. */ }
   }
   return {
-    measure<T>(label: Label, start: () => Promise<T>): Promise<T> {
-      if (!active || !LABELS.includes(label) || pending.has(label) || results.has(label)) return start();
+    measure<T>(label: L, start: () => Promise<T>): Promise<T> {
+      if (!active || !labels.includes(label) || pending.has(label) || results.has(label)) return start();
       const began = clock();
       pending.add(label);
-      const settle = (status: Timing["status"]) => {
+      const settle = (status: Timing<L>["status"]) => {
         const elapsed = clock() - began;
         results.set(label, { label, durationMs: Number.isFinite(elapsed) ? Math.max(0, Math.round(elapsed)) : 0, status });
         pending.delete(label);

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
+import { createCatalogueLoadDiagnostics } from "../lib/touchlineArena/ranking-load-diagnostics.ts";
 import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-player-points.ts";
 import { projectTouchlineCardStatsByPosition } from "../lib/touchlineArena/position-aware-card-stats.ts";
 import { parseTouchlinePublicEditorialCardPresentation } from "../lib/touchlineArena/editorial-card-profile.ts";
@@ -84,6 +85,7 @@ function harness(options: { legacy?: boolean; statsFailure?: boolean; competitio
     loadTouchlinePublishedCardPresentations: publication, isTouchlineProvisionalColumnsUnavailable, console: { warn() {} },
   });
   const load = runInNewContext(`${code("ranked-card-catalog-server")}\nloadTouchLineRankedCardCatalog;`, {
+    createCatalogueLoadDiagnostics: () => createCatalogueLoadDiagnostics({}),
     ...complete,
     readPublicSeasonPlayerPoints: options.legacy
       ? (playerIds: string[], supplied: Row) => { const { providedPlayerRows: ignored, ...rest } = supplied; void ignored; return readPoints(playerIds, rest); }

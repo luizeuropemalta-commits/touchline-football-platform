@@ -1,4 +1,5 @@
 import "server-only";
+import { createCatalogueLoadDiagnostics } from "./ranking-load-diagnostics";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -90,16 +91,18 @@ export async function loadTouchLineRankedCardCatalog(
   providedAdmin?: SupabaseClient | null,
 ): Promise<ClubOwnerSquadCard[]> {
   if (state.phase !== "ranked" || state.scoringVersion !== "player_scoring_v3" || !state.seasonId || !state.players.length) return [];
+  const seasonId = state.seasonId;
   const admin = providedAdmin ?? createAdminClient();
   if (!admin) return [];
   const catalogueAdmin = createCompleteTouchlineCatalogueAdmin(admin);
+  const diagnostics = createCatalogueLoadDiagnostics();
   const playerIds = [...new Set(state.players.map((player) => String(player.playerId).trim().toLowerCase()).filter(Boolean))];
   const playersPromise = (async () => {
     const { data } = await catalogueAdmin.from("football_players").select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds);
     return rows(data);
   })();
-  const [{ players, clubData }, { data: squadData }, { data: fixtureData }, seasonPoints, published] = await Promise.all([
-    (async () => {
+  const branches = Promise.all([
+    diagnostics.measure("identityAndClubs", () => (async () => {
       const players = await playersPromise;
       const clubIds = [...new Set(players.map((player) => text(player.current_club_id)).filter((id): id is string => Boolean(id)))];
       // Club identity depends on players, not on slower publication or stats reads.
@@ -107,17 +110,19 @@ export async function loadTouchLineRankedCardCatalog(
         ? await catalogueAdmin.from("football_clubs").select("id,name").in("id", clubIds)
         : { data: [] };
       return { players, clubData };
-    })(),
-    catalogueAdmin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }),
-    catalogueAdmin.from("touchline_player_fixture_score_settlements").select("football_player_id,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds),
-    readPublicSeasonPlayerPoints(playerIds, {
+    })()),
+    diagnostics.measure("memberships", () => Promise.resolve(catalogueAdmin.from("football_squad_members").select("player_id,club_id,jersey_number,position,status,source_updated_at").in("player_id", playerIds).eq("status", "active").order("source_updated_at", { ascending: false }))),
+    diagnostics.measure("settlements", () => Promise.resolve(catalogueAdmin.from("touchline_player_fixture_score_settlements").select("football_player_id,rating,statistics_payload,football_fixtures!inner(starts_at)").eq("season_id", state.seasonId).eq("scoring_version", "player_scoring_v3").in("football_player_id", playerIds))),
+    diagnostics.measure("seasonPoints", () => readPublicSeasonPlayerPoints(playerIds, {
       providedAdmin: catalogueAdmin,
-      seasonId: state.seasonId,
+      seasonId,
       publishedRankingState: state,
       providedPlayerRows: playersPromise,
-    }),
-    loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin),
+    })),
+    diagnostics.measure("publication", () => loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin)),
   ]);
+  diagnostics.seal();
+  const [{ players, clubData }, { data: squadData }, { data: fixtureData }, seasonPoints, published] = await branches;
   requireCompleteRankedSeasonProjection(playerIds, seasonPoints);
   const playerById = new Map(players.flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));
   const clubById = new Map(rows(clubData).flatMap((row) => text(row.id) ? [[text(row.id)!, row] as const] : []));

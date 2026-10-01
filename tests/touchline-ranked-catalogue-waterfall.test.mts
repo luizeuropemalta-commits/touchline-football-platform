@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
+import { createCatalogueLoadDiagnostics } from "../lib/touchlineArena/ranking-load-diagnostics.ts";
 import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-player-points.ts";
 import { projectTouchlineCardStatsByPosition } from "../lib/touchlineArena/position-aware-card-stats.ts";
 
@@ -11,8 +12,9 @@ const code = (file: string) => stripTypeScriptTypes(readFileSync(new URL(`../${f
 const playerId = "00000000-0000-4000-8000-000000000001";
 const state = { phase: "ranked", scoringVersion: "player_scoring_v3", seasonId: "season", snapshotId: "snapshot", publishedAt: "2026-09-01", players: [{ playerId, totalRating: 0 }] };
 
-function scenario(clubFailure = false, showcase = false, unpublished = false, holdClubs = false) {
+function scenario(clubFailure = false, showcase = false, unpublished = false, holdClubs = false, diagnosticsEnabled = false) {
   const reads: string[] = [];
+  const summaries: unknown[] = [];
   let release!: () => void;
   const pending = new Promise<void>(resolve => { release = resolve; });
   let releaseClubs!: () => void;
@@ -36,6 +38,10 @@ function scenario(clubFailure = false, showcase = false, unpublished = false, ho
   } };
   const complete = runInNewContext(`${code("lib/touchlineArena/complete-catalogue-read-server.ts")}\ncreateCompleteTouchlineCatalogueAdmin;`, {});
   const load = runInNewContext(`${code("lib/touchlineArena/ranked-card-catalog-server.ts")}\n${showcase ? "loadTouchlinePublishedCardShowcaseCatalog" : "loadTouchLineRankedCardCatalog"};`, {
+    createCatalogueLoadDiagnostics: () => createCatalogueLoadDiagnostics(diagnosticsEnabled ? {
+      TOUCHLINE_QA_RANKING_TIMINGS: "true", VERCEL_ENV: "preview", VERCEL_GIT_COMMIT_REF: "qa",
+      NEXT_PUBLIC_SUPABASE_URL: "https://xgxbwqxjssxxuihuwmgy.supabase.co",
+    } : {}, () => 1, summary => summaries.push(summary)),
     createCompleteTouchlineCatalogueAdmin: complete,
     loadCompleteTouchlineCataloguePresentations: async () => { await pending; return new Map(unpublished ? [] : [[playerId, { tierKey: "elite", marketValueEur: 1_000_000 }]]); },
     readPublicSeasonPlayerPoints: async () => [{ canonicalPlayerId: playerId, totalRating: 0, touchlinePoints: null, statistics: {} }],
@@ -45,8 +51,21 @@ function scenario(clubFailure = false, showcase = false, unpublished = false, ho
     formatTouchlineMarketValueEur: () => "€1M", touchlineCountryCode3FromName: () => "N/A",
     normalizeTouchlineCountryCode3: () => "N/A", hasTouchlineCountryFlag: () => false,
   }) as (...args: unknown[]) => Promise<Array<{ clubName: string; id: string; seasonTotalRating: number }>>;
-  return { reads, release, releaseClubs, result: showcase ? load(admin) : load(state, admin) };
+  return { reads, summaries, release, releaseClubs, result: showcase ? load(admin) : load(state, admin) };
 }
+
+test("real catalogue diagnostic binding consumes each lazy query once enabled or disabled", async () => {
+  const disabled = scenario(false, false, false, false, false);
+  const enabled = scenario(false, false, false, false, true);
+  disabled.release(); enabled.release();
+  assert.deepEqual(JSON.parse(JSON.stringify(await enabled.result)), JSON.parse(JSON.stringify(await disabled.result)));
+  for (const run of [disabled, enabled]) {
+    assert.deepEqual(run.reads.slice().sort(), ["football_clubs", "football_players", "football_squad_members", "touchline_player_fixture_score_settlements"]);
+  }
+  assert.deepEqual(enabled.reads, disabled.reads, "query start order remains identical");
+  assert.equal(disabled.summaries.length, 0);
+  assert.equal(enabled.summaries.length, 1);
+});
 
 test("ranking reads clubs before slow publication finishes, retaining the complete card and confirmed zero", async () => {
   const run = scenario();

@@ -53,7 +53,8 @@ test("player-card rankings expose published card terms only", () => {
   assert.match(playerRankings, /formatTouchlineEditorialCardPrice/);
   assert.match(playerRankings, /loadTouchLineRankedCardCatalog\(activeRanking\)/);
   assert.match(rankedCatalog, /loadCompleteTouchlineCataloguePresentations\(playerIds, catalogueAdmin\)/);
-  assert.match(rankedCatalog, /readPublicSeasonPlayerPoints\(playerIds, \{[\s\S]*?seasonId: state\.seasonId,[\s\S]*?publishedRankingState: state/);
+  assert.match(rankedCatalog, /if \([^\n]*!state\.seasonId[^\n]*\) return \[\];\s*const seasonId = state\.seasonId;/);
+  assert.match(rankedCatalog, /readPublicSeasonPlayerPoints\(playerIds, \{[\s\S]*?\bseasonId,[\s\S]*?publishedRankingState: state/);
   assert.match(rankedCatalog, /requireCompleteRankedSeasonProjection\(playerIds, seasonPoints\)/);
   assert.match(rankedCatalog, /if \(!player \|\| !editorialCard\) return \[\]/);
   assert.match(playerRankings, /buildTouchlinePlayerCardZoomDetails/);

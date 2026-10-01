@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
+import { createCatalogueLoadDiagnostics } from "../lib/touchlineArena/ranking-load-diagnostics.ts";
 import { runInNewContext } from "node:vm";
 
 import { applyTouchlineSeasonPoints } from "../lib/touchlineArena/matchday-player-points.ts";
@@ -105,6 +106,7 @@ function loadRankedCatalogue({
     },
   };
   const execute = runInNewContext(`${source}\nloadTouchLineRankedCardCatalog;`, {
+    createCatalogueLoadDiagnostics: () => createCatalogueLoadDiagnostics({}),
     createAdminClient: () => admin,
     createCompleteTouchlineCatalogueAdmin,
     loadCompleteTouchlineCataloguePresentations: completeReader.loadCompleteTouchlineCataloguePresentations,
