@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import FantasyGameweekClient from "@/app/fantasy/FantasyGameweekClient";
 import TouchlineGlobalNavigation from "@/components/touchline/TouchlineGlobalNavigation";
+import TouchlineMarketNotifications from "@/components/touchline/notifications/TouchlineMarketNotifications";
 import { createClient } from "@/lib/supabase/server";
 import { isOwnerEmail } from "@/lib/admin/owner";
 import { resolveTouchlineClubOwnerPageIdentity } from "@/lib/touchlineArena/club-owner-page-identity";
@@ -63,6 +64,7 @@ export default async function MarketTransferPage({ searchParams }: {
     <div className={styles.content}>
       <TouchlineGlobalNavigation locale={locale} currentRoute="market" surface="authenticated" />
       <header className={styles.heading}><div><span>TOUCHLINE</span><h1>{pt ? "Mercado" : "Market"}</h1><p>{pt ? "Seu XI. Seu treinador. Seu jogo." : "Your XI. Your coach. Your game."}</p></div><Link href={`/intro?lang=${encodeURIComponent(locale)}&intro=first`}>{pt ? "Ver intro" : "Watch intro"}</Link></header>
+      <TouchlineMarketNotifications locale={locale} />
       <FantasyGameweekClient initialSnapshot={snapshot} locale={locale} embedded marketPage initialPlayerClubTeamId={initialPlayerClubTeamId} clubOwner={clubOwner ? { name: clubOwner.name, avatarUrl: clubOwner.avatarUrl } : undefined} />
     </div>
   </main>;

@@ -157,7 +157,7 @@ export async function PUT(request: NextRequest) {
     hasRegisteredDevice,
   });
 
-  if (!channels.in_app && !channels.push && !channels.email) {
+  if (frequency !== "paused" && !channels.in_app && !channels.push && !channels.email) {
     return NextResponse.json({ ok: false, error: "At least one notification channel must stay enabled." }, { status: 400 });
   }
 
