@@ -94,10 +94,13 @@ export async function loadTouchLineRankedCardCatalog(
   if (!admin) return [];
   const catalogueAdmin = createCompleteTouchlineCatalogueAdmin(admin);
   const playerIds = [...new Set(state.players.map((player) => String(player.playerId).trim().toLowerCase()).filter(Boolean))];
+  const playersPromise = (async () => {
+    const { data } = await catalogueAdmin.from("football_players").select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds);
+    return rows(data);
+  })();
   const [{ players, clubData }, { data: squadData }, { data: fixtureData }, seasonPoints, published] = await Promise.all([
     (async () => {
-      const { data: playerData } = await catalogueAdmin.from("football_players").select("id,provider_player_id,display_name,name,current_club_id,nationality,country_id,position,provider_position,detailed_position").in("id", playerIds);
-      const players = rows(playerData);
+      const players = await playersPromise;
       const clubIds = [...new Set(players.map((player) => text(player.current_club_id)).filter((id): id is string => Boolean(id)))];
       // Club identity depends on players, not on slower publication or stats reads.
       const { data: clubData } = clubIds.length
@@ -111,6 +114,7 @@ export async function loadTouchLineRankedCardCatalog(
       providedAdmin: catalogueAdmin,
       seasonId: state.seasonId,
       publishedRankingState: state,
+      providedPlayerRows: playersPromise,
     }),
     loadCompleteTouchlineCataloguePresentations(playerIds, catalogueAdmin),
   ]);

@@ -46,10 +46,10 @@ test("fixture persistence links one provider round to competition, season and fi
 test("Live and Tables render the same provider-backed round with a safe pending state", () => {
   assert.match(matchCentre, /selected\.roundName \? `\$\{dictionary\.matchweek\} · \$\{selected\.roundName\}` : dictionary\.roundPending/);
   assert.doesNotMatch(matchCentre, /dictionary\.matchweek\} · \{selected\.seasonId/);
-  assert.match(tablesPage, /selectArenaFixtureRound\(publicFixtures\)/);
+  assert.match(tablesPage, /selectArenaFixtureRound\(await fixtures\)/);
   assert.match(tablesPage, /fixture\.roundName\?\.trim\(\)/);
-  assert.match(tablesClient, /currentProviderRoundName/);
-  assert.match(tablesPage, /providerRoundNamesById/);
+  assert.match(tablesPage, /<RoundBadge fixtures=\{fixtures\} locale=\{locale\}/);
+  assert.doesNotMatch(tablesClient, /currentProviderRoundName|providerRoundNamesById/);
   // The page header still identifies the provider round. The owner-defined
   // season XI is cumulative and must not be labelled as that one round.
   assert.match(tablesClient, /<h2>\{copy\.seasonSelection\}<\/h2>/);

@@ -22,6 +22,8 @@ type PublicSeasonPlayerPointsOptions = Readonly<{
    */
   publishedRankingState?: TouchlineActiveRankingState;
   providedAdmin?: NonNullable<ReturnType<typeof createAdminClient>>;
+  /** Same-invocation identity read; never reused for editorial publication. */
+  providedPlayerRows?: Promise<readonly PlayerRow[]>;
 }>;
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -44,6 +46,12 @@ export async function readPublicSeasonPlayerPoints(
   canonicalPlayerIds: readonly string[],
   options: PublicSeasonPlayerPointsOptions = {},
 ): Promise<TouchlinePublicSeasonPlayerPoints[]> {
+  // Observe immediately, even when scope validation returns before positions
+  // are needed. Retain a rejection to propagate if this projection consumes it.
+  const providedPlayers = options.providedPlayerRows?.then(
+    (data) => ({ ok: true as const, data }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
   const ids = [...new Set(canonicalPlayerIds.map((id) => id.trim().toLowerCase()).filter(Boolean))];
   const admin = options.providedAdmin ?? createAdminClient();
   if (!ids.length || !admin) return [];
@@ -126,10 +134,15 @@ export async function readPublicSeasonPlayerPoints(
       // never the cumulative rating owned by the published snapshot.
       .eq("scoring_version", "player_scoring_v3")
       .in("football_player_id", ids),
-    admin
-      .from("football_players")
-      .select("id,position,provider_position,detailed_position")
-      .in("id", ids),
+    providedPlayers
+      ? providedPlayers.then((outcome) => {
+        if (!outcome.ok) throw outcome.error;
+        return { data: outcome.data, error: null };
+      })
+      : admin
+        .from("football_players")
+        .select("id,position,provider_position,detailed_position")
+        .in("id", ids),
   ]);
   // Stats are supplementary card fields. A transient read of them must not
   // suppress the already-published V3 rating from every card.

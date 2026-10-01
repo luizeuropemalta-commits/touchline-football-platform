@@ -20,11 +20,10 @@ import styles from "./touchline-tables.module.css";
 
 export const metadata = { title: "TouchLine Tables" };
 
-function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveRanking>, fixtures: ReturnType<typeof readPublicCompetitionFixtures>) {
+function readSportingData(rankingPromise: ReturnType<typeof loadTouchLineActiveRanking>) {
   return Promise.all([
     rankingPromise,
     rankingPromise.then((activeRanking) => loadTouchLinePublishedTopEleven(activeRanking)),
-    fixtures,
     rankingPromise.then((activeRanking) => loadTouchLineRankedCardCatalog(activeRanking)),
     loadTouchLineCoachRanking(),
     countTouchlinePublishedPlayerCards(),
@@ -44,22 +43,7 @@ async function SportingContent({ data, locale, user }: {
   locale: ReturnType<typeof normalizeTouchLineLocale>;
   user: { email?: string | null } | null;
 }) {
-  const [activeRanking, publishedTopEleven, publicFixtures, rankedCards, coachRanking, publishedCardCount] = await data;
-  const selectedProviderRound = selectArenaFixtureRound(publicFixtures);
-  const providerRoundNames = [...new Set(selectedProviderRound
-    .map((fixture) => fixture.roundName?.trim())
-    .filter((name): name is string => Boolean(name)))];
-  const currentProviderRoundName = providerRoundNames.length === 1 ? providerRoundNames[0] : null;
-  // Provider round IDs are database identities, never public-facing labels.
-  // Retain the verified display name for every available round so historical
-  // Best XI records can be rendered without leaking an internal ID.
-  const providerRoundNamesById = Object.fromEntries(
-    publicFixtures.flatMap((fixture) => (
-      fixture.roundId?.trim() && fixture.roundName?.trim()
-        ? [[fixture.roundId.trim(), fixture.roundName.trim()] as const]
-        : []
-    )),
-  );
+  const [activeRanking, publishedTopEleven, rankedCards, coachRanking, publishedCardCount] = await data;
   // No fabricated ClubOwner table may be presented as a published competition
   // ranking. It remains empty until its audited sporting snapshot is available.
   const touchLineEnglandTable: never[] = [];
@@ -75,8 +59,6 @@ async function SportingContent({ data, locale, user }: {
       canEditCardEngine={Boolean(user && isOwnerEmail(user.email))}
       coachRanking={coachRanking}
       copy={copy}
-      currentProviderRoundName={currentProviderRoundName}
-      providerRoundNamesById={providerRoundNamesById}
       locale={locale}
       rankMode={activeRanking.phase === "ranked" ? copy.pointsMode : copy.marketMode}
       publishedTopEleven={publishedTopEleven}
@@ -98,7 +80,10 @@ export default async function TouchLineTablesPage({ searchParams }: { searchPara
   const locale = normalizeTouchLineLocale(lang);
   const ranking = loadTouchLineActiveRanking();
   const fixtures = readPublicCompetitionFixtures({ includeHistorical: true, limit: 240 });
-  const data = readSportingData(ranking, fixtures);
+  // The schedule belongs only to RoundBadge. Observe failures before auth
+  // completes while retaining the original rejection for that boundary.
+  void fixtures.catch(() => undefined);
+  const data = readSportingData(ranking);
   // Observe early failures while auth is pending; the original promise still
   // rejects at the sporting boundary rather than inventing empty standings.
   void data.catch(() => undefined);

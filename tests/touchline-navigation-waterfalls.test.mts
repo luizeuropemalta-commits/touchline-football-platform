@@ -135,6 +135,115 @@ test("Rankings starts independent reads while authentication is pending and shar
   assert.equal(shell.props.children[0].props.children[0], navigation, "Navigation is owned by the shell, not sporting completion");
 });
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+const turn = () => new Promise(resolve => setImmediate(resolve));
+
+function rankingsWithDeferredSchedule() {
+  const fixtures = deferred<Array<{ roundName?: string }>>();
+  const catalogue = deferred<unknown[]>();
+  const auth = deferred<{ data: { user: null } }>();
+  const reads: string[] = [];
+  const ranking = { snapshotId: "published-snapshot", phase: "ranked" };
+  const selection = { snapshotId: ranking.snapshotId };
+  const coaches = { snapshotId: "published-coaches" };
+  const page = loadPage("../app/touchline-tables/page.tsx", {
+    "@/lib/touchlineArena/i18n": { normalizeTouchLineLocale: (lang: string) => lang },
+    "@/lib/supabase/server": { createClient: async () => ({ auth: { getUser: () => auth.promise } }) },
+    "@/lib/touchlineArena/card-ranking-server": {
+      loadTouchLineActiveRanking: async () => { reads.push("ranking"); return ranking; },
+      loadTouchLinePublishedTopEleven: async (state: unknown) => { assert.equal(state, ranking); reads.push("xi"); return selection; },
+    },
+    "@/lib/touchlineArena/ranked-card-catalog-server": { loadTouchLineRankedCardCatalog: (state: unknown) => { assert.equal(state, ranking); reads.push("catalogue"); return catalogue.promise; } },
+    "@/lib/football-data/fixture-schedule-store": { readPublicCompetitionFixtures: (options: unknown) => {
+      assert.equal(JSON.stringify(options), JSON.stringify({ includeHistorical: true, limit: 240 }));
+      reads.push("fixtures"); return fixtures.promise;
+    } },
+    "@/lib/touchlineArena/coach-ranking-server": { loadTouchLineCoachRanking: async () => { reads.push("coaches"); return coaches; } },
+    "@/lib/touchlineArena/card-publication-read-model": { countTouchlinePublishedPlayerCards: async () => { reads.push("count"); return 17; } },
+    "@/lib/touchlineArena/arena-fixture-round": { selectArenaFixtureRound: (rows: unknown) => rows },
+    "@/lib/touchlineArena/rankings-i18n": { getTouchLineRankingsCopy: () => ({ pointsMode: "Published rating" }) },
+    "@/lib/touchlineArena/global-navigation": { resolveTouchlineGlobalNavigationSurface: () => "public" },
+  });
+  return { fixtures, catalogue, auth, reads, selection, coaches, page };
+}
+
+test("Ranking content resolves while only its round badge awaits the unchanged schedule", async () => {
+  const h = rankingsWithDeferredSchedule();
+  const result = h.page({ searchParams: Promise.resolve({ lang: "en-GB" }) });
+  h.auth.resolve({ data: { user: null } });
+  const shell = await result;
+  const badge = shell.props.children[0].props.children[1].props.children;
+  const sporting = shell.props.children[1].props.children;
+  let badgeReady = false;
+  let sportingReady = false;
+  const badgeResult = badge.type(badge.props).then((value: unknown) => { badgeReady = true; return value; });
+  const sportingResult = sporting.type(sporting.props).then((value: unknown) => { sportingReady = true; return value; });
+  await turn();
+  assert.equal(sportingReady, false, "Catalogue still gates the sporting content");
+  const cards = [{ id: "canonical-published-player" }];
+  h.catalogue.resolve(cards);
+  await turn();
+  try {
+    assert.equal(sportingReady, true, "An unused schedule must not gate published sporting content");
+    assert.equal(badgeReady, false, "The badge alone still awaits verified round data");
+  } finally {
+    h.fixtures.resolve([{ roundName: "6" }]);
+  }
+  const loaded = await sportingResult;
+  const client = loaded.props.children[1].props;
+  assert.equal(client.rosterCards, cards);
+  assert.equal(client.publishedTopEleven, h.selection);
+  assert.equal(client.coachRanking, h.coaches);
+  assert.equal(client.totalPublishedCards, 17);
+  assert.equal(client.totalRankedCards, 1);
+  assert.equal(client.canEditCardEngine, false);
+  assert.equal((await badgeResult).props.children[1], "Matchweek 6");
+  assert.deepEqual(h.reads.slice().sort(), ["catalogue", "coaches", "count", "fixtures", "ranking", "xi"]);
+});
+
+for (const timing of ["before auth", "after content"] as const) {
+  test(`Ranking observes schedule rejection ${timing} without poisoning published content`, async () => {
+    const h = rankingsWithDeferredSchedule();
+    const error = new Error(`schedule failed ${timing}`);
+    const result = h.page({ searchParams: Promise.resolve({ lang: "pt-BR" }) });
+    await turn();
+    if (timing === "before auth") { h.fixtures.reject(error); await turn(); }
+    h.auth.resolve({ data: { user: null } });
+    h.catalogue.resolve([]);
+    const shell = await result;
+    const sporting = shell.props.children[1].props.children;
+    let ready = false;
+    const content = sporting.type(sporting.props).then(() => { ready = true; }, (reason: unknown) => reason);
+    await turn();
+    if (timing === "after content") { h.fixtures.reject(error); await turn(); }
+    await content;
+    const badge = shell.props.children[0].props.children[1].props.children;
+    await assert.rejects(badge.type(badge.props), (reason: unknown) => reason === error);
+    assert.equal(ready, true, "Schedule rejection belongs to the round badge, not the sporting boundary");
+  });
+}
+
+test("Ranking still propagates catalogue rejection while schedule is pending", async () => {
+  const h = rankingsWithDeferredSchedule();
+  const result = h.page({ searchParams: Promise.resolve({ lang: "en-GB" }) });
+  h.auth.resolve({ data: { user: null } });
+  const shell = await result;
+  const sporting = shell.props.children[1].props.children;
+  const error = new Error("catalogue unavailable");
+  const rejected = assert.rejects(sporting.type(sporting.props), (reason: unknown) => reason === error);
+  h.catalogue.reject(error);
+  await rejected;
+  h.fixtures.resolve([]);
+  const badge = shell.props.children[0].props.children[1].props.children;
+  assert.equal((await badge.type(badge.props)).props.children[1], "Matchweek awaiting provider");
+});
+
 test("Live starts authentication alongside schedule but refuses private detail anonymously", async () => {
   let authenticationStarted = false;
   let release!: (value: unknown) => void;

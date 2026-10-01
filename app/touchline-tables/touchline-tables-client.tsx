@@ -53,8 +53,6 @@ type TouchLineTablesClientProps = {
   canEditCardEngine: boolean;
   coachRanking: TouchLineCoachRankingState;
   copy: RankingsCopy;
-  currentProviderRoundName: string | null;
-  providerRoundNamesById: Record<string, string>;
   locale: TouchLineLocale;
   navigationSurface: TouchlineGlobalNavigationSurface;
   rankMode: string;
