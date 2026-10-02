@@ -382,7 +382,7 @@ export class SportmonksFootballProvider implements FootballDataProvider {
         // wait too; Promise.race keeps that request's later rejection observed.
         const request = await Promise.race([
           this.request<unknown[]>(`/topscorers/seasons/${seasonId}`, {
-            filters: "seasonTopscorerTypes:208", include: "player;team;type;stage;season;league", per_page: 50, page,
+            filters: "seasontopscorerTypes:208", include: "season;player;participant;type", per_page: 50, page,
           }, "live", "interactive", remaining, 3, undefined, quota),
           new Promise<null>(resolve => { timer = setTimeout(() => resolve(null), remaining); }),
         ]);

@@ -88,7 +88,7 @@ test("later-page failure preserves earlier quota and cooldown without partial fa
 
 test("legacy cache without attempt metadata is unknown, never invented zero cost", async () => {
   await synthetic(async () => { throw Error("No network permitted"); }, async provider => {
-    const params = { filters: "seasonTopscorerTypes:208", include: "player;team;type;stage;season;league", per_page: 50, page: 1 };
+    const params = { filters: "seasontopscorerTypes:208", include: "season;player;participant;type", per_page: 50, page: 1 };
     const fetchedAt = new Date().toISOString();
     await withFootballDataCache("live", ["sportmonks", "/topscorers/seasons/28083", JSON.stringify(params)], async () => ({
       ok: true, status: 200, data: page([row()]), headers: new Headers(), fetchedAt,
@@ -105,7 +105,7 @@ test("a later in-flight timeout preserves earlier cooldown and remains unknown a
     ...page([row()], 1, true),
     rate_limit: { remaining: 0, resets_in_seconds: 120, requested_entity: "Topscorers" },
   }), async provider => {
-    const params = { filters: "seasonTopscorerTypes:208", include: "player;team;type;stage;season;league", per_page: 50, page: 2 };
+    const params = { filters: "seasontopscorerTypes:208", include: "season;player;participant;type", per_page: 50, page: 2 };
     let release!: () => void;
     const barrier = new Promise<void>(resolve => { release = resolve; });
     const joined = withFootballDataCache("live", ["sportmonks", "/topscorers/seasons/28083", JSON.stringify(params)], async () => {
@@ -157,7 +157,8 @@ test("strict season goals read follows pages with type 208, retaining shared lea
   await synthetic(async input => {
     const url = new URL(String(input)); urls.push(url);
     assert.equal(url.pathname, "/v3/football/topscorers/seasons/28083");
-    assert.equal(url.searchParams.get("filters"), "seasonTopscorerTypes:208");
+    assert.equal(url.searchParams.get("filters"), "seasontopscorerTypes:208");
+    assert.equal(url.searchParams.get("include"), "season;player;participant;type");
     assert.equal(url.searchParams.get("per_page"), "50");
     return response(page([row(Number(url.searchParams.get("page")) + 10)], urls.length, urls.length === 1));
   }, async provider => {
@@ -224,6 +225,9 @@ test("strict normalizer does not invent omitted stage/league and rejects conflic
     { rows: [row(10, 3, { type_id: 209 })], status: "unavailable" },
     { rows: [row(10, 3, { total: -1 })], status: "unavailable" },
     { rows: [row(10, 3, { player: { id: 11 } })], status: "ambiguous" },
+    { rows: [row(10, 3, { participant_id: undefined, participant: { id: 9 } })], status: "complete" },
+    { rows: [row(10, 3, { participant: { id: 99 } })], status: "ambiguous" },
+    { rows: [row(10, 3, { stage_id: undefined, participant: { id: 9 } })], status: "unavailable" },
     { rows: [row(10, 3, { stage_id: undefined, league_id: undefined, stage: { id: 1, season_id: 28083 }, season: { id: 28083, league_id: 8 } })], status: "complete" },
   ];
   for (const value of cases) await synthetic(async () => response(page(value.rows)), async provider => {
@@ -237,7 +241,7 @@ test("oldest cached page owns freshness even when another page was fetched now",
   let calls = 0;
   await synthetic(async () => { calls++; return response(page([row(10)], 1, true)); }, async provider => {
     const old = new Date(Date.now() - 5_000).toISOString();
-    const params = { filters: "seasonTopscorerTypes:208", include: "player;team;type;stage;season;league", per_page: 50, page: 2 };
+    const params = { filters: "seasontopscorerTypes:208", include: "season;player;participant;type", per_page: 50, page: 2 };
     await withFootballDataCache("live", ["sportmonks", "/topscorers/seasons/28083", JSON.stringify(params)], async () => ({
       ok: true, status: 200, data: page([row(11)], 2), headers: new Headers(), fetchedAt: old,
     }));

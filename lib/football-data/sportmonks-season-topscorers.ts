@@ -33,7 +33,7 @@ export function normalizeSportmonksSeasonTopScorers(
     return {
       providerRecordId: identity(row.id),
       providerPlayerId: identity(row.player_id, record(row.player).id),
-      providerTeamId: identity(row.participant_id, row.team_id, record(row.team).id),
+      providerTeamId: identity(row.participant_id, record(row.participant).id, row.team_id, record(row.team).id),
       leagueId: identity(row.league_id, record(row.league).id, season.league_id, stage.league_id),
       seasonId,
       stageId: identity(row.stage_id, stage.id),
