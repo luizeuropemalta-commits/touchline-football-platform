@@ -27,6 +27,25 @@ function authorized(request: NextRequest) {
   return received.length === expected.length && timingSafeEqual(received, expected);
 }
 
+function logFailure(result: { status: unknown; reason: unknown; diagnostic?: unknown }) {
+  const raw = result.diagnostic;
+  const d = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+  // Re-project even trusted producer metadata: never serialize its raw object,
+  // quota trace, exception, identifier or provider response.
+  const phase = d.phase === "provider_setup" || d.phase === "stages" || d.phase === "topscorers" ? d.phase : null;
+  const category = typeof d.category === "string" && ["not_configured", "unsupported", "invalid_request", "not_found",
+    "rate_limited", "provider_error", "deadline", "exception"].includes(d.category) ? d.category : null;
+  const reason = typeof result.reason === "string" && ["PROVIDER_UNAVAILABLE", "EVIDENCE_INVALID", "CANONICAL_UNAVAILABLE",
+    "PERSISTENCE_UNCONFIRMED"].includes(result.reason) ? result.reason : null;
+  try {
+    console.warn(JSON.stringify({ event: "golden_boot_refresh_failure",
+      status: result.status === "unavailable" ? "unavailable" : "unconfirmed", reason, phase, category,
+      httpStatus: typeof d.httpStatus === "number" && Number.isInteger(d.httpStatus) && d.httpStatus >= 100 && d.httpStatus <= 599 ? d.httpStatus : null,
+      elapsedMs: typeof d.elapsedMs === "number" && Number.isSafeInteger(d.elapsedMs) && d.elapsedMs >= 0 && d.elapsedMs <= 45_000 ? d.elapsedMs : null,
+    }));
+  } catch { /* Logging must not change the committed outcome or invocation ack. */ }
+}
+
 /** Trusted scheduler only. No browser session, body, query string, league or
  * token supplied by a caller can override canonical producer admission. */
 export async function POST(request: NextRequest) {
@@ -36,6 +55,7 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient();
     if (!admin) return response("not_configured", 503);
     const result = await produceGoldenBootSnapshot({ admin, createProvider: createFootballDataProvider });
+    if (result.status !== "stored" && result.status !== "skipped") logFailure(result);
     // Operational provider traces and SQL errors remain private. The public
     // GET is the only award read authority; this is merely an invocation ack.
     switch (result.status) {

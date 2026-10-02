@@ -179,6 +179,58 @@ function successfulFinishes(f: Fixture) {
 }
 function assertPrivate(value: unknown) { assert.doesNotMatch(JSON.stringify(value), /PRIVATE|sentinel|token\/url/); }
 
+test("provider failures identify stages or scorers using only bounded allowlisted metadata", async () => {
+  for (const phase of ["stages", "topscorers"] as const) {
+    for (const [code, status] of [["not_configured", undefined], ["provider_error", 401],
+      ["provider_error", 403], ["rate_limited", 429], ["PRIVATE unknown", 999]] as const) {
+      const f = fixture();
+      const failure = { ok: false, provider: "sportmonks", error: {
+        code, status, provider: "sportmonks", message: "PRIVATE token/url sentinel", details: { token: "PRIVATE" },
+      } };
+      if (phase === "stages") f.onStages = async () => failure as FootballDataResult<TouchlineSeasonStages>;
+      else f.onScorers = async () => failure as FootballDataResult<TouchlineSeasonTopScorers>;
+      const result = await harness(f).run();
+      const diagnostic = (result as unknown as Row).diagnostic as Row;
+      assert.ok(diagnostic, "failure must preserve its safe diagnostic before cleanup");
+      assert.deepEqual(Object.keys(diagnostic).sort(), ["category", "elapsedMs", "httpStatus", "phase"]);
+      assert.equal(diagnostic.phase, phase);
+      assert.equal(diagnostic.category, code.startsWith("PRIVATE") ? "provider_error" : code);
+      assert.equal(diagnostic.httpStatus, status === 999 || status === undefined ? null : status);
+      assert.ok(Number.isSafeInteger(diagnostic.elapsedMs) && Number(diagnostic.elapsedMs) >= 0 && Number(diagnostic.elapsedMs) <= 45_000);
+      assertPrivate(diagnostic); assert.equal(result.reason, "PROVIDER_UNAVAILABLE");
+      assert.equal(f.calls.filter(name => name === "provider:stages").length, 1);
+      assert.equal(f.calls.filter(name => name === "provider:scorers").length, phase === "stages" ? 0 : 1);
+      assert.equal(f.requests.filter(r => r.name === "complete_touchline_golden_boot_worker").length, 1);
+    }
+  }
+});
+
+test("factory exceptions expose no exception message and no provider request", async () => {
+  const f = fixture(); const h = harness(f);
+  h.input.createProvider = () => { throw Error("PRIVATE token/url sentinel"); };
+  const result = await h.run();
+  const diagnostic = (result as unknown as Row).diagnostic as Row;
+  assert.ok(diagnostic); assert.equal(diagnostic.phase, "provider_setup");
+  assert.equal(diagnostic.category, "exception"); assert.equal(diagnostic.httpStatus, null);
+  assertPrivate(diagnostic); assert.equal(f.calls.some(name => name.startsWith("provider:")), false);
+});
+
+test("own timeout diagnostic remains detached from a late provider rejection", async () => {
+  const f = fixture(); let reject!: (error: Error) => void;
+  f.onStages = () => new Promise((_, rejection) => { reject = rejection; });
+  const pending = harness(f).run();
+  for (let n = 0; n < 100 && !f.calls.includes("provider:stages"); n++) await Promise.resolve();
+  assert.ok(f.calls.includes("provider:stages"));
+  f.monotonic = 3_000; f.clock += 3_000;
+  [...f.timers.values()][0]!.callback();
+  const result = await pending;
+  const diagnostic = (result as unknown as Row).diagnostic as Row;
+  assert.deepEqual(diagnostic, { phase: "stages", category: "deadline", httpStatus: null, elapsedMs: 3_000 });
+  reject(Error("PRIVATE token/url sentinel")); await Promise.resolve(); await Promise.resolve();
+  assert.deepEqual((result as unknown as Row).diagnostic, diagnostic);
+  assert.equal(f.calls.includes("provider:scorers"), false); assert.equal(f.timers.size, 0);
+});
+
 test("durable admission denial makes no provider or authority writes", async () => {
   for (const reason of ["duplicate", "not_due"]) {
     const f = fixture(); f.claimOverride = { acquired: false, reason };

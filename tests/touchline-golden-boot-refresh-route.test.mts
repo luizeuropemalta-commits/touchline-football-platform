@@ -7,6 +7,7 @@ import ts from "typescript";
 
 const secret = "x".repeat(48);
 function harness(env: Record<string, string> = {}) {
+  const logs: unknown[][] = [];
   const state = { clients: 0, runs: 0, providers: 0, fail: false, configured: true,
     result: { status: "stored", reason: null, leaderCount: 1, publicAwardEligible: false,
       providerQuota: { private: "PRIVATE provider sentinel" } } as Record<string, unknown> };
@@ -28,10 +29,10 @@ function harness(env: Record<string, string> = {}) {
   const source = readFileSync(new URL("../app/api/touchline-awards/golden-boot/refresh/route.ts", import.meta.url), "utf8");
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const exports: Record<string, unknown> = {};
-  vm.runInThisContext(`(function(exports,require,process){${js}\n})`)(exports, (key: string) => {
+  vm.runInThisContext(`(function(exports,require,process,console){${js}\n})`)(exports, (key: string) => {
     assert.ok(Object.hasOwn(imports, key), key); return imports[key];
-  }, { env });
-  return { state, exports,
+  }, { env }, { warn: (...args: unknown[]) => logs.push(args) });
+  return { state, exports, logs,
     post: (authorization = `Bearer ${secret}`) => (exports.POST as (request: Request) => Promise<Response>)(
       new Request("https://example.test/api/touchline-awards/golden-boot/refresh", { method: "POST", headers: { authorization } })),
     get: exports.GET as () => Response,
@@ -48,6 +49,45 @@ test("refresh defaults off without creating a database client or provider", asyn
     const h = harness({ ...enabled, TOUCHLINE_GOLDEN_BOOT_REFRESH_ENABLED: flag as string });
     const response = await h.post(); assert.equal(response.status, 503); privateResponse(response);
     assert.equal(h.state.clients, 0); assert.equal(h.state.runs, 0);
+  }
+});
+
+test("failed refresh logs one allowlisted diagnostic without changing the public response", async () => {
+  const h = harness(enabled);
+  h.state.result = { ...h.state.result, status: "unavailable", reason: "PROVIDER_UNAVAILABLE",
+    diagnostic: { phase: "stages", category: "provider_error", httpStatus: 403, elapsedMs: 21,
+      message: "PRIVATE api_token=sentinel", details: { token: secret }, playerId: "PRIVATE UUID" } };
+  const response = await h.post();
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), { ok: false, status: "unavailable" });
+  assert.equal(h.logs.length, 1);
+  const serialized = JSON.stringify(h.logs);
+  assert.doesNotMatch(serialized, /PRIVATE|sentinel|api_token|playerId|details/);
+  assert.equal(serialized.includes(secret), false);
+  assert.match(serialized, /stages/); assert.match(serialized, /provider_error/);
+  assert.match(serialized, /403/); assert.match(serialized, /21/);
+  assert.equal(h.state.runs, 1);
+});
+
+test("successful or denied refresh emits no provider diagnostic", async () => {
+  for (const status of ["stored", "skipped"]) {
+    const h = harness(enabled); h.state.result.status = status;
+    await h.post(); assert.deepEqual(h.logs, []);
+  }
+  const h = harness(enabled); await h.post("Bearer invalid"); assert.deepEqual(h.logs, []);
+});
+
+test("route rejects malformed diagnostic enums, status and elapsed rather than logging raw values", async () => {
+  for (const elapsedMs of [-1, 45_001, Infinity, "PRIVATE elapsed sentinel"]) {
+    const h = harness(enabled);
+    h.state.result = { ...h.state.result, status: "unavailable", reason: "PRIVATE reason sentinel",
+      diagnostic: { phase: "PRIVATE phase sentinel", category: "PRIVATE category sentinel", httpStatus: 999, elapsedMs } };
+    assert.equal((await h.post()).status, 502);
+    assert.equal(h.logs.length, 1);
+    assert.deepEqual(JSON.parse(String(h.logs[0]![0])), {
+      event: "golden_boot_refresh_failure", status: "unavailable", reason: null,
+      phase: null, category: null, httpStatus: null, elapsedMs: null,
+    });
   }
 });
 test("only exact dedicated bearer authority can invoke refresh", async () => {

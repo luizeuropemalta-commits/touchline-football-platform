@@ -9,6 +9,13 @@ import { readGoldenBootCanonicalLeaders } from "./golden-boot-canonical-reader.t
 
 type Admin = NonNullable<Parameters<typeof readGoldenBootCanonicalLeaders>[0]["admin"]>;
 type Failure = "PROVIDER_UNAVAILABLE" | "EVIDENCE_INVALID" | "CANONICAL_UNAVAILABLE";
+type ProviderDiagnostic = Readonly<{
+  phase: "provider_setup" | "stages" | "topscorers";
+  category: "not_configured" | "unsupported" | "invalid_request" | "not_found" | "rate_limited" | "provider_error" | "deadline" | "exception";
+  httpStatus: number | null;
+  elapsedMs: number;
+}>;
+class ProviderDeadline extends Error {}
 export type GoldenBootProducerOutcome = Readonly<{
   status: "stored" | "unavailable" | "unconfirmed" | "skipped";
   reason: Failure | "PERSISTENCE_UNCONFIRMED" | "WORK_NOT_DUE" | null;
@@ -17,6 +24,8 @@ export type GoldenBootProducerOutcome = Readonly<{
   publicAwardEligible: false;
   /** Private evidence. Null/unknown never implies spare quota. */
   providerQuota: Readonly<Record<SportmonksQuotaOperation, SportmonksQuotaTrace | null>>;
+  /** Sanitized operational metadata only; never part of the public response. */
+  diagnostic?: ProviderDiagnostic | null;
 }>;
 const MAX_AGE_MS = 60_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -51,6 +60,24 @@ export async function produceGoldenBootSnapshot(input: {
   let workerGeneration: string | null = null;
   let leaseDeadline = 0;
   let failure: Failure = "CANONICAL_UNAVAILABLE";
+  const diagnosticStart = performance.now();
+  let providerPhase: ProviderDiagnostic["phase"] = "provider_setup";
+  let diagnostic: ProviderDiagnostic | null = null;
+  function diagnose(category: ProviderDiagnostic["category"], httpStatus: unknown = null) {
+    const elapsed = performance.now() - diagnosticStart;
+    diagnostic = {
+      phase: providerPhase, category,
+      httpStatus: typeof httpStatus === "number" && Number.isInteger(httpStatus) && httpStatus >= 100 && httpStatus <= 599 ? httpStatus : null,
+      elapsedMs: Number.isFinite(elapsed) ? Math.min(45_000, Math.max(0, Math.floor(elapsed))) : 0,
+    };
+  }
+  function diagnoseResult(error: unknown) {
+    const value = record(error);
+    const code = value?.code;
+    const category = code === "not_configured" || code === "unsupported" || code === "invalid_request"
+      || code === "not_found" || code === "rate_limited" ? code : "provider_error";
+    diagnose(category, value?.status);
+  }
   let quotaClosed = false;
   const providerQuota: Record<SportmonksQuotaOperation, SportmonksQuotaTrace | null> = { stages: null, topscorers: null };
   const observeQuota = (operation: SportmonksQuotaOperation) => (trace: SportmonksQuotaTrace) => {
@@ -76,7 +103,8 @@ export async function produceGoldenBootSnapshot(input: {
           status = "unconfirmed"; reason = "PERSISTENCE_UNCONFIRMED"; leaderCount = 0;
         }
       }
-      return { status, reason, leaderCount, publicAwardEligible: false, providerQuota: structuredClone(providerQuota) };
+      return { status, reason, leaderCount, publicAwardEligible: false, providerQuota: structuredClone(providerQuota),
+        ...(diagnostic ? { diagnostic: { ...diagnostic } } : {}) };
     };
 
   async function fail(code: Failure): Promise<GoldenBootProducerOutcome> {
@@ -135,35 +163,38 @@ export async function produceGoldenBootSnapshot(input: {
     leaseDeadline = claimStart + Number(claim.leaseUntilMs) - Number(claim.observedAtMs);
 
     failure = "PROVIDER_UNAVAILABLE";
-    if (performance.now() >= leaseDeadline) return fail(failure);
+    if (performance.now() >= leaseDeadline) { diagnose("deadline"); return fail(failure); }
     const deadline = Date.now() + 15_000;
     const provider = createProvider();
-    if (provider.name !== "sportmonks") return fail(failure);
+    if (provider.name !== "sportmonks") { diagnose("provider_error"); return fail(failure); }
     async function bounded<T>(start: () => Promise<T>, capMs: number): Promise<T> {
       const budget = Math.min(capMs, deadline - Date.now(), Math.floor(leaseDeadline - performance.now()));
-      if (budget <= 0) throw Error("Provider budget exhausted");
+      if (budget <= 0) throw new ProviderDeadline();
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         // Promise.race installs rejection handlers even if the provider settles
         // after timeout. Adapter budgets bound its own in-flight work separately.
         return await Promise.race([
           Promise.resolve().then(start),
-          new Promise<never>((_, reject) => { timer = setTimeout(() => reject(Error("Provider timeout")), budget); }),
+          new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new ProviderDeadline()), budget); }),
         ]);
       } finally { if (timer !== undefined) clearTimeout(timer); }
     }
     const stageBudget = Math.min(3_000, deadline - Date.now(), Math.floor(leaseDeadline - performance.now()));
+    providerPhase = "stages";
     const stages = structuredClone(await bounded(() => provider.getSeasonStages({
       seasonId: scope!.providerSeasonId, leagueId: "8", totalBudgetMs: stageBudget,
       quotaObserver: observeQuota("stages"),
     }), stageBudget));
-    if (!stages.ok) return fail(failure);
+    if (!stages.ok) { diagnoseResult(stages.error); return fail(failure); }
     const scorerBudget = Math.min(12_000, deadline - Date.now(), Math.floor(leaseDeadline - performance.now()));
+    providerPhase = "topscorers";
     const topScorers = structuredClone(await bounded(() => provider.getSeasonTopScorers({
       seasonId: scope!.providerSeasonId, totalBudgetMs: scorerBudget, maxPages: 10,
       quotaObserver: observeQuota("topscorers"),
     }), scorerBudget));
-    if (!topScorers.ok || Date.now() > deadline) return fail(failure);
+    if (!topScorers.ok) { diagnoseResult(topScorers.error); return fail(failure); }
+    if (Date.now() > deadline) { diagnose("deadline"); return fail(failure); }
     failure = "EVIDENCE_INVALID";
     if (!Array.isArray(stages.data?.rows) || stages.data.rows.length !== 1
       || !Array.isArray(topScorers.data?.rows) || topScorers.data.rows.length > 500
@@ -204,7 +235,8 @@ export async function produceGoldenBootSnapshot(input: {
     if (finished.error || receipt?.phase !== "ready" || !uuid(receipt.snapshot_id)
       || !revision(receipt.stateRevision) || receipt.stateRevision === "0") return fail(failure);
     return outcome("stored", null, leaders.length);
-  } catch {
+  } catch (error) {
+    if (failure === "PROVIDER_UNAVAILABLE" && !diagnostic) diagnose(error instanceof ProviderDeadline ? "deadline" : "exception");
     return fail(failure);
   }
 }
