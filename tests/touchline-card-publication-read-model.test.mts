@@ -17,6 +17,34 @@ const squadRoute = readFileSync(
   "utf8",
 );
 
+test("strict publication reads distinguish an empty card set from a failed chunk", async () => {
+  const exported: Record<string, unknown> = {};
+  const javascript = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  vm.runInThisContext(`(function(exports, require) { ${javascript}\n })`)(exported, (id: string) => {
+    if (id === "server-only") return {};
+    if (id === "next/cache") return { unstable_noStore() {} };
+    if (id === "@/lib/supabase/admin") return { createAdminClient() { throw Error("No database access"); } };
+    if (id === "./editorial-card-profile.ts") return editorial;
+    if (id === "./card-engine-provisional-policy.ts") return provisional;
+    if (id === "./card-engine-provisional-schema-compat.ts") return compatibility;
+    if (id === "./editorial-season.ts") return seasonLabels;
+    throw Error(`Unexpected import ${id}`);
+  });
+  const read = exported.loadTouchlinePublishedCardPresentations as (input: unknown) => Promise<Map<string, unknown>>;
+  const playerIds = Array.from({ length: 151 }, (_, n) => `10000000-0000-4000-8000-${String(n + 1).padStart(12, "0")}`);
+  const admin = { from() {
+    let failed = false;
+    const query = {
+      select() { return query; }, eq() { return query; },
+      in(_key: string, ids: string[]) { failed = ids.includes(playerIds[150]!); return query; },
+      then(resolve: (value: unknown) => unknown) { return Promise.resolve({ data: [], error: failed ? { message: "unavailable" } : null }).then(resolve); },
+    }; return query;
+  } };
+  assert.equal((await read({ playerIds: playerIds.slice(0, 150), providedAdmin: admin, requireCompleteRead: true })).size, 0);
+  await assert.rejects(read({ playerIds, providedAdmin: admin, requireCompleteRead: true }), /TL_CARD_PUBLICATION_READ_INCOMPLETE/);
+  assert.equal((await read({ playerIds, providedAdmin: admin })).size, 0, "existing public readers preserve fail-closed compatibility");
+});
+
 test("publication rejects a membership belonging to another requested player", async () => {
   const first = "10000000-0000-4000-8000-000000000001";
   const second = "10000000-0000-4000-8000-000000000002";

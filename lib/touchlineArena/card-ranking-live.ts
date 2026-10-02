@@ -4,6 +4,7 @@ import {
   touchlineArenaTierForKey,
   type TouchlineCardTierKey,
 } from "./card-rules.ts";
+import { parseCardGoalsPublication, type CardGoalsPublication } from "./card-goals-leadership.ts";
 import type {
   TouchlinePositionRankingGroup,
   TouchlineRankedPlayer,
@@ -35,6 +36,7 @@ export type TouchlineActiveRankingPlayer = Pick<
 >;
 
 export type TouchlineActiveRankingState = {
+  cardGoals?: CardGoalsPublication | null;
   phase: "preseason" | "ranked";
   leagueKey: string;
   snapshotId: string | null;
@@ -201,6 +203,7 @@ export function parseTouchlineActiveRankingState(value: unknown): TouchlineActiv
     totalScorePoints: candidate.totalScorePoints,
     players: candidate.players,
     leadershipDecision,
+    cardGoals: parseCardGoalsPublication(candidate.cardGoals, candidate.snapshotId!),
   };
 }
 

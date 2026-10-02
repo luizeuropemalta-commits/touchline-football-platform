@@ -73,6 +73,7 @@ const readRequestActiveRanking = cache(async (): Promise<TouchlineActiveRankingS
     expectedFixtureIds: Array.isArray(record.expected_fixture_ids) ? record.expected_fixture_ids : [],
     totalScorePoints: record.total_score_points,
     leadershipDecision,
+    cardGoals: payload?.cardGoals,
     players: Array.isArray(payload?.players) ? payload.players.map((player) => ({
       playerId: player.playerId,
       providerPlayerId: player.providerPlayerId,

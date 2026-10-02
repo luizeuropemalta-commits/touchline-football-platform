@@ -9,6 +9,7 @@ import {
   touchlineArenaTierForKey,
 } from "./card-rules.ts";
 import type { LeadershipDecision } from "./leadership-decision.ts";
+import { parseCardGoalsPublication, type CardGoalsPublication } from "./card-goals-leadership.ts";
 import {
   parsePublishedTouchlinePlayerLeadership,
   unavailableTouchlinePlayerLeadership,
@@ -22,6 +23,7 @@ export type TouchlineSportmonksRankingPlayer = TouchlineRankingPlayerInput & {
 };
 
 export type TouchlineRankingDraft = {
+  cardGoals?: CardGoalsPublication;
   seasonId: string;
   scoringVersion: "player_scoring_v1" | "player_scoring_v2" | "player_scoring_v3" | "player_scoring_v4";
   coverageStatus: "complete" | "complete_for_scoring";
@@ -48,6 +50,7 @@ export type TouchlineRankingAuditCheck = {
 };
 
 export type TouchlineAuditedRankingSnapshot = TouchlineRankingSnapshot & {
+  cardGoals?: CardGoalsPublication;
   status: "audited";
   source: "sportmonks-audited";
   seasonId: string;
@@ -94,6 +97,7 @@ function checksumFor(value: string) {
 }
 
 export function touchlineRankingSnapshotChecksum(input: {
+  cardGoals?: CardGoalsPublication;
   seasonId: string;
   priceTableVersion: string;
   snapshot: TouchlineRankingSnapshot;
@@ -130,10 +134,12 @@ export function touchlineRankingSnapshotChecksum(input: {
     generatedAt: input.snapshot.generatedAt,
     priceTableVersion: input.priceTableVersion,
     rows: canonicalRows,
+    ...(input.cardGoals ? { cardGoals: input.cardGoals } : {}),
   }));
 }
 
 export function buildSportmonksRankingDraft(input: {
+  cardGoals?: CardGoalsPublication;
   snapshotId: string;
   roundId: string;
   seasonId: string;
@@ -149,6 +155,7 @@ export function buildSportmonksRankingDraft(input: {
 }): TouchlineRankingDraft {
   const fixtureIds = [...new Set(input.fixtureIds ?? input.players.flatMap((player) => player.sourceFixtureIds))].sort();
   return {
+    ...(input.cardGoals ? { cardGoals: input.cardGoals } : {}),
     seasonId: input.seasonId,
     scoringVersion: input.scoringVersion ?? "player_scoring_v1",
     coverageStatus: input.coverageStatus ?? "complete",
@@ -249,6 +256,9 @@ export function auditTouchlineRankingDraft(
     { key: "prices", label: "Tabela de preços oficial", passed: !issues.some((issue) => issue.code.includes("price")) },
     { key: "timestamps", label: "Rastreabilidade temporal", passed: !issues.some((issue) => issue.code.includes("timestamp")) },
   ];
+  const cardGoals = draft.cardGoals === undefined ? undefined
+    : parseCardGoalsPublication(draft.cardGoals, draft.snapshot.snapshotId);
+  if (draft.cardGoals !== undefined && !cardGoals) issues.push({ code: "invalid-card-goals", message: "Card goals must belong to this snapshot and contain unique canonical players." });
   const passed = issues.length === 0;
   const checksum = passed
     ? touchlineRankingSnapshotChecksum({
@@ -260,6 +270,7 @@ export function auditTouchlineRankingDraft(
       fixtureIds: draft.fixtureIds,
       expectedFixtureIds: draft.expectedFixtureIds,
       totalScorePoints: draft.totalScorePoints,
+      ...(cardGoals ? { cardGoals } : {}),
     })
     : undefined;
   const snapshot = passed && checksum ? {
@@ -275,6 +286,7 @@ export function auditTouchlineRankingDraft(
     auditedAt,
     priceTableVersion: draft.priceTableVersion,
     checksum,
+    ...(cardGoals ? { cardGoals } : {}),
   } : undefined;
 
   return {

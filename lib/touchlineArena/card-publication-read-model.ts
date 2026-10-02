@@ -219,7 +219,7 @@ async function readPublishedTouchlineCardsChunk(playerIds: readonly string[], ad
   return result;
 }
 
-async function readPublishedTouchlineCards(playerIds: readonly string[], admin: Admin | null, requiredScope?: PublicationScope, requiredBindings?: ReadonlyMap<string, PublicationBinding>) {
+async function readPublishedTouchlineCards(playerIds: readonly string[], admin: Admin | null, requiredScope?: PublicationScope, requiredBindings?: ReadonlyMap<string, PublicationBinding>, requireCompleteRead = false) {
   if (!admin || !playerIds.length || playerIds.length > MAX_PLAYER_IDS) return new Map<string, TouchlinePublicEditorialCardPresentation>();
 
   const chunks = Array.from(
@@ -227,7 +227,10 @@ async function readPublishedTouchlineCards(playerIds: readonly string[], admin: 
     (_, index) => playerIds.slice(index * PLAYER_ID_QUERY_CHUNK_SIZE, (index + 1) * PLAYER_ID_QUERY_CHUNK_SIZE),
   );
   const chunkResults = await Promise.all(chunks.map((chunk) => readPublishedTouchlineCardsChunk(chunk, admin, requiredScope, requiredBindings)));
-  if (chunkResults.some((result) => result === null)) return new Map<string, TouchlinePublicEditorialCardPresentation>();
+  if (chunkResults.some((result) => result === null)) {
+    if (requireCompleteRead) throw new Error("TL_CARD_PUBLICATION_READ_INCOMPLETE");
+    return new Map<string, TouchlinePublicEditorialCardPresentation>();
+  }
 
   const result = new Map<string, TouchlinePublicEditorialCardPresentation>();
   for (const chunk of chunkResults) {
@@ -251,6 +254,8 @@ export async function loadTouchlinePublishedCardPresentations(input: Readonly<{
   playerIds: readonly (string | null | undefined)[];
   /** Test-only injection bypasses the cache. */
   providedAdmin?: Admin | null;
+  /** Award publishers cannot interpret transport failure as an unpublished card. */
+  requireCompleteRead?: boolean;
   /** Server-resolved canonical award scope; checked against the same rows
    * producing the presentation, never a second cached publication lookup. */
   requiredScope?: PublicationScope;
@@ -282,9 +287,9 @@ export async function loadTouchlinePublishedCardPresentations(input: Readonly<{
       bindings.set(id, { clubId: binding.clubId.toLowerCase(), membershipId: binding.membershipId.toLowerCase() });
     }
   }
-  if (input.providedAdmin !== undefined) return readPublishedTouchlineCards(playerIds, input.providedAdmin, scope, bindings);
+  if (input.providedAdmin !== undefined) return readPublishedTouchlineCards(playerIds, input.providedAdmin, scope, bindings, input.requireCompleteRead);
   unstable_noStore();
-  return readPublishedTouchlineCards(playerIds, createAdminClient(), scope, bindings);
+  return readPublishedTouchlineCards(playerIds, createAdminClient(), scope, bindings, input.requireCompleteRead);
 }
 
 /** Public summary count; it never expands the publication DTO or exposes rows. */

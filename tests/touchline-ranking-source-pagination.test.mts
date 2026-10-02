@@ -20,7 +20,11 @@ const { rebuild, rebuildV4, auditCoverage } = runInNewContext(`${source}\n({ reb
   buildTouchlineRankingPersistenceRecord, TOUCHLINE_ENGLAND_LEAGUE_KEY,
   isTouchLinePlayerRankingAggregateComplete, isTouchLinePlayerRankingSettlementComplete,
   TOUCHLINE_SELECTION_VERSION, buildTouchlineSelection,
-  loadTouchlinePublishedCardPresentations: async ({ playerIds }) => new Map(playerIds.map(id => [id, {}])),
+  loadTouchlinePublishedCardPresentations: async ({ playerIds, providedAdmin, requireCompleteRead }) => {
+    assert.equal(requireCompleteRead, true);
+    if (providedAdmin.failPublication) throw Error("synthetic publication failure");
+    return new Map(playerIds.map(id => [id, {}]));
+  },
 });
 
 function database(options: { pageFailure?: boolean; missing?: boolean; duplicate?: boolean; cap?: number; rating?: number; persistFailure?: boolean; readFailure?: string } = {}) {
@@ -80,6 +84,38 @@ function database(options: { pageFailure?: boolean; missing?: boolean; duplicate
     },
   };
 }
+
+test("V4 publication carries all card goals, including a player without rating, and changes identity when goals change", async () => {
+  const db = database();
+  const extra = { ...db.tables.football_players[0], id: "10000000-0000-4000-8000-000000009999", provider_player_id: "9999" };
+  db.tables.football_players.push(extra);
+  db.tables.football_player_season_statistics.push({ ...db.tables.football_player_season_statistics[0],
+    football_player_id: extra.id, provider_player_id: extra.provider_player_id,
+    summary_payload: { totalRating: null, minutes: 90, appearances: 1, goals: 9 } });
+  const first = await rebuildV4(db.admin);
+  assert.equal(first.ok, true);
+  const payload = db.tables.touchline_card_ranking_snapshots[0].ranking_payload;
+  assert.equal(payload.players.some(player => player.playerId === extra.id), false);
+  assert.equal(payload.cardGoals.rows.find(player => player.playerId === extra.id).goals, 9);
+  db.tables.football_player_season_statistics.at(-1).summary_payload.goals = 10;
+  const second = await rebuildV4(db.admin);
+  assert.equal(second.ok, true);
+  assert.notEqual(second.snapshotId, first.snapshotId);
+  assert.notEqual(second.checksum, first.checksum);
+  db.tables.football_player_season_statistics.at(-1).coverage_status = "partial";
+  const incomplete = await rebuildV4(db.admin);
+  assert.equal(incomplete.ok, true, "incomplete goal-only candidate does not change Crown eligibility");
+  const partialPayload = db.tables.touchline_card_ranking_snapshots.at(-1).ranking_payload;
+  assert.equal(partialPayload.cardGoals, undefined, "no Boot from a partial goal source");
+});
+
+test("indeterminate publication read never publishes a partial winner", async () => {
+  const db = database(); db.admin.failPublication = true;
+  const result = await rebuildV4(db.admin);
+  assert.equal(result.ok, false);
+  assert.equal(result.error, "ranking-publication-source-incomplete");
+  assert.equal(db.writes.length, 0);
+});
 
 test("rebuild includes all 1,100 settlements beyond the API's first 1,000 rows", async () => {
   const db = database();

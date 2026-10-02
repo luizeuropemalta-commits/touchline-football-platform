@@ -79,6 +79,30 @@ type TouchLinePlayerRankingEngine = Readonly<{
   snapshotPrefix: "player-v2" | "player-rating" | "player-rating-v4";
 }>;
 
+async function readRankingAggregates(admin: SupabaseClient, seasonId: string, scoringVersion: string) {
+  const collected: Row[] = [];
+  const seen = new Set<string>();
+  let expected: number | null = null;
+  for (let offset = 0; offset < 100_000; offset += 150) {
+    const { data, error, count } = await admin.from("football_player_season_statistics")
+      .select("football_player_id,club_id,provider_player_id,summary_payload,position_statistics_payload,coverage_status,expected_fixture_ids,aggregated_fixture_ids,source_synced_at", { count: "exact" })
+      .eq("season_id", seasonId).eq("scoring_version", scoringVersion)
+      .order("football_player_id", { ascending: true }).range(offset, offset + 149);
+    if (error || !Array.isArray(data) || count === null || !Number.isSafeInteger(count) || count < 0 || count > 100_000
+      || (expected !== null && expected !== count) || data.length !== Math.min(150, Math.max(0, count - offset))) {
+      return { data: [], error: "ranking-aggregate-read-incomplete" };
+    }
+    expected = count;
+    for (const row of rows(data)) {
+      const id = text(row.football_player_id);
+      if (!id || seen.has(id)) return { data: [], error: "ranking-aggregate-read-duplicate" };
+      seen.add(id); collected.push(row);
+    }
+    if (collected.length === count) return { data: collected, error: null };
+  }
+  return { data: [], error: "ranking-aggregate-read-limit" };
+}
+
 /** A season has more settlement rows than PostgREST's default response cap.
  * Read every page in unique, stable order; never mistake an incomplete read
  * for missing provider facts (which would leave the active ranking stale). */
@@ -163,10 +187,7 @@ async function rebuildTouchLinePlayerRanking(
   if (seasonError || !seasonId) return failure("current-season-unavailable");
 
   const [{ data: aggregateData, error: aggregateError }, { data: fixtureData, error: fixtureError }] = await Promise.all([
-    admin.from("football_player_season_statistics")
-      .select("football_player_id,club_id,provider_player_id,summary_payload,coverage_status,expected_fixture_ids,aggregated_fixture_ids,source_synced_at")
-      .eq("season_id", seasonId)
-      .eq("scoring_version", engine.scoringVersion),
+    readRankingAggregates(admin, seasonId, engine.scoringVersion),
     admin.from("football_fixtures")
       .select("id,provider_fixture_id,round_id,starts_at,status,source_updated_at")
       .eq("season_id", seasonId),
@@ -179,21 +200,57 @@ async function rebuildTouchLinePlayerRanking(
   if (!aggregatePlayerIds.length || !fixtures.length) return failure("ranking-source-empty", { seasonId });
 
   const [{ data: playerData, error: playerError }, { data: fixtureRatingData, error: ratingError }] = await Promise.all([
-    admin.from("football_players")
-      .select("id,provider_player_id,display_name,name,provider_position,detailed_position,position,current_club_id")
-      .in("id", aggregatePlayerIds),
+    (async () => {
+      const data: Row[] = [];
+      for (let start = 0; start < aggregatePlayerIds.length; start += 150) {
+        const ids = aggregatePlayerIds.slice(start, start + 150);
+        const response = await admin.from("football_players")
+          .select("id,provider_player_id,display_name,name,provider_position,detailed_position,position,current_club_id")
+          .in("id", ids);
+        if (response.error || !Array.isArray(response.data) || response.data.length !== ids.length) return { data: [], error: "ranking-player-source-incomplete" };
+        data.push(...rows(response.data));
+      }
+      return { data, error: null };
+    })(),
     readRankingSettlements(admin, engine, seasonId),
   ]);
   if (playerError || ratingError) return failure(ratingError ?? "ranking-player-source-unavailable", { seasonId });
 
   const playerRows = rows(playerData);
   const playerIds = playerRows.map((row) => text(row.id)).filter((id): id is string => Boolean(id));
-  const publishedCards = await loadTouchlinePublishedCardPresentations({ playerIds, providedAdmin: admin as never });
+  const publishedCards = new Map();
+  try {
+    for (let start = 0; start < playerIds.length; start += 150) {
+      const batch = await loadTouchlinePublishedCardPresentations({ playerIds: playerIds.slice(start, start + 150), providedAdmin: admin as never, requireCompleteRead: true });
+      for (const [id, card] of batch) publishedCards.set(id, card);
+    }
+  } catch {
+    return failure("ranking-publication-source-incomplete", { seasonId });
+  }
   const eligiblePlayerRows = playerRows.filter((row) => {
     const id = text(row.id)?.toLowerCase();
     return Boolean(id && publishedCards.has(id));
   });
   const aggregateByPlayerId = new Map(aggregates.flatMap((row) => text(row.football_player_id) ? [[text(row.football_player_id)!, row] as const] : []));
+  // Goals use all published card candidates, not the rating-only subset below.
+  // Same summary/fallback as the public card projection; unknown is not zero.
+  const cardGoalRows = eligiblePlayerRows.map((player) => {
+    const playerId = text(player.id)!.toLowerCase();
+    const aggregate = aggregateByPlayerId.get(playerId);
+    const goals = number(object(aggregate?.summary_payload).goals)
+      ?? number(object(aggregate?.position_statistics_payload).goals);
+    return { playerId, goals };
+  }).sort((a, b) => a.playerId.localeCompare(b.playerId));
+  // A partial goal candidate must not award somebody else by omission. Keep
+  // Crown publication independent, but withhold Boot until goals are complete.
+  const cardGoalsComplete = eligiblePlayerRows.every((player) => {
+    const aggregate = aggregateByPlayerId.get(text(player.id) ?? "");
+    return Boolean(aggregate && isTouchLinePlayerRankingAggregateComplete({
+      coverageStatus: aggregate.coverage_status,
+      expectedFixtureIds: aggregate.expected_fixture_ids,
+      aggregatedFixtureIds: aggregate.aggregated_fixture_ids,
+    }));
+  });
   // Provider-absent ratings remain visible as unavailable on player surfaces,
   // never as a synthetic zero and never as a ranking contribution.
   const rankingEligiblePlayerRows = eligiblePlayerRows.filter((player) => {
@@ -293,6 +350,7 @@ async function rebuildTouchLinePlayerRanking(
     coverageStatus, totalScorePoints,
   });
   const digest = sourceDigest({
+    cardGoals: cardGoalsComplete ? cardGoalRows : null,
     coverageStatus,
     expectedFixtureIds,
     selectionVersion: TOUCHLINE_SELECTION_VERSION,
@@ -308,6 +366,7 @@ async function rebuildTouchLinePlayerRanking(
   });
   const snapshotId = `${engine.snapshotPrefix}:${seasonId}:${digest}`;
   const draft = buildSportmonksRankingDraft({
+    ...(cardGoalsComplete ? { cardGoals: { source: "published-card-goals-v1" as const, snapshotId, rows: cardGoalRows } } : {}),
     snapshotId,
     roundId,
     seasonId,
