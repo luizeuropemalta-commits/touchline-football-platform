@@ -10,6 +10,7 @@ import ts from "typescript";
 import * as editorial from "../lib/touchlineArena/editorial-card-profile.ts";
 import * as provisional from "../lib/touchlineArena/card-engine-provisional-policy.ts";
 import * as compatibility from "../lib/touchlineArena/card-engine-provisional-schema-compat.ts";
+import * as seasonLabels from "../lib/touchlineArena/editorial-season.ts";
 import * as stageScope from "../lib/touchlineArena/golden-boot-stage-scope.ts";
 import * as eligibility from "../lib/touchlineArena/golden-boot-eligibility.ts";
 import * as providerIds from "../lib/football-data/sportmonks-season-topscorers.ts";
@@ -21,6 +22,7 @@ import type { FootballDataProvider, FootballDataResult, TouchlineSeasonStages, T
 const modulePath = process.env.TOUCHLINE_GOLDEN_BOOT_PGLITE_MODULE;
 const { PGlite } = modulePath ? await import(modulePath) : { PGlite: null };
 const migration = readFileSync(new URL("../supabase/migrations/20261001194607_touchline_golden_boot_authority.sql", import.meta.url), "utf8");
+const seasonLabelsMigration = readFileSync(new URL("../supabase/migrations/20261002092823_touchline_golden_boot_season_labels.sql", import.meta.url), "utf8");
 type Row = Record<string, unknown>;
 type Success<T> = Extract<FootballDataResult<T>, { ok: true }>;
 const uuid = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -99,14 +101,58 @@ test("actual producer -> canonical parser -> real GoldenBoot SQL authority", { s
   try {
     await db.exec(schema);
     await db.exec(migration);
+    const bindingMetadata = async () => (await db.query(`select oid,proowner,proacl::text,prosecdef,provolatile,proconfig
+      from pg_proc where oid='public.touchline_golden_boot_bindings_valid(uuid,uuid,text,jsonb)'::regprocedure`)).rows[0];
+    const beforeMetadata = await bindingMetadata();
+    const sourceRows = async () => (await db.query(`select jsonb_build_object(
+      'publications',(select jsonb_agg(to_jsonb(p) order by player_id) from public.touchline_card_publications p),
+      'values',(select jsonb_agg(to_jsonb(v) order by player_id) from public.football_player_market_values v),
+      'memberships',(select jsonb_agg(to_jsonb(m) order by id) from public.football_squad_members m),
+      'revision',(select revision::text from public.touchline_golden_boot_source_revision where singleton)) data`)).rows[0].data;
+    const beforeRows = await sourceRows();
+    const bindingLeaders = players.map((player_id, i) => ({ player_id, provider_player_id: String(200 + i),
+      club_id: club, provider_team_id: "300", membership_id: members[i], goals: 3 }));
+    const bindingValid = async () => (await db.query("select public.touchline_golden_boot_bindings_valid($1,$2,'2026-27',$3::jsonb) value",
+      [comp, season, JSON.stringify(bindingLeaders)])).rows[0].value;
+    await t.test("forward migration fixes literal-label rejection and rolls back without data changes", async () => {
+      await db.exec("begin");
+      try {
+        await db.query("update public.touchline_card_publications set effective_season='2026/27'");
+        await db.query("update public.football_player_market_values set verified_season='2026/2027'");
+        assert.equal(await bindingValid(), false, "The installed predecessor rejects equivalent seasons");
+        const changedRows = await sourceRows();
+        await db.exec(seasonLabelsMigration);
+        assert.equal(await bindingValid(), true);
+        assert.deepEqual(await sourceRows(), changedRows, "DDL may not rewrite source data/revision");
+        assert.deepEqual(await bindingMetadata(), beforeMetadata, "Identity/owner/ACL/invoker properties must remain unchanged");
+      } finally { await db.exec("rollback"); }
+      assert.deepEqual(await sourceRows(), beforeRows);
+    });
+    await db.exec(seasonLabelsMigration);
+    assert.deepEqual(await sourceRows(), beforeRows);
+    assert.deepEqual(await bindingMetadata(), beforeMetadata);
+    await t.test("SQL and TypeScript season parsers agree with independent expected year pairs", async () => {
+      const cases: Array<[string | null, string | null]> = [
+        ["2026/27", "2026-27"], ["2026-2027", "2026-27"], ["2026/2027", "2026-27"], ["2026-27", "2026-27"],
+        ["1999/00", "1999-00"], ["1999-2000", "1999-00"], ["1000/1001", "1000-01"], ["9998/9999", "9998-99"],
+        ...[null, "", "2026/28", "2026/2026", "2026", "0999/00", "9999/00", "2026.27", " 2026/27", "2026/27 ", "2026/27\n", "2026 /27", "x2026/27", "2026/27x"].map(value => [value, null] as [string | null, null]),
+      ];
+      for (const [value, expected] of cases) {
+        assert.equal(seasonLabels.canonicalEditorialSeason(value), expected, `TS:${JSON.stringify(value)}`);
+        const result = await db.query("select public.touchline_golden_boot_editorial_season($1) value", [value]);
+        assert.equal(result.rows[0].value, expected, `SQL:${JSON.stringify(value)}`);
+      }
+    });
     const publication = actualModule("card-publication-read-model", {
       "server-only": {}, "next/cache": { unstable_noStore() {} },
       "@/lib/supabase/admin": { createAdminClient() { throw Error("Real external database forbidden"); } },
       "./editorial-card-profile.ts": editorial, "./card-engine-provisional-policy.ts": provisional,
       "./card-engine-provisional-schema-compat.ts": compatibility,
+      "./editorial-season.ts": seasonLabels,
     });
     const canonical = actualModule("golden-boot-canonical-reader", {
       "server-only": {}, "./card-publication-read-model.ts": publication,
+      "./editorial-season.ts": seasonLabels,
       "../football-data/sportmonks-season-topscorers.ts": providerIds,
       "./golden-boot-stage-scope.ts": stageScope, "./golden-boot-eligibility.ts": eligibility,
     });
@@ -218,6 +264,36 @@ test("actual producer -> canonical parser -> real GoldenBoot SQL authority", { s
       assert.equal(io.requests.filter(row => row.name === "read_touchline_golden_boot_source_revision").length, 2);
       assert.equal(io.requests.filter(row => row.name === "finish_touchline_golden_boot_refresh" && row.args.p_failure === null).length, 1);
     });
+
+    for (const publicationLabel of ["2026-27", "2026/27", "2026-2027", "2026/2027"]) {
+      for (const valueLabel of ["2026-27", "2026/27", "2026-2027", "2026/2027"]) {
+        await scenario(`real producer and SQL accept season aliases ${publicationLabel}/${valueLabel}`, async () => {
+          await db.query("update public.touchline_card_publications set effective_season=$1 where player_id=$2", [publicationLabel, players[0]]);
+          await db.query("update public.football_player_market_values set verified_season=$1 where player_id=$2", [valueLabel, players[0]]);
+          const io = transport();
+          assert.equal((await produce({ admin: io.admin, createProvider: () => provider() })).status, "stored");
+          assert.equal((await readAuthority()).status, "ready");
+          assert.deepEqual((await readAuthority()).playerIds, players);
+          assert.equal((await db.query("select effective_season from public.touchline_card_publications where player_id=$1", [players[0]])).rows[0].effective_season, publicationLabel);
+          assert.equal((await db.query("select verified_season from public.football_player_market_values where player_id=$1", [players[0]])).rows[0].verified_season, valueLabel);
+        });
+      }
+    }
+
+    for (const label of [null, "", "2025/26", "2026/28", "2026/2026", "0999/00", "9999/00", "2026.27", "2026 /27", "2026/27\n"]) {
+      for (const target of ["publication", "value"]) {
+        await scenario(`invalid ${target} season rejects TS and SQL: ${JSON.stringify(label)}`, async () => {
+          if (target === "publication") await db.query("update public.touchline_card_publications set effective_season=$1 where player_id=$2", [label, players[0]]);
+          else await db.query("update public.football_player_market_values set verified_season=$1 where player_id=$2", [label, players[0]]);
+          assert.equal(await bindingValid(), false, "SQL cannot authorize even if a caller bypasses the TS reader");
+          const io = transport();
+          const result = await produce({ admin: io.admin, createProvider: () => provider() });
+          assert.equal(result.status, "unavailable");
+          assert.equal(await snapshots(), 0);
+          assert.deepEqual((await readAuthority()).playerIds, []);
+        });
+      }
+    }
 
     const editorialFailures: Array<[string, string, unknown[]]> = [
       ["shirt 1000", "update public.football_squad_members set jersey_number=1000 where id=$1", [members[0]]],

@@ -13,6 +13,7 @@ import {
   TOUCHLINE_PROVISIONAL_MISSING_SHIRT,
 } from "./card-engine-provisional-policy.ts";
 import { isTouchlineProvisionalColumnsUnavailable } from "./card-engine-provisional-schema-compat.ts";
+import { canonicalEditorialSeason } from "./editorial-season.ts";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_PLAYER_IDS = 750;
@@ -74,7 +75,10 @@ function isPublicationRowValid(
   const tierKey = text(publication.calculated_tier);
   const price = safeInteger(publication.calculated_nominal_price_gbp);
   const reviewedAt = text(publication.last_reviewed_at);
-  const season = text(publication.effective_season);
+  // Preserve the unscoped card contract. Award-scoped reads compare strict
+  // season identities, not the editorial separator/short-year formatting.
+  const season = requiredScope ? canonicalEditorialSeason(publication.effective_season) : text(publication.effective_season);
+  const valueSeason = requiredScope ? canonicalEditorialSeason(value?.verified_season) : text(value?.verified_season);
   const playerCurrentClub = text(player?.current_club_id);
   const binding = playerId ? requiredBindings?.get(playerId) : undefined;
 
@@ -82,7 +86,7 @@ function isPublicationRowValid(
     !playerId || publicationState !== "published" || !tierKey || price === null || price < 0
     || !reviewedAt || !season || !value || !player || !membership
     || text(value.player_id)?.toLowerCase() !== playerId
-    || safeInteger(value.market_value_eur) === null || text(value.verified_season) !== season
+    || safeInteger(value.market_value_eur) === null || valueSeason !== season
     || text(membership.id) !== text(publication.current_membership_id)
     || text(membership.player_id)?.toLowerCase() !== playerId
     || text(membership.status) !== "active" || text(membership.club_id) !== playerCurrentClub
@@ -257,10 +261,10 @@ export async function loadTouchlinePublishedCardPresentations(input: Readonly<{
   const requestedScope = input.requiredScope;
   if (requestedScope !== undefined && (!requestedScope || typeof requestedScope.competitionId !== "string"
     || !UUID_PATTERN.test(requestedScope.competitionId) || typeof requestedScope.effectiveSeason !== "string"
-    || !/^\d{4}-\d{2}$/.test(requestedScope.effectiveSeason))) {
+    || canonicalEditorialSeason(requestedScope.effectiveSeason) === null)) {
     return new Map<string, TouchlinePublicEditorialCardPresentation>();
   }
-  const scope = requestedScope ? { ...requestedScope } : undefined;
+  const scope = requestedScope ? { ...requestedScope, effectiveSeason: canonicalEditorialSeason(requestedScope.effectiveSeason)! } : undefined;
   const playerIds = normalizePlayerIds(input.playerIds);
   if (!playerIds.length || playerIds.length > MAX_PLAYER_IDS) return new Map<string, TouchlinePublicEditorialCardPresentation>();
   let bindings: Map<string, PublicationBinding> | undefined;

@@ -6,6 +6,7 @@ import ts from "typescript";
 import * as editorial from "../lib/touchlineArena/editorial-card-profile.ts";
 import * as provisional from "../lib/touchlineArena/card-engine-provisional-policy.ts";
 import * as compatibility from "../lib/touchlineArena/card-engine-provisional-schema-compat.ts";
+import * as seasonLabels from "../lib/touchlineArena/editorial-season.ts";
 
 const source = readFileSync(
   new URL("../lib/touchlineArena/card-publication-read-model.ts", import.meta.url),
@@ -34,10 +35,11 @@ test("publication rejects a membership belonging to another requested player", a
     if (id === "./editorial-card-profile.ts") return editorial;
     if (id === "./card-engine-provisional-policy.ts") return provisional;
     if (id === "./card-engine-provisional-schema-compat.ts") return compatibility;
+    if (id === "./editorial-season.ts") return seasonLabels;
     throw Error(`Unexpected import ${id}`);
   });
   const read = exported.loadTouchlinePublishedCardPresentations as (input: unknown) => Promise<Map<string, unknown>>;
-  async function load(memberOwner: string, requiredScope?: unknown, requiredBindings?: unknown, duringRead?: () => void) {
+  async function load(memberOwner: string, requiredScope?: unknown, requiredBindings?: unknown, duringRead?: () => void, labels = ["2026-27", "2026-27"]) {
     const tables: Record<string, Record<string, unknown>[]> = {
       touchline_card_publications: [{ player_id: first, current_membership_id: membership, competition_id: competition, effective_season: "2026-27", publication_status: "published", calculated_tier: "ruby-red", calculated_nominal_price_gbp: 10, last_reviewed_at: "2026-10-01T10:00:00Z" }],
       football_player_market_values: [{ player_id: first, market_value_eur: 2500000, verified_season: "2026-27", status: "verified", confidence: "verified" }],
@@ -45,6 +47,8 @@ test("publication rejects a membership belonging to another requested player", a
       football_squad_members: [{ id: membership, player_id: memberOwner, club_id: club, competition_id: competition, status: "active", jersey_number: 13 }],
       touchline_card_editorial_overrides: [],
     };
+    tables.touchline_card_publications![0]!.effective_season = labels[0];
+    tables.football_player_market_values![0]!.verified_season = labels[1];
     // Both players are actually published, so the batched membership query
     // can legitimately return the other player's row.
     tables.touchline_card_publications!.push({ ...tables.touchline_card_publications![0], player_id: second });
@@ -69,6 +73,16 @@ test("publication rejects a membership belonging to another requested player", a
   assert.equal((await load(first)).has(first), true, "Valid publication must remain visible");
   assert.equal((await load(second)).has(first), false, "Another player's active membership cannot authorize this card");
   assert.equal((await load(first, { competitionId: competition, effectiveSeason: "2026-27" })).has(first), true);
+  const labels = ["2026-27", "2026/27", "2026-2027", "2026/2027"];
+  for (const scopeLabel of labels) for (const publicationLabel of labels) for (const valueLabel of labels) {
+    assert.equal((await load(first, { competitionId: competition, effectiveSeason: scopeLabel }, undefined, undefined, [publicationLabel, valueLabel])).has(first), true);
+  }
+  assert.equal((await load(first, undefined, undefined, undefined, ["2026/27", "2026/27"])).has(first), true);
+  assert.equal((await load(first, undefined, undefined, undefined, ["2026/27", "2026-27"])).has(first), false, "Unscoped card behavior must not change");
+  for (const label of ["2026/28", "2026/27\n", " 2026/27", "", "9999/00"]) {
+    assert.equal((await load(first, { competitionId: competition, effectiveSeason: "2026-27" }, undefined, undefined, [label, label])).size, 0, "Two invalid labels must never match through null equality");
+    assert.equal((await load(first, { competitionId: competition, effectiveSeason: label })).size, 0);
+  }
   assert.equal((await load(first, { competitionId: competition, effectiveSeason: "2025-26" })).size, 0, "A previous season cannot authorize an award now");
   assert.equal((await load(first, { competitionId: second, effectiveSeason: "2026-27" })).size, 0, "A different competition cannot authorize this card");
   for (const invalid of [null, {}, { competitionId: "league", effectiveSeason: "2026-27" }, { competitionId: competition, effectiveSeason: "" }]) {

@@ -7,6 +7,7 @@ import * as crypto from "node:crypto";
 import * as editorial from "../lib/touchlineArena/editorial-card-profile.ts";
 import * as provisional from "../lib/touchlineArena/card-engine-provisional-policy.ts";
 import * as compatibility from "../lib/touchlineArena/card-engine-provisional-schema-compat.ts";
+import * as seasonLabels from "../lib/touchlineArena/editorial-season.ts";
 import * as stageScope from "../lib/touchlineArena/golden-boot-stage-scope.ts";
 import * as eligibility from "../lib/touchlineArena/golden-boot-eligibility.ts";
 import * as providerIds from "../lib/football-data/sportmonks-season-topscorers.ts";
@@ -42,9 +43,11 @@ const publication = evaluate(compile("card-publication-read-model"), {
   "@/lib/supabase/admin": { createAdminClient() { throw Error("No real database permitted"); } },
   "./editorial-card-profile.ts": editorial, "./card-engine-provisional-policy.ts": provisional,
   "./card-engine-provisional-schema-compat.ts": compatibility,
+  "./editorial-season.ts": seasonLabels,
 });
 const canonicalReader = evaluate(compile("golden-boot-canonical-reader"), {
   "server-only": {}, "./card-publication-read-model.ts": publication,
+  "./editorial-season.ts": seasonLabels,
   "../football-data/sportmonks-season-topscorers.ts": providerIds,
   "./golden-boot-stage-scope.ts": stageScope, "./golden-boot-eligibility.ts": eligibility,
 });

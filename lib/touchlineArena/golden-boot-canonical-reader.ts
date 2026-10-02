@@ -6,6 +6,7 @@ import { loadTouchlinePublishedCardPresentations } from "./card-publication-read
 import type { TouchlinePublicEditorialCardPresentation } from "./editorial-card-profile.ts";
 import { resolveGoldenBootEligibility, type GoldenBootStageScope } from "./golden-boot-eligibility.ts";
 import { resolveGoldenBootPremierStageScope } from "./golden-boot-stage-scope.ts";
+import { canonicalEditorialSeason } from "./editorial-season.ts";
 
 type Admin = NonNullable<Parameters<typeof loadTouchlinePublishedCardPresentations>[0]["providedAdmin"]>;
 type Row = Record<string, unknown>;
@@ -29,19 +30,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 function uuid(value: unknown): value is string { return typeof value === "string" && UUID.test(value); }
 function providerId(value: unknown): value is string {
   return typeof value === "string" && strictSportmonksId(value) === value;
-}
-
-// Only canonical season metadata supplies this label; never derive it from
-// today's date, a player name or a caller's requested season.
-function editorialSeason(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const match = /^(\d{4})[-/](\d{2}|\d{4})$/.exec(value);
-  if (!match) return null;
-  const start = Number(match[1]);
-  if (start < 1000 || start >= 9999) return null;
-  const end = start + 1;
-  if (match[2] !== String(end) && match[2] !== String(end).slice(-2)) return null;
-  return `${match[1]}-${String(end).slice(-2)}`;
 }
 
 function completeRows(response: { data: unknown; error: unknown; count: number | null }): Row[] | null {
@@ -86,7 +74,7 @@ export async function readGoldenBootCanonicalLeaders(input: {
       .select("id,provider,provider_season_id,competition_id,is_current,name", { count: "exact" })
       .eq("provider", "sportmonks").eq("competition_id", competitionId).eq("is_current", true).limit(2));
     const season = seasons?.length === 1 ? seasons[0] : null;
-    const effectiveSeason = editorialSeason(season?.name);
+    const effectiveSeason = canonicalEditorialSeason(season?.name);
     if (!season || !uuid(season.id) || !providerId(season.provider_season_id)
       || season.provider !== "sportmonks" || season.competition_id !== competitionId
       || season.is_current !== true || !effectiveSeason) return unavailable("canonical-season-unavailable");

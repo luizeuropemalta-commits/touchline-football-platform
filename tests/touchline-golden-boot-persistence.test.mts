@@ -12,6 +12,7 @@ import { parseGoldenBootPublicAuthority, createGoldenBootAuthorityState, advance
 const modulePath = process.env.TOUCHLINE_GOLDEN_BOOT_PGLITE_MODULE;
 const { PGlite } = modulePath ? await import(modulePath) : { PGlite: null };
 const proposal = readFileSync(new URL("../supabase/migrations/20261001194607_touchline_golden_boot_authority.sql", import.meta.url), "utf8");
+const seasonLabelsMigration = readFileSync(new URL("../supabase/migrations/20261002092823_touchline_golden_boot_season_labels.sql", import.meta.url), "utf8");
 const uuid = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12,"0")}`;
 const comp=uuid(1), season=uuid(2), club=uuid(3), player=uuid(10), player2=uuid(11), member=uuid(20), member2=uuid(21);
 type Json = Record<string, unknown>;
@@ -58,6 +59,7 @@ test("GoldenBoot authority: real SQL atomic state/evidence/read contract", {time
   try {
     await db.exec(schema);
     await db.exec(proposal);
+    await db.exec(seasonLabelsMigration);
     async function payload(sql:string,args:unknown[]=[]):Promise<Json> {
       const result=await db.query(sql,args); return result.rows[0].payload;
     }

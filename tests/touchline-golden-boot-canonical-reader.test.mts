@@ -6,6 +6,7 @@ import ts from "typescript";
 import * as editorial from "../lib/touchlineArena/editorial-card-profile.ts";
 import * as provisional from "../lib/touchlineArena/card-engine-provisional-policy.ts";
 import * as compatibility from "../lib/touchlineArena/card-engine-provisional-schema-compat.ts";
+import * as seasonLabels from "../lib/touchlineArena/editorial-season.ts";
 import * as stagesResolver from "../lib/touchlineArena/golden-boot-stage-scope.ts";
 import * as eligibility from "../lib/touchlineArena/golden-boot-eligibility.ts";
 import * as topScorerIds from "../lib/football-data/sportmonks-season-topscorers.ts";
@@ -38,9 +39,11 @@ const publication = moduleAt("card-publication-read-model", {
   "./editorial-card-profile.ts": editorial,
   "./card-engine-provisional-policy.ts": provisional,
   "./card-engine-provisional-schema-compat.ts": compatibility,
+  "./editorial-season.ts": seasonLabels,
 });
 const reader = moduleAt("golden-boot-canonical-reader", {
   "server-only": {}, "./card-publication-read-model.ts": publication,
+  "./editorial-season.ts": seasonLabels,
   "../football-data/sportmonks-season-topscorers.ts": topScorerIds,
   "./golden-boot-stage-scope.ts": stagesResolver, "./golden-boot-eligibility.ts": eligibility,
 }).readGoldenBootCanonicalLeaders as typeof readGoldenBootCanonicalLeaders;
@@ -128,6 +131,32 @@ test("real readers map every tied leader without names; expiry is oldest origina
   assert.equal(result.leaders[0]!.presentation.tierKey, "ruby-red");
   assert.equal(result.fetchedAt, new Date(now - 20_000).toISOString());
   assert.equal(result.expiresAt, new Date(now + 40_000).toISOString());
+});
+
+test("canonical awards accept equivalent adjacent-year publication and value labels", async () => {
+  const labels = ["2026-27", "2026/27", "2026-2027", "2026/2027"];
+  for (const publicationLabel of labels) for (const valueLabel of labels) {
+    const f = fixture();
+    f.tables.touchline_card_publications![0]!.effective_season = publicationLabel;
+    f.tables.football_player_market_values![0]!.verified_season = valueLabel;
+    const result = await read(f);
+    assert.equal(result.phase, "shared", `${publicationLabel} / ${valueLabel}: ${result.reason}`);
+    assert.equal(result.canonicalScope?.effectiveSeason, "2026-27");
+    assert.equal(result.leaders.length, 2);
+  }
+});
+
+test("invalid or different season labels reject the entire tie", async () => {
+  for (const label of [null, "", "2025/26", "2026/28", "2026/2026", "2026/20270", "2026", "x2026/27", "2026/27x", "2026 /27", "2026.27", "0999/00", "9999/00"]) {
+    for (const target of ["publication", "value"]) {
+      const f = fixture();
+      if (target === "publication") f.tables.touchline_card_publications![0]!.effective_season = label;
+      else f.tables.football_player_market_values![0]!.verified_season = label;
+      const result = await read(f);
+      assert.equal(result.phase, "unavailable", `${target}: ${label}`);
+      assert.deepEqual(result.leaders, []);
+    }
+  }
 });
 
 test("single leader and canonical short season label remain supported", async () => {
